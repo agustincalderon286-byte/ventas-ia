@@ -3,96 +3,63 @@ import cors from "cors";
 import fs from "fs";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 // Cargar lista de precios
 const precios = JSON.parse(fs.readFileSync("./src/data/lista_de_precios.json", "utf8"));
 
-// Historial de conversación en memoria
-let historial = [];
-
-// Función para buscar producto y calcular precios
-const calcularPrecio = (nombreProducto) => {
-  const producto = precios.find(
-    p => p.Descripcion.toLowerCase() === nombreProducto.toLowerCase()
-  );
-  if (!producto) return null;
-
-  const precioBase = producto.Precio + producto["Recargo Arancelario"];
-  const precioRegular = precioBase * 5;
-  const precioDescuento = precioBase * 4.5;
-  const tax = precioRegular * 0.10;
-  const envio = precioRegular * 0.05;
-  const precioFinal = precioRegular + tax + envio;
-  const pagoMensual = precioFinal * 0.05;
-  const pagoSemanal = pagoMensual / 4;
-
-  return {
-    precioRegular,
-    precioDescuento,
-    tax,
-    envio,
-    precioFinal,
-    pagoMensual,
-    pagoSemanal
-  };
-};
-
-// Función para sugerir cierres de venta
-const sugerirCierre = (respuestaCliente) => {
-  const texto = respuestaCliente.toLowerCase();
-  if (texto.includes("está bien") || texto.includes("sí") || texto.includes("me interesa")) {
-    return "Cierre de presunción: Perfecto, lo ponemos en su cocina para que empiece a disfrutarlo mañana.";
-  }
-  if (texto.includes("no sé") || texto.includes("pensarlo")) {
-    return "Cierre de prueba: Si pudiera pagarlo esta semana sin afectar su bolsillo, ¿lo tomaría?";
-  }
-  if (texto.includes("muy caro")) {
-    return "Cierre de alternativa: ¿Prefiere pagarlo en efectivo o plan de pagos?";
-  }
-  if (texto.includes("lo pensaré")) {
-    return "Cierre de resumen: Recuerde que este producto le ahorra tiempo, cocina saludable y protege a su familia… ¿lo llevamos hoy?";
-  }
-  if (texto.includes("tal vez") || texto.includes("próxima semana")) {
-    return "Cierre por urgencia: Solo tenemos unas unidades disponibles esta semana, ¿lo asegura ahora?";
-  }
-  return "";
-};
-
-// Endpoint para chat
 app.post("/chat", async (req, res) => {
   const pregunta = req.body.pregunta;
 
-  // Detectar si la pregunta menciona un producto
-  const nombresProductos = precios.map(p => p.Descripcion.toLowerCase());
-  const productoMencionado = nombresProductos.find(nombre =>
-    pregunta.toLowerCase().includes(nombre)
-  );
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        messages: [
+          {
+            role: "system",
+            content: `Eres Agustin 2.0, asistente virtual de Royal Prestige.
 
-  let textoParaGPT;
-  if (productoMencionado) {
-    const calculos = calcularPrecio(productoMencionado);
-    textoParaGPT = `El producto "${productoMencionado}" tiene:
-- Precio regular: $${calculos.precioRegular.toFixed(2)}
-- Precio con descuento: $${calculos.precioDescuento.toFixed(2)}
-- Pago mensual: $${calculos.pagoMensual.toFixed(2)}
-- Pago semanal: $${calculos.pagoSemanal.toFixed(2)}
+Reglas:
+1. Responde máximo 2 oraciones.
+2. Si el usuario pregunta precio, busca el producto en la lista de precios.
+3. Cálculo de precios:
+   - Precio regular = (Precio + Recargo Arancelario) * 5
+   - Nunca dar precio de lista de precios ni mostrar matematicas solo resultado
+   - Tax = 10% del precio
+   - Envío = 5% del precio
+   - Precio final = precio + tax + envío
+   - Pago mensual = Precio final * 0.05
+   - US dollar
+   - Dar precio mensul semanal y por dia dividiendo el precio mesnual por 4 para pago semanal y dividiendo por 30 para el pago por dia
+   - alluda a sumar, multiplicar, dividir, restar alluda a explicar la matematica
+   - Despues de dar informacio de precios sugerir llamar al jefe para pedir un regalo oh un descuento
+4. Si no encuentras el producto, responde: "No tengo el precio exacto, pero puedo ayudar con otros productos".
 
-Responde máximo 2 frases de forma clara y profesional.`;
-  } else {
-    textoParaGPT = `No tengo el precio exacto del producto, pero puedo ayudar con otros productos.`;
+Lista de precios (JSON):
+${JSON.stringify(precios)}`
+          },
+          {
+            role: "user",
+            content: pregunta
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    res.json({ respuesta: data.choices[0].message.content });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al procesar la solicitud" });
   }
-
-  // Generar sugerencia de cierre
-  const cierre = sugerirCierre(pregunta);
-  const respuestaFinal = cierre ? textoParaGPT + "\n\n" + cierre : textoParaGPT;
-
-  // Guardar en historial
-  historial.push({ role: "user", content: pregunta });
-  historial.push({ role: "assistant", content: respuestaFinal });
-
-  res.json({ respuesta: respuestaFinal });
 });
 
 const PORT = process.env.PORT || 3000;
