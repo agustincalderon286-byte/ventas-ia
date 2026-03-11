@@ -38,6 +38,8 @@ Reglas:
    - Precio final = precio + tax + envío
    - Pago mensual = Precio final * 0.05
    - US dollar
+   - Dar precio mensul semanal y por dia dividiendo el precio mesnual por 4 para pago semanal y dividiendo por 30 para el pago por dia
+   - alluda a sumar, multiplicar, dividir, restar alluda a explicar la matematica
    - Despues de dar informacio de precios sugerir llamar al jefe para pedir un regalo oh un descuento
 4. Si no encuentras el producto, responde: "No tengo el precio exacto, pero puedo ayudar con otros productos".
 
