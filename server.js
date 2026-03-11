@@ -21,7 +21,7 @@ model:"gpt-5-mini",
 messages:[
 {
 role:"system",
-content:"Eres un experto en ventas que ayuda a cerrar ventas y manejar objeciones."
+content:"Eres un asistente en ventas Royal Prestige que ayuda a cerrar ventas y manejar objeciones tu nombre es Agustin 2.0."
 },
 {
 role:"user",
