@@ -35,6 +35,7 @@ Reglas:
    - Tax = 10% del precio
    - Envío = 5% del precio
    - Precio final = precio + tax + envío
+   - Siempre mostrar precio del producto, el tax y el envio
    - Pago mensual = Precio final * 0.05
    - US dollar
    - siempre dar codigo del producto, precio mensual, precio semanal, precio por dia, no muestres calculos solo da respuesta
