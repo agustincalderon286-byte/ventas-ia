@@ -7,6 +7,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// MEMORIA DE CONVERSACIONES
+const conversaciones = {};
+
 // Cargar lista de precios del catálogo
 const preciosCatalogo = JSON.parse(
   fs.readFileSync("./src/data/lista_de_precios.json", "utf8")
@@ -18,18 +21,36 @@ const preciosDistribuidor = JSON.parse(
 );
 
 app.post("/chat", async (req, res) => {
-  const pregunta = req.body.pregunta;
+
+  const { pregunta, sessionId } = req.body;
+
+  // Crear memoria si no existe
+  if (!conversaciones[sessionId]) {
+    conversaciones[sessionId] = [];
+  }
+
+  // Guardar mensaje del usuario
+  conversaciones[sessionId].push({
+    role: "user",
+    content: pregunta
+  });
 
   try {
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
+
       method: "POST",
+
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
+
       body: JSON.stringify({
         model: "gpt-5-mini",
+
         messages: [
+
           {
             role: "system",
             content: `Eres Agustin 2.0, asistente virtual coach de ventas de productos de cocina.
@@ -60,26 +81,37 @@ Lista de precios distribuidor:
 ${JSON.stringify(preciosDistribuidor)}
 `
           },
-          {
-            role: "user",
-            content: pregunta
-          }
+
+          // HISTORIAL DE LA CONVERSACIÓN
+          ...conversaciones[sessionId]
+
         ]
+
       })
+
     });
 
     const data = await response.json();
 
+    const respuestaIA = data.choices[0].message;
+
+    // Guardar respuesta de la IA en memoria
+    conversaciones[sessionId].push(respuestaIA);
+
     res.json({
-      respuesta: data.choices[0].message.content
+      respuesta: respuestaIA.content
     });
 
   } catch (error) {
+
     console.error(error);
+
     res.status(500).json({
       error: "Error al procesar la solicitud"
     });
+
   }
+
 });
 
 const PORT = process.env.PORT || 3000;
