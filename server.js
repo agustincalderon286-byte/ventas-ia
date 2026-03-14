@@ -1,21 +1,11 @@
 import express from "express";
 import cors from "cors";
 import fs from "fs";
-import session from "express-session";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// memoria de sesión por usuario
-app.use(
-  session({
-    secret: "agustin2",
-    resave: false,
-    saveUninitialized: true
-  })
-);
 
 // Cargar lista de precios del catálogo
 const preciosCatalogo = JSON.parse(
@@ -27,39 +17,8 @@ const preciosDistribuidor = JSON.parse(
   fs.readFileSync("./src/data/precios_al_distribuidor.json", "utf8")
 );
 
-// detectar producto en pregunta
-function detectarProducto(texto, lista) {
-  const textoLower = texto.toLowerCase();
-
-  return lista.find(p =>
-    textoLower.includes(String(p.codigo).toLowerCase()) ||
-    textoLower.includes(String(p.nombre).toLowerCase())
-  );
-}
-
 app.post("/chat", async (req, res) => {
   const pregunta = req.body.pregunta;
-
-  // crear historial si no existe
-  if (!req.session.historial) {
-    req.session.historial = [];
-  }
-
-  // detectar producto mencionado
-  const productoDetectado = detectarProducto(pregunta, preciosCatalogo);
-
-  if (productoDetectado) {
-    req.session.productoActual = productoDetectado;
-  }
-
-  // si no mencionan producto usar el último
-  let productoContexto = productoDetectado || req.session.productoActual;
-
-  // guardar pregunta en historial
-  req.session.historial.push({
-    role: "user",
-    content: pregunta
-  });
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -94,9 +53,6 @@ Cálculo de precios:
 Si no encuentras el producto responde:
 "No tengo el precio exacto, pero puedo ayudar con otros productos".
 
-Producto en conversación:
-${JSON.stringify(productoContexto)}
-
 Lista de precios catálogo:
 ${JSON.stringify(preciosCatalogo)}
 
@@ -104,23 +60,18 @@ Lista de precios distribuidor:
 ${JSON.stringify(preciosDistribuidor)}
 `
           },
-          ...req.session.historial
+          {
+            role: "user",
+            content: pregunta
+          }
         ]
       })
     });
 
     const data = await response.json();
 
-    const respuesta = data.choices[0].message.content;
-
-    // guardar respuesta en historial
-    req.session.historial.push({
-      role: "assistant",
-      content: respuesta
-    });
-
     res.json({
-      respuesta
+      respuesta: data.choices[0].message.content
     });
 
   } catch (error) {
