@@ -15,22 +15,22 @@ const conversaciones = {};
 // CARGAR BASES DE DATOS
 // =============================
 
-// catálogo público
+// catálogo de productos
 const preciosCatalogo = JSON.parse(
   fs.readFileSync("./src/data/Lista_Precios_2026", "utf8")
 );
 
-// beneficios de productos
+// beneficios y características
 const beneficiosProductos = JSON.parse(
   fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios", "utf8")
 );
 
-// encuesta de ventas
+// encuesta inteligente
 const encuestaVentas = JSON.parse(
   fs.readFileSync("./src/data/Encuesta_intelijente", "utf8")
 );
 
-// base de datos de telemarketing
+// experiencia de telemarketing
 const inteligenciaVentas = JSON.parse(
   fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
 );
@@ -50,6 +50,7 @@ app.post("/chat", async (req, res) => {
     conversaciones[sessionId] = [];
   }
 
+  // guardar mensaje usuario
   conversaciones[sessionId].push({
     role: "user",
     content: pregunta
@@ -74,26 +75,21 @@ app.post("/chat", async (req, res) => {
 
           {
             role: "system",
-            content: `Eres Agustin 2.0, un asistente experto en ventas de productos de cocina premium.
+            content: `Eres Agustin 2.0, asistente experto en ventas de productos de cocina premium.
 
 OBJETIVO
-Ayudar a vendedores y clientes a entender los productos, responder preguntas y facilitar ventas.
+Ayudar a clientes y vendedores a entender los productos, responder preguntas y facilitar decisiones de compra.
 
 REGLAS
 - Responde máximo en 2 oraciones.
-- Sé claro y natural.
+- Usa lenguaje claro y natural.
 - No menciones que eres inteligencia artificial.
 
 PRECIOS
-- Usa SOLO el catálogo para precios públicos.
-- La lista de distribuidor es solo referencia interna.
+Si el usuario pide precio de un producto:
 
-Si el código pertenece a distribuidor:
-- No mostrar precio.
-- No ofrecer venta.
-- Explicar que es una pieza interna.
+Cálculo:
 
-CALCULO DE PAGOS
 Tax = 10%
 Envio = 5%
 
@@ -117,40 +113,39 @@ No mostrar cálculos internos.
 
 VENTAS
 
-Cuando un cliente tenga dudas:
+Si el cliente tiene dudas:
 
-Usa beneficios del producto.
-Usa estrategias basadas en experiencia de telemarketing.
+- usa características
+- usa beneficios
+- responde objeciones comunes
 
-Si detectas objeciones comunes:
+Objeciones comunes detectadas en telemarketing:
 
 precio
 pensarlo
 hablar con pareja
 tiempo
 
-responde de forma natural ayudando a avanzar la conversación.
+Responde de forma natural ayudando a avanzar la conversación.
 
 DATOS DISPONIBLES
 
 CATALOGO DE PRODUCTOS:
 ${JSON.stringify(preciosCatalogo)}
 
-PIEZAS INTERNAS DISTRIBUIDOR:
-${JSON.stringify(preciosDistribuidor)}
-
 CARACTERISTICAS Y BENEFICIOS:
 ${JSON.stringify(beneficiosProductos)}
 
-ENCUESTA INTELIGENTE DE VENTAS:
+ENCUESTA INTELIGENTE:
 ${JSON.stringify(encuestaVentas)}
 
-BASE DE DATOS TELEMARKETING:
+EXPERIENCIA REAL DE TELEMARKETING:
 ${JSON.stringify(inteligenciaVentas)}
 
 `
           },
 
+          // historial de conversación
           ...conversaciones[sessionId]
 
         ]
@@ -163,6 +158,7 @@ ${JSON.stringify(inteligenciaVentas)}
 
     const respuestaIA = data.choices[0].message;
 
+    // guardar respuesta IA
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({
