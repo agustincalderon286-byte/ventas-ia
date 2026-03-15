@@ -10,26 +10,46 @@ app.use(express.json());
 // MEMORIA DE CONVERSACIONES
 const conversaciones = {};
 
-// Cargar lista de precios del catálogo
+
+// =============================
+// CARGAR BASES DE DATOS
+// =============================
+
+// catálogo público
 const preciosCatalogo = JSON.parse(
-  fs.readFileSync("./src/data/lista_de_precios.json", "utf8")
+  fs.readFileSync("./src/data/Lista_Precios_2026", "utf8")
 );
 
-// Cargar precios del distribuidor
-const preciosDistribuidor = JSON.parse(
-  fs.readFileSync("./src/data/precios_al_distribuidor.json", "utf8")
+// beneficios de productos
+const beneficiosProductos = JSON.parse(
+  fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios", "utf8")
 );
+
+// encuesta de ventas
+const encuestaVentas = JSON.parse(
+  fs.readFileSync("./src/data/Encuesta_intelijente", "utf8")
+);
+
+// base de datos de telemarketing
+const inteligenciaVentas = JSON.parse(
+  fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
+);
+
+
 
 app.post("/chat", async (req, res) => {
 
   const { pregunta, sessionId } = req.body;
 
-  // Crear memoria si no existe
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId requerido" });
+  }
+
+  // crear memoria si no existe
   if (!conversaciones[sessionId]) {
     conversaciones[sessionId] = [];
   }
 
-  // Guardar mensaje del usuario
   conversaciones[sessionId].push({
     role: "user",
     content: pregunta
@@ -47,42 +67,90 @@ app.post("/chat", async (req, res) => {
       },
 
       body: JSON.stringify({
+
         model: "gpt-5-mini",
 
         messages: [
 
           {
             role: "system",
-            content: `Eres Agustin 2.0, asistente virtual coach de ventas de productos de cocina.
+            content: `Eres Agustin 2.0, un asistente experto en ventas de productos de cocina premium.
 
-Reglas:
-1. Responde máximo 2 oraciones.
-2. Si el usuario pregunta precio, busca el producto por su codigo en las listas.
-3. Usa la lista de catálogo para precio público.
-4. Usa la lista de distribuidor para calcular estrategias de venta.
+OBJETIVO
+Ayudar a vendedores y clientes a entender los productos, responder preguntas y facilitar ventas.
 
-Cálculo de precios:
-- Tax = 10% del precio
-- Envío = 5% del precio
-- Precio final = precio + tax + envío
-- Pago mensual = precio final * 0.05
-- Pago semanal = pago mensual / 4
-- Pago diario = pago mensual / 30
-- Siempre mostrar: codigo, nombre producto, precio, tax, envio, pago mensual, semanal y diario.
-- No mostrar cálculos.
+REGLAS
+- Responde máximo en 2 oraciones.
+- Sé claro y natural.
+- No menciones que eres inteligencia artificial.
 
-Si no encuentras el producto responde:
-"No tengo el precio exacto, pero puedo ayudar con otros productos".
+PRECIOS
+- Usa SOLO el catálogo para precios públicos.
+- La lista de distribuidor es solo referencia interna.
 
-Lista de precios catálogo:
+Si el código pertenece a distribuidor:
+- No mostrar precio.
+- No ofrecer venta.
+- Explicar que es una pieza interna.
+
+CALCULO DE PAGOS
+Tax = 10%
+Envio = 5%
+
+Precio final = precio + tax + envio
+Pago mensual = precio final * 0.05
+Pago semanal = pago mensual / 4
+Pago diario = pago mensual / 30
+
+Mostrar siempre:
+
+codigo
+nombre producto
+precio
+tax
+envio
+pago mensual
+pago semanal
+pago diario
+
+No mostrar cálculos internos.
+
+VENTAS
+
+Cuando un cliente tenga dudas:
+
+Usa beneficios del producto.
+Usa estrategias basadas en experiencia de telemarketing.
+
+Si detectas objeciones comunes:
+
+precio
+pensarlo
+hablar con pareja
+tiempo
+
+responde de forma natural ayudando a avanzar la conversación.
+
+DATOS DISPONIBLES
+
+CATALOGO DE PRODUCTOS:
 ${JSON.stringify(preciosCatalogo)}
 
-Lista de precios distribuidor:
+PIEZAS INTERNAS DISTRIBUIDOR:
 ${JSON.stringify(preciosDistribuidor)}
+
+CARACTERISTICAS Y BENEFICIOS:
+${JSON.stringify(beneficiosProductos)}
+
+ENCUESTA INTELIGENTE DE VENTAS:
+${JSON.stringify(encuestaVentas)}
+
+BASE DE DATOS TELEMARKETING:
+${JSON.stringify(inteligenciaVentas)}
+
 `
           },
 
-          // HISTORIAL DE LA CONVERSACIÓN
           ...conversaciones[sessionId]
 
         ]
@@ -95,7 +163,6 @@ ${JSON.stringify(preciosDistribuidor)}
 
     const respuestaIA = data.choices[0].message;
 
-    // Guardar respuesta de la IA en memoria
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({
@@ -113,6 +180,7 @@ ${JSON.stringify(preciosDistribuidor)}
   }
 
 });
+
 
 const PORT = process.env.PORT || 3000;
 
