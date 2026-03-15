@@ -20,187 +20,20 @@ const preciosDistribuidor = JSON.parse(
   fs.readFileSync("./src/data/precios_al_distribuidor.json", "utf8")
 );
 
-// Cargar base de datos de telemarketing
-const leadsData = JSON.parse(
-  fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
-);
-
-
-// DETECTAR SI HABLA CLIENTE O VENDEDOR
-function detectarRol(texto){
-
-  const t = texto.toLowerCase();
-
-  if(
-    t.includes("soy vendedor") ||
-    t.includes("soy distribuidor") ||
-    t.includes("soy representante") ||
-    t.includes("ayudame a cerrar") ||
-    t.includes("como cierro") ||
-    t.includes("tengo un cliente")
-  ){
-    return "vendedor";
-  }
-
-  return "cliente";
-}
-
-
-// BUSCAR PRODUCTO
-function buscarProducto(codigo){
-
-  const prodCatalogo = preciosCatalogo.find(p => p.codigo === codigo);
-
-  if(prodCatalogo){
-    return {
-      tipo: "catalogo",
-      data: prodCatalogo
-    };
-  }
-
-  const piezaInterna = preciosDistribuidor.find(p => p.codigo === codigo);
-
-  if(piezaInterna){
-    return {
-      tipo: "pieza_interna",
-      data: piezaInterna
-    };
-  }
-
-  return null;
-
-}
-
-
-// Detectar objeciones
-function detectarObjecion(texto) {
-
-  if (!texto) return "general";
-
-  const t = texto.toLowerCase();
-
-  if (t.includes("caro") || t.includes("precio")) return "precio";
-  if (t.includes("pensar") || t.includes("luego")) return "indecision";
-  if (t.includes("esposo") || t.includes("esposa")) return "decision_familiar";
-  if (t.includes("ocupado") || t.includes("tiempo")) return "tiempo";
-
-  return "general";
-}
-
-
-// Sugerencias de cierre
-function sugerirCierre(objecion) {
-
-  if (objecion === "precio") {
-    return "Muchos clientes pensaban lo mismo al principio, por eso ofrecemos pagos pequeños que se ajustan al presupuesto.";
-  }
-
-  if (objecion === "indecision") {
-    return "A muchos clientes les ayuda ver una demostración rápida antes de decidir.";
-  }
-
-  if (objecion === "decision_familiar") {
-    return "Podemos programar una demostración cuando esté su pareja también.";
-  }
-
-  if (objecion === "tiempo") {
-    return "La demostración dura pocos minutos y aclara todas las dudas.";
-  }
-
-  return "";
-}
-
-
-// Analizar dataset
-function generarSugerenciaVentas() {
-
-  for (const lead of leadsData) {
-
-    if (!lead.notas) continue;
-
-    const obj = detectarObjecion(lead.notas);
-
-    if (obj !== "general") {
-      return sugerirCierre(obj);
-    }
-
-  }
-
-  return "";
-
-}
-
-
-
 app.post("/chat", async (req, res) => {
 
   const { pregunta, sessionId } = req.body;
 
-  if (!sessionId) {
-    return res.status(400).json({ error: "sessionId requerido" });
-  }
-
+  // Crear memoria si no existe
   if (!conversaciones[sessionId]) {
     conversaciones[sessionId] = [];
   }
 
+  // Guardar mensaje del usuario
   conversaciones[sessionId].push({
     role: "user",
     content: pregunta
   });
-
-
-// DETECTAR QUIEN HABLA
-  const rol = detectarRol(pregunta);
-
-
-// SUGERENCIA BASADA EN DATOS REALES
-  const sugerenciaVentas = generarSugerenciaVentas();
-
-
-// PROMPT SEGÚN EL ROL
-
-let instruccionesRol = "";
-
-if(rol === "cliente"){
-
-instruccionesRol = `
-Estás hablando con un CLIENTE potencial.
-
-Tu objetivo es:
-- responder preguntas
-- generar confianza
-- explicar beneficios
-- guiar naturalmente hacia comprar
-
-No parezcas vendedor agresivo.
-Habla como asesor experto.
-No menciones que eres IA.
-
-Máximo 2 oraciones.
-`;
-
-}
-
-if(rol === "vendedor"){
-
-instruccionesRol = `
-Estás hablando con un REPRESENTANTE de ventas.
-
-Tu función es ayudarle a cerrar la venta.
-Responde como si fueras su asesor privado.
-
-Puedes sugerir:
-- que decir
-- como responder objeciones
-- que estrategia usar
-
-No expliques demasiado.
-Responde como mensaje corto que el vendedor pueda copiar o usar.
-`;
-
-}
-
 
   try {
 
@@ -214,60 +47,42 @@ Responde como mensaje corto que el vendedor pueda copiar o usar.
       },
 
       body: JSON.stringify({
-
         model: "gpt-5-mini",
 
         messages: [
 
           {
             role: "system",
-            content: `Eres Agustin 2.0 asistente inteligente de ventas.
+            content: `Eres Agustin 2.0, asistente virtual coach de ventas de productos de cocina.
 
-${instruccionesRol}
-
-Reglas de precios:
-
-Usa SOLO la lista de catálogo para mostrar precios al cliente.
-
-Si el código pertenece a lista de distribuidor:
-- NO mostrar precio
-- NO ofrecer venta
-- solo explicar que es una pieza interna.
+Reglas:
+1. Responde máximo 2 oraciones.
+2. Si el usuario pregunta precio, busca el producto por su codigo en las listas.
+3. Usa la lista de catálogo para precio público.
+4. Usa la lista de distribuidor para calcular estrategias de venta.
 
 Cálculo de precios:
+- Tax = 10% del precio
+- Envío = 5% del precio
+- Precio final = precio + tax + envío
+- Pago mensual = precio final * 0.05
+- Pago semanal = pago mensual / 4
+- Pago diario = pago mensual / 30
+- Siempre mostrar: codigo, nombre producto, precio, tax, envio, pago mensual, semanal y diario.
+- No mostrar cálculos.
 
-Tax = 10%
-Envio = 5%
+Si no encuentras el producto responde:
+"No tengo el precio exacto, pero puedo ayudar con otros productos".
 
-Precio final = precio + tax + envio
-Pago mensual = precio final * 0.05
-Pago semanal = pago mensual / 4
-Pago diario = pago mensual / 30
-
-Mostrar siempre:
-codigo
-nombre
-precio
-tax
-envio
-pago mensual
-pago semanal
-pago diario
-
-No mostrar cálculos.
-
-Sugerencia basada en telemarketing:
-${sugerenciaVentas}
-
-Catalogo:
+Lista de precios catálogo:
 ${JSON.stringify(preciosCatalogo)}
 
-Distribuidor:
+Lista de precios distribuidor:
 ${JSON.stringify(preciosDistribuidor)}
-
 `
           },
 
+          // HISTORIAL DE LA CONVERSACIÓN
           ...conversaciones[sessionId]
 
         ]
@@ -280,6 +95,7 @@ ${JSON.stringify(preciosDistribuidor)}
 
     const respuestaIA = data.choices[0].message;
 
+    // Guardar respuesta de la IA en memoria
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({
@@ -297,7 +113,6 @@ ${JSON.stringify(preciosDistribuidor)}
   }
 
 });
-
 
 const PORT = process.env.PORT || 3000;
 
