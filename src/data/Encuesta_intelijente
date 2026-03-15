@@ -1,0 +1,90 @@
+[
+  {
+    "pregunta": "Trabajan actualmente?",
+    "respuesta": "Si/No"
+  },
+  {
+    "pregunta": "Que an escuchado decir de Royal prestige? una cosa buena y una cosa no tan buena( mala)",
+    "respuesta": "???"
+  },
+  {
+    "pregunta": "Que es lo mas importante para su familia ? tiempo, dinero oh salud",
+    "respuesta": "???"
+  },
+  {
+    "pregunta": "Para cuantas personas cosina?",
+    "respuesta": "???"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es la salud de su familia?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "del uno al diez que tan importante es prevenir enfermedades con la alimentacion?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es cocinar con menos grasa?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez  que tan importante es la calidad del agua",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es ahorrar dinero a largo plazo",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es comprar productos duraderos",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es tomar decisiones inteligentes al comprar",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan comodo se sintiria invirtiendo semanalmente",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es cosinar rapido?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan importante es usar los productos que compra todos los dias",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan satisfecho esta con sus utenzilios de cosina actuales",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan util cree que seria mejorar su cosina?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tanto conocia Royal Prestige antes?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tanto cree que los utelzilios de cosina afectan la salud?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tanto cree que el agua de la tuberia tiene contaminantes",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Del uno al diez que tan probable seria que invierta en un producto que beneficie a su familia?",
+    "respuesta": "1-10"
+  },
+  {
+    "pregunta": "Si usted ve un producto en la linea de royal prestige cuanto cree que pudiera invertir semanalmente para adquirirlo sin que afecte su bolsillo?",
+    "respuesta": "$15/$30/$45/$60"
+  },
+  {
+    "pregunta": "De los productos que vio en el catalogo mencione 3  que usted cree que les daria mas uso.",
+    "respuesta": "???"
+  }
+]
