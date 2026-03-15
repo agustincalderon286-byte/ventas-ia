@@ -15,22 +15,22 @@ const conversaciones = {};
 // CARGAR BASES DE DATOS
 // =============================
 
-// catálogo de productos
+// catálogo de productos con precios
 const preciosCatalogo = JSON.parse(
-  fs.readFileSync("./src/data/Lista_Precios_2026", "utf8")
+  fs.readFileSync("./src/data/lista_de_precios.json", "utf8")
 );
 
-// beneficios y características
+// características y beneficios
 const beneficiosProductos = JSON.parse(
   fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios", "utf8")
 );
 
-// encuesta inteligente
+// encuesta inteligente de ventas
 const encuestaVentas = JSON.parse(
   fs.readFileSync("./src/data/Encuesta_intelijente", "utf8")
 );
 
-// experiencia de telemarketing
+// experiencia real de telemarketing
 const inteligenciaVentas = JSON.parse(
   fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
 );
@@ -50,7 +50,7 @@ app.post("/chat", async (req, res) => {
     conversaciones[sessionId] = [];
   }
 
-  // guardar mensaje usuario
+  // guardar mensaje del usuario
   conversaciones[sessionId].push({
     role: "user",
     content: pregunta
@@ -86,9 +86,8 @@ REGLAS
 - No menciones que eres inteligencia artificial.
 
 PRECIOS
-Si el usuario pide precio de un producto:
 
-Cálculo:
+Cuando el usuario pida precio de un producto:
 
 Tax = 10%
 Envio = 5%
@@ -117,9 +116,9 @@ Si el cliente tiene dudas:
 
 - usa características
 - usa beneficios
-- responde objeciones comunes
+- usa experiencia de ventas reales
 
-Objeciones comunes detectadas en telemarketing:
+Objeciones comunes:
 
 precio
 pensarlo
@@ -139,7 +138,7 @@ ${JSON.stringify(beneficiosProductos)}
 ENCUESTA INTELIGENTE:
 ${JSON.stringify(encuestaVentas)}
 
-EXPERIENCIA REAL DE TELEMARKETING:
+EXPERIENCIA REAL TELEMARKETING:
 ${JSON.stringify(inteligenciaVentas)}
 
 `
@@ -158,7 +157,7 @@ ${JSON.stringify(inteligenciaVentas)}
 
     const respuestaIA = data.choices[0].message;
 
-    // guardar respuesta IA
+    // guardar respuesta de la IA
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({
@@ -176,7 +175,6 @@ ${JSON.stringify(inteligenciaVentas)}
   }
 
 });
-
 
 const PORT = process.env.PORT || 3000;
 
