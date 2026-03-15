@@ -22,7 +22,7 @@ const preciosDistribuidor = JSON.parse(
 
 // Cargar base de datos de telemarketing
 const leadsData = JSON.parse(
-  fs.readFileSync("./src/data/Eric_Material_viejo.json", "utf8")
+  fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
 );
 
 // Detectar objeciones comunes en notas
