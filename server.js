@@ -1,94 +1,104 @@
 import express from "express";
 import cors from "cors";
 import fs from "fs";
-import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
-import fetch from "node-fetch";
-
-dotenv.config(); // Cargar variables de .env
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// =============================
-// MONGODB
-// =============================
-const uri = process.env.MONGODB_URI; // Tu URI seguro en .env
-const client = new MongoClient(uri);
-let db;
-
-async function conectarDB() {
-  try {
-    await client.connect();
-    db = client.db("ventasIA");
-    console.log("MongoDB conectado");
-  } catch (error) {
-    console.error("Error conectando MongoDB", error);
-  }
-}
-
-conectarDB();
-
-// =============================
 // MEMORIA DE CONVERSACIONES
-// =============================
 const conversaciones = {};
+
 
 // =============================
 // CARGAR BASES DE DATOS
 // =============================
+
+// catálogo de productos con precios
 const preciosCatalogo = JSON.parse(
   fs.readFileSync("./src/data/lista_de_precios.json", "utf8")
 );
 
+// características y beneficios
 const beneficiosProductos = JSON.parse(
-  fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios.json", "utf8")
+  fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios", "utf8")
 );
 
+// encuesta inteligente de ventas
 const encuestaVentas = JSON.parse(
-  fs.readFileSync("./src/data/Encuesta_intelijente.json", "utf8")
+  fs.readFileSync("./src/data/Encuesta_intelijente", "utf8")
 );
 
+// experiencia real de telemarketing
 const inteligenciaVentas = JSON.parse(
-  fs.readFileSync("./src/data/Eric_Material_viejo.json", "utf8")
+  fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
 );
 
-// =============================
-// ENDPOINT /chat
-// =============================
+
+
 app.post("/chat", async (req, res) => {
+
   const { pregunta, sessionId } = req.body;
 
-  if (!sessionId) return res.status(400).json({ error: "sessionId requerido" });
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId requerido" });
+  }
 
-  if (!conversaciones[sessionId]) conversaciones[sessionId] = [];
+  // crear memoria si no existe
+  if (!conversaciones[sessionId]) {
+    conversaciones[sessionId] = [];
+  }
 
-  conversaciones[sessionId].push({ role: "user", content: pregunta });
+  // guardar mensaje del usuario
+  conversaciones[sessionId].push({
+    role: "user",
+    content: pregunta
+  });
 
   try {
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
+
       method: "POST",
+
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
+
       body: JSON.stringify({
+
         model: "gpt-5-mini",
+
         messages: [
+
           {
             role: "system",
             content: `Eres Agustin 2.0, asistente experto en ventas de productos de cocina premium.
-OBJETIVO: Ayudar a clientes y vendedores a entender los productos, responder preguntas y facilitar decisiones de compra.
-REGLAS:
+
+OBJETIVO
+Ayudar a clientes y vendedores a entender los productos, responder preguntas y facilitar decisiones de compra.
+
+REGLAS
 - Responde máximo en 2 oraciones.
 - Usa lenguaje claro y natural.
 - No menciones que eres inteligencia artificial.
-PRECIOS:
+
+PRECIOS
+
+Cuando el usuario pida precio de un producto:
+
 Tax = 10%
 Envio = 5%
+
+Precio final = precio + tax + envio
+Pago mensual = precio final * 0.05
+Pago semanal = pago mensual / 4
+Pago diario = pago mensual / 30
+
 Mostrar siempre:
+
 codigo
 nombre producto
 precio
@@ -97,46 +107,77 @@ envio
 pago mensual
 pago semanal
 pago diario
-VENTAS:
+
+No mostrar cálculos internos.
+
+VENTAS
+
+Si el cliente tiene dudas:
+
 - usa características
 - usa beneficios
 - usa experiencia de ventas reales
-Objeciones comunes: precio, pensarlo, hablar con pareja, tiempo
-DATOS DISPONIBLES:
-CATALOGO: ${JSON.stringify(preciosCatalogo)}
-CARACTERISTICAS: ${JSON.stringify(beneficiosProductos)}
-ENCUESTA: ${JSON.stringify(encuestaVentas)}
-EXPERIENCIA REAL: ${JSON.stringify(inteligenciaVentas)}
+
+Objeciones comunes:
+
+precio
+pensarlo
+hablar con pareja
+tiempo
+
+Responde de forma natural ayudando a avanzar la conversación.
+
+DATOS DISPONIBLES
+
+CATALOGO DE PRODUCTOS:
+${JSON.stringify(preciosCatalogo)}
+
+CARACTERISTICAS Y BENEFICIOS:
+${JSON.stringify(beneficiosProductos)}
+
+ENCUESTA INTELIGENTE:
+${JSON.stringify(encuestaVentas)}
+
+EXPERIENCIA REAL TELEMARKETING:
+${JSON.stringify(inteligenciaVentas)}
+
 `
           },
+
+          // historial de conversación
           ...conversaciones[sessionId]
-        ],
-      }),
+
+        ]
+
+      })
+
     });
 
     const data = await response.json();
+
     const respuestaIA = data.choices[0].message;
+
+    // guardar respuesta de la IA
     conversaciones[sessionId].push(respuestaIA);
 
-    // Guardar en MongoDB
-    if (db) {
-      await db.collection("conversaciones").insertOne({
-        sessionId,
-        pregunta,
-        respuesta: respuestaIA.content,
-        fecha: new Date(),
-      });
-    }
+    res.json({
+      respuesta: respuestaIA.content
+    });
 
-    res.json({ respuesta: respuestaIA.content });
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ error: "Error al procesar la solicitud" });
+
+    res.status(500).json({
+      error: "Error al procesar la solicitud"
+    });
+
   }
+
 });
 
-// =============================
-// INICIAR SERVIDOR
-// =============================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+app.listen(PORT, () =>
+  console.log(`Servidor corriendo en puerto ${PORT}`)
+);
