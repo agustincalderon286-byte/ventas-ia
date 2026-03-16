@@ -1,11 +1,41 @@
 import express from "express";
 import cors from "cors";
 import fs from "fs";
+import { MongoClient } from "mongodb";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// =============================
+// MONGODB
+// =============================
+
+const uri = process.env.MONGODB_URI;
+
+const client = new MongoClient(uri);
+
+let db;
+
+async function conectarDB() {
+  try {
+
+    await client.connect();
+
+    db = client.db("ventasIA");
+
+    console.log("MongoDB conectado");
+
+  } catch (error) {
+
+    console.error("Error conectando MongoDB", error);
+
+  }
+}
+
+conectarDB();
+
 
 // MEMORIA DE CONVERSACIONES
 const conversaciones = {};
@@ -144,7 +174,6 @@ ${JSON.stringify(inteligenciaVentas)}
 `
           },
 
-          // historial de conversación
           ...conversaciones[sessionId]
 
         ]
@@ -159,6 +188,23 @@ ${JSON.stringify(inteligenciaVentas)}
 
     // guardar respuesta de la IA
     conversaciones[sessionId].push(respuestaIA);
+
+    // =============================
+    // GUARDAR EN MONGODB
+    // =============================
+
+    if (db) {
+
+      await db.collection("conversaciones").insertOne({
+
+        sessionId: sessionId,
+        pregunta: pregunta,
+        respuesta: respuestaIA.content,
+        fecha: new Date()
+
+      });
+
+    }
 
     res.json({
       respuesta: respuestaIA.content
