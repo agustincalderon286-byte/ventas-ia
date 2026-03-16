@@ -1,0 +1,827 @@
+{
+  "recetas": [
+    {
+      "nombre": "Alitas con Salsa BBQ y Mango Habanero",
+      "ingredientes": [
+        "1 libra de alitas de pollo",
+        "1½ tazas de zumo de mango",
+        "½ taza de salsa barbacoa",
+        "3 chiles habaneros, sin semillas, picados, o al gusto",
+        "Sirope de agave, al gusto",
+        "Sal Kosher, al gusto",
+        "Adorno",
+        "Cebollas verdes, cortadas finamente al bies",
+        "Cilantro, picado grueso"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Paellera de 10\"",
+        "Batidor de Globo",
+        "Tazón para Mezclar – 3QT",
+        "Espátula de Silicona",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Sazona las alitas de pollo con sal al gusto.",
+        "Precalienta el sartén a fuego medio durante 3 minutos.",
+        "Coloca las alitas de pollo y cocínalas de cada lado con la tapa entreabierta.",
+        "Baja el fuego a bajo, cierra la tapa con la válvula Redi-Temp™ cerrada.",
+        "Abre la tapa, sube el fuego a medio y cocina hasta que estén crujientes.",
+        "Retíralas y pásalas a un tazón.",
+        "Sube el fuego, añade el jugo de mango y bátelo.",
+        "Añade la salsa bbq, el habanero y baja el fuego a medio.",
+        "Cocina hasta que la salsa se vuelva espesa como un glaseado.",
+        "Rectifica y añade sal si es necesario, baja el picante con el jarabe de agave si hace falta.",
+        "Vierte un poco de la salsa barbacoa al gusto sobre las alitas de pollo y remuévelas para cubrirlas.",
+        "Sirve, decora y disfruta."
+      ]
+    },
+    {
+      "nombre": "Burrito de Desayuno",
+      "ingredientes": [
+        "1 taza papas yukon gold, en cubitos",
+        "½ cda Maggi® Caldo Granulado con Sabor a Pollo",
+        "1/3 taza tomates Roma, en cubitos",
+        "½ taza frijoles refritos",
+        "2 tortillas de harina tamaño burrito",
+        "¼ taza queso pepper jack, rallado",
+        "Adorno",
+        "Tu Salsa Favorita"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Deluxe Easy Release Sartén Profundo de 10.5\"",
+        "Espátula de Silicona",
+        "Cuchillo del Chef",
+        "Batidor de Globo",
+        "Tabla de Bambú para Cortar",
+        "Royal Prestige® Deluxe Easy Release Cuchara de Silicona",
+        "Tazón para Mezclar de 2 Cuartos",
+        "Tazón para Mezclar de 3 Cuartos"
+      ],
+      "preparacion": [
+        "Bate los huevos hasta que estén espumosos.",
+        "Rocía el sartén con aceite y precalienta 30 segundos a fuego medio.",
+        "Agrega las papas y sazónalas con el caldo de pollo.",
+        "Cocina hasta que las papas estén cocidas; agrega los tomates y cocina por 2 minutos.",
+        "Baja el fuego a medio bajo, agrega los huevos y cocina hasta cocer.",
+        "Calienta las tortillas a fuego medio.",
+        "Agrega frijoles, queso y huevo sobre una tortilla y enrolla el burrito. Repite con las tortillas y los ingredientes restantes.",
+        "Sirve, adorna y disfruta."
+      ]
+    },
+    {
+      "nombre": "Tostada Francesa con Huevo",
+      "ingredientes": [
+        "4 rebanadas de pan de masa agria",
+        "Cortador de galletas en forma de corazón de 3 pulgadas",
+        "2 cucharadas de mantequilla sin sal",
+        "1 taza de queso cheddar rallado",
+        "4 huevos grandes",
+        "Mezcla de Tostada Francesa",
+        "4 huevos grandes",
+        "½ taza de leche entera",
+        "1 cucharadita de sal Kosher",
+        "½ cucharadita de cebolla en polvo",
+        "½ cucharadita de ajo en polvo",
+        "½ cucharadita de chile en polvo",
+        "Adorno",
+        "Brotes de lechuga"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Deluxe Easy Release Sartén de 10\"",
+        "Espátula de Silicona",
+        "Batidor de Globo",
+        "Tabla de Bambú para Cortar",
+        "Cuchillo del Chef",
+        "Tazón para Mezclar de 3 Cuartos"
+      ],
+      "preparacion": [
+        "Coloca los ingredientes en el tazón para mezclar y mezcla bien.",
+        "Corta un corazón en la rebanada de pan.",
+        "Precalienta el sartén durante 30 segundos a fuego medio.",
+        "Derrite ½ cucharada de mantequilla y sumerge el pan en la mezcla.",
+        "Deja escurrir el exceso y colócalo en el sartén.",
+        "Haz el mismo procedimiento con el corte de corazón.",
+        "Cocina ambos durante unos 5 minutos por ambos lados.",
+        "Rompe un huevo en el agujero al darle la vuelta.",
+        "Pon el queso encima del pan.",
+        "¡Sirve, decora y disfruta"
+      ]
+    },
+    {
+      "nombre": "Frijoles Puercos",
+      "ingredientes": [
+        "15 oz chorizo de puerco",
+        "4 tazas frijoles pintos cocidos",
+        "1 lata de 7 ¾ oz salsa de tomate estilo mexicano",
+        "Sal kosher",
+        "Adorno",
+        "Jalapeños y Zanahorias",
+        "Queso Cotija",
+        "Totopos de Maiz"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Power Blender Go Plus",
+        "Royal Prestige® NOVEL™ Olla de 3 Cuartos",
+        "Espátula de Silicona",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Precalienta la olla a fuego medio alto por 3 minutos.",
+        "Agrega el chorizo y cocina por 3 minutos, entre tapado.",
+        "Machaca el chorizo y cocina otros 2 minutos.",
+        "Agrega frijoles y salsa de tomate.",
+        "Licua con la Power Blender Go hasta obtener un puré.",
+        "Si es necesario, ajusta el sazón con sal al gusto.",
+        "Ajusta el fuego a medio y cocina otros 5 minutos.",
+        "Sirve y decora."
+      ]
+    },
+    {
+      "nombre": "Sopa de pollo al limón",
+      "ingredientes": [
+        "3 yemas de huevo grandes",
+        "2 zanahorias peladas, en rodajas",
+        "1 pimiento verde mediano, en cubos pequeños",
+        "½ cebolla amarilla, en cubos pequeños",
+        "4 dientes de ajo picado",
+        "1 chile serrano picado — puedes sustituir por chile jalapeño—",
+        "1 libra de pechuga de pollo sin piel",
+        "8 tazas de caldo de pollo",
+        "Zumo de 2 limones frescos",
+        "1 taza de col rizada, picada —opcional—",
+        "2 cucharaditas de orégano mexicano",
+        "Sal kosher al gusto.   Guarnición",
+        "Rodajas de limón, sin semillas",
+        "Cilantro"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Olla de 4 Cuartos",
+        "Tazón para Mezclar de 2 Cuartos",
+        "Espátula de Silicona",
+        "Batidor de Globo",
+        "Cucharón",
+        "Pelador",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "En la Olla de 4 cuartos de Royal Prestige®, agregar la zanahoria, el pimiento verde, la cebolla, el ajo, el chile serrano, la pechuga de pollo, el caldo de pollo y sal al gusto.",
+        "Tapar con la Válvula Redi-Temp™ abierta, y cocinar a fuego a medio-alto hasta que la válvula silbe. Una vez que silbe, reducir la temperatura a baja y cerrar la válvula. Cocinar por 15 minutos.",
+        "Deshebrar el pollo dentro de la olla con la ayuda de dos tenedores, dejando algunos trozos enteros.",
+        "En un Tazón para Mezclar de 2 cuartos, colocar las yemas de huevo y combinar hasta conseguir una textura espumosa. Incorporar el jugo de limón poco a poco, batiendo constantemente.",
+        "Con la ayuda de un Cucharón, añadir el equivalente a una taza de caldo caliente sin dejar de batir.",
+        "Una vez que los huevos estén templados, verter lentamente la mezcla en olla, mientras continúas batiendo. Cocinar a fuego lento, a temperatura media-baja durante 5 minutos.",
+        "Agregar la col rizada y el orégano; ajustar la sazón con sal de ser necesario. Servir con la guarnición y disfrutar.",
+        "Nota del Chef: Para templar los huevos, colócalos todos al mismo tiempo"
+      ]
+    },
+    {
+      "nombre": "Ensalada de Pollo Estilo Cobb",
+      "ingredientes": [
+        "4 toallas de papel, moajadas",
+        "8 huevos grandes",
+        "Hielo",
+        "4 pechugas de pollo",
+        "8 tiras gruesas de tocino, rebanadas en cuadritos",
+        "2 cabezas lechuga romana, rebanadas a lo ancho",
+        "Aderezo de tu elección",
+        "4 tomates, en cubos grandes",
+        "4 aguacates, en cubos grandes",
+        "1 taza queso roquefort, desmoronado",
+        "Sal Kosher, al gusto",
+        "Pimienta, al gusto"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Sartén Gourmet de 10\"",
+        "Cuchillo del Chef",
+        "Tazón para Mezclar 3 QT",
+        "Tazón para Mezclar 5 QT",
+        "Espátula de Silicona",
+        "Cucharón",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Coloca las toallas de papel mojadas en el sartén y los huevos encima.",
+        "Tapa con la válvula Redi-Temp abierta y cocina a fuego medio alto hasta que silbe.",
+        "Reduce el fuego a bajo, cierra la válvula y cocina durante 12 minutos.",
+        "En un recipiente de 3 QT, combina el hielo con agua; sumerge los huevos hasta enfriar; quítales la cáscara.",
+        "Sazona el pollo con sal al gusto y cocina con la tapa entreabierta.",
+        "Voltea el pollo, reduce el fuego a bajo, tapa y cierra la válvula.",
+        "Agrega el tocino al sartén, sube el fuego a medio y cocina hasta que esté crujiente.",
+        "Coloca la lechuga romana en un tazón de 5 QT, incorpora el aderezo, sazona con sal y pimienta al gusto.",
+        "Sirve y disfruta."
+      ]
+    },
+    {
+      "nombre": "Sándwich con Ensalada de Huevo",
+      "ingredientes": [
+        "6 huevos grandes",
+        "2 toallas de papel, empapadas de agua",
+        "8 rebanadas de pan tostado",
+        "Espinaca fresca, al gusto",
+        "Baño helado",
+        "Ensalada de Huevo",
+        "½ chile serrano, picado",
+        "¼ taza de cebollín verde, picado",
+        "1/3 de taza mayonesa, mayonesa ligera o yogurt griego",
+        "1 cda mostaza Dijon",
+        "El jugo de ½ limón verde",
+        "½ cdta chile en polvo",
+        "Sal kosher, al gusto",
+        "Pimienta negra, al gusto",
+        "Adorno",
+        "Cebollín verde, picado"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Sartén de 8”",
+        "Tazones para Mezclar de 2 y 3 Cuartos",
+        "Batidor de Globo",
+        "Espátula de Silicona",
+        "Cucharón",
+        "Cuchillo del Chef",
+        "Cuchillo para Pan",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Acomoda las toallas de papel en el sartén. Añade los huevos. Tapa con la válvula Redi-Temp™ abierta. Cocina a fuego medio alto hasta que la válvula silbe. Reduce el fuego a bajo. Cierra la válvula y cocina otros 12 minutos.",
+        "Coloca los huevos cocidos en el baño helado y deja enfriar por unos minutos. Pela los huevos y córtalos en cubitos. Reserva.",
+        "En el tazón de 3 cuartos, combina los ingredientes para la ensalada de huevo. Agrega los huevos picados y mezcla hasta incorporar bien.",
+        "Arma cada sándwich en pan tostado con una porción de espinaca y ensalada de huevo. Adorna con cebollín verde."
+      ]
+    },
+    {
+      "nombre": "Pastel de Frambuesas con Crema",
+      "ingredientes": [
+        "Betún de Frambuesas con Crema",
+        "½ taza azúcar glas, o más al gusto",
+        "½ taza puré de frambuesas, sin semillas",
+        "1 cda gelatina en polvo Jell-O sabor frambuesa",
+        "½ cdta sal",
+        "1 ½ libras queso crema, temperatura ambiente",
+        "Masa",
+        "2 cajas harina preparada para pastel amarillo",
+        "1 taza mantequilla, ablandada",
+        "6 huevos grandes",
+        "2 tazas leche entera o agua",
+        "Adorno",
+        "Frambuesas",
+        "Ingredientes Adicionales",
+        "Aceite en aerosol para hornear"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Sartén de 8”",
+        "Royal Prestige® Power Blender Max",
+        "Tazones para Mezclar de 1 y 5 Cuartos",
+        "Espátula de Silicona",
+        "Batidor de Globo",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Licúa todos los ingredientes del betún hasta obtener una consistencia suave y uniforme. Transfiere a un tazón. Refrigera. En otro tazón, combina los ingredientes para el pastel. Reserva.",
+        "Engrasa el sartén. Agrega 1/3 de la masa. Tapa con la válvula Redi-Temp™ cerrada. Cocina a fuego bajo por 15 minutos. Retira del fuego y deja descansar 5 minutos.",
+        "Voltea el sartén sobre la tabla. Deja caer el pastel. Reserva. Limpia el sartén. Repite los pasos anteriores con la masa restante. Deja que los pasteles enfríen.",
+        "Corta las tapas para formar las tres capas del pastel. Ajusta según sea necesario para que tengan la misma forma y dimensiones.",
+        "Aplica una capa de betún a temperatura ambiente sobre dos de las tres capas. Para armar el pastel, coloca una capa sobre la otra.",
+        "Cubre toda la superficie del pastel con una capa delgada de betún. Refrigera por lo menos 30 minutos para endurecer. Nota del Chef: esta capa sirve como base para que la aplicación final del betún tenga un terminado liso y parejo.",
+        "Una vez que la capa base haya endurecido, aplica el betún restante sobre toda la superficie del pastel. Empareja para obtener un acabado liso y parejo.",
+        "Decora con frambuesas frescas."
+      ]
+    },
+    {
+      "nombre": "Bobo de Camarón",
+      "ingredientes": [
+        "1 cebolla blanca, picada",
+        "1 pimiento morrón, picado",
+        "1 pimiento morrón amarillo, picado",
+        "1 ají rojo u otro tipo de chile picante, picado",
+        "6 dientes ajo, picados",
+        "1 pieza de 1” jengibre, picado",
+        "2 tomates, en trozos",
+        "2 hojas laurel",
+        "1 ½ libras yuca pelada, fresca o congelada",
+        "2 cdas aceite de palma",
+        "8 tazas caldo camarón",
+        "1 taza leche de coco",
+        "2 limones verdes, exprimidos",
+        "2 libras camarón mediano limpio, sin cola",
+        "½ taza cilantro, picado",
+        "Sal kosher, al gusto",
+        "Pimienta, al gusto",
+        "Adorno",
+        "Cilantro picado",
+        "Arroz blanco"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Olla de 6 Cuartos",
+        "Royal Prestige® Power Blender Max",
+        "Tazón para Mezclar de 2 Cuartos",
+        "Espátula de Silicona",
+        "Cucharón con Ranuras",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Corta las verduras y reserva. En un tazón, combina los camarones con el jugo de limón y la sal. Reserva.",
+        "En la olla, combina la cebolla, los pimientos, el ajo, el jengibre, los tomates, las hojas de laurel, la yuca, el aceite de palma, el caldo, sal y pimienta.",
+        "Tapa con la válvula Redi-Temp™ abierta. Cocina a fuego medio alto hasta que silbe. Reduce el fuego a bajo y cierra la válvula. Cocina por 10 minutos o hasta que la yuca se ablande.",
+        "Deja que la sopa enfríe un poco. Retira las hojas de laurel. En la licuadora, combina la yuca con un poco del caldo y las verduras. Procesa a velocidad media hasta que la yuca se desmorone.",
+        "Agrega la mezcla a la olla y revuelve bien. Deja hervir a fuego alto. Luego, reduce el fuego a medio. Añade la leche de coco y el jugo de limón. Ajusta el sazón con sal.",
+        "Agrega los camarones y cocina hasta que adquieran un color rosa. Añade el cilantro. Mezcla bien. Sirve y adorna al gusto."
+      ]
+    },
+    {
+      "nombre": "Costillas de Res con Puré de Papas y Ejotes",
+      "ingredientes": [
+        "2–3 lbs costillas de res con hueso",
+        "1 cebolla picada",
+        "2 tallos de apio picados",
+        "3 zanahorias peladas y picadas",
+        "4 dientes de ajo picados",
+        "¼ taza pasta de tomate",
+        "1 taza vino tinto",
+        "4 tazas caldo de res",
+        "½ taza piloncillo o azúcar morena",
+        "4 cdas harina",
+        "3 ramitas de romero fresco",
+        "3 ramitas de tomillo fresco",
+        "Sal kosher",
+        "Pimienta",
+        "Acompañamientos",
+        "Puré de Papas",
+        "Ejotes Verdes",
+        "Cebollita Verde Picada"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Precision Cook",
+        "Royal Prestige® NOVEL™ Olla de 6 Cuartos",
+        "Tazón para Mezclar de 5 Cuartos",
+        "Espátula de Silicona",
+        "Batidor de Globo",
+        "Pelador",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Sazona las costillas con sal y pimienta; reserva.",
+        "Coloca la olla sobre la Royal Prestige® Precision Cook; elige la función de precalentar.",
+        "Agrega las costillas, dora 2 minutos por lado, entre tapadas.",
+        "Retira las costillas y reduce la temperatura a 350°F.",
+        "Saltea cebolla, apio, zanahorias y ajo hasta ablandar.",
+        "Agrega la pasta de tomate y sal al gusto, cocina otro minuto.",
+        "Añade el vino tinto, el caldo de res y el piloncillo; incorpora la harina.",
+        "Agrega el romero, el tomillo y las costillas.",
+        "Tapa con la válvula Redi-Temp™ cerrada; cambia la función a cocción lenta.",
+        "Elige nivel de cocción bajo; ajusta el temporizador a 2 ½ horas.",
+        "Cuando esté listo, la unidad hará beep 3 veces y dejará de cocinar.",
+        "Sirve con puré de papas y ejotes verdes. Decora al gusto."
+      ]
+    },
+    {
+      "nombre": "Costillas de Cordero al Horno",
+      "ingredientes": [
+        "2 costillares de cordero, recortados a la francesa",
+        "Sal kosher, al gusto",
+        "4 tazas de caldo de res",
+        "2 libras de zanahorias de colores, peladas y cortadas en tercios",
+        "½ libra de espárragos, tallos cortados",
+        "½ libra de espinaca",
+        "Marinado de Costillas",
+        "1 cda chile en polvo",
+        "1 cda paprika",
+        "1 cda ajo en polvo",
+        "1 cda cebolla en polvo",
+        "2 cdtas comino molido",
+        "1 cdta semillas de cilantro molidas",
+        "1 cdta orégano mexicano, seco",
+        "1 cdta de canela en polvo",
+        "1 cdta pimienta negra",
+        "¼ taza vinagre de sidra de manzana",
+        "Adorno",
+        "Salsa de Tomatillo"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Pavera Ovalada",
+        "Tazón para Mezclar de 1 Cuarto",
+        "Batidor de Globo",
+        "Espátula de Silicona",
+        "Cucharón",
+        "Tenedor para Trinchar",
+        "Cuchillo para Rebanar",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Precalienta el horno a 400 grados. Sazona las costillas con sal. Deja que alcancen temperatura ambiente. Reserva. Combina los ingredientes para el marinado en un tazón. Mezcla y reserva.",
+        "Precalienta la pavera ovalada a temperatura media alta por 3 minutos. Agrega las costillas. Sella por 5 minutos con la tapa entreabierta. Retira y coloca sobre un plato.",
+        "Añade el caldo de res a la pavera y revuelve para desprender el fondo de cocción.",
+        "Barniza las costillas con el marinado, cubriendo muy bien. Reserva el marinado restante.",
+        "Coloca la rejilla en la pavera. Acomoda las costillas al centro. Rodea con las zanahorias y los espárragos.",
+        "Deja que el caldo de res hierva. Con cuidado, introduce la pavera en el horno, sin tapar. Hornea por 20 minutos o hasta que la carne alcance una temperatura de 135 grados.",
+        "Retira las costillas. Deja descansar unos minutos. Pasa las verduras a un plato. Con cuidado, retira la rejilla de la pavera ovalada. Acomoda la pavera sobre la estufa y ajusta el fuego a medio alto.",
+        "Deja que el caldo hierva. Agrega el marinado restante y mezcla. Si es necesario, ajusta la sazón. Reduce por 2 minutos.",
+        "Corta costillas individuales. Agrega la espinaca a la pavera e incorpora rápidamente con los jugos. Retira las espinacas de inmediato.",
+        "En un platón, acomoda las espinacas, las verduras y las costillas de cordero. Baña con los jugos. Adorna y sirve."
+      ]
+    },
+    {
+      "nombre": "Yogurt Helado de Papaya",
+      "ingredientes": [
+        "2 tazas de papaya congelada, la mitad de una papaya",
+        "1 taza de yogurt griego natural",
+        "3 cucharadas de jarabe de agave"
+      ],
+      "utensilios_royal_prestige": [
+        "Extractor de Jugos Royal Prestige®",
+        "Espátula de Silicona",
+        "Colador para Helados en el Extractor de Jugos Royal Prestige®"
+      ],
+      "preparacion": [
+        "Coloca 2 tazas de papaya congelada en el Tazón para Mezclar de 3 cuartos y reserva dentro del congelador por 1 hora.",
+        "Pasada la hora, saca el Tazón y deja descongelar durante 5 minutos.",
+        "Agrega 1 taza de yogurt griego natural y 3 cucharadas de agave a la papaya. Mezcla bien con la Espátula de Silicona.",
+        "Coloca el Colador para Helados en el Extractor de Jugos Royal Prestige® y cierra la Tapa Removible.",
+        "Procesa la mezcla de papaya. Abre la tapa y deja que caiga el yogurt dentro del recipiente."
+      ]
+    },
+    {
+      "nombre": "Salmón Estilo Asiático con Miel y Limón",
+      "ingredientes": [
+        "4 piezas de salmón, 1/4 de libra c/u",
+        "Sal y pimienta negra, al gusto",
+        "Marinado:",
+        "½ taza de miel de abeja",
+        "¼ taza de jugo de limón",
+        "2 cucharadas de aceite de ajonjolí",
+        "Salsa de soya",
+        "Sal y pimienta negra al gusto",
+        "Para Acompañar:",
+        "Espárragos"
+      ],
+      "utensilios_royal_prestige": [
+        "Tazón para Mezclar de 3 cuartos",
+        "Sartén Deluxe Easy Release",
+        "Batidor de Globo"
+      ],
+      "preparacion": [
+        "En el Tazón para Mezclar de 3 cuartos, coloca los ingredientes del marinado. Incorpora con el Batidor de Globo. Agrega el salmón y marina de 20 a 30 minutos.",
+        "Precalienta el Sartén Deluxe Easy Release durante 30 segundos a fuego medio.",
+        "Coloca las piezas de salmón en el sartén y sella durante minuto y medio aproximadamente, con la tapa entreabierta.",
+        "Voltea las piezas de salmón. Baña cada filete con la mezcla de marinado.",
+        "Acomoda los espárragos sobre el salmón y tapa el sartén. Cocina de 5 a 7 minutos más.",
+        "Sirve una pieza de salmón y cuatro espárragos por persona."
+      ]
+    },
+    {
+      "nombre": "Té Verde con Frutos del Bosque",
+      "ingredientes": [
+        "5 tazas agua",
+        "4 tazas jugo de frutos del bosque",
+        "9 cdas hojas té verde",
+        "Endulzante al gusto",
+        "Hielo",
+        "Adorno",
+        "Fresas",
+        "Arándanos",
+        "Moras",
+        "Frambuesas",
+        "Semillas de Granada",
+        "Limones",
+        "Hojas de Menta"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® ExperTea",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "En el Royal Prestige® ExperTea, combina agua y jugo de frutos del bosque. Tapa con la válvula abierta. Sube el fuego a medio alto. Espera a que la válvula silbe.",
+        "Una vez que la válvula silbe, retira el Royal Prestige® ExperTea del fuego. Cierra la válvula y destapa. Agrega las hojas de té en el infusor y sumerge. Tapa y deja reposar por 5 minutos o al gusto.",
+        "Agrega hielo a una taza o jarra. Vierte el té. Añade endulzante a tu gusto. Decora. Si es necesario, agrega más hielo."
+      ]
+    },
+    {
+      "nombre": "Salmón Estilo Asiático con Miel y Limón",
+      "ingredientes": [
+        "Tilapia y Chícharos",
+        "4 filetes de tilapia",
+        "2 cucharadas de sazón limón y pimienta",
+        "¼ de taza de jugo de naranja",
+        "4 tazas de chícharos",
+        "1 diente de ajo picado finamente",
+        "Salsa de Mango",
+        "1 taza de mango cortado en cuadritos",
+        "½ taza de pimiento rojo, cortado en cuadritos",
+        "½ taza de pimiento verde, cortado en cuadritos",
+        "¼ de taza de cebolla morada, cortada en cuadritos",
+        "½ taza de granos de elote",
+        "1 limón verde recién exprimido",
+        "2 cucharadas de vinagre blanco"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Sartén de 10.5\"",
+        "Royal Prestige® NOVEL™ Sartén Gourmet de 8\"",
+        "Tazón para Mezclar de 2 Cuartos",
+        "Espátula de Silicona"
+      ],
+      "preparacion": [
+        "En el Tazón para Mezclar de 2 cuartos, combina todos los ingredientes de la salsa de mango; resérvala.",
+        "Espolvorea los filetes de tilapia con el sazonador de limón y pimienta.",
+        "Precalienta el Sartén de 10½ pulgadas a temperatura media alta por 3 minutos.",
+        "Reduce la temperatura a baja, agrega los filetes y cocínalos por 3 minutos. Voltéalos con la ayuda de la Espátula. Agrega el jugo de naranja. Tapa con la válvula Redi‐Temp™ cerrada y cocina por 3 minutos más.",
+        "Precalienta el Sartén Gourmet de 8 pulgadas a temperatura media alta por 3 minutos. Agrega los chícharos y el ajo. Saltea a temperatura media por 2 minutos, revolviendo constantemente.",
+        "Cubre la tilapia con la salsa de mango. Sírvela con los chícharos salteados y tu arroz favorito."
+      ]
+    },
+    {
+      "nombre": "Jugo de Frutas",
+      "ingredientes": [
+        "2 tazas de melón verde, pelado y picado",
+        "2 tazas de melón cantalupo, pelado y picado",
+        "2 tazas de sandía, pelada y picada",
+        "2 cucharadas de yogurt natural bajo en grasa"
+      ],
+      "utensilios_royal_prestige": [
+        "Extractor de Jugos Royal Prestige®",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Pasa todos los ingredientes por el Extractor de Jugos Royal Prestige® y mezcla bien.",
+        "Agrega el yogurt en el recipiente para el jugo. Mezcla bien y sirve frío."
+      ]
+    },
+    {
+      "nombre": "La Mejor Receta de Mole de Olla",
+      "ingredientes": [
+        "1½ libras de chamberete de res",
+        "2 zanahorias, rebanadas",
+        "1 calabacita, cortada en medialunas",
+        "2 papas medianas, en cubos",
+        "1 chayote, en cubos",
+        "2 elotes, en trozos",
+        "6 chiles pasilla, desvenados",
+        "2 chiles ancho, desvenados",
+        "2 tomates medianos",
+        "2 dientes de ajo",
+        "½ cebolla",
+        "2 ramitas de epazote, fresco o seco",
+        "Rodajas de limón verde, al gusto",
+        "Sal al gusto"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Ollas de 3 y 8 Cuartos",
+        "Hacha de Cocina",
+        "Cuchillo del Chef",
+        "Tabla de Bambú para Cortar"
+      ],
+      "preparacion": [
+        "Usando el Hacha de Cocina, pica la carne en trozos medianos. Corta las verduras con el Cuchillo del Chef.",
+        "Llena la mitad de la Olla de 8 cuartos con agua. Agrega la carne, la zanahoria, la calabacita, la papa, el chayote y los elotes. Tapa con la válvula Redi‐Temp™ abierta. Cocina a temperatura media alta hasta que silbe.",
+        "Mientras se cocinan los ingredientes anteriores, añade los chiles, los tomates, el ajo y la cebolla en la Olla de 3 cuartos. Agrega 1½ tazas de agua y cocina a temperatura media alta por unos 12 minutos. Deja refrescar un poco. Licúa bien y cuela con un colador de malla.",
+        "Cuando silbe la válvula de la Olla de 8 cuartos, agrega la mezcla de chile, el epazote y sal al gusto. Revuelve.",
+        "Tapa y cocina a temperatura baja, con la válvula cerrada, durante unos 15 minutos o hasta que la carne esté suave. Sirve con rodajas de limón y tortillas."
+      ]
+    },
+    {
+      "nombre": "Lasaña Mexicana",
+      "ingredientes": [
+        "1 libra de carne de res molida",
+        "2 tazas de salsa verde",
+        "½ taza de crema agria",
+        "1 cucharadita de ajo, picado finamente",
+        "½ taza de cebolla, picada finamente",
+        "1 paquete de sazonador para tacos, 4 onzas / 113 gramos",
+        "15 tortillas de maíz",
+        "¾ de taza de pimientos rojos y verdes, en cuadritos",
+        "1½ tazas de queso mexicano, rallado",
+        "1½ tazas de frijoles negros, cocidos",
+        "½ taza de chile jalapeño con semillas, rebanado",
+        "½ taza de aceitunas Kalamata, deshuesadas y rebanadas",
+        "½ taza de cebollín verde, rebanado finamente"
+      ],
+      "utensilios_royal_prestige": [
+        "Tazón para Mezclar de 1 cuarto",
+        "Sartén de 10½ pulgadas"
+      ],
+      "preparacion": [
+        "En el Tazón para Mezclar de 1 cuarto, combina la salsa verde con ½ taza de crema agria; reserva.",
+        "Precalienta el Sartén de 10½ pulgadas a temperatura media alta por 3 minutos.",
+        "Agrega la carne y cocina por 4 minutos, revolviendo constantemente.",
+        "Agrega el ajo, la cebolla y el sazonador para tacos. Revuelve y cocina 1 minuto más. Apaga la estufa, retira el sartén y coloca la carne en otro recipiente. Reserva.",
+        "En el mismo sartén, distribuye cuidadosamente un tercio de la mezcla de salsa verde. Cubre con 5 tortillas, la mitad de la carne, los pimientos y ½ taza de queso rallado.",
+        "Sigue con otra capa de 5 tortillas, el resto de la carne, los frijoles negros, los jalapeños, una segunda porción de queso y una segunda porción de la salsa verde mezclada.",
+        "Cubre con las 5 tortillas restantes. Esparce el resto de la mezcla de salsa, el queso, las aceitunas y el cebollín.",
+        "Tapa con la válvula Redi‐Temp™ cerrada y cocina a temperatura baja por 16 minutos. Apaga la estufa. Deja reposar la lasaña por 3 minutos. Corta y sirve."
+      ]
+    },
+    {
+      "nombre": "Receta Bien Mexicana de Ensalada Azteca",
+      "ingredientes": [
+        "¼ taza de tomates deshidratados (sundried tomatoes)",
+        "1 taza de salsa de tomate",
+        "¼ de taza de chile chipotle, picado finamente",
+        "1 cucharadita de ajo, picado finamente",
+        "1 libra (1/2 kg) de pechuga de pollo",
+        "1 taza de aderezo ranch",
+        "¾ de taza de pimiento rojo, cortado en juliana",
+        "¾ de taza de pimiento verde, cortado en juliana",
+        "¾ de taza de granos de elote (maíz tierno)",
+        "¼ de taza de cebolla morada, cortada en cuadritos",
+        "¾ de taza de frijoles negros, previamente cocidos",
+        "¼ de taza de jugo de limón verde",
+        "1 cucharada de vinagre blanco",
+        "1 bolsa de hojas verdes mixtas (8 onzas / 227 g)",
+        "1 taza de tortillas en tiras (tortilla strips)",
+        "2 aguacates, cortados en rodajas",
+        "Sal y pimienta negra al gusto"
+      ],
+      "utensilios_royal_prestige": [
+        "Tazón para Mezclar de 1 cuartos",
+        "Tazón para Mezclar de 3 cuartos",
+        "Tazón para Mezclar de 5 cuartos",
+        "Olla de 3 cuartos"
+      ],
+      "preparacion": [
+        "Licúa los tomates deshidratados, la salsa de tomate, el chipotle, el ajo, sal y pimienta al gusto.",
+        "En la Olla de 3 cuartos, agrega ½ taza de agua, mitad de la salsa licuada y las pechugas de pollo; tapa con la válvula Redi‐Temp™ abierta y cocina a temperatura media‐alta hasta que la válvula silbe (en unos 7 minutos). Reduce la temperatura a baja y, cuando la válvula deje de silbar, ciérrala y cocina por 5 minutos más.",
+        "En el Tazón de 1 cuarto, agrega el aderezo ranch y la otra mitad de la salsa licuada; mezcla bien con el Batidor de Globo hasta conseguir una consistencia espesa.",
+        "En el Tazón de 3 cuartos, agrega los pimientos, los granos de elote, la cebolla y los frijoles. Añade el jugo de limón, el vinagre, sal y pimienta al gusto. Tapa y deja marinar por 15 minutos.",
+        "En el Tazón de 5 cuartos, combina las hojas verdes mixtas, las verduras marinadas, la mezcla de salsa ranch y las tortillas. Sirve la ensalada con rebanadas de pollo y adorna con rodajas de aguacate."
+      ]
+    },
+    {
+      "nombre": "Café Helado con Galletas",
+      "ingredientes": [
+        "18 cdas café molido",
+        "Agua para 12 tazas marcadas",
+        "1 cda jarabe chocolate",
+        "1 cda jarabe caramelo",
+        "1 taza café preparado",
+        "2 cdas crema para batir",
+        "Hielo",
+        "Adorno",
+        "Crema Batida",
+        "Jarabe Chocolate",
+        "Jarabe Caramelo",
+        "Galletas"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Barista"
+      ],
+      "preparacion": [
+        "Agrega el café al Royal Prestige® Barista. Añade agua. Tapa con el pistón levantado. Alinea el ícono de calentar con el pico servidor. Abre la válvula y calienta a fuego medio alto hasta que silbe. Retira inmediatamente del fuego.",
+        "Deja reposar por 2 minutos. Empuja el pistón lentamente hasta llegar al fondo. Cierra la válvula. Gira al ícono de servir. Agrega jarabe de chocolate y caramelo en un vaso. Vierte el café y la crema. Mezcla. Añade hielo, decora y sirve"
+      ]
+    },
+    {
+      "nombre": "Una Arrachera Ranchera que Rinde para Todos",
+      "ingredientes": [
+        "3 libras de arrachera cortada en tiras",
+        "8 onzas de chorizo español, cortado en tiras",
+        "¾ de taza de cebolla morada, cortada en juliana",
+        "1 cucharada de ajo picado finamente",
+        "1 libra de nopales cocidos y cortados en tiras",
+        "1½ tazas de pimiento verde, cortado en juliana",
+        "1½ tazas de pimiento amarillo, cortado en juliana",
+        "1½ tazas de pimiento rojo, cortado en juliana",
+        "¼ de taza de cilantro picado",
+        "Salsa para Carne",
+        "¾ de taza de salsa soya",
+        "½ taza de cerveza oscura",
+        "2 cucharadas de saborizante ahumado, líquido"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Paellera de 14\"",
+        "Cuchillo del Chef",
+        "Tabla para Cortar de Bambú"
+      ],
+      "preparacion": [
+        "Precalienta la Paellera de 14 pulgadas a temperatura media‐alta durante unos 3 minutos. Agrega el chorizo y cocina por 2 minutos; revuelve constantemente.",
+        "Agrega la cebolla y el ajo; saltea por 1 minuto. Agrega la carne y los nopales y cocina por 1 minuto más.",
+        "Añade los pimientos, el cilantro y los tres ingredientes de la salsa. Tapa con la válvula Redi‐Temp™ abierta y cocina hasta que la válvula silbe. Disminuye la temperatura a baja, cierra la válvula y cocina por 8 minutos más.",
+        "Sirve la carne con frijoles, guacamole y tortillas de maíz."
+      ]
+    },
+    {
+      "nombre": "Tamales Dulces de Fresa",
+      "ingredientes": [
+        "Relleno",
+        "2 tazas de fresas rebanadas",
+        "¼ de taza de azúcar",
+        "½ taza de agua",
+        "Tamales",
+        "2 tazas de harina de maíz para tamales",
+        "1½ tazas de agua",
+        "6 gotas de colorante rojo para alimentos",
+        "24 hojas secas de maíz para tamales",
+        "Crema batida, al gusto"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Ollas de 2 y 8 Cuartos",
+        "Tazones para Mezclar de 3 y 5 Cuartos",
+        "Machacador Redondo",
+        "Cuchillo del Chef",
+        "Tabla para Cortar de Bambú"
+      ],
+      "preparacion": [
+        "En la Olla de 2 cuartos, agrega las fresas rebanadas, el azúcar y ½ taza de agua. Tapa con la válvula Redi‐Temp™ abierta y cocina a temperatura media alta hasta que esta silbe. Disminuye la temperatura a baja. Cierra la válvula y deja cocinar por 4 minutos más. Con la ayuda del Machacador Redondo, aplasta las fresas hasta obtener una mermelada.",
+        "En el Tazón para Mezclar de 5 cuartos, coloca las hojas de maíz. Cubre con agua a temperatura ambiente y déjalas remojar por unos 20 minutos, o hasta que estén suaves. Retira y deja que escurran.",
+        "En el Tazón para Mezclar de 3 cuartos, añade la harina, 1½ tazas de agua y el colorante. Mezcla hasta formar una masa suave. Agrega más agua si es necesario.",
+        "Toma una hoja de maíz y con la ayuda de una cuchara, esparce una capa de masa. En el centro de la masa, coloca una cucharada de mermelada de fresa. Dobla los extremos laterales de la hoja para cubrir el relleno completamente. Luego dobla el extremo inferior de la hoja hacia arriba y deja el otro extremo abierto. Repite el mismo procedimiento con los tamales restantes.",
+        "Llena la tercera parte de la Olla de 8 cuartos con agua. Tapa con la válvula Redi‐Temp™ abierta y cocina a temperatura media alta hasta que la válvula silbe.",
+        "Inserta el Colador Grande en la Olla. Acomoda los tamales en forma vertical. Cubre con la Tapa Alta y cocina a temperatura media por 45 minutos.",
+        "Sirve los tamales con mermelada de fresa y si deseas, agrega crema batida."
+      ]
+    },
+    {
+      "nombre": "Jalapeños Rellenos de Pollo",
+      "ingredientes": [
+        "1 libra de pollo molido",
+        "1 cucharadita de ajo picado finamente",
+        "16 jalapeños medianos sin semillas, cortados por la mitad",
+        "1½ tazas de queso ricotta",
+        "32 rebanadas de tocino de pavo",
+        "Palillos de madera"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Sartén de 10.5\"",
+        "Tazón para Mezclar de 3 Cuartos",
+        "Cuchillo del Chef",
+        "Tabla para Cortar de Bambú"
+      ],
+      "preparacion": [
+        "Precalienta el Sartén a 350° F. Agrega el pollo con el ajo y cocina por 4 minutos, revolviendo constantemente. Transfiere el pollo al Tazón para Mezclar de 3 cuartos. Reserva.",
+        "Agrega los jalapeños al mismo sartén. Cocina por 5 minutos, revolviendo constantemente. Retira y reserva.",
+        "Mezcla el pollo con el queso ricotta.",
+        "Rellena las 32 mitades de jalapeño con la mezcla de pollo. Enrolla cada mitad con tocino de pavo. Asegura con palillos de madera.",
+        "Coloca los jalapeños rellenos en el Sartén. Tapa y cocina por 10 minutos a 280° F.",
+        "Deja enfriar un par de minutos y disfruta."
+      ]
+    },
+    {
+      "nombre": "Milanesas Caseras",
+      "ingredientes": [
+        "500 gramos de carne para milanesa",
+        "2 huevos",
+        "Pan rallado",
+        "2 dientes de ajo",
+        "Sal a gusto",
+        "Aceite para freír"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® Deluxe Easy Release Sartén de 12\""
+      ],
+      "preparacion": [
+        "En un recipiente, mezclar los huevos con el ajo y sal al gusto.",
+        "Pasar cada corte de carne por huevo y luego por pan rallado, hasta cubrir muy bien.",
+        "Agregar aceite en el sartén precalentado a fuego medio. Colocar las milanesas en el sartén. Dorar por ambos lados."
+      ]
+    },
+    {
+      "nombre": "Ensalada Asiática para Paladares Exigentes",
+      "ingredientes": [
+        "Ensalada",
+        "¼ de taza de rábanos rebanados",
+        "1 cucharada de cebollita verde rebanada, para decorar",
+        "1 taza de vinagre balsámico",
+        "½ taza de aceite de oliva",
+        "1 filete de atún fresco, ahí tuna, de 12 onzas",
+        "½ taza de ajonjolí negro",
+        "Sal y pimienta negra, al gusto",
+        "1 bolsa de ensalada mixta de 5 onzas",
+        "½ taza de plátano deshidratado",
+        "1 taza de gajos de mandarina",
+        "1 taza de fideo chino estilo chow mein, tostado",
+        "Aderezo Royal Prestige",
+        "4 cucharaditas de cebolla morada, picada finamente",
+        "1 cucharadita de sal",
+        "1 cucharadita de pimienta negra",
+        "½ taza de jugo de limón verde",
+        "½ taza de cilantro picado finamente",
+        "4 cucharaditas de miel de abeja",
+        "4 cucharaditas de aceite de oliva"
+      ],
+      "utensilios_royal_prestige": [
+        "Royal Prestige® NOVEL™ Olla de 2 Cuartos",
+        "Royal Prestige® NOVEL™ Sartén de 10.5\"",
+        "Tazones para Mezclar de 1 y 5 Cuartos",
+        "Cuchillo del Deshuesar",
+        "Cuchillo del Chef",
+        "Tabla para Cortar de Bambú"
+      ],
+      "preparacion": [
+        "Aderezo Royal Prestige:",
+        "En el Tazón para Mezclar de 1 cuarto, agrega la cebolla, la sal, la pimienta negra y el jugo de limón; mezcla bien. Incorpora el cilantro, la miel y el aceite de oliva. Revuelve y reserva en el refrigerador.",
+        "Ensalada:",
+        "En la Olla, agrega el vinagre balsámico y cocina a temperatura media alta por 4 minutos o hasta que hierva. Reduce la temperatura a media y sigue cocinando por 5 minutos, o hasta que el vinagre se reduzca y espese como una miel.",
+        "Precalienta el Sartén con la ½ taza de aceite de oliva a temperatura media alta por 4 minutos. Agrega el filete de atún previamente sazonado con el ajonjolí, sal y pimienta. Cocina 8 segundos por cada lado. Con la ayuda de unas pinzas, dora la orilla del filete de atún por unos 8 segundos. Refrigera por 6 minutos.",
+        "En el Tazón para Mezclar de 5 cuartos, agrega la ensalada mixta, el plátano deshidratado, la mandarina, los rábanos y el aderezo. Mezcla bien.",
+        "Con el Cuchillo para Deshuesar, rebana el filete. Sirve las rebanadas sobre la ensalada y agrega la miel balsámica. Esparce encima los fideos chinos y la cebollita verde"
+      ]
+    }
+  ],
+  "total": 25
+}
