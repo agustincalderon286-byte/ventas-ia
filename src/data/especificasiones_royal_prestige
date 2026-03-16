@@ -1,0 +1,462 @@
+{
+  "marca": "Royal Prestige® — Hy Cite Enterprises LLC",
+  "descripcion_general": "Base de conocimiento oficial de Royal Prestige®. Incluye garantías por producto, consejos de uso y cuidado, preguntas frecuentes del sistema FrescaFlow y métodos de pago disponibles.",
+  "contacto_servicio": {
+    "telefono_espanol": "1-800-280-9708",
+    "telefono_ingles": "1-800-280-9709",
+    "portal_clientes": "customers.hycite.com",
+    "centro_servicio": "2115 Pinehurst Drive, Middleton, WI 53562",
+    "sistema_audiorrespuesta": "HOLA ROYAL — disponible 24/7 lunes a domingo"
+  },
+  "garantias": {
+    "nota_general": "La garantía aplica solo al propietario original o familiar inmediato. Cubre exclusivamente uso doméstico normal. El producto debe estar pagado en su totalidad. Para reclamaciones llamar al 1-800-280-9708 y solicitar número de pre-autorización.",
+    "por_producto": [
+      {
+        "producto": "Utensilios de Cocina de Acero inoxidabley Piezas Relacionadas: Hy Cite garantiza que sus utensilios de cocina de acero inoxidable Royal Prestige® y las piezas relacionadas, estarán libres de defectos de material y mano de obra, y no se oxidarán, desportillarán, derretirán, romperán, agrietarán ni mancharán permanentemente durante 50 años a partir de la fecha de compra; con excepción del aro de silicona de Royal Prestige® (donde esté disponible) el cual está garantizado por 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Utensilios de Cocina de Acero inoxidabley Piezas Relacionadas: Hy Cite garantiza que sus utensilios de cocina de acero inoxidable Royal Prestige® y las piezas relacionadas, estarán libres de defectos de material y mano de obra, y no se oxidarán, desportillarán, derretirán, romperán, agrietarán ni mancharán permanentemente durante 50 años a partir de la fecha de compra; con excepción del aro de silicona de Royal Prestige® (donde esté disponible) el cual está garantizado por 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "50 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® MultiPan: Hy Cite garantiza que su Royal Prestige®MultiPan (con la excepción del aro silicromático, donde esté disponible) estará libre de defectos de material y/o mano de obra, y no se manchará, oxidará, derretirá, romperá ni agrietará de forma permanente por 50 años a partir de la fecha de compra. La cobertura de su aro silicromático de Royal Prestige® estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® MultiPan: Hy Cite garantiza que su Royal Prestige®MultiPan (con la excepción del aro silicromático, donde esté disponible) estará libre de defectos de material y/o mano de obra, y no se manchará, oxidará, derretirá, romperá ni agrietará de forma permanente por 50 años a partir de la fecha de compra. La cobertura de su aro silicromático de Royal Prestige® estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "50 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Core™ Sartenes Eléctricos: Hy Cite garantiza que sus Sartenes Eléctricos Royal Prestige® (con excepción de las partes eléctricas), estarán libres de defectos de material y mano de obra, y no se oxidarán, desportillarán, derretirán, romperán, agrietarán ni mancharán permanentemente durante 50 años a partir de la fecha de compra. Se garantiza que las partes eléctricas estarán libres de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Core™ Sartenes Eléctricos: Hy Cite garantiza que sus Sartenes Eléctricos Royal Prestige® (con excepción de las partes eléctricas), estarán libres de defectos de material y mano de obra, y no se oxidarán, desportillarán, derretirán, romperán, agrietarán ni mancharán permanentemente durante 50 años a partir de la fecha de compra. Se garantiza que las partes eléctricas estarán libres de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "50 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Deluxe Easy Release Utensilios de Cocina: Hy Cite garantiza que su Royal Prestige® Deluxe Easy Release Utensilios de Cocina (excepto los aros de silicona) estará libre de defectos de material y mano de obra durante 5 años a partir de la fecha de compra. Daños, incluyendo el deterioro de la capacidad antiadherente, deformación, separación de metales, manchas, decoloración, los rayones, o la rotura del cristal producidos por no haberse seguido las instrucciones de usos y cuidados en relación con el sobrecalentamiento, choque térmico, caídas, uso de utensilios o detergentes abrasivos, o el uso del lavavajillas están excluidos. Imperfecciones menores y variaciones de color no afectan el rendimiento y están excluidas.",
+        "garantia_detalle": "Deluxe Easy Release Utensilios de Cocina: Hy Cite garantiza que su Royal Prestige® Deluxe Easy Release Utensilios de Cocina (excepto los aros de silicona) estará libre de defectos de material y mano de obra durante 5 años a partir de la fecha de compra. Daños, incluyendo el deterioro de la capacidad antiadherente, deformación, separación de metales, manchas, decoloración, los rayones, o la rotura del cristal producidos por no haberse seguido las instrucciones de usos y cuidados en relación con el sobrecalentamiento, choque térmico, caídas, uso de utensilios o detergentes abrasivos, o el uso del lavavajillas están excluidos. Imperfecciones menores y variaciones de color no afectan el rendimiento y están excluidas.",
+        "duraciones_cobertura": [
+          "5 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Perfect Pop: Hy Cite garantiza que su Royal Prestige® Perfect Pop estará libre de defectos de material o mano de obra durante 3 años.",
+        "garantia_detalle": "Royal Prestige® Perfect Pop: Hy Cite garantiza que su Royal Prestige® Perfect Pop estará libre de defectos de material o mano de obra durante 3 años.",
+        "duraciones_cobertura": [
+          "3 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Smart Temp: Hy Cite extiende una garantía limitada integral de 2 años para Royal Prestige® Smart Temp Surface Thermometer, lo que refleja nuestro compromiso con la calidad y la satisfacción del cliente. Esta garantía limitada cubre las partes mecánicas del Royal Prestige® Smart Temp Surface Thermometer, incluyendo la carcasa de acero inoxidable, el mecanismo de la esfera y la cúpula de cristal templado, asegurando que están libres de defectos en materiales y mano de obra bajo un uso doméstico regular. La garantía limitada no cubre los daños causados por un uso indebido por parte del cliente, modificaciones no autorizadas, manipulación incorrecta o uso en condiciones que superen los límites de temperatura recomendados para el termómetro. También excluye los daños causados por factores ambientales no propicios para el uso previsto del termómetro. Las exclusiones específicas son las siguientes: uso o manipulación inadecuados, incluidas las mediciones en superficies que no sean de cocción o en entornos industriales; exposición a temperaturas superiores a las máximas nominales, lo que podría dañar la bobina bimetálica o la cúpula de cristal; daños por impactos físicos o caídas que afecten a la cúpula de cristal o a la carcasa; exposición a productos químicos agresivos o sustancias corrosivas; daños por agua o humedad excesiva, especialmente si la junta está deteriorada; manipulación incorrecta durante la limpieza con materiales abrasivos o productos de limpieza nocivos; modificaciones, reparaciones o desmontaje no autorizados. Durante el periodo de garantía, si se identifica un defecto en los componentes cubiertos y se presenta una reclamación válida, Hy Cite sustituirá los componentes defectuosos sin costo adicional para el cliente.",
+        "garantia_detalle": "Royal Prestige® Smart Temp: Hy Cite extiende una garantía limitada integral de 2 años para Royal Prestige® Smart Temp Surface Thermometer, lo que refleja nuestro compromiso con la calidad y la satisfacción del cliente. Esta garantía limitada cubre las partes mecánicas del Royal Prestige® Smart Temp Surface Thermometer, incluyendo la carcasa de acero inoxidable, el mecanismo de la esfera y la cúpula de cristal templado, asegurando que están libres de defectos en materiales y mano de obra bajo un uso doméstico regular. La garantía limitada no cubre los daños causados por un uso indebido por parte del cliente, modificaciones no autorizadas, manipulación incorrecta o uso en condiciones que superen los límites de temperatura recomendados para el termómetro. También excluye los daños causados por factores ambientales no propicios para el uso previsto del termómetro. Las exclusiones específicas son las siguientes: uso o manipulación inadecuados, incluidas las mediciones en superficies que no sean de cocción o en entornos industriales; exposición a temperaturas superiores a las máximas nominales, lo que podría dañar la bobina bimetálica o la cúpula de cristal; daños por impactos físicos o caídas que afecten a la cúpula de cristal o a la carcasa; exposición a productos químicos agresivos o sustancias corrosivas; daños por agua o humedad excesiva, especialmente si la junta está deteriorada; manipulación incorrecta durante la limpieza con materiales abrasivos o productos de limpieza nocivos; modificaciones, reparaciones o desmontaje no autorizados. Durante el periodo de garantía, si se identifica un defecto en los componentes cubiertos y se presenta una reclamación válida, Hy Cite sustituirá los componentes defectuosos sin costo adicional para el cliente.",
+        "duraciones_cobertura": [
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Warmer Pro: Hy Cite garantiza que su Royal Prestige® Warmer Pro estará libre de defectos (excluida la batería) de material y la mano de obra durante 5 años a partir de la fecha de compra. La batería está garantizada estar libre de defectos en material y mano de obra durante 1 año a partir de la fecha de compra. Las baterías de repuesto se pueden comprar a través de los Distribuidores Autorizados Independientes de Royal Prestige®.",
+        "garantia_detalle": "Royal Prestige® Warmer Pro: Hy Cite garantiza que su Royal Prestige® Warmer Pro estará libre de defectos (excluida la batería) de material y la mano de obra durante 5 años a partir de la fecha de compra. La batería está garantizada estar libre de defectos en material y mano de obra durante 1 año a partir de la fecha de compra. Las baterías de repuesto se pueden comprar a través de los Distribuidores Autorizados Independientes de Royal Prestige®.",
+        "duraciones_cobertura": [
+          "5 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Precision Cook: Hy Cite garantiza que su Precision Cook estará libre de defectos en materiales y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® Precision Cook: Hy Cite garantiza que su Precision Cook estará libre de defectos en materiales y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Olla de Presión y Piezas Relacionadas: Hy Cite garantiza que la base de la olla, la tapa de acero inoxidable y la tapa de retención de su olla de presión Royal Prestige® estarán libres de defectos de material y de fabricación durante 50 años a partir de la fecha de compra. Las partes plásticas, como la válvula, el sistema de 3 abrazaderas y los mangos, estarán libres de defectos de material y de fabricación durante 10 años a partir de la fecha de compra. El aro y juntas de silicona y las juntas tóricas estarán libres de defectos de material y de fabricación durante 6 meses a partir de la fecha de compra. Cuando aplique la garantía limitada y Hy Cite opte por reemplazar el producto, el reemplazo corresponderá al modelo originalmente adquirido. El modelo puede identificarse en la base de la olla. Sin embargo, esto no limita la facultad de Hy Cite de reparar o reemplazar el producto, según lo detallado en la sección de Cumplimiento de la Garantía Limitada.",
+        "garantia_detalle": "Olla de Presión y Piezas Relacionadas: Hy Cite garantiza que la base de la olla, la tapa de acero inoxidable y la tapa de retención de su olla de presión Royal Prestige® estarán libres de defectos de material y de fabricación durante 50 años a partir de la fecha de compra. Las partes plásticas, como la válvula, el sistema de 3 abrazaderas y los mangos, estarán libres de defectos de material y de fabricación durante 10 años a partir de la fecha de compra. El aro y juntas de silicona y las juntas tóricas estarán libres de defectos de material y de fabricación durante 6 meses a partir de la fecha de compra. Cuando aplique la garantía limitada y Hy Cite opte por reemplazar el producto, el reemplazo corresponderá al modelo originalmente adquirido. El modelo puede identificarse en la base de la olla. Sin embargo, esto no limita la facultad de Hy Cite de reparar o reemplazar el producto, según lo detallado en la sección de Cumplimiento de la Garantía Limitada.",
+        "duraciones_cobertura": [
+          "50 años",
+          "10 años",
+          "6 meses"
+        ]
+      },
+      {
+        "producto": "Cuchillos, Afilador de Cuchillos, Bloque de Cuchillos todo en uno, Herramientas de Cocina y Cortador de Alimentos: Hy Cite garantiza que sus cuchillos, afilador de cuchillos, bloque de cuchillos, herramientas y cortador de alimentos estarán libres de defectos en materiales y mano de obra durante 50 años a partir de la fecha de compra.  Las piezas de silicona, como los cabezales de las espátulas, tienen una garantía limitada de 2 años a partir de la fecha de compra. Nota: Los cuchillos deberían poder mantener un filo cortante siempre que se utilicen correctamente y se afilen periódicamente de forma profesional o utilizando su Afilador de cuchillos.",
+        "garantia_detalle": "Cuchillos, Afilador de Cuchillos, Bloque de Cuchillos todo en uno, Herramientas de Cocina y Cortador de Alimentos: Hy Cite garantiza que sus cuchillos, afilador de cuchillos, bloque de cuchillos, herramientas y cortador de alimentos estarán libres de defectos en materiales y mano de obra durante 50 años a partir de la fecha de compra.  Las piezas de silicona, como los cabezales de las espátulas, tienen una garantía limitada de 2 años a partir de la fecha de compra. Nota: Los cuchillos deberían poder mantener un filo cortante siempre que se utilicen correctamente y se afilen periódicamente de forma profesional o utilizando su Afilador de cuchillos.",
+        "duraciones_cobertura": [
+          "50 años",
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Tablas de cortar: Hy Cite garantiza que sus tablas de cortar estarán libres de defectos de material y mano de obra durante 2 años a partir de la fecha de compra.",
+        "garantia_detalle": "Tablas de cortar: Hy Cite garantiza que sus tablas de cortar estarán libres de defectos de material y mano de obra durante 2 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Cubiertos: Hy Cite garantiza, que sus Cubiertos Royal Prestige® estarán libres de defectos de material o mano de obra, y no se desportillarán, romperán, derretirán ni mancharán, permanentemente durante 50 años a partir de la fecha de compra.",
+        "garantia_detalle": "Cubiertos: Hy Cite garantiza, que sus Cubiertos Royal Prestige® estarán libres de defectos de material o mano de obra, y no se desportillarán, romperán, derretirán ni mancharán, permanentemente durante 50 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® ExperTea: Hy Cite garantiza que su ExperTea estará libre de defectos de material y mano de obra durante 50 años a partir de la fecha de compra.  Los arañazos, las pequeñas imperfecciones y las variaciones de color debidas al sobrecalentamiento, las caídas o el uso de utensilios de limpieza abrasivos no afectan al rendimiento y no están cubiertos por esta garantía limitada.",
+        "garantia_detalle": "Royal Prestige® ExperTea: Hy Cite garantiza que su ExperTea estará libre de defectos de material y mano de obra durante 50 años a partir de la fecha de compra.  Los arañazos, las pequeñas imperfecciones y las variaciones de color debidas al sobrecalentamiento, las caídas o el uso de utensilios de limpieza abrasivos no afectan al rendimiento y no están cubiertos por esta garantía limitada.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Barista: Hy Cite garantiza que su Royal Prestige® Barista estará libre de defectos de material y/o mano de obra durante 50 años a partir de la fecha de compra. Las rayaduras, pequeñas imperfecciones y/o variaciones de color debidas al sobrecalentamiento, las caídas o el uso de utensilios de limpieza abrasivos no afectan al rendimiento y no están cubiertos por esta garantía limitada.",
+        "garantia_detalle": "Royal Prestige® Barista: Hy Cite garantiza que su Royal Prestige® Barista estará libre de defectos de material y/o mano de obra durante 50 años a partir de la fecha de compra. Las rayaduras, pequeñas imperfecciones y/o variaciones de color debidas al sobrecalentamiento, las caídas o el uso de utensilios de limpieza abrasivos no afectan al rendimiento y no están cubiertos por esta garantía limitada.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® BaristArt Kit: Hy Cite garantiza que su Royal Prestige® BaristArt Kit estará libre de defectos de fabricación o materiales durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® BaristArt Kit: Hy Cite garantiza que su Royal Prestige® BaristArt Kit estará libre de defectos de fabricación o materiales durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Power Blender Max, Jarra de Tritan, y Max Cup: Hy Cite garantiza que Power Blender Max, Jarra de Tritan, y Max Cup (excepto el presionador, el cable eléctrico desmontable y el aro de silicona) no presentará defectos en el material y la mano de obra durante 7 años a partir de la fecha de compra.  El presionador y el cable eléctrico desmontable no presentarán defectos en el material y la mano de obra durante 2 años a partir de la fecha de compra. El aro de silicona no presentará defectos en el material y la mano de obra durante 1 año a partir de la fecha de compra. Los cambios en el color o la apariencia de la jarra no afectan el rendimiento.",
+        "garantia_detalle": "Royal Prestige® Power Blender Max, Jarra de Tritan, y Max Cup: Hy Cite garantiza que Power Blender Max, Jarra de Tritan, y Max Cup (excepto el presionador, el cable eléctrico desmontable y el aro de silicona) no presentará defectos en el material y la mano de obra durante 7 años a partir de la fecha de compra.  El presionador y el cable eléctrico desmontable no presentarán defectos en el material y la mano de obra durante 2 años a partir de la fecha de compra. El aro de silicona no presentará defectos en el material y la mano de obra durante 1 año a partir de la fecha de compra. Los cambios en el color o la apariencia de la jarra no afectan el rendimiento.",
+        "duraciones_cobertura": [
+          "7 años",
+          "2 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Fresh Max bomba de vacío: Hy Cite garantiza que su Fresh MAX estará libre de defectos de fabricación o materiales durante 2 años a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® Fresh Max bomba de vacío: Hy Cite garantiza que su Fresh MAX estará libre de defectos de fabricación o materiales durante 2 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Power Blender Go Plus: Hy Cite garantiza que su Power Blender Go estará libre de defectos de fabricación o materiales durante 2 años a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® Power Blender Go Plus: Hy Cite garantiza que su Power Blender Go estará libre de defectos de fabricación o materiales durante 2 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige®Espresso: Hy Cite garantiza que su Royal Espresso estará libre de defectos de material o mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige®Espresso: Hy Cite garantiza que su Royal Espresso estará libre de defectos de material o mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Vasos, Copas y Jarras: Hy Cite garantiza que sus Vasos, Copas y Jarras no se romperán, agrietarán, desportillarán, rayarán ni desteñirán durante 50 años a partir de la fecha de compra. Si a usted se le rompe alguna de estas piezas, puede obtener una de repuesto solo por el costo de manejo y envió. Si las piezas de repuesto no están disponibles, puede hacer un intercambio pieza por pieza de su juego actual por un nuevo diseño de igual valor.",
+        "garantia_detalle": "Vasos, Copas y Jarras: Hy Cite garantiza que sus Vasos, Copas y Jarras no se romperán, agrietarán, desportillarán, rayarán ni desteñirán durante 50 años a partir de la fecha de compra. Si a usted se le rompe alguna de estas piezas, puede obtener una de repuesto solo por el costo de manejo y envió. Si las piezas de repuesto no están disponibles, puede hacer un intercambio pieza por pieza de su juego actual por un nuevo diseño de igual valor.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Vajillas: Hy Cite garantiza que su Vajilla no se desportillará durante 50 años a partir de la fecha de compra. Si cualquier pieza de su Vajilla se desportilla, simplemente regréselas a Hy Cite Enterprises, LLC, y pague una tarifa por pieza, para cubrir el costo de manejo y envío. Si su Vajilla se rompe, agrieta, raya o destiñe, puede obtener piezas de repuesto por 50% del precio sugerido al por menor. Si las piezas de repuesto no están disponibles, puede hacer un intercambio pieza por pieza de su juego actual por un nuevo diseño de igual valor.",
+        "garantia_detalle": "Vajillas: Hy Cite garantiza que su Vajilla no se desportillará durante 50 años a partir de la fecha de compra. Si cualquier pieza de su Vajilla se desportilla, simplemente regréselas a Hy Cite Enterprises, LLC, y pague una tarifa por pieza, para cubrir el costo de manejo y envío. Si su Vajilla se rompe, agrieta, raya o destiñe, puede obtener piezas de repuesto por 50% del precio sugerido al por menor. Si las piezas de repuesto no están disponibles, puede hacer un intercambio pieza por pieza de su juego actual por un nuevo diseño de igual valor.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Sistemas de Filtración de Agua: Hy Cite garantiza que la montura de la base, la cubierta del filtro y la montura del surtidor de agua de sus Sistemas de Filtración de Agua, estarán libres de defectos de material o mano de obra durante 15 años a partir de la fecha de compra. Hy Cite también garantiza que los cartuchos de sus Sistemas de Filtración de Agua no se taparán durante los 90 días posteriores a la fecha de compra. Se garantiza que las partes eléctricas estarán libres de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.  Nota: Podría ser necesario remplazar las piezas de mantenimiento de sus Sistemas de Tratamiento de Agua (válvula de desvío, las piezas de la manguera y los anillos de plástico en forma de “o”), no porque sean defectuosas, sino porque los minerales presentes en el agua podrían tapar las válvulas, y las sustancias químicas corrosivas del agua del grifo pueden causar que los anillos de plástico en forma de “o” y las mangueras se tornen quebradizos. Las piezas de mantenimiento pueden ser remplazadas a la mitad (50%) del precio actual de venta al por menor.",
+        "garantia_detalle": "Sistemas de Filtración de Agua: Hy Cite garantiza que la montura de la base, la cubierta del filtro y la montura del surtidor de agua de sus Sistemas de Filtración de Agua, estarán libres de defectos de material o mano de obra durante 15 años a partir de la fecha de compra. Hy Cite también garantiza que los cartuchos de sus Sistemas de Filtración de Agua no se taparán durante los 90 días posteriores a la fecha de compra. Se garantiza que las partes eléctricas estarán libres de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.  Nota: Podría ser necesario remplazar las piezas de mantenimiento de sus Sistemas de Tratamiento de Agua (válvula de desvío, las piezas de la manguera y los anillos de plástico en forma de “o”), no porque sean defectuosas, sino porque los minerales presentes en el agua podrían tapar las válvulas, y las sustancias químicas corrosivas del agua del grifo pueden causar que los anillos de plástico en forma de “o” y las mangueras se tornen quebradizos. Las piezas de mantenimiento pueden ser remplazadas a la mitad (50%) del precio actual de venta al por menor.",
+        "duraciones_cobertura": [
+          "15 años",
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® FrescaFlow: Hy Cite ofrece una garantía limitada de 5 años para el sistema de ósmosis inversa Royal Prestige® FrescaFlow. Con esto afirmamos nuestro compromiso a la calidad y el servicio al cliente en nuestra línea de productos premium. Esta garantía limitada aplica de forma retroactiva desde la fecha de compra para clientes actuales del Royal Prestige® FrescaFlow. La garantía limitada sólo es válida si se cumplen todos los requisitos indicados en el formulario de Elegibilidad y Reconocimiento del Cliente en el momento de la venta, incluyendo (pero no limitado a) que el suministro de agua sea exclusivamente municipal. La garantía limitada cubre específicamente las partes mecánicas, las válvulas eléctricas, la pantalla, la tarjeta de control y la bomba del sistema FrescaFlow. Estas piezas están garantizadas contra defectos de materiales y mano de obra bajo un uso doméstico normal, durante toda la vigencia de la garantía limitada. No cubre daños causados por el cliente, modificaciones no autorizadas, instalación incorrecta o fugas externas. También excluye los daños derivados del incumplimiento de las instrucciones de uso y cuidado. Esta garantía limitada es válida únicamente si el sistema FrescaFlow está conectado a un suministro de agua municipal. Si se usa agua de pozo, la garantía limitada queda anulada. Además, la fuente de agua y el ambiente de instalación deben pasar la evaluación previa realizada por un Distribuidores Autorizados Independientes de Royal Prestige®. Para mantener la validez de la garantía limitada, el cliente debe dar un mantenimiento adecuado al sistema, lo que incluye cambiar los filtros según el manual.  Se deben usar filtros compatibles y con un rendimiento igual o similar a los de la marca Royal Prestige®. En caso de un reclamo, podría solicitarse prueba de este mantenimiento. Hy Cite también garantiza que los cartuchos de filtro Royal Prestige® no se taparán durante los primeros 90 días desde la compra. Si durante el período de garantía, se detecta un defecto en las partes cubiertas y se presenta un reclamo válido, Hy Cite reemplazará la unidad completa por un nuevo Royal Prestige® FrescaFlow.  No se cubrirán la reparaciónes ni reemplazos de piezas individuales. Hy Cite proporcionará las instrucciones para la devolución y una etiqueta de envío prepagada. El cliente deberá desinstalar el sistema y quitar los filtros antes de enviarlo. Los costos de desinstalación e instalación no están cubiertos por Hy Cite y son responsabilidad del cliente.",
+        "garantia_detalle": "Royal Prestige® FrescaFlow: Hy Cite ofrece una garantía limitada de 5 años para el sistema de ósmosis inversa Royal Prestige® FrescaFlow. Con esto afirmamos nuestro compromiso a la calidad y el servicio al cliente en nuestra línea de productos premium. Esta garantía limitada aplica de forma retroactiva desde la fecha de compra para clientes actuales del Royal Prestige® FrescaFlow. La garantía limitada sólo es válida si se cumplen todos los requisitos indicados en el formulario de Elegibilidad y Reconocimiento del Cliente en el momento de la venta, incluyendo (pero no limitado a) que el suministro de agua sea exclusivamente municipal. La garantía limitada cubre específicamente las partes mecánicas, las válvulas eléctricas, la pantalla, la tarjeta de control y la bomba del sistema FrescaFlow. Estas piezas están garantizadas contra defectos de materiales y mano de obra bajo un uso doméstico normal, durante toda la vigencia de la garantía limitada. No cubre daños causados por el cliente, modificaciones no autorizadas, instalación incorrecta o fugas externas. También excluye los daños derivados del incumplimiento de las instrucciones de uso y cuidado. Esta garantía limitada es válida únicamente si el sistema FrescaFlow está conectado a un suministro de agua municipal. Si se usa agua de pozo, la garantía limitada queda anulada. Además, la fuente de agua y el ambiente de instalación deben pasar la evaluación previa realizada por un Distribuidores Autorizados Independientes de Royal Prestige®. Para mantener la validez de la garantía limitada, el cliente debe dar un mantenimiento adecuado al sistema, lo que incluye cambiar los filtros según el manual.  Se deben usar filtros compatibles y con un rendimiento igual o similar a los de la marca Royal Prestige®. En caso de un reclamo, podría solicitarse prueba de este mantenimiento. Hy Cite también garantiza que los cartuchos de filtro Royal Prestige® no se taparán durante los primeros 90 días desde la compra. Si durante el período de garantía, se detecta un defecto en las partes cubiertas y se presenta un reclamo válido, Hy Cite reemplazará la unidad completa por un nuevo Royal Prestige® FrescaFlow.  No se cubrirán la reparaciónes ni reemplazos de piezas individuales. Hy Cite proporcionará las instrucciones para la devolución y una etiqueta de envío prepagada. El cliente deberá desinstalar el sistema y quitar los filtros antes de enviarlo. Los costos de desinstalación e instalación no están cubiertos por Hy Cite y son responsabilidad del cliente.",
+        "duraciones_cobertura": [
+          "5 años"
+        ]
+      },
+      {
+        "producto": "Filtro para la Ducha: Hy Cite garantiza que su Filtro para la Ducha estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Filtro para la Ducha: Hy Cite garantiza que su Filtro para la Ducha estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Extractor de Jugos: Hy Cite garantiza que el motor de su Extractor de Jugos Royal Prestige® estará libre de defectos de material y mano de obra durante un período de 10 años a partir de la fecha de compra. Se garantiza que los otros componentes estarán libres de defectos de material y mano de obra durante 2 años a partir de la fecha de compra.",
+        "garantia_detalle": "Extractor de Jugos: Hy Cite garantiza que el motor de su Extractor de Jugos Royal Prestige® estará libre de defectos de material y mano de obra durante un período de 10 años a partir de la fecha de compra. Se garantiza que los otros componentes estarán libres de defectos de material y mano de obra durante 2 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "10 años",
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Exprimidor de Jugos: Hy Cite garantiza que su Exprimidor de Jugos Royal Prestige®estará libre de defectos de material y mano de obra durante un período de 2 años a partir de la fecha de compra.",
+        "garantia_detalle": "Exprimidor de Jugos: Hy Cite garantiza que su Exprimidor de Jugos Royal Prestige®estará libre de defectos de material y mano de obra durante un período de 2 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "2 años"
+        ]
+      },
+      {
+        "producto": "Juego de Utensilios para Hornear: Hy Cite garantiza que su Juego de Utensilios para Hornear Royal Prestige® estará libre de defectos de material o mano de obra, y no se oxidará, desportillará, derretirá, romperá, agrietará ni manchará, permanentemente durante 50 años a partir de la fecha de compra.",
+        "garantia_detalle": "Juego de Utensilios para Hornear: Hy Cite garantiza que su Juego de Utensilios para Hornear Royal Prestige® estará libre de defectos de material o mano de obra, y no se oxidará, desportillará, derretirá, romperá, agrietará ni manchará, permanentemente durante 50 años a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "50 años"
+        ]
+      },
+      {
+        "producto": "Juego de Utensilios de Cocina: Hy Cite garantiza que su Juego de Utensilios de Cocina Royal Prestige® estará libre de defectos de material o mano de obra durante un período de 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Juego de Utensilios de Cocina: Hy Cite garantiza que su Juego de Utensilios de Cocina Royal Prestige® estará libre de defectos de material o mano de obra durante un período de 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Sistema de Filtración de Aire: Hy Cite garantiza que su Sistema de Filtración de Aire estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Sistema de Filtración de Aire: Hy Cite garantiza que su Sistema de Filtración de Aire estará libre de defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Productos Accesorios: Hy Cite garantiza que los productos accesorios (incluyendo las tazas con pared doble para café, el juego de azucarera y jarro para leche, etc.) que no sean cubiertos y accesorios estarán libres de defectos de material o mano de obra durante un periodo de 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Productos Accesorios: Hy Cite garantiza que los productos accesorios (incluyendo las tazas con pared doble para café, el juego de azucarera y jarro para leche, etc.) que no sean cubiertos y accesorios estarán libres de defectos de material o mano de obra durante un periodo de 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "1 años"
+        ]
+      },
+      {
+        "producto": "Royal Prestige® Mixing Bowls: Hy Cite garantiza que sus tazones para mezclar de Royal Prestige® estarán libres de defectos de material y mano de obra durante un período de 5 años a partir de la fecha de compra. Las tapas y las cuchillas incluidas para ello, están garantizadas contra defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "garantia_detalle": "Royal Prestige® Mixing Bowls: Hy Cite garantiza que sus tazones para mezclar de Royal Prestige® estarán libres de defectos de material y mano de obra durante un período de 5 años a partir de la fecha de compra. Las tapas y las cuchillas incluidas para ello, están garantizadas contra defectos de material y mano de obra durante 1 año a partir de la fecha de compra.",
+        "duraciones_cobertura": [
+          "5 años",
+          "1 años"
+        ]
+      }
+    ],
+    "politicas_administrativas": [
+      {
+        "seccion": "Garantía limitada",
+        "contenido": "Hy Cite Enterprises LLC (“Hy Cite”) proporciona una Garantía Limitada (según se describe más adelante) a los productos de Hy Cite adquiridos a través de un Distribuidor Autorizado Independiente. La cobertura de esta garantía limitada es exclusivamente proporcionada al propietario original de los productos (ya sea que el producto haya sido comprado directamente o recibido como regalo). Asimismo, la cobertura de esta garantía limitada solo puede ser transferida a miembros inmediatos de la familia y la misma quedará anulada si el producto es vendido o transferido a alguien distinto de la familia inmediata, o si fue comprado a través de un vendedor o canal no autorizado."
+      },
+      {
+        "seccion": "Limitaciones en la cobertura: Las garantías limitadas de Hy Cite sólo cubren el uso doméstico normal, queriendo decir por ejemplo que quedarán anuladas, si el producto ha sido dañado por negligencia; ensamblaje, mantenimiento o servicio inapropiados; personas no autorizadas le han hecho reparaciones, o se ha usado para fines comerciales. La cobertura de la garantía limitada se limita a aquellos productos que han sido pagados en su totalidad y a los productos bajo cuentas en buen estado. Hy Cite puede, a su discreción, denegar la cobertura de la garantía limitada si su producto cubierto es devuelto a nuestro Centro de Servicio en condiciones insalubres o peligrosas que impidan una inspección adecuada de su producto.",
+        "contenido": "Limitaciones en la cobertura: Las garantías limitadas de Hy Cite sólo cubren el uso doméstico normal, queriendo decir por ejemplo que quedarán anuladas, si el producto ha sido dañado por negligencia; ensamblaje, mantenimiento o servicio inapropiados; personas no autorizadas le han hecho reparaciones, o se ha usado para fines comerciales. La cobertura de la garantía limitada se limita a aquellos productos que han sido pagados en su totalidad y a los productos bajo cuentas en buen estado. Hy Cite puede, a su discreción, denegar la cobertura de la garantía limitada si su producto cubierto es devuelto a nuestro Centro de Servicio en condiciones insalubres o peligrosas que impidan una inspección adecuada de su producto."
+      },
+      {
+        "seccion": "Garantías Limitadas Implícitas: LA DURACIÓN DE CUALQUIER GARANTÍA IMPLÍCITA QUE EL COMPRADOR PUDIESE TENER ESTÁ LIMITADA AL MISMO PERÍODO DE TIEMPO DESCRITO EN LA GARANTÍA ESCRITA ESPECIFICADA ANTERIORMENTE PARA EL PRODUCTO BAJO COBERTURA. Algunos estados no permiten limitaciones en cuanto a la duración de una garantía implícita, por lo tanto, la limitación arriba descrita podría no serle aplicable a usted.",
+        "contenido": "Garantías Limitadas Implícitas: LA DURACIÓN DE CUALQUIER GARANTÍA IMPLÍCITA QUE EL COMPRADOR PUDIESE TENER ESTÁ LIMITADA AL MISMO PERÍODO DE TIEMPO DESCRITO EN LA GARANTÍA ESCRITA ESPECIFICADA ANTERIORMENTE PARA EL PRODUCTO BAJO COBERTURA. Algunos estados no permiten limitaciones en cuanto a la duración de una garantía implícita, por lo tanto, la limitación arriba descrita podría no serle aplicable a usted."
+      },
+      {
+        "seccion": "Funcionamiento de la Garantía Limitada: Si su producto cubierto necesita garantía limitada, llame al Centro de Servicio (1-800-280-9708) para recibir un número de pre-autorización. Hy Cite, a su opción, decidirá si repararlo o remplazarlo. Hy Cite podría reemplazar el producto con cualquier otro equivalente o con uno que incorpore una nueva tecnología o diseño. Usted es responsable del costo de envió para devolver el producto a Hy Cite. En el caso de que Hy Cite deniegue la cobertura por alguna de las razones expuestas, usted será responsable de los gastos de envío para devolverle el producto original.  Hy Cite le enviará el producto original sólo cuando reciba primero de usted el costo de envío y manejo.",
+        "contenido": "Funcionamiento de la Garantía Limitada: Si su producto cubierto necesita garantía limitada, llame al Centro de Servicio (1-800-280-9708) para recibir un número de pre-autorización. Hy Cite, a su opción, decidirá si repararlo o remplazarlo. Hy Cite podría reemplazar el producto con cualquier otro equivalente o con uno que incorpore una nueva tecnología o diseño. Usted es responsable del costo de envió para devolver el producto a Hy Cite. En el caso de que Hy Cite deniegue la cobertura por alguna de las razones expuestas, usted será responsable de los gastos de envío para devolverle el producto original.  Hy Cite le enviará el producto original sólo cuando reciba primero de usted el costo de envío y manejo."
+      },
+      {
+        "seccion": "Devolución de Productos: Para obtener servicio conforme a la garantía limitada, envíe el producto a nuestro Centro de Servicio:",
+        "contenido": "Devolución de Productos: Para obtener servicio conforme a la garantía limitada, envíe el producto a nuestro Centro de Servicio:"
+      },
+      {
+        "seccion": "Daños durante el Envío: Hy Cite remplazará, sin costo alguno, cualquier producto cubierto que resulte dañado durante el envío, si usted nos lo notifica en un período de 30 días tras haber recibido el producto. Simplemente, contacte el Centro de Servicio de Royal Prestige. Como condición para remplazarlo, se podría requerir que usted tenga el producto disponible para que Hy Cite pase a recogerlo, el costo de lo cual también quedará cubierto.",
+        "contenido": "Daños durante el Envío: Hy Cite remplazará, sin costo alguno, cualquier producto cubierto que resulte dañado durante el envío, si usted nos lo notifica en un período de 30 días tras haber recibido el producto. Simplemente, contacte el Centro de Servicio de Royal Prestige. Como condición para remplazarlo, se podría requerir que usted tenga el producto disponible para que Hy Cite pase a recogerlo, el costo de lo cual también quedará cubierto."
+      },
+      {
+        "seccion": "Opción de Compra: Si su producto cubierto resulta dañado por un incendio o tormenta, o es robado, usted podría comprar un producto para remplazarlo y pagaría la mitad (50%) del precio actual de venta al por menor. Para recibir este descuento es necesario presentar un informe válido del departamento de bomberos o de policía.",
+        "contenido": "Opción de Compra: Si su producto cubierto resulta dañado por un incendio o tormenta, o es robado, usted podría comprar un producto para remplazarlo y pagaría la mitad (50%) del precio actual de venta al por menor. Para recibir este descuento es necesario presentar un informe válido del departamento de bomberos o de policía."
+      },
+      {
+        "seccion": "Limitación de Recursos Legales: Ninguna persona está autorizada para asumir en nombre de Hy Cite cualquier otra responsabilidad en relación con la venta de los productos cubiertos. La reparación o el remplazo, a criterio de Hy Cite, debe ser su único recurso legal conforme a esta garantía limitada y en ningún caso Hy Cite será responsable por daños y perjuicios incidentales o indirectos, pérdidas o gastos. Algunos estados no permiten la exclusión o limitación de daños y perjuicios incidentales o indirectos. En consecuencia, dicha limitación o exclusión podría no serle aplicable a usted.",
+        "contenido": "Limitación de Recursos Legales: Ninguna persona está autorizada para asumir en nombre de Hy Cite cualquier otra responsabilidad en relación con la venta de los productos cubiertos. La reparación o el remplazo, a criterio de Hy Cite, debe ser su único recurso legal conforme a esta garantía limitada y en ningún caso Hy Cite será responsable por daños y perjuicios incidentales o indirectos, pérdidas o gastos. Algunos estados no permiten la exclusión o limitación de daños y perjuicios incidentales o indirectos. En consecuencia, dicha limitación o exclusión podría no serle aplicable a usted."
+      },
+      {
+        "seccion": "Derechos Legales: Esta garantía limitada le da derechos legales específicos, y usted podría tener otros derechos que varían de Estado a Estado.  Para más información acerca de nuestros productos por favor visite: www.royalprestige.com.",
+        "contenido": "Derechos Legales: Esta garantía limitada le da derechos legales específicos, y usted podría tener otros derechos que varían de Estado a Estado.  Para más información acerca de nuestros productos por favor visite: www.royalprestige.com."
+      }
+    ]
+  },
+  "consejos_uso_y_cuidado": {
+    "descripcion": "Preguntas frecuentes sobre el uso correcto y cuidado de los utensilios de cocina de acero inoxidable Royal Prestige®.",
+    "faq": [
+      {
+        "pregunta": "¿PUEDO LAVAR MIS UTENSILIOS DE COCINA SI AÚN ESTÁN CALIENTES?",
+        "respuesta": "¡No! Deja que el sartén se enfríe por completo antes de limpiarlo. Si el sartén todavía está caliente y se coloca sobre agua fría, puede provocar un choque térmico que puede deformar el utensilio con el tiempo. El daño por choque térmico puede anular la garantía."
+      },
+      {
+        "pregunta": "¿PUEDO USAR MI JUEGO DE OLLAS DE ACERO INOXIDABLE EN EL HORNO?",
+        "respuesta": "¡Sí! Asegúrate de precalentar el horno por completo antes de colocar los utensilios de cocina dentro de este. Nunca uses una temperatura superior a 400°F/205°C. Además, asegúrate de utilizar guantes de cocina al introducir o retirar los utensilios del horno."
+      },
+      {
+        "pregunta": "¿POR QUÉ MIS OLLAS DE ACERO INOXIDABLE TIENEN MANCHAS BLANCAS?",
+        "respuesta": "La sal sin disolver puede dejar manchas blancas o incluso crear hoyos en el fondo de los utensilios de cocina. Estos hoyos no afectan el rendimiento de los utensilios, pero no se pueden eliminar. Para evitar que esto ocurra: (1) Siempre agrega la sal después de que el agua haya hervido o la comida haya alcanzado la temperatura de cocción. (2) Nunca dejes comida en las ollas por largos periodos de tiempo. Ten presente que cocinar con sal sin disolver en los utensilios de cocina o almacenar comida en ellos puede anular la garantía."
+      },
+      {
+        "pregunta": "¿POR QUÉ MI OLLA TIENE UNA CAPA BLANCA?",
+        "respuesta": "Los minerales en el agua o almidones en la comida pueden dejar una capa blanca en el acero inoxidable. Esta no afectará el desempeño de los utensilios, pero puede quitarse frotando el área con un limpiador para acero inoxidable como Royal Shine™ de Royal Prestige®."
+      },
+      {
+        "pregunta": "¿POR QUÉ LA CARNE NO SE DORA BIEN EN MI SARTÉN DE ACERO INOXIDABLE?",
+        "respuesta": "Es posible que el utensilio de cocina no se haya precalentado correctamente. Siempre precalienta el utensilio de cocina durante 3 o 4 minutos a temperatura media alta. Para saber si el utensilio se ha precalentado correctamente, agrega unas gotas de agua al sartén, las gotas deberán rebotar. Si desaparecen de inmediato, es señal de que el utensilio está demasiado caliente y debe enfriarse. También puedes usar el Royal Prestige® Smart Temp, nuestro termómetro preciso, fiable y compatible con todos los sartenes de acero inoxidable de Royal Prestige®. Para ello, ubica el Royal Prestige® Smart Temp sobre la superficie del utensilio, enciende el quemador (fogón u hornilla) y espera a que el indicador azul del Royal Prestige® Smart Temp se torne de color verde, así sabrás que el utensilio se ha precalentado correctamente, luego retira el Royal Prestige® Smart Temp de la agarradera de silicona. Ten presente que si el indicador llega a tornarse de color rojo, significa que el utensilio está muy caliente y debe enfriarse. Una vez la olla o sartén se haya  precalentado correctamente, al agregar una carne, no la despegues hasta que esta lo haga por sí sola."
+      },
+      {
+        "pregunta": "¿POR QUÉ HAY RAYONES EN MI JUEGO DE OLLAS DE ACERO INOXIDABLE?",
+        "respuesta": "El acero inoxidable puede rayarse si es manejado inadecuadamente. Los rayones no afectan el desempeño del juego de ollas y, por lo tanto, no son considerados defecto de material o fabricación. Para evitar los rayones: (1) No utilices cuchillos o herramientas de cocina con filo para cortar, revolver o servir las comidas. (2) No uses mezcladores eléctricos en las ollas. (3) Siempre que almacenes en pirámide tu juego de ollas, hazlo cuidadosamente."
+      },
+      {
+        "pregunta": "¿CÓMO ELIMINAR LAS MANCHAS DE AGUA DE MIS OLLAS DE ACERO INOXIDABLE?",
+        "respuesta": "Las manchas de agua pueden aparecer debido a las condiciones del agua en la zona en la que vives. Para evitarlas, después de lavar los utensilios de cocina, enjuágalos siempre con agua tibia y sécalos inmediatamente. Si aparecen manchas de agua, aplica un limpiador de acero inoxidable, como RoyalShine™ de Royal Prestige® sobre los utensilios de cocina secos y, con una toalla de papel humedecida, frota con movimientos circulares. Una vez que se haya quitado la mancha, lava la olla con agua tibia y jabón, después de esto sécala."
+      },
+      {
+        "pregunta": "¿CÓMO ELIMINAR LA GRASA QUEMADA DE MIS OLLAS DE ACERO INOXIDABLE?",
+        "respuesta": "Evita raspar la olla o usar estropajos metálicos. Está bien usar Scotch-Brite™ en el interior, pero no en el exterior. Llena la olla hasta la mitad con agua, colócala en la estufa y déjala hervir durante unos minutos. Deja que el agua se enfríe y lava la olla como de costumbre. Para la suciedad severa, puedes usar un limpiador de hornos en aerosol, para ello rocía generosamente, deja reposar durante la noche y, por la mañana, los alimentos quemados se desprenderán fácilmente."
+      },
+      {
+        "pregunta": "¿PUEDO USAR MIS OLLAS EN EL MICROONDAS O EN UN ASADOR?",
+        "respuesta": "¡No! Nunca utilices tus utensilios de cocina en el microondas, ni en una parrilla o asador."
+      },
+      {
+        "pregunta": "¿POR QUÉ MI OLLA DE ACERO INOXIDABLE SE HA PUESTO AMARILLA?",
+        "respuesta": "Si calientas demasiado o dejas hervir tu olla hasta que se seque el contenido, la superficie de acero inoxidable se verá afectada por tonos amarillos, bronceados, azules o arcoíris. Estos tonos son inofensivos y se pueden eliminar con un limpiador de acero inoxidable, como RoyalShine™ de Royal Prestige®, para ello, aplica el limpiador sobre la olla seca y, con una toalla de papel humedecida, frota con movimientos circulares. Una vez que se haya eliminado la mancha, lava la olla con agua tibia y jabón, después de esto sécala."
+      },
+      {
+        "pregunta": "¿POR QUÉ NO PUEDO QUITAR LA TAPA DE MI OLLA?",
+        "respuesta": "Después de cocinar, puede haber un sello firme de agua entre la olla y la tapa. Si la tapa quedó atascada y no la puedes retirar, simplemente abre la válvula Redi-Temp® para igualar la presión y así la tapa podrá quitarse fácilmente. Si la tapa no tiene válvula o no se puede abrir,  entonces vuelva a colocar la olla sellada en el quemador (estufa u hornalla) a baja temperatura durante aproximadamente de 1 a 2 minutos. Cuando el aire caliente del interior de la olla se expanda, romperá el sello y la tapa podrá separarse fácilmente. Siempre inclina la tapa lejos de ti para evitar quemaduras por causa del vapor."
+      },
+      {
+        "pregunta": "¿CUÁL ES LA MEJOR FORMA DE LIMPIAR LOS UTENSILIOS DESPUÉS DE COCINA DE ACERO INOXIDABLE DESPUÉS DE COCINAR?",
+        "respuesta": "Ten presente lavar bien los utensilios después de cada uso una vez que se hayan enfriado por completo. Para ello, usa agua tibia con un detergente suave para platos y una esponja o paño de cocina para eliminar todos los residuos de comida. Los utensilios de cocina pueden decolorarse o mancharse si no se lavan adecuadamente antes de volverlos a usar. Recuerda que también se pueden lavar en el lavavajillas."
+      },
+      {
+        "pregunta": "¿POR QUÉ ESTÁ SUELTAS EL MANGO O LAS ASAS DE MI SARTÉN?",
+        "respuesta": "Tus utensilios de cocina cuentan con mangos y asas atornillados, lo que permite que tengan un interior liso sin remaches ni marcas de soldadura. Con el tiempo, las asas pueden aflojarse, pero se pueden apretar fácilmente (herramienta necesaria: llave de tubo de 10 mm). Si el mango o asa está dañado, no lo uses, comunícate con el departamento de servicio  al cliente para obtener un reemplazo."
+      },
+      {
+        "pregunta": "¿NECESITO LAVAR MIS SET DE OLLAS ANTES DE USARLOS?",
+        "respuesta": "¡Sí! Antes de usar tus nuevos utensilios de cocina por primera vez, asegúrate de lavarlos bien. Mezcla agua tibia con jabón y agrega 1/4 de taza de vinagre. Con una esponja o un paño de cocina lava cada pieza. Esto eliminará los aceites de fabricación residuales o los compuestos de pulido que aún puedan quedar en los utensilios. Ten en cuenta que los utensilios de cocina pueden decolorarse o mancharse si no se lavan adecuadamente antes de usarlos por primera vez."
+      },
+      {
+        "pregunta": "¿IMPORTA EL TAMAÑO DE OLLA O TAPA QUE UTILIZO?",
+        "respuesta": "¡Sí! Elige un tamaño de la olla adecuado para la cantidad de comida que vayas a preparar. Lo ideal es que llenes la olla hasta 2/3 de su capacidad. Utiliza siempre la tapa que está diseñada para la olla específica que vayas a utilizar."
+      },
+      {
+        "pregunta": "¿CUÁL ES LA TEMPERATURA CORRECTA PARA MI ESTUFA?",
+        "respuesta": "Es recomendable usar una temperatura baja o media. Se puede utilizar una temperatura alta cuando sea necesario, como cuando se hierven líquidos. Ten presente usar siempre un quemador (fogón, hornalla, estufa) que tenga un diámetro similar al de la olla. Si cocinas en una cocina a gas, no permitas que la llama se extienda por los lados del utensilio."
+      },
+      {
+        "pregunta": "¿PUEDO GUARDAR ALIMENTOS EN MIS OLLAS?",
+        "respuesta": "¡No! Almacenar alimentos en utensilios de cocina de acero inoxidable quirúrgico durante periodos prolongados puede provocar manchas o picaduras debido a las sales, grasas, condimentos y ácidos presentes en los alimentos. El almacenar alimentos en tu olla podría considerarse un uso indebido, anulando así la garantía."
+      }
+    ]
+  },
+  "faq_frescaflow": {
+    "descripcion": "Preguntas frecuentes sobre el sistema de ósmosis inversa Royal Prestige® FrescaFlow.",
+    "faq": [
+      {
+        "pregunta": "¿POR QUÉ ELEGIR UN SISTEMA DE ÓSMOSIS INVERSA?",
+        "respuesta": "Porque la ósmosis inversa es un método de filtración que utiliza tecnología avanzada para eliminar una amplia gama de substancias. Funciona cuando el agua impulsada a presión pasa a través de una membrana con poros diminutos que filtra a nivel molecular, proporcionando agua excepcionalmente limpia y con un mejor sabor."
+      },
+      {
+        "pregunta": "¿QUÉ DIFERENCIA HAY ENTRE EL ROYAL PRESTIGE® FRESCAFLOW Y EL ROYAL PRESTIGE® FRESCAPURE™?",
+        "respuesta": "El Royal Prestige® FrescaPure™ es un confiable sistema de filtración de carbón activado, mientras que el Royal Prestige® FrescaFlow ofrece agua filtrada a través de 3 etapas: Pre-Filtro, Filtro de Carbón y Filtro de Ósmosis Inversa. Además, obtén agua con solo abrir el grifo, sin tanque. Puede filtrar 845 galones de agua por día y su pantalla LED muestra la calidad actual del agua. El sistema incluye un cartucho que ayuda a agregar minerales esenciales para potenciar al bienestar que obtienes al beber agua con más pureza*. Aunque el Royal Prestige® FrescaFlow, por sus dimensiones de 18.06\" * 5.65\" * 17.75\" es más grande. *La cantidad de minerales añadidos puede variar."
+      },
+      {
+        "pregunta": "¿QUÉ INCLUYE EL NUEVO ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "El Royal Prestige® FrescaFlow incluye el grifo inteligente con la pantalla LED Pre-Filtro, Filtro de Ósmosis inversa, Filtro de Carbón y Mineralizador."
+      },
+      {
+        "pregunta": "¿CUÁL ES EL TAMAÑO DEL TANQUE DEL ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "El Royal Prestige® FrescaFlow no tiene tanque, porque filtra el agua en el momento que pasa por el sistema, sin tener que almacenarla y con agua más fresca siempre disponible."
+      },
+      {
+        "pregunta": "¿CUÁNTOS CARTUCHOS TIENE Y CUÁNTO DURAN?",
+        "respuesta": "El Royal Prestige® FrescaFlow tiene 4 cartuchos con la siguiente duración, teniendo en cuenta que ésta puede variar dependiendo de múltiples factores: Pre-Filtro — aproximadamente 6 meses. Filtro de Carbón — aproximadamente 1 año. Cartucho Mineralizador – aproximadamente 1 año (éste no se muestra cuándo debes cambiarlo, te recomendamos hacerlo al mismo tiempo que el filtro de Carbón. Filtro de Ósmosis Inversa — aproximadamente 2 años."
+      },
+      {
+        "pregunta": "¿CÓMO SABRÉ CUÁNDO CAMBIAR LOS CARTUCHOS?",
+        "respuesta": "El grifo inteligente de Royal Prestige® FrescaFlow tiene una pantalla LED que indica el estado de los cartuchos y te alertará cuando es tiempo de cambiarlos. Azul: ESTADO ÓPTIMO Amarillo: REEMPLAZAR PRONTO Rojo: REEMPLAZAR INMEDIATAMENTE Importante: El estado del cartucho mineralizador se mostrará junto a la luz de estado del filtro de Carbón Activado"
+      },
+      {
+        "pregunta": "¿QUÉ SON LOS TDS?",
+        "respuesta": "El total de sólidos disueltos (TDS) indica la cantidad de sustancias disueltas presentes en tu agua. Entre más bajo sea el número, mejor. Según la Organización Mundial de la Salud (OMS), los rangos aceptables de calificación del sabor en el agua son: 0 – 300: Excelente 300 – 600: Buena 600 – 900: Regular 900 – 1,200: Baja Recuerda que este valor puede variar de acuerdo con el agua de tu suministro municipal, fluctuaciones en el suministro de agua, procesador de tratamiento de agua municipal o de toda la casa, condiciones de las tuberías, agua estancada, entre otras."
+      },
+      {
+        "pregunta": "¿EL ROYAL PRESTIGE® FRESCAFLOW PUEDE SUMINISTRAR AGUA CALIENTE?",
+        "respuesta": "No, es muy importante utilizar únicamente agua fría"
+      },
+      {
+        "pregunta": "¿EL ROYAL PRESTIGE® FRESCAFLOW PUEDE FILTRAR EL FLUOR?",
+        "respuesta": "Sí, y puede hacerlo hasta el 96.4%. Para una lista completa de todas las sustancias que ayuda a eliminar, puedes descargar la ficha técnica del producto AQUÍ."
+      },
+      {
+        "pregunta": "¿QUÉ NECESITO PARA PODER COMPRAR EL ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "Puedes conocer a detalle todo lo que necesitas para saber si es viable la compra para tu localidad en este VIDEO."
+      },
+      {
+        "pregunta": "¿QUÉ OTROS ASPECTOS DEBO TOMAR EN CUENTA?",
+        "respuesta": "Tu Royal Prestige® FrescaFlow necesita una fuente de agua externa con cierta presión y una toma de electricidad bajo el fregadero que no esté controlada por un switch, dentro de tu casa. Además, necesitas contar con una fuente de agua municipal, considerar la temperatura del agua, el pH del agua, la dureza del agua y el TDS del agua."
+      },
+      {
+        "pregunta": "¿COMO SE INSTALA EL ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "Se recomienda utilizar los servicios de un profesional. Tu Distribuidor Independiente Autorizado te proporcionará una guía de como coordinar este servicio."
+      },
+      {
+        "pregunta": "¿CÓMO RESOLVER LOS PROBLEMAS Y MENSAJES DE ERROR DEL ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "En el manual de usuario tienes una lista de los problemas que se pueden presentar, éste también está en versión web, y puedes acceder a él AQUÍ. De igual manera hemos creado un video donde podrás encontrar los problemas más comunes, revísalo AQUÍ."
+      },
+      {
+        "pregunta": "¿CÓMO PUEDO COMPRAR LOS REPUESTOS DE FILTROS Y CARTUCHOS DE ROYAL PRESTIGE® FRESCAFLOW?",
+        "respuesta": "Tienes dos opciones, puedes pedirlos a tu Distribuidor Autorizado Independiente o marcando directamente al: Departamento de atención a clientes de Royal Prestige® al 1-800-280-9708."
+      }
+    ]
+  },
+  "opciones_de_pago": {
+    "descripcion": "Métodos disponibles para realizar pagos a Hy Cite Enterprises LLC.",
+    "metodos": [
+      {
+        "metodo": "Western Union",
+        "instrucciones": "Para localizar a la Agencia de Western Union más cercana, llame a Western Union al 1-800-325-6000, o comuníquese con Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español)."
+      },
+      {
+        "metodo": "En la Agencia, seleccione y complete todo el formulario Western Union Quick Collect Payment que tiene un borde azul, incluyendo la siguiente información:",
+        "instrucciones": "a. Pague a: Hy Cite Enterprises, LLC b. Código de Ciudad: HYCITE c. Estado: WISCONSIN"
+      },
+      {
+        "metodo": "Cheque por teléfono",
+        "instrucciones": "Por favor tenga listos su número de cuenta corriente (checking) y el número de identificación del banco. Este se encuentra en la parte inferior de la esquina izquierda de su cheque personal."
+      },
+      {
+        "metodo": "Para hacer un pago por teléfono o para programar que el pago coincida con su disponibilidad de dinero, llame a Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español).",
+        "instrucciones": "¡Ya ha finalizado! La cantidad de su pago más un cargo de $10.00 serán automáticamente deducidos de la cuenta bancaria designada. Los $10.00 de cargo serán perdonados si usted decide que sus pagos mensuales sean automáticamente deducidos."
+      },
+      {
+        "metodo": "Tarjeta de crédito o débito y Pago por teléfono",
+        "instrucciones": "Por favor tenga su tarjeta de crédito a la mano."
+      },
+      {
+        "metodo": "Para hacer un pago expreso o para programar que el pago coincida con su disponibilidad de dinero, llame a Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español).",
+        "instrucciones": "¡Ya ha finalizado! La cantidad de su pago más un cargo de $10.00 serán automáticamente deducidos de la tarjeta de crédito de la institución financiera designada. Los $10.00 de cargo serán perdonados si usted decide que sus pagos mensuales sean automáticamente deducidos."
+      },
+      {
+        "metodo": "Llama a la línea de atención 1-800-280-9708.",
+        "instrucciones": "Opción 1 para hacer en pago. Elige la opción 1 para tarjeta. Ingresa los datos de la tarjeta. Moneygram MONEYGRAM Utilice el Servicio de MoneyGram® ExpressPayment® para hacer su pago de Hy Cite en una de las 40,000 agencias de MoneyGram de todo el país, incluyendo Walmart y CVS/Pharmacy. MoneyGram cobra una tarifa de $6.95 por este servicio."
+      },
+      {
+        "metodo": "Lleve todos los detalles al cajero del local, el cual colectará el dinero en efectivo y la tarifa de servicio de MoneyGram, y completará el pago.",
+        "instrucciones": "*La Notificación de Pago estará disponible para Hy Cite en un plazo de 10 minutos. Consulte con Hy Cite el horario exacto de registro del pago. **Garantía basada en la notificación del pago de MoneyGram al facturador. El pago al facturador es basado en términos del contrato. MoneyGram ®, ExpressPayment® y Globe son marcas registradas de MoneyGram."
+      },
+      {
+        "metodo": "Página Web para pagos de Clientes",
+        "instrucciones": "¿Cómo acceder al Portal de Servicio al Cliente Hy Cite?"
+      },
+      {
+        "metodo": "Comunicación electrónica: Mensualmente recibirá un mail con su estado de cuenta en un formato sencillo, diga adiós a las complicaciones y desorden que genera el papeleo al mismo tiempo que ayuda al medio ambiente.",
+        "instrucciones": "Pagos en línea: Ahorre tiempo y costos de cheques-giros haciendo su pago mensual directamente en nuestro sitio web seguro, configure sus pagos automáticos y relájese. Administración de su cuenta: Acceda a su historial de pedidos y pagos, haga seguimiento a la entrega de sus órdenes y reciba notificaciones de nuevos productos y ofertas especiales. Registrarse es sencillo y seguro, todo lo que necesita es su número de cliente para empezar a disfrutar de los beneficios de nuestro portal de Servicio al Cliente de Hy Cite."
+      }
+    ]
+  }
+}
