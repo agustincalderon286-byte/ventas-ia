@@ -38,7 +38,7 @@ const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_ro
 // =============================
 // CARGAR REDFIN DATA (archivo sin extensión .json)
 // =============================
-const redfinDataPath = path.join(process.cwd(), "redfin_23");
+const redfinDataPath = path.join(process.cwd(), "src/data/redfin_23");
 let redfinProperties = [];
 
 try {
