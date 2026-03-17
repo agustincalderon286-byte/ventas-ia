@@ -12,38 +12,46 @@ const conversaciones = {};
 
 
 // =============================
+// FUNCION PARA CARGAR JSON SEGURO
+// =============================
+
+function cargarJSON(ruta) {
+  try {
+    return JSON.parse(fs.readFileSync(ruta, "utf8"));
+  } catch (error) {
+    console.log("Error cargando:", ruta);
+    return {};
+  }
+}
+
+
+// =============================
 // CARGAR BASES DE DATOS
 // =============================
 
-// catálogo de productos con precios
-const preciosCatalogo = JSON.parse(
-  fs.readFileSync("./src/data/lista_de_precios.json", "utf8")
+const preciosCatalogo = cargarJSON("./src/data/lista_de_precios.json");
+
+const beneficiosProductos = cargarJSON(
+  "./src/data/Caracteristicas_Ventajas_Beneficios"
 );
 
-// características y beneficios
-const beneficiosProductos = JSON.parse(
-  fs.readFileSync("./src/data/Caracteristicas_Ventajas_Beneficios", "utf8")
+const encuestaVentas = cargarJSON(
+  "./src/data/Encuesta_intelijente"
 );
 
-// encuesta inteligente de ventas
-const encuestaVentas = JSON.parse(
-  fs.readFileSync("./src/data/Encuesta_intelijente", "utf8")
+const inteligenciaVentas = cargarJSON(
+  "./src/data/Eric_Material_viejo"
 );
 
-// experiencia real de telemarketing
-const inteligenciaVentas = JSON.parse(
-  fs.readFileSync("./src/data/Eric_Material_viejo", "utf8")
+const recetasRoyalPrestige = cargarJSON(
+  "./src/data/recetas_royal_prestige"
 );
 
-// recetas de cocina
-const recetasRoyalPrestige = JSON.parse(
-  fs.readFileSync("./src/data/recetas_royal_prestige", "utf8")
+// ARCHIVO NUEVO DE ESPECIFICACIONES
+const especificacionesRoyalPrestige = cargarJSON(
+  "./src/data/especificasiones_royal_prestige"
 );
 
-// especificaciones, cuidados, garantías e instalación
-const especificacionesRoyalPrestige = JSON.parse(
-  fs.readFileSync("./src/data/especificasiones_royal_prestige", "utf8")
-);
 
 
 app.post("/chat", async (req, res) => {
@@ -65,24 +73,25 @@ app.post("/chat", async (req, res) => {
 
   try {
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
 
-      method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        },
 
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
+        body: JSON.stringify({
 
-      body: JSON.stringify({
+          model: "gpt-5-mini",
 
-        model: "gpt-5-mini",
+          messages: [
 
-        messages: [
-
-          {
-            role: "system",
-            content: `Eres Agustin 2.0, asistente experto en cocina y ventas de utensilios de cocina premium.
+            {
+              role: "system",
+              content: `Eres Agustin 2.0, asistente experto en cocina y ventas de utensilios de cocina premium.
 
 OBJETIVO
 Ayudar a cocinar mejor, responder preguntas y ayudar a vendedores y clientes a entender los productos.
@@ -134,18 +143,16 @@ USO DE ESPECIFICACIONES
 
 Si preguntan sobre:
 
-garantía  
-cuidados  
-materiales  
-durabilidad  
-instalación  
-mantenimiento  
+garantía
+cuidados
+materiales
+durabilidad
+instalación
+mantenimiento
 
-usa la información de ESPECIFICACIONES.
+usa la información del archivo ESPECIFICACIONES.
 
-Explica de forma clara y simple para generar confianza.
-
-No abrumar con demasiada información técnica si no es necesario.
+Explica de forma simple para generar confianza.
 
 --------------------------------------------------
 
@@ -163,14 +170,14 @@ Pago diario = pago mensual / 30
 
 Mostrar siempre:
 
-codigo  
-nombre producto  
-precio  
-tax  
-envio  
-pago mensual  
-pago semanal  
-pago diario  
+codigo
+nombre producto
+precio
+tax
+envio
+pago mensual
+pago semanal
+pago diario
 
 No mostrar cálculos internos.
 
@@ -178,7 +185,7 @@ No mostrar cálculos internos.
 
 VENTAS
 
-Si hay dudas o objeciones usa:
+Si hay dudas usa:
 
 - características
 - beneficios
@@ -186,12 +193,12 @@ Si hay dudas o objeciones usa:
 
 Objeciones comunes:
 
-precio  
-pensarlo  
-hablar con pareja  
-tiempo  
+precio
+pensarlo
+hablar con pareja
+tiempo
 
-Responde ayudando a avanzar la conversación de forma natural.
+Responde ayudando a avanzar la conversación.
 
 --------------------------------------------------
 
@@ -201,7 +208,6 @@ ESTILO
 - lenguaje claro
 - natural
 - tono amable
-- explica como un chef o experto
 
 No menciones que eres inteligencia artificial.
 
@@ -209,34 +215,34 @@ No menciones que eres inteligencia artificial.
 
 DATOS DISPONIBLES
 
-CATALOGO DE PRODUCTOS:
+CATALOGO:
 ${JSON.stringify(preciosCatalogo)}
 
-CARACTERISTICAS Y BENEFICIOS:
+CARACTERISTICAS:
 ${JSON.stringify(beneficiosProductos)}
 
-ENCUESTA INTELIGENTE:
+ENCUESTA:
 ${JSON.stringify(encuestaVentas)}
 
-EXPERIENCIA REAL TELEMARKETING:
+EXPERIENCIA VENTAS:
 ${JSON.stringify(inteligenciaVentas)}
 
-RECETAS Y GUIAS DE COCINA:
+RECETAS:
 ${JSON.stringify(recetasRoyalPrestige)}
 
-ESPECIFICACIONES Y GARANTIAS:
+ESPECIFICACIONES:
 ${JSON.stringify(especificacionesRoyalPrestige)}
 
 `
-          },
+            },
 
-          ...conversaciones[sessionId]
+            ...conversaciones[sessionId]
 
-        ]
+          ]
 
-      })
-
-    });
+        })
+      }
+    );
 
     const data = await response.json();
 
@@ -263,5 +269,5 @@ ${JSON.stringify(especificacionesRoyalPrestige)}
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () =>
-  console.log(\`Servidor corriendo en puerto \${PORT}\`)
+  console.log(`Servidor corriendo en puerto ${PORT}`)
 );
