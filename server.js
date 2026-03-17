@@ -11,6 +11,7 @@ app.use(express.json());
 // MEMORIA DE CONVERSACIONES
 const conversaciones = {};
 
+
 // =============================
 // FUNCION PARA CARGAR JSON SEGURO
 // =============================
@@ -23,6 +24,7 @@ function cargarJSON(ruta) {
   }
 }
 
+
 // =============================
 // CARGAR BASES DE DATOS
 // =============================
@@ -34,7 +36,7 @@ const recetasRoyalPrestige = cargarJSON("./src/data/recetas_royal_prestige");
 const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_royal_prestige");
 
 // =============================
-// CARGAR REDFIN DATA
+// CARGAR REDFIN DATA (archivo sin extensión .json)
 // =============================
 const redfinDataPath = path.join(process.cwd(), "redfin_23");
 let redfinProperties = [];
@@ -44,72 +46,84 @@ try {
   redfinProperties = JSON.parse(rawData);
   console.log(`Loaded ${redfinProperties.length} properties from redfin_23`);
 } catch (error) {
-  console.error("Error loading redfin_23.json:", error.message);
+  console.error("Error loading redfin_23:", error.message);
 }
 
-// =============================
-// ANALISIS DE PROPIEDADES
-// =============================
-function analyzeProperty(property) {
-  const price = property.price || 0;
-  const rent = property.rent_estimate || 0;
-  const rentRatio = rent / price; // regla simple mensual / precio
-  const yearlyRent = rent * 12;
-  const cashFlowEstimate = yearlyRent - (price * 0.1); // estimación simple de gastos
-
-  let score = 0;
-  if (rentRatio >= 0.01) score += 2;
-  else if (rentRatio >= 0.008) score += 1;
-  if (cashFlowEstimate > 0) score += 2;
-
-  return {
-    ...property,
-    rentRatio,
-    yearlyRent,
-    cashFlowEstimate,
-    score
-  };
-}
 
 // =============================
-// ENDPOINT CHAT EXISTENTE
+// RUTA /CHAT
 // =============================
 app.post("/chat", async (req, res) => {
+
   const { pregunta, sessionId } = req.body;
 
   if (!sessionId) {
     return res.status(400).json({ error: "sessionId requerido" });
   }
 
-  if (!conversaciones[sessionId]) conversaciones[sessionId] = [];
+  if (!conversaciones[sessionId]) {
+    conversaciones[sessionId] = [];
+  }
 
-  conversaciones[sessionId].push({ role: "user", content: pregunta });
+  conversaciones[sessionId].push({
+    role: "user",
+    content: pregunta
+  });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        messages: [
-          {
-            role: "system",
-            content: `Eres Agustin 2.0, asistente experto en cocina, ventas y análisis de inversión inmobiliaria.
 
-OBJETIVO:
-Ayuda a cocinar, responder preguntas de productos, vender, y analizar propiedades de inversión.
+    const response = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content: `Eres Agustin 2.0, asistente experto en cocina, ventas de utensilios premium y análisis de inversiones en propiedades.
 
-USO DE REDFIN DATA:
-Tienes acceso al archivo 'redfin_23' con 23 propiedades.
-- Analiza rentabilidad: rent-to-price ratio y cash flow
-- Detecta patrones de propiedades buenas
-- Recomienda oportunidades de inversión de forma clara y simple
+OBJETIVO
+Ayudar a cocinar mejor, responder preguntas, asistir a vendedores, analizar propiedades de inversión y encontrar patrones clave en casas.
 
 --------------------------------------------------
-DATOS DISPONIBLES:
+MODO CONVERSACION INTELIGENTE
+
+CLIENTE
+- recetas, técnicas, beneficios culinarios
+
+DISTRIBUIDOR
+- objeciones, precios, demostraciones, venta
+
+PERSONA CURIOSA
+- mostrar capacidades de Agustin 2.0
+
+--------------------------------------------------
+USO DE ESPECIFICACIONES
+Si preguntan sobre:
+garantía, cuidados, materiales, durabilidad, instalación, mantenimiento
+usa la información del archivo ESPECIFICACIONES
+
+--------------------------------------------------
+PRECIOS
+Tax = 10%
+Envio = 5%
+Mostrar código, nombre, precio, tax, envio, pago mensual, semanal, diario
+
+--------------------------------------------------
+VENTAS
+Usa características, beneficios y experiencia de ventas reales
+
+--------------------------------------------------
+ESTILO
+Max 3 oraciones, lenguaje claro y natural, tono amable
+
+--------------------------------------------------
+DATOS DISPONIBLES
 
 CATALOGO:
 ${JSON.stringify(preciosCatalogo)}
@@ -129,15 +143,17 @@ ${JSON.stringify(recetasRoyalPrestige)}
 ESPECIFICACIONES:
 ${JSON.stringify(especificacionesRoyalPrestige)}
 
-REDFIN PROPERTIES:
+PROPIEDADES REDFIN:
 ${JSON.stringify(redfinProperties)}
 
+Instrucciones adicionales: Agustin 2.0 puede buscar patrones de inversión, comparar propiedades, sugerir oportunidades de compra y entregar recomendaciones basadas en los datos del archivo redfin_23.
 `
-          },
-          ...conversaciones[sessionId]
-        ]
-      })
-    });
+            },
+            ...conversaciones[sessionId]
+          ]
+        })
+      }
+    );
 
     const data = await response.json();
     const respuestaIA = data.choices[0].message;
@@ -145,54 +161,12 @@ ${JSON.stringify(redfinProperties)}
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({ respuesta: respuestaIA.content });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al procesar la solicitud" });
   }
-});
 
-// =============================
-// ENDPOINT ANALISIS DE PROPIEDADES
-// =============================
-app.post("/analyze-properties", async (req, res) => {
-  try {
-    const analyzed = redfinProperties.map(analyzeProperty);
-    const topDeals = analyzed.sort((a, b) => b.score - a.score).slice(0, 5);
-
-    const prompt = `
-You are an expert real estate investor.
-Analyze the following properties for good investment opportunities. Focus on cash flow, rent-to-price ratio, size, and value. Explain your recommendations simply.
-
-Properties:
-${JSON.stringify(topDeals, null, 2)}
-`;
-
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        messages: [
-          { role: "system", content: "You are an expert real estate investor." },
-          { role: "user", content: prompt }
-        ]
-      })
-    });
-
-    const data = await aiResponse.json();
-
-    res.json({
-      success: true,
-      topDeals,
-      insights: data.choices[0].message.content
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Analysis failed" });
-  }
 });
 
 const PORT = process.env.PORT || 3000;
