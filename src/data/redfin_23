@@ -1,0 +1,849 @@
+{
+  "metadata": {
+    "fuente": "Redfin",
+    "fecha_exportacion": "2026-03-17-16-03-10",
+    "total_propiedades": 23,
+    "activas": 23,
+    "vendidas_recientemente": 0,
+    "posibles_bajas_de_precio": 12,
+    "precio_promedio": "$490,786",
+    "precio_minimo": "$29,900",
+    "precio_maximo": "$1,450,000",
+    "mejores_oportunidades_count": 17
+  },
+  "resumen_mercado": {
+    "activas": 23,
+    "vendidas": 0,
+    "con_open_house": 2,
+    "sin_hoa": 16,
+    "en_mercado_mas_30_dias": 12
+  },
+  "propiedades": [
+    {
+      "direccion": "4015 Peartree Dr",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 379900,
+      "precio_formateado": "$379,900",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 3336,
+      "tamano_lote_pie2": 10497,
+      "anio_construido": 1992,
+      "dias_en_mercado": 102,
+      "precio_por_pie2": 114.0,
+      "hoa_mensual": 3.0,
+      "mls_numero": "12525995",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/4015-Peartree-Dr-60156/home/17815180",
+      "coordenadas": {
+        "lat": 42.188775,
+        "lng": -88.3655557
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² muy bajo (<$150)",
+          "En mercado 102 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "3,336 pie² — buen tamaño",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9103 Miller Rd #4",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 425000,
+      "precio_formateado": "$425,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1736,
+      "anio_construido": 2025,
+      "dias_en_mercado": 187,
+      "precio_por_pie2": 245.0,
+      "mls_numero": "12469509",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9103-Miller-Rd-60156/unit-4/home/197833147",
+      "coordenadas": {
+        "lat": 42.1898899,
+        "lng": -88.3734978
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 187 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,736 pie² — buen tamaño",
+          "Construida en 2025 — relativamente nueva",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9103 Miller Rd #5",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 425000,
+      "precio_formateado": "$425,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1736,
+      "anio_construido": 2025,
+      "dias_en_mercado": 187,
+      "precio_por_pie2": 245.0,
+      "mls_numero": "12469518",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9103-Miller-Rd-60156/unit-5/home/197833146",
+      "coordenadas": {
+        "lat": 42.1898899,
+        "lng": -88.3734978
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 187 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,736 pie² — buen tamaño",
+          "Construida en 2025 — relativamente nueva",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9103 Miller Rd #3",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 425000,
+      "precio_formateado": "$425,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1736,
+      "anio_construido": 2025,
+      "dias_en_mercado": 187,
+      "precio_por_pie2": 245.0,
+      "mls_numero": "12469502",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9103-Miller-Rd-60156/unit-3/home/197833077",
+      "coordenadas": {
+        "lat": 42.1898899,
+        "lng": -88.3734978
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 187 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,736 pie² — buen tamaño",
+          "Construida en 2025 — relativamente nueva",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9103 Miller Rd #2",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 425000,
+      "precio_formateado": "$425,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1736,
+      "anio_construido": 2025,
+      "dias_en_mercado": 187,
+      "precio_por_pie2": 245.0,
+      "mls_numero": "12469478",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9103-Miller-Rd-60156/unit-2/home/197833023",
+      "coordenadas": {
+        "lat": 42.1898899,
+        "lng": -88.3734978
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 187 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,736 pie² — buen tamaño",
+          "Construida en 2025 — relativamente nueva",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9103 Miller Rd #1",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 425000,
+      "precio_formateado": "$425,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1736,
+      "anio_construido": 2025,
+      "dias_en_mercado": 188,
+      "precio_por_pie2": 245.0,
+      "mls_numero": "12466815",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9103-Miller-Rd-60156/unit-1/home/197832898",
+      "coordenadas": {
+        "lat": 42.1898899,
+        "lng": -88.3734978
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 9,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 188 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,736 pie² — buen tamaño",
+          "Construida en 2025 — relativamente nueva",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "2661 Stanton Cir",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Meadowbrook",
+      "estatus": "Active",
+      "precio": 375000,
+      "precio_formateado": "$375,000",
+      "recamaras": 4,
+      "banos": 2.0,
+      "pie_cuadrados": 2640,
+      "tamano_lote_pie2": 8494,
+      "anio_construido": 1998,
+      "dias_en_mercado": 1,
+      "precio_por_pie2": 142.0,
+      "proximo_open_house": "March-21-2026 11:00 AM",
+      "mls_numero": "12589539",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/2661-Stanton-Cir-60156/home/17032007",
+      "coordenadas": {
+        "lat": 42.1938485,
+        "lng": -88.3918078
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 8,
+        "nivel": "🔥 Excelente",
+        "notas": [
+          "Precio/pie² muy bajo (<$150)",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "2,640 pie² — buen tamaño",
+          "4 recámaras / 2.0 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9 Laurel Valley Ct",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Boulder Ridge Greens",
+      "estatus": "Active",
+      "precio": 679900,
+      "precio_formateado": "$679,900",
+      "recamaras": 5,
+      "banos": 3.5,
+      "pie_cuadrados": 5310,
+      "tamano_lote_pie2": 14309,
+      "anio_construido": 2003,
+      "dias_en_mercado": 12,
+      "precio_por_pie2": 128.0,
+      "hoa_mensual": 89.0,
+      "mls_numero": "12574600",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/9-Laurel-Valley-Ct-60156/home/17802443",
+      "coordenadas": {
+        "lat": 42.1893208,
+        "lng": -88.3533871
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 7,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² muy bajo (<$150)",
+          "Precio medio-alto",
+          "5,310 pie² — buen tamaño",
+          "Construida en 2003 — relativamente nueva",
+          "5 recámaras / 3.5 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "187 Hilltop Dr",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills Estates",
+      "estatus": "Active",
+      "precio": 489000,
+      "precio_formateado": "$489,000",
+      "recamaras": 4,
+      "banos": 3.5,
+      "pie_cuadrados": 2500,
+      "tamano_lote_pie2": 6969,
+      "anio_construido": 1988,
+      "dias_en_mercado": 14,
+      "precio_por_pie2": 196.0,
+      "mls_numero": "12582550",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/187-Hilltop-Dr-60156/home/187004972",
+      "coordenadas": {
+        "lat": 42.1865423,
+        "lng": -88.3294131
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 7,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² bajo (<$200)",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "2,500 pie² — buen tamaño",
+          "4 recámaras / 3.5 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "7 Elizabeth Ct",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 430000,
+      "precio_formateado": "$430,000",
+      "recamaras": 4,
+      "banos": 2.5,
+      "pie_cuadrados": 1990,
+      "tamano_lote_pie2": 10018,
+      "anio_construido": 1996,
+      "dias_en_mercado": 17,
+      "precio_por_pie2": 216.0,
+      "mls_numero": "12579879",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/7-Elizabeth-Ct-60156/home/17799899",
+      "coordenadas": {
+        "lat": 42.1836396,
+        "lng": -88.3055441
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 7,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² moderado",
+          "En mercado 17 días",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,990 pie² — buen tamaño",
+          "4 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "6 Sherwood Ct",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Boulder Ridge",
+      "estatus": "Active",
+      "precio": 624997,
+      "precio_formateado": "$624,997",
+      "recamaras": 4,
+      "banos": 3.0,
+      "pie_cuadrados": 3889,
+      "tamano_lote_pie2": 6500,
+      "anio_construido": 1995,
+      "dias_en_mercado": 68,
+      "precio_por_pie2": 161.0,
+      "hoa_mensual": 175.0,
+      "mls_numero": "12531094",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/6-Sherwood-Ct-60156/home/14357245",
+      "coordenadas": {
+        "lat": 42.1874928,
+        "lng": -88.3550159
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 7,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² bajo (<$200)",
+          "En mercado 68 días — margen de negociación",
+          "Precio medio-alto",
+          "3,889 pie² — buen tamaño",
+          "4 recámaras / 3.0 baños — buen layout"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "298 Apache Trl",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 649900,
+      "precio_formateado": "$649,900",
+      "recamaras": 4,
+      "banos": 2.5,
+      "pie_cuadrados": 2970,
+      "tamano_lote_pie2": 7405,
+      "anio_construido": 2026,
+      "dias_en_mercado": 4,
+      "precio_por_pie2": 219.0,
+      "proximo_open_house": "March-21-2026 12:00 PM",
+      "mls_numero": "12588748",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/298-Apache-Trl-60156/home/21875994",
+      "coordenadas": {
+        "lat": 42.178012,
+        "lng": -88.310648
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 6,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² moderado",
+          "Precio medio-alto",
+          "Sin HOA",
+          "2,970 pie² — buen tamaño",
+          "Construida en 2026 — relativamente nueva",
+          "4 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "871 Taralon Trl",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 390000,
+      "precio_formateado": "$390,000",
+      "recamaras": 3,
+      "banos": 2.5,
+      "pie_cuadrados": 1789,
+      "tamano_lote_pie2": 19841,
+      "anio_construido": 1996,
+      "dias_en_mercado": 5,
+      "precio_por_pie2": 218.0,
+      "mls_numero": "12574303",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/871-Taralon-Trl-60156/home/17815736",
+      "coordenadas": {
+        "lat": 42.1864615,
+        "lng": -88.3871635
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 6,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² moderado",
+          "Rango de precio ideal para inversión",
+          "Sin HOA",
+          "1,789 pie² — buen tamaño",
+          "3 recámaras / 2.5 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "121 Boulder Dr",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Boulder Ridge",
+      "estatus": "Active",
+      "precio": 899900,
+      "precio_formateado": "$899,900",
+      "recamaras": 4,
+      "banos": 6.0,
+      "pie_cuadrados": 5589,
+      "tamano_lote_pie2": 18730,
+      "anio_construido": 2000,
+      "dias_en_mercado": 6,
+      "precio_por_pie2": 161.0,
+      "hoa_mensual": 49.0,
+      "mls_numero": "12576963",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/121-Boulder-Dr-60156/home/17814918",
+      "coordenadas": {
+        "lat": 42.1768868,
+        "lng": -88.3612156
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 5,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "Precio/pie² bajo (<$200)",
+          "5,589 pie² — buen tamaño",
+          "Construida en 2000 — relativamente nueva",
+          "4 recámaras / 6.0 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "6 Sugar Maple Ct",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Lakes of Boulder Ridge",
+      "estatus": "Active",
+      "precio": 659900,
+      "precio_formateado": "$659,900",
+      "recamaras": 3,
+      "banos": 3.0,
+      "pie_cuadrados": 1710,
+      "tamano_lote_pie2": 9430,
+      "anio_construido": 2016,
+      "dias_en_mercado": 28,
+      "precio_por_pie2": 386.0,
+      "hoa_mensual": 197.0,
+      "mls_numero": "12570564",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/6-Sugar-Maple-Ct-60156/home/109048442",
+      "coordenadas": {
+        "lat": 42.1808387,
+        "lng": -88.3711037
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 5,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "En mercado 28 días",
+          "Precio medio-alto",
+          "1,710 pie² — buen tamaño",
+          "Construida en 2016 — relativamente nueva",
+          "3 recámaras / 3.0 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "1770 E Algonquin Rd",
+      "ciudad": "Algonquin",
+      "estado": "IL",
+      "zip": "60102",
+      "tipo_propiedad": "Vacant Land",
+      "vecindario": "Algonquin",
+      "estatus": "Active",
+      "precio": 465000,
+      "precio_formateado": "$465,000",
+      "tamano_lote_pie2": 73180,
+      "dias_en_mercado": 167,
+      "mls_numero": "12485262",
+      "url_redfin": "https://www.redfin.com/IL/Algonquin/1770-Algonquin-Rd-60156/home/198385680",
+      "coordenadas": {
+        "lat": 42.1760087,
+        "lng": -88.3223036
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 5,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "En mercado 167 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "113 Pheasant Trl",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 275000,
+      "precio_formateado": "$275,000",
+      "recamaras": 2,
+      "banos": 1.5,
+      "pie_cuadrados": 1100,
+      "tamano_lote_pie2": 8712,
+      "anio_construido": 1952,
+      "dias_en_mercado": 232,
+      "precio_por_pie2": 250.0,
+      "mls_numero": "12398028",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/113-Pheasant-Trl-60156/home/17797261",
+      "coordenadas": {
+        "lat": 42.1782059,
+        "lng": -88.3263085
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 5,
+        "nivel": "✅ Bueno",
+        "notas": [
+          "En mercado 232 días — margen de negociación",
+          "Rango de precio ideal para inversión",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "641 Mason Ln",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Boulder Ridge Estates",
+      "estatus": "Active",
+      "precio": 774900,
+      "precio_formateado": "$774,900",
+      "recamaras": 5,
+      "banos": 3.0,
+      "pie_cuadrados": 4744,
+      "tamano_lote_pie2": 20473,
+      "anio_construido": 1994,
+      "dias_en_mercado": 4,
+      "precio_por_pie2": 163.0,
+      "hoa_mensual": 69.0,
+      "mls_numero": "12591725",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/641-Mason-Ln-60156/home/17815240",
+      "coordenadas": {
+        "lat": 42.1852406,
+        "lng": -88.3601817
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 4,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "Precio/pie² bajo (<$200)",
+          "4,744 pie² — buen tamaño",
+          "5 recámaras / 3.0 baños — buen layout"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "101 Oakleaf Rd",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Single Family Residential",
+      "vecindario": "Lake in the Hills Estates",
+      "estatus": "Active",
+      "precio": 249900,
+      "precio_formateado": "$249,900",
+      "recamaras": 3,
+      "banos": 1.0,
+      "pie_cuadrados": 875,
+      "tamano_lote_pie2": 8712,
+      "anio_construido": 1947,
+      "dias_en_mercado": 26,
+      "precio_por_pie2": 286.0,
+      "mls_numero": "12571814",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/101-Oakleaf-Rd-60156/home/17797278",
+      "coordenadas": {
+        "lat": 42.1781553,
+        "lng": -88.3281251
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 4,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "En mercado 26 días",
+          "Rango de precio ideal para inversión",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "7 Dogwood Ct",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Townhouse",
+      "vecindario": "Spring Lake Farms",
+      "estatus": "Active",
+      "precio": 274900,
+      "precio_formateado": "$274,900",
+      "recamaras": 2,
+      "banos": 1.5,
+      "pie_cuadrados": 1235,
+      "tamano_lote_pie2": 2627,
+      "anio_construido": 1993,
+      "dias_en_mercado": 1,
+      "precio_por_pie2": 223.0,
+      "hoa_mensual": 80.0,
+      "mls_numero": "12553455",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/7-Dogwood-Ct-60156/home/17815302",
+      "coordenadas": {
+        "lat": 42.1880674,
+        "lng": -88.3715916
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 3,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "Precio/pie² moderado",
+          "Rango de precio ideal para inversión"
+        ],
+        "posible_baja_precio": false,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "5259 Greenshire Cir",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Vacant Land",
+      "vecindario": "Greenshire",
+      "estatus": "Active",
+      "precio": 65000,
+      "precio_formateado": "$65,000",
+      "tamano_lote_pie2": 13503,
+      "dias_en_mercado": 99,
+      "mls_numero": "12529482",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/5259-Greenshire-Cir-60156/home/22943030",
+      "coordenadas": {
+        "lat": 42.2034568,
+        "lng": -88.3953708
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 3,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "En mercado 99 días — margen de negociación",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "LOT 3 Blackhawk Dr",
+      "ciudad": "Lake In The Hills",
+      "estado": "IL",
+      "zip": "60156",
+      "tipo_propiedad": "Vacant Land",
+      "vecindario": "Lake in the Hills",
+      "estatus": "Active",
+      "precio": 29900,
+      "precio_formateado": "$29,900",
+      "tamano_lote_pie2": 12632,
+      "dias_en_mercado": 283,
+      "mls_numero": "12387325",
+      "url_redfin": "https://www.redfin.com/IL/Lake-in-the-Hills/LOT-3-Blackhawk-Dr-60156/home/17551622",
+      "coordenadas": {
+        "lat": 42.1771655,
+        "lng": -88.3139133
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 3,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "En mercado 283 días — margen de negociación",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    },
+    {
+      "direccion": "9105 Algonquin Rd",
+      "ciudad": "Huntley",
+      "estado": "IL",
+      "zip": "60142",
+      "tipo_propiedad": "Ranch",
+      "vecindario": "Huntley",
+      "estatus": "Active",
+      "precio": 1450000,
+      "precio_formateado": "$1,450,000",
+      "tamano_lote_pie2": 566280,
+      "dias_en_mercado": 664,
+      "mls_numero": "12063334",
+      "url_redfin": "https://www.redfin.com/IL/Huntley/9105-W-Algonquin-Rd-60142/home/21872507",
+      "coordenadas": {
+        "lat": 42.1755495,
+        "lng": -88.3742313
+      },
+      "analisis_inversion": {
+        "puntaje_inversion": 3,
+        "nivel": "⚠️ Moderado",
+        "notas": [
+          "En mercado 664 días — margen de negociación",
+          "Sin HOA"
+        ],
+        "posible_baja_precio": true,
+        "vendido_recientemente": false
+      }
+    }
+  ]
+}
