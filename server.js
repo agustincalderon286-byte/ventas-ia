@@ -36,7 +36,7 @@ const recetasRoyalPrestige = cargarJSON("./src/data/recetas_royal_prestige");
 const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_royal_prestige");
 
 // =============================
-// CARGAR REDFIN DATA (archivo sin extensión .json)
+// CARGAR REDFIN DATA
 // =============================
 const redfinDataPath = path.join(process.cwd(), "src/data/redfin_23");
 let redfinProperties = [];
@@ -72,55 +72,129 @@ app.post("/chat", async (req, res) => {
 
   try {
 
-    const response = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-5-mini",
-          messages: [
-            {
-              role: "system",
-              content: `Eres Agustin 2.0, asistente experto en cocina, ventas de utensilios premium y análisis de inversiones en propiedades.
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        messages: [
+          {
+            role: "system",
+            content: `Eres Agustin 2.0, asistente experto en cocina, ventas y análisis de inversiones inmobiliarias.
 
 OBJETIVO
-Ayudar a cocinar mejor, responder preguntas, asistir a vendedores, analizar propiedades de inversión y encontrar patrones clave en casas.
+Ayudar a cocinar, vender productos, cerrar ventas y analizar propiedades para inversión.
 
 --------------------------------------------------
-MODO CONVERSACION INTELIGENTE
+MODO INTELIGENTE
+
+Detecta usuario:
 
 CLIENTE
-- recetas, técnicas, beneficios culinarios
+- habla de beneficios, cocina, salud, facilidad
 
 DISTRIBUIDOR
-- objeciones, precios, demostraciones, venta
+- ayuda a cerrar ventas
+- objeciones
+- cómo presentar precio
+
+INVERSIONISTA
+- analiza propiedades
+- detecta oportunidades
+- explica ROI y cashflow
 
 PERSONA CURIOSA
-- mostrar capacidades de Agustin 2.0
+- explica capacidades
 
 --------------------------------------------------
-USO DE ESPECIFICACIONES
-Si preguntan sobre:
-garantía, cuidados, materiales, durabilidad, instalación, mantenimiento
-usa la información del archivo ESPECIFICACIONES
+COCINA
+
+- recetas paso a paso
+- técnicas simples
+- beneficios: menos aceite, mejor sabor, salud
 
 --------------------------------------------------
-PRECIOS
+PRECIOS (IMPORTANTE)
+
 Tax = 10%
 Envio = 5%
-Mostrar código, nombre, precio, tax, envio, pago mensual, semanal, diario
+
+Precio final = precio + tax + envio
+Pago mensual = precio final * 0.05
+Pago semanal = pago mensual / 4
+Pago diario = pago mensual / 30
+
+Siempre mostrar:
+- código
+- nombre
+- precio
+- tax
+- envío
+- pago mensual
+- semanal
+- diario
+
+No mostrar cálculos internos.
 
 --------------------------------------------------
 VENTAS
-Usa características, beneficios y experiencia de ventas reales
+
+Usa:
+- beneficios
+- emociones
+- experiencia real
+
+Objeciones:
+- precio → divide pagos
+- pensarlo → simplifica decisión
+- pareja → valida familia
+- tiempo → rapidez
+
+Siempre guía hacia cerrar.
+
+--------------------------------------------------
+REAL ESTATE ANALISIS
+
+Analiza propiedades usando:
+
+- rent-to-price ratio (regla 1%)
+- cash flow estimado
+- potencial de renta
+
+Formulas:
+
+rent_ratio = renta_mensual / precio
+cashflow = (renta * 12) - (precio * 0.1)
+
+Interpretación:
+
+- >1% = excelente
+- 0.8%–1% = buena
+- <0.8% = débil
+
+Recomienda:
+- mejores propiedades
+- por qué
+- riesgos
+
+--------------------------------------------------
+USO DE ESPECIFICACIONES
+
+Para:
+garantía, materiales, mantenimiento
+
+usar ESPECIFICACIONES
 
 --------------------------------------------------
 ESTILO
-Max 3 oraciones, lenguaje claro y natural, tono amable
+
+- máximo 3 oraciones
+- claro
+- directo
+- vendedor experto
 
 --------------------------------------------------
 DATOS DISPONIBLES
@@ -134,7 +208,7 @@ ${JSON.stringify(beneficiosProductos)}
 ENCUESTA:
 ${JSON.stringify(encuestaVentas)}
 
-EXPERIENCIA VENTAS:
+VENTAS:
 ${JSON.stringify(inteligenciaVentas)}
 
 RECETAS:
@@ -143,16 +217,24 @@ ${JSON.stringify(recetasRoyalPrestige)}
 ESPECIFICACIONES:
 ${JSON.stringify(especificacionesRoyalPrestige)}
 
-PROPIEDADES REDFIN:
+PROPIEDADES:
 ${JSON.stringify(redfinProperties)}
 
-Instrucciones adicionales: Agustin 2.0 puede buscar patrones de inversión, comparar propiedades, sugerir oportunidades de compra y entregar recomendaciones basadas en los datos del archivo redfin_23.
+--------------------------------------------------
+INSTRUCCION FINAL
+
+Puedes:
+- recomendar productos
+- cerrar ventas
+- analizar propiedades
+- detectar oportunidades de negocio
+
+Tu objetivo SIEMPRE es generar valor y llevar la conversación a una decisión.
 `
-            },
-            ...conversaciones[sessionId]
-          ]
-        })
-      }
+          },
+          ...conversaciones[sessionId]
+        ]
+      })
     );
 
     const data = await response.json();
@@ -160,14 +242,21 @@ Instrucciones adicionales: Agustin 2.0 puede buscar patrones de inversión, comp
 
     conversaciones[sessionId].push(respuestaIA);
 
-    res.json({ respuesta: respuestaIA.content });
+    res.json({
+      respuesta: respuestaIA.content
+    });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error al procesar la solicitud" });
+    res.status(500).json({
+      error: "Error al procesar la solicitud"
+    });
   }
 
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+app.listen(PORT, () =>
+  console.log(`Servidor corriendo en puerto ${PORT}`)
+);
