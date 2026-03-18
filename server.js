@@ -8,12 +8,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MEMORIA DE CONVERSACIONES
+// MEMORIA
 const conversaciones = {};
 
-
 // =============================
-// FUNCION PARA CARGAR JSON SEGURO
+// FUNCION JSON
 // =============================
 function cargarJSON(ruta) {
   try {
@@ -24,9 +23,8 @@ function cargarJSON(ruta) {
   }
 }
 
-
 // =============================
-// CARGAR BASES DE DATOS
+// BASES DE DATOS
 // =============================
 const preciosCatalogo = cargarJSON("./src/data/lista_de_precios.json");
 const beneficiosProductos = cargarJSON("./src/data/Caracteristicas_Ventajas_Beneficios");
@@ -36,7 +34,7 @@ const recetasRoyalPrestige = cargarJSON("./src/data/recetas_royal_prestige");
 const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_royal_prestige");
 
 // =============================
-// CARGAR REDFIN DATA
+// REDFIN DATA
 // =============================
 const redfinDataPath = path.join(process.cwd(), "src/data/redfin_23");
 let redfinProperties = [];
@@ -44,14 +42,51 @@ let redfinProperties = [];
 try {
   const rawData = fs.readFileSync(redfinDataPath, "utf-8");
   redfinProperties = JSON.parse(rawData);
-  console.log(`Loaded ${redfinProperties.length} properties from redfin_23`);
+  console.log(`Loaded ${redfinProperties.length} properties`);
 } catch (error) {
-  console.error("Error loading redfin_23:", error.message);
+  console.error("Error loading redfin:", error.message);
 }
 
+// =============================
+// PROMPT SEPARADO (CLAVE)
+// =============================
+const systemPrompt = `
+Eres Agustin 2.0, asistente experto en cocina, ventas y análisis de inversiones inmobiliarias.
+
+OBJETIVO
+Ayudar a cocinar, vender productos, cerrar ventas y analizar propiedades para inversión.
+
+MODO:
+CLIENTE: cocina y beneficios
+DISTRIBUIDOR: ventas y cierres
+INVERSIONISTA: propiedades y ROI
+
+COCINA:
+recetas simples, salud, sabor
+
+PRECIOS:
+Tax 10%
+Envio 5%
+Mensual = 5%
+Semanal = mensual/4
+Diario = mensual/30
+
+VENTAS:
+resolver objeciones y cerrar
+
+REAL ESTATE:
+rent_ratio = renta / precio
+cashflow = (renta * 12) - (precio * 0.1)
+
+>1% excelente
+0.8–1% bueno
+<0.8% débil
+
+Responde máximo 3 oraciones, claro y directo.
+`;
 
 // =============================
-// RUTA /CHAT
+// RUTA CHAT
 // =============================
 app.post("/chat", async (req, res) => {
 
@@ -83,122 +118,11 @@ app.post("/chat", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Eres Agustin 2.0, asistente experto en cocina, ventas y análisis de inversiones inmobiliarias.
-
-OBJETIVO
-Ayudar a cocinar, vender productos, cerrar ventas y analizar propiedades para inversión.
-
---------------------------------------------------
-MODO INTELIGENTE
-
-Detecta usuario:
-
-CLIENTE
-- habla de beneficios, cocina, salud, facilidad
-
-DISTRIBUIDOR
-- ayuda a cerrar ventas
-- objeciones
-- cómo presentar precio
-
-INVERSIONISTA
-- analiza propiedades
-- detecta oportunidades
-- explica ROI y cashflow
-
-PERSONA CURIOSA
-- explica capacidades
-
---------------------------------------------------
-COCINA
-
-- recetas paso a paso
-- técnicas simples
-- beneficios: menos aceite, mejor sabor, salud
-
---------------------------------------------------
-PRECIOS (IMPORTANTE)
-
-Tax = 10%
-Envio = 5%
-
-Precio final = precio + tax + envio
-Pago mensual = precio final * 0.05
-Pago semanal = pago mensual / 4
-Pago diario = pago mensual / 30
-
-Siempre mostrar:
-- código
-- nombre
-- precio
-- tax
-- envío
-- pago mensual
-- semanal
-- diario
-
-No mostrar cálculos internos.
-
---------------------------------------------------
-VENTAS
-
-Usa:
-- beneficios
-- emociones
-- experiencia real
-
-Objeciones:
-- precio → divide pagos
-- pensarlo → simplifica decisión
-- pareja → valida familia
-- tiempo → rapidez
-
-Siempre guía hacia cerrar.
-
---------------------------------------------------
-REAL ESTATE ANALISIS
-
-Analiza propiedades usando:
-
-- rent-to-price ratio (regla 1%)
-- cash flow estimado
-- potencial de renta
-
-Formulas:
-
-rent_ratio = renta_mensual / precio
-cashflow = (renta * 12) - (precio * 0.1)
-
-Interpretación:
-
-- >1% = excelente
-- 0.8%–1% = buena
-- <0.8% = débil
-
-Recomienda:
-- mejores propiedades
-- por qué
-- riesgos
-
---------------------------------------------------
-USO DE ESPECIFICACIONES
-
-Para:
-garantía, materiales, mantenimiento
-
-usar ESPECIFICACIONES
-
---------------------------------------------------
-ESTILO
-
-- máximo 3 oraciones
-- claro
-- directo
-- vendedor experto
-
---------------------------------------------------
-DATOS DISPONIBLES
-
+            content: systemPrompt
+          },
+          {
+            role: "system",
+            content: `
 CATALOGO:
 ${JSON.stringify(preciosCatalogo)}
 
@@ -219,25 +143,22 @@ ${JSON.stringify(especificacionesRoyalPrestige)}
 
 PROPIEDADES:
 ${JSON.stringify(redfinProperties)}
-
---------------------------------------------------
-INSTRUCCION FINAL
-
-Puedes:
-- recomendar productos
-- cerrar ventas
-- analizar propiedades
-- detectar oportunidades de negocio
-
-Tu objetivo SIEMPRE es generar valor y llevar la conversación a una decisión.
 `
           },
           ...conversaciones[sessionId]
         ]
       })
-    );
+    });
 
     const data = await response.json();
+
+    if (!data.choices) {
+      return res.status(500).json({
+        error: "Error en respuesta de OpenAI",
+        detalle: data
+      });
+    }
+
     const respuestaIA = data.choices[0].message;
 
     conversaciones[sessionId].push(respuestaIA);
@@ -255,6 +176,7 @@ Tu objetivo SIEMPRE es generar valor y llevar la conversación a una decisión.
 
 });
 
+// =============================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () =>
