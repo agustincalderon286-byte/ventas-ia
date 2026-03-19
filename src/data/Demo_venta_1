@@ -1,0 +1,466 @@
+{
+  "metadata": {
+    "titulo": "Demostración Virtual — Alejandro Jaramillo",
+    "presentador": "Alejandro Jaramillo (con Fanny, su esposa)",
+    "clientes_demo": "Joana y Andrés Ribera (pareja real, clientes reales)",
+    "duracion": "~62 minutos",
+    "formato": "Demo virtual por videollamada",
+    "mercado": "Ecuador",
+    "resultado": "VENTA CERRADA — Set de 5 piezas complementarias + Olla de Presión 6L",
+    "fuente": "YouTube — Demostración Virtual Royal Prestige",
+    "uso": "Entrenamiento GPT en técnicas de demostración y cierre de ventas Royal Prestige"
+  },
+  "estructura_demo_completa": {
+    "total_fases": 7,
+    "fases": [
+      {
+        "fase": 1,
+        "nombre": "Apertura y construcción de confianza",
+        "tiempo": "0:00 – 5:30",
+        "objetivo": "Establecer credibilidad de la compañía y crear rapport con los clientes",
+        "tecnicas": [
+          "Agradecer el tiempo del cliente antes de empezar",
+          "Presentarse como 'representante autorizado' (no vendedor)",
+          "Mencionar 60+ años de historia de la compañía para dar seriedad",
+          "Hacer preguntas que el cliente responde solo: '¿Qué opinan cuando escuchan 60 años en el mercado?'"
+        ],
+        "frases_clave": [
+          "Quiero agradecerles muchísimo por el tiempo que me han brindado",
+          "Soy representante autorizado de Royal Prestige de Hy Cite — matriz en Madison, Wisconsin desde 1959",
+          "¿Qué opinan cuando escuchan una compañía con 60 años en el mercado? — Trayectoria, seriedad",
+          "Si tuvieran que pedir consejo, ¿a alguien con mucha o poca experiencia?"
+        ],
+        "insight": "Nunca mencionar el precio en esta fase. La compañía habla antes que el producto."
+      },
+      {
+        "fase": 2,
+        "nombre": "Diagnóstico de valores — Tiempo, Dinero o Salud",
+        "tiempo": "5:30 – 13:30",
+        "objetivo": "Hacer que el cliente declare en voz alta que la SALUD es lo más importante, creando el anclaje emocional de toda la demo",
+        "tecnicas": [
+          "Pregunta de los 3 factores: tiempo, dinero o salud — ¿cuál es más importante?",
+          "Dejar que el cliente responda — nunca imponer",
+          "Si dice dinero, conectarlo inmediatamente con la salud ('el dinero para comprar medicamentos... que van a cuidar la salud')",
+          "Llevar al cliente a concluir que la salud es #1 con sus propias palabras",
+          "Preguntar cuál debería ser el lugar más limpio de la casa → llevar a la COCINA",
+          "Definir la cocina como 'el laboratorio del hogar'"
+        ],
+        "frases_clave": [
+          "Cuando hablamos de estilos de vida hay tres factores: el tiempo, el dinero o la salud — ¿cuál es el más importante?",
+          "Usted tiene razón — para comprar medicamentos que van directamente a cuidar la salud",
+          "¿Cuál debería ser el lugar más limpio de su casa? — La cocina exacto",
+          "La cocina es el laboratorio de nuestro hogar — ahí es donde inicia la salud de la familia",
+          "¿Cómo debe estar un laboratorio? — Ordenado, limpio, pulcro — exactamente",
+          "El 80% de las enfermedades entra directamente por nuestra boca — somos lo que comemos"
+        ],
+        "calculo_ancla": {
+          "descripcion": "Calcular el gasto semanal del cliente en comida y multiplicarlo por semanas",
+          "ejemplo": "$100/semana × 15 semanas = $1,500 en alimentos",
+          "pregunta_clave": "¿Esos $1,500 han sido una INVERSIÓN o un GASTO?",
+          "respuesta_buscada": "Una inversión — el distribuidor lo anota visiblemente"
+        }
+      },
+      {
+        "fase": 3,
+        "nombre": "Prueba del agua sucia — Demostración con ollas del cliente",
+        "tiempo": "13:30 – 22:00",
+        "objetivo": "Demostrar visualmente que los utensilios actuales del cliente están contaminados, creando urgencia de cambio",
+        "pasos": [
+          "Pedir al cliente que traiga su sartén y olla que usa normalmente",
+          "Pedir también la esponja verde/amarilla con la que lavan",
+          "Pedir 2 vasos de agua transparentes",
+          "Preguntar si lavan las ollas antes o después de usarlas — confirmar que están 'listas para usar'",
+          "Pedir que laven las ollas como de costumbre con agua en los vasos",
+          "Mostrar el agua resultante en cámara — el agua sale sucia/turbia",
+          "Preguntar: '¿Su agua está limpia o sucia?' — el cliente dice 'sucia'",
+          "Reflexión: '¿Colocarían los alimentos de sus hijos en esa agua?'"
+        ],
+        "frases_clave": [
+          "Quiero que me traigan su sartén y la olla con que hacen el arroz — y la esponja que usan normalmente",
+          "Ustedes me dijeron que están listas para usar, ¿cierto?",
+          "¿Qué color tiene el agua? — [cliente responde: sucia, turbia]",
+          "¿Eso es lo que están comiendo? — son sus palabras, no las mías",
+          "¿Hubieran cambiado si lo hubieran sabido ayer? — Nuevas, porque ya era tiempo",
+          "Si gastaron $1,500 y los colocaron en esas aguas — ¿fue inversión o fue malgastado? — MALGASTADO",
+          "Andrés, míre a su esposa y dígale que nunca más le va a servir un alimento insalubre"
+        ],
+        "ciencia_mencionada": [
+          "El teflón es derivado del petróleo — similar al benceno y tolueno",
+          "Las micro-porosidades acumulan restos de alimentos de semanas anteriores",
+          "El acero inoxidable también tiene micro-porosidades que acumulan contaminantes"
+        ],
+        "momento_emocional_clave": "Pedir que el esposo mire a los ojos a su esposa y haga la promesa — esto crea compromiso emocional bilateral"
+      },
+      {
+        "fase": 4,
+        "nombre": "Presentación de Royal Prestige — La solución",
+        "tiempo": "22:00 – 32:00",
+        "objetivo": "Presentar el producto como LA alternativa inteligente, con beneficios medibles y concretos",
+        "tecnica_presentacion": "Nunca decir 'vendo algo' — decir 'tengo algo especial exactamente para usted'",
+        "beneficios_presentados": [
+          {
+            "beneficio": "Acero quirúrgico 316L",
+            "argumento": "Si es bueno para operar en quirófanos, ¿qué tan bueno no va a ser para cocinar?",
+            "pregunta": "¿Dónde se usa el acero quirúrgico? — En quirófanos, hospitales"
+          },
+          {
+            "beneficio": "Sellado al vacío — cocina con poco o nada de agua y grasa",
+            "argumento": "Sus $1,500 en alimentos pasan de malgastados a bien invertidos"
+          },
+          {
+            "beneficio": "Válvula Redi-Temp",
+            "argumento": "Su asistente de cocina — cuando silba a 82°C baje la llama al mínimo y aproveche el calor",
+            "historia": "¿Le ha pasado que sus hijos la llaman y la olla se quema? — Ya no más"
+          },
+          {
+            "beneficio": "Ahorro de energía 78%",
+            "argumento": "Los otros materiales consumen 78% más energía — Royal Prestige ahorra ese 78%"
+          },
+          {
+            "beneficio": "Cocción en 5 minutos vs 30-60 minutos",
+            "argumento": "¿Qué tan bueno compartir 30 minutos más con la familia?",
+            "calculo": "Usted pierde 1 hora cocinando — con Royal Prestige solo 5 minutos"
+          },
+          {
+            "beneficio": "Retiene hasta 73% de nutrientes",
+            "argumento": "Sus $1,500 pasan de malgastados a BIEN INVERTIDOS porque ahora sí aprovechan los nutrientes"
+          },
+          {
+            "beneficio": "Garantía de 50 años",
+            "argumento": "¿Qué tiene en su casa con 50 años de garantía? — Nada. Ni el matrimonio tiene eso (bromea)",
+            "pregunta": "¿Hace cuánto van de casados? — 12 años — exactamente, esto va más que el matrimonio"
+          }
+        ],
+        "frases_clave": [
+          "Más que venderle, le quiero AYUDAR — tengo algo especial exactamente para usted",
+          "Esta alternativa inteligente se llama Royal Prestige",
+          "Si es bueno para operar, ¿qué tan bueno no va a ser para cocinar?",
+          "Usted va a cocinar en 5 minutos lo que antes hacía en 30 — 30 minutos más para su familia",
+          "Retiene hasta el 73% de los nutrientes — sus $1,500 ahora sí están bien invertidos",
+          "¿Qué tiene en su casa con 50 años de garantía? — Nada"
+        ]
+      },
+      {
+        "fase": 5,
+        "nombre": "Segunda prueba — Bicarbonato en las ollas",
+        "tiempo": "26:00 – 35:00",
+        "objetivo": "Hacer que el cliente PRUEBE el sabor de la contaminación de sus ollas para crear impacto físico e irreversible",
+        "pasos": [
+          "Pedir al cliente que lleve sus ollas a la cocina con agua y una cucharada de bicarbonato",
+          "Dejar hervir mientras continúa la presentación",
+          "Pedir que traigan 2 cucharitas soplando (para que estén tibias)",
+          "Que ambos prueben el agua de cada olla",
+          "El bicarbonato es absorbente — captura lo que se desprendió de las ollas",
+          "Preguntar: '¿Es ese el verdadero sabor de sus comidas?'"
+        ],
+        "frases_clave": [
+          "El bicarbonato es un absorbente — nos va a permitir comprobar qué se desprendió de sus ollas",
+          "Por primera vez usted va a probar lo que estaba comiendo",
+          "¿Es ese el verdadero sabor? — No lo sentíamos porque le poníamos condimentos y disfrazábamos el sabor",
+          "Ahora quiero que hagamos un brindis por la salud — [distribuidor también bebe su agua limpia]",
+          "Si tuviera que elegir dónde colocar sus alimentos — ¿en su agua sucia o la mía limpia?"
+        ],
+        "impacto_emocional": "Este es el momento de máxima impresión visual y física — el cliente ya no puede volver atrás emocionalmente"
+      },
+      {
+        "fase": 6,
+        "nombre": "Cierre — Presentación de sets y manejo de objeciones",
+        "tiempo": "35:00 – 54:00",
+        "objetivo": "Llevar al cliente de 'cuánto cuesta' al mejor set para su presupuesto, sin bajar el precio",
+        "tecnica_antes_del_precio": [
+          "Antes de dar precio, preguntar cuánto quiere a su esposa/esposo",
+          "Hacer que ambos se comprometan mirándose a los ojos",
+          "Que ella le dé un beso y le diga que está con él en el compromiso de salud",
+          "Preguntar: '¿Con qué tarjeta suelen hacer sus inversiones?'",
+          "Averiguar si prefieren crédito, efectivo o diferido"
+        ],
+        "sets_presentados": [
+          {
+            "set": "Set 15 piezas",
+            "precio_original": "$4,750",
+            "precio_actual": "$3,580",
+            "descuento": "30%",
+            "opciones_pago": [
+              "36 cuotas de $125",
+              "24 cuotas de $175",
+              "18 cuotas de $225",
+              "12 cuotas de $324"
+            ]
+          },
+          {
+            "set": "Set 10 piezas (familiar)",
+            "incluye": [
+              "Olla 6L tapa alta",
+              "Olla 4L",
+              "Colador pequeño",
+              "Sartén 10\"",
+              "Sartén 8\"",
+              "Olla 2L"
+            ],
+            "ideal_para": "Familias de 4 personas"
+          },
+          {
+            "set": "Set 5 piezas complementarias",
+            "incluye": [
+              "Olla 6L",
+              "Olla 3L",
+              "Sartén 10\""
+            ],
+            "cuota": "$88/mes",
+            "argumento": "Solo $88 vs los $120 que gastaba de más — tiene un ahorro de $40"
+          },
+          {
+            "set": "Set 5 piezas pequeñas",
+            "incluye": [
+              "Sartén 8\"",
+              "Olla 4L",
+              "Olla 2L"
+            ],
+            "ideal_para": "Quienes quieren empezar con lo básico"
+          },
+          {
+            "producto": "Olla de Presión 6L",
+            "precio": "$989",
+            "opciones_pago": [
+              "30 cuotas de $41",
+              "24 cuotas de $50",
+              "18 cuotas de $63",
+              "12 cuotas de $90"
+            ],
+            "argumento": "Ya estaba en su presupuesto — era lo que quería comprar primero"
+          }
+        ],
+        "tecnica_calculo_magico": {
+          "descripcion": "El cierre matemático que hace irrefutable la compra",
+          "pasos": [
+            "Recordar los $30 extras que gastaban por semana",
+            "$30 × 4 semanas = $120 mal gastados al mes",
+            "Cuota del set + olla de presión = $79",
+            "$120 (mal gastados) - $79 (cuota) = $41 de AHORRO",
+            "Pregunta final: '¿Dónde quiere esos $41 — en el supermercado o en su bolsillo con la olla?'"
+          ],
+          "frase_cierre": "Dígame si me equivoco — [cliente dice: No te equivocas] — ¡Bienvenidos a Royal Prestige!"
+        },
+        "manejo_objeciones": {
+          "muy_caro": "El set de 15 piezas antes era $4,750 — hoy está en $3,580 con 30% de descuento. ¿Cuándo es mejor invertir — cuando estaba más caro o ahora con descuento?",
+          "no_es_el_momento": "¿Qué pasaría si mañana algo cambia — eso influiría para que su familia deje de comer 3 veces al día? El enemigo externo nos preocupa, pero ¿qué hay del enemigo interno de 3 a 5 comidas diarias?",
+          "lo_voy_a_pensar": "Ya lo pensaron — ustedes me dijeron que la salud no tiene precio. El mejor momento es ahora que tenemos el 30% de descuento",
+          "no_tengo_tarjeta": "¿Prefieren hacerlo en efectivo o diferido? — tenemos opciones para ambos",
+          "solo_quiero_la_olla_de_presion": "Excelente — ¿y no le dejemos a Joana con ganas? Veamos qué set se complementa con la olla"
+        }
+      },
+      {
+        "fase": 7,
+        "nombre": "Cierre definitivo y bienvenida",
+        "tiempo": "54:00 – 55:00",
+        "objetivo": "Formalizar la venta y dejar al cliente emocionado con su decisión",
+        "pasos": [
+          "Confirmar el set elegido y la forma de pago",
+          "Preguntar si la inversión sale a nombre de él o de ella (hacerla sentir incluida)",
+          "Decir 'Bienvenidos a Royal Prestige' con entusiasmo genuino",
+          "Mencionar el siguiente paso: visita de seguimiento o clase de cocina",
+          "Ofrecer clase de cocina como regalo (no como comisión adicional)"
+        ],
+        "frases_cierre": [
+          "¡Bienvenidos a Royal Prestige — los felicito!",
+          "Mi trabajo es seguirlos visitando, seguir ayudando, estar a las órdenes",
+          "Les regalo una clase de cocina espectacular — no para que cocinen mal, sino para que le saquen el máximo provecho",
+          "¿Le gustaría que esta inversión saliera a nombre de su esposo también?"
+        ]
+      }
+    ]
+  },
+  "tecnicas_maestras_identificadas": {
+    "regla_del_diamante": {
+      "descripcion": "Llevar al cliente de un nivel emocional a otro más alto, haciéndolo comprometerse públicamente con su familia",
+      "ejemplo": "Mírele a los ojos a su esposa y dígale que nunca más le va a servir un alimento insalubre"
+    },
+    "son_sus_palabras_no_las_mias": {
+      "descripcion": "Anotar visiblemente lo que el cliente dice y devolverlo como argumento de cierre",
+      "ejemplo": "Usted me dijo que era malgastado — son sus palabras, no las mías. Y usted me dijo que la salud no tiene precio"
+    },
+    "analogias_limpio_sucio": {
+      "descripcion": "Todo el argumento se maneja en pares opuestos simples que no admiten discusión",
+      "pares": [
+        "sucio/limpio",
+        "malgastado/invertido",
+        "inteligente/poco inteligente",
+        "antes/ahora",
+        "enemigo externo/enemigo interno"
+      ]
+    },
+    "el_vendedor_habla_una_sola_vez": {
+      "descripcion": "Escuchar al cliente el doble que hablar — al final usar todo lo que dijo como argumentos de cierre",
+      "frase_mauro": "Tenemos una boca y dos oídos — para escuchar dos veces"
+    },
+    "nunca_regreses_del_cierre": {
+      "descripcion": "Una vez que el cliente pidió la olla de presión, NO regresar a ofrecerle más — cerrar en ese punto",
+      "nota": "Alejandro subió porque el cliente tenía tarjeta con cupo — en cliente normal cerrar en lo que pidió"
+    },
+    "datos_personales_al_inicio": {
+      "descripcion": "Pedir nombre completo, cédula, dirección, teléfono DURANTE la presentación mientras el cliente busca las ollas",
+      "por_que": "El cliente ya está 'registrado' psicológicamente antes de decir sí — reduce la fricción del cierre",
+      "momento": "Mientras el cliente va a buscar su sartén y olla"
+    },
+    "preparacion_previa": {
+      "descripcion": "Enviar catálogo y video al cliente ANTES de la demo",
+      "beneficio": "El cliente ya conoce Royal Prestige — la demo no tiene que explicar, solo demostrar y cerrar",
+      "frase_mauro": "La gente ya sabe que es de Royal Prestige — no hay que esconderlo"
+    },
+    "de_mas_a_menos": {
+      "descripcion": "Empezar siempre con el set más completo (15 piezas) y bajar según el presupuesto",
+      "nunca": "Empezar por el producto pequeño — siempre iniciar arriba"
+    }
+  },
+  "frases_modelo_para_gpt": [
+    {
+      "situacion": "Apertura de la demo",
+      "frase": "Quiero agradecerles muchísimo por el tiempo que me han brindado para esta visita"
+    },
+    {
+      "situacion": "Presentar la empresa",
+      "frase": "Hy Cite lleva desde 1959 en el mercado — 60 años de historia. ¿Qué opinan cuando escuchan eso? — Trayectoria, seriedad, exacto"
+    },
+    {
+      "situacion": "Pregunta de los 3 factores",
+      "frase": "Tiempo, dinero o salud — ¿cuál es el más importante para usted y su familia?"
+    },
+    {
+      "situacion": "Conectar dinero con salud",
+      "frase": "Tiene razón — el dinero para comprar medicamentos que van directamente a cuidar la salud. Es decir, lo más importante siempre ha sido la salud"
+    },
+    {
+      "situacion": "Definir la cocina",
+      "frase": "La cocina es el laboratorio de nuestro hogar — y el 80% de las enfermedades entra por la boca. Somos lo que comemos"
+    },
+    {
+      "situacion": "Calcular el ancla económica",
+      "frase": "¿Cuánto le calculo de presupuesto semanal en alimentación? $100 × 15 semanas = $1,500. ¿Eso ha sido una inversión o un gasto? — Una inversión — lo anoto"
+    },
+    {
+      "situacion": "Prueba del agua",
+      "frase": "¿Qué color tiene el agua? — ¿Eso está limpio o sucio? — Son sus palabras. ¿Colocaría los alimentos de sus hijos en esa agua?"
+    },
+    {
+      "situacion": "Reflexión emocional",
+      "frase": "Andrés, mire a su esposa a los ojos y dígale que nunca más le va a servir un alimento insalubre"
+    },
+    {
+      "situacion": "Presentar el producto",
+      "frase": "Más que venderle, le quiero ayudar — tengo algo especial exactamente para usted. Se llama Royal Prestige"
+    },
+    {
+      "situacion": "Argumento quirúrgico",
+      "frase": "¿Dónde se usa el acero quirúrgico? — En quirófanos. Si es bueno para operar, ¿qué tan bueno no va a ser para cocinar?"
+    },
+    {
+      "situacion": "Beneficio de tiempo",
+      "frase": "Lo que hacía en 30 minutos, ahora lo hace en 5. ¿Cuánto vale ese tiempo con su familia?"
+    },
+    {
+      "situacion": "Garantía de 50 años",
+      "frase": "¿Qué tiene en su casa con 50 años de garantía? — Nada. Ni el matrimonio tiene eso"
+    },
+    {
+      "situacion": "Antes del precio — compromiso emocional",
+      "frase": "¿Cuánto quiere a su esposa? — Infinito. Entonces si en sus manos estuviera la salud de ella, ¿tomaría la mejor decisión?"
+    },
+    {
+      "situacion": "Cierre matemático",
+      "frase": "Usted gastaba $30 de más por semana = $120 al mes. La cuota son $79. ¿Dónde está mejor ese dinero — en el supermercado o en su bolsillo con Royal Prestige?"
+    },
+    {
+      "situacion": "Cierre final",
+      "frase": "Dígame si me equivoco — [cliente: no te equivocas] — ¡Bienvenidos a Royal Prestige!"
+    },
+    {
+      "situacion": "Objeción: no es el momento / el virus / la economía",
+      "frase": "¿Eso influiría para que su familia deje de comer 3 veces al día? El enemigo externo nos preocupa — pero el enemigo interno lo enfrentamos 3 a 5 veces al día"
+    },
+    {
+      "situacion": "Objeción: déjeme pensarlo",
+      "frase": "¿Cuándo es mejor invertir — cuando el set estaba en $4,750 o ahora con 30% de descuento? El mejor momento es hoy"
+    }
+  ],
+  "productos_y_precios_mencionados": {
+    "set_15_piezas": {
+      "precio_original": 4750,
+      "precio_actual": 3580,
+      "descuento_pct": 30,
+      "contenido": [
+        "Paellera 14\"",
+        "Sartén 8\"",
+        "Sartén 10.5\"",
+        "Olla 8 cuartos",
+        "Olla 4L",
+        "Olla 3L",
+        "Olla 1.5 cuartos",
+        "Olla 2 cuartos"
+      ],
+      "financiamiento": [
+        "36×$125",
+        "24×$175",
+        "18×$225",
+        "12×$324"
+      ]
+    },
+    "set_10_piezas_familiar": {
+      "contenido": [
+        "Olla 6L tapa alta",
+        "Olla 4L",
+        "Colador",
+        "Sartén 10\"",
+        "Sartén 8\"",
+        "Olla 2L"
+      ],
+      "ideal_para": "Familias de 4 personas"
+    },
+    "set_5_piezas_complementarias": {
+      "contenido": [
+        "Olla 6L",
+        "Olla 3L",
+        "Sartén 10\""
+      ],
+      "cuota_mensual": 88,
+      "argumento": "$88/mes vs $120 que gastaba de más = ahorro real de $40"
+    },
+    "olla_presion_6L": {
+      "precio": 989,
+      "financiamiento": [
+        "30×$41",
+        "24×$50",
+        "18×$63",
+        "12×$90"
+      ],
+      "garantia": "50 años en cuerpo de acero, 10 años en partes plásticas"
+    }
+  },
+  "resultado_de_la_demo": {
+    "set_vendido": "Set 5 piezas complementarias + Olla de Presión 6L",
+    "cuota_final": "$79/mes",
+    "forma_pago": "Diferido con tarjeta Visa Banco del Pacífico (24 cuotas)",
+    "a_nombre_de": "Los dos (esposo y esposa)",
+    "regalo_incluido": "Clase de cocina con el distribuidor",
+    "tiempo_para_cerrar": "~54 minutos desde el inicio",
+    "comentario_mauro_post_demo": "Con un cliente que no conoce ventas es imposible decir que no. Cerró excelente — llevó de más a menos perfectamente"
+  },
+  "instrucciones_gpt": {
+    "rol": "Entrenador de ventas Royal Prestige especializado en demostraciones virtuales y presenciales",
+    "cuando_usar_este_archivo": [
+      "Usuario pregunta cómo hacer una demo de Royal Prestige",
+      "Usuario quiere saber cómo manejar una objeción de precio",
+      "Usuario quiere frases para el cierre de venta",
+      "Usuario pregunta cómo presentar los beneficios del producto",
+      "Usuario quiere saber el orden correcto de una demostración",
+      "Usuario pregunta qué hacer cuando el cliente dice 'déjame pensarlo'"
+    ],
+    "reglas_para_el_gpt": [
+      "Siempre recomendar las 7 fases en orden — no saltarse ninguna",
+      "La salud SIEMPRE va antes del precio — nunca mencionar precio antes de fase 6",
+      "Usar los cálculos matemáticos reales de la demo para justificar el precio",
+      "El cierre siempre termina con 'Dígame si me equivoco' — nunca presionar directamente",
+      "Si el cliente tiene objeción económica, usar el 'cierre matemático' de los $30 extras",
+      "La garantía de 50 años siempre se menciona DESPUÉS del compromiso emocional"
+    ]
+  }
+}
