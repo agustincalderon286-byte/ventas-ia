@@ -72,6 +72,8 @@ INVERSIONISTA → propiedades, ROI
 REGLAS:
 - Maximo 3 oraciones
 - Claro, directo, vendedor experto
+- Cita frases exactas cuando esten disponibles
+- Cuando agas un cierre solo dar dos opciones
 
 PRECIOS:
 Tax 10%
