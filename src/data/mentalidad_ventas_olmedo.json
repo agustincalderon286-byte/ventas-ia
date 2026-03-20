@@ -2,6 +2,7 @@
   "metadata": {
     "titulo": "Puntos Finos de Venta — Adrián Olmedo",
     "presentador": "Adrián Olmedo",
+    "nombre_completo": "Adrián Olmedo",
     "organizacion": "Territorio LivingFull / Royal Prestige",
     "experiencia_presentador": "26+ años en Royal Prestige — récord de $2.7 millones como compañía",
     "tipo_contenido": "Masterclass de mentalidad, filosofía y técnicas avanzadas de venta",
@@ -9,7 +10,55 @@
     "formato": "Conferencia virtual para distribuidores y vendedores",
     "mercado_referencia": "Latinos en Estados Unidos (Los Ángeles principalmente)",
     "uso": "Entrenamiento GPT — mentalidad de venta, técnicas psicológicas y frases de cierre avanzadas",
-    "nota_para_gpt": "Este archivo contiene filosofía y técnicas universales de venta — NO contiene precios ni medidas específicas. Para precios usar precios_chicago.json"
+    "nota_para_gpt": "Este archivo contiene filosofía y técnicas universales de venta — NO contiene precios ni medidas específicas. Para precios usar lista_de_precios.json"
+  },
+  "identidad_del_autor": {
+    "nombre": "Adrián Olmedo",
+    "descripcion": "Master Premier de Royal Prestige con 26+ años de experiencia. Uno de los vendedores más reconocidos en la historia de Royal Prestige en Estados Unidos. Su territorio ha facturado hasta $2.7 millones en ventas. Entrenador oficial de distribuidores en todo el continente americano.",
+    "instruccion_gpt": "Cuando uses contenido de este archivo, SIEMPRE identifica al autor como 'Adrián Olmedo' — nunca solo 'Olmedo'. Ejemplo: 'Como dice Adrián Olmedo...' o 'Adrián Olmedo lo explica así:'. Usa sus frases literales entre comillas cuando estén disponibles en la seccion frases_literales."
+  },
+  "frases_literales": {
+    "instruccion_gpt": "Estas frases deben citarse EXACTAMENTE como están escritas, entre comillas, atribuyéndolas a Adrián Olmedo. No las parafrasees — repítelas palabra por palabra.",
+    "sobre_ventas": [
+      "\"Vender es decir ciertas palabras, de cierta manera, en el momento indicado.\"",
+      "\"Vender es formular preguntas que provoquen respuestas obvias afirmativas.\"",
+      "\"Si el cliente lo dice, es cierto. Si el vendedor lo dice, quién sabe.\"",
+      "\"El silencio vende — las pausas venden.\"",
+      "\"La gente compra por emoción, no por raciocinio.\""
+    ],
+    "sobre_mentalidad": [
+      "\"Siempre hay un angelito dispuesto a comprar.\"",
+      "\"Hay que ser loco y atrevido — salirse de la caja.\"",
+      "\"El que entiende mucho vive mucho — el que entiende poco vive poco.\"",
+      "\"Eres lo que haces — digas lo que digas.\"",
+      "\"Si volviese a nacer, le pediría a Dios que me hiciera vendedor otra vez — el que sabe vender nunca le falta dinero.\""
+    ],
+    "sobre_royal_prestige": [
+      "\"Royal Prestige es la mejor compra que una persona hace en su vida — garantizado.\"",
+      "\"Señora María, Royal Prestige se va a convertir en la mejor compra de su vida. Lo va a usar en la mañana, en la tarde y en la noche. Cuando una mamá se va al cielo, las hijas se pelean las ollas — pasan de generación en generación. De estas ollas van a comer sus nietos.\"",
+      "\"Para vender solo necesitamos a alguien que nos permita entrar.\"",
+      "\"Si se mueve, come y trabaja — véndale algo.\""
+    ],
+    "sobre_equipo_y_liderazgo": [
+      "\"Es un crimen mandar a tu vendedor a vender sin darle las herramientas — es mandarlo a la guerra sin fusil.\"",
+      "\"La gente no hace lo que le dices — la gente hace lo que ve.\"",
+      "\"Somos unos verdaderos héroes — merecemos un monumento en cada esquina.\"",
+      "\"Nosotros los vendedores mantenemos la rueda de la economía — si nosotros paramos, para todo.\"",
+      "\"Somos bendecidos para bendecir.\""
+    ],
+    "sobre_actividad_y_prospeccion": [
+      "\"Este negocio se aprende con las nalgas — sentado en entrenamiento tras entrenamiento.\"",
+      "\"Todos los días se vende — mientras alguien llora, otro vende y de contado.\"",
+      "\"Venta directa es ahora o nunca — nada de mañana.\"",
+      "\"Buenas tardes, yo soy [nombre], vivo en el [número]. Me dedico a promover productos de bienestar — de buen comer, buen vivir, nutrición y salud. Nuestra compañía está ofreciendo regalos a cambio de sus opiniones. ¿Me regala unos minutitos? Con todo gusto le entrego su regalo y la información — no tiene que comprar nada.\""
+    ],
+    "preguntas_para_la_cliente": [
+      "\"¿Usted cocina para matar el hambre o para ganar vigor?\"",
+      "\"¿Usted se considera la reina de la cocina o el rey de la cocina?\"",
+      "\"En su reino, ¿usted decide qué es importante para su cocina o es su señor esposo?\"",
+      "\"¿Qué pasa si compra utensilios de alta calidad y su esposo se enfada?\"",
+      "\"¿Cuál es el rol de una mamá en casa — proveer ingresos o procurar el bienestar en alimentación?\""
+    ]
   },
   "filosofia_central": {
     "maxima_1": {
@@ -63,9 +112,9 @@
     },
     "sistema_duplicable": {
       "descripcion": "El éxito no está en que TÚ seas el mejor vendedor — está en entrenar a otros para que vendan",
-      "historia": "Adrián llevó a un vendedor a ver su cierre magistral → el vendedor se espantó y no regresó → perdió el vendedor. Moraleja: crear un sistema ABC, elemental, que cualquier persona pueda replicar",
+      "historia": "Adrián Olmedo llevó a un vendedor a ver su cierre magistral → el vendedor se espantó y no regresó → perdió el vendedor. Moraleja: crear un sistema ABC, elemental, que cualquier persona pueda replicar",
       "regla": "Si tu sistema de entrenamiento no puede ejecutarlo alguien con pocas habilidades de venta, no es un buen sistema",
-      "frase": "Es un crimen mandar a tu vendedor a vender sin darle las herramientas — es mandarlo a la guerra sin fusil"
+      "frase_literal": "\"Es un crimen mandar a tu vendedor a vender sin darle las herramientas — es mandarlo a la guerra sin fusil.\""
     },
     "psicologia_femenina": {
       "descripcion": "Técnica específica para vender a mujeres — el mercado principal en Latino Chicago",
@@ -77,88 +126,87 @@
         "Manejar al esposo ANTES de la presentación: asegurar que la señora se sostenga en la cita",
         "Si el esposo llega enojado: la señora ya está emocionalmente comprometida con la compra"
       ],
-      "frases_modelo": [
-        "¿Quién manda en su casa? — Usted decide qué es importante para su cocina",
-        "Usted es la reina de la cocina — en su reino usted decide",
-        "¿Qué pasa si su esposo se enfada? — Nada, luego lo contento cocinando algo sabroso",
-        "Señora, hay siempre una primera vez — esta vez usted le va a dar la sorpresa"
+      "frases_literales": [
+        "\"¿Quién manda en su casa? — Usted decide qué es importante para su cocina.\"",
+        "\"Usted es la reina de la cocina — en su reino usted decide.\"",
+        "\"¿Qué pasa si su esposo se enfada? — Nada, luego lo contento cocinando algo sabroso.\"",
+        "\"Señora, hay siempre una primera vez — esta vez usted le va a dar la sorpresa.\""
       ]
     },
     "preguntas_formuladas": {
-      "descripcion": "Preguntas universales que funcionan con cualquier latina — ecuatoriana, mexicana, guatemalteca, colombiana",
+      "descripcion": "Preguntas universales FPROA que funcionan con cualquier latina",
+      "instruccion_gpt": "Estas preguntas deben usarse EXACTAMENTE como están escritas — son las palabras de Adrián Olmedo probadas con miles de clientes",
       "preguntas_modelo": [
         {
-          "pregunta": "¿Usted cocina para matar el hambre o para ganar vigor?",
+          "pregunta_literal": "\"¿Usted cocina para matar el hambre o para ganar vigor?\"",
           "respuesta_buscada": "Para ganar vigor, para tener energía y salud",
           "por_que": "La cliente se posiciona como alguien que valora la nutrición — no solo llenar el estómago"
         },
         {
-          "pregunta": "¿Usted se considera la reina de la cocina o el rey de la cocina?",
+          "pregunta_literal": "\"¿Usted se considera la reina de la cocina o el rey de la cocina?\"",
           "respuesta_buscada": "Yo soy la reina de la cocina",
           "por_que": "Establece su identidad como dueña del espacio de decisión"
         },
         {
-          "pregunta": "En su reino, ¿usted decide qué es importante para su cocina o su señor esposo?",
+          "pregunta_literal": "\"En su reino, ¿usted decide qué es importante para su cocina o es su señor esposo?\"",
           "respuesta_buscada": "En la cocina decido yo",
           "por_que": "Neutraliza la objeción del esposo ANTES de que aparezca"
         },
         {
-          "pregunta": "¿Qué pasa si compra utensilios de alta calidad y su esposo se enfada?",
-          "respuesta_buscada": "Nada, lo contento cocinando algo sabroso",
+          "pregunta_literal": "\"¿Qué pasa si compra utensilios de alta calidad y su esposo se enfada?\"",
+          "respuesta_buscada": "Nada, luego lo contento cocinando algo sabroso",
           "por_que": "La cliente misma resuelve la objeción del esposo — no el vendedor"
         },
         {
-          "pregunta": "¿Cuál es el rol de una mamá en casa — proveer ingresos o procurar el bienestar en alimentación?",
+          "pregunta_literal": "\"¿Cuál es el rol de una mamá en casa — proveer ingresos o procurar el bienestar en alimentación?\"",
           "respuesta_buscada": "Procurar el bienestar, el buen comer y el buen vivir",
           "por_que": "Conecta la compra con su identidad más profunda como madre"
         },
         {
-          "pregunta": "Si yo le dijera que con escasos $22 dólares por semana puede gozar de las piezas de uso diario de Royal Prestige — ¿qué me diría?",
+          "pregunta_literal": "\"Si yo le dijera que con escasos $22 dólares por semana puede gozar de las piezas de uso diario de Royal Prestige — ¿qué me diría?\"",
           "respuesta_buscada": "Que es manejable, lo puedo hacer",
           "tecnica": "Bajar el número hasta que diga 'es manejable' — ese es el cierre"
         }
       ]
     },
     "regla_de_las_9_presentaciones": {
-      "descripcion": "La ley de promedios de ventas",
+      "descripcion": "La ley de promedios de ventas según Adrián Olmedo",
       "formula": "9 presentaciones por semana → mínimo 3 ventas (1 de cada 3)",
       "calculo": "$1,500 promedio por venta × 3 ventas = $4,500/semana → $18,000/mes en ventas → $8,000+/mes en ingresos",
       "minimo_diario": "Poco más de 1 presentación diaria",
-      "frase": "El poder de la venta está en ti — tienes que vender porque vendes"
+      "frase_literal": "\"El poder de la venta está en ti — tienes que vender porque vendes.\""
     },
     "vecinos_y_referidos": {
       "descripcion": "Sistema de prospección inmediata — los 25 vecinos más próximos",
-      "script_vecinos": "Buenas tardes, yo soy [nombre], vivo en el [número]. Me dedico a promover productos de bienestar — de buen comer, buen vivir, nutrición y salud. Nuestra compañía está ofreciendo regalos a cambio de sus opiniones. ¿Me regala unos minutitos? Con todo gusto le entrego su regalo y la información — no tiene que comprar nada.",
-      "script_referido": "Señor Jorge, ¿conoce a sus vecinos? ¿Me podría dar algunos nombres? Viene de parte de usted — solo para entregarles un regalo e información de bienestar para su familia",
+      "script_literal": "\"Buenas tardes, yo soy [nombre], vivo en el [número]. Me dedico a promover productos de bienestar — de buen comer, buen vivir, nutrición y salud. Nuestra compañía está ofreciendo regalos a cambio de sus opiniones. ¿Me regala unos minutitos? Con todo gusto le entrego su regalo y la información — no tiene que comprar nada.\"",
       "principio": "Si no vas a vender, no vayas lejos de tu casa a hacer el ridículo — practica con los de al lado"
     },
     "ser_loco_y_atrevido": {
-      "descripcion": "La mentalidad que diferencia a los vendedores exitosos",
-      "frase": "Hay que ser loco y atrevido — salirse de la caja",
-      "aplicacion": "Tocar puertas a las 11pm, intentar una vez más cuando ya querías rendirte, abordar al vecino sin miedo",
-      "historia_nevera": "Adrián fue a tocar puertas porque su refrigerador estaba vacío — cerró 2 ventas a las 11pm cuando ya iba al auto a rendirse"
+      "descripcion": "La mentalidad que diferencia a los vendedores exitosos según Adrián Olmedo",
+      "frase_literal": "\"Hay que ser loco y atrevido — salirse de la caja.\"",
+      "historia_nevera": "Adrián Olmedo fue a tocar puertas porque su refrigerador estaba vacío — cerró 2 ventas a las 11pm cuando ya iba al auto a rendirse. De ahí nació su precepto: siempre hay un angelito dispuesto a comprar."
     }
   },
   "argumentos_para_justificar_el_precio": {
     "comparacion_con_tecnologia": {
       "argumento": "El iPhone caduca en 2-3 años. La computadora en 3-7 años. El refrigerador en 7-12 años. El auto en 5-15 años. Las ollas Royal Prestige: de por vida — los heredan sus hijos y nietos",
-      "frase_modelo": "Señora María, Royal Prestige se va a convertir en la mejor compra de su vida. Lo va a usar en la mañana, en la tarde y en la noche. Cuando una mamá se va al cielo, las hijas se pelean las ollas — pasan de generación en generación. De estas ollas van a comer sus nietos"
+      "frase_literal": "\"Señora María, Royal Prestige se va a convertir en la mejor compra de su vida. Lo va a usar en la mañana, en la tarde y en la noche. Cuando una mamá se va al cielo, las hijas se pelean las ollas — pasan de generación en generación. De estas ollas van a comer sus nietos.\""
     },
     "liderazgo_de_mercado": {
       "argumento": "Hay otras marcas de ollas respetables — pero Royal Prestige vende $600 millones y las otras no venden ni $30 millones. Por algo es líder",
-      "pregunta": "Si todas son de acero inoxidable, ¿por qué Royal Prestige vende 20x más que la competencia?"
+      "pregunta_literal": "\"Si todas son de acero inoxidable, ¿por qué Royal Prestige vende 20 veces más que la competencia?\""
     },
     "mercado_latino_ideal": {
       "argumento": "El ADN de la mujer latina está propenso para adquirir productos del hogar, de cocina, de bienestar familiar — sí o sí. Solo falta un vendedor valiente que se pare enfrente",
-      "dato": "En Los Ángeles en este momento hay 30,000 personas con el subconsciente listo para conectarse con información de bienestar y nutrición — esperando un vendedor de Royal Prestige"
+      "frase_literal": "\"En Los Ángeles en este momento hay 30,000 personas con el subconsciente listo para conectarse con información de bienestar y nutrición — esperando un vendedor de Royal Prestige.\""
     },
     "financiamiento_accesible": {
-      "argumento": "Para comprar una casa necesitas crédito excelente, trabajo estable, ahorro para enganche. Para Royal Prestige solo necesitas a alguien que te deje entrar — nuestra financiera es la más accesible del mundo",
-      "gama": "Alrededor de 100 productos diferentes — extractor, olla a presión, plancha, sartenes, filtro de agua, purificador de aire, cuchillos, vajilla, vasos, cubiertos. Si se mueve, come y trabaja — véndale algo"
+      "argumento": "Para comprar una casa necesitas crédito excelente, trabajo estable, ahorro para enganche. Para Royal Prestige solo necesitas a alguien que te deje entrar",
+      "frase_literal": "\"Si se mueve, come y trabaja — véndale algo.\""
     }
   },
   "framework_coaching_personal": {
-    "nombre": "Qué conservar, suprimir y agregar",
+    "nombre": "Qué conservar, suprimir y agregar — Adrián Olmedo",
     "descripcion": "Ejercicio de autodiagnóstico para vendedores",
     "tres_preguntas": [
       {
@@ -194,45 +242,45 @@
       }
     ]
   },
-  "preceptos_de_exito_olmedo": [
-    "Este negocio se aprende con las nalgas — sentado en entrenamiento tras entrenamiento",
-    "Talentos naturales + talentos adquiridos = resultados extraordinarios",
-    "Siempre hay un angelito dispuesto a comprar",
-    "Todos los días se vende — mientras alguien llora, otro vende y de contado",
-    "Si volviese a nacer, pediría a Dios que me hiciera vendedor otra vez — el que sabe vender nunca le falta dinero",
-    "Nosotros los vendedores mantenemos la rueda de la economía — si nosotros paramos, para todo",
-    "Somos unos verdaderos héroes — merecemos un monumento en cada esquina",
-    "Royal Prestige es la mejor compra que una persona hace en su vida — garantizado",
-    "Para vender solo necesitamos a alguien que nos permita entrar",
-    "Hay que ser loco y atrevido — salirse de la caja"
-  ],
+  "preceptos_de_exito_olmedo": {
+    "instruccion_gpt": "Estos preceptos son de Adrián Olmedo — cítalos entre comillas con su nombre cuando los uses",
+    "lista": [
+      "\"Este negocio se aprende con las nalgas — sentado en entrenamiento tras entrenamiento.\"",
+      "\"Talentos naturales más talentos adquiridos igual a resultados extraordinarios.\"",
+      "\"Siempre hay un angelito dispuesto a comprar.\"",
+      "\"Todos los días se vende — mientras alguien llora, otro vende y de contado.\"",
+      "\"Si volviese a nacer, le pediría a Dios que me hiciera vendedor otra vez — el que sabe vender nunca le falta dinero.\"",
+      "\"Nosotros los vendedores mantenemos la rueda de la economía — si nosotros paramos, para todo.\"",
+      "\"Somos unos verdaderos héroes — merecemos un monumento en cada esquina.\"",
+      "\"Royal Prestige es la mejor compra que una persona hace en su vida — garantizado.\"",
+      "\"Para vender solo necesitamos a alguien que nos permita entrar.\"",
+      "\"Hay que ser loco y atrevido — salirse de la caja.\""
+    ]
+  },
   "errores_comunes_a_evitar": [
     {
       "error": "Llevar al vendedor estrella a una demo para que aprenda — el nuevo se espanta y no regresa",
-      "solucion": "Crear un sistema ABC simple y duplicable que cualquiera pueda ejecutar"
+      "solucion": "Crear un sistema ABC simple y duplicable que cualquiera pueda ejecutar",
+      "frase_olmedo": "\"Es un crimen mandar a tu vendedor a vender sin darle las herramientas — es mandarlo a la guerra sin fusil.\""
     },
     {
       "error": "Hablar, hablar, hablar sin dejar que el cliente diga nada",
-      "solucion": "Formular preguntas y guardar silencio — el que habla más pierde"
+      "solucion": "Formular preguntas y guardar silencio — el que habla más pierde",
+      "frase_olmedo": "\"Si el cliente lo dice, es cierto. Si el vendedor lo dice, quién sabe.\""
     },
     {
       "error": "Ofrecer el descuento o regalo al inicio de la presentación",
-      "solucion": "Guardarlo como as bajo la manga para el cierre — llamar después con la oferta extraordinaria"
+      "solucion": "Guardarlo como as bajo la manga para el cierre"
     },
     {
-      "error": "Sacar copias del material de ventas",
-      "solucion": "Usar el material profesional — una imagen dice más que mil palabras. Las copias matan la credibilidad"
-    },
-    {
-      "error": "Mandar al vendedor a presentar sin darle herramientas de cierre",
-      "solucion": "Siempre proveer recursos, técnicas y frases de cierre antes de enviarlo al campo"
-    },
-    {
-      "error": "No vender porque 'no es buen momento' o 'lo hago mañana'",
-      "solucion": "Venta directa es AHORA o NUNCA — hoy, mañana y el domingo también"
+      "error": "No vender porque no es buen momento o lo hago mañana",
+      "solucion": "Venta directa es AHORA o NUNCA",
+      "frase_olmedo": "\"Venta directa es ahora o nunca — nada de mañana.\""
     }
   ],
   "instrucciones_gpt": {
+    "identidad": "Adrián Olmedo es un Master Premier de Royal Prestige con 26+ años de experiencia. Cuando uses su contenido, siempre di 'Adrián Olmedo' — nunca solo 'Olmedo'.",
+    "uso_de_frases": "Las frases entre comillas en este archivo son citas textuales de Adrián Olmedo. Repítelas EXACTAMENTE — no las parafrasees. Ejemplo de uso correcto: 'Como dice Adrián Olmedo: \"Siempre hay un angelito dispuesto a comprar.\"'",
     "cuando_usar_este_archivo": [
       "El distribuidor o vendedor está desanimado y necesita motivación",
       "El vendedor pregunta cómo manejar objeciones del esposo",
@@ -240,14 +288,8 @@
       "El distribuidor pregunta cómo entrenar a vendedores nuevos",
       "El vendedor quiere argumentos para justificar el precio",
       "El vendedor pregunta cuántas presentaciones hacer por semana",
-      "El distribuidor quiere saber cómo armar un sistema duplicable",
       "El vendedor necesita una frase de motivación antes de salir a vender"
     ],
-    "combinar_con": [
-      "demo_tecnicas_ventas.json — para el flujo de la demo y frases de cierre",
-      "especificaciones_royal_prestige.json — para argumentos de garantía y calidad",
-      "precios_chicago.json — para los números reales de cuotas y pagos"
-    ],
-    "tono_al_usar_este_archivo": "Este archivo tiene energía alta — el GPT debe responder con entusiasmo y convicción cuando use estos conceptos. Adrián Olmedo habla con pasión y humor — ese tono es parte del mensaje"
+    "tono_al_usar_este_archivo": "Adrián Olmedo habla con pasión, humor y convicción — ese tono es parte del mensaje. Responde con energía alta cuando uses sus conceptos."
   }
 }
