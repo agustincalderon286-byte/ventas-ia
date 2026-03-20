@@ -1,0 +1,205 @@
+{
+  "metadata": {
+    "titulo": "Reclutamiento — José Miguel Ciprián",
+    "presentador": "José Miguel Ciprián",
+    "cargo": "Master Premier Network Leader",
+    "experiencia": "12+ años en Royal Prestige — equipo de casi 200 distribuidores",
+    "tipo_contenido": "Masterclass de reclutamiento y liderazgo organizacional",
+    "formato": "Entrevista/conferencia virtual con David Peñaherrera",
+    "nota_para_gpt": "Este archivo cubre reclutamiento y conservación de distribuidores. Para precios usar precios_chicago.json. Para técnicas de demo usar demo_tecnicas_ventas.json.",
+    "por_que_es_diferente_a_olmedo": "Olmedo enseña a vender el producto. Ciprián enseña a construir y conservar el equipo. Son complementarios — no se repiten."
+  },
+  "filosofia_central": {
+    "verdad_1": {
+      "frase": "El reclutamiento no es ni fácil ni difícil — tiene su naturaleza. Hay que entenderla.",
+      "aplicacion": "No desmotivarse cuando no hay resultados inmediatos. El reclutamiento es siembra, no cosecha instantánea"
+    },
+    "verdad_2": {
+      "frase": "El problema más grande del reclutamiento no es conseguir gente — es CONSERVAR a la gente correcta",
+      "aplicacion": "La mayoría invierte el 90% del tiempo buscando y 10% reteniendo. Ciprián lo invierte al revés"
+    },
+    "verdad_3": {
+      "frase": "El reclutamiento empieza contigo — no con la gente",
+      "explicacion": "Si te llega gente difícil tienes dos problemas: eres mal líder O estás haciendo mala selección. Ambos tienen solución porque dependen de ti"
+    },
+    "verdad_4": {
+      "frase": "Lo bueno atrae lo bueno — declara qué tipo de gente quieres y hasta que no lo declares no llega",
+      "aplicacion": "Hacer una declaración explícita del perfil de distribuidor que buscas. Tu equipo refleja tu nivel de liderazgo"
+    },
+    "verdad_5": {
+      "frase": "Ventas directa es actividad masiva — toca 1,000 puertas para encontrar al correcto",
+      "ejemplo": "Ciprián repartía 1,000 flyers para conseguir 1 buen distribuidor. Quien hace poco espera mucho"
+    },
+    "verdad_6": {
+      "frase": "No vendas 'cuando seas director ya no vas a trabajar' — eso es una mentira que atrae al tipo de gente equivocado",
+      "lo_que_si_vender": "Que van a ganar mucho dinero, que se van a divertir, pero que aquí se trabaja hasta el día que uno muere — porque es tan divertido que no querrás parar"
+    }
+  },
+  "sistema_de_reclutamiento": {
+    "principio_clave": "Desarrollar pequeños sistemas que funcionen los 365 días del año sin depender de ti",
+    "ejemplo_sistema": {
+      "descripcion": "Contratar a una persona (joven, part-time) que coloque anuncios en páginas gratuitas y grupos todos los días",
+      "resultado": "Este sistema fue el que llevó a Ciprián de distribuidor a Director de Territorio",
+      "frecuencia": "Actividad diaria — no ocasional"
+    },
+    "cantidad_vs_calidad": {
+      "postura": "Trabaja con cantidad — no tengas miedo de tener 15 candidatos al mismo tiempo",
+      "razon": "De 15 posiblemente 2 o 3 son buenos. Si esperas el 'ideal' nunca tienes a nadie",
+      "tecnica": "De los 15, identifica rápido con quién dedicas tu tiempo y energía — suelta el miedo al número grande"
+    },
+    "actividad_minima_requerida": {
+      "principio": "La mayoría fracasa porque hace actividad mínima esperando resultado máximo",
+      "pregunta_clave": "¿Cuántas entrevistas necesito hacer para conseguir un buen distribuidor? Cuando lo sepas, haz el doble",
+      "anecdota": "Vendedor que tocó 159 puertas sin venta. Ciprián le dijo: yo toqué 400. Por eso tú no vendiste"
+    }
+  },
+  "perfil_del_distribuidor_ideal": {
+    "advertencia": "Perfil NO significa títulos, diplomas o experiencia previa. Significa características de carácter",
+    "caracteristicas_que_busca": [
+      {
+        "caracteristica": "Capacidad de confiar",
+        "por_que": "Personas muy 'maltratadas por la vida' no confían en nadie. Sin confianza no hay relación de trabajo posible",
+        "señal": "¿Esta persona puede darme la autoridad para guiarla aunque no me conozca bien?"
+      },
+      {
+        "caracteristica": "Humildad",
+        "por_que": "Aunque haya tenido éxito en otro negocio, esto es nuevo para ellos. Necesitan reconocer que no saben",
+        "señal": "¿Puede decir 'enséñame' aunque haya ganado dinero antes?"
+      },
+      {
+        "caracteristica": "Responsabilidad",
+        "por_que": "Cuando no tenga resultados, ¿te va a culpar a ti o va a preguntar cómo mejorar?",
+        "señal": "¿Habla de sus fracasos pasados con responsabilidad o siempre tiene una excusa externa?"
+      },
+      {
+        "caracteristica": "Capacidad de trabajo",
+        "por_que": "No buscar personas que quieran 'residuales sin trabajar' — eso atrae al tipo equivocado",
+        "señal": "¿Está buscando atajos o está dispuesto a trabajar lo necesario para lograr sus metas?"
+      },
+      {
+        "caracteristica": "Entrenable (coachable)",
+        "por_que": "De nada sirve la experiencia si no pueden aprender algo nuevo",
+        "señal": "¿Pregunta o discute? ¿Escucha o justifica?"
+      }
+    ],
+    "perfil_que_NO_quieres": [
+      "Personas que dicen 'cuando sea director ya no voy a trabajar'",
+      "Personas que culpan siempre a otros de sus resultados",
+      "Personas que exageran sus logros pasados para impresionar",
+      "Personas que necesitan control constante para hacer su trabajo",
+      "Personas tóxicas que dañan el ambiente del equipo aunque den resultados a corto plazo"
+    ]
+  },
+  "conservacion_del_equipo": {
+    "por_que_es_mas_importante_que_reclutar": "De nada sirve traer 100 distribuidores si los pierdes todos. La densidad de gente buena es lo que construye el negocio",
+    "practicas_clave": [
+      {
+        "practica": "Crear un ambiente de trabajo que la gente quiera",
+        "descripcion": "Tu oficina/equipo debe ser un santuario — un lugar donde se disfruta estar. Si es un caos, la gente buena se va",
+        "frase": "Mi trabajo es mi primera casa — paso más tiempo ahí que en mi hogar"
+      },
+      {
+        "practica": "Soltar el control excesivo",
+        "descripcion": "Si tienes que exigirle a alguien un horario o que llegue temprano, el problema es el tipo de gente que estás reclutando — no la gente",
+        "analogia": "Google, Apple, Amazon no controlan tanto — pero eso es porque seleccionan bien desde el inicio"
+      },
+      {
+        "practica": "Eliminar a personas nocivas aunque den resultados",
+        "descripcion": "Una persona tóxica aleja a la gente buena. Ciprián tenía un grupo en Nueva York que le impedía crecer porque alejaba a los buenos",
+        "decision": "Si alguien daña el ambiente del equipo, eventualmente hay que tomar decisiones — aunque duelan"
+      },
+      {
+        "practica": "Ser el líder que la gente busca",
+        "descripcion": "La gente no se va de las empresas — se va de los líderes. Si tu gente se va, es porque no encuentran en ti al líder que los lleve donde quieren ir",
+        "frase": "Si la gente se te está yendo, ellos identifican en ti que no eres el líder que necesitan"
+      }
+    ]
+  },
+  "liderazgo_como_base_del_reclutamiento": {
+    "principio": "Tu nivel de liderazgo determina el nivel de la gente que atraes — no puedes atraer líderes nivel 5 si tú eres nivel 3",
+    "solucion": "Crecer como líder es la única solución sostenible. Estudiar, modelar líderes exitosos, responsabilizarse de los resultados",
+    "pregunta_poderosa": "¿En qué tipo de líder me tengo que convertir para atraer el tipo de gente que quiero?",
+    "responsabilidad_total": {
+      "frase": "Los problemas salen de ti hacia afuera — no de afuera hacia adentro",
+      "aplicacion": "Si tienes problemas en tu organización, la solución eres tú. Esa es la BUENA noticia porque tú sí puedes cambiar"
+    }
+  },
+  "errores_comunes_en_reclutamiento": [
+    {
+      "error": "Hacer toda la actividad de reclutamiento tú mismo sin delegar",
+      "solucion": "Crear un sistema — delegar la parte operativa (poner anuncios, hacer llamadas iniciales) a alguien más"
+    },
+    {
+      "error": "Desesperarse por no ver resultados inmediatos",
+      "solucion": "El reclutamiento es siembra. Tener fe en el principio: el que siembra cosecha"
+    },
+    {
+      "error": "Tener miedo de tener muchos candidatos al mismo tiempo",
+      "solucion": "Trabajar con cantidad — de 15 candidatos identifica a los 2 o 3 que merecen tu tiempo"
+    },
+    {
+      "error": "Vender 'cuando llegues a director ya no trabajas'",
+      "solucion": "Vender la verdad: se gana mucho dinero, es divertido, pero se trabaja siempre — y uno lo quiere así"
+    },
+    {
+      "error": "Traer a cualquier persona sin evaluar el perfil",
+      "solucion": "Declarar explícitamente qué tipo de persona buscas antes de salir a reclutar"
+    },
+    {
+      "error": "Controlar excesivamente al equipo por miedo",
+      "solucion": "Mejorar la selección inicial — la gente buena no necesita control"
+    },
+    {
+      "error": "Retener a personas nocivas porque dan resultados cortos",
+      "solucion": "Las personas tóxicas alejan a la gente buena. El daño a largo plazo supera el beneficio corto"
+    }
+  ],
+  "frases_modelo_para_gpt": [
+    {
+      "situacion": "Distribuidor frustrado porque no le llega gente buena",
+      "frase": "El reclutamiento empieza contigo. Si te llega gente difícil hay dos razones: o estás siendo mal líder, o estás haciendo mala selección. Ambas tienen solución porque dependen de ti."
+    },
+    {
+      "situacion": "Distribuidor que quiere reclutar pero no sabe cómo empezar",
+      "frase": "Crea un sistema pequeño que funcione los 365 días del año. No tienes que hacerlo tú — busca a alguien que ponga anuncios en páginas gratuitas todos los días. La constancia es más importante que la técnica."
+    },
+    {
+      "situacion": "Distribuidor que pregunta cuántas personas reclutar a la vez",
+      "frase": "Trabaja con cantidad. Si llegan 15, de esos 2 o 3 son buenos. No tengas miedo al número — tu trabajo es identificar rápido con quién vale la pena tu tiempo."
+    },
+    {
+      "situacion": "Distribuidor que pierde distribuidores constantemente",
+      "frase": "La gente no se va de las empresas — se va de los líderes. Pregúntate: ¿en qué tipo de líder me tengo que convertir para que la gente quiera quedarse?"
+    },
+    {
+      "situacion": "Cómo presentar la oportunidad sin mentir",
+      "frase": "Vende la verdad: van a ganar mucho dinero, se van a divertir, y van a trabajar siempre — porque es tan divertido que no van a querer parar. No vendas 'cuando seas director ya no trabajas' — eso atrae al tipo de persona equivocado."
+    },
+    {
+      "situacion": "Cómo evaluar a un candidato rápidamente",
+      "frase": "Busca tres cosas: que pueda confiar en ti aunque no te conozca bien, que tenga humildad para decir 'enséñame', y que hable de sus fracasos pasados con responsabilidad. Si culpa siempre a otros, es señal de alarma."
+    },
+    {
+      "situacion": "Distribuidor desanimado que cree que no puede reclutar",
+      "frase": "Todo se aprende. Ciprián fue por años el mejor director en la categoría de perder gente. Lo aprendió. El reclutamiento no es un talento con el que se nace — es una materia que se estudia y se practica."
+    }
+  ],
+  "diferencias_vs_olmedo": {
+    "olmedo": "Enseña a vender el producto — psicología del cliente, cierres, demos",
+    "ciprian": "Enseña a construir el equipo — reclutar, seleccionar, conservar, liderar",
+    "como_se_complementan": "Olmedo hace que el vendedor cierre más. Ciprián hace que el distribuidor construya un equipo que dure. Juntos cubren el ciclo completo del negocio Royal Prestige."
+  },
+  "instrucciones_gpt": {
+    "cuando_usar_este_archivo": [
+      "El distribuidor pregunta cómo reclutar vendedores",
+      "El distribuidor se queja de que la gente se le va",
+      "El distribuidor pregunta qué perfil buscar en un candidato",
+      "El distribuidor tiene problemas con su equipo",
+      "El distribuidor quiere saber cómo presentar la oportunidad de negocio",
+      "El distribuidor está desanimado porque no retiene gente",
+      "El distribuidor pregunta cuántas personas reclutar",
+      "El distribuidor quiere saber cómo crear un sistema de reclutamiento"
+    ],
+    "tono": "Ciprián es directo, reflexivo y honesto — admite sus propios errores pasados. El GPT debe usar ese mismo tono: sin miedo a señalar el problema real (el líder) pero con esperanza (todo se puede aprender y mejorar)."
+  }
+}
