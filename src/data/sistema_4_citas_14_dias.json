@@ -1,0 +1,241 @@
+{
+  "metadata": {
+    "titulo": "Fasill RP — Programa 4 Citas en 14 Días",
+    "tipo_contenido": "Sistema de referidos Royal Prestige — 7 pasos completos",
+    "relevancia": "Enseña al vendedor cómo salir de cada casa con 8-10 citas nuevas sin tocar puertas. Cierra el ciclo que los otros archivos dejan abierto.",
+    "nota_para_gpt": "Usar cuando el vendedor pregunta qué hacer DESPUÉS de la demo — cómo conseguir su próximo trabajo sin prospectar desde cero."
+  },
+  "concepto_central": {
+    "nombre": "4 Citas en 14 Días",
+    "descripcion": "Sistema donde el cliente actual ayuda al vendedor a conseguir 4 citas con sus referidos en los próximos 14 días — a cambio de un regalo gratis",
+    "por_que_funciona": "El cliente no siente que le están vendiendo sino que está ganando un regalo. Los referidos reciben la llamada de alguien que conocen y confían, no de un extraño.",
+    "regalo_usado_en_demo": "Set de 4 tazones herméticos Royal Prestige ($160-180 valor) — el cliente se lo gana si 4 de sus referidos reciben la presentación",
+    "regla_de_oro": "Los 7 pasos van en orden estricto — cambiar el orden rompe el sistema"
+  },
+  "los_7_pasos": [
+    {
+      "paso": 1,
+      "nombre": "El puente",
+      "objetivo": "Quitar la presión de que le van a vender algo — el cliente debe entender desde el inicio que todo es gratis",
+      "por_que_es_critico": "Si el cliente cree que le van a vender, tiene la mente cerrada desde el principio. Con la mente cerrada no da buenos referidos.",
+      "como_hacerlo": "Desde el primer momento dejar claro que están participando en un programa de regalos gratis — no en una visita de ventas",
+      "frases_modelo": [
+        "Lo que vamos a hacer es invitarlos a participar en un programa de regalos — completamente gratis",
+        "No les estoy vendiendo nada — la idea es que esto sea totalmente gratis si nos ayudan"
+      ],
+      "error_comun": "Empezar la demo sin el puente — el cliente se pone a la defensiva inmediatamente"
+    },
+    {
+      "paso": 2,
+      "nombre": "Demostración del producto",
+      "objetivo": "Mostrar el producto regalo con la misma energía e intensidad que una venta real",
+      "por_que_es_critico": "Si el producto no le emociona, no va a comprometerse a llamar a sus amigos para ganárselo",
+      "producto_tipico_demo": "Set de 4 tazones herméticos Royal Prestige",
+      "puntos_de_demo_del_regalo": [
+        "Tamaños: 5 cuartos, 3 cuartos, 2 cuartos, 1 cuarto — set completo",
+        "Tapas herméticas — no dejan entrar el aire seco de la nevera que quema los alimentos",
+        "El queso, carnes, frutas duran mucho más tiempo",
+        "No dejan salir los olores — la cebolla no contamina lo demás",
+        "Sirven para transportar alimentos sin que se derramen",
+        "Valor: $160-180 dólares — pero no se los estoy vendiendo"
+      ],
+      "principio_clave": "Hacer la demo como si estuvieras vendiendo las ollas — misma intensidad, mismos beneficios, mismo entusiasmo",
+      "frase_cierre_demo": "Si ustedes fueran a comprar estos les saldrían $160 más taxes, aproximadamente $180 — pero no se los estoy vendiendo, la idea es que sea totalmente gratis"
+    },
+    {
+      "paso": 3,
+      "nombre": "Sacar los nombres",
+      "objetivo": "Conseguir 8-10 nombres de referidos de ALTA CALIDAD — no cualquier nombre",
+      "por_que_es_critico": "Nombres de baja calidad generan trabajo sin resultado — llamadas que no contestan, citas que no se hacen",
+      "perfil_ideal_de_referido": [
+        "Parejas — trabajan los dos",
+        "Gente cercana — no amigos de hace años que no ven",
+        "Familia cercana — hermanos, primos, tíos con quienes tienen contacto",
+        "Amigos cercanos de trabajo o iglesia",
+        "Gente que les quiere — que los va a recibir por ellos"
+      ],
+      "perfil_que_NO_quieres": [
+        "Amigos que no han visto en 6 años",
+        "Gente que no trabaja",
+        "Solteros (menos posibilidades de venta)",
+        "Gente donde la distancia es muy grande"
+      ],
+      "como_pedirlos": "Tocar el corazón — explicar que esos nombres son importantes para el trabajo del vendedor y para que el cliente se gane su regalo",
+      "frases_modelo": [
+        "Le pido un favor bien especial — no me pongan la amiga que no ven desde hace seis años. Su familiar, los primos, los amigos cercanos — gente que los quiere, porque esa gente nos va a recibir por ustedes",
+        "Póngame gente que trabaje — si voy donde gente que no trabaja ninguno de los dos gana",
+        "¿Si usted tuviera mi trabajo, qué clase de personas le gustaría que la recibieran?"
+      ],
+      "cuantos_nombres_pedir": "8-10 mínimo — de esos 4 tienen que recibirte",
+      "informacion_a_pedir_por_nombre": "Nombre completo, número de teléfono"
+    },
+    {
+      "paso": 4,
+      "nombre": "Calificación de los nombres",
+      "objetivo": "Obtener información adicional sobre cada referido para que telemarketing pueda priorizar las llamadas correctas",
+      "por_que_es_critico": "Sin calificación, el vendedor pierde tiempo con citas imposibles — lejos, gente que no trabaja, o que no puede comprar",
+      "preguntas_de_calificacion": [
+        {
+          "pregunta": "¿Tienen casa propia o rentan?",
+          "por_que": "Propietarios tienen más estabilidad y disposición a invertir"
+        },
+        {
+          "pregunta": "¿Trabajan los dos o solo uno?",
+          "por_que": "Dos ingresos = más posibilidades de compra"
+        },
+        {
+          "pregunta": "¿De día o de noche?",
+          "por_que": "Para agendar la cita en el horario correcto"
+        },
+        {
+          "pregunta": "¿En qué área de la ciudad viven?",
+          "por_que": "En Chicago especialmente — norte, sur, oeste son muy distantes. Agrupar citas por zona para hacer 3-4 en un día"
+        },
+        {
+          "pregunta": "¿Qué relación tienen con ustedes?",
+          "por_que": "Saber de parte de quién llamar — 'le llamo de parte de su amiga María'"
+        },
+        {
+          "pregunta": "¿Conocen o tienen Royal Prestige?",
+          "por_que": "Si ya tienen, no es prospecto de venta pero sí de servicio o upgrade"
+        }
+      ],
+      "los_4_mejores": "Al final de la calificación, pedir al cliente que identifique los 4 mejores candidatos — esos son los que se persiguen primero",
+      "uso_en_chicago": "Preguntar siempre el área específica de Chicago — norte/sur/oeste/suburbios — para agrupar citas y no cruzar toda la ciudad entre una y otra"
+    },
+    {
+      "paso": 5,
+      "nombre": "Explicar el programa 4 en 14",
+      "objetivo": "Comprometer al cliente a llamar a sus referidos — que entienda su parte del trato",
+      "por_que_va_en_5to_lugar": "Si se explica antes de sacar los nombres, el cliente da solo 4 nombres básicos. Después de la calificación ya tiene emoción y confianza.",
+      "como_explicarlo": [
+        "Necesitamos que 4 de estas personas reciban nuestra presentación en los próximos 14 días",
+        "Su parte es sencilla: llamarles y avisarles que nosotros los vamos a visitar",
+        "NO les trate de vender — solo avisarles que les vamos a dar un regalo igualito al suyo",
+        "Cuando hable con ellos, llámenos para que nosotros hagamos la cita"
+      ],
+      "lo_que_el_cliente_dice_a_sus_referidos": "Oye, te estoy llamando para pedirte un favor — me quiero ganar un regalo y necesito que me ayudes recibiendo a unas personas",
+      "firmar_el_compromiso": "Pedir firma en la hoja del programa — 'Regálame una firmita aquí diciendo que entiende cómo funciona y que se compromete'",
+      "frases_modelo": [
+        "Usted se gana el regalo ayudándonos con que 4 de estas personas vean nuestra presentación — solo que vean la demostración",
+        "Su parte es bien sencilla: una llamadita a cada uno, avisarles que les vamos a visitar y que también les vamos a dar un regalo",
+        "No les trate de vender — si les dice 'quiero que compres ollas' ni usted se gana el regalo ni yo tengo la oportunidad de trabajar"
+      ]
+    },
+    {
+      "paso": 6,
+      "nombre": "La cita instantánea",
+      "objetivo": "Hacer la primera cita EN EL MOMENTO — con el cliente presente, llamando a su referido ahora mismo",
+      "por_que_es_poderoso": "El vendedor no pide el favor — da una instrucción sutil. El cliente solo obedece. La probabilidad de que el referido acepte es mucho mayor cuando la llamada viene del amigo en ese momento.",
+      "como_ejecutarla": [
+        "El cliente llama a su referido: 'Te estoy llamando para pedirte un favor — me quiero ganar un regalo, ¿puedo contar contigo?'",
+        "Cuando el referido pregunta qué tiene que hacer, el cliente pasa el teléfono al vendedor",
+        "El vendedor toma el control: 'Buenas tardes señora — su amiga quiere ganarse un set de Royal Prestige. Lo único que necesitamos es un ratito que nos reciban en su casa. ¿Entre hoy o mañana cuál sería el mejor horario?'"
+      ],
+      "regla_del_vendedor": "El vendedor NO pide el favor — da una instrucción con autoridad, cariño y respeto. En la casa del cliente, en ese momento, manda el vendedor.",
+      "resultado": "El que maneja la cita instantánea nunca se queda sin trabajo — siempre tiene citas para el día siguiente",
+      "frases_modelo": [
+        "Lo que vamos a hacer es ayudarle con su primera cita — llame al señor [nombre] y dígale lo siguiente...",
+        "Buenas tardes, su amiga [nombre] se quiere ganar un set de Royal Prestige — lo único que necesitan es recibirnos un momento. ¿Entre hoy o mañana cuál sería el mejor horario para encontrarlos?"
+      ]
+    },
+    {
+      "paso": 7,
+      "nombre": "La despedida",
+      "objetivo": "Salir de la casa asegurándose de que el cliente SE VA A ACORDAR de llamar a sus referidos",
+      "por_que_es_critico": "El cliente tiene toda la intención pero la vida lo distrae. Sin este paso, la hoja va a un cajón y se olvida.",
+      "como_ejecutarla": [
+        "Pegar la hoja de referidos en el REFRIGERADOR — no dársela en la mano",
+        "Al salir, tocar el corazón una última vez: 'Cuento con usted — mi trabajo depende de si usted les avisa'",
+        "Dar la mano y comprometer con la mirada"
+      ],
+      "por_que_el_refri": "El cliente abre el refrigerador múltiples veces al día — cada vez que lo abre, ve la hoja y se acuerda del compromiso. Clientes con la hoja pegada 6 meses después siguen siendo fuente de referidos.",
+      "frases_modelo": [
+        "Señora, se las pongo en el refrigerador para que no se le olvide — si las pone en un cajón con toda la intención, se le va a olvidar",
+        "Cuento con usted — no se le olvide que mi trabajo depende de que usted les avise",
+        "Puedo contar con que usted les va a llamar hoy, ¿verdad?"
+      ],
+      "seguimiento": "El cliente llama al vendedor cuando habla con cada referido — el vendedor hace la cita inmediatamente. No esperar a que el cliente haga todo antes de llamar."
+    }
+  ],
+  "errores_mas_comunes": [
+    {
+      "error": "Sacar la hoja del programa al principio",
+      "consecuencia": "El cliente da solo 4 nombres básicos y de baja calidad",
+      "solucion": "La hoja sale en el paso 5 — no antes"
+    },
+    {
+      "error": "Cambiar el orden de los 7 pasos",
+      "consecuencia": "El sistema se rompe — siempre da el mismo resultado malo",
+      "solucion": "1-2-3-4-5-6-7 en ese orden estricto"
+    },
+    {
+      "error": "Aceptar nombres de baja calidad sin exigir calidad",
+      "consecuencia": "Telemarketing pierde tiempo llamando a personas que no contestan o no reciben",
+      "solucion": "Exigir calidad tocando el corazón — explicar por qué importa"
+    },
+    {
+      "error": "Pedirle el favor al cliente en la cita instantánea",
+      "consecuencia": "El cliente toma el control y da excusas",
+      "solucion": "El vendedor da la instrucción con autoridad — no pide permiso"
+    },
+    {
+      "error": "Darle la hoja al cliente en la mano al despedirse",
+      "consecuencia": "Va al cajón y se olvida",
+      "solucion": "Pegarla en el refrigerador siempre"
+    },
+    {
+      "error": "Decirle al cliente que les diga a sus amigos que van a comprar ollas",
+      "consecuencia": "Los referidos se niegan a recibir al vendedor",
+      "solucion": "Solo avisarles que van a recibir un regalo — nunca mencionar venta"
+    }
+  ],
+  "aplicacion_chicago": {
+    "zonificacion": "Chicago es una ciudad enorme — siempre preguntar área específica (norte, sur, oeste, suburbios como Cicero, Berwyn, Melrose Park) para agrupar 3-4 citas en la misma zona el mismo día",
+    "mercado_latino": "La mayoría de referidos serán familia y amigos latinos — el sistema de compadres y familia extendida funciona muy bien. Los compadres son más cercanos que los hermanos.",
+    "perfil_ideal_chicago": "Parejas inmigrantes trabajando los dos — ella de día, él de noche o viceversa. Familia grande, fiestas frecuentes, alta disposición a invertir en el hogar.",
+    "cuando_usar_este_sistema": "En cada visita — no solo cuando se hace una venta. Incluso si no vende, salir con 4-6 citas nuevas para los próximos días"
+  },
+  "conexion_con_otros_archivos": {
+    "alejandro_jaramillo": "En su demo virtual pide datos personales (nombre, cédula, teléfono) mientras el cliente busca las ollas — es el inicio informal del sistema de referidos",
+    "olmedo": "Su técnica de los 25 vecinos es prospección fría. Este sistema es prospección caliente — referidos de alguien que ya confía en el vendedor",
+    "alex_dey_cierres": "Los cierres del paso 5 y 6 usan el Doble Alternativa ('¿entre hoy o mañana?') y el Puercoespín ('¿puedo contar contigo?' → cliente dice sí → vendedor actúa)"
+  },
+  "frases_modelo_para_gpt": [
+    {
+      "situacion": "Abrir el sistema al inicio de la visita",
+      "frase": "Lo que vamos a hacer es invitarlos a participar en un programa de regalos — completamente gratis. No les estoy vendiendo nada."
+    },
+    {
+      "situacion": "Pedir referidos de calidad",
+      "frase": "Le pido un favor especial: no me pongan la amiga que no han visto en seis años. Familia cercana, amigos cercanos — gente que los quiere, porque esa gente nos va a recibir por ustedes. Y si puede, parejas donde trabajen los dos."
+    },
+    {
+      "situacion": "Explicar el programa",
+      "frase": "Su parte es sencilla: una llamadita a cada uno avisándoles que les vamos a visitar y que también les vamos a dar un regalo igualito. No les trate de vender — solo avisarles."
+    },
+    {
+      "situacion": "Ejecutar la cita instantánea",
+      "frase": "Lo que vamos a hacer es ayudarle con la primera cita — llame ahorita al señor [nombre] y dígale: 'Te llamo para pedirte un favor, me quiero ganar un regalo, ¿puedo contar contigo?' Cuando le pregunte qué tiene que hacer, me pasa el teléfono."
+    },
+    {
+      "situacion": "Al despedirse",
+      "frase": "Se las pongo en el refrigerador para que no se le olvide. Cuento con usted — no se le olvide que mi trabajo depende de que usted les avise. ¿Puedo contar con que hoy les llama?"
+    },
+    {
+      "situacion": "Vendedor en Chicago pregunta cómo conseguir más citas",
+      "frase": "Usa el sistema 4 en 14 en cada visita. Sal de cada casa con mínimo 8 nombres calificados y haz la primera cita instantánea antes de irte. Si haces eso en cada visita, nunca te quedas sin trabajo."
+    }
+  ],
+  "instrucciones_gpt": {
+    "cuando_usar": [
+      "Vendedor pregunta cómo conseguir más citas",
+      "Vendedor no sabe qué hacer después de la demo",
+      "Vendedor pregunta cómo pedir referidos",
+      "Vendedor se queda sin trabajo para el día siguiente",
+      "Vendedor pregunta cómo multiplicar su negocio sin tocar puertas",
+      "Vendedor quiere saber qué decir cuando pide referencias"
+    ],
+    "mensaje_clave": "Este sistema convierte cada visita en 4 visitas nuevas. Un vendedor que lo aplica consistentemente nunca se queda sin trabajo — el negocio se multiplica solo."
+  }
+}
