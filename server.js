@@ -76,7 +76,7 @@ REGLAS:
 PRECIOS:
 Tax 10%
 Envio 5%
-Mensual = 5%
+Mensual = precio mas tax mas envio * 5%
 Semanal = mensual/4
 Diario = mensual/30
 
