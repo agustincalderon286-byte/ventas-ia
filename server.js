@@ -13,11 +13,22 @@ app.use(express.static(path.join(process.cwd(), "public")));
 const conversaciones = {};
 const estadosConversacion = {};
 
+const conversationEntrySchema = new mongoose.Schema(
+  {
+    role: String,
+    content: String,
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
 const leadSchema = new mongoose.Schema({
+  sessionIds: [String],
   name: String,
   email: String,
   phone: String,
   message: String,
+  ocupacion: String,
   tieneProductos: String,
   necesitaGarantia: String,
   quiereLlamada: String,
@@ -28,12 +39,20 @@ const leadSchema = new mongoose.Schema({
     }
   ],
   productos: [String],
+  temasInteres: [String],
+  conversationHistory: [conversationEntrySchema],
   cocinaPara: String,
   esCliente: String,
   direccion: String,
+  lastInteractionAt: Date,
+  lastAssistantMessage: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
+
+leadSchema.index({ email: 1 });
+leadSchema.index({ phone: 1 });
+leadSchema.index({ sessionIds: 1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 
@@ -146,19 +165,109 @@ function extraerDireccion(texto) {
     return "";
   }
 
-  return match[1]
-    .split(/\s+y\s+(?:quiero|me interesa|necesito|ocupo|solo|tambien|también)\b/i)[0]
-    .trim()
-    .replace(/[.,;!?]+$/, "");
+  const resto = match[1].trim();
+  const restoNormalizado = resto.toLowerCase();
+  const marcadoresCorte = [
+    ", no soy",
+    ", soy cliente",
+    ", ya soy cliente",
+    ", no tengo",
+    ", tengo",
+    ", ya tengo",
+    ", no necesito",
+    ", necesito",
+    ", cocino",
+    ", somos",
+    ", me dedico",
+    ", trabajo",
+    ", quiero",
+    ", me interesa",
+    " y no soy",
+    " y soy cliente",
+    " y no tengo",
+    " y tengo",
+    " y no necesito",
+    " y cocino",
+    " y me dedico",
+    " y trabajo",
+    " y quiero",
+    " y me interesa"
+  ];
+  let indiceCorte = resto.length;
+
+  for (const marcador of marcadoresCorte) {
+    const indice = restoNormalizado.indexOf(marcador);
+
+    if (indice !== -1 && indice < indiceCorte) {
+      indiceCorte = indice;
+    }
+  }
+
+  return resto.slice(0, indiceCorte).trim().replace(/[.,;!?]+$/, "");
+}
+
+function extraerOcupacion(texto) {
+  const patrones = [
+    /(?:me dedico a|trabajo en|trabajo de)\s+([^.\n]+)/i,
+    /(?:soy)\s+([a-záéíóúñ][a-záéíóúñ\s]{2,50})/i
+  ];
+
+  for (const patron of patrones) {
+    const match = texto.match(patron);
+
+    if (!match) {
+      continue;
+    }
+
+    const ocupacion = match[1]
+      .split(/\s+(?:y\s+mi|mi\s+n[uú]mero|mi\s+telefono|mi\s+tel[eé]fono|mi\s+correo|mi\s+email|quiero|necesito|vivo|estoy|para)\b/i)[0]
+      .trim()
+      .replace(/[.,;!?]+$/, "");
+
+    if (
+      ocupacion &&
+      !/(?:client[ea]|interesad[oa]|de\s+[a-záéíóúñ]+|royal\s+prestige|garant[ií]a)/i.test(
+        ocupacion
+      )
+    ) {
+      return ocupacion;
+    }
+  }
+
+  return "";
+}
+
+function extraerTemasInteres(texto) {
+  const temas = [];
+  const mapaTemas = [
+    { nombre: "recetas saludables", regex: /\b(?:receta|saludable|cocinar|comida|cena|desayuno)\b/i },
+    { nombre: "pollo", regex: /\bpollo\b/i },
+    { nombre: "carne", regex: /\b(?:carne|res|bistec)\b/i },
+    { nombre: "pescado", regex: /\b(?:pescado|salmon|salm[oó]n)\b/i },
+    { nombre: "pancakes", regex: /\b(?:pancake|hotcake|panqueque)\b/i },
+    { nombre: "garantia", regex: /\bgarant[ií]a\b/i },
+    { nombre: "precios", regex: /\b(?:precio|precios|cuesta|pagos?|financiamiento)\b/i },
+    { nombre: "llamada informativa", regex: /\b(?:llamada|agendar|cita|representante)\b/i }
+  ];
+
+  for (const tema of mapaTemas) {
+    if (tema.regex.test(texto)) {
+      temas.push(tema.nombre);
+    }
+  }
+
+  return combinarListas(temas, extraerProductos(texto));
 }
 
 function extraerDetallesLead(texto) {
   return {
     name: extraerNombre(texto),
     productos: extraerProductos(texto),
+    temasInteres: extraerTemasInteres(texto),
     cocinaPara: extraerCocinaPara(texto),
     esCliente: extraerEstadoCliente(texto),
-    direccion: extraerDireccion(texto)
+    direccion: extraerDireccion(texto),
+    ocupacion: extraerOcupacion(texto)
   };
 }
 
@@ -180,19 +289,32 @@ function extraerTieneProductos(texto, productosDetectados = []) {
 function extraerNecesitaGarantia(texto) {
   if (
     /garant[ií]a/i.test(texto) &&
-    /(?:necesito|ocupo|quiero|ayuda|problema|reclamo|cambio|soporte|fall[oó]|no\s+sirve)/i.test(texto)
-  ) {
-    return "si";
-  }
-
-  if (
-    /garant[ií]a/i.test(texto) &&
     /(?:todo\s+est[aá]\s+bien|no\s+necesito|no\s+ocupo|sin\s+problema)/i.test(texto)
   ) {
     return "no";
   }
 
+  if (
+    /garant[ií]a/i.test(texto) &&
+    /(?:necesito|ocupo|quiero|ayuda|problema|reclamo|cambio|soporte|fall[oó]|no\s+sirve)/i.test(texto)
+  ) {
+    return "si";
+  }
+
   return "";
+}
+
+function detectarEnvioDatosContacto(texto) {
+  const leadInfo = extraerLeadInfo(texto);
+  const detallesLead = extraerDetallesLead(texto);
+
+  return Boolean(leadInfo?.phone || leadInfo?.email) && Boolean(
+    detallesLead.name ||
+      detallesLead.direccion ||
+      detallesLead.cocinaPara ||
+      detallesLead.esCliente ||
+      detallesLead.ocupacion
+  );
 }
 
 function detectarConsultaPrecio(texto) {
@@ -248,16 +370,19 @@ function obtenerEstadoConversacion(sessionId) {
       interesComercial: false,
       consultaPrecio: false,
       llamadaInformativaAceptada: false,
+      envioDatosContactoReciente: false,
       quiereLlamada: "",
       name: "",
       email: "",
       phone: "",
       direccion: "",
+      ocupacion: "",
       esCliente: "",
       tieneProductos: "",
       necesitaGarantia: "",
       cocinaPara: "",
-      productos: []
+      productos: [],
+      temasInteres: []
     };
   }
 
@@ -270,6 +395,8 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
   const detallesLead = extraerDetallesLead(texto);
   const tieneProductos = extraerTieneProductos(texto, detallesLead.productos);
   const necesitaGarantia = extraerNecesitaGarantia(texto);
+
+  estado.envioDatosContactoReciente = detectarEnvioDatosContacto(texto);
 
   if (leadInfo?.email) {
     estado.email = leadInfo.email;
@@ -285,6 +412,10 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
 
   if (detallesLead.direccion) {
     estado.direccion = detallesLead.direccion;
+  }
+
+  if (detallesLead.ocupacion) {
+    estado.ocupacion = detallesLead.ocupacion;
   }
 
   if (detallesLead.esCliente) {
@@ -305,6 +436,10 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
 
   if (detallesLead.productos.length) {
     estado.productos = combinarListas(estado.productos, detallesLead.productos);
+  }
+
+  if (detallesLead.temasInteres.length) {
+    estado.temasInteres = combinarListas(estado.temasInteres, detallesLead.temasInteres);
   }
 
   if (detectarConsultaPrecio(texto)) {
@@ -330,52 +465,73 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
     estado.email = leadGuardado.email || estado.email;
     estado.phone = leadGuardado.phone || estado.phone;
     estado.direccion = leadGuardado.direccion || estado.direccion;
+    estado.ocupacion = leadGuardado.ocupacion || estado.ocupacion;
     estado.esCliente = leadGuardado.esCliente || estado.esCliente;
     estado.cocinaPara = leadGuardado.cocinaPara || estado.cocinaPara;
     estado.tieneProductos = leadGuardado.tieneProductos || estado.tieneProductos;
     estado.necesitaGarantia = leadGuardado.necesitaGarantia || estado.necesitaGarantia;
     estado.quiereLlamada = leadGuardado.quiereLlamada || estado.quiereLlamada;
     estado.productos = combinarListas(estado.productos, leadGuardado.productos || []);
+    estado.temasInteres = combinarListas(estado.temasInteres, leadGuardado.temasInteres || []);
+
+    if (leadGuardado.quiereLlamada === "si") {
+      estado.llamadaInformativaAceptada = true;
+      estado.interesComercial = true;
+    }
   }
 
   return estado;
 }
 
 function obtenerSiguienteDatoLead(estado) {
+  const datosVitales = [];
+  const datosComplementarios = [];
+
   if (!estado.name) {
-    return "nombre";
+    datosVitales.push("nombre completo");
   }
 
   if (!estado.phone) {
-    return "telefono";
+    datosVitales.push("telefono");
   }
 
   if (!estado.direccion) {
-    return "direccion";
+    datosComplementarios.push("ciudad o direccion");
   }
 
   if (!estado.esCliente) {
-    return "si ya es cliente";
+    datosComplementarios.push("si ya es cliente");
   }
 
   if (!estado.tieneProductos) {
-    return "si ya tiene productos";
+    datosComplementarios.push("si ya tiene productos");
   }
 
   if (estado.tieneProductos === "si" && !estado.productos.length) {
-    return "que productos tiene";
+    datosComplementarios.push("que productos tiene");
   }
 
   if (!estado.necesitaGarantia) {
-    return "si necesita garantia";
+    datosComplementarios.push("si necesita garantia");
   }
 
-  return "";
+  if (!estado.cocinaPara) {
+    datosComplementarios.push("para cuantas personas cocina");
+  }
+
+  if (!estado.ocupacion) {
+    datosComplementarios.push("a que se dedica");
+  }
+
+  return {
+    datosVitales,
+    datosComplementarios
+  };
 }
 
 function construirEstadoPrompt(sessionId) {
   const estado = obtenerEstadoConversacion(sessionId);
-  const siguienteDatoLead = obtenerSiguienteDatoLead(estado);
+  const { datosVitales, datosComplementarios } = obtenerSiguienteDatoLead(estado);
   let fase = "chef-y-guia-de-uso";
   let instruccion = "Enfocate en ayudar con cocina saludable, recetas y uso correcto de productos Royal Prestige.";
 
@@ -385,10 +541,18 @@ function construirEstadoPrompt(sessionId) {
   }
 
   if (estado.llamadaInformativaAceptada) {
-    fase = "captura-de-lead";
-    instruccion = siguienteDatoLead
-      ? `La llamada informativa ya fue aceptada. Pide unicamente este dato ahora: ${siguienteDatoLead}.`
-      : "Ya tienes los datos clave; confirma que un representante 5 estrellas puede continuar con la llamada informativa.";
+    fase = "captura-breve-de-lead";
+
+    if (estado.envioDatosContactoReciente && !datosVitales.length) {
+      instruccion = "La persona acaba de compartir sus datos. Agradece brevemente, confirma la llamada informativa con el numero registrado y solo si cabe agrega una recomendacion util muy breve.";
+    } else if (datosVitales.length) {
+      const solicitudBreve = [...datosVitales, ...datosComplementarios].join(", ");
+      instruccion = `La llamada informativa ya fue aceptada. Pide en un solo mensaje breve estos datos: ${solicitudBreve}. Hazlo natural y facil de contestar.`;
+    } else if (datosComplementarios.length) {
+      instruccion = `Ya tienes nombre y telefono. Si es natural, pide en un solo mensaje breve estos datos complementarios: ${datosComplementarios.join(", ")}.`;
+    } else {
+      instruccion = "Ya tienes los datos clave; confirma que un representante 5 estrellas puede continuar con la llamada informativa.";
+    }
   }
 
   return `
@@ -397,19 +561,256 @@ ESTADO ACTUAL:
 - interes_comercial: ${estado.interesComercial ? "si" : "no"}
 - consulta_precio: ${estado.consultaPrecio ? "si" : "no"}
 - llamada_informativa_aceptada: ${estado.llamadaInformativaAceptada ? "si" : "no"}
+- envio_datos_contacto_reciente: ${estado.envioDatosContactoReciente ? "si" : "no"}
 - nombre: ${estado.name || "pendiente"}
 - email: ${estado.email || "pendiente"}
 - telefono: ${estado.phone || "pendiente"}
 - direccion: ${estado.direccion || "pendiente"}
+- ocupacion: ${estado.ocupacion || "pendiente"}
 - es_cliente: ${estado.esCliente || "pendiente"}
 - tiene_productos: ${estado.tieneProductos || "pendiente"}
 - productos_mencionados: ${estado.productos.length ? estado.productos.join(", ") : "pendiente"}
 - necesita_garantia: ${estado.necesitaGarantia || "pendiente"}
 - cocina_para: ${estado.cocinaPara || "pendiente"}
-- siguiente_dato_prioritario: ${siguienteDatoLead || "ninguno"}
+- temas_interes: ${estado.temasInteres.length ? estado.temasInteres.join(", ") : "pendiente"}
+- datos_vitales_faltantes: ${datosVitales.length ? datosVitales.join(", ") : "ninguno"}
+- datos_complementarios_faltantes: ${datosComplementarios.length ? datosComplementarios.join(", ") : "ninguno"}
 
 INSTRUCCION OPERATIVA:
 ${instruccion}
+`;
+}
+
+function seleccionarValorString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
+
+function seleccionarValorMasCompleto(...values) {
+  const candidatos = values
+    .filter(value => typeof value === "string" && value.trim())
+    .map(value => value.trim())
+    .sort((a, b) => b.length - a.length);
+
+  return candidatos[0] || "";
+}
+
+function obtenerTimestampSeguro(value) {
+  const fecha = value ? new Date(value) : null;
+
+  if (!fecha || Number.isNaN(fecha.getTime())) {
+    return 0;
+  }
+
+  return fecha.getTime();
+}
+
+function normalizarNotas(notas = []) {
+  return notas
+    .filter(note => note?.text)
+    .map(note => ({
+      text: note.text,
+      createdAt: note.createdAt || new Date()
+    }))
+    .sort((a, b) => obtenerTimestampSeguro(a.createdAt) - obtenerTimestampSeguro(b.createdAt))
+    .slice(-40);
+}
+
+function normalizarHistorialConversacion(historial = []) {
+  return historial
+    .filter(entry => entry?.role && entry?.content)
+    .map(entry => ({
+      role: entry.role,
+      content: entry.content,
+      createdAt: entry.createdAt || new Date()
+    }))
+    .sort((a, b) => obtenerTimestampSeguro(a.createdAt) - obtenerTimestampSeguro(b.createdAt))
+    .slice(-30);
+}
+
+async function fusionarLeads(primaryLead, duplicateLeads = []) {
+  if (!primaryLead || !duplicateLeads.length) {
+    return primaryLead;
+  }
+
+  const allSessionIds = combinarListas(
+    primaryLead.sessionIds || [],
+    duplicateLeads.flatMap(lead => lead.sessionIds || [])
+  );
+  const allProductos = combinarListas(
+    primaryLead.productos || [],
+    duplicateLeads.flatMap(lead => lead.productos || [])
+  );
+  const allTemasInteres = combinarListas(
+    primaryLead.temasInteres || [],
+    duplicateLeads.flatMap(lead => lead.temasInteres || [])
+  );
+  const allNotas = normalizarNotas([
+    ...(primaryLead.notes || []),
+    ...duplicateLeads.flatMap(lead => lead.notes || [])
+  ]);
+  const allHistorial = normalizarHistorialConversacion([
+    ...(primaryLead.conversationHistory || []),
+    ...duplicateLeads.flatMap(lead => lead.conversationHistory || [])
+  ]);
+
+  primaryLead.sessionIds = allSessionIds;
+  primaryLead.productos = allProductos;
+  primaryLead.temasInteres = allTemasInteres;
+  primaryLead.notes = allNotas;
+  primaryLead.conversationHistory = allHistorial;
+  primaryLead.name = seleccionarValorMasCompleto(
+    primaryLead.name,
+    ...duplicateLeads.map(lead => lead.name)
+  );
+  primaryLead.email = seleccionarValorString(
+    primaryLead.email,
+    ...duplicateLeads.map(lead => lead.email)
+  );
+  primaryLead.phone = seleccionarValorString(
+    primaryLead.phone,
+    ...duplicateLeads.map(lead => lead.phone)
+  );
+  primaryLead.message = seleccionarValorMasCompleto(
+    duplicateLeads
+      .map(lead => lead.message)
+      .filter(Boolean)
+      .slice(-1)[0],
+    primaryLead.message
+  );
+  primaryLead.ocupacion = seleccionarValorMasCompleto(
+    primaryLead.ocupacion,
+    ...duplicateLeads.map(lead => lead.ocupacion)
+  );
+  primaryLead.tieneProductos = seleccionarValorString(
+    primaryLead.tieneProductos,
+    ...duplicateLeads.map(lead => lead.tieneProductos)
+  );
+  primaryLead.necesitaGarantia = seleccionarValorString(
+    primaryLead.necesitaGarantia,
+    ...duplicateLeads.map(lead => lead.necesitaGarantia)
+  );
+  primaryLead.quiereLlamada = seleccionarValorString(
+    primaryLead.quiereLlamada,
+    ...duplicateLeads.map(lead => lead.quiereLlamada)
+  );
+  primaryLead.cocinaPara = seleccionarValorMasCompleto(
+    primaryLead.cocinaPara,
+    ...duplicateLeads.map(lead => lead.cocinaPara)
+  );
+  primaryLead.esCliente = seleccionarValorString(
+    primaryLead.esCliente,
+    ...duplicateLeads.map(lead => lead.esCliente)
+  );
+  primaryLead.direccion = seleccionarValorMasCompleto(
+    primaryLead.direccion,
+    ...duplicateLeads.map(lead => lead.direccion)
+  );
+  primaryLead.lastAssistantMessage = seleccionarValorMasCompleto(
+    primaryLead.lastAssistantMessage,
+    ...duplicateLeads.map(lead => lead.lastAssistantMessage)
+  );
+  primaryLead.lastInteractionAt = new Date(
+    Math.max(
+      obtenerTimestampSeguro(primaryLead.lastInteractionAt),
+      ...duplicateLeads.map(lead => obtenerTimestampSeguro(lead.lastInteractionAt))
+    )
+  );
+  primaryLead.updatedAt = new Date();
+
+  await primaryLead.save();
+  await Lead.deleteMany({
+    _id: { $in: duplicateLeads.map(lead => lead._id) }
+  });
+
+  return primaryLead;
+}
+
+async function resolverLeadExistente(sessionId, email = "", phone = "") {
+  const condiciones = [];
+
+  if (email) {
+    condiciones.push({ email });
+  }
+
+  if (phone) {
+    condiciones.push({ phone });
+  }
+
+  if (sessionId) {
+    condiciones.push({ sessionIds: sessionId });
+  }
+
+  if (!condiciones.length) {
+    return null;
+  }
+
+  const coincidencias = await Lead.find({ $or: condiciones }).sort({ createdAt: 1 });
+
+  if (!coincidencias.length) {
+    return null;
+  }
+
+  let primaryLead =
+    coincidencias.find(lead => (email && lead.email === email) || (phone && lead.phone === phone)) ||
+    coincidencias.find(lead => lead.email || lead.phone) ||
+    coincidencias[0];
+
+  const duplicateLeads = coincidencias.filter(lead => !lead._id.equals(primaryLead._id));
+
+  if (duplicateLeads.length) {
+    primaryLead = await fusionarLeads(primaryLead, duplicateLeads);
+  }
+
+  return primaryLead;
+}
+
+function construirPerfilHistoricoPrompt(lead) {
+  if (!lead) {
+    return `
+PERFIL HISTORICO:
+- sin_historial_previo: si
+
+INSTRUCCION:
+Si aun no conoces a la persona, atiendela con calidez y usa solo lo que diga en esta conversacion.
+`;
+  }
+
+  const notasRecientes = normalizarNotas(lead.notes || [])
+    .slice(-4)
+    .map(note => note.text)
+    .join(" | ");
+  const historialReciente = normalizarHistorialConversacion(lead.conversationHistory || [])
+    .slice(-6)
+    .map(entry => `- ${entry.role}: ${entry.content}`)
+    .join("\n");
+
+  return `
+PERFIL HISTORICO:
+- sin_historial_previo: no
+- nombre: ${lead.name || "desconocido"}
+- telefono: ${lead.phone || "desconocido"}
+- email: ${lead.email || "desconocido"}
+- direccion: ${lead.direccion || "desconocida"}
+- ocupacion: ${lead.ocupacion || "desconocida"}
+- es_cliente: ${lead.esCliente || "desconocido"}
+- tiene_productos: ${lead.tieneProductos || "desconocido"}
+- productos_confirmados_del_cliente: ${lead.tieneProductos === "si" && lead.productos?.length ? lead.productos.join(", ") : "sin productos confirmados"}
+- productos_mencionados_en_historial: ${lead.productos?.length ? lead.productos.join(", ") : "ninguno"}
+- cocina_para: ${lead.cocinaPara || "desconocido"}
+- necesita_garantia: ${lead.necesitaGarantia || "desconocido"}
+- temas_interes: ${lead.temasInteres?.length ? lead.temasInteres.join(", ") : "ninguno"}
+- notas_relevantes: ${notasRecientes || "ninguna"}
+- historial_reciente:
+${historialReciente || "- sin historial reciente"}
+
+INSTRUCCION:
+Usa este perfil para personalizar recetas, recomendaciones y seguimiento comercial. No inventes datos faltantes ni recites el perfil completo al usuario.
 `;
 }
 
@@ -436,15 +837,11 @@ async function sincronizarLeadAGoogleSheets(lead) {
   }
 }
 
-async function guardarLeadSiExiste(texto, estadoConversacion = null) {
+async function guardarLeadSiExiste(texto, sessionId, estadoConversacion = null) {
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
   const email = leadInfo?.email || estadoConversacion?.email || "";
   const phone = leadInfo?.phone || estadoConversacion?.phone || "";
-
-  if (!email && !phone) {
-    return null;
-  }
 
   try {
     const tieneProductos =
@@ -455,18 +852,44 @@ async function guardarLeadSiExiste(texto, estadoConversacion = null) {
       estadoConversacion?.productos || [],
       detallesLead.productos
     );
-    const condiciones = [];
+    const temasInteresDetectados = combinarListas(
+      estadoConversacion?.temasInteres || [],
+      detallesLead.temasInteres
+    );
+    const leadExistente = await resolverLeadExistente(sessionId, email, phone);
+    const leadId = leadExistente?._id || new mongoose.Types.ObjectId();
+    const sessionIds = combinarListas(
+      leadExistente?.sessionIds || [],
+      sessionId ? [sessionId] : []
+    );
     const camposActualizar = {
+      sessionIds,
       message: texto,
       updatedAt: new Date(),
-      quiereLlamada: estadoConversacion?.quiereLlamada || ""
+      lastInteractionAt: new Date(),
+      quiereLlamada: estadoConversacion?.quiereLlamada || leadExistente?.quiereLlamada || ""
     };
     const actualizacion = {
       $set: camposActualizar,
       $push: {
         notes: {
-          text: texto,
-          createdAt: new Date()
+          $each: [
+            {
+              text: texto,
+              createdAt: new Date()
+            }
+          ],
+          $slice: -40
+        },
+        conversationHistory: {
+          $each: [
+            {
+              role: "user",
+              content: texto,
+              createdAt: new Date()
+            }
+          ],
+          $slice: -30
         }
       },
       $setOnInsert: {
@@ -475,29 +898,57 @@ async function guardarLeadSiExiste(texto, estadoConversacion = null) {
     };
 
     if (email) {
-      condiciones.push({ email });
       camposActualizar.email = email;
     }
 
     if (phone) {
-      condiciones.push({ phone });
       camposActualizar.phone = phone;
     }
 
-    if (detallesLead.name || estadoConversacion?.name) {
-      camposActualizar.name = detallesLead.name || estadoConversacion?.name || "";
+    const nombre = seleccionarValorMasCompleto(
+      detallesLead.name,
+      estadoConversacion?.name,
+      leadExistente?.name
+    );
+    const cocinaPara = seleccionarValorMasCompleto(
+      detallesLead.cocinaPara,
+      estadoConversacion?.cocinaPara,
+      leadExistente?.cocinaPara
+    );
+    const esCliente = seleccionarValorString(
+      detallesLead.esCliente,
+      estadoConversacion?.esCliente,
+      leadExistente?.esCliente
+    );
+    const direccion = seleccionarValorMasCompleto(
+      detallesLead.direccion,
+      estadoConversacion?.direccion,
+      leadExistente?.direccion
+    );
+    const ocupacion = seleccionarValorMasCompleto(
+      detallesLead.ocupacion,
+      estadoConversacion?.ocupacion,
+      leadExistente?.ocupacion
+    );
+
+    if (nombre) {
+      camposActualizar.name = nombre;
     }
 
-    if (detallesLead.cocinaPara || estadoConversacion?.cocinaPara) {
-      camposActualizar.cocinaPara = detallesLead.cocinaPara || estadoConversacion?.cocinaPara || "";
+    if (cocinaPara) {
+      camposActualizar.cocinaPara = cocinaPara;
     }
 
-    if (detallesLead.esCliente || estadoConversacion?.esCliente) {
-      camposActualizar.esCliente = detallesLead.esCliente || estadoConversacion?.esCliente || "";
+    if (esCliente) {
+      camposActualizar.esCliente = esCliente;
     }
 
-    if (detallesLead.direccion || estadoConversacion?.direccion) {
-      camposActualizar.direccion = detallesLead.direccion || estadoConversacion?.direccion || "";
+    if (direccion) {
+      camposActualizar.direccion = direccion;
+    }
+
+    if (ocupacion) {
+      camposActualizar.ocupacion = ocupacion;
     }
 
     if (tieneProductos) {
@@ -510,21 +961,62 @@ async function guardarLeadSiExiste(texto, estadoConversacion = null) {
 
     if (productosDetectados.length) {
       actualizacion.$addToSet = {
+        ...(actualizacion.$addToSet || {}),
         productos: { $each: productosDetectados }
       };
     }
 
-    return await Lead.findOneAndUpdate(
-      { $or: condiciones },
-      actualizacion,
-      {
-        new: true,
-        upsert: true
-      }
-    );
+    if (temasInteresDetectados.length) {
+      actualizacion.$addToSet = {
+        ...(actualizacion.$addToSet || {}),
+        temasInteres: { $each: temasInteresDetectados }
+      };
+    }
+
+    return await Lead.findByIdAndUpdate(leadId, actualizacion, {
+      new: true,
+      upsert: true
+    });
   } catch (error) {
     console.log("Error guardando lead MongoDB:", error.message);
     return null;
+  }
+}
+
+async function guardarRespuestaIAEnPerfil(lead, respuestaIA) {
+  if (!lead || !respuestaIA) {
+    return lead;
+  }
+
+  try {
+    return await Lead.findByIdAndUpdate(
+      lead._id,
+      {
+        $set: {
+          lastAssistantMessage: respuestaIA,
+          updatedAt: new Date(),
+          lastInteractionAt: new Date()
+        },
+        $push: {
+          conversationHistory: {
+            $each: [
+              {
+                role: "assistant",
+                content: respuestaIA,
+                createdAt: new Date()
+              }
+            ],
+            $slice: -30
+          }
+        }
+      },
+      {
+        new: true
+      }
+    );
+  } catch (error) {
+    console.log("Error guardando respuesta IA en MongoDB:", error.message);
+    return lead;
   }
 }
 
@@ -594,10 +1086,10 @@ PRECIOS:
 
 VENTAS:
 - Primero llamada informativa, despues cita informativa
-- Si el usuario acepta la llamada, pide un solo dato a la vez
+- Si el usuario acepta la llamada, pide en un solo mensaje breve la mayoria de los datos utiles
 - Datos vitales: nombre y telefono
-- Datos de calificacion: direccion, si ya es cliente, si tiene productos, cuales tiene y si necesita garantia
-- Si ya tienes nombre y telefono, sigue con el siguiente dato faltante mas util
+- Datos de calificacion: direccion o ciudad, si ya es cliente, si tiene productos, cuales tiene, si necesita garantia, para cuantas personas cocina y a que se dedica si lo quiere compartir
+- Si despues de ese mensaje aun falta nombre o telefono, pide solo el dato vital faltante
 - Si aun no aceptan llamada, no pidas toda la ficha completa
 
 COCINA:
@@ -618,6 +1110,7 @@ Tienes acceso a multiples bases de conocimiento.
 Usa SOLO la informacion necesaria segun la pregunta.
 No repitas informacion innecesaria.
 - No inventes productos ni beneficios fuera del contexto disponible.
+- Si ya conoces el historial de la persona, usalo para personalizar recetas, seguimiento y recomendaciones de producto.
 `;
 
 // =============================
@@ -704,13 +1197,14 @@ app.post("/chat", async (req, res) => {
 
     const leadGuardado = await guardarLeadSiExiste(
       preguntaLimpia,
+      sessionId,
       obtenerEstadoConversacion(sessionId)
     );
     actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
-    await sincronizarLeadAGoogleSheets(leadGuardado);
 
     const contexto = construirContexto(preguntaLimpia);
     const estadoPrompt = construirEstadoPrompt(sessionId);
+    const perfilPrompt = construirPerfilHistoricoPrompt(leadGuardado);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -724,6 +1218,7 @@ app.post("/chat", async (req, res) => {
           { role: "system", content: systemPrompt },
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
+          { role: "system", content: perfilPrompt },
           ...conversaciones[sessionId]
         ]
       })
@@ -743,8 +1238,12 @@ app.post("/chat", async (req, res) => {
     }
 
     const respuestaIA = data.choices[0].message;
+    const leadFinal = await guardarRespuestaIAEnPerfil(leadGuardado, respuestaIA.content);
 
     conversaciones[sessionId].push(respuestaIA);
+    await sincronizarLeadAGoogleSheets(
+      leadFinal?.email || leadFinal?.phone ? leadFinal : null
+    );
 
     res.json({ respuesta: respuestaIA.content });
   } catch (error) {

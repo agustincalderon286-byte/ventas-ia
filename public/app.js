@@ -11,7 +11,7 @@ const conversation = [
   {
     role: "assistant",
     content:
-      "Hi! I’m your website assistant. Ask me about services, pricing, support, or what your business offers."
+      "Hola, soy Agustin 2.0. Te ayudo con recetas saludables, uso de Royal Prestige y, si te interesa, tambien te oriento para una llamada informativa."
   }
 ];
 
