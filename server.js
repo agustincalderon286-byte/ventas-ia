@@ -345,7 +345,7 @@ app.use(applyCors);
 app.use(express.json({ limit: MAX_BODY_BYTES }));
 app.use(express.static(PUBLIC_DIR, { extensions: ["html"] }));
 
-app.post("/chat", rateLimit, async (req, res) => {
+async function handleChatRoute(req, res) {
   if (!OPENAI_API_KEY) {
     res.status(500).json({ error: "OPENAI_API_KEY no configurada en el servidor" });
     return;
@@ -387,7 +387,10 @@ app.post("/chat", rateLimit, async (req, res) => {
     const status = Number.isInteger(error.status) ? error.status : 500;
     res.status(status).json({ error: error.message || "Error servidor" });
   }
-});
+}
+
+app.post("/chat", rateLimit, handleChatRoute);
+app.post("/api/chat", rateLimit, handleChatRoute);
 
 app.use((error, req, res, next) => {
   if (error && error.type === "entity.too.large") {
