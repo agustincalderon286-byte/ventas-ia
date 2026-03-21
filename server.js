@@ -1,7 +1,7 @@
-
 import express from "express";
 import cors from "cors";
 import fs from "fs";
+import mongoose from "mongoose";
 import path from "path";
 
 const app = express();
@@ -9,6 +9,16 @@ app.use(cors());
 app.use(express.json());
 
 const conversaciones = {};
+
+const leadSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  phone: String,
+  message: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 
 // =============================
 // FUNCION JSON SEGURA
@@ -19,6 +29,70 @@ function cargarJSON(ruta) {
   } catch (error) {
     console.log("Error cargando:", ruta);
     return null;
+  }
+}
+
+function extraerLeadInfo(texto) {
+  if (!texto) {
+    return null;
+  }
+
+  const emailMatch = texto.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  const phoneMatch = texto.match(/(?:\+?\d[\d()\-\s]{7,}\d)/);
+  const email = emailMatch ? emailMatch[0].toLowerCase() : "";
+  const phone = phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : "";
+
+  if (!email && !phone) {
+    return null;
+  }
+
+  return {
+    name: "",
+    email,
+    phone,
+    message: texto
+  };
+}
+
+async function guardarLeadSiExiste(texto) {
+  const leadInfo = extraerLeadInfo(texto);
+
+  if (!leadInfo) {
+    return;
+  }
+
+  try {
+    const condiciones = [];
+    const camposActualizar = {
+      message: leadInfo.message
+    };
+
+    if (leadInfo.email) {
+      condiciones.push({ email: leadInfo.email });
+      camposActualizar.email = leadInfo.email;
+    }
+
+    if (leadInfo.phone) {
+      condiciones.push({ phone: leadInfo.phone });
+      camposActualizar.phone = leadInfo.phone;
+    }
+
+    await Lead.findOneAndUpdate(
+      { $or: condiciones },
+      {
+        $set: camposActualizar,
+        $setOnInsert: {
+          name: leadInfo.name,
+          createdAt: new Date()
+        }
+      },
+      {
+        new: true,
+        upsert: true
+      }
+    );
+  } catch (error) {
+    console.log("Error guardando lead MongoDB:", error.message);
   }
 }
 
@@ -102,7 +176,6 @@ No repitas informacion innecesaria.
 // FUNCION INTELIGENTE (FILTRA DATA)
 // =============================
 function construirContexto(pregunta) {
-
   let contexto = `
 CATALOGO:
 ${JSON.stringify(preciosCatalogo)}
@@ -114,13 +187,14 @@ ENCUESTA:
 ${JSON.stringify(encuestaVentas)}
 `;
 
-  // 🔥 SOLO AGREGA SI SE NECESITA
-
   if (pregunta.toLowerCase().includes("receta")) {
     contexto += `\nRECETAS:\n${JSON.stringify(recetasRoyalPrestige)}`;
   }
 
-  if (pregunta.toLowerCase().includes("garantia") || pregunta.toLowerCase().includes("material")) {
+  if (
+    pregunta.toLowerCase().includes("garantia") ||
+    pregunta.toLowerCase().includes("material")
+  ) {
     contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
   }
 
@@ -145,8 +219,12 @@ ${JSON.stringify(encuestaVentas)}
 // CHAT
 // =============================
 app.post("/chat", async (req, res) => {
-
   const { pregunta, sessionId } = req.body;
+  const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
+
+  if (!preguntaLimpia) {
+    return res.status(400).json({ error: "pregunta requerida" });
+  }
 
   if (!sessionId) {
     return res.status(400).json({ error: "sessionId requerido" });
@@ -158,12 +236,13 @@ app.post("/chat", async (req, res) => {
 
   conversaciones[sessionId].push({
     role: "user",
-    content: pregunta
+    content: preguntaLimpia
   });
 
   try {
+    await guardarLeadSiExiste(preguntaLimpia);
 
-    const contexto = construirContexto(pregunta);
+    const contexto = construirContexto(preguntaLimpia);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -181,9 +260,16 @@ app.post("/chat", async (req, res) => {
       })
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
 
-    if (!data.choices) {
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: "Error OpenAI",
+        detalle: data || { message: "Respuesta invalida del API" }
+      });
+    }
+
+    if (!data?.choices?.[0]?.message) {
       return res.status(500).json({ error: "Error OpenAI", detalle: data });
     }
 
@@ -192,18 +278,32 @@ app.post("/chat", async (req, res) => {
     conversaciones[sessionId].push(respuestaIA);
 
     res.json({ respuesta: respuestaIA.content });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error servidor" });
   }
-
 });
 
 // =============================
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
+async function iniciarServidor() {
+  if (!process.env.MONGODB_URI) {
+    console.error("MONGODB_URI no configurada");
+    process.exit(1);
+  }
 
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("MongoDB Atlas conectado");
+
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en puerto ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Error conectando MongoDB Atlas:", error.message);
+    process.exit(1);
+  }
+}
+
+iniciarServidor();
