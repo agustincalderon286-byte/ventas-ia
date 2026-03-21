@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -7,6 +8,7 @@ import path from "path";
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(process.cwd(), "public")));
 
 const conversaciones = {};
 
@@ -15,6 +17,17 @@ const leadSchema = new mongoose.Schema({
   email: String,
   phone: String,
   message: String,
+  notes: [
+    {
+      text: String,
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  productos: [String],
+  cocinaPara: String,
+  esCliente: String,
+  direccion: String,
+  updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -54,17 +67,138 @@ function extraerLeadInfo(texto) {
   };
 }
 
-async function guardarLeadSiExiste(texto) {
-  const leadInfo = extraerLeadInfo(texto);
+function extraerNombre(texto) {
+  const nombreMatch = texto.match(
+    /(?:mi nombre es|soy)\s+([a-záéíóúñ][a-záéíóúñ\s]{1,60})/i
+  );
 
-  if (!leadInfo) {
+  if (!nombreMatch) {
+    return "";
+  }
+
+  return nombreMatch[1]
+    .split(/\s+(?:y\s+mi|mi\s+n[uú]mero|mi\s+telefono|mi\s+tel[eé]fono|mi\s+correo|mi\s+email|quiero|para)\b/i)[0]
+    .trim()
+    .replace(/[.,;!?]+$/, "");
+}
+
+function extraerProductos(texto) {
+  const productosDetectados = [];
+  const catalogoProductos = [
+    { nombre: "olla de presion", regex: /\bolla(?:\s+de)?\s+presi[oó]n\b/i },
+    { nombre: "ollas", regex: /\bollas\b/i },
+    { nombre: "sarten", regex: /\bsart(?:e|é)n(?:es)?\b/i },
+    { nombre: "cacerola", regex: /\bcacerolas?\b/i },
+    { nombre: "bateria de cocina", regex: /\bbater[ií]a\s+de\s+cocina\b/i },
+    { nombre: "vaporeras", regex: /\bvaporeras?\b/i },
+    { nombre: "comal", regex: /\bcomal(?:es)?\b/i },
+    { nombre: "wok", regex: /\bwok\b/i },
+    { nombre: "royal prestige", regex: /\broyal\s+prestige\b/i }
+  ];
+
+  for (const producto of catalogoProductos) {
+    if (producto.regex.test(texto)) {
+      productosDetectados.push(producto.nombre);
+    }
+  }
+
+  return [...new Set(productosDetectados)];
+}
+
+function extraerCocinaPara(texto) {
+  const match = texto.match(
+    /(?:cocino\s+para|somos|para)\s+(\d{1,2})\s+personas?/i
+  );
+
+  if (!match) {
+    return "";
+  }
+
+  return `${match[1]} personas`;
+}
+
+function extraerEstadoCliente(texto) {
+  if (/(?:no\s+soy\s+client[ea]|a[uú]n\s+no\s+soy\s+client[ea]|todav[ií]a\s+no\s+soy\s+client[ea])/i.test(texto)) {
+    return "no";
+  }
+
+  if (/(?:ya\s+soy\s+client[ea]|soy\s+client[ea]|ya\s+compr[eé]|ya\s+tengo\s+productos?)/i.test(texto)) {
+    return "si";
+  }
+
+  return "";
+}
+
+function extraerDireccion(texto) {
+  const match = texto.match(
+    /(?:mi direcci[oó]n es|vivo en|estoy en|me ubico en)\s+([^.\n]+)/i
+  );
+
+  if (!match) {
+    return "";
+  }
+
+  return match[1].trim();
+}
+
+function extraerDetallesLead(texto) {
+  return {
+    name: extraerNombre(texto),
+    productos: extraerProductos(texto),
+    cocinaPara: extraerCocinaPara(texto),
+    esCliente: extraerEstadoCliente(texto),
+    direccion: extraerDireccion(texto)
+  };
+}
+
+async function sincronizarLeadAGoogleSheets(lead) {
+  if (!lead || !process.env.GOOGLE_SHEETS_WEBHOOK_URL) {
     return;
   }
 
   try {
+    const payload = typeof lead.toObject === "function" ? lead.toObject() : lead;
+    const response = await fetch(process.env.GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.log("Error Google Sheets:", response.status, response.statusText);
+    }
+  } catch (error) {
+    console.log("Error sincronizando Google Sheets:", error.message);
+  }
+}
+
+async function guardarLeadSiExiste(texto) {
+  const leadInfo = extraerLeadInfo(texto);
+
+  if (!leadInfo) {
+    return null;
+  }
+
+  try {
+    const detallesLead = extraerDetallesLead(texto);
     const condiciones = [];
     const camposActualizar = {
-      message: leadInfo.message
+      message: leadInfo.message,
+      updatedAt: new Date()
+    };
+    const actualizacion = {
+      $set: camposActualizar,
+      $push: {
+        notes: {
+          text: leadInfo.message,
+          createdAt: new Date()
+        }
+      },
+      $setOnInsert: {
+        createdAt: new Date()
+      }
     };
 
     if (leadInfo.email) {
@@ -77,15 +211,31 @@ async function guardarLeadSiExiste(texto) {
       camposActualizar.phone = leadInfo.phone;
     }
 
-    await Lead.findOneAndUpdate(
+    if (detallesLead.name) {
+      camposActualizar.name = detallesLead.name;
+    }
+
+    if (detallesLead.cocinaPara) {
+      camposActualizar.cocinaPara = detallesLead.cocinaPara;
+    }
+
+    if (detallesLead.esCliente) {
+      camposActualizar.esCliente = detallesLead.esCliente;
+    }
+
+    if (detallesLead.direccion) {
+      camposActualizar.direccion = detallesLead.direccion;
+    }
+
+    if (detallesLead.productos.length) {
+      actualizacion.$addToSet = {
+        productos: { $each: detallesLead.productos }
+      };
+    }
+
+    return await Lead.findOneAndUpdate(
       { $or: condiciones },
-      {
-        $set: camposActualizar,
-        $setOnInsert: {
-          name: leadInfo.name,
-          createdAt: new Date()
-        }
-      },
+      actualizacion,
       {
         new: true,
         upsert: true
@@ -93,6 +243,7 @@ async function guardarLeadSiExiste(texto) {
     );
   } catch (error) {
     console.log("Error guardando lead MongoDB:", error.message);
+    return null;
   }
 }
 
@@ -240,7 +391,8 @@ app.post("/chat", async (req, res) => {
   });
 
   try {
-    await guardarLeadSiExiste(preguntaLimpia);
+    const leadGuardado = await guardarLeadSiExiste(preguntaLimpia);
+    await sincronizarLeadAGoogleSheets(leadGuardado);
 
     const contexto = construirContexto(preguntaLimpia);
 

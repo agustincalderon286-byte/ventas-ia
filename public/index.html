@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website AI Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Smart website assistant</p>
+        <h1>Your visitors can ask. The site can answer.</h1>
+        <p class="lede">
+          This starter gives your website an AI chat experience with a polished frontend and a secure backend endpoint
+          for live responses.
+        </p>
+        <div class="hero-card">
+          <div class="pulse"></div>
+          <p>Use it for customer support, product discovery, booking help, FAQs, or lead capture.</p>
+        </div>
+      </section>
+
+      <section class="chat-panel">
+        <div class="chat-header">
+          <div>
+            <p class="chat-title">Ask the assistant</p>
+            <p class="chat-subtitle">Powered by your backend API key, not exposed in the browser.</p>
+          </div>
+          <span class="status" id="statusBadge">Ready</span>
+        </div>
+
+        <div class="messages" id="messages">
+          <article class="message assistant">
+            <p>
+              Hi! I’m your website assistant. Ask me about services, pricing, support, or what your business offers.
+            </p>
+          </article>
+        </div>
+
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="messageInput">Type your message</label>
+          <textarea
+            id="messageInput"
+            name="message"
+            rows="1"
+            maxlength="2000"
+            placeholder="Ask a question your visitors might ask..."
+          ></textarea>
+          <button type="submit" id="sendButton">Send</button>
+        </form>
+
+        <div class="quick-prompts">
+          <button type="button" class="prompt-chip">What services do you offer?</button>
+          <button type="button" class="prompt-chip">Can you help me choose a plan?</button>
+          <button type="button" class="prompt-chip">How do I get started?</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
