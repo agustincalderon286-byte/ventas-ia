@@ -11,12 +11,16 @@ app.use(express.json());
 app.use(express.static(path.join(process.cwd(), "public")));
 
 const conversaciones = {};
+const estadosConversacion = {};
 
 const leadSchema = new mongoose.Schema({
   name: String,
   email: String,
   phone: String,
   message: String,
+  tieneProductos: String,
+  necesitaGarantia: String,
+  quiereLlamada: String,
   notes: [
     {
       text: String,
@@ -85,14 +89,18 @@ function extraerNombre(texto) {
 function extraerProductos(texto) {
   const productosDetectados = [];
   const catalogoProductos = [
+    { nombre: "extractor", regex: /\bextractor\b/i },
     { nombre: "olla de presion", regex: /\bolla(?:\s+de)?\s+presi[oó]n\b/i },
     { nombre: "ollas", regex: /\bollas\b/i },
     { nombre: "sarten", regex: /\bsart(?:e|é)n(?:es)?\b/i },
+    { nombre: "easy release", regex: /\beasy\s+release\b/i },
     { nombre: "cacerola", regex: /\bcacerolas?\b/i },
     { nombre: "bateria de cocina", regex: /\bbater[ií]a\s+de\s+cocina\b/i },
     { nombre: "vaporeras", regex: /\bvaporeras?\b/i },
     { nombre: "comal", regex: /\bcomal(?:es)?\b/i },
     { nombre: "wok", regex: /\bwok\b/i },
+    { nombre: "cuchillo santoku", regex: /\bsantoku\b/i },
+    { nombre: "cuchillo", regex: /\bcuchill(?:o|os)\b/i },
     { nombre: "royal prestige", regex: /\broyal\s+prestige\b/i }
   ];
 
@@ -138,7 +146,10 @@ function extraerDireccion(texto) {
     return "";
   }
 
-  return match[1].trim();
+  return match[1]
+    .split(/\s+y\s+(?:quiero|me interesa|necesito|ocupo|solo|tambien|también)\b/i)[0]
+    .trim()
+    .replace(/[.,;!?]+$/, "");
 }
 
 function extraerDetallesLead(texto) {
@@ -149,6 +160,257 @@ function extraerDetallesLead(texto) {
     esCliente: extraerEstadoCliente(texto),
     direccion: extraerDireccion(texto)
   };
+}
+
+function extraerTieneProductos(texto, productosDetectados = []) {
+  if (/(?:no\s+tengo\s+productos?|no\s+tengo\s+royal\s+prestige|todav[ií]a\s+no\s+tengo\s+productos?|a[uú]n\s+no\s+tengo\s+productos?)/i.test(texto)) {
+    return "no";
+  }
+
+  if (
+    /(?:tengo\s+productos?|ya\s+tengo\s+productos?|cuento\s+con\s+productos?|soy\s+client[ea]|ya\s+soy\s+client[ea]|ya\s+compr[eé])/i.test(texto) ||
+    (productosDetectados.length && /(?:tengo|ya\s+tengo|cuento\s+con)/i.test(texto))
+  ) {
+    return "si";
+  }
+
+  return "";
+}
+
+function extraerNecesitaGarantia(texto) {
+  if (
+    /garant[ií]a/i.test(texto) &&
+    /(?:necesito|ocupo|quiero|ayuda|problema|reclamo|cambio|soporte|fall[oó]|no\s+sirve)/i.test(texto)
+  ) {
+    return "si";
+  }
+
+  if (
+    /garant[ií]a/i.test(texto) &&
+    /(?:todo\s+est[aá]\s+bien|no\s+necesito|no\s+ocupo|sin\s+problema)/i.test(texto)
+  ) {
+    return "no";
+  }
+
+  return "";
+}
+
+function detectarConsultaPrecio(texto) {
+  return /(?:precio|precios|cu[aá]nto|cu[aá]ntos|cuesta|cost[oó]|pagos?|diario|semanal|mensual|financiamiento|plan(?:es)?\s+de\s+pago)/i.test(
+    texto
+  );
+}
+
+function detectarInteresComercial(texto) {
+  return /(?:precio|precios|cuesta|cost[oó]|pago|pagos|interesa|interesado|quiero\s+informaci[oó]n|quiero\s+saber|cat[aá]logo|representante|agendar|cita|llamada|demo|demostraci[oó]n|comprar|promoci[oó]n|oferta)/i.test(
+    texto
+  );
+}
+
+function detectarAceptacionLlamada(texto, estado) {
+  const textoLimpio = texto.trim().toLowerCase();
+
+  if (
+    /(?:agend|ll[aá]mame|ll[aá]menme|marc[aá]me|marquenme|quiero\s+la\s+llamada|quiero\s+agendar|s[ií],?\s+me\s+interesa\s+la\s+llamada|s[ií],?\s+agendemos)/i.test(
+      texto
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    (estado.interesComercial || estado.consultaPrecio) &&
+    /^(si|sí|claro|perfecto|ok|dale|est[aá]\s+bien)$/i.test(textoLimpio)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function detectarRechazoLlamada(texto, estado) {
+  if (!(estado.interesComercial || estado.consultaPrecio)) {
+    return false;
+  }
+
+  return /^(no|ahorita no|despu[eé]s|luego|solo\s+era\s+una\s+pregunta)$/i.test(
+    texto.trim().toLowerCase()
+  );
+}
+
+function combinarListas(base = [], nuevas = []) {
+  return [...new Set([...base, ...nuevas].filter(Boolean))];
+}
+
+function obtenerEstadoConversacion(sessionId) {
+  if (!estadosConversacion[sessionId]) {
+    estadosConversacion[sessionId] = {
+      interesComercial: false,
+      consultaPrecio: false,
+      llamadaInformativaAceptada: false,
+      quiereLlamada: "",
+      name: "",
+      email: "",
+      phone: "",
+      direccion: "",
+      esCliente: "",
+      tieneProductos: "",
+      necesitaGarantia: "",
+      cocinaPara: "",
+      productos: []
+    };
+  }
+
+  return estadosConversacion[sessionId];
+}
+
+function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
+  const estado = obtenerEstadoConversacion(sessionId);
+  const leadInfo = extraerLeadInfo(texto);
+  const detallesLead = extraerDetallesLead(texto);
+  const tieneProductos = extraerTieneProductos(texto, detallesLead.productos);
+  const necesitaGarantia = extraerNecesitaGarantia(texto);
+
+  if (leadInfo?.email) {
+    estado.email = leadInfo.email;
+  }
+
+  if (leadInfo?.phone) {
+    estado.phone = leadInfo.phone;
+  }
+
+  if (detallesLead.name) {
+    estado.name = detallesLead.name;
+  }
+
+  if (detallesLead.direccion) {
+    estado.direccion = detallesLead.direccion;
+  }
+
+  if (detallesLead.esCliente) {
+    estado.esCliente = detallesLead.esCliente;
+  }
+
+  if (detallesLead.cocinaPara) {
+    estado.cocinaPara = detallesLead.cocinaPara;
+  }
+
+  if (tieneProductos) {
+    estado.tieneProductos = tieneProductos;
+  }
+
+  if (necesitaGarantia) {
+    estado.necesitaGarantia = necesitaGarantia;
+  }
+
+  if (detallesLead.productos.length) {
+    estado.productos = combinarListas(estado.productos, detallesLead.productos);
+  }
+
+  if (detectarConsultaPrecio(texto)) {
+    estado.consultaPrecio = true;
+    estado.interesComercial = true;
+  }
+
+  if (detectarInteresComercial(texto)) {
+    estado.interesComercial = true;
+  }
+
+  if (detectarAceptacionLlamada(texto, estado)) {
+    estado.llamadaInformativaAceptada = true;
+    estado.quiereLlamada = "si";
+  }
+
+  if (detectarRechazoLlamada(texto, estado)) {
+    estado.quiereLlamada = "no";
+  }
+
+  if (leadGuardado) {
+    estado.name = leadGuardado.name || estado.name;
+    estado.email = leadGuardado.email || estado.email;
+    estado.phone = leadGuardado.phone || estado.phone;
+    estado.direccion = leadGuardado.direccion || estado.direccion;
+    estado.esCliente = leadGuardado.esCliente || estado.esCliente;
+    estado.cocinaPara = leadGuardado.cocinaPara || estado.cocinaPara;
+    estado.tieneProductos = leadGuardado.tieneProductos || estado.tieneProductos;
+    estado.necesitaGarantia = leadGuardado.necesitaGarantia || estado.necesitaGarantia;
+    estado.quiereLlamada = leadGuardado.quiereLlamada || estado.quiereLlamada;
+    estado.productos = combinarListas(estado.productos, leadGuardado.productos || []);
+  }
+
+  return estado;
+}
+
+function obtenerSiguienteDatoLead(estado) {
+  if (!estado.name) {
+    return "nombre";
+  }
+
+  if (!estado.phone) {
+    return "telefono";
+  }
+
+  if (!estado.direccion) {
+    return "direccion";
+  }
+
+  if (!estado.esCliente) {
+    return "si ya es cliente";
+  }
+
+  if (!estado.tieneProductos) {
+    return "si ya tiene productos";
+  }
+
+  if (estado.tieneProductos === "si" && !estado.productos.length) {
+    return "que productos tiene";
+  }
+
+  if (!estado.necesitaGarantia) {
+    return "si necesita garantia";
+  }
+
+  return "";
+}
+
+function construirEstadoPrompt(sessionId) {
+  const estado = obtenerEstadoConversacion(sessionId);
+  const siguienteDatoLead = obtenerSiguienteDatoLead(estado);
+  let fase = "chef-y-guia-de-uso";
+  let instruccion = "Enfocate en ayudar con cocina saludable, recetas y uso correcto de productos Royal Prestige.";
+
+  if (estado.interesComercial || estado.consultaPrecio) {
+    fase = "interes-comercial";
+    instruccion = "Si el usuario muestra interes comercial, invitalo a una llamada informativa sin compromiso con un representante 5 estrellas.";
+  }
+
+  if (estado.llamadaInformativaAceptada) {
+    fase = "captura-de-lead";
+    instruccion = siguienteDatoLead
+      ? `La llamada informativa ya fue aceptada. Pide unicamente este dato ahora: ${siguienteDatoLead}.`
+      : "Ya tienes los datos clave; confirma que un representante 5 estrellas puede continuar con la llamada informativa.";
+  }
+
+  return `
+ESTADO ACTUAL:
+- fase: ${fase}
+- interes_comercial: ${estado.interesComercial ? "si" : "no"}
+- consulta_precio: ${estado.consultaPrecio ? "si" : "no"}
+- llamada_informativa_aceptada: ${estado.llamadaInformativaAceptada ? "si" : "no"}
+- nombre: ${estado.name || "pendiente"}
+- email: ${estado.email || "pendiente"}
+- telefono: ${estado.phone || "pendiente"}
+- direccion: ${estado.direccion || "pendiente"}
+- es_cliente: ${estado.esCliente || "pendiente"}
+- tiene_productos: ${estado.tieneProductos || "pendiente"}
+- productos_mencionados: ${estado.productos.length ? estado.productos.join(", ") : "pendiente"}
+- necesita_garantia: ${estado.necesitaGarantia || "pendiente"}
+- cocina_para: ${estado.cocinaPara || "pendiente"}
+- siguiente_dato_prioritario: ${siguienteDatoLead || "ninguno"}
+
+INSTRUCCION OPERATIVA:
+${instruccion}
+`;
 }
 
 async function sincronizarLeadAGoogleSheets(lead) {
@@ -174,25 +436,36 @@ async function sincronizarLeadAGoogleSheets(lead) {
   }
 }
 
-async function guardarLeadSiExiste(texto) {
+async function guardarLeadSiExiste(texto, estadoConversacion = null) {
   const leadInfo = extraerLeadInfo(texto);
+  const detallesLead = extraerDetallesLead(texto);
+  const email = leadInfo?.email || estadoConversacion?.email || "";
+  const phone = leadInfo?.phone || estadoConversacion?.phone || "";
 
-  if (!leadInfo) {
+  if (!email && !phone) {
     return null;
   }
 
   try {
-    const detallesLead = extraerDetallesLead(texto);
+    const tieneProductos =
+      extraerTieneProductos(texto, detallesLead.productos) || estadoConversacion?.tieneProductos || "";
+    const necesitaGarantia =
+      extraerNecesitaGarantia(texto) || estadoConversacion?.necesitaGarantia || "";
+    const productosDetectados = combinarListas(
+      estadoConversacion?.productos || [],
+      detallesLead.productos
+    );
     const condiciones = [];
     const camposActualizar = {
-      message: leadInfo.message,
-      updatedAt: new Date()
+      message: texto,
+      updatedAt: new Date(),
+      quiereLlamada: estadoConversacion?.quiereLlamada || ""
     };
     const actualizacion = {
       $set: camposActualizar,
       $push: {
         notes: {
-          text: leadInfo.message,
+          text: texto,
           createdAt: new Date()
         }
       },
@@ -201,35 +474,43 @@ async function guardarLeadSiExiste(texto) {
       }
     };
 
-    if (leadInfo.email) {
-      condiciones.push({ email: leadInfo.email });
-      camposActualizar.email = leadInfo.email;
+    if (email) {
+      condiciones.push({ email });
+      camposActualizar.email = email;
     }
 
-    if (leadInfo.phone) {
-      condiciones.push({ phone: leadInfo.phone });
-      camposActualizar.phone = leadInfo.phone;
+    if (phone) {
+      condiciones.push({ phone });
+      camposActualizar.phone = phone;
     }
 
-    if (detallesLead.name) {
-      camposActualizar.name = detallesLead.name;
+    if (detallesLead.name || estadoConversacion?.name) {
+      camposActualizar.name = detallesLead.name || estadoConversacion?.name || "";
     }
 
-    if (detallesLead.cocinaPara) {
-      camposActualizar.cocinaPara = detallesLead.cocinaPara;
+    if (detallesLead.cocinaPara || estadoConversacion?.cocinaPara) {
+      camposActualizar.cocinaPara = detallesLead.cocinaPara || estadoConversacion?.cocinaPara || "";
     }
 
-    if (detallesLead.esCliente) {
-      camposActualizar.esCliente = detallesLead.esCliente;
+    if (detallesLead.esCliente || estadoConversacion?.esCliente) {
+      camposActualizar.esCliente = detallesLead.esCliente || estadoConversacion?.esCliente || "";
     }
 
-    if (detallesLead.direccion) {
-      camposActualizar.direccion = detallesLead.direccion;
+    if (detallesLead.direccion || estadoConversacion?.direccion) {
+      camposActualizar.direccion = detallesLead.direccion || estadoConversacion?.direccion || "";
     }
 
-    if (detallesLead.productos.length) {
+    if (tieneProductos) {
+      camposActualizar.tieneProductos = tieneProductos;
+    }
+
+    if (necesitaGarantia) {
+      camposActualizar.necesitaGarantia = necesitaGarantia;
+    }
+
+    if (productosDetectados.length) {
       actualizacion.$addToSet = {
-        productos: { $each: detallesLead.productos }
+        productos: { $each: productosDetectados }
       };
     }
 
@@ -285,29 +566,44 @@ try {
 // PROMPT OPTIMIZADO
 // =============================
 const systemPrompt = `
-Eres Agustin 2.0, experto en ventas, cocina y analisis de inversiones.
+Eres Agustin 2.0, chef inteligente de Royal Prestige, guia de cocina saludable y asistente comercial consultivo.
 
-OBJETIVO:
-Ayudar a cerrar ventas, cocinar mejor y detectar oportunidades de negocio.
-
-MODOS:
-CLIENTE → cocina, beneficios
-DISTRIBUIDOR → ventas, objeciones, cierres
-INVERSIONISTA → propiedades, ROI
+OBJETIVO PRINCIPAL:
+- Ayudar gratis a los clientes a cocinar saludable y usar bien sus productos Royal Prestige.
+- Recomendar recetas, tecnicas y el producto exacto ideal para cada paso.
+- Cuando detectes interes real por productos o precios, invitar a una llamada informativa con un representante 5 estrellas.
+- Despues de que acepten la llamada informativa, capturar el lead paso a paso.
 
 REGLAS:
 - Maximo 3 oraciones
-- Claro, directo, vendedor experto
+- Espanol claro, calido y experto
+- Si hablan de recetas o ingredientes, responde primero como chef
+- Cuando recomiendes un producto, menciona el nombre del producto y para que sirve en esa receta
+- Ejemplo de estilo: "Usa tu cuchillo Santoku de Royal Prestige para cortar la carne; te da cortes uniformes y rapidos."
+- Otro ejemplo de estilo: "Para pancakes te recomiendo la sarten Easy Release porque ayuda a cocinar con menos grasa y se despega facil."
 
 PRECIOS:
-Tax 10%
-Envio 5%
-Mensual = precio mas tax mas envio * 5%
-Semanal = mensual/4
-Diario = mensual/30
+- Nunca des precio total exacto
+- Solo da rangos aproximados por dia usando el catalogo y estas reglas internas:
+  tax 10%
+  envio 5%
+  mensual = precio mas tax mas envio * 5%
+  diario = mensual / 30
+- Nunca expliques la matematica
+- Si preguntan precio, cierra invitando a una llamada informativa sin compromiso con un representante 5 estrellas
 
 VENTAS:
-Usa emocion + logica + urgencia suave
+- Primero llamada informativa, despues cita informativa
+- Si el usuario acepta la llamada, pide un solo dato a la vez
+- Datos vitales: nombre y telefono
+- Datos de calificacion: direccion, si ya es cliente, si tiene productos, cuales tiene y si necesita garantia
+- Si ya tienes nombre y telefono, sigue con el siguiente dato faltante mas util
+- Si aun no aceptan llamada, no pidas toda la ficha completa
+
+COCINA:
+- Guias a las personas para cocinar saludable, abrir la puerta de su casa al aprendizaje y usar Royal Prestige con confianza
+- Prioriza recetas practicas, saludables y faciles de replicar
+- Cuando sea util, conecta la receta con beneficios como menos grasa, mejor control de coccion, practicidad y durabilidad
 
 REAL ESTATE:
 rent_ratio = renta / precio
@@ -321,12 +617,14 @@ IMPORTANTE:
 Tienes acceso a multiples bases de conocimiento.
 Usa SOLO la informacion necesaria segun la pregunta.
 No repitas informacion innecesaria.
+- No inventes productos ni beneficios fuera del contexto disponible.
 `;
 
 // =============================
 // FUNCION INTELIGENTE (FILTRA DATA)
 // =============================
 function construirContexto(pregunta) {
+  const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = `
 CATALOGO:
 ${JSON.stringify(preciosCatalogo)}
@@ -338,28 +636,39 @@ ENCUESTA:
 ${JSON.stringify(encuestaVentas)}
 `;
 
-  if (pregunta.toLowerCase().includes("receta")) {
+  if (
+    /receta|cocinar|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
+      preguntaNormalizada
+    )
+  ) {
     contexto += `\nRECETAS:\n${JSON.stringify(recetasRoyalPrestige)}`;
   }
 
   if (
-    pregunta.toLowerCase().includes("garantia") ||
-    pregunta.toLowerCase().includes("material")
+    preguntaNormalizada.includes("garantia") ||
+    preguntaNormalizada.includes("material") ||
+    /olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|royal prestige/i.test(
+      preguntaNormalizada
+    )
   ) {
     contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
   }
 
-  if (pregunta.toLowerCase().includes("venta") || pregunta.toLowerCase().includes("cerrar")) {
+  if (
+    preguntaNormalizada.includes("venta") ||
+    preguntaNormalizada.includes("cerrar") ||
+    detectarInteresComercial(pregunta)
+  ) {
     contexto += `\nVENTAS:\n${JSON.stringify(inteligenciaVentas)}`;
     contexto += `\nDEMO:\n${JSON.stringify(demoVenta)}`;
     contexto += `\nCIERRES:\n${JSON.stringify(cierresAlexDey)}`;
   }
 
-  if (pregunta.toLowerCase().includes("equipo") || pregunta.toLowerCase().includes("reclutar")) {
+  if (preguntaNormalizada.includes("equipo") || preguntaNormalizada.includes("reclutar")) {
     contexto += `\nRECLUTAMIENTO:\n${JSON.stringify(reclutamientoCiprian)}`;
   }
 
-  if (pregunta.toLowerCase().includes("casa") || pregunta.toLowerCase().includes("inversion")) {
+  if (preguntaNormalizada.includes("casa") || preguntaNormalizada.includes("inversion")) {
     contexto += `\nPROPIEDADES:\n${JSON.stringify(redfinProperties)}`;
   }
 
@@ -391,10 +700,17 @@ app.post("/chat", async (req, res) => {
   });
 
   try {
-    const leadGuardado = await guardarLeadSiExiste(preguntaLimpia);
+    actualizarEstadoConversacion(sessionId, preguntaLimpia);
+
+    const leadGuardado = await guardarLeadSiExiste(
+      preguntaLimpia,
+      obtenerEstadoConversacion(sessionId)
+    );
+    actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
     await sincronizarLeadAGoogleSheets(leadGuardado);
 
     const contexto = construirContexto(preguntaLimpia);
+    const estadoPrompt = construirEstadoPrompt(sessionId);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -407,6 +723,7 @@ app.post("/chat", async (req, res) => {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "system", content: contexto },
+          { role: "system", content: estadoPrompt },
           ...conversaciones[sessionId]
         ]
       })
