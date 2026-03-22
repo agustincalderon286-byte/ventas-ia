@@ -152,7 +152,7 @@ function dividirEnChunks(text, maxChars = DEFAULT_CHUNK_SIZE, overlapParagraphs 
 function inferirSourceType(relativePath) {
   const nombre = relativePath.toLowerCase();
 
-  if (nombre.includes("receta")) {
+  if (nombre.includes("receta") || nombre.includes("cocina") || nombre.includes("clases")) {
     return "recipes";
   }
 
@@ -177,6 +177,30 @@ function inferirSourceType(relativePath) {
   }
 
   return "general";
+}
+
+function construirChunksEspeciales(parsedContent, sourceType, fileName) {
+  if (
+    sourceType === "recipes" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.recetas)
+  ) {
+    return parsedContent.recetas
+      .map((receta, index) => {
+        const titulo = receta?.nombre_receta || receta?.nombre || receta?.id || `Receta ${index + 1}`;
+
+        return {
+          text: serializarNodo(receta, `Receta / ${titulo}`),
+          itemId: receta?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  return [];
 }
 
 function inferirTags(relativePath) {
@@ -316,8 +340,17 @@ export async function importarKnowledge({
     const sourceKey = construirSourceKey(relativePath);
     const sourceType = inferirSourceType(relativePath);
     const tags = inferirTags(relativePath);
-    const normalizedText = serializarNodo(parsedContent, path.basename(filePath));
-    const textChunks = dividirEnChunks(normalizedText);
+    const fileName = path.basename(filePath);
+    const normalizedText = serializarNodo(parsedContent, fileName);
+    const semanticChunks = construirChunksEspeciales(parsedContent, sourceType, fileName);
+    const chunkDocs = semanticChunks.length
+      ? semanticChunks
+      : dividirEnChunks(normalizedText).map(text => ({
+          text,
+          itemId: null,
+          itemTitle: null
+        }));
+    const textChunks = chunkDocs.map(chunk => chunk.text);
     const contentHash = obtenerHash(rawContent);
     const existingSource = await sources.findOne({ sourceKey });
 
@@ -346,19 +379,21 @@ export async function importarKnowledge({
 
     if (textChunks.length) {
       await chunks.insertMany(
-        textChunks.map((text, chunkIndex) => ({
+        chunkDocs.map((chunk, chunkIndex) => ({
           sourceKey,
           relativePath,
-          fileName: path.basename(filePath),
+          fileName,
           sourceType,
           tags,
           chunkIndex,
-          text,
+          itemId: chunk.itemId || null,
+          itemTitle: chunk.itemTitle || null,
+          text: chunk.text,
           embedding: embeddings[chunkIndex] || [],
           embeddingModel: skipEmbeddings ? null : process.env.KNOWLEDGE_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
           embeddingDimensions,
-          charCount: text.length,
-          wordCount: text.split(/\s+/).filter(Boolean).length,
+          charCount: chunk.text.length,
+          wordCount: chunk.text.split(/\s+/).filter(Boolean).length,
           createdAt: existingSource?.createdAt || now,
           updatedAt: now
         }))

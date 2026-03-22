@@ -1,0 +1,687 @@
+{
+  "metadata": {
+    "coleccion": "clases_magistrales_cocina",
+    "descripcion": "Clases magistrales de cocina Royal Prestige — 4 episodios. Optimizado para vector search en MongoDB RAG.",
+    "total_recetas": 12,
+    "episodios": [
+      "Episodio 1 — Delicias de Francia",
+      "Episodio 2 — Sabores de Italia",
+      "Episodio 3 — Maravillas de España",
+      "Episodio 4 — Cocina Suramericana"
+    ],
+    "campos_por_chunk": [
+      "nombre_receta",
+      "objetivo",
+      "ingredientes",
+      "utensilios_recomendados",
+      "pasos_clave",
+      "errores_comunes",
+      "consejos_del_chef",
+      "producto_recomendado",
+      "por_que_royal_prestige"
+    ],
+    "nota_para_rag": "Cada receta es un documento independiente para embeddings. Buscar por nombre_receta, tecnica, ingrediente o producto_recomendado."
+  },
+  "recetas": [
+    {
+      "id": "ep1_ratatouille",
+      "episodio": "Episodio 1 — Delicias de Francia",
+      "chef": "Chef Jesús",
+      "nombre_receta": "Ratatouille francés",
+      "objetivo": "Preparar el clásico vegetariano francés sin horno, directamente en la estufa usando sartén Royal Prestige con tapa selladora",
+      "ingredientes": [
+        "Tomates maduros (2-3)",
+        "Zucchini verde (2)",
+        "Squash amarillo (2)",
+        "Berenjena (1-2)",
+        "Pimiento rojo, verde y amarillo",
+        "Aceite de oliva",
+        "Queso parmesano rallado",
+        "Cebollín fresco",
+        "Tomillo fresco y seco",
+        "Orégano seco",
+        "Perejil seco",
+        "Sal y pimienta"
+      ],
+      "utensilios_recomendados": [
+        "Sartén Royal Prestige con tapa selladora (válvula)",
+        "Chef Knife Royal Prestige para cortes uniformes",
+        "Power Blender Go para licuar base de tomate directo en sartén",
+        "Tabla de corte Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Hacer corte en Cruz en los tomates, hervir 15 minutos para pelar fácilmente",
+        "Licuar tomates pelados directamente en el sartén con Power Blender Go — sin ensuciar licuadora",
+        "Agregar pimientos picados como base y dejar sofreír a fuego bajo",
+        "Cortar todos los vegetales al mismo grosor — aprox 1 cm — para cocción uniforme",
+        "Armar espiral intercalando tomate, zucchini, squash y berenjena alrededor del sartén",
+        "Sazonar con sal, pimienta, tomillo, orégano, aceite de oliva",
+        "Tapar con válvula cerrada y cocinar a fuego bajo 15 minutos",
+        "Terminar con queso parmesano y cebollín fresco"
+      ],
+      "errores_comunes": [
+        "Usar vegetales muy maduros — se deshacen durante la cocción",
+        "Cortar vegetales de diferentes grosores — se cocinan desigual",
+        "Cocinar a fuego alto — los vegetales se queman sin cocinarse por dentro",
+        "No intercalar los vegetales — pierde la presentación en espiral"
+      ],
+      "consejos_del_chef": [
+        "El tomate es la prueba de fuego de cualquier cuchillo — si no corta tomate limpio, no está bien afilado",
+        "Todos los vegetales deben estar en punto medio: ni muy maduros ni muy verdes",
+        "La válvula cerrada hace las veces del horno — concentra el calor y el vapor",
+        "Excelente como acompañante de cualquier proteína: pollo, carne o pescado"
+      ],
+      "producto_recomendado": "Sartén Royal Prestige con tapa válvula + Power Blender Go + Chef Knife",
+      "por_que_royal_prestige": "La tapa con válvula selladora permite hornear sobre la estufa sin encender el horno. La sartén Easy Release permite cocinar sin aceite o con cantidad mínima. El Power Blender Go licua directamente en el sartén sin ensuciar más recipientes."
+    },
+    {
+      "id": "ep1_crepa_salada",
+      "episodio": "Episodio 1 — Delicias de Francia",
+      "chef": "Chef Jesús",
+      "nombre_receta": "Crepa salada con bechamel, jamón y queso gruyère",
+      "objetivo": "Dominar la masa base de crepas y la salsa bechamel francesa para aplicarla en versión salada",
+      "ingredientes": {
+        "masa_crepa": [
+          "2 tazas de harina",
+          "2.5 tazas de leche entera",
+          "4 cucharadas de mantequilla derretida",
+          "2 cucharadas de azúcar",
+          "2 cucharadas de extracto de vainilla",
+          "1 pizca de sal",
+          "4 huevos"
+        ],
+        "bechamel": [
+          "2 tazas de leche entera",
+          "2 oz de mantequilla a temperatura ambiente",
+          "0.5 taza de harina de trigo",
+          "Nuez moscada",
+          "Pimienta blanca",
+          "Sal"
+        ],
+        "relleno": [
+          "Jamón en rebanadas",
+          "Queso gruyère rallado",
+          "Salsa bechamel"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Sartén 12 pulgadas Deluxe Easy Release Royal Prestige",
+        "Power Blender Go para mezclar masa",
+        "Ollita para bechamel Royal Prestige",
+        "Espátula de silicón Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Mezclar todos los ingredientes de la masa con Power Blender Go — queda lista en segundos",
+        "Refrigerar la masa 10-15 minutos antes de usar",
+        "Para bechamel: derretir mantequilla, agregar harina poco a poco formando pasta, incorporar leche gradualmente sin dejar de mover",
+        "Eliminar grumos de bechamel antes de sazonar con nuez moscada, pimienta blanca y sal",
+        "Calentar sartén Easy Release a fuego medio con toque mínimo de mantequilla",
+        "Echar cucharada de masa y rotar sartén para cubrir toda la superficie",
+        "Voltear cuando los bordes estén sólidos y no haya partes líquidas",
+        "Rellenar dividiendo en 4 cuadrantes — jamón y queso en uno, doblar en cuatro",
+        "Cubrir con bechamel y queso extra encima"
+      ],
+      "errores_comunes": [
+        "Sartén frío al echar la masa — la crepa no corre bien ni se cocina parejo",
+        "Agregar toda la leche de golpe a la bechamel — se forman grumos imposibles de eliminar",
+        "Cocinar a fuego alto — la crepa se tuesta sin cocinarse bien",
+        "Cortar la pasta en la crepa — los italianos lo prohíben (aplica también a este contexto)"
+      ],
+      "consejos_del_chef": [
+        "La masa debe ser más líquida que la de pancakes — si está muy espesa no corre bien en el sartén",
+        "La bechamel se puede hacer más o menos espesa según el uso: más líquida para salsas, más espesa para rellenos",
+        "El Easy Release permite cocinar a temperaturas más bajas sin que se pegue — resultado profesional en casa",
+        "La crepa está lista para voltear cuando se bombea ligeramente y los bordes están secos"
+      ],
+      "producto_recomendado": "Sartén 12 pulgadas Deluxe Easy Release Royal Prestige",
+      "por_que_royal_prestige": "La tecnología antiadherente Easy Release permite usar cantidad mínima de mantequilla y lograr crepas perfectas sin que se peguen. La temperatura uniforme del acero garantiza cocción pareja sin puntos calientes."
+    },
+    {
+      "id": "ep1_crepa_dulce",
+      "episodio": "Episodio 1 — Delicias de Francia",
+      "chef": "Chef Jesús",
+      "nombre_receta": "Crepa dulce con frutas del bosque",
+      "objetivo": "Versión dulce de la crepa francesa con frutas frescas y azúcar glass",
+      "ingredientes": [
+        "Masa base de crepa (misma que versión salada)",
+        "Frutas del bosque frescas (berries)",
+        "Crema de avellana con chocolate o mantequilla de maní",
+        "Azúcar glass"
+      ],
+      "utensilios_recomendados": [
+        "Sartén 12 pulgadas Deluxe Easy Release Royal Prestige",
+        "Espátula de silicón"
+      ],
+      "pasos_clave": [
+        "Usar la misma masa refrigerada de la versión salada",
+        "Cocinar la crepa con el mismo proceso — fuego medio, toque de mantequilla",
+        "Rellenar en un cuadrante con spread de preferencia y frutas",
+        "Doblar dos veces formando triángulo",
+        "Decorar con más frutas encima y espolvorear azúcar glass"
+      ],
+      "errores_comunes": [
+        "Poner demasiado relleno — la crepa no se puede doblar bien",
+        "No refrigerar la masa — queda con burbujas irregulares"
+      ],
+      "consejos_del_chef": [
+        "La misma masa funciona para versión dulce y salada — solo cambia el relleno",
+        "Entre más maduras las frutas, más sabor y color en el plato"
+      ],
+      "producto_recomendado": "Sartén 12 pulgadas Deluxe Easy Release Royal Prestige",
+      "por_que_royal_prestige": "El Easy Release permite hacer crepas perfectas dulces y saladas con el mismo sartén sin cambiar nada — versatilidad total."
+    },
+    {
+      "id": "ep2_pasta_pomodoro_fresco",
+      "episodio": "Episodio 2 — Sabores de Italia",
+      "chef": "Chef Jesús + Chef Natalia Delgado",
+      "nombre_receta": "Espaguetti con salsa pomodoro fresco, crema y parmesano",
+      "objetivo": "Pasta italiana auténtica al dente con salsa de tomate fresco casera usando técnicas italianas",
+      "ingredientes": {
+        "pasta": [
+          "Espaguetti (cantidad según personas)",
+          "Agua abundante hirviendo",
+          "Sal generosa (tan salada como el mar)"
+        ],
+        "salsa": [
+          "Tomates maduros",
+          "Tomate cherry",
+          "Ajo (2-3 dientes)",
+          "Romero fresco",
+          "Albahaca fresca",
+          "Crema",
+          "Queso parmesano rallado",
+          "Piñones (o nueces/almendras)",
+          "Aceite de oliva",
+          "Sal y pimienta",
+          "Nuez moscada"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Olla 8 cuartos Royal Prestige para hervir pasta",
+        "Olla 3 cuartos Royal Prestige para escalfar tomates",
+        "Sartén 10.5 pulgadas Royal Prestige para la salsa",
+        "Power Blender Go para procesar salsa directo en la olla",
+        "Chef Knife Royal Prestige",
+        "Pinzas Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Hacer corte en Cruz en tomates y escalfar en olla con solo 2 tazas de agua — gracias al sellado Royal Prestige",
+        "Pelar tomates escalfados bajo agua fría para quitar piel sin quemarse",
+        "Licuar tomates pelados con Power Blender Go directamente en la olla — sin ensuciar licuadora",
+        "Hervir agua con sal abundante — la pasta debe absorber sal desde el inicio",
+        "Cocinar espaguetti exactamente 7 minutos para término al dente",
+        "GUARDAR una taza del agua de cocción antes de escurrir — tiene almidón que espesa la salsa",
+        "En sartén: saltear ajo y romero en aceite, agregar tomates procesados",
+        "Incorporar crema, parmesano y agua de cocción reservada para espesor",
+        "Terminar la pasta en la salsa — se termina de cocer allí y absorbe todos los sabores"
+      ],
+      "errores_comunes": [
+        "Tirar el agua de cocción de la pasta — es el secreto para espesar la salsa",
+        "Cocinar la pasta hasta blanda — debe estar al dente (resistencia al morder)",
+        "Usar tomates poco maduros — la salsa pierde sabor y color",
+        "Agregar todo el queso de golpe — se hace grumo"
+      ],
+      "consejos_del_chef": [
+        "Al dente significa literalmente al diente — la pasta debe dar resistencia, no estar blanda",
+        "Los italianos dicen: el agua debe estar tan salada como el mar",
+        "El tomate te escoge a ti — entre más maduro, más sabor sin necesidad de condimentos extras",
+        "La pasta se termina de cocer en la salsa — nunca escurrirla completamente seca",
+        "Una cucharada del agua de cocción espesa cualquier salsa y le da sabor extra"
+      ],
+      "producto_recomendado": "Olla 8 cuartos Royal Prestige + Power Blender Go + Sartén 10.5 pulgadas",
+      "por_que_royal_prestige": "La olla de 3 cuartos escalfa tomates con solo 2 tazas de agua gracias al sellado hermético — conserva más nutrientes y sabor. El Power Blender Go procesa la salsa sin transferir a otro recipiente. La válvula avisa exactamente cuando el agua está lista."
+    },
+    {
+      "id": "ep2_pizza_paellera",
+      "episodio": "Episodio 2 — Sabores de Italia",
+      "chef": "Chef Omar Sandoval + Dominica Paleta",
+      "nombre_receta": "Pizza gourmet tres quesos con prosciutto y higos — sin horno",
+      "objetivo": "Pizza italiana gourmet cocinada en paellera sobre la estufa en 10 minutos sin encender el horno",
+      "ingredientes": {
+        "masa": [
+          "2 tazas de harina",
+          "Mantequilla en punto pomada",
+          "Azúcar",
+          "Sal",
+          "Polvo de hornear",
+          "Agua (agregar poco a poco)"
+        ],
+        "toppings": [
+          "Salsa pomodoro casera",
+          "Queso mozzarella",
+          "Queso gorgonzola",
+          "Queso parmesano rallado",
+          "Higos frescos",
+          "Prosciutto",
+          "Arúgula fresca",
+          "Albahaca",
+          "Aceite de oliva extra virgen",
+          "Sal y pimienta"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Paellera 14 pulgadas Nobel Royal Prestige",
+        "Olla 1.5 cuartos Royal Prestige para salsa",
+        "Power Blender Go para procesar salsa",
+        "Tabla de bambú Royal Prestige",
+        "Rodillo",
+        "Cortador de pizza Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Mezclar ingredientes secos de la masa, incorporar mantequilla en punto pomada",
+        "Agregar agua poco a poco hasta masa homogénea ligeramente húmeda",
+        "Dejar reposar masa tapada 30 minutos — los tazones herméticos Royal Prestige son perfectos",
+        "Estirar masa con rodillo a 1 cm de grosor aproximadamente",
+        "Precalentar paellera 14 pulgadas a fuego medio 40 segundos",
+        "Colocar masa en paellera sin aceite — dejar entre tapada para no acumular humedad",
+        "Cocinar base 5-7 minutos hasta que quede crujiente por debajo",
+        "Voltear masa, agregar salsa, mozzarella, gorgonzola, higos",
+        "Tapar 3-4 minutos para derretir quesos",
+        "Terminar con prosciutto, arúgula, parmesano y aceite de oliva fuera del fuego"
+      ],
+      "errores_comunes": [
+        "Tapar completamente — se acumula humedad y la base queda húmeda no crujiente",
+        "Agregar prosciutto y arúgula con calor — se marchitan, van al final fuera del fuego",
+        "Masa muy gruesa — no se cocina bien en el centro",
+        "Paellera fría — la base no queda crujiente"
+      ],
+      "consejos_del_chef": [
+        "El prosciutto y la arúgula SIEMPRE van al final, fuera del fuego — el calor los arruina",
+        "Masa de pizza no requiere perfección en el corte — lo que importa es el sabor",
+        "El gorgonzola da fuerza, el mozzarella da elasticidad, el parmesano da sabor — cada queso tiene su función",
+        "Los higos dan contraste dulce que equilibra el gorgonzola fuerte",
+        "Con la paellera de 14 pulgadas puedes sustituir el horno completamente"
+      ],
+      "producto_recomendado": "Paellera 14 pulgadas Nobel Royal Prestige + Power Blender Go",
+      "por_que_royal_prestige": "La paellera Nobel de 14 pulgadas tiene la superficie y distribución de calor perfecta para cocinar pizza sobre la estufa — resultado idéntico al horno de piedra en 10 minutos. Sin horno, sin pizza stone, sin esperar precalentamiento."
+    },
+    {
+      "id": "ep2_palomitas",
+      "episodio": "Episodio 2 — Sabores de Italia",
+      "chef": "Chef Omar Sandoval",
+      "nombre_receta": "Palomitas caseras gourmet — Perfect Pop",
+      "objetivo": "Palomitas perfectas sin quemarse, parejas y con sabor personalizado usando la Perfect Pop Royal Prestige",
+      "ingredientes": [
+        "Maíz palomero",
+        "Aceite (cantidad mínima — opcional)",
+        "Sal al gusto",
+        "Opcionales: limón, chile, Tajín, caramelo, queso"
+      ],
+      "utensilios_recomendados": [
+        "Perfect Pop Royal Prestige con olla de 6 cuartos"
+      ],
+      "pasos_clave": [
+        "Precalentar Perfect Pop a fuego medio",
+        "Agregar maíz con toque mínimo de aceite o sin aceite",
+        "Tapar — la tapa transparente permite monitorear sin destapar",
+        "Mover con la palanca integrada para que no se quemen",
+        "Cuando bajan los pops, retirar del fuego",
+        "Agregar condimentos al gusto usando el diseño que permite distribución uniforme"
+      ],
+      "errores_comunes": [
+        "No mover — las de abajo se queman mientras las de arriba no se hicieron",
+        "Fuego alto — se queman antes de que se abran todas",
+        "Agregar condimentos en ollas normales — quedan mal distribuidos"
+      ],
+      "consejos_del_chef": [
+        "La tapa transparente es clave — puedes ver exactamente cuándo retirarlo sin perder vapor",
+        "El diseño permite agregar sal, chile o caramelo con distribución uniforme",
+        "Sin aceite quedan igual de bien — opcionalidad total"
+      ],
+      "producto_recomendado": "Perfect Pop con olla 6 cuartos Royal Prestige",
+      "por_que_royal_prestige": "La Perfect Pop resuelve el problema clásico de las palomitas: las de abajo se queman mientras las de arriba no se abren. La tapa transparente y la palanca garantizan resultado perfecto cada vez."
+    },
+    {
+      "id": "ep3_patatas_bravas",
+      "episodio": "Episodio 3 — Maravillas de España",
+      "chef": "Chef Mikel Alonso + Dominica Paleta",
+      "nombre_receta": "Patatas bravas con salsa brava casera",
+      "objetivo": "Tapa española clásica con patatas cocidas y doradas en sartén con salsa brava picante procesada con Max Cup",
+      "ingredientes": {
+        "patatas": [
+          "Patatas/papas medianas",
+          "Agua fría (solo 0.5 taza gracias a Royal Prestige)",
+          "Sal",
+          "Aceite de oliva (mínimo para dorar)"
+        ],
+        "salsa_brava": [
+          "Cebolla",
+          "Ajo",
+          "Tomate (casero preferentemente)",
+          "Pimentón de la vera (denominación de origen España)",
+          "Polvo de cayena al gusto",
+          "Vinagre blanco (o manzana, champán o vino)",
+          "Caldo de verduras o pollo",
+          "Sal y pimienta"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Olla 2 cuartos Royal Prestige con válvula para cocer papas",
+        "Sartén 12 pulgadas Easy Release para dorar",
+        "Max Cup Royal Prestige para procesar salsa",
+        "Chef Knife Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Cocer papas en olla Royal Prestige con solo media taza de agua — válvula cerrada 15 minutos",
+        "El pin de seguridad indica cuándo abrir — esperar que baje antes de abrir",
+        "Papas quedan mantequillosas perfectas en tiempo récord",
+        "En sartén Easy Release: dorar papas cocidas con mínimo aceite de oliva hasta costra dorada",
+        "Para salsa: acitronar cebolla y ajo, agregar pimentón de la vera y cayena",
+        "Reducir con vinagre, agregar tomate y caldo",
+        "Procesar con Max Cup directamente — sin ensuciar licuadora",
+        "Bañar patatas con salsa caliente y servir inmediatamente"
+      ],
+      "errores_comunes": [
+        "Poner papas en agua ya hirviendo — se encallan y quedan duras por fuera y crudas por dentro",
+        "Quemarse abriendo la olla a presión antes de que baje el pin — peligroso",
+        "Usar demasiado aceite para dorar — quedan grasosas no crujientes",
+        "Procesar salsa hirviendo a máxima velocidad — salpica, empezar despacio"
+      ],
+      "consejos_del_chef": [
+        "Las papas SIEMPRE van en agua fría y fuego lento — son muy sensibles a cambios de temperatura",
+        "El pimentón de la vera es el ingrediente diferenciador de la salsa brava auténtica",
+        "La grasa de la papa de altura es cremosa amarilla — señal de calidad",
+        "Con Max Cup: empezar a velocidad baja con líquidos calientes para no salpicarse"
+      ],
+      "producto_recomendado": "Olla 2 cuartos Royal Prestige + Sartén Easy Release + Max Cup",
+      "por_que_royal_prestige": "La olla con válvula cuece las papas perfectas con solo media taza de agua en 15 minutos — sin agua hasta arriba, sin hervido excesivo que las daña. El sellado hermético mantiene temperatura y humedad exacta para resultado mantequilloso."
+    },
+    {
+      "id": "ep3_paella_mixta",
+      "episodio": "Episodio 3 — Maravillas de España",
+      "chef": "Chef Mikel Alonso",
+      "nombre_receta": "Paella mixta española (pollo, cerdo, mariscos)",
+      "objetivo": "Paella auténtica española con arroz bomba, azafrán y mariscos del Pacífico en paellera Royal Prestige",
+      "ingredientes": [
+        "Arroz bomba valenciano (grano redondo)",
+        "Caldo de pollo con marisco sazonado",
+        "Chorizo español (grasa propia — sin aceite extra)",
+        "Jamón ibérico en tacos",
+        "Pollo orgánico de libre pastoreo",
+        "Costillar de cerdo",
+        "Camarones jumbo con cabeza",
+        "Mejillones del Pacífico Norte",
+        "Almejas chione",
+        "Cebolla",
+        "Ajo",
+        "Pimiento verde y rojo",
+        "Tomate maduro",
+        "Azafrán (3 pistilos por persona)",
+        "Perejil fresco",
+        "Guisantes/chícharos",
+        "Sal y pimienta"
+      ],
+      "utensilios_recomendados": [
+        "Paellera Royal Prestige (tamaño según comensales)",
+        "Chef Knife Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Freír chorizo en la paellera sin aceite — la grasa del chorizo es el aceite de la paella",
+        "Agregar jamón, sellar pollo y cerdo en esa misma grasa",
+        "Retirar proteínas, hacer sofrito: cebolla, ajo, pimiento hasta caramelizar",
+        "Agregar tomate, dejar reducir bien",
+        "Incorporar azafrán — 3 pistilos por persona máximo",
+        "Regresar proteínas, añadir caldo caliente sazonado",
+        "Cuando hierve agregar arroz — repartir como dándole de comer a las gallinas",
+        "Colocar mariscos ordenados encima cuando el arroz lleva 10 minutos",
+        "Válvula avisa cuando está lista — tapar y bajar fuego",
+        "Reposar 5 minutos fuera del fuego antes de servir",
+        "Terminar con guisantes y perejil"
+      ],
+      "errores_comunes": [
+        "Agregar aceite extra — el chorizo tiene suficiente grasa de calidad",
+        "Sofrito malo — arruina toda la paella desde la base",
+        "Arroz pasado — debe tener el socarrat (costra en el fondo) sin quemarse",
+        "Demasiado azafrán — es muy expresivo, 3 pistilos por persona es suficiente",
+        "No respetar el reposo — el arroz se termina de asentar en esos 5 minutos"
+      ],
+      "consejos_del_chef": [
+        "Si quieres buen arroz, primero haz buen sofrito — es la base de todo",
+        "El azafrán da sabor Y color — es el diferenciador de la paella auténtica",
+        "Arroz bomba es como esponja — absorbe todos los sabores del caldo",
+        "Paella = democracia en la cocina: todos los ingredientes sueltan su sabor y todos se benefician",
+        "El socarrat (costra del fondo) es lo más preciado de la paella — no se quema, se carameliza"
+      ],
+      "producto_recomendado": "Paellera Royal Prestige",
+      "por_que_royal_prestige": "El grosor del acero de la paellera Royal Prestige distribuye el calor uniformemente — esencial para que el arroz se cocine parejo y se forme el socarrat sin quemarse. La conductividad del acero quirúrgico replica el resultado de los mejores restaurantes valencianos."
+    },
+    {
+      "id": "ep3_potaje_garbanzos",
+      "episodio": "Episodio 3 — Maravillas de España",
+      "chef": "Chef Mikel Alonso",
+      "nombre_receta": "Potaje español de garbanzos con chorizo, tocino y verduras",
+      "objetivo": "Plato de cuchara español contundente cocinado en olla Precision Cook Royal Prestige",
+      "ingredientes": [
+        "Garbanzos crudos (remojados 12 horas)",
+        "Chorizo español",
+        "Tocino no ahumado",
+        "Pollo",
+        "Cebolla",
+        "Ajo",
+        "Pimiento verde",
+        "Tomate",
+        "Espinaca o acelga",
+        "Kale (col rizada)",
+        "Pimentón de la vera",
+        "Hoja de laurel",
+        "Agua",
+        "Sal y pimienta"
+      ],
+      "utensilios_recomendados": [
+        "Precision Cook Royal Prestige (olla a presión programable)",
+        "Espátula de silicón Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Remojar garbanzos 12 horas antes — obligatorio con garbanzos crudos",
+        "Prender Precision Cook a nivel 6",
+        "Freír chorizo en su propia grasa — sin aceite extra",
+        "Agregar tocino, sofreír junto",
+        "Incorporar cebolla, ajo, pimiento — citronar bien",
+        "Agregar tomate, dejar reducir",
+        "Sumar verduras: espinaca, kale, acelga",
+        "Pimentón de la vera, laurel, sal y pimienta",
+        "Agregar garbanzos y agua — máximo 2/3 de la capacidad de la olla",
+        "Cerrar tapa y válvula — cocinar hasta que genere presión, luego bajar a nivel bajo 15 minutos",
+        "Esperar que salga todo el vapor antes de abrir"
+      ],
+      "errores_comunes": [
+        "No remojar garbanzos — nunca ablandarán bien",
+        "Llenar la olla más de 2/3 — peligroso con ollas a presión",
+        "Abrir antes de que salga todo el vapor — peligroso"
+      ],
+      "consejos_del_chef": [
+        "El potaje sabe mejor al día siguiente — los sabores se integran con el reposo",
+        "La Precision Cook permite programar y alejarse — cocina sola sin supervisión",
+        "Kale da textura y superpoder nutricional — es un superalimento con minerales esenciales",
+        "El laurel es la hierba española por excelencia para potajes y guisos"
+      ],
+      "producto_recomendado": "Precision Cook Royal Prestige",
+      "por_que_royal_prestige": "La Precision Cook permite cocinar a presión programada con temperatura exacta — puedes configurarla y dedicarte a otras cosas. Funciona como slow cooker y como olla express, conservando todos los sabores en un solo recipiente."
+    },
+    {
+      "id": "ep4_picana_cerveza",
+      "episodio": "Episodio 4 — Cocina Suramericana",
+      "chef": "Chef Cristian Pet (Argentina)",
+      "nombre_receta": "Picaña a la presión con trio de cervezas latinoamericanas y zapallo relleno de fondue",
+      "objetivo": "Corte brasileño/argentino cocinado a presión con cerveza ecuatoriana, colombiana y peruana, servido dentro de un zapallo con fondue de quesos",
+      "ingredientes": {
+        "picana": [
+          "1.5 kg de picaña/tapa de cuadril",
+          "Cerveza ecuatoriana (lager)",
+          "Cerveza colombiana Águila",
+          "Cerveza peruana Cusqueña oscura",
+          "Zanahoria",
+          "Cebolla",
+          "Ajo al medio",
+          "Sal y pimienta"
+        ],
+        "fondue_zapallo": [
+          "Zapallo/calabaza mediana",
+          "Queso gruyère",
+          "Queso tipo (elástico)",
+          "Vino blanco",
+          "Kirsch (destilado de cerezas)",
+          "Fécula de maíz",
+          "Nuez moscada",
+          "Agua",
+          "Tomillo y laurel",
+          "Ajo (para frotar la olla)"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Olla a presión Royal Prestige 6 litros",
+        "Sartén Royal Prestige para sellar",
+        "Cuchillos Royal Prestige set completo con cubo"
+      ],
+      "pasos_clave": [
+        "Recortar grasa excesiva — guardar grasa de picaña para hamburguesas (tip especial)",
+        "Sellar picaña del lado de la grasa primero — SIN aceite, usar la propia grasa",
+        "Agregar verduras aromáticas en la olla",
+        "Incorporar las 3 cervezas — unión latinoamericana de sabores",
+        "Tapar y cocinar a presión 35-40 minutos",
+        "Para fondue: frotar olla con ajo crudo cortado (diferenciador clave)",
+        "Calentar vino blanco hasta 90-95°C para evaporar alcohol",
+        "Agregar quesos de A POCO — nunca de golpe",
+        "Incorporar kirsch con fécula disuelta para cremosidad y brillo",
+        "Servir fondue dentro del zapallo cocido al vapor"
+      ],
+      "errores_comunes": [
+        "Agregar todos los quesos de golpe — se hace engrudo imposible de recuperar",
+        "Carne muy fría al fuego — baja la temperatura de la olla y afecta cocción",
+        "No frotar el ajo en la olla para fondue — es el diferenciador de sabor",
+        "Abrir la olla a presión sin liberar vapor completamente"
+      ],
+      "consejos_del_chef": [
+        "La grasa de la picaña es la grasa ideal para hamburguesas — pasarla por picadora es un secreto de chef",
+        "Temperatura ambiente antes de cocinar la carne — nunca directo del refrigerador",
+        "El color de la grasa indica calidad: crema = animal de pasto, amarillo = mucho pasto, blanco = grano",
+        "El kirsch + fécula es el secreto de la cremosidad perfecta de la fondue",
+        "Frotar ajo en la olla antes de la fondue: parece que no sirve pero es el diferenciador"
+      ],
+      "producto_recomendado": "Olla a presión Royal Prestige + cuchillos con cubo",
+      "por_que_royal_prestige": "La olla a presión Royal Prestige tiene pin de seguridad que impide abrir antes de liberar vapor — la más segura del mercado. El peso de la tapa habla de su calidad y seguridad. Reduce 1 hora de cocción a 35-40 minutos sin perder sabor."
+    },
+    {
+      "id": "ep4_bife_hongos_chimichurri",
+      "episodio": "Episodio 4 — Cocina Suramericana",
+      "chef": "Chef Cristian Pet (Argentina)",
+      "nombre_receta": "Bife de chorizo con hongos salteados y chimichurri argentino",
+      "objetivo": "Corte premium argentino cocinado en sartén Easy Release con guarnición de tres variedades de hongos y chimichurri casero",
+      "ingredientes": {
+        "bife": [
+          "Bife de chorizo 1 pulgada de grosor",
+          "Sal gruesa",
+          "Aceite de oliva (toque mínimo)",
+          "Kale/col rizada masajeada con aceite de oliva"
+        ],
+        "hongos": [
+          "Portobello",
+          "Champiñones",
+          "Hongos ostra",
+          "Aceite de oliva",
+          "Sal y pimienta"
+        ],
+        "chimichurri": [
+          "Perejil fresco abundante (el clásico original)",
+          "Albahaca fresca",
+          "Ajo picado a cuchillo",
+          "Pimentón dulce (ahumado y dulzor)",
+          "Orégano seco",
+          "Ají molido (picante al gusto)",
+          "Comino",
+          "Vinagre de vino blanco",
+          "Aceite de maíz o de oliva",
+          "Sal"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Sartén Easy Release Royal Prestige",
+        "Chef Knife Royal Prestige",
+        "Tabla de corte Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Chimichurri: hidratar especias secas con vinagre primero, luego agregar aceite de a poco",
+        "Dejar reposar chimichurri mínimo un día — a la semana está mejor",
+        "Masajear kale con aceite de oliva para suavizar la fibra antes de cocinar",
+        "Salar el bife ANTES de cocinarlo — la sal seca la superficie para mejor sellado",
+        "Poner aceite de oliva apenas en la carne, no en el sartén",
+        "Sartén bien caliente antes de poner la carne — buscar el sello perfecto",
+        "Cocinar a fuego medio, voltear una sola vez",
+        "Saltear hongos en el mismo sartén aprovechando los jugos de la carne",
+        "Terminar con generoso chimichurri encima"
+      ],
+      "errores_comunes": [
+        "Salar la carne después de cocinar — pierde el sellado perfecto (reacción de Maillard)",
+        "Carne fría directo al fuego — baja la temperatura y no sella bien",
+        "Cortar la carne muy gruesa para sartén — mejor 1 pulgada máximo",
+        "Chimichurri sin reposo — las especias no se hidratan bien"
+      ],
+      "consejos_del_chef": [
+        "Chimichurri original argentino = ajo + perejil. Todo lo demás es creatividad",
+        "El perejil en Argentina se regalaba — hoy está olvidado pero es el rey del chimichurri",
+        "Sal siempre ANTES — activa la reacción de Maillard para ese dorado perfecto",
+        "El kale masajeado se vuelve más tierno y digestivo — no saltarlo crudo directo",
+        "En chimichurri: vinagre primero para hidratar especias, aceite al final para ligar"
+      ],
+      "producto_recomendado": "Sartén Easy Release Royal Prestige",
+      "por_que_royal_prestige": "El Easy Release permite cocinar el bife con cantidad mínima de aceite manteniendo todo el sabor natural de la carne. La temperatura uniforme garantiza sellado perfecto y cocción pareja sin puntos fríos o calientes."
+    },
+    {
+      "id": "ep4_colonche_camaron_mani",
+      "episodio": "Episodio 4 — Cocina Suramericana",
+      "chef": "Chef Irene González (Ecuador)",
+      "nombre_receta": "Colonche manabita — camarón en salsa de maní con patacones",
+      "objetivo": "Receta tradicional de la costa de Ecuador (provincia Manabí) con camarones en fondo de maní, servido con patacones crujientes",
+      "ingredientes": {
+        "base": [
+          "Pasta de maní",
+          "Camarones jumbo frescos (con colita para decorar)",
+          "Caldo de camarones",
+          "Achiote",
+          "Cebolla colorada",
+          "Pimiento verde",
+          "Ajo",
+          "Comino",
+          "Cilantro y perejil",
+          "Sal y pimienta"
+        ],
+        "patacones": [
+          "Plátano verde (no maduro)",
+          "Aceite para fritura",
+          "Sal"
+        ]
+      },
+      "utensilios_recomendados": [
+        "Sartén Gourmet Royal Prestige (apto para fritura)",
+        "Sartén Easy Release para el refrito",
+        "Espátulas de silicón Royal Prestige",
+        "Tabla y cuchillos Royal Prestige"
+      ],
+      "pasos_clave": [
+        "Hacer refrito base: achiote + cebolla + pimiento + ajo hasta caramelizar bien",
+        "Agregar pasta de maní — el fondo del camarón la afloja y potencia el sabor",
+        "Incorporar caldo de camarones poco a poco para aflojar el maní",
+        "Agregar camarones — se cocinan en el caldo de maní",
+        "Tapar con tapa de vidrio para concentrar sabores sin perder vapor",
+        "Para patacones: primera fritura en aceite caliente, sacar y aplastar",
+        "Segunda fritura hasta dorado — doble cocción para máxima crocancia",
+        "Escurrir en papel absorbente y cortar en cuatro",
+        "Servir colonche con patacones trozados para absorber la salsa"
+      ],
+      "errores_comunes": [
+        "Refrito mal hecho — arruina toda la base del plato",
+        "Aceite no suficientemente caliente para patacones — absorben aceite y quedan grasosos",
+        "Cocinar camarones demasiado — quedan chiclosos, se terminan de cocer en la salsa",
+        "No hacer doble fritura al patacón — no quedan crujientes"
+      ],
+      "consejos_del_chef": [
+        "El plátano verde de Manabí es el corazón de la cocina costeña ecuatoriana",
+        "Un mal refrito daña toda la cocina — es la base que define el sabor final",
+        "Los patacones absorben la salsa de maní — eso es parte del plato, no error",
+        "Dejar colita al camarón para servir — presentación y agarre al comer"
+      ],
+      "producto_recomendado": "Sartén Gourmet Royal Prestige para fritura + Sartén Easy Release",
+      "por_que_royal_prestige": "El sartén Gourmet está diseñado específicamente para fritura — aguanta las altas temperaturas necesarias para los patacones. El Easy Release para el refrito permite hacer la base perfecta con mínimo aceite y sin que se pegue nada."
+    }
+  ]
+}
