@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_clases_site",
+    "descripcion": "Clases magistrales públicas de cocina de Royal Prestige con recetas descargables y horarios.",
+    "total_clases": 5,
+    "fetched_at": "2026-03-22T23:17:00.600Z",
+    "source": "https://www.royalprestige.com/clases-de-cocina",
+    "campos_por_chunk": [
+      "titulo",
+      "descripcion",
+      "fecha",
+      "horarios",
+      "recetas_pdf_url"
+    ]
+  },
+  "pagina": {
+    "titulo": "Clases de Cocina",
+    "descripcion": "Clases de Cocina",
+    "introduccion": "Pero eso no es todo, al final de participar en estas clases, podrás descargar tu certificado que te acredita como un experto de cocina Royal Prestige®. ​",
+    "url": "https://www.royalprestige.com/clases-de-cocina"
+  },
+  "clases": [
+    {
+      "id": "delicias-de-francia",
+      "titulo": "DELICIAS DE FRANCIA",
+      "descripcion": "Conoce los secretos de la cocina francesa con el querido Chef Jesus ‘Yisus’ Diaz, de tu show matutino favorito. Nos enseñará a preparar un delicioso ratatouille y unas crepas versátiles, ¡que te harán agua la boca!",
+      "fecha": "Sábado 23 de Septiembre",
+      "horarios": "3:00 pm Los Ángeles / 5:00 pm Madison / 6:00 pm New York",
+      "recetas_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/recipe-card-class-1.pdf?sfvrsn=faf2386a_1",
+      "certificado_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/clases-magistrales-certificado_template.pdf?sfvrsn=238edd9c_3",
+      "imagen_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/images/default-source/content-and-media/clase-1_yisus_chefs_800x500.jpg?sfvrsn=ee072332_0",
+      "productos_relacionados": []
+    },
+    {
+      "id": "sabores-de-italia",
+      "titulo": "SABORES DE ITALIA",
+      "descripcion": "Deléitate con la reconocida comida italiana con el apreciable Chef Jesus ‘Yisus’ Diaz junto al querido Chef Omar Sandoval que nos enseñarán a preparar la pasta perfecta y una pizza sin horno para dejar a todos tus invitados, familiares y amigos con la boca abierta.",
+      "fecha": "Sábado 14 de Octubre",
+      "horarios": "3:00 pm Los Ángeles / 5:00 pm Madison / 6:00 pm New York",
+      "recetas_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/recipe-card-class-2-eu-mx-(2).pdf?sfvrsn=794c3401_1",
+      "certificado_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/clases-magistrales-certificado_template.pdf?sfvrsn=238edd9c_3",
+      "imagen_url": "",
+      "productos_relacionados": []
+    },
+    {
+      "id": "maravillas-de-espana",
+      "titulo": "MARAVILLAS DE ESPAÑA",
+      "descripcion": "Acompáñanos con el prestigioso Chef Mikel Alonso, asesor del restaurante Cocina de Autor, que junto a las famosas Dominika Paleta y Claudia Lizaldi, nos enseñarán a preparar: Paella, patatas bravas y potaje de garbanzos, platillos que enamoran a cualquiera gracias a su combinación de sabores.",
+      "fecha": "Sábado 4 de Noviembre",
+      "horarios": "3:00 pm Los Ángeles / 5:00 pm Madison / 6:00 pm New York",
+      "recetas_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/recipe-card-class-3-eu-mx-1.pdf?sfvrsn=492eb058_1",
+      "certificado_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/clases-magistrales-certificado_template.pdf?sfvrsn=238edd9c_3",
+      "imagen_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/images/default-source/content-and-media/chef-mikel-alonso.png?sfvrsn=4eaf0c4e_0",
+      "productos_relacionados": []
+    },
+    {
+      "id": "sabor-a-la-mexicana",
+      "titulo": "SABOR A LA MEXICANA",
+      "descripcion": "Acompáñanos con dos chefs de talla internacional, el Chef Omar Sandoval y el chef Benito Molina, que juntos nos enseñarán a preparar todo un banquete de la mejor comida mexicana, desde tacos al pastor, hasta la famosa agua de horchata.",
+      "fecha": "Jueves 16 de Noviembre",
+      "horarios": "4:00 pm Los Ángeles / 6:00 pm Madison / 7:00 pm New York",
+      "recetas_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/recipe-card-class-4-1.pdf?sfvrsn=66fc5785_1",
+      "certificado_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/clases-magistrales-certificado_template.pdf?sfvrsn=238edd9c_3",
+      "imagen_url": "",
+      "productos_relacionados": []
+    },
+    {
+      "id": "especial-navideno",
+      "titulo": "ESPECIAL NAVIDEÑO",
+      "descripcion": "Cerramos este viaje con un verdadero banquete navideño, pasando por el clásico lomo, hasta un chocolate caliente muy especial. Acompáñanos con 4 chefs de nivel mundial como: Omar Sandoval, Mikel Alonso, Poncho Cadena y Natalia Delgado.",
+      "fecha": "Sábado 9 de Diciembre",
+      "horarios": "3:00 pm Los Ángeles / 5:00 pm Madison / 6:00 pm New York",
+      "recetas_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/recipe-card-class-na-navidena-v2.pdf?sfvrsn=7180ee08_1",
+      "certificado_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/use-care-pdfs/clases-magistrales-certificado_template.pdf?sfvrsn=238edd9c_3",
+      "imagen_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/images/default-source/content-and-media/chef-navidad-sa.png?sfvrsn=487c39e_1",
+      "productos_relacionados": []
+    }
+  ]
+}

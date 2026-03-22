@@ -8,13 +8,22 @@ const OUTPUTS = {
   products: path.join(DATA_DIR, "royalprestige_productos_site.json"),
   warranty: path.join(DATA_DIR, "royalprestige_garantia_site.json"),
   payments: path.join(DATA_DIR, "royalprestige_pagos_site.json"),
-  helpfulHints: path.join(DATA_DIR, "royalprestige_consejos_site.json")
+  helpfulHints: path.join(DATA_DIR, "royalprestige_consejos_site.json"),
+  classes: path.join(DATA_DIR, "royalprestige_clases_site.json"),
+  magazine: path.join(DATA_DIR, "royalprestige_revista_site.json"),
+  productMatch: path.join(DATA_DIR, "royalprestige_producto_ideal_site.json")
 };
 
 const SUPPORT_URLS = {
   warranty: `${BASE_URL}/apoyo/garantia`,
   payments: `${BASE_URL}/apoyo/opciones-de-pago`,
   helpfulHints: `${BASE_URL}/apoyo/consejos-utiles`
+};
+
+const INSPIRATION_URLS = {
+  classes: `${BASE_URL}/clases-de-cocina`,
+  magazine: `${BASE_URL}/inspiracion/revista-royal-prestige`,
+  productMatch: `${BASE_URL}/inspiracion/tu-producto-ideal`
 };
 
 function decodeHtmlEntities(text) {
@@ -180,8 +189,21 @@ function extractSupportHeader(html, heading) {
   return start >= 0 ? html.slice(start, end) : "";
 }
 
+function extractSection(html, regex) {
+  const match = String(html || "").match(regex);
+  return match ? match[1] : "";
+}
+
 function extractParagraphs(html) {
   return Array.from(String(html || "").matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)).map(match => match[1]);
+}
+
+function extractMetaDescription(html) {
+  return decodeHtmlEntities(extractFirst(html, /<meta name="description" content="([^"]*)"/i));
+}
+
+function extractOgTitle(html) {
+  return decodeHtmlEntities(extractFirst(html, /<meta property="og:title" content="([^"]*)"/i));
 }
 
 function parseWarrantySections(html) {
@@ -275,6 +297,158 @@ function parseHelpfulHints(html) {
       };
     })
     .filter(item => item.pregunta && item.respuesta);
+}
+
+function parseProductCards(html) {
+  return Array.from(String(html || "").matchAll(/<a\s+href="([^"]+)" class="product-card">([\s\S]*?)<\/a>/gi))
+    .map((match, index) => {
+      const cardHtml = match[2];
+      const title = stripHtml(extractFirst(cardHtml, /<div class="product-card__title">([\s\S]*?)<\/div>/i));
+      const description = stripHtml(extractFirst(cardHtml, /<div class="product-card__description">([\s\S]*?)<\/div>/i));
+
+      return {
+        id: slugify(title || `producto-${index + 1}`),
+        titulo: title || `Producto ${index + 1}`,
+        descripcion: description,
+        url: absolutize(match[1])
+      };
+    })
+    .filter(card => card.titulo);
+}
+
+function parseClasses(html) {
+  const introStart = html.indexOf("Acompáñanos en este viaje");
+  const introEnd = html.indexOf('<div id="MainContent_C035_Col00"', introStart);
+  const introSlice = introStart >= 0 ? html.slice(introStart, introEnd > introStart ? introEnd : html.length) : "";
+  const introduccion = Array.from(introSlice.matchAll(/<h5[^>]*>([\s\S]*?)<\/h5>/gi))
+    .map(match => stripHtml(match[1]))
+    .filter(Boolean)
+    .join("\n\n");
+
+  const rows = Array.from(
+    String(html || "").matchAll(/<div class="row(?: row-reverse)?" data-sf-element="Row">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/gi)
+  );
+
+  const clases = rows
+    .map(match => match[1])
+    .filter(block => /recipe-card-class/i.test(block))
+    .map((block, index) => {
+      const title = stripHtml(extractFirst(block, /<h2[^>]*>([\s\S]*?)<\/h2>/i));
+      const paragraphs = extractParagraphs(block)
+        .map(stripHtml)
+        .filter(Boolean);
+      const description = paragraphs.find(paragraph =>
+        !/^Descarga/i.test(paragraph) &&
+        !/(Lunes|Martes|Mi[eé]rcoles|Jueves|Viernes|S[aá]bado|Domingo)/i.test(paragraph) &&
+        !/Los [ÁA]ngeles|Madison|New York/i.test(paragraph)
+      ) || "";
+      const date = paragraphs.find(paragraph =>
+        /(Lunes|Martes|Mi[eé]rcoles|Jueves|Viernes|S[aá]bado|Domingo)/i.test(paragraph)
+      ) || "";
+      const schedule = paragraphs.find(paragraph => /Los [ÁA]ngeles|Madison|New York/i.test(paragraph)) || "";
+      const imageUrl = absolutize(extractFirst(block, /<img[^>]+src="([^"]+)"/i));
+      const recipesPdfUrl = absolutize(extractFirst(block, /href="([^"]*recipe-card-class[^"]*)"/i));
+      const certificateUrl = absolutize(extractFirst(block, /href="([^"]*clases-magistrales-certificado[^"]*)"/i));
+      const productLinks = unique(
+        Array.from(block.matchAll(/<a[^>]+href="([^"]*\/productos\/detalle\/[^"]+)"/gi)).map(link => absolutize(link[1]))
+      );
+
+      return {
+        id: slugify(title || `clase-${index + 1}`),
+        titulo: title || `Clase ${index + 1}`,
+        descripcion: description,
+        fecha: date,
+        horarios: schedule,
+        recetas_pdf_url: recipesPdfUrl,
+        certificado_url: certificateUrl,
+        imagen_url: imageUrl,
+        productos_relacionados: productLinks
+      };
+    })
+    .filter(item => item.titulo && item.recetas_pdf_url);
+
+  return {
+    introduccion,
+    clases
+  };
+}
+
+function parseMagazine(html) {
+  const block = extractSection(html, /<section class="featured-magazine">([\s\S]*?)<\/section>/i);
+
+  if (!block) {
+    return [];
+  }
+
+  const kicker = stripHtml(extractFirst(block, /<div class="featured-magazine__kicker">([\s\S]*?)<\/div>/i));
+  const season = stripHtml(extractFirst(block, /<div class="featured-magazine__season">([\s\S]*?)<\/div>/i));
+  const title = stripHtml(extractFirst(block, /<div class="featured-magazine__title">([\s\S]*?)<\/div>/i));
+  const issue = stripHtml(extractFirst(block, /<div class="featured-magazine__issue">([\s\S]*?)<\/div>/i));
+  const description = stripHtml(extractFirst(block, /<div class="featured-magazine__des">([\s\S]*?)<\/div>/i));
+  const imageUrl = absolutize(extractFirst(block, /<img[^>]+class="featured-magazine__image"[^>]+src="([^"]+)"/i));
+  const downloadUrl = absolutize(extractFirst(block, /<a href="([^"]+)"[^>]*>Descargar<\/a>/i));
+  const readOnlineUrl = absolutize(extractFirst(block, /<a href="([^"]+)"[^>]*>Leer en l/i));
+
+  return [
+    {
+      id: slugify(`${season} ${title}` || "revista-destacada"),
+      tipo: kicker,
+      temporada: season,
+      titulo: title,
+      encabezado: issue,
+      descripcion: description,
+      descarga_pdf_url: downloadUrl,
+      leer_online_url: readOnlineUrl,
+      imagen_url: imageUrl,
+      url: INSPIRATION_URLS.magazine
+    }
+  ].filter(item => item.titulo);
+}
+
+async function parseProductMatchPage(url) {
+  const html = await fetchText(url);
+  const start = html.indexOf('<h1 class="results__heading">');
+  const endMarker = html.indexOf('href="/inspiracion/tu-producto-ideal"', start);
+  const content = start >= 0 ? html.slice(start, endMarker > start ? endMarker : html.length) : html;
+  const cardsStart = html.indexOf('<div class="product-cards">', start);
+  const cardsEndCandidates = [
+    html.indexOf("Volver a intentar", cardsStart > start ? cardsStart : start),
+    html.indexOf("Try Again", cardsStart > start ? cardsStart : start)
+  ].filter(index => index > cardsStart);
+  const cardsEnd = cardsEndCandidates.length ? Math.min(...cardsEndCandidates) : -1;
+  const cardsBlock = cardsStart > start ? html.slice(cardsStart, cardsEnd > cardsStart ? cardsEnd : html.length) : "";
+  const audienceMatch = content.match(/Productos Perfectos Para<\/b><\/p><h2[^>]*>([\s\S]*?)<\/h2>/i);
+  const audienceEnd = audienceMatch ? audienceMatch.index + audienceMatch[0].length : 0;
+  const afterAudience = audienceEnd ? content.slice(audienceEnd) : content;
+  const featuredMatch = afterAudience.match(/<div ><p[^>]*><b>([\s\S]*?)<\/b><\/p><p>([\s\S]*?)<\/p><\/div>/i);
+  const featuredProduct = featuredMatch ? stripHtml(featuredMatch[1]) : "";
+  const featuredDescription = featuredMatch ? stripHtml(featuredMatch[2]) : "";
+  const afterFeatured = featuredMatch
+    ? afterAudience.slice(featuredMatch.index + featuredMatch[0].length)
+    : afterAudience;
+  const recommendationBlock = extractFirst(afterFeatured, /<div >((?:<h2[^>]*>[\s\S]*?<\/h2>)+[\s\S]*?)<\/div>/i, 1);
+  const recommendationTitle = Array.from(String(recommendationBlock || "").matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi))
+    .map(match => stripHtml(match[1]))
+    .filter(Boolean)
+    .at(-1) || "";
+  const recommendationText = stripHtml(recommendationBlock)
+    .replace(new RegExp(`^${recommendationTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`), "")
+    .trim();
+  const recommendedProducts = parseProductCards(cardsBlock);
+
+  return {
+    id: slugify(new URL(url).pathname.split("/").pop() || extractOgTitle(html)),
+    nombre: extractOgTitle(html) || stripHtml(extractFirst(content, /<h1 class="results__heading">([\s\S]*?)<\/h1>/i)),
+    titulo_resultado: stripHtml(extractFirst(content, /<h1 class="results__heading">([\s\S]*?)<\/h1>/i)),
+    publico_ideal: stripHtml(extractFirst(content, /Productos Perfectos Para<\/b><\/p><h2[^>]*>([\s\S]*?)<\/h2>/i)),
+    producto_destacado: featuredProduct || recommendedProducts[0]?.titulo || "",
+    descripcion_producto_destacado: featuredDescription || recommendedProducts[0]?.descripcion || "",
+    recomendacion_titulo: recommendationTitle,
+    recomendacion_texto: recommendationText,
+    productos_recomendados: recommendedProducts,
+    agenda_demo_disponible: /Agenda tu Demo/i.test(html),
+    url: absolutize(url)
+  };
 }
 
 async function parseProductPage(url) {
@@ -428,23 +602,142 @@ async function buildHelpfulHintsDocument() {
   };
 }
 
+async function buildClassesDocument() {
+  const html = await fetchText(INSPIRATION_URLS.classes);
+  const title = decodeHtmlEntities(extractFirst(html, /<title>\s*([\s\S]*?)\s*<\/title>/i));
+  const metaDescription = extractMetaDescription(html);
+  const { introduccion, clases } = parseClasses(html);
+
+  return {
+    metadata: {
+      coleccion: "royalprestige_clases_site",
+      descripcion: "Clases magistrales públicas de cocina de Royal Prestige con recetas descargables y horarios.",
+      total_clases: clases.length,
+      fetched_at: new Date().toISOString(),
+      source: INSPIRATION_URLS.classes,
+      campos_por_chunk: [
+        "titulo",
+        "descripcion",
+        "fecha",
+        "horarios",
+        "recetas_pdf_url"
+      ]
+    },
+    pagina: {
+      titulo: title,
+      descripcion: metaDescription,
+      introduccion,
+      url: INSPIRATION_URLS.classes
+    },
+    clases
+  };
+}
+
+async function buildMagazineDocument() {
+  const html = await fetchText(INSPIRATION_URLS.magazine);
+  const title = decodeHtmlEntities(extractFirst(html, /<title>\s*([\s\S]*?)\s*<\/title>/i));
+  const metaDescription = extractMetaDescription(html);
+  const ediciones = parseMagazine(html);
+
+  return {
+    metadata: {
+      coleccion: "royalprestige_revista_site",
+      descripcion: "Ediciones destacadas de la revista pública Royal Prestige con resumen y enlaces de lectura.",
+      total_ediciones: ediciones.length,
+      fetched_at: new Date().toISOString(),
+      source: INSPIRATION_URLS.magazine,
+      campos_por_chunk: [
+        "temporada",
+        "titulo",
+        "descripcion",
+        "descarga_pdf_url",
+        "leer_online_url"
+      ]
+    },
+    pagina: {
+      titulo: title,
+      descripcion: metaDescription,
+      url: INSPIRATION_URLS.magazine
+    },
+    ediciones
+  };
+}
+
+async function buildProductMatchDocument() {
+  const [sitemap, landingHtml] = await Promise.all([
+    fetchText(SITEMAP_URL),
+    fetchText(INSPIRATION_URLS.productMatch)
+  ]);
+  const urls = unique(
+    extractLocs(sitemap)
+      .filter(url => url.includes("/inspiracion/tu-producto-ideal/"))
+      .filter(url => !url.includes("/en-us/"))
+      .map(absolutize)
+  );
+  const perfiles = (await mapWithConcurrency(urls, 3, async url => {
+    try {
+      return await parseProductMatchPage(url);
+    } catch (error) {
+      console.warn(`Omitiendo perfil con error: ${url} -> ${error.message}`);
+      return null;
+    }
+  })).filter(Boolean);
+
+  return {
+    metadata: {
+      coleccion: "royalprestige_producto_ideal_site",
+      descripcion: "Perfiles públicos de Tu Producto Ideal de Royal Prestige para recomendar productos por estilo de vida.",
+      total_perfiles: perfiles.length,
+      fetched_at: new Date().toISOString(),
+      source: INSPIRATION_URLS.productMatch,
+      campos_por_chunk: [
+        "nombre",
+        "publico_ideal",
+        "producto_destacado",
+        "recomendacion_texto",
+        "productos_recomendados"
+      ]
+    },
+    pagina: {
+      titulo: decodeHtmlEntities(extractFirst(landingHtml, /<title>\s*([\s\S]*?)\s*<\/title>/i)),
+      descripcion: extractMetaDescription(landingHtml),
+      url: INSPIRATION_URLS.productMatch
+    },
+    perfiles
+  };
+}
+
 async function writeJson(filePath, payload) {
   await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
 
 async function main() {
-  const [productsDoc, warrantyDoc, paymentsDoc, helpfulHintsDoc] = await Promise.all([
+  const [
+    productsDoc,
+    warrantyDoc,
+    paymentsDoc,
+    helpfulHintsDoc,
+    classesDoc,
+    magazineDoc,
+    productMatchDoc
+  ] = await Promise.all([
     buildProductsDocument(),
     buildWarrantyDocument(),
     buildPaymentsDocument(),
-    buildHelpfulHintsDocument()
+    buildHelpfulHintsDocument(),
+    buildClassesDocument(),
+    buildMagazineDocument(),
+    buildProductMatchDocument()
   ]);
 
   await Promise.all([
     writeJson(OUTPUTS.products, productsDoc),
     writeJson(OUTPUTS.warranty, warrantyDoc),
     writeJson(OUTPUTS.payments, paymentsDoc),
-    writeJson(OUTPUTS.helpfulHints, helpfulHintsDoc)
+    writeJson(OUTPUTS.helpfulHints, helpfulHintsDoc),
+    writeJson(OUTPUTS.classes, classesDoc),
+    writeJson(OUTPUTS.magazine, magazineDoc),
+    writeJson(OUTPUTS.productMatch, productMatchDoc)
   ]);
 
   console.log(
@@ -455,7 +748,10 @@ async function main() {
           productos: productsDoc.productos.length,
           garantia_secciones: warrantyDoc.secciones.length,
           metodos_pago: paymentsDoc.metodos_pago.length,
-          consejos: helpfulHintsDoc.consejos.length
+          consejos: helpfulHintsDoc.consejos.length,
+          clases: classesDoc.clases.length,
+          revista_ediciones: magazineDoc.ediciones.length,
+          producto_ideal_perfiles: productMatchDoc.perfiles.length
         }
       },
       null,

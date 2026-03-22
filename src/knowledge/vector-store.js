@@ -152,7 +152,7 @@ function dividirEnChunks(text, maxChars = DEFAULT_CHUNK_SIZE, overlapParagraphs 
 function inferirSourceType(relativePath) {
   const nombre = relativePath.toLowerCase();
 
-  if (nombre.includes("receta") || nombre.includes("cocina") || nombre.includes("clases")) {
+  if (nombre.includes("receta") || nombre.includes("cocina") || nombre.includes("clases") || nombre.includes("revista")) {
     return "recipes";
   }
 
@@ -160,7 +160,16 @@ function inferirSourceType(relativePath) {
     return "pricing";
   }
 
-  if (nombre.includes("producto") || nombre.includes("garantia") || nombre.includes("especific") || nombre.includes("caracter") || nombre.includes("consejo") || nombre.includes("frescaflow")) {
+  if (
+    nombre.includes("producto") ||
+    nombre.includes("garantia") ||
+    nombre.includes("especific") ||
+    nombre.includes("caracter") ||
+    nombre.includes("consejo") ||
+    nombre.includes("frescaflow") ||
+    nombre.includes("ideal") ||
+    nombre.includes("match")
+  ) {
     return "product_knowledge";
   }
 
@@ -180,6 +189,63 @@ function inferirSourceType(relativePath) {
 }
 
 function construirChunksEspeciales(parsedContent, sourceType, fileName) {
+  if (
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.clases)
+  ) {
+    return parsedContent.clases
+      .map((clase, index) => {
+        const titulo = clase?.titulo || clase?.id || `Clase ${index + 1}`;
+
+        return {
+          text: serializarNodo(clase, `Clase magistral / ${titulo}`),
+          itemId: clase?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.ediciones)
+  ) {
+    return parsedContent.ediciones
+      .map((edicion, index) => {
+        const titulo = edicion?.titulo || edicion?.temporada || edicion?.id || `Edición ${index + 1}`;
+
+        return {
+          text: serializarNodo(edicion, `Revista / ${titulo}`),
+          itemId: edicion?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.perfiles)
+  ) {
+    return parsedContent.perfiles
+      .map((perfil, index) => {
+        const titulo = perfil?.nombre || perfil?.publico_ideal || perfil?.id || `Perfil ${index + 1}`;
+
+        return {
+          text: serializarNodo(perfil, `Producto ideal / ${titulo}`),
+          itemId: perfil?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
   if (
     sourceType === "recipes" &&
     parsedContent &&
@@ -522,7 +588,11 @@ export function inferirTiposFuentePorPregunta(question) {
   const pregunta = question.toLowerCase();
   const tipos = new Set();
 
-  if (/receta|cocinar|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(pregunta)) {
+  if (
+    /receta|recetas|cocinar|cocina|clase|clases|magistral|revista|magazine|edici[oó]n|n[uú]mero|hornear|horno|postre|postres|pastel|galleta|brownie|crepa|paella|pizza|italia|italiana|francia|francesa|espa[nñ]a|mexicana|navide[nñ]|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
+      pregunta
+    )
+  ) {
     tipos.add("recipes");
   }
 
@@ -570,7 +640,8 @@ export async function buscarKnowledgeVectorial({
       model: process.env.KNOWLEDGE_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL
     });
 
-    const filter = sourceTypes.length ? { sourceType: { $in: sourceTypes } } : undefined;
+    const filterableSourceTypes = sourceTypes.filter(type => type !== "general");
+    const filter = filterableSourceTypes.length ? { sourceType: { $in: filterableSourceTypes } } : undefined;
     const pipeline = [
       {
         $vectorSearch: {

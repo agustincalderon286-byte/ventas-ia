@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_revista_site",
+    "descripcion": "Ediciones destacadas de la revista pública Royal Prestige con resumen y enlaces de lectura.",
+    "total_ediciones": 1,
+    "fetched_at": "2026-03-22T23:17:00.181Z",
+    "source": "https://www.royalprestige.com/inspiracion/revista-royal-prestige",
+    "campos_por_chunk": [
+      "temporada",
+      "titulo",
+      "descripcion",
+      "descarga_pdf_url",
+      "leer_online_url"
+    ]
+  },
+  "pagina": {
+    "titulo": "Royal Prestige USA Magazine | Todo sobre la cocina y hogar",
+    "descripcion": "Explora nuestra revista para encontrar contenido interesante sobre cocina, nutrición y bienestar. ¡Descubre un estilo de vida más saludable con nosotros!",
+    "url": "https://www.royalprestige.com/inspiracion/revista-royal-prestige"
+  },
+  "ediciones": [
+    {
+      "id": "fiestas-2025-cocina-e-inspiracion-para-celebrar-en-casa",
+      "tipo": "Edición Especial",
+      "temporada": "FIESTAS 2025",
+      "titulo": "Cocina e inspiración para celebrar en casa",
+      "encabezado": "EN ESTE NÚMERO ENCONTRARÁS:",
+      "descripcion": "Descubre platillos deliciosos como una sopa cremosa de champiñones o un pollo glaseado con vino y arándanos. Aprende a transformar sobras en nuevas recetas, decora tu mesa con estilo sin complicaciones y explora los secretos de la canela en la cocina. Una edición pensada para que celebres con sabor y cariño cada momento en familia.",
+      "descarga_pdf_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/docs/default-source/magazine/royal-prestige-magazine-holidays-2025-us-spa-cl.pdf?sfvrsn=6876e11b_1&amp;Status=Master",
+      "leer_online_url": "https://online.flippingbook.com/view/972393392/",
+      "imagen_url": "https://prdcuscmscdn01.azureedge.net/royalprestige/images/default-source/magazines/usa-spa.png?sfvrsn=4627a727_1&amp;Status=Master",
+      "url": "https://www.royalprestige.com/inspiracion/revista-royal-prestige"
+    }
+  ]
+}

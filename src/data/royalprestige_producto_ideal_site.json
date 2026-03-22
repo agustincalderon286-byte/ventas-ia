@@ -1,0 +1,134 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_producto_ideal_site",
+    "descripcion": "Perfiles públicos de Tu Producto Ideal de Royal Prestige para recomendar productos por estilo de vida.",
+    "total_perfiles": 5,
+    "fetched_at": "2026-03-22T23:17:01.226Z",
+    "source": "https://www.royalprestige.com/inspiracion/tu-producto-ideal",
+    "campos_por_chunk": [
+      "nombre",
+      "publico_ideal",
+      "producto_destacado",
+      "recomendacion_texto",
+      "productos_recomendados"
+    ]
+  },
+  "pagina": {
+    "titulo": "Royal Prestige® - Equipa tu cocina con la mejor calidad",
+    "descripcion": "Descubre nuestra selección de ollas, sartenes y utensilios de alta calidad para una cocina perfecta. ¡Haz que tu hogar brille con Royal Prestige®!",
+    "url": "https://www.royalprestige.com/inspiracion/tu-producto-ideal"
+  },
+  "perfiles": [
+    {
+      "id": "los-hogarenos",
+      "nombre": "Los Hogarenos",
+      "titulo_resultado": "FAMILIAR",
+      "publico_ideal": "LOS FAMILIARES",
+      "producto_destacado": "Sistema de Cocina 5 CAPAS",
+      "descripcion_producto_destacado": "",
+      "recomendacion_titulo": "Para la Cocina de los Familiares",
+      "recomendacion_texto": "Ahorra tiempo al preparar los platillos favoritos de tu familia en nuestras Ollas de Presión y cocina a tu manera con el Sistema 5 Capas.",
+      "productos_recomendados": [
+        {
+          "id": "sistema-de-cocina-5-capas",
+          "titulo": "Sistema de Cocina 5 CAPAS",
+          "descripcion": "",
+          "url": "https://www.royalprestige.com/productos/detalle/juego-de-ollas-acero-inoxidable"
+        },
+        {
+          "id": "royal-prestige-pressure-cooker",
+          "titulo": "Royal Prestige® Pressure Cooker",
+          "descripcion": "Cocina a velocidad máxima, con la confianza que te da la seguridad total.",
+          "url": "https://www.royalprestige.com/productos/detalle/olla-a-presion"
+        }
+      ],
+      "agenda_demo_disponible": true,
+      "url": "https://royalprestige.com/inspiracion/tu-producto-ideal/los-hogarenos"
+    },
+    {
+      "id": "los-reposteros",
+      "nombre": "Los Reposteros",
+      "titulo_resultado": "INDULGENTE",
+      "publico_ideal": "INDULGENTES",
+      "producto_destacado": "Deluxe Easy Release™",
+      "descripcion_producto_destacado": "Los sartenes Deluxe Easy Release™ te permiten cocinar sin usar temperaturas altas y con excelente capacidad antiadherente.",
+      "recomendacion_titulo": "Para completar la cocina de los Anfitriones:",
+      "recomendacion_texto": "Nuestros Tazones para Mezclar te ofrecen tamaños ideales para refrigerar o transportar alimentos. El Juego para Hornear de 7 Piezas incluye todo lo que necesitas para preparar pasteles, tartas, galletas, dulces y más.",
+      "productos_recomendados": [
+        {
+          "id": "royal-prestige-deluxe-easy-release",
+          "titulo": "Royal Prestige® Deluxe Easy Release",
+          "descripcion": "La mejor tecnología antiadherente con la calidad superior de nuestra marca.",
+          "url": "https://www.royalprestige.com/productos/detalle/juego-de-sartenes-deluxe-easy-release"
+        },
+        {
+          "id": "juego-para-hornear-de-7-piezas",
+          "titulo": "Juego para Hornear de 7 Piezas",
+          "descripcion": "",
+          "url": "https://www.royalprestige.com/productos/detalle/juego-para-hornear-de-7-piezas"
+        }
+      ],
+      "agenda_demo_disponible": true,
+      "url": "https://royalprestige.com/inspiracion/tu-producto-ideal/los-reposteros"
+    },
+    {
+      "id": "los-deportistas",
+      "nombre": "Los Deportistas",
+      "titulo_resultado": "Cocinera Saludable",
+      "publico_ideal": "LOS SALUDABLES",
+      "producto_destacado": "NOVEL™",
+      "descripcion_producto_destacado": "Si quieres servir sabor saludable, NOVEL™ es tu mejor opción. Cada pieza de la línea NOVEL™ ha sido diseñada para maximizar los nutrientes y el sabor de tus comidas.",
+      "recomendacion_titulo": "Para Completar la Cocina de los Saludables:",
+      "recomendacion_texto": "Imagina todos los refrescantes jugos, helados y batidos que puedes preparar con el Extractor de Jugos. Hablando de frescura, con los Sistemas de Filtración de Agua FrescaPure® siempre tendrás agua fresca en casa.",
+      "productos_recomendados": [
+        {
+          "id": "sistema-de-cocina-novel",
+          "titulo": "Sistema de Cocina NOVEL™",
+          "descripcion": "Maximiza los nutrientes y el sabor de tus comidas.",
+          "url": "https://www.royalprestige.com/productos/detalle/sistema-de-cocina-novel"
+        },
+        {
+          "id": "royal-prestige-juicer",
+          "titulo": "Royal Prestige® Juicer",
+          "descripcion": "",
+          "url": "https://www.royalprestige.com/productos/detalle/extractor-de-jugos"
+        }
+      ],
+      "agenda_demo_disponible": true,
+      "url": "https://royalprestige.com/inspiracion/tu-producto-ideal/los-deportistas"
+    },
+    {
+      "id": "los-parrilleros",
+      "nombre": "Los Parrilleros",
+      "titulo_resultado": "PARRILLEROS",
+      "publico_ideal": "LOS PARRILLEROS",
+      "producto_destacado": "Línea 5 Capas",
+      "descripcion_producto_destacado": "En Royal Prestige® contamos con la línea línea 5 capas, que gracias a sus materiales resistentes pueden ser usados en distintas superficies para simular el calor perfecto del fuego. Elige planchas y parrillas para preparar una gran variedad de comidas y hacer suspirar a tus invitados.",
+      "recomendacion_titulo": "Para completar la cocina de los Anfitriones:",
+      "recomendacion_texto": "También contamos con un set de cuchillos preparados para todo tipo de carnes y pescados, junto con las tablas que te convertirán en segundos en un verdadero parrillero/a.",
+      "productos_recomendados": [],
+      "agenda_demo_disponible": true,
+      "url": "https://royalprestige.com/inspiracion/tu-producto-ideal/los-parrilleros"
+    },
+    {
+      "id": "los-chef",
+      "nombre": "Los Chef",
+      "titulo_resultado": "CHEF",
+      "publico_ideal": "LOS CHEFS",
+      "producto_destacado": "INNOVE™",
+      "descripcion_producto_destacado": "Te gusta lucirte con tus invitados, por eso la línea INNOVE™ es justo lo que necesitas. INNOVE™ te ofrece una variedad de sistemas de cocina que incluyen piezas perfectas para toda preparación y ocasión.",
+      "recomendacion_titulo": "Para la cocina de los Chefs:",
+      "recomendacion_texto": "Todo Chef necesita accesorios de la mejor calidad para complementar su repertorio. El Juego de Utensilios de Cocina de 6 Piezas es la solución perfecta. Pasando a la mesa, el Juego para Servir Deluxe incluye 3 bellos utensilios de acero inoxidable.",
+      "productos_recomendados": [
+        {
+          "id": "sistema-de-cocina-innove",
+          "titulo": "Sistema de Cocina INNOVE™",
+          "descripcion": "Hechos para ti, que buscas la más alta calidad para cocinar y alimentar mejor a tu familia.",
+          "url": "https://www.royalprestige.com/productos/detalle/sistema-de-cocina-innove"
+        }
+      ],
+      "agenda_demo_disponible": true,
+      "url": "https://royalprestige.com/inspiracion/tu-producto-ideal/los-chef"
+    }
+  ]
+}
