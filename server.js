@@ -4,6 +4,11 @@ import cors from "cors";
 import fs from "fs";
 import mongoose from "mongoose";
 import path from "path";
+import {
+  buscarKnowledgeVectorial,
+  construirContextoVectorial,
+  inferirTiposFuentePorPregunta
+} from "./src/knowledge/vector-store.js";
 
 const app = express();
 app.use(cors());
@@ -12,6 +17,7 @@ app.use(express.static(path.join(process.cwd(), "public")));
 
 const conversaciones = {};
 const estadosConversacion = {};
+const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -1583,7 +1589,7 @@ No repitas informacion innecesaria.
 // =============================
 // FUNCION INTELIGENTE (FILTRA DATA)
 // =============================
-function construirContexto(pregunta) {
+function construirContextoEstatico(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = `
 CATALOGO:
@@ -1633,6 +1639,26 @@ ${JSON.stringify(encuestaVentas)}
   }
 
   return contexto;
+}
+
+async function construirContexto(pregunta) {
+  if (!ENABLE_VECTOR_SEARCH) {
+    return construirContextoEstatico(pregunta);
+  }
+
+  const sourceTypes = inferirTiposFuentePorPregunta(pregunta);
+  const matches = await buscarKnowledgeVectorial({
+    mongoose,
+    question: pregunta,
+    sourceTypes,
+    logger: console
+  });
+
+  if (!matches.length) {
+    return construirContextoEstatico(pregunta);
+  }
+
+  return construirContextoVectorial(matches);
 }
 
 // =============================
@@ -1689,7 +1715,7 @@ app.post("/chat", async (req, res) => {
       estadoConversacion: estadoConLead
     });
 
-    const contexto = construirContexto(preguntaLimpia);
+    const contexto = await construirContexto(preguntaLimpia);
     const estadoPrompt = construirEstadoPrompt(sessionId);
     const perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado, leadGuardado);
 
