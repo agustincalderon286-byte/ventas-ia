@@ -156,11 +156,11 @@ function inferirSourceType(relativePath) {
     return "recipes";
   }
 
-  if (nombre.includes("precio")) {
+  if (nombre.includes("precio") || nombre.includes("pago") || nombre.includes("payment") || nombre.includes("financ")) {
     return "pricing";
   }
 
-  if (nombre.includes("garantia") || nombre.includes("especific") || nombre.includes("caracter")) {
+  if (nombre.includes("producto") || nombre.includes("garantia") || nombre.includes("especific") || nombre.includes("caracter") || nombre.includes("consejo") || nombre.includes("frescaflow")) {
     return "product_knowledge";
   }
 
@@ -194,6 +194,86 @@ function construirChunksEspeciales(parsedContent, sourceType, fileName) {
         return {
           text: serializarNodo(receta, `Receta / ${titulo}`),
           itemId: receta?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    sourceType === "product_knowledge" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.productos)
+  ) {
+    return parsedContent.productos
+      .map((producto, index) => {
+        const titulo = producto?.titulo || producto?.id || `Producto ${index + 1}`;
+
+        return {
+          text: serializarNodo(producto, `Producto / ${titulo}`),
+          itemId: producto?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    sourceType === "product_knowledge" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.secciones)
+  ) {
+    return parsedContent.secciones
+      .map((seccion, index) => {
+        const titulo = seccion?.titulo || seccion?.id || `Sección ${index + 1}`;
+
+        return {
+          text: serializarNodo(seccion, `Garantía / ${titulo}`),
+          itemId: seccion?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    sourceType === "product_knowledge" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.consejos)
+  ) {
+    return parsedContent.consejos
+      .map((consejo, index) => {
+        const titulo = consejo?.pregunta || consejo?.id || `Consejo ${index + 1}`;
+
+        return {
+          text: serializarNodo(consejo, `Consejo útil / ${titulo}`),
+          itemId: consejo?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    sourceType === "pricing" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.metodos_pago)
+  ) {
+    return parsedContent.metodos_pago
+      .map((metodo, index) => {
+        const titulo = metodo?.nombre || metodo?.id || `Método de pago ${index + 1}`;
+
+        return {
+          text: serializarNodo(metodo, `Método de pago / ${titulo}`),
+          itemId: metodo?.id || null,
           itemTitle: titulo
         };
       })
@@ -450,7 +530,7 @@ export function inferirTiposFuentePorPregunta(question) {
     tipos.add("pricing");
   }
 
-  if (/garantia|material|olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto/i.test(pregunta)) {
+  if (/garantia|material|olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto|extractor|exprimidor|juicer|licuadora|blender|filtro|fresca(flow|pure)|cafetera|barista|expertea|fresh max|precision cook|smart temp|warmer pro|mixing bowl|recipiente|utensilio/i.test(pregunta)) {
     tipos.add("product_knowledge");
   }
 

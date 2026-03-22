@@ -1,0 +1,1025 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_productos_site",
+    "descripcion": "Productos estructurados descargados desde páginas públicas de Royal Prestige US en español.",
+    "total_productos": 54,
+    "fetched_at": "2026-03-22T19:24:01.733Z",
+    "source": "https://www.royalprestige.com/sitemap/sitemap.xml",
+    "campos_por_chunk": [
+      "titulo",
+      "descripcion_general",
+      "por_que_te_encantara",
+      "uso_y_cuidados_titulo",
+      "opciones_financiamiento"
+    ]
+  },
+  "productos": [
+    {
+      "id": "juego-de-utensilios-de-cocina-de-6-piezas",
+      "titulo": "Juego de Utensilios de Cocina de 6 Piezas",
+      "descripcion_corta": "El juego de utensilios de cocina Royal Prestige incluye herramientas en acero inoxidable de alta calidad para ayudar a preparar y servir tus alimentos.",
+      "descripcion_general": "La más alta calidad para auxiliarte en la cocción de tus mejores comidas\nTen siempre a la mano el utensilio perfecto para cada tarea. Cocina, mezcla, voltea y sirve con herramientas de calidad superior. Ideales para asistirte en cada paso de tu receta. El juego incluye:\n- Cucharón\n- Cucharón para Pasta\n- Cuchara\n- Tenedor para Servir\n- Cuchara con Ranuras\n- Espátula con Ranuras",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricados con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR0196",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-de-utensilios-de-cocina-de-6-piezas"
+    },
+    {
+      "id": "pavera-ovalada",
+      "titulo": "Pavera Ovalada Royal Prestige®",
+      "descripcion_corta": "Comparte momentos especiales con la pavera ovalada Royal Prestige. Acero inoxidable duradero, garantía de 50 años. Apta para horno y estufa.",
+      "descripcion_general": "La mejor compañera para tus festejos de todo el año\nCocina tu pavo sobre la estufa y prepara verdaderos banquetes para compartir en familia, en cualquier época del año. Fabricada con acero inoxidable grado quirúrgico y con garantía limitada de 50 años. Puedes usarla en el horno o sobre la estufa. Dimensión: 18” x 13” / 46 cm x 33 cm.",
+      "por_que_te_encantara": [
+        "50 años de garantía limitada | Te acompañará en muchas comidas deliciosas en familia.",
+        "Acero Inoxidable grado quirúrgico | Durable y resistente gracias a su fabricación en acero inoxidable grado quirúrgico, el mejor material para cocinar.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CO6589",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/pavera-ovalada"
+    },
+    {
+      "id": "juego-de-8-recipientes-para-almacenar-alimentos",
+      "titulo": "Juego de 8 Recipientes para Almacenar Alimentos",
+      "descripcion_corta": "Organiza y conserva la frescura y sabor de tus alimentos con los contenedores para comida de Royal Prestige que garantizan un sellado seguro. ¡Compra ya!",
+      "descripcion_general": "Protege tus alimentos con recipientes versátiles de diferentes tamaños\nIdeales para preparar, transportar, guardar, refrigerar, congelar y servir alimentos. Las tapas están adheridas a los recipientes. ¡No más tapas perdidas! Aptos para microondas, lavavajillas y congelador. Incluye tamaños esenciales que usarás todos los días.",
+      "por_que_te_encantara": [
+        "Funcional | Aptos para usar en el congelador o en el microondas."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0113",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-de-8-recipientes-para-almacenar-alimentos"
+    },
+    {
+      "id": "tablas-para-cortar-de-bambu",
+      "titulo": "Tablas de Bambú para Cortar",
+      "descripcion_corta": "Destaca el acabado natural en la cocina con nuestra tabla para picar de bambú de Royal Prestige, tiene superficie suave y es amigable con los cuchillos.",
+      "descripcion_general": "Destaca el acabado natural en la cocina con nuestra tabla para picar de bambú de Royal Prestige, tiene superficie suave y es amigable con los cuchillos.",
+      "por_que_te_encantara": [
+        "Funcional | Te ayuda a reducir el impacto y proteger las hojas de tus cuchillos."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR0008",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/tablas-para-cortar-de-bambu"
+    },
+    {
+      "id": "extractor-de-jugos",
+      "titulo": "Royal Prestige® Juicer",
+      "descripcion_corta": "Elige nuestro extractor de jugos y aprovecha al máximo los nutrientes de tus frutas y verduras. ¡Comienza tu estilo de vida saludable hoy mismo!",
+      "descripcion_general": "La forma más natural de comenzar tu día con energía\nTecnología de prensado en frío que te permite extraer la mayor cantidad de jugo de tus frutas, verduras y hasta hojas verdes. Gracias a su motor silencioso, prepara tu jugo todas las mañanas sin interrumpir el sueño de los demás. Con sus accesorios adicionales, puedes preparar de forma natural jugos con más pulpa, smoothies y ¡helados! Con su motor potente y silencioso, el Royal Prestige Juicer será tu compañero perfecto todas las mañanas.",
+      "por_que_te_encantara": [
+        "Funcional | Tecnología de prensado en frío y extracción lenta para aprovechar mejor los nutrientes de frutas, verduras y hojas verdes.",
+        "Potencia | Obtén la mayor cantidad de jugo posible de tus ingredientes."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Extractor de Jugos",
+      "video_youtube_id": "bPa7N0R-FGg",
+      "codigo_producto": "JU0026",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/extractor-de-jugos"
+    },
+    {
+      "id": "juego-para-servir-deluxe-de-3-piezas",
+      "titulo": "Juego para Servir Deluxe de 3 Piezas",
+      "descripcion_corta": "Encuentra en Royal Prestige juego para servir Deluxe que incluye tres piezas de acero inoxidable. Apropiados para servir variedad de platillos. ¡Compra ya!",
+      "descripcion_general": "Calidad superior para compartir tus mejores comidas\nImprescindibles para servir todos tus platillos, incluyendo arroz, frijoles y una gran variedad de guisos. Altamente resistentes y durables, fabricados en acero inoxidable de la mejor calidad. Ideales para servir una gran variedad de platillos. El juego incluye:\n1 Cuchara con Ranuras\n2 Cucharas",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricados con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0098",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-para-servir-deluxe-de-3-piezas"
+    },
+    {
+      "id": "cafetera-royal-espresso",
+      "titulo": "Royal Prestige® Royal Espresso",
+      "descripcion_corta": "Descubre la elegancia y durabilidad en cada taza con nuestra cafetera Royal Espresso. Diseñada para los amantes del café que aprecian la calidad.",
+      "descripcion_general": "Despierta todos los días con el aroma de Italia en tu hogar\n¡Te lo mereces! Consiéntete con un delicioso café expreso todas las mañanas, preparado sobre la estufa y en la comodidad de tu hogar. La Royal Espresso es la cafetera ideal para los amantes del buen café. Fabricada con acero inoxidable de calidad superior. Apta para todo tipo de estufas: eléctricas, de gas o de inducción. Disponible en dos tamaños: 10 y 4 tazas de café expreso.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad.",
+        "Funcional | Filtro integrado para disfrutar tu café más rápido, sin necesidad de colar o comprar filtros."
+      ],
+      "uso_y_cuidados_titulo": "Royal Prestige® Royal Espresso Manual",
+      "video_youtube_id": "",
+      "codigo_producto": "PR2129",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/cafetera-royal-espresso"
+    },
+    {
+      "id": "chocolatera",
+      "titulo": "Royal Prestige® Chocolatera",
+      "descripcion_corta": "La Chocolatera de Royal Prestige con sistema anti derrames te permite disfrutar del chocolate caliente sin complicaciones. ¡Obtén la tuya ahora!",
+      "descripcion_general": "Cuando huele a chocolate, ¡huele a felicidad!\nDiseñada especialmente para preparar el chocolate caliente más exquisito. La Royal Prestige® Chocolatera es fabricada en acero inoxidable grado quirúrgico de la más alta calidad, con diseño estilizado terminado a mano. Su exclusivo efecto de volcán te ayuda a evitar derrames en tu cocina, para una preparación más fácil y práctica. Apta para todo tipo de estufas: eléctricas, de gas o de inducción. Amplia capacidad de hasta 10 tazas (2.6 L).",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricada con materiales de la más alta calidad.",
+        "Funcional | Cono de acero inoxidable que produce un efecto de volcán y te ayuda a prevenir derrames.",
+        "50 años de garantía limitada | Te acompañará en muchos años de momentos especiales con familia y amigos."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Chocolatera",
+      "video_youtube_id": "9Qp3YyHIL4U",
+      "codigo_producto": "CO0101",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/chocolatera"
+    },
+    {
+      "id": "copas-para-helado-acero-inoxidable",
+      "titulo": "Juego de Copas para Helado",
+      "descripcion_corta": "Adquiere las Copas para Helado en acero inoxidable de Royal Prestige. Su pared térmica mantiene la temperatura de tus helados y postres. ¡Compra ahora!",
+      "descripcion_general": "Sirve tu helado favorito en estas hermosas copas de acero inoxidable\nFabricadas en acero inoxidable de la más alta calidad, estas copas sofisticadas mantienen la temperatura por más tiempo, gracias a su pared térmica. Además de helados y postres, puedes llevarlas a tu mesa con especias o complementos para tus comidas.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0252",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/copas-para-helado-acero-inoxidable"
+    },
+    {
+      "id": "base-magnetica-para-ollas",
+      "titulo": "Base Magnética Para Ollas",
+      "descripcion_corta": "La Base Magnética Para Ollas calientes de Royal Prestige se adhiere a la base de tus ollas y sartenes. ✓Ideal para proteger la superficie de tu cocina.",
+      "descripcion_general": "El soporte ideal para servir tus comidas\nAltamente resistente y antideslizante. Se adhiere a la base tus ollas y sartenes Royal Prestige para servir comidas calientes y proteger las superficies de tu cocina. Su forma triangular te ofrece el soporte ideal para ollas y sartenes con un diámetro de 3 a 10 pulgadas.",
+      "por_que_te_encantara": [
+        "Seguridad | La base antideslizante impide percances con tus ollas y sartenes.",
+        "Funcional | Protege las superficies en tu cocina."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0305",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/base-magnetica-para-ollas"
+    },
+    {
+      "id": "filtro-de-agua-frescapure-3500",
+      "titulo": "Filtro de Agua FrescaPure™ 3500",
+      "descripcion_corta": "Haz de cada vaso de agua una experiencia refrescante y saludable con nuestra innovadora tecnología de filtración. Compra Filtro de agua Royal Prestige aquí",
+      "descripcion_general": "Ofrece a tu familia agua más limpia y de mejor sabor para beber y cocinar\nCertificado por la Water Quality Association de los Estados Unidos, el FrescaPure™ 3500 Water Filtration System de Royal Prestige® elimina hasta 99% de plomo, quistes y otras partículas que podrían estar presentes en el agua. Conéctalo directamente a la llave del agua, sin necesidad de instalaciones eléctricas. Comparte con tu familia la comodidad de tener agua de mejor sabor y calidad siempre disponible en tu hogar.",
+      "por_que_te_encantara": [
+        "Funcional | Filtro de carbón activado que elimina hasta 99% de plomo, quistes y otras partículas presentes en el agua."
+      ],
+      "uso_y_cuidados_titulo": "Manual del Sistema de Filtración de Agua FrescaPure™ 3500",
+      "video_youtube_id": "",
+      "codigo_producto": "WF0419",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/filtro-de-agua-frescapure-3500"
+    },
+    {
+      "id": "afilador-de-cuchillos-negro",
+      "titulo": "Afilador de Cuchillos con Revestimiento Negro",
+      "descripcion_corta": "Olvídate de cuchillos desafilados y disfruta de cortes precisos con nuestro afilador de cuchillo con revestimiento negro de Royal Prestige. ✓Alta calidad.",
+      "descripcion_general": "Mantén tus cuchillos listos para la acción\nElaborado con tecnología patentada para afilar fácilmente cuchillos de hojas lisas y serradas. Se ajusta automáticamente para adaptarse a los diferentes ángulos de la hoja. Indispensable en tu cocina para pulir, afilar y alinear tus cuchillos. Parte de la línea exclusiva Precision Series III™ de Royal Prestige®.",
+      "por_que_te_encantara": [
+        "Funcional | Te permite afilar fácilmente todo tipo de cuchillos."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CU0712",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/afilador-de-cuchillos-negro"
+    },
+    {
+      "id": "colador-de-pasta-de-8-cuartos",
+      "titulo": "Colador de Pasta de 8 cuartos",
+      "descripcion_corta": "El colador de pasta 8 cuartos en Acero de Royal Prestige, es apropiado para escurrir caldos, pasta o guisos y conseguir la cocción perfecta de alimentos. ",
+      "descripcion_general": "Tu asistente indispensable para lograr una deliciosa pasta\nIdeal para pasta, caldos, sopas o guisados. Hecho de acero inoxidable grado quirúrgico, es el complemento perfecto para cocinar infinidad de recetas.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricado con acero inoxidable T-304 de la más alta calidad.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CO9080",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/colador-de-pasta-de-8-cuartos"
+    },
+    {
+      "id": "multipan-sarten-11-funciones",
+      "titulo": "Royal Prestige® MultiPan",
+      "descripcion_corta": "11 funciones en un solo sartén",
+      "descripcion_general": "11 funciones en un solo sartén\nSuma versatilidad, ¡multiplica tus posibilidades! Diseñado para quienes buscan algo más que un sartén. El Royal Prestige® MultiPan hace más fácil y complementa tu cocina sin sacrificar la calidad de tus platillos.\nTe permite sellar, sofreír, asar, brasear, dorar, saltear, cocinar a fuego lento, cocer al vapor, hervir, hornear y colar. Apto con todo tipo de estufas: eléctricas, de gas o de inducción.",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricado con acero inoxidable grado quirúrgico T-304, con hasta 50 años de garantía limitada.",
+        "Funcional | Desempeña hasta 11 funciones: sellar, sofreír, asar, brasear, dorar, saltear, cocinar a fuego lento, cocer al vapor, hervir, hornear y colar. ​",
+        "Perilla de silbato | Te avisa cuando es momento de dar el siguiente paso en tu receta o bajar la temperatura.",
+        "Aro de silicona | Facilita un cerrado hermético para una mejor concentración y distribución de calor.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400 °F / 204 °C. No apto para usarse en el asador del horno, ni dentro de microondas.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa."
+      ],
+      "uso_y_cuidados_titulo": "Versatilidad en acción",
+      "video_youtube_id": "RvdjRQ78kho",
+      "codigo_producto": "CO4911",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/multipan-sarten-11-funciones"
+    },
+    {
+      "id": "vasos-cortos-london",
+      "titulo": "Vasos Cortos London",
+      "descripcion_corta": "Los Vasos de Vidrio Cortos London Royal Prestige son aptos para servir tus bebidas desde, refrescos hasta cocteles con un toque de practicidad y elegancia.",
+      "descripcion_general": "Disfruta tus bebidas en un diseño único\nPerfectos para servir una gran variedad de bebidas. Fabricados con materiales de la más alta calidad y respaldados con una garantía limitada de 50 años. Alta resistencia y materiales de la mejor calidad. Aptos para lavavajillas. Disponibles en juegos de 4 piezas, cada una con capacidad de 12 oz o 354 ml.",
+      "por_que_te_encantara": [
+        "50 años de garantía limitada | Te acompañarán en muchos años de festejos con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CR2672",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/vasos-cortos-london"
+    },
+    {
+      "id": "cafetera-barista",
+      "titulo": "Royal Prestige® Barista",
+      "descripcion_corta": "Prepara el café perfecto todas las mañanas con la cafetera barista de Royal Prestige. Disfruta tu café caliente y delicioso desde la comodidad de tu casa.",
+      "descripcion_general": "Despierta todos los días con el aroma del mejor café\nObtén el máximo sabor de tus granos de café con el Barista de Royal Prestige®. Puedes hacer hasta 12 tazas de café y la jarra de doble pared térmica lo mantiene caliente por más tiempo. Compatible con estufas de inducción, gas o eléctricas. Goza la comodidad de disfrutar el café todas las mañanas como te gusta, recién hecho en casa.",
+      "por_que_te_encantara": [
+        "Funcional | Su mecanismo basado en prensa francesa extrae al máximo el sabor y las propiedades de cada grano de café.",
+        "Válvula Redi-Temp™ | Te avisa cuando el agua comenzó a hervir y está lista para preparar tu café.",
+        "Seguridad | Mango ergonómico que no se calienta sobre la estufa."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Barista",
+      "video_youtube_id": "we0PGQPAw48",
+      "codigo_producto": "CO2106",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/cafetera-barista"
+    },
+    {
+      "id": "maquina-de-ensaladas",
+      "titulo": "Máquina de Ensaladas Royal Prestige®",
+      "descripcion_corta": "Simplifica la preparación de tus ensaladas con el Picador de verdura. Esta máquina de ensaladas de Royal Prestige agiliza el corte de tus ingredientes.",
+      "descripcion_general": "Logra cortes gourmet para preparar tu ensalada favorita\nObtén los cortes más variados de una gran variedad de ingredientes, incluyendo verduras, frutas, galletas, quesos y salchichas, de una manera rápida, eficiente y precisa. La base de goma y palanca de sujeción evitan deslizamientos y te ofrecen firmeza al cortar tus ingredientes. Calidad superior respaldada con una garantía limitada de 50 años. Cuenta con 5 conos de acero inoxidable grado quirúrgico que puedes cambiar muy fácilmente:\n- Cono para Rallar\n- Cono para Rebanar\n- Cono para Cortar en Juliana\n- Cono para Cortes Ondulados\n- Cono para Papas a la Francesa",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Los conos están fabricados en acero inoxidable grado quirúrgico T-304.",
+        "Funcional | Consigue cortes perfectos fácilmente.",
+        "50 años de garantía limitada | Disfruta muchos años de ensaladas saludables y deliciosas."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR2614",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/maquina-de-ensaladas"
+    },
+    {
+      "id": "tazones-para-mezclar",
+      "titulo": "Juego de Tazones para Mezclar - Royal Prestige® EE. UU.",
+      "descripcion_corta": "El juego de tazones para mezclar es ideal para batir, mezclar y preparar tus ingredientes con precisión. Incluye 4 tazones con base antideslizante y tapas.",
+      "descripcion_general": "Tazones para cocinar, mezclar y almacenar comidas fácilmente\nPara antes, durante y después de cocinar...¡estos son los expertos! Corta o ralla tus ingredientes, mezcla salsas, postres y mucho más o guarda tus comidas para después con los Royal Prestige® Mixing Bowls.\nEl juego completo incluye el Royal Prestige® 5.5 QT Grater Mixing Bowl, con el que puedes rallar, cortar y rebanar frutas, verduras, quesos y hasta chocolate, directamente en el tazón. Logra cortes perfectos con sus 6 cuchillas intercambiables:\n* Royal Prestige® Waffler Slicer\n* Royal Prestige® Standard Slicer\n* Royal Prestige® Large Julienne Slicer\n* Royal Prestige® Medium Grater\n* Royal Prestige® Large Grater\n* Royal Prestige® Spiralizer​",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricado con acero inoxidable, material de excelente calidad y durabilidad.",
+        "Funcional | Te permiten cortar, rallar, rebanar, mezclar y almacenar tus alimentos.",
+        "Seguridad | Base de silicona que reduce el riesgo de resbalones."
+      ],
+      "uso_y_cuidados_titulo": "Te acompañan en todo momento",
+      "video_youtube_id": "pSj-WRjoPPI",
+      "codigo_producto": "CO4900",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/tazones-para-mezclar"
+    },
+    {
+      "id": "sistema-de-cocina-novel",
+      "titulo": "Sistema de Cocina Royal Prestige® NOVEL™",
+      "descripcion_corta": "Con nuestro set de ollas y sartenes de acero inoxidable, cocinar será una experiencia única y fácil. ¡Aprovecha nuestros productos de alta calidad!",
+      "descripcion_general": "Hechos para ti, que buscas la más alta calidad para cocinar y alimentar mejor a tu familia\nCocina sin aceite la mayoría de las carnes y aves, con muy poca o nada de agua. Tus comidas se cocinan en sus propios jugos, con nutrientes al máximo, texturas apetecibles y sabores espectaculares. ¡Incluso podrás hacer pasteles sobre la estufa! Pon en práctica tus mejores recetas todos los días. Calidad superior respaldada con una garantía limitada de 50 años. Aptos para todo tipo de estufas: eléctricas, de gas o de inducción.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricados con acero inoxidable grado quirúrgico T-304, el mejor material para cocinar.",
+        "Cocción sin aceite | Puedes cocinar la mayoría de las proteínas animales sin añadir aceite ni grasa.",
+        "Cocción sin agua | Cocina con muy poca o nada de agua, para conservar mejor la consistencia, los nutrientes y el sabor de tus comidas.",
+        "Válvula Redi-Temp™ | Te avisa cuando es momento de dar el siguiente paso en tu receta o bajar la temperatura.",
+        "Aro Silicromático™ | Facilita un cerrado hermético para una mejor concentración y distribución de calor.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa.",
+        "Hecho en Italia | Manufactura italiana de primer nivel, con acabados elegantes para lucir en tu cocina.",
+        "50 años de garantía limitada | Te acompañarán en muchas comidas deliciosas para compartir con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "USO Y CUIDADO",
+      "video_youtube_id": "4zKG8m3jhkA",
+      "codigo_producto": "novelsys",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/sistema-de-cocina-novel"
+    },
+    {
+      "id": "fresh-max",
+      "titulo": "Royal Prestige® Fresh Max",
+      "descripcion_corta": "Encuentra la mejor licuadora para elaborar batidos y jugos, conservando la calidad y sabor de las frutas y verduras. ¡Ingresa ahora y compra!",
+      "descripcion_general": "Licuado al vacío para mantener la frescura de tus alimentos por más tiempo\nEste sistema te permite hacer un licuado al vacío, esto es, extraer gran parte del oxígeno en la Jarra de Vidrio de la Power Blender Max antes de procesar tus ingredientes. Reduce la espuma y la separación de ingredientes en tus preparaciones. Gracias a esto, tus preparaciones mantienen los sabores frescos y los colores intensos por más tiempo.",
+      "por_que_te_encantara": [
+        "Funcional | Retarda la oxidación de tus ingredientes para conservar más nutrientes."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PE0040",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/fresh-max"
+    },
+    {
+      "id": "accesorios-de-cocina",
+      "titulo": "Accesorios de Cocina Precision Series™",
+      "descripcion_corta": "Descubre la gama completa de Accesorios de Cocina Royal Prestige en acero inoxidable y disfruta de la confianza que brinda la marca líder en calidad.",
+      "descripcion_general": "Descubre la gama completa de Accesorios de Cocina Royal Prestige en acero inoxidable y disfruta de la confianza que brinda la marca líder en calidad.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "accesorios-cocina-precision-series",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/accesorios-de-cocina"
+    },
+    {
+      "id": "licuadora-profesional-power-blender-max",
+      "titulo": "Royal Prestige® Power Blender Max",
+      "descripcion_corta": "Licuadora Profesional Power Blender Max · Cuchilla de acero inoxidable · Acople magnético · Vaso de vidrio · 1500w de potencia. ¡Licua o tritura de todo!",
+      "descripcion_general": "Licuadora con poder para hacer más, con posibilidades ilimitadas para tus recetas\n¡Ponemos el poder en tus manos! Procesa hasta los ingredientes más duros, gracias a los más de dos caballos de potencia de esta licuadora. Muele café o tritura semillas para preparar tus propias harinas más saludables. Su jarra de vidrio te ofrece una capacidad de 48 onzas o 1.4 litros. La jarra cuenta con guía de medidas para facilitarte el cálculo de ingredientes.",
+      "por_que_te_encantara": [
+        "Potencia | Con más de dos caballos de potencia, logra mucho más de lo que puedes hacer con una licuadora convencional.",
+        "Acero inoxidable grado quirúrgico | Sus seis aspas de acero inoxidable grado quirúrgico te permiten un licuado más profundo.",
+        "Funcional | Su jarra de vidrio no retiene olores ni altera sabores. Puedes retirar las aspas para limpiarla."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Power Blender Max",
+      "video_youtube_id": "CWVjdd84sZA",
+      "codigo_producto": "ES0082",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/licuadora-profesional-power-blender-max"
+    },
+    {
+      "id": "juego-para-hornear-de-7-piezas",
+      "titulo": "Juego para Hornear de 7 Piezas",
+      "descripcion_corta": "Descubre la calidad que solo Royal Prestige ofrece para que prepares variedad de recetas con los recipientes para hornear de 7 piezas. ✓Garantía de 50 años.",
+      "descripcion_general": "Deleita a tu familia con pizzas, pasteles, galletas y mucho más\nLúcete con una gran variedad de recetas de repostería. Este juego está fabricado en acero inoxidable de la más alta calidad, para preparar tus mejores postres, pizzas y hasta barritas de granola. El juego incluye:\n2 Recipientes para Pasteles\nDiámetro: 9” / 23 cm\n2 Recipientes para Tartas (pies)\nDiámetro: 9” / 23 cm\n1 Bandeja para Pizza\nDiámetro: 12” / 30.5 cm\n2 Bandejas para Galletas\nMedidas: 12” x 15” / 30.5 cm x 3 cm",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricados con materiales de la más alta calidad, durables y resistentes.",
+        "50 años de garantía limitada | Te durarán muchos años de postres deliciosos para consentir a tu familia."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR0135",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-para-hornear-de-7-piezas"
+    },
+    {
+      "id": "warmer-pro",
+      "titulo": "Royal Prestige® Warmer Pro",
+      "descripcion_corta": "Warmer Pro | Royal Prestige EE.UU.",
+      "descripcion_general": "Warmer Pro | Royal Prestige EE.UU.",
+      "por_que_te_encantara": [
+        "Funcional | Su forro interior mantiene el calor y retiene toda la humedad para tener el bocado ideal.",
+        "Seguridad | La agarradera te ayudará a transportarlo de forma segura.",
+        "Precisión | El cerrojo y la tapa conservan la temperatura ideal.",
+        "Inalámbrico | Posee una batería externa para que puedas ponerlo donde lo necesites."
+      ],
+      "uso_y_cuidados_titulo": "El calor y el sabor nos unen",
+      "video_youtube_id": "7mWnwsxppwc",
+      "codigo_producto": "PE4000",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/warmer-pro"
+    },
+    {
+      "id": "batidora-de-mano-power-blender-go-plus",
+      "titulo": "Royal Prestige® Power Blender Go Plus",
+      "descripcion_corta": "Prepara salsas y purés de forma fácil y versátil gracias a su diseño ergonómico para mayor comodidad al batir o triturar los ingredientes. ✓Es Inalámbrica",
+      "descripcion_general": "Sumérgete en un mundo de deliciosas posibilidades\nLleva tu pasión culinaria a donde quiera que vayas con la Royal Prestige® Power Blender Go Plus. Su tecnología inalámbrica y motor que genera 13.500 rpm te permite licuar tus salsas, purés, jugos y mucho más, directamente en tus ollas, sartenes o tazones.",
+      "por_que_te_encantara": [
+        "Potencia | Su motor produce hasta 13,500 revoluciones por minuto.",
+        "Funcional | Ideal para licuar o batir directamente en tus recipientes hondos, ollas y tazones con sus 9\" (23 cm) de longitud.",
+        "Inalámbrico | Batería interna que dura hasta 30 minutos (potencia baja) y base de carga rápida.",
+        "Seguridad | Presiona el botón de encendido dos veces para iniciar y controla la velocidad según lo necesites.",
+        "Acero inoxidable | Aspas de acero inoxidable de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "Lo que quieras",
+      "video_youtube_id": "Naoe05OwjW8",
+      "codigo_producto": "ES4200",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/batidora-de-mano-power-blender-go-plus"
+    },
+    {
+      "id": "juego-para-servir-complementario-de-3-piezas",
+      "titulo": "Juego para Servir Complementario de 3 Piezas",
+      "descripcion_corta": "Nuestro juego para servir de 3 piezas de Royal Prestige son accesorios esenciales que dan un toque de elegancia a tu cocina. Sirve tus alimentos con estilo.",
+      "descripcion_general": "Sirve tus comidas y postres con todo el estilo de Royal Prestige®\nHerramientas elegantes fabricadas en acero inoxidable, durables y resistentes, para ayudarte a servir de manera práctica y con estilo. Ideales para servir tus comidas y postres. El juego incluye:\n1 Servidor de Postres\n1 Tenedor para Servir\n1 Cucharón para Pasta",
+      "por_que_te_encantara": [
+        "Acero inoxidable | Fabricados con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0091",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-para-servir-complementario-de-3-piezas"
+    },
+    {
+      "id": "cacerola-de-cocina",
+      "titulo": "Royal Prestige® Casserole",
+      "descripcion_corta": "¡Crea platos deliciosos con la Cacerola de cocina de Royal Prestige! Fabricada con materiales de alta calidad para lograr cocción uniforme y perfecta.",
+      "descripcion_general": "La medida perfecta para ti\nConsiéntete con comidas y postres deliciosos en porciones individuales. O sorprende a tu familia y amigos con riquísimos dips, quesos fundidos, salsas y mucho más. Fabricada en acero inoxidable grado quirúrgico de la más alta calidad, respaldada con una garantía limitada de 50 años. Apta para todo tipo de estufas: eléctricas, de gas o de inducción. Diámetro de 14 centímetros, perfecto para cocinarte porciones individuales.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricada con materiales de calidad superior.",
+        "50 años de garantía limitada | Para acompañarte en infinidad de comidas riquísimas.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "Seguridad | Las asas ergonómicas no se calientan sobre la estufa y puedes llevarla con seguridad a tu mesa."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Casserole",
+      "video_youtube_id": "3Ys_VtMeR-4",
+      "codigo_producto": "PR2124",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/cacerola-de-cocina"
+    },
+    {
+      "id": "juego-de-6-recipientes-para-almacenar-alimentos",
+      "titulo": "Juego de 6 Recipientes para Almacenar Alimentos",
+      "descripcion_corta": "Los recipientes de plástico para almacenar alimentos de Royal Prestige son accesorios que permiten guardar tus comidas frescas y seguras. ¡Comprar ahora!",
+      "descripcion_general": "Protege tus alimentos con recipientes versátiles de diferentes tamaños\nIdeales para preparar, transportar, guardar, refrigerar, congelar y servir alimentos. Las tapas están adheridas a los recipientes. ¡No más tapas perdidas! Aptos para microondas, lavavajillas y congelador. Incluye tamaños esenciales que usarás todos los días.",
+      "por_que_te_encantara": [
+        "Funcional | Aptos para usar en el congelador o en el microondas."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0113",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-de-6-recipientes-para-almacenar-alimentos"
+    },
+    {
+      "id": "copas-para-vino-gala",
+      "titulo": "Copas para Vino Gala",
+      "descripcion_corta": "Descubre el arte de la degustación con nuestras Copas para Vino Royal Prestige. Un deleite para los amantes del vino que buscan la excelencia en cada detalle.",
+      "descripcion_general": "La trasparencia elegante perfecta para una tarde relajada\nDisfruta tus mejores vinos en las Copas Gala. Fabricadas con materiales de la más alta calidad y respaldadas con una garantía limitada de 50 años. Hechas con tecnología Kwarx® y materiales de la mejor calidad. Disponibles en juegos de 4 piezas, cada una con capacidad de 16 oz o 473 ml. Aptas para lavavajillas.",
+      "por_que_te_encantara": [
+        "50 años de garantía limitada | Te acompañarán en muchos años de festejos con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CR2679",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/copas-para-vino-gala"
+    },
+    {
+      "id": "juego-de-sartenes-deluxe-easy-release",
+      "titulo": "Royal Prestige® Deluxe Easy Release",
+      "descripcion_corta": "Sartenes de acero inoxidable con tecnología antiadherente | La comida se despega muy fácilmente. · Con tapa de cristal para monitorear los alimentos.",
+      "descripcion_general": "La mejor tecnología antiadherente con la calidad superior de nuestra marca\nHechos en Italia, los sartenes y ollas de la línea Royal Prestige® Deluxe Easy Release son fabricados con la más avanzada tecnología y materiales de primer nivel. ¡Cocina todos los días con la más alta calidad! Tu comida se despega fácilmente, para que cocines de forma práctica. Gracias a su tapa de cristal, puedes monitorear tus alimentos mientras se cocinan. Son aptos para todo tipo de estufas: eléctricas, de gas o de inducción.",
+      "por_que_te_encantara": [
+        "Hecho en Italia | Fabricados con tecnología plasma y materiales de primer nivel.",
+        "Funcional | Distribuyen el calor de manera uniforme y te permiten cocinar con una cantidad mínima de aceite.",
+        "Tecnología Antiadherente | Tu comida se despega muy fácilmente, para que cocines sin complicaciones."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Deluxe Easy Release",
+      "video_youtube_id": "gIRieCFeMQc",
+      "codigo_producto": "dersys",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-de-sartenes-deluxe-easy-release"
+    },
+    {
+      "id": "jarra-para-leche-y-azucarera",
+      "titulo": "Juego de Azucarera y Jarro para Leche",
+      "descripcion_corta": "Este juego de azucarero y jarra para crema de Royal Prestige combina elegancia y funcionalidad agregando un toque de distinción en tus bebidas.",
+      "descripcion_general": "Calidad y estilo para la hora del café\nLúcete con dos piezas espectaculares que le darán elegancia a tu mesa. Fabricadas en acero inoxidable de la más alta calidad, para acompañar tu café, tés e infusiones. Lleva azúcar y crema a la mesa con el toque elegante de Royal Prestige.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad.",
+        "Funcional | El Jarro para Leche cuenta con pico vertedor para evitar derrames. La Azucarera incluye tapa para proteger su contenido."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP0261",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/jarra-para-leche-y-azucarera"
+    },
+    {
+      "id": "tetera-expertea",
+      "titulo": "Royal Prestige® ExperTea",
+      "descripcion_corta": "Perfecta para preparar té de manera rápida y fácil. Conoce la tetera de Royal Prestige y sorprende a tus invitados con una experiencia de té única.",
+      "descripcion_general": "Perfecta para preparar té de manera rápida y fácil. Conoce la tetera de Royal Prestige y sorprende a tus invitados con una experiencia de té única.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Preserva la calidad del agua que utilizas, sin afectar el sabor de tus infusiones.",
+        "Perilla de silbato | Te avisa cuando el agua comenzó a hervir y está lista para la infusión.",
+        "Funcional | Su cesta de infusión se desempeña también como colador, para ahorrarte pasos en el proceso.",
+        "50 años de garantía limitada | Te esperan muchas tardes de té con una buena plática."
+      ],
+      "uso_y_cuidados_titulo": "Manual de Uso y Cuidado",
+      "video_youtube_id": "BWZ_1RZyLpY",
+      "codigo_producto": "CO1001",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/tetera-expertea"
+    },
+    {
+      "id": "tritan-jar",
+      "titulo": "Tritan Jar",
+      "descripcion_corta": "Tritan Jar",
+      "descripcion_general": "Vaso para licuadora con mayor capacidad para lucirte con tus mejores recetas\nFabricado en una sola pieza, este vaso para licuadora es extremadamente durable y te ofrece la facilidad de licuar en cantidades mayores. Cuenta con guía de medidas para facilitarte el cálculo de ingredientes. Capacidad: 56 oz / 1.6 L.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Sus seis aspas de acero inoxidable grado quirúrgico te permiten un licuado más profundo.",
+        "Seguridad | Libre de BPA"
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "tritan-jar",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/tritan-jar"
+    },
+    {
+      "id": "olla-a-presion",
+      "titulo": "Royal Prestige® Pressure Cooker",
+      "descripcion_corta": "La olla a presión de Royal Prestige® es la herramienta perfecta para cocinar en poco tiempo sin sacrificar el sabor y la calidad. ¡Conoce nuestro producto!",
+      "descripcion_general": "Cocina a velocidad máxima, con la confianza que te da la seguridad total\nAhorra hasta un tercio del tiempo de cocción con la Royal Prestige® Pressure Cooker. Sus cuatro mecanismos de seguridad te ofrecen la tranquilidad que quieres para cocinar con confianza y en materiales de la más alta calidad. Garantía limitada de 50 años. Apta para todo tipo de estufas: eléctricas, de gas o de inducción.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricados con acero inoxidable grado quirúrgico 316L, el mejor material para cocinar.",
+        "Seguridad | Cuatro mecanismos de seguridad que te ofrecen tranquilidad y confianza.",
+        "50 años de garantía limitada | Comparte con tu familia muchos años de comidas deliciosas, cocinadas en menos tiempo.",
+        "Rapidez | Reduce hasta un tercio el tiempo de cocción."
+      ],
+      "uso_y_cuidados_titulo": "Mecanismos de seguridad para tu tranquilidad",
+      "video_youtube_id": "neo1YLhGYIE",
+      "codigo_producto": "CO1258",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/olla-a-presion"
+    },
+    {
+      "id": "novel-milk-butter-warmers",
+      "titulo": "Milk & Butter Warmers",
+      "descripcion_corta": "Milk &amp; Butter Warmers",
+      "descripcion_general": "Pieza elegante de calidad superior para el uso diario\nIdeal para calentar mantequilla, leche, agua, salsas y mucho más. Estos hervidores te asisten con gran eficiencia en esas tareas pequeñas pero esenciales que requieren tus recetas. Fabricados con acero inoxidable grado quirúrgico de calidad superior y respaldados con una garantía limitada de 50 años. Apto para todo tipo de estufas: eléctricas, de gas o de inducción.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricada con materiales de la más alta calidad.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "50 años de garantía limitada | Te acompañarán en muchas comidas deliciosas para compartir con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "milk-butter-warmers",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/novel-milk-butter-warmers"
+    },
+    {
+      "id": "parrillas-para-innove-stock-pots",
+      "titulo": "Royal Prestige® 60-Quart Stock Pot",
+      "descripcion_corta": "Royal Prestige® 60-Quart Stock Pot",
+      "descripcion_general": "El complemento para preparar y compartir comidas deliciosas\nFabricada en acero inoxidable grado quirúrgico T-304. Diseñada especialmente para adaptarse a la Royal Prestige® 60-Quart Stock Pot.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Manufactura de primer nivel con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "60-quart-stock-pot",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/parrillas-para-innove-stock-pots"
+    },
+    {
+      "id": "test-site-sync",
+      "titulo": "Test site sync",
+      "descripcion_corta": "Test site sync",
+      "descripcion_general": "Test site sync",
+      "por_que_te_encantara": [],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "12345",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/test-site-sync"
+    },
+    {
+      "id": "vasos-para-agua-london",
+      "titulo": "Vasos London para Agua",
+      "descripcion_corta": "Juego de Vasos de Vidrio para Agua London de Royal Prestige, cada vaso es una expresión de lujo y buen gusto. Disfruta los momentos de hidratación.",
+      "descripcion_general": "Disfruta tus bebidas en un diseño único\nPerfectos para servir una gran variedad de bebidas. Fabricados con materiales de la más alta calidad y respaldados con una garantía limitada de 50 años. Alta resistencia y materiales de la mejor calidad. Aptos para lavavajillas. Disponibles en juegos de 4 piezas, cada una con capacidad de 16 oz o 473 ml.",
+      "por_que_te_encantara": [
+        "50 años de garantía limitada | Te acompañarán en muchos años de festejos con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CR1670",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/vasos-para-agua-london"
+    },
+    {
+      "id": "perfect-pop",
+      "titulo": "Royal Prestige® Perfect Pop",
+      "descripcion_corta": "Nuestra tapa Popcorn es la elección perfecta para preparar palomitas perfectas en casa. Encuéntrala aquí y lleva tus noches de cine a otro nivel.",
+      "descripcion_general": "¡Lleva el cine a tu casa con las palomitas de maíz perfectas!\nComparte con tu familia un popcorn recién hecho y crujiente, ¡mejor que en el cine! Prepara tus palomitas de maíz de forma clásica y sazonadas a tu gusto.\nAgrega tus condimentos en la apertura pequeña, sin tener que destapar la olla. La tapa de cristal te permite monitorear cómodamente la cocción de tu popcorn.\nEsta tapa especial está diseñada para ensamblar a la perfección con tu Olla Royal Prestige de 6 cuartos.",
+      "por_que_te_encantara": [
+        "Funcional | La forma clásica de hacer popcorn, con un sistema giratorio para evitar que se pegue o se queme.",
+        "Seguridad | La manija se mantiene fría para que puedas mover el maíz de manera constante."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR0025",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/perfect-pop"
+    },
+    {
+      "id": "filtro-de-agua-frescapure-5500",
+      "titulo": "Filtro de Agua FrescaPure™ 5500",
+      "descripcion_corta": "Con el filtro de agua FrescaPure™ 5500 de Royal Prestige® podras eliminar hasta el 99% de plomo y otras partículas que podrían estar presentes en el agua.",
+      "descripcion_general": "Siente la tranquilidad de ofrecer agua más limpia a tu familia\nDisfruta la comodidad de tener siempre a la mano agua de mejor sabor y calidad, para beber y cocinar en tu hogar. El Water Filtration System FrescaPure™ 5500 de Royal Prestige® elimina hasta 99% de plomo, quistes y otras partículas que podrían estar presentes en el agua. Certificado por la Water Quality Association de los Estados Unidos. Conéctalo directamente a la llave del agua, sin necesidad de instalaciones eléctricas. Puedes instalarlo debajo o encima del mostrador. El cartucho rinde 3,500 litros (mil galones) de agua filtrada, dependiendo de la calidad del agua local.",
+      "por_que_te_encantara": [
+        "Funcional | Filtro de carbón activado que elimina hasta 99% de plomo, quistes y otras partículas presentes en el agua.",
+        "Acero Inoxidable | Su tanque de acero inoxidable lucirá espectacular en tu cocina."
+      ],
+      "uso_y_cuidados_titulo": "Filtration System FrescaPure™ 5500 Manual",
+      "video_youtube_id": "",
+      "codigo_producto": "WF0485",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/filtro-de-agua-frescapure-5500"
+    },
+    {
+      "id": "test1",
+      "titulo": "Test this",
+      "descripcion_corta": "Con nuestro set de ollas y sartenes de acero inoxidable, cocinar será una experiencia única y fácil. ¡Aprovecha nuestros productos de alta calidad!",
+      "descripcion_general": "Con nuestro set de ollas y sartenes de acero inoxidable, cocinar será una experiencia única y fácil. ¡Aprovecha nuestros productos de alta calidad!",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricados con acero inoxidable grado quirúrgico T-304, el mejor material para cocinar.",
+        "Cocción sin aceite | Puedes cocinar la mayoría de las proteínas animales sin añadir aceite ni grasa.",
+        "Cocción sin agua | Cocina con muy poca o nada de agua, para conservar mejor la consistencia, los nutrientes y el sabor de tus comidas.",
+        "Válvula Redi-Temp™ | Te avisa cuando es momento de dar el siguiente paso en tu receta o bajar la temperatura.",
+        "Aro Silicromático™ | Facilita un cerrado hermético para una mejor concentración y distribución de calor.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa.",
+        "Hecho en Italia | Manufactura italiana de primer nivel, con acabados elegantes para lucir en tu cocina.",
+        "50 años de garantía limitada | Te acompañarán en muchas comidas deliciosas para compartir con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "USO Y CUIDADO",
+      "video_youtube_id": "4zKG8m3jhkA",
+      "codigo_producto": "",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/test1"
+    },
+    {
+      "id": "sistema-de-filtracion-de-aire",
+      "titulo": "Royal Prestige® Air Filtration System",
+      "descripcion_corta": "Optimiza la calidad del aire en tu hogar con el sistema de filtración de Aire Royal Prestige. Están diseñados para ofrecer un ambiente más limpio y fresco.",
+      "descripcion_general": "Sistema de filtración de aire multietapa\n¡Respira en un ambiente más limpio en tu hogar! El Royal Prestige Air Filtration System filtra el aire en cuatro etapas y ayuda a remover partículas de polvo, pelo de mascotas y otros desencadenantes de alergias. Además, ayuda a eliminar olores desagradables, hongos, bacterias y virus. Fácil operación, con indicadores para la limpieza del filtro y control del flujo del aire.",
+      "por_que_te_encantara": [
+        "Funcional | Ayuda a eliminar alérgenos, olores desagradables, hongos, bacterias y virus."
+      ],
+      "uso_y_cuidados_titulo": "Royal Prestige® Air Filtration System Manual",
+      "video_youtube_id": "",
+      "codigo_producto": "AP2801",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/sistema-de-filtracion-de-aire"
+    },
+    {
+      "id": "sistema-de-cocina-innove",
+      "titulo": "Sistema de Cocina Royal Prestige® INNOVE™",
+      "descripcion_corta": "Con la línea de productos Royal Prestige® INNOVE™, tendrás lo mejor en tecnología y materiales para lograr resultados de alta calidad en tus preparaciones.",
+      "descripcion_general": "Hechos para ti, que buscas la más alta calidad para cocinar y alimentar mejor a tu familia\nCocina sin aceite la mayoría de las carnes y aves, con muy poca o nada de agua. Tus comidas se cocinan en sus propios jugos, con nutrientes al máximo, texturas apetecibles y sabores espectaculares. ¡Incluso podrás hacer pasteles sobre la estufa! Pon en práctica tus mejores recetas todos los días. Calidad superior respaldada con una garantía limitada de 50 años. La ventanilla en la tapa te permite monitorear fácilmente la humedad de tus comidas al cocinar. Aptos para todo tipo de estufas: eléctricas, de gas o de inducción. Las asas son desmontables e intercambiables, para facilitarte el uso y almacenamiento de tus ollas y sartenes.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricados con acero inoxidable grado quirúrgico 316L, el mejor material para cocinar.",
+        "Cocción sin aceite | Puedes cocinar la mayoría de las proteínas animales sin añadir aceite ni grasa.",
+        "Cocción sin agua | Cocina con muy poca o nada de agua, para conservar mejor la consistencia, los nutrientes y el sabor de tus comidas.",
+        "Válvula Redi-Temp™ | Te avisa cuando es momento de dar el siguiente paso en tu receta o bajar la temperatura.",
+        "Aro Silicromático™ | Facilita un cerrado hermético para una mejor concentración y distribución de calor.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa.",
+        "50 años de garantía limitada | Te acompañarán en muchas comidas deliciosas para compartir con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidado Sistemas de Cocina Royal Prestige® INNOVE™",
+      "video_youtube_id": "5G86YsDe6-4",
+      "codigo_producto": "Innovesys",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/sistema-de-cocina-innove"
+    },
+    {
+      "id": "precision-cook",
+      "titulo": "Royal Prestige® Precision Cook",
+      "descripcion_corta": "Con nuestra parrilla de inducción cocinas deliciosas comidas donde quiera que vayas, en eventos o al aire libre. ¡Potente, portátil y práctica!",
+      "descripcion_general": "La parrilla de inducción que necesitas para una cocina inteligente\nOlvídate de adivinar cantidades, temperaturas y tiempos al cocinar. Con la Royal Prestige Precision Cook tienes todo lo que necesitas para cocinar con exactitud y lograr los resultados que quieres. Su superficie de cristal es fácil de limpiar y soporta hasta 30 libras (13.5 kilos). Cuenta con suelas de goma en la base, para mayor estabilidad.\nPotente y portátil, la Precision Cook pesa solo 7 libras (3.2 kg), así que será tu compañera perfecta para preparar tus comidas favoritas al aire libre o para agregarle más potencia de cocción a tu cocina diaria. Ocupará una cantidad mínima de espacio en tu mostrador, por lo que puedes usarla todos los días, ya sea que estés haciendo huevos revueltos o carne guisada.",
+      "por_que_te_encantara": [
+        "Precisión | Puede subir o bajar la temperatura en rangos de cinco grados. Potencia de 1,800 watts.",
+        "Temporizador | Mide hasta diez horas. Ideal para comidas de cocción lenta.",
+        "Báscula | Pesa tus ingredientes de forma práctica.",
+        "Funcional | Cuenta con varias funciones listas para usar."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidados de tu Royal Prestige® Precision Cook",
+      "video_youtube_id": "1J5rF6naZ9o",
+      "codigo_producto": "ES0071",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/precision-cook"
+    },
+    {
+      "id": "juego-de-ollas-acero-inoxidable",
+      "titulo": "Sistema de Cocina Royal Prestige® 5 CAPAS",
+      "descripcion_corta": "Explora la fusión perfecta entre estilo y funcionalidad con nuestras ollas en acero inoxidable grado quirúrgico de Royal Prestige. ¡Cocina con confianza!",
+      "descripcion_general": "Hechos para ti, que buscas la más alta calidad para cocinar y alimentar mejor a tu familia\nCocina sin aceite la mayoría de las carnes y aves, con muy poca o nada de agua. Aptos para todo tipo de estufas: eléctricas, de gas o de inducción. Tus comidas se cocinan en sus propios jugos, con nutrientes al máximo, texturas apetecibles y sabores espectaculares. Calidad superior respaldada con una garantía limitada de 50 años.",
+      "por_que_te_encantara": [
+        "Acero inoxidable grado quirúrgico | Fabricados con acero inoxidable grado quirúrgico T-304, el mejor material para cocinar.",
+        "Cocción sin aceite | Puedes cocinar la mayoría de las proteínas animales sin añadir aceite ni grasa.",
+        "Cocción sin agua | Cocina con muy poca o nada de agua, para conservar mejor la consistencia, los nutrientes y el sabor de tus comidas.",
+        "Válvula Redi-Temp™ | Te avisa cuando es momento de dar el siguiente paso en tu receta o bajar la temperatura.",
+        "Apto para el horno | Las asas resisten temperaturas de hasta 400° F / 204° C.",
+        "Seguridad | Las asas ergonómicas no se calientan al cocinar sobre la estufa.",
+        "50 años de garantía limitada | Te acompañarán en muchas comidas deliciosas para compartir con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "5plysys",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/juego-de-ollas-acero-inoxidable"
+    },
+    {
+      "id": "baristart-kit",
+      "titulo": "Royal Prestige® BaristArt Kit",
+      "descripcion_corta": "Despierta tu creatividad cafetera con nuestro completo kit barista, sus piezas te sumergen en el apasionante mundo de la preparación de café artesanal.",
+      "descripcion_general": "Despierta tu creatividad cafetera con nuestro completo kit barista, sus piezas te sumergen en el apasionante mundo de la preparación de café artesanal.",
+      "por_que_te_encantara": [
+        "Potencia | El potente vaporizador eléctrico es perfecto para usar con leche al 2 %, ya sea caliente o fría.",
+        "Acero Inoxidable | Todas las piezas del kit, excepto el molinillo, están fabricadas íntegramente en acero inoxidable para garantizar su durabilidad.",
+        "Funcional | Dé rienda suelta a su imaginación y agregue sus propios toques creativos a cada bebida que prepare, para que pueda disfrutar del café de la forma en que debe ser."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "CO2206",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/baristart-kit"
+    },
+    {
+      "id": "cuchillo-damascus-santoku",
+      "titulo": "Cuchillo Santoku Damascus de 5” Precision Series III™",
+      "descripcion_corta": "Experimenta cortes excelentes con nuestro Cuchillo Santoku Damascus de 5\". Mantiene su filo gracias a sus 32 capas internas de acero inoxidable.",
+      "descripcion_general": "Tradición milenaria y calidad excepcional\nObtén cortes más precisos gracias a su borde afilado fabricado con “súper acero”, que mantiene el filo por más tiempo. Este borde está protegido con 32 capas internas de acero inoxidable en cada lado. Pieza de lujo para quienes desean lograr cortes más precisos. La cuchilla se extiende hasta el mango, para evitar que se rompa o desprenda. El mango ergonómico de resina te facilita sujetarlos de manera cómoda y firme. Parte de la extraordinaria línea Precision Series III™ de Royal Prestige.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricada con acero inoxidable alemán de la más alta calidad.",
+        "50 años de garantía limitada | Te acompañará en la preparación de infinidad de recetas."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidado de tus Cuchillos Royal Prestige®",
+      "video_youtube_id": "mfQS_GM1mf4",
+      "codigo_producto": "CU0148",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/cuchillo-damascus-santoku"
+    },
+    {
+      "id": "unidad-de-combinaci-c3-b3n",
+      "titulo": "Unidad de Combinación",
+      "descripcion_corta": "Unidad de Combinación",
+      "descripcion_general": "Derrite el corazón de tus comensales\nCon este práctico utensilio puedes derretir a la perfección mantequilla, chocolate, azúcar, entre otros ingredientes, así como cocinar postres en baño maría. Úsalo en tus Ollas Royal Prestige® de 3 y 4 cuartos. Diámetro: 7.5” / 19 cm | Capacidad: 2 qt / 1.89 L.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "unidad-combinacion",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/unidad-de-combinaci%C3%B3n"
+    },
+    {
+      "id": "smart-temp",
+      "titulo": "Royal Prestige® Smart Temp",
+      "descripcion_corta": "Control preciso de la temperatura con el Termómetro de Cocina Royal Prestige® Smart Temp. Tus alimentos se cocinan a una temperatura óptima.",
+      "descripcion_general": "Control preciso de la temperatura con el Termómetro de Cocina Royal Prestige® Smart Temp. Tus alimentos se cocinan a una temperatura óptima.",
+      "por_que_te_encantara": [
+        "Cocción sin aceite | No necesitas agregar agua o aceite, esta es la opción renovada de la prueba de gotas en tus ollas y sartenes Royal Prestige®.",
+        "Precisión | Ten la certeza de realizar la cocción de tus recetas con la temperatura óptima.",
+        "Funcional | Ya no más suposiciones o dudas, con su indicador giratorio sabrás exactamente lo que necesitas.",
+        "Seguridad | Coloca y retira de manera segura gracias a su asa de silicona.",
+        "Acero Inoxidable | Está fabricado con acero inoxidable como tus ollas y sartenes Royal Prestige® favoritas."
+      ],
+      "uso_y_cuidados_titulo": "Usos y Cuidados Royal Prestige® Smart Temp",
+      "video_youtube_id": "4LNak24axbI",
+      "codigo_producto": "SP2881",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/smart-temp"
+    },
+    {
+      "id": "cuchillos-para-churrascos",
+      "titulo": "Royal Prestige® Precision Series 3™ Churrasco Knife Set‌",
+      "descripcion_corta": "El Juego de Cuchillos para Churrasco de Royal Prestige es ideal para los amantes de la carne a la parrilla. Realiza cortes precisos y sin esfuerzo.",
+      "descripcion_general": "Los compañeros perfectos para los mejores cortes.\nDiseñados especialmente para cortes de carne y proteínas a la parrilla, son el complemento perfecto para tus barbacoas. Tienen un filo cortante y una punta dentada. La hoja es muy resistente y conserva su filo durante más tiempo. El mango ergonómico de resina facilita sujetarlos con comodidad y firmeza. Fabricados con una aleación de acero inoxidable de la más alta calidad y respaldados por una garantía limitada de 50 años. Parte de los extraordinarios Cuchillos de Churrasco Precision Series III™ de Royal Prestige®.",
+      "por_que_te_encantara": [
+        "Acero inoxidable de estándar alemán | Están fabricados con acero inoxidable de grado alemán para incrementar su durabilidad, balance y resistencia.",
+        "Funcional | Su mango renovado te permite tener más comodidad y mayor control a la hora de cortar los ingredientes favoreciendo un agarre profesional.",
+        "50 años de garantía limitada | Te acompañarán en la preparación de infinidad de recetas."
+      ],
+      "uso_y_cuidados_titulo": "Uso y cuidado de tus Cuchillos Royal Prestige®",
+      "video_youtube_id": "mfQS_GM1mf4",
+      "codigo_producto": "CU0740",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/cuchillos-para-churrascos"
+    },
+    {
+      "id": "max-cup",
+      "titulo": "Max Cup",
+      "descripcion_corta": "Max Cup",
+      "descripcion_general": "El vaso para licuado que acompaña a donde quiera que vayas\nLicúa y llévate tus jugos y smoothies en este vaso para licuado personal, sin necesidad de utilizar el vaso de la licuadora. Su práctica tapa con cierre hermético cuenta con un gancho para transportar cómodamente. Te ofrece 20 onzas de capacidad, o poco más de medio litro. Su innovador diseño permite licuar y transportar tus preparaciones en el mismo vaso. Cuenta con guía de medidas para facilitarte el cálculo de ingredientes.",
+      "por_que_te_encantara": [
+        "Funcional | Gancho para portar cómodamente el vaso y tapa hermética que evita derrames.",
+        "Seguridad | Libre de BPA"
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "max-cup",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/max-cup"
+    },
+    {
+      "id": "unidad-de-combinacion",
+      "titulo": "Tazón para Baño María",
+      "descripcion_corta": "El Tazón para Baño María Royal Prestige es la herramienta perfecta para preparar o derretir variedad de ingredientes. Derrite el corazón de tus comensales.",
+      "descripcion_general": "Derrite el corazón de tus comensales\nCon este práctico utensilio puedes derretir a la perfección mantequilla, chocolate, azúcar, entre otros ingredientes, así como cocinar postres en baño maría. Úsalo en tus Ollas Royal Prestige de 3 y 4 cuartos. Diámetro: 7.5” / 19 cm | Capacidad: 2 qt / 1.89 L.",
+      "por_que_te_encantara": [
+        "Acero Inoxidable | Fabricado con materiales de la más alta calidad."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "tazon-bano-maria",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/unidad-de-combinacion"
+    },
+    {
+      "id": "afilador-de-cuchillos-acero-inoxidable",
+      "titulo": "Afilador de cuchillos de Acero",
+      "descripcion_corta": "Revive el filo de tus cuchillos con nuestro Afilador de Cuchillos Royal Prestige en acero inoxidable, una herramienta imprescindible para cualquier cocina.",
+      "descripcion_general": "Mantén tus cuchillos como nuevos y ¡listos para la acción!\nDe diseño innovador y elegante, el Royal Prestige® Knife Sharpener te ayuda a mantener tus cuchillos listos para usar, permitiéndote afilar, alinear y pulir todo tipo de cuchillos, ya sean de hojas lisas o serradas. Su sistema de mariposa se ajusta automáticamente para adaptarse a los ángulos de la hoja.",
+      "por_que_te_encantara": [
+        "Funcional | Obtén filo superior para tus cortes sin dañar las hojas de tus cuchillos.",
+        "Acero inoxidable | Fabricado con materiales de la más alta calidad.",
+        "Seguridad | Gracias a su cuerpo sólido, no necesitas sostenerlo para usarlo."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "PR1841",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/afilador-de-cuchillos-acero-inoxidable"
+    },
+    {
+      "id": "vasos-tequileros",
+      "titulo": "Vasos Tequileros",
+      "descripcion_corta": "Exquisitos Vasos Tequileros Royal Prestige, calidad insuperable y detalles grabados para una experiencia distinguida en cada sorbo. ¡Ingresa ahora!",
+      "descripcion_general": "Celebra con el sello de calidad de Royal Prestige\nLos Vasos Tequileros de Royal Prestige están fabricados con materiales de la mejor calidad, para una resistencia y durabilidad excepcional. Alta resistencia y materiales de la mejor calidad. Aptos para lavavajillas. Disponibles en juegos de 4 piezas. Cuentan con garantía limitada de 50 años.",
+      "por_que_te_encantara": [
+        "50 años de garantía limitada | Te acompañarán en muchos años de festejos con los que más quieres."
+      ],
+      "uso_y_cuidados_titulo": "",
+      "video_youtube_id": "",
+      "codigo_producto": "SP2137",
+      "agenda_demo_disponible": true,
+      "whatsapp_chat_disponible": true,
+      "whatsapp_url": "https://wa.me/13124651833?text=RoyalWeb",
+      "opciones_financiamiento": true,
+      "url": "https://royalprestige.com/productos/detalle/vasos-tequileros"
+    }
+  ]
+}

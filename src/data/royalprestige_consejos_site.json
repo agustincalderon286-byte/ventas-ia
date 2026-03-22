@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_consejos_site",
+    "descripcion": "Consejos útiles extraídos desde la página pública de apoyo de Royal Prestige US en español.",
+    "total_consejos": 17,
+    "fetched_at": "2026-03-22T19:23:59.859Z",
+    "source": "https://www.royalprestige.com/apoyo/consejos-utiles",
+    "campos_por_chunk": [
+      "pregunta",
+      "respuesta"
+    ]
+  },
+  "pagina": {
+    "titulo": "Consejos Útiles",
+    "descripcion": "",
+    "introduccion": "",
+    "url": "https://www.royalprestige.com/apoyo/consejos-utiles"
+  },
+  "consejos": [
+    {
+      "id": "puedo-lavar-mis-utensilios-de-cocina-si-aun-estan-calientes",
+      "pregunta": "¿Puedo lavar mis utensilios de cocina si aún están calientes?",
+      "respuesta": "¡No! Deja que el sartén se enfríe por completo antes de limpiarlo. Si el sartén todavía está caliente y se coloca sobre agua fría, puede provocar un choque térmico que puede deformar el utensilio con el tiempo. El daño por choque térmico puede anular la garantía."
+    },
+    {
+      "id": "puedo-usar-mi-juego-de-ollas-de-acero-inoxidable-en-el-horno",
+      "pregunta": "¿Puedo usar mi juego de ollas de acero inoxidable en el horno?",
+      "respuesta": "¡Sí! Asegúrate de precalentar el horno por completo antes de colocar los utensilios de cocina dentro de este. Nunca uses una temperatura superior a 400°F/205°C. Además, asegúrate de utilizar guantes de cocina al introducir o retirar los utensilios del horno."
+    },
+    {
+      "id": "por-que-mis-ollas-de-acero-inoxidable-tienen-manchas-blancas",
+      "pregunta": "¿Por qué mis ollas de acero inoxidable tienen manchas blancas?",
+      "respuesta": "La sal sin disolver puede dejar manchas blancas o incluso crear hoyos en el fondo de los utensilios de cocina. Estos hoyos no afectan el rendimiento de los utensilios, pero no se pueden eliminar. Para evitar que esto ocurra: (1) Siempre agrega la sal después de que el agua haya hervido o la comida haya alcanzado la temperatura de cocción. (2) Nunca dejes comida en las ollas por largos periodos de tiempo. Ten presente que cocinar con sal sin disolver en los utensilios de cocina o almacenar comida en ellos puede anular la garantía."
+    },
+    {
+      "id": "por-que-mi-olla-tiene-una-capa-blanca",
+      "pregunta": "¿Por qué mi olla tiene una capa blanca?",
+      "respuesta": "Los minerales en el agua o almidones en la comida pueden dejar una capa blanca en el acero inoxidable. Esta no afectará el desempeño de los utensilios, pero puede quitarse frotando el área con un limpiador para acero inoxidable como Royal Shine™ de Royal Prestige®."
+    },
+    {
+      "id": "por-que-la-carne-no-se-dora-bien-en-mi-sarten-de-acero-inoxidable",
+      "pregunta": "¿Por qué la carne no se dora bien en mi sartén de acero inoxidable?",
+      "respuesta": "Es posible que el utensilio de cocina no se haya precalentado correctamente. Siempre precalienta el utensilio de cocina durante 3 o 4 minutos a temperatura media alta. Para saber si el utensilio se ha precalentado correctamente, agrega unas gotas de agua al sartén, las gotas deberán rebotar. Si desaparecen de inmediato, es señal de que el utensilio está demasiado caliente y debe enfriarse."
+    },
+    {
+      "id": "por-que-hay-rayones-en-mi-juego-de-ollas-de-acero-inoxidable",
+      "pregunta": "¿Por qué hay rayones en mi juego de ollas de acero inoxidable?",
+      "respuesta": "El acero inoxidable puede rayarse si es manejado inadecuadamente. Los rayones no afectan el desempeño del juego de ollas y, por lo tanto, no son considerados defecto de material o fabricación. Para evitar los rayones: (1) No utilices cuchillos o herramientas de cocina con filo para cortar, revolver o servir las comidas. (2) No uses mezcladores eléctricos en las ollas. (3) Siempre que almacenes en pirámide tu juego de ollas, hazlo cuidadosamente."
+    },
+    {
+      "id": "como-eliminar-las-manchas-de-agua-de-mis-ollas-de-acero-inoxidable",
+      "pregunta": "¿Cómo eliminar las manchas de agua de mis ollas de acero inoxidable?",
+      "respuesta": "Las manchas de agua pueden aparecer debido a las condiciones del agua en la zona en la que vives. Para evitarlas, después de lavar los utensilios de cocina, enjuágalos siempre con agua tibia y sécalos inmediatamente. Si aparecen manchas de agua, aplica un limpiador de acero inoxidable, como RoyalShine™ de Royal Prestige® sobre los utensilios de cocina secos y, con una toalla de papel humedecida, frota con movimientos circulares. Una vez que se haya quitado la mancha, lava la olla con agua tibia y jabón, después de esto sécala."
+    },
+    {
+      "id": "como-eliminar-la-grasa-quemada-de-mis-ollas-de-acero-inoxidable",
+      "pregunta": "¿Cómo eliminar la grasa quemada de mis ollas de acero inoxidable?",
+      "respuesta": "Evita raspar la olla o usar estropajos metálicos. Está bien usar Scotch-Brite™ en el interior, pero no en el exterior. Llena la olla hasta la mitad con agua, colócala en la estufa y déjala hervir durante unos minutos. Deja que el agua se enfríe y lava la olla como de costumbre. Para la suciedad severa, puedes usar un limpiador de hornos en aerosol, para ello rocía generosamente, deja reposar durante la noche y, por la mañana, los alimentos quemados se desprenderán fácilmente."
+    },
+    {
+      "id": "puedo-usar-mis-ollas-en-el-microondas-o-en-un-asador",
+      "pregunta": "¿Puedo usar mis ollas en el microondas o en un asador?",
+      "respuesta": "¡No! Nunca utilices tus utensilios de cocina en el microondas, ni en una parrilla o asador."
+    },
+    {
+      "id": "por-que-mi-olla-de-acero-inoxidable-se-ha-puesto-amarilla",
+      "pregunta": "¿Por qué mi olla de acero inoxidable se ha puesto amarilla?",
+      "respuesta": "Si calientas demasiado o dejas hervir tu olla hasta que se seque el contenido, la superficie de acero inoxidable se verá afectada por tonos amarillos, bronceados, azules o arcoíris. Estos tonos son inofensivos y se pueden eliminar con un limpiador de acero inoxidable, como RoyalShine™ de Royal Prestige®, para ello, aplica el limpiador sobre la olla seca y, con una toalla de papel humedecida, frota con movimientos circulares. Una vez que se haya eliminado la mancha, lava la olla con agua tibia y jabón, después de esto sécala."
+    },
+    {
+      "id": "por-que-no-puedo-quitar-la-tapa-de-mi-olla",
+      "pregunta": "¿Por qué no puedo quitar la tapa de mi olla?",
+      "respuesta": "Después de cocinar, puede haber un sello firme de agua entre la olla y la tapa. Si la tapa quedó atascada y no la puedes retirar, simplemente abre la válvula Redi-Temp® para igualar la presión y así la tapa podrá quitarse fácilmente. Si la tapa no tiene válvula o no se puede abrir, entonces vuelva a colocar la olla sellada en el quemador (estufa u hornalla) a baja temperatura durante aproximadamente de 1 a 2 minutos. Cuando el aire caliente del interior de la olla se expanda, romperá el sello y la tapa podrá separarse fácilmente. Siempre inclina la tapa lejos de ti para evitar quemaduras por causa del vapor."
+    },
+    {
+      "id": "cual-es-la-mejor-forma-de-limpiar-los-utensilios-despues-de-cocina-de-acero-inoxidable-despues-de-cocinar",
+      "pregunta": "¿Cuál es la mejor forma de limpiar los utensilios después de cocina de acero inoxidable después de cocinar?",
+      "respuesta": "Ten presente lavar bien los utensilios después de cada uso una vez que se hayan enfriado por completo. Para ello, usa agua tibia con un detergente suave para platos y una esponja o paño de cocina para eliminar todos los residuos de comida. Los utensilios de cocina pueden decolorarse o mancharse si no se lavan adecuadamente antes de volverlos a usar. Recuerda que también se pueden lavar en el lavavajillas."
+    },
+    {
+      "id": "por-que-esta-sueltas-el-mango-o-las-asas-de-mi-sarten",
+      "pregunta": "¿Por qué está sueltas el mango o las asas de mi sartén?",
+      "respuesta": "Tus utensilios de cocina cuentan con mangos y asas atornillados, lo que permite que tengan un interior liso sin remaches ni marcas de soldadura. Con el tiempo, las asas pueden aflojarse, pero se pueden apretar fácilmente (herramienta necesaria: llave de tubo de 10 mm). Si el mango o asa está dañado, no lo uses, comunícate con el departamento de servicio al cliente para obtener un reemplazo."
+    },
+    {
+      "id": "necesito-lavar-mis-set-de-ollas-antes-de-usarlos",
+      "pregunta": "¿Necesito lavar mis set de ollas antes de usarlos?",
+      "respuesta": "¡Sí! Antes de usar tus nuevos utensilios de cocina por primera vez, asegúrate de lavarlos bien. Mezcla agua tibia con jabón y agrega 1/4 de taza de vinagre. Con una esponja o un paño de cocina lava cada pieza. Esto eliminará los aceites de fabricación residuales o los compuestos de pulido que aún puedan quedar en los utensilios. Ten en cuenta que los utensilios de cocina pueden decolorarse o mancharse si no se lavan adecuadamente antes de usarlos por primera vez."
+    },
+    {
+      "id": "importa-el-tamano-de-olla-o-tapa-que-utilizo",
+      "pregunta": "¿Importa el tamaño de olla o tapa que utilizo?",
+      "respuesta": "¡Sí! Elige un tamaño de la olla adecuado para la cantidad de comida que vayas a preparar. Lo ideal es que llenes la olla hasta 2/3 de su capacidad. Utiliza siempre la tapa que está diseñada para la olla específica que vayas a utilizar."
+    },
+    {
+      "id": "cual-es-la-temperatura-correcta-para-mi-estufa",
+      "pregunta": "¿Cuál es la temperatura correcta para mi estufa?",
+      "respuesta": "Es recomendable usar una temperatura baja o media. Se puede utilizar una temperatura alta cuando sea necesario, como cuando se hierven líquidos. Ten presente usar siempre un quemador (fogón, hornalla, estufa) que tenga un diámetro similar al de la olla. Si cocinas en una cocina a gas, no permitas que la llama se extienda por los lados del utensilio."
+    },
+    {
+      "id": "puedo-guardar-alimentos-en-mis-ollas",
+      "pregunta": "¿Puedo guardar alimentos en mis ollas?",
+      "respuesta": "¡No! Almacenar alimentos en utensilios de cocina de acero inoxidable quirúrgico durante periodos prolongados puede provocar manchas o picaduras debido a las sales, grasas, condimentos y ácidos presentes en los alimentos. El almacenar alimentos en tu olla podría considerarse un uso indebido, anulando así la garantía."
+    }
+  ]
+}

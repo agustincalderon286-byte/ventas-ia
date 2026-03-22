@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "coleccion": "royalprestige_pagos_site",
+    "descripcion": "Métodos de pago extraídos desde la página pública de apoyo de Royal Prestige US en español.",
+    "total_metodos": 5,
+    "fetched_at": "2026-03-22T19:23:59.756Z",
+    "source": "https://www.royalprestige.com/apoyo/opciones-de-pago",
+    "campos_por_chunk": [
+      "nombre",
+      "instrucciones",
+      "enlaces"
+    ]
+  },
+  "pagina": {
+    "titulo": "Opciones de pago | Royal Prestige® USA",
+    "descripcion": "En Royal Prestige®, nos preocupamos por tu comodidad al momento de comprar y pagar. Descubre nuestras opciones de pago y compra sin preocupaciones.",
+    "introduccion": "Selecciona cualquiera de los siguientes métodos para hacer tu pago.",
+    "url": "https://www.royalprestige.com/apoyo/opciones-de-pago"
+  },
+  "metodos_pago": [
+    {
+      "id": "western-union",
+      "nombre": "Western Union",
+      "instrucciones": "Para localizar a la Agencia de Western Union más cercana, llame a Western Union al 1-800-325-6000, o comuníquese con Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español).\nEn la Agencia, seleccione y complete todo el formulario Western Union Quick Collect Payment que tiene un borde azul, incluyendo la siguiente información:\na. Pague a: Hy Cite Enterprises, LLC\nb. Código de Ciudad: HYCITE\nc. Estado: WISCONSIN\nSu nombre y número de cuenta deben ser escritos clara y correctamente en el formulario, para que su cuenta sea acreditada.\nEntregue el formulario y la cantidad de pago, más un cargo fijo, en dinero en efectivo, al Agente de Western Union. Asegúrese de que usted reciba una copia de la forma del pago con el número de control de transferencia escrito por el agente. Ésta es prueba de su pago, y de cuándo fue enviado.\nCheque, giro postal (money order) o cheque de gerencia (cashier check).\nEn un sobre incluya un cheque, giro postal o cheque de gerencia, con su número de cuenta. Envíelo a:\nHy Cite Enterprises,\nLLC 333 Holtzman Road\nMadison, WI 53713-3954",
+      "enlaces": [
+        "https://www.royalprestige.com/#"
+      ]
+    },
+    {
+      "id": "cheque-por-telefono",
+      "nombre": "Cheque por teléfono",
+      "instrucciones": "Por favor tenga listos su número de cuenta corriente (checking) y el número de identificación del banco. Este se encuentra en la parte inferior de la esquina izquierda de su cheque personal.\nPara hacer un pago por teléfono o para programar que el pago coincida con su disponibilidad de dinero, llame a Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español).\n¡Ya ha finalizado! La cantidad de su pago más un cargo de $10.00 serán automáticamente deducidos de la cuenta bancaria designada. Los $10.00 de cargo serán perdonados si usted decide que sus pagos mensuales sean automáticamente deducidos.",
+      "enlaces": [
+        "https://www.royalprestige.com/#"
+      ]
+    },
+    {
+      "id": "tarjeta-de-credito-o-debito-y-pago-por-telefono",
+      "nombre": "Tarjeta de crédito o débito y Pago por teléfono",
+      "instrucciones": "Por favor tenga su tarjeta de crédito a la mano.\nPara hacer un pago expreso o para programar que el pago coincida con su disponibilidad de dinero, llame a Hy Cite Enterprises, LLC al 1-800-280-9709 (Inglés) o 1-800-280-9708 (Español).\n¡Ya ha finalizado! La cantidad de su pago más un cargo de $10.00 serán automáticamente deducidos de la tarjeta de crédito de la institución financiera designada. Los $10.00 de cargo serán perdonados si usted decide que sus pagos mensuales sean automáticamente deducidos.\nRoyal Prestige ahora hace más fácil tu vida con HOLA ROYAL el sistema de audiorespuesta de nuestra línea de atención.\nCon HOLA ROYAL es ágil, seguro y efectivo realizar tus pagos con tarjetas de crédito y débito desde el lugar donde estés. Funciona de lunes a domingo las 24 horas del día y usarlo es muy sencillo.\nEl sistema de audiorespuesta te guiará en cada paso:\n- Llama a la línea de atención 1-800-280-9708.\n- Opción 1 para hacer en pago.\n- Elige la opción 1 para tarjeta.\n- Ingresa los datos de la tarjeta.",
+      "enlaces": [
+        "https://www.royalprestige.com/#"
+      ]
+    },
+    {
+      "id": "moneygram",
+      "nombre": "Moneygram",
+      "instrucciones": "Utilice el Servicio de MoneyGram® ExpressPayment® para hacer su pago de Hy Cite en una de las 40,000 agencias de MoneyGram de todo el país, incluyendo Walmart y CVS/Pharmacy. MoneyGram cobra una tarifa de $6.95 por este servicio.\nHaga clic aquí para encontrar la Agencia de MoneyGram más cercana a usted, o llame al 1(800) MONEYGRAM. Para hacer un pago ese mismo día*, pago garantizado** con MoneyGram, utilice el Código de Recepción 3290.\nPara muchas de las sedes de MoneyGram, incluyendo Walmart, por favor comience a completar un formulario azul de ExpressPayment con la siguiente información:\nCódigo de Recepción: 3290\nNúmero de Cuenta: Su número de Cuenta de Hy Cite\nNombre de Compañía: Hy Cite Enterprises, LLC\nCiudad/Estado: Madison, WI\nPara otras sedes de MoneyGram, como CVS/Pharmacy, por favor siga estos pasos:\nLevante el teléfono rojo de MoneyGram, el cual llamará automáticamente al Servicio al Cliente de MoneyGram.\nCuando se le pida el tipo de transacción, seleccione Pagar una Factura (Pay a bill).\nIngrese su número de teléfono.\nUsted estará conectado a un agente de MoneyGram que le pedirá que confirme su número de teléfono, nombre, dirección, número de cuenta, el monto de su pago y el código de Recepción del destinatario (El código de Recepción de Hy Cite es 3290).\nRecibirá información importante del agente de MoneyGram: tome nota.\nLleve todos los detalles al cajero del local, el cual colectará el dinero en efectivo y la tarifa de servicio de MoneyGram, y completará el pago.\n*La Notificación de Pago estará disponible para Hy Cite en un plazo de 10 minutos. Consulte con Hy Cite el horario exacto de registro del pago.\n**Garantía basada en la notificación del pago de MoneyGram al facturador. El pago al facturador es basado en términos del contrato. MoneyGram ®, ExpressPayment® y Globe son marcas registradas de MoneyGram.",
+      "enlaces": [
+        "https://www.royalprestige.com/#",
+        "https://www.moneygram.com/mgo/us/es/locations/",
+        "https://www.moneygram.com/mgo/us/es/paybills/"
+      ]
+    },
+    {
+      "id": "pagina-web-para-pagos-de-clientes",
+      "nombre": "Página Web para pagos de Clientes",
+      "instrucciones": "¿Cómo acceder al Portal de Servicio al Cliente Hy Cite?\nRegistrándose en customers.hycite.com podrá acceder a toda la información relacionada a su cuenta:\n- Comunicación electrónica: Mensualmente recibirá un mail con su estado de cuenta en un formato sencillo, diga adiós a las complicaciones y desorden que genera el papeleo al mismo tiempo que ayuda al medio ambiente.\n- Pagos en línea: Ahorre tiempo y costos de cheques-giros haciendo su pago mensual directamente en nuestro sitio web seguro, configure sus pagos automáticos y relájese.\n- Administración de su cuenta: Acceda a su historial de pedidos y pagos, haga seguimiento a la entrega de sus órdenes y reciba notificaciones de nuevos productos y ofertas especiales.\nRegistrarse es sencillo y seguro, todo lo que necesita es su número de cliente para empezar a disfrutar de los beneficios de nuestro portal de Servicio al Cliente de Hy Cite.",
+      "enlaces": [
+        "https://www.royalprestige.com/#",
+        "https://customers.hycite.com/Default.aspx"
+      ]
+    }
+  ]
+}

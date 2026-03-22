@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "recipes:fetch": "node scripts/fetch-royalprestige-recipes.js",
+    "royal:fetch:site": "node scripts/fetch-royalprestige-site-knowledge.js",
     "knowledge:import": "node scripts/import-knowledge.js",
     "knowledge:search": "node scripts/search-knowledge.js",
     "knowledge:index": "node scripts/create-vector-index.js"
