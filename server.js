@@ -23,6 +23,7 @@ const conversationEntrySchema = new mongoose.Schema(
 );
 
 const leadSchema = new mongoose.Schema({
+  visitorIds: [String],
   sessionIds: [String],
   name: String,
   email: String,
@@ -44,17 +45,68 @@ const leadSchema = new mongoose.Schema({
   cocinaPara: String,
   esCliente: String,
   direccion: String,
+  leadStatus: String,
   lastInteractionAt: Date,
   lastAssistantMessage: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
+const profileSchema = new mongoose.Schema({
+  visitorId: { type: String, required: true, unique: true },
+  visitorIds: [String],
+  sessionIds: [String],
+  leadId: mongoose.Schema.Types.ObjectId,
+  name: String,
+  email: String,
+  phone: String,
+  direccion: String,
+  ocupacion: String,
+  esCliente: String,
+  tieneProductos: String,
+  necesitaGarantia: String,
+  quiereLlamada: String,
+  productos: [String],
+  productosInteres: [String],
+  temasInteres: [String],
+  cocinaPara: String,
+  leadStatus: String,
+  profileSummary: String,
+  recentHistory: [conversationEntrySchema],
+  conversationCount: { type: Number, default: 0 },
+  lastUserMessage: String,
+  lastAssistantMessage: String,
+  lastInteractionAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const messageSchema = new mongoose.Schema({
+  visitorId: { type: String, required: true, index: true },
+  sessionId: { type: String, index: true },
+  profileId: mongoose.Schema.Types.ObjectId,
+  leadId: mongoose.Schema.Types.ObjectId,
+  role: String,
+  content: String,
+  intent: String,
+  detectedTopics: [String],
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
+leadSchema.index({ visitorIds: 1 });
+profileSchema.index({ email: 1 });
+profileSchema.index({ phone: 1 });
+profileSchema.index({ visitorIds: 1 });
+profileSchema.index({ leadId: 1 });
+messageSchema.index({ visitorId: 1, createdAt: -1 });
+messageSchema.index({ sessionId: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
+const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
+const Message = mongoose.models.Message || mongoose.model("Message", messageSchema);
 
 // =============================
 // FUNCION JSON SEGURA
@@ -364,6 +416,383 @@ function combinarListas(base = [], nuevas = []) {
   return [...new Set([...base, ...nuevas].filter(Boolean))];
 }
 
+function detectarIntentoMensaje(texto, estado = null) {
+  const estadoBase = estado || { interesComercial: false, consultaPrecio: false };
+
+  if (detectarConsultaPrecio(texto)) {
+    return "consulta_precio";
+  }
+
+  if (detectarAceptacionLlamada(texto, estadoBase)) {
+    return "acepta_llamada";
+  }
+
+  if (detectarRechazoLlamada(texto, estadoBase)) {
+    return "rechaza_llamada";
+  }
+
+  if (detectarEnvioDatosContacto(texto)) {
+    return "comparte_datos";
+  }
+
+  if (/\b(?:receta|cocinar|desayuno|comida|cena|pollo|carne|pescado|salm[oó]n|pancake|hotcake|panqueque)\b/i.test(texto)) {
+    return "consulta_receta";
+  }
+
+  if (/\b(?:garant[ií]a|material|producto|productos)\b/i.test(texto)) {
+    return "consulta_producto";
+  }
+
+  return "general";
+}
+
+function inferirLeadStatus({
+  leadGuardado = null,
+  estadoConversacion = null,
+  tieneDatosContacto = false,
+  esCliente = "",
+  quiereLlamada = ""
+}) {
+  if (esCliente === "si" || leadGuardado?.esCliente === "si") {
+    return "cliente";
+  }
+
+  if ((quiereLlamada === "si" || leadGuardado?.quiereLlamada === "si") && tieneDatosContacto) {
+    return "calificado";
+  }
+
+  if (quiereLlamada === "si" || leadGuardado?.quiereLlamada === "si") {
+    return "interesado";
+  }
+
+  if (tieneDatosContacto) {
+    return "interesado";
+  }
+
+  if (estadoConversacion?.interesComercial || estadoConversacion?.consultaPrecio) {
+    return "interesado";
+  }
+
+  return "anonimo";
+}
+
+function construirProfileSummary(profile) {
+  if (!profile) {
+    return "";
+  }
+
+  const partes = [];
+
+  if (profile.name) {
+    partes.push(`Nombre: ${profile.name}.`);
+  }
+
+  if (profile.ocupacion) {
+    partes.push(`Ocupacion: ${profile.ocupacion}.`);
+  }
+
+  if (profile.cocinaPara) {
+    partes.push(`Cocina para ${profile.cocinaPara}.`);
+  }
+
+  if (profile.esCliente) {
+    partes.push(`Estado cliente: ${profile.esCliente}.`);
+  }
+
+  if (profile.tieneProductos) {
+    partes.push(`Tiene productos: ${profile.tieneProductos}.`);
+  }
+
+  if (profile.productos?.length) {
+    partes.push(`Productos confirmados: ${profile.productos.join(", ")}.`);
+  }
+
+  if (profile.productosInteres?.length) {
+    partes.push(`Productos de interes: ${profile.productosInteres.join(", ")}.`);
+  }
+
+  if (profile.temasInteres?.length) {
+    partes.push(`Temas de interes: ${profile.temasInteres.join(", ")}.`);
+  }
+
+  if (profile.necesitaGarantia) {
+    partes.push(`Garantia: ${profile.necesitaGarantia}.`);
+  }
+
+  if (profile.quiereLlamada) {
+    partes.push(`Interes en llamada: ${profile.quiereLlamada}.`);
+  }
+
+  if (profile.leadStatus) {
+    partes.push(`Estado comercial: ${profile.leadStatus}.`);
+  }
+
+  return partes.join(" ");
+}
+
+async function resolverPerfilExistente(visitorId, email = "", phone = "", leadId = null) {
+  const condiciones = [];
+
+  if (visitorId) {
+    condiciones.push({ visitorId });
+    condiciones.push({ visitorIds: visitorId });
+  }
+
+  if (email) {
+    condiciones.push({ email });
+  }
+
+  if (phone) {
+    condiciones.push({ phone });
+  }
+
+  if (leadId) {
+    condiciones.push({ leadId });
+  }
+
+  if (!condiciones.length) {
+    return null;
+  }
+
+  return await Profile.findOne({ $or: condiciones }).sort({ createdAt: 1 });
+}
+
+async function guardarMensajeRaw({
+  visitorId,
+  sessionId,
+  profileId = null,
+  leadId = null,
+  role,
+  content,
+  estadoConversacion = null
+}) {
+  if (!visitorId || !content) {
+    return null;
+  }
+
+  try {
+    return await Message.create({
+      visitorId,
+      sessionId,
+      profileId,
+      leadId,
+      role,
+      content,
+      intent: role === "user" ? detectarIntentoMensaje(content, estadoConversacion) : "respuesta_ai",
+      detectedTopics: role === "user" ? extraerTemasInteres(content) : [],
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.log("Error guardando mensaje raw MongoDB:", error.message);
+    return null;
+  }
+}
+
+async function guardarOActualizarPerfil({
+  visitorId,
+  sessionId,
+  texto,
+  estadoConversacion = null,
+  leadGuardado = null
+}) {
+  if (!visitorId) {
+    return null;
+  }
+
+  const leadInfo = extraerLeadInfo(texto);
+  const detallesLead = extraerDetallesLead(texto);
+  const tieneProductos = extraerTieneProductos(texto, detallesLead.productos);
+  const necesitaGarantia = extraerNecesitaGarantia(texto);
+  const perfilExistente = await resolverPerfilExistente(
+    visitorId,
+    leadGuardado?.email || leadInfo?.email || "",
+    leadGuardado?.phone || leadInfo?.phone || "",
+    leadGuardado?._id || null
+  );
+  const productosConfirmados = tieneProductos === "si"
+    ? combinarListas(
+        perfilExistente?.productos || [],
+        detallesLead.productos
+      )
+    : perfilExistente?.productos || [];
+  const productosInteres = tieneProductos === "si"
+    ? perfilExistente?.productosInteres || []
+    : combinarListas(
+        perfilExistente?.productosInteres || [],
+        detallesLead.productos
+      );
+  const profilePayload = {
+    visitorId: perfilExistente?.visitorId || visitorId,
+    visitorIds: combinarListas(
+      perfilExistente?.visitorIds || [],
+      visitorId ? [visitorId] : []
+    ),
+    sessionIds: combinarListas(perfilExistente?.sessionIds || [], sessionId ? [sessionId] : []),
+    leadId: leadGuardado?._id || perfilExistente?.leadId || null,
+    name: seleccionarValorMasCompleto(
+      leadGuardado?.name,
+      detallesLead.name,
+      estadoConversacion?.name,
+      perfilExistente?.name
+    ),
+    email: seleccionarValorString(
+      leadGuardado?.email,
+      leadInfo?.email,
+      perfilExistente?.email
+    ),
+    phone: seleccionarValorString(
+      leadGuardado?.phone,
+      leadInfo?.phone,
+      perfilExistente?.phone
+    ),
+    direccion: seleccionarValorMasCompleto(
+      leadGuardado?.direccion,
+      detallesLead.direccion,
+      estadoConversacion?.direccion,
+      perfilExistente?.direccion
+    ),
+    ocupacion: seleccionarValorMasCompleto(
+      leadGuardado?.ocupacion,
+      detallesLead.ocupacion,
+      estadoConversacion?.ocupacion,
+      perfilExistente?.ocupacion
+    ),
+    esCliente: seleccionarValorString(
+      leadGuardado?.esCliente,
+      detallesLead.esCliente,
+      estadoConversacion?.esCliente,
+      perfilExistente?.esCliente
+    ),
+    tieneProductos: seleccionarValorString(
+      leadGuardado?.tieneProductos,
+      tieneProductos,
+      estadoConversacion?.tieneProductos,
+      perfilExistente?.tieneProductos
+    ),
+    necesitaGarantia: seleccionarValorString(
+      leadGuardado?.necesitaGarantia,
+      necesitaGarantia,
+      estadoConversacion?.necesitaGarantia,
+      perfilExistente?.necesitaGarantia
+    ),
+    quiereLlamada: seleccionarValorString(
+      leadGuardado?.quiereLlamada,
+      estadoConversacion?.quiereLlamada,
+      perfilExistente?.quiereLlamada
+    ),
+    productos: productosConfirmados,
+    productosInteres,
+    temasInteres: combinarListas(
+      perfilExistente?.temasInteres || [],
+      combinarListas(detallesLead.temasInteres, estadoConversacion?.temasInteres || [])
+    ),
+    cocinaPara: seleccionarValorMasCompleto(
+      leadGuardado?.cocinaPara,
+      detallesLead.cocinaPara,
+      estadoConversacion?.cocinaPara,
+      perfilExistente?.cocinaPara
+    ),
+    leadStatus: inferirLeadStatus({
+      leadGuardado,
+      estadoConversacion,
+      tieneDatosContacto: Boolean(
+        leadGuardado?.phone ||
+        leadGuardado?.email ||
+        leadInfo?.phone ||
+        leadInfo?.email
+      ),
+      esCliente: leadGuardado?.esCliente || detallesLead.esCliente || estadoConversacion?.esCliente || "",
+      quiereLlamada: leadGuardado?.quiereLlamada || estadoConversacion?.quiereLlamada || ""
+    }),
+    lastUserMessage: texto,
+    lastInteractionAt: new Date(),
+    updatedAt: new Date(),
+    conversationCount: (perfilExistente?.conversationCount || 0) + 1
+  };
+
+  profilePayload.profileSummary = construirProfileSummary(profilePayload);
+
+  try {
+    return await Profile.findOneAndUpdate(
+      perfilExistente?._id ? { _id: perfilExistente._id } : { visitorId },
+      {
+        $set: profilePayload,
+        $push: {
+          recentHistory: {
+            $each: [
+              {
+                role: "user",
+                content: texto,
+                createdAt: new Date()
+              }
+            ],
+            $slice: -8
+          }
+        },
+        $setOnInsert: {
+          createdAt: new Date()
+        }
+      },
+      {
+        new: true,
+        upsert: true
+      }
+    );
+  } catch (error) {
+    console.log("Error guardando profile MongoDB:", error.message);
+    return null;
+  }
+}
+
+async function guardarRespuestaIAEnProfile(profile, respuestaIA, leadGuardado = null) {
+  if (!profile || !respuestaIA) {
+    return profile;
+  }
+
+  const payload = {
+    lastAssistantMessage: respuestaIA,
+    lastInteractionAt: new Date(),
+    updatedAt: new Date(),
+    leadId: leadGuardado?._id || profile.leadId || null
+  };
+  const profileBase = typeof profile.toObject === "function" ? profile.toObject() : profile;
+  const profileActualizado = {
+    ...profileBase,
+    ...payload
+  };
+  profileActualizado.profileSummary = construirProfileSummary(profileActualizado);
+
+  try {
+    return await Profile.findByIdAndUpdate(
+      profile._id,
+      {
+        $set: {
+          ...payload,
+          profileSummary: profileActualizado.profileSummary
+        },
+        $push: {
+          recentHistory: {
+            $each: [
+              {
+                role: "assistant",
+                content: respuestaIA,
+                createdAt: new Date()
+              }
+            ],
+            $slice: -8
+          }
+        }
+      },
+      {
+        new: true
+      }
+    );
+  } catch (error) {
+    console.log("Error guardando respuesta IA en profile MongoDB:", error.message);
+    return profile;
+  }
+}
+
 function obtenerEstadoConversacion(sessionId) {
   if (!estadosConversacion[sessionId]) {
     estadosConversacion[sessionId] = {
@@ -638,6 +1067,10 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
     return primaryLead;
   }
 
+  const allVisitorIds = combinarListas(
+    primaryLead.visitorIds || [],
+    duplicateLeads.flatMap(lead => lead.visitorIds || [])
+  );
   const allSessionIds = combinarListas(
     primaryLead.sessionIds || [],
     duplicateLeads.flatMap(lead => lead.sessionIds || [])
@@ -659,6 +1092,7 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
     ...duplicateLeads.flatMap(lead => lead.conversationHistory || [])
   ]);
 
+  primaryLead.visitorIds = allVisitorIds;
   primaryLead.sessionIds = allSessionIds;
   primaryLead.productos = allProductos;
   primaryLead.temasInteres = allTemasInteres;
@@ -715,6 +1149,10 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
     primaryLead.lastAssistantMessage,
     ...duplicateLeads.map(lead => lead.lastAssistantMessage)
   );
+  primaryLead.leadStatus = seleccionarValorString(
+    primaryLead.leadStatus,
+    ...duplicateLeads.map(lead => lead.leadStatus)
+  );
   primaryLead.lastInteractionAt = new Date(
     Math.max(
       obtenerTimestampSeguro(primaryLead.lastInteractionAt),
@@ -731,8 +1169,12 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
   return primaryLead;
 }
 
-async function resolverLeadExistente(sessionId, email = "", phone = "") {
+async function resolverLeadExistente(sessionId, visitorId = "", email = "", phone = "") {
   const condiciones = [];
+
+  if (visitorId) {
+    condiciones.push({ visitorIds: visitorId });
+  }
 
   if (email) {
     condiciones.push({ email });
@@ -770,8 +1212,10 @@ async function resolverLeadExistente(sessionId, email = "", phone = "") {
   return primaryLead;
 }
 
-function construirPerfilHistoricoPrompt(lead) {
-  if (!lead) {
+function construirPerfilHistoricoPrompt(profile = null, lead = null) {
+  const fuente = profile || lead;
+
+  if (!fuente) {
     return `
 PERFIL HISTORICO:
 - sin_historial_previo: si
@@ -781,11 +1225,13 @@ Si aun no conoces a la persona, atiendela con calidez y usa solo lo que diga en 
 `;
   }
 
-  const notasRecientes = normalizarNotas(lead.notes || [])
+  const notasRecientes = normalizarNotas(lead?.notes || [])
     .slice(-4)
     .map(note => note.text)
     .join(" | ");
-  const historialReciente = normalizarHistorialConversacion(lead.conversationHistory || [])
+  const historialReciente = normalizarHistorialConversacion(
+    profile?.recentHistory || lead?.conversationHistory || []
+  )
     .slice(-6)
     .map(entry => `- ${entry.role}: ${entry.content}`)
     .join("\n");
@@ -793,18 +1239,21 @@ Si aun no conoces a la persona, atiendela con calidez y usa solo lo que diga en 
   return `
 PERFIL HISTORICO:
 - sin_historial_previo: no
-- nombre: ${lead.name || "desconocido"}
-- telefono: ${lead.phone || "desconocido"}
-- email: ${lead.email || "desconocido"}
-- direccion: ${lead.direccion || "desconocida"}
-- ocupacion: ${lead.ocupacion || "desconocida"}
-- es_cliente: ${lead.esCliente || "desconocido"}
-- tiene_productos: ${lead.tieneProductos || "desconocido"}
-- productos_confirmados_del_cliente: ${lead.tieneProductos === "si" && lead.productos?.length ? lead.productos.join(", ") : "sin productos confirmados"}
-- productos_mencionados_en_historial: ${lead.productos?.length ? lead.productos.join(", ") : "ninguno"}
-- cocina_para: ${lead.cocinaPara || "desconocido"}
-- necesita_garantia: ${lead.necesitaGarantia || "desconocido"}
-- temas_interes: ${lead.temasInteres?.length ? lead.temasInteres.join(", ") : "ninguno"}
+- nombre: ${fuente.name || "desconocido"}
+- telefono: ${fuente.phone || "desconocido"}
+- email: ${fuente.email || "desconocido"}
+- direccion: ${fuente.direccion || "desconocida"}
+- ocupacion: ${fuente.ocupacion || "desconocida"}
+- es_cliente: ${fuente.esCliente || "desconocido"}
+- tiene_productos: ${fuente.tieneProductos || "desconocido"}
+- productos_confirmados_del_cliente: ${fuente.tieneProductos === "si" && fuente.productos?.length ? fuente.productos.join(", ") : "sin productos confirmados"}
+- productos_de_interes: ${profile?.productosInteres?.length ? profile.productosInteres.join(", ") : "ninguno"}
+- productos_mencionados_en_historial: ${fuente.productos?.length ? fuente.productos.join(", ") : "ninguno"}
+- cocina_para: ${fuente.cocinaPara || "desconocido"}
+- necesita_garantia: ${fuente.necesitaGarantia || "desconocido"}
+- temas_interes: ${fuente.temasInteres?.length ? fuente.temasInteres.join(", ") : "ninguno"}
+- estado_comercial: ${profile?.leadStatus || lead?.leadStatus || "desconocido"}
+- resumen_de_perfil: ${profile?.profileSummary || "sin resumen"}
 - notas_relevantes: ${notasRecientes || "ninguna"}
 - historial_reciente:
 ${historialReciente || "- sin historial reciente"}
@@ -837,7 +1286,7 @@ async function sincronizarLeadAGoogleSheets(lead) {
   }
 }
 
-async function guardarLeadSiExiste(texto, sessionId, estadoConversacion = null) {
+async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConversacion = null) {
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
   const email = leadInfo?.email || estadoConversacion?.email || "";
@@ -856,18 +1305,36 @@ async function guardarLeadSiExiste(texto, sessionId, estadoConversacion = null) 
       estadoConversacion?.temasInteres || [],
       detallesLead.temasInteres
     );
-    const leadExistente = await resolverLeadExistente(sessionId, email, phone);
+    const leadExistente = await resolverLeadExistente(sessionId, visitorId, email, phone);
+
+    if (!leadExistente && !email && !phone) {
+      return null;
+    }
+
     const leadId = leadExistente?._id || new mongoose.Types.ObjectId();
+    const visitorIds = combinarListas(
+      leadExistente?.visitorIds || [],
+      visitorId ? [visitorId] : []
+    );
     const sessionIds = combinarListas(
       leadExistente?.sessionIds || [],
       sessionId ? [sessionId] : []
     );
+    const leadStatus = inferirLeadStatus({
+      leadGuardado: leadExistente,
+      estadoConversacion,
+      tieneDatosContacto: Boolean(email || phone),
+      esCliente: detallesLead.esCliente || estadoConversacion?.esCliente || leadExistente?.esCliente || "",
+      quiereLlamada: estadoConversacion?.quiereLlamada || leadExistente?.quiereLlamada || ""
+    });
     const camposActualizar = {
+      visitorIds,
       sessionIds,
       message: texto,
       updatedAt: new Date(),
       lastInteractionAt: new Date(),
-      quiereLlamada: estadoConversacion?.quiereLlamada || leadExistente?.quiereLlamada || ""
+      quiereLlamada: estadoConversacion?.quiereLlamada || leadExistente?.quiereLlamada || "",
+      leadStatus
     };
     const actualizacion = {
       $set: camposActualizar,
@@ -1172,8 +1639,10 @@ ${JSON.stringify(encuestaVentas)}
 // CHAT
 // =============================
 app.post("/chat", async (req, res) => {
-  const { pregunta, sessionId } = req.body;
+  const { pregunta, sessionId, visitorId } = req.body;
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
+  const visitorIdLimpio =
+    typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
 
   if (!preguntaLimpia) {
     return res.status(400).json({ error: "pregunta requerida" });
@@ -1194,17 +1663,35 @@ app.post("/chat", async (req, res) => {
 
   try {
     actualizarEstadoConversacion(sessionId, preguntaLimpia);
+    const estadoActual = obtenerEstadoConversacion(sessionId);
 
     const leadGuardado = await guardarLeadSiExiste(
       preguntaLimpia,
       sessionId,
-      obtenerEstadoConversacion(sessionId)
+      visitorIdLimpio,
+      estadoActual
     );
-    actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
+    const estadoConLead = actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
+    const profileGuardado = await guardarOActualizarPerfil({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      texto: preguntaLimpia,
+      estadoConversacion: estadoConLead,
+      leadGuardado
+    });
+    await guardarMensajeRaw({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      profileId: profileGuardado?._id || null,
+      leadId: leadGuardado?._id || null,
+      role: "user",
+      content: preguntaLimpia,
+      estadoConversacion: estadoConLead
+    });
 
     const contexto = construirContexto(preguntaLimpia);
     const estadoPrompt = construirEstadoPrompt(sessionId);
-    const perfilPrompt = construirPerfilHistoricoPrompt(leadGuardado);
+    const perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado, leadGuardado);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -1239,8 +1726,22 @@ app.post("/chat", async (req, res) => {
 
     const respuestaIA = data.choices[0].message;
     const leadFinal = await guardarRespuestaIAEnPerfil(leadGuardado, respuestaIA.content);
+    const profileFinal = await guardarRespuestaIAEnProfile(
+      profileGuardado,
+      respuestaIA.content,
+      leadFinal
+    );
 
     conversaciones[sessionId].push(respuestaIA);
+    await guardarMensajeRaw({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      profileId: profileFinal?._id || profileGuardado?._id || null,
+      leadId: leadFinal?._id || leadGuardado?._id || null,
+      role: "assistant",
+      content: respuestaIA.content,
+      estadoConversacion: obtenerEstadoConversacion(sessionId)
+    });
     await sincronizarLeadAGoogleSheets(
       leadFinal?.email || leadFinal?.phone ? leadFinal : null
     );
