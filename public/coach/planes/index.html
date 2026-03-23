@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planes | Agustin 2.0 Coach</title>
+    <meta
+      name="description"
+      content="Activa el acceso privado a Agustin 2.0 Coach por $30 al mes para distribuidores."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/coach/styles.css" />
+  </head>
+  <body>
+    <div class="coach-shell">
+      <header class="coach-nav">
+        <a class="coach-brand" href="/coach/">
+          <div class="coach-brand-badge">💼</div>
+          <div class="coach-brand-copy">
+            <h1>Agustin 2.0 Coach</h1>
+            <p>Acceso privado para distribuidores</p>
+          </div>
+        </a>
+
+        <nav class="coach-nav-links">
+          <a class="nav-link" href="/coach/">Inicio</a>
+          <a class="nav-link" href="/coach/login/">Login</a>
+          <a class="nav-button" href="/">Chef público</a>
+        </nav>
+      </header>
+
+      <section class="plan-layout" style="padding-top: 28px;">
+        <article class="plan-card">
+          <div class="eyebrow">Plan de lanzamiento</div>
+          <h2 class="section-heading">Un solo plan. Un solo acceso. Todo el Coach.</h2>
+          <p class="section-copy">
+            Esta suscripción está pensada para distribuidores que quieren tener una guía privada para vender, dar
+            seguimiento, contestar objeciones y moverse con más claridad.
+          </p>
+
+          <div class="plan-price">
+            <strong>$30</strong>
+            <span>USD al mes</span>
+          </div>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Modo Coach privado</strong>
+                <span>Separado del chat público del Chef.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Apoyo para objeciones</strong>
+                <span>Respuestas más claras para dudas comunes en demos y seguimiento.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Flujo para citas y seguimiento</strong>
+                <span>Sugerencias más ordenadas para mover prospectos al siguiente paso.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Crecimiento futuro</strong>
+                <span>Más adelante aquí entrarán entrenamiento privado, universidad y copiloto de demo.</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <aside class="plan-card">
+          <h3>Checkout listo para conectar</h3>
+          <p class="section-copy">
+            Este es el lugar donde quedará el checkout real. En el siguiente paso lo conectamos con Stripe y después
+            abrimos el acceso con login.
+          </p>
+
+          <div class="checkout-placeholder">
+            <p>
+              Botón listo para ser conectado a Stripe Checkout con el plan mensual de Agustin 2.0 Coach.
+            </p>
+
+            <div class="checkout-actions">
+              <button class="primary-button" data-placeholder-action="checkout">Continuar al pago</button>
+              <a class="secondary-button" href="/coach/login/">Ya tengo cuenta</a>
+            </div>
+          </div>
+
+          <p class="mini-note">
+            Cuando el cobro quede conectado, este flujo hará: pago exitoso, activación de cuenta, login y acceso al
+            Coach.
+          </p>
+        </aside>
+      </section>
+
+      <p class="footer-note">
+        Página de suscripción lista para conectar a Stripe.
+      </p>
+    </div>
+
+    <script src="/coach/app.js"></script>
+  </body>
+</html>

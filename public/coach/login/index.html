@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Agustin 2.0 Coach</title>
+    <meta
+      name="description"
+      content="Acceso privado para distribuidores con suscripción activa a Agustin 2.0 Coach."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/coach/styles.css" />
+  </head>
+  <body>
+    <div class="coach-shell">
+      <header class="coach-nav">
+        <a class="coach-brand" href="/coach/">
+          <div class="coach-brand-badge">🔐</div>
+          <div class="coach-brand-copy">
+            <h1>Agustin 2.0 Coach</h1>
+            <p>Login privado para distribuidores</p>
+          </div>
+        </a>
+
+        <nav class="coach-nav-links">
+          <a class="nav-link" href="/coach/">Inicio</a>
+          <a class="nav-link" href="/coach/planes/">Plan $30</a>
+        </nav>
+      </header>
+
+      <section class="login-layout">
+        <article class="login-panel">
+          <div class="eyebrow">Acceso privado</div>
+          <h2>Entra a tu Coach</h2>
+          <p>
+            Esta pantalla queda lista para conectarse al login real. Solo cuentas con suscripción activa podrán entrar
+            al modo privado del distribuidor.
+          </p>
+
+          <form class="coach-form">
+            <div>
+              <label for="coach-email">Correo</label>
+              <input id="coach-email" type="email" placeholder="tu-correo@ejemplo.com" required />
+            </div>
+
+            <div>
+              <label for="coach-password">Contraseña</label>
+              <input id="coach-password" type="password" placeholder="Tu contraseña" required />
+            </div>
+
+            <button class="primary-button" type="submit">Entrar al Coach</button>
+
+            <div class="form-result">
+              La interfaz ya quedó lista. El siguiente paso es conectar el login real y validar suscripción activa.
+            </div>
+          </form>
+
+          <div class="form-help">
+            Si todavía no tienes acceso, primero activa tu plan desde la página de suscripción. Después conectaremos esta
+            pantalla a la base de usuarios y al sistema de suscripciones.
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <script src="/coach/app.js"></script>
+  </body>
+</html>
