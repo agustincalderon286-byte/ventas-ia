@@ -1958,6 +1958,7 @@ const encuestaVentas = cargarJSON("./src/data/Encuesta_intelijente");
 const inteligenciaVentas = cargarJSON("./src/data/Eric_Material_viejo");
 const recetasRoyalPrestige = cargarJSON("./src/data/recetas_royal_prestige");
 const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_royal_prestige");
+const opcionesPagoRoyalPrestige = cargarJSON("./src/data/royalprestige_pagos_site.json");
 const demoVenta = cargarJSON("./src/data/Demo_venta_1");
 
 const cierresAlexDey = cargarJSON("./src/data/12_cierres_alex_dey.json");
@@ -1982,7 +1983,7 @@ try {
 // =============================
 // PROMPT OPTIMIZADO
 // =============================
-const systemPrompt = `
+const chefSystemPrompt = `
 Eres Agustin 2.0, un chef inteligente, cercano y paciente. Ayudas gratis a familias latinas a cocinar mas rico, mas saludable y a usar bien sus productos Royal Prestige. Tambien eres un asistente comercial amable que detecta interes real y ayuda a pasar a llamada informativa sin presionar.
 
 VOZ Y TONO:
@@ -2059,10 +2060,59 @@ No repitas informacion innecesaria.
 - Siempre prioriza que la persona se sienta comoda, entendida y bienvenida.
 `;
 
+const coachSystemPrompt = `
+Eres Agustin 2.0 Coach, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, ordenar seguimientos, preparar demos y mover prospectos al siguiente paso con mas claridad.
+
+VOZ Y TONO:
+- Habla claro, directo, calido y util
+- Usa lenguaje sencillo, practico y accionable
+- Suena como un coach de ventas paciente, no como call center ni como vendedor agresivo
+- Da respuestas cortas que el distribuidor pueda usar de inmediato
+- Si algo se puede decir mas simple, dilo mas simple
+
+OBJETIVO PRINCIPAL:
+- Ayudar al distribuidor a contestar objeciones
+- Sugerir siguientes pasos de seguimiento
+- Dar ideas para demos, citas, cierres y reclutamiento
+- Aterrizar el conocimiento del producto en palabras faciles
+- Convertir informacion dispersa en respuestas practicas
+
+REGLAS DE RESPUESTA:
+- Maximo 5 oraciones
+- Prioriza claridad y utilidad inmediata
+- Si la pregunta es una objecion, responde con:
+  1. que contestar
+  2. por que funciona
+  3. siguiente paso sugerido
+- Si la pregunta es sobre producto, explica como presentarlo facil
+- Si la pregunta es sobre seguimiento, da un guion corto o proximo paso
+- Si la pregunta es sobre reclutamiento, habla claro y sin exagerar
+- No pidas nombre, telefono ni datos de lead
+- No trates al distribuidor como cliente final
+- No invites a una llamada informativa como lo haria el Chef
+- No hables como recetario a menos que el distribuidor este preparando una demo o ejemplo para cliente
+
+ENFOQUE:
+- El usuario aqui es distribuidor, no prospecto
+- Piensa como coach de ventas, no como chef publico
+- Puedes usar recetas o producto solo si ayudan a vender, demostrar o explicar mejor
+- Si la informacion privada todavia no esta conectada, responde con lo mejor que haya en entrenamiento, producto y seguimiento
+- Nunca reveles que esta area es publica o abierta; esta es una herramienta privada del distribuidor
+
+IMPORTANTE:
+Tienes acceso a multiples bases de conocimiento.
+Usa primero lo mas relevante para ventas, objeciones, demos, producto y seguimiento.
+No inventes beneficios ni politicas fuera del contexto disponible.
+`;
+
 // =============================
 // FUNCION INTELIGENTE (FILTRA DATA)
 // =============================
-function construirContextoEstatico(pregunta) {
+function normalizarModoChat(mode = "") {
+  return String(mode || "").trim().toLowerCase() === "coach" ? "coach" : "chef";
+}
+
+function construirContextoEstaticoChef(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = `
 CATALOGO:
@@ -2114,12 +2164,89 @@ ${JSON.stringify(encuestaVentas)}
   return contexto;
 }
 
-async function construirContexto(pregunta) {
-  if (!ENABLE_VECTOR_SEARCH) {
-    return construirContextoEstatico(pregunta);
+function construirContextoEstaticoCoach(pregunta) {
+  const preguntaNormalizada = pregunta.toLowerCase();
+  let contexto = `
+CATALOGO:
+${JSON.stringify(preciosCatalogo)}
+
+CARACTERISTICAS:
+${JSON.stringify(beneficiosProductos)}
+
+VENTAS:
+${JSON.stringify(inteligenciaVentas)}
+
+DEMO:
+${JSON.stringify(demoVenta)}
+
+CIERRES:
+${JSON.stringify(cierresAlexDey)}
+
+MENTALIDAD:
+${JSON.stringify(mentalidadOlmedo)}
+
+SEGUIMIENTO:
+${JSON.stringify(sistema4Citas)}
+`;
+
+  if (
+    preguntaNormalizada.includes("garantia") ||
+    preguntaNormalizada.includes("material") ||
+    /olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|royal prestige|extractor|producto/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
   }
 
-  const sourceTypes = inferirTiposFuentePorPregunta(pregunta);
+  if (
+    /precio|precios|cu[aá]nto|cuesta|pago|pagos|diario|mensual|financiamiento|plan/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += `\nPAGOS:\n${JSON.stringify(opcionesPagoRoyalPrestige)}`;
+  }
+
+  if (
+    /receta|recetas|cocinar|cocina|demo|demostraci[oó]n|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += `\nRECETAS PARA DEMO:\n${JSON.stringify(recetasRoyalPrestige)}`;
+  }
+
+  if (preguntaNormalizada.includes("equipo") || preguntaNormalizada.includes("reclutar")) {
+    contexto += `\nRECLUTAMIENTO:\n${JSON.stringify(reclutamientoCiprian)}`;
+  }
+
+  return contexto;
+}
+
+function inferirTiposFuentePorModo(pregunta, modo = "chef") {
+  const tipos = new Set(inferirTiposFuentePorPregunta(pregunta));
+
+  if (modo === "coach") {
+    tipos.delete("real_estate");
+    tipos.delete("general");
+    tipos.add("sales_training");
+  }
+
+  if (!tipos.size) {
+    tipos.add(modo === "coach" ? "sales_training" : "general");
+  }
+
+  return Array.from(tipos);
+}
+
+async function construirContexto(pregunta, modo = "chef") {
+  const contextoEstatico =
+    modo === "coach" ? construirContextoEstaticoCoach(pregunta) : construirContextoEstaticoChef(pregunta);
+
+  if (!ENABLE_VECTOR_SEARCH) {
+    return contextoEstatico;
+  }
+
+  const sourceTypes = inferirTiposFuentePorModo(pregunta, modo);
   const matches = await buscarKnowledgeVectorial({
     mongoose,
     question: pregunta,
@@ -2128,10 +2255,38 @@ async function construirContexto(pregunta) {
   });
 
   if (!matches.length) {
-    return construirContextoEstatico(pregunta);
+    return contextoEstatico;
   }
 
   return construirContextoVectorial(matches);
+}
+
+function construirPromptModo(modo = "chef") {
+  return modo === "coach" ? coachSystemPrompt : chefSystemPrompt;
+}
+
+function construirContextoModoPrompt(modo = "chef", coachUser = null) {
+  if (modo !== "coach") {
+    return `
+MODO ACTIVO:
+- modo: chef
+- tipo_usuario: cliente_o_prospecto
+- acceso_privado: no
+`;
+  }
+
+  return `
+MODO ACTIVO:
+- modo: coach
+- tipo_usuario: distribuidor
+- acceso_privado: si
+- nombre_distribuidor: ${coachUser?.name || "desconocido"}
+- correo_distribuidor: ${coachUser?.email || "desconocido"}
+- suscripcion: ${coachUser?.subscriptionStatus || "desconocida"}
+
+INSTRUCCION:
+Responde como Coach privado de ventas. No trates a este usuario como lead ni como cliente final.
+`;
 }
 
 // =============================
@@ -2454,10 +2609,12 @@ app.use(express.static(PUBLIC_DIR));
 // CHAT
 // =============================
 app.post("/chat", async (req, res) => {
-  const { pregunta, sessionId, visitorId } = req.body;
+  const { pregunta, sessionId, visitorId, mode } = req.body;
+  const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
+  let coachAuth = null;
 
   if (!preguntaLimpia) {
     return res.status(400).json({ error: "pregunta requerida" });
@@ -2465,6 +2622,14 @@ app.post("/chat", async (req, res) => {
 
   if (!sessionId) {
     return res.status(400).json({ error: "sessionId requerido" });
+  }
+
+  if (modoChat === "coach") {
+    coachAuth = await requireCoachActivo(req, res);
+
+    if (!coachAuth) {
+      return;
+    }
   }
 
   if (!conversaciones[sessionId]) {
@@ -2477,36 +2642,59 @@ app.post("/chat", async (req, res) => {
   });
 
   try {
-    actualizarEstadoConversacion(sessionId, preguntaLimpia);
-    const estadoActual = obtenerEstadoConversacion(sessionId);
+    let leadGuardado = null;
+    let profileGuardado = null;
+    const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
+    let estadoPrompt = "";
+    let perfilPrompt = "";
 
-    const leadGuardado = await guardarLeadSiExiste(
-      preguntaLimpia,
-      sessionId,
-      visitorIdLimpio,
-      estadoActual
-    );
-    const estadoConLead = actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
-    const profileGuardado = await guardarOActualizarPerfil({
-      visitorId: visitorIdLimpio,
-      sessionId,
-      texto: preguntaLimpia,
-      estadoConversacion: estadoConLead,
-      leadGuardado
-    });
-    await guardarMensajeRaw({
-      visitorId: visitorIdLimpio,
-      sessionId,
-      profileId: profileGuardado?._id || null,
-      leadId: leadGuardado?._id || null,
-      role: "user",
-      content: preguntaLimpia,
-      estadoConversacion: estadoConLead
-    });
+    if (modoChat === "coach") {
+      estadoPrompt = `
+ESTADO DEL COACH:
+- area_privada: si
+- tipo_ayuda: objeciones, seguimiento, demo, cierre, reclutamiento
+`;
+      perfilPrompt = `
+CONTEXTO INTERNO DEL COACH:
+- esta conversacion pertenece al area privada del distribuidor
+- no capturar lead
+- no pedir telefono
+- no mandar informacion a Google Sheets
+- enfocate en objeciones, seguimiento, demo, cierre, reclutamiento y estrategia
+`;
+    } else {
+      actualizarEstadoConversacion(sessionId, preguntaLimpia);
+      const estadoActual = obtenerEstadoConversacion(sessionId);
 
-    const contexto = await construirContexto(preguntaLimpia);
-    const estadoPrompt = construirEstadoPrompt(sessionId);
-    const perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado, leadGuardado);
+      leadGuardado = await guardarLeadSiExiste(
+        preguntaLimpia,
+        sessionId,
+        visitorIdLimpio,
+        estadoActual
+      );
+      const estadoConLead = actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
+      profileGuardado = await guardarOActualizarPerfil({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        texto: preguntaLimpia,
+        estadoConversacion: estadoConLead,
+        leadGuardado
+      });
+      await guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: profileGuardado?._id || null,
+        leadId: leadGuardado?._id || null,
+        role: "user",
+        content: preguntaLimpia,
+        estadoConversacion: estadoConLead
+      });
+
+      estadoPrompt = construirEstadoPrompt(sessionId);
+      perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado, leadGuardado);
+    }
+
+    const contexto = await construirContexto(preguntaLimpia, modoChat);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -2517,7 +2705,8 @@ app.post("/chat", async (req, res) => {
       body: JSON.stringify({
         model: "gpt-5-mini",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: construirPromptModo(modoChat) },
+          { role: "system", content: modoPrompt },
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
@@ -2540,6 +2729,16 @@ app.post("/chat", async (req, res) => {
     }
 
     const respuestaIA = data.choices[0].message;
+
+    conversaciones[sessionId].push(respuestaIA);
+
+    if (modoChat === "coach") {
+      return res.json({
+        respuesta: respuestaIA.content,
+        mode: modoChat
+      });
+    }
+
     const leadFinal = await guardarRespuestaIAEnPerfil(leadGuardado, respuestaIA.content);
     const profileFinal = await guardarRespuestaIAEnProfile(
       profileGuardado,
@@ -2547,7 +2746,6 @@ app.post("/chat", async (req, res) => {
       leadFinal
     );
 
-    conversaciones[sessionId].push(respuestaIA);
     await guardarMensajeRaw({
       visitorId: visitorIdLimpio,
       sessionId,
@@ -2557,11 +2755,12 @@ app.post("/chat", async (req, res) => {
       content: respuestaIA.content,
       estadoConversacion: obtenerEstadoConversacion(sessionId)
     });
-    await sincronizarLeadAGoogleSheets(
-      leadFinal?.email || leadFinal?.phone ? leadFinal : null
-    );
+    await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
 
-    res.json({ respuesta: respuestaIA.content });
+    res.json({
+      respuesta: respuestaIA.content,
+      mode: modoChat
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error servidor" });
