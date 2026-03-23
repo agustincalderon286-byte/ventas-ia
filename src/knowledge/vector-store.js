@@ -637,7 +637,7 @@ export function inferirTiposFuentePorPregunta(question) {
     tipos.add("pricing");
   }
 
-  if (/garantia|material|olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto|extractor|exprimidor|juicer|licuadora|blender|filtro|fresca(flow|pure)|cafetera|barista|expertea|fresh max|precision cook|smart temp|warmer pro|mixing bowl|recipiente|utensilio/i.test(pregunta)) {
+  if (/garantia|material|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto|extractor|exprimidor|juicer|licuadora|blender|filtro|fresca(flow|pure)|cafetera|barista|expertea|fresh max|max cup|precision cook|smart temp|warmer pro|mixing bowl|recipiente|utensilio|innove|perfect pop|palomita|palomitas|popcorn|colador|hervidor|chocolatera|salad machine|filtracion de aire|air filtration|ducha|shower filter/i.test(pregunta)) {
     tipos.add("product_knowledge");
   }
 

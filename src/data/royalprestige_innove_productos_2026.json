@@ -1,0 +1,395 @@
+{
+  "metadata": {
+    "titulo": "Catalogo INNOVE 2026 USA - Productos",
+    "origen": "INNOVE Catalog_USA_0226_Digital-2.pdf",
+    "tipo_contenido": "Catalogo de productos Royal Prestige USA 2026",
+    "uso": "Base curada para Chef y Coach sobre sistemas de cocina, electrodomesticos, cuchillos, accesorios y filtracion",
+    "nota": "Resume el catalogo 02-26. La disponibilidad puede variar y algunas piezas se venden por separado."
+  },
+  "productos": [
+    {
+      "id": "innove_overview_2026",
+      "titulo": "Sistemas de Cocina INNOVE",
+      "categoria": "sistemas_de_cocina",
+      "paginas": "4-5",
+      "descripcion": "Linea principal de sistemas de cocina INNOVE para cocinar con poca o nada de agua y poca grasa, aprovechando mejor sabor y nutrientes.",
+      "caracteristicas_clave": [
+        "Fabricados en Italia",
+        "Garantia limitada de 50 anos",
+        "Aptos para estufas electricas, gas e induccion",
+        "Aro Silicromatico para mejor sello con vapores",
+        "Ventanilla indicadora de humedad",
+        "Asas desmontables, intercambiables y resistentes hasta 400F/204C",
+        "Valvula Redi-Temp con alerta sonora"
+      ],
+      "por_que_te_encantara": [
+        "Ayuda a cocinar con menos grasa y menos agua",
+        "Aprovecha mejor el sabor y los nutrientes",
+        "Permite cocinar con mas control y eficiencia",
+        "Da versatilidad para recetas de diario y recetas especiales"
+      ],
+      "uso_para_chef": "Recomendar cuando pidan cocinar mas saludable, con menos grasa, con mejor retencion y usando induccion.",
+      "uso_para_coach": "Presentarlo como sistema premium de uso diario, valor duradero y cocina eficiente para toda la familia.",
+      "preguntas_utiles_de_venta": [
+        "Le serviria cocinar con menos grasa y con mas control del vapor?",
+        "Usa estufa de induccion o le gustaria tener esa opcion?"
+      ]
+    },
+    {
+      "id": "sistema_familiar_10_piezas",
+      "titulo": "Sistema de Cocina Familiar de 10 Piezas",
+      "categoria": "sistemas_de_cocina",
+      "paginas": "6",
+      "descripcion": "Sistema completo para preparar gran variedad de platillos para familias numerosas o recetas mas completas.",
+      "incluye": [
+        "Olla de 2 cuartos",
+        "Olla de 4 cuartos",
+        "Olla de 6 cuartos",
+        "Sarten de 8 pulgadas",
+        "Sarten de 10.5 pulgadas",
+        "Tapa pequena",
+        "Tapa mediana",
+        "Tapa grande",
+        "Tapa alta",
+        "Colador pequeno"
+      ],
+      "por_que_te_encantara": [
+        "Listo para cocinar diario sin quedarse corto",
+        "Sirve para familias grandes y recetas mas elaboradas",
+        "Cubre desde salsas hasta comidas completas"
+      ],
+      "uso_para_chef": "Ideal para recomendar cuando cocinan para varios o quieren un sistema mas completo.",
+      "uso_para_coach": "Buen paquete principal para clientes que quieren resolver cocina diaria y reuniones familiares."
+    },
+    {
+      "id": "sistema_especial_8_piezas",
+      "titulo": "Sistema de Cocina Especial de 8 Piezas",
+      "categoria": "sistemas_de_cocina",
+      "paginas": "7",
+      "descripcion": "Sistema versatil con olla, paellera y tapas para variedad de recetas y mejor presentacion.",
+      "incluye": [
+        "Olla de 2 cuartos",
+        "Olla de 4 cuartos",
+        "Olla de 8 pulgadas",
+        "Paellera de 14 pulgadas",
+        "Tapa pequena",
+        "Tapa mediana",
+        "Tapa grande",
+        "Tapa de paellera"
+      ],
+      "por_que_te_encantara": [
+        "Da estilo y versatilidad",
+        "Ayuda con recetas especiales y presentacion",
+        "La paellera abre mas opciones de cocina"
+      ],
+      "uso_para_chef": "Util para recomendar a quien cocina recetas variadas y quiere una paellera.",
+      "uso_para_coach": "Sirve para armar oferta cuando el cliente busca algo mas lucidor y versatil."
+    },
+    {
+      "id": "sistema_clasico_7_piezas",
+      "titulo": "Sistema de Cocina Clasico de 7 Piezas",
+      "categoria": "sistemas_de_cocina",
+      "paginas": "8",
+      "descripcion": "Sistema clasico INNOVE con metodo de coccion comprobado para conservar sabor y valor nutricional.",
+      "incluye": [
+        "Olla de 2 cuartos",
+        "Olla de 4 cuartos",
+        "Sarten de 8 pulgadas",
+        "Sarten de 10.5 pulgadas",
+        "Tapa pequena",
+        "Tapa mediana",
+        "Tapa grande"
+      ],
+      "por_que_te_encantara": [
+        "Cubre lo esencial sin irse al sistema mas grande",
+        "Conserva sabor y valor nutricional",
+        "Es una entrada fuerte al mundo INNOVE"
+      ],
+      "uso_para_chef": "Para quien quiere empezar con sistema funcional y balanceado.",
+      "uso_para_coach": "Buen punto medio cuando el cliente quiere algo serio pero no tan grande."
+    },
+    {
+      "id": "sistema_complementario_5_piezas",
+      "titulo": "Sistema de Cocina Complementario de 5 Piezas",
+      "categoria": "sistemas_de_cocina",
+      "paginas": "9",
+      "descripcion": "Sistema para complementar el hogar y ampliar capacidades con ollas grandes, sarten y Perfect Pop.",
+      "incluye": [
+        "Olla de 3 cuartos",
+        "Olla de 6 cuartos",
+        "Sarten de 10.5 pulgadas",
+        "Tapa mediana",
+        "Tapa grande",
+        "Perfect Pop"
+      ],
+      "por_que_te_encantara": [
+        "Complementa muy bien un sistema base",
+        "Aporta ollas utiles y agrega Perfect Pop",
+        "Da mas juego para familia y snacks"
+      ],
+      "uso_para_chef": "Ayuda a recomendar piezas extra a quien ya cocina seguido o quiere mas capacidad.",
+      "uso_para_coach": "Muy bueno para agregado o para cliente que ya tiene piezas y quiere ampliar."
+    },
+    {
+      "id": "gourmet_skillets",
+      "titulo": "Sartenes Gourmet",
+      "categoria": "sartenes",
+      "paginas": "10",
+      "descripcion": "Sartenes de 8, 10 y 12 pulgadas con tapa para platillos tradicionales, incluso frituras, usando poco o nada de aceite.",
+      "por_que_te_encantara": [
+        "Sirven para recetas tradicionales",
+        "Tambien permiten cocinar con menos aceite",
+        "Abren mas flexibilidad en la cocina diaria"
+      ],
+      "uso_para_chef": "Recomendarlos para desayunos, salteados, frituras controladas y comidas de diario.",
+      "uso_para_coach": "Ayudan a hablarle al cliente que no quiere dejar sus comidas tradicionales."
+    },
+    {
+      "id": "colanders_innove",
+      "titulo": "Coladores INNOVE",
+      "categoria": "aliados_de_cocina",
+      "paginas": "11",
+      "descripcion": "Colador pequeno y grande hechos de acero quirurgico inoxidable T-304 para ollas de 3, 4, 6 y 8 cuartos.",
+      "por_que_te_encantara": [
+        "Ideales para pasta, caldos, sopas y guisados",
+        "Son complemento directo del sistema INNOVE",
+        "Dan practicidad en recetas de diario"
+      ],
+      "uso_para_chef": "Muy utiles cuando pregunten por pasta, caldos, sopas o coccion mas practica.",
+      "uso_para_coach": "Sirven para venta cruzada con ollas y para mostrar que el sistema no es solo una olla."
+    },
+    {
+      "id": "stock_pots_and_rack",
+      "titulo": "Ollas Grandes y Parrilla",
+      "categoria": "ollas_grandes",
+      "paginas": "16",
+      "descripcion": "Ollas de 12, 20 y 30 cuartos con opcion de parrilla especial para tamales y grandes cantidades.",
+      "por_que_te_encantara": [
+        "Ideales para reuniones familiares",
+        "Buenas para platillos tipicos y grandes porciones",
+        "La parrilla ayuda especialmente para tamales"
+      ],
+      "uso_para_chef": "Excelente para recetas de volumen, caldos, tamales y reuniones.",
+      "uso_para_coach": "Muy fuerte para clientes con familia grande, eventos o cocina tradicional mexicana."
+    },
+    {
+      "id": "perfect_pop_and_warmers",
+      "titulo": "Perfect Pop y Hervidores",
+      "categoria": "aliados_de_cocina",
+      "paginas": "21",
+      "descripcion": "Perfect Pop para palomitas caseras en olla de 6 cuartos y hervidores para leche, infusiones, mantequilla, comida de bebe, salsas y mermeladas.",
+      "por_que_te_encantara": [
+        "Perfect Pop crea experiencia divertida para la familia",
+        "Los hervidores sirven para tareas pequenas del diario",
+        "Dan mas usos al sistema y a la cocina"
+      ],
+      "uso_para_chef": "Muy util para snacks, bebidas, salsas y preparaciones pequenas.",
+      "uso_para_coach": "Ayuda a vender experiencia familiar y practicidad, no solo ollas."
+    },
+    {
+      "id": "power_blender_max",
+      "titulo": "Power Blender Max",
+      "categoria": "electrodomesticos",
+      "paginas": "24",
+      "descripcion": "Licuadora potente con jarra de vidrio de 48 onzas y accesorios como Fresh Max, Max Cup y jarra Tritan.",
+      "caracteristicas_clave": [
+        "Procesa ingredientes dificiles",
+        "Busca sabor y textura perfecta",
+        "Jarra de vidrio para apariencia elegante",
+        "Fresh Max reduce oxidacion al vacio"
+      ],
+      "por_que_te_encantara": [
+        "Ayuda a preparar smoothies, salsas y mezclas con mejor textura",
+        "Fresh Max apoya mezclas con menos oxidacion",
+        "Max Cup ayuda a llevar una porcion"
+      ],
+      "uso_para_chef": "Perfecta para smoothies, salsas, mezclas y bebidas rapidas.",
+      "uso_para_coach": "Muy buena para vender salud, practicidad y estilo de vida moderno."
+    },
+    {
+      "id": "power_blender_go",
+      "titulo": "Power Blender Go",
+      "categoria": "electrodomesticos",
+      "paginas": "25",
+      "descripcion": "Licuadora de inmersion inalambrica con motor de 13,500 RPM, base de carga y accesorios para picar, licuar y mezclar.",
+      "caracteristicas_clave": [
+        "Diseno inalambrico",
+        "13,500 RPM",
+        "Estacion para cargar y exhibir",
+        "Accesorios para picar, licuar y batir"
+      ],
+      "por_que_te_encantara": [
+        "Muy practica para uso diario",
+        "Sirve para salsas, liquidos y picados rapidos",
+        "No maltrata recipientes con el batidor de silicona"
+      ],
+      "uso_para_chef": "Ideal para salsas, cremas, mezclas pequenas y cocina rapida.",
+      "uso_para_coach": "Buena para cliente que quiere practicidad, poco espacio y uso diario."
+    },
+    {
+      "id": "royal_prestige_juicer",
+      "titulo": "Extractor de Jugos Royal Prestige",
+      "categoria": "electrodomesticos",
+      "paginas": "26",
+      "descripcion": "Extractor de jugos con motor potente que extrae eficientemente frutas y verduras y disminuye la oxidacion frente a un extractor centrifugo.",
+      "caracteristicas_clave": [
+        "Aprovecha mejor vitaminas y minerales",
+        "Aditamentos para helado, mas pulpa, smoothies y citricos"
+      ],
+      "por_que_te_encantara": [
+        "Facilita un estilo de vida saludable",
+        "Permite jugos, smoothies, sorbetes y papillas",
+        "Da versatilidad con un solo equipo"
+      ],
+      "uso_para_chef": "Muy fuerte para recetas saludables, jugos, smoothies y comida de bebe.",
+      "uso_para_coach": "Excelente para clientes de salud, bienestar y familias con ninos.",
+      "preguntas_utiles_de_venta": [
+        "Le serviria sacar mas provecho de frutas y verduras en casa?",
+        "En su casa toman jugos, smoothies o les gustaria hacer nieves naturales?"
+      ]
+    },
+    {
+      "id": "precision_cook",
+      "titulo": "Precision Cook",
+      "categoria": "electrodomesticos",
+      "paginas": "27",
+      "descripcion": "Equipo compacto para controlar la temperatura con modos preestablecidos, coccion lenta, balanza y nivel de potencia.",
+      "caracteristicas_clave": [
+        "Modo precalentar",
+        "Modo coccion lenta",
+        "Ajuste de temperatura",
+        "Funciones preprogramadas",
+        "Funcion de balanza",
+        "Cook by Power Level"
+      ],
+      "por_que_te_encantara": [
+        "Da mas control de temperatura",
+        "Ayuda a lograr resultados mas exactos",
+        "Es compatible con las lineas de ollas y sartenes Royal Prestige"
+      ],
+      "uso_para_chef": "Muy util cuando pidan precision, coccion lenta o control de temperatura.",
+      "uso_para_coach": "Ayuda a vender tecnologia, control y cocina moderna con menos improvisacion."
+    },
+    {
+      "id": "cutlery_line",
+      "titulo": "Linea de Cuchillos y All-In-One Knife Block",
+      "categoria": "cuchillos",
+      "paginas": "29-31",
+      "descripcion": "Linea de cuchillos con acero inoxidable aleman, hoja con borde en V, hendiduras para evitar que la comida se pegue y agarre ergonomico.",
+      "incluye": [
+        "Chef knife",
+        "Filet knife",
+        "Bread knife",
+        "Santoku",
+        "Paring knife",
+        "Steak knives",
+        "Carving knife y fork",
+        "Kitchen shears",
+        "Sharpening steel",
+        "Knife block de acacia"
+      ],
+      "por_que_te_encantara": [
+        "Mas precision y control al cortar",
+        "Acero premium con filo durable",
+        "Bloque con 17 ranuras y afilador integrado"
+      ],
+      "uso_para_chef": "Perfecto para recomendar por tipo de corte y por practicidad de cocina completa.",
+      "uso_para_coach": "Bueno para venta cruzada y para clientes que ya cuidan la calidad de su cocina."
+    },
+    {
+      "id": "coffee_tea_chocolate_line",
+      "titulo": "Cafe, Te y Chocolate",
+      "categoria": "bebidas",
+      "paginas": "36",
+      "descripcion": "Incluye chocolatera, tazas de pared doble y set de azucarera con jarro para leche.",
+      "por_que_te_encantara": [
+        "La chocolatera mantiene y prolonga temperatura",
+        "Tiene sistema de cono para evitar derrames al hervir",
+        "Las tazas de pared doble mantienen bebidas calientes por mas tiempo",
+        "El set de azucarera y jarro da servicio con estilo"
+      ],
+      "uso_para_chef": "Ayuda con bebidas calientes, chocolate, cafe y servicio en mesa.",
+      "uso_para_coach": "Aporta ideas de regalo, detalle y experiencia en casa."
+    },
+    {
+      "id": "salad_machine",
+      "titulo": "Salad Machine",
+      "categoria": "accesorios_de_cocina",
+      "paginas": "41",
+      "descripcion": "Cortadora de alimentos con 5 conos de acero inoxidable para cortar, rallar y rebanar mas rapido.",
+      "por_que_te_encantara": [
+        "Ahorra tiempo",
+        "Da variedad de cortes",
+        "Ayuda a preparar mas vegetales en casa"
+      ],
+      "uso_para_chef": "Muy util para ensaladas, rallados y preparacion rapida.",
+      "uso_para_coach": "Buen argumento para familias que quieren practicidad y comer mejor."
+    },
+    {
+      "id": "frescaflow",
+      "titulo": "FrescaFlow",
+      "categoria": "filtracion",
+      "paginas": "47",
+      "descripcion": "Sistema de filtracion por osmosis inversa para remover una amplia gama de sustancias, virus y bacterias a nivel microscopico.",
+      "caracteristicas_clave": [
+        "Grifo inteligente con pantalla de solidos disueltos totales",
+        "Indicadores luminosos de estado de filtros",
+        "4 etapas de filtracion",
+        "Diseno moderno",
+        "Cumplimiento de estandares minimos EPA"
+      ],
+      "por_que_te_encantara": [
+        "Ayuda a tener agua mas pura",
+        "Da informacion visible del estado del sistema",
+        "Aporta tranquilidad para la familia"
+      ],
+      "uso_para_chef": "Bueno cuando pregunten por agua para beber y cocinar mejor.",
+      "uso_para_coach": "Muy fuerte para clientes movidos por salud y bienestar familiar."
+    },
+    {
+      "id": "frescapure_3500",
+      "titulo": "FrescaPure 3500",
+      "categoria": "filtracion",
+      "paginas": "48",
+      "descripcion": "Sistema compacto que se conecta directo a la llave y reduce sabor y olor a cloro, plomo y otras particulas.",
+      "por_que_te_encantara": [
+        "Facil de instalar",
+        "Ideal para espacios reducidos",
+        "LED que avisa cuando reemplazar cartucho"
+      ],
+      "uso_para_chef": "Util para quien quiere solucion sencilla y poca instalacion.",
+      "uso_para_coach": "Buena opcion para cliente que quiere filtracion practica sin sistema grande."
+    },
+    {
+      "id": "frescapure_5500",
+      "titulo": "FrescaPure 5500",
+      "categoria": "filtracion",
+      "paginas": "48",
+      "descripcion": "Sistema con filtro de carbon activado que reduce olor y sabor a cloro, y disminuye 99% del plomo y quistes. Puede ir sobre o debajo del mostrador.",
+      "caracteristicas_clave": [
+        "Diseno versatil",
+        "Certificado por Water Quality Association"
+      ],
+      "por_que_te_encantara": [
+        "Filtracion confiable para casa",
+        "Flexible en instalacion",
+        "Enfasis fuerte en reduccion de plomo y quistes"
+      ],
+      "uso_para_chef": "Sirve cuando pregunten por agua de cocina y de beber con mejor calidad.",
+      "uso_para_coach": "Muy util para clientes preocupados por cloro, plomo y salud de la familia."
+    },
+    {
+      "id": "shower_filter_and_air_system",
+      "titulo": "Filtro para Ducha y Sistema de Filtracion de Aire",
+      "categoria": "filtracion",
+      "paginas": "49",
+      "descripcion": "Productos para mejorar la experiencia del agua en ducha y la calidad del aire dentro de casa.",
+      "por_que_te_encantara": [
+        "El filtro para ducha reduce cloro en olor y sabor y tiene cinco posiciones",
+        "El sistema de aire tiene cinco etapas para eliminar polvo, polen, pelo, humo y olores"
+      ],
+      "uso_para_chef": "Le sirve menos que otros productos, pero puede entrar cuando hablen de bienestar integral en casa.",
+      "uso_para_coach": "Amplia la conversacion de cocina a bienestar del hogar completo."
+    }
+  ]
+}

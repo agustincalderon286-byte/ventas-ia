@@ -2435,7 +2435,7 @@ ${JSON.stringify(encuestaVentas)}
   if (
     preguntaNormalizada.includes("garantia") ||
     preguntaNormalizada.includes("material") ||
-    /olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|royal prestige/i.test(
+    /olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|royal prestige|innove|perfect pop|palomitas|popcorn|colador|hervidor|extractor|juicer|licuadora|blender|precision cook|fresca(flow|pure)|salad machine|filtracion|air filtration/i.test(
       preguntaNormalizada
     )
   ) {
@@ -2609,7 +2609,7 @@ function detectarTemaCoach(preguntaNormalizada = "") {
     precio: /precio|precios|cu[aá]nto|cuesta|plan|planes|mensual|diario|financiamiento|pago|pagos|mensualidad|paquete|paquetes|combo|combos|negociar|negociacion|matematica|matematicas|catalogo|total/i.test(
       preguntaNormalizada
     ),
-    producto: /producto|extractor|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|garantia|material/i.test(
+    producto: /producto|extractor|juicer|licuadora|blender|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|garantia|material|innove|perfect pop|palomitas|popcorn|colador|hervidor|precision cook|fresca(flow|pure)|salad machine|filtracion|air filtration/i.test(
       preguntaNormalizada
     ),
     demo: /demo|demostraci[oó]n|presentaci[oó]n|mostrar|explicar|presentar|rompe hielo|rompiendo el hielo|cita instant[aá]nea|encuesta|cuestionario|salud|4\s*&\s*14|4 y 14|4 en 14|beneficios|ventajas|caracter[ií]sticas/i.test(
