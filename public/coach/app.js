@@ -22,6 +22,42 @@ async function apiRequest(url, options = {}) {
   return data;
 }
 
+const COACH_CHAT_API_URL = "/chat";
+const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
+const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
+
+function buildCoachId(prefix) {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return `${prefix}-${window.crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getCoachChatSessionId() {
+  const saved = window.sessionStorage.getItem(COACH_CHAT_SESSION_KEY);
+
+  if (saved) {
+    return saved;
+  }
+
+  const newId = buildCoachId("coach-session");
+  window.sessionStorage.setItem(COACH_CHAT_SESSION_KEY, newId);
+  return newId;
+}
+
+function getCoachVisitorId() {
+  const saved = window.localStorage.getItem(COACH_CHAT_VISITOR_KEY);
+
+  if (saved) {
+    return saved;
+  }
+
+  const newId = buildCoachId("coach-visitor");
+  window.localStorage.setItem(COACH_CHAT_VISITOR_KEY, newId);
+  return newId;
+}
+
 function setMessage(target, message, state = "info") {
   if (!target) {
     return;
@@ -71,6 +107,31 @@ function formatDate(dateString) {
     month: "long",
     day: "numeric"
   }).format(date);
+}
+
+function autoResizeTextarea(textarea) {
+  if (!textarea) {
+    return;
+  }
+
+  textarea.style.height = "auto";
+  textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+}
+
+function addCoachMessage(container, role, content) {
+  if (!container) {
+    return;
+  }
+
+  const card = document.createElement("article");
+  card.className = `coach-message ${role}`;
+
+  const paragraph = document.createElement("p");
+  paragraph.textContent = content;
+  card.appendChild(paragraph);
+
+  container.appendChild(card);
+  container.scrollTop = container.scrollHeight;
 }
 
 async function fetchViewer() {
@@ -293,42 +354,136 @@ async function initCoachAppPage() {
 
   updateAuthTargets(me.user);
 
-  const portalButton = document.querySelector("[data-open-billing-portal]");
-  const logoutButton = document.querySelector("[data-coach-logout]");
+  const chatMessages = document.querySelector("[data-coach-chat-messages]");
+  const chatForm = document.querySelector("[data-coach-chat-form]");
+  const chatInput = document.querySelector("[data-coach-chat-input]");
+  const chatSendButton = document.querySelector("[data-coach-chat-send]");
+  const chatStatus = document.querySelector("[data-coach-chat-status]");
+  const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
+  const logoutButtons = document.querySelectorAll("[data-coach-logout]");
   const appMessage = document.querySelector("[data-coach-app-message]");
 
-  portalButton?.addEventListener("click", async event => {
-    event.preventDefault();
-    clearMessage(appMessage);
-    setButtonLoading(portalButton, true, "Abriendo portal...");
+  const sendCoachMessage = async rawText => {
+    const text = String(rawText || "").trim();
+
+    if (!text) {
+      return;
+    }
+
+    addCoachMessage(chatMessages, "user", text);
+
+    if (chatInput) {
+      chatInput.value = "";
+      autoResizeTextarea(chatInput);
+      chatInput.disabled = true;
+    }
+
+    if (chatSendButton) {
+      chatSendButton.disabled = true;
+    }
+
+    if (chatStatus) {
+      chatStatus.textContent = "Pensando...";
+    }
 
     try {
-      const data = await apiRequest("/api/coach/create-portal-session", {
-        method: "POST"
+      const data = await apiRequest(COACH_CHAT_API_URL, {
+        method: "POST",
+        body: {
+          pregunta: text,
+          sessionId: getCoachChatSessionId(),
+          visitorId: getCoachVisitorId(),
+          mode: "coach"
+        }
       });
 
-      window.location.href = data.url;
+      addCoachMessage(
+        chatMessages,
+        "assistant",
+        data.respuesta || "No pude responder en este momento."
+      );
     } catch (error) {
-      setMessage(appMessage, error.message, "error");
-      setButtonLoading(portalButton, false);
+      addCoachMessage(
+        chatMessages,
+        "assistant",
+        error.message || "No pude responder en este momento."
+      );
+    } finally {
+      if (chatInput) {
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
+
+      if (chatSendButton) {
+        chatSendButton.disabled = false;
+      }
+
+      if (chatStatus) {
+        chatStatus.textContent = "Listo";
+      }
+    }
+  };
+
+  chatForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    sendCoachMessage(chatInput?.value || "");
+  });
+
+  chatInput?.addEventListener("input", () => {
+    autoResizeTextarea(chatInput);
+  });
+
+  chatInput?.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendCoachMessage(chatInput?.value || "");
     }
   });
 
-  logoutButton?.addEventListener("click", async event => {
-    event.preventDefault();
-    clearMessage(appMessage);
-    setButtonLoading(logoutButton, true, "Cerrando...");
+  document.querySelectorAll("[data-coach-prompt]").forEach(button => {
+    button.addEventListener("click", () => {
+      sendCoachMessage(button.textContent || "");
+    });
+  });
 
-    try {
-      await apiRequest("/api/coach/logout", {
-        method: "POST"
-      });
+  autoResizeTextarea(chatInput);
 
-      window.location.href = "/coach/login/";
-    } catch (error) {
-      setMessage(appMessage, error.message, "error");
-      setButtonLoading(logoutButton, false);
-    }
+  portalButtons.forEach(button => {
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      clearMessage(appMessage);
+      setButtonLoading(button, true, "Abriendo portal...");
+
+      try {
+        const data = await apiRequest("/api/coach/create-portal-session", {
+          method: "POST"
+        });
+
+        window.location.href = data.url;
+      } catch (error) {
+        setMessage(appMessage, error.message, "error");
+        setButtonLoading(button, false);
+      }
+    });
+  });
+
+  logoutButtons.forEach(button => {
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      clearMessage(appMessage);
+      setButtonLoading(button, true, "Cerrando...");
+
+      try {
+        await apiRequest("/api/coach/logout", {
+          method: "POST"
+        });
+
+        window.location.href = "/coach/login/";
+      } catch (error) {
+        setMessage(appMessage, error.message, "error");
+        setButtonLoading(button, false);
+      }
+    });
   });
 }
 

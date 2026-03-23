@@ -35,73 +35,130 @@
         </nav>
       </header>
 
-      <section class="dashboard-layout">
-        <article class="dashboard-card dashboard-card-hero">
-          <div class="eyebrow">Coach activo</div>
-          <h2>Bienvenido, <span data-coach-user-name>Distribuidor</span></h2>
-          <p class="section-copy">
-            Tu acceso privado ya está encendido. Aquí vive la parte protegida del Coach para distribuidores y desde este
-            punto seguiremos conectando el modo de ventas, objeciones y copiloto.
-          </p>
+      <section class="coach-console">
+        <article class="coach-chat-card">
+          <div class="coach-chat-header">
+            <div>
+              <div class="eyebrow">Coach activo</div>
+              <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
+              <p>
+                Esta ya es tu cabina privada. Desde aquí vamos a hablar con el Coach de ventas, separado del Chef
+                público.
+              </p>
+            </div>
 
-          <div class="hero-metrics">
-            <div class="metric-card">
-              <strong data-coach-subscription-status>Activa</strong>
-              <span>estado actual de tu suscripción</span>
-            </div>
-            <div class="metric-card">
-              <strong data-coach-subscription-period>Sin fecha</strong>
-              <span>próxima fecha importante de tu plan</span>
-            </div>
-            <div class="metric-card">
-              <strong data-coach-user-email>Tu correo</strong>
-              <span>cuenta conectada al Coach</span>
-            </div>
+            <div class="coach-chat-status" data-coach-chat-status>Listo</div>
           </div>
+
+          <div class="coach-messages" data-coach-chat-messages>
+            <article class="coach-message assistant">
+              <p>
+                Hola, soy Agustin 2.0 Coach. Estoy aquí para ayudarte con objeciones, seguimiento, demos y próximos
+                pasos de venta.
+              </p>
+            </article>
+          </div>
+
+          <div class="coach-prompt-row">
+            <button type="button" class="prompt-chip" data-coach-prompt>
+              El cliente dice que está caro
+            </button>
+            <button type="button" class="prompt-chip" data-coach-prompt>
+              Ayúdame con seguimiento después de una demo
+            </button>
+            <button type="button" class="prompt-chip" data-coach-prompt>
+              Qué digo para moverlo a llamada
+            </button>
+          </div>
+
+          <form class="coach-composer" data-coach-chat-form>
+            <label class="sr-only" for="coach-chat-input">Pregunta al Coach</label>
+            <textarea
+              id="coach-chat-input"
+              data-coach-chat-input
+              rows="1"
+              maxlength="2000"
+              placeholder="Escribe la objecion, la situacion o la pregunta de ventas..."
+            ></textarea>
+            <button type="submit" class="primary-button" data-coach-chat-send>Enviar</button>
+          </form>
         </article>
 
-        <article class="dashboard-card">
-          <h3>Tu panel ya está listo</h3>
-          <p>
-            Esta es la base protegida donde vamos a montar el Coach de ventas. Desde aquí el usuario ya puede entrar,
-            administrar su plan y quedarse dentro del producto correcto.
-          </p>
+        <aside class="coach-sidebar">
+          <article class="dashboard-card">
+            <div class="eyebrow">Tu cuenta</div>
+            <h3>Estado del acceso</h3>
 
-          <div class="feature-list">
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Acceso protegido</strong>
-                <span>Solo usuarios con cuenta y suscripción activa pueden ver esta área.</span>
+            <div class="feature-list compact">
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Suscripcion</strong>
+                  <span data-coach-subscription-status>Activa</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Cuenta</strong>
+                  <span data-coach-user-email>Tu correo</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Vigencia</strong>
+                  <span data-coach-subscription-period>Sin fecha</span>
+                </div>
               </div>
             </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Base lista para el Coach</strong>
-                <span>El siguiente paso será conectar aquí el frontend privado del asistente de ventas.</span>
+
+            <div class="dashboard-actions">
+              <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
+              <button class="nav-button" data-coach-logout>Cerrar sesion</button>
+            </div>
+
+            <div class="form-result" data-coach-app-message></div>
+          </article>
+
+          <article class="dashboard-card">
+            <div class="eyebrow">Lo que sigue</div>
+            <h3>Base lista para el Coach real</h3>
+            <p>
+              La interfaz privada ya existe. El siguiente paso es separar el prompt y el conocimiento para que este
+              chat piense como Coach y no como Chef.
+            </p>
+
+            <div class="feature-list compact">
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Frontend privado</strong>
+                  <span>Ya quedó viviendo dentro del área protegida.</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Sesión protegida</strong>
+                  <span>Solo entra quien tenga login y suscripción activa.</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Modo Coach</strong>
+                  <span>Ya dejamos el frontend listo para mandar ese contexto en el siguiente paso.</span>
+                </div>
               </div>
             </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Suscripción administrable</strong>
-                <span>Puedes abrir tu portal de pago cuando quieras desde este mismo panel.</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="dashboard-actions">
-            <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
-            <a class="primary-button" href="/coach/">Volver a la landing</a>
-          </div>
-
-          <div class="form-result" data-coach-app-message></div>
-        </article>
+          </article>
+        </aside>
       </section>
 
       <p class="footer-note">
-        Fase 2 lista: cuenta, suscripción, login y entrada protegida del Coach.
+        El Coach ya tiene área privada, acceso protegido y frontend propio. El siguiente paso es separar su cerebro del
+        Chef.
       </p>
     </div>
 
