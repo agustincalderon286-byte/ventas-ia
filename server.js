@@ -2123,6 +2123,8 @@ REGLAS DE RESPUESTA:
 - Si ya sabes en que momento de la demo va, usa ese contexto para dar la accion que sigue
 - Si el mejor movimiento es cerrar, cierra
 - Si el mejor movimiento es callar y amarrar, dilo sin rodeos
+- Si el cliente ya escucho todo, ya entendio el pago y se queda callado, trata ese momento como cierre final
+- En ese momento no sigas explicando; manda al distribuidor a asumir la venta con la frase correcta
 - Si usas un cierre, da solo el mejor para ese momento
 - Si das ejemplo, da solo uno y pegado al contexto del chat
 - No des listas largas de opciones
@@ -2144,6 +2146,9 @@ CUANDO SEA UTIL:
 - Ejemplo bueno:
   Di esto: "?Que le queda mejor, sabado o domingo?"
   Siguiente: "No abras mas opciones. Deja solo esas dos."
+- Ejemplo bueno:
+  Di esto: "Bienvenido a Royal Prestige, me facilita su ID."
+  Siguiente: "Si te da el ID, sigue con la orden. Si te objeta, esa ya es la objecion real."
 
 ENFOQUE:
 - El usuario aqui es distribuidor, no prospecto
@@ -2156,6 +2161,19 @@ IMPORTANTE:
 Tienes acceso a multiples bases de conocimiento.
 Usa primero lo mas relevante para ventas, objeciones, demos, producto y seguimiento.
 No inventes beneficios ni politicas fuera del contexto disponible.
+`;
+
+const coachCierreFinalInterno = `
+CIERRE FINAL INTERNO DEL COACH:
+- Este es el cierre final real cuando ya se presento todo, ya se hablo del pago y el cliente se queda callado
+- En ese momento no conviene seguir explicando
+- El movimiento correcto es asumir la venta para descubrir si ya esta listo o si todavia trae una objecion escondida
+- El representante se levanta, se acerca, extiende la mano con una sonrisa y dice:
+  "Bienvenido a Royal Prestige, me facilita su ID"
+- Si el cliente entrega el ID, ya no expliques de mas: sigue con la orden, comprobante de domicilio y deposito
+- Si el cliente no esta listo, ahi mismo va a sacar la objecion real y esa se rebate
+- Cuando el silencio ya es de cierre, no mandes al distribuidor a seguir hablando ni a volver a presentar
+- Usa este cierre solo cuando el cliente ya escucho todo, ya se hablo del plan y solo quedo el silencio final
 `;
 
 // =============================
@@ -2267,6 +2285,10 @@ ${JSON.stringify(cierresAlexDey)}
 `);
   }
 
+  if (temaCoach.cierreFinal) {
+    contextoBase.push(coachCierreFinalInterno);
+  }
+
   if (temaCoach.mentalidad) {
     contextoBase.push(`
 MENTALIDAD:
@@ -2334,6 +2356,9 @@ function detectarTemaCoach(preguntaNormalizada = "") {
       preguntaNormalizada
     ),
     cierre: /cerrar|cierre|amarre|benjamin franklin|doble alternativa|puercoesp[ií]n|rebote|silencio/i.test(
+      preguntaNormalizada
+    ),
+    cierreFinal: /se queda callado|se queda en silencio|se quedo callado|se quedo en silencio|no responde|no me responde|silencio final|momento final|final de la demo|me facilita su id|id|comprobante de domicilio|deposito|orden|asumo la venta/i.test(
       preguntaNormalizada
     ),
     mentalidad: /mentalidad|frustrad|desanimad|disciplina|constancia|miedo|seguridad|liderazgo|confianza|actitud/i.test(
