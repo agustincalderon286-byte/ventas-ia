@@ -24,6 +24,10 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 const COACH_SESSION_COOKIE = "agustin_coach_session";
 const COACH_SESSION_DAYS = 30;
 const COACH_PASSWORD_MIN = 8;
+const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
+  .split(",")
+  .map(email => normalizarEmail(email))
+  .filter(Boolean);
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -241,6 +245,30 @@ function coachTieneAcceso(status = "") {
   return ["active", "trialing"].includes(String(status || "").toLowerCase());
 }
 
+function coachTieneAccesoDePrueba(email = "") {
+  return COACH_TEST_ACCESS_EMAILS.includes(normalizarEmail(email));
+}
+
+function coachTieneAccesoTotal(userDoc = null) {
+  if (!userDoc) {
+    return false;
+  }
+
+  return Boolean(userDoc.subscriptionActive) || coachTieneAccesoDePrueba(userDoc.email);
+}
+
+function obtenerCoachStatusVisible(userDoc = null) {
+  if (!userDoc) {
+    return "inactive";
+  }
+
+  if (coachTieneAccesoDePrueba(userDoc.email) && !coachTieneAcceso(userDoc.subscriptionStatus)) {
+    return "test_access";
+  }
+
+  return userDoc.subscriptionStatus || "inactive";
+}
+
 function limpiarCoachUser(userDoc) {
   if (!userDoc) {
     return null;
@@ -250,8 +278,8 @@ function limpiarCoachUser(userDoc) {
     id: String(userDoc._id),
     name: userDoc.name || "",
     email: userDoc.email || "",
-    subscriptionStatus: userDoc.subscriptionStatus || "inactive",
-    subscriptionActive: Boolean(userDoc.subscriptionActive),
+    subscriptionStatus: obtenerCoachStatusVisible(userDoc),
+    subscriptionActive: coachTieneAccesoTotal(userDoc),
     subscriptionCurrentPeriodEnd: userDoc.subscriptionCurrentPeriodEnd || null,
     subscriptionCancelAtPeriodEnd: Boolean(userDoc.subscriptionCancelAtPeriodEnd),
     stripeCustomerId: userDoc.stripeCustomerId || "",
@@ -353,7 +381,7 @@ async function requireCoachActivo(req, res) {
     return null;
   }
 
-  if (!auth.user.subscriptionActive) {
+  if (!coachTieneAccesoTotal(auth.user)) {
     responderCoachError(res, 403, "Tu cuenta no tiene una suscripcion activa.");
     return null;
   }
@@ -2333,17 +2361,27 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 
   try {
     const passwordSeguro = crearPasswordSeguro(password);
+    const accesoDePrueba = coachTieneAccesoDePrueba(email);
     let userDoc = await CoachUser.create({
       name,
       email,
       passwordHash: passwordSeguro.hash,
       passwordSalt: passwordSeguro.salt,
-      subscriptionStatus: "inactive",
+      subscriptionStatus: accesoDePrueba ? "test_access" : "inactive",
       subscriptionActive: false,
       updatedAt: new Date()
     });
 
     await crearCoachSesion(req, res, userDoc._id);
+
+    if (accesoDePrueba) {
+      return res.json({
+        url: "/coach/app/",
+        bypass: true,
+        user: limpiarCoachUser(userDoc)
+      });
+    }
+
     userDoc = await asegurarCoachCustomer(userDoc);
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -2458,11 +2496,13 @@ app.post("/api/coach/create-checkout-session", async (req, res) => {
     return;
   }
 
-  if (auth.user.subscriptionActive) {
+  if (coachTieneAccesoTotal(auth.user)) {
     return responderCoachError(
       res,
       409,
-      "Tu cuenta ya tiene una suscripcion activa. Entra al Coach o abre el portal de facturacion."
+      coachTieneAccesoDePrueba(auth.user.email)
+        ? "Tu cuenta de prueba ya puede entrar al Coach sin pagar."
+        : "Tu cuenta ya tiene una suscripcion activa. Entra al Coach o abre el portal de facturacion."
     );
   }
 
@@ -2516,6 +2556,14 @@ app.post("/api/coach/create-portal-session", async (req, res) => {
 
   if (!auth) {
     return;
+  }
+
+  if (coachTieneAccesoDePrueba(auth.user.email) && !auth.user.stripeCustomerId) {
+    return responderCoachError(
+      res,
+      400,
+      "Tu cuenta de prueba no necesita portal de pago. Ya puedes entrar y revisar el Coach."
+    );
   }
 
   if (!auth.user.stripeCustomerId) {
@@ -2596,7 +2644,7 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
     return res.redirect("/coach/login/");
   }
 
-  if (!auth.user.subscriptionActive) {
+  if (!coachTieneAccesoTotal(auth.user)) {
     return res.redirect("/coach/planes/");
   }
 

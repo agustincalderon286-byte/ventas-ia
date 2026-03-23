@@ -152,11 +152,13 @@ function updateAuthTargets(user) {
   });
 
   document.querySelectorAll("[data-coach-subscription-status]").forEach(node => {
-    node.textContent = user?.subscriptionActive
-      ? "Activa"
-      : user?.subscriptionStatus === "past_due"
-        ? "Pago pendiente"
-        : "Sin activar";
+    node.textContent = user?.subscriptionStatus === "test_access"
+      ? "Prueba activa"
+      : user?.subscriptionActive
+        ? "Activa"
+        : user?.subscriptionStatus === "past_due"
+          ? "Pago pendiente"
+          : "Sin activar";
   });
 
   document.querySelectorAll("[data-coach-subscription-period]").forEach(node => {
