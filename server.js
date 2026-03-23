@@ -21,9 +21,12 @@ const conversaciones = {};
 const estadosConversacion = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const STRIPE_PRICE_ID_MONTHLY = process.env.STRIPE_PRICE_ID || "";
+const STRIPE_PRICE_ID_ANNUAL = process.env.STRIPE_PRICE_ID_ANNUAL || "";
 const COACH_SESSION_COOKIE = "agustin_coach_session";
 const COACH_SESSION_DAYS = 30;
 const COACH_PASSWORD_MIN = 8;
+const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
   .split(",")
   .map(email => normalizarEmail(email))
@@ -257,6 +260,18 @@ function coachTieneAccesoTotal(userDoc = null) {
   return Boolean(userDoc.subscriptionActive) || coachTieneAccesoDePrueba(userDoc.email);
 }
 
+function coachPuedeIniciarTrial(userDoc = null) {
+  if (!userDoc) {
+    return true;
+  }
+
+  if (coachTieneAccesoDePrueba(userDoc.email)) {
+    return false;
+  }
+
+  return !userDoc.stripeSubscriptionId;
+}
+
 function obtenerCoachStatusVisible(userDoc = null) {
   if (!userDoc) {
     return "inactive";
@@ -283,7 +298,67 @@ function limpiarCoachUser(userDoc) {
     subscriptionCurrentPeriodEnd: userDoc.subscriptionCurrentPeriodEnd || null,
     subscriptionCancelAtPeriodEnd: Boolean(userDoc.subscriptionCancelAtPeriodEnd),
     stripeCustomerId: userDoc.stripeCustomerId || "",
-    lastCheckoutSessionId: userDoc.lastCheckoutSessionId || ""
+    lastCheckoutSessionId: userDoc.lastCheckoutSessionId || "",
+    trialEligible: coachPuedeIniciarTrial(userDoc)
+  };
+}
+
+function normalizarPlanCoach(plan = "") {
+  const value = String(plan || "").trim().toLowerCase();
+
+  if (value === "annual") {
+    return "annual";
+  }
+
+  if (value === "trial") {
+    return "trial";
+  }
+
+  return "monthly";
+}
+
+function obtenerPlanCoach(plan = "", userDoc = null) {
+  const selectedPlan = normalizarPlanCoach(plan);
+
+  if (selectedPlan === "annual") {
+    if (!STRIPE_PRICE_ID_ANNUAL) {
+      throw new Error("El precio anual del Coach todavia no esta configurado.");
+    }
+
+    return {
+      code: "annual",
+      label: "plan anual",
+      priceId: STRIPE_PRICE_ID_ANNUAL,
+      trialDays: 0
+    };
+  }
+
+  if (selectedPlan === "trial") {
+    if (!STRIPE_PRICE_ID_MONTHLY) {
+      throw new Error("El precio mensual del Coach todavia no esta configurado.");
+    }
+
+    if (!coachPuedeIniciarTrial(userDoc)) {
+      throw new Error("La prueba gratis ya no esta disponible para esta cuenta.");
+    }
+
+    return {
+      code: "trial",
+      label: "prueba gratis",
+      priceId: STRIPE_PRICE_ID_MONTHLY,
+      trialDays: COACH_TRIAL_DAYS
+    };
+  }
+
+  if (!STRIPE_PRICE_ID_MONTHLY) {
+    throw new Error("El precio mensual del Coach todavia no esta configurado.");
+  }
+
+  return {
+    code: "monthly",
+    label: "plan mensual",
+    priceId: STRIPE_PRICE_ID_MONTHLY,
+    trialDays: 0
   };
 }
 
@@ -390,11 +465,55 @@ async function requireCoachActivo(req, res) {
 }
 
 function stripeConfigurado() {
-  return Boolean(stripe && process.env.STRIPE_PRICE_ID && process.env.STRIPE_WEBHOOK_SECRET);
+  return Boolean(stripe && STRIPE_PRICE_ID_MONTHLY && process.env.STRIPE_WEBHOOK_SECRET);
 }
 
 function stripeListoParaCheckout() {
-  return Boolean(stripe && process.env.STRIPE_PRICE_ID);
+  return Boolean(stripe && STRIPE_PRICE_ID_MONTHLY);
+}
+
+function construirCheckoutCoach(req, userDoc, plan = "monthly") {
+  const selectedPlan = obtenerPlanCoach(plan, userDoc);
+  const checkoutConfig = {
+    mode: "subscription",
+    customer: userDoc.stripeCustomerId,
+    client_reference_id: String(userDoc._id),
+    line_items: [
+      {
+        price: selectedPlan.priceId,
+        quantity: 1
+      }
+    ],
+    success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
+    allow_promotion_codes: true,
+    metadata: {
+      coachUserId: String(userDoc._id),
+      coachPlan: selectedPlan.code
+    },
+    subscription_data: {
+      metadata: {
+        coachUserId: String(userDoc._id),
+        productMode: "coach",
+        coachPlan: selectedPlan.code
+      }
+    }
+  };
+
+  if (selectedPlan.code === "trial") {
+    checkoutConfig.payment_method_collection = "if_required";
+    checkoutConfig.subscription_data.trial_period_days = selectedPlan.trialDays;
+    checkoutConfig.subscription_data.trial_settings = {
+      end_behavior: {
+        missing_payment_method: "pause"
+      }
+    };
+  }
+
+  return {
+    selectedPlan,
+    checkoutConfig
+  };
 }
 
 async function asegurarCoachCustomer(userDoc) {
@@ -524,7 +643,7 @@ async function sincronizarCoachDesdeCheckoutSession(sessionId) {
     coachUserId: String(userDoc._id),
     customerId: typeof session.customer === "string" ? session.customer : userDoc.stripeCustomerId || "",
     subscriptionId: subscription?.id || (typeof session.subscription === "string" ? session.subscription : ""),
-    priceId: subscription?.items?.data?.[0]?.price?.id || process.env.STRIPE_PRICE_ID || "",
+    priceId: subscription?.items?.data?.[0]?.price?.id || STRIPE_PRICE_ID_MONTHLY || "",
     status: subscription?.status || userDoc.subscriptionStatus || "inactive",
     currentPeriodEnd: convertirUnixADate(subscription?.current_period_end),
     cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
@@ -2627,6 +2746,7 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
   const name = String(req.body?.name || "").trim();
   const email = normalizarEmail(req.body?.email || "");
   const password = String(req.body?.password || "");
+  const plan = normalizarPlanCoach(req.body?.plan || "trial");
 
   if (!name) {
     return responderCoachError(res, 400, "Tu nombre es requerido.");
@@ -2679,29 +2799,8 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 
     userDoc = await asegurarCoachCustomer(userDoc);
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: userDoc.stripeCustomerId,
-      client_reference_id: String(userDoc._id),
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID,
-          quantity: 1
-        }
-      ],
-      success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
-      allow_promotion_codes: true,
-      metadata: {
-        coachUserId: String(userDoc._id)
-      },
-      subscription_data: {
-        metadata: {
-          coachUserId: String(userDoc._id),
-          productMode: "coach"
-        }
-      }
-    });
+    const { selectedPlan, checkoutConfig } = construirCheckoutCoach(req, userDoc, plan);
+    const checkoutSession = await stripe.checkout.sessions.create(checkoutConfig);
 
     userDoc.lastCheckoutSessionId = checkoutSession.id;
     userDoc.updatedAt = new Date();
@@ -2709,11 +2808,12 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 
     res.json({
       url: checkoutSession.url,
+      plan: selectedPlan.code,
       user: limpiarCoachUser(userDoc)
     });
   } catch (error) {
     console.error("Error creando signup checkout Coach:", error.message);
-    responderCoachError(res, 500, "No pude crear tu suscripcion en este momento.");
+    responderCoachError(res, 500, error.message || "No pude crear tu suscripcion en este momento.");
   }
 });
 
@@ -2786,6 +2886,7 @@ app.post("/api/coach/create-checkout-session", async (req, res) => {
   }
 
   const auth = await requireCoachUser(req, res);
+  const plan = normalizarPlanCoach(req.body?.plan || "monthly");
 
   if (!auth) {
     return;
@@ -2803,38 +2904,17 @@ app.post("/api/coach/create-checkout-session", async (req, res) => {
 
   try {
     const userDoc = await asegurarCoachCustomer(auth.user);
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: userDoc.stripeCustomerId,
-      client_reference_id: String(userDoc._id),
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID,
-          quantity: 1
-        }
-      ],
-      success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
-      allow_promotion_codes: true,
-      metadata: {
-        coachUserId: String(userDoc._id)
-      },
-      subscription_data: {
-        metadata: {
-          coachUserId: String(userDoc._id),
-          productMode: "coach"
-        }
-      }
-    });
+    const { selectedPlan, checkoutConfig } = construirCheckoutCoach(req, userDoc, plan);
+    const checkoutSession = await stripe.checkout.sessions.create(checkoutConfig);
 
     userDoc.lastCheckoutSessionId = checkoutSession.id;
     userDoc.updatedAt = new Date();
     await userDoc.save();
 
-    res.json({ url: checkoutSession.url });
+    res.json({ url: checkoutSession.url, plan: selectedPlan.code });
   } catch (error) {
     console.error("Error creando checkout Coach:", error.message);
-    responderCoachError(res, 500, "No pude abrir el pago del Coach.");
+    responderCoachError(res, 500, error.message || "No pude abrir el pago del Coach.");
   }
 });
 

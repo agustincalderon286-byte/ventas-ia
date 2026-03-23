@@ -6,7 +6,7 @@
     <title>Planes | Agustin 2.0 Coach</title>
     <meta
       name="description"
-      content="Activa el acceso privado a Agustin 2.0 Coach por $30 al mes para distribuidores."
+      content="Prueba Agustin 2.0 Coach gratis por 7 dias o activa tu plan mensual o anual para distribuidores."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,72 +36,106 @@
 
       <section class="plan-layout" style="padding-top: 28px;">
         <article class="plan-card">
-          <div class="eyebrow">Plan de lanzamiento</div>
-          <h2 class="section-heading">Un solo plan. Un solo acceso. Todo el Coach.</h2>
+          <div class="eyebrow">Elige tu acceso</div>
+          <h2 class="section-heading">Empieza gratis y luego elige como seguir.</h2>
           <p class="section-copy">
-            Esta suscripcion esta pensada para distribuidores que quieren una guia privada para cerrar mejor, contestar
-            objeciones, dar precios, negociar y armar paquetes con mas claridad.
+            Agustin 2.0 Coach te deja probar primero y despues quedarte con el plan que mejor se acomode a tu manera de
+            vender.
           </p>
 
-          <div class="plan-price">
-            <strong>$30</strong>
-            <span>USD al mes</span>
-          </div>
+          <div class="pricing-options">
+            <article class="pricing-option is-selected" data-plan-card data-plan="trial">
+              <div class="pricing-option-top">
+                <div>
+                  <div class="plan-badge">Empieza aqui</div>
+                  <h3>Prueba gratis</h3>
+                </div>
+                <div class="plan-option-price">
+                  <strong>7 dias</strong>
+                  <span>sin tarjeta</span>
+                </div>
+              </div>
+              <p>Usa el Coach completo por 7 dias y prueba objeciones, pagos, paquetes y cierres en demos reales.</p>
+              <ul>
+                <li>no pide tarjeta al empezar</li>
+                <li>si no agregas pago al final, se pausa</li>
+                <li>ideal para conocerlo sin friccion</li>
+              </ul>
+              <button type="button" class="secondary-button plan-action" data-plan-select="trial">
+                Elegir prueba gratis
+              </button>
+            </article>
 
-          <div class="feature-list">
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Modo Coach privado</strong>
-                <span>Acceso privado pensado solo para distribuidores.</span>
+            <article class="pricing-option" data-plan-card data-plan="monthly">
+              <div class="pricing-option-top">
+                <div>
+                  <div class="plan-badge subtle">Mensual</div>
+                  <h3>Plan mensual</h3>
+                </div>
+                <div class="plan-option-price">
+                  <strong>$30</strong>
+                  <span>USD / mes</span>
+                </div>
               </div>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Apoyo para objeciones y cierre</strong>
-                <span>Respuestas mas claras para dudas comunes en demo y al momento de cerrar.</span>
+              <p>Para distribuidores que quieren acceso continuo al Coach y prefieren pagar poco a poco.</p>
+              <ul>
+                <li>acceso privado completo</li>
+                <li>objeciones, cierres, pagos y paquetes</li>
+                <li>entra y sales mes por mes</li>
+              </ul>
+              <button type="button" class="secondary-button plan-action" data-plan-select="monthly">
+                Elegir mensual
+              </button>
+            </article>
+
+            <article class="pricing-option highlight" data-plan-card data-plan="annual">
+              <div class="pricing-option-top">
+                <div>
+                  <div class="plan-badge highlight">Ahorra 2 meses</div>
+                  <h3>Plan anual</h3>
+                </div>
+                <div class="plan-option-price">
+                  <strong>$300</strong>
+                  <span>USD / año</span>
+                </div>
               </div>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Precios, pagos y matematicas</strong>
-                <span>Ayuda para sacar numeros rapidos y hablar con mas seguridad.</span>
-              </div>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Paquetes y negociacion</strong>
-                <span>Apoyo para juntar productos y mover la venta sin enredarte.</span>
-              </div>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Acceso privado</strong>
-                <span>Protege el conocimiento del distribuidor dentro de su area privada.</span>
-              </div>
-            </div>
+              <p>La mejor opcion si ya sabes que lo vas a usar de verdad y quieres pagar menos por todo el año.</p>
+              <ul>
+                <li>equivale a 10 meses pagados</li>
+                <li>mejor valor para uso constante</li>
+                <li>mismo Coach completo todo el año</li>
+              </ul>
+              <button type="button" class="secondary-button plan-action" data-plan-select="annual">
+                Elegir anual
+              </button>
+            </article>
           </div>
         </article>
 
         <aside class="plan-card">
           <h3>Activa tu acceso</h3>
           <p class="section-copy">
-            Crea tu cuenta, activa tu suscripcion y entra a tu Coach privado desde el mismo flujo.
+            Crea tu cuenta, elige tu plan y entra a tu Coach privado desde el mismo flujo.
           </p>
+
+          <div class="selected-plan-box">
+            <div class="eyebrow">Plan elegido</div>
+            <h4 data-selected-plan-name>Prueba gratis de 7 dias</h4>
+            <p data-selected-plan-copy>
+              Empiezas sin tarjeta. Si despues quieres seguir, activas tu plan de pago.
+            </p>
+          </div>
 
           <div class="auth-card" data-signup-section>
             <div class="eyebrow">Nuevo distribuidor</div>
-            <h4>Crea tu cuenta y sigue al pago</h4>
+            <h4>Crea tu cuenta y sigue</h4>
             <p>
-              Llena tus datos una sola vez. Despues de eso se abre el cobro mensual y tu cuenta queda lista para
-              activarse.
+              Llena tus datos una sola vez. Despues de eso se abre el flujo correcto segun el plan que elegiste.
             </p>
 
             <form class="coach-form" data-signup-checkout-form>
+              <input type="hidden" name="plan" value="trial" data-plan-input />
+
               <div>
                 <label for="coach-signup-name">Nombre</label>
                 <input id="coach-signup-name" name="name" type="text" placeholder="Tu nombre" required />
@@ -130,24 +164,22 @@
                 />
               </div>
 
-              <button class="primary-button" type="submit">Crear cuenta y continuar al pago</button>
+              <button class="primary-button" type="submit" data-plan-submit-label>Crear cuenta y empezar gratis</button>
               <div class="form-result"></div>
             </form>
 
             <p class="mini-note">
-              Si ya tienes cuenta, entra por login y desde ahí podrás seguir con tu pago o entrar directo al Coach.
+              Si ya tienes cuenta, entra por login y desde ahi podras seguir con el plan que elijas o entrar directo al Coach.
             </p>
           </div>
 
           <div class="auth-card" data-member-section hidden>
             <div class="eyebrow">Cuenta detectada</div>
             <h4>Hola, <span data-coach-user-name>Distribuidor</span></h4>
-            <p>
-              Tu cuenta ya existe. Solo falta abrir o retomar el pago mensual para activar el acceso privado del Coach.
-            </p>
+            <p data-member-plan-copy>Tu cuenta ya existe. Solo falta abrir el plan que elegiste para activar tu Coach.</p>
 
             <div class="dashboard-actions">
-              <button class="primary-button" data-start-checkout>Continuar al pago</button>
+              <button class="primary-button" data-start-checkout data-member-plan-label>Continuar con mi plan</button>
               <a class="secondary-button" href="/coach/login/">Cambiar de cuenta</a>
             </div>
 
@@ -171,14 +203,13 @@
           </div>
 
           <p class="mini-note">
-            El flujo queda asi: crear cuenta, pagar, activar suscripcion y entrar por login al area privada del
-            distribuidor.
+            Trial gratis por 7 dias, mensual por $30 o anual por $300. El plan anual te ahorra 2 meses.
           </p>
         </aside>
       </section>
 
       <p class="footer-note">
-        Suscripcion privada para distribuidores con acceso protegido al Agustin 2.0 Coach.
+        Suscripcion privada para distribuidores con prueba gratis, plan mensual y plan anual.
       </p>
     </div>
 

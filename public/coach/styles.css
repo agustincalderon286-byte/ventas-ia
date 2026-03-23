@@ -503,6 +503,143 @@ img {
   margin-top: 24px;
 }
 
+.pricing-options {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.pricing-option {
+  padding: 20px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.pricing-option.is-selected {
+  border-color: rgba(215, 38, 69, 0.5);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
+}
+
+.pricing-option.highlight {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(215, 38, 69, 0.1));
+  border-color: rgba(215, 38, 69, 0.34);
+}
+
+.pricing-option.is-disabled {
+  opacity: 0.6;
+}
+
+.pricing-option-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.pricing-option h3,
+.pricing-option p,
+.pricing-option ul {
+  margin: 0;
+}
+
+.pricing-option h3 {
+  margin-top: 12px;
+  font-size: 1.3rem;
+}
+
+.pricing-option p {
+  margin-top: 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.pricing-option ul {
+  margin-top: 14px;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(215, 38, 69, 0.16);
+  border: 1px solid rgba(215, 38, 69, 0.24);
+  color: #ffd7df;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.plan-badge.subtle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #edf2f9;
+}
+
+.plan-badge.highlight {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.plan-option-price {
+  text-align: right;
+}
+
+.plan-option-price strong,
+.plan-option-price span {
+  display: block;
+}
+
+.plan-option-price strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.plan-option-price span {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.plan-action {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.selected-plan-box {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(215, 38, 69, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.selected-plan-box h4,
+.selected-plan-box p {
+  margin: 0;
+}
+
+.selected-plan-box h4 {
+  margin-top: 14px;
+  font-size: 1.2rem;
+}
+
+.selected-plan-box p {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 .feature-item {
   display: grid;
   grid-template-columns: auto 1fr;

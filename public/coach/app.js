@@ -25,6 +25,29 @@ async function apiRequest(url, options = {}) {
 const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
+const COACH_PLAN_CONFIG = {
+  trial: {
+    name: "Prueba gratis de 7 dias",
+    copy: "Empiezas sin tarjeta. Si despues quieres seguir, activas tu plan de pago.",
+    signupLabel: "Crear cuenta y empezar gratis",
+    memberLabel: "Empezar prueba gratis",
+    memberCopy: "Tu cuenta ya existe. Puedes arrancar tu prueba gratis de 7 dias sin tarjeta."
+  },
+  monthly: {
+    name: "Plan mensual de $30",
+    copy: "Acceso privado completo por 30 dolares al mes para usar el Coach de forma continua.",
+    signupLabel: "Crear cuenta y continuar al mensual",
+    memberLabel: "Continuar con plan mensual",
+    memberCopy: "Tu cuenta ya existe. Solo falta abrir el plan mensual para activar tu Coach."
+  },
+  annual: {
+    name: "Plan anual de $300",
+    copy: "Acceso completo por 12 meses. Ahorras 2 meses al pagar anual.",
+    signupLabel: "Crear cuenta y continuar al anual",
+    memberLabel: "Continuar con plan anual",
+    memberCopy: "Tu cuenta ya existe. Solo falta abrir el plan anual para activar tu Coach."
+  }
+};
 
 function buildCoachId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -152,7 +175,7 @@ function updateAuthTargets(user) {
   });
 
   document.querySelectorAll("[data-coach-subscription-status]").forEach(node => {
-    node.textContent = user?.subscriptionStatus === "test_access"
+    node.textContent = user?.subscriptionStatus === "test_access" || user?.subscriptionStatus === "trialing"
       ? "Prueba activa"
       : user?.subscriptionActive
         ? "Activa"
@@ -196,10 +219,87 @@ async function initPlanPage() {
   const signupMessage = signupForm?.querySelector(".form-result");
   const startCheckoutButton = document.querySelector("[data-start-checkout]");
   const portalButton = document.querySelector("[data-open-billing-portal]");
+  const planInput = document.querySelector("[data-plan-input]");
+  const signupSubmitLabel = document.querySelector("[data-plan-submit-label]");
+  const selectedPlanName = document.querySelector("[data-selected-plan-name]");
+  const selectedPlanCopy = document.querySelector("[data-selected-plan-copy]");
+  const memberPlanCopy = document.querySelector("[data-member-plan-copy]");
+  const memberPlanLabel = document.querySelector("[data-member-plan-label]");
+  const planCards = document.querySelectorAll("[data-plan-card]");
+  const planSelectButtons = document.querySelectorAll("[data-plan-select]");
+
+  planSelectButtons.forEach(button => {
+    if (!button.dataset.defaultLabel) {
+      button.dataset.defaultLabel = button.textContent;
+    }
+  });
 
   const me = await fetchViewer();
   const user = me.user || null;
   updateAuthTargets(user);
+  let selectedPlan = user && !user.trialEligible ? "monthly" : "trial";
+
+  function getPlanConfig(plan) {
+    return COACH_PLAN_CONFIG[plan] || COACH_PLAN_CONFIG.monthly;
+  }
+
+  function syncPlanUi() {
+    const selectedConfig = getPlanConfig(selectedPlan);
+
+    if (planInput) {
+      planInput.value = selectedPlan;
+    }
+
+    if (selectedPlanName) {
+      selectedPlanName.textContent = selectedConfig.name;
+    }
+
+    if (selectedPlanCopy) {
+      selectedPlanCopy.textContent = selectedConfig.copy;
+    }
+
+    if (signupSubmitLabel) {
+      signupSubmitLabel.textContent = selectedConfig.signupLabel;
+    }
+
+    if (memberPlanCopy) {
+      memberPlanCopy.textContent = selectedConfig.memberCopy;
+    }
+
+    if (memberPlanLabel) {
+      memberPlanLabel.textContent = selectedConfig.memberLabel;
+    }
+
+    planCards.forEach(card => {
+      card.classList.toggle("is-selected", card.dataset.plan === selectedPlan);
+      card.classList.toggle("is-disabled", card.dataset.plan === "trial" && Boolean(user) && !user.trialEligible);
+    });
+
+    planSelectButtons.forEach(button => {
+      const isTrialDisabled = button.dataset.planSelect === "trial" && Boolean(user) && !user.trialEligible;
+      button.disabled = isTrialDisabled;
+
+      if (isTrialDisabled) {
+        button.textContent = "Prueba ya utilizada";
+      } else {
+        button.textContent = button.dataset.defaultLabel || button.textContent;
+      }
+    });
+  }
+
+  planSelectButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const plan = button.dataset.planSelect || "monthly";
+
+      if (plan === "trial" && user && !user.trialEligible) {
+        return;
+      }
+
+      selectedPlan = plan;
+      syncPlanUi();
+      signupSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 
   if (me.authenticated && user?.subscriptionActive) {
     signupSection?.setAttribute("hidden", "hidden");
@@ -214,6 +314,8 @@ async function initPlanPage() {
     activeSection?.setAttribute("hidden", "hidden");
     signupSection?.removeAttribute("hidden");
   }
+
+  syncPlanUi();
 
   signupForm?.addEventListener("submit", async event => {
     event.preventDefault();
@@ -230,7 +332,8 @@ async function initPlanPage() {
         body: {
           name: formData.get("name"),
           email: formData.get("email"),
-          password: formData.get("password")
+          password: formData.get("password"),
+          plan: formData.get("plan")
         }
       });
 
@@ -249,7 +352,10 @@ async function initPlanPage() {
 
     try {
       const data = await apiRequest("/api/coach/create-checkout-session", {
-        method: "POST"
+        method: "POST",
+        body: {
+          plan: selectedPlan
+        }
       });
 
       window.location.href = data.url;
@@ -506,6 +612,15 @@ async function initSuccessPage() {
     updateAuthTargets(data.user);
 
     if (data.user?.subscriptionActive) {
+      if (data.user?.subscriptionStatus === "trialing") {
+        setMessage(
+          statusBox,
+          "Tu prueba gratis ya quedo activa. Ya puedes entrar al Coach.",
+          "success"
+        );
+        return;
+      }
+
       setMessage(
         statusBox,
         "Tu pago ya quedo confirmado y tu Coach esta activo. Ya puedes entrar.",
