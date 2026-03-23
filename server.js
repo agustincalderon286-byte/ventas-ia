@@ -2201,6 +2201,7 @@ const reclutamientoCiprian = cargarJSON("./src/data/reclutamiento_ciprian.json")
 const sistema4Citas = cargarJSON("./src/data/sistema_4_citas_14_dias.json");
 const manualNovatoCoach = cargarJSON("./src/data/manual_novato_2016_coach.json");
 const planNegocio2026Coach = cargarJSON("./src/data/plan_negocio_2026_us_coach.json");
+const docuciteOrdenesCoach = cargarJSON("./src/data/docucite_ordenes_publico_coach.json");
 
 // =============================
 // REDFIN
@@ -2315,6 +2316,7 @@ OBJETIVO PRINCIPAL:
 - Dar apoyo para negociar con mas claridad y menos vueltas
 - Aterrizar el conocimiento del producto en palabras faciles
 - Convertir informacion dispersa en respuestas practicas
+- Ayudar a meter orden, pedir documentos correctos y no perder ventas por proceso mal hecho despues del cierre
 
 PRECIOS Y PAGOS DEL COACH:
 - Cuando el distribuidor te diga un numero como "1000" o "2500", toma ese numero como precio base de catalogo
@@ -2347,6 +2349,7 @@ REGLAS DE RESPUESTA:
 - Si la pregunta es sobre producto, explica como presentarlo facil y que preguntar despues
 - Si la pregunta es sobre precio o pago, da el numero claro y luego el siguiente paso mas util para vender
 - Si la pregunta es sobre seguimiento, da un guion corto o el proximo paso mas fuerte
+- Si la pregunta es sobre orden, DocuCite, documentos o aprobacion, di el paso exacto que sigue y que revisar
 - Si la pregunta es sobre reclutamiento, habla claro y sin exagerar
 - Si ya sabes en que momento de la demo va, usa ese contexto para dar la accion que sigue
 - Si el mejor movimiento es cerrar, cierra
@@ -2377,6 +2380,9 @@ CUANDO SEA UTIL:
 - Ejemplo bueno:
   Di esto: "Bienvenido a Royal Prestige, me facilita su ID."
   Siguiente: "Si te da el ID, sigue con la orden. Si te objeta, esa ya es la objecion real."
+- Ejemplo bueno:
+  Di esto: "Perfecto, ahora vamos a meter su orden y subir sus documentos bien claritos."
+  Siguiente: "Confirma si vas en pedido nuevo, anexar documentos o aprobacion."
 
 ENFOQUE:
 - El usuario aqui es distribuidor, no prospecto
@@ -2478,6 +2484,7 @@ GUIA DEL COACH:
 - Si es precio, usa lista de precios y pagos
 - Para sacar pagos del Coach, usa la formula interna de base + 10% tax + 5% envio; mensualidad = total * 5%
 - Si es producto, usa caracteristicas y especificaciones
+- Si es orden, DocuCite o documentos despues del cierre, prioriza la base publica de DocuCite y papeleria del manual
 `);
 
   if (temaCoach.precio) {
@@ -2517,6 +2524,7 @@ ${JSON.stringify(especificacionesRoyalPrestige)}
     temaCoach.demo ||
     temaCoach.objecion ||
     temaCoach.cierre ||
+    temaCoach.ordenes ||
     temaCoach.mentalidad ||
     temaCoach.seguimiento ||
     temaCoach.reclutamiento
@@ -2552,6 +2560,13 @@ ${JSON.stringify(cierresAlexDey)}
     contextoBase.push(coachCierreFinalInterno);
   }
 
+  if (temaCoach.ordenes || temaCoach.cierreFinal) {
+    contextoBase.push(`
+DOCUCITE Y ORDENES:
+${JSON.stringify(docuciteOrdenesCoach)}
+`);
+  }
+
   if (temaCoach.mentalidad) {
     contextoBase.push(`
 MENTALIDAD:
@@ -2585,6 +2600,7 @@ ${JSON.stringify(reclutamientoCiprian)}
     !temaCoach.demo &&
     !temaCoach.objecion &&
     !temaCoach.cierre &&
+    !temaCoach.ordenes &&
     !temaCoach.mentalidad &&
     !temaCoach.seguimiento &&
     !temaCoach.reclutamiento
@@ -2622,6 +2638,9 @@ function detectarTemaCoach(preguntaNormalizada = "") {
       preguntaNormalizada
     ),
     cierreFinal: /se queda callado|se queda en silencio|se quedo callado|se quedo en silencio|no responde|no me responde|silencio final|momento final|final de la demo|me facilita su id|id|comprobante de domicilio|deposito|orden|asumo la venta/i.test(
+      preguntaNormalizada
+    ),
+    ordenes: /docucite|pedido|pedido nuevo|nuevo pedido|orden|ordenes|meter la orden|subir documentos|anexar documentos|order review|aprobaci[oó]n del pedido|aprobar pedido|procesamiento de pagos|esignature|match|uploaded|doc review|biometric|biometrica|captura|camara|notificaciones|sin conexi[oó]n|offline/i.test(
       preguntaNormalizada
     ),
     mentalidad: /mentalidad|frustrad|desanimad|disciplina|constancia|miedo|seguridad|liderazgo|confianza|actitud/i.test(
@@ -3207,7 +3226,7 @@ app.post("/chat", async (req, res) => {
       estadoPrompt = `
 ESTADO DEL COACH:
 - area_privada: si
-- tipo_ayuda: objeciones, cierre, precios, pagos, paquetes, negociacion
+- tipo_ayuda: objeciones, cierre, precios, pagos, paquetes, negociacion, ordenes y docucite
 `;
       perfilPrompt = `
 CONTEXTO INTERNO DEL COACH:
@@ -3215,7 +3234,7 @@ CONTEXTO INTERNO DEL COACH:
 - no capturar lead
 - no pedir telefono
 - no mandar informacion a Google Sheets
-- enfocate en objeciones, seguimiento, demo, cierre, reclutamiento y estrategia
+- enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
 `;
     } else {
       actualizarEstadoConversacion(sessionId, preguntaLimpia);

@@ -193,7 +193,10 @@ function inferirSourceType(relativePath) {
     nombre.includes("iniciativa") ||
     nombre.includes("bono") ||
     nombre.includes("network") ||
-    nombre.includes("distribuidor")
+    nombre.includes("distribuidor") ||
+    nombre.includes("docucite") ||
+    nombre.includes("esignature") ||
+    nombre.includes("pedido")
   ) {
     return "sales_training";
   }
@@ -370,12 +373,18 @@ function construirChunksEspeciales(parsedContent, sourceType, fileName) {
     !Array.isArray(parsedContent) &&
     Array.isArray(parsedContent.modulos)
   ) {
+    const lowerFileName = String(fileName || "").toLowerCase();
+    const prefijo =
+      lowerFileName.includes("docucite") || lowerFileName.includes("esignature") || lowerFileName.includes("pedido")
+        ? "DocuCite"
+        : "Coach";
+
     return parsedContent.modulos
       .map((modulo, index) => {
         const titulo = modulo?.titulo || modulo?.id || `Modulo ${index + 1}`;
 
         return {
-          text: serializarNodo(modulo, `Coach / ${titulo}`),
+          text: serializarNodo(modulo, `${prefijo} / ${titulo}`),
           itemId: modulo?.id || null,
           itemTitle: titulo
         };
@@ -641,7 +650,11 @@ export function inferirTiposFuentePorPregunta(question) {
     tipos.add("product_knowledge");
   }
 
-  if (/venta|cerrar|objeci[oó]n|cita|representante|agendar|demo|demostraci[oó]n|equipo|reclutar/i.test(pregunta)) {
+  if (
+    /venta|cerrar|objeci[oó]n|cita|representante|agendar|demo|demostraci[oó]n|equipo|reclutar|docucite|pedido|orden|esignature|match|order review|biometrica|captura de imagen|aprobaci[oó]n del pedido|subir documentos|anexar documentos/i.test(
+      pregunta
+    )
+  ) {
     tipos.add("sales_training");
   }
 

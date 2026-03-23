@@ -1,0 +1,192 @@
+{
+  "metadata": {
+    "titulo": "DocuCite publico - Ordenes y proceso para Coach",
+    "version_curada": "2026-03-23-v2",
+    "origen": [
+      "https://www.docucite.com/Training?language=ES",
+      "https://www.docucite.com/support?language=ES",
+      "https://www.docucite.com/Welcome?isDistributor=True&language=ES"
+    ],
+    "tipo_contenido": "Base publica de capacitacion y soporte de DocuCite",
+    "uso": "Ayuda al Coach a mover al distribuidor desde el cierre hasta la orden metida sin atorarse en documentos, match, aprobacion o captura",
+    "nota": "Este archivo usa solo informacion publica visible. Sirve como base inicial y no reemplaza manuales internos ni politicas privadas."
+  },
+  "resumen_ejecutivo": {
+    "idea_central": "DocuCite ayuda a capturar, enviar, revisar y dar seguimiento a pedidos y documentos. Para el Coach, esto sirve para no perder ventas por errores de captura, documentos faltantes o pasos mal hechos despues del cierre.",
+    "para_que_si_sirve": [
+      "Guiar el siguiente paso despues del cierre",
+      "Explicar como enviar un pedido nuevo o anexar documentos",
+      "Ayudar a entender estados del pedido y del match",
+      "Prevenir retrasos por mala captura de imagen",
+      "Aclarar cuando usar eSignature, aprobacion y procesamiento de pagos",
+      "Resolver dudas basicas de dispositivos, notificaciones y modo sin conexion"
+    ],
+    "para_que_no_sirve_solo": [
+      "No reemplaza videos internos ni guias rapidas completas",
+      "No confirma politicas privadas de oficina o de credito",
+      "No sustituye el proceso exacto de tu lider, oficina o pais"
+    ]
+  },
+  "modulos": [
+    {
+      "id": "inicio_y_recorrido_docucite",
+      "titulo": "Inicio rapido de DocuCite",
+      "cuando_usarlo": [
+        "Cuando el distribuidor nunca ha usado DocuCite",
+        "Cuando pregunta por donde empezar"
+      ],
+      "puntos_clave": [
+        "La pagina publica de capacitacion arranca con una guia de introduccion y videos de instrucciones",
+        "El recorrido incluye configurar cuenta, enviar pedido, anexar documentos, aprobacion y eSignature",
+        "La recomendacion publica es empezar por la guia de inicio y luego ver los videos segun el paso donde vas"
+      ],
+      "frase_para_gpt": "Si estas perdido, no quieras aprender todo de golpe. Empieza por guia de inicio, luego nuevo pedido, luego documentos y aprobacion."
+    },
+    {
+      "id": "configuracion_de_cuenta",
+      "titulo": "Configurar cuenta de distribuidor o emprendedor",
+      "cuando_usarlo": [
+        "Cuando un nuevo distribuidor no puede arrancar en la app",
+        "Cuando preguntan por usuario o acceso inicial"
+      ],
+      "puntos_clave": [
+        "La capacitacion publica incluye video para configurar cuenta de distribuidor y cuenta de emprendedor",
+        "La pagina de bienvenida indica que el usuario entra con su usuario y contrasena de DocuCite configurados durante verificacion",
+        "El nombre de usuario publico descrito ahi es el codigo de emprendedor de 8 caracteres asignado por Hy Cite"
+      ],
+      "frase_para_gpt": "Si no puedes ni entrar, primero arregla acceso y cuenta. No te vayas directo a meter orden sin tener eso bien."
+    },
+    {
+      "id": "nuevo_pedido_y_documentos",
+      "titulo": "Enviar un nuevo pedido y anexar documentos",
+      "cuando_usarlo": [
+        "Cuando ya cerraron y toca meter la orden",
+        "Cuando falta subir documentos a un pedido ya existente"
+      ],
+      "puntos_clave": [
+        "La capacitacion publica separa dos acciones: enviar un nuevo pedido y anexar documentos a un pedido existente",
+        "Tambien existe aprobacion de las ordenes de un emprendedor como paso aparte",
+        "La pagina de soporte aclara que en la pantalla de match solo aparecen pedidos enviados a traves de DocuCite y todavia en flujo de trabajo"
+      ],
+      "siguiente_paso_util": [
+        "Si todavia no existe el pedido, empieza por nuevo pedido",
+        "Si el pedido ya existe y solo falta evidencia, usa anexar documentos",
+        "Si es pedido de emprendedor, revisa si tambien toca aprobacion"
+      ],
+      "frase_para_gpt": "No mezcles pasos. Primero confirma si vas a crear pedido nuevo, subir documentos o aprobar uno ya hecho."
+    },
+    {
+      "id": "esignature_y_match",
+      "titulo": "eSignature y match de ordenes",
+      "cuando_usarlo": [
+        "Cuando preguntan por firma electronica",
+        "Cuando el pedido no aparece matched"
+      ],
+      "puntos_clave": [
+        "La capacitacion publica tiene flujos separados de eSignature y match para Estados Unidos, Mexico y Brasil",
+        "La guia publica de soporte dice que si el estado sale matched, los documentos ya quedaron coincidentes",
+        "Si sale Uploaded o Doc Review, el match todavia no se ha completado por procesamiento de pedidos"
+      ],
+      "frase_para_gpt": "Si todavia dice Uploaded o Doc Review, no des por hecho que ya quedo. Todavia no esta matched."
+    },
+    {
+      "id": "aprobacion_order_review_y_estado",
+      "titulo": "Aprobacion del pedido, Order Review y estados",
+      "cuando_usarlo": [
+        "Cuando el distribuidor quiere revisar si todo se ve bien",
+        "Cuando no sabe en que estado va el pedido"
+      ],
+      "puntos_clave": [
+        "La capacitacion publica incluye aprobacion del pedido como documento y como video para emprendedor",
+        "Order Review permite revisar informacion del cliente y vista previa de imagenes del documento",
+        "La pagina de soporte aclara que Order Review sirve para revisar, pero no para editar"
+      ],
+      "frase_para_gpt": "Usa Order Review para confirmar lo que subiste, no para corregir ahi mismo."
+    },
+    {
+      "id": "procesamiento_de_pagos",
+      "titulo": "Procesamiento de pagos",
+      "cuando_usarlo": [
+        "Cuando el distribuidor pregunta que sigue con el pago",
+        "Cuando busca el modulo correcto despues de meter la orden"
+      ],
+      "puntos_clave": [
+        "La pagina publica lista procesamiento de pagos como documento de capacitacion",
+        "Eso indica que el pago es una capa separada del pedido y de la captura de documentos",
+        "Para el Coach esto sirve para no confundir cierre, orden y pago como si fueran un solo paso"
+      ],
+      "frase_para_gpt": "Cierre, orden y pago van ligados, pero no son lo mismo. Si ya cerro, lleva al siguiente modulo correcto."
+    },
+    {
+      "id": "captura_de_imagenes_y_calidad",
+      "titulo": "Calidad de imagen y captura de documentos",
+      "cuando_usarlo": [
+        "Cuando el pedido se atora por documentos borrosos",
+        "Cuando preguntan como tomar mejor la foto"
+      ],
+      "puntos_clave": [
+        "La pagina de capacitacion recomienda seguir instrucciones de captura para obtener imagenes de maxima calidad",
+        "Soporte dice que en vista previa procesada se debe revisar que el documento sea legible, bien recortado y sin zonas borrosas",
+        "Si el modo automatico no captura, la recomendacion publica es cambiar a modo manual y tomar la imagen asi"
+      ],
+      "frase_para_gpt": "Antes de culpar al sistema, revisa si la imagen esta legible, completa y bien recortada."
+    },
+    {
+      "id": "notificaciones_camara_biometria_y_dispositivos",
+      "titulo": "Notificaciones, camara, biometria y reglas de dispositivo",
+      "cuando_usarlo": [
+        "Cuando la app no deja capturar o no llegan alertas",
+        "Cuando comparten dispositivo o preguntan si pueden usar varios"
+      ],
+      "puntos_clave": [
+        "La app necesita permiso de camara para funcionar",
+        "Las notificaciones deben autorizarse para recibir avisos en el dispositivo",
+        "La capacitacion publica lista inicio de sesion biometrica como documento",
+        "Soporte dice que si se pueden usar varios dispositivos, pero solo se permite un usuario por dispositivo",
+        "Si mas de un usuario comparte un dispositivo, la recomendacion publica es reinstalar la app para cambiar de usuario"
+      ],
+      "frase_para_gpt": "Si la app no captura o no avisa, primero revisa permisos, camara, notificaciones y que no esten compartiendo el mismo dispositivo."
+    },
+    {
+      "id": "modo_sin_conexion_y_fax",
+      "titulo": "Modo sin conexion, fax y alcance real de la app",
+      "cuando_usarlo": [
+        "Cuando el distribuidor trabaja en zonas sin internet",
+        "Cuando preguntan si DocuCite reemplaza al fax o si muestra pedidos viejos"
+      ],
+      "puntos_clave": [
+        "Soporte dice que si se puede capturar un pedido nuevo en modo sin conexion",
+        "Cuando regresa la conectividad, el pedido capturado se carga automaticamente",
+        "DocuCite no muestra pedidos enviados por fax",
+        "La pagina publica aclara que DocuCite no reemplaza al fax; es una alternativa movil para capturar y enviar documentos"
+      ],
+      "frase_para_gpt": "Si trabajas sin senal, captura y sube luego. Pero no esperes ver en DocuCite lo que se mando por fax."
+    },
+    {
+      "id": "despues_del_cierre_sin_perder_la_venta",
+      "titulo": "Despues del cierre: convertir el si en orden metida",
+      "cuando_usarlo": [
+        "Cuando el distribuidor ya cerro y no quiere perder la venta por falta de proceso",
+        "Cuando pregunta que sigue despues de pedir ID o documentos"
+      ],
+      "puntos_clave": [
+        "Despues del cierre ya no conviene dar otro discurso; conviene mover al pedido correcto",
+        "DocuCite entra como herramienta para capturar, revisar y empujar la orden con documentos de calidad",
+        "Si el pedido o los documentos no se ven bien, la venta puede retrasarse aunque ya este acordada",
+        "Para el Coach, esta etapa pide instrucciones cortas: que subir, que revisar y que estado esperar"
+      ],
+      "frase_para_gpt": "Si ya te dieron el ID y el cliente ya dijo que si, baja la voz, mete orden y cuida documentos. No revivas la demo."
+    }
+  ],
+  "instrucciones_gpt": {
+    "cuando_usar_este_archivo": [
+      "Cuando pregunten por DocuCite",
+      "Cuando hablen de meter orden, subir documentos o aprobar pedido",
+      "Cuando el distribuidor ya cerro y toca pasar a papeleria o app",
+      "Cuando pregunten por eSignature, match, Upload, Doc Review o Order Review",
+      "Cuando ocupen mejorar imagenes, permisos o trabajo sin conexion"
+    ],
+    "tono": "Responder breve y practico. Decir que hacer ahorita y el siguiente paso. No recitar toda la ayuda publica si no la piden.",
+    "prioridad": "Primero resolver en que paso exacto van: acceso, pedido nuevo, documentos, match, aprobacion, pago o captura."
+  }
+}
