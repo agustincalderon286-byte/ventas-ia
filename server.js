@@ -2089,7 +2089,7 @@ No repitas informacion innecesaria.
 `;
 
 const coachSystemPrompt = `
-Eres Agustin 2.0 Coach, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, ordenar seguimientos, preparar demos y mover prospectos al siguiente paso con mas claridad.
+Eres Agustin 2.0 Coach, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, sacar precios y pagos, armar paquetes, negociar y cerrar con mas claridad.
 
 VOZ Y TONO:
 - Habla claro, directo, calido y util
@@ -2102,11 +2102,30 @@ VOZ Y TONO:
 - Piensa en distribuidores latinos que trabajan duro, leen rapido y necesitan ayuda al momento
 
 OBJETIVO PRINCIPAL:
-- Ayudar al distribuidor a contestar objeciones
-- Sugerir siguientes pasos de seguimiento
-- Dar ideas para demos, citas, cierres y reclutamiento
+- Ayudar al distribuidor a contestar objeciones y cerrar mejor
+- Sacar precios, pagos mensuales y paquetes sin enredarse
+- Dar apoyo para negociar con mas claridad y menos vueltas
 - Aterrizar el conocimiento del producto en palabras faciles
 - Convertir informacion dispersa en respuestas practicas
+
+PRECIOS Y PAGOS DEL COACH:
+- Cuando el distribuidor te diga un numero como "1000" o "2500", toma ese numero como precio base de catalogo
+- Formula interna:
+  tax = base * 10%
+  envio = base * 5%
+  total = base + tax + envio
+  mensualidad = total * 5%
+- Si hay varios productos para paquete, suma primero todas las bases y luego aplica la formula al total base
+- Ejemplo interno:
+  base 2500
+  tax 250
+  envio 125
+  total 2875
+  mensualidad 143.75
+- No expliques esta formula a menos que el distribuidor te la pida
+- Si solo te piden el pago, da el pago
+- Si te piden total y pago, da ambos
+- Si ocupan negociar, usa los numeros para mover al siguiente paso sin dar discurso largo
 
 REGLAS DE RESPUESTA:
 - Prioriza claridad y utilidad inmediata
@@ -2118,6 +2137,7 @@ REGLAS DE RESPUESTA:
 - No des teoria si el momento pide accion
 - Si la pregunta es una objecion, da una frase util y luego el siguiente paso
 - Si la pregunta es sobre producto, explica como presentarlo facil y que preguntar despues
+- Si la pregunta es sobre precio o pago, da el numero claro y luego el siguiente paso mas util para vender
 - Si la pregunta es sobre seguimiento, da un guion corto o el proximo paso mas fuerte
 - Si la pregunta es sobre reclutamiento, habla claro y sin exagerar
 - Si ya sabes en que momento de la demo va, usa ese contexto para dar la accion que sigue
@@ -2248,16 +2268,29 @@ GUIA DEL COACH:
 - Si es reclutamiento o retencion, prioriza Jose Miguel Ciprian
 - Si es demo o presentacion, prioriza Alejandro Jaramillo
 - Si es precio, usa lista de precios y pagos
+- Para sacar pagos del Coach, usa la formula interna de base + 10% tax + 5% envio; mensualidad = total * 5%
 - Si es producto, usa caracteristicas y especificaciones
 `);
 
   if (temaCoach.precio) {
     contextoBase.push(`
+FORMULA INTERNA DE PRECIOS DEL COACH:
+- numero recibido = precio base de catalogo
+- tax = base * 10%
+- envio = base * 5%
+- total = base + tax + envio
+- mensualidad = total * 5%
+- si es paquete, suma primero las bases y luego aplica la formula al total base
+- no expliques la formula salvo que te la pidan
+
 PRECIOS:
 ${JSON.stringify(preciosCatalogo)}
 
 PAGOS:
 ${JSON.stringify(opcionesPagoRoyalPrestige)}
+
+CALCULOS DETECTADOS:
+${construirCalculosPreciosCoach(pregunta)}
 `);
   }
 
@@ -2343,7 +2376,7 @@ ${JSON.stringify(mentalidadOlmedo)}
 
 function detectarTemaCoach(preguntaNormalizada = "") {
   return {
-    precio: /precio|precios|cu[aá]nto|cuesta|plan|planes|mensual|diario|financiamiento|pago|pagos/i.test(
+    precio: /precio|precios|cu[aá]nto|cuesta|plan|planes|mensual|diario|financiamiento|pago|pagos|mensualidad|paquete|paquetes|combo|combos|negociar|negociacion|matematica|matematicas|catalogo|total/i.test(
       preguntaNormalizada
     ),
     producto: /producto|extractor|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|garantia|material/i.test(
@@ -2407,6 +2440,51 @@ function extraerPalabrasClaveCoach(pregunta = "") {
   }
 
   return Array.from(claves);
+}
+
+function redondearMonedaCoach(valor) {
+  return Math.round((Number(valor) + Number.EPSILON) * 100) / 100;
+}
+
+function extraerMontosCoach(pregunta = "") {
+  const coincidencias = String(pregunta || "").match(/\$?\d[\d,]*(?:\.\d+)?/g) || [];
+  const montos = coincidencias
+    .map(item => Number(item.replace(/[$,]/g, "")))
+    .filter(numero => Number.isFinite(numero) && numero >= 100);
+
+  return Array.from(new Set(montos));
+}
+
+function calcularPagoCoach(base = 0) {
+  const tax = redondearMonedaCoach(base * 0.1);
+  const envio = redondearMonedaCoach(base * 0.05);
+  const total = redondearMonedaCoach(base + tax + envio);
+  const mensualidad = redondearMonedaCoach(total * 0.05);
+
+  return { base, tax, envio, total, mensualidad };
+}
+
+function construirCalculosPreciosCoach(pregunta = "") {
+  const montos = extraerMontosCoach(pregunta);
+
+  if (!montos.length) {
+    return "- Sin monto directo en la pregunta. Si el distribuidor te dice un precio base, aplica la formula interna.";
+  }
+
+  const lineas = montos.map(base => {
+    const calculo = calcularPagoCoach(base);
+    return `- Base ${calculo.base}: tax ${calculo.tax}, envio ${calculo.envio}, total ${calculo.total}, mensualidad ${calculo.mensualidad}`;
+  });
+
+  if (montos.length > 1) {
+    const basePaquete = redondearMonedaCoach(montos.reduce((acc, monto) => acc + monto, 0));
+    const paquete = calcularPagoCoach(basePaquete);
+    lineas.push(
+      `- Paquete total base ${paquete.base}: tax ${paquete.tax}, envio ${paquete.envio}, total ${paquete.total}, mensualidad ${paquete.mensualidad}`
+    );
+  }
+
+  return lineas.join("\n");
 }
 
 function construirExperienciaRealCoach(pregunta = "") {
@@ -2917,7 +2995,7 @@ app.post("/chat", async (req, res) => {
       estadoPrompt = `
 ESTADO DEL COACH:
 - area_privada: si
-- tipo_ayuda: objeciones, seguimiento, demo, cierre, reclutamiento
+- tipo_ayuda: objeciones, cierre, precios, pagos, paquetes, negociacion
 `;
       perfilPrompt = `
 CONTEXTO INTERNO DEL COACH:
