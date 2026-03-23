@@ -2194,60 +2194,227 @@ ${JSON.stringify(encuestaVentas)}
 
 function construirContextoEstaticoCoach(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
-  let contexto = `
-CATALOGO:
+  const contextoBase = [];
+  const temaCoach = detectarTemaCoach(preguntaNormalizada);
+
+  contextoBase.push(`
+GUIA DEL COACH:
+- Si es objecion o cierre, prioriza Alex Dey
+- Si es frustracion, actitud o liderazgo personal, prioriza Adrian Olmedo
+- Si es seguimiento despues de demo, prioriza Sistema 4 Citas en 14 Dias
+- Si es reclutamiento o retencion, prioriza Jose Miguel Ciprian
+- Si es demo o presentacion, prioriza Alejandro Jaramillo
+- Si es precio, usa lista de precios y pagos
+- Si es producto, usa caracteristicas y especificaciones
+`);
+
+  if (temaCoach.precio) {
+    contextoBase.push(`
+PRECIOS:
 ${JSON.stringify(preciosCatalogo)}
 
-CARACTERISTICAS:
+PAGOS:
+${JSON.stringify(opcionesPagoRoyalPrestige)}
+`);
+  }
+
+  if (temaCoach.producto || temaCoach.demo) {
+    contextoBase.push(`
+PRODUCTO Y BENEFICIOS:
 ${JSON.stringify(beneficiosProductos)}
 
-VENTAS:
-${JSON.stringify(inteligenciaVentas)}
+ESPECIFICACIONES:
+${JSON.stringify(especificacionesRoyalPrestige)}
+`);
+  }
 
+  if (temaCoach.demo) {
+    contextoBase.push(`
 DEMO:
 ${JSON.stringify(demoVenta)}
+`);
+  }
+
+  if (temaCoach.objecion || temaCoach.cierre) {
+    contextoBase.push(`
+CIERRES:
+${JSON.stringify(cierresAlexDey)}
+`);
+  }
+
+  if (temaCoach.mentalidad) {
+    contextoBase.push(`
+MENTALIDAD:
+${JSON.stringify(mentalidadOlmedo)}
+`);
+  }
+
+  if (temaCoach.seguimiento) {
+    contextoBase.push(`
+SEGUIMIENTO:
+${JSON.stringify(sistema4Citas)}
+`);
+  }
+
+  if (temaCoach.reclutamiento) {
+    contextoBase.push(`
+RECLUTAMIENTO:
+${JSON.stringify(reclutamientoCiprian)}
+`);
+  }
+
+  const experienciaReal = construirExperienciaRealCoach(pregunta);
+
+  if (experienciaReal) {
+    contextoBase.push(experienciaReal);
+  }
+
+  if (
+    !temaCoach.precio &&
+    !temaCoach.producto &&
+    !temaCoach.demo &&
+    !temaCoach.objecion &&
+    !temaCoach.cierre &&
+    !temaCoach.mentalidad &&
+    !temaCoach.seguimiento &&
+    !temaCoach.reclutamiento
+  ) {
+    contextoBase.push(`
+BASE GENERAL COACH:
+${JSON.stringify(beneficiosProductos)}
 
 CIERRES:
 ${JSON.stringify(cierresAlexDey)}
 
 MENTALIDAD:
 ${JSON.stringify(mentalidadOlmedo)}
+`);
+  }
 
-SEGUIMIENTO:
-${JSON.stringify(sistema4Citas)}
+  return contextoBase.join("\n\n");
+}
+
+function detectarTemaCoach(preguntaNormalizada = "") {
+  return {
+    precio: /precio|precios|cu[aá]nto|cuesta|plan|planes|mensual|diario|financiamiento|pago|pagos/i.test(
+      preguntaNormalizada
+    ),
+    producto: /producto|extractor|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|garantia|material/i.test(
+      preguntaNormalizada
+    ),
+    demo: /demo|demostraci[oó]n|presentaci[oó]n|mostrar|explicar|presentar/i.test(
+      preguntaNormalizada
+    ),
+    objecion: /objeci[oó]n|esta caro|caro|muy caro|no me alcanza|no tengo dinero|lo voy a pensar|no tengo tiempo|no estoy segura|no estoy seguro|no me interesa|ya tengo|ya compr[eé]|despu[eé]s/i.test(
+      preguntaNormalizada
+    ),
+    cierre: /cerrar|cierre|amarre|benjamin franklin|doble alternativa|puercoesp[ií]n|rebote|silencio/i.test(
+      preguntaNormalizada
+    ),
+    mentalidad: /mentalidad|frustrad|desanimad|disciplina|constancia|miedo|seguridad|liderazgo|confianza|actitud/i.test(
+      preguntaNormalizada
+    ),
+    seguimiento: /seguimiento|despu[eé]s de la demo|despu[eé]s de la cita|referid|4 citas|14 d[ií]as|llamar luego|volver a llamar|pr[oó]ximo paso/i.test(
+      preguntaNormalizada
+    ),
+    reclutamiento: /reclut|equipo|distribuidor|lider|liderazgo de equipo|retener|conservar gente|entrevista|candidato/i.test(
+      preguntaNormalizada
+    )
+  };
+}
+
+function normalizarTextoBusquedaCoach(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, " ");
+}
+
+function extraerPalabrasClaveCoach(pregunta = "") {
+  const base = normalizarTextoBusquedaCoach(pregunta)
+    .split(/[^a-z0-9ñ]+/i)
+    .map(word => word.trim())
+    .filter(word => word.length >= 4);
+
+  const claves = new Set(base);
+
+  if (/caro|precio|dinero|cuota|pago/i.test(pregunta)) {
+    ["caro", "interesada", "interesado", "no esta interesada", "no esta interesado"].forEach(item =>
+      claves.add(item)
+    );
+  }
+
+  if (/ya tengo|ya tiene|cliente|productos/i.test(pregunta)) {
+    ["cliente", "tiene productos", "sus productos estan bien"].forEach(item => claves.add(item));
+  }
+
+  if (/llamar|seguimiento|despues|ocupad/i.test(pregunta)) {
+    ["llamar", "ocupada", "ocupado", "llamar luego", "llamar siguiente"].forEach(item => claves.add(item));
+  }
+
+  if (/regalo|demo|cita|recibir/i.test(pregunta)) {
+    ["regalo", "recibir", "cita", "visita"].forEach(item => claves.add(item));
+  }
+
+  return Array.from(claves);
+}
+
+function construirExperienciaRealCoach(pregunta = "") {
+  if (!Array.isArray(inteligenciaVentas) || !inteligenciaVentas.length) {
+    return "";
+  }
+
+  const palabrasClave = extraerPalabrasClaveCoach(pregunta);
+
+  if (!palabrasClave.length) {
+    return "";
+  }
+
+  const coincidencias = inteligenciaVentas
+    .map(registro => {
+      const corpus = normalizarTextoBusquedaCoach(
+        [
+          registro?.nombre,
+          registro?.observaciones_vendedor,
+          registro?.comentario_telemarketing,
+          registro?.resultado_cita
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+
+      let score = 0;
+      for (const palabra of palabrasClave) {
+        if (corpus.includes(palabra)) {
+          score += palabra.includes(" ") ? 3 : 1;
+        }
+      }
+
+      return {
+        registro,
+        score
+      };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(item => ({
+      nombre: item.registro?.nombre || "Cliente",
+      ciudad_zip: item.registro?.ciudad_zip || "",
+      observaciones_vendedor: item.registro?.observaciones_vendedor || "",
+      comentario_telemarketing: item.registro?.comentario_telemarketing || "",
+      resultado_cita: item.registro?.resultado_cita || ""
+    }));
+
+  if (!coincidencias.length) {
+    return "";
+  }
+
+  return `
+EXPERIENCIA REAL DE CLIENTES Y TELEMARKETING:
+Usa estas notas reales solo como referencia practica para detectar patrones de objecion, seguimiento y reaccion del cliente.
+${JSON.stringify(coincidencias)}
 `;
-
-  if (
-    preguntaNormalizada.includes("garantia") ||
-    preguntaNormalizada.includes("material") ||
-    /olla|sarten|cuchillo|santoku|easy release|paellera|vaporera|royal prestige|extractor|producto/i.test(
-      preguntaNormalizada
-    )
-  ) {
-    contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
-  }
-
-  if (
-    /precio|precios|cu[aá]nto|cuesta|pago|pagos|diario|mensual|financiamiento|plan/i.test(
-      preguntaNormalizada
-    )
-  ) {
-    contexto += `\nPAGOS:\n${JSON.stringify(opcionesPagoRoyalPrestige)}`;
-  }
-
-  if (
-    /receta|recetas|cocinar|cocina|demo|demostraci[oó]n|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
-      preguntaNormalizada
-    )
-  ) {
-    contexto += `\nRECETAS PARA DEMO:\n${JSON.stringify(recetasRoyalPrestige)}`;
-  }
-
-  if (preguntaNormalizada.includes("equipo") || preguntaNormalizada.includes("reclutar")) {
-    contexto += `\nRECLUTAMIENTO:\n${JSON.stringify(reclutamientoCiprian)}`;
-  }
-
-  return contexto;
 }
 
 function inferirTiposFuentePorModo(pregunta, modo = "chef") {
