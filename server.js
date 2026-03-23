@@ -29,6 +29,7 @@ const COACH_PASSWORD_MIN = 8;
 const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
+const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
 const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
   .split(",")
   .map(email => normalizarEmail(email))
@@ -523,6 +524,30 @@ async function validarLimiteUsoCoach(userDoc = null) {
     allowed: usedToday < COACH_MAX_MESSAGES_PER_DAY,
     usedToday,
     remainingToday: Math.max(COACH_MAX_MESSAGES_PER_DAY - usedToday, 0)
+  };
+}
+
+async function validarLimiteUsoChef(visitorId = "") {
+  if (!visitorId) {
+    return {
+      allowed: true,
+      usedToday: 0,
+      remainingToday: CHEF_MAX_MESSAGES_PER_DAY
+    };
+  }
+
+  const startOfDay = obtenerInicioDia();
+  const usedToday = await Message.countDocuments({
+    visitorId,
+    role: "user",
+    createdAt: { $gte: startOfDay },
+    intent: "chef_chat"
+  });
+
+  return {
+    allowed: usedToday < CHEF_MAX_MESSAGES_PER_DAY,
+    usedToday,
+    remainingToday: Math.max(CHEF_MAX_MESSAGES_PER_DAY - usedToday, 0)
   };
 }
 
@@ -3101,6 +3126,7 @@ app.post("/chat", async (req, res) => {
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
   let coachUsage = null;
+  let chefUsage = null;
 
   if (!preguntaLimpia) {
     return res.status(400).json({ error: "pregunta requerida" });
@@ -3122,6 +3148,14 @@ app.post("/chat", async (req, res) => {
     if (!coachUsage.allowed) {
       return res.status(429).json({
         error: `Ya llegaste al limite de ${COACH_MAX_MESSAGES_PER_DAY} mensajes por hoy en tu plan individual. Manana se reinicia tu acceso diario.`
+      });
+    }
+  } else {
+    chefUsage = await validarLimiteUsoChef(visitorIdLimpio);
+
+    if (!chefUsage.allowed) {
+      return res.status(429).json({
+        error: `Por hoy ya usaste tus ${CHEF_MAX_MESSAGES_PER_DAY} mensajes gratis. Manana se reinicia tu acceso.`
       });
     }
   }
@@ -3181,6 +3215,7 @@ CONTEXTO INTERNO DEL COACH:
         leadId: leadGuardado?._id || null,
         role: "user",
         content: preguntaLimpia,
+        intent: "chef_chat",
         estadoConversacion: estadoConLead
       });
 
@@ -3274,6 +3309,7 @@ CONTEXTO INTERNO DEL COACH:
       leadId: leadFinal?._id || leadGuardado?._id || null,
       role: "assistant",
       content: respuestaIA.content,
+      intent: "chef_chat",
       estadoConversacion: obtenerEstadoConversacion(sessionId)
     });
     await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
