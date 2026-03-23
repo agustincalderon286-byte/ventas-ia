@@ -442,12 +442,6 @@ async function initCoachAppPage() {
     }
   });
 
-  document.querySelectorAll("[data-coach-prompt]").forEach(button => {
-    button.addEventListener("click", () => {
-      sendCoachMessage(button.textContent || "");
-    });
-  });
-
   autoResizeTextarea(chatInput);
 
   portalButtons.forEach(button => {
