@@ -27,6 +27,8 @@ const COACH_SESSION_COOKIE = "agustin_coach_session";
 const COACH_SESSION_DAYS = 30;
 const COACH_PASSWORD_MIN = 8;
 const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
+const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
+const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
 const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
   .split(",")
   .map(email => normalizarEmail(email))
@@ -138,6 +140,8 @@ const coachSessionSchema = new mongoose.Schema({
     index: true
   },
   tokenHash: { type: String, required: true, unique: true },
+  ipAddress: String,
+  userAgent: String,
   expiresAt: { type: Date, required: true },
   lastSeenAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
@@ -376,6 +380,15 @@ function setCoachCookie(res, req, token) {
   });
 }
 
+function obtenerCoachIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean)[0];
+
+  return forwarded || req.ip || req.socket?.remoteAddress || "";
+}
+
 function clearCoachCookie(res, req) {
   res.clearCookie(COACH_SESSION_COOKIE, {
     httpOnly: true,
@@ -389,10 +402,27 @@ async function crearCoachSesion(req, res, userId) {
   const token = generarTokenSeguro();
   const tokenHash = hashTokenSeguro(token);
   const expiresAt = new Date(Date.now() + COACH_SESSION_DAYS * 24 * 60 * 60 * 1000);
+  const activeSessions = await CoachSession.find({
+    userId,
+    expiresAt: { $gt: new Date() }
+  })
+    .sort({ lastSeenAt: -1, createdAt: -1 });
+
+  if (activeSessions.length >= COACH_MAX_ACTIVE_SESSIONS) {
+    const sessionsToRemove = activeSessions.slice(COACH_MAX_ACTIVE_SESSIONS - 1);
+
+    if (sessionsToRemove.length) {
+      await CoachSession.deleteMany({
+        _id: { $in: sessionsToRemove.map(session => session._id) }
+      });
+    }
+  }
 
   await CoachSession.create({
     userId,
     tokenHash,
+    ipAddress: obtenerCoachIp(req),
+    userAgent: String(req.headers["user-agent"] || "").slice(0, 400),
     expiresAt,
     lastSeenAt: new Date()
   });
@@ -462,6 +492,38 @@ async function requireCoachActivo(req, res) {
   }
 
   return auth;
+}
+
+function obtenerInicioDia(date = new Date()) {
+  const inicio = new Date(date);
+  inicio.setHours(0, 0, 0, 0);
+  return inicio;
+}
+
+async function validarLimiteUsoCoach(userDoc = null) {
+  if (!userDoc || coachTieneAccesoDePrueba(userDoc.email)) {
+    return {
+      allowed: true,
+      usedToday: 0,
+      remainingToday: COACH_MAX_MESSAGES_PER_DAY
+    };
+  }
+
+  const startOfDay = obtenerInicioDia();
+  const usedToday = await Message.countDocuments({
+    leadId: null,
+    profileId: null,
+    role: "user",
+    createdAt: { $gte: startOfDay },
+    intent: "coach_chat",
+    detectedTopics: [`coach_user:${String(userDoc._id)}`]
+  });
+
+  return {
+    allowed: usedToday < COACH_MAX_MESSAGES_PER_DAY,
+    usedToday,
+    remainingToday: Math.max(COACH_MAX_MESSAGES_PER_DAY - usedToday, 0)
+  };
 }
 
 function stripeConfigurado() {
@@ -3038,6 +3100,7 @@ app.post("/chat", async (req, res) => {
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
+  let coachUsage = null;
 
   if (!preguntaLimpia) {
     return res.status(400).json({ error: "pregunta requerida" });
@@ -3052,6 +3115,14 @@ app.post("/chat", async (req, res) => {
 
     if (!coachAuth) {
       return;
+    }
+
+    coachUsage = await validarLimiteUsoCoach(coachAuth.user);
+
+    if (!coachUsage.allowed) {
+      return res.status(429).json({
+        error: `Ya llegaste al limite de ${COACH_MAX_MESSAGES_PER_DAY} mensajes por hoy en tu plan individual. Manana se reinicia tu acceso diario.`
+      });
     }
   }
 
@@ -3156,9 +3227,36 @@ CONTEXTO INTERNO DEL COACH:
     conversaciones[sessionId].push(respuestaIA);
 
     if (modoChat === "coach") {
+      await guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: null,
+        leadId: null,
+        role: "user",
+        content: preguntaLimpia,
+        intent: "coach_chat",
+        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
+
+      await guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: null,
+        leadId: null,
+        role: "assistant",
+        content: respuestaIA.content,
+        intent: "coach_chat",
+        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
+
       return res.json({
         respuesta: respuestaIA.content,
-        mode: modoChat
+        mode: modoChat,
+        usage: {
+          usedToday: (coachUsage?.usedToday || 0) + 1,
+          remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
+          limitPerDay: COACH_MAX_MESSAGES_PER_DAY
+        }
       });
     }
 
