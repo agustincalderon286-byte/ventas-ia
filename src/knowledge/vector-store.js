@@ -177,7 +177,19 @@ function inferirSourceType(relativePath) {
     return "survey";
   }
 
-  if (nombre.includes("demo") || nombre.includes("cierres") || nombre.includes("mentalidad") || nombre.includes("reclutamiento") || nombre.includes("sistema") || nombre.includes("material")) {
+  if (
+    nombre.includes("demo") ||
+    nombre.includes("cierres") ||
+    nombre.includes("mentalidad") ||
+    nombre.includes("reclutamiento") ||
+    nombre.includes("sistema") ||
+    nombre.includes("material") ||
+    nombre.includes("manual") ||
+    nombre.includes("novato") ||
+    nombre.includes("entrenamiento") ||
+    nombre.includes("capacitacion") ||
+    nombre.includes("prospeccion")
+  ) {
     return "sales_training";
   }
 
@@ -340,6 +352,26 @@ function construirChunksEspeciales(parsedContent, sourceType, fileName) {
         return {
           text: serializarNodo(metodo, `Método de pago / ${titulo}`),
           itemId: metodo?.id || null,
+          itemTitle: titulo
+        };
+      })
+      .filter(chunk => limpiarTexto(chunk.text));
+  }
+
+  if (
+    sourceType === "sales_training" &&
+    parsedContent &&
+    typeof parsedContent === "object" &&
+    !Array.isArray(parsedContent) &&
+    Array.isArray(parsedContent.modulos)
+  ) {
+    return parsedContent.modulos
+      .map((modulo, index) => {
+        const titulo = modulo?.titulo || modulo?.id || `Modulo ${index + 1}`;
+
+        return {
+          text: serializarNodo(modulo, `Coach / ${titulo}`),
+          itemId: modulo?.id || null,
           itemTitle: titulo
         };
       })

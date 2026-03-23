@@ -1,0 +1,299 @@
+{
+  "metadata": {
+    "titulo": "Manual del Novato 2016 - Coach",
+    "origen": "Chicago Vision Team Network / Royal Prestige",
+    "tipo_contenido": "Manual operativo para novatos en venta directa",
+    "uso": "Base de conocimiento del Coach para demo, cierres, papeleria, prospeccion y entrenamiento",
+    "nota": "Este archivo resume y cura el manual original. Conserva lo util para vender hoy y marca con cuidado lo que puede sonar viejo o invasivo."
+  },
+  "resumen_ejecutivo": {
+    "idea_central": "El manual ensena un sistema completo: abrir confianza, calificar, presentar, crear deseo, cerrar, llenar papeleria y medir actividad.",
+    "para_que_si_sirve": [
+      "Mover al distribuidor por etapas durante la demo",
+      "Recordar el siguiente paso en vez de hablar de mas",
+      "Apoyar objeciones y cierres con estructura",
+      "Guiar papeleria, credito y matematicas de la orden",
+      "Ayudar a prospectar y medir actividad"
+    ],
+    "para_que_no_sirve_solo": [
+      "No reemplaza precios actuales ni politicas vigentes",
+      "No se debe usar literal en preguntas sensibles de dinero o credito al inicio",
+      "No se debe tratar como guion rigido si ya tienes un cierre mas fuerte de campo"
+    ]
+  },
+  "modulos": [
+    {
+      "id": "flujo_7_pasos",
+      "titulo": "Flujo de la presentacion en 7 pasos",
+      "paginas": "11",
+      "cuando_usarlo": [
+        "Cuando el distribuidor no sabe en que parte de la demo va",
+        "Cuando ocupa ordenar una presentacion que se le descompuso"
+      ],
+      "pasos": [
+        "Rompe hielo",
+        "Referencias",
+        "Cita instantanea",
+        "Encuesta",
+        "Demo",
+        "Cierre",
+        "Invitacion al negocio"
+      ],
+      "idea_fuerza": "No te saltes del saludo al precio. Cada paso prepara el siguiente.",
+      "frase_para_gpt": "Si la demo esta floja, regresa a la etapa correcta en vez de empujar el cierre antes de tiempo."
+    },
+    {
+      "id": "onboarding_novato",
+      "titulo": "Onboarding, metas y estilo de aprendizaje del novato",
+      "paginas": "6-10",
+      "cuando_usarlo": [
+        "Cuando el distribuidor es nuevo y se siente perdido",
+        "Cuando un lider quiere entrenar sin tratar igual a todo el equipo"
+      ],
+      "puntos_clave": [
+        "Levantar metas de corto, mediano y largo plazo",
+        "Definir motivacion y sueno del novato",
+        "Detectar como aprende mejor: escrito, diagrama, videos, escucha o practica",
+        "Presentarte como coach, guia y punto principal de dudas",
+        "Recordar que actitud, facilidad y persistencia cambian la velocidad del aprendizaje"
+      ],
+      "frase_para_gpt": "No entrenes parejo a todos. Primero detecta que mueve al novato y como aprende mas rapido."
+    },
+    {
+      "id": "rompe_hielo_y_calificacion",
+      "titulo": "Rompe hielo y calificacion del cliente",
+      "paginas": "13-14",
+      "cuando_usarlo": [
+        "Cuando el distribuidor pregunta como abrir confianza",
+        "Cuando ocupa sacar informacion sin parecer robot ni detective"
+      ],
+      "puntos_clave": [
+        "Venderse uno mismo antes de vender el producto",
+        "Sonreir, mirar a los ojos, agradecer el tiempo y usar humor ligero",
+        "Buscar afinidad real: origen, familia, trabajo, casa, deportes, decoracion",
+        "Descubrir quien decide y quien apoya la compra",
+        "Crear confianza temprano para que el cierre no llegue frio"
+      ],
+      "usar_con_cuidado_hoy": [
+        "No preguntar ingresos o credito demasiado pronto",
+        "No sonar invasivo ni interrogatorio",
+        "Usar la idea de calificar, no la version mas dura del cuestionario"
+      ],
+      "frases_modelo": [
+        "Que bonita esta su area, ya tienen mucho tiempo aqui?",
+        "Gracias por su tiempo. Primero quiero conocerlos un poquito para saber que les puede servir de verdad.",
+        "Antes de seguir, quien decide mas estas compras en casa?"
+      ],
+      "frase_para_gpt": "Abre confianza, detecta al que decide y no preguntes cosas sensibles antes de ganarte el ambiente."
+    },
+    {
+      "id": "encuesta_y_deteccion_de_necesidades",
+      "titulo": "Encuesta y deteccion de necesidades",
+      "paginas": "22-23",
+      "cuando_usarlo": [
+        "Cuando el distribuidor no sabe que preguntar para descubrir interes real",
+        "Cuando necesita mover la conversacion de gusto a necesidad"
+      ],
+      "puntos_clave": [
+        "Preguntar por salud, tiempo y dinero como prioridades familiares",
+        "Explorar porciones, gasto en alimentos y tipo de agua que usan",
+        "Llevar al cliente a verbalizar si valora cocinar con poca grasa y productos de calidad",
+        "Usar la encuesta para justificar la demo, no para llenar silencio"
+      ],
+      "usar_con_cuidado_hoy": [
+        "No hacer la encuesta completa si el ambiente esta fragil",
+        "Tomar solo las preguntas que ayuden a esa demo",
+        "Las preguntas de credito se usan mas tarde, no de arranque"
+      ],
+      "frase_para_gpt": "Haz pocas preguntas pero buenas. La meta es que el cliente diga por que le conviene, no que se fastidie."
+    },
+    {
+      "id": "caracteristicas_ventajas_beneficios",
+      "titulo": "Tabla de caracteristicas, ventajas y beneficios",
+      "paginas": "25",
+      "cuando_usarlo": [
+        "Cuando el distribuidor ocupa presentar producto sin sonar tecnico",
+        "Cuando necesita convertir material en valor para el cliente"
+      ],
+      "puntos_clave": [
+        "No basta decir material o tecnologia: hay que traducirlo a beneficio",
+        "Ejemplo: acero higienico y facil de limpiar -> mas seguridad e higiene",
+        "Ejemplo: coccion uniforme -> mejor control y ahorro de tiempo",
+        "Ejemplo: tapa que sella vapor -> menos grasa, poco agua y mejor retencion"
+      ],
+      "regla": "Toda caracteristica debe aterrizar en ventaja y luego en beneficio para la familia.",
+      "frase_para_gpt": "No vendas material. Vende lo que ese material le resuelve a la familia."
+    },
+    {
+      "id": "crear_deseo_y_precalificar",
+      "titulo": "Crear deseo y precalificar bien",
+      "paginas": "26",
+      "cuando_usarlo": [
+        "Cuando hay interes pero no deseo de compra",
+        "Cuando el distribuidor esta gastando tiempo con el prospecto equivocado"
+      ],
+      "puntos_clave": [
+        "No hablar demasiado",
+        "Sembrar deseo conectando beneficio con necesidad real",
+        "Escoger mejor al cliente antes de invertir tiempo",
+        "Si el prospecto no tiene necesidad ni capacidad, la direccion esta mal"
+      ],
+      "frase_para_gpt": "Primero confirma necesidad y capacidad. Luego siembra deseo. Si no, te vas a cansar presentando en vano."
+    },
+    {
+      "id": "cierres_y_metodos_del_manual",
+      "titulo": "Cierres y metodos del manual",
+      "paginas": "30-32",
+      "cuando_usarlo": [
+        "Cuando el distribuidor pide un cierre puntual",
+        "Cuando una objecion ya salio y ocupa convertirla"
+      ],
+      "cierres_clave": [
+        "Conclusion: entrar pensando si lo quiere",
+        "Doble alternativa: llevar la decision entre A o B",
+        "Amarre: cerrar ideas con preguntas afirmativas",
+        "Puercoespin: responder pregunta con pregunta para retomar control",
+        "Envolvente: hablar como si ya fuera cliente",
+        "Compromiso: si te consigo esto, hoy lo haces?",
+        "Rebote: convertir objecion en nueva oportunidad",
+        "Benjamin Franklin: sacar la objecion real cuando dice que lo va a pensar"
+      ],
+      "regla_maestra": "No tires muchos cierres a la vez. Usa el mejor para ese momento.",
+      "frase_para_gpt": "Si el cliente ya esta cerca, no expliques otro mundo. Escoge un cierre y avanza."
+    },
+    {
+      "id": "llamada_de_cierre",
+      "titulo": "Llamada de cierre con supervisor",
+      "paginas": "33",
+      "cuando_usarlo": [
+        "Cuando el distribuidor ocupa apoyo para amarrar una venta",
+        "Cuando quiere subir seriedad usando a su lider o supervisor"
+      ],
+      "puntos_clave": [
+        "La llamada busca poner candado a la venta",
+        "Presentar al cliente como amable e interesado",
+        "No prometer antes de consultar",
+        "Usar discrecion, pedir referidos y confirmar datos de la cuenta"
+      ],
+      "riesgo": "Solo usar si el proceso actual de la oficina o del equipo todavia permite ese formato.",
+      "frase_para_gpt": "La llamada de cierre no es para improvisar. Es para cerrar con apoyo y confirmar datos."
+    },
+    {
+      "id": "papeleria_credito_y_orden",
+      "titulo": "Pedido de venta, credito y datos criticos",
+      "paginas": "34-35",
+      "cuando_usarlo": [
+        "Cuando el distribuidor ya va a llenar orden o aplicacion",
+        "Cuando quiere evitar errores tontos de papeleria"
+      ],
+      "puntos_clave": [
+        "Informacion clara, completa y legible",
+        "Datos de cliente, direccion, telefonos y envio",
+        "Tipo de contrato y estatus de entrega",
+        "Producto exacto y promocion correcta",
+        "Firma del cliente y de quien participa"
+      ],
+      "credito": [
+        "Nombre completo",
+        "Fecha de nacimiento",
+        "SSN, ITIN o identificacion valida segun el proceso vigente",
+        "Trabajo, referencias y fiador si aplica"
+      ],
+      "frase_para_gpt": "Si ya cerraste, no arruines la venta por papeleria mal hecha."
+    },
+    {
+      "id": "matematica_de_la_orden",
+      "titulo": "Matematica de la orden y pago mensual",
+      "paginas": "37",
+      "cuando_usarlo": [
+        "Cuando el distribuidor ocupa sacar total, balance o mensualidad",
+        "Cuando necesita practicar calculos rapidos"
+      ],
+      "puntos_clave": [
+        "Precio de venta",
+        "Costo de manejo y envio",
+        "Impuesto",
+        "Valor total",
+        "Deposito entregado hoy",
+        "Deposito adicional",
+        "Balance a pagar",
+        "Pago por mes"
+      ],
+      "conexion_con_el_coach_actual": "El Coach usa la formula interna moderna de base + 10% tax + 5% envio y mensualidad = total * 5%.",
+      "frase_para_gpt": "El cliente no compra una formula. Compra una cuota clara y manejable."
+    },
+    {
+      "id": "prospeccion_dad_y_estrella",
+      "titulo": "Prospeccion, estrella y D.A.D.",
+      "paginas": "38",
+      "cuando_usarlo": [
+        "Cuando el distribuidor quiere sacar citas con mas orden",
+        "Cuando pregunta a quien si vale la pena atender"
+      ],
+      "puntos_clave": [
+        "La estrella es cita",
+        "El proceso de prospectar se resume en boleto, estrella y pregunta de interes",
+        "D.A.D. = deseo, autoridad y dinero",
+        "Atender citas unicamente con prospectos que cumplen D.A.D."
+      ],
+      "frase_para_gpt": "No toda cita sirve. Si no hay deseo, autoridad ni dinero, vas a caminar mucho para poco."
+    },
+    {
+      "id": "reporte_y_medicion",
+      "titulo": "Reporte mensual y cultura de actividad",
+      "paginas": "44",
+      "cuando_usarlo": [
+        "Cuando el distribuidor no esta midiendo actividad",
+        "Cuando el lider quiere corregir por numeros y no por emociones"
+      ],
+      "indicadores": [
+        "Citas",
+        "Demos",
+        "Servicio",
+        "Ventas",
+        "Citas de instalacion",
+        "Aprobados",
+        "Referencias",
+        "Leads",
+        "Asociados"
+      ],
+      "frase_para_gpt": "Lo que no se mide se siente, pero no se corrige."
+    },
+    {
+      "id": "mentalidad_y_contrato_irrevocable",
+      "titulo": "Mentalidad, pertenencia y contrato irrevocable",
+      "paginas": "8-10,45",
+      "cuando_usarlo": [
+        "Cuando el distribuidor esta flojo, desanimado o sin disciplina",
+        "Cuando el lider quiere encender compromiso sin puro regano"
+      ],
+      "puntos_clave": [
+        "La gente acepta al equipo cuando el equipo muestra interes",
+        "Crear ambicion sana y lenguaje de numeros",
+        "Aprender requiere informacion, aceptacion, integracion, aprendizaje y ensenanza",
+        "La emocionalidad puede mover mas rapido que la pura informacion",
+        "El contrato irrevocable busca compromiso personal con esfuerzo y constancia"
+      ],
+      "frase_para_gpt": "Sin actividad y sin compromiso, ni el mejor libreto cierra por ti."
+    }
+  ],
+  "cosas_que_no_usar_literal_hoy": [
+    "Preguntas de ingreso o credito en rompe hielo",
+    "Cualquier promesa comercial que no este vigente hoy",
+    "Cualquier dato legal, de credito o papeleria sin validar proceso actual",
+    "Pruebas o demostraciones sensibles sin revisar cumplimiento actual"
+  ],
+  "instrucciones_gpt": {
+    "cuando_usar_este_archivo": [
+      "Cuando el distribuidor pregunta en que parte de la demo va",
+      "Cuando ocupa romper el hielo, calificar o detectar al que decide",
+      "Cuando necesita ordenar una encuesta o demo",
+      "Cuando pide un cierre del sistema clasico",
+      "Cuando esta llenando papeleria o credito",
+      "Cuando pregunta como prospectar o sacar citas con calidad",
+      "Cuando necesita disciplina, estructura o actividad"
+    ],
+    "tono": "Usa este manual como sistema practico de campo. Habla simple, corto y util. No cites el manual como autoridad si no hace falta; usalo para guiar el siguiente paso.",
+    "prioridad": "Si el distribuidor pregunta por un momento especifico de la demo, usa primero el modulo exacto. Si ocupa cierre final de campo, prioriza el cierre interno del Coach."
+  }
+}

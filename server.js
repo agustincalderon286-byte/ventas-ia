@@ -2199,6 +2199,7 @@ const cierresAlexDey = cargarJSON("./src/data/12_cierres_alex_dey.json");
 const mentalidadOlmedo = cargarJSON("./src/data/mentalidad_ventas_olmedo.json");
 const reclutamientoCiprian = cargarJSON("./src/data/reclutamiento_ciprian.json");
 const sistema4Citas = cargarJSON("./src/data/sistema_4_citas_14_dias.json");
+const manualNovatoCoach = cargarJSON("./src/data/manual_novato_2016_coach.json");
 
 // =============================
 // REDFIN
@@ -2510,6 +2511,21 @@ ${JSON.stringify(especificacionesRoyalPrestige)}
 `);
   }
 
+  if (
+    temaCoach.precio ||
+    temaCoach.demo ||
+    temaCoach.objecion ||
+    temaCoach.cierre ||
+    temaCoach.mentalidad ||
+    temaCoach.seguimiento ||
+    temaCoach.reclutamiento
+  ) {
+    contextoBase.push(`
+MANUAL DEL NOVATO CURADO:
+${JSON.stringify(manualNovatoCoach)}
+`);
+  }
+
   if (temaCoach.demo) {
     contextoBase.push(`
 DEMO:
@@ -2588,13 +2604,13 @@ function detectarTemaCoach(preguntaNormalizada = "") {
     producto: /producto|extractor|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|garantia|material/i.test(
       preguntaNormalizada
     ),
-    demo: /demo|demostraci[oó]n|presentaci[oó]n|mostrar|explicar|presentar/i.test(
+    demo: /demo|demostraci[oó]n|presentaci[oó]n|mostrar|explicar|presentar|rompe hielo|rompiendo el hielo|cita instant[aá]nea|encuesta|cuestionario|salud|4\s*&\s*14|4 y 14|4 en 14|beneficios|ventajas|caracter[ií]sticas/i.test(
       preguntaNormalizada
     ),
     objecion: /objeci[oó]n|esta caro|caro|muy caro|no me alcanza|no tengo dinero|lo voy a pensar|no tengo tiempo|no estoy segura|no estoy seguro|no me interesa|ya tengo|ya compr[eé]|despu[eé]s/i.test(
       preguntaNormalizada
     ),
-    cierre: /cerrar|cierre|amarre|benjamin franklin|doble alternativa|puercoesp[ií]n|rebote|silencio/i.test(
+    cierre: /cerrar|cierre|amarre|benjamin franklin|doble alternativa|puercoesp[ií]n|rebote|silencio|llamada de cierre|envolvente|compromiso/i.test(
       preguntaNormalizada
     ),
     cierreFinal: /se queda callado|se queda en silencio|se quedo callado|se quedo en silencio|no responde|no me responde|silencio final|momento final|final de la demo|me facilita su id|id|comprobante de domicilio|deposito|orden|asumo la venta/i.test(
@@ -2603,10 +2619,10 @@ function detectarTemaCoach(preguntaNormalizada = "") {
     mentalidad: /mentalidad|frustrad|desanimad|disciplina|constancia|miedo|seguridad|liderazgo|confianza|actitud/i.test(
       preguntaNormalizada
     ),
-    seguimiento: /seguimiento|despu[eé]s de la demo|despu[eé]s de la cita|referid|4 citas|14 d[ií]as|llamar luego|volver a llamar|pr[oó]ximo paso/i.test(
+    seguimiento: /seguimiento|despu[eé]s de la demo|despu[eé]s de la cita|referid|4 citas|14 d[ií]as|llamar luego|volver a llamar|pr[oó]ximo paso|prospect|prospecci[oó]n|estrella|dad|boleto/i.test(
       preguntaNormalizada
     ),
-    reclutamiento: /reclut|equipo|distribuidor|lider|liderazgo de equipo|retener|conservar gente|entrevista|candidato/i.test(
+    reclutamiento: /reclut|equipo|distribuidor|lider|liderazgo de equipo|retener|conservar gente|entrevista|candidato|coach|novato/i.test(
       preguntaNormalizada
     )
   };
