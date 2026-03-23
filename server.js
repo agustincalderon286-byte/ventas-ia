@@ -1,9 +1,11 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import fs from "fs";
 import mongoose from "mongoose";
 import path from "path";
+import Stripe from "stripe";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -12,12 +14,16 @@ import {
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(process.cwd(), "public")));
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const PRIVATE_DIR = path.join(process.cwd(), "private");
 
 const conversaciones = {};
 const estadosConversacion = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const COACH_SESSION_COOKIE = "agustin_coach_session";
+const COACH_SESSION_DAYS = 30;
+const COACH_PASSWORD_MIN = 8;
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -99,6 +105,37 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachUserSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  passwordHash: { type: String, required: true },
+  passwordSalt: { type: String, required: true },
+  stripeCustomerId: String,
+  stripeSubscriptionId: String,
+  stripePriceId: String,
+  subscriptionStatus: { type: String, default: "inactive" },
+  subscriptionActive: { type: Boolean, default: false },
+  subscriptionCurrentPeriodEnd: Date,
+  subscriptionCancelAtPeriodEnd: { type: Boolean, default: false },
+  lastCheckoutSessionId: String,
+  lastLoginAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachSessionSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  tokenHash: { type: String, required: true, unique: true },
+  expiresAt: { type: Date, required: true },
+  lastSeenAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -109,10 +146,425 @@ profileSchema.index({ visitorIds: 1 });
 profileSchema.index({ leadId: 1 });
 messageSchema.index({ visitorId: 1, createdAt: -1 });
 messageSchema.index({ sessionId: 1, createdAt: -1 });
+coachUserSchema.index({ stripeCustomerId: 1 });
+coachUserSchema.index({ stripeSubscriptionId: 1 });
+coachSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
 const Message = mongoose.models.Message || mongoose.model("Message", messageSchema);
+const CoachUser = mongoose.models.CoachUser || mongoose.model("CoachUser", coachUserSchema);
+const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSession", coachSessionSchema);
+
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
+app.use(express.json());
+
+function normalizarEmail(email = "") {
+  return String(email || "").trim().toLowerCase();
+}
+
+function passwordEsValido(password = "") {
+  return typeof password === "string" && password.trim().length >= COACH_PASSWORD_MIN;
+}
+
+function crearPasswordSeguro(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+
+  return { salt, hash };
+}
+
+function verificarPasswordSeguro(password, salt, hashGuardado) {
+  if (!password || !salt || !hashGuardado) {
+    return false;
+  }
+
+  const hashCalculado = crypto.scryptSync(password, salt, 64);
+  const hashOriginal = Buffer.from(hashGuardado, "hex");
+
+  if (hashCalculado.length !== hashOriginal.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(hashCalculado, hashOriginal);
+}
+
+function generarTokenSeguro() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function hashTokenSeguro(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function parsearCookies(header = "") {
+  return header
+    .split(";")
+    .map(fragmento => fragmento.trim())
+    .filter(Boolean)
+    .reduce((acumulado, fragmento) => {
+      const indiceSeparador = fragmento.indexOf("=");
+
+      if (indiceSeparador === -1) {
+        return acumulado;
+      }
+
+      const key = fragmento.slice(0, indiceSeparador).trim();
+      const value = decodeURIComponent(fragmento.slice(indiceSeparador + 1).trim());
+      acumulado[key] = value;
+      return acumulado;
+    }, {});
+}
+
+function requestEsSeguro(req) {
+  return req.secure || req.headers["x-forwarded-proto"] === "https";
+}
+
+function obtenerBaseUrl(req) {
+  if (process.env.APP_BASE_URL) {
+    return process.env.APP_BASE_URL.replace(/\/+$/, "");
+  }
+
+  const protocol = requestEsSeguro(req) ? "https" : "http";
+  return `${protocol}://${req.get("host")}`;
+}
+
+function convertirUnixADate(unix) {
+  if (!unix) {
+    return null;
+  }
+
+  return new Date(unix * 1000);
+}
+
+function coachTieneAcceso(status = "") {
+  return ["active", "trialing"].includes(String(status || "").toLowerCase());
+}
+
+function limpiarCoachUser(userDoc) {
+  if (!userDoc) {
+    return null;
+  }
+
+  return {
+    id: String(userDoc._id),
+    name: userDoc.name || "",
+    email: userDoc.email || "",
+    subscriptionStatus: userDoc.subscriptionStatus || "inactive",
+    subscriptionActive: Boolean(userDoc.subscriptionActive),
+    subscriptionCurrentPeriodEnd: userDoc.subscriptionCurrentPeriodEnd || null,
+    subscriptionCancelAtPeriodEnd: Boolean(userDoc.subscriptionCancelAtPeriodEnd),
+    stripeCustomerId: userDoc.stripeCustomerId || "",
+    lastCheckoutSessionId: userDoc.lastCheckoutSessionId || ""
+  };
+}
+
+function responderCoachError(res, statusCode, message) {
+  return res.status(statusCode).json({ error: message });
+}
+
+function setCoachCookie(res, req, token) {
+  res.cookie(COACH_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: "/",
+    maxAge: COACH_SESSION_DAYS * 24 * 60 * 60 * 1000
+  });
+}
+
+function clearCoachCookie(res, req) {
+  res.clearCookie(COACH_SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: "/"
+  });
+}
+
+async function crearCoachSesion(req, res, userId) {
+  const token = generarTokenSeguro();
+  const tokenHash = hashTokenSeguro(token);
+  const expiresAt = new Date(Date.now() + COACH_SESSION_DAYS * 24 * 60 * 60 * 1000);
+
+  await CoachSession.create({
+    userId,
+    tokenHash,
+    expiresAt,
+    lastSeenAt: new Date()
+  });
+
+  setCoachCookie(res, req, token);
+}
+
+async function destruirCoachSesion(req, res) {
+  const cookies = parsearCookies(req.headers.cookie || "");
+  const token = cookies[COACH_SESSION_COOKIE];
+
+  if (token) {
+    await CoachSession.deleteOne({ tokenHash: hashTokenSeguro(token) });
+  }
+
+  clearCoachCookie(res, req);
+}
+
+async function obtenerCoachAuth(req) {
+  const cookies = parsearCookies(req.headers.cookie || "");
+  const token = cookies[COACH_SESSION_COOKIE];
+
+  if (!token) {
+    return { session: null, user: null };
+  }
+
+  const tokenHash = hashTokenSeguro(token);
+  const session = await CoachSession.findOne({
+    tokenHash,
+    expiresAt: { $gt: new Date() }
+  }).populate("userId");
+
+  if (!session || !session.userId) {
+    return { session: null, user: null };
+  }
+
+  session.lastSeenAt = new Date();
+  await session.save();
+
+  return {
+    session,
+    user: session.userId
+  };
+}
+
+async function requireCoachUser(req, res) {
+  const auth = await obtenerCoachAuth(req);
+
+  if (!auth.user) {
+    responderCoachError(res, 401, "Necesitas iniciar sesion.");
+    return null;
+  }
+
+  return auth;
+}
+
+async function requireCoachActivo(req, res) {
+  const auth = await requireCoachUser(req, res);
+
+  if (!auth) {
+    return null;
+  }
+
+  if (!auth.user.subscriptionActive) {
+    responderCoachError(res, 403, "Tu cuenta no tiene una suscripcion activa.");
+    return null;
+  }
+
+  return auth;
+}
+
+function stripeConfigurado() {
+  return Boolean(stripe && process.env.STRIPE_PRICE_ID && process.env.STRIPE_WEBHOOK_SECRET);
+}
+
+function stripeListoParaCheckout() {
+  return Boolean(stripe && process.env.STRIPE_PRICE_ID);
+}
+
+async function asegurarCoachCustomer(userDoc) {
+  if (!stripe) {
+    throw new Error("Stripe no configurado.");
+  }
+
+  if (userDoc.stripeCustomerId) {
+    return userDoc;
+  }
+
+  const customer = await stripe.customers.create({
+    email: userDoc.email,
+    name: userDoc.name,
+    metadata: {
+      coachUserId: String(userDoc._id)
+    }
+  });
+
+  userDoc.stripeCustomerId = customer.id;
+  userDoc.updatedAt = new Date();
+  await userDoc.save();
+  return userDoc;
+}
+
+async function actualizarCoachSuscripcion({
+  coachUserId = "",
+  customerId = "",
+  subscriptionId = "",
+  priceId = "",
+  status = "",
+  currentPeriodEnd = null,
+  cancelAtPeriodEnd = false,
+  checkoutSessionId = ""
+}) {
+  let userDoc = null;
+
+  if (coachUserId) {
+    userDoc = await CoachUser.findById(coachUserId);
+  }
+
+  if (!userDoc && customerId) {
+    userDoc = await CoachUser.findOne({ stripeCustomerId: customerId });
+  }
+
+  if (!userDoc && subscriptionId) {
+    userDoc = await CoachUser.findOne({ stripeSubscriptionId: subscriptionId });
+  }
+
+  if (!userDoc) {
+    return null;
+  }
+
+  if (customerId) {
+    userDoc.stripeCustomerId = customerId;
+  }
+
+  if (subscriptionId) {
+    userDoc.stripeSubscriptionId = subscriptionId;
+  }
+
+  if (priceId) {
+    userDoc.stripePriceId = priceId;
+  }
+
+  if (checkoutSessionId) {
+    userDoc.lastCheckoutSessionId = checkoutSessionId;
+  }
+
+  userDoc.subscriptionStatus = status || "inactive";
+  userDoc.subscriptionActive = coachTieneAcceso(status);
+  userDoc.subscriptionCurrentPeriodEnd = currentPeriodEnd || null;
+  userDoc.subscriptionCancelAtPeriodEnd = Boolean(cancelAtPeriodEnd);
+  userDoc.updatedAt = new Date();
+
+  await userDoc.save();
+  return userDoc;
+}
+
+async function encontrarCoachUserPorCheckout(session) {
+  const coachUserId = session?.metadata?.coachUserId || session?.client_reference_id || "";
+
+  if (coachUserId) {
+    const userById = await CoachUser.findById(coachUserId);
+
+    if (userById) {
+      return userById;
+    }
+  }
+
+  if (session?.customer) {
+    const userByCustomer = await CoachUser.findOne({ stripeCustomerId: session.customer });
+
+    if (userByCustomer) {
+      return userByCustomer;
+    }
+  }
+
+  const email = normalizarEmail(session?.customer_details?.email || session?.customer_email || "");
+
+  if (email) {
+    return CoachUser.findOne({ email });
+  }
+
+  return null;
+}
+
+async function sincronizarCoachDesdeCheckoutSession(sessionId) {
+  if (!stripe) {
+    throw new Error("Stripe no configurado.");
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["subscription"]
+  });
+  const userDoc = await encontrarCoachUserPorCheckout(session);
+
+  if (!userDoc) {
+    return null;
+  }
+
+  const subscription = session.subscription && typeof session.subscription === "object"
+    ? session.subscription
+    : null;
+
+  return actualizarCoachSuscripcion({
+    coachUserId: String(userDoc._id),
+    customerId: typeof session.customer === "string" ? session.customer : userDoc.stripeCustomerId || "",
+    subscriptionId: subscription?.id || (typeof session.subscription === "string" ? session.subscription : ""),
+    priceId: subscription?.items?.data?.[0]?.price?.id || process.env.STRIPE_PRICE_ID || "",
+    status: subscription?.status || userDoc.subscriptionStatus || "inactive",
+    currentPeriodEnd: convertirUnixADate(subscription?.current_period_end),
+    cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+    checkoutSessionId: session.id
+  });
+}
+
+async function manejarCheckoutCompletadoStripe(session) {
+  if (!stripe) {
+    return;
+  }
+
+  await sincronizarCoachDesdeCheckoutSession(session.id);
+}
+
+async function manejarSubscriptionEventStripe(subscription) {
+  const customerId =
+    typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id || "";
+
+  await actualizarCoachSuscripcion({
+    customerId,
+    subscriptionId: subscription.id,
+    priceId: subscription.items?.data?.[0]?.price?.id || "",
+    status: subscription.status || "inactive",
+    currentPeriodEnd: convertirUnixADate(subscription.current_period_end),
+    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end)
+  });
+}
+
+async function manejarWebhookStripe(req, res) {
+  if (!stripeConfigurado()) {
+    return res.status(503).send("Stripe webhook no configurado");
+  }
+
+  const signature = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (error) {
+    console.error("Webhook Stripe invalido:", error.message);
+    return res.status(400).send(`Webhook Error: ${error.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        await manejarCheckoutCompletadoStripe(event.data.object);
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        await manejarSubscriptionEventStripe(event.data.object);
+        break;
+      default:
+        break;
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error("Error procesando webhook Stripe:", error.message);
+    res.status(500).json({ error: "Error procesando webhook Stripe" });
+  }
+}
 
 // =============================
 // FUNCION JSON SEGURA
@@ -1681,6 +2133,322 @@ async function construirContexto(pregunta) {
 
   return construirContextoVectorial(matches);
 }
+
+// =============================
+// COACH: AUTH, STRIPE Y RUTAS PRIVADAS
+// =============================
+app.post("/api/coach/signup-checkout", async (req, res) => {
+  if (!stripeListoParaCheckout()) {
+    return responderCoachError(
+      res,
+      503,
+      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
+    );
+  }
+
+  const name = String(req.body?.name || "").trim();
+  const email = normalizarEmail(req.body?.email || "");
+  const password = String(req.body?.password || "");
+
+  if (!name) {
+    return responderCoachError(res, 400, "Tu nombre es requerido.");
+  }
+
+  if (!email) {
+    return responderCoachError(res, 400, "Tu correo es requerido.");
+  }
+
+  if (!passwordEsValido(password)) {
+    return responderCoachError(
+      res,
+      400,
+      `Tu contrasena debe tener al menos ${COACH_PASSWORD_MIN} caracteres.`
+    );
+  }
+
+  const existente = await CoachUser.findOne({ email });
+
+  if (existente) {
+    return responderCoachError(
+      res,
+      409,
+      "Ese correo ya tiene cuenta. Entra por login para continuar con tu Coach."
+    );
+  }
+
+  try {
+    const passwordSeguro = crearPasswordSeguro(password);
+    let userDoc = await CoachUser.create({
+      name,
+      email,
+      passwordHash: passwordSeguro.hash,
+      passwordSalt: passwordSeguro.salt,
+      subscriptionStatus: "inactive",
+      subscriptionActive: false,
+      updatedAt: new Date()
+    });
+
+    await crearCoachSesion(req, res, userDoc._id);
+    userDoc = await asegurarCoachCustomer(userDoc);
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: userDoc.stripeCustomerId,
+      client_reference_id: String(userDoc._id),
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_ID,
+          quantity: 1
+        }
+      ],
+      success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
+      allow_promotion_codes: true,
+      metadata: {
+        coachUserId: String(userDoc._id)
+      },
+      subscription_data: {
+        metadata: {
+          coachUserId: String(userDoc._id),
+          productMode: "coach"
+        }
+      }
+    });
+
+    userDoc.lastCheckoutSessionId = checkoutSession.id;
+    userDoc.updatedAt = new Date();
+    await userDoc.save();
+
+    res.json({
+      url: checkoutSession.url,
+      user: limpiarCoachUser(userDoc)
+    });
+  } catch (error) {
+    console.error("Error creando signup checkout Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear tu suscripcion en este momento.");
+  }
+});
+
+app.post("/api/coach/login", async (req, res) => {
+  const email = normalizarEmail(req.body?.email || "");
+  const password = String(req.body?.password || "");
+
+  if (!email || !password) {
+    return responderCoachError(res, 400, "Correo y contrasena son requeridos.");
+  }
+
+  try {
+    const userDoc = await CoachUser.findOne({ email });
+
+    if (!userDoc || !verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash)) {
+      return responderCoachError(res, 401, "Correo o contrasena incorrectos.");
+    }
+
+    userDoc.lastLoginAt = new Date();
+    userDoc.updatedAt = new Date();
+    await userDoc.save();
+    await crearCoachSesion(req, res, userDoc._id);
+
+    res.json({ user: limpiarCoachUser(userDoc) });
+  } catch (error) {
+    console.error("Error login Coach:", error.message);
+    responderCoachError(res, 500, "No pude iniciar sesion en este momento.");
+  }
+});
+
+app.post("/api/coach/logout", async (req, res) => {
+  try {
+    await destruirCoachSesion(req, res);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Error logout Coach:", error.message);
+    responderCoachError(res, 500, "No pude cerrar la sesion.");
+  }
+});
+
+app.get("/api/coach/me", async (req, res) => {
+  try {
+    const auth = await obtenerCoachAuth(req);
+
+    if (!auth.user) {
+      return res.json({
+        authenticated: false,
+        stripeReady: stripeListoParaCheckout()
+      });
+    }
+
+    res.json({
+      authenticated: true,
+      stripeReady: stripeListoParaCheckout(),
+      user: limpiarCoachUser(auth.user)
+    });
+  } catch (error) {
+    console.error("Error obteniendo usuario Coach:", error.message);
+    responderCoachError(res, 500, "No pude revisar tu cuenta.");
+  }
+});
+
+app.post("/api/coach/create-checkout-session", async (req, res) => {
+  if (!stripeListoParaCheckout()) {
+    return responderCoachError(
+      res,
+      503,
+      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
+    );
+  }
+
+  const auth = await requireCoachUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (auth.user.subscriptionActive) {
+    return responderCoachError(
+      res,
+      409,
+      "Tu cuenta ya tiene una suscripcion activa. Entra al Coach o abre el portal de facturacion."
+    );
+  }
+
+  try {
+    const userDoc = await asegurarCoachCustomer(auth.user);
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: userDoc.stripeCustomerId,
+      client_reference_id: String(userDoc._id),
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_ID,
+          quantity: 1
+        }
+      ],
+      success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
+      allow_promotion_codes: true,
+      metadata: {
+        coachUserId: String(userDoc._id)
+      },
+      subscription_data: {
+        metadata: {
+          coachUserId: String(userDoc._id),
+          productMode: "coach"
+        }
+      }
+    });
+
+    userDoc.lastCheckoutSessionId = checkoutSession.id;
+    userDoc.updatedAt = new Date();
+    await userDoc.save();
+
+    res.json({ url: checkoutSession.url });
+  } catch (error) {
+    console.error("Error creando checkout Coach:", error.message);
+    responderCoachError(res, 500, "No pude abrir el pago del Coach.");
+  }
+});
+
+app.post("/api/coach/create-portal-session", async (req, res) => {
+  if (!stripe) {
+    return responderCoachError(
+      res,
+      503,
+      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
+    );
+  }
+
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (!auth.user.stripeCustomerId) {
+    return responderCoachError(
+      res,
+      400,
+      "Tu cuenta aun no tiene cliente de Stripe conectado."
+    );
+  }
+
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: auth.user.stripeCustomerId,
+      return_url: `${obtenerBaseUrl(req)}/coach/app/`
+    });
+
+    res.json({ url: portalSession.url });
+  } catch (error) {
+    console.error("Error creando portal Coach:", error.message);
+    responderCoachError(res, 500, "No pude abrir tu portal de suscripcion.");
+  }
+});
+
+app.get("/api/coach/checkout-session", async (req, res) => {
+  if (!stripe) {
+    return responderCoachError(
+      res,
+      503,
+      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
+    );
+  }
+
+  const auth = await requireCoachUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const sessionId = String(req.query?.session_id || "").trim();
+
+  if (!sessionId) {
+    return responderCoachError(res, 400, "session_id requerido.");
+  }
+
+  try {
+    const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
+    const coachUserId =
+      checkoutSession.metadata?.coachUserId || checkoutSession.client_reference_id || "";
+    const sameUser =
+      coachUserId === String(auth.user._id) ||
+      checkoutSession.customer === auth.user.stripeCustomerId ||
+      normalizarEmail(checkoutSession.customer_email || "") === auth.user.email;
+
+    if (!sameUser) {
+      return responderCoachError(res, 403, "Esa sesion no pertenece a tu cuenta.");
+    }
+
+    const userActualizado = await sincronizarCoachDesdeCheckoutSession(sessionId);
+
+    res.json({
+      user: limpiarCoachUser(userActualizado || auth.user),
+      session: {
+        id: checkoutSession.id,
+        status: checkoutSession.status,
+        paymentStatus: checkoutSession.payment_status
+      }
+    });
+  } catch (error) {
+    console.error("Error revisando checkout Coach:", error.message);
+    responderCoachError(res, 500, "No pude revisar tu pago todavia.");
+  }
+});
+
+app.get(["/coach/app", "/coach/app/"], async (req, res) => {
+  const auth = await obtenerCoachAuth(req);
+
+  if (!auth.user) {
+    return res.redirect("/coach/login/");
+  }
+
+  if (!auth.user.subscriptionActive) {
+    return res.redirect("/coach/planes/");
+  }
+
+  res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 // =============================
 // CHAT

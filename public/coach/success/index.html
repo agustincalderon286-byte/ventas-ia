@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pago exitoso | Agustin 2.0 Coach</title>
+    <meta
+      name="description"
+      content="Confirmacion de pago y activacion del acceso privado a Agustin 2.0 Coach."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/coach/styles.css" />
+  </head>
+  <body>
+    <div class="coach-shell" data-coach-success-page>
+      <header class="coach-nav">
+        <a class="coach-brand" href="/coach/">
+          <div class="coach-brand-badge">✅</div>
+          <div class="coach-brand-copy">
+            <h1>Agustin 2.0 Coach</h1>
+            <p>Pago recibido</p>
+          </div>
+        </a>
+      </header>
+
+      <section class="login-layout">
+        <article class="login-panel">
+          <div class="eyebrow">Pago confirmado</div>
+          <h2>Estamos activando tu Coach</h2>
+          <p>
+            En esta pantalla confirmamos tu pago con Stripe y actualizamos el acceso privado de tu cuenta.
+          </p>
+
+          <div class="form-result is-visible" data-success-status data-state="info">
+            Confirmando tu pago...
+          </div>
+
+          <div class="dashboard-actions">
+            <a class="primary-button" href="/coach/app/">Entrar al Coach</a>
+            <a class="secondary-button" href="/coach/login/">Ir a login</a>
+          </div>
+
+          <div class="form-help">
+            Cuenta: <strong data-coach-user-email>pendiente</strong><br />
+            Estado: <strong data-coach-subscription-status>pendiente</strong><br />
+            Vigencia: <strong data-coach-subscription-period>pendiente</strong>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <script src="/coach/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coach Privado | Agustin 2.0 Coach</title>
+    <meta
+      name="description"
+      content="Area privada para distribuidores con suscripcion activa a Agustin 2.0 Coach."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/coach/styles.css" />
+  </head>
+  <body>
+    <div class="coach-shell" data-coach-app-page>
+      <header class="coach-nav">
+        <a class="coach-brand" href="/coach/app/">
+          <div class="coach-brand-badge">🧠</div>
+          <div class="coach-brand-copy">
+            <h1>Agustin 2.0 Coach</h1>
+            <p>Area privada para distribuidores</p>
+          </div>
+        </a>
+
+        <nav class="coach-nav-links">
+          <a class="nav-link" href="/coach/">Landing</a>
+          <a class="nav-link" href="/coach/planes/">Plan</a>
+          <button class="nav-button" data-open-billing-portal>Suscripcion</button>
+          <button class="primary-button" data-coach-logout>Cerrar sesion</button>
+        </nav>
+      </header>
+
+      <section class="dashboard-layout">
+        <article class="dashboard-card dashboard-card-hero">
+          <div class="eyebrow">Coach activo</div>
+          <h2>Bienvenido, <span data-coach-user-name>Distribuidor</span></h2>
+          <p class="section-copy">
+            Tu acceso privado ya está encendido. Aquí vive la parte protegida del Coach para distribuidores y desde este
+            punto seguiremos conectando el modo de ventas, objeciones y copiloto.
+          </p>
+
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <strong data-coach-subscription-status>Activa</strong>
+              <span>estado actual de tu suscripción</span>
+            </div>
+            <div class="metric-card">
+              <strong data-coach-subscription-period>Sin fecha</strong>
+              <span>próxima fecha importante de tu plan</span>
+            </div>
+            <div class="metric-card">
+              <strong data-coach-user-email>Tu correo</strong>
+              <span>cuenta conectada al Coach</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-card">
+          <h3>Tu panel ya está listo</h3>
+          <p>
+            Esta es la base protegida donde vamos a montar el Coach de ventas. Desde aquí el usuario ya puede entrar,
+            administrar su plan y quedarse dentro del producto correcto.
+          </p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Acceso protegido</strong>
+                <span>Solo usuarios con cuenta y suscripción activa pueden ver esta área.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Base lista para el Coach</strong>
+                <span>El siguiente paso será conectar aquí el frontend privado del asistente de ventas.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot"></div>
+              <div>
+                <strong>Suscripción administrable</strong>
+                <span>Puedes abrir tu portal de pago cuando quieras desde este mismo panel.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-actions">
+            <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
+            <a class="primary-button" href="/coach/">Volver a la landing</a>
+          </div>
+
+          <div class="form-result" data-coach-app-message></div>
+        </article>
+      </section>
+
+      <p class="footer-note">
+        Fase 2 lista: cuenta, suscripción, login y entrada protegida del Coach.
+      </p>
+    </div>
+
+    <script src="/coach/app.js"></script>
+  </body>
+</html>

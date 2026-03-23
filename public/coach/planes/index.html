@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/coach/styles.css" />
   </head>
   <body>
-    <div class="coach-shell">
+    <div class="coach-shell" data-coach-plan-page>
       <header class="coach-nav">
         <a class="coach-brand" href="/coach/">
           <div class="coach-brand-badge">💼</div>
@@ -81,26 +81,92 @@
         </article>
 
         <aside class="plan-card">
-          <h3>Checkout listo para conectar</h3>
+          <h3>Activa tu acceso</h3>
           <p class="section-copy">
-            Este es el lugar donde quedará el checkout real. En el siguiente paso lo conectamos con Stripe y después
-            abrimos el acceso con login.
+            El Coach ya queda conectado para crear cuenta, abrir el checkout y después entrar solo con suscripción
+            activa.
           </p>
 
-          <div class="checkout-placeholder">
+          <div class="auth-card" data-signup-section>
+            <div class="eyebrow">Nuevo distribuidor</div>
+            <h4>Crea tu cuenta y sigue al pago</h4>
             <p>
-              Botón listo para ser conectado a Stripe Checkout con el plan mensual de Agustin 2.0 Coach.
+              Llena tus datos una sola vez. Después de eso Stripe abre el cobro mensual y tu cuenta queda lista para
+              activarse.
             </p>
 
-            <div class="checkout-actions">
-              <button class="primary-button" data-placeholder-action="checkout">Continuar al pago</button>
-              <a class="secondary-button" href="/coach/login/">Ya tengo cuenta</a>
+            <form class="coach-form" data-signup-checkout-form>
+              <div>
+                <label for="coach-signup-name">Nombre</label>
+                <input id="coach-signup-name" name="name" type="text" placeholder="Tu nombre" required />
+              </div>
+
+              <div>
+                <label for="coach-signup-email">Correo</label>
+                <input
+                  id="coach-signup-email"
+                  name="email"
+                  type="email"
+                  placeholder="tu-correo@ejemplo.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label for="coach-signup-password">Contraseña</label>
+                <input
+                  id="coach-signup-password"
+                  name="password"
+                  type="password"
+                  placeholder="Minimo 8 caracteres"
+                  minlength="8"
+                  required
+                />
+              </div>
+
+              <button class="primary-button" type="submit">Crear cuenta y continuar al pago</button>
+              <div class="form-result"></div>
+            </form>
+
+            <p class="mini-note">
+              Si ya tienes cuenta, entra por login y desde ahí podrás seguir con tu pago o entrar directo al Coach.
+            </p>
+          </div>
+
+          <div class="auth-card" data-member-section hidden>
+            <div class="eyebrow">Cuenta detectada</div>
+            <h4>Hola, <span data-coach-user-name>Distribuidor</span></h4>
+            <p>
+              Tu cuenta ya existe. Solo falta abrir o retomar el pago mensual para activar el acceso privado del Coach.
+            </p>
+
+            <div class="dashboard-actions">
+              <button class="primary-button" data-start-checkout>Continuar al pago</button>
+              <a class="secondary-button" href="/coach/login/">Cambiar de cuenta</a>
             </div>
+
+            <div class="form-result"></div>
+          </div>
+
+          <div class="auth-card" data-active-section hidden>
+            <div class="eyebrow">Suscripcion activa</div>
+            <h4>Tu Coach ya esta encendido</h4>
+            <p>
+              Tu acceso ya esta activo para <strong data-coach-user-email>tu correo</strong>. Puedes entrar directo al
+              Coach o administrar tu suscripción.
+            </p>
+
+            <div class="dashboard-actions">
+              <a class="primary-button" href="/coach/app/">Entrar al Coach</a>
+              <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
+            </div>
+
+            <div class="form-result"></div>
           </div>
 
           <p class="mini-note">
-            Cuando el cobro quede conectado, este flujo hará: pago exitoso, activación de cuenta, login y acceso al
-            Coach.
+            El flujo real queda así: crear cuenta, pagar, activar suscripción y entrar por login al área privada del
+            distribuidor.
           </p>
         </aside>
       </section>

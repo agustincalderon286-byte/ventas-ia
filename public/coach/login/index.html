@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/coach/styles.css" />
   </head>
   <body>
-    <div class="coach-shell">
+    <div class="coach-shell" data-coach-login-page>
       <header class="coach-nav">
         <a class="coach-brand" href="/coach/">
           <div class="coach-brand-badge">🔐</div>
@@ -38,31 +38,41 @@
           <div class="eyebrow">Acceso privado</div>
           <h2>Entra a tu Coach</h2>
           <p>
-            Esta pantalla queda lista para conectarse al login real. Solo cuentas con suscripción activa podrán entrar
-            al modo privado del distribuidor.
+            Solo distribuidores con cuenta y suscripción activa podrán entrar al modo privado del Coach.
           </p>
 
-          <form class="coach-form">
+          <div class="form-result" data-login-banner></div>
+
+          <form class="coach-form" data-login-form>
             <div>
               <label for="coach-email">Correo</label>
-              <input id="coach-email" type="email" placeholder="tu-correo@ejemplo.com" required />
+              <input
+                id="coach-email"
+                name="email"
+                type="email"
+                placeholder="tu-correo@ejemplo.com"
+                required
+              />
             </div>
 
             <div>
               <label for="coach-password">Contraseña</label>
-              <input id="coach-password" type="password" placeholder="Tu contraseña" required />
+              <input
+                id="coach-password"
+                name="password"
+                type="password"
+                placeholder="Tu contraseña"
+                required
+              />
             </div>
 
             <button class="primary-button" type="submit">Entrar al Coach</button>
-
-            <div class="form-result">
-              La interfaz ya quedó lista. El siguiente paso es conectar el login real y validar suscripción activa.
-            </div>
+            <div class="form-result"></div>
           </form>
 
           <div class="form-help">
-            Si todavía no tienes acceso, primero activa tu plan desde la página de suscripción. Después conectaremos esta
-            pantalla a la base de usuarios y al sistema de suscripciones.
+            Si todavía no tienes acceso, primero activa tu plan desde la página de suscripción. Si ya pagaste y tu
+            cuenta está activa, aquí mismo entras al Coach privado.
           </div>
         </article>
       </section>
