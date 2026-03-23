@@ -188,7 +188,12 @@ function inferirSourceType(relativePath) {
     nombre.includes("novato") ||
     nombre.includes("entrenamiento") ||
     nombre.includes("capacitacion") ||
-    nombre.includes("prospeccion")
+    nombre.includes("prospeccion") ||
+    nombre.includes("negocio") ||
+    nombre.includes("iniciativa") ||
+    nombre.includes("bono") ||
+    nombre.includes("network") ||
+    nombre.includes("distribuidor")
   ) {
     return "sales_training";
   }

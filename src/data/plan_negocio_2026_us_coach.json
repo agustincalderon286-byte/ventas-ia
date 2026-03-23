@@ -1,0 +1,191 @@
+{
+  "metadata": {
+    "titulo": "Plan de negocio 2026 US - Coach",
+    "origen": "Material publico de Iniciativas 2026 Estados Unidos y Preguntas y Respuestas Estados Unidos",
+    "tipo_contenido": "Resumen curado de iniciativas, ascensos, bonos y aclaraciones del negocio 2026",
+    "uso": "Base de conocimiento del Coach para responder dudas de niveles, bonos, reclutamiento y crecimiento de network",
+    "nota": "Este archivo resume iniciativas validas en 2026 y puede cambiar por comunicacion oficial. No reemplaza el plan completo del distribuidor."
+  },
+  "resumen_ejecutivo": {
+    "idea_central": "En 2026 el enfoque esta puesto en crecer en equipo. Se ajustan formas de llegar a niveles, se crean bonos por reclutamiento con venta y se facilita recuperar niveles.",
+    "mensajes_fuerza": [
+      "Se gana vendiendo, se crece compartiendo y se lidera inspirando",
+      "2026 premia construccion de fuerza de ventas, no solo venta personal",
+      "Hay iniciativas temporales y reglas puntuales que deben leerse con cuidado"
+    ],
+    "usar_con_cuidado": [
+      "Son iniciativas 2026, no reglas eternas",
+      "Algunos pagos y fechas dependen de cierres mensuales y comunicaciones oficiales",
+      "Si una respuesta afecta dinero o ascenso real, conviene confirmar en el portal del distribuidor"
+    ]
+  },
+  "modulos": [
+    {
+      "id": "vision_2026",
+      "titulo": "Vision 2026: crecer en equipo",
+      "cuando_usarlo": [
+        "Cuando el distribuidor pregunta cual es el enfoque del negocio en 2026",
+        "Cuando necesita explicar la oportunidad de forma breve"
+      ],
+      "puntos_clave": [
+        "2026 empuja construccion y formacion de fuerza de ventas",
+        "La oportunidad tiene orden: ganas vendiendo, creces compartiendo, lideras inspirando",
+        "Hay iniciativas exclusivas y por tiempo limitado para crecer y ganar mas rapido"
+      ],
+      "frase_para_gpt": "En 2026 el negocio no solo premia vender; premia crecer en equipo con orden y actividad."
+    },
+    {
+      "id": "iniciativa_1_blue_royal_premier",
+      "titulo": "Iniciativa 1: dos opciones para llegar a Blue, Royal y Premier",
+      "cuando_usarlo": [
+        "Cuando preguntan como subir a Blue, Royal o Premier en 2026",
+        "Cuando ocupan entender la opcion con reclutamiento"
+      ],
+      "puntos_clave": [
+        "Blue Network opcion 1: compras del network 275K y compras sin linea mas fuerte 90K",
+        "Blue Network opcion 2: compras del network 215K, compras sin linea mas fuerte 70K, 40 reclutas en network directo y 80K en compras de reclutas",
+        "Royal Network opcion 1: 550K y 180K",
+        "Royal Network opcion 2: 450K, 150K, 75 reclutas y 150K en compras de reclutas",
+        "Premier Network Leader opcion 1: 1,150K",
+        "Premier Network Leader opcion 2: 950K, 300K, 90 reclutas y 180K en compras de reclutas"
+      ],
+      "aclaraciones_qyq": [
+        "Si cumples la opcion 2, recibes todos los beneficios del nivel",
+        "Los reclutas nuevos con venta cuentan aunque no sigan activos al cierre del ano",
+        "Quien cuenta en tu network directo depende del nivel: se excluyen redes de leaders del mismo o mayor rango segun corresponda"
+      ],
+      "frase_para_gpt": "En 2026 ya no todo depende del puro volumen: tambien hay camino por reclutamiento con venta."
+    },
+    {
+      "id": "iniciativa_2_dj_a_distribuidor",
+      "titulo": "Iniciativa 2: nueva via para que un Distribuidor Junior llegue a Distribuidor",
+      "cuando_usarlo": [
+        "Cuando un DJ pregunta como promoverse",
+        "Cuando un lider quiere explicarle la opcion 2 a un junior"
+      ],
+      "puntos_clave": [
+        "Opcion 1 aplica despues de 9 meses",
+        "Opcion 2 aplica en meses 6, 7 y 8",
+        "Opcion 2 pide 24K en compras de la distribucion, 78K en ventas, 31K en ventas personales, 4 reclutas directos y 15K en ventas de reclutas directos",
+        "Tambien exige morosidad total menor a 6 por ciento, cesiones promedio de 6 meses menor a 1.0 por ciento, reserva arriba de requerida y estado de cuenta no peor de -500"
+      ],
+      "aclaraciones_qyq": [
+        "Si cumple en el noveno mes con opcion 2, no promueve por esa via; es solo para meses 6, 7 y 8",
+        "El garante sigue siendo responsable por minimo 12 meses completos despues de recibir la distribucion",
+        "DJs de 2025 con primera venta en 2026 pueden aplicar segun la iniciativa"
+      ],
+      "frase_para_gpt": "La opcion 2 acelera el ascenso del DJ, pero no es en cualquier mes ni con actividad floja."
+    },
+    {
+      "id": "iniciativa_3_bono_djs_desarrollados",
+      "titulo": "Iniciativa 3: bono por compras de reclutas directos para DJs desarrollados",
+      "cuando_usarlo": [
+        "Cuando preguntan si desarrollar DJs nuevos deja dinero despues",
+        "Cuando un distribuidor quiere saber si le cuenta el trabajo de formar juniors"
+      ],
+      "puntos_clave": [
+        "Si desarrollas DJs en 2026 bajo tu distribucion, cuando ese DJ llegue a Distribuidor podra activar bonos correspondientes a esos desarrollos previos",
+        "Aplica unicamente para DJs desarrollados desde enero de 2026"
+      ],
+      "frase_para_gpt": "En 2026 formar DJs ya no solo te ayuda a crecer la red; tambien prepara bono futuro cuando ese DJ se convierta en Distribuidor."
+    },
+    {
+      "id": "iniciativa_4_recuperar_niveles",
+      "titulo": "Iniciativa 4: recuperar Blue, Royal y Premier",
+      "cuando_usarlo": [
+        "Cuando alguien perdio nivel y quiere volver rapido",
+        "Cuando preguntan hasta cuando aplica la recuperacion"
+      ],
+      "puntos_clave": [
+        "Aplica para quienes perdieron Blue, Royal o Premier en 2023, 2024 o 2025",
+        "Es valida hasta junio 30 de 2026",
+        "Blue recuperar: 107K, 35K, 20 reclutas y 40K en compras de reclutas",
+        "Royal recuperar: 225K, 75K, 35 reclutas y 70K en compras de reclutas",
+        "Premier recuperar: 475K, 150K, 45 reclutas y 90K en compras de reclutas"
+      ],
+      "aclaraciones_qyq": [
+        "El ascenso al nivel recuperado se realiza aproximadamente para el 15 de julio de 2026",
+        "El nivel recuperado dura hasta el 31 de diciembre de 2026; para mantenerlo en 2027 hay que cumplir requisitos normales o los de la iniciativa 1"
+      ],
+      "frase_para_gpt": "La recuperacion 2026 es una ventana corta. Sirve para volver al nivel, pero luego hay que sostenerlo con reglas normales."
+    },
+    {
+      "id": "iniciativa_5_nivel_4_a_nivel_3",
+      "titulo": "Iniciativa 5: facilitar que nivel 4 llegue a nivel 3 de precios",
+      "cuando_usarlo": [
+        "Cuando un distribuidor pregunta por niveles de precio al inicio de 2026"
+      ],
+      "puntos_clave": [
+        "Valida del 1 de enero al 30 de marzo de 2026",
+        "Requiere 6,750 en compras de compania",
+        "Solo cuentan ordenes a cliente"
+      ],
+      "frase_para_gpt": "Esta iniciativa fue una aceleracion puntual al arranque del ano para subir de nivel 4 a nivel 3."
+    },
+    {
+      "id": "iniciativa_6_bono_compras_y_reclutamiento",
+      "titulo": "Iniciativa 6: bono por compras de compania y reclutamiento con venta",
+      "cuando_usarlo": [
+        "Cuando un distribuidor pregunta que bono puede ganar por mover compras y reclutas",
+        "Cuando ocupa entender escenarios de volumen mensual"
+      ],
+      "puntos_clave": [
+        "Escenario 1: compras de compania arriba de 6,500, 2 reclutas y 1,600 en compras de reclutas directos -> bono 5 por ciento",
+        "Escenario 2: compras de compania arriba de 11,000, 2 reclutas y 1,600 en compras de reclutas directos -> bono 15 o 20 por ciento segun nivel",
+        "Distribuidores nivel de precios 2 reciben 15 por ciento adicional en escenario 2",
+        "Distribuidores nivel de precios 3 reciben 20 por ciento en escenario 2 porque no traen el 5 por ciento base"
+      ],
+      "frase_para_gpt": "Aqui no basta comprar mas; el bono se mueve mejor cuando hay compra de compania mas reclutamiento con venta."
+    },
+    {
+      "id": "iniciativa_7_bono_liderazgo",
+      "titulo": "Iniciativa 7: bono de liderazgo por nuevos Emprendedores con venta",
+      "cuando_usarlo": [
+        "Cuando preguntan por el bono del primer y segundo mes del nuevo Emprendedor",
+        "Cuando un lider quiere saber quien aplica y cuanto paga"
+      ],
+      "puntos_clave": [
+        "Aplica desde febrero de 2026",
+        "Paga sobre compras de mercancia generadas por esos Emprendedores en tu network",
+        "Premier y Elite: 4 por ciento primer mes, 5 por ciento segundo mes",
+        "Royal y Blue: 3 por ciento primer mes, 4 por ciento segundo mes",
+        "Distribuidor nivel de precio 1 y 2: 2 por ciento primer mes, 3 por ciento segundo mes"
+      ],
+      "aclaraciones_qyq": [
+        "El primer pago se realiza en marzo de 2026",
+        "Aplican Distribuidores nivel 1 y 2, Blue, Royal, Premier y Elite",
+        "No aplica para DJs ni para Distribuidores nivel 3 y 4",
+        "Reclutas de enero pueden contar para el segundo mes activo en febrero"
+      ],
+      "frase_para_gpt": "El bono de liderazgo premia que tus reclutas nuevos vendan rapido y repitan en su segundo mes."
+    },
+    {
+      "id": "aclaraciones_clave_2026",
+      "titulo": "Aclaraciones practicas de preguntas y respuestas 2026",
+      "cuando_usarlo": [
+        "Cuando el distribuidor esta confundido por reglas finas del plan",
+        "Cuando pregunta quien cuenta, cuando se paga o si algo si aplica"
+      ],
+      "puntos_clave": [
+        "Los nuevos Emprendedores cuentan en el mes en que hacen su primera venta valida",
+        "Los nuevos reclutas no tienen que seguir activos al cierre del ano para contar en las iniciativas",
+        "Para todas las iniciativas, los reintegros no cuentan como nuevos reclutas",
+        "Quien cuenta en network directo depende del nivel y excluye ciertas redes ya desarrolladas",
+        "Si una iniciativa toca bonos o ascenso real, conviene confirmar en el portal del distribuidor"
+      ],
+      "frase_para_gpt": "La letra fina del 2026 importa. Si la duda toca pago real o ascenso real, confirma en el portal."
+    }
+  ],
+  "instrucciones_gpt": {
+    "cuando_usar_este_archivo": [
+      "Cuando el distribuidor pregunta por Blue, Royal, Premier o niveles de precio",
+      "Cuando pregunta por bonos 2026",
+      "Cuando quiere saber como subir con reclutamiento",
+      "Cuando un DJ pregunta por su promocion a Distribuidor",
+      "Cuando alguien quiere recuperar nivel",
+      "Cuando se habla de network directo, reclutas o liderazgo"
+    ],
+    "tono": "Responder simple y ordenado. Dar el dato que sirve y luego el siguiente paso. No recitar tablas enteras si no te las piden.",
+    "prioridad": "Si la pregunta es muy puntual, responde solo esa iniciativa. Si la pregunta afecta dinero o ascenso real, recuerda que son reglas 2026 sujetas a comunicacion oficial."
+  }
+}

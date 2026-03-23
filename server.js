@@ -2200,6 +2200,7 @@ const mentalidadOlmedo = cargarJSON("./src/data/mentalidad_ventas_olmedo.json");
 const reclutamientoCiprian = cargarJSON("./src/data/reclutamiento_ciprian.json");
 const sistema4Citas = cargarJSON("./src/data/sistema_4_citas_14_dias.json");
 const manualNovatoCoach = cargarJSON("./src/data/manual_novato_2016_coach.json");
+const planNegocio2026Coach = cargarJSON("./src/data/plan_negocio_2026_us_coach.json");
 
 // =============================
 // REDFIN
@@ -2526,6 +2527,13 @@ ${JSON.stringify(manualNovatoCoach)}
 `);
   }
 
+  if (temaCoach.negocio) {
+    contextoBase.push(`
+PLAN DE NEGOCIO 2026:
+${JSON.stringify(planNegocio2026Coach)}
+`);
+  }
+
   if (temaCoach.demo) {
     contextoBase.push(`
 DEMO:
@@ -2623,6 +2631,9 @@ function detectarTemaCoach(preguntaNormalizada = "") {
       preguntaNormalizada
     ),
     reclutamiento: /reclut|equipo|distribuidor|lider|liderazgo de equipo|retener|conservar gente|entrevista|candidato|coach|novato/i.test(
+      preguntaNormalizada
+    ),
+    negocio: /plan de negocio|negocio 2026|iniciativa|iniciativas|blue network|royal network|premier|elite|network leader|network|bono|bonos|distribuidor junior|dj|nivel de precio|nivel 3|nivel 4|liderazgo|recluta|reclutas|compras de reclutas|compras de compania|opcion 1|opcion 2|recuperar nivel/i.test(
       preguntaNormalizada
     )
   };
