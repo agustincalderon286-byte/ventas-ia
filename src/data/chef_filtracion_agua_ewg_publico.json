@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "titulo": "Chef - Agua, filtracion y EWG Tap Water",
+    "version_curada": "2026-03-23-v1",
+    "origen": [
+      "https://www.ewg.org/tapwater/all-ewg-standards.php",
+      "https://www.epa.gov/ccr",
+      "https://www.epa.gov/lead/will-my-filter-remove-lead",
+      "https://www.royalprestige.com/productos/detalle/filtro-de-agua",
+      "https://www.royalprestige.com/productos/detalle/filtro-de-agua-bajo-mostrador"
+    ],
+    "tipo_contenido": "Guia publica para responder preguntas sobre agua de la llave, filtracion y uso prudente de EWG Tap Water",
+    "uso": "Ayuda al Chef a orientar sobre agua para beber y cocinar, y a conectar esa preocupacion con filtracion sin exagerar ni asustar de mas.",
+    "nota": "EWG es util para conciencia del consumidor, pero conviene revisar tambien el reporte local CCR de EPA y usar filtros certificados y bien mantenidos."
+  },
+  "consejos": [
+    {
+      "id": "que_es_ewg_tap_water",
+      "pregunta": "Que es EWG Tap Water y para que si sirve",
+      "keywords": [
+        "EWG Tap Water",
+        "tap water",
+        "agua de la llave",
+        "agua del grifo",
+        "zip code",
+        "zipcode"
+      ],
+      "respuesta_corta": "EWG Tap Water sirve para revisar contaminantes detectados en sistemas publicos de agua y compararlos con limites legales y con guias de salud mas estrictas de EWG.",
+      "puntos_clave": [
+        "Puede ayudar a una familia a hacer preguntas mas informadas sobre su agua local",
+        "Es util para ver si vale la pena revisar mejor filtro, cartucho o habitos de agua en casa",
+        "No debe usarse como si fuera diagnostico medico"
+      ],
+      "como_debe_usarlo_el_chef": "Usalo para orientar y explicar por que a algunas familias les interesa filtrar mejor el agua de beber y cocinar, sin meter miedo de mas."
+    },
+    {
+      "id": "ewg_mas_epa_mejor_que_solo_ewg",
+      "pregunta": "Como revisar el agua de casa con mas criterio",
+      "keywords": [
+        "Consumer Confidence Report",
+        "CCR",
+        "EPA",
+        "EWG",
+        "reporte local de agua"
+      ],
+      "respuesta_corta": "Lo mas sano es combinar EWG con el Consumer Confidence Report local de EPA y, si hace falta, revisar filtros certificados para el contaminante que mas preocupa.",
+      "pasos_sugeridos": [
+        "Buscar el sistema local de agua",
+        "Revisar el Consumer Confidence Report o CCR",
+        "Ver que contaminantes salen repetidos o mas preocupantes",
+        "Si se va a usar filtro, confirmar que sea certificado para ese problema y cambiar cartucho a tiempo"
+      ],
+      "fuente_extra_util": "EPA indica que el CCR ayuda a conocer la calidad del agua de tu zona."
+    },
+    {
+      "id": "como_hablar_de_filtro_sin_exagerar",
+      "pregunta": "Como debe hablar el Chef sobre filtros y agua",
+      "keywords": [
+        "filtro de agua",
+        "filtracion",
+        "plomo",
+        "cloro",
+        "contaminantes"
+      ],
+      "respuesta_corta": "El Chef debe hablar de agua de mejor sabor y mas limpia para beber y cocinar, no de curas ni promesas medicas.",
+      "si_puede_decir": [
+        "A muchas familias les gusta filtrar el agua para beber y cocinar con mas confianza",
+        "Un buen filtro puede ayudar con sabor, cloro y otros contaminantes segun su certificacion",
+        "Tambien importa cambiar el cartucho cuando toca"
+      ],
+      "no_debe_decir": [
+        "Este filtro cura enfermedades",
+        "Con esto ya no necesita ver a su doctor",
+        "Toda el agua de la llave es mala"
+      ],
+      "producto_relacionado_rp": [
+        "FrescaPure 3500",
+        "FrescaPure 5500",
+        "FrescaFlow"
+      ]
+    },
+    {
+      "id": "filtro_bien_usado_importa",
+      "pregunta": "Que hacer para que el filtro de verdad ayude",
+      "keywords": [
+        "filtro certificado",
+        "cambiar cartucho",
+        "agua caliente",
+        "lead filter",
+        "plomo"
+      ],
+      "respuesta_corta": "EPA recuerda que algunos filtros si reducen plomo, pero deben estar certificados, instalarse bien y cambiarse a tiempo.",
+      "puntos_clave": [
+        "Si el filtro se usa vencido, puede ser menos efectivo",
+        "Hay que seguir instrucciones del fabricante",
+        "No conviene pasar agua caliente por el filtro si el fabricante no lo indica",
+        "No todos los filtros sirven para todo; depende de la certificacion"
+      ],
+      "como_debe_usarlo_el_chef": "Si preguntan por agua o plomo, primero valida la preocupacion y luego recomienda revisar certificacion y cambio de cartucho."
+    },
+    {
+      "id": "cuando_si_conviene_mencionar_ewg",
+      "pregunta": "En que momento le sirve al Chef mencionar EWG",
+      "keywords": [
+        "agua embotellada",
+        "sabor raro",
+        "olor a cloro",
+        "EWG",
+        "water quality"
+      ],
+      "respuesta_corta": "Conviene mencionarlo cuando la familia ya expresa preocupacion por cloro, plomo, sabor raro, agua para cocinar o cuando comparan filtro vs agua embotellada.",
+      "ejemplos_de_uso": [
+        "Si compran agua embotellada para tomar y cocinar, EWG puede servirles para revisar su sistema local",
+        "Si se quejan del sabor o del olor, la filtracion cobra mas sentido",
+        "Si ya cuidan salud familiar, agua y cocina suelen ir de la mano"
+      ],
+      "guardrail": "Si la pregunta se vuelve tecnica o local, el Chef debe sugerir revisar el CCR local o el sitio de EWG con el zipcode exacto."
+    }
+  ]
+}

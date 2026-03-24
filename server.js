@@ -2194,6 +2194,8 @@ const recetasRoyalPrestige = cargarJSON("./src/data/recetas_royal_prestige");
 const especificacionesRoyalPrestige = cargarJSON("./src/data/especificasiones_royal_prestige");
 const opcionesPagoRoyalPrestige = cargarJSON("./src/data/royalprestige_pagos_site.json");
 const demoVenta = cargarJSON("./src/data/Demo_venta_1");
+const chefCocinaMexicanaSaludable = cargarJSON("./src/data/chef_cocina_mexicana_saludable_publico.json");
+const chefFiltracionAguaEwg = cargarJSON("./src/data/chef_filtracion_agua_ewg_publico.json");
 
 const cierresAlexDey = cargarJSON("./src/data/12_cierres_alex_dey.json");
 const mentalidadOlmedo = cargarJSON("./src/data/mentalidad_ventas_olmedo.json");
@@ -2279,6 +2281,10 @@ COCINA:
 - Prioriza recetas practicas, saludables y faciles de replicar
 - Cuando sea util, conecta la receta con beneficios simples como menos grasa, mejor coccion, practicidad y facilidad
 - Explica como usar el producto sin complicar a la persona
+- Si preguntan por diabetes, colesterol o presion alta, responde como guia de cocina y alimentacion general, no como medico
+- Puedes hablar de porciones, menos sodio, menos grasa saturada, menos azucar y comida casera mas balanceada
+- Si hace falta, di algo corto como: "Si ya lleva plan de su doctor o nutriologa, siga ese plan"
+- Nunca digas que un producto, jugo o receta cura enfermedades o reemplaza medicinas
 
 REAL ESTATE:
 rent_ratio = renta / precio
@@ -2437,11 +2443,19 @@ ${JSON.stringify(encuestaVentas)}
 `;
 
   if (
-    /receta|cocinar|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
+    /receta|cocinar|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena|saludable|diabetes|glucosa|az[uú]car|colesterol|presi[oó]n|hipertensi[oó]n|sodio|grasa saturada|pozole|enchilada|enchiladas|frijol|frijoles|tamal|tamales|agua fresca/i.test(
       preguntaNormalizada
     )
   ) {
     contexto += `\nRECETAS:\n${JSON.stringify(recetasRoyalPrestige)}`;
+  }
+
+  if (
+    /saludable|diabetes|glucosa|az[uú]car|colesterol|presi[oó]n|hipertensi[oó]n|sodio|grasa saturada|corazon|cardio|plato|porci[oó]n|mexicana|pozole|enchilada|enchiladas|frijol|frijoles|tamal|tamales|antojito/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += `\nCOCINA MEXICANA SALUDABLE:\n${JSON.stringify(chefCocinaMexicanaSaludable)}`;
   }
 
   if (
@@ -2452,6 +2466,14 @@ ${JSON.stringify(encuestaVentas)}
     )
   ) {
     contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
+  }
+
+  if (
+    /agua|grifo|llave|tap water|ewg|plomo|cloro|contaminante|filtraci[oó]n|filtro|purificador|cartucho|ccr|consumer confidence/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += `\nAGUA Y FILTRACION:\n${JSON.stringify(chefFiltracionAguaEwg)}`;
   }
 
   if (
@@ -2468,7 +2490,11 @@ ${JSON.stringify(encuestaVentas)}
     contexto += `\nRECLUTAMIENTO:\n${JSON.stringify(reclutamientoCiprian)}`;
   }
 
-  if (preguntaNormalizada.includes("casa") || preguntaNormalizada.includes("inversion")) {
+  if (
+    /inversion|propiedad|propiedades|redfin|roi|renta|cashflow|cash flow|house hack|flip|flipping|cap rate|caprate|hipoteca|mortgage|rental/i.test(
+      preguntaNormalizada
+    )
+  ) {
     contexto += `\nPROPIEDADES:\n${JSON.stringify(redfinProperties)}`;
   }
 

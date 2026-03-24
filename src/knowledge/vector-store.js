@@ -635,7 +635,7 @@ export function inferirTiposFuentePorPregunta(question) {
   const tipos = new Set();
 
   if (
-    /receta|recetas|cocinar|cocina|clase|clases|magistral|revista|magazine|edici[oó]n|n[uú]mero|hornear|horno|postre|postres|pastel|galleta|brownie|crepa|paella|pizza|italia|italiana|francia|francesa|espa[nñ]a|mexicana|navide[nñ]|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena/i.test(
+    /receta|recetas|cocinar|cocina|clase|clases|magistral|revista|magazine|edici[oó]n|n[uú]mero|hornear|horno|postre|postres|pastel|galleta|brownie|crepa|paella|pizza|italia|italiana|francia|francesa|espa[nñ]a|mexicana|navide[nñ]|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena|saludable|diabetes|glucosa|az[uú]car|colesterol|presi[oó]n|hipertensi[oó]n|sodio|grasa saturada|antojito|pozole|enchilada|enchiladas|frijol|frijoles|tamal|tamales|agua fresca/i.test(
       pregunta
     )
   ) {
@@ -646,7 +646,7 @@ export function inferirTiposFuentePorPregunta(question) {
     tipos.add("pricing");
   }
 
-  if (/garantia|material|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto|extractor|exprimidor|juicer|licuadora|blender|filtro|fresca(flow|pure)|cafetera|barista|expertea|fresh max|max cup|precision cook|smart temp|warmer pro|mixing bowl|recipiente|utensilio|innove|perfect pop|palomita|palomitas|popcorn|colador|hervidor|chocolatera|salad machine|filtracion de aire|air filtration|ducha|shower filter/i.test(pregunta)) {
+  if (/garantia|material|olla|ollas|sarten|cuchillo|santoku|easy release|paellera|vaporera|producto|extractor|exprimidor|juicer|licuadora|blender|filtro|fresca(flow|pure)|cafetera|barista|expertea|fresh max|max cup|precision cook|smart temp|warmer pro|mixing bowl|recipiente|utensilio|innove|perfect pop|palomita|palomitas|popcorn|colador|hervidor|chocolatera|salad machine|filtracion de aire|air filtration|ducha|shower filter|agua|grifo|llave|tap water|ewg|plomo|cloro|contaminante|ccr|consumer confidence/i.test(pregunta)) {
     tipos.add("product_knowledge");
   }
 
@@ -658,7 +658,7 @@ export function inferirTiposFuentePorPregunta(question) {
     tipos.add("sales_training");
   }
 
-  if (/casa|inversion|propiedad|roi|renta/i.test(pregunta)) {
+  if (/inversion|propiedad|propiedades|redfin|roi|renta|cashflow|cash flow|house hack|flip|flipping|cap rate|caprate|hipoteca|mortgage|rental/i.test(pregunta)) {
     tipos.add("real_estate");
   }
 

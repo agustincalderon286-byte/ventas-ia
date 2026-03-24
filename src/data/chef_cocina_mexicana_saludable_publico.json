@@ -1,0 +1,191 @@
+{
+  "metadata": {
+    "titulo": "Chef - Cocina mexicana saludable publica",
+    "version_curada": "2026-03-23-v1",
+    "origen": [
+      "https://www.royalprestige.com/inspiracion/recetas",
+      "https://www.royalprestige.com/inspiracion/royal-tv",
+      "https://www.royalprestige.com/inspiracion/blog",
+      "https://www.niddk.nih.gov/health-information/diabetes/overview/healthy-living-with-diabetes",
+      "https://www.cdc.gov/diabetes/healthy-eating/diabetes-meal-planning.html",
+      "https://www.nhlbi.nih.gov/education/dash-eating-plan",
+      "https://www.nhlbi.nih.gov/resources/delicious-heart-healthy-latino-recipes-book-platillos-latinos-sabrosos-y-saludables",
+      "https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/fats/saturated-fats",
+      "https://www.myplate.gov"
+    ],
+    "tipo_contenido": "Guia publica de cocina mexicana saludable para familias latinas",
+    "uso": "Ayuda al Chef a recomendar comida mexicana con menos grasa, menos sodio y menos azucar sin perder sazon ni volver la conversacion medica.",
+    "nota": "Es educacion general de cocina. No sustituye indicaciones medicas, no promete curar enfermedades y no debe usarse para decirle a nadie que deje medicinas."
+  },
+  "recetas": [
+    {
+      "id": "principios_cocina_mexicana_saludable",
+      "nombre": "Cocina mexicana saludable sin perder sazon",
+      "categoria": "fundamentos",
+      "idea_central": "La comida mexicana puede seguir sabiendo rico si bajas grasa, sal y azucar poco a poco y subes verduras, frijoles, salsas caseras y proteina magra.",
+      "puntos_practicos": [
+        "Usa mas salsa casera, ajo, cebolla, limon, cilantro, oregano, comino y chile para dar sabor sin depender tanto de la sal",
+        "Cambia parte de la fritura por asado, vapor, salteado o coccion con poca grasa",
+        "Sirve mas verdura, nopales, calabacita, jitomate, chile y frijoles para que el plato rinda mas",
+        "Cuida porcion de arroz, tortilla, pan dulce, crema y queso, pero sin quitar de golpe todo lo que la familia disfruta"
+      ],
+      "que_puede_decir_el_chef": "Se puede comer mas ligero sin dejar la comida desabrida. El truco esta en usar mejor las salsas, las verduras y el metodo de coccion.",
+      "productos_rp_utiles": [
+        "INNOVE",
+        "NOVEL",
+        "Sartenes Gourmet",
+        "Precision Cook",
+        "Royal Prestige Juicer"
+      ]
+    },
+    {
+      "id": "diabetes_metodo_plato_mexicano",
+      "nombre": "Diabetes: plato mexicano mas balanceado",
+      "categoria": "salud_familiar",
+      "idea_central": "Si preguntan por diabetes, el Chef debe hablar de platos mas balanceados, porciones y menos azucar, no de curas.",
+      "puntos_practicos": [
+        "Arma el plato con mas verduras no feculentas, una parte de proteina y una porcion mas medida de arroz, tortilla, papa o pasta",
+        "Prefiere aguas frescas con menos azucar, fruta entera y desayunos con avena, huevo, frijol o yogurt natural",
+        "Evita decir que un jugo o un producto controla la diabetes",
+        "Si la persona ya tiene plan de su doctor o nutriologa, el Chef debe respetar ese plan"
+      ],
+      "que_puede_decir_el_chef": "Si en casa cuidan el azucar, les conviene servir mas verdura, frijoles y proteina, y medir mejor arroz, tortillas y bebidas dulces.",
+      "guardrail": "Nunca decir que algo cura la diabetes o reemplaza medicina."
+    },
+    {
+      "id": "presion_alta_sabor_mexicano",
+      "nombre": "Presion alta: menos sodio sin perder sabor mexicano",
+      "categoria": "salud_familiar",
+      "idea_central": "Para presion alta, lo mas util es bajar sodio y subir sabor natural con hierbas, chile, limon, ajo, cebolla y verduras.",
+      "puntos_practicos": [
+        "Usa menos consome en polvo, sazonadores muy cargados, embutidos y sopas instantaneas",
+        "Haz caldos, salsas y guisos con jitomate, chile, ajo, cebolla, cilantro y especias",
+        "Frijoles, verduras, frutas y comidas tipo DASH ayudan mas que solo quitar el salero",
+        "Prueba la comida antes de agregar mas sal"
+      ],
+      "que_puede_decir_el_chef": "Para bajar sal sin que la comida sepa fea, apóyate mucho en ajo, cebolla, chile, jitomate, limon y hierbas.",
+      "guardrail": "No decir que un platillo por si solo baja la presion."
+    },
+    {
+      "id": "colesterol_menos_grasa_saturada",
+      "nombre": "Colesterol: menos grasa saturada, mismo sabor familiar",
+      "categoria": "salud_familiar",
+      "idea_central": "Cuando preguntan por colesterol, el Chef debe empujar menos manteca, menos crema, menos quesos pesados y mas pescado, pollo sin piel, frijoles y aceites vegetales.",
+      "puntos_practicos": [
+        "Prefiere pollo sin piel, pescado, atun, frijoles, lentejas y porciones mas medidas de carne muy grasosa",
+        "Usa menos manteca, mantequilla, crema espesa y quesos muy grasos",
+        "El asado, vapor y salteado ligero ayudan mas que la fritura seguida",
+        "Aguacate, nueces y semillas pueden ayudar a dar saciedad en porcion moderada"
+      ],
+      "que_puede_decir_el_chef": "Si quieren comer mas ligero para cuidar el colesterol, ayuda mucho bajar fritura y grasa saturada, no quitar todo el sabor.",
+      "guardrail": "No prometer que una receta sola baja el colesterol."
+    },
+    {
+      "id": "aguas_frescas_y_bebidas_mas_ligeras",
+      "nombre": "Aguas frescas y bebidas mas ligeras",
+      "categoria": "bebidas",
+      "idea_central": "El Chef puede ayudar mucho bajando azucar liquida sin quitar por completo el gusto por aguas frescas y licuados.",
+      "puntos_practicos": [
+        "Pon menos azucar y deja que la fruta de mas sabor",
+        "Usa mas hielo y agua para aligerar bebidas muy cargadas",
+        "Prefiere licuados con fruta entera, yogurt natural o avena antes que bebidas muy azucaradas",
+        "Para aguas del diario, la jamaica, limon, pepino o frutas frescas suelen ser mas faciles de ajustar"
+      ],
+      "que_puede_decir_el_chef": "Si les gusta el agua fresca, se puede hacer mas ligera bajando azucar poquito a poco sin quitarle el sabor de golpe.",
+      "productos_rp_utiles": [
+        "Power Blender Max",
+        "Power Blender Go",
+        "Royal Prestige Juicer",
+        "FrescaPure 3500",
+        "FrescaPure 5500"
+      ]
+    },
+    {
+      "id": "swaps_mexicanos_saludables",
+      "nombre": "Cambios pequenos que ayudan mucho en comida mexicana",
+      "categoria": "swaps",
+      "idea_central": "Al Chef le conviene proponer cambios chicos que una familia si pueda repetir.",
+      "puntos_practicos": [
+        "Mas frijol de la olla y menos refrito muy grasoso",
+        "Mas salsa casera y menos crema pesada",
+        "Mas pollo, pescado o pavo y menos carne muy grasosa",
+        "Mas ensalada, nopales o verduras de guarnicion y menos solo arroz o pan",
+        "Mas tortilla medida y menos canasta de pan o frituras al mismo tiempo"
+      ],
+      "que_puede_decir_el_chef": "No tiene que cambiar todo hoy. A veces con dos o tres cambios pequenos la comida ya queda mas ligera."
+    },
+    {
+      "id": "pozole_de_pollo_mas_ligero",
+      "nombre": "Pozole de pollo mas ligero",
+      "categoria": "platillos_tipicos",
+      "idea_central": "El pozole se presta muy bien para una version mas ligera y con mucho sabor.",
+      "como_aligerarlo": [
+        "Usa pollo sin piel o mezcla de pechuga y muslo bien limpio",
+        "Quita exceso de grasa del caldo",
+        "Sube lechuga, rabanos, cebolla y limon",
+        "Mide tostadas, crema y queso si la familia los usa"
+      ],
+      "que_puede_decir_el_chef": "El pozole puede quedar bien rico y mas ligero si limpias la grasa del caldo y cargas bien los toppings frescos.",
+      "productos_rp_utiles": [
+        "Ollas grandes INNOVE",
+        "Olla de 6 cuartos",
+        "Coladores INNOVE"
+      ]
+    },
+    {
+      "id": "enchiladas_mas_ligeras",
+      "nombre": "Enchiladas mas ligeras sin perder antojo",
+      "categoria": "platillos_tipicos",
+      "idea_central": "Las enchiladas siguen sabiendo a casa si mejoras la salsa y moderas crema, queso y fritura.",
+      "como_aligerarlo": [
+        "Haz salsa roja o verde casera con jitomate, chile, ajo y cebolla",
+        "Prefiere pollo deshebrado, queso moderado o rellenos con mas verdura",
+        "Pasa la tortilla lo justo o usa menos aceite",
+        "Sirve con ensalada, nopales o frijoles de la olla"
+      ],
+      "que_puede_decir_el_chef": "Las enchiladas no tienen que quedar secas ni tristes. Con buena salsa casera y menos grasa siguen sabiendo muy bien.",
+      "productos_rp_utiles": [
+        "Sartenes Gourmet",
+        "Paellera",
+        "Power Blender Max"
+      ]
+    },
+    {
+      "id": "arroz_con_pollo_mas_balanceado",
+      "nombre": "Arroz con pollo mas balanceado",
+      "categoria": "platillos_tipicos",
+      "idea_central": "El arroz con pollo es rendidor y familiar, pero mejora mucho si subes verdura y cuidas la porcion de arroz.",
+      "como_aligerarlo": [
+        "Usa pollo sin piel",
+        "Mezcla mas zanahoria, chicharo, pimiento o calabacita",
+        "No cargues demasiado aceite al sofreir",
+        "Sirve con ensalada o verduras aparte"
+      ],
+      "que_puede_decir_el_chef": "Para que el arroz con pollo quede mas balanceado, ayuda mucho meter mas verdura y no dejar que el arroz se robe todo el plato.",
+      "productos_rp_utiles": [
+        "INNOVE",
+        "NOVEL",
+        "Precision Cook"
+      ]
+    },
+    {
+      "id": "frijoles_sopas_y_guisos_rendidores",
+      "nombre": "Frijoles, sopas y guisos que llenan y cuidan mas",
+      "categoria": "platillos_tipicos",
+      "idea_central": "Frijoles, sopas de verduras, caldos y guisos caseros son de lo mejor para comer rico, rendir el dinero y cuidar mejor a la familia.",
+      "puntos_practicos": [
+        "Los frijoles ayudan a dar fibra, llenar mas y rendir comidas de diario",
+        "Los caldos y sopas caseras dejan meter mas verduras y controlar mejor la sal",
+        "Los guisos con nopales, calabacita, jitomate y chile pueden seguir sabiendo muy mexicanos",
+        "Sirve una proteina clara y una porcion medida de carbohidrato al lado"
+      ],
+      "que_puede_decir_el_chef": "Si quieren comer mas casero, mas rendidor y mas ligero, frijoles, caldos y guisos bien hechos son una gran base.",
+      "productos_rp_utiles": [
+        "Ollas de 4 y 6 cuartos",
+        "Coladores INNOVE",
+        "Cuchillos",
+        "Salad Machine"
+      ]
+    }
+  ]
+}
