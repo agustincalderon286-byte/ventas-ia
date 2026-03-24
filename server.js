@@ -30,10 +30,18 @@ const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
 const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
+const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
+const MAX_RAM_SESSION_MESSAGES = Math.max(
+  MAX_PROMPT_HISTORY_MESSAGES,
+  Number(process.env.MAX_RAM_SESSION_MESSAGES || 16)
+);
+const MAX_RAM_SESSION_STATES = Math.max(100, Number(process.env.MAX_RAM_SESSION_STATES || 500));
+const RAM_SESSION_TTL_MS = Math.max(60 * 60 * 1000, Number(process.env.RAM_SESSION_TTL_MS || 6 * 60 * 60 * 1000));
 const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
   .split(",")
   .map(email => normalizarEmail(email))
   .filter(Boolean);
+const actividadSesiones = {};
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -173,6 +181,246 @@ app.use(express.json());
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
+}
+
+function truncarTextoPrompt(value = "", maxLength = 180) {
+  const limpio = String(value || "").replace(/\s+/g, " ").trim();
+
+  if (limpio.length <= maxLength) {
+    return limpio;
+  }
+
+  return `${limpio.slice(0, Math.max(maxLength - 3, 0)).trim()}...`;
+}
+
+function obtenerEtiquetaPrompt(node, fallback = "item") {
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    return fallback;
+  }
+
+  const campos = ["id", "nombre", "titulo", "pregunta", "producto", "codigo", "Codigo Del Producto", "Nombre Del Producto NOVEL"];
+
+  for (const campo of campos) {
+    if (node[campo]) {
+      return truncarTextoPrompt(node[campo], 80);
+    }
+  }
+
+  return fallback;
+}
+
+function resumirDatoProfundoPrompt(value, options = {}) {
+  const { maxArrayItems = 6, maxStringLength = 140, maxObjectKeys = 6 } = options;
+
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return truncarTextoPrompt(value, maxStringLength);
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, Math.max(1, Math.min(maxArrayItems, 3))).map(item => {
+      if (typeof item === "string") {
+        return truncarTextoPrompt(item, maxStringLength);
+      }
+
+      return obtenerEtiquetaPrompt(item);
+    });
+  }
+
+  const resultado = {};
+  const entradas = Object.entries(value)
+    .filter(([, item]) => item !== undefined && item !== null)
+    .slice(0, maxObjectKeys);
+
+  for (const [key, item] of entradas) {
+    if (typeof item === "string") {
+      resultado[key] = truncarTextoPrompt(item, maxStringLength);
+      continue;
+    }
+
+    if (typeof item === "number" || typeof item === "boolean") {
+      resultado[key] = item;
+      continue;
+    }
+
+    if (Array.isArray(item)) {
+      resultado[key] = item.slice(0, Math.max(1, Math.min(maxArrayItems, 3))).map(entry => {
+        if (typeof entry === "string") {
+          return truncarTextoPrompt(entry, maxStringLength);
+        }
+
+        return obtenerEtiquetaPrompt(entry);
+      });
+      continue;
+    }
+
+    resultado[key] = obtenerEtiquetaPrompt(item);
+  }
+
+  return resultado;
+}
+
+function compactarDatoParaPrompt(value, options = {}, depth = 0) {
+  const { maxDepth = 2, maxArrayItems = 8, maxObjectKeys = 10, maxStringLength = 180 } = options;
+
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return truncarTextoPrompt(value, maxStringLength);
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+
+  if (depth >= maxDepth) {
+    return resumirDatoProfundoPrompt(value, options);
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, maxArrayItems).map(item => compactarDatoParaPrompt(item, options, depth + 1));
+  }
+
+  const entradas = Object.entries(value)
+    .filter(([, item]) => item !== undefined)
+    .sort(([a], [b]) => {
+      const prioridades = ["metadata", "id", "nombre", "titulo", "pregunta", "descripcion", "respuesta_corta"];
+      const indexA = prioridades.indexOf(a);
+      const indexB = prioridades.indexOf(b);
+
+      if (indexA === -1 && indexB === -1) {
+        return 0;
+      }
+
+      if (indexA === -1) {
+        return 1;
+      }
+
+      if (indexB === -1) {
+        return -1;
+      }
+
+      return indexA - indexB;
+    })
+    .slice(0, maxObjectKeys);
+
+  return Object.fromEntries(
+    entradas.map(([key, item]) => [key, compactarDatoParaPrompt(item, options, depth + 1)])
+  );
+}
+
+function construirBloquePrompt(label, data, options = {}) {
+  return `\n${label}:\n${JSON.stringify(compactarDatoParaPrompt(data, options))}`;
+}
+
+function crearEstadoConversacionBase() {
+  return {
+    interesComercial: false,
+    consultaPrecio: false,
+    llamadaInformativaAceptada: false,
+    envioDatosContactoReciente: false,
+    quiereLlamada: "",
+    name: "",
+    email: "",
+    phone: "",
+    direccion: "",
+    ocupacion: "",
+    esCliente: "",
+    tieneProductos: "",
+    necesitaGarantia: "",
+    cocinaPara: "",
+    productos: [],
+    temasInteres: []
+  };
+}
+
+function marcarSesionActiva(sessionId = "") {
+  if (!sessionId) {
+    return;
+  }
+
+  actividadSesiones[sessionId] = Date.now();
+}
+
+function limpiarMemoriaSesiones() {
+  const ahora = Date.now();
+  const sesiones = Object.entries(actividadSesiones);
+
+  for (const [sessionId, lastSeenAt] of sesiones) {
+    if (ahora - Number(lastSeenAt || 0) > RAM_SESSION_TTL_MS) {
+      delete actividadSesiones[sessionId];
+      delete conversaciones[sessionId];
+      delete estadosConversacion[sessionId];
+    }
+  }
+
+  const activas = Object.entries(actividadSesiones).sort((a, b) => Number(b[1]) - Number(a[1]));
+
+  if (activas.length <= MAX_RAM_SESSION_STATES) {
+    return;
+  }
+
+  for (const [sessionId] of activas.slice(MAX_RAM_SESSION_STATES)) {
+    delete actividadSesiones[sessionId];
+    delete conversaciones[sessionId];
+    delete estadosConversacion[sessionId];
+  }
+}
+
+function registrarMensajeMemoria(sessionId = "", role = "", content = "") {
+  if (!sessionId || !role || !content) {
+    return;
+  }
+
+  marcarSesionActiva(sessionId);
+  limpiarMemoriaSesiones();
+
+  if (!conversaciones[sessionId]) {
+    conversaciones[sessionId] = [];
+  }
+
+  conversaciones[sessionId].push({ role, content });
+  conversaciones[sessionId] = conversaciones[sessionId].slice(-MAX_RAM_SESSION_MESSAGES);
+}
+
+function hidratarEstadoConversacion(sessionId, profile = null, lead = null) {
+  const estado = obtenerEstadoConversacion(sessionId);
+  const fuente = profile || lead;
+
+  if (!fuente) {
+    return estado;
+  }
+
+  estado.name = estado.name || fuente.name || "";
+  estado.email = estado.email || fuente.email || "";
+  estado.phone = estado.phone || fuente.phone || "";
+  estado.direccion = estado.direccion || fuente.direccion || "";
+  estado.ocupacion = estado.ocupacion || fuente.ocupacion || "";
+  estado.esCliente = estado.esCliente || fuente.esCliente || "";
+  estado.tieneProductos = estado.tieneProductos || fuente.tieneProductos || "";
+  estado.necesitaGarantia = estado.necesitaGarantia || fuente.necesitaGarantia || "";
+  estado.quiereLlamada = estado.quiereLlamada || fuente.quiereLlamada || "";
+  estado.cocinaPara = estado.cocinaPara || fuente.cocinaPara || "";
+  estado.productos = combinarListas(estado.productos, fuente.productos || []);
+  estado.temasInteres = combinarListas(estado.temasInteres, fuente.temasInteres || []);
+
+  if (fuente.leadStatus === "llamada_aceptada" || fuente.quiereLlamada === "si") {
+    estado.interesComercial = true;
+    estado.llamadaInformativaAceptada = true;
+  } else if (fuente.leadStatus && fuente.leadStatus !== "solo_soporte") {
+    estado.interesComercial = true;
+  }
+
+  return estado;
 }
 
 function passwordEsValido(password = "") {
@@ -517,7 +765,7 @@ async function validarLimiteUsoCoach(userDoc = null) {
     role: "user",
     createdAt: { $gte: startOfDay },
     intent: "coach_chat",
-    detectedTopics: [`coach_user:${String(userDoc._id)}`]
+    detectedTopics: `coach_user:${String(userDoc._id)}`
   });
 
   return {
@@ -1256,13 +1504,22 @@ async function guardarMensajeRaw({
   leadId = null,
   role,
   content,
-  estadoConversacion = null
+  estadoConversacion = null,
+  intent = "",
+  detectedTopics = []
 }) {
   if (!visitorId || !content) {
     return null;
   }
 
   try {
+    const intentFinal = intent || (role === "user" ? detectarIntentoMensaje(content, estadoConversacion) : "respuesta_ai");
+    const detectedTopicsFinal = Array.isArray(detectedTopics)
+      ? detectedTopics.filter(Boolean)
+      : role === "user"
+        ? extraerTemasInteres(content)
+        : [];
+
     return await Message.create({
       visitorId,
       sessionId,
@@ -1270,8 +1527,8 @@ async function guardarMensajeRaw({
       leadId,
       role,
       content,
-      intent: role === "user" ? detectarIntentoMensaje(content, estadoConversacion) : "respuesta_ai",
-      detectedTopics: role === "user" ? extraerTemasInteres(content) : [],
+      intent: intentFinal,
+      detectedTopics: detectedTopicsFinal,
       createdAt: new Date()
     });
   } catch (error) {
@@ -1486,25 +1743,11 @@ async function guardarRespuestaIAEnProfile(profile, respuestaIA, leadGuardado = 
 }
 
 function obtenerEstadoConversacion(sessionId) {
+  marcarSesionActiva(sessionId);
+  limpiarMemoriaSesiones();
+
   if (!estadosConversacion[sessionId]) {
-    estadosConversacion[sessionId] = {
-      interesComercial: false,
-      consultaPrecio: false,
-      llamadaInformativaAceptada: false,
-      envioDatosContactoReciente: false,
-      quiereLlamada: "",
-      name: "",
-      email: "",
-      phone: "",
-      direccion: "",
-      ocupacion: "",
-      esCliente: "",
-      tieneProductos: "",
-      necesitaGarantia: "",
-      cocinaPara: "",
-      productos: [],
-      temasInteres: []
-    };
+    estadosConversacion[sessionId] = crearEstadoConversacionBase();
   }
 
   return estadosConversacion[sessionId];
@@ -1953,6 +2196,34 @@ ${historialReciente || "- sin historial reciente"}
 INSTRUCCION:
 Usa este perfil para personalizar recetas, recomendaciones y seguimiento comercial. No inventes datos faltantes ni recites el perfil completo al usuario.
 `;
+}
+
+async function obtenerHistorialConversacionPrompt(sessionId) {
+  if (!sessionId) {
+    return [];
+  }
+
+  try {
+    const historialMongo = await Message.find({ sessionId })
+      .sort({ createdAt: -1 })
+      .limit(MAX_PROMPT_HISTORY_MESSAGES)
+      .select({ role: 1, content: 1, _id: 0 })
+      .lean();
+
+    if (historialMongo.length) {
+      return historialMongo
+        .reverse()
+        .filter(entry => entry?.role && entry?.content)
+        .map(entry => ({
+          role: entry.role,
+          content: entry.content
+        }));
+    }
+  } catch (error) {
+    console.log("Error leyendo historial MongoDB:", error.message);
+  }
+
+  return (conversaciones[sessionId] || []).slice(-MAX_PROMPT_HISTORY_MESSAGES);
 }
 
 async function sincronizarLeadAGoogleSheets(lead) {
@@ -2431,23 +2702,54 @@ function normalizarModoChat(mode = "") {
 
 function construirContextoEstaticoChef(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
-  let contexto = `
-CATALOGO:
-${JSON.stringify(preciosCatalogo)}
+  let contexto = "";
 
-CARACTERISTICAS:
-${JSON.stringify(beneficiosProductos)}
+  if (
+    /precio|precios|cu[aá]nto|cuesta|pago|pagos|diario|mensual|financiamiento|plan|llamada|representante|comprar|venta/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += construirBloquePrompt("CATALOGO", preciosCatalogo, {
+      maxArrayItems: 10,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 140
+    });
+  }
 
-ENCUESTA:
-${JSON.stringify(encuestaVentas)}
-`;
+  if (
+    /producto|olla|ollas|sarten|cuchillo|extractor|licuadora|blender|filtro|innove|novel|easy release|fresca(flow|pure)|royal prestige|palomitas|perfect pop|hervidor|juicer/i.test(
+      preguntaNormalizada
+    )
+  ) {
+    contexto += construirBloquePrompt("CARACTERISTICAS", beneficiosProductos, {
+      maxArrayItems: 10,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 150
+    });
+  }
+
+  if (/encuesta|salud|tiempo|dinero|laboratorio|hogar/i.test(preguntaNormalizada)) {
+    contexto += construirBloquePrompt("ENCUESTA", encuestaVentas, {
+      maxArrayItems: 8,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 150
+    });
+  }
 
   if (
     /receta|cocinar|pollo|carne|res|pescado|salmon|huevo|pancake|hotcake|panqueque|sopa|arroz|pasta|verdura|ensalada|desayuno|comida|cena|saludable|diabetes|glucosa|az[uú]car|colesterol|presi[oó]n|hipertensi[oó]n|sodio|grasa saturada|pozole|enchilada|enchiladas|frijol|frijoles|tamal|tamales|agua fresca/i.test(
       preguntaNormalizada
     )
   ) {
-    contexto += `\nRECETAS:\n${JSON.stringify(recetasRoyalPrestige)}`;
+    contexto += construirBloquePrompt("RECETAS", recetasRoyalPrestige, {
+      maxArrayItems: 12,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 160
+    });
   }
 
   if (
@@ -2455,7 +2757,12 @@ ${JSON.stringify(encuestaVentas)}
       preguntaNormalizada
     )
   ) {
-    contexto += `\nCOCINA MEXICANA SALUDABLE:\n${JSON.stringify(chefCocinaMexicanaSaludable)}`;
+    contexto += construirBloquePrompt("COCINA MEXICANA SALUDABLE", chefCocinaMexicanaSaludable, {
+      maxArrayItems: 10,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 170
+    });
   }
 
   if (
@@ -2465,7 +2772,12 @@ ${JSON.stringify(encuestaVentas)}
       preguntaNormalizada
     )
   ) {
-    contexto += `\nESPECIFICACIONES:\n${JSON.stringify(especificacionesRoyalPrestige)}`;
+    contexto += construirBloquePrompt("ESPECIFICACIONES", especificacionesRoyalPrestige, {
+      maxArrayItems: 10,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 150
+    });
   }
 
   if (
@@ -2473,7 +2785,12 @@ ${JSON.stringify(encuestaVentas)}
       preguntaNormalizada
     )
   ) {
-    contexto += `\nAGUA Y FILTRACION:\n${JSON.stringify(chefFiltracionAguaEwg)}`;
+    contexto += construirBloquePrompt("AGUA Y FILTRACION", chefFiltracionAguaEwg, {
+      maxArrayItems: 6,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 170
+    });
   }
 
   if (
@@ -2481,13 +2798,33 @@ ${JSON.stringify(encuestaVentas)}
     preguntaNormalizada.includes("cerrar") ||
     detectarInteresComercial(pregunta)
   ) {
-    contexto += `\nVENTAS:\n${JSON.stringify(inteligenciaVentas)}`;
-    contexto += `\nDEMO:\n${JSON.stringify(demoVenta)}`;
-    contexto += `\nCIERRES:\n${JSON.stringify(cierresAlexDey)}`;
+    contexto += construirBloquePrompt("VENTAS", inteligenciaVentas, {
+      maxArrayItems: 3,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 160
+    });
+    contexto += construirBloquePrompt("DEMO", demoVenta, {
+      maxArrayItems: 6,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 160
+    });
+    contexto += construirBloquePrompt("CIERRES", cierresAlexDey, {
+      maxArrayItems: 6,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 150
+    });
   }
 
   if (preguntaNormalizada.includes("equipo") || preguntaNormalizada.includes("reclutar")) {
-    contexto += `\nRECLUTAMIENTO:\n${JSON.stringify(reclutamientoCiprian)}`;
+    contexto += construirBloquePrompt("RECLUTAMIENTO", reclutamientoCiprian, {
+      maxArrayItems: 6,
+      maxObjectKeys: 8,
+      maxDepth: 2,
+      maxStringLength: 150
+    });
   }
 
   if (
@@ -2529,26 +2866,46 @@ FORMULA INTERNA DE PRECIOS DEL COACH:
 - mensualidad = total * 5%
 - si es paquete, suma primero las bases y luego aplica la formula al total base
 - no expliques la formula salvo que te la pidan
-
-PRECIOS:
-${JSON.stringify(preciosCatalogo)}
-
-PAGOS:
-${JSON.stringify(opcionesPagoRoyalPrestige)}
-
+`);
+    contextoBase.push(
+      construirBloquePrompt("PRECIOS", preciosCatalogo, {
+        maxArrayItems: 10,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 140
+      })
+    );
+    contextoBase.push(
+      construirBloquePrompt("PAGOS", opcionesPagoRoyalPrestige, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 140
+      })
+    );
+    contextoBase.push(`
 CALCULOS DETECTADOS:
 ${construirCalculosPreciosCoach(pregunta)}
 `);
   }
 
   if (temaCoach.producto || temaCoach.demo) {
-    contextoBase.push(`
-PRODUCTO Y BENEFICIOS:
-${JSON.stringify(beneficiosProductos)}
-
-ESPECIFICACIONES:
-${JSON.stringify(especificacionesRoyalPrestige)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("PRODUCTO Y BENEFICIOS", beneficiosProductos, {
+        maxArrayItems: 10,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
+    contextoBase.push(
+      construirBloquePrompt("ESPECIFICACIONES", especificacionesRoyalPrestige, {
+        maxArrayItems: 10,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   if (
@@ -2561,31 +2918,47 @@ ${JSON.stringify(especificacionesRoyalPrestige)}
     temaCoach.seguimiento ||
     temaCoach.reclutamiento
   ) {
-    contextoBase.push(`
-MANUAL DEL NOVATO CURADO:
-${JSON.stringify(manualNovatoCoach)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("MANUAL DEL NOVATO CURADO", manualNovatoCoach, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 160
+      })
+    );
   }
 
   if (temaCoach.negocio) {
-    contextoBase.push(`
-PLAN DE NEGOCIO 2026:
-${JSON.stringify(planNegocio2026Coach)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("PLAN DE NEGOCIO 2026", planNegocio2026Coach, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 160
+      })
+    );
   }
 
   if (temaCoach.demo) {
-    contextoBase.push(`
-DEMO:
-${JSON.stringify(demoVenta)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("DEMO", demoVenta, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 160
+      })
+    );
   }
 
   if (temaCoach.objecion || temaCoach.cierre) {
-    contextoBase.push(`
-CIERRES:
-${JSON.stringify(cierresAlexDey)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("CIERRES", cierresAlexDey, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   if (temaCoach.cierreFinal) {
@@ -2593,31 +2966,47 @@ ${JSON.stringify(cierresAlexDey)}
   }
 
   if (temaCoach.ordenes || temaCoach.cierreFinal) {
-    contextoBase.push(`
-DOCUCITE Y ORDENES:
-${JSON.stringify(docuciteOrdenesCoach)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("DOCUCITE Y ORDENES", docuciteOrdenesCoach, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 160
+      })
+    );
   }
 
   if (temaCoach.mentalidad) {
-    contextoBase.push(`
-MENTALIDAD:
-${JSON.stringify(mentalidadOlmedo)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("MENTALIDAD", mentalidadOlmedo, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   if (temaCoach.seguimiento) {
-    contextoBase.push(`
-SEGUIMIENTO:
-${JSON.stringify(sistema4Citas)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("SEGUIMIENTO", sistema4Citas, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   if (temaCoach.reclutamiento) {
-    contextoBase.push(`
-RECLUTAMIENTO:
-${JSON.stringify(reclutamientoCiprian)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("RECLUTAMIENTO", reclutamientoCiprian, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   const experienciaReal = construirExperienciaRealCoach(pregunta);
@@ -2637,16 +3026,30 @@ ${JSON.stringify(reclutamientoCiprian)}
     !temaCoach.seguimiento &&
     !temaCoach.reclutamiento
   ) {
-    contextoBase.push(`
-BASE GENERAL COACH:
-${JSON.stringify(beneficiosProductos)}
-
-CIERRES:
-${JSON.stringify(cierresAlexDey)}
-
-MENTALIDAD:
-${JSON.stringify(mentalidadOlmedo)}
-`);
+    contextoBase.push(
+      construirBloquePrompt("BASE GENERAL COACH", beneficiosProductos, {
+        maxArrayItems: 8,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
+    contextoBase.push(
+      construirBloquePrompt("CIERRES", cierresAlexDey, {
+        maxArrayItems: 6,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
+    contextoBase.push(
+      construirBloquePrompt("MENTALIDAD", mentalidadOlmedo, {
+        maxArrayItems: 6,
+        maxObjectKeys: 8,
+        maxDepth: 2,
+        maxStringLength: 150
+      })
+    );
   }
 
   return contextoBase.join("\n\n");
@@ -3238,14 +3641,8 @@ app.post("/chat", async (req, res) => {
     }
   }
 
-  if (!conversaciones[sessionId]) {
-    conversaciones[sessionId] = [];
-  }
-
-  conversaciones[sessionId].push({
-    role: "user",
-    content: preguntaLimpia
-  });
+  marcarSesionActiva(sessionId);
+  limpiarMemoriaSesiones();
 
   try {
     let leadGuardado = null;
@@ -3268,7 +3665,20 @@ CONTEXTO INTERNO DEL COACH:
 - no mandar informacion a Google Sheets
 - enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
 `;
+      await guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: null,
+        leadId: null,
+        role: "user",
+        content: preguntaLimpia,
+        intent: "coach_chat",
+        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
     } else {
+      const leadPrevio = await resolverLeadExistente(sessionId, visitorIdLimpio, "", "");
+      const perfilPrevio = await resolverPerfilExistente(visitorIdLimpio, "", "", leadPrevio?._id || null);
+      hidratarEstadoConversacion(sessionId, perfilPrevio, leadPrevio);
       actualizarEstadoConversacion(sessionId, preguntaLimpia);
       const estadoActual = obtenerEstadoConversacion(sessionId);
 
@@ -3294,7 +3704,8 @@ CONTEXTO INTERNO DEL COACH:
         role: "user",
         content: preguntaLimpia,
         intent: "chef_chat",
-        estadoConversacion: estadoConLead
+        estadoConversacion: estadoConLead,
+        detectedTopics: extraerTemasInteres(preguntaLimpia)
       });
 
       estadoPrompt = construirEstadoPrompt(sessionId);
@@ -3302,6 +3713,8 @@ CONTEXTO INTERNO DEL COACH:
     }
 
     const contexto = await construirContexto(preguntaLimpia, modoChat);
+    registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
+    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -3317,7 +3730,7 @@ CONTEXTO INTERNO DEL COACH:
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
-          ...conversaciones[sessionId]
+          ...historialPrompt
         ]
       })
     });
@@ -3337,20 +3750,9 @@ CONTEXTO INTERNO DEL COACH:
 
     const respuestaIA = data.choices[0].message;
 
-    conversaciones[sessionId].push(respuestaIA);
+    registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
 
     if (modoChat === "coach") {
-      await guardarMensajeRaw({
-        visitorId: visitorIdLimpio,
-        sessionId,
-        profileId: null,
-        leadId: null,
-        role: "user",
-        content: preguntaLimpia,
-        intent: "coach_chat",
-        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
-      });
-
       await guardarMensajeRaw({
         visitorId: visitorIdLimpio,
         sessionId,
