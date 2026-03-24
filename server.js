@@ -123,6 +123,38 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachMetricSchema = new mongoose.Schema(
+  {
+    label: String,
+    count: { type: Number, default: 0 },
+    lastSeenAt: Date
+  },
+  { _id: false }
+);
+
+const coachSessionSummarySchema = new mongoose.Schema(
+  {
+    sessionId: String,
+    summary: String,
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
+const coachDailyRollupSchema = new mongoose.Schema(
+  {
+    dateKey: String,
+    questions: { type: Number, default: 0 },
+    replies: { type: Number, default: 0 },
+    topics: [coachMetricSchema],
+    objections: [coachMetricSchema],
+    products: [coachMetricSchema],
+    stages: [coachMetricSchema],
+    closeStyles: [coachMetricSchema]
+  },
+  { _id: false }
+);
+
 const coachUserSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true, lowercase: true },
@@ -137,6 +169,71 @@ const coachUserSchema = new mongoose.Schema({
   subscriptionCancelAtPeriodEnd: { type: Boolean, default: false },
   lastCheckoutSessionId: String,
   lastLoginAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachDistributorProfileSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    unique: true,
+    index: true
+  },
+  name: String,
+  email: String,
+  subscriptionStatus: String,
+  questionsCount: { type: Number, default: 0 },
+  coachRepliesCount: { type: Number, default: 0 },
+  pricingQuestionsCount: { type: Number, default: 0 },
+  followUpQuestionsCount: { type: Number, default: 0 },
+  docuciteQuestionsCount: { type: Number, default: 0 },
+  recruitingQuestionsCount: { type: Number, default: 0 },
+  demoQuestionsCount: { type: Number, default: 0 },
+  objectionQuestionsCount: { type: Number, default: 0 },
+  productQuestionsCount: { type: Number, default: 0 },
+  closingQuestionsCount: { type: Number, default: 0 },
+  mindsetQuestionsCount: { type: Number, default: 0 },
+  businessQuestionsCount: { type: Number, default: 0 },
+  topTopics: [coachMetricSchema],
+  topObjections: [coachMetricSchema],
+  topProducts: [coachMetricSchema],
+  topStages: [coachMetricSchema],
+  closeStylesConsulted: [coachMetricSchema],
+  focusAreas: [String],
+  painAreas: [String],
+  preferredCloseStyle: String,
+  lastQuestion: String,
+  lastCoachReply: String,
+  lastInteractionAt: Date,
+  recentSessionsSummary: [coachSessionSummarySchema],
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachDistributorAnalyticsSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    unique: true,
+    index: true
+  },
+  name: String,
+  email: String,
+  firstInteractionAt: Date,
+  lastInteractionAt: Date,
+  lastSessionId: String,
+  totalQuestions: { type: Number, default: 0 },
+  totalReplies: { type: Number, default: 0 },
+  totalSessions: { type: Number, default: 0 },
+  topTopics: [coachMetricSchema],
+  topObjections: [coachMetricSchema],
+  topProducts: [coachMetricSchema],
+  topStages: [coachMetricSchema],
+  closeStylesConsulted: [coachMetricSchema],
+  dailyRollup: [coachDailyRollupSchema],
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
@@ -168,12 +265,19 @@ messageSchema.index({ visitorId: 1, createdAt: -1 });
 messageSchema.index({ sessionId: 1, createdAt: -1 });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
+coachDistributorProfileSchema.index({ email: 1 });
+coachDistributorAnalyticsSchema.index({ email: 1 });
 coachSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
 const Message = mongoose.models.Message || mongoose.model("Message", messageSchema);
 const CoachUser = mongoose.models.CoachUser || mongoose.model("CoachUser", coachUserSchema);
+const CoachDistributorProfile =
+  mongoose.models.CoachDistributorProfile || mongoose.model("CoachDistributorProfile", coachDistributorProfileSchema);
+const CoachDistributorAnalytics =
+  mongoose.models.CoachDistributorAnalytics ||
+  mongoose.model("CoachDistributorAnalytics", coachDistributorAnalyticsSchema);
 const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSession", coachSessionSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
@@ -553,6 +657,319 @@ function limpiarCoachUser(userDoc) {
     stripeCustomerId: userDoc.stripeCustomerId || "",
     lastCheckoutSessionId: userDoc.lastCheckoutSessionId || "",
     trialEligible: coachPuedeIniciarTrial(userDoc)
+  };
+}
+
+function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
+  if (!profileDoc && !analyticsDoc) {
+    return null;
+  }
+
+  return {
+    questionsCount: profileDoc?.questionsCount || 0,
+    coachRepliesCount: profileDoc?.coachRepliesCount || 0,
+    topTopics: extraerTopLabels(profileDoc?.topTopics || analyticsDoc?.topTopics || [], 5),
+    topObjections: extraerTopLabels(profileDoc?.topObjections || analyticsDoc?.topObjections || [], 5),
+    topProducts: extraerTopLabels(profileDoc?.topProducts || analyticsDoc?.topProducts || [], 5),
+    topStages: extraerTopLabels(profileDoc?.topStages || analyticsDoc?.topStages || [], 5),
+    focusAreas: profileDoc?.focusAreas || [],
+    painAreas: profileDoc?.painAreas || [],
+    preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
+    lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null
+  };
+}
+
+function incrementarMetricaCoach(metricas = [], label = "", amount = 1) {
+  if (!label) {
+    return metricas || [];
+  }
+
+  const ahora = new Date();
+  const lista = Array.isArray(metricas) ? [...metricas] : [];
+  const normalizada = String(label).trim().toLowerCase();
+  const existente = lista.find(item => String(item?.label || "").trim().toLowerCase() === normalizada);
+
+  if (existente) {
+    existente.count = (existente.count || 0) + amount;
+    existente.lastSeenAt = ahora;
+  } else {
+    lista.push({
+      label: String(label).trim(),
+      count: amount,
+      lastSeenAt: ahora
+    });
+  }
+
+  return lista
+    .filter(item => item?.label)
+    .sort((a, b) => (b.count || 0) - (a.count || 0))
+    .slice(0, 8);
+}
+
+function obtenerDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function detectarDolorCoach(texto = "") {
+  return /no se|no s[eé]|me atoro|me trabo|batallo|me cuesta|confundo|confundido|complicado|dif[ií]cil|ayuda|no entiendo|no me sale|me gana/i.test(
+    texto
+  );
+}
+
+function extraerObjecionesCoach(texto = "") {
+  const normalizado = normalizarTextoBusquedaCoach(texto);
+  const objeciones = [];
+  const catalogo = [
+    { label: "esta caro", regex: /esta caro|muy caro|caro/ },
+    { label: "lo voy a pensar", regex: /lo voy a pensar|pensarlo|pensar/ },
+    { label: "no tengo dinero", regex: /no tengo dinero|no me alcanza|no puedo ahorita/ },
+    { label: "ya tengo", regex: /ya tengo|ya compre|ya compr[eé]/ },
+    { label: "no tengo tiempo", regex: /no tengo tiempo|despues|mas adelante/ },
+    { label: "no me interesa", regex: /no me interesa|no estoy interesad/ }
+  ];
+
+  for (const item of catalogo) {
+    if (item.regex.test(normalizado)) {
+      objeciones.push(item.label);
+    }
+  }
+
+  return objeciones;
+}
+
+function extraerCierresConsultadosCoach(texto = "") {
+  const normalizado = normalizarTextoBusquedaCoach(texto);
+  const cierres = [];
+  const catalogo = [
+    { label: "benjamin franklin", regex: /benjamin franklin/ },
+    { label: "doble alternativa", regex: /doble alternativa/ },
+    { label: "rebote", regex: /rebote/ },
+    { label: "silencio", regex: /silencio|se queda callado|se queda en silencio/ },
+    { label: "puercoespin", regex: /puercoesp[ii]n/ },
+    { label: "llamada de cierre", regex: /llamada de cierre/ },
+    { label: "me facilita su id", regex: /me facilita su id|bienvenido a royal prestige/ }
+  ];
+
+  for (const item of catalogo) {
+    if (item.regex.test(normalizado)) {
+      cierres.push(item.label);
+    }
+  }
+
+  return cierres;
+}
+
+function extraerEtapasCoach(pregunta = "", temaCoach = null) {
+  const tema = temaCoach || detectarTemaCoach(normalizarTextoBusquedaCoach(pregunta));
+  const etapas = [];
+
+  if (tema.demo) etapas.push("demo");
+  if (tema.producto) etapas.push("presentacion_producto");
+  if (tema.precio) etapas.push("negociacion_precio");
+  if (tema.objecion) etapas.push("objecion");
+  if (tema.cierre) etapas.push("cierre");
+  if (tema.cierreFinal) etapas.push("cierre_final");
+  if (tema.ordenes) etapas.push("post_cierre_orden");
+  if (tema.seguimiento) etapas.push("seguimiento");
+  if (tema.reclutamiento) etapas.push("reclutamiento");
+  if (tema.negocio) etapas.push("plan_de_negocio");
+  if (tema.mentalidad) etapas.push("mentalidad");
+
+  return etapas;
+}
+
+function extraerTopLabels(metricas = [], limit = 3) {
+  return (Array.isArray(metricas) ? metricas : [])
+    .slice()
+    .sort((a, b) => (b?.count || 0) - (a?.count || 0))
+    .slice(0, limit)
+    .map(item => item.label)
+    .filter(Boolean);
+}
+
+function construirResumenSesionCoach(question = "", reply = "") {
+  const pregunta = truncarTextoPrompt(question, 120);
+  const respuesta = truncarTextoPrompt(reply, 140);
+  return `Pregunta: ${pregunta} | Coach: ${respuesta}`;
+}
+
+async function actualizarPerfilYAnalyticsCoach({ userDoc, sessionId = "", question = "", reply = "" }) {
+  if (!userDoc || !question) {
+    return null;
+  }
+
+  const ahora = new Date();
+  const tema = detectarTemaCoach(normalizarTextoBusquedaCoach(question));
+  const topicos = [
+    tema.precio ? "precio" : "",
+    tema.producto ? "producto" : "",
+    tema.demo ? "demo" : "",
+    tema.objecion ? "objecion" : "",
+    tema.cierre ? "cierre" : "",
+    tema.cierreFinal ? "cierre_final" : "",
+    tema.ordenes ? "ordenes" : "",
+    tema.mentalidad ? "mentalidad" : "",
+    tema.seguimiento ? "seguimiento" : "",
+    tema.reclutamiento ? "reclutamiento" : "",
+    tema.negocio ? "negocio" : ""
+  ].filter(Boolean);
+  const objeciones = extraerObjecionesCoach(question);
+  const productos = extraerProductos(question);
+  const etapas = extraerEtapasCoach(question, tema);
+  const cierres = extraerCierresConsultadosCoach(`${question} ${reply}`);
+  const sessionSummary = {
+    sessionId,
+    summary: construirResumenSesionCoach(question, reply),
+    createdAt: ahora
+  };
+
+  const profile = (await CoachDistributorProfile.findOne({ userId: userDoc._id })) || new CoachDistributorProfile({
+    userId: userDoc._id,
+    createdAt: ahora
+  });
+
+  profile.name = userDoc.name || profile.name || "";
+  profile.email = userDoc.email || profile.email || "";
+  profile.subscriptionStatus = obtenerCoachStatusVisible(userDoc);
+  profile.questionsCount = (profile.questionsCount || 0) + 1;
+  profile.coachRepliesCount = (profile.coachRepliesCount || 0) + (reply ? 1 : 0);
+  profile.lastQuestion = question;
+  profile.lastCoachReply = reply || profile.lastCoachReply || "";
+  profile.lastInteractionAt = ahora;
+  profile.updatedAt = ahora;
+
+  if (tema.precio) profile.pricingQuestionsCount = (profile.pricingQuestionsCount || 0) + 1;
+  if (tema.seguimiento) profile.followUpQuestionsCount = (profile.followUpQuestionsCount || 0) + 1;
+  if (tema.ordenes) profile.docuciteQuestionsCount = (profile.docuciteQuestionsCount || 0) + 1;
+  if (tema.reclutamiento) profile.recruitingQuestionsCount = (profile.recruitingQuestionsCount || 0) + 1;
+  if (tema.demo) profile.demoQuestionsCount = (profile.demoQuestionsCount || 0) + 1;
+  if (tema.objecion) profile.objectionQuestionsCount = (profile.objectionQuestionsCount || 0) + 1;
+  if (tema.producto) profile.productQuestionsCount = (profile.productQuestionsCount || 0) + 1;
+  if (tema.cierre || tema.cierreFinal) profile.closingQuestionsCount = (profile.closingQuestionsCount || 0) + 1;
+  if (tema.mentalidad) profile.mindsetQuestionsCount = (profile.mindsetQuestionsCount || 0) + 1;
+  if (tema.negocio) profile.businessQuestionsCount = (profile.businessQuestionsCount || 0) + 1;
+
+  for (const item of topicos) {
+    profile.topTopics = incrementarMetricaCoach(profile.topTopics, item);
+  }
+
+  for (const item of objeciones) {
+    profile.topObjections = incrementarMetricaCoach(profile.topObjections, item);
+  }
+
+  for (const item of productos) {
+    profile.topProducts = incrementarMetricaCoach(profile.topProducts, item);
+  }
+
+  for (const item of etapas) {
+    profile.topStages = incrementarMetricaCoach(profile.topStages, item);
+  }
+
+  for (const item of cierres) {
+    profile.closeStylesConsulted = incrementarMetricaCoach(profile.closeStylesConsulted, item);
+  }
+
+  profile.focusAreas = extraerTopLabels(profile.topTopics, 3);
+  profile.painAreas = [
+    ...new Set([
+      ...extraerTopLabels(profile.topObjections, 3),
+      ...(detectarDolorCoach(question) ? extraerTopLabels(profile.topTopics, 2) : [])
+    ])
+  ].slice(0, 3);
+  profile.preferredCloseStyle = extraerTopLabels(profile.closeStylesConsulted, 1)[0] || profile.preferredCloseStyle || "";
+  profile.recentSessionsSummary = [sessionSummary, ...(profile.recentSessionsSummary || [])].slice(0, 10);
+  await profile.save();
+
+  const analytics =
+    (await CoachDistributorAnalytics.findOne({ userId: userDoc._id })) ||
+    new CoachDistributorAnalytics({
+      userId: userDoc._id,
+      createdAt: ahora,
+      firstInteractionAt: ahora
+    });
+
+  analytics.name = userDoc.name || analytics.name || "";
+  analytics.email = userDoc.email || analytics.email || "";
+  analytics.lastInteractionAt = ahora;
+  analytics.updatedAt = ahora;
+  analytics.totalQuestions = (analytics.totalQuestions || 0) + 1;
+  analytics.totalReplies = (analytics.totalReplies || 0) + (reply ? 1 : 0);
+
+  if (sessionId && analytics.lastSessionId !== sessionId) {
+    analytics.totalSessions = (analytics.totalSessions || 0) + 1;
+    analytics.lastSessionId = sessionId;
+  }
+
+  for (const item of topicos) {
+    analytics.topTopics = incrementarMetricaCoach(analytics.topTopics, item);
+  }
+
+  for (const item of objeciones) {
+    analytics.topObjections = incrementarMetricaCoach(analytics.topObjections, item);
+  }
+
+  for (const item of productos) {
+    analytics.topProducts = incrementarMetricaCoach(analytics.topProducts, item);
+  }
+
+  for (const item of etapas) {
+    analytics.topStages = incrementarMetricaCoach(analytics.topStages, item);
+  }
+
+  for (const item of cierres) {
+    analytics.closeStylesConsulted = incrementarMetricaCoach(analytics.closeStylesConsulted, item);
+  }
+
+  const dateKey = obtenerDateKey(ahora);
+  const dailyRollup = Array.isArray(analytics.dailyRollup) ? [...analytics.dailyRollup] : [];
+  let daily = dailyRollup.find(item => item.dateKey === dateKey);
+
+  if (!daily) {
+    daily = {
+      dateKey,
+      questions: 0,
+      replies: 0,
+      topics: [],
+      objections: [],
+      products: [],
+      stages: [],
+      closeStyles: []
+    };
+    dailyRollup.unshift(daily);
+  }
+
+  daily.questions += 1;
+  daily.replies += reply ? 1 : 0;
+
+  for (const item of topicos) {
+    daily.topics = incrementarMetricaCoach(daily.topics, item);
+  }
+
+  for (const item of objeciones) {
+    daily.objections = incrementarMetricaCoach(daily.objections, item);
+  }
+
+  for (const item of productos) {
+    daily.products = incrementarMetricaCoach(daily.products, item);
+  }
+
+  for (const item of etapas) {
+    daily.stages = incrementarMetricaCoach(daily.stages, item);
+  }
+
+  for (const item of cierres) {
+    daily.closeStyles = incrementarMetricaCoach(daily.closeStyles, item);
+  }
+
+  analytics.dailyRollup = dailyRollup.slice(0, 45);
+  await analytics.save();
+
+  return {
+    profile,
+    analytics
   };
 }
 
@@ -3433,10 +3850,16 @@ app.get("/api/coach/me", async (req, res) => {
       });
     }
 
+    const [profileDoc, analyticsDoc] = await Promise.all([
+      CoachDistributorProfile.findOne({ userId: auth.user._id }).lean(),
+      CoachDistributorAnalytics.findOne({ userId: auth.user._id }).lean()
+    ]);
+
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
-      user: limpiarCoachUser(auth.user)
+      user: limpiarCoachUser(auth.user),
+      profile: limpiarCoachProfile(profileDoc, analyticsDoc)
     });
   } catch (error) {
     console.error("Error obteniendo usuario Coach:", error.message);
@@ -3762,6 +4185,13 @@ CONTEXTO INTERNO DEL COACH:
         content: respuestaIA.content,
         intent: "coach_chat",
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
+
+      await actualizarPerfilYAnalyticsCoach({
+        userDoc: coachAuth.user,
+        sessionId,
+        question: preguntaLimpia,
+        reply: respuestaIA.content
       });
 
       return res.json({
