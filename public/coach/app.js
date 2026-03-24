@@ -191,6 +191,115 @@ function updateAuthTargets(user) {
   });
 }
 
+function formatCoachInsightLabel(value) {
+  const limpio = String(value || "").trim();
+
+  if (!limpio) {
+    return "Sin datos";
+  }
+
+  return limpio
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function joinCoachInsightList(items, emptyText = "Sin datos todavia.") {
+  return Array.isArray(items) && items.length
+    ? items.map(formatCoachInsightLabel).join(" · ")
+    : emptyText;
+}
+
+function renderCoachTagList(target, items, emptyText = "Sin datos") {
+  if (!target) {
+    return;
+  }
+
+  target.innerHTML = "";
+  const values = Array.isArray(items) ? items.filter(Boolean) : [];
+
+  if (!values.length) {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip is-muted";
+    chip.textContent = emptyText;
+    target.appendChild(chip);
+    return;
+  }
+
+  values.forEach(item => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.textContent = formatCoachInsightLabel(item);
+    target.appendChild(chip);
+  });
+}
+
+function renderCoachProfile(profile) {
+  const safeProfile = profile || {};
+
+  document.querySelectorAll("[data-coach-profile-level]").forEach(node => {
+    node.textContent = formatCoachInsightLabel(safeProfile.level || "novato");
+  });
+
+  document.querySelectorAll("[data-coach-profile-questions]").forEach(node => {
+    node.textContent = String(safeProfile.questionsCount || 0);
+  });
+
+  document.querySelectorAll("[data-coach-profile-sessions]").forEach(node => {
+    node.textContent = String(safeProfile.totalSessions || 0);
+  });
+
+  document.querySelectorAll("[data-coach-profile-focus]").forEach(node => {
+    node.textContent = joinCoachInsightList(safeProfile.focusAreas, "Todavia no hay foco claro.");
+  });
+
+  document.querySelectorAll("[data-coach-profile-pain]").forEach(node => {
+    node.textContent = joinCoachInsightList(safeProfile.painAreas, "Todavia no hay dolor claro.");
+  });
+
+  document.querySelectorAll("[data-coach-profile-close]").forEach(node => {
+    node.textContent = safeProfile.preferredCloseStyle
+      ? formatCoachInsightLabel(safeProfile.preferredCloseStyle)
+      : "Todavia no hay cierre dominante.";
+  });
+
+  document.querySelectorAll("[data-coach-profile-style]").forEach(node => {
+    node.textContent = formatCoachInsightLabel(safeProfile.supportStyle || "directo");
+  });
+}
+
+function renderCoachNetworkSummary(summary) {
+  const safeSummary = summary || {};
+
+  document.querySelectorAll("[data-coach-network-total]").forEach(node => {
+    node.textContent = String(safeSummary.totalDistributors || 0);
+  });
+
+  document.querySelectorAll("[data-coach-network-today]").forEach(node => {
+    node.textContent = String(safeSummary.activeToday || 0);
+  });
+
+  document.querySelectorAll("[data-coach-network-week]").forEach(node => {
+    node.textContent = String(safeSummary.activeLast7Days || 0);
+  });
+
+  renderCoachTagList(
+    document.querySelector("[data-coach-network-topics]"),
+    safeSummary.topTopics,
+    "Aun no hay datos globales."
+  );
+  renderCoachTagList(
+    document.querySelector("[data-coach-network-objections]"),
+    safeSummary.topObjections,
+    "Aun no hay objeciones globales."
+  );
+  renderCoachTagList(
+    document.querySelector("[data-coach-network-stages]"),
+    safeSummary.topStages,
+    "Aun no hay etapas globales."
+  );
+}
+
 function initFaq() {
   document.querySelectorAll(".faq-card").forEach(card => {
     const trigger = card.querySelector(".faq-trigger");
@@ -461,6 +570,8 @@ async function initCoachAppPage() {
   }
 
   updateAuthTargets(me.user);
+  renderCoachProfile(me.profile);
+  renderCoachNetworkSummary(me.networkSummary);
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
@@ -510,6 +621,10 @@ async function initCoachAppPage() {
         "assistant",
         data.respuesta || "No pude responder en este momento."
       );
+
+      if (data.profile) {
+        renderCoachProfile(data.profile);
+      }
     } catch (error) {
       addCoachMessage(
         chatMessages,

@@ -665,17 +665,138 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
     return null;
   }
 
+  const totalQuestions = profileDoc?.questionsCount || analyticsDoc?.totalQuestions || 0;
+  const totalSessions = analyticsDoc?.totalSessions || 0;
+  let level = "novato";
+
+  if (totalQuestions >= 80 || totalSessions >= 30) {
+    level = "avanzado";
+  } else if (totalQuestions >= 25 || totalSessions >= 10) {
+    level = "intermedio";
+  }
+
+  const focusAreas = profileDoc?.focusAreas || [];
+  const painAreas = profileDoc?.painAreas || [];
+  let supportStyle = "directo";
+
+  if (painAreas.some(item => /precio|esta caro|dinero|pensar|objecion/i.test(item))) {
+    supportStyle = "cierre_y_objeciones";
+  } else if (painAreas.some(item => /docucite|orden|papeleria/i.test(item))) {
+    supportStyle = "operativo_post_cierre";
+  } else if (focusAreas.some(item => /reclutamiento|negocio/i.test(item))) {
+    supportStyle = "crecimiento_y_negocio";
+  } else if (focusAreas.some(item => /demo|producto/i.test(item))) {
+    supportStyle = "demo_y_producto";
+  }
+
   return {
-    questionsCount: profileDoc?.questionsCount || 0,
+    questionsCount: totalQuestions,
     coachRepliesCount: profileDoc?.coachRepliesCount || 0,
+    totalSessions,
+    level,
+    supportStyle,
     topTopics: extraerTopLabels(profileDoc?.topTopics || analyticsDoc?.topTopics || [], 5),
     topObjections: extraerTopLabels(profileDoc?.topObjections || analyticsDoc?.topObjections || [], 5),
     topProducts: extraerTopLabels(profileDoc?.topProducts || analyticsDoc?.topProducts || [], 5),
     topStages: extraerTopLabels(profileDoc?.topStages || analyticsDoc?.topStages || [], 5),
-    focusAreas: profileDoc?.focusAreas || [],
-    painAreas: profileDoc?.painAreas || [],
+    focusAreas,
+    painAreas,
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
-    lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null
+    lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
+    recentSessionsSummary: (profileDoc?.recentSessionsSummary || []).slice(0, 4).map(item => ({
+      sessionId: item?.sessionId || "",
+      summary: truncarTextoPrompt(item?.summary || "", 180),
+      createdAt: item?.createdAt || null
+    }))
+  };
+}
+
+function construirContextoPerfilCoachPrompt(profileDoc = null, analyticsDoc = null) {
+  const perfil = limpiarCoachProfile(profileDoc, analyticsDoc);
+
+  if (!perfil) {
+    return `
+PERFIL OPERATIVO DEL DISTRIBUIDOR:
+- nivel_estimado: novato
+- estilo_de_apoyo: directo_y_simple
+
+INSTRUCCION DE PERSONALIZACION:
+Asume que este distribuidor necesita respuestas cortas, faciles de leer y con un siguiente paso muy claro.
+No menciones que lo estas perfilando.
+`;
+  }
+
+  const ultimasSesiones = (perfil.recentSessionsSummary || [])
+    .slice(0, 3)
+    .map(item => item.summary)
+    .filter(Boolean);
+
+  return `
+PERFIL OPERATIVO DEL DISTRIBUIDOR:
+- nivel_estimado: ${perfil.level}
+- estilo_de_apoyo: ${perfil.supportStyle}
+- preguntas_acumuladas: ${perfil.questionsCount}
+- sesiones_acumuladas: ${perfil.totalSessions}
+- temas_mas_consultados: ${perfil.topTopics.length ? perfil.topTopics.join(", ") : "sin datos"}
+- objeciones_recurrentes: ${perfil.topObjections.length ? perfil.topObjections.join(", ") : "sin datos"}
+- productos_mas_mencionados: ${perfil.topProducts.length ? perfil.topProducts.join(", ") : "sin datos"}
+- etapas_mas_consultadas: ${perfil.topStages.length ? perfil.topStages.join(", ") : "sin datos"}
+- areas_fuertes: ${perfil.focusAreas.length ? perfil.focusAreas.join(", ") : "sin datos"}
+- areas_de_dolor: ${perfil.painAreas.length ? perfil.painAreas.join(", ") : "sin datos"}
+- cierre_mas_consultado: ${perfil.preferredCloseStyle || "sin dato"}
+- sesiones_recientes: ${ultimasSesiones.length ? ultimasSesiones.join(" || ") : "sin historial corto"}
+
+INSTRUCCION DE PERSONALIZACION:
+- no menciones este perfil ni digas que lo estas analizando
+- si es novato, usa palabras mas simples, menos teoria y un solo siguiente paso
+- si es intermedio, ve directo al punto y da una accion principal con una alternativa corta
+- si es avanzado, responde mas ejecutivo y asume que ya entiende la demo
+- si suele batallar en precio u objeciones, prioriza frase exacta + siguiente movimiento
+- si suele batallar en ordenes o docucite, agrega el paso operativo despues del cierre
+- si suele consultar producto o demo, conecta tu respuesta con beneficios reales del producto
+- usa el cierre mas consultado solo si siembra bien con la situacion actual
+`;
+}
+
+function mezclarMetricasCoach(metricasDocs = [], field = "", limit = 5) {
+  let acumulado = [];
+
+  for (const doc of Array.isArray(metricasDocs) ? metricasDocs : []) {
+    for (const item of Array.isArray(doc?.[field]) ? doc[field] : []) {
+      acumulado = incrementarMetricaCoach(acumulado, item?.label || "", Number(item?.count || 0) || 1);
+    }
+  }
+
+  return extraerTopLabels(acumulado, limit);
+}
+
+async function obtenerCoachNetworkSummary() {
+  const analyticsDocs = await CoachDistributorAnalytics.find(
+    {},
+    {
+      totalQuestions: 1,
+      lastInteractionAt: 1,
+      topTopics: 1,
+      topObjections: 1,
+      topStages: 1
+    }
+  )
+    .sort({ lastInteractionAt: -1 })
+    .lean();
+
+  const ahora = Date.now();
+  const inicioHoy = new Date();
+  inicioHoy.setHours(0, 0, 0, 0);
+  const hace7Dias = new Date(ahora - 7 * 24 * 60 * 60 * 1000);
+
+  return {
+    totalDistributors: analyticsDocs.length,
+    activeToday: analyticsDocs.filter(doc => doc?.lastInteractionAt && new Date(doc.lastInteractionAt) >= inicioHoy).length,
+    activeLast7Days: analyticsDocs.filter(doc => doc?.lastInteractionAt && new Date(doc.lastInteractionAt) >= hace7Dias).length,
+    totalQuestions: analyticsDocs.reduce((sum, doc) => sum + Number(doc?.totalQuestions || 0), 0),
+    topTopics: mezclarMetricasCoach(analyticsDocs, "topTopics", 5),
+    topObjections: mezclarMetricasCoach(analyticsDocs, "topObjections", 5),
+    topStages: mezclarMetricasCoach(analyticsDocs, "topStages", 5)
   };
 }
 
@@ -3850,16 +3971,18 @@ app.get("/api/coach/me", async (req, res) => {
       });
     }
 
-    const [profileDoc, analyticsDoc] = await Promise.all([
+    const [profileDoc, analyticsDoc, networkSummary] = await Promise.all([
       CoachDistributorProfile.findOne({ userId: auth.user._id }).lean(),
-      CoachDistributorAnalytics.findOne({ userId: auth.user._id }).lean()
+      CoachDistributorAnalytics.findOne({ userId: auth.user._id }).lean(),
+      coachTieneAccesoTotal(auth.user) ? obtenerCoachNetworkSummary() : Promise.resolve(null)
     ]);
 
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
       user: limpiarCoachUser(auth.user),
-      profile: limpiarCoachProfile(profileDoc, analyticsDoc)
+      profile: limpiarCoachProfile(profileDoc, analyticsDoc),
+      networkSummary
     });
   } catch (error) {
     console.error("Error obteniendo usuario Coach:", error.message);
@@ -4070,11 +4193,18 @@ app.post("/chat", async (req, res) => {
   try {
     let leadGuardado = null;
     let profileGuardado = null;
+    let coachProfileDoc = null;
+    let coachAnalyticsDoc = null;
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
     let estadoPrompt = "";
     let perfilPrompt = "";
 
     if (modoChat === "coach") {
+      [coachProfileDoc, coachAnalyticsDoc] = await Promise.all([
+        CoachDistributorProfile.findOne({ userId: coachAuth.user._id }).lean(),
+        CoachDistributorAnalytics.findOne({ userId: coachAuth.user._id }).lean()
+      ]);
+
       estadoPrompt = `
 ESTADO DEL COACH:
 - area_privada: si
@@ -4087,6 +4217,7 @@ CONTEXTO INTERNO DEL COACH:
 - no pedir telefono
 - no mandar informacion a Google Sheets
 - enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
+${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 `;
       await guardarMensajeRaw({
         visitorId: visitorIdLimpio,
@@ -4187,7 +4318,7 @@ CONTEXTO INTERNO DEL COACH:
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
 
-      await actualizarPerfilYAnalyticsCoach({
+      const coachProfileActualizado = await actualizarPerfilYAnalyticsCoach({
         userDoc: coachAuth.user,
         sessionId,
         question: preguntaLimpia,
@@ -4197,6 +4328,7 @@ CONTEXTO INTERNO DEL COACH:
       return res.json({
         respuesta: respuestaIA.content,
         mode: modoChat,
+        profile: limpiarCoachProfile(coachProfileActualizado?.profile, coachProfileActualizado?.analytics),
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
