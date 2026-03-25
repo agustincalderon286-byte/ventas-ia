@@ -266,6 +266,7 @@ profileSchema.index({ visitorIds: 1 });
 profileSchema.index({ leadId: 1 });
 messageSchema.index({ visitorId: 1, createdAt: -1 });
 messageSchema.index({ sessionId: 1, createdAt: -1 });
+messageSchema.index({ intent: 1, role: 1, createdAt: -1 });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachDistributorProfileSchema.index({ email: 1 });
@@ -642,6 +643,45 @@ function obtenerCoachStatusVisible(userDoc = null) {
   }
 
   return userDoc.subscriptionStatus || "inactive";
+}
+
+async function obtenerChefPublicStats() {
+  const ahora = new Date();
+  const inicioHoy = new Date(ahora);
+  inicioHoy.setHours(0, 0, 0, 0);
+  const hace7Dias = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const baseMessageQuery = {
+    intent: "chef_chat",
+    role: "user"
+  };
+
+  const [familiasGuiadasIds, activosHoyIds, activos7DiasIds, preguntasTotales, perfilesChef, leadsCalientes, topTopics] =
+    await Promise.all([
+      Message.distinct("visitorId", baseMessageQuery),
+      Message.distinct("visitorId", { ...baseMessageQuery, createdAt: { $gte: inicioHoy } }),
+      Message.distinct("visitorId", { ...baseMessageQuery, createdAt: { $gte: hace7Dias } }),
+      Message.countDocuments(baseMessageQuery),
+      Profile.countDocuments({ conversationCount: { $gt: 0 } }),
+      Lead.countDocuments({ leadStatus: { $in: ["interesado", "calificado", "cliente"] } }),
+      Message.aggregate([
+        { $match: { ...baseMessageQuery, detectedTopics: { $exists: true, $ne: [] } } },
+        { $unwind: "$detectedTopics" },
+        { $match: { detectedTopics: { $type: "string", $ne: "" } } },
+        { $group: { _id: "$detectedTopics", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 6 }
+      ])
+    ]);
+
+  return {
+    familiasGuiadas: Math.max(familiasGuiadasIds.length, perfilesChef),
+    activosHoy: activosHoyIds.length,
+    activos7Dias: activos7DiasIds.length,
+    preguntasTotales,
+    interesDetectado: leadsCalientes,
+    topTopics: topTopics.map(item => item._id).filter(Boolean),
+    updatedAt: ahora.toISOString()
+  };
 }
 
 function limpiarCoachUser(userDoc) {
@@ -4477,6 +4517,18 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   }
 
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
+});
+
+app.get("/api/chef/stats", async (req, res) => {
+  try {
+    const stats = await obtenerChefPublicStats();
+    res.json(stats);
+  } catch (error) {
+    console.error("Error obteniendo stats Chef:", error.message);
+    res.status(500).json({
+      error: "No pude cargar las metricas del Chef."
+    });
+  }
 });
 
 app.use(express.static(PUBLIC_DIR));
