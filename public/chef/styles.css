@@ -120,6 +120,12 @@ a {
   font-weight: 700;
 }
 
+.nav-pill-button,
+.secondary-button-button {
+  font: inherit;
+  cursor: pointer;
+}
+
 .chef-shell {
   display: flex;
   flex-direction: column;
@@ -230,6 +236,13 @@ a {
   background: #ffffff;
   color: var(--chef-navy);
   border: 1px solid rgba(10, 34, 71, 0.08);
+}
+
+.chef-install-note,
+.helper-note {
+  margin: 14px 0 0;
+  color: var(--chef-muted);
+  line-height: 1.7;
 }
 
 .hero-trust {
@@ -354,16 +367,12 @@ a {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
 .metric-card {
   padding: 20px;
-}
-
-.metric-card.is-wide {
-  grid-column: span 2;
 }
 
 .metric-meta {
@@ -438,6 +447,13 @@ a {
 .mini-stat-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.install-button-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 16px;
 }
@@ -650,10 +666,6 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .metric-card.is-wide {
-    grid-column: span 1;
-  }
-
   .hero-trust,
   .mini-stat-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -670,6 +682,11 @@ a {
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  .nav-pill-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .chef-hero-copy,

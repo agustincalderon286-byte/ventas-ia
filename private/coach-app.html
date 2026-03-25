@@ -30,6 +30,8 @@
         <nav class="coach-nav-links">
           <a class="nav-link" href="/coach/">Landing</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
+          <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer">Ver Chef</a>
+          <button class="nav-button" data-open-chef-share>Compartir Chef</button>
           <button class="nav-button" data-open-billing-portal>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
         </nav>
@@ -280,6 +282,24 @@
           </article>
 
           <article class="dashboard-card">
+            <div class="eyebrow">Comparte el Chef</div>
+            <h3>Regalalo rapido desde aqui</h3>
+            <p>
+              Si el cliente quiere el Chef, abre el link o ensenale el QR. Desde la misma pagina del Chef podra
+              guardarlo en su telefono para volver facil despues.
+            </p>
+
+            <div class="dashboard-actions">
+              <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
+              <button class="nav-button" data-open-chef-share>Mostrar QR</button>
+            </div>
+
+            <p class="mini-note">
+              Compartelo sin apuntar numeros ni explicar demasiado. Escanea, abre y listo.
+            </p>
+          </article>
+
+          <article class="dashboard-card">
             <div class="eyebrow">Para que te ayuda hoy</div>
             <h3>Coach listo para vender mejor</h3>
             <p>
@@ -313,6 +333,36 @@
           </article>
         </aside>
       </section>
+
+      <div class="coach-modal-backdrop" data-chef-share-modal hidden>
+        <div class="coach-modal-card" role="dialog" aria-modal="true" aria-labelledby="chef-share-title">
+          <button class="coach-modal-close" type="button" data-close-chef-share aria-label="Cerrar">×</button>
+          <div class="eyebrow">Comparte el Chef</div>
+          <h3 id="chef-share-title">Escanea o comparte este acceso</h3>
+          <p>
+            Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma
+            pagina.
+          </p>
+
+          <img
+            class="chef-share-qr"
+            src="/chef/share-qr.svg"
+            alt="Codigo QR para abrir Agustin 2.0 Chef"
+          />
+
+          <div class="coach-share-url" data-chef-share-url>https://ventas-ia.onrender.com/chef/</div>
+
+          <div class="dashboard-actions">
+            <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer" data-chef-share-open-link>
+              Abrir Chef
+            </a>
+            <button class="nav-button" type="button" data-copy-chef-link>Copiar link</button>
+            <button class="primary-button" type="button" data-native-share-chef>Compartir</button>
+          </div>
+
+          <p class="mini-note" data-chef-share-feedback></p>
+        </div>
+      </div>
 
       <p class="footer-note">
         Agustin 2.0 Coach vive en su area privada para distribuidores.

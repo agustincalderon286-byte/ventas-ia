@@ -1,0 +1,22 @@
+{
+  "name": "Agustin 2.0 Chef",
+  "short_name": "Agustin Chef",
+  "description": "Chef inteligente gratis para recetas, cocina mexicana saludable, agua y uso practico de productos.",
+  "start_url": "/chef/",
+  "scope": "/chef/",
+  "display": "standalone",
+  "background_color": "#f6fbff",
+  "theme_color": "#0a2247",
+  "icons": [
+    {
+      "src": "/chef/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/chef/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

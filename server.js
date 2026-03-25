@@ -655,14 +655,13 @@ async function obtenerChefPublicStats() {
     role: "user"
   };
 
-  const [familiasGuiadasIds, activosHoyIds, activos7DiasIds, preguntasTotales, perfilesChef, leadsCalientes, topTopics] =
+  const [familiasGuiadasIds, activosHoyIds, activos7DiasIds, preguntasTotales, perfilesChef, topTopics] =
     await Promise.all([
       Message.distinct("visitorId", baseMessageQuery),
       Message.distinct("visitorId", { ...baseMessageQuery, createdAt: { $gte: inicioHoy } }),
       Message.distinct("visitorId", { ...baseMessageQuery, createdAt: { $gte: hace7Dias } }),
       Message.countDocuments(baseMessageQuery),
       Profile.countDocuments({ conversationCount: { $gt: 0 } }),
-      Lead.countDocuments({ leadStatus: { $in: ["interesado", "calificado", "cliente"] } }),
       Message.aggregate([
         { $match: { ...baseMessageQuery, detectedTopics: { $exists: true, $ne: [] } } },
         { $unwind: "$detectedTopics" },
@@ -678,7 +677,6 @@ async function obtenerChefPublicStats() {
     activosHoy: activosHoyIds.length,
     activos7Dias: activos7DiasIds.length,
     preguntasTotales,
-    interesDetectado: leadsCalientes,
     topTopics: topTopics.map(item => item._id).filter(Boolean),
     updatedAt: ahora.toISOString()
   };

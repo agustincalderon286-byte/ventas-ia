@@ -141,6 +141,24 @@ function autoResizeTextarea(textarea) {
   textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
 }
 
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const tempInput = document.createElement("textarea");
+  tempInput.value = text;
+  tempInput.setAttribute("readonly", "readonly");
+  tempInput.style.position = "absolute";
+  tempInput.style.left = "-9999px";
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(tempInput);
+  return copied;
+}
+
 function addCoachMessage(container, role, content) {
   if (!container) {
     return;
@@ -643,7 +661,49 @@ async function initCoachAppPage() {
   const chatStatus = document.querySelector("[data-coach-chat-status]");
   const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
+  const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
+  const chefShareModal = document.querySelector("[data-chef-share-modal]");
+  const chefShareCloseButtons = document.querySelectorAll("[data-close-chef-share]");
+  const chefShareUrlNodes = document.querySelectorAll("[data-chef-share-url]");
+  const chefShareOpenLinks = document.querySelectorAll("[data-chef-share-open-link]");
+  const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
+  const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
+  const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
   const appMessage = document.querySelector("[data-coach-app-message]");
+  const chefShareUrl = `${window.location.origin}/chef/`;
+
+  chefShareUrlNodes.forEach(node => {
+    node.textContent = chefShareUrl;
+  });
+
+  chefShareOpenLinks.forEach(node => {
+    node.href = chefShareUrl;
+  });
+
+  if (nativeShareChefButton && typeof navigator.share !== "function") {
+    nativeShareChefButton.hidden = true;
+  }
+
+  const openChefShareModal = () => {
+    if (!chefShareModal) {
+      return;
+    }
+
+    if (chefShareFeedback) {
+      chefShareFeedback.textContent = "";
+    }
+    chefShareModal.hidden = false;
+    document.body.classList.add("modal-open");
+  };
+
+  const closeChefShareModal = () => {
+    if (!chefShareModal) {
+      return;
+    }
+
+    chefShareModal.hidden = true;
+    document.body.classList.remove("modal-open");
+  };
 
   const sendCoachMessage = async rawText => {
     const text = String(rawText || "").trim();
@@ -730,6 +790,58 @@ async function initCoachAppPage() {
   });
 
   autoResizeTextarea(chatInput);
+
+  chefShareButtons.forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      openChefShareModal();
+    });
+  });
+
+  chefShareCloseButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      closeChefShareModal();
+    });
+  });
+
+  chefShareModal?.addEventListener("click", event => {
+    if (event.target === chefShareModal) {
+      closeChefShareModal();
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && chefShareModal && !chefShareModal.hidden) {
+      closeChefShareModal();
+    }
+  });
+
+  copyChefLinkButton?.addEventListener("click", async () => {
+    try {
+      await copyTextToClipboard(chefShareUrl);
+      if (chefShareFeedback) {
+        chefShareFeedback.textContent = "El link del Chef ya quedo copiado.";
+      }
+    } catch (error) {
+      if (chefShareFeedback) {
+        chefShareFeedback.textContent = "No pude copiar el link del Chef.";
+      } else {
+        setMessage(appMessage, "No pude copiar el link del Chef.", "error");
+      }
+    }
+  });
+
+  nativeShareChefButton?.addEventListener("click", async () => {
+    try {
+      await navigator.share({
+        title: "Agustin 2.0 Chef",
+        text: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable.",
+        url: chefShareUrl
+      });
+    } catch (error) {
+      // noop
+    }
+  });
 
   portalButtons.forEach(button => {
     button.addEventListener("click", async event => {

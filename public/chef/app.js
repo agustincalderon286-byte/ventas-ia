@@ -9,6 +9,9 @@ const mensajesDiv = document.getElementById("chat-mensajes");
 const typing = document.getElementById("typing-indicator");
 const statusBadge = document.getElementById("chefStatusBadge");
 const promptButtons = document.querySelectorAll("[data-chef-prompt]");
+const installButtons = document.querySelectorAll("[data-chef-install]");
+const installHintNodes = document.querySelectorAll("[data-chef-install-hint]");
+let deferredInstallPrompt = null;
 
 function crearId(prefijo) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -75,6 +78,56 @@ function setLoading(loading) {
 
   if (statusBadge) {
     statusBadge.textContent = loading ? "Pensando..." : "Listo";
+  }
+}
+
+function setInstallHint(message) {
+  installHintNodes.forEach(node => {
+    node.textContent = message;
+  });
+}
+
+function isIosDevice() {
+  const ua = window.navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneMode() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function syncInstallButtons() {
+  const isInstalled = isStandaloneMode();
+  const canPrompt = Boolean(deferredInstallPrompt);
+  const isIos = isIosDevice();
+
+  installButtons.forEach(buttonNode => {
+    if (!buttonNode.dataset.defaultLabel) {
+      buttonNode.dataset.defaultLabel = buttonNode.textContent;
+    }
+
+    if (isInstalled) {
+      buttonNode.textContent = "Ya esta guardado";
+      buttonNode.disabled = true;
+      return;
+    }
+
+    buttonNode.disabled = false;
+    buttonNode.textContent = canPrompt
+      ? "Guardar en tu telefono"
+      : isIos
+        ? "Como guardarlo"
+        : buttonNode.dataset.defaultLabel || "Guardar en tu telefono";
+  });
+
+  if (isInstalled) {
+    setInstallHint("Ya quedo guardado en tu telefono. Lo puedes abrir directo desde tu pantalla.");
+  } else if (canPrompt) {
+    setInstallHint("Toca el boton y, si tu navegador lo permite, te saldra la opcion de instalarlo o guardarlo.");
+  } else if (isIos) {
+    setInstallHint("En iPhone abre esta pagina en Safari, toca Compartir y luego Agregar a pantalla de inicio.");
+  } else {
+    setInstallHint("Abre el Chef desde tu navegador y guardalo en favoritos o en tu pantalla si tu dispositivo lo permite.");
   }
 }
 
@@ -168,14 +221,12 @@ function renderChefStats(stats = {}) {
       node.textContent = formatNumber(stats.preguntasTotales || 0);
     });
 
-  document
-    .querySelectorAll("[data-chef-stat-interest], [data-chef-stat-interest-side]")
-    .forEach(node => {
-      node.textContent = formatNumber(stats.interesDetectado || 0);
-    });
-
   document.querySelectorAll("[data-chef-stat-updated]").forEach(node => {
     node.textContent = formatTimestamp(stats.updatedAt);
+  });
+
+  document.querySelectorAll("[data-chef-stat-questions-side]").forEach(node => {
+    node.textContent = formatNumber(stats.preguntasTotales || 0);
   });
 
   renderTopics(
@@ -258,6 +309,61 @@ async function enviarPregunta(forcedText = "") {
   }
 }
 
+async function handleInstallClick() {
+  if (isStandaloneMode()) {
+    setInstallHint("Ya lo tienes guardado en tu telefono.");
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    promptEvent.prompt();
+
+    try {
+      await promptEvent.userChoice;
+    } catch (error) {
+      // noop
+    }
+
+    syncInstallButtons();
+    return;
+  }
+
+  if (isIosDevice()) {
+    setInstallHint("En iPhone abre esta pagina en Safari, toca Compartir y luego Agregar a pantalla de inicio.");
+    return;
+  }
+
+  setInstallHint("Tu navegador no mostro instalacion directa. Guarda esta pagina en tu pantalla o favoritos para volver rapido.");
+}
+
+async function registerChefServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  try {
+    await navigator.serviceWorker.register("/chef/sw.js", {
+      scope: "/chef/"
+    });
+  } catch (error) {
+    // noop
+  }
+}
+
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  syncInstallButtons();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  syncInstallButtons();
+  setInstallHint("Listo. Agustin 2.0 Chef ya quedo guardado en tu telefono.");
+});
+
 button?.addEventListener("click", () => {
   enviarPregunta();
 });
@@ -277,7 +383,15 @@ promptButtons.forEach(buttonNode => {
   });
 });
 
+installButtons.forEach(buttonNode => {
+  buttonNode.addEventListener("click", () => {
+    handleInstallClick();
+  });
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   autoResize();
+  await registerChefServiceWorker();
+  syncInstallButtons();
   await loadChefStats();
 });

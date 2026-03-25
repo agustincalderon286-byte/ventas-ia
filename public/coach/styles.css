@@ -34,6 +34,10 @@ body {
     linear-gradient(140deg, #050d18 0%, #09172a 38%, #0f2445 100%);
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -1105,6 +1109,80 @@ img {
   gap: 10px;
 }
 
+.coach-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 9, 18, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.coach-modal-card {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 28px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(9, 22, 41, 0.98), rgba(10, 24, 46, 0.94));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.coach-modal-card h3,
+.coach-modal-card p {
+  margin: 0;
+}
+
+.coach-modal-card h3 {
+  margin-top: 16px;
+  font-size: 1.5rem;
+  font-family: "Bricolage Grotesque", sans-serif;
+}
+
+.coach-modal-card p {
+  margin-top: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.coach-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chef-share-qr {
+  width: min(260px, 100%);
+  margin: 22px auto 0;
+  padding: 14px;
+  border-radius: 24px;
+  background: #ffffff;
+}
+
+.coach-share-url {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+  word-break: break-word;
+}
+
 .footer-note {
   padding: 0 0 40px;
   color: var(--muted);
@@ -1189,5 +1267,9 @@ img {
 
   .coach-composer {
     grid-template-columns: 1fr;
+  }
+
+  .coach-modal-card {
+    padding: 22px;
   }
 }
