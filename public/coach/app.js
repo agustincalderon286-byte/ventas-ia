@@ -300,6 +300,67 @@ function renderCoachNetworkSummary(summary) {
   );
 }
 
+function renderCoachRepLeadSummary(summary) {
+  const safeSummary = summary || {};
+  const scoreboard = safeSummary.scoreboard || {};
+
+  document.querySelectorAll("[data-coach-rifa-hot]").forEach(node => {
+    node.textContent = String(scoreboard.hot || 0);
+  });
+
+  document.querySelectorAll("[data-coach-rifa-warm]").forEach(node => {
+    node.textContent = String(scoreboard.warm || 0);
+  });
+
+  document.querySelectorAll("[data-coach-rifa-cold]").forEach(node => {
+    node.textContent = String(scoreboard.cold || 0);
+  });
+
+  document.querySelectorAll("[data-coach-rifa-dead]").forEach(node => {
+    node.textContent = String(scoreboard.dead || 0);
+  });
+
+  document.querySelectorAll("[data-coach-rifa-statuses]").forEach(node => {
+    node.textContent = joinCoachInsightList(safeSummary.topStatuses, "Sin datos todavia.");
+  });
+
+  document.querySelectorAll("[data-coach-rifa-angles]").forEach(node => {
+    node.textContent = joinCoachInsightList(safeSummary.topScriptAngles, "Sin datos todavia.");
+  });
+}
+
+function renderActiveLeadContext(context) {
+  const safeContext = context || {};
+  const scoreCopy =
+    safeContext.leadTemperature || safeContext.callStatus
+      ? `${formatCoachInsightLabel(safeContext.leadTemperature || "sin score")} · ${formatCoachInsightLabel(
+          safeContext.callStatus || "sin estado"
+        )}`
+      : "Sin score todavia.";
+
+  document.querySelectorAll("[data-coach-active-lead-name]").forEach(node => {
+    node.textContent = safeContext.leadName
+      ? `${safeContext.leadName}${safeContext.leadId ? ` · Lead ${safeContext.leadId}` : ""}`
+      : "Sin lead detectado todavia.";
+  });
+
+  document.querySelectorAll("[data-coach-active-lead-score]").forEach(node => {
+    node.textContent = scoreCopy;
+  });
+
+  document.querySelectorAll("[data-coach-active-lead-next]").forEach(node => {
+    node.textContent = safeContext.nextStep
+      ? formatCoachInsightLabel(safeContext.nextStep)
+      : "Sin siguiente paso todavia.";
+  });
+
+  document.querySelectorAll("[data-coach-active-lead-angle]").forEach(node => {
+    node.textContent = safeContext.bestScriptAngle
+      ? formatCoachInsightLabel(safeContext.bestScriptAngle)
+      : "Sin angulo todavia.";
+  });
+}
+
 function initFaq() {
   document.querySelectorAll(".faq-card").forEach(card => {
     const trigger = card.querySelector(".faq-trigger");
@@ -572,6 +633,8 @@ async function initCoachAppPage() {
   updateAuthTargets(me.user);
   renderCoachProfile(me.profile);
   renderCoachNetworkSummary(me.networkSummary);
+  renderCoachRepLeadSummary(me.repLeadSummary);
+  renderActiveLeadContext(me.activeLeadContext);
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
@@ -625,6 +688,9 @@ async function initCoachAppPage() {
       if (data.profile) {
         renderCoachProfile(data.profile);
       }
+
+      renderCoachRepLeadSummary(data.repLeadSummary || null);
+      renderActiveLeadContext(data.activeLeadContext || null);
     } catch (error) {
       addCoachMessage(
         chatMessages,

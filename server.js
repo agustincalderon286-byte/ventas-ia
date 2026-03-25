@@ -42,6 +42,9 @@ const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || 
   .map(email => normalizarEmail(email))
   .filter(Boolean);
 const actividadSesiones = {};
+const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
+const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
+const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -797,6 +800,334 @@ async function obtenerCoachNetworkSummary() {
     topTopics: mezclarMetricasCoach(analyticsDocs, "topTopics", 5),
     topObjections: mezclarMetricasCoach(analyticsDocs, "topObjections", 5),
     topStages: mezclarMetricasCoach(analyticsDocs, "topStages", 5)
+  };
+}
+
+function obtenerLeadMemoryCollections() {
+  const db = mongoose.connection?.db;
+
+  if (!db) {
+    return null;
+  }
+
+  return {
+    rifaProfiles: db.collection(RIFA_PROFILE_COLLECTION),
+    rifaStates: db.collection(RIFA_STATE_COLLECTION),
+    rifaInsights: db.collection(RIFA_INSIGHTS_COLLECTION)
+  };
+}
+
+function escapeRegex(value = "") {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizarTextoBusqueda(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extraerTelefonosDesdeTexto(texto = "") {
+  const matches = String(texto || "").match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/g) || [];
+  return [...new Set(matches.map(item => normalizePhone(item)).filter(Boolean))];
+}
+
+function extraerLeadIdDesdeTexto(texto = "") {
+  const match = String(texto || "").match(/\blead\s*id\b[:#\s-]*([A-Za-z0-9_-]+)/i) || String(texto || "").match(/\bid\b[:#\s-]+([A-Za-z0-9_-]{1,12})/i);
+  return cleanText(match?.[1] || "");
+}
+
+function extraerEmailDesdeTexto(texto = "") {
+  const match = String(texto || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return normalizarEmail(match?.[0] || "");
+}
+
+function extraerTokensRepresentante(coachUser = null) {
+  const tokens = new Set();
+  const nombre = cleanText(coachUser?.name || "");
+
+  nombre
+    .split(/\s+/)
+    .map(cleanText)
+    .filter(token => token.length >= 4)
+    .forEach(token => tokens.add(token));
+
+  const emailLocal = normalizarEmail(coachUser?.email || "").split("@")[0] || "";
+  emailLocal
+    .split(/[._-]+/)
+    .map(cleanText)
+    .filter(token => token.length >= 4)
+    .forEach(token => tokens.add(token));
+
+  return [...tokens];
+}
+
+function construirResumenScoreLeads(insights = []) {
+  const base = { hot: 0, warm: 0, cold: 0, dead: 0 };
+
+  for (const item of insights) {
+    const key = cleanLower(item?.leadTemperature || "");
+    if (Object.prototype.hasOwnProperty.call(base, key)) {
+      base[key] += 1;
+    }
+  }
+
+  return base;
+}
+
+function obtenerTopConteos(items = [], field = "", limit = 5) {
+  const counts = new Map();
+
+  for (const item of Array.isArray(items) ? items : []) {
+    const value = cleanText(item?.[field] || "");
+    if (!value) {
+      continue;
+    }
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([label]) => label);
+}
+
+function construirLeadMemoryVisible(profile = null, state = null, insight = null) {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    leadId: profile.leadId || "",
+    leadName: profile.leadName || "",
+    repName: profile.repName || "",
+    phone: profile.phone || profile.phoneRaw || "",
+    eventSource: profile.eventSource || "",
+    productInterest: profile.productInterestRaw || "",
+    waterSource: profile.waterSourceRaw || "",
+    hasRoyalPrestige:
+      typeof profile.hasRoyalPrestige === "boolean" ? (profile.hasRoyalPrestige ? "si" : "no") : "sin dato",
+    productsOwned: profile.productsOwnedRaw || "",
+    callStatus: state?.callStatusNormalized || state?.callStatusRaw || "",
+    nextStep: state?.nextStep || "",
+    leadTemperature: insight?.leadTemperature || "",
+    bestScriptAngle: insight?.bestScriptAngle || "",
+    primaryObjection: insight?.primaryObjection || "",
+    appointmentDetected: Boolean(state?.appointmentDetected),
+    callbackRecommended: Boolean(insight?.callbackRecommended),
+    requiresSpousePresent: Boolean(insight?.requiresSpousePresent),
+    worksLate: Boolean(insight?.worksLate),
+    travellingOrUnavailable: Boolean(insight?.travellingOrUnavailable),
+    lastContactSummary: state?.lastContactNoteSummary || profile.notesRaw || ""
+  };
+}
+
+function construirPromptMemoriaLead(context = null, mode = "coach") {
+  if (!context) {
+    return "";
+  }
+
+  return `
+MEMORIA REAL DEL LEAD:
+- lead_detectado: si
+- lead_id: ${context.leadId || "sin dato"}
+- nombre: ${context.leadName || "sin dato"}
+- representante_asignado: ${context.repName || "sin dato"}
+- score_actual: ${context.leadTemperature || "sin dato"}
+- estado_llamada: ${context.callStatus || "sin dato"}
+- siguiente_paso_sugerido: ${context.nextStep || "sin dato"}
+- angulo_recomendado: ${context.bestScriptAngle || "sin dato"}
+- objecion_principal: ${context.primaryObjection || "sin dato"}
+- producto_interes: ${context.productInterest || "sin dato"}
+- agua: ${context.waterSource || "sin dato"}
+- tiene_royal: ${context.hasRoyalPrestige || "sin dato"}
+- productos_que_tiene: ${context.productsOwned || "sin dato"}
+- fuente_del_lead: ${context.eventSource || "sin dato"}
+- pareja_necesaria: ${context.requiresSpousePresent ? "si" : "no"}
+- trabaja_tarde: ${context.worksLate ? "si" : "no"}
+- viaje_o_no_disponible: ${context.travellingOrUnavailable ? "si" : "no"}
+- resumen_ultimo_contacto: ${context.lastContactSummary || "sin dato"}
+
+INSTRUCCION:
+${mode === "coach"
+    ? "Si la pregunta trata de esta persona, usa primero su score, su ultimo estado real y el siguiente paso. No ignores la memoria del lead."
+    : "Usa este contexto para recordar interes real, situacion del hogar y producto correcto sin sonar invasivo ni recitar la ficha."}
+`;
+}
+
+function construirPromptPipelineRepresentante(summary = null) {
+  if (!summary) {
+    return "";
+  }
+
+  return `
+PIPELINE REAL DEL REPRESENTANTE:
+- leads_asignados: ${summary.totalLeads || 0}
+- score_hot: ${summary.scoreboard?.hot || 0}
+- score_warm: ${summary.scoreboard?.warm || 0}
+- score_cold: ${summary.scoreboard?.cold || 0}
+- score_dead: ${summary.scoreboard?.dead || 0}
+- estados_mas_repetidos: ${summary.topStatuses?.length ? summary.topStatuses.join(", ") : "sin datos"}
+- angulos_que_mas_aparecen: ${summary.topScriptAngles?.length ? summary.topScriptAngles.join(", ") : "sin datos"}
+- leads_con_callback: ${summary.callbackLeads || 0}
+- leads_con_cita: ${summary.appointmentLeads || 0}
+
+INSTRUCCION:
+Si no hay un lead especifico, usa estas senales para sugerir el mejor siguiente movimiento comercial para su pipeline real.
+`;
+}
+
+async function buscarLeadRifaPorContexto({
+  collections,
+  question = "",
+  leadDoc = null,
+  profileDoc = null,
+  candidateProfiles = []
+}) {
+  const leadIdFromQuestion = extraerLeadIdDesdeTexto(question);
+  const emails = combinarListas(
+    [],
+    [extraerEmailDesdeTexto(question), normalizarEmail(leadDoc?.email || ""), normalizarEmail(profileDoc?.email || "")]
+  ).filter(Boolean);
+  const phones = combinarListas(
+    [],
+    [...extraerTelefonosDesdeTexto(question), normalizePhone(leadDoc?.phone || ""), normalizePhone(profileDoc?.phone || "")]
+  ).filter(Boolean);
+  const nameCandidates = combinarListas([], [leadDoc?.name || "", profileDoc?.name || ""]).filter(Boolean);
+
+  let matchedProfile = null;
+
+  if (leadIdFromQuestion) {
+    matchedProfile = await collections.rifaProfiles.findOne({ leadId: leadIdFromQuestion });
+  }
+
+  if (!matchedProfile && phones.length) {
+    matchedProfile = await collections.rifaProfiles.findOne({ phone: { $in: phones } });
+  }
+
+  if (!matchedProfile && emails.length) {
+    matchedProfile = await collections.rifaProfiles.findOne({ email: { $in: emails } });
+  }
+
+  if (!matchedProfile && nameCandidates.length) {
+    for (const name of nameCandidates) {
+      const regex = new RegExp(`^${escapeRegex(cleanText(name))}$`, "i");
+      matchedProfile = await collections.rifaProfiles.findOne({ leadName: regex });
+      if (matchedProfile) {
+        break;
+      }
+    }
+  }
+
+  if (!matchedProfile && candidateProfiles.length) {
+    const questionNormalized = normalizarTextoBusqueda(question);
+    matchedProfile =
+      candidateProfiles.find(profile => {
+        const normalizedName = normalizarTextoBusqueda(profile?.leadName || "");
+        if (normalizedName && normalizedName.length >= 5 && questionNormalized.includes(normalizedName)) {
+          return true;
+        }
+
+        const phone = String(profile?.phone || "").replace(/\D/g, "");
+        return phone.length >= 7 && questionNormalized.includes(phone.slice(-7));
+      }) || null;
+  }
+
+  if (!matchedProfile) {
+    return null;
+  }
+
+  const [state, insight] = await Promise.all([
+    collections.rifaStates.findOne({ leadId: matchedProfile.leadId }),
+    collections.rifaInsights.findOne({ leadId: matchedProfile.leadId })
+  ]);
+
+  return construirLeadMemoryVisible(matchedProfile, state, insight);
+}
+
+async function obtenerResumenPipelineRepresentante(coachUser = null, collections = null) {
+  const tokens = extraerTokensRepresentante(coachUser);
+
+  if (!collections || !tokens.length) {
+    return null;
+  }
+
+  const profiles = await collections.rifaProfiles
+    .find({
+      $or: tokens.map(token => ({
+        repName: new RegExp(`^${escapeRegex(token)}\\b`, "i")
+      }))
+    })
+    .toArray();
+
+  if (!profiles.length) {
+    return null;
+  }
+
+  const leadIds = profiles.map(item => item.leadId).filter(Boolean);
+  const [states, insights] = await Promise.all([
+    collections.rifaStates.find({ leadId: { $in: leadIds } }).toArray(),
+    collections.rifaInsights.find({ leadId: { $in: leadIds } }).toArray()
+  ]);
+
+  const stateByLeadId = new Map(states.map(item => [item.leadId, item]));
+  const insightByLeadId = new Map(insights.map(item => [item.leadId, item]));
+  const visibleLeads = profiles
+    .map(profile => construirLeadMemoryVisible(profile, stateByLeadId.get(profile.leadId), insightByLeadId.get(profile.leadId)))
+    .filter(Boolean);
+
+  return {
+    repName: profiles[0]?.repName || tokens[0] || "",
+    totalLeads: profiles.length,
+    scoreboard: construirResumenScoreLeads(insights),
+    topStatuses: obtenerTopConteos(states, "callStatusNormalized", 4),
+    topScriptAngles: obtenerTopConteos(insights, "bestScriptAngle", 4),
+    callbackLeads: insights.filter(item => item?.callbackRecommended).length,
+    appointmentLeads: states.filter(item => item?.appointmentDetected).length,
+    sampleLeads: visibleLeads.slice(0, 4)
+  };
+}
+
+async function obtenerMemoriaLeadRelacionada({
+  question = "",
+  mode = "chef",
+  leadDoc = null,
+  profileDoc = null,
+  coachUser = null
+}) {
+  const collections = obtenerLeadMemoryCollections();
+
+  if (!collections) {
+    return {
+      leadContext: null,
+      repLeadSummary: null
+    };
+  }
+
+  let repLeadSummary = null;
+  let candidateProfiles = [];
+
+  if (mode === "coach" && coachUser) {
+    repLeadSummary = await obtenerResumenPipelineRepresentante(coachUser, collections);
+    candidateProfiles = repLeadSummary?.sampleLeads?.length
+      ? await collections.rifaProfiles.find({ repName: new RegExp(`^${escapeRegex(repLeadSummary.repName)}\\b`, "i") }).toArray()
+      : [];
+  }
+
+  const leadContext = await buscarLeadRifaPorContexto({
+    collections,
+    question,
+    leadDoc,
+    profileDoc,
+    candidateProfiles
+  });
+
+  return {
+    leadContext,
+    repLeadSummary
   };
 }
 
@@ -3971,10 +4302,16 @@ app.get("/api/coach/me", async (req, res) => {
       });
     }
 
-    const [profileDoc, analyticsDoc, networkSummary] = await Promise.all([
+    const [profileDoc, analyticsDoc, networkSummary, leadMemory] = await Promise.all([
       CoachDistributorProfile.findOne({ userId: auth.user._id }).lean(),
       CoachDistributorAnalytics.findOne({ userId: auth.user._id }).lean(),
-      coachTieneAccesoTotal(auth.user) ? obtenerCoachNetworkSummary() : Promise.resolve(null)
+      coachTieneAccesoTotal(auth.user) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
+      coachTieneAccesoTotal(auth.user)
+        ? obtenerMemoriaLeadRelacionada({
+            mode: "coach",
+            coachUser: auth.user
+          })
+        : Promise.resolve({ leadContext: null, repLeadSummary: null })
     ]);
 
     res.json({
@@ -3982,7 +4319,9 @@ app.get("/api/coach/me", async (req, res) => {
       stripeReady: stripeListoParaCheckout(),
       user: limpiarCoachUser(auth.user),
       profile: limpiarCoachProfile(profileDoc, analyticsDoc),
-      networkSummary
+      networkSummary,
+      repLeadSummary: leadMemory?.repLeadSummary || null,
+      activeLeadContext: leadMemory?.leadContext || null
     });
   } catch (error) {
     console.error("Error obteniendo usuario Coach:", error.message);
@@ -4195,6 +4534,8 @@ app.post("/chat", async (req, res) => {
     let profileGuardado = null;
     let coachProfileDoc = null;
     let coachAnalyticsDoc = null;
+    let repLeadSummary = null;
+    let activeLeadContext = null;
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
     let estadoPrompt = "";
     let perfilPrompt = "";
@@ -4219,6 +4560,15 @@ CONTEXTO INTERNO DEL COACH:
 - enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
 ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 `;
+      const leadMemory = await obtenerMemoriaLeadRelacionada({
+        question: preguntaLimpia,
+        mode: "coach",
+        coachUser: coachAuth.user
+      });
+      repLeadSummary = leadMemory?.repLeadSummary || null;
+      activeLeadContext = leadMemory?.leadContext || null;
+      perfilPrompt += construirPromptPipelineRepresentante(repLeadSummary);
+      perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
       await guardarMensajeRaw({
         visitorId: visitorIdLimpio,
         sessionId,
@@ -4264,6 +4614,14 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
       estadoPrompt = construirEstadoPrompt(sessionId);
       perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado, leadGuardado);
+      const leadMemory = await obtenerMemoriaLeadRelacionada({
+        question: preguntaLimpia,
+        mode: "chef",
+        leadDoc: leadGuardado,
+        profileDoc: profileGuardado
+      });
+      activeLeadContext = leadMemory?.leadContext || null;
+      perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "chef");
     }
 
     const contexto = await construirContexto(preguntaLimpia, modoChat);
@@ -4329,6 +4687,8 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         respuesta: respuestaIA.content,
         mode: modoChat,
         profile: limpiarCoachProfile(coachProfileActualizado?.profile, coachProfileActualizado?.analytics),
+        repLeadSummary,
+        activeLeadContext,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
@@ -4358,7 +4718,8 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
     res.json({
       respuesta: respuestaIA.content,
-      mode: modoChat
+      mode: modoChat,
+      activeLeadContext
     });
   } catch (error) {
     console.error(error);
