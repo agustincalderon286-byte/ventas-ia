@@ -30,6 +30,8 @@ const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
 const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
+const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || "").toLowerCase() === "true";
+const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -3631,6 +3633,314 @@ function normalizarModoChat(mode = "") {
   return String(mode || "").trim().toLowerCase() === "coach" ? "coach" : "chef";
 }
 
+function escapeXml(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function construirTwilioMessageResponse(message = "") {
+  const body = cleanText(String(message || "No pude responder en este momento.")).slice(0, 1590);
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Message><Body>${escapeXml(body)}</Body></Message></Response>`;
+}
+
+async function sembrarLeadYPerfilCanal({ sessionId, visitorId, phoneHint = "", nameHint = "" }) {
+  const phone = normalizePhone(phoneHint);
+  const name = cleanText(nameHint);
+  let leadDoc = await resolverLeadExistente(sessionId, visitorId, "", phone);
+  let profileDoc = await resolverPerfilExistente(visitorId, "", phone, leadDoc?._id || null);
+
+  if (!leadDoc && phone) {
+    leadDoc = await Lead.create({
+      visitorIds: [visitorId],
+      sessionIds: [sessionId],
+      phone,
+      name: name || undefined,
+      leadStatus: "interesado",
+      lastInteractionAt: new Date(),
+      updatedAt: new Date()
+    });
+  } else if (leadDoc) {
+    let dirty = false;
+    const visitorIdsActualizados = combinarListas(leadDoc.visitorIds || [], [visitorId]);
+    const sessionIdsActualizados = combinarListas(leadDoc.sessionIds || [], [sessionId]);
+
+    if (visitorIdsActualizados.length !== (leadDoc.visitorIds || []).length) {
+      leadDoc.visitorIds = visitorIdsActualizados;
+      dirty = true;
+    }
+
+    if (sessionIdsActualizados.length !== (leadDoc.sessionIds || []).length) {
+      leadDoc.sessionIds = sessionIdsActualizados;
+      dirty = true;
+    }
+
+    if (phone && !leadDoc.phone) {
+      leadDoc.phone = phone;
+      dirty = true;
+    }
+
+    if (name && !leadDoc.name) {
+      leadDoc.name = name;
+      dirty = true;
+    }
+
+    if (dirty) {
+      leadDoc.updatedAt = new Date();
+      leadDoc.lastInteractionAt = new Date();
+      await leadDoc.save();
+    }
+  }
+
+  if (!profileDoc) {
+    profileDoc = await Profile.create({
+      visitorId,
+      visitorIds: [visitorId],
+      sessionIds: [sessionId],
+      leadId: leadDoc?._id || undefined,
+      phone: phone || undefined,
+      name: name || undefined,
+      profileSummary: "",
+      recentHistory: [],
+      conversationCount: 0,
+      updatedAt: new Date()
+    });
+  } else {
+    let dirty = false;
+    const visitorIdsActualizados = combinarListas(profileDoc.visitorIds || [], [visitorId]);
+    const sessionIdsActualizados = combinarListas(profileDoc.sessionIds || [], [sessionId]);
+
+    if (visitorIdsActualizados.length !== (profileDoc.visitorIds || []).length) {
+      profileDoc.visitorIds = visitorIdsActualizados;
+      dirty = true;
+    }
+
+    if (sessionIdsActualizados.length !== (profileDoc.sessionIds || []).length) {
+      profileDoc.sessionIds = sessionIdsActualizados;
+      dirty = true;
+    }
+
+    if (leadDoc?._id && !profileDoc.leadId) {
+      profileDoc.leadId = leadDoc._id;
+      dirty = true;
+    }
+
+    if (phone && !profileDoc.phone) {
+      profileDoc.phone = phone;
+      dirty = true;
+    }
+
+    if (name && !profileDoc.name) {
+      profileDoc.name = name;
+      dirty = true;
+    }
+
+    if (dirty) {
+      profileDoc.updatedAt = new Date();
+      await profileDoc.save();
+    }
+  }
+
+  return { leadDoc, profileDoc };
+}
+
+async function procesarChatChefCanal({
+  pregunta,
+  sessionId,
+  visitorId,
+  phoneHint = "",
+  nameHint = "",
+  source = "web"
+}) {
+  const preguntaLimpia = cleanText(pregunta);
+  const visitorIdLimpio = cleanText(visitorId || sessionId);
+
+  if (!preguntaLimpia) {
+    return { ok: false, status: 400, error: "pregunta requerida" };
+  }
+
+  if (!sessionId) {
+    return { ok: false, status: 400, error: "sessionId requerido" };
+  }
+
+  const chefUsage = await validarLimiteUsoChef(visitorIdLimpio);
+
+  if (!chefUsage.allowed) {
+    return {
+      ok: false,
+      status: 429,
+      error: `Por hoy ya usaste tus ${CHEF_MAX_MESSAGES_PER_DAY} mensajes gratis. Manana se reinicia tu acceso.`
+    };
+  }
+
+  marcarSesionActiva(sessionId);
+  limpiarMemoriaSesiones();
+
+  try {
+    const modoChat = "chef";
+    const modoPrompt = construirContextoModoPrompt(modoChat);
+    const { leadDoc: leadInicial, profileDoc: profileInicial } = await sembrarLeadYPerfilCanal({
+      sessionId,
+      visitorId: visitorIdLimpio,
+      phoneHint,
+      nameHint
+    });
+
+    hidratarEstadoConversacion(sessionId, profileInicial, leadInicial);
+    actualizarEstadoConversacion(sessionId, preguntaLimpia);
+    const estadoActual = obtenerEstadoConversacion(sessionId);
+
+    let leadGuardado = await guardarLeadSiExiste(preguntaLimpia, sessionId, visitorIdLimpio, estadoActual);
+
+    if (leadGuardado && (phoneHint || nameHint)) {
+      let dirtyLead = false;
+      const phoneNormalizado = normalizePhone(phoneHint);
+
+      if (phoneNormalizado && !leadGuardado.phone) {
+        leadGuardado.phone = phoneNormalizado;
+        dirtyLead = true;
+      }
+
+      if (cleanText(nameHint) && !leadGuardado.name) {
+        leadGuardado.name = cleanText(nameHint);
+        dirtyLead = true;
+      }
+
+      if (dirtyLead) {
+        leadGuardado.updatedAt = new Date();
+        await leadGuardado.save();
+      }
+    }
+
+    const estadoConLead = actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado || leadInicial);
+    let profileGuardado = await guardarOActualizarPerfil({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      texto: preguntaLimpia,
+      estadoConversacion: estadoConLead,
+      leadGuardado: leadGuardado || leadInicial
+    });
+
+    if (profileGuardado && (phoneHint || nameHint)) {
+      let dirtyProfile = false;
+      const phoneNormalizado = normalizePhone(phoneHint);
+
+      if (phoneNormalizado && !profileGuardado.phone) {
+        profileGuardado.phone = phoneNormalizado;
+        dirtyProfile = true;
+      }
+
+      if (cleanText(nameHint) && !profileGuardado.name) {
+        profileGuardado.name = cleanText(nameHint);
+        dirtyProfile = true;
+      }
+
+      if (dirtyProfile) {
+        profileGuardado.updatedAt = new Date();
+        await profileGuardado.save();
+      }
+    }
+
+    await guardarMensajeRaw({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      profileId: profileGuardado?._id || profileInicial?._id || null,
+      leadId: leadGuardado?._id || leadInicial?._id || null,
+      role: "user",
+      content: preguntaLimpia,
+      intent: "chef_chat",
+      estadoConversacion: estadoConLead,
+      detectedTopics: combinarListas(extraerTemasInteres(preguntaLimpia), [`canal:${source}`])
+    });
+
+    const estadoPrompt = construirEstadoPrompt(sessionId);
+    let perfilPrompt = construirPerfilHistoricoPrompt(profileGuardado || profileInicial, leadGuardado || leadInicial);
+    const leadMemory = await obtenerMemoriaLeadRelacionada({
+      question: preguntaLimpia,
+      mode: "chef",
+      leadDoc: leadGuardado || leadInicial,
+      profileDoc: profileGuardado || profileInicial
+    });
+    const activeLeadContext = leadMemory?.leadContext || null;
+    perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "chef");
+
+    const contexto = await construirContexto(preguntaLimpia, modoChat);
+    registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
+    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId);
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        messages: [
+          { role: "system", content: construirPromptModo(modoChat) },
+          { role: "system", content: modoPrompt },
+          { role: "system", content: contexto },
+          { role: "system", content: estadoPrompt },
+          { role: "system", content: perfilPrompt },
+          ...historialPrompt
+        ]
+      })
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: "Error OpenAI",
+        detalle: data || { message: "Respuesta invalida del API" }
+      };
+    }
+
+    if (!data?.choices?.[0]?.message) {
+      return { ok: false, status: 500, error: "Error OpenAI", detalle: data };
+    }
+
+    const respuestaIA = data.choices[0].message;
+    registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
+
+    const leadFinal = await guardarRespuestaIAEnPerfil(leadGuardado || leadInicial, respuestaIA.content);
+    const profileFinal = await guardarRespuestaIAEnProfile(
+      profileGuardado || profileInicial,
+      respuestaIA.content,
+      leadFinal
+    );
+
+    await guardarMensajeRaw({
+      visitorId: visitorIdLimpio,
+      sessionId,
+      profileId: profileFinal?._id || profileGuardado?._id || profileInicial?._id || null,
+      leadId: leadFinal?._id || leadGuardado?._id || leadInicial?._id || null,
+      role: "assistant",
+      content: respuestaIA.content,
+      intent: "chef_chat",
+      estadoConversacion: obtenerEstadoConversacion(sessionId),
+      detectedTopics: [`canal:${source}`]
+    });
+    await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
+
+    return {
+      ok: true,
+      status: 200,
+      respuesta: respuestaIA.content,
+      mode: "chef",
+      activeLeadContext
+    };
+  } catch (error) {
+    console.error(error);
+    return { ok: false, status: 500, error: "Error servidor" };
+  }
+}
+
 function construirContextoEstaticoChef(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = "";
@@ -4551,6 +4861,55 @@ app.get("/api/chef/stats", async (req, res) => {
       error: "No pude cargar las metricas del Chef."
     });
   }
+});
+
+app.get("/webhooks/twilio/whatsapp", (req, res) => {
+  res.json({
+    ok: true,
+    mode: "chef",
+    sandboxEnabled: TWILIO_WHATSAPP_ENABLED,
+    webhookPath: "/webhooks/twilio/whatsapp",
+    tokenRequired: Boolean(TWILIO_WHATSAPP_WEBHOOK_TOKEN)
+  });
+});
+
+app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), async (req, res) => {
+  if (!TWILIO_WHATSAPP_ENABLED) {
+    return res.type("text/xml").send(construirTwilioMessageResponse("El sandbox de WhatsApp todavia no esta activado."));
+  }
+
+  if (TWILIO_WHATSAPP_WEBHOOK_TOKEN && cleanText(req.query.token || "") !== TWILIO_WHATSAPP_WEBHOOK_TOKEN) {
+    return res.status(403).type("text/plain").send("Webhook no autorizado");
+  }
+
+  const body = cleanText(req.body?.Body || "");
+  const fromRaw = cleanText(req.body?.From || "");
+  const phone = normalizePhone(req.body?.WaId || fromRaw);
+  const profileName = cleanText(req.body?.ProfileName || "");
+
+  if (!body) {
+    return res.type("text/xml").send(construirTwilioMessageResponse("Recibi tu mensaje vacio. Intenta otra vez con texto."));
+  }
+
+  if (!phone) {
+    return res
+      .type("text/xml")
+      .send(construirTwilioMessageResponse("No pude identificar tu numero de WhatsApp. Intenta de nuevo."));
+  }
+
+  const sessionId = `wa-session-${phone}`;
+  const visitorId = `wa-visitor-${phone}`;
+  const resultado = await procesarChatChefCanal({
+    pregunta: body,
+    sessionId,
+    visitorId,
+    phoneHint: phone,
+    nameHint: profileName,
+    source: "whatsapp_sandbox"
+  });
+
+  const mensaje = resultado.ok ? resultado.respuesta : resultado.error || "No pude responder en este momento.";
+  return res.type("text/xml").send(construirTwilioMessageResponse(mensaje));
 });
 
 app.use(express.static(PUBLIC_DIR));
