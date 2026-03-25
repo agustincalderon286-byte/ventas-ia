@@ -868,6 +868,30 @@ function normalizarTextoBusqueda(value = "") {
     .trim();
 }
 
+function cleanText(value = "") {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanLower(value = "") {
+  return cleanText(value).toLowerCase();
+}
+
+function normalizePhone(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return digits.slice(1);
+  }
+
+  return digits;
+}
+
 function extraerTelefonosDesdeTexto(texto = "") {
   const matches = String(texto || "").match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/g) || [];
   return [...new Set(matches.map(item => normalizePhone(item)).filter(Boolean))];
