@@ -1121,6 +1121,10 @@ img {
   backdrop-filter: blur(8px);
 }
 
+.coach-modal-backdrop[hidden] {
+  display: none !important;
+}
+
 .coach-modal-card {
   position: relative;
   width: min(460px, 100%);
