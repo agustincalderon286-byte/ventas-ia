@@ -12,7 +12,8 @@
     "royal:fetch:site": "node scripts/fetch-royalprestige-site-knowledge.js",
     "knowledge:import": "node scripts/import-knowledge.js",
     "knowledge:search": "node scripts/search-knowledge.js",
-    "knowledge:index": "node scripts/create-vector-index.js"
+    "knowledge:index": "node scripts/create-vector-index.js",
+    "lead-memory:import": "node scripts/import-lead-memory.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
