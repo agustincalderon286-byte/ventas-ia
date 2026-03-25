@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prototipo Agustin 2.0 Chef AR</title>
+    <meta
+      name="description"
+      content="Prototipo visual de catálogo virtual y AR para Agustin 2.0 Chef."
+    />
+    <script
+      type="module"
+      src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
+    ></script>
+    <style>
+      :root {
+        --navy: #13366f;
+        --red: #c12733;
+        --ink: #192741;
+        --muted: #607089;
+        --gold: #e0bf68;
+        --line: rgba(19, 54, 111, 0.12);
+        --panel: rgba(255, 255, 255, 0.86);
+        --shadow: 0 22px 52px rgba(25, 39, 65, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Avenir, Montserrat, "Helvetica Neue", Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(193, 39, 51, 0.1), transparent 24%),
+          radial-gradient(circle at top right, rgba(19, 54, 111, 0.1), transparent 26%),
+          linear-gradient(180deg, #f8f7f2, #edf2f8);
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 28px));
+        margin: 22px auto 38px;
+      }
+
+      .hero,
+      .panel,
+      .strip {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .hero {
+        padding: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(193, 39, 51, 0.1);
+        color: var(--red);
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .hero h1 {
+        margin-top: 16px;
+        color: var(--navy);
+        font-size: clamp(2.5rem, 9vw, 4.8rem);
+        line-height: 0.94;
+        letter-spacing: -0.04em;
+      }
+
+      .hero h1 span {
+        color: var(--red);
+      }
+
+      .hero .lede {
+        max-width: 760px;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 1.04rem;
+        line-height: 1.72;
+      }
+
+      .hero-note {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.62);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.06fr 0.94fr;
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .panel {
+        padding: 24px;
+      }
+
+      .panel h2 {
+        color: var(--navy);
+        font-size: clamp(1.8rem, 5vw, 2.3rem);
+      }
+
+      .panel p {
+        margin-top: 12px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      model-viewer {
+        width: 100%;
+        height: 560px;
+        margin-top: 18px;
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at center, rgba(19, 54, 111, 0.08), rgba(19, 54, 111, 0.02));
+        --poster-color: transparent;
+      }
+
+      .info-stack,
+      .metric-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric,
+      .info-card {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.64);
+        border: 1px solid var(--line);
+      }
+
+      .metric strong,
+      .metric span,
+      .info-card strong,
+      .info-card span {
+        display: block;
+      }
+
+      .metric strong,
+      .info-card strong {
+        color: var(--navy);
+      }
+
+      .metric strong {
+        font-size: 1.25rem;
+      }
+
+      .metric span,
+      .info-card span {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.58;
+      }
+
+      .strip {
+        margin-top: 18px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(19, 54, 111, 0.96), rgba(193, 39, 51, 0.92));
+        color: #fff;
+      }
+
+      .strip h3 {
+        font-size: clamp(1.9rem, 5vw, 2.8rem);
+      }
+
+      .strip p {
+        margin-top: 12px;
+        color: rgba(255, 255, 255, 0.93);
+        line-height: 1.74;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .step {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .step strong,
+      .step span {
+        display: block;
+      }
+
+      .step span {
+        margin-top: 8px;
+        color: rgba(255, 255, 255, 0.92);
+        line-height: 1.55;
+      }
+
+      .footnote {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 0.93rem;
+        line-height: 1.65;
+      }
+
+      @media (max-width: 920px) {
+        .grid,
+        .metric-grid,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+
+        model-viewer {
+          height: 420px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .shell {
+          width: min(100% - 18px, 1180px);
+        }
+
+        .hero,
+        .panel,
+        .strip {
+          border-radius: 22px;
+        }
+
+        .hero,
+        .panel,
+        .strip {
+          padding: 20px;
+        }
+
+        .hero .lede,
+        .hero-note,
+        .panel p,
+        .metric span,
+        .info-card span,
+        .strip p,
+        .step span {
+          font-size: 0.98rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="eyebrow">Prototipo para Agustin 2.0 Chef</div>
+        <h1>Catálogo virtual con <span>AR</span></h1>
+        <p class="lede">
+          Esta maqueta muestra cómo Agustin 2.0 Chef podría enseñar un producto en 3D y abrir una experiencia de
+          realidad aumentada en el momento exacto, sin sacar al cliente del flujo de conversación.
+        </p>
+        <div class="hero-note">
+          Chef no solo explica. También puede mostrar tamaño, presencia y contexto real del producto dentro del hogar.
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="eyebrow">Vista demo</div>
+          <h2>Novel dentro de Chef</h2>
+          <p>
+            En esta maqueta el cliente puede rotar el producto en 3D y, si su dispositivo lo soporta, abrir la
+            experiencia AR directamente desde el visor.
+          </p>
+
+          <model-viewer
+            src="https://royalprestige.live/assets/novel.glb"
+            ios-src="https://royalprestige.live/assets/novel.usdz"
+            poster="https://royalprestige.live/images/cover_novel.webp"
+            alt="Prototipo AR para Agustin 2.0 Chef"
+            camera-controls
+            auto-rotate
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            shadow-intensity="1.15"
+            exposure="1"
+            environment-image="neutral"
+          ></model-viewer>
+
+          <p class="footnote">
+            La idea aquí no es vender el archivo 3D. La idea es enseñar cómo Agustin 2.0 Chef podría volver la
+            demostración más visual, clara y memorable.
+          </p>
+        </article>
+
+        <aside class="panel">
+          <div class="eyebrow">Valor comercial</div>
+          <h2>Por qué esto suma</h2>
+          <p>
+            Un cliente entiende mejor cuando puede ver el producto en contexto. Eso reduce dudas, eleva la percepción y
+            abre una conversación más fuerte para pasar luego al cierre.
+          </p>
+
+          <div class="metric-grid">
+            <div class="metric">
+              <strong>Más claridad</strong>
+              <span>El cliente ve mejor tamaño y presencia del producto.</span>
+            </div>
+            <div class="metric">
+              <strong>Menos fricción</strong>
+              <span>Se reducen dudas como “¿cómo se vería?” o “¿sí cabe aquí?”.</span>
+            </div>
+            <div class="metric">
+              <strong>Más intención</strong>
+              <span>Chef deja de solo explicar y empieza a mostrar.</span>
+            </div>
+          </div>
+
+          <div class="info-stack">
+            <div class="info-card">
+              <strong>Chef atrae y demuestra</strong>
+              <span>Puede explicar beneficios, enseñar el producto y llevar la conversación a interés real.</span>
+            </div>
+            <div class="info-card">
+              <strong>Coach entra después</strong>
+              <span>Una vez que el cliente ya entendió mejor el producto, Coach puede entrar con precio, paquete y siguiente paso.</span>
+            </div>
+            <div class="info-card">
+              <strong>Material para pitch privado</strong>
+              <span>Sirve para enseñar visión a socios o inversionistas sin esperar a tener todo el catálogo final producido.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="strip">
+        <h3>Cómo viviría dentro del ecosistema</h3>
+        <p>
+          <strong>Chef</strong> explica y demuestra. <strong>AR</strong> enseña el producto en contexto. <strong>Coach</strong> cierra
+          con precio, objeción y siguiente paso. Esa combinación convierte una conversación útil en una experiencia más
+          persuasiva.
+        </p>
+
+        <div class="steps">
+          <div class="step">
+            <strong>Paso 1</strong>
+            <span>El cliente pregunta por un producto y Chef lo presenta con lenguaje simple.</span>
+          </div>
+          <div class="step">
+            <strong>Paso 2</strong>
+            <span>Chef abre la vista 3D / AR para enseñar tamaño real y presencia en casa.</span>
+          </div>
+          <div class="step">
+            <strong>Paso 3</strong>
+            <span>Coach toma la conversación para mover paquete, precio, objeción y cierre.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
