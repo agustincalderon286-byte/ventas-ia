@@ -79,39 +79,21 @@
 
         <aside class="coach-sidebar">
           <article class="dashboard-card">
-            <div class="eyebrow">Tu cuenta</div>
-            <h3>Estado del acceso</h3>
-
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Suscripcion</strong>
-                  <span data-coach-subscription-status>Activa</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Cuenta</strong>
-                  <span data-coach-user-email>Tu correo</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Vigencia</strong>
-                  <span data-coach-subscription-period>Sin fecha</span>
-                </div>
-              </div>
-            </div>
+            <div class="eyebrow">Comparte el Chef</div>
+            <h3>Regalalo rapido desde aqui</h3>
+            <p>
+              Si el cliente quiere el Chef, abre el link o ensenale el QR. Desde la misma pagina del Chef podra
+              guardarlo en su telefono para volver facil despues.
+            </p>
 
             <div class="dashboard-actions">
-              <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
-              <button class="nav-button" data-coach-logout>Cerrar sesion</button>
+              <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
+              <button class="nav-button" data-open-chef-share>Mostrar QR</button>
             </div>
 
-            <div class="form-result" data-coach-app-message></div>
+            <p class="mini-note">
+              Compartelo sin apuntar numeros ni explicar demasiado. Escanea, abre y listo.
+            </p>
           </article>
 
           <article class="dashboard-card">
@@ -169,81 +151,6 @@
           </article>
 
           <article class="dashboard-card">
-            <div class="eyebrow">Pipeline real</div>
-            <h3>Score visible de tus leads</h3>
-            <p>
-              Este tablero toma la memoria limpia de la rifa para mostrarte como viene tu pipeline y que lead se detecto en el chat.
-            </p>
-
-            <div class="insight-grid">
-              <div class="mini-stat">
-                <strong data-coach-rifa-hot>0</strong>
-                <span>Hot</span>
-              </div>
-              <div class="mini-stat">
-                <strong data-coach-rifa-warm>0</strong>
-                <span>Warm</span>
-              </div>
-              <div class="mini-stat">
-                <strong data-coach-rifa-cold>0</strong>
-                <span>Cold</span>
-              </div>
-              <div class="mini-stat">
-                <strong data-coach-rifa-dead>0</strong>
-                <span>Dead</span>
-              </div>
-            </div>
-
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Estados mas repetidos</strong>
-                  <span data-coach-rifa-statuses>Sin datos todavia.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Angulos mas utiles</strong>
-                  <span data-coach-rifa-angles>Sin datos todavia.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Lead detectado en el chat</strong>
-                  <span data-coach-active-lead-name>Sin lead detectado todavia.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Score y estado</strong>
-                  <span data-coach-active-lead-score>Sin score todavia.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Siguiente paso sugerido</strong>
-                  <span data-coach-active-lead-next>Sin siguiente paso todavia.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Angulo recomendado</strong>
-                  <span data-coach-active-lead-angle>Sin angulo todavia.</span>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <article class="dashboard-card">
             <div class="eyebrow">Pulso interno</div>
             <h3>Lo que mas se mueve en la red</h3>
             <p>
@@ -282,24 +189,6 @@
           </article>
 
           <article class="dashboard-card">
-            <div class="eyebrow">Comparte el Chef</div>
-            <h3>Regalalo rapido desde aqui</h3>
-            <p>
-              Si el cliente quiere el Chef, abre el link o ensenale el QR. Desde la misma pagina del Chef podra
-              guardarlo en su telefono para volver facil despues.
-            </p>
-
-            <div class="dashboard-actions">
-              <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
-              <button class="nav-button" data-open-chef-share>Mostrar QR</button>
-            </div>
-
-            <p class="mini-note">
-              Compartelo sin apuntar numeros ni explicar demasiado. Escanea, abre y listo.
-            </p>
-          </article>
-
-          <article class="dashboard-card">
             <div class="eyebrow">Para que te ayuda hoy</div>
             <h3>Coach listo para vender mejor</h3>
             <p>
@@ -330,6 +219,42 @@
                 </div>
               </div>
             </div>
+          </article>
+
+          <article class="dashboard-card">
+            <div class="eyebrow">Tu cuenta</div>
+            <h3>Estado del acceso</h3>
+
+            <div class="feature-list compact">
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Suscripcion</strong>
+                  <span data-coach-subscription-status>Activa</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Cuenta</strong>
+                  <span data-coach-user-email>Tu correo</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Vigencia</strong>
+                  <span data-coach-subscription-period>Sin fecha</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-actions">
+              <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
+              <button class="nav-button" data-coach-logout>Cerrar sesion</button>
+            </div>
+
+            <div class="form-result" data-coach-app-message></div>
           </article>
         </aside>
       </section>
