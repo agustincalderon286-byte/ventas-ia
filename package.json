@@ -13,7 +13,8 @@
     "knowledge:import": "node scripts/import-knowledge.js",
     "knowledge:search": "node scripts/search-knowledge.js",
     "knowledge:index": "node scripts/create-vector-index.js",
-    "lead-memory:import": "node scripts/import-lead-memory.js"
+    "lead-memory:import": "node scripts/import-lead-memory.js",
+    "whatsapp:send-template": "node scripts/send-whatsapp-template.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
