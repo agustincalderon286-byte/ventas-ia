@@ -28,6 +28,7 @@ const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const GOOGLE_RAFFLE_FORM_EMBED_URL = `${GOOGLE_RAFFLE_FORM_URL}?embedded=true`;
+const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_LEAD_STATUS_OPTIONS = [
   { value: "nuevo", label: "Nuevo" },
   { value: "contactado", label: "Contactado" },
@@ -243,6 +244,46 @@ async function copyTextToClipboard(text) {
 
 function sanitizeZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 5);
+}
+
+function initCoachWorkspaceTabs() {
+  const tabButtons = Array.from(document.querySelectorAll("[data-coach-workspace-tab]"));
+  const workspaceSections = Array.from(document.querySelectorAll("[data-coach-workspace-section]"));
+
+  if (!tabButtons.length || !workspaceSections.length) {
+    return;
+  }
+
+  const validTabs = new Set(tabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
+  let activeTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre";
+
+  if (!validTabs.has(activeTab)) {
+    activeTab = "cierre";
+  }
+
+  const syncWorkspace = nextTab => {
+    const safeTab = validTabs.has(nextTab) ? nextTab : "cierre";
+
+    tabButtons.forEach(button => {
+      const isActive = button.dataset.coachWorkspaceTab === safeTab;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    workspaceSections.forEach(section => {
+      section.hidden = section.dataset.coachWorkspaceSection !== safeTab;
+    });
+
+    window.sessionStorage.setItem(COACH_WORKSPACE_TAB_KEY, safeTab);
+  };
+
+  tabButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      syncWorkspace(button.dataset.coachWorkspaceTab || "cierre");
+    });
+  });
+
+  syncWorkspace(activeTab);
 }
 
 function normalizeLeadPhone(value = "") {
@@ -1634,6 +1675,7 @@ async function initCoachAppPage() {
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  initCoachWorkspaceTabs();
   initLeadFormTool();
   initCoachLeadWorkspace();
   initOrderCalculator();

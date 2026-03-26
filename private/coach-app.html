@@ -78,7 +78,32 @@
         </article>
 
         <aside class="coach-sidebar">
-          <article class="dashboard-card">
+          <div class="coach-workspace-switch">
+            <div class="eyebrow">Modo de trabajo</div>
+            <div class="coach-workspace-tabs" role="tablist" aria-label="Modo del Coach">
+              <button
+                type="button"
+                class="coach-workspace-tab is-active"
+                data-coach-workspace-tab="cierre"
+                aria-selected="true"
+              >
+                Cierre
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
+                data-coach-workspace-tab="prospeccion"
+                aria-selected="false"
+              >
+                Prospeccion
+              </button>
+            </div>
+            <p class="mini-note">
+              Cambia entre herramientas para demo y herramientas para captar leads sin mezclar el flujo.
+            </p>
+          </div>
+
+          <article class="dashboard-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Comparte el Chef</div>
             <h3>Regalalo rapido desde aqui</h3>
             <p>
@@ -96,7 +121,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card resource-card">
+          <article class="dashboard-card resource-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Recursos / Apoyo</div>
             <h3>Herramientas listas para tu presentacion</h3>
             <p>
@@ -183,7 +208,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card lead-form-card">
+          <article class="dashboard-card lead-form-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Captura de leads</div>
             <h3>Rifa Google (respaldo)</h3>
             <p>
@@ -226,7 +251,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card native-lead-card">
+          <article class="dashboard-card native-lead-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Captura propia</div>
             <h3>Formulario nativo del Coach</h3>
             <p>
@@ -309,7 +334,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card lead-folder-card">
+          <article class="dashboard-card lead-folder-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Carpeta privada</div>
             <h3>Mis leads</h3>
             <p>
@@ -372,7 +397,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card order-calc-card">
+          <article class="dashboard-card order-calc-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Herramienta de cierre</div>
             <h3>Calculadora de pedido</h3>
             <p>
@@ -458,7 +483,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card decision-tool-card">
+          <article class="dashboard-card decision-tool-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Herramienta de cierre</div>
             <h3>Balance de decision</h3>
             <p>
@@ -561,7 +586,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card buyer-profile-card">
+          <article class="dashboard-card buyer-profile-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Herramienta de lectura</div>
             <h3>Perfil rapido del cliente</h3>
             <p>
@@ -619,7 +644,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card">
+          <article class="dashboard-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Tu patron</div>
             <h3>Como te esta leyendo el Coach</h3>
             <p>
@@ -711,7 +736,7 @@
             </div>
           </article>
 
-          <article class="dashboard-card">
+          <article class="dashboard-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Para que te ayuda hoy</div>
             <h3>Coach listo para vender mejor</h3>
             <p>
