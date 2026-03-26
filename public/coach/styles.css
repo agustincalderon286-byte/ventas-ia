@@ -1004,6 +1004,46 @@ img {
   margin-top: 12px;
 }
 
+.lead-form-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.lead-form-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -8% 56% auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(125, 255, 212, 0.14), transparent 72%);
+  pointer-events: none;
+}
+
+.lead-form-wrap[hidden] {
+  display: none !important;
+}
+
+.lead-form-toggle {
+  min-width: 170px;
+}
+
+.lead-form-shell {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lead-form-frame {
+  width: 100%;
+  min-height: 760px;
+  border: 0;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
 .order-calc-card {
   position: relative;
   overflow: hidden;

@@ -25,6 +25,9 @@ async function apiRequest(url, options = {}) {
 const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
+const GOOGLE_RAFFLE_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
+const GOOGLE_RAFFLE_FORM_EMBED_URL = `${GOOGLE_RAFFLE_FORM_URL}?embedded=true`;
 const COACH_PLAN_CONFIG = {
   trial: {
     name: "Prueba gratis de 7 dias",
@@ -686,6 +689,39 @@ function initBuyerProfileTool() {
   resetButton?.addEventListener("click", reset);
 }
 
+function initLeadFormTool() {
+  const wrap = document.querySelector("[data-lead-form-wrap]");
+  const toggle = document.querySelector("[data-lead-form-toggle]");
+  const frame = document.querySelector("[data-lead-form-frame]");
+  const openLink = document.querySelector("[data-lead-form-open-link]");
+
+  if (!wrap || !toggle || !frame) {
+    return;
+  }
+
+  if (openLink) {
+    openLink.href = GOOGLE_RAFFLE_FORM_URL;
+  }
+
+  const syncLeadFormToggle = open => {
+    wrap.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open ? "Cerrar rifa" : "Abrir rifa";
+  };
+
+  syncLeadFormToggle(false);
+
+  toggle.addEventListener("click", () => {
+    const willOpen = wrap.hidden;
+
+    if (willOpen && !frame.getAttribute("src")) {
+      frame.setAttribute("src", GOOGLE_RAFFLE_FORM_EMBED_URL);
+    }
+
+    syncLeadFormToggle(willOpen);
+  });
+}
+
 function addCoachMessage(container, role, content) {
   if (!container) {
     return;
@@ -1180,6 +1216,7 @@ async function initCoachAppPage() {
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  initLeadFormTool();
   initOrderCalculator();
   initDecisionTool();
   initBuyerProfileTool();
