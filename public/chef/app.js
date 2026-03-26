@@ -149,9 +149,63 @@ function agregarMensaje(texto, clase) {
 
   const bubble = document.createElement("div");
   bubble.className = clase;
-  bubble.textContent = texto;
+  bubble.appendChild(construirFragmentoMensaje(texto));
   mensajesDiv.appendChild(bubble);
   mensajesDiv.scrollTop = mensajesDiv.scrollHeight;
+}
+
+function construirFragmentoMensaje(texto) {
+  const fragment = document.createDocumentFragment();
+  const source = String(texto || "");
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  let lastIndex = 0;
+  let match = null;
+
+  while ((match = urlRegex.exec(source))) {
+    agregarTextoConSaltos(fragment, source.slice(lastIndex, match.index));
+    fragment.appendChild(crearLinkMensaje(match[0]));
+    lastIndex = match.index + match[0].length;
+  }
+
+  agregarTextoConSaltos(fragment, source.slice(lastIndex));
+  return fragment;
+}
+
+function agregarTextoConSaltos(fragment, text) {
+  const parts = String(text || "").split("\n");
+
+  parts.forEach((part, index) => {
+    if (part) {
+      fragment.appendChild(document.createTextNode(part));
+    }
+
+    if (index < parts.length - 1) {
+      fragment.appendChild(document.createElement("br"));
+    }
+  });
+}
+
+function crearLinkMensaje(url) {
+  const link = document.createElement("a");
+  const safeUrl = String(url || "").trim();
+
+  link.href = safeUrl;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.className = "msg-action-link";
+
+  if (/wa\.me|whatsapp/i.test(safeUrl)) {
+    link.textContent = "Abrir WhatsApp";
+    return link;
+  }
+
+  if (/calendly/i.test(safeUrl)) {
+    link.textContent = "Abrir agenda";
+    return link;
+  }
+
+  link.textContent = safeUrl;
+  return link;
 }
 
 function formatNumber(value) {

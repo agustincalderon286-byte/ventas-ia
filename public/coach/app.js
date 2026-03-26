@@ -23,7 +23,6 @@ async function apiRequest(url, options = {}) {
 }
 
 const COACH_CHAT_API_URL = "/chat";
-const PLATFORM_CONFIG_API_URL = "/api/platform/config";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_PLAN_CONFIG = {
@@ -140,17 +139,6 @@ function autoResizeTextarea(textarea) {
 
   textarea.style.height = "auto";
   textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
-}
-
-function buildCalendlyEmbedUrl(url) {
-  try {
-    const calendlyUrl = new URL(url);
-    calendlyUrl.searchParams.set("hide_gdpr_banner", "1");
-    calendlyUrl.searchParams.set("hide_event_type_details", "1");
-    return calendlyUrl.toString();
-  } catch (error) {
-    return url;
-  }
 }
 
 async function copyTextToClipboard(text) {
@@ -681,14 +669,8 @@ async function initCoachAppPage() {
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
-  const coachCalendlyButtons = document.querySelectorAll("[data-open-coach-calendly]");
-  const coachCalendlyModal = document.querySelector("[data-coach-calendly-modal]");
-  const coachCalendlyCloseButtons = document.querySelectorAll("[data-close-coach-calendly]");
-  const coachCalendlyFrame = document.querySelector("[data-coach-calendly-frame]");
-  const coachCalendlyOpenLink = document.querySelector("[data-coach-calendly-open-link]");
   const appMessage = document.querySelector("[data-coach-app-message]");
   const chefShareUrl = `${window.location.origin}/chef/`;
-  let coachCalendlyUrl = "";
 
   chefShareUrlNodes.forEach(node => {
     node.textContent = chefShareUrl;
@@ -702,12 +684,6 @@ async function initCoachAppPage() {
     nativeShareChefButton.hidden = true;
   }
 
-  const syncCoachModalLock = () => {
-    const chefShareOpen = Boolean(chefShareModal && !chefShareModal.hidden);
-    const coachCalendlyOpen = Boolean(coachCalendlyModal && !coachCalendlyModal.hidden);
-    document.body.classList.toggle("modal-open", chefShareOpen || coachCalendlyOpen);
-  };
-
   const openChefShareModal = () => {
     if (!chefShareModal) {
       return;
@@ -717,7 +693,7 @@ async function initCoachAppPage() {
       chefShareFeedback.textContent = "";
     }
     chefShareModal.hidden = false;
-    syncCoachModalLock();
+    document.body.classList.add("modal-open");
   };
 
   const closeChefShareModal = () => {
@@ -726,50 +702,7 @@ async function initCoachAppPage() {
     }
 
     chefShareModal.hidden = true;
-    syncCoachModalLock();
-  };
-
-  const applyCoachCalendlyConfig = config => {
-    coachCalendlyUrl = String(config?.calendly?.coachUrl || "").trim();
-    const enabled = Boolean(config?.calendly?.coachEnabled && coachCalendlyUrl);
-
-    coachCalendlyButtons.forEach(button => {
-      button.hidden = !enabled;
-    });
-
-    if (!enabled) {
-      if (coachCalendlyModal) {
-        coachCalendlyModal.hidden = true;
-      }
-      syncCoachModalLock();
-      return;
-    }
-
-    if (coachCalendlyFrame) {
-      coachCalendlyFrame.src = buildCalendlyEmbedUrl(coachCalendlyUrl);
-    }
-
-    if (coachCalendlyOpenLink) {
-      coachCalendlyOpenLink.href = coachCalendlyUrl;
-    }
-  };
-
-  const openCoachCalendlyModal = () => {
-    if (!coachCalendlyModal || !coachCalendlyUrl) {
-      return;
-    }
-
-    coachCalendlyModal.hidden = false;
-    syncCoachModalLock();
-  };
-
-  const closeCoachCalendlyModal = () => {
-    if (!coachCalendlyModal) {
-      return;
-    }
-
-    coachCalendlyModal.hidden = true;
-    syncCoachModalLock();
+    document.body.classList.remove("modal-open");
   };
 
   const sendCoachMessage = async rawText => {
@@ -858,13 +791,6 @@ async function initCoachAppPage() {
 
   autoResizeTextarea(chatInput);
 
-  try {
-    const config = await apiRequest(PLATFORM_CONFIG_API_URL);
-    applyCoachCalendlyConfig(config);
-  } catch (error) {
-    applyCoachCalendlyConfig();
-  }
-
   chefShareButtons.forEach(button => {
     button.addEventListener("click", event => {
       event.preventDefault();
@@ -884,35 +810,8 @@ async function initCoachAppPage() {
     }
   });
 
-  coachCalendlyButtons.forEach(button => {
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      openCoachCalendlyModal();
-    });
-  });
-
-  coachCalendlyCloseButtons.forEach(button => {
-    button.addEventListener("click", () => {
-      closeCoachCalendlyModal();
-    });
-  });
-
-  coachCalendlyModal?.addEventListener("click", event => {
-    if (event.target === coachCalendlyModal) {
-      closeCoachCalendlyModal();
-    }
-  });
-
   document.addEventListener("keydown", event => {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    if (coachCalendlyModal && !coachCalendlyModal.hidden) {
-      closeCoachCalendlyModal();
-    }
-
-    if (chefShareModal && !chefShareModal.hidden) {
+    if (event.key === "Escape" && chefShareModal && !chefShareModal.hidden) {
       closeChefShareModal();
     }
   });

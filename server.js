@@ -3468,14 +3468,9 @@ REGLAS DE RESPUESTA:
 - Nunca hagas sentir presion
 
 PRECIOS:
-- Nunca des precio total exacto
-- Solo da rangos aproximados por dia usando el catalogo y estas reglas internas:
-  tax 10%
-  envio 5%
-  mensual = precio mas tax mas envio * 5%
-  diario = mensual / 30
-- Nunca expliques la matematica
-- Si preguntan precio, responde facil de entender y cierra invitando a una llamada informativa sin compromiso
+- No des precios, mensualidades ni cotizaciones exactas desde el Chef
+- Si preguntan precio, promociones o cuanto cuesta, di que para precios es mejor hablar con un distribuidor autorizado
+- Cuando ayude, ofrece seguir por WhatsApp o pedir una llamada con un distribuidor autorizado
 
 VENTAS:
 - Primero llamada informativa, despues cita informativa
@@ -4005,19 +4000,6 @@ CANAL ACTIVO:
 function construirContextoEstaticoChef(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = "";
-
-  if (
-    /precio|precios|cu[aá]nto|cuesta|pago|pagos|diario|mensual|financiamiento|plan|llamada|representante|comprar|venta/i.test(
-      preguntaNormalizada
-    )
-  ) {
-    contexto += construirBloquePrompt("CATALOGO", preciosCatalogo, {
-      maxArrayItems: 10,
-      maxObjectKeys: 8,
-      maxDepth: 2,
-      maxStringLength: 140
-    });
-  }
 
   if (
     /producto|olla|ollas|sarten|cuchillo|extractor|licuadora|blender|filtro|innove|novel|easy release|fresca(flow|pure)|royal prestige|palomitas|perfect pop|hervidor|juicer/i.test(
@@ -4586,17 +4568,14 @@ function construirContextoModoPrompt(modo = "chef", coachUser = null) {
     const chefWhatsAppPrompt = chefWhatsAppLink
       ? `\nWHATSAPP DISPONIBLE:\n- si al usuario se le hace mas facil seguir por WhatsApp, puedes compartir este link exacto: ${chefWhatsAppLink}\n- ofrecelo solo cuando ayude y se sienta natural\n`
       : "";
+    const chefPricingPrompt = `\nPRECIOS Y COTIZACION:\n- no compartas precios, mensualidades ni cotizaciones exactas desde el Chef\n- si preguntan por precio, promociones o cuanto cuesta, explica que para precios es mejor hablar con un distribuidor autorizado\n- cuando convenga, invita a seguir por WhatsApp o a pedir llamada con un distribuidor autorizado\n`;
     return `
 MODO ACTIVO:
 - modo: chef
 - tipo_usuario: cliente_o_prospecto
 - acceso_privado: no
-${chefCalendlyPrompt}${chefWhatsAppPrompt}`;
+${chefCalendlyPrompt}${chefWhatsAppPrompt}${chefPricingPrompt}`;
   }
-
-  const coachCalendlyPrompt = limpiarUrlExterna(CALENDLY_COACH_URL)
-    ? `\nCALENDLY INTERNO:\n- si el distribuidor quiere una llamada de apoyo o seguimiento, puedes compartir este link exacto: ${limpiarUrlExterna(CALENDLY_COACH_URL)}\n- compartelo solo cuando ayude a avanzar\n`
-    : "";
   return `
 MODO ACTIVO:
 - modo: coach
@@ -4608,7 +4587,7 @@ MODO ACTIVO:
 
 INSTRUCCION:
 Responde como Coach privado de ventas. No trates a este usuario como lead ni como cliente final.
-${coachCalendlyPrompt}`;
+`;
 }
 
 // =============================

@@ -684,6 +684,24 @@ a {
   box-shadow: 0 8px 18px rgba(17, 35, 70, 0.05);
 }
 
+.msg-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f8b53 0%, #17b26a 100%);
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 18px rgba(15, 139, 83, 0.18);
+}
+
+.msg-action-link:hover {
+  filter: brightness(1.03);
+}
+
 #typing-indicator {
   display: none;
   font-size: 15px;
