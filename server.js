@@ -289,6 +289,8 @@ const coachLeadInboxSchema = new mongoose.Schema({
   notes: String,
   consentGiven: { type: Boolean, default: false },
   status: { type: String, default: "nuevo" },
+  nextAction: String,
+  nextActionAt: Date,
   summary: String,
   tags: [String],
   lastContactAt: Date,
@@ -828,8 +830,23 @@ function normalizarCoachLeadSource(source = "") {
   return validSources.includes(value) ? value : "captura_manual";
 }
 
+function normalizarCoachLeadNextAction(action = "") {
+  const value = String(action || "").trim().toLowerCase();
+  const validActions = ["", "llamar", "whatsapp", "cita", "demo", "seguimiento", "correo"];
+  return validActions.includes(value) ? value : "";
+}
+
 function normalizarZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function parseCoachLeadNextActionAt(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function construirCoachLeadSummary(leadDoc = null) {
@@ -852,6 +869,10 @@ function construirCoachLeadSummary(leadDoc = null) {
 
   if (leadDoc.source) {
     parts.push(`Fuente: ${String(leadDoc.source).replace(/_/g, " ")}.`);
+  }
+
+  if (leadDoc.nextAction) {
+    parts.push(`Siguiente paso: ${String(leadDoc.nextAction).replace(/_/g, " ")}.`);
   }
 
   if (leadDoc.notes) {
@@ -879,6 +900,8 @@ function limpiarCoachInboxLead(leadDoc = null) {
     notes: leadDoc.notes || "",
     consentGiven: Boolean(leadDoc.consentGiven),
     status: normalizarCoachLeadStatus(leadDoc.status),
+    nextAction: normalizarCoachLeadNextAction(leadDoc.nextAction),
+    nextActionAt: leadDoc.nextActionAt || null,
     summary: leadDoc.summary || "",
     lastContactAt: leadDoc.lastContactAt || null,
     lastStatusChangeAt: leadDoc.lastStatusChangeAt || null,
@@ -5683,6 +5706,8 @@ app.post("/api/coach/leads", async (req, res) => {
   const source = normalizarCoachLeadSource(req.body?.source || "captura_manual");
   const notes = String(req.body?.notes || "").trim().slice(0, 400);
   const consentGiven = Boolean(req.body?.consentGiven);
+  const nextAction = normalizarCoachLeadNextAction(req.body?.nextAction || "");
+  const nextActionAt = parseCoachLeadNextActionAt(req.body?.nextActionAt);
 
   if (!fullName) {
     return responderCoachError(res, 400, "El nombre es requerido.");
@@ -5722,6 +5747,11 @@ app.post("/api/coach/leads", async (req, res) => {
       leadDoc.interest = interest || leadDoc.interest || "";
       leadDoc.source = source || leadDoc.source || "captura_manual";
       leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
+      leadDoc.nextAction = nextAction || leadDoc.nextAction || "";
+
+      if (nextActionAt) {
+        leadDoc.nextActionAt = nextActionAt;
+      }
 
       if (notes && notes !== leadDoc.notes) {
         leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${notes}` : notes;
@@ -5751,7 +5781,9 @@ app.post("/api/coach/leads", async (req, res) => {
       notes,
       consentGiven,
       status: "nuevo",
-      summary: construirCoachLeadSummary({ interest, city, zipCode, source, notes }),
+      nextAction,
+      nextActionAt,
+      summary: construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
       lastStatusChangeAt: now,
       updatedAt: now
     });
@@ -5781,6 +5813,10 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
 
   const nextStatus = normalizarCoachLeadStatus(req.body?.status || "nuevo");
   const noteToAppend = String(req.body?.notes || "").trim().slice(0, 300);
+  const hasNextAction = Object.prototype.hasOwnProperty.call(req.body || {}, "nextAction");
+  const hasNextActionAt = Object.prototype.hasOwnProperty.call(req.body || {}, "nextActionAt");
+  const nextAction = normalizarCoachLeadNextAction(req.body?.nextAction || "");
+  const nextActionAt = parseCoachLeadNextActionAt(req.body?.nextActionAt);
 
   try {
     const leadDoc = await CoachLeadInbox.findOne({ _id: leadId, ownerUserId: auth.user._id });
@@ -5792,6 +5828,14 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
     const now = new Date();
     leadDoc.status = nextStatus;
     leadDoc.lastStatusChangeAt = now;
+
+    if (hasNextAction) {
+      leadDoc.nextAction = nextAction;
+    }
+
+    if (hasNextActionAt) {
+      leadDoc.nextActionAt = nextActionAt;
+    }
 
     if (["contactado", "agendado", "cliente"].includes(nextStatus)) {
       leadDoc.lastContactAt = now;

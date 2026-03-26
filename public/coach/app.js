@@ -45,6 +45,15 @@ const COACH_LEAD_SOURCE_LABELS = {
   evento: "Evento",
   otro: "Otro"
 };
+const COACH_LEAD_NEXT_ACTION_OPTIONS = [
+  { value: "", label: "Sin proxima accion" },
+  { value: "llamar", label: "Llamar" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "cita", label: "Agendar cita" },
+  { value: "demo", label: "Preparar demo" },
+  { value: "seguimiento", label: "Dar seguimiento" },
+  { value: "correo", label: "Mandar correo" }
+];
 const COACH_PLAN_CONFIG = {
   trial: {
     name: "Prueba gratis de 7 dias",
@@ -211,6 +220,26 @@ function formatDate(dateString) {
   }).format(date);
 }
 
+function formatDateTime(dateString) {
+  if (!dateString) {
+    return "Sin fecha";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
+  }
+
+  return new Intl.DateTimeFormat("es-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
 function formatMoney(value) {
   return `$${(Number(value) || 0).toFixed(2)}`;
 }
@@ -298,6 +327,54 @@ function normalizeLeadPhone(value = "") {
   }
 
   return digits;
+}
+
+function formatLeadNextActionLabel(value = "") {
+  const found = COACH_LEAD_NEXT_ACTION_OPTIONS.find(option => option.value === value);
+  return found?.label || "Sin proxima accion";
+}
+
+function formatDateInputValue(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeInputValue(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function buildLeadDateTimeValue(dateValue = "", timeValue = "") {
+  if (!dateValue) {
+    return "";
+  }
+
+  const safeTime = timeValue || "09:00";
+  const parsed = new Date(`${dateValue}T${safeTime}`);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
 }
 
 function formatLeadPhone(value = "") {
@@ -901,9 +978,15 @@ function initCoachLeadWorkspace() {
         const selected = option.value === lead.status ? " selected" : "";
         return `<option value="${option.value}"${selected}>${option.label}</option>`;
       }).join("");
+      const nextActionOptions = COACH_LEAD_NEXT_ACTION_OPTIONS.map(option => {
+        const selected = option.value === (lead.nextAction || "") ? " selected" : "";
+        return `<option value="${option.value}"${selected}>${option.label}</option>`;
+      }).join("");
 
       const phoneHref = normalizeLeadPhone(lead.phone);
       const dateCopy = formatDate(lead.createdAt);
+      const nextActionCopy = lead.nextAction ? formatLeadNextActionLabel(lead.nextAction) : "Sin proxima accion";
+      const nextActionAtCopy = lead.nextActionAt ? formatDateTime(lead.nextActionAt) : "Sin fecha";
       const metaChips = [
         lead.phone ? `<span class="lead-folder-meta-chip">${escapeHtml(formatLeadPhone(lead.phone))}</span>` : "",
         lead.email ? `<span class="lead-folder-meta-chip">${escapeHtml(lead.email)}</span>` : "",
@@ -925,6 +1008,16 @@ function initCoachLeadWorkspace() {
         </div>
         <p class="lead-folder-copy">${escapeHtml(lead.summary || "Sin resumen todavia.")}</p>
         <div class="lead-folder-meta">${metaChips}</div>
+        <div class="lead-folder-followup">
+          <div class="lead-folder-followup-card">
+            <span>Proxima accion</span>
+            <strong>${escapeHtml(nextActionCopy)}</strong>
+          </div>
+          <div class="lead-folder-followup-card">
+            <span>Cuando</span>
+            <strong>${escapeHtml(nextActionAtCopy)}</strong>
+          </div>
+        </div>
         <div class="lead-folder-actions-row">
           ${
             phoneHref
@@ -938,11 +1031,31 @@ function initCoachLeadWorkspace() {
               : ""
           }
         </div>
+        <div class="lead-folder-followup-grid">
+          <label class="lead-folder-field">
+            <span>Proxima accion</span>
+            <select data-coach-lead-next-action>
+              ${nextActionOptions}
+            </select>
+          </label>
+          <label class="lead-folder-field">
+            <span>Dia</span>
+            <input type="date" value="${escapeHtml(formatDateInputValue(lead.nextActionAt))}" data-coach-lead-date />
+          </label>
+          <label class="lead-folder-field">
+            <span>Hora</span>
+            <input type="time" value="${escapeHtml(formatTimeInputValue(lead.nextActionAt))}" data-coach-lead-time />
+          </label>
+          <label class="lead-folder-field lead-folder-field-full">
+            <span>Nota rapida</span>
+            <input type="text" maxlength="180" placeholder="Ej. prefiere despues de las 6 pm" data-coach-lead-note />
+          </label>
+        </div>
         <div class="lead-folder-actions-row lead-folder-status-row">
           <select data-coach-lead-status>
             ${statusOptions}
           </select>
-          <button type="button" class="secondary-button" data-coach-lead-save>Guardar estado</button>
+          <button type="button" class="secondary-button" data-coach-lead-save>Guardar seguimiento</button>
         </div>
       `;
 
@@ -958,7 +1071,20 @@ function initCoachLeadWorkspace() {
 
   const exportLeads = () => {
     const rows = [
-      ["nombre", "telefono", "email", "ciudad", "zip_code", "interes", "fuente", "status", "notas", "fecha"]
+      [
+        "nombre",
+        "telefono",
+        "email",
+        "ciudad",
+        "zip_code",
+        "interes",
+        "fuente",
+        "status",
+        "proxima_accion",
+        "proxima_fecha",
+        "notas",
+        "fecha"
+      ]
     ];
 
     getFilteredLeads().forEach(lead => {
@@ -971,6 +1097,8 @@ function initCoachLeadWorkspace() {
         lead.interest || "",
         formatLeadSourceLabel(lead.source),
         formatLeadStatusLabel(lead.status),
+        formatLeadNextActionLabel(lead.nextAction || ""),
+        lead.nextActionAt ? new Date(lead.nextActionAt).toISOString() : "",
         lead.notes || "",
         lead.createdAt ? new Date(lead.createdAt).toISOString() : ""
       ]);
@@ -1020,6 +1148,8 @@ function initCoachLeadWorkspace() {
             <td>${escapeHtml(lead.interest || "")}</td>
             <td>${escapeHtml(formatLeadStatusLabel(lead.status))}</td>
             <td>${escapeHtml(formatLeadSourceLabel(lead.source))}</td>
+            <td>${escapeHtml(formatLeadNextActionLabel(lead.nextAction || ""))}</td>
+            <td>${escapeHtml(lead.nextActionAt ? formatDateTime(lead.nextActionAt) : "")}</td>
             <td>${escapeHtml(lead.notes || "")}</td>
           </tr>
         `
@@ -1048,6 +1178,8 @@ function initCoachLeadWorkspace() {
                 <th>Interes</th>
                 <th>Status</th>
                 <th>Fuente</th>
+                <th>Proxima accion</th>
+                <th>Cuando</th>
                 <th>Notas</th>
               </tr>
             </thead>
@@ -1152,7 +1284,14 @@ function initCoachLeadWorkspace() {
     const card = saveButton.closest("[data-coach-lead-id]");
     const leadId = card?.dataset.coachLeadId || "";
     const statusSelect = card?.querySelector("[data-coach-lead-status]");
+    const nextActionSelect = card?.querySelector("[data-coach-lead-next-action]");
+    const nextDateInput = card?.querySelector("[data-coach-lead-date]");
+    const nextTimeInput = card?.querySelector("[data-coach-lead-time]");
+    const noteInput = card?.querySelector("[data-coach-lead-note]");
     const nextStatus = statusSelect?.value || "nuevo";
+    const nextAction = nextActionSelect?.value || "";
+    const nextActionAt = buildLeadDateTimeValue(nextDateInput?.value || "", nextTimeInput?.value || "");
+    const noteToAppend = noteInput?.value || "";
 
     if (!leadId) {
       return;
@@ -1164,7 +1303,10 @@ function initCoachLeadWorkspace() {
       await apiRequest(`/api/coach/leads/${encodeURIComponent(leadId)}`, {
         method: "PATCH",
         body: {
-          status: nextStatus
+          status: nextStatus,
+          nextAction,
+          nextActionAt,
+          notes: noteToAppend
         }
       });
       await loadLeads();

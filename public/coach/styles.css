@@ -1293,6 +1293,38 @@ img {
   margin-top: 14px;
 }
 
+.lead-folder-followup {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lead-folder-followup-card {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lead-folder-followup-card span,
+.lead-folder-followup-card strong {
+  display: block;
+}
+
+.lead-folder-followup-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lead-folder-followup-card strong {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .lead-folder-meta-chip {
   display: inline-flex;
   align-items: center;
@@ -1311,6 +1343,27 @@ img {
   margin-top: 16px;
 }
 
+.lead-folder-followup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.lead-folder-field {
+  display: grid;
+  gap: 7px;
+}
+
+.lead-folder-field-full {
+  grid-column: 1 / -1;
+}
+
+.lead-folder-field span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .lead-folder-status-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1318,7 +1371,9 @@ img {
   align-items: center;
 }
 
-.lead-folder-status-row select {
+.lead-folder-status-row select,
+.lead-folder-field select,
+.lead-folder-field input {
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
@@ -1327,6 +1382,18 @@ img {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   font: inherit;
+}
+
+.lead-folder-field input::placeholder {
+  color: var(--muted);
+}
+
+.lead-folder-status-row select:focus,
+.lead-folder-field select:focus,
+.lead-folder-field input:focus {
+  outline: none;
+  border-color: rgba(120, 182, 255, 0.28);
+  box-shadow: 0 0 0 3px rgba(120, 182, 255, 0.12);
 }
 
 .lead-folder-empty {
@@ -2394,6 +2461,8 @@ img {
   .order-calc-payment-grid,
   .order-calc-metrics,
   .native-lead-grid,
+  .lead-folder-followup,
+  .lead-folder-followup-grid,
   .decision-tool-columns,
   .decision-tool-scoreboard,
   .decision-tool-insight,
