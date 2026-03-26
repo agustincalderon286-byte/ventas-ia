@@ -1961,33 +1961,6 @@ img {
   line-height: 1.68;
 }
 
-.royalone-dock-summary {
-  display: grid;
-  gap: 8px;
-  margin-top: 18px;
-  padding: 16px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.royalone-dock-summary strong,
-.royalone-dock-summary span {
-  display: block;
-}
-
-.royalone-dock-summary strong {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-size: 1rem;
-  line-height: 1.2;
-}
-
-.royalone-dock-summary span {
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
 .footer-note {
   padding: 0 0 40px;
   color: var(--muted);

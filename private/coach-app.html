@@ -636,29 +636,14 @@
 
         <div class="royalone-dock-panel" id="royalone-dock-panel" data-royalone-panel hidden>
           <div class="eyebrow">Pedido rapido</div>
-          <h3>Listo para subir la orden</h3>
-          <p>
-            Abre RoyalOne cuando cierres la venta. Si ya tienes un lead activo, aqui mismo copias el resumen rapido.
-          </p>
-
-          <div class="royalone-dock-summary">
-            <strong data-royalone-lead-name>Sin lead activo todavia.</strong>
-            <span data-royalone-lead-score>Sin score todavia.</span>
-            <span data-royalone-lead-next>Sin siguiente paso todavia.</span>
-            <span data-royalone-lead-angle>Sin angulo todavia.</span>
-          </div>
+          <h3>Vas a salir a RoyalOne</h3>
+          <p>Seras redirigido a RoyalOne para llenar el pedido. Si lo abriste por accidente, puedes cancelar.</p>
 
           <div class="dashboard-actions">
-            <a
-              class="secondary-button"
-              href="https://www.royalone.com/"
-              target="_blank"
-              rel="noreferrer"
-              data-royalone-open-link
-            >
-              Abrir pedido
+            <button type="button" class="nav-button" data-royalone-cancel>Cerrar</button>
+            <a class="secondary-button" href="https://www.royalone.com/" target="_blank" rel="noreferrer" data-royalone-open-link>
+              Continuar
             </a>
-            <button type="button" class="nav-button" data-royalone-copy-summary>Copiar resumen</button>
           </div>
 
           <p class="mini-note" data-royalone-feedback>
