@@ -1,0 +1,3270 @@
+{
+  "generatedAt": "2026-03-26T02:45:37.088Z",
+  "note": "Derived from Lista_Precios_2026. Prices intentionally removed. Classification is heuristic and should be reviewed before production use.",
+  "summary": {
+    "uniqueCodes": 465,
+    "productLikeCodes": 85,
+    "partOrInternalCodes": 380,
+    "alsoInPublicCatalog": 141,
+    "internalOnly": 324
+  },
+  "productLikeCodes": [
+    {
+      "category": "MRCH",
+      "code": "CO9846",
+      "description": "INNOVE 5PZ+CATALOG+PERFECT POP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9251",
+      "description": "CLASICO 7 PZS INNV 316L +MATRL",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9256",
+      "description": "ESPECIAL 8 PZS INNV 316L MATRL APOYO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9861",
+      "description": "INNOVE 10PZ + PERFECT POP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9265",
+      "description": "JGO SARTENES GOURMT 6 PZS INNOV 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9893",
+      "description": "NOVEL 5 PZ + CATALOGO +POP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9563",
+      "description": "SIST NOVEL 7 PZS SIN CATALOGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9573",
+      "description": "SIST NOVEL 8 PZS SIN CATALOGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9883",
+      "description": "NOVEL 10 PZ + CATALOGO +POP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9554",
+      "description": "SISTEMA DE 15 PZAS NOVEL NOVEL CATALOGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9736",
+      "description": "8\" DER SARTEN EFECT PIEDRA+3PZ UTEN",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9738",
+      "description": "10\" DER SARTEN EFECT PIEDRA+3PZ UTEN",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9739",
+      "description": "12\" DER SARTEN EFECT PIEDRA+3PZ UTEN",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9740",
+      "description": "6PC SET DER EFECTO PIEDRA+3PZ UTEN",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9780",
+      "description": "RP EASY RELEASE OLLAS&SARTEN 6 PZS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO4911",
+      "description": "ROYAL PRESTIGE MULTIPAN",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9267",
+      "description": "OLLA 12QT CON PARILLA INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1678",
+      "description": "6 PC GOURMET (PANS WITH/CVRS)-5PLY",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1253",
+      "description": "OLLA DE PRESION RP 6L & RECETARIO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1258",
+      "description": "OLLA DE PRESION RP 10L & RECETARIO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6589",
+      "description": "PAVERA OVALADA ROYAL PRESTIGE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR2124",
+      "description": "CACEROLA ROYAL PRESTIGE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO0101",
+      "description": "RP CHOCOLATERA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1001",
+      "description": "ROYAL PRESTIGE EXPERTEA TETERA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO2106",
+      "description": "ROYAL PRESTIGE BARISTA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9229",
+      "description": "SARTEN GOURMET 8\"/20CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9685",
+      "description": "PLANCHA DOBLE  DE 18\"X10\" RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9231",
+      "description": "SARTEN GOURMET INNOVE 316 10\"/24CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9233",
+      "description": "SARTEN GOURMET 12\"/30CM 316L INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9201",
+      "description": "OLLA DE 2 CUARTOS/16CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9203",
+      "description": "OLLA DE 3 CUARTOS/20CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9205",
+      "description": "OLLA DE 4QT/20CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9207",
+      "description": "OLLA DE 6 CUARTOS/26CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9209",
+      "description": "OLLA DE 8 CUARTOS/26CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9211",
+      "description": "SARTEN DE 8'/20CM INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9213",
+      "description": "SARTEN 10.5\"/4QT/26CM INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9218",
+      "description": "PLANCHA DOBLE INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9219",
+      "description": "PLANCHA REDONDA INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9220",
+      "description": "PLANCHA SENCILLA INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9687",
+      "description": "PLANCHA SENCILA (11\"/28CM) RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1651",
+      "description": "SARTEN GOURMET 8\"20CM - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8656",
+      "description": "SARTEN GOURMET 10\"/24COM-5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8661",
+      "description": "12\"/30CM GOURMET SKILLET ONLY - 5PLY",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO1663",
+      "description": "SARTENES GOURMET 8\" 10\" Y 12\" 5-CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6030",
+      "description": "OLLAS DE 1.5 CUARTOS/16CM-5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6135",
+      "description": "OLLA DE 2 CUARTOS/16CM-5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6140",
+      "description": "OLLA DE 3 CUARTOS/20CM-5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6150",
+      "description": "OLLA DE 6 CUARTOS/26CM - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6056",
+      "description": "OLLA DE 8 CUARTOS/26CM - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6160",
+      "description": "SARTEN 8\"/ 2CUARTOS/20CM - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6165",
+      "description": "SARTEN 10.5\"/4CUARTOS/26CM-5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8546",
+      "description": "PLANCHA DOBLE - 18\"X10\" -5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8548",
+      "description": "PLANCHA SENCILLA (11\"/28CM)- 5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO4900",
+      "description": "RP JUEGO DE TAZONES PARA MEZCLAR/RALLAR",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9076",
+      "description": "COLADOR PEQUEÑO (20CM.) INNOVE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9080",
+      "description": "COLADOR GRANDE (26CM) - INNOVE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9615",
+      "description": "COLADOR PEQUEÑO (20CM.) RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9690",
+      "description": "PARRILA ACR INXDL -31CM - OLLAS 20/30 RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8820",
+      "description": "COLADOR PEQUEÑO (20CM) 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0740",
+      "description": "JUEGO DE 4 CUCHILLOS PARA CHURRASCO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0056",
+      "description": "RP BLOQUE PARA CUCHILLOS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0810",
+      "description": "RP CUCHILLO PARA PELAR 2.75\"",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0814",
+      "description": "RP CUCHILLO MULTIUSO 5\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0825",
+      "description": "RP HACHA DE COSINA 7\"",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0932",
+      "description": "RP TODO EN 1 BLOQUE CUCHILLOS + CHURRASCO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0148",
+      "description": "CUCHILLO SANTOKU DAMASCUS DE 5\"",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR0025",
+      "description": "ROYAL PRESTIGE PERFET POP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR0008",
+      "description": "TABLA DE BAMBU CON BORDE SILICONA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR0021",
+      "description": "TABLA PARA CORTAR DE BAMBU PEQUEÑA CON SILICON",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR1841",
+      "description": "AFILADOR DE CUCHILLOS RP INOX",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR2614",
+      "description": "MAQUINA DE ENSALADAS ROYAL PRESTIGE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR1459",
+      "description": "EXPRIMIDOR DE JUGO ROYAL PRESTIGE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PR1460",
+      "description": "3 COLADORES EXTRACTOR DE JUGO RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0482",
+      "description": "FRESCAPURE 5500- SOBRE MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0485",
+      "description": "FRESCAPURE 5500-BAJO MOSTRADOR",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "WF1200",
+      "description": "RP FRESCAFLOW 100- 240V&MINERALIZADOR",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "CR2670",
+      "description": "12 OZ VASOS WATER GLASS 4 PACK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "CR2672",
+      "description": "PAQUETE DE 4 VASOS DE 10 ONZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "CR2679",
+      "description": "JUEGO 4 COPAS DE VINO GALA 16 OZ",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "ES0082",
+      "description": "RP POWER BLENDER MAX 120-127V VPU",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PE0051",
+      "description": "RP MAX CUP (2) CON ASPAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "PREM",
+      "code": "PE4000",
+      "description": "ROYAL PRESTIGE WARMER PRO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "ES0071",
+      "description": "RP PRECISION COOK 120-127V TIPO B",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0653",
+      "description": "UNIDAD ULTRAVIOLETA - FP ULTRA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": false
+    },
+    {
+      "category": "MRCH",
+      "code": "JU0038",
+      "description": "EXTRACTOR DE JUGOS RP RECETARIO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": false
+    }
+  ],
+  "partOrInternalCodes": [
+    {
+      "category": "MRCH",
+      "code": "CO9560",
+      "description": "OLLA NOVEL 3QT/20CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9655",
+      "description": "JGO. 6PZS GOURMET ( SARTENES C/TAPA)",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9777",
+      "description": "2QT/18CM ER OLLA C/TAPAVIDRIO/3PZUT",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9778",
+      "description": "3QT/26CM ER OLLA C/TAPAVIDRIO/3PZUT",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9779",
+      "description": "3.5QT/26CM ER SAUTE.TAPAVIDRIO/3PZUTE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9840",
+      "description": "NOVEL 10PZ SC FAMILIAR (TAPA ALTA)",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9269",
+      "description": "OLLA 30QT/38CM Y PARRILLA INNOVE/316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9144",
+      "description": "OLLA ROYAL PRESTIGE 60QT Y PARRILLA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP7008",
+      "description": "KIT DE 5 CAPAS PARA EL NOVATO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP9001",
+      "description": "KIT INNOVE PARA EL NOVATO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP9005",
+      "description": "KIT NOVEL PARA EL NOVATO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0091",
+      "description": "NUEVO JUEGO PARA SERVIR COMPLEMENTARIO 3PZ 430SS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0077",
+      "description": "SERVIR DELUXE CUCHARA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0078",
+      "description": "SERVIR DELUXE CUCHARA CON RANURAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0079",
+      "description": "SERVIR DELUXE CUCHARA CUADRADA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0095",
+      "description": "SERVIR COMPLEMENTARIO SERVIDOR DE POSTRES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0096",
+      "description": "SERVIR COMPLEMENTARIO CUCHARON PARA PASTA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0097",
+      "description": "SERVIR COMPLEMENTARIO TENEDOR PARA SERVIR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO7014",
+      "description": "SISTEMA COC. COMPLEMENTARIO-5CAPAS 5 PIEZAS CON CATALOGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO7024",
+      "description": "SISTEMA COC CLASICO-5CAPAS- 7PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8020",
+      "description": "SISTEMA COSINA. CLASICOS-5 CAPAS-7PIEZAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8030",
+      "description": "SISTEMA COCINA ESPECIAL-5CAPAS-8PIEZAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO7034",
+      "description": "SISTEMA CLASICO-5CAPAS-8PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO7044",
+      "description": "SISTEMA COSINA FAMILIAR-5CAPAS-10PIEZAS CON CATALOGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO7054",
+      "description": "SISTEMA COSINA PROFESIONAL- 5CAPAS-15PIEZAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9230",
+      "description": "SARTEN GOURMET 8\"/20CM + TAPA INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9232",
+      "description": "SARTEN GOURMET 10\"24CM + TAPA INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9234",
+      "description": "SARTEN GOURMET 12\"/30CM + TAPA INNOVE316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9236",
+      "description": "OLLA DE 4QT/20CM + TAPA INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9237",
+      "description": "OLLA DE 8QT/26CM + TAPA INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9224",
+      "description": "OLLA DE 12QT/30CM + TAPA INNOVE 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9226",
+      "description": "OLLA INNOVE 20QT/35CM 316L CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9228",
+      "description": "OLLA DE 30QT/38CM INNOVE CON TAPA 316L",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9268",
+      "description": "OLLA INNOVE 20QT 316L CON PARRILLA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9315",
+      "description": "PAELLERA + TAPA 14\"/35CM INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9222",
+      "description": "WOK INNOVE 316L CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9317",
+      "description": "PAELLERA + TAPA 10\"/26CM INNOVE 316L",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9630",
+      "description": "SARTEN GOURMET RP 8\"20CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9640",
+      "description": "SARTEN GOURMET RP 10\"/24CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9650",
+      "description": "SARTEN GOURMET RP 12\"/30CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9565",
+      "description": "OLLA NOVEL 4QT/20CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9575",
+      "description": "OLLA NOVEL 8QT/26CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9595",
+      "description": "PAELLERA NOVEL 10\" CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9598",
+      "description": "PAELLERA NOVEL 14\" CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9660",
+      "description": "OLLA RP DE 12QT/30CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9675",
+      "description": "OLLA RP DE 20QT/35CM CON TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9680",
+      "description": "OLLA RP DE 30 QT/38CM CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9079",
+      "description": "OLLA ROYAL PRESTIGUE DE 60QT CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "PR2134",
+      "description": "KIT COMPLEMENTO BARISTART",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO2206",
+      "description": "BARISTA/BARISTART KIT",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8650",
+      "description": "SARTEN GOURMET-8\"/20 CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8655",
+      "description": "SARTEN GOURMET 10\"/25CM CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8660",
+      "description": "SARTEN GOURMET- 12\"/30CM CON TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6145",
+      "description": "OLLA 4 CUARTOS/20CM CON TAPA-5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6155",
+      "description": "OLLA 8 CUARTOS/26CM CON TAPA- 5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8380",
+      "description": "OLLA 20 CUARTOS/35CM CON TAPA- 9CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8385",
+      "description": "OLLA 30 CUARTOS/38CM CON TAPA-9CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8072",
+      "description": "PAELLERA DE 10 CON TAPA- 5 CAPAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8070",
+      "description": "PAELLERA DE 14\"/35CM CON TAPA- 5 CAPAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8375",
+      "description": "OLLA DE 12 CUARTOS/30CM CON TAPA- 9CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9686",
+      "description": "PARRILLA REDONDA DE 12\"/30CM- RP",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9631",
+      "description": "SARTEN GOURMET RP 8\"/20CM SIN TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9641",
+      "description": "SARTEN GOURMET RP 10\"/20CM SIN TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9651",
+      "description": "SARTEN GOURMET RP 12\"/30CM SIN TAPA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9550",
+      "description": "OLLA NOVEL 1.5QT/16CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9555",
+      "description": "OLLA NOVEL 2QT/16CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9570",
+      "description": "OLLA NOVEL 6QT/26CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9580",
+      "description": "SARTEN NOVEL 8\"/2QT/20CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9590",
+      "description": "SARTEN NOVEL 10.5/4QT/26CM SIN TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9096",
+      "description": "PARRILLA PARA OLLA DE 12QT INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6547",
+      "description": "PARRILLA REDONDA - 12\"/30CM-5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO8010",
+      "description": "SISTEMA COCINA COMPLEMENTARIO - 5 CAPAS- 5 PIEZAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "CO4904",
+      "description": "RP TAZONES PARA MEZCLAR 4 PIEZAS (2.8L)",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT4900",
+      "description": "FOLLETO ROYAL PRESTIGE MIXING BOWL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9097",
+      "description": "PARRILLA PARA OLLA DE 20QT INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9098",
+      "description": "PARRILLA PARA OLLA DE 30QT INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9099",
+      "description": "PARRILLA PARA OLLA DE 60 CUARTOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9088",
+      "description": "TAPA ALTA INNOVE - 26CM- CON REVESTIMIENTO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP5050",
+      "description": "ROYAL SHINE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP5054",
+      "description": "ROYAL SHINE - PAQUETE DE 12 UNIDADES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2288",
+      "description": "RP CUBIERTA INDICADOR OLLA PRESION",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2289",
+      "description": "FILTRO VAPOR /TAPA OLLA PRESION",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2290",
+      "description": "TUERCA APRIETA CUBIERTA DE CIERRE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4802",
+      "description": "ROYAL PRESTIGE VALVULA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4800",
+      "description": "AGARRADERA MEDIANA PARA TAPA INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4801",
+      "description": "AGARRADERA GRANDE PARA TAPA- INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4814",
+      "description": "AGARRADERA SUPERIOR - TAPA- INNOVE 63CT",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4810",
+      "description": "ASA LATERAL DESMONTABLE INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9600",
+      "description": "TAPA PEQUEÑA NOVEL DE 16CM.",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9605",
+      "description": "TAPA MEDIANA NOVEL DE 20 CM",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9610",
+      "description": "TAPA GRANDE NOVEL DE 26CM",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO9620",
+      "description": "TAPA ALTA NOVEL 26CM CON REVESTIMIENTO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6500",
+      "description": "TAPA PEQUEÑA DE 16 CM 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6605",
+      "description": "20COM MEDIUM COVER 5 & 9 PLY",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6610",
+      "description": "TAPA GRANDE DE 26CM 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CO6516",
+      "description": "TAPA ALTA 26CM CON BASE 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4410",
+      "description": "VALVULA COMPLETA PARA 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP5405",
+      "description": "AGARRADERA COMPLETA PARA TAPA 5 & 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4430",
+      "description": "AGARRADERA CORTA - 3&4QT/SARTEN 8\"-9\" CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4420",
+      "description": "MANGO LATERAL COLADOR JR 4 CTS- 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4425",
+      "description": "MANGO LATERAL SARTEN- 10\" 6 & 8 CTS- 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4435",
+      "description": "MANGO SARTEN 10\" 6 & 8 QTS Y ALTA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4440",
+      "description": "AGARRADERA CORTA PARA 12QT - 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4445",
+      "description": "ASA OLLA 20QT/PAELLA 14\" 5&9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4450",
+      "description": "AGARRADERA CORTA PARA 30QT- 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4811",
+      "description": "ASA LARGA DESMONTABLE INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0420",
+      "description": "ARO 16CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0430",
+      "description": "ARO 20CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0440",
+      "description": "ARO 26CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0450",
+      "description": "ARO 30CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0460",
+      "description": "ARO 35CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0470",
+      "description": "ARO 38CM Y VENTANA INNOVE-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0488",
+      "description": "ARO PARA TAPA ALTA - ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP5610",
+      "description": "MANGO- FRESCAPURE PARA LA DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4650",
+      "description": "AGARRADERA COMPLETA PARA TAPA RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4652",
+      "description": "MANGO LATERAL COLADOR JR 4 CTS - NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4654",
+      "description": "MANGO LATERAL- SARTEN - 10\" 6 & 8 CTS- NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4656",
+      "description": "AGARRADERA CORTA PARA 12QT RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4658",
+      "description": "MANGO LATERAL- PAELLERA 20CTS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4670",
+      "description": "AGARRADERA LARGA - 1.5CT & 2 CTS - NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4672",
+      "description": "MANGO - PLANCHA SENCILLA 11\"/25CM RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4676",
+      "description": "MANGO PARA SARTEN GOURMET 10\"/24CM- NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4680",
+      "description": "AGGARADERA LARGA - 3QT Y SARTEN 8\" - NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4682",
+      "description": "AGGARADERA LARGA - SARTEN 10\" - 5 CAPAS- NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2420",
+      "description": "ARO DE 16 CM-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2440",
+      "description": "ARO DE 20 CM-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2460",
+      "description": "ARO DE 26 CM- ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2480",
+      "description": "ARO DE 35 CM-ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3265",
+      "description": "ARO DE 38 CM INNOVE- ROJO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3320",
+      "description": "PUREAMBIENCE 2 - CONTROL REMOTO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1670",
+      "description": "ANILLO \"O\" GRANDE PARA FILTRO DE DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3271",
+      "description": "AGARRADERA SUPERIOR INNOVE PARA ARO MEDIANO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "RP5460",
+      "description": "AGARRADERA LARGA 1.5CT Y 2 CTS - 5CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4475",
+      "description": "AGARRADERA LARGA 1.5&2 QT - 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP5465",
+      "description": "AGARRADERA LARGA 3QT&SARTEN 8\" - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4480",
+      "description": "AGARRADERA LARGA SARTEN 8\" - 9\" CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4470",
+      "description": "AGARRADERA LARGA - SARTEN 10\" - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4485",
+      "description": "AGARRADERA LARGA SARTEN 10\" - 9 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4458",
+      "description": "VALVULA COMPLETA COLOR NEGRO RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1902",
+      "description": "AGARRADERA LARGA COMPLEMENTARIO - 7 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1903",
+      "description": "NUEVAS AGARRADERA COMPLETA 7 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0003",
+      "description": "PERILLA TAPA VIDRIO - EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0004",
+      "description": "DER - ARO TAPA DE VIDRIO 20 CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0006",
+      "description": "DER - ARO PARA TAPA DE CIDRIO 30 CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9700",
+      "description": "MANGO LARGO SARTEN 20CM EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9701",
+      "description": "MANGO LATERAL SARTEN 30CM EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9702",
+      "description": "MANGO LARGO SARTEN 26CM EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9703",
+      "description": "MANGO LARGO SARTEN 30CM EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9712",
+      "description": "AGARRADERA VALVULA VIDRIO EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9713",
+      "description": "ARO SILICONA TAPA DE VIDRIO ER 18CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9714",
+      "description": "ARO SILICONA TAPA DE VIDRIO ER 20CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9716",
+      "description": "MANGO SARTEN 2QT - 1.89L EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9717",
+      "description": "MANGO SARTEN 3QT- 2.84L EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9718",
+      "description": "MANGO SARTEN 3.5QT - 3.31L EASY RELEASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9719",
+      "description": "AGARRADERA SARTEN 3.5Q-3.31L ER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1257",
+      "description": "RP VALVULA PARA EXPERTEA (TETERA)",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1258",
+      "description": "RP TAPA EXPERTA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1259",
+      "description": "RP EXPERTEA MANIJA Y BASE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1263",
+      "description": "RP TAZA INFUSORA EXPERTEA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2285",
+      "description": "VALVULA-NUEVA RP OLLA DE PRESION",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2286",
+      "description": "RP MANGO-NUEVA RP OLLA DE PRESION",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3272",
+      "description": "AGARRADERA SUPERIOR INNOVE PARA ARO GRANDE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2551",
+      "description": "RP SMART TEMP SILICONE HANDLE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2224",
+      "description": "PB GO CHIOPPER ATTACHMENT",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2225",
+      "description": "PB GO BLENDING CUP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2229",
+      "description": "PB GO CHOPPER LID",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2230",
+      "description": "PB GO CHOPPER CONTAINER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2231",
+      "description": "PB GO CHOPPER CBLADE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4903",
+      "description": "MANGO RP PARA OLLA DE 1.5QT Y 2QT",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4904",
+      "description": "MANGO RP DE OLLA 3QT Y SARTEN 8\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4905",
+      "description": "AGARRADERA RP DE OLLA 4QT Y SARTEN 8\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4906",
+      "description": "MANGO RP DE SARTEN 10.5\"/26CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4907",
+      "description": "ASA DE OLLA 6QT/ Y SARTEN 10.5\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4908",
+      "description": "AGARRADERA RP PARA PAELLERA 14\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4909",
+      "description": "MANGO RP PARA SARTEN GOURMET DE 8\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4910",
+      "description": "MANGO RP PARA SARTEN GOURMET DE 10\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4913",
+      "description": "AGARRADERA RP PARA COLADOR DE 20CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4914",
+      "description": "AGARRADERA RP PARA TAPA ALTA 26CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4920",
+      "description": "AGARRADERA RP PARA COLADOR DE 26CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4921",
+      "description": "AGARRADERA RP PARA PAELLERA DE 10\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4900",
+      "description": "ASA RP TAPA 16CM+ SARTEN GOURMET 8\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4662",
+      "description": "AGARRADERA LATERAL- PLANCHA DOBLE- 18\"X10\" RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4664",
+      "description": "AGARRADERA LATERAL- PARRILLA REDONDA- 12\"/30\" RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP2287",
+      "description": "ARO DE SILICONA - NUEVA RP OLLA PRESION",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP5461",
+      "description": "MANGO - PLANCHA SENCILLA DE 11\"/25CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4462",
+      "description": "MANGO PARA SARTEN GOURMET DE 8\"/20CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4454",
+      "description": "AGARRADERA PARA TAPA - BANDEJA PARA ASAR ACERO 1",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP5455",
+      "description": "MANGO DEL HERVIDOR DE 1/2 QT - 5 CAPAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4457",
+      "description": "MANGO HERVIDOR 1 QT- 5CAPAS NUEVO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4463",
+      "description": "MANGO PARA SARTEN GOURMET DE 10\"/24CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4464",
+      "description": "MANGO PARA SARTEN GOURMET DE 12\"/30CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3603",
+      "description": "INIDAD GIRATORIA DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3604",
+      "description": "TAZON DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3605",
+      "description": "PRESIONADOR DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3606",
+      "description": "RECIPIENTE JUGO CON MANIJA MAXTRACTOR RP JCR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3607",
+      "description": "RECIPIENTE PULPA S/MANIJA MAXTRACTOR/RP JCR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3608",
+      "description": "CEPILLO PARA LIMPIAR MATR/RP JUICER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3609",
+      "description": "TAPON DE SILICONA DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3610",
+      "description": "MOTOR(BASE)MAXTRACTOR/RP JUICER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3611",
+      "description": "TAPA INTELIGENTE DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3617",
+      "description": "PIEXA PARA LIMPIAR MAXTRACTOR/RP JUICER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3628",
+      "description": "TOLVA ENSAMB PARA EXTRACTOR DE JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3629",
+      "description": "RP EXTRACTOR DE JUGOS ULTRASQUEEZER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3630",
+      "description": "COLADOR PARA EXTRACTOR DE JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3631",
+      "description": "UNIDAD GIRATORIA PARA EXTRACTOR JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3632",
+      "description": "TAZON DEL EXTRACTOR DE JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3633",
+      "description": "UTENSILIOS PARA PRESIONAR EXTRACTOR JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4807",
+      "description": "AGARRADERA INNOVE CON SILICON TAPA 20CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4808",
+      "description": "AGARRADERA INNOVE CON SILICON TAOA 24/30CM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4815",
+      "description": "RESORTE PARA ASA LATERAL INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0012",
+      "description": "ESPUMADOR DE LECHE BARISTART KIT",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0042",
+      "description": "RP BASE DE MOTOR POWER BLENDER MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3406",
+      "description": "JARRA DE VIDRIO PARA LICUADORA PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3410",
+      "description": "TAPON PLASTICO PARA TAPA PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3411",
+      "description": "TAPA DE LA JARRA POWER BLENDER MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3412",
+      "description": "ARO DE SILICONA PARA TAPA PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3413",
+      "description": "PRESIONADOR JARRA DE VIDRIO PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3414",
+      "description": "PRESIONADOR JARRA DE TRITAN PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3415",
+      "description": "BASE SILICONA LICUADORA PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3426",
+      "description": "PB MAX MECANI CUCHILLA JARRA VIDRIO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3417",
+      "description": "ARO DE SILICONA/ASPAS/VIDRIO PB MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3459",
+      "description": "GASKET PARA CUCHILLAS MAX CUP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3428",
+      "description": "RP MECANIS COMPLETO CUCHILLA MAXCUP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3419",
+      "description": "MECANISMO DE ASPAS Y TAPA PARA RP MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3420",
+      "description": "TAPA PARA MAX CUP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3421",
+      "description": "ROYAL PRESTIGE MAX CUP JARRA SOLA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3422",
+      "description": "ADAPTADOR COMPLETO FRESH MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3600",
+      "description": "TOLVA DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3601",
+      "description": "ULTRA SQUEEZER DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3602",
+      "description": "COLADOR DEL MAXTRACTOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0001",
+      "description": "ANILLO TRCA BLANCO PARA GRIFO FP5K/6K",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0007",
+      "description": "SPACER , 7/8\" FAUCET",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0160",
+      "description": "3 ADAPTADORES PARA FILTRO DE AGUA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3636",
+      "description": "TAPA INTELIGENTE PARA EXTRACTOR JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP3637",
+      "description": "EMPAQUE PARA COLADOR - EXTRACTOR JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6153",
+      "description": "EMPAQUE DEL TANQUE - FRESCAPURE 6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6154",
+      "description": "ABRAZADERA DEL TANQUE DEL FP600",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6155",
+      "description": "TANQUE DE ACERO INOXIDABLE FP 6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6157",
+      "description": "COLLAR DE LIBERACION DEL FP6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6158",
+      "description": "TAPA BATERIA FP6000 SOBRE MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6159",
+      "description": "MONITOR DE FLUJO FP5500/FP6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6161",
+      "description": "JUEGO DEL GRIFO FP6000",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6162",
+      "description": "VALVULA T FP6000 DEBAJO DEL MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6163",
+      "description": "CUBIERTA INFERIOR FP5500 SOBRE MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6164",
+      "description": "BASE DEL FP5500 BAJO MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6166",
+      "description": "NUEVA TAPA CUBIERTA FP5500/FP6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6171",
+      "description": "MANGUERA AZUL DE 8\" FP5500/FP6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6172",
+      "description": "MANGUERA ROJA DE 12\" - FP5500/FP6000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6174",
+      "description": "BASE FP6000 DEBAJO DE MOSTRADOR S/LOGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6192",
+      "description": "EMPAQUE DEL TANQUE- FP3500",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4840",
+      "description": "RP MULTIPAN-PERILLA DE SILBATO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4842",
+      "description": "RP MULTIPAN - AGARRADERA CORTA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4843",
+      "description": "RP MULTIPAN- MANGO LARGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4846",
+      "description": "RP MULTIPAN-EMPAQUE SOLO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4848",
+      "description": "RP MULTIPAN-EMPAQUE DE COLADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP1350",
+      "description": "MANGUERA DE SALIDA PARA PREFILTRO 10\"",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6165",
+      "description": "MONITOR LED PARA LLAVE DE 3 MANGUERAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4572",
+      "description": "JUNTA MONTAJE DE LA TAPA - FP 3000",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4576",
+      "description": "MONTAJE/CUBIERTA FP 3000- BLANCO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4600",
+      "description": "CUBIERTA SUPERIOR- FRESCAPURE/DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4615",
+      "description": "CONEXION GIRATORIA- PARA LA DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4620",
+      "description": "MANGUERA- FRESCAPURE/DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4622",
+      "description": "POSTE SUPERIOR DUCHA- FRESCAPURE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6150",
+      "description": "TAPA PARA CUBIERTA FP5500-6000 SOBRE MOSTRADOR",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0800",
+      "description": "RP JUEGO DE CUCHILLOS 5 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0815",
+      "description": "RP JUEGO PARA REBANAR 4 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "CU0820",
+      "description": "RP JUEGO CUCHILLOS PARA CARNE 4 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2675",
+      "description": "HERVIDOR 1/2 CUARTO-RP-MANGO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2685",
+      "description": "HERVIDOR 1 CUARTO-RP-MANGO NEGRO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2128",
+      "description": "CAFETER ESPRESSO 4 TAZAS DOBLE PARED",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2129",
+      "description": "CAFETERA ESPRESSO 10 TAZAS DOBLE PARED",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR0109",
+      "description": "JUEGO CUBIERTOS AMERICAN-24PIEZAS-18/8 US",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0296",
+      "description": "RP CUCHILLO SANTOKU 5\"",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0297",
+      "description": "RP CUCHILLO SANTOKU 3.5\"/ 8.89CM",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR0196",
+      "description": "JUEGO DE UTELZILIOS DE COSINA-6 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR0333",
+      "description": "ROYAL PRESTIGE FILTRO DE DUCHA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0419",
+      "description": "FILTRO DE AGUA FRESCAPURE 3500 CT",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "WF2002",
+      "description": "2 UNIDADES DE PREFILTRO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2003",
+      "description": "1 UNIDAD FILTRO OSMOSIS INVERSA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PR2004",
+      "description": "1 UNIDAD MINERALIZADOR 1 UNIDAD FILTRO CARBON",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PE0050",
+      "description": "JARRA TRITAN COMPLETA RP PB MAX",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PE0040",
+      "description": "RP FRESH MAX / ADAPTADOR TIPO A",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "ES4200",
+      "description": "RP PBGO PLS TIPO A CON BATIDOR & CEPILLO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PE0028",
+      "description": "CONJUNTO PICADORA Y TAZA-BLENDER GO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "PREM",
+      "code": "PE0029",
+      "description": "CONJUNTO BATIDORA & CEPILLO BLENDER GO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP9003",
+      "description": "RP FRESCAFLOW KIT DE MUDANZA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0075",
+      "description": "DOS (2) CARTUCHOS- FILTRO PARA DUCHA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0080",
+      "description": "SEIS (6) CARTUCHOS- FILTRO PARA DUCHA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP0140",
+      "description": "CARTUCHOS DE SEDIMENTO DE 10\"",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0382",
+      "description": "PREFILTRO PARA SEDIMENTOS 5 MICRONES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0451",
+      "description": "CARTUCHO DE REMPLAZO-FP 3000/3000 PLUS/3500",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0500",
+      "description": "CARTUCHO REMPLAZO 4.5\" (C/ENVLTR)- CRT NSF",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0530",
+      "description": "CARTUCHO 4.5 CON CPSL PARA/BTR-FP BAJO MOSTRADOR",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP4621",
+      "description": "RP KIT REEMPLAZO CUBIERTA DE DUCHA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "AP2801",
+      "description": "RP FILTRO DE AIRE 120-127V TIPO A",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "AP2704",
+      "description": "RP FILTRO AIRE PAQUETE REMPLAZO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0060",
+      "description": "PRE-FILTRO DE 10\" CON 3 CARTUCHOS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6196",
+      "description": "VALVULA DE METAL- MANGUERA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "RP6186",
+      "description": "VALVULA DESVIO- DOBLE MANGUERA METAL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MRCH",
+      "code": "WF0654",
+      "description": "FP ULTRA - 3 FILTROS DE REMPLAZO",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP3303",
+      "description": "PAQUETE 6 JARRA VORT- X 2.5.1 COMPLETA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0098",
+      "description": "JUEGO DE UTENZILIOS 3 PIEZAS EASY RELEASE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1850",
+      "description": "DESTAPADOR PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1851",
+      "description": "RALLADOR PRESISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1852",
+      "description": "ESPATULA PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1853",
+      "description": "BATIDOR GLOBO PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1854",
+      "description": "PELADOR PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1856",
+      "description": "CORTA PIZZA PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1857",
+      "description": "MACHACADOR PRECISION SERIES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1859",
+      "description": "ESPATULA PARA HELADOS PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1860",
+      "description": "PELADOR VERTICAL PRECISION SERIES",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP1861",
+      "description": "JUEGO DE 2 ESPATULAS DE SILICONA PS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0066",
+      "description": "TAZON MEZCLAR 10QT CON BASE SILICONA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0068",
+      "description": "TAZON 5 CUARTOS PARED DOBLE + TAPA",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0135",
+      "description": "JUEGO DE 4 TAZAS CON PARED DOBLE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0145",
+      "description": "RECIPIENTE PARA UTENSILIOS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0152",
+      "description": "JUEGOS COMPLEMENTARIO 430SS + DLX+ RECIPIENTE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0081",
+      "description": "NUEVO JUEGO PARA SERVIR DELUXE 3 PIEZAS-430SS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0088",
+      "description": "3PIEZAS NEW DELUXE SERVING SET 430SS-36PK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0305",
+      "description": "BASE MAGNETICA PARA OLLAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0137",
+      "description": "TEQUILAS GLASS RP LOGO 4-PACK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0136",
+      "description": "JUEGO 2 TAZAS 16OZ. CON PARED DOBLE",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0261",
+      "description": "JUEGO AZUCAR/JARRO PARA LECHE ACERO 2PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0252",
+      "description": "JUEGO DE 2 COPAS PARA HELADO CON PARED DOBLE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0254",
+      "description": "JUEGO DE RECIPIENTES PARA HELADO 4 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0001",
+      "description": "RP LUNCH BAG",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0111",
+      "description": "6 RECIPIENTES RP CON CAPACIDAD DE 2 TAZAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP0113",
+      "description": "RECIPIENTES DE COMIDA RP - 8 PIEZAS",
+      "inPublicCatalog": true,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2881",
+      "description": "RP PAQUETE DE 10 UNIDADES SMART TEMP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SP2551",
+      "description": "ROYAL PRESTIGE SMART TEMP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2900",
+      "description": "CATALOGO RP NOVEL ESPAÑOL / INGLES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0005",
+      "description": "CATALOGO DE PRODUCTOS 5 CAPAS INGLES/ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT1199",
+      "description": "RECETARIO INNOVE Y NOVEL - INGLES/ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2179",
+      "description": "RECETARIO OLLA DE PRESION RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT5260",
+      "description": "LIBRO DE RECETAS ESPERTEA (TETERA)",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT4910",
+      "description": "FOLLETO ROYAL PRESTIGE MULTIPAN",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT4033",
+      "description": "CALENDARIO DE LA SUERTE RAFFLE 100PK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2177",
+      "description": "FOLLETO DE OLLAS DE PRESION ESPAÑOL-INGLES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2661",
+      "description": "SUPER FOLLETO - MAQUINA PARA ENSALADAS",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2268",
+      "description": "FOLLETO DE EXTRACTOR DE JUGOS RP",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2325",
+      "description": "NOTIFICASION CLIENTES - ILLINOIS PAQUETE 25",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2700",
+      "description": "25 ORDENES VENTA RP- MULTI ESTADO INGLES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2705",
+      "description": "25 ORDENES VENTA RP- MULTI ESTADO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2740",
+      "description": "25 SOLICITUD CREDITO RP MULTI ESO-RTVO-INGLES",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2745",
+      "description": "25 SLCTS CRDT RP-MULTI EDO-RTVO ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2750",
+      "description": "SOLICITUD GENERICA CREDITO ROTVO-INGLES-25",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2795",
+      "description": "HOJA DE RESUMEN-ESPAÑOL-PAQUETE 25",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2797",
+      "description": "HOJA DE RESUMEN- INGLE-PAQUETE 25",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2917",
+      "description": "CATALOGO EASY RELEASE TAPA VIDRIO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0131",
+      "description": "FOLLETO PRECISION COOK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0105",
+      "description": "EXPERTEA BROCHURE ENGLISH/ SPANISH (TETERA)",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0102",
+      "description": "FOLLETO CHOCOLATERA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT3211",
+      "description": "FOLLETO POWER BLENDER MAX",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2597",
+      "description": "FOLLETO DEL FRESCAPURE 3500-ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0601",
+      "description": "FOLLETO FRESCAPURE 5500-ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT6310",
+      "description": "TRIPTICO OPORTUNIDAD INGLES PAQUETE 25",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT3206",
+      "description": "FOLLETO POWER BLENDER GO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT9002",
+      "description": "LAMINAS DE VENTAS INNOVE",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0094",
+      "description": "MALETA EJECUTIVA - RP LOGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0193",
+      "description": "MALETIN DE NEGOCIOS- RP LOGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0083",
+      "description": "RP COOLER",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0027",
+      "description": "BOLSA DE PRODUCTO- SM",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0028",
+      "description": "BOLSA DE PRODUCTO - MD",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0649",
+      "description": "MANTEL- RP-LOGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0371",
+      "description": "PRENDEDOR EMBAJADOR - RP - LOGO-DORADO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0373",
+      "description": "PRENDEDOR EMBAJADOR-RP LOGO- PLATA",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0375",
+      "description": "PRENDEDOR DE EMPRENDEDOR - RP LOGO",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0376",
+      "description": "PRENDEDOR EMPRENDEDOR - RP LOGO 10PK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0091",
+      "description": "RP DIST JR PIN",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0092",
+      "description": "RP DISTIBUIDOR PIN",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE3000",
+      "description": "KIT DE PRESENTACION FRESCAFLOW",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT5301",
+      "description": "TRIPTICO PORTUNIDAD ROYAL 25PK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2905",
+      "description": "LAMINAS DE VENTA NOVEL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT0025",
+      "description": "FOLLETO PROGRAMA \"4 EN 14\" - ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT5300",
+      "description": "REVISTA OPORTUNIDAD ROYAL - 25 PK",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0430",
+      "description": "ALMOHADILLA - MOUSE LOGO RP PAQUETE 5",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "SE0429",
+      "description": "POP SOCKET NEGRO LOGO RP PAQUETE 10",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2020",
+      "description": "TARJETAS PARA RASPAR ESPAÑOL PAQUETE 100",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT9006",
+      "description": "7 POSTERS - INNOVE- ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    },
+    {
+      "category": "MISC",
+      "code": "LT2493",
+      "description": "PORTA REGALO PAQUETE DE 10 ESPAÑOL",
+      "inPublicCatalog": false,
+      "likelyPartOrInternal": true
+    }
+  ]
+}
