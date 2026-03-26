@@ -138,6 +138,7 @@
                 <span>Donde quieres recibirlos tambien</span>
                 <select name="type" data-lead-destination-type>
                   <option value="carpeta_privada">Solo mi carpeta privada</option>
+                  <option value="correo_personal">Mandarme copia a mi correo</option>
                   <option value="google_sheets">Google Sheets / Apps Script</option>
                   <option value="webhook_crm">Webhook / CRM</option>
                 </select>
@@ -155,7 +156,17 @@
                   />
                 </label>
 
-                <label class="native-lead-field">
+                <label class="native-lead-field" data-lead-destination-email-field hidden>
+                  <span>Correo donde quieres recibirlos</span>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="tucorreo@gmail.com"
+                    data-lead-destination-email
+                  />
+                </label>
+
+                <label class="native-lead-field" data-lead-destination-url-field>
                   <span>URL del destino</span>
                   <input
                     type="url"
@@ -174,8 +185,8 @@
             </form>
 
             <p class="mini-note">
-              Si eliges Google Sheets o CRM, el sistema intentara mandar ahi cada lead nuevo, ademas de guardarlo en tu
-              carpeta.
+              Si eliges correo, Google Sheets o CRM, el sistema intentara mandar ahi cada lead nuevo, ademas de
+              guardarlo en tu carpeta.
             </p>
           </article>
 

@@ -36,6 +36,8 @@ const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim
 const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
+const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
+const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -224,6 +226,7 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   leadDestinationType: { type: String, default: "carpeta_privada" },
   leadDestinationLabel: String,
   leadDestinationUrl: String,
+  leadDestinationEmail: String,
   leadDestinationUpdatedAt: Date,
   lastQuestion: String,
   lastCoachReply: String,
@@ -825,25 +828,31 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
 
 function normalizarCoachLeadDestinationType(type = "") {
   const value = String(type || "").trim().toLowerCase();
-  const validTypes = ["carpeta_privada", "google_sheets", "webhook_crm"];
+  const validTypes = ["carpeta_privada", "google_sheets", "webhook_crm", "correo_personal"];
   return validTypes.includes(value) ? value : "carpeta_privada";
 }
 
 function limpiarCoachLeadDestination(profileDoc = null) {
   const type = normalizarCoachLeadDestinationType(profileDoc?.leadDestinationType || "carpeta_privada");
   const url = limpiarUrlExterna(profileDoc?.leadDestinationUrl || "");
+  const email = normalizarEmail(profileDoc?.leadDestinationEmail || "");
   const label = String(profileDoc?.leadDestinationLabel || "").trim().slice(0, 80);
   const destinationLabels = {
     carpeta_privada: "Solo mi carpeta privada",
     google_sheets: "Google Sheets",
-    webhook_crm: "Webhook / CRM"
+    webhook_crm: "Webhook / CRM",
+    correo_personal: "Mi correo personal"
   };
 
   return {
     type,
     label: label || destinationLabels[type],
     url,
-    enabled: Boolean(type !== "carpeta_privada" && url),
+    email,
+    enabled:
+      type === "correo_personal"
+        ? Boolean(email)
+        : Boolean(type !== "carpeta_privada" && url),
     updatedAt: profileDoc?.leadDestinationUpdatedAt || null
   };
 }
@@ -881,10 +890,135 @@ function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destinat
   };
 }
 
+function construirCorreoLeadCoach(userDoc = null, lead = null, destination = null) {
+  const ownerName = userDoc?.name || "Distribuidor";
+  const leadName = lead?.fullName || "Lead nuevo";
+  const subject = `Nuevo lead para ${ownerName}: ${leadName}`;
+  const nextActionCopy = lead?.nextAction ? String(lead.nextAction).replace(/_/g, " ") : "sin proxima accion";
+  const nextActionAtCopy = lead?.nextActionAt ? new Date(lead.nextActionAt).toLocaleString("es-US") : "sin fecha";
+  const lines = [
+    `Hola ${ownerName},`,
+    "",
+    "Te acaba de entrar un lead nuevo en Agustin 2.0 Coach.",
+    "",
+    `Nombre: ${lead?.fullName || "Sin nombre"}`,
+    `Telefono: ${lead?.phone || "Sin telefono"}`,
+    `Correo: ${lead?.email || "Sin correo"}`,
+    `Ciudad: ${lead?.city || "Sin ciudad"}`,
+    `ZIP Code: ${lead?.zipCode || "Sin ZIP"}`,
+    `Interes: ${lead?.interest || "Sin interes"}`,
+    `Fuente: ${lead?.source || "Sin fuente"}`,
+    `Estado: ${lead?.status || "nuevo"}`,
+    `Proxima accion: ${nextActionCopy}`,
+    `Cuando: ${nextActionAtCopy}`,
+    "",
+    `Resumen: ${lead?.summary || "Sin resumen"}`,
+    "",
+    `Notas: ${lead?.notes || "Sin notas"}`,
+    "",
+    "El lead tambien quedo guardado en tu carpeta privada dentro del Coach."
+  ];
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a">
+      <h2 style="margin:0 0 12px">Nuevo lead para ${escapeXml(ownerName)}</h2>
+      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar un lead nuevo en Agustin 2.0 Coach.</p>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Nombre</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.fullName || "Sin nombre")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.phone || "Sin telefono")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Correo</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.email || "Sin correo")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Ciudad</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.city || "Sin ciudad")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>ZIP Code</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.zipCode || "Sin ZIP")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Interes</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.interest || "Sin interes")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Fuente</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.source || "Sin fuente")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Estado</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.status || "nuevo")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Proxima accion</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(nextActionCopy)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Cuando</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(nextActionAtCopy)}</td></tr>
+      </table>
+      <p style="margin:18px 0 0"><strong>Resumen:</strong> ${escapeXml(lead?.summary || "Sin resumen")}</p>
+      <p style="margin:10px 0 0"><strong>Notas:</strong> ${escapeXml(lead?.notes || "Sin notas")}</p>
+      <p style="margin:18px 0 0;color:#475569">Este lead tambien quedo guardado en tu carpeta privada dentro del Coach.</p>
+    </div>
+  `;
+
+  return {
+    subject,
+    text: lines.join("\n"),
+    html,
+    to: destination?.email || ""
+  };
+}
+
+async function enviarCorreoLeadCoach(userDoc = null, lead = null, destination = null) {
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return {
+      attempted: true,
+      delivered: false,
+      destination,
+      error: "El correo del sistema todavia no esta configurado."
+    };
+  }
+
+  if (!destination?.email) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination,
+      error: "No hay correo destino configurado."
+    };
+  }
+
+  const emailPayload = construirCorreoLeadCoach(userDoc, lead, destination);
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: RESEND_FROM_EMAIL,
+      to: [emailPayload.to],
+      subject: emailPayload.subject,
+      text: emailPayload.text,
+      html: emailPayload.html
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      delivered: false,
+      destination,
+      status: response.status,
+      error: errorData?.message || `Correo respondio ${response.status}`
+    };
+  }
+
+  return {
+    attempted: true,
+    delivered: true,
+    destination,
+    status: response.status
+  };
+}
+
 async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
-  if (!destination.enabled || !destination.url || !lead) {
+  if (!destination.enabled || !lead) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  if (destination.type === "correo_personal") {
+    return enviarCorreoLeadCoach(userDoc, lead, destination);
+  }
+
+  if (!destination.url) {
     return {
       attempted: false,
       delivered: false,
@@ -5783,8 +5917,13 @@ app.put("/api/coach/lead-destination", async (req, res) => {
   const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
   const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
   const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  const nextEmail = normalizarEmail(req.body?.email || "");
 
-  if (nextType !== "carpeta_privada" && !nextUrl) {
+  if (nextType === "correo_personal" && !nextEmail) {
+    return responderCoachError(res, 400, "Pon el correo donde quieres recibir tus leads.");
+  }
+
+  if (["google_sheets", "webhook_crm"].includes(nextType) && !nextUrl) {
     return responderCoachError(res, 400, "Pon la URL de tu destino para guardar esta conexion.");
   }
 
@@ -5805,7 +5944,8 @@ app.put("/api/coach/lead-destination", async (req, res) => {
     profileDoc.subscriptionStatus = obtenerCoachStatusVisible(auth.user);
     profileDoc.leadDestinationType = nextType;
     profileDoc.leadDestinationLabel = nextLabel;
-    profileDoc.leadDestinationUrl = nextType === "carpeta_privada" ? "" : nextUrl;
+    profileDoc.leadDestinationUrl = ["google_sheets", "webhook_crm"].includes(nextType) ? nextUrl : "";
+    profileDoc.leadDestinationEmail = nextType === "correo_personal" ? nextEmail : "";
     profileDoc.leadDestinationUpdatedAt = now;
     profileDoc.updatedAt = now;
     await profileDoc.save();

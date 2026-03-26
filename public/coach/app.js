@@ -47,6 +47,7 @@ const COACH_LEAD_SOURCE_LABELS = {
 };
 const COACH_LEAD_DESTINATION_LABELS = {
   carpeta_privada: "Solo mi carpeta privada",
+  correo_personal: "Mi correo personal",
   google_sheets: "Google Sheets / Apps Script",
   webhook_crm: "Webhook / CRM"
 };
@@ -911,13 +912,16 @@ function initLeadDestinationSettings(initialDestination = null) {
   const form = document.querySelector("[data-lead-destination-form]");
   const typeSelect = document.querySelector("[data-lead-destination-type]");
   const labelInput = document.querySelector("[data-lead-destination-label]");
+  const emailInput = document.querySelector("[data-lead-destination-email]");
   const urlInput = document.querySelector("[data-lead-destination-url]");
   const extraWrap = document.querySelector("[data-lead-destination-extra]");
+  const emailField = document.querySelector("[data-lead-destination-email-field]");
+  const urlField = document.querySelector("[data-lead-destination-url-field]");
   const currentNode = document.querySelector("[data-lead-destination-current]");
   const feedbackNode = document.querySelector("[data-lead-destination-feedback]");
   const saveButton = document.querySelector("[data-lead-destination-save]");
 
-  if (!form || !typeSelect || !labelInput || !urlInput || !extraWrap || !currentNode) {
+  if (!form || !typeSelect || !labelInput || !emailInput || !urlInput || !extraWrap || !currentNode) {
     return;
   }
 
@@ -930,6 +934,14 @@ function initLeadDestinationSettings(initialDestination = null) {
       return "Tus leads viven solo en tu carpeta privada por ahora.";
     }
 
+    if (type === "correo_personal") {
+      if (!safeDestination.email) {
+        return "Tu destino actual es tu correo personal, pero todavia falta el correo.";
+      }
+
+      return `Tus leads se guardan en tu carpeta y tambien te llegan a ${safeDestination.email}.`;
+    }
+
     if (!safeDestination.url) {
       return `Tu destino actual es ${baseLabel}, pero todavia falta la URL.`;
     }
@@ -940,16 +952,30 @@ function initLeadDestinationSettings(initialDestination = null) {
   const syncExtraFields = () => {
     const type = typeSelect.value || "carpeta_privada";
     const needsExtra = type !== "carpeta_privada";
+    const needsEmail = type === "correo_personal";
+    const needsUrl = type === "google_sheets" || type === "webhook_crm";
     extraWrap.hidden = !needsExtra;
-    urlInput.required = needsExtra;
+    if (emailField) {
+      emailField.hidden = !needsEmail;
+    }
+    if (urlField) {
+      urlField.hidden = !needsUrl;
+    }
+    emailInput.required = needsEmail;
+    urlInput.required = needsUrl;
     labelInput.placeholder =
-      type === "google_sheets" ? "Ej. Mi hoja de rifa" : "Ej. Mi GoHighLevel o Mi CRM";
+      type === "google_sheets"
+        ? "Ej. Mi hoja de rifa"
+        : type === "correo_personal"
+          ? "Ej. Correo de trabajo"
+          : "Ej. Mi GoHighLevel o Mi CRM";
   };
 
   const applyDestination = destination => {
     const safeDestination = destination || { type: "carpeta_privada", label: "", url: "" };
     typeSelect.value = safeDestination.type || "carpeta_privada";
     labelInput.value = safeDestination.label && safeDestination.type !== "carpeta_privada" ? safeDestination.label : "";
+    emailInput.value = safeDestination.email || "";
     urlInput.value = safeDestination.url || "";
     currentNode.textContent = buildSummary(safeDestination);
     syncExtraFields();
@@ -973,6 +999,7 @@ function initLeadDestinationSettings(initialDestination = null) {
         body: {
           type: typeSelect.value,
           label: labelInput.value,
+          email: emailInput.value,
           url: urlInput.value
         }
       });
