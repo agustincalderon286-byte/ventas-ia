@@ -475,9 +475,10 @@ async function registerChefServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("/chef/sw.js", {
+    const registration = await navigator.serviceWorker.register("/chef/sw.js", {
       scope: "/chef/"
     });
+    registration.update().catch(() => {});
   } catch (error) {
     // noop
   }

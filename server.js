@@ -3466,7 +3466,7 @@ REGLAS DE RESPUESTA:
 PRECIOS:
 - No des precios, mensualidades ni cotizaciones exactas desde el Chef
 - Si preguntan precio, promociones o cuanto cuesta, di que para precios es mejor hablar con un distribuidor autorizado
-- Cuando ayude, ofrece seguir por WhatsApp o pedir una llamada con un distribuidor autorizado
+- Cuando ayude, ofrece pedir una llamada con un distribuidor autorizado
 
 VENTAS:
 - Primero llamada informativa, despues cita informativa
@@ -4100,6 +4100,7 @@ function construirContextoEstaticoCoach(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   const contextoBase = [];
   const temaCoach = detectarTemaCoach(preguntaNormalizada);
+  const preciosRelevantesCoach = temaCoach.precio ? construirPreciosRelevantesCoach(pregunta) : null;
 
   contextoBase.push(`
 GUIA DEL COACH:
@@ -4124,15 +4125,20 @@ FORMULA INTERNA DE PRECIOS DEL COACH:
 - mensualidad = total * 5%
 - si es paquete, suma primero las bases y luego aplica la formula al total base
 - no expliques la formula salvo que te la pidan
+- no uses costos internos, piezas sueltas ni listas de partes para cotizar productos
 `);
     contextoBase.push(
-      construirBloquePrompt("PRECIOS", preciosCatalogo, {
-        maxArrayItems: 10,
+      construirBloquePrompt("PRECIOS_RELEVANTES", preciosRelevantesCoach?.coincidencias || [], {
+        maxArrayItems: 5,
         maxObjectKeys: 8,
         maxDepth: 2,
         maxStringLength: 140
       })
     );
+    contextoBase.push(`
+GUIA_PRECIO_RELEVANTE:
+${preciosRelevantesCoach?.guidance || "- Si no encuentras el producto exacto, pide codigo o nombre exacto y no inventes precio."}
+`);
     contextoBase.push(
       construirBloquePrompt("PAGOS", opcionesPagoRoyalPrestige, {
         maxArrayItems: 8,
@@ -4355,7 +4361,225 @@ function normalizarTextoBusquedaCoach(value = "") {
   return String(value || "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, " ");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .trim();
+}
+
+function tokenizarTextoBusquedaCoach(value = "") {
+  return normalizarTextoBusquedaCoach(value)
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(Boolean);
+}
+
+function obtenerCodigoPrecioCatalogo(item = {}) {
+  return String(item?.["Codigo Del Producto"] || item?.codigo || item?.code || "")
+    .trim()
+    .toUpperCase();
+}
+
+function obtenerNombrePrecioCatalogo(item = {}) {
+  return String(item?.["Nombre Del Producto NOVEL"] || item?.nombre || item?.descripcion || "").trim();
+}
+
+function obtenerPrecioBaseCatalogo(item = {}) {
+  const precio = Number(item?.Precio ?? item?.precio);
+  return Number.isFinite(precio) ? precio : null;
+}
+
+function construirPreciosRelevantesCoach(pregunta = "") {
+  if (!Array.isArray(preciosCatalogo) || !preciosCatalogo.length) {
+    return {
+      coincidencias: [],
+      guidance: "- No se pudo cargar la lista de catalogo. No inventes precios."
+    };
+  }
+
+  const stopwords = new Set([
+    "precio",
+    "precios",
+    "cuanto",
+    "cuesta",
+    "costo",
+    "costos",
+    "pago",
+    "pagos",
+    "mensual",
+    "mensualidad",
+    "mensualidades",
+    "plan",
+    "planes",
+    "catalogo",
+    "producto",
+    "productos",
+    "royal",
+    "prestige",
+    "quiero",
+    "saber",
+    "dime",
+    "dar",
+    "dame",
+    "del",
+    "de",
+    "la",
+    "el",
+    "los",
+    "las",
+    "por",
+    "para",
+    "una",
+    "uno",
+    "que",
+    "con"
+  ]);
+  const preguntaNormalizada = normalizarTextoBusquedaCoach(pregunta);
+  const tokens = tokenizarTextoBusquedaCoach(pregunta).filter(token => /^\d+$/.test(token) || !stopwords.has(token));
+  const buscaSet = /\bset\b/.test(preguntaNormalizada);
+  const buscaSistema = /\bsistema\b/.test(preguntaNormalizada);
+  const buscaTapa = /\btapa\b/.test(preguntaNormalizada);
+  const buscaOlla = /\bolla\b/.test(preguntaNormalizada);
+  const buscaComal = /\bcomal\b/.test(preguntaNormalizada);
+  const buscaSarten = /\bsarten\b/.test(preguntaNormalizada);
+  const buscaCuchillo = /\bcuchill(?:o|os)\b/.test(preguntaNormalizada);
+  const piezasMatch = preguntaNormalizada.match(/\b(\d+)\s+piezas\b/);
+  const piezasBuscadas = piezasMatch ? `${piezasMatch[1]} piezas` : "";
+
+  const coincidencias = preciosCatalogo
+    .map((item, index) => {
+      const codigo = obtenerCodigoPrecioCatalogo(item);
+      const nombre = obtenerNombrePrecioCatalogo(item);
+      const precio = obtenerPrecioBaseCatalogo(item);
+
+      if (!codigo || !nombre || !Number.isFinite(precio)) {
+        return null;
+      }
+
+      const codigoNormalizado = normalizarTextoBusquedaCoach(codigo);
+      const nombreNormalizado = normalizarTextoBusquedaCoach(nombre);
+      const corpus = `${codigoNormalizado} ${nombreNormalizado}`.trim();
+      const tokensProducto = new Set(tokenizarTextoBusquedaCoach(corpus));
+      const piezasProductoMatch = nombreNormalizado.match(/\b(\d+)\s+piezas\b/);
+      const piezasProducto = piezasProductoMatch ? `${piezasProductoMatch[1]} piezas` : "";
+      let score = 0;
+
+      if (codigoNormalizado && preguntaNormalizada.includes(codigoNormalizado)) {
+        score += 120;
+      }
+
+      if (nombreNormalizado && preguntaNormalizada === nombreNormalizado) {
+        score += 100;
+      }
+
+      if (nombreNormalizado && preguntaNormalizada.includes(nombreNormalizado) && preguntaNormalizada.length > 5) {
+        score += 45;
+      }
+
+      if (preguntaNormalizada.includes("chocolatera") && nombreNormalizado.includes("chocolatera")) {
+        score += 80;
+      }
+
+      if (piezasBuscadas && nombreNormalizado.includes(piezasBuscadas)) {
+        score += 35;
+      }
+
+      if (buscaSet && /\bset\b/.test(nombreNormalizado)) {
+        score += 20;
+      }
+
+      if (buscaSet && !/\bset\b/.test(nombreNormalizado) && /\bsistema\b/.test(nombreNormalizado)) {
+        score += 14;
+      }
+
+      if (buscaSistema && /\bsistema\b/.test(nombreNormalizado)) {
+        score += 16;
+      }
+
+      for (const token of tokens) {
+        if (codigoNormalizado === token) {
+          score += 80;
+          continue;
+        }
+
+        if (tokensProducto.has(token)) {
+          score += /^\d+$/.test(token) ? 10 : token.length >= 5 ? 8 : 5;
+        }
+      }
+
+      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaTapa && /\btapa\b/.test(nombreNormalizado)) {
+        score -= 30;
+      }
+
+      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaOlla && /\bolla\b/.test(nombreNormalizado)) {
+        score -= 18;
+      }
+
+      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaComal && /\bcomal\b/.test(nombreNormalizado)) {
+        score -= 18;
+      }
+
+      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaSarten && /\bsarten\b/.test(nombreNormalizado)) {
+        score -= 18;
+      }
+
+      if (piezasBuscadas && piezasProducto && piezasProducto !== piezasBuscadas) {
+        score -= 35;
+      }
+
+      if (
+        (buscaSet || buscaSistema || piezasBuscadas) &&
+        !buscaCuchillo &&
+        /(?:\bcuchill(?:o|os)\b|\bjuego\b)/.test(nombreNormalizado)
+      ) {
+        score -= 25;
+      }
+
+      if (/folleto|repuesto|kit|manual/i.test(nombreNormalizado)) {
+        score -= 25;
+      }
+
+      return {
+        index,
+        codigo,
+        nombre,
+        precio,
+        score
+      };
+    })
+    .filter(item => item && item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      return a.index - b.index;
+    })
+    .slice(0, 5)
+    .map(item => {
+      const calculo = calcularPagoCoach(item.precio);
+      return {
+        codigo_producto: item.codigo,
+        nombre_producto: item.nombre,
+        precio_base_catalogo: item.precio,
+        total_estimado_coach: calculo.total,
+        mensualidad_estimada_coach: calculo.mensualidad
+      };
+    });
+
+  if (coincidencias.length) {
+    return {
+      coincidencias,
+      guidance:
+        "- Usa solo estos productos encontrados del catalogo publico para cotizar. Si ves varias coincidencias parecidas, dilo antes de cotizar una sola. Si el nombre exacto no aparece aqui, pide codigo o nombre exacto y no inventes precio."
+    };
+  }
+
+  return {
+    coincidencias: [],
+    guidance: extraerMontosCoach(pregunta).length
+      ? "- No se detecto un producto exacto del catalogo. Si ya te dieron una base numerica, usa CALCULOS DETECTADOS y aclara que la base vino del distribuidor."
+      : "- No se detecto un producto exacto del catalogo. Pide el codigo o nombre exacto antes de cotizar y no inventes precio."
+  };
 }
 
 function extraerPalabrasClaveCoach(pregunta = "") {
@@ -4542,7 +4766,7 @@ function construirContextoModoPrompt(modo = "chef", coachUser = null) {
     const chefCalendlyPrompt = limpiarUrlExterna(CALENDLY_CHEF_URL)
       ? `\nCALENDLY DISPONIBLE:\n- si el usuario quiere una llamada, apoyo humano o agendar, puedes compartir este link exacto: ${limpiarUrlExterna(CALENDLY_CHEF_URL)}\n- no lo fuerces en cada respuesta; usalo solo cuando sea natural\n`
       : "";
-    const chefPricingPrompt = `\nPRECIOS Y COTIZACION:\n- no compartas precios, mensualidades ni cotizaciones exactas desde el Chef\n- si preguntan por precio, promociones o cuanto cuesta, explica que para precios es mejor hablar con un distribuidor autorizado\n- cuando convenga, invita a pedir una llamada o a contactar con un distribuidor autorizado\n`;
+    const chefPricingPrompt = `\nPRECIOS Y COTIZACION:\n- no compartas precios, mensualidades ni cotizaciones exactas desde el Chef\n- si preguntan por precio, promociones o cuanto cuesta, explica que para precios es mejor hablar con un distribuidor autorizado\n- cuando convenga, invita a pedir una llamada con un distribuidor autorizado\n`;
     return `
 MODO ACTIVO:
 - modo: chef

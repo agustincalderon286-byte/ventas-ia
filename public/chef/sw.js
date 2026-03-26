@@ -1,4 +1,4 @@
-const CACHE_NAME = "agustin-chef-shell-v1";
+const CACHE_NAME = "agustin-chef-shell-v2";
 const APP_SHELL = [
   "/chef/",
   "/chef/index.html",
@@ -40,6 +40,32 @@ self.addEventListener("fetch", event => {
   }
 
   if (requestUrl.pathname.startsWith("/chat") || requestUrl.pathname.startsWith("/api/")) {
+    return;
+  }
+
+  const isNavigationRequest =
+    event.request.mode === "navigate" || event.request.destination === "document";
+
+  if (isNavigationRequest) {
+    event.respondWith(
+      fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          }
+
+          return networkResponse;
+        })
+        .catch(async () => {
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          return caches.match("/chef/index.html");
+        })
+    );
     return;
   }
 
