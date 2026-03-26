@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Torre de Control | Agustin 2.0</title>
+    <meta
+      name="description"
+      content="Panel interno privado para revisar Chef, Coach, WhatsApp y leads listos para llamada."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/control/styles.css" />
+  </head>
+  <body>
+    <div class="control-shell">
+      <header class="control-nav">
+        <div class="control-brand">
+          <div class="control-brand-badge">📡</div>
+          <div>
+            <div class="eyebrow">Area privada</div>
+            <h1>Torre de control</h1>
+            <p>Chef, Coach, WhatsApp y leads en un mismo tablero interno.</p>
+          </div>
+        </div>
+
+        <nav class="control-actions">
+          <a class="ghost-button" href="/coach/app/">Volver al Coach</a>
+          <a class="ghost-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
+        </nav>
+      </header>
+
+      <main class="control-content">
+        <section class="hero-grid">
+          <article class="hero-card">
+            <span class="eyebrow">Vision rapida</span>
+            <h2>Lo esencial para decidir hoy</h2>
+            <p>
+              Este panel junta actividad real del Chef, uso del Coach, respuestas de WhatsApp y leads listos para
+              llamada, sin meter ruido ni tocar lo publico.
+            </p>
+            <p class="mini-note" data-control-updated>Actualizando...</p>
+          </article>
+
+          <div class="kpi-grid">
+            <article class="kpi-card">
+              <strong data-kpi-chef>0</strong>
+              <span>Familias guiadas por Chef</span>
+            </article>
+            <article class="kpi-card">
+              <strong data-kpi-coach>0</strong>
+              <span>Distribuidores con historial</span>
+            </article>
+            <article class="kpi-card">
+              <strong data-kpi-wa-today>0</strong>
+              <span>Replies WhatsApp hoy</span>
+            </article>
+            <article class="kpi-card">
+              <strong data-kpi-ready>0</strong>
+              <span>Leads listos para llamada</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel-grid">
+          <article class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">Chef</div>
+                <h3>Pulso publico</h3>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="mini-stat">
+                <strong data-chef-active-today>0</strong>
+                <span>Activos hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-chef-active-week>0</strong>
+                <span>Activos 7 dias</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-chef-questions>0</strong>
+                <span>Preguntas totales</span>
+              </div>
+            </div>
+
+            <div>
+              <strong class="section-label">Temas mas tocados</strong>
+              <div class="tag-list" data-chef-topics></div>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">Coach</div>
+                <h3>Pulso interno</h3>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="mini-stat">
+                <strong data-coach-active-today>0</strong>
+                <span>Activos hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-coach-active-week>0</strong>
+                <span>Activos 7 dias</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-coach-questions>0</strong>
+                <span>Preguntas totales</span>
+              </div>
+            </div>
+
+            <div class="stack">
+              <div>
+                <strong class="section-label">Temas</strong>
+                <div class="tag-list" data-coach-topics></div>
+              </div>
+              <div>
+                <strong class="section-label">Objeciones</strong>
+                <div class="tag-list" data-coach-objections></div>
+              </div>
+              <div>
+                <strong class="section-label">Etapas</strong>
+                <div class="tag-list" data-coach-stages></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel-card panel-card-wide">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">WhatsApp</div>
+                <h3>Respuestas recientes</h3>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="mini-stat">
+                <strong data-wa-replies-today>0</strong>
+                <span>Replies hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-wa-replies-week>0</strong>
+                <span>Replies 7 dias</span>
+              </div>
+            </div>
+
+            <div>
+              <strong class="section-label">Temas detectados</strong>
+              <div class="tag-list" data-wa-topics></div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Telefono</th>
+                    <th>Mensaje</th>
+                    <th>Intento</th>
+                  </tr>
+                </thead>
+                <tbody data-wa-recent-table>
+                  <tr>
+                    <td colspan="4">Sin respuestas todavia.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel-card panel-card-wide">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">Leads</div>
+                <h3>Listos para mover</h3>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="mini-stat">
+                <strong data-leads-total>0</strong>
+                <span>Perfiles guardados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-leads-interested>0</strong>
+                <span>Interesados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-leads-customers>0</strong>
+                <span>Clientes</span>
+              </div>
+            </div>
+
+            <div>
+              <strong class="section-label">Productos mas repetidos</strong>
+              <div class="tag-list" data-leads-products></div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Telefono</th>
+                    <th>Llamar</th>
+                    <th>Estado</th>
+                    <th>Resumen</th>
+                  </tr>
+                </thead>
+                <tbody data-leads-ready-table>
+                  <tr>
+                    <td colspan="5">Sin leads listos por ahora.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/control/app.js"></script>
+  </body>
+</html>

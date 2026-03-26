@@ -47,6 +47,10 @@ const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || 
   .split(",")
   .map(email => normalizarEmail(email))
   .filter(Boolean);
+const CONTROL_TOWER_ACCESS_EMAILS = String(process.env.CONTROL_TOWER_ACCESS_EMAILS || "")
+  .split(",")
+  .map(email => normalizarEmail(email))
+  .filter(Boolean);
 const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
@@ -627,6 +631,20 @@ function coachTieneAccesoDePrueba(email = "") {
   return COACH_TEST_ACCESS_EMAILS.includes(normalizarEmail(email));
 }
 
+function usuarioPuedeVerTorreControl(userDoc = null) {
+  if (!userDoc) {
+    return false;
+  }
+
+  const email = normalizarEmail(userDoc.email);
+
+  if (CONTROL_TOWER_ACCESS_EMAILS.length) {
+    return CONTROL_TOWER_ACCESS_EMAILS.includes(email);
+  }
+
+  return coachTieneAccesoDePrueba(email);
+}
+
 function coachTieneAccesoTotal(userDoc = null) {
   if (!userDoc) {
     return false;
@@ -852,6 +870,175 @@ async function obtenerCoachNetworkSummary() {
     topTopics: mezclarMetricasCoach(analyticsDocs, "topTopics", 5),
     topObjections: mezclarMetricasCoach(analyticsDocs, "topObjections", 5),
     topStages: mezclarMetricasCoach(analyticsDocs, "topStages", 5)
+  };
+}
+
+function limpiarTagControl(label = "") {
+  const limpio = cleanText(label);
+
+  if (!limpio || /^canal:/i.test(limpio)) {
+    return "";
+  }
+
+  return limpio;
+}
+
+async function obtenerControlTowerStats() {
+  const ahora = new Date();
+  const inicioHoy = new Date(ahora);
+  inicioHoy.setHours(0, 0, 0, 0);
+  const hace7Dias = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const whatsappBaseQuery = {
+    sessionId: /^wa-session-/,
+    role: "user"
+  };
+
+  const [
+    chefSummary,
+    coachSummary,
+    whatsappTodayIds,
+    whatsapp7DayIds,
+    recentWhatsAppReplies,
+    whatsappTopics,
+    totalProfiles,
+    interestedProfiles,
+    readyToCallProfiles,
+    customerProfiles,
+    recentReadyLeads,
+    topInterestProducts
+  ] = await Promise.all([
+    obtenerChefPublicStats(),
+    obtenerCoachNetworkSummary(),
+    Message.distinct("visitorId", {
+      ...whatsappBaseQuery,
+      createdAt: { $gte: inicioHoy }
+    }),
+    Message.distinct("visitorId", {
+      ...whatsappBaseQuery,
+      createdAt: { $gte: hace7Dias }
+    }),
+    Message.find(whatsappBaseQuery, {
+      sessionId: 1,
+      visitorId: 1,
+      content: 1,
+      intent: 1,
+      detectedTopics: 1,
+      createdAt: 1
+    })
+      .where("createdAt")
+      .gte(hace7Dias)
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean(),
+    Message.aggregate([
+      {
+        $match: {
+          ...whatsappBaseQuery,
+          createdAt: { $gte: hace7Dias },
+          detectedTopics: { $exists: true, $ne: [] }
+        }
+      },
+      { $unwind: "$detectedTopics" },
+      { $match: { detectedTopics: { $type: "string", $ne: "" } } },
+      { $group: { _id: "$detectedTopics", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 }
+    ]),
+    Profile.countDocuments({ conversationCount: { $gt: 0 } }),
+    Profile.countDocuments({ leadStatus: "interesado" }),
+    Profile.countDocuments({
+      quiereLlamada: "si",
+      phone: { $exists: true, $ne: "" },
+      bestCallDay: { $exists: true, $ne: "" },
+      bestCallTime: { $exists: true, $ne: "" }
+    }),
+    Profile.countDocuments({ leadStatus: "cliente" }),
+    Profile.find(
+      {
+        quiereLlamada: "si",
+        phone: { $exists: true, $ne: "" }
+      },
+      {
+        name: 1,
+        phone: 1,
+        leadStatus: 1,
+        bestCallDay: 1,
+        bestCallTime: 1,
+        profileSummary: 1,
+        lastInteractionAt: 1,
+        productosInteres: 1
+      }
+    )
+      .sort({ lastInteractionAt: -1 })
+      .limit(10)
+      .lean(),
+    Profile.aggregate([
+      {
+        $project: {
+          productos: {
+            $setUnion: [
+              { $ifNull: ["$productosInteres", []] },
+              { $ifNull: ["$productos", []] }
+            ]
+          }
+        }
+      },
+      { $unwind: "$productos" },
+      { $match: { productos: { $type: "string", $ne: "" } } },
+      { $group: { _id: "$productos", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 }
+    ])
+  ]);
+
+  return {
+    updatedAt: ahora.toISOString(),
+    overview: {
+      chefFamiliesGuided: chefSummary.familiasGuiadas,
+      coachDistributors: coachSummary.totalDistributors,
+      coachActive7Days: coachSummary.activeLast7Days,
+      whatsappRepliesToday: whatsappTodayIds.length,
+      whatsappReplies7Days: whatsapp7DayIds.length,
+      callsReady: readyToCallProfiles
+    },
+    chef: chefSummary,
+    coach: coachSummary,
+    whatsapp: {
+      repliesToday: whatsappTodayIds.length,
+      replies7Days: whatsapp7DayIds.length,
+      recentReplies: recentWhatsAppReplies.map(item => ({
+        sessionId: item.sessionId || "",
+        phone: (item.sessionId || "").replace(/^wa-session-/, ""),
+        content: truncarTextoPrompt(item.content || "", 200),
+        intent: item.intent || "",
+        topics: (Array.isArray(item.detectedTopics) ? item.detectedTopics : [])
+          .map(limpiarTagControl)
+          .filter(Boolean),
+        createdAt: item.createdAt || null
+      })),
+      topTopics: whatsappTopics
+        .map(item => limpiarTagControl(item._id))
+        .filter(Boolean)
+    },
+    leads: {
+      totalProfiles,
+      interestedProfiles,
+      readyToCallProfiles,
+      customerProfiles,
+      topInterestProducts: topInterestProducts
+        .map(item => ({ label: item._id, count: item.count }))
+        .filter(item => item.label),
+      recentReadyLeads: recentReadyLeads.map(item => ({
+        name: item.name || "Sin nombre",
+        phone: item.phone || "",
+        leadStatus: item.leadStatus || "sin estado",
+        bestCallDay: item.bestCallDay || "",
+        bestCallTime: item.bestCallTime || "",
+        products: Array.isArray(item.productosInteres) ? item.productosInteres : [],
+        summary: truncarTextoPrompt(item.profileSummary || "", 220),
+        lastInteractionAt: item.lastInteractionAt || null
+      }))
+    }
   };
 }
 
@@ -1682,6 +1869,21 @@ async function requireCoachActivo(req, res) {
 
   if (!coachTieneAccesoTotal(auth.user)) {
     responderCoachError(res, 403, "Tu cuenta no tiene una suscripcion activa.");
+    return null;
+  }
+
+  return auth;
+}
+
+async function requireControlTowerAccess(req, res) {
+  const auth = await requireCoachUser(req, res);
+
+  if (!auth) {
+    return null;
+  }
+
+  if (!usuarioPuedeVerTorreControl(auth.user)) {
+    responderCoachError(res, 403, "Esta area privada solo esta disponible para administracion.");
     return null;
   }
 
@@ -5356,6 +5558,36 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   }
 
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
+});
+
+app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, res) => {
+  const auth = await obtenerCoachAuth(req);
+
+  if (!auth.user) {
+    return res.redirect("/coach/login/");
+  }
+
+  if (!usuarioPuedeVerTorreControl(auth.user)) {
+    return res.redirect("/coach/app/");
+  }
+
+  res.sendFile(path.join(PRIVATE_DIR, "control-tower.html"));
+});
+
+app.get("/api/control/overview", async (req, res) => {
+  const auth = await requireControlTowerAccess(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const stats = await obtenerControlTowerStats();
+    res.json(stats);
+  } catch (error) {
+    console.error("Error obteniendo torre de control:", error.message);
+    res.status(500).json({ error: "No pude cargar la torre de control." });
+  }
 });
 
 app.get("/api/chef/stats", async (req, res) => {
