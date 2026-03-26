@@ -476,6 +476,12 @@ a {
   margin-bottom: 8px;
 }
 
+.side-card-accent {
+  background:
+    radial-gradient(circle at top right, rgba(241, 185, 95, 0.22), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 248, 235, 0.95) 100%);
+}
+
 .mini-stat-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -490,8 +496,85 @@ a {
   margin-top: 16px;
 }
 
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
 .chef-chat-shell {
   min-width: 0;
+}
+
+.chef-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(7, 23, 49, 0.64);
+  backdrop-filter: blur(10px);
+}
+
+.chef-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.chef-modal-card {
+  position: relative;
+  width: min(960px, 100%);
+  padding: 28px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 250, 255, 0.96));
+  border: 1px solid var(--chef-line);
+  box-shadow: var(--chef-shadow);
+}
+
+.chef-modal-card h3,
+.chef-modal-card p {
+  margin: 0;
+}
+
+.chef-modal-card h3 {
+  margin-top: 14px;
+  font-size: 1.8rem;
+}
+
+.chef-modal-card p {
+  margin-top: 12px;
+}
+
+.chef-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(10, 34, 71, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--chef-navy);
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chef-calendly-frame-wrap {
+  margin-top: 22px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(10, 34, 71, 0.08);
+  background: #ffffff;
+}
+
+.chef-calendly-frame {
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
 }
 
 #chat-container,
@@ -754,6 +837,14 @@ a {
   #chat-container {
     min-height: 680px;
     border-radius: 20px;
+  }
+
+  .chef-modal-card {
+    padding: 22px;
+  }
+
+  .chef-calendly-frame {
+    min-height: 72vh;
   }
 
   #chat-header {

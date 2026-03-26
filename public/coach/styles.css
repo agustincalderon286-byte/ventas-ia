@@ -1135,6 +1135,10 @@ img {
   box-shadow: var(--shadow);
 }
 
+.coach-modal-card-wide {
+  width: min(940px, 100%);
+}
+
 .coach-modal-card h3,
 .coach-modal-card p {
   margin: 0;
@@ -1166,6 +1170,21 @@ img {
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.coach-calendly-frame-wrap {
+  margin-top: 20px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+}
+
+.coach-calendly-frame {
+  width: 100%;
+  min-height: 720px;
+  border: 0;
+  background: #ffffff;
 }
 
 .chef-share-qr {
@@ -1275,5 +1294,9 @@ img {
 
   .coach-modal-card {
     padding: 22px;
+  }
+
+  .coach-calendly-frame {
+    min-height: 640px;
   }
 }

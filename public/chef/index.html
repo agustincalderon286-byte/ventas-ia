@@ -54,6 +54,9 @@
 
             <div class="chef-hero-actions">
               <a class="primary-button" href="#chat-chef">Hablar con Chef</a>
+              <button type="button" class="secondary-button secondary-button-button" data-open-chef-calendly hidden>
+                Agendar llamada
+              </button>
               <button type="button" class="secondary-button secondary-button-button" data-chef-install>
                 Guardar en tu telefono
               </button>
@@ -193,6 +196,17 @@
                 </p>
               </article>
 
+              <article class="side-card side-card-accent" data-chef-calendly-card hidden>
+                <div class="eyebrow">Si prefieres hablar</div>
+                <h3>Agenda una llamada</h3>
+                <p>
+                  Si quieres ayuda mas guiada, abre la agenda y aparta una llamada breve sin salirte de esta pagina.
+                </p>
+                <div class="install-button-row">
+                  <button type="button" class="primary-button" data-open-chef-calendly>Agendar ahora</button>
+                </div>
+              </article>
+
               <article class="side-card">
                 <div class="eyebrow">Actividad viva</div>
                 <h3>La gente si lo usa</h3>
@@ -295,6 +309,34 @@
           </nav>
         </footer>
       </main>
+
+      <div class="chef-modal-backdrop" data-chef-calendly-modal hidden>
+        <div class="chef-modal-card" role="dialog" aria-modal="true" aria-labelledby="chef-calendly-title">
+          <button class="chef-modal-close" type="button" data-close-chef-calendly aria-label="Cerrar">×</button>
+          <div class="eyebrow">Agenda tu llamada</div>
+          <h3 id="chef-calendly-title">Elige el horario que te quede mejor</h3>
+          <p>
+            Si quieres ayuda mas guiada, aqui puedes apartar una llamada breve. Si la agenda no carga bien, abre el
+            enlace directo.
+          </p>
+
+          <div class="chef-calendly-frame-wrap">
+            <iframe
+              class="chef-calendly-frame"
+              data-chef-calendly-frame
+              title="Agenda una llamada con Agustin 2.0 Chef"
+              loading="lazy"
+            ></iframe>
+          </div>
+
+          <div class="dashboard-actions">
+            <a class="secondary-button" href="#" target="_blank" rel="noreferrer" data-chef-calendly-open-link>
+              Abrir Calendly
+            </a>
+            <button class="primary-button" type="button" data-close-chef-calendly>Cerrar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="/chef/app.js"></script>

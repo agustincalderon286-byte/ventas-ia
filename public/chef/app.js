@@ -1,5 +1,6 @@
 const CHAT_API_URL = "/chat";
 const CHEF_STATS_API_URL = "/api/chef/stats";
+const PLATFORM_CONFIG_API_URL = "/api/platform/config";
 const VISITOR_KEY = "agustin-chef-visitor-id";
 const SESSION_KEY = "agustin-chef-session-id";
 
@@ -11,7 +12,14 @@ const statusBadge = document.getElementById("chefStatusBadge");
 const promptButtons = document.querySelectorAll("[data-chef-prompt]");
 const installButtons = document.querySelectorAll("[data-chef-install]");
 const installHintNodes = document.querySelectorAll("[data-chef-install-hint]");
+const chefCalendlyButtons = document.querySelectorAll("[data-open-chef-calendly]");
+const chefCalendlyCard = document.querySelector("[data-chef-calendly-card]");
+const chefCalendlyModal = document.querySelector("[data-chef-calendly-modal]");
+const chefCalendlyCloseButtons = document.querySelectorAll("[data-close-chef-calendly]");
+const chefCalendlyFrame = document.querySelector("[data-chef-calendly-frame]");
+const chefCalendlyOpenLink = document.querySelector("[data-chef-calendly-open-link]");
 let deferredInstallPrompt = null;
+let chefCalendlyUrl = "";
 
 function crearId(prefijo) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -238,6 +246,75 @@ function renderChefStats(stats = {}) {
   );
 }
 
+function buildCalendlyEmbedUrl(url) {
+  try {
+    const calendlyUrl = new URL(url);
+    calendlyUrl.searchParams.set("hide_gdpr_banner", "1");
+    calendlyUrl.searchParams.set("hide_event_type_details", "1");
+    return calendlyUrl.toString();
+  } catch (error) {
+    return url;
+  }
+}
+
+function applyChefCalendlyConfig(config = {}) {
+  chefCalendlyUrl = String(config.calendly?.chefUrl || "").trim();
+  const enabled = Boolean(config.calendly?.chefEnabled && chefCalendlyUrl);
+
+  chefCalendlyButtons.forEach(buttonNode => {
+    buttonNode.hidden = !enabled;
+  });
+
+  if (chefCalendlyCard) {
+    chefCalendlyCard.hidden = !enabled;
+  }
+
+  if (!enabled) {
+    return;
+  }
+
+  if (chefCalendlyFrame) {
+    chefCalendlyFrame.src = buildCalendlyEmbedUrl(chefCalendlyUrl);
+  }
+
+  if (chefCalendlyOpenLink) {
+    chefCalendlyOpenLink.href = chefCalendlyUrl;
+  }
+}
+
+function openChefCalendlyModal() {
+  if (!chefCalendlyModal || !chefCalendlyUrl) {
+    return;
+  }
+
+  chefCalendlyModal.hidden = false;
+}
+
+function closeChefCalendlyModal() {
+  if (!chefCalendlyModal) {
+    return;
+  }
+
+  chefCalendlyModal.hidden = true;
+}
+
+async function loadPlatformConfig() {
+  try {
+    const response = await fetch(PLATFORM_CONFIG_API_URL, {
+      method: "GET"
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "No pude cargar la configuracion.");
+    }
+
+    applyChefCalendlyConfig(data);
+  } catch (error) {
+    applyChefCalendlyConfig();
+  }
+}
+
 async function loadChefStats() {
   try {
     const response = await fetch(CHEF_STATS_API_URL, {
@@ -389,9 +466,34 @@ installButtons.forEach(buttonNode => {
   });
 });
 
+chefCalendlyButtons.forEach(buttonNode => {
+  buttonNode.addEventListener("click", () => {
+    openChefCalendlyModal();
+  });
+});
+
+chefCalendlyCloseButtons.forEach(buttonNode => {
+  buttonNode.addEventListener("click", () => {
+    closeChefCalendlyModal();
+  });
+});
+
+chefCalendlyModal?.addEventListener("click", event => {
+  if (event.target === chefCalendlyModal) {
+    closeChefCalendlyModal();
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && chefCalendlyModal && !chefCalendlyModal.hidden) {
+    closeChefCalendlyModal();
+  }
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   autoResize();
   await registerChefServiceWorker();
+  await loadPlatformConfig();
   syncInstallButtons();
   await loadChefStats();
 });

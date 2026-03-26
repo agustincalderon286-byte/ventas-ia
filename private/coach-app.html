@@ -31,6 +31,7 @@
           <a class="nav-link" href="/coach/">Landing</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
           <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer">Ver Chef</a>
+          <button class="nav-button" data-open-coach-calendly hidden>Agendar llamada</button>
           <button class="nav-button" data-open-chef-share>Compartir Chef</button>
           <button class="nav-button" data-open-billing-portal>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
@@ -88,6 +89,7 @@
 
             <div class="dashboard-actions">
               <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
+              <button class="nav-button" type="button" data-open-coach-calendly hidden>Agendar llamada</button>
               <button class="nav-button" data-open-chef-share>Mostrar QR</button>
             </div>
 
@@ -286,6 +288,34 @@
           </div>
 
           <p class="mini-note" data-chef-share-feedback></p>
+        </div>
+      </div>
+
+      <div class="coach-modal-backdrop" data-coach-calendly-modal hidden>
+        <div class="coach-modal-card coach-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="coach-calendly-title">
+          <button class="coach-modal-close" type="button" data-close-coach-calendly aria-label="Cerrar">×</button>
+          <div class="eyebrow">Agenda una llamada</div>
+          <h3 id="coach-calendly-title">Aparta el horario que te quede mejor</h3>
+          <p>
+            Si quieres una llamada de apoyo o seguimiento, abre la agenda aqui mismo. Si no carga bien, abre el link
+            directo.
+          </p>
+
+          <div class="coach-calendly-frame-wrap">
+            <iframe
+              class="coach-calendly-frame"
+              data-coach-calendly-frame
+              title="Agenda una llamada desde Agustin 2.0 Coach"
+              loading="lazy"
+            ></iframe>
+          </div>
+
+          <div class="dashboard-actions">
+            <a class="secondary-button" href="#" target="_blank" rel="noreferrer" data-coach-calendly-open-link>
+              Abrir Calendly
+            </a>
+            <button class="nav-button" type="button" data-close-coach-calendly>Cerrar</button>
+          </div>
         </div>
       </div>
 
