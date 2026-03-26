@@ -50,6 +50,7 @@ const COACH_PLAN_CONFIG = {
 };
 const ORDER_CALC_PRODUCT_COUNT = 3;
 const DECISION_TOOL_ROW_COUNT = 5;
+const ROYALONE_ORDER_URL = "https://www.royalone.com/";
 const BUYER_PROFILE_OPTIONS = [
   { value: "0", label: "Elige una opcion" },
   { value: "1", label: "Poco" },
@@ -906,6 +907,77 @@ function renderActiveLeadContext(context) {
   });
 }
 
+function buildRoyalOneLeadSummary(context) {
+  const safeContext = context || {};
+  const lines = [];
+
+  if (safeContext.leadName) {
+    lines.push(`Lead: ${safeContext.leadName}`);
+  }
+
+  if (safeContext.leadId) {
+    lines.push(`ID: ${safeContext.leadId}`);
+  }
+
+  if (safeContext.leadTemperature || safeContext.callStatus) {
+    const scoreCopy = [
+      safeContext.leadTemperature ? formatCoachInsightLabel(safeContext.leadTemperature) : "",
+      safeContext.callStatus ? formatCoachInsightLabel(safeContext.callStatus) : ""
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    if (scoreCopy) {
+      lines.push(`Estado: ${scoreCopy}`);
+    }
+  }
+
+  if (safeContext.nextStep) {
+    lines.push(`Siguiente paso: ${formatCoachInsightLabel(safeContext.nextStep)}`);
+  }
+
+  if (safeContext.bestScriptAngle) {
+    lines.push(`Angulo recomendado: ${formatCoachInsightLabel(safeContext.bestScriptAngle)}`);
+  }
+
+  return lines.length ? lines.join("\n") : "Sin lead activo todavia.";
+}
+
+function renderRoyalOneLeadSummary(context) {
+  const safeContext = context || {};
+  const nameCopy = safeContext.leadName
+    ? `${safeContext.leadName}${safeContext.leadId ? ` · Lead ${safeContext.leadId}` : ""}`
+    : "Sin lead activo todavia.";
+  const scoreCopy =
+    safeContext.leadTemperature || safeContext.callStatus
+      ? `${formatCoachInsightLabel(safeContext.leadTemperature || "sin score")} · ${formatCoachInsightLabel(
+          safeContext.callStatus || "sin estado"
+        )}`
+      : "Sin score todavia.";
+  const nextCopy = safeContext.nextStep
+    ? `Siguiente paso: ${formatCoachInsightLabel(safeContext.nextStep)}`
+    : "Sin siguiente paso todavia.";
+  const angleCopy = safeContext.bestScriptAngle
+    ? `Angulo: ${formatCoachInsightLabel(safeContext.bestScriptAngle)}`
+    : "Sin angulo todavia.";
+
+  document.querySelectorAll("[data-royalone-lead-name]").forEach(node => {
+    node.textContent = nameCopy;
+  });
+
+  document.querySelectorAll("[data-royalone-lead-score]").forEach(node => {
+    node.textContent = scoreCopy;
+  });
+
+  document.querySelectorAll("[data-royalone-lead-next]").forEach(node => {
+    node.textContent = nextCopy;
+  });
+
+  document.querySelectorAll("[data-royalone-lead-angle]").forEach(node => {
+    node.textContent = angleCopy;
+  });
+}
+
 function initFaq() {
   document.querySelectorAll(".faq-card").forEach(card => {
     const trigger = card.querySelector(".faq-trigger");
@@ -1180,6 +1252,7 @@ async function initCoachAppPage() {
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  renderRoyalOneLeadSummary(me.activeLeadContext);
   initOrderCalculator();
   initDecisionTool();
   initBuyerProfileTool();
@@ -1205,7 +1278,13 @@ async function initCoachAppPage() {
   const waterCheckInput = document.querySelector("[data-water-check-input]");
   const waterCheckFeedback = document.querySelector("[data-water-check-feedback]");
   const appMessage = document.querySelector("[data-coach-app-message]");
+  const royalOneToggle = document.querySelector("[data-royalone-toggle]");
+  const royalOnePanel = document.querySelector("[data-royalone-panel]");
+  const royalOneCopyButton = document.querySelector("[data-royalone-copy-summary]");
+  const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
+  const royalOneOpenLinks = document.querySelectorAll("[data-royalone-open-link]");
   const chefShareUrl = `${window.location.origin}/chef/`;
+  let currentActiveLeadContext = me.activeLeadContext || null;
 
   chefShareUrlNodes.forEach(node => {
     node.textContent = chefShareUrl;
@@ -1213,6 +1292,10 @@ async function initCoachAppPage() {
 
   chefShareOpenLinks.forEach(node => {
     node.href = chefShareUrl;
+  });
+
+  royalOneOpenLinks.forEach(node => {
+    node.href = ROYALONE_ORDER_URL;
   });
 
   if (nativeShareChefButton && typeof navigator.share !== "function") {
@@ -1231,6 +1314,19 @@ async function initCoachAppPage() {
   };
 
   syncOrderCalcToggle(false);
+
+  const syncRoyalOneDock = open => {
+    if (royalOnePanel) {
+      royalOnePanel.hidden = !open;
+    }
+
+    if (royalOneToggle) {
+      royalOneToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      royalOneToggle.textContent = open ? "Cerrar RoyalOne" : "RoyalOne";
+    }
+  };
+
+  syncRoyalOneDock(false);
 
   const openChefShareModal = () => {
     if (!chefShareModal) {
@@ -1298,7 +1394,9 @@ async function initCoachAppPage() {
       }
 
       renderCoachRepLeadSummary(data.repLeadSummary || null);
-      renderActiveLeadContext(data.activeLeadContext || null);
+      currentActiveLeadContext = data.activeLeadContext || null;
+      renderActiveLeadContext(currentActiveLeadContext);
+      renderRoyalOneLeadSummary(currentActiveLeadContext);
     } catch (error) {
       addCoachMessage(
         chatMessages,
@@ -1361,6 +1459,43 @@ async function initCoachAppPage() {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && chefShareModal && !chefShareModal.hidden) {
       closeChefShareModal();
+      return;
+    }
+
+    if (event.key === "Escape" && royalOnePanel && !royalOnePanel.hidden) {
+      syncRoyalOneDock(false);
+    }
+  });
+
+  royalOneToggle?.addEventListener("click", () => {
+    if (royalOneFeedback) {
+      royalOneFeedback.textContent = "Pensado para tenerlo a la mano sin robar espacio dentro del Coach.";
+    }
+    syncRoyalOneDock(royalOnePanel?.hidden ?? true);
+  });
+
+  document.addEventListener("click", event => {
+    if (!royalOnePanel || !royalOneToggle || royalOnePanel.hidden) {
+      return;
+    }
+
+    const dock = document.querySelector("[data-royalone-dock]");
+
+    if (dock && !dock.contains(event.target)) {
+      syncRoyalOneDock(false);
+    }
+  });
+
+  royalOneCopyButton?.addEventListener("click", async () => {
+    try {
+      await copyTextToClipboard(buildRoyalOneLeadSummary(currentActiveLeadContext));
+      if (royalOneFeedback) {
+        royalOneFeedback.textContent = "Resumen copiado. Ya lo puedes pegar al llenar el pedido.";
+      }
+    } catch (error) {
+      if (royalOneFeedback) {
+        royalOneFeedback.textContent = "No pude copiar el resumen en este momento.";
+      }
     }
   });
 

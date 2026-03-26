@@ -1901,6 +1901,93 @@ img {
   word-break: break-word;
 }
 
+.royalone-dock {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 32;
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.royalone-dock-toggle {
+  min-height: 54px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(215, 38, 69, 0.96), rgba(140, 17, 40, 0.92));
+  color: #fff8fb;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.36);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.royalone-dock-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 24px 46px rgba(0, 0, 0, 0.42);
+}
+
+.royalone-dock-panel {
+  width: min(360px, calc(100vw - 28px));
+  padding: 22px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(9, 22, 41, 0.98), rgba(10, 24, 46, 0.94));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.royalone-dock-panel[hidden] {
+  display: none !important;
+}
+
+.royalone-dock-panel h3,
+.royalone-dock-panel p {
+  margin: 0;
+}
+
+.royalone-dock-panel h3 {
+  margin-top: 16px;
+  font-size: 1.32rem;
+  font-family: "Bricolage Grotesque", sans-serif;
+}
+
+.royalone-dock-panel p {
+  margin-top: 12px;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.royalone-dock-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.royalone-dock-summary strong,
+.royalone-dock-summary span {
+  display: block;
+}
+
+.royalone-dock-summary strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.royalone-dock-summary span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .footer-note {
   padding: 0 0 40px;
   color: var(--muted);
@@ -1940,6 +2027,21 @@ img {
   .coach-nav-links .nav-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .royalone-dock {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    justify-items: stretch;
+  }
+
+  .royalone-dock-toggle {
+    width: 100%;
+  }
+
+  .royalone-dock-panel {
+    width: 100%;
   }
 
   .hero-copy,
