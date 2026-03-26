@@ -372,6 +372,64 @@
             </p>
           </article>
 
+          <article class="dashboard-card buyer-profile-card">
+            <div class="eyebrow">Herramienta de lectura</div>
+            <h3>Perfil rapido del cliente</h3>
+            <p>
+              Haz preguntas sencillas para entender que mueve mas al cliente y escoger el cierre correcto sin hablar
+              de mas.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button buyer-profile-toggle"
+                data-buyer-profile-toggle
+                aria-expanded="false"
+              >
+                Abrir lectura
+              </button>
+            </div>
+
+            <div class="buyer-profile-wrap" data-buyer-profile-wrap hidden>
+              <div class="buyer-profile-tool" data-buyer-profile-tool>
+                <div class="buyer-profile-list" data-buyer-profile-questions></div>
+
+                <div class="decision-tool-actions">
+                  <button type="button" class="primary-button" data-buyer-profile-run>Leer cliente</button>
+                  <button type="button" class="nav-button" data-buyer-profile-reset>Limpiar</button>
+                </div>
+
+                <div class="buyer-profile-result">
+                  <div class="buyer-profile-result-grid">
+                    <div class="buyer-profile-result-card is-main">
+                      <span>Perfil principal</span>
+                      <strong data-buyer-profile-main>Sin lectura todavia.</strong>
+                    </div>
+                    <div class="buyer-profile-result-card">
+                      <span>Lo que mas le mueve</span>
+                      <strong data-buyer-profile-driver>Completa la lectura para verlo.</strong>
+                    </div>
+                    <div class="buyer-profile-result-card">
+                      <span>Como hablarle</span>
+                      <strong data-buyer-profile-script>Usa preguntas sencillas y escucha bien.</strong>
+                    </div>
+                    <div class="buyer-profile-result-card is-next">
+                      <span>Herramienta recomendada</span>
+                      <strong data-buyer-profile-recommendation>
+                        Abre esta lectura cuando notes interes pero no claridad.
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Pensada para gente latina con lenguaje sencillo. Ayuda a saber por donde entrar sin intimidar.
+            </p>
+          </article>
+
           <article class="dashboard-card">
             <div class="eyebrow">Tu patron</div>
             <h3>Como te esta leyendo el Coach</h3>

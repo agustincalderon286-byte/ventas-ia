@@ -50,6 +50,63 @@ const COACH_PLAN_CONFIG = {
 };
 const ORDER_CALC_PRODUCT_COUNT = 3;
 const DECISION_TOOL_ROW_COUNT = 5;
+const BUYER_PROFILE_OPTIONS = [
+  { value: "0", label: "Elige una opcion" },
+  { value: "1", label: "Poco" },
+  { value: "2", label: "Algo" },
+  { value: "3", label: "Mucho" },
+  { value: "4", label: "Muchisimo" }
+];
+const BUYER_PROFILE_QUESTIONS = [
+  {
+    id: "family_health",
+    title: "Que tanto te importa cuidar la salud de tu casa?",
+    hint: "Sirve para ver si lo mueve la familia y el bienestar.",
+    group: "family"
+  },
+  {
+    id: "family_clean_cooking",
+    title: "Que tanto te importa cocinar con menos grasa?",
+    hint: "Ayuda a saber si le importa una cocina mas limpia.",
+    group: "family"
+  },
+  {
+    id: "money_savings",
+    title: "Que tanto te importa ahorrar con el tiempo?",
+    hint: "Mide si le pesa el ahorro y el valor real.",
+    group: "money"
+  },
+  {
+    id: "money_durable",
+    title: "Que tanto te importa comprar algo que dure?",
+    hint: "Mide si piensa a largo plazo.",
+    group: "money"
+  },
+  {
+    id: "practical_speed",
+    title: "Que tanto te ayudaria cocinar mas rapido?",
+    hint: "Nos dice si quiere facilidad y menos vuelta.",
+    group: "practical"
+  },
+  {
+    id: "practical_daily",
+    title: "Que tanto usarias esto en tu dia a dia?",
+    hint: "Mide si lo ve util de verdad.",
+    group: "practical"
+  },
+  {
+    id: "proof_evidence",
+    title: "Antes de comprar, que tanto ocupas ver pruebas?",
+    hint: "Nos dice si primero necesita confiar.",
+    group: "proof"
+  },
+  {
+    id: "proof_water",
+    title: "Que tanto te ayudaria ver datos del agua de tu zona?",
+    hint: "Mide si le ayuda ver evidencia concreta.",
+    group: "proof"
+  }
+];
 
 function buildCoachId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -468,6 +525,161 @@ function initDecisionTool() {
 
   toggle.addEventListener("click", () => {
     syncDecisionToggle(wrap.hidden);
+  });
+
+  runButton?.addEventListener("click", analyze);
+  resetButton?.addEventListener("click", reset);
+}
+
+function createBuyerProfileQuestionRow(question) {
+  const options = BUYER_PROFILE_OPTIONS.map(
+    option => `<option value="${option.value}">${option.label}</option>`
+  ).join("");
+
+  return `
+    <label class="buyer-profile-row">
+      <div>
+        <strong>${question.title}</strong>
+        <span>${question.hint}</span>
+      </div>
+      <select data-buyer-profile-score data-buyer-profile-group="${question.group}">
+        ${options}
+      </select>
+    </label>
+  `;
+}
+
+function initBuyerProfileTool() {
+  const wrap = document.querySelector("[data-buyer-profile-wrap]");
+  const root = document.querySelector("[data-buyer-profile-tool]");
+  const toggle = document.querySelector("[data-buyer-profile-toggle]");
+
+  if (!root || !wrap || !toggle) {
+    return;
+  }
+
+  const questionsContainer = root.querySelector("[data-buyer-profile-questions]");
+  const runButton = root.querySelector("[data-buyer-profile-run]");
+  const resetButton = root.querySelector("[data-buyer-profile-reset]");
+  const mainNode = root.querySelector("[data-buyer-profile-main]");
+  const driverNode = root.querySelector("[data-buyer-profile-driver]");
+  const scriptNode = root.querySelector("[data-buyer-profile-script]");
+  const recommendationNode = root.querySelector("[data-buyer-profile-recommendation]");
+
+  if (questionsContainer && !questionsContainer.children.length) {
+    questionsContainer.innerHTML = BUYER_PROFILE_QUESTIONS.map(createBuyerProfileQuestionRow).join("");
+  }
+
+  const profiles = {
+    family: {
+      label: "Cliente de familia",
+      driver: "Lo mueve cuidar a su casa, su comida y su bienestar.",
+      script: "Habla simple. Conectalo con salud, familia, cocina limpia y uso diario.",
+      recommendation: "Abre calidad del agua o comparte el Chef con recetas y apoyo."
+    },
+    money: {
+      label: "Cliente de ahorro",
+      driver: "Le importa que el dinero rinda y comprar algo que dure.",
+      script: "Habla de valor real, ahorro a largo plazo y uso de todos los dias.",
+      recommendation: "Abre la calculadora de pedido y ensena pagos claros."
+    },
+    practical: {
+      label: "Cliente practico",
+      driver: "Quiere cocinar mas rapido, batallar menos y usarlo seguido.",
+      script: "Habla de tiempo, facilidad, limpieza y comodidad diaria.",
+      recommendation: "Muestra una demo rapida o una receta sencilla."
+    },
+    proof: {
+      label: "Cliente que ocupa pruebas",
+      driver: "Necesita confiar primero y ver pruebas antes de avanzar.",
+      script: "No cierres duro. Habla con calma y ensena pruebas, garantia y evidencia.",
+      recommendation: "Abre balance de decision o calidad del agua para darle seguridad."
+    }
+  };
+
+  const syncBuyerProfileToggle = open => {
+    wrap.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open ? "Cerrar lectura" : "Abrir lectura";
+  };
+
+  const applyProfile = profile => {
+    const safeProfile = profile || {
+      label: "Sin lectura todavia.",
+      driver: "Completa la lectura para verlo.",
+      script: "Usa preguntas sencillas y escucha bien.",
+      recommendation: "Abre esta lectura cuando notes interes pero no claridad."
+    };
+
+    if (mainNode) {
+      mainNode.textContent = safeProfile.label;
+    }
+    if (driverNode) {
+      driverNode.textContent = safeProfile.driver;
+    }
+    if (scriptNode) {
+      scriptNode.textContent = safeProfile.script;
+    }
+    if (recommendationNode) {
+      recommendationNode.textContent = safeProfile.recommendation;
+    }
+  };
+
+  const analyze = () => {
+    const scores = {
+      family: 0,
+      money: 0,
+      practical: 0,
+      proof: 0
+    };
+
+    const selects = Array.from(root.querySelectorAll("[data-buyer-profile-score]"));
+
+    selects.forEach(select => {
+      const group = select.dataset.buyerProfileGroup;
+      const value = Number.parseInt(select.value || "0", 10) || 0;
+      if (Object.prototype.hasOwnProperty.call(scores, group)) {
+        scores[group] += value;
+      }
+    });
+
+    const ranking = Object.entries(scores).sort((left, right) => right[1] - left[1]);
+    const [topKey, topValue] = ranking[0] || [];
+    const [, secondValue] = ranking[1] || [];
+
+    if (!topKey || topValue <= 0) {
+      applyProfile();
+      return;
+    }
+
+    const topProfile = profiles[topKey];
+    const isMixed = typeof secondValue === "number" && topValue - secondValue <= 1 && secondValue > 0;
+
+    if (!isMixed) {
+      applyProfile(topProfile);
+      return;
+    }
+
+    applyProfile({
+      label: `${topProfile.label} con mezcla`,
+      driver: `${topProfile.driver} Tambien trae otra motivacion muy cerca, asi que conviene escuchar mas antes de empujar cierre.`,
+      script: `${topProfile.script} Haz una pregunta mas para confirmar que es lo que de verdad pesa hoy.`,
+      recommendation: topProfile.recommendation
+    });
+  };
+
+  const reset = () => {
+    root.querySelectorAll("[data-buyer-profile-score]").forEach(select => {
+      select.value = "0";
+    });
+    applyProfile();
+  };
+
+  syncBuyerProfileToggle(false);
+  applyProfile();
+
+  toggle.addEventListener("click", () => {
+    syncBuyerProfileToggle(wrap.hidden);
   });
 
   runButton?.addEventListener("click", analyze);
@@ -970,6 +1182,7 @@ async function initCoachAppPage() {
   renderActiveLeadContext(me.activeLeadContext);
   initOrderCalculator();
   initDecisionTool();
+  initBuyerProfileTool();
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
