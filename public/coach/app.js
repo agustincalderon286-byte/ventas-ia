@@ -48,6 +48,7 @@ const COACH_PLAN_CONFIG = {
     memberCopy: "Tu cuenta ya existe. Solo falta abrir el plan anual para activar tu Coach."
   }
 };
+const ORDER_CALC_PRODUCT_COUNT = 3;
 
 function buildCoachId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -132,6 +133,10 @@ function formatDate(dateString) {
   }).format(date);
 }
 
+function formatMoney(value) {
+  return `$${(Number(value) || 0).toFixed(2)}`;
+}
+
 function autoResizeTextarea(textarea) {
   if (!textarea) {
     return;
@@ -161,6 +166,169 @@ async function copyTextToClipboard(text) {
 
 function sanitizeZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 5);
+}
+
+function createOrderCalcProductCard(index) {
+  return `
+    <section class="order-calc-product" data-order-calc-product>
+      <div class="order-calc-product-head">
+        <div>
+          <strong>Producto ${index}</strong>
+          <span>Calcula bruto, ahorro y balance real.</span>
+        </div>
+        <div class="order-calc-product-total" data-order-calc-gross>$0.00</div>
+      </div>
+
+      <div class="order-calc-grid">
+        <label class="order-calc-field">
+          <span>Nombre del producto</span>
+          <input type="text" data-order-calc-name placeholder="Ej. Olla de presion" />
+        </label>
+        <label class="order-calc-field">
+          <span>Precio</span>
+          <input type="number" min="0" step="0.01" data-order-calc-price placeholder="0.00" />
+        </label>
+        <label class="order-calc-field">
+          <span>Down payment</span>
+          <input type="number" min="0" step="0.01" data-order-calc-down placeholder="0.00" />
+        </label>
+        <label class="order-calc-field">
+          <span>Descuento fijo</span>
+          <input type="number" min="0" step="0.01" data-order-calc-desc-fixed placeholder="0.00" />
+        </label>
+        <label class="order-calc-field">
+          <span>Descuento %</span>
+          <input type="number" min="0" step="0.01" data-order-calc-desc-percent placeholder="0" />
+        </label>
+      </div>
+
+      <div class="order-calc-metrics">
+        <div class="order-calc-metric">
+          <span>Total bruto</span>
+          <strong data-order-calc-total>$0.00</strong>
+        </div>
+        <div class="order-calc-metric">
+          <span>Ahorro aplicado</span>
+          <strong data-order-calc-savings>$0.00</strong>
+        </div>
+        <div class="order-calc-metric is-balance">
+          <span>Balance individual</span>
+          <strong data-order-calc-balance>$0.00</strong>
+        </div>
+        <div class="order-calc-metric">
+          <span>Pago mensual</span>
+          <strong data-order-calc-monthly>$0.00</strong>
+        </div>
+        <div class="order-calc-metric">
+          <span>Pago semanal</span>
+          <strong data-order-calc-weekly>$0.00</strong>
+        </div>
+        <div class="order-calc-metric">
+          <span>Pago diario</span>
+          <strong data-order-calc-daily>$0.00</strong>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function readCalcNumber(input) {
+  return Number.parseFloat(input?.value || "") || 0;
+}
+
+function initOrderCalculator() {
+  const root = document.querySelector("[data-order-calc]");
+
+  if (!root) {
+    return;
+  }
+
+  const productsContainer = root.querySelector("[data-order-calc-products]");
+  if (productsContainer && !productsContainer.children.length) {
+    productsContainer.innerHTML = Array.from({ length: ORDER_CALC_PRODUCT_COUNT }, (_, index) =>
+      createOrderCalcProductCard(index + 1)
+    ).join("");
+  }
+
+  const productCards = Array.from(root.querySelectorAll("[data-order-calc-product]"));
+  const summaryDown = root.querySelector("[data-order-calc-down-total]");
+  const summaryDescFixed = root.querySelector("[data-order-calc-desc-fixed-total]");
+  const summaryDescPercent = root.querySelector("[data-order-calc-desc-percent-total]");
+  const totalNode = root.querySelector("[data-order-calc-summary-total]");
+  const downNode = root.querySelector("[data-order-calc-summary-down]");
+  const discountNode = root.querySelector("[data-order-calc-summary-discount]");
+  const balanceNode = root.querySelector("[data-order-calc-summary-balance]");
+  const monthlyNode = root.querySelector("[data-order-calc-summary-monthly]");
+  const weeklyNode = root.querySelector("[data-order-calc-summary-weekly]");
+  const dailyNode = root.querySelector("[data-order-calc-summary-daily]");
+
+  function recalculate() {
+    let totalGeneral = 0;
+    let totalDown = 0;
+    let totalDiscount = 0;
+
+    productCards.forEach(card => {
+      const price = readCalcNumber(card.querySelector("[data-order-calc-price]"));
+      const down = readCalcNumber(card.querySelector("[data-order-calc-down]"));
+      const descFixed = readCalcNumber(card.querySelector("[data-order-calc-desc-fixed]"));
+      const descPercent = readCalcNumber(card.querySelector("[data-order-calc-desc-percent]"));
+
+      const tax = price * 0.1;
+      const shipping = price * 0.05;
+      const grossTotal = price + tax + shipping;
+      const discountAmount = descFixed + grossTotal * (descPercent / 100);
+      const savings = down + discountAmount;
+      const balance = Math.max(0, grossTotal - savings);
+      const monthly = balance * 0.05;
+      const weekly = monthly / 4;
+      const daily = weekly / 7;
+
+      const grossNode = card.querySelector("[data-order-calc-gross]");
+      const totalProductNode = card.querySelector("[data-order-calc-total]");
+      const savingsNode = card.querySelector("[data-order-calc-savings]");
+      const balanceProductNode = card.querySelector("[data-order-calc-balance]");
+      const monthlyProductNode = card.querySelector("[data-order-calc-monthly]");
+      const weeklyProductNode = card.querySelector("[data-order-calc-weekly]");
+      const dailyProductNode = card.querySelector("[data-order-calc-daily]");
+
+      if (grossNode) grossNode.textContent = formatMoney(grossTotal);
+      if (totalProductNode) totalProductNode.textContent = formatMoney(grossTotal);
+      if (savingsNode) savingsNode.textContent = formatMoney(savings);
+      if (balanceProductNode) balanceProductNode.textContent = formatMoney(balance);
+      if (monthlyProductNode) monthlyProductNode.textContent = formatMoney(monthly);
+      if (weeklyProductNode) weeklyProductNode.textContent = formatMoney(weekly);
+      if (dailyProductNode) dailyProductNode.textContent = formatMoney(daily);
+
+      totalGeneral += grossTotal;
+      totalDown += down;
+      totalDiscount += discountAmount;
+    });
+
+    const extraDown = readCalcNumber(summaryDown);
+    const extraDescFixed = readCalcNumber(summaryDescFixed);
+    const extraDescPercent = readCalcNumber(summaryDescPercent);
+    const extraDiscount = extraDescFixed + totalGeneral * (extraDescPercent / 100);
+    const finalDown = totalDown + extraDown;
+    const finalDiscount = totalDiscount + extraDiscount;
+    const finalBalance = Math.max(0, totalGeneral - finalDown - finalDiscount);
+    const finalMonthly = finalBalance * 0.05;
+    const finalWeekly = finalMonthly / 4;
+    const finalDaily = finalWeekly / 7;
+
+    if (totalNode) totalNode.textContent = formatMoney(totalGeneral);
+    if (downNode) downNode.textContent = formatMoney(finalDown);
+    if (discountNode) discountNode.textContent = formatMoney(finalDiscount);
+    if (balanceNode) balanceNode.textContent = formatMoney(finalBalance);
+    if (monthlyNode) monthlyNode.textContent = formatMoney(finalMonthly);
+    if (weeklyNode) weeklyNode.textContent = formatMoney(finalWeekly);
+    if (dailyNode) dailyNode.textContent = formatMoney(finalDaily);
+  }
+
+  root.querySelectorAll("input").forEach(input => {
+    input.addEventListener("input", recalculate);
+  });
+
+  recalculate();
 }
 
 function addCoachMessage(container, role, content) {
@@ -657,6 +825,7 @@ async function initCoachAppPage() {
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  initOrderCalculator();
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
