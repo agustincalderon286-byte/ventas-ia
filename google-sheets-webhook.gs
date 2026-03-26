@@ -1,17 +1,10 @@
 const SHEET_NAME = "Leads";
 const HEADERS = [
-  "leadId",
-  "name",
-  "email",
-  "phone",
-  "esCliente",
-  "cocinaPara",
-  "productos",
-  "direccion",
-  "latestMessage",
-  "notes",
-  "createdAt",
-  "updatedAt"
+  "nombre",
+  "telefono",
+  "mejor_dia_para_llamar",
+  "mejor_hora_para_llamar",
+  "notas"
 ];
 
 function doPost(e) {
@@ -19,7 +12,11 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents || "{}");
     const sheet = getSheet_();
     const rowData = buildRow_(payload);
-    const rowIndex = findExistingRow_(sheet, payload.email, payload.phone);
+    const rowIndex = findExistingRow_(
+      sheet,
+      payload.telefono || payload.phone,
+      payload.nombre || payload.name
+    );
 
     if (rowIndex > 0) {
       sheet.getRange(rowIndex, 1, 1, HEADERS.length).setValues([rowData]);
@@ -49,43 +46,38 @@ function getSheet_() {
 }
 
 function buildRow_(payload) {
+  const notasCompatibles = Array.isArray(payload.notes)
+    ? payload.notes
+        .map(note => `${formatDate_(note.createdAt)} - ${note.text || ""}`)
+        .join("\n\n")
+    : payload.notas || payload.notes || payload.profileSummary || payload.message || "";
+
   return [
-    payload._id || "",
-    payload.name || "",
-    payload.email || "",
-    payload.phone || "",
-    payload.esCliente || "",
-    payload.cocinaPara || "",
-    Array.isArray(payload.productos) ? payload.productos.join(", ") : "",
-    payload.direccion || "",
-    payload.message || "",
-    Array.isArray(payload.notes)
-      ? payload.notes
-          .map(note => `${formatDate_(note.createdAt)} - ${note.text || ""}`)
-          .join("\n\n")
-      : "",
-    formatDate_(payload.createdAt),
-    formatDate_(payload.updatedAt)
+    payload.nombre || payload.name || "",
+    payload.telefono || payload.phone || "",
+    payload.mejor_dia_para_llamar || payload.bestCallDay || "",
+    payload.mejor_hora_para_llamar || payload.bestCallTime || "",
+    notasCompatibles
   ];
 }
 
-function findExistingRow_(sheet, email, phone) {
-  if (!email && !phone) {
+function findExistingRow_(sheet, phone, name) {
+  if (!phone && !name) {
     return -1;
   }
 
   const values = sheet.getDataRange().getValues();
-  const emailIndex = HEADERS.indexOf("email");
-  const phoneIndex = HEADERS.indexOf("phone");
+  const phoneIndex = HEADERS.indexOf("telefono");
+  const nameIndex = HEADERS.indexOf("nombre");
 
   for (let i = 1; i < values.length; i += 1) {
     const row = values[i];
 
-    if (email && row[emailIndex] === email) {
+    if (phone && row[phoneIndex] === phone) {
       return i + 1;
     }
 
-    if (phone && row[phoneIndex] === phone) {
+    if (name && row[nameIndex] === name) {
       return i + 1;
     }
   }

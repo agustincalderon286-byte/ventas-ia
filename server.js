@@ -67,6 +67,8 @@ const leadSchema = new mongoose.Schema({
   name: String,
   email: String,
   phone: String,
+  bestCallDay: String,
+  bestCallTime: String,
   message: String,
   ocupacion: String,
   tieneProductos: String,
@@ -99,6 +101,8 @@ const profileSchema = new mongoose.Schema({
   name: String,
   email: String,
   phone: String,
+  bestCallDay: String,
+  bestCallTime: String,
   direccion: String,
   ocupacion: String,
   esCliente: String,
@@ -446,6 +450,8 @@ function crearEstadoConversacionBase() {
     name: "",
     email: "",
     phone: "",
+    bestCallDay: "",
+    bestCallTime: "",
     direccion: "",
     ocupacion: "",
     esCliente: "",
@@ -517,6 +523,8 @@ function hidratarEstadoConversacion(sessionId, profile = null, lead = null) {
   estado.name = estado.name || fuente.name || "";
   estado.email = estado.email || fuente.email || "";
   estado.phone = estado.phone || fuente.phone || "";
+  estado.bestCallDay = estado.bestCallDay || fuente.bestCallDay || "";
+  estado.bestCallTime = estado.bestCallTime || fuente.bestCallTime || "";
   estado.direccion = estado.direccion || fuente.direccion || "";
   estado.ocupacion = estado.ocupacion || fuente.ocupacion || "";
   estado.esCliente = estado.esCliente || fuente.esCliente || "";
@@ -2135,6 +2143,89 @@ function extraerDireccion(texto) {
   return resto.slice(0, indiceCorte).trim().replace(/[.,;!?]+$/, "");
 }
 
+function limpiarRespuestaBreveLead(texto = "", maxLength = 80) {
+  return String(texto || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.,;!?]+$/, "")
+    .slice(0, maxLength);
+}
+
+function extraerMejorDiaLlamada(texto = "") {
+  const normalizado = normalizarTextoBusqueda(texto);
+  const patronesContexto = [
+    /(?:mejor\s+dia(?:\s+para\s+llamar)?\s*(?:es)?|prefiero\s+que\s+me\s+llamen(?:\s+el)?|pueden\s+llamarme(?:\s+el)?|llamenme(?:\s+el)?|llamame(?:\s+el)?|me\s+queda\s+mejor(?:\s+el)?|seria\s+mejor(?:\s+el)?)([^.\n]+)/i,
+    /\b(?:hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|entre\s+semana|fin\s+de\s+semana)\b/i
+  ];
+  const catalogo = [
+    "entre semana",
+    "fin de semana",
+    "hoy",
+    "manana",
+    "lunes",
+    "martes",
+    "miercoles",
+    "jueves",
+    "viernes",
+    "sabado",
+    "domingo"
+  ];
+
+  for (const patron of patronesContexto) {
+    const match = normalizado.match(patron);
+
+    if (!match) {
+      continue;
+    }
+
+    const segmento = limpiarRespuestaBreveLead(match[1] || match[0], 60);
+
+    for (const item of catalogo) {
+      if (segmento.includes(item)) {
+        return item;
+      }
+    }
+  }
+
+  return "";
+}
+
+function extraerMejorHoraLlamada(texto = "") {
+  const normalizado = normalizarTextoBusqueda(texto);
+  const segmentos = [normalizado];
+  const patronesContexto = [
+    /(?:mejor\s+hora(?:\s+para\s+llamar)?\s*(?:es)?|prefiero\s+que\s+me\s+llamen|pueden\s+llamarme|llamenme|llamame|me\s+queda\s+mejor|seria\s+mejor)\s+([^.\n]+)/i
+  ];
+
+  for (const patron of patronesContexto) {
+    const match = normalizado.match(patron);
+
+    if (match?.[1]) {
+      segmentos.unshift(limpiarRespuestaBreveLead(match[1], 80));
+    }
+  }
+
+  const patrones = [
+    /\b((?:despues|antes)\s+de\s+las\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
+    /\b(entre\s+las\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s+y\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
+    /\b((?:a\s+las|como\s+a\s+las|tipo)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
+    /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i,
+    /\b(por\s+la\s+manana|por\s+la\s+tarde|por\s+la\s+noche|temprano|al\s+mediodia)\b/i
+  ];
+
+  for (const segmento of segmentos) {
+    for (const patron of patrones) {
+      const match = segmento.match(patron);
+
+      if (match?.[1]) {
+        return limpiarRespuestaBreveLead(match[1], 50);
+      }
+    }
+  }
+
+  return "";
+}
+
 function extraerOcupacion(texto) {
   const patrones = [
     /(?:me dedico a|trabajo en|trabajo de)\s+([^.\n]+)/i,
@@ -2364,6 +2455,14 @@ function construirProfileSummary(profile) {
     partes.push(`Nombre: ${profile.name}.`);
   }
 
+  if (profile.bestCallDay) {
+    partes.push(`Mejor dia para llamar: ${profile.bestCallDay}.`);
+  }
+
+  if (profile.bestCallTime) {
+    partes.push(`Mejor hora para llamar: ${profile.bestCallTime}.`);
+  }
+
   if (profile.ocupacion) {
     partes.push(`Ocupacion: ${profile.ocupacion}.`);
   }
@@ -2487,6 +2586,8 @@ async function guardarOActualizarPerfil({
 
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
+  const bestCallDay = extraerMejorDiaLlamada(texto);
+  const bestCallTime = extraerMejorHoraLlamada(texto);
   const tieneProductos = extraerTieneProductos(texto, detallesLead.productos);
   const necesitaGarantia = extraerNecesitaGarantia(texto);
   const perfilExistente = await resolverPerfilExistente(
@@ -2530,6 +2631,18 @@ async function guardarOActualizarPerfil({
       leadGuardado?.phone,
       leadInfo?.phone,
       perfilExistente?.phone
+    ),
+    bestCallDay: seleccionarValorMasCompleto(
+      leadGuardado?.bestCallDay,
+      bestCallDay,
+      estadoConversacion?.bestCallDay,
+      perfilExistente?.bestCallDay
+    ),
+    bestCallTime: seleccionarValorMasCompleto(
+      leadGuardado?.bestCallTime,
+      bestCallTime,
+      estadoConversacion?.bestCallTime,
+      perfilExistente?.bestCallTime
     ),
     direccion: seleccionarValorMasCompleto(
       leadGuardado?.direccion,
@@ -2694,6 +2807,8 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
   const estado = obtenerEstadoConversacion(sessionId);
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
+  const bestCallDay = extraerMejorDiaLlamada(texto);
+  const bestCallTime = extraerMejorHoraLlamada(texto);
   const tieneProductos = extraerTieneProductos(texto, detallesLead.productos);
   const necesitaGarantia = extraerNecesitaGarantia(texto);
 
@@ -2705,6 +2820,14 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
 
   if (leadInfo?.phone) {
     estado.phone = leadInfo.phone;
+  }
+
+  if (bestCallDay) {
+    estado.bestCallDay = bestCallDay;
+  }
+
+  if (bestCallTime) {
+    estado.bestCallTime = bestCallTime;
   }
 
   if (detallesLead.name) {
@@ -2765,6 +2888,8 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
     estado.name = leadGuardado.name || estado.name;
     estado.email = leadGuardado.email || estado.email;
     estado.phone = leadGuardado.phone || estado.phone;
+    estado.bestCallDay = leadGuardado.bestCallDay || estado.bestCallDay;
+    estado.bestCallTime = leadGuardado.bestCallTime || estado.bestCallTime;
     estado.direccion = leadGuardado.direccion || estado.direccion;
     estado.ocupacion = leadGuardado.ocupacion || estado.ocupacion;
     estado.esCliente = leadGuardado.esCliente || estado.esCliente;
@@ -2786,7 +2911,7 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
 
 function obtenerSiguienteDatoLead(estado) {
   const datosVitales = [];
-  const datosComplementarios = [];
+  const datosAgenda = [];
 
   if (!estado.name) {
     datosVitales.push("nombre completo");
@@ -2796,43 +2921,23 @@ function obtenerSiguienteDatoLead(estado) {
     datosVitales.push("telefono");
   }
 
-  if (!estado.direccion) {
-    datosComplementarios.push("ciudad o direccion");
+  if (!estado.bestCallDay) {
+    datosAgenda.push("mejor dia para llamar");
   }
 
-  if (!estado.esCliente) {
-    datosComplementarios.push("si ya es cliente");
-  }
-
-  if (!estado.tieneProductos) {
-    datosComplementarios.push("si ya tiene productos");
-  }
-
-  if (estado.tieneProductos === "si" && !estado.productos.length) {
-    datosComplementarios.push("que productos tiene");
-  }
-
-  if (!estado.necesitaGarantia) {
-    datosComplementarios.push("si necesita garantia");
-  }
-
-  if (!estado.cocinaPara) {
-    datosComplementarios.push("para cuantas personas cocina");
-  }
-
-  if (!estado.ocupacion) {
-    datosComplementarios.push("a que se dedica");
+  if (!estado.bestCallTime) {
+    datosAgenda.push("mejor hora para llamar");
   }
 
   return {
     datosVitales,
-    datosComplementarios
+    datosAgenda
   };
 }
 
 function construirEstadoPrompt(sessionId) {
   const estado = obtenerEstadoConversacion(sessionId);
-  const { datosVitales, datosComplementarios } = obtenerSiguienteDatoLead(estado);
+  const { datosVitales, datosAgenda } = obtenerSiguienteDatoLead(estado);
   let fase = "chef-y-guia-de-uso";
   let instruccion = "Enfocate en ayudar con cocina saludable, recetas y uso correcto de productos Royal Prestige.";
 
@@ -2844,15 +2949,15 @@ function construirEstadoPrompt(sessionId) {
   if (estado.llamadaInformativaAceptada) {
     fase = "captura-breve-de-lead";
 
-    if (estado.envioDatosContactoReciente && !datosVitales.length) {
+    if (estado.envioDatosContactoReciente && !datosVitales.length && !datosAgenda.length) {
       instruccion = "La persona acaba de compartir sus datos. Agradece brevemente, confirma la llamada informativa con el numero registrado y solo si cabe agrega una recomendacion util muy breve.";
     } else if (datosVitales.length) {
-      const solicitudBreve = [...datosVitales, ...datosComplementarios].join(", ");
+      const solicitudBreve = [...datosVitales, ...datosAgenda].join(", ");
       instruccion = `La llamada informativa ya fue aceptada. Pide en un solo mensaje breve estos datos: ${solicitudBreve}. Hazlo natural y facil de contestar.`;
-    } else if (datosComplementarios.length) {
-      instruccion = `Ya tienes nombre y telefono. Si es natural, pide en un solo mensaje breve estos datos complementarios: ${datosComplementarios.join(", ")}.`;
+    } else if (datosAgenda.length) {
+      instruccion = `Ya tienes nombre y telefono. Pide en un solo mensaje breve estos datos de agenda: ${datosAgenda.join(", ")}.`;
     } else {
-      instruccion = "Ya tienes los datos clave; confirma que un representante 5 estrellas puede continuar con la llamada informativa.";
+      instruccion = "Ya tienes los datos clave y de agenda; confirma que un representante 5 estrellas puede continuar con la llamada informativa. No pidas mas datos.";
     }
   }
 
@@ -2866,16 +2971,12 @@ ESTADO ACTUAL:
 - nombre: ${estado.name || "pendiente"}
 - email: ${estado.email || "pendiente"}
 - telefono: ${estado.phone || "pendiente"}
-- direccion: ${estado.direccion || "pendiente"}
-- ocupacion: ${estado.ocupacion || "pendiente"}
-- es_cliente: ${estado.esCliente || "pendiente"}
-- tiene_productos: ${estado.tieneProductos || "pendiente"}
+- mejor_dia_para_llamar: ${estado.bestCallDay || "pendiente"}
+- mejor_hora_para_llamar: ${estado.bestCallTime || "pendiente"}
 - productos_mencionados: ${estado.productos.length ? estado.productos.join(", ") : "pendiente"}
-- necesita_garantia: ${estado.necesitaGarantia || "pendiente"}
-- cocina_para: ${estado.cocinaPara || "pendiente"}
 - temas_interes: ${estado.temasInteres.length ? estado.temasInteres.join(", ") : "pendiente"}
 - datos_vitales_faltantes: ${datosVitales.length ? datosVitales.join(", ") : "ninguno"}
-- datos_complementarios_faltantes: ${datosComplementarios.length ? datosComplementarios.join(", ") : "ninguno"}
+- datos_agenda_faltantes: ${datosAgenda.length ? datosAgenda.join(", ") : "ninguno"}
 
 INSTRUCCION OPERATIVA:
 ${instruccion}
@@ -2981,6 +3082,14 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
   primaryLead.phone = seleccionarValorString(
     primaryLead.phone,
     ...duplicateLeads.map(lead => lead.phone)
+  );
+  primaryLead.bestCallDay = seleccionarValorMasCompleto(
+    primaryLead.bestCallDay,
+    ...duplicateLeads.map(lead => lead.bestCallDay)
+  );
+  primaryLead.bestCallTime = seleccionarValorMasCompleto(
+    primaryLead.bestCallTime,
+    ...duplicateLeads.map(lead => lead.bestCallTime)
   );
   primaryLead.message = seleccionarValorMasCompleto(
     duplicateLeads
@@ -3113,6 +3222,8 @@ PERFIL HISTORICO:
 - sin_historial_previo: no
 - nombre: ${fuente.name || "desconocido"}
 - telefono: ${fuente.phone || "desconocido"}
+- mejor_dia_para_llamar: ${fuente.bestCallDay || "desconocido"}
+- mejor_hora_para_llamar: ${fuente.bestCallTime || "desconocido"}
 - email: ${fuente.email || "desconocido"}
 - direccion: ${fuente.direccion || "desconocida"}
 - ocupacion: ${fuente.ocupacion || "desconocida"}
@@ -3165,13 +3276,125 @@ async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_
   return (conversaciones[sessionId] || []).slice(-safeLimit);
 }
 
-async function sincronizarLeadAGoogleSheets(lead) {
+function obtenerTextoOperativoLead(lead = null, profile = null) {
+  const notasRecientes = normalizarNotas(lead?.notes || [])
+    .slice(-8)
+    .map(note => note.text)
+    .filter(Boolean);
+  const historialReciente = normalizarHistorialConversacion([
+    ...(profile?.recentHistory || []),
+    ...(lead?.conversationHistory || [])
+  ])
+    .slice(-12)
+    .map(entry => entry.content)
+    .filter(Boolean);
+
+  return [lead?.message || "", profile?.lastUserMessage || "", ...notasRecientes, ...historialReciente]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function inferirTemperaturaLead(lead = null, profile = null) {
+  const texto = obtenerTextoOperativoLead(lead, profile);
+  const preguntaPrecio = detectarConsultaPrecio(texto);
+  const productos = combinarListas(
+    lead?.productos || [],
+    profile?.productos || [],
+    profile?.productosInteres || []
+  );
+  const quiereLlamada = (lead?.quiereLlamada || profile?.quiereLlamada || "") === "si";
+  const consultaGarantia = /garant[ií]a/i.test(texto) || lead?.necesitaGarantia === "si" || profile?.necesitaGarantia === "si";
+  const interesDirecto = /comprar|me interesa|quiero informacion|quiero saber|agendar|llamada|demo|demostracion|representante/i.test(
+    texto
+  );
+
+  if (quiereLlamada && (preguntaPrecio || productos.length || interesDirecto)) {
+    return "caliente";
+  }
+
+  if (quiereLlamada || preguntaPrecio || productos.length || consultaGarantia || interesDirecto) {
+    return "interesado";
+  }
+
+  return "curioso";
+}
+
+function construirResumenLeadOperativo(lead = null, profile = null) {
+  const texto = obtenerTextoOperativoLead(lead, profile);
+  const temperatura = inferirTemperaturaLead(lead, profile);
+  const partes = [`Lead ${temperatura}.`];
+  const productos = combinarListas(
+    profile?.productosInteres || [],
+    lead?.productos || [],
+    profile?.productos || []
+  );
+  const temas = combinarListas(profile?.temasInteres || [], lead?.temasInteres || []);
+
+  if (productos.length) {
+    partes.push(`Productos o intereses: ${productos.join(", ")}.`);
+  }
+
+  if ((lead?.quiereLlamada || profile?.quiereLlamada || "") === "si") {
+    partes.push("Acepto llamada.");
+  }
+
+  if (detectarConsultaPrecio(texto)) {
+    partes.push("Pregunto precio o pagos.");
+  }
+
+  if (/garant[ií]a/i.test(texto) || lead?.necesitaGarantia === "si" || profile?.necesitaGarantia === "si") {
+    partes.push("Pregunto garantia o soporte.");
+  }
+
+  if (profile?.cocinaPara || lead?.cocinaPara) {
+    partes.push(`Cocina para ${profile?.cocinaPara || lead?.cocinaPara}.`);
+  }
+
+  if (profile?.esCliente || lead?.esCliente) {
+    partes.push(`Estado cliente: ${profile?.esCliente || lead?.esCliente}.`);
+  }
+
+  if (temas.length) {
+    partes.push(`Temas tocados: ${temas.join(", ")}.`);
+  }
+
+  const ultimoMensaje = profile?.lastUserMessage || lead?.message || "";
+
+  if (ultimoMensaje) {
+    partes.push(`Ultimo mensaje: ${truncarTextoPrompt(ultimoMensaje, 140)}.`);
+  }
+
+  return partes.join(" ");
+}
+
+function construirPayloadLeadParaGoogleSheets(lead = null, profile = null) {
+  if (!lead) {
+    return null;
+  }
+
+  return {
+    nombre: lead?.name || profile?.name || "",
+    telefono: lead?.phone || profile?.phone || "",
+    mejor_dia_para_llamar: lead?.bestCallDay || profile?.bestCallDay || "",
+    mejor_hora_para_llamar: lead?.bestCallTime || profile?.bestCallTime || "",
+    notas: truncarTextoPrompt(construirResumenLeadOperativo(lead, profile), 480)
+  };
+}
+
+async function sincronizarLeadAGoogleSheets(lead, profile = null) {
   if (!lead || !process.env.GOOGLE_SHEETS_WEBHOOK_URL) {
     return;
   }
 
   try {
-    const payload = typeof lead.toObject === "function" ? lead.toObject() : lead;
+    const leadPayload = typeof lead.toObject === "function" ? lead.toObject() : lead;
+    const profilePayload = profile && typeof profile.toObject === "function" ? profile.toObject() : profile;
+    const payload = construirPayloadLeadParaGoogleSheets(leadPayload, profilePayload);
+
+    if (!payload?.telefono || (leadPayload?.quiereLlamada || profilePayload?.quiereLlamada || "") !== "si") {
+      return;
+    }
+
     const response = await fetch(process.env.GOOGLE_SHEETS_WEBHOOK_URL, {
       method: "POST",
       headers: {
@@ -3191,6 +3414,8 @@ async function sincronizarLeadAGoogleSheets(lead) {
 async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConversacion = null) {
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
+  const bestCallDay = extraerMejorDiaLlamada(texto) || estadoConversacion?.bestCallDay || "";
+  const bestCallTime = extraerMejorHoraLlamada(texto) || estadoConversacion?.bestCallTime || "";
   const email = leadInfo?.email || estadoConversacion?.email || "";
   const phone = leadInfo?.phone || estadoConversacion?.phone || "";
 
@@ -3272,6 +3497,14 @@ async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConve
 
     if (phone) {
       camposActualizar.phone = phone;
+    }
+
+    if (bestCallDay) {
+      camposActualizar.bestCallDay = bestCallDay;
+    }
+
+    if (bestCallTime) {
+      camposActualizar.bestCallTime = bestCallTime;
     }
 
     const nombre = seleccionarValorMasCompleto(
@@ -3454,7 +3687,7 @@ OBJETIVO PRINCIPAL:
 - Recomendar recetas practicas, faciles y utiles para la vida diaria
 - Mencionar el producto exacto que conviene usar y explicar para que sirve de forma simple
 - Cuando detectes interes real por productos o precios, invitar con suavidad a una llamada informativa
-- Despues de que acepten la llamada, captar la mayor parte de los datos en un solo mensaje breve
+- Despues de que acepten la llamada, pedir solo los datos operativos minimos en un solo mensaje breve
 
 REGLAS DE RESPUESTA:
 - Maximo 3 oraciones
@@ -3472,10 +3705,11 @@ PRECIOS:
 
 VENTAS:
 - Primero llamada informativa, despues cita informativa
-- Si el usuario acepta la llamada, pide en un solo mensaje breve la mayoria de los datos utiles
+- Si el usuario acepta la llamada, pide en un solo mensaje breve solo los datos necesarios para agendar
 - Datos vitales: nombre y telefono
-- Datos de calificacion: direccion o ciudad, si ya es cliente, si tiene productos, cuales tiene, si necesita garantia, para cuantas personas cocina y a que se dedica si lo quiere compartir
-- Si despues de ese mensaje aun falta nombre o telefono, pide solo el dato vital faltante
+- Datos de agenda: mejor dia para llamar y mejor hora para llamar
+- No pidas direccion, ciudad, ocupacion, garantia ni otras preguntas de calificacion en esta fase
+- Si despues de ese mensaje aun falta un dato, pide solo el dato faltante
 - Si aun no aceptan llamada, no pidas toda la ficha completa
 - Cuando invites a llamada, hazlo suave y natural
 - Mejor di: "Si quieres, te puedo ayudar a que te llamen y te expliquen bien."
@@ -3965,7 +4199,7 @@ CANAL ACTIVO:
     });
 
     if (!fastChannel) {
-      await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
+      await sincronizarLeadAGoogleSheets(leadFinal?.phone ? leadFinal : null, profileFinal);
     }
 
     return {
@@ -5429,7 +5663,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       intent: "chef_chat",
       estadoConversacion: obtenerEstadoConversacion(sessionId)
     });
-    await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
+    await sincronizarLeadAGoogleSheets(leadFinal?.phone ? leadFinal : null, profileFinal);
 
     res.json({
       respuesta: respuestaIA.content,
