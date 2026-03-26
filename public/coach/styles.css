@@ -905,6 +905,22 @@ img {
   margin-top: 20px;
 }
 
+.resource-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.resource-card::before {
+  content: "";
+  position: absolute;
+  inset: -30% auto auto 58%;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 68%);
+  pointer-events: none;
+}
+
 .coach-console {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
