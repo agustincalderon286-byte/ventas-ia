@@ -34,10 +34,6 @@ const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || ""
 const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
-const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
-const WHATSAPP_CHEF_TEXT = String(
-  process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef."
-).trim();
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -3641,37 +3637,6 @@ function limpiarUrlExterna(value = "") {
   return /^https?:\/\//i.test(text) ? text : "";
 }
 
-function limpiarTelefonoWhatsApp(value = "") {
-  const digits = String(value || "").replace(/\D/g, "");
-
-  if (!digits) {
-    return "";
-  }
-
-  if (digits.length === 10) {
-    return `1${digits}`;
-  }
-
-  return digits;
-}
-
-function construirWhatsAppLink(phone = "", text = "") {
-  const whatsappNumber = limpiarTelefonoWhatsApp(phone);
-
-  if (!whatsappNumber) {
-    return "";
-  }
-
-  const whatsappUrl = new URL(`https://wa.me/${whatsappNumber}`);
-  const message = cleanText(String(text || "")).trim();
-
-  if (message) {
-    whatsappUrl.searchParams.set("text", message);
-  }
-
-  return whatsappUrl.toString();
-}
-
 function escapeXml(value = "") {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -4000,6 +3965,15 @@ CANAL ACTIVO:
 function construirContextoEstaticoChef(pregunta) {
   const preguntaNormalizada = pregunta.toLowerCase();
   let contexto = "";
+
+  if (detectarConsultaPrecio(preguntaNormalizada)) {
+    contexto += `
+GUIA DE PRECIOS PARA CHEF:
+- no compartas precios, mensualidades ni cotizaciones exactas
+- si la persona quiere precio, promo o cuanto cuesta, recomienda hablar con un distribuidor autorizado
+- si hay agenda disponible, puedes invitar a una llamada informativa
+`;
+  }
 
   if (
     /producto|olla|ollas|sarten|cuchillo|extractor|licuadora|blender|filtro|innove|novel|easy release|fresca(flow|pure)|royal prestige|palomitas|perfect pop|hervidor|juicer/i.test(
@@ -4540,6 +4514,10 @@ async function construirContexto(pregunta, modo = "chef") {
     return contextoEstatico;
   }
 
+  if (detectarConsultaPrecio(pregunta)) {
+    return contextoEstatico;
+  }
+
   const sourceTypes = inferirTiposFuentePorModo(pregunta, modo);
   const matches = await buscarKnowledgeVectorial({
     mongoose,
@@ -4564,17 +4542,13 @@ function construirContextoModoPrompt(modo = "chef", coachUser = null) {
     const chefCalendlyPrompt = limpiarUrlExterna(CALENDLY_CHEF_URL)
       ? `\nCALENDLY DISPONIBLE:\n- si el usuario quiere una llamada, apoyo humano o agendar, puedes compartir este link exacto: ${limpiarUrlExterna(CALENDLY_CHEF_URL)}\n- no lo fuerces en cada respuesta; usalo solo cuando sea natural\n`
       : "";
-    const chefWhatsAppLink = construirWhatsAppLink(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT);
-    const chefWhatsAppPrompt = chefWhatsAppLink
-      ? `\nWHATSAPP DISPONIBLE:\n- si al usuario se le hace mas facil seguir por WhatsApp, puedes compartir este link exacto: ${chefWhatsAppLink}\n- ofrecelo solo cuando ayude y se sienta natural\n`
-      : "";
-    const chefPricingPrompt = `\nPRECIOS Y COTIZACION:\n- no compartas precios, mensualidades ni cotizaciones exactas desde el Chef\n- si preguntan por precio, promociones o cuanto cuesta, explica que para precios es mejor hablar con un distribuidor autorizado\n- cuando convenga, invita a seguir por WhatsApp o a pedir llamada con un distribuidor autorizado\n`;
+    const chefPricingPrompt = `\nPRECIOS Y COTIZACION:\n- no compartas precios, mensualidades ni cotizaciones exactas desde el Chef\n- si preguntan por precio, promociones o cuanto cuesta, explica que para precios es mejor hablar con un distribuidor autorizado\n- cuando convenga, invita a pedir una llamada o a contactar con un distribuidor autorizado\n`;
     return `
 MODO ACTIVO:
 - modo: chef
 - tipo_usuario: cliente_o_prospecto
 - acceso_privado: no
-${chefCalendlyPrompt}${chefWhatsAppPrompt}${chefPricingPrompt}`;
+${chefCalendlyPrompt}${chefPricingPrompt}`;
   }
   return `
 MODO ACTIVO:
@@ -4914,17 +4888,12 @@ app.get("/api/chef/stats", async (req, res) => {
 });
 
 app.get("/api/platform/config", (req, res) => {
-  const chefWhatsAppUrl = construirWhatsAppLink(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT);
   res.json({
     calendly: {
       chefUrl: limpiarUrlExterna(CALENDLY_CHEF_URL),
       coachUrl: limpiarUrlExterna(CALENDLY_COACH_URL),
       chefEnabled: Boolean(limpiarUrlExterna(CALENDLY_CHEF_URL)),
       coachEnabled: Boolean(limpiarUrlExterna(CALENDLY_COACH_URL))
-    },
-    whatsapp: {
-      chefUrl: chefWhatsAppUrl,
-      chefEnabled: Boolean(chefWhatsAppUrl)
     }
   });
 });

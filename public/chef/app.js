@@ -12,8 +12,6 @@ const statusBadge = document.getElementById("chefStatusBadge");
 const promptButtons = document.querySelectorAll("[data-chef-prompt]");
 const installButtons = document.querySelectorAll("[data-chef-install]");
 const installHintNodes = document.querySelectorAll("[data-chef-install-hint]");
-const chefWhatsAppLinks = document.querySelectorAll("[data-chef-whatsapp-link]");
-const chefWhatsAppCards = document.querySelectorAll("[data-chef-whatsapp-card]");
 const chefCalendlyButtons = document.querySelectorAll("[data-open-chef-calendly]");
 const chefCalendlyCard = document.querySelector("[data-chef-calendly-card]");
 const chefCalendlyModal = document.querySelector("[data-chef-calendly-modal]");
@@ -21,7 +19,6 @@ const chefCalendlyCloseButtons = document.querySelectorAll("[data-close-chef-cal
 const chefCalendlyFrame = document.querySelector("[data-chef-calendly-frame]");
 const chefCalendlyOpenLink = document.querySelector("[data-chef-calendly-open-link]");
 let deferredInstallPrompt = null;
-let chefWhatsAppUrl = "";
 let chefCalendlyUrl = "";
 
 function crearId(prefijo) {
@@ -339,22 +336,6 @@ function applyChefCalendlyConfig(config = {}) {
   }
 }
 
-function applyChefWhatsAppConfig(config = {}) {
-  chefWhatsAppUrl = String(config.whatsapp?.chefUrl || "").trim();
-  const enabled = Boolean(config.whatsapp?.chefEnabled && chefWhatsAppUrl);
-
-  chefWhatsAppLinks.forEach(linkNode => {
-    linkNode.hidden = !enabled;
-    if (enabled) {
-      linkNode.href = chefWhatsAppUrl;
-    }
-  });
-
-  chefWhatsAppCards.forEach(cardNode => {
-    cardNode.hidden = !enabled;
-  });
-}
-
 function openChefCalendlyModal() {
   if (!chefCalendlyModal || !chefCalendlyUrl) {
     return;
@@ -383,10 +364,8 @@ async function loadPlatformConfig() {
     }
 
     applyChefCalendlyConfig(data);
-    applyChefWhatsAppConfig(data);
   } catch (error) {
     applyChefCalendlyConfig();
-    applyChefWhatsAppConfig();
   }
 }
 
