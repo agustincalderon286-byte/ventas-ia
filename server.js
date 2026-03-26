@@ -3400,10 +3400,16 @@ async function sincronizarLeadAGoogleSheets(lead, profile = null) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      redirect: "manual"
     });
 
-    if (!response.ok) {
+    const locationHeader = response.headers.get("location") || "";
+    const googleAppsRedirect =
+      (response.status === 302 || response.status === 303) &&
+      /script\.googleusercontent\.com\/macros\/echo/i.test(locationHeader);
+
+    if (!response.ok && !googleAppsRedirect) {
       console.log("Error Google Sheets:", response.status, response.statusText);
     }
   } catch (error) {
