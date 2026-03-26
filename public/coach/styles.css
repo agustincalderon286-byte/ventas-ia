@@ -921,6 +921,36 @@ img {
   pointer-events: none;
 }
 
+.resource-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.resource-item {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.resource-copy strong,
+.resource-copy span {
+  display: block;
+}
+
+.resource-copy strong {
+  font-size: 1rem;
+}
+
+.resource-copy span {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .coach-console {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
