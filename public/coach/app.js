@@ -956,7 +956,15 @@ function initCoachLeadWorkspace() {
 
   const printLeads = () => {
     const filteredLeads = getFilteredLeads();
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=920,height=760");
+
+    if (!filteredLeads.length) {
+      if (leadListNote) {
+        leadListNote.textContent = "No hay leads en este filtro para imprimir.";
+      }
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=920,height=760");
 
     if (!printWindow) {
       return;
@@ -1009,7 +1017,9 @@ function initCoachLeadWorkspace() {
     `);
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
+    window.setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const loadLeads = async () => {
