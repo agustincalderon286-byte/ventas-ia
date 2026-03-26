@@ -960,6 +960,47 @@ img {
   overflow: hidden;
 }
 
+.lead-destination-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.lead-destination-card::before {
+  content: "";
+  position: absolute;
+  inset: -12% -10% auto auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(125, 255, 212, 0.14), transparent 72%);
+  pointer-events: none;
+}
+
+.lead-destination-status {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #eff4fb;
+  line-height: 1.65;
+}
+
+.lead-destination-form {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.lead-destination-extra[hidden] {
+  display: none !important;
+}
+
+.lead-destination-extra {
+  display: grid;
+  gap: 14px;
+}
+
 .resource-card::before {
   content: "";
   position: absolute;

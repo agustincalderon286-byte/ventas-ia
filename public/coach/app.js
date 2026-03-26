@@ -45,6 +45,11 @@ const COACH_LEAD_SOURCE_LABELS = {
   evento: "Evento",
   otro: "Otro"
 };
+const COACH_LEAD_DESTINATION_LABELS = {
+  carpeta_privada: "Solo mi carpeta privada",
+  google_sheets: "Google Sheets / Apps Script",
+  webhook_crm: "Webhook / CRM"
+};
 const COACH_LEAD_NEXT_ACTION_OPTIONS = [
   { value: "", label: "Sin proxima accion" },
   { value: "llamar", label: "Llamar" },
@@ -332,6 +337,10 @@ function normalizeLeadPhone(value = "") {
 function formatLeadNextActionLabel(value = "") {
   const found = COACH_LEAD_NEXT_ACTION_OPTIONS.find(option => option.value === value);
   return found?.label || "Sin proxima accion";
+}
+
+function formatLeadDestinationLabel(type = "") {
+  return COACH_LEAD_DESTINATION_LABELS[type] || COACH_LEAD_DESTINATION_LABELS.carpeta_privada;
 }
 
 function formatDateInputValue(dateString) {
@@ -898,6 +907,91 @@ function initLeadFormTool() {
   });
 }
 
+function initLeadDestinationSettings(initialDestination = null) {
+  const form = document.querySelector("[data-lead-destination-form]");
+  const typeSelect = document.querySelector("[data-lead-destination-type]");
+  const labelInput = document.querySelector("[data-lead-destination-label]");
+  const urlInput = document.querySelector("[data-lead-destination-url]");
+  const extraWrap = document.querySelector("[data-lead-destination-extra]");
+  const currentNode = document.querySelector("[data-lead-destination-current]");
+  const feedbackNode = document.querySelector("[data-lead-destination-feedback]");
+  const saveButton = document.querySelector("[data-lead-destination-save]");
+
+  if (!form || !typeSelect || !labelInput || !urlInput || !extraWrap || !currentNode) {
+    return;
+  }
+
+  const buildSummary = destination => {
+    const safeDestination = destination || {};
+    const type = safeDestination.type || "carpeta_privada";
+    const baseLabel = safeDestination.label || formatLeadDestinationLabel(type);
+
+    if (type === "carpeta_privada") {
+      return "Tus leads viven solo en tu carpeta privada por ahora.";
+    }
+
+    if (!safeDestination.url) {
+      return `Tu destino actual es ${baseLabel}, pero todavia falta la URL.`;
+    }
+
+    return `Tus leads se guardan en tu carpeta y tambien se mandan a ${baseLabel}.`;
+  };
+
+  const syncExtraFields = () => {
+    const type = typeSelect.value || "carpeta_privada";
+    const needsExtra = type !== "carpeta_privada";
+    extraWrap.hidden = !needsExtra;
+    urlInput.required = needsExtra;
+    labelInput.placeholder =
+      type === "google_sheets" ? "Ej. Mi hoja de rifa" : "Ej. Mi GoHighLevel o Mi CRM";
+  };
+
+  const applyDestination = destination => {
+    const safeDestination = destination || { type: "carpeta_privada", label: "", url: "" };
+    typeSelect.value = safeDestination.type || "carpeta_privada";
+    labelInput.value = safeDestination.label && safeDestination.type !== "carpeta_privada" ? safeDestination.label : "";
+    urlInput.value = safeDestination.url || "";
+    currentNode.textContent = buildSummary(safeDestination);
+    syncExtraFields();
+  };
+
+  applyDestination(initialDestination);
+
+  typeSelect.addEventListener("change", () => {
+    syncExtraFields();
+    clearMessage(feedbackNode);
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      const data = await apiRequest("/api/coach/lead-destination", {
+        method: "PUT",
+        body: {
+          type: typeSelect.value,
+          label: labelInput.value,
+          url: urlInput.value
+        }
+      });
+
+      applyDestination(data.destination);
+
+      if (data.profile) {
+        renderCoachProfile(data.profile);
+      }
+
+      setMessage(feedbackNode, "Destino guardado. Esta parte ya se siente mas tuya.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
+}
+
 function initCoachLeadWorkspace() {
   const captureWrap = document.querySelector("[data-native-lead-wrap]");
   const captureToggle = document.querySelector("[data-native-lead-toggle]");
@@ -1248,9 +1342,17 @@ function initCoachLeadWorkspace() {
         body: payload
       });
 
+      const deliveryCopy = data.delivery?.attempted
+        ? data.delivery?.delivered
+          ? " Tambien lo mande a tu destino."
+          : " Lo guarde, pero no pude mandarlo a tu destino todavia."
+        : "";
+
       setMessage(
         captureFeedback,
-        data.duplicate ? "Este lead ya existia. Lo actualice en tu carpeta." : "Lead guardado en tu carpeta privada.",
+        data.duplicate
+          ? `Este lead ya existia. Lo actualice en tu carpeta.${deliveryCopy}`
+          : `Lead guardado en tu carpeta privada.${deliveryCopy}`,
         "success"
       );
       captureForm.reset();
@@ -1818,6 +1920,7 @@ async function initCoachAppPage() {
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
   initCoachWorkspaceTabs();
+  initLeadDestinationSettings(me.profile?.leadDestination || null);
   initLeadFormTool();
   initCoachLeadWorkspace();
   initOrderCalculator();

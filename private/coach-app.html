@@ -121,6 +121,64 @@
             </p>
           </article>
 
+          <article class="dashboard-card lead-destination-card" data-coach-workspace-section="prospeccion" hidden>
+            <div class="eyebrow">Destino de leads</div>
+            <h3>Haz que esta parte se sienta tuya</h3>
+            <p>
+              Tus leads siempre se guardan en tu carpeta privada. Si quieres, tambien los podemos mandar a tu Google
+              Sheets, webhook o CRM para que esta parte se sienta mas tuya.
+            </p>
+
+            <div class="lead-destination-status" data-lead-destination-current>
+              Tus leads viven solo en tu carpeta privada por ahora.
+            </div>
+
+            <form class="lead-destination-form" data-lead-destination-form>
+              <label class="native-lead-field">
+                <span>Donde quieres recibirlos tambien</span>
+                <select name="type" data-lead-destination-type>
+                  <option value="carpeta_privada">Solo mi carpeta privada</option>
+                  <option value="google_sheets">Google Sheets / Apps Script</option>
+                  <option value="webhook_crm">Webhook / CRM</option>
+                </select>
+              </label>
+
+              <div class="lead-destination-extra" data-lead-destination-extra hidden>
+                <label class="native-lead-field">
+                  <span>Nombre de tu destino</span>
+                  <input
+                    type="text"
+                    name="label"
+                    maxlength="80"
+                    placeholder="Ej. Mi hoja de leads o Mi GoHighLevel"
+                    data-lead-destination-label
+                  />
+                </label>
+
+                <label class="native-lead-field">
+                  <span>URL del destino</span>
+                  <input
+                    type="url"
+                    name="url"
+                    placeholder="https://..."
+                    data-lead-destination-url
+                  />
+                </label>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-lead-destination-save>Guardar destino</button>
+              </div>
+
+              <div class="form-result" data-lead-destination-feedback></div>
+            </form>
+
+            <p class="mini-note">
+              Si eliges Google Sheets o CRM, el sistema intentara mandar ahi cada lead nuevo, ademas de guardarlo en tu
+              carpeta.
+            </p>
+          </article>
+
           <article class="dashboard-card resource-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Recursos / Apoyo</div>
             <h3>Herramientas listas para tu presentacion</h3>

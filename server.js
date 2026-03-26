@@ -221,6 +221,10 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   focusAreas: [String],
   painAreas: [String],
   preferredCloseStyle: String,
+  leadDestinationType: { type: String, default: "carpeta_privada" },
+  leadDestinationLabel: String,
+  leadDestinationUrl: String,
+  leadDestinationUpdatedAt: Date,
   lastQuestion: String,
   lastCoachReply: String,
   lastInteractionAt: Date,
@@ -808,6 +812,7 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
     topStages: extraerTopLabels(profileDoc?.topStages || analyticsDoc?.topStages || [], 5),
     focusAreas,
     painAreas,
+    leadDestination: limpiarCoachLeadDestination(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
     recentSessionsSummary: (profileDoc?.recentSessionsSummary || []).slice(0, 4).map(item => ({
@@ -816,6 +821,106 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
       createdAt: item?.createdAt || null
     }))
   };
+}
+
+function normalizarCoachLeadDestinationType(type = "") {
+  const value = String(type || "").trim().toLowerCase();
+  const validTypes = ["carpeta_privada", "google_sheets", "webhook_crm"];
+  return validTypes.includes(value) ? value : "carpeta_privada";
+}
+
+function limpiarCoachLeadDestination(profileDoc = null) {
+  const type = normalizarCoachLeadDestinationType(profileDoc?.leadDestinationType || "carpeta_privada");
+  const url = limpiarUrlExterna(profileDoc?.leadDestinationUrl || "");
+  const label = String(profileDoc?.leadDestinationLabel || "").trim().slice(0, 80);
+  const destinationLabels = {
+    carpeta_privada: "Solo mi carpeta privada",
+    google_sheets: "Google Sheets",
+    webhook_crm: "Webhook / CRM"
+  };
+
+  return {
+    type,
+    label: label || destinationLabels[type],
+    url,
+    enabled: Boolean(type !== "carpeta_privada" && url),
+    updatedAt: profileDoc?.leadDestinationUpdatedAt || null
+  };
+}
+
+function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destination = null) {
+  return {
+    app: "Agustin 2.0 Coach",
+    sentAt: new Date().toISOString(),
+    owner: {
+      id: userDoc?._id ? String(userDoc._id) : "",
+      name: userDoc?.name || "",
+      email: userDoc?.email || ""
+    },
+    destination: {
+      type: destination?.type || "carpeta_privada",
+      label: destination?.label || ""
+    },
+    lead: {
+      id: lead?.id || "",
+      fullName: lead?.fullName || "",
+      phone: lead?.phone || "",
+      email: lead?.email || "",
+      city: lead?.city || "",
+      zipCode: lead?.zipCode || "",
+      interest: lead?.interest || "",
+      source: lead?.source || "",
+      status: lead?.status || "",
+      nextAction: lead?.nextAction || "",
+      nextActionAt: lead?.nextActionAt || null,
+      notes: lead?.notes || "",
+      summary: lead?.summary || "",
+      createdAt: lead?.createdAt || null,
+      updatedAt: lead?.updatedAt || null
+    }
+  };
+}
+
+async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !destination.url || !lead) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(destination.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(construirCoachLeadDeliveryPayload(userDoc, lead, destination)),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    return {
+      attempted: true,
+      delivered: response.ok,
+      destination,
+      status: response.status,
+      error: response.ok ? "" : `Destino respondio ${response.status}`
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    return {
+      attempted: true,
+      delivered: false,
+      destination,
+      error: error?.name === "AbortError" ? "El destino tardo demasiado en responder." : error.message
+    };
+  }
 }
 
 function normalizarCoachLeadStatus(status = "") {
@@ -5668,6 +5773,53 @@ app.get("/api/coach/me", async (req, res) => {
   }
 });
 
+app.put("/api/coach/lead-destination", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
+  const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
+  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+
+  if (nextType !== "carpeta_privada" && !nextUrl) {
+    return responderCoachError(res, 400, "Pon la URL de tu destino para guardar esta conexion.");
+  }
+
+  try {
+    const now = new Date();
+    const profileDoc =
+      (await CoachDistributorProfile.findOne({ userId: auth.user._id })) ||
+      new CoachDistributorProfile({
+        userId: auth.user._id,
+        name: auth.user.name || "",
+        email: auth.user.email || "",
+        subscriptionStatus: obtenerCoachStatusVisible(auth.user),
+        createdAt: now
+      });
+
+    profileDoc.name = auth.user.name || profileDoc.name || "";
+    profileDoc.email = auth.user.email || profileDoc.email || "";
+    profileDoc.subscriptionStatus = obtenerCoachStatusVisible(auth.user);
+    profileDoc.leadDestinationType = nextType;
+    profileDoc.leadDestinationLabel = nextLabel;
+    profileDoc.leadDestinationUrl = nextType === "carpeta_privada" ? "" : nextUrl;
+    profileDoc.leadDestinationUpdatedAt = now;
+    profileDoc.updatedAt = now;
+    await profileDoc.save();
+
+    res.json({
+      destination: limpiarCoachLeadDestination(profileDoc),
+      profile: limpiarCoachProfile(profileDoc, null)
+    });
+  } catch (error) {
+    console.error("Error guardando destino de leads del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el destino de leads.");
+  }
+});
+
 app.get("/api/coach/leads", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -5718,6 +5870,7 @@ app.post("/api/coach/leads", async (req, res) => {
   }
 
   try {
+    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
     const duplicateQuery = [];
 
     if (phone) {
@@ -5760,10 +5913,13 @@ app.post("/api/coach/leads", async (req, res) => {
       leadDoc.summary = construirCoachLeadSummary(leadDoc);
       leadDoc.updatedAt = now;
       await leadDoc.save();
+      const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
+      const delivery = await enviarCoachLeadADestino(auth.user, profileDoc, cleanedLead);
 
       return res.json({
-        lead: limpiarCoachInboxLead(leadDoc.toObject()),
-        duplicate: true
+        lead: cleanedLead,
+        duplicate: true,
+        delivery
       });
     }
 
@@ -5788,9 +5944,13 @@ app.post("/api/coach/leads", async (req, res) => {
       updatedAt: now
     });
 
+    const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
+    const delivery = await enviarCoachLeadADestino(auth.user, profileDoc, cleanedLead);
+
     res.json({
-      lead: limpiarCoachInboxLead(leadDoc.toObject()),
-      duplicate: false
+      lead: cleanedLead,
+      duplicate: false,
+      delivery
     });
   } catch (error) {
     console.error("Error guardando lead del Coach:", error.message);
