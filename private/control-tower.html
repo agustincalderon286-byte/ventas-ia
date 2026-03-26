@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Torre de Control | Agustin 2.0</title>
+    <title>Torre de Control Privada | Agustin 2.0</title>
     <meta
       name="description"
       content="Panel interno privado para revisar Chef, Coach, WhatsApp y leads listos para llamada."
@@ -11,12 +11,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/control/styles.css" />
   </head>
   <body>
+    <div class="control-noise" aria-hidden="true"></div>
     <div class="control-shell">
       <header class="control-nav">
         <div class="control-brand">
@@ -24,7 +25,12 @@
           <div>
             <div class="eyebrow">Area privada</div>
             <h1>Torre de control</h1>
-            <p>Chef, Coach, WhatsApp y leads en un mismo tablero interno.</p>
+            <p>Centro de mando interno para Chef, Coach, WhatsApp y operacion territorial.</p>
+            <div class="control-status-strip">
+              <span class="status-chip status-chip-live">Canal seguro</span>
+              <span class="status-chip">Solo socios autorizados</span>
+              <span class="status-chip">Decision en tiempo real</span>
+            </div>
           </div>
         </div>
 
@@ -38,28 +44,33 @@
         <section class="hero-grid">
           <article class="hero-card">
             <span class="eyebrow">Vision rapida</span>
-            <h2>Lo esencial para decidir hoy</h2>
+            <h2>Panel de mando para mover territorio con calma y precision</h2>
             <p>
-              Este panel junta actividad real del Chef, uso del Coach, respuestas de WhatsApp y leads listos para
-              llamada, sin meter ruido ni tocar lo publico.
+              Aqui viven solo los datos que ayudan a decidir: actividad real del Chef, adopcion del Coach,
+              respuestas de WhatsApp y leads listos para accionar sin ruido publico.
             </p>
+            <div class="hero-meta">
+              <span>Privado</span>
+              <span>Operativo</span>
+              <span>Reservado</span>
+            </div>
             <p class="mini-note" data-control-updated>Actualizando...</p>
           </article>
 
           <div class="kpi-grid">
-            <article class="kpi-card">
+            <article class="kpi-card tone-chef">
               <strong data-kpi-chef>0</strong>
               <span>Familias guiadas por Chef</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card tone-coach">
               <strong data-kpi-coach>0</strong>
               <span>Distribuidores con historial</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card tone-wa">
               <strong data-kpi-wa-today>0</strong>
               <span>Replies WhatsApp hoy</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card tone-ready">
               <strong data-kpi-ready>0</strong>
               <span>Leads listos para llamada</span>
             </article>
@@ -67,7 +78,7 @@
         </section>
 
         <section class="panel-grid">
-          <article class="panel-card">
+          <article class="panel-card panel-card-chef">
             <div class="panel-header">
               <div>
                 <div class="eyebrow">Chef</div>
@@ -96,7 +107,7 @@
             </div>
           </article>
 
-          <article class="panel-card">
+          <article class="panel-card panel-card-coach">
             <div class="panel-header">
               <div>
                 <div class="eyebrow">Coach</div>
@@ -135,7 +146,7 @@
             </div>
           </article>
 
-          <article class="panel-card panel-card-wide">
+          <article class="panel-card panel-card-wide panel-card-wa">
             <div class="panel-header">
               <div>
                 <div class="eyebrow">WhatsApp</div>
@@ -178,7 +189,7 @@
             </div>
           </article>
 
-          <article class="panel-card panel-card-wide">
+          <article class="panel-card panel-card-wide panel-card-leads">
             <div class="panel-header">
               <div>
                 <div class="eyebrow">Leads</div>
