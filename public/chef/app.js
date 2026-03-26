@@ -12,6 +12,7 @@ const statusBadge = document.getElementById("chefStatusBadge");
 const promptButtons = document.querySelectorAll("[data-chef-prompt]");
 const installButtons = document.querySelectorAll("[data-chef-install]");
 const installHintNodes = document.querySelectorAll("[data-chef-install-hint]");
+const installSection = document.querySelector("[data-chef-install-section]");
 const chefWhatsAppLinks = document.querySelectorAll("[data-chef-whatsapp-link]");
 const chefCalendlyButtons = document.querySelectorAll("[data-open-chef-calendly]");
 const chefCalendlyCard = document.querySelector("[data-chef-calendly-card]");
@@ -125,9 +126,7 @@ function syncInstallButtons() {
     buttonNode.disabled = false;
     buttonNode.textContent = canPrompt
       ? "Guardar en tu telefono"
-      : isIos
-        ? "Como guardarlo"
-        : buttonNode.dataset.defaultLabel || "Guardar en tu telefono";
+      : buttonNode.dataset.defaultLabel || (isIos ? "Como guardarlo" : "Guardar en tu telefono");
   });
 
   if (isInstalled) {
@@ -139,6 +138,17 @@ function syncInstallButtons() {
   } else {
     setInstallHint("Abre el Chef desde tu navegador y guardalo en favoritos o en tu pantalla si tu dispositivo lo permite.");
   }
+}
+
+function scrollToInstallSection() {
+  if (!installSection) {
+    return;
+  }
+
+  installSection.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
 function agregarMensaje(texto, clase) {
@@ -483,10 +493,12 @@ async function handleInstallClick() {
 
   if (isIosDevice()) {
     setInstallHint("En iPhone abre esta pagina en Safari, toca Compartir y luego Agregar a pantalla de inicio.");
+    scrollToInstallSection();
     return;
   }
 
   setInstallHint("Tu navegador no mostro instalacion directa. Guarda esta pagina en tu pantalla o favoritos para volver rapido.");
+  scrollToInstallSection();
 }
 
 async function registerChefServiceWorker() {

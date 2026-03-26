@@ -1,4 +1,4 @@
-const CACHE_NAME = "agustin-chef-shell-v2";
+const CACHE_NAME = "agustin-chef-shell-v3";
 const APP_SHELL = [
   "/chef/",
   "/chef/index.html",

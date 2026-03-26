@@ -242,26 +242,26 @@ a {
   border: 1px solid rgba(10, 34, 71, 0.08);
 }
 
-.whatsapp-button,
-.whatsapp-button:visited {
+.secondary-button.whatsapp-button,
+.secondary-button.whatsapp-button:visited {
   background: linear-gradient(135deg, var(--chef-whatsapp) 0%, #43e97b 100%);
   color: #ffffff;
   border: none;
   box-shadow: 0 14px 28px rgba(18, 140, 74, 0.22);
 }
 
-.whatsapp-button:hover {
+.secondary-button.whatsapp-button:hover {
   background: linear-gradient(135deg, var(--chef-whatsapp-dark) 0%, var(--chef-whatsapp) 100%);
 }
 
-.calendly-button {
+.secondary-button.calendly-button {
   background: linear-gradient(135deg, var(--chef-calendly-blue) 0%, #14548a 100%);
   color: #ffffff;
   border: none;
   box-shadow: 0 14px 28px rgba(11, 53, 88, 0.22);
 }
 
-.calendly-button:hover {
+.secondary-button.calendly-button:hover {
   background: linear-gradient(135deg, var(--chef-calendly-blue-dark) 0%, var(--chef-calendly-blue) 100%);
 }
 
@@ -534,6 +534,10 @@ a {
 .chef-hero-actions .secondary-button,
 .chef-hero-actions .primary-button {
   min-width: 178px;
+}
+
+[data-chef-install-section] {
+  scroll-margin-top: 110px;
 }
 
 .dashboard-actions {
