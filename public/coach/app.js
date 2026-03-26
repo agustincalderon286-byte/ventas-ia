@@ -28,6 +28,22 @@ const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const GOOGLE_RAFFLE_FORM_EMBED_URL = `${GOOGLE_RAFFLE_FORM_URL}?embedded=true`;
+const COACH_LEAD_STATUS_OPTIONS = [
+  { value: "nuevo", label: "Nuevo" },
+  { value: "contactado", label: "Contactado" },
+  { value: "agendado", label: "Agendado" },
+  { value: "cliente", label: "Cliente" },
+  { value: "archivado", label: "Archivado" }
+];
+const COACH_LEAD_SOURCE_LABELS = {
+  captura_manual: "Captura manual",
+  rifa_digital: "Rifa digital",
+  llamada: "Llamada",
+  demo: "Demo",
+  referencia: "Referencia",
+  evento: "Evento",
+  otro: "Otro"
+};
 const COACH_PLAN_CONFIG = {
   trial: {
     name: "Prueba gratis de 7 dias",
@@ -227,6 +243,48 @@ async function copyTextToClipboard(text) {
 
 function sanitizeZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 5);
+}
+
+function normalizeLeadPhone(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return digits.slice(1);
+  }
+
+  return digits;
+}
+
+function formatLeadPhone(value = "") {
+  const digits = normalizeLeadPhone(value);
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  return value || "Sin telefono";
+}
+
+function formatLeadStatusLabel(status = "") {
+  const found = COACH_LEAD_STATUS_OPTIONS.find(option => option.value === status);
+  return found?.label || "Nuevo";
+}
+
+function formatLeadSourceLabel(source = "") {
+  return COACH_LEAD_SOURCE_LABELS[source] || "Captura manual";
+}
+
+function escapeHtml(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function createOrderCalcProductCard(index) {
@@ -720,6 +778,356 @@ function initLeadFormTool() {
 
     syncLeadFormToggle(willOpen);
   });
+}
+
+function initCoachLeadWorkspace() {
+  const captureWrap = document.querySelector("[data-native-lead-wrap]");
+  const captureToggle = document.querySelector("[data-native-lead-toggle]");
+  const captureForm = document.querySelector("[data-native-lead-form]");
+  const captureFeedback = document.querySelector("[data-native-lead-feedback]");
+  const folderWrap = document.querySelector("[data-lead-folder-wrap]");
+  const folderToggle = document.querySelector("[data-lead-folder-toggle]");
+  const leadList = document.querySelector("[data-coach-lead-list]");
+  const leadListNote = document.querySelector("[data-coach-lead-list-note]");
+  const exportButton = document.querySelector("[data-coach-leads-export]");
+  const printButton = document.querySelector("[data-coach-leads-print]");
+  const filterButtons = Array.from(document.querySelectorAll("[data-lead-filter]"));
+  const totalNode = document.querySelector("[data-coach-leads-total]");
+  const newNode = document.querySelector("[data-coach-leads-new]");
+  const bookedNode = document.querySelector("[data-coach-leads-booked]");
+  const clientsNode = document.querySelector("[data-coach-leads-clients]");
+
+  if (!captureWrap || !captureToggle || !captureForm || !folderWrap || !folderToggle || !leadList) {
+    return;
+  }
+
+  const state = {
+    leads: [],
+    filter: "todos"
+  };
+
+  const syncCaptureToggle = open => {
+    captureWrap.hidden = !open;
+    captureToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    captureToggle.textContent = open ? "Cerrar captura" : "Abrir captura";
+  };
+
+  const syncFolderToggle = open => {
+    folderWrap.hidden = !open;
+    folderToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    folderToggle.textContent = open ? "Cerrar carpeta" : "Abrir carpeta";
+  };
+
+  const getFilteredLeads = () => {
+    if (state.filter === "todos") {
+      return state.leads;
+    }
+
+    return state.leads.filter(lead => lead.status === state.filter);
+  };
+
+  const renderSummary = summary => {
+    if (totalNode) totalNode.textContent = String(summary?.total || 0);
+    if (newNode) newNode.textContent = String(summary?.nuevo || 0);
+    if (bookedNode) bookedNode.textContent = String(summary?.agendado || 0);
+    if (clientsNode) clientsNode.textContent = String(summary?.cliente || 0);
+  };
+
+  const renderLeadList = () => {
+    const filteredLeads = getFilteredLeads();
+    leadList.innerHTML = "";
+
+    filterButtons.forEach(button => {
+      button.classList.toggle("is-active", button.dataset.leadFilter === state.filter);
+    });
+
+    if (!filteredLeads.length) {
+      leadList.innerHTML = `<div class="lead-folder-empty">No hay leads en este filtro todavia.</div>`;
+      if (leadListNote) {
+        leadListNote.textContent = "Captura uno nuevo o cambia el filtro para ver mas.";
+      }
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    filteredLeads.forEach(lead => {
+      const card = document.createElement("article");
+      card.className = "lead-folder-item";
+      card.dataset.coachLeadId = lead.id;
+
+      const statusOptions = COACH_LEAD_STATUS_OPTIONS.map(option => {
+        const selected = option.value === lead.status ? " selected" : "";
+        return `<option value="${option.value}"${selected}>${option.label}</option>`;
+      }).join("");
+
+      const phoneHref = normalizeLeadPhone(lead.phone);
+      const dateCopy = formatDate(lead.createdAt);
+      const metaChips = [
+        lead.phone ? `<span class="lead-folder-meta-chip">${escapeHtml(formatLeadPhone(lead.phone))}</span>` : "",
+        lead.email ? `<span class="lead-folder-meta-chip">${escapeHtml(lead.email)}</span>` : "",
+        lead.interest ? `<span class="lead-folder-meta-chip">${escapeHtml(lead.interest)}</span>` : "",
+        lead.source ? `<span class="lead-folder-meta-chip">${escapeHtml(formatLeadSourceLabel(lead.source))}</span>` : "",
+        lead.city ? `<span class="lead-folder-meta-chip">${escapeHtml(lead.city)}</span>` : "",
+        lead.zipCode ? `<span class="lead-folder-meta-chip">ZIP ${escapeHtml(lead.zipCode)}</span>` : ""
+      ]
+        .filter(Boolean)
+        .join("");
+
+      card.innerHTML = `
+        <div class="lead-folder-head">
+          <div>
+            <strong>${escapeHtml(lead.fullName || "Nombre pendiente")}</strong>
+            <span>Guardado ${escapeHtml(dateCopy)}</span>
+          </div>
+          <span class="lead-status-badge">${escapeHtml(formatLeadStatusLabel(lead.status))}</span>
+        </div>
+        <p class="lead-folder-copy">${escapeHtml(lead.summary || "Sin resumen todavia.")}</p>
+        <div class="lead-folder-meta">${metaChips}</div>
+        <div class="lead-folder-actions-row">
+          ${
+            phoneHref
+              ? `<a class="secondary-button" href="tel:+1${phoneHref}">Llamar</a>
+                 <a class="nav-button" href="sms:+1${phoneHref}">SMS</a>`
+              : ""
+          }
+          ${
+            lead.email
+              ? `<a class="nav-button" href="mailto:${encodeURIComponent(lead.email)}">Correo</a>`
+              : ""
+          }
+        </div>
+        <div class="lead-folder-actions-row lead-folder-status-row">
+          <select data-coach-lead-status>
+            ${statusOptions}
+          </select>
+          <button type="button" class="secondary-button" data-coach-lead-save>Guardar estado</button>
+        </div>
+      `;
+
+      fragment.appendChild(card);
+    });
+
+    leadList.appendChild(fragment);
+
+    if (leadListNote) {
+      leadListNote.textContent = `${filteredLeads.length} lead(s) en este filtro.`;
+    }
+  };
+
+  const exportLeads = () => {
+    const rows = [
+      ["nombre", "telefono", "email", "ciudad", "zip_code", "interes", "fuente", "status", "notas", "fecha"]
+    ];
+
+    getFilteredLeads().forEach(lead => {
+      rows.push([
+        lead.fullName || "",
+        lead.phone || "",
+        lead.email || "",
+        lead.city || "",
+        lead.zipCode || "",
+        lead.interest || "",
+        formatLeadSourceLabel(lead.source),
+        formatLeadStatusLabel(lead.status),
+        lead.notes || "",
+        lead.createdAt ? new Date(lead.createdAt).toISOString() : ""
+      ]);
+    });
+
+    const csv = rows
+      .map(row =>
+        row
+          .map(value => `"${String(value || "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "coach-leads.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const printLeads = () => {
+    const filteredLeads = getFilteredLeads();
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=920,height=760");
+
+    if (!printWindow) {
+      return;
+    }
+
+    const rows = filteredLeads
+      .map(
+        lead => `
+          <tr>
+            <td>${escapeHtml(lead.fullName || "")}</td>
+            <td>${escapeHtml(formatLeadPhone(lead.phone || ""))}</td>
+            <td>${escapeHtml(lead.interest || "")}</td>
+            <td>${escapeHtml(formatLeadStatusLabel(lead.status))}</td>
+            <td>${escapeHtml(formatLeadSourceLabel(lead.source))}</td>
+            <td>${escapeHtml(lead.notes || "")}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Mis leads</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+            h1 { margin: 0 0 16px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; vertical-align: top; }
+            th { background: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <h1>Mis leads</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Telefono</th>
+                <th>Interes</th>
+                <th>Status</th>
+                <th>Fuente</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const loadLeads = async () => {
+    const data = await apiRequest("/api/coach/leads");
+    state.leads = Array.isArray(data.leads) ? data.leads : [];
+    renderSummary(data.summary || {});
+    renderLeadList();
+  };
+
+  syncCaptureToggle(false);
+  syncFolderToggle(false);
+
+  captureToggle.addEventListener("click", () => {
+    syncCaptureToggle(captureWrap.hidden);
+  });
+
+  folderToggle.addEventListener("click", async () => {
+    const willOpen = folderWrap.hidden;
+    syncFolderToggle(willOpen);
+
+    if (willOpen) {
+      await loadLeads().catch(() => {
+        if (leadListNote) {
+          leadListNote.textContent = "No pude cargar tu carpeta de leads.";
+        }
+      });
+    }
+  });
+
+  captureForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(captureFeedback);
+
+    const submitButton = captureForm.querySelector('button[type="submit"]');
+    const formData = new FormData(captureForm);
+    const payload = {
+      fullName: formData.get("fullName"),
+      phone: formData.get("phone"),
+      email: formData.get("email"),
+      city: formData.get("city"),
+      zipCode: formData.get("zipCode"),
+      interest: formData.get("interest"),
+      source: formData.get("source"),
+      notes: formData.get("notes"),
+      consentGiven: formData.get("consentGiven") === "on"
+    };
+
+    setButtonLoading(submitButton, true, "Guardando...");
+
+    try {
+      const data = await apiRequest("/api/coach/leads", {
+        method: "POST",
+        body: payload
+      });
+
+      setMessage(
+        captureFeedback,
+        data.duplicate ? "Este lead ya existia. Lo actualice en tu carpeta." : "Lead guardado en tu carpeta privada.",
+        "success"
+      );
+      captureForm.reset();
+      await loadLeads();
+      syncFolderToggle(true);
+    } catch (error) {
+      setMessage(captureFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  captureForm.addEventListener("reset", () => {
+    clearMessage(captureFeedback);
+  });
+
+  filterButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      state.filter = button.dataset.leadFilter || "todos";
+      renderLeadList();
+    });
+  });
+
+  leadList.addEventListener("click", async event => {
+    const saveButton = event.target.closest("[data-coach-lead-save]");
+
+    if (!saveButton) {
+      return;
+    }
+
+    const card = saveButton.closest("[data-coach-lead-id]");
+    const leadId = card?.dataset.coachLeadId || "";
+    const statusSelect = card?.querySelector("[data-coach-lead-status]");
+    const nextStatus = statusSelect?.value || "nuevo";
+
+    if (!leadId) {
+      return;
+    }
+
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      await apiRequest(`/api/coach/leads/${encodeURIComponent(leadId)}`, {
+        method: "PATCH",
+        body: {
+          status: nextStatus
+        }
+      });
+      await loadLeads();
+    } catch (error) {
+      if (leadListNote) {
+        leadListNote.textContent = error.message;
+      }
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
+
+  exportButton?.addEventListener("click", exportLeads);
+  printButton?.addEventListener("click", printLeads);
 }
 
 function addCoachMessage(container, role, content) {
@@ -1217,6 +1625,7 @@ async function initCoachAppPage() {
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
   initLeadFormTool();
+  initCoachLeadWorkspace();
   initOrderCalculator();
   initDecisionTool();
   initBuyerProfileTool();

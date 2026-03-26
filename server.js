@@ -270,6 +270,33 @@ const coachSessionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachLeadInboxSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  fullName: { type: String, required: true, trim: true },
+  phone: String,
+  email: String,
+  city: String,
+  zipCode: String,
+  interest: String,
+  source: { type: String, default: "captura_manual" },
+  notes: String,
+  consentGiven: { type: Boolean, default: false },
+  status: { type: String, default: "nuevo" },
+  summary: String,
+  tags: [String],
+  lastContactAt: Date,
+  lastStatusChangeAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -286,6 +313,10 @@ coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachDistributorProfileSchema.index({ email: 1 });
 coachDistributorAnalyticsSchema.index({ email: 1 });
 coachSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+coachLeadInboxSchema.index({ ownerUserId: 1, createdAt: -1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -297,6 +328,7 @@ const CoachDistributorAnalytics =
   mongoose.models.CoachDistributorAnalytics ||
   mongoose.model("CoachDistributorAnalytics", coachDistributorAnalyticsSchema);
 const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSession", coachSessionSchema);
+const CoachLeadInbox = mongoose.models.CoachLeadInbox || mongoose.model("CoachLeadInbox", coachLeadInboxSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json());
@@ -782,6 +814,96 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
       createdAt: item?.createdAt || null
     }))
   };
+}
+
+function normalizarCoachLeadStatus(status = "") {
+  const value = String(status || "").trim().toLowerCase();
+  const validStatuses = ["nuevo", "contactado", "agendado", "cliente", "archivado"];
+  return validStatuses.includes(value) ? value : "nuevo";
+}
+
+function normalizarCoachLeadSource(source = "") {
+  const value = String(source || "").trim().toLowerCase();
+  const validSources = ["rifa_digital", "llamada", "demo", "referencia", "evento", "captura_manual", "otro"];
+  return validSources.includes(value) ? value : "captura_manual";
+}
+
+function normalizarZipCode(value = "") {
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function construirCoachLeadSummary(leadDoc = null) {
+  if (!leadDoc) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (leadDoc.interest) {
+    parts.push(`Interes principal: ${truncarTextoPrompt(leadDoc.interest, 80)}.`);
+  }
+
+  if (leadDoc.city || leadDoc.zipCode) {
+    const zone = [leadDoc.city || "", leadDoc.zipCode ? `ZIP ${leadDoc.zipCode}` : ""].filter(Boolean).join(" · ");
+    if (zone) {
+      parts.push(`Zona: ${zone}.`);
+    }
+  }
+
+  if (leadDoc.source) {
+    parts.push(`Fuente: ${String(leadDoc.source).replace(/_/g, " ")}.`);
+  }
+
+  if (leadDoc.notes) {
+    parts.push(`Notas: ${truncarTextoPrompt(leadDoc.notes, 120)}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+function limpiarCoachInboxLead(leadDoc = null) {
+  if (!leadDoc) {
+    return null;
+  }
+
+  return {
+    id: String(leadDoc._id),
+    ownerUserId: leadDoc.ownerUserId ? String(leadDoc.ownerUserId) : "",
+    fullName: leadDoc.fullName || "",
+    phone: leadDoc.phone || "",
+    email: leadDoc.email || "",
+    city: leadDoc.city || "",
+    zipCode: leadDoc.zipCode || "",
+    interest: leadDoc.interest || "",
+    source: leadDoc.source || "captura_manual",
+    notes: leadDoc.notes || "",
+    consentGiven: Boolean(leadDoc.consentGiven),
+    status: normalizarCoachLeadStatus(leadDoc.status),
+    summary: leadDoc.summary || "",
+    lastContactAt: leadDoc.lastContactAt || null,
+    lastStatusChangeAt: leadDoc.lastStatusChangeAt || null,
+    updatedAt: leadDoc.updatedAt || null,
+    createdAt: leadDoc.createdAt || null
+  };
+}
+
+function construirCoachLeadInboxSummary(leads = []) {
+  const items = Array.isArray(leads) ? leads : [];
+  const summary = {
+    total: items.length,
+    nuevo: 0,
+    contactado: 0,
+    agendado: 0,
+    cliente: 0,
+    archivado: 0
+  };
+
+  items.forEach(item => {
+    const status = normalizarCoachLeadStatus(item?.status);
+    summary[status] = (summary[status] || 0) + 1;
+  });
+
+  return summary;
 }
 
 function construirContextoPerfilCoachPrompt(profileDoc = null, analyticsDoc = null) {
@@ -5520,6 +5642,175 @@ app.get("/api/coach/me", async (req, res) => {
   } catch (error) {
     console.error("Error obteniendo usuario Coach:", error.message);
     responderCoachError(res, 500, "No pude revisar tu cuenta.");
+  }
+});
+
+app.get("/api/coach/leads", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const leadDocs = await CoachLeadInbox.find({ ownerUserId: auth.user._id }).sort({ createdAt: -1 }).limit(300).lean();
+    const leads = leadDocs.map(limpiarCoachInboxLead).filter(Boolean);
+
+    res.json({
+      summary: construirCoachLeadInboxSummary(leads),
+      leads
+    });
+  } catch (error) {
+    console.error("Error obteniendo carpeta de leads del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tu carpeta de leads.");
+  }
+});
+
+app.post("/api/coach/leads", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const rawName = String(req.body?.fullName || req.body?.name || "").trim();
+  const fullName = seleccionarNombreConfiable(rawName) || rawName;
+  const phone = normalizePhone(req.body?.phone || "");
+  const email = normalizarEmail(req.body?.email || "");
+  const city = String(req.body?.city || "").trim().slice(0, 80);
+  const zipCode = normalizarZipCode(req.body?.zipCode || req.body?.zip || "");
+  const interest = String(req.body?.interest || "").trim().slice(0, 120);
+  const source = normalizarCoachLeadSource(req.body?.source || "captura_manual");
+  const notes = String(req.body?.notes || "").trim().slice(0, 400);
+  const consentGiven = Boolean(req.body?.consentGiven);
+
+  if (!fullName) {
+    return responderCoachError(res, 400, "El nombre es requerido.");
+  }
+
+  if (!phone && !email) {
+    return responderCoachError(res, 400, "Necesitas telefono o correo para guardar el lead.");
+  }
+
+  try {
+    const duplicateQuery = [];
+
+    if (phone) {
+      duplicateQuery.push({ phone });
+    }
+
+    if (email) {
+      duplicateQuery.push({ email });
+    }
+
+    const now = new Date();
+    let leadDoc = null;
+
+    if (duplicateQuery.length) {
+      leadDoc = await CoachLeadInbox.findOne({
+        ownerUserId: auth.user._id,
+        $or: duplicateQuery
+      }).sort({ createdAt: -1 });
+    }
+
+    if (leadDoc) {
+      leadDoc.fullName = fullName || leadDoc.fullName;
+      leadDoc.phone = phone || leadDoc.phone || "";
+      leadDoc.email = email || leadDoc.email || "";
+      leadDoc.city = city || leadDoc.city || "";
+      leadDoc.zipCode = zipCode || leadDoc.zipCode || "";
+      leadDoc.interest = interest || leadDoc.interest || "";
+      leadDoc.source = source || leadDoc.source || "captura_manual";
+      leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
+
+      if (notes && notes !== leadDoc.notes) {
+        leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${notes}` : notes;
+      }
+
+      leadDoc.summary = construirCoachLeadSummary(leadDoc);
+      leadDoc.updatedAt = now;
+      await leadDoc.save();
+
+      return res.json({
+        lead: limpiarCoachInboxLead(leadDoc.toObject()),
+        duplicate: true
+      });
+    }
+
+    leadDoc = await CoachLeadInbox.create({
+      ownerUserId: auth.user._id,
+      ownerEmail: auth.user.email || "",
+      ownerName: auth.user.name || "",
+      fullName,
+      phone,
+      email,
+      city,
+      zipCode,
+      interest,
+      source,
+      notes,
+      consentGiven,
+      status: "nuevo",
+      summary: construirCoachLeadSummary({ interest, city, zipCode, source, notes }),
+      lastStatusChangeAt: now,
+      updatedAt: now
+    });
+
+    res.json({
+      lead: limpiarCoachInboxLead(leadDoc.toObject()),
+      duplicate: false
+    });
+  } catch (error) {
+    console.error("Error guardando lead del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el lead en este momento.");
+  }
+});
+
+app.patch("/api/coach/leads/:leadId", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const leadId = String(req.params?.leadId || "").trim();
+
+  if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+    return responderCoachError(res, 400, "Lead invalido.");
+  }
+
+  const nextStatus = normalizarCoachLeadStatus(req.body?.status || "nuevo");
+  const noteToAppend = String(req.body?.notes || "").trim().slice(0, 300);
+
+  try {
+    const leadDoc = await CoachLeadInbox.findOne({ _id: leadId, ownerUserId: auth.user._id });
+
+    if (!leadDoc) {
+      return responderCoachError(res, 404, "No encontre ese lead.");
+    }
+
+    const now = new Date();
+    leadDoc.status = nextStatus;
+    leadDoc.lastStatusChangeAt = now;
+
+    if (["contactado", "agendado", "cliente"].includes(nextStatus)) {
+      leadDoc.lastContactAt = now;
+    }
+
+    if (noteToAppend) {
+      leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${noteToAppend}` : noteToAppend;
+    }
+
+    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    leadDoc.updatedAt = now;
+    await leadDoc.save();
+
+    res.json({
+      lead: limpiarCoachInboxLead(leadDoc.toObject())
+    });
+  } catch (error) {
+    console.error("Error actualizando lead del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar ese lead.");
   }
 });
 

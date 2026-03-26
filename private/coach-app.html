@@ -185,10 +185,10 @@
 
           <article class="dashboard-card lead-form-card">
             <div class="eyebrow">Captura de leads</div>
-            <h3>Rifa digital</h3>
+            <h3>Rifa Google (respaldo)</h3>
             <p>
-              Abre aqui mismo tu Google Form para captar leads nuevos sin salir del Coach. Lo puedes usar en llamada,
-              en demo o cuando estes prospectando.
+              Abre aqui mismo tu Google Form actual para captar leads sin salir del Coach. Lo dejamos aqui como
+              respaldo mientras pruebas la captura nueva del sistema.
             </p>
 
             <div class="dashboard-actions compact-top">
@@ -222,7 +222,153 @@
             </div>
 
             <p class="mini-note">
-              Los leads siguen entrando por tu Google Form como siempre, solo que ahora lo tienes mas a la mano.
+              Los leads siguen entrando por Google como siempre. Esto no cambia tu flujo actual.
+            </p>
+          </article>
+
+          <article class="dashboard-card native-lead-card">
+            <div class="eyebrow">Captura propia</div>
+            <h3>Formulario nativo del Coach</h3>
+            <p>
+              Esta es la base nueva del sistema. Guarda el lead directo en Mongo y lo deja en tu carpeta privada para
+              trabajarlo despues.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button native-lead-toggle"
+                data-native-lead-toggle
+                aria-expanded="false"
+              >
+                Abrir captura
+              </button>
+            </div>
+
+            <div class="native-lead-wrap" data-native-lead-wrap hidden>
+              <form class="native-lead-form" data-native-lead-form>
+                <div class="native-lead-grid">
+                  <label class="native-lead-field">
+                    <span>Nombre</span>
+                    <input type="text" name="fullName" placeholder="Nombre completo" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Telefono</span>
+                    <input type="tel" name="phone" placeholder="7735551234" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Correo</span>
+                    <input type="email" name="email" placeholder="Opcional" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Ciudad</span>
+                    <input type="text" name="city" placeholder="Opcional" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>ZIP Code</span>
+                    <input type="text" name="zipCode" inputmode="numeric" maxlength="10" placeholder="Opcional" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Interes principal</span>
+                    <input type="text" name="interest" placeholder="Ej. olla de presion" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Fuente</span>
+                    <select name="source">
+                      <option value="captura_manual">Captura manual</option>
+                      <option value="rifa_digital">Rifa digital</option>
+                      <option value="llamada">Llamada</option>
+                      <option value="demo">Demo</option>
+                      <option value="referencia">Referencia</option>
+                      <option value="evento">Evento</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field native-lead-field-full">
+                    <span>Notas</span>
+                    <textarea name="notes" rows="3" maxlength="400" placeholder="Algo importante sobre este lead"></textarea>
+                  </label>
+                </div>
+
+                <label class="native-lead-check">
+                  <input type="checkbox" name="consentGiven" />
+                  <span>Este lead acepto que lo contacten.</span>
+                </label>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button">Guardar lead</button>
+                  <button type="reset" class="nav-button">Limpiar</button>
+                </div>
+
+                <div class="form-result" data-native-lead-feedback></div>
+              </form>
+            </div>
+
+            <p class="mini-note">
+              Esta captura ya queda dentro de tu sistema y no depende de Google para guardar una copia.
+            </p>
+          </article>
+
+          <article class="dashboard-card lead-folder-card">
+            <div class="eyebrow">Carpeta privada</div>
+            <h3>Mis leads</h3>
+            <p>
+              Aqui se queda guardado lo que captures con tu formulario nativo. Puedes mover estados, imprimir o exportar.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button lead-folder-toggle"
+                data-lead-folder-toggle
+                aria-expanded="false"
+              >
+                Abrir carpeta
+              </button>
+            </div>
+
+            <div class="lead-folder-wrap" data-lead-folder-wrap hidden>
+              <div class="insight-grid lead-folder-metrics">
+                <div class="mini-stat">
+                  <strong data-coach-leads-total>0</strong>
+                  <span>Total</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-coach-leads-new>0</strong>
+                  <span>Nuevos</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-coach-leads-booked>0</strong>
+                  <span>Agendados</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-coach-leads-clients>0</strong>
+                  <span>Clientes</span>
+                </div>
+              </div>
+
+              <div class="lead-folder-toolbar">
+                <div class="lead-folder-filters">
+                  <button type="button" class="lead-filter-chip is-active" data-lead-filter="todos">Todos</button>
+                  <button type="button" class="lead-filter-chip" data-lead-filter="nuevo">Nuevos</button>
+                  <button type="button" class="lead-filter-chip" data-lead-filter="contactado">Contactados</button>
+                  <button type="button" class="lead-filter-chip" data-lead-filter="agendado">Agendados</button>
+                  <button type="button" class="lead-filter-chip" data-lead-filter="cliente">Clientes</button>
+                  <button type="button" class="lead-filter-chip" data-lead-filter="archivado">Archivados</button>
+                </div>
+
+                <div class="dashboard-actions compact-top lead-folder-actions">
+                  <button type="button" class="nav-button" data-coach-leads-export>Exportar CSV</button>
+                  <button type="button" class="nav-button" data-coach-leads-print>Imprimir</button>
+                </div>
+              </div>
+
+              <div class="lead-folder-list" data-coach-lead-list></div>
+              <p class="mini-note" data-coach-lead-list-note>Aun no hay leads guardados en tu carpeta privada.</p>
+            </div>
+
+            <p class="mini-note">
+              Cada distribuidor tendra su propia carpeta. Aqui empieza la parte duplicable del sistema.
             </p>
           </article>
 
