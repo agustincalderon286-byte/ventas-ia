@@ -1,4 +1,24 @@
 const OVERVIEW_API_URL = "/api/control/overview";
+const SYSTEM_CODE_LINES = [
+  "lead.score = warm",
+  "chef.intent = recipe_support",
+  "coach.route = follow_up",
+  "territory.signal = active",
+  "wa.reply_window = monitoring",
+  "handoff.status = synchronized",
+  "call.queue = optimizing",
+  "notes.summary = refreshed",
+  "prospect.flow = active",
+  "pipeline.signal = healthy",
+  "lead.memory = linked",
+  "system.guard = private"
+];
+const SYSTEM_STATUS_LINES = [
+  "Prospectando y generando clientes en tiempo real",
+  "Analizando conversaciones y detectando interes comercial",
+  "Sincronizando Chef, Coach y handoff operativo",
+  "Moviendo oportunidades activas dentro del territorio"
+];
 
 function escapeHtml(value = "") {
   return String(value)
@@ -78,6 +98,68 @@ function setText(selector, value) {
   if (el) {
     el.textContent = value;
   }
+}
+
+function buildCodeStream() {
+  const target = document.querySelector("[data-code-stream-track]");
+
+  if (!target) {
+    return;
+  }
+
+  const lines = [...SYSTEM_CODE_LINES, ...SYSTEM_CODE_LINES];
+
+  target.innerHTML = lines
+    .map((line, index) => {
+      const accent = index % 4 === 1 ? " code-line-accent" : "";
+      return `<div class="code-line${accent}">${escapeHtml(line)}</div>`;
+    })
+    .join("");
+}
+
+function randomBinaryRow(length = 18) {
+  return Array.from({ length }, () => (Math.random() > 0.5 ? "1" : "0")).join("");
+}
+
+function buildBinaryGrid() {
+  const target = document.querySelector("[data-binary-grid]");
+
+  if (!target) {
+    return;
+  }
+
+  const columns = Array.from({ length: 15 }, (_, index) => {
+    const left = 3 + index * 6.5;
+    const duration = 10 + (index % 5) * 2.2;
+    const delay = -(index * 1.15);
+    const opacity = 0.42 + (index % 4) * 0.1;
+    const rows = Array.from({ length: 22 }, () => randomBinaryRow(14)).join("<br>");
+
+    return `
+      <div
+        class="binary-column"
+        style="left:${left}%;animation-duration:${duration}s;animation-delay:${delay}s;opacity:${opacity};"
+      >${rows}</div>
+    `;
+  });
+
+  target.innerHTML = columns.join("");
+}
+
+function rotateSystemStatus() {
+  const target = document.querySelector("[data-system-status-line]");
+
+  if (!target) {
+    return;
+  }
+
+  let index = 0;
+  target.textContent = SYSTEM_STATUS_LINES[index];
+
+  window.setInterval(() => {
+    index = (index + 1) % SYSTEM_STATUS_LINES.length;
+    target.textContent = SYSTEM_STATUS_LINES[index];
+  }, 3200);
 }
 
 function hydrateDashboard(data) {
@@ -169,6 +251,10 @@ function hydrateDashboard(data) {
 }
 
 async function init() {
+  buildCodeStream();
+  buildBinaryGrid();
+  rotateSystemStatus();
+
   try {
     const data = await cargarControlTower();
     hydrateDashboard(data);
