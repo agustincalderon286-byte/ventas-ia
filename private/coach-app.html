@@ -269,6 +269,109 @@
             </p>
           </article>
 
+          <article class="dashboard-card decision-tool-card">
+            <div class="eyebrow">Herramienta de cierre</div>
+            <h3>Balance de decision</h3>
+            <p>
+              Cuando el cliente esta interesado pero indeciso, usa este cierre interactivo para pesar razones,
+              detectar la objecion principal y decidir el siguiente movimiento con mas claridad.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button decision-tool-toggle"
+                data-decision-tool-toggle
+                aria-expanded="false"
+              >
+                Abrir balance
+              </button>
+            </div>
+
+            <div class="decision-tool-wrap" data-decision-tool-wrap hidden>
+              <div class="decision-tool" data-decision-tool>
+                <div class="decision-tool-columns">
+                  <section class="decision-tool-section">
+                    <div class="decision-tool-head">
+                      <strong>Por que si</strong>
+                      <span>Razones para avanzar</span>
+                    </div>
+                    <div class="decision-tool-list" data-decision-pros></div>
+                  </section>
+
+                  <section class="decision-tool-section is-cons">
+                    <div class="decision-tool-head">
+                      <strong>Por que no</strong>
+                      <span>Objeciones o frenos</span>
+                    </div>
+                    <div class="decision-tool-list" data-decision-cons></div>
+                  </section>
+                </div>
+
+                <div class="decision-tool-actions">
+                  <button type="button" class="primary-button" data-decision-tool-run>Analizar decision</button>
+                  <button type="button" class="nav-button" data-decision-tool-reset>Limpiar</button>
+                </div>
+
+                <div class="decision-tool-summary">
+                  <div class="decision-tool-summary-head">
+                    <strong>Lectura del cierre</strong>
+                    <span>Ponderado por el propio cliente</span>
+                  </div>
+
+                  <div class="decision-tool-scoreboard">
+                    <div class="decision-score-card">
+                      <span>Beneficios</span>
+                      <strong data-decision-total-pros>0</strong>
+                    </div>
+                    <div class="decision-score-card is-cons">
+                      <span>Objeciones</span>
+                      <strong data-decision-total-cons>0</strong>
+                    </div>
+                    <div class="decision-score-card is-highlight">
+                      <span>Compra a favor</span>
+                      <strong data-decision-percent>0%</strong>
+                    </div>
+                  </div>
+
+                  <div class="decision-bars">
+                    <div class="decision-bar-group">
+                      <span>Fuerza de beneficios</span>
+                      <div class="decision-bar-shell">
+                        <div class="decision-bar is-pros" data-decision-bar-pros style="width: 0%"></div>
+                      </div>
+                    </div>
+                    <div class="decision-bar-group">
+                      <span>Peso de objeciones</span>
+                      <div class="decision-bar-shell">
+                        <div class="decision-bar is-cons" data-decision-bar-cons style="width: 0%"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="decision-tool-insight">
+                    <div class="decision-insight-card">
+                      <span>Decision sugerida</span>
+                      <strong data-decision-message>Agrega razones y objeciones para leer el cierre.</strong>
+                    </div>
+                    <div class="decision-insight-card">
+                      <span>Objecion principal</span>
+                      <strong data-decision-objection>Sin objecion principal todavia.</strong>
+                    </div>
+                    <div class="decision-insight-card is-next">
+                      <span>Siguiente paso recomendado</span>
+                      <strong data-decision-next-step>Usalo cuando el cliente diga que lo quiere pensar.</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Sirve para destrabar clientes tibios y convertir indecision en una conversacion mas clara.
+            </p>
+          </article>
+
           <article class="dashboard-card">
             <div class="eyebrow">Tu patron</div>
             <h3>Como te esta leyendo el Coach</h3>

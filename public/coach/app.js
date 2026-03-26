@@ -49,6 +49,7 @@ const COACH_PLAN_CONFIG = {
   }
 };
 const ORDER_CALC_PRODUCT_COUNT = 3;
+const DECISION_TOOL_ROW_COUNT = 5;
 
 function buildCoachId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -329,6 +330,148 @@ function initOrderCalculator() {
   });
 
   recalculate();
+}
+
+function createDecisionToolRow(kind, index) {
+  const placeholder = kind === "pro" ? "Razón a favor" : "Objeción o freno";
+
+  return `
+    <div class="decision-tool-row">
+      <input type="text" data-decision-text data-decision-kind="${kind}" placeholder="${placeholder} ${index}" />
+      <select data-decision-weight data-decision-kind="${kind}">
+        <option value="0">Peso 0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+      </select>
+    </div>
+  `;
+}
+
+function initDecisionTool() {
+  const wrap = document.querySelector("[data-decision-tool-wrap]");
+  const root = document.querySelector("[data-decision-tool]");
+  const toggle = document.querySelector("[data-decision-tool-toggle]");
+
+  if (!root || !wrap || !toggle) {
+    return;
+  }
+
+  const prosContainer = root.querySelector("[data-decision-pros]");
+  const consContainer = root.querySelector("[data-decision-cons]");
+  const runButton = root.querySelector("[data-decision-tool-run]");
+  const resetButton = root.querySelector("[data-decision-tool-reset]");
+  const totalProsNode = root.querySelector("[data-decision-total-pros]");
+  const totalConsNode = root.querySelector("[data-decision-total-cons]");
+  const percentNode = root.querySelector("[data-decision-percent]");
+  const messageNode = root.querySelector("[data-decision-message]");
+  const objectionNode = root.querySelector("[data-decision-objection]");
+  const nextStepNode = root.querySelector("[data-decision-next-step]");
+  const prosBar = root.querySelector("[data-decision-bar-pros]");
+  const consBar = root.querySelector("[data-decision-bar-cons]");
+
+  if (prosContainer && !prosContainer.children.length) {
+    prosContainer.innerHTML = Array.from({ length: DECISION_TOOL_ROW_COUNT }, (_, index) =>
+      createDecisionToolRow("pro", index + 1)
+    ).join("");
+  }
+
+  if (consContainer && !consContainer.children.length) {
+    consContainer.innerHTML = Array.from({ length: DECISION_TOOL_ROW_COUNT }, (_, index) =>
+      createDecisionToolRow("con", index + 1)
+    ).join("");
+  }
+
+  const syncDecisionToggle = open => {
+    wrap.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open ? "Cerrar balance" : "Abrir balance";
+  };
+
+  const analyze = () => {
+    const prosRows = Array.from(prosContainer?.querySelectorAll(".decision-tool-row") || []);
+    const consRows = Array.from(consContainer?.querySelectorAll(".decision-tool-row") || []);
+    let totalPros = 0;
+    let totalCons = 0;
+    let maxConValue = 0;
+    let maxConText = "";
+
+    prosRows.forEach(row => {
+      const text = String(row.querySelector("[data-decision-text]")?.value || "").trim();
+      const weight = Number.parseInt(row.querySelector("[data-decision-weight]")?.value || "0", 10) || 0;
+      if (text || weight > 0) {
+        totalPros += weight;
+      }
+    });
+
+    consRows.forEach(row => {
+      const text = String(row.querySelector("[data-decision-text]")?.value || "").trim();
+      const weight = Number.parseInt(row.querySelector("[data-decision-weight]")?.value || "0", 10) || 0;
+      if (text || weight > 0) {
+        totalCons += weight;
+      }
+      if (weight > maxConValue) {
+        maxConValue = weight;
+        maxConText = text || "Objeción no especificada";
+      }
+    });
+
+    const total = totalPros + totalCons;
+    const percent = total > 0 ? Math.round((totalPros / total) * 100) : 0;
+    const prosPercentOfMax = Math.min(100, Math.round((totalPros / (DECISION_TOOL_ROW_COUNT * 10)) * 100));
+    const consPercentOfMax = Math.min(100, Math.round((totalCons / (DECISION_TOOL_ROW_COUNT * 10)) * 100));
+
+    let message = "Agrega razones y objeciones para leer el cierre.";
+    let nextStep = "Usalo cuando el cliente diga que lo quiere pensar.";
+    let topObjection = maxConText || "Sin objecion principal todavia.";
+
+    if (total > 0 && totalPros >= totalCons && percent >= 70) {
+      message = "Los beneficios ya pesan mas que las objeciones.";
+      nextStep = "Pide decision con calma y refuerza el valor que mas peso tiene.";
+    } else if (total > 0 && totalPros >= totalCons) {
+      message = "Hay inclinacion positiva, pero conviene rematar la objecion principal.";
+      nextStep = "Resuelve el freno principal y vuelve a pedir el siguiente paso.";
+    } else if (total > 0) {
+      message = "La indecision sigue cargada hacia una objecion importante.";
+      nextStep = "No cierres duro todavia. Resuelve la objecion principal antes de volver a pedir compra.";
+    }
+
+    if (totalProsNode) totalProsNode.textContent = String(totalPros);
+    if (totalConsNode) totalConsNode.textContent = String(totalCons);
+    if (percentNode) percentNode.textContent = `${percent}%`;
+    if (messageNode) messageNode.textContent = message;
+    if (objectionNode) objectionNode.textContent = topObjection;
+    if (nextStepNode) nextStepNode.textContent = nextStep;
+    if (prosBar) prosBar.style.width = `${prosPercentOfMax}%`;
+    if (consBar) consBar.style.width = `${consPercentOfMax}%`;
+  };
+
+  const reset = () => {
+    root.querySelectorAll("input").forEach(input => {
+      input.value = "";
+    });
+    root.querySelectorAll("select").forEach(select => {
+      select.value = "0";
+    });
+    analyze();
+  };
+
+  syncDecisionToggle(false);
+  analyze();
+
+  toggle.addEventListener("click", () => {
+    syncDecisionToggle(wrap.hidden);
+  });
+
+  runButton?.addEventListener("click", analyze);
+  resetButton?.addEventListener("click", reset);
 }
 
 function addCoachMessage(container, role, content) {
@@ -826,6 +969,7 @@ async function initCoachAppPage() {
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
   initOrderCalculator();
+  initDecisionTool();
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
