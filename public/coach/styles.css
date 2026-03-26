@@ -951,6 +951,55 @@ img {
   line-height: 1.6;
 }
 
+.resource-item-water {
+  background:
+    linear-gradient(180deg, rgba(17, 37, 62, 0.78), rgba(10, 24, 44, 0.88));
+  border-color: rgba(120, 182, 255, 0.18);
+}
+
+.water-tool-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.water-tool-input {
+  flex: 1 1 220px;
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+}
+
+.water-tool-input::placeholder {
+  color: var(--muted);
+}
+
+.water-tool-input:focus {
+  outline: none;
+  border-color: rgba(120, 182, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(120, 182, 255, 0.12);
+}
+
+.water-tool-button {
+  min-width: 168px;
+}
+
+.water-tool-note {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.water-tool-feedback {
+  margin-top: 12px;
+}
+
 .coach-console {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;

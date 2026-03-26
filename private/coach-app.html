@@ -146,6 +146,36 @@
                   </a>
                 </div>
               </section>
+
+              <section class="resource-item resource-item-water">
+                <div class="resource-copy">
+                  <strong>Consulta calidad del agua</strong>
+                  <span>
+                    Herramienta de apoyo para abrir conversacion sobre agua, contaminantes y sistemas de filtracion
+                    usando el ZIP Code del cliente.
+                  </span>
+                </div>
+
+                <form class="water-tool-form" data-water-check-form>
+                  <label class="sr-only" for="coach-water-zip">ZIP Code</label>
+                  <input
+                    id="coach-water-zip"
+                    class="water-tool-input"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="Ingresa ZIP Code"
+                    data-water-check-input
+                    required
+                  />
+                  <button type="submit" class="secondary-button water-tool-button">Analizar agua</button>
+                </form>
+
+                <p class="water-tool-note">
+                  Abre EWG en una nueva pestana y deja el ZIP listo para pegar en la busqueda.
+                </p>
+                <div class="form-result water-tool-feedback" data-water-check-feedback></div>
+              </section>
             </div>
 
             <p class="mini-note">

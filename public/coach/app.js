@@ -159,6 +159,10 @@ async function copyTextToClipboard(text) {
   return copied;
 }
 
+function sanitizeZipCode(value = "") {
+  return String(value || "").replace(/\D/g, "").slice(0, 5);
+}
+
 function addCoachMessage(container, role, content) {
   if (!container) {
     return;
@@ -669,6 +673,9 @@ async function initCoachAppPage() {
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
+  const waterCheckForm = document.querySelector("[data-water-check-form]");
+  const waterCheckInput = document.querySelector("[data-water-check-input]");
+  const waterCheckFeedback = document.querySelector("[data-water-check-feedback]");
   const appMessage = document.querySelector("[data-coach-app-message]");
   const chefShareUrl = `${window.location.origin}/chef/`;
 
@@ -841,6 +848,44 @@ async function initCoachAppPage() {
     } catch (error) {
       // noop
     }
+  });
+
+  waterCheckInput?.addEventListener("input", () => {
+    const safeZip = sanitizeZipCode(waterCheckInput.value);
+    if (waterCheckInput.value !== safeZip) {
+      waterCheckInput.value = safeZip;
+    }
+  });
+
+  waterCheckForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const zip = sanitizeZipCode(waterCheckInput?.value || "");
+
+    if (!zip || zip.length < 5) {
+      setMessage(waterCheckFeedback, "Ingresa un ZIP Code valido de 5 digitos.", "error");
+      waterCheckInput?.focus();
+      return;
+    }
+
+    clearMessage(waterCheckFeedback);
+
+    try {
+      await copyTextToClipboard(zip);
+      setMessage(
+        waterCheckFeedback,
+        `Se abrio EWG en una nueva pestana y el ZIP ${zip} quedo copiado para pegarlo en la busqueda.`,
+        "success"
+      );
+    } catch (error) {
+      setMessage(
+        waterCheckFeedback,
+        `Se abrio EWG en una nueva pestana. Usa el ZIP ${zip} en la busqueda.`,
+        "info"
+      );
+    }
+
+    window.open("https://www.ewg.org/tapwater/", "_blank", "noopener,noreferrer");
   });
 
   portalButtons.forEach(button => {
