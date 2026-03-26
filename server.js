@@ -34,6 +34,10 @@ const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || ""
 const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
+const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
+const WHATSAPP_CHEF_TEXT = String(
+  process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef."
+).trim();
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -3642,6 +3646,37 @@ function limpiarUrlExterna(value = "") {
   return /^https?:\/\//i.test(text) ? text : "";
 }
 
+function limpiarTelefonoWhatsApp(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length === 10) {
+    return `1${digits}`;
+  }
+
+  return digits;
+}
+
+function construirWhatsAppLink(phone = "", text = "") {
+  const whatsappNumber = limpiarTelefonoWhatsApp(phone);
+
+  if (!whatsappNumber) {
+    return "";
+  }
+
+  const whatsappUrl = new URL(`https://wa.me/${whatsappNumber}`);
+  const message = cleanText(String(text || "")).trim();
+
+  if (message) {
+    whatsappUrl.searchParams.set("text", message);
+  }
+
+  return whatsappUrl.toString();
+}
+
 function escapeXml(value = "") {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -4547,12 +4582,16 @@ function construirContextoModoPrompt(modo = "chef", coachUser = null) {
     const chefCalendlyPrompt = limpiarUrlExterna(CALENDLY_CHEF_URL)
       ? `\nCALENDLY DISPONIBLE:\n- si el usuario quiere una llamada, apoyo humano o agendar, puedes compartir este link exacto: ${limpiarUrlExterna(CALENDLY_CHEF_URL)}\n- no lo fuerces en cada respuesta; usalo solo cuando sea natural\n`
       : "";
+    const chefWhatsAppLink = construirWhatsAppLink(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT);
+    const chefWhatsAppPrompt = chefWhatsAppLink
+      ? `\nWHATSAPP DISPONIBLE:\n- si al usuario se le hace mas facil seguir por WhatsApp, puedes compartir este link exacto: ${chefWhatsAppLink}\n- ofrecelo solo cuando ayude y se sienta natural\n`
+      : "";
     return `
 MODO ACTIVO:
 - modo: chef
 - tipo_usuario: cliente_o_prospecto
 - acceso_privado: no
-${chefCalendlyPrompt}`;
+${chefCalendlyPrompt}${chefWhatsAppPrompt}`;
   }
 
   const coachCalendlyPrompt = limpiarUrlExterna(CALENDLY_COACH_URL)
@@ -4896,12 +4935,17 @@ app.get("/api/chef/stats", async (req, res) => {
 });
 
 app.get("/api/platform/config", (req, res) => {
+  const chefWhatsAppUrl = construirWhatsAppLink(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT);
   res.json({
     calendly: {
       chefUrl: limpiarUrlExterna(CALENDLY_CHEF_URL),
       coachUrl: limpiarUrlExterna(CALENDLY_COACH_URL),
       chefEnabled: Boolean(limpiarUrlExterna(CALENDLY_CHEF_URL)),
       coachEnabled: Boolean(limpiarUrlExterna(CALENDLY_COACH_URL))
+    },
+    whatsapp: {
+      chefUrl: chefWhatsAppUrl,
+      chefEnabled: Boolean(chefWhatsAppUrl)
     }
   });
 });
