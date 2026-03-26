@@ -54,7 +54,22 @@
 
             <div class="chef-hero-actions">
               <a class="primary-button" href="#chat-chef">Hablar con Chef</a>
-              <button type="button" class="secondary-button secondary-button-button" data-open-chef-calendly hidden>
+              <a
+                class="secondary-button whatsapp-button"
+                href="#"
+                target="_blank"
+                rel="noreferrer"
+                data-chef-whatsapp-link
+                hidden
+              >
+                Contactar por WhatsApp
+              </a>
+              <button
+                type="button"
+                class="secondary-button secondary-button-button calendly-button"
+                data-open-chef-calendly
+                hidden
+              >
                 Agendar llamada
               </button>
               <button type="button" class="secondary-button secondary-button-button" data-chef-install>
@@ -197,13 +212,31 @@
               </article>
 
               <article class="side-card side-card-accent" data-chef-calendly-card hidden>
-                <div class="eyebrow">Si prefieres hablar</div>
-                <h3>Agenda una llamada</h3>
+                <div class="eyebrow">Si prefieres ayuda directa</div>
+                <h3>Habla con nosotros</h3>
                 <p>
-                  Si quieres ayuda mas guiada, abre la agenda y aparta una llamada breve sin salirte de esta pagina.
+                  Si quieres ayuda mas guiada, puedes escribir por WhatsApp o apartar una llamada breve sin salirte de
+                  esta pagina.
                 </p>
-                <div class="install-button-row">
-                  <button type="button" class="primary-button" data-open-chef-calendly>Agendar ahora</button>
+                <div class="contact-button-row">
+                  <a
+                    class="secondary-button whatsapp-button"
+                    href="#"
+                    target="_blank"
+                    rel="noreferrer"
+                    data-chef-whatsapp-link
+                    hidden
+                  >
+                    WhatsApp
+                  </a>
+                  <button
+                    type="button"
+                    class="secondary-button secondary-button-button calendly-button"
+                    data-open-chef-calendly
+                    hidden
+                  >
+                    Agendar llamada
+                  </button>
                 </div>
               </article>
 

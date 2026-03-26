@@ -32,6 +32,8 @@ const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESS
 const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
 const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || "").toLowerCase() === "true";
 const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
+const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
+const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
@@ -3637,6 +3639,23 @@ function limpiarUrlExterna(value = "") {
   return /^https?:\/\//i.test(text) ? text : "";
 }
 
+function construirWhatsAppUrl(phone = "", text = "") {
+  const phoneNormalizado = String(phone || "").replace(/\D+/g, "");
+
+  if (!phoneNormalizado) {
+    return "";
+  }
+
+  const message = String(text || "").trim();
+  const baseUrl = `https://wa.me/${phoneNormalizado}`;
+
+  if (!message) {
+    return baseUrl;
+  }
+
+  return `${baseUrl}?text=${encodeURIComponent(message)}`;
+}
+
 function escapeXml(value = "") {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -5118,6 +5137,10 @@ app.get("/api/platform/config", (req, res) => {
       coachUrl: limpiarUrlExterna(CALENDLY_COACH_URL),
       chefEnabled: Boolean(limpiarUrlExterna(CALENDLY_CHEF_URL)),
       coachEnabled: Boolean(limpiarUrlExterna(CALENDLY_COACH_URL))
+    },
+    whatsapp: {
+      chefUrl: construirWhatsAppUrl(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT),
+      chefEnabled: Boolean(construirWhatsAppUrl(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT))
     }
   });
 });

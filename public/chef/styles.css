@@ -1,6 +1,8 @@
 :root {
   --chef-navy: #0a2247;
   --chef-blue: #123d82;
+  --chef-calendly-blue: #0b3558;
+  --chef-calendly-blue-dark: #072843;
   --chef-sky: #d6ebff;
   --chef-cream: #fff9f0;
   --chef-paper: rgba(255, 255, 255, 0.88);
@@ -8,6 +10,8 @@
   --chef-muted: #5d6d86;
   --chef-red: #c71f37;
   --chef-red-dark: #a51329;
+  --chef-whatsapp: #25d366;
+  --chef-whatsapp-dark: #128c4a;
   --chef-gold: #f1b95f;
   --chef-line: rgba(16, 33, 62, 0.08);
   --chef-shadow: 0 22px 60px rgba(7, 23, 49, 0.12);
@@ -236,6 +240,29 @@ a {
   background: #ffffff;
   color: var(--chef-navy);
   border: 1px solid rgba(10, 34, 71, 0.08);
+}
+
+.whatsapp-button,
+.whatsapp-button:visited {
+  background: linear-gradient(135deg, var(--chef-whatsapp) 0%, #43e97b 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 14px 28px rgba(18, 140, 74, 0.22);
+}
+
+.whatsapp-button:hover {
+  background: linear-gradient(135deg, var(--chef-whatsapp-dark) 0%, var(--chef-whatsapp) 100%);
+}
+
+.calendly-button {
+  background: linear-gradient(135deg, var(--chef-calendly-blue) 0%, #14548a 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 14px 28px rgba(11, 53, 88, 0.22);
+}
+
+.calendly-button:hover {
+  background: linear-gradient(135deg, var(--chef-calendly-blue-dark) 0%, var(--chef-calendly-blue) 100%);
 }
 
 .chef-install-note,
@@ -494,6 +521,19 @@ a {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 16px;
+}
+
+.contact-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.contact-button-row .secondary-button,
+.chef-hero-actions .secondary-button,
+.chef-hero-actions .primary-button {
+  min-width: 178px;
 }
 
 .dashboard-actions {
