@@ -3131,15 +3131,17 @@ Usa este perfil para personalizar recetas, recomendaciones y seguimiento comerci
 `;
 }
 
-async function obtenerHistorialConversacionPrompt(sessionId) {
+async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_HISTORY_MESSAGES) {
   if (!sessionId) {
     return [];
   }
 
+  const safeLimit = Math.max(1, Number(limit || MAX_PROMPT_HISTORY_MESSAGES));
+
   try {
     const historialMongo = await Message.find({ sessionId })
       .sort({ createdAt: -1 })
-      .limit(MAX_PROMPT_HISTORY_MESSAGES)
+      .limit(safeLimit)
       .select({ role: 1, content: 1, _id: 0 })
       .lean();
 
@@ -3156,7 +3158,7 @@ async function obtenerHistorialConversacionPrompt(sessionId) {
     console.log("Error leyendo historial MongoDB:", error.message);
   }
 
-  return (conversaciones[sessionId] || []).slice(-MAX_PROMPT_HISTORY_MESSAGES);
+  return (conversaciones[sessionId] || []).slice(-safeLimit);
 }
 
 async function sincronizarLeadAGoogleSheets(lead) {
@@ -3757,6 +3759,7 @@ async function procesarChatChefCanal({
 }) {
   const preguntaLimpia = cleanText(pregunta);
   const visitorIdLimpio = cleanText(visitorId || sessionId);
+  const fastChannel = /^whatsapp/i.test(source);
 
   if (!preguntaLimpia) {
     return { ok: false, status: 400, error: "pregunta requerida" };
@@ -3782,6 +3785,16 @@ async function procesarChatChefCanal({
   try {
     const modoChat = "chef";
     const modoPrompt = construirContextoModoPrompt(modoChat);
+    const modoPromptCanal = fastChannel
+      ? `
+CANAL ACTIVO:
+- canal: whatsapp
+- prioridad: velocidad y claridad
+- respuesta_maxima: 3 oraciones cortas o lista breve
+- evita respuestas largas, adornos y explicaciones extensas
+- si hace falta, primero responde lo mas util y practico
+`
+      : "";
     const { leadDoc: leadInicial, profileDoc: profileInicial } = await sembrarLeadYPerfilCanal({
       sessionId,
       visitorId: visitorIdLimpio,
@@ -3867,9 +3880,11 @@ async function procesarChatChefCanal({
     const activeLeadContext = leadMemory?.leadContext || null;
     perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "chef");
 
-    const contexto = await construirContexto(preguntaLimpia, modoChat);
+    const contexto = fastChannel
+      ? construirContextoEstaticoChef(preguntaLimpia)
+      : await construirContexto(preguntaLimpia, modoChat);
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
-    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId);
+    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId, fastChannel ? 4 : MAX_PROMPT_HISTORY_MESSAGES);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -3882,6 +3897,7 @@ async function procesarChatChefCanal({
         messages: [
           { role: "system", content: construirPromptModo(modoChat) },
           { role: "system", content: modoPrompt },
+          { role: "system", content: modoPromptCanal },
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
@@ -3926,7 +3942,10 @@ async function procesarChatChefCanal({
       estadoConversacion: obtenerEstadoConversacion(sessionId),
       detectedTopics: [`canal:${source}`]
     });
-    await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
+
+    if (!fastChannel) {
+      await sincronizarLeadAGoogleSheets(leadFinal?.email || leadFinal?.phone ? leadFinal : null);
+    }
 
     return {
       ok: true,
