@@ -192,8 +192,12 @@
                 <span>Perfiles guardados</span>
               </div>
               <div class="mini-stat">
-                <strong data-leads-interested>0</strong>
-                <span>Interesados</span>
+                <strong data-leads-ready>0</strong>
+                <span>Listos hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-leads-follow-up>0</strong>
+                <span>Dar seguimiento</span>
               </div>
               <div class="mini-stat">
                 <strong data-leads-customers>0</strong>
@@ -206,24 +210,50 @@
               <div class="tag-list" data-leads-products></div>
             </div>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Telefono</th>
-                    <th>Llamar</th>
-                    <th>Estado</th>
-                    <th>Resumen</th>
-                  </tr>
-                </thead>
-                <tbody data-leads-ready-table>
-                  <tr>
-                    <td colspan="5">Sin leads listos por ahora.</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="subsection-block">
+              <strong class="section-label">Listos hoy</strong>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Telefono</th>
+                      <th>Llamar</th>
+                      <th>Estado</th>
+                      <th>Resumen</th>
+                    </tr>
+                  </thead>
+                  <tbody data-leads-ready-table>
+                    <tr>
+                      <td colspan="5">Sin leads listos por ahora.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            <div class="subsection-block">
+              <strong class="section-label">Dar seguimiento</strong>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Telefono</th>
+                      <th>Pendiente</th>
+                      <th>Estado</th>
+                      <th>Resumen</th>
+                    </tr>
+                  </thead>
+                  <tbody data-leads-followup-table>
+                    <tr>
+                      <td colspan="5">Sin leads pendientes por ahora.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </article>
         </section>
       </main>

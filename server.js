@@ -893,6 +893,23 @@ async function obtenerControlTowerStats() {
     role: "user"
   };
 
+  const phoneReadyQuery = {
+    quiereLlamada: "si",
+    phone: { $exists: true, $ne: "" },
+    bestCallDay: { $exists: true, $ne: "" },
+    bestCallTime: { $exists: true, $ne: "" }
+  };
+  const phoneFollowUpQuery = {
+    quiereLlamada: "si",
+    phone: { $exists: true, $ne: "" },
+    $or: [
+      { bestCallDay: { $exists: false } },
+      { bestCallDay: "" },
+      { bestCallTime: { $exists: false } },
+      { bestCallTime: "" }
+    ]
+  };
+
   const [
     chefSummary,
     coachSummary,
@@ -903,8 +920,10 @@ async function obtenerControlTowerStats() {
     totalProfiles,
     interestedProfiles,
     readyToCallProfiles,
+    followUpNeededProfiles,
     customerProfiles,
     recentReadyLeads,
+    recentFollowUpLeads,
     topInterestProducts
   ] = await Promise.all([
     obtenerChefPublicStats(),
@@ -946,18 +965,27 @@ async function obtenerControlTowerStats() {
     ]),
     Profile.countDocuments({ conversationCount: { $gt: 0 } }),
     Profile.countDocuments({ leadStatus: "interesado" }),
-    Profile.countDocuments({
-      quiereLlamada: "si",
-      phone: { $exists: true, $ne: "" },
-      bestCallDay: { $exists: true, $ne: "" },
-      bestCallTime: { $exists: true, $ne: "" }
-    }),
+    Profile.countDocuments(phoneReadyQuery),
+    Profile.countDocuments(phoneFollowUpQuery),
     Profile.countDocuments({ leadStatus: "cliente" }),
     Profile.find(
+      phoneReadyQuery,
       {
-        quiereLlamada: "si",
-        phone: { $exists: true, $ne: "" }
-      },
+        name: 1,
+        phone: 1,
+        leadStatus: 1,
+        bestCallDay: 1,
+        bestCallTime: 1,
+        profileSummary: 1,
+        lastInteractionAt: 1,
+        productosInteres: 1
+      }
+    )
+      .sort({ lastInteractionAt: -1 })
+      .limit(10)
+      .lean(),
+    Profile.find(
+      phoneFollowUpQuery,
       {
         name: 1,
         phone: 1,
@@ -999,7 +1027,8 @@ async function obtenerControlTowerStats() {
       coachActive7Days: coachSummary.activeLast7Days,
       whatsappRepliesToday: whatsappTodayIds.length,
       whatsappReplies7Days: whatsapp7DayIds.length,
-      callsReady: readyToCallProfiles
+      callsReady: readyToCallProfiles,
+      callsFollowUp: followUpNeededProfiles
     },
     chef: chefSummary,
     coach: coachSummary,
@@ -1024,16 +1053,31 @@ async function obtenerControlTowerStats() {
       totalProfiles,
       interestedProfiles,
       readyToCallProfiles,
+      followUpNeededProfiles,
       customerProfiles,
       topInterestProducts: topInterestProducts
         .map(item => ({ label: item._id, count: item.count }))
         .filter(item => item.label),
       recentReadyLeads: recentReadyLeads.map(item => ({
-        name: item.name || "Sin nombre",
+        name: formatearNombreOperativo(item.name),
         phone: item.phone || "",
         leadStatus: item.leadStatus || "sin estado",
         bestCallDay: item.bestCallDay || "",
         bestCallTime: item.bestCallTime || "",
+        products: Array.isArray(item.productosInteres) ? item.productosInteres : [],
+        summary: truncarTextoPrompt(item.profileSummary || "", 220),
+        lastInteractionAt: item.lastInteractionAt || null
+      })),
+      recentFollowUpLeads: recentFollowUpLeads.map(item => ({
+        name: formatearNombreOperativo(item.name),
+        phone: item.phone || "",
+        leadStatus: item.leadStatus || "sin estado",
+        bestCallDay: item.bestCallDay || "",
+        bestCallTime: item.bestCallTime || "",
+        pending: [
+          item.bestCallDay ? "" : "dia",
+          item.bestCallTime ? "" : "hora"
+        ].filter(Boolean).join(" y ") || "seguimiento",
         products: Array.isArray(item.productosInteres) ? item.productosInteres : [],
         summary: truncarTextoPrompt(item.profileSummary || "", 220),
         lastInteractionAt: item.lastInteractionAt || null
@@ -1077,6 +1121,73 @@ function cleanText(value = "") {
 
 function cleanLower(value = "") {
   return cleanText(value).toLowerCase();
+}
+
+function limpiarNombreCandidato(value = "") {
+  return cleanText(value)
+    .replace(/\s+/g, " ")
+    .replace(/[.,;!?]+$/g, "")
+    .trim();
+}
+
+function esNombreConfiable(value = "") {
+  const nombre = limpiarNombreCandidato(value);
+
+  if (!nombre || nombre.length < 2 || nombre.length > 48 || /\d/.test(nombre)) {
+    return false;
+  }
+
+  const palabras = nombre.split(/\s+/).filter(Boolean);
+
+  if (!palabras.length || palabras.length > 4) {
+    return false;
+  }
+
+  const nombreLower = cleanLower(nombre);
+  const terminosRuido = [
+    "cliente",
+    "telefono",
+    "teléfono",
+    "numero",
+    "número",
+    "correo",
+    "email",
+    "direccion",
+    "dirección",
+    "vivo",
+    "cocino",
+    "personas",
+    "llamada",
+    "interes",
+    "precio",
+    "garantia",
+    "garantía"
+  ];
+
+  if (terminosRuido.some(termino => nombreLower.includes(termino))) {
+    return false;
+  }
+
+  return palabras.every(palabra => /^[a-záéíóúñ'’-]+$/i.test(palabra));
+}
+
+function puntuarNombreConfiable(value = "") {
+  const nombre = limpiarNombreCandidato(value);
+  const palabras = nombre.split(/\s+/).filter(Boolean).length;
+  return Math.min(palabras, 4) * 100 + nombre.length;
+}
+
+function seleccionarNombreConfiable(...values) {
+  const candidatos = values
+    .map(limpiarNombreCandidato)
+    .filter(esNombreConfiable)
+    .sort((a, b) => puntuarNombreConfiable(b) - puntuarNombreConfiable(a));
+
+  return candidatos[0] || "";
+}
+
+function formatearNombreOperativo(value = "") {
+  return seleccionarNombreConfiable(value) || "Nombre pendiente";
 }
 
 function normalizePhone(value = "") {
@@ -2238,10 +2349,12 @@ function extraerNombre(texto) {
     return "";
   }
 
-  return nombreMatch[1]
+  const nombre = nombreMatch[1]
     .split(/\s+(?:y\s+mi|mi\s+n[uú]mero|mi\s+telefono|mi\s+tel[eé]fono|mi\s+correo|mi\s+email|quiero|para)\b/i)[0]
     .trim()
     .replace(/[.,;!?]+$/, "");
+
+  return esNombreConfiable(nombre) ? nombre : "";
 }
 
 function extraerProductos(texto) {
@@ -2818,7 +2931,7 @@ async function guardarOActualizarPerfil({
     ),
     sessionIds: combinarListas(perfilExistente?.sessionIds || [], sessionId ? [sessionId] : []),
     leadId: leadGuardado?._id || perfilExistente?.leadId || null,
-    name: seleccionarValorMasCompleto(
+    name: seleccionarNombreConfiable(
       leadGuardado?.name,
       detallesLead.name,
       estadoConversacion?.name,
@@ -3273,7 +3386,7 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
   primaryLead.temasInteres = allTemasInteres;
   primaryLead.notes = allNotas;
   primaryLead.conversationHistory = allHistorial;
-  primaryLead.name = seleccionarValorMasCompleto(
+  primaryLead.name = seleccionarNombreConfiable(
     primaryLead.name,
     ...duplicateLeads.map(lead => lead.name)
   );
@@ -3715,7 +3828,7 @@ async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConve
       camposActualizar.bestCallTime = bestCallTime;
     }
 
-    const nombre = seleccionarValorMasCompleto(
+    const nombre = seleccionarNombreConfiable(
       detallesLead.name,
       estadoConversacion?.name,
       leadExistente?.name

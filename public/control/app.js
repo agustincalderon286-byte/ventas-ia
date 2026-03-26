@@ -105,7 +105,8 @@ function hydrateDashboard(data) {
   renderTags(document.querySelector("[data-wa-topics]"), data.whatsapp?.topTopics || []);
 
   setText("[data-leads-total]", String(data.leads?.totalProfiles || 0));
-  setText("[data-leads-interested]", String(data.leads?.interestedProfiles || 0));
+  setText("[data-leads-ready]", String(data.leads?.readyToCallProfiles || 0));
+  setText("[data-leads-follow-up]", String(data.leads?.followUpNeededProfiles || 0));
   setText("[data-leads-customers]", String(data.leads?.customerProfiles || 0));
   renderTags(
     document.querySelector("[data-leads-products]"),
@@ -142,6 +143,24 @@ function hydrateDashboard(data) {
         <td>${escapeHtml(item.name || "Sin nombre")}</td>
         <td>${escapeHtml(item.phone || "Sin dato")}</td>
         <td>${escapeHtml(`${item.bestCallDay || "Sin dia"} / ${item.bestCallTime || "Sin hora"}`)}</td>
+        <td>${escapeHtml(item.leadStatus || "sin estado")}</td>
+        <td>${escapeHtml(item.summary || "Sin resumen")}</td>
+      </tr>
+    `
+  );
+
+  const followUpTable = document.querySelector("[data-leads-followup-table]");
+  if (followUpTable) {
+    followUpTable.dataset.cols = "5";
+  }
+  renderTableRows(
+    followUpTable,
+    data.leads?.recentFollowUpLeads || [],
+    item => `
+      <tr>
+        <td>${escapeHtml(item.name || "Sin nombre")}</td>
+        <td>${escapeHtml(item.phone || "Sin dato")}</td>
+        <td>${escapeHtml(item.pending || "seguimiento")}</td>
         <td>${escapeHtml(item.leadStatus || "sin estado")}</td>
         <td>${escapeHtml(item.summary || "Sin resumen")}</td>
       </tr>

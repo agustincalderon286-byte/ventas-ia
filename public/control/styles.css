@@ -193,7 +193,7 @@ body {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -253,6 +253,10 @@ body {
   border: 1px solid rgba(21, 36, 63, 0.08);
   background: rgba(255, 255, 255, 0.72);
   margin-top: 14px;
+}
+
+.subsection-block + .subsection-block {
+  margin-top: 22px;
 }
 
 table {
