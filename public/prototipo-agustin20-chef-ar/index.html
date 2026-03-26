@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prototipo Agustin 2.0 Chef AR</title>
+    <title>Prototipo AR | Agustin 2.0 Chef</title>
     <meta
       name="description"
-      content="Prototipo visual de catálogo virtual y AR para Agustin 2.0 Chef."
+      content="Maqueta funcional de realidad aumentada para Agustin 2.0 Chef con productos Royal Prestige."
     />
     <script
       type="module"
@@ -14,61 +14,97 @@
     ></script>
     <style>
       :root {
-        --navy: #13366f;
-        --red: #c12733;
-        --ink: #192741;
-        --muted: #607089;
-        --gold: #e0bf68;
-        --line: rgba(19, 54, 111, 0.12);
-        --panel: rgba(255, 255, 255, 0.86);
-        --shadow: 0 22px 52px rgba(25, 39, 65, 0.14);
+        --navy: #102b5a;
+        --navy-deep: #081a38;
+        --sky: #ddecff;
+        --paper: rgba(255, 255, 255, 0.88);
+        --line: rgba(16, 43, 90, 0.1);
+        --red: #c62839;
+        --gold: #dcb86a;
+        --ink: #15243f;
+        --muted: #60728e;
+        --ok: #1f9b59;
+        --shadow: 0 26px 54px rgba(9, 26, 56, 0.14);
+        --radius: 28px;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
+        min-height: 100%;
+      }
+
+      body {
         font-family: Avenir, Montserrat, "Helvetica Neue", Arial, sans-serif;
         color: var(--ink);
         background:
-          radial-gradient(circle at top left, rgba(193, 39, 51, 0.1), transparent 24%),
-          radial-gradient(circle at top right, rgba(19, 54, 111, 0.1), transparent 26%),
-          linear-gradient(180deg, #f8f7f2, #edf2f8);
+          radial-gradient(circle at top left, rgba(198, 40, 57, 0.12), transparent 24%),
+          radial-gradient(circle at top right, rgba(16, 43, 90, 0.12), transparent 28%),
+          linear-gradient(180deg, #f8fbff 0%, #eef4fb 48%, #f9f6ef 100%);
       }
 
-      .shell {
-        width: min(1180px, calc(100% - 28px));
-        margin: 22px auto 38px;
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(16, 43, 90, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(16, 43, 90, 0.018) 1px, transparent 1px);
+        background-size: 30px 30px;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      main {
+        position: relative;
+        z-index: 1;
+        width: min(1180px, calc(100% - 20px));
+        margin: 16px auto 34px;
       }
 
       .hero,
       .panel,
       .strip {
-        background: var(--panel);
+        background: var(--paper);
         border: 1px solid var(--line);
-        border-radius: 28px;
+        border-radius: var(--radius);
         box-shadow: var(--shadow);
-        backdrop-filter: blur(12px);
+        backdrop-filter: blur(14px);
       }
 
       .hero {
-        padding: 28px;
+        padding: 24px;
       }
 
-      .eyebrow {
+      .eyebrow,
+      .badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         padding: 8px 14px;
         border-radius: 999px;
-        background: rgba(193, 39, 51, 0.1);
-        color: var(--red);
-        font-size: 0.8rem;
+        font-size: 0.79rem;
         font-weight: 800;
-        letter-spacing: 0.06em;
         text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .eyebrow {
+        background: rgba(198, 40, 57, 0.1);
+        color: var(--red);
+      }
+
+      .badge {
+        background: rgba(31, 155, 89, 0.1);
+        color: var(--ok);
       }
 
       h1,
@@ -78,11 +114,16 @@
         margin: 0;
       }
 
+      h1,
+      h2,
+      h3 {
+        color: var(--navy);
+      }
+
       .hero h1 {
         margin-top: 16px;
-        color: var(--navy);
-        font-size: clamp(2.5rem, 9vw, 4.8rem);
-        line-height: 0.94;
+        font-size: clamp(2.45rem, 8vw, 4.8rem);
+        line-height: 0.95;
         letter-spacing: -0.04em;
       }
 
@@ -90,102 +131,228 @@
         color: var(--red);
       }
 
-      .hero .lede {
+      .lede,
+      .hero-note,
+      .panel-copy,
+      .card-copy,
+      .helper,
+      .step span,
+      .fineprint {
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .lede {
         max-width: 760px;
         margin-top: 16px;
-        color: var(--muted);
-        font-size: 1.04rem;
-        line-height: 1.72;
+        font-size: 1.02rem;
       }
 
       .hero-note {
         margin-top: 18px;
         padding: 16px 18px;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.62);
+        border-radius: 20px;
         border: 1px solid var(--line);
-        color: var(--muted);
-        line-height: 1.65;
+        background: rgba(255, 255, 255, 0.72);
       }
 
-      .grid {
+      .layout {
         display: grid;
-        grid-template-columns: 1.06fr 0.94fr;
+        grid-template-columns: minmax(0, 1.06fr) minmax(300px, 0.94fr);
         gap: 18px;
         margin-top: 18px;
       }
 
       .panel {
-        padding: 24px;
+        padding: 22px;
       }
 
-      .panel h2 {
-        color: var(--navy);
-        font-size: clamp(1.8rem, 5vw, 2.3rem);
+      .viewer-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
       }
 
-      .panel p {
+      .viewer-header h2 {
         margin-top: 12px;
-        color: var(--muted);
-        line-height: 1.7;
+        font-size: clamp(1.8rem, 5vw, 2.6rem);
+      }
+
+      .panel-copy {
+        margin-top: 12px;
+      }
+
+      .viewer-stage {
+        margin-top: 18px;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(circle at center, rgba(16, 43, 90, 0.08), rgba(16, 43, 90, 0.02)),
+          linear-gradient(180deg, #fbfdff 0%, #eef4fb 100%);
       }
 
       model-viewer {
         width: 100%;
-        height: 560px;
-        margin-top: 18px;
-        border-radius: 22px;
-        background:
-          radial-gradient(circle at center, rgba(19, 54, 111, 0.08), rgba(19, 54, 111, 0.02));
+        height: 540px;
         --poster-color: transparent;
       }
 
-      .info-stack,
-      .metric-grid {
+      .fallback-view {
+        display: none;
+        min-height: 540px;
+        padding: 28px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .fallback-card {
+        width: min(100%, 520px);
+        padding: 26px;
+        border-radius: 26px;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background:
+          radial-gradient(circle at top right, rgba(220, 184, 106, 0.24), transparent 34%),
+          linear-gradient(160deg, rgba(8, 26, 56, 0.94), rgba(16, 43, 90, 0.92));
+        color: #fff;
+        box-shadow: 0 24px 42px rgba(8, 26, 56, 0.24);
+      }
+
+      .fallback-card h3 {
+        color: #fff;
+        font-size: clamp(1.6rem, 5vw, 2.2rem);
+      }
+
+      .fallback-card p {
+        margin-top: 12px;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.7;
+      }
+
+      .fallback-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .fallback-chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .action,
+      .ghost-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 54px;
+        padding: 0 18px;
+        border-radius: 18px;
+        font-weight: 800;
+        font-size: 0.98rem;
+        cursor: pointer;
+        transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+      }
+
+      .action {
+        border: none;
+        background: linear-gradient(135deg, var(--red) 0%, #ea4a60 100%);
+        color: #fff;
+        box-shadow: 0 14px 26px rgba(198, 40, 57, 0.2);
+      }
+
+      .ghost-action {
+        border: 1px solid rgba(16, 43, 90, 0.1);
+        background: #fff;
+        color: var(--navy);
+      }
+
+      .action:hover,
+      .ghost-action:hover,
+      .product-card:hover {
+        transform: translateY(-1px);
+      }
+
+      .helper {
+        margin-top: 14px;
+      }
+
+      .product-list {
         display: grid;
         gap: 12px;
         margin-top: 18px;
       }
 
-      .metric-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .metric,
-      .info-card {
-        padding: 16px;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.64);
+      .product-card {
+        width: 100%;
+        padding: 18px;
+        text-align: left;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.74);
         border: 1px solid var(--line);
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
       }
 
-      .metric strong,
-      .metric span,
-      .info-card strong,
-      .info-card span {
+      .product-card.active {
+        border-color: rgba(198, 40, 57, 0.28);
+        box-shadow: 0 18px 36px rgba(16, 43, 90, 0.1);
+        background:
+          radial-gradient(circle at top right, rgba(220, 184, 106, 0.18), transparent 30%),
+          rgba(255, 255, 255, 0.9);
+      }
+
+      .product-card strong,
+      .product-card span {
         display: block;
       }
 
-      .metric strong,
-      .info-card strong {
+      .product-card strong {
         color: var(--navy);
+        font-size: 1.06rem;
       }
 
-      .metric strong {
-        font-size: 1.25rem;
-      }
-
-      .metric span,
-      .info-card span {
+      .product-card span {
         margin-top: 8px;
         color: var(--muted);
-        line-height: 1.58;
+        line-height: 1.6;
+      }
+
+      .product-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .product-tag {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(16, 43, 90, 0.06);
+        color: var(--navy);
+        font-size: 0.78rem;
+        font-weight: 700;
       }
 
       .strip {
         margin-top: 18px;
         padding: 24px;
-        background: linear-gradient(135deg, rgba(19, 54, 111, 0.96), rgba(193, 39, 51, 0.92));
+        background: linear-gradient(135deg, rgba(16, 43, 90, 0.97), rgba(198, 40, 57, 0.92));
         color: #fff;
       }
 
@@ -195,15 +362,15 @@
 
       .strip p {
         margin-top: 12px;
-        color: rgba(255, 255, 255, 0.93);
-        line-height: 1.74;
+        color: rgba(255, 255, 255, 0.92);
+        line-height: 1.72;
       }
 
       .steps {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
-        margin-top: 16px;
+        margin-top: 18px;
       }
 
       .step {
@@ -221,163 +388,363 @@
       .step span {
         margin-top: 8px;
         color: rgba(255, 255, 255, 0.92);
-        line-height: 1.55;
       }
 
-      .footnote {
-        margin-top: 14px;
-        color: var(--muted);
+      .fineprint {
+        margin-top: 16px;
         font-size: 0.93rem;
-        line-height: 1.65;
       }
 
-      @media (max-width: 920px) {
-        .grid,
-        .metric-grid,
+      .quicklook-anchor {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      @media (max-width: 960px) {
+        .layout,
         .steps {
           grid-template-columns: 1fr;
         }
-
-        model-viewer {
-          height: 420px;
-        }
       }
 
-      @media (max-width: 620px) {
-        .shell {
-          width: min(100% - 18px, 1180px);
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 16px, 1180px);
         }
 
         .hero,
         .panel,
         .strip {
           border-radius: 22px;
+          padding: 18px;
         }
 
-        .hero,
-        .panel,
-        .strip {
-          padding: 20px;
+        model-viewer,
+        .fallback-view {
+          min-height: 420px;
+          height: 420px;
         }
 
-        .hero .lede,
-        .hero-note,
-        .panel p,
-        .metric span,
-        .info-card span,
-        .strip p,
-        .step span {
-          font-size: 0.98rem;
+        .action-row {
+          display: grid;
+          grid-template-columns: 1fr;
         }
       }
     </style>
   </head>
   <body>
-    <main class="shell">
+    <main>
       <section class="hero">
         <div class="eyebrow">Prototipo para Agustin 2.0 Chef</div>
-        <h1>Catálogo virtual con <span>AR</span></h1>
+        <h1>Realidad aumentada que <span>sí puedes probar</span></h1>
         <p class="lede">
-          Esta maqueta muestra cómo Agustin 2.0 Chef podría enseñar un producto en 3D y abrir una experiencia de
-          realidad aumentada en el momento exacto, sin sacar al cliente del flujo de conversación.
+          Esta maqueta ya está pensada para abrirse desde tu teléfono, usar la cámara cuando el dispositivo lo soporte
+          y enseñar cómo Agustin 2.0 Chef podría mostrar productos Royal Prestige en 3D y AR dentro del flujo real de
+          conversación.
         </p>
         <div class="hero-note">
-          Chef no solo explica. También puede mostrar tamaño, presencia y contexto real del producto dentro del hogar.
+          Usa tu teléfono y toca <strong>Ver en tu espacio</strong>. En iPhone/iPad se abre Quick Look. En dispositivos
+          compatibles con Android/Chrome, Novel puede abrir la experiencia AR desde el visor.
         </div>
       </section>
 
-      <section class="grid">
+      <section class="layout">
         <article class="panel">
-          <div class="eyebrow">Vista demo</div>
-          <h2>Novel dentro de Chef</h2>
-          <p>
-            En esta maqueta el cliente puede rotar el producto en 3D y, si su dispositivo lo soporta, abrir la
-            experiencia AR directamente desde el visor.
-          </p>
-
-          <model-viewer
-            src="https://royalprestige.live/assets/novel.glb"
-            ios-src="https://royalprestige.live/assets/novel.usdz"
-            poster="https://royalprestige.live/images/cover_novel.webp"
-            alt="Prototipo AR para Agustin 2.0 Chef"
-            camera-controls
-            auto-rotate
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            shadow-intensity="1.15"
-            exposure="1"
-            environment-image="neutral"
-          ></model-viewer>
-
-          <p class="footnote">
-            La idea aquí no es vender el archivo 3D. La idea es enseñar cómo Agustin 2.0 Chef podría volver la
-            demostración más visual, clara y memorable.
-          </p>
-        </article>
-
-        <aside class="panel">
-          <div class="eyebrow">Valor comercial</div>
-          <h2>Por qué esto suma</h2>
-          <p>
-            Un cliente entiende mejor cuando puede ver el producto en contexto. Eso reduce dudas, eleva la percepción y
-            abre una conversación más fuerte para pasar luego al cierre.
-          </p>
-
-          <div class="metric-grid">
-            <div class="metric">
-              <strong>Más claridad</strong>
-              <span>El cliente ve mejor tamaño y presencia del producto.</span>
+          <div class="viewer-header">
+            <div>
+              <div class="eyebrow">Demo funcional</div>
+              <h2 id="viewerTitle">Novel dentro de tu espacio</h2>
             </div>
-            <div class="metric">
-              <strong>Menos fricción</strong>
-              <span>Se reducen dudas como “¿cómo se vería?” o “¿sí cabe aquí?”.</span>
-            </div>
-            <div class="metric">
-              <strong>Más intención</strong>
-              <span>Chef deja de solo explicar y empieza a mostrar.</span>
+            <div class="badge" id="viewerModeBadge">3D + AR</div>
+          </div>
+
+          <p class="panel-copy" id="viewerCopy">
+            Rota el producto en 3D y, si tu teléfono lo soporta, ábrelo en realidad aumentada sin salirte de esta
+            página.
+          </p>
+
+          <div class="viewer-stage">
+            <model-viewer
+              id="arViewer"
+              src="/prototipo-agustin20-chef-ar/assets/novel.glb"
+              ios-src="/prototipo-agustin20-chef-ar/assets/novel.usdz"
+              poster="/prototipo-agustin20-chef-ar/assets/cover_novel.webp"
+              alt="Prototipo AR para Agustin 2.0 Chef"
+              camera-controls
+              auto-rotate
+              ar
+              ar-modes="webxr scene-viewer quick-look"
+              shadow-intensity="1.15"
+              exposure="1"
+              environment-image="neutral"
+              ar-placement="floor"
+            ></model-viewer>
+
+            <div class="fallback-view" id="fallbackView">
+              <div class="fallback-card">
+                <h3 id="fallbackTitle">Demo Quick Look</h3>
+                <p id="fallbackCopy">
+                  Esta variante está pensada como maqueta privada para abrir AR desde iPhone o iPad usando Quick Look.
+                </p>
+                <div class="fallback-chip-row">
+                  <span class="fallback-chip" id="fallbackChipOne">AR privado</span>
+                  <span class="fallback-chip" id="fallbackChipTwo">iPhone / iPad</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="info-stack">
-            <div class="info-card">
-              <strong>Chef atrae y demuestra</strong>
-              <span>Puede explicar beneficios, enseñar el producto y llevar la conversación a interés real.</span>
-            </div>
-            <div class="info-card">
-              <strong>Coach entra después</strong>
-              <span>Una vez que el cliente ya entendió mejor el producto, Coach puede entrar con precio, paquete y siguiente paso.</span>
-            </div>
-            <div class="info-card">
-              <strong>Material para pitch privado</strong>
-              <span>Sirve para enseñar visión a socios o inversionistas sin esperar a tener todo el catálogo final producido.</span>
-            </div>
+          <div class="action-row">
+            <button class="action" id="openArButton" type="button">Ver en tu espacio</button>
+            <button class="ghost-action" id="rotatePromptButton" type="button">Probar otro producto</button>
+          </div>
+
+          <p class="helper" id="viewerHelper">
+            Si lo abres en iPhone o iPad, Quick Look usará la cámara. Si lo abres en Android compatible, Novel puede
+            entrar a AR desde el visor.
+          </p>
+
+          <p class="fineprint">
+            Esta demo está pensada para enseñar la visión del producto. No es el catálogo final, pero ya deja probar un
+            flujo real y compartible desde tu propio dominio.
+          </p>
+
+          <a
+            id="quickLookLink"
+            class="quicklook-anchor"
+            rel="ar"
+            href="/prototipo-agustin20-chef-ar/assets/novel.usdz"
+          >
+            <img src="/prototipo-agustin20-chef-ar/assets/cover_novel.webp" alt="" />
+          </a>
+        </article>
+
+        <aside class="panel">
+          <div class="eyebrow">Selector de producto</div>
+          <h2>Escoge la pieza que quieres mostrar</h2>
+          <p class="panel-copy">
+            La idea es que Chef detecte interés y abra la vista correcta. En esta maqueta dejamos listos varios caminos
+            para probar esa experiencia.
+          </p>
+
+          <div class="product-list" id="productList">
+            <button class="product-card active" type="button" data-product-id="novel">
+              <strong>Novel</strong>
+              <span>Visor 3D completo dentro de la web y apertura AR desde el teléfono.</span>
+              <div class="product-tags">
+                <span class="product-tag">3D</span>
+                <span class="product-tag">AR</span>
+                <span class="product-tag">iPhone + Android</span>
+              </div>
+            </button>
+
+            <button class="product-card" type="button" data-product-id="multipan">
+              <strong>Multipan</strong>
+              <span>Maqueta Quick Look lista para mostrar un segundo producto desde iPhone o iPad.</span>
+              <div class="product-tags">
+                <span class="product-tag">AR</span>
+                <span class="product-tag">Quick Look</span>
+                <span class="product-tag">iPhone / iPad</span>
+              </div>
+            </button>
+
+            <button class="product-card" type="button" data-product-id="royalprestige">
+              <strong>Royal Prestige Showcase</strong>
+              <span>Vista demostrativa para enseñar una tercera pieza dentro del pitch privado.</span>
+              <div class="product-tags">
+                <span class="product-tag">AR</span>
+                <span class="product-tag">Pitch privado</span>
+                <span class="product-tag">iPhone / iPad</span>
+              </div>
+            </button>
           </div>
         </aside>
       </section>
 
       <section class="strip">
-        <h3>Cómo viviría dentro del ecosistema</h3>
+        <h3>Cómo se usaría en una conversación real</h3>
         <p>
-          <strong>Chef</strong> explica y demuestra. <strong>AR</strong> enseña el producto en contexto. <strong>Coach</strong> cierra
-          con precio, objeción y siguiente paso. Esa combinación convierte una conversación útil en una experiencia más
-          persuasiva.
+          <strong>Chef</strong> detecta interés. <strong>AR</strong> enseña el producto en contexto real. <strong>Coach</strong>
+          entra después con precio, objeciones y siguiente paso. Esta maqueta ya deja probar esa experiencia desde el
+          teléfono.
         </p>
 
         <div class="steps">
           <div class="step">
             <strong>Paso 1</strong>
-            <span>El cliente pregunta por un producto y Chef lo presenta con lenguaje simple.</span>
+            <span>Abre esta página desde tu teléfono y selecciona el producto que quieres enseñar.</span>
           </div>
           <div class="step">
             <strong>Paso 2</strong>
-            <span>Chef abre la vista 3D / AR para enseñar tamaño real y presencia en casa.</span>
+            <span>Toca <em>Ver en tu espacio</em> para abrir la cámara o la experiencia AR disponible.</span>
           </div>
           <div class="step">
             <strong>Paso 3</strong>
-            <span>Coach toma la conversación para mover paquete, precio, objeción y cierre.</span>
+            <span>Después de ver el producto, la conversación pasa natural a llamada, demo o cierre.</span>
           </div>
         </div>
       </section>
     </main>
+
+    <script>
+      const productCatalog = {
+        novel: {
+          id: "novel",
+          title: "Novel dentro de tu espacio",
+          modeBadge: "3D + AR",
+          copy: "Rota el producto en 3D y, si tu teléfono lo soporta, ábrelo en realidad aumentada sin salirte de esta página.",
+          helper:
+            "Si lo abres en iPhone o iPad, Quick Look usará la cámara. Si lo abres en Android compatible, Novel puede entrar a AR desde el visor.",
+          hasViewer: true,
+          src: "/prototipo-agustin20-chef-ar/assets/novel.glb",
+          iosSrc: "/prototipo-agustin20-chef-ar/assets/novel.usdz",
+          poster: "/prototipo-agustin20-chef-ar/assets/cover_novel.webp",
+          actionLabel: "Ver en tu espacio",
+          fallbackTitle: "",
+          fallbackCopy: "",
+          fallbackChipOne: "",
+          fallbackChipTwo: ""
+        },
+        multipan: {
+          id: "multipan",
+          title: "Multipan en AR",
+          modeBadge: "Quick Look",
+          copy: "Esta variante demuestra cómo un segundo producto podría abrirse desde iPhone o iPad usando Quick Look.",
+          helper:
+            "En esta maqueta, Multipan está listo como experiencia AR privada para iPhone o iPad. Es ideal para enseñar visión aunque el visor 3D completo todavía no esté terminado.",
+          hasViewer: false,
+          iosSrc: "/prototipo-agustin20-chef-ar/assets/multipan.usdz",
+          actionLabel: "Abrir demo AR",
+          fallbackTitle: "Multipan listo para AR",
+          fallbackCopy:
+            "Este producto se abre como demo Quick Look desde iPhone o iPad. Así puedes enseñar una segunda pieza en un pitch privado sin esperar el catálogo completo.",
+          fallbackChipOne: "AR privado",
+          fallbackChipTwo: "Quick Look iOS"
+        },
+        royalprestige: {
+          id: "royalprestige",
+          title: "Royal Prestige Showcase",
+          modeBadge: "Quick Look",
+          copy: "Esta vista sirve como tercera pieza demostrativa dentro del pitch de Agustin 2.0 Chef.",
+          helper:
+            "Abre esta demo desde iPhone o iPad para ver cómo un producto adicional podría entrar al flujo AR sin depender de una página externa.",
+          hasViewer: false,
+          iosSrc: "/prototipo-agustin20-chef-ar/assets/royalprestige.usdz",
+          actionLabel: "Abrir demo AR",
+          fallbackTitle: "Showcase privado en AR",
+          fallbackCopy:
+            "Pensado para mostrar visión y rango de producto. Aquí ya puedes enseñar que Agustin 2.0 Chef podría abrir varias experiencias AR desde el mismo sitio.",
+          fallbackChipOne: "Pitch privado",
+          fallbackChipTwo: "iPhone / iPad"
+        }
+      };
+
+      const viewer = document.getElementById("arViewer");
+      const fallbackView = document.getElementById("fallbackView");
+      const quickLookLink = document.getElementById("quickLookLink");
+      const viewerTitle = document.getElementById("viewerTitle");
+      const viewerCopy = document.getElementById("viewerCopy");
+      const viewerModeBadge = document.getElementById("viewerModeBadge");
+      const viewerHelper = document.getElementById("viewerHelper");
+      const openArButton = document.getElementById("openArButton");
+      const rotatePromptButton = document.getElementById("rotatePromptButton");
+      const productCards = Array.from(document.querySelectorAll("[data-product-id]"));
+      const fallbackTitle = document.getElementById("fallbackTitle");
+      const fallbackCopy = document.getElementById("fallbackCopy");
+      const fallbackChipOne = document.getElementById("fallbackChipOne");
+      const fallbackChipTwo = document.getElementById("fallbackChipTwo");
+
+      let activeProduct = productCatalog.novel;
+
+      function isIosLike() {
+        const ua = window.navigator.userAgent || "";
+        return /iPad|iPhone|iPod/.test(ua) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+      }
+
+      function renderProduct(product) {
+        activeProduct = product;
+        viewerTitle.textContent = product.title;
+        viewerCopy.textContent = product.copy;
+        viewerModeBadge.textContent = product.modeBadge;
+        viewerHelper.textContent = product.helper;
+        openArButton.textContent = product.actionLabel;
+
+        productCards.forEach(card => {
+          card.classList.toggle("active", card.dataset.productId === product.id);
+        });
+
+        if (product.hasViewer) {
+          viewer.style.display = "block";
+          fallbackView.style.display = "none";
+          viewer.setAttribute("src", product.src);
+          viewer.setAttribute("ios-src", product.iosSrc);
+          viewer.setAttribute("poster", product.poster);
+          quickLookLink.setAttribute("href", product.iosSrc);
+          return;
+        }
+
+        viewer.style.display = "none";
+        fallbackView.style.display = "flex";
+        fallbackTitle.textContent = product.fallbackTitle;
+        fallbackCopy.textContent = product.fallbackCopy;
+        fallbackChipOne.textContent = product.fallbackChipOne;
+        fallbackChipTwo.textContent = product.fallbackChipTwo;
+        quickLookLink.setAttribute("href", product.iosSrc);
+      }
+
+      async function openActiveAr() {
+        if (!activeProduct) {
+          return;
+        }
+
+        if (activeProduct.hasViewer && viewer && typeof viewer.activateAR === "function") {
+          try {
+            await viewer.activateAR();
+            return;
+          } catch (error) {
+            // fall through to Quick Look fallback
+          }
+        }
+
+        if (isIosLike() && quickLookLink?.href) {
+          quickLookLink.click();
+          return;
+        }
+
+        if (activeProduct.iosSrc) {
+          window.open(activeProduct.iosSrc, "_blank", "noopener");
+        }
+      }
+
+      productCards.forEach(card => {
+        card.addEventListener("click", () => {
+          const product = productCatalog[card.dataset.productId];
+          if (!product) {
+            return;
+          }
+
+          renderProduct(product);
+        });
+      });
+
+      openArButton.addEventListener("click", () => {
+        openActiveAr();
+      });
+
+      rotatePromptButton.addEventListener("click", () => {
+        document.getElementById("productList")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      });
+
+      renderProduct(activeProduct);
+    </script>
   </body>
 </html>
