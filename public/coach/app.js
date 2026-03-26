@@ -842,6 +842,8 @@ async function initCoachAppPage() {
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
+  const orderCalcToggle = document.querySelector("[data-order-calc-toggle]");
+  const orderCalcWrap = document.querySelector("[data-order-calc-wrap]");
   const waterCheckForm = document.querySelector("[data-water-check-form]");
   const waterCheckInput = document.querySelector("[data-water-check-input]");
   const waterCheckFeedback = document.querySelector("[data-water-check-feedback]");
@@ -859,6 +861,19 @@ async function initCoachAppPage() {
   if (nativeShareChefButton && typeof navigator.share !== "function") {
     nativeShareChefButton.hidden = true;
   }
+
+  const syncOrderCalcToggle = open => {
+    if (orderCalcWrap) {
+      orderCalcWrap.hidden = !open;
+    }
+
+    if (orderCalcToggle) {
+      orderCalcToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      orderCalcToggle.textContent = open ? "Cerrar calculadora" : "Abrir calculadora";
+    }
+  };
+
+  syncOrderCalcToggle(false);
 
   const openChefShareModal = () => {
     if (!chefShareModal) {
@@ -1017,6 +1032,11 @@ async function initCoachAppPage() {
     } catch (error) {
       // noop
     }
+  });
+
+  orderCalcToggle?.addEventListener("click", () => {
+    const isOpen = orderCalcWrap ? !orderCalcWrap.hidden : false;
+    syncOrderCalcToggle(!isOpen);
   });
 
   waterCheckInput?.addEventListener("input", () => {

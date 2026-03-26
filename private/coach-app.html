@@ -191,61 +191,74 @@
               presentacion.
             </p>
 
-            <div class="order-calc" data-order-calc>
-              <div class="order-calc-products" data-order-calc-products></div>
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button order-calc-toggle"
+                data-order-calc-toggle
+                aria-expanded="false"
+              >
+                Abrir calculadora
+              </button>
+            </div>
 
-              <div class="order-calc-summary">
-                <div class="order-calc-summary-head">
-                  <strong>Resumen general</strong>
-                  <span>Se actualiza en tiempo real</span>
-                </div>
+            <div class="order-calc-wrap" data-order-calc-wrap hidden>
+              <div class="order-calc" data-order-calc>
+                <div class="order-calc-products" data-order-calc-products></div>
 
-                <div class="order-calc-summary-grid">
-                  <label class="order-calc-field">
-                    <span>Down payment extra</span>
-                    <input type="number" min="0" step="0.01" data-order-calc-down-total placeholder="0.00" />
-                  </label>
-                  <label class="order-calc-field">
-                    <span>Descuento fijo total</span>
-                    <input type="number" min="0" step="0.01" data-order-calc-desc-fixed-total placeholder="0.00" />
-                  </label>
-                  <label class="order-calc-field">
-                    <span>Descuento % total</span>
-                    <input type="number" min="0" step="0.01" data-order-calc-desc-percent-total placeholder="0" />
-                  </label>
-                </div>
+                <div class="order-calc-summary">
+                  <div class="order-calc-summary-head">
+                    <strong>Resumen general</strong>
+                    <span>Se actualiza en tiempo real</span>
+                  </div>
 
-                <div class="order-calc-rollup">
-                  <div class="order-calc-rollup-item">
-                    <span>Total bruto</span>
-                    <strong data-order-calc-summary-total>$0.00</strong>
+                  <div class="order-calc-summary-grid">
+                    <label class="order-calc-field">
+                      <span>Down payment extra</span>
+                      <input type="number" min="0" step="0.01" data-order-calc-down-total placeholder="0.00" />
+                    </label>
+                    <label class="order-calc-field">
+                      <span>Descuento fijo total</span>
+                      <input type="number" min="0" step="0.01" data-order-calc-desc-fixed-total placeholder="0.00" />
+                    </label>
+                    <label class="order-calc-field">
+                      <span>Descuento % total</span>
+                      <input type="number" min="0" step="0.01" data-order-calc-desc-percent-total placeholder="0" />
+                    </label>
                   </div>
-                  <div class="order-calc-rollup-item">
-                    <span>Down payments</span>
-                    <strong data-order-calc-summary-down>$0.00</strong>
-                  </div>
-                  <div class="order-calc-rollup-item">
-                    <span>Descuentos</span>
-                    <strong data-order-calc-summary-discount>$0.00</strong>
-                  </div>
-                  <div class="order-calc-rollup-item is-highlight">
-                    <span>Balance final</span>
-                    <strong data-order-calc-summary-balance>$0.00</strong>
-                  </div>
-                </div>
 
-                <div class="order-calc-payment-grid">
-                  <div class="order-calc-payment-item">
-                    <span>Mensual</span>
-                    <strong data-order-calc-summary-monthly>$0.00</strong>
+                  <div class="order-calc-rollup">
+                    <div class="order-calc-rollup-item">
+                      <span>Total bruto</span>
+                      <strong data-order-calc-summary-total>$0.00</strong>
+                    </div>
+                    <div class="order-calc-rollup-item">
+                      <span>Down payments</span>
+                      <strong data-order-calc-summary-down>$0.00</strong>
+                    </div>
+                    <div class="order-calc-rollup-item">
+                      <span>Descuentos</span>
+                      <strong data-order-calc-summary-discount>$0.00</strong>
+                    </div>
+                    <div class="order-calc-rollup-item is-highlight">
+                      <span>Balance final</span>
+                      <strong data-order-calc-summary-balance>$0.00</strong>
+                    </div>
                   </div>
-                  <div class="order-calc-payment-item">
-                    <span>Semanal</span>
-                    <strong data-order-calc-summary-weekly>$0.00</strong>
-                  </div>
-                  <div class="order-calc-payment-item">
-                    <span>Diario</span>
-                    <strong data-order-calc-summary-daily>$0.00</strong>
+
+                  <div class="order-calc-payment-grid">
+                    <div class="order-calc-payment-item">
+                      <span>Mensual</span>
+                      <strong data-order-calc-summary-monthly>$0.00</strong>
+                    </div>
+                    <div class="order-calc-payment-item">
+                      <span>Semanal</span>
+                      <strong data-order-calc-summary-weekly>$0.00</strong>
+                    </div>
+                    <div class="order-calc-payment-item">
+                      <span>Diario</span>
+                      <strong data-order-calc-summary-daily>$0.00</strong>
+                    </div>
                   </div>
                 </div>
               </div>

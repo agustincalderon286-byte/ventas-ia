@@ -905,6 +905,10 @@ img {
   margin-top: 20px;
 }
 
+.dashboard-actions.compact-top {
+  margin-top: 16px;
+}
+
 .resource-card {
   position: relative;
   overflow: hidden;
@@ -1020,6 +1024,14 @@ img {
   display: grid;
   gap: 18px;
   margin-top: 18px;
+}
+
+.order-calc-wrap[hidden] {
+  display: none !important;
+}
+
+.order-calc-toggle {
+  min-width: 210px;
 }
 
 .order-calc-products {
