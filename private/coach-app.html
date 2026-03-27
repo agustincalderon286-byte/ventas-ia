@@ -221,6 +221,67 @@
             </p>
           </article>
 
+          <article class="dashboard-card" data-coach-workspace-section="prospeccion" data-chef-campaign-root hidden>
+            <div class="eyebrow">Campana Chef</div>
+            <h3>Primer mensaje del Chef</h3>
+            <p>
+              Usa al Chef para abrir conversacion con tus <strong>Contactos compartidos</strong>. Si responden, el Chef
+              puede seguir por SMS y llevarlos a llamada cuando convenga.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-chef-campaign-total>0</strong>
+                <span>Importados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-chef-campaign-ready>0</strong>
+                <span>Listos</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-chef-campaign-sent>0</strong>
+                <span>Ya contactados</span>
+              </div>
+            </div>
+
+            <form class="native-lead-form" data-chef-campaign-form>
+              <div class="native-lead-grid">
+                <label class="native-lead-field native-lead-field-full">
+                  <span>Mensaje inicial</span>
+                  <textarea
+                    name="messageTemplate"
+                    rows="4"
+                    maxlength="600"
+                    data-chef-campaign-message
+                    placeholder="Hola {{nombre}}, soy Agustin 2.0 Chef..."
+                  >Hola {{nombre}}, soy Agustin 2.0 Chef. Me compartieron tu contacto porque tal vez te puede servir ayuda gratis con recetas, cocina saludable y tips para sacarle mas provecho a tu cocina. Si quieres, te puedo ayudar por aqui o apartarte una llamada corta. Responde STOP si prefieres no recibir mensajes.</textarea>
+                </label>
+                <label class="native-lead-field">
+                  <span>Cuantos mandar ahorita</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="200"
+                    step="1"
+                    value="25"
+                    name="limit"
+                    data-chef-campaign-limit
+                  />
+                </label>
+              </div>
+
+              <div class="dashboard-actions compact-top">
+                <button type="button" class="nav-button" data-chef-campaign-refresh>Actualizar</button>
+                <button type="submit" class="primary-button" data-chef-campaign-send>Mandar campana</button>
+              </div>
+
+              <div class="mini-note" data-chef-campaign-config-note>
+                Activa SMS y respuesta del Chef para que las contestaciones se atiendan por la misma linea.
+              </div>
+              <div class="form-result" data-chef-campaign-feedback></div>
+            </form>
+          </article>
+
           <article
             class="dashboard-card resource-card"
             data-coach-workspace-section="cierre"

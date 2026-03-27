@@ -4129,6 +4129,121 @@ function initCoachLeadWorkspace() {
   printButton?.addEventListener("click", printLeads);
 }
 
+function initChefCampaignTool() {
+  const root = document.querySelector("[data-chef-campaign-root]");
+  const form = document.querySelector("[data-chef-campaign-form]");
+  const feedbackNode = document.querySelector("[data-chef-campaign-feedback]");
+  const configNote = document.querySelector("[data-chef-campaign-config-note]");
+  const totalNode = document.querySelector("[data-chef-campaign-total]");
+  const readyNode = document.querySelector("[data-chef-campaign-ready]");
+  const sentNode = document.querySelector("[data-chef-campaign-sent]");
+  const refreshButton = document.querySelector("[data-chef-campaign-refresh]");
+  const sendButton = document.querySelector("[data-chef-campaign-send]");
+  const limitInput = document.querySelector("[data-chef-campaign-limit]");
+
+  if (!root || !form) {
+    return;
+  }
+
+  const renderSummary = summary => {
+    if (totalNode) {
+      totalNode.textContent = String(summary?.totalImported || 0);
+    }
+
+    if (readyNode) {
+      readyNode.textContent = String(summary?.eligibleCount || 0);
+    }
+
+    if (sentNode) {
+      sentNode.textContent = String(summary?.alreadyMessaged || 0);
+    }
+
+    if (limitInput) {
+      const maxSuggested = Math.max(1, Math.min(summary?.eligibleCount || 1, 200));
+      limitInput.max = "200";
+      if (!limitInput.value || Number(limitInput.value) > 200) {
+        limitInput.value = String(maxSuggested);
+      }
+    }
+
+    if (configNote) {
+      if (!summary?.smsEnabled) {
+        configNote.textContent = "Primero conecta Twilio SMS para poder mandar esta campana.";
+      } else if (!summary?.aiReplyEnabled) {
+        configNote.textContent =
+          "La campana puede salir, pero activa TWILIO_SMS_AI_REPLY_ENABLED para que el Chef conteste respuestas por SMS.";
+      } else if (!summary?.calendlyEnabled) {
+        configNote.textContent =
+          "El Chef ya puede contestar por SMS. Si tambien quieres que agende directo, conecta CALENDLY_CHEF_URL.";
+      } else {
+        configNote.textContent =
+          "Listo: el Chef puede escribir, contestar respuestas y compartir cita directa cuando la pidan.";
+      }
+    }
+  };
+
+  const loadSummary = async () => {
+    const data = await apiRequest("/api/coach/campaigns/chef-intro");
+    renderSummary(data);
+    return data;
+  };
+
+  refreshButton?.addEventListener("click", async () => {
+    clearMessage(feedbackNode);
+    setButtonLoading(refreshButton, true, "Actualizando...");
+
+    try {
+      await loadSummary();
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(refreshButton, false);
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(sendButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(form);
+      const data = await apiRequest("/api/coach/campaigns/chef-intro/send", {
+        method: "POST",
+        body: {
+          messageTemplate: formData.get("messageTemplate"),
+          limit: formData.get("limit")
+        }
+      });
+
+      setMessage(
+        feedbackNode,
+        `Campana enviada. Intentados: ${data.attempted || 0}. Enviados: ${data.sent || 0}. Fallidos: ${data.failed || 0}.`,
+        data.failed ? "info" : "success"
+      );
+
+      if (Array.isArray(data.errors) && data.errors.length) {
+        const errorCopy = data.errors.join(" | ");
+        setMessage(
+          feedbackNode,
+          `Campana enviada. Intentados: ${data.attempted || 0}. Enviados: ${data.sent || 0}. Fallidos: ${data.failed || 0}. ${errorCopy}`,
+          data.sent ? "success" : "error"
+        );
+      }
+
+      await loadSummary();
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(sendButton, false);
+    }
+  });
+
+  loadSummary().catch(error => {
+    setMessage(feedbackNode, error.message || "No pude cargar la campana del Chef.", "error");
+  });
+}
+
 function addCoachMessage(container, role, content) {
   const targets = Array.from(
     new Set(
@@ -5695,6 +5810,7 @@ async function initCoachAppPage() {
   }
   initCoachPrivateResources();
   initCoachLeadWorkspace();
+  initChefCampaignTool();
   initCoachTeamWorkspace(me.user);
   initRecruitmentTool();
   initHealthSurveyTool();

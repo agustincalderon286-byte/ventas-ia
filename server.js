@@ -4023,10 +4023,71 @@ async function registrarActividadSmsCoachLead(leadDoc = null, options = {}) {
   await guardarMensajeCoachLeadCanal(leadDoc, {
     role: direction === "saliente" ? "assistant" : "user",
     content: message,
-    intent: direction === "saliente" ? "sms_saliente" : "sms_entrante"
+    intent:
+      cleanText(options.intent || "") ||
+      (direction === "saliente" ? "sms_saliente" : "sms_entrante")
   });
 
   return leadDoc;
+}
+
+async function resolverCoachChefContextPorLead(leadDoc = null) {
+  if (!leadDoc) {
+    return null;
+  }
+
+  const candidateUserIds = [];
+
+  if (leadDoc.generatedByUserId) {
+    candidateUserIds.push(String(leadDoc.generatedByUserId));
+  }
+
+  if (leadDoc.ownerUserId && String(leadDoc.ownerUserId) !== String(leadDoc.generatedByUserId || "")) {
+    candidateUserIds.push(String(leadDoc.ownerUserId));
+  }
+
+  for (const userId of candidateUserIds) {
+    const profileDoc = await CoachDistributorProfile.findOne({
+      userId,
+      chefEnabled: { $ne: false }
+    });
+
+    if (!profileDoc?.userId) {
+      continue;
+    }
+
+    let userDoc = await CoachUser.findById(profileDoc.userId);
+
+    if (!userDoc) {
+      continue;
+    }
+
+    userDoc = await asegurarCoachUserBase(userDoc);
+
+    if (!(await coachTieneAccesoOperativo(userDoc))) {
+      continue;
+    }
+
+    const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+    const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+    if (accountType === "seat" && seatStatus !== "active") {
+      continue;
+    }
+
+    const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+    const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+    return {
+      slug: profileDoc.chefSlug || "",
+      userDoc,
+      profileDoc,
+      ownerProfileDoc: ownerProfileDoc || profileDoc,
+      ownership
+    };
+  }
+
+  return null;
 }
 
 function limpiarCoachInboxLead(leadDoc = null) {
@@ -4059,6 +4120,53 @@ function limpiarCoachInboxLead(leadDoc = null) {
     lastStatusChangeAt: leadDoc.lastStatusChangeAt || null,
     updatedAt: leadDoc.updatedAt || null,
     createdAt: leadDoc.createdAt || null
+  };
+}
+
+function construirCoachChefCampaignMessage(leadDoc = null) {
+  const firstName = seleccionarNombreConfiable(String(leadDoc?.fullName || "").split(/\s+/).slice(0, 2).join(" ")) || "hola";
+  return `Hola ${firstName}, soy Agustin 2.0 Chef. Me compartieron tu contacto porque tal vez te puede servir ayuda gratis con recetas, cocina saludable y tips para sacarle mas provecho a tu cocina. Si quieres, te puedo ayudar por aqui o apartarte una llamada corta. Responde STOP si prefieres no recibir mensajes.`;
+}
+
+function renderCoachChefCampaignMessage(template = "", leadDoc = null) {
+  const fallback = construirCoachChefCampaignMessage(leadDoc);
+  const firstName =
+    seleccionarNombreConfiable(String(leadDoc?.fullName || "").split(/\s+/).slice(0, 2).join(" ")) || "amiga";
+  const safeTemplate = cleanText(template || "").slice(0, 600);
+
+  if (!safeTemplate) {
+    return fallback;
+  }
+
+  return safeTemplate
+    .replace(/\{\{\s*nombre\s*\}\}/gi, firstName)
+    .replace(/\{\{\s*primer_nombre\s*\}\}/gi, firstName);
+}
+
+async function obtenerCoachChefCampaignSnapshot(userDoc = null) {
+  const query = {
+    ...construirCoachWorkspaceQuery(userDoc),
+    source: "contactos_compartidos",
+    phone: { $nin: ["", null] }
+  };
+  const leadDocs = await CoachLeadInbox.find(query).sort({ createdAt: -1 }).lean();
+  const leadIds = leadDocs.map(item => item?._id).filter(Boolean);
+  const sentLeadIds = leadIds.length
+    ? await Message.distinct("leadId", {
+        leadId: { $in: leadIds },
+        role: "assistant",
+        detectedTopics: "sms"
+      })
+    : [];
+  const sentSet = new Set(sentLeadIds.map(item => String(item)));
+  const eligibleLeads = leadDocs.filter(item => item?._id && !sentSet.has(String(item._id)));
+
+  return {
+    totalImported: leadDocs.length,
+    alreadyMessaged: sentSet.size,
+    eligibleCount: eligibleLeads.length,
+    eligibleLeads,
+    sample: eligibleLeads.slice(0, 5).map(limpiarCoachInboxLead).filter(Boolean)
   };
 }
 
@@ -8412,12 +8520,14 @@ async function procesarChatChefCanal({
   phoneHint = "",
   nameHint = "",
   source = "web",
-  chefSlug = ""
+  chefSlug = "",
+  coachChefContextOverride = null
 }) {
   const preguntaLimpia = cleanText(pregunta);
   const visitorIdLimpio = cleanText(visitorId || sessionId);
   const fastChannel = /^(whatsapp|sms)/i.test(source);
-  const coachChefContext = fastChannel ? null : await resolverCoachChefContextPorSlug(chefSlug);
+  const coachChefContext =
+    coachChefContextOverride || (fastChannel ? null : await resolverCoachChefContextPorSlug(chefSlug));
 
   if (!preguntaLimpia) {
     return { ok: false, status: 400, error: "pregunta requerida" };
@@ -9970,6 +10080,104 @@ app.get("/api/coach/leads", async (req, res) => {
   }
 });
 
+app.get("/api/coach/campaigns/chef-intro", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const snapshot = await obtenerCoachChefCampaignSnapshot(auth.user);
+    res.json({
+      totalImported: snapshot.totalImported,
+      alreadyMessaged: snapshot.alreadyMessaged,
+      eligibleCount: snapshot.eligibleCount,
+      sample: snapshot.sample,
+      smsEnabled: twilioSmsEstaConfigurado(),
+      aiReplyEnabled: TWILIO_SMS_AI_REPLY_ENABLED,
+      calendlyEnabled: Boolean(limpiarUrlExterna(CALENDLY_CHEF_URL))
+    });
+  } catch (error) {
+    console.error("Error cargando campana Chef:", error.message);
+    responderCoachError(res, 500, "No pude cargar la campana del Chef.");
+  }
+});
+
+app.post("/api/coach/campaigns/chef-intro/send", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (!twilioSmsEstaConfigurado()) {
+    return responderCoachError(res, 503, "Twilio SMS todavia no esta configurado.");
+  }
+
+  try {
+    const snapshot = await obtenerCoachChefCampaignSnapshot(auth.user);
+    const requestedLimit = Number.parseInt(req.body?.limit || "", 10);
+    const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 25, 200));
+    const template = String(req.body?.messageTemplate || "").trim();
+    const leadsToSend = snapshot.eligibleLeads.slice(0, limit);
+
+    if (!leadsToSend.length) {
+      return responderCoachError(res, 400, "No encontre contactos compartidos pendientes para esta campana.");
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const lead of leadsToSend) {
+      const message = renderCoachChefCampaignMessage(template, lead);
+      const smsResult = await enviarTwilioSms({
+        to: lead.phone || "",
+        body: message
+      });
+
+      if (!smsResult.ok) {
+        failed += 1;
+
+        if (errors.length < 5) {
+          errors.push(`${lead.fullName || "Contacto"}: ${smsResult.error || "sin detalle"}`);
+        }
+        continue;
+      }
+
+      const leadDoc = await CoachLeadInbox.findById(lead._id);
+
+      if (leadDoc) {
+        await registrarActividadSmsCoachLead(leadDoc, {
+          direction: "saliente",
+          message,
+          sid: smsResult.sid || "",
+          intent: "chef_outreach_campaign"
+        });
+      }
+
+      sent += 1;
+    }
+
+    const nextSnapshot = await obtenerCoachChefCampaignSnapshot(auth.user);
+
+    res.json({
+      ok: true,
+      sent,
+      failed,
+      attempted: leadsToSend.length,
+      errors,
+      remainingEligible: nextSnapshot.eligibleCount,
+      totalImported: nextSnapshot.totalImported,
+      alreadyMessaged: nextSnapshot.alreadyMessaged
+    });
+  } catch (error) {
+    console.error("Error enviando campana Chef:", error.message);
+    responderCoachError(res, 500, "No pude enviar la campana del Chef en este momento.");
+  }
+});
+
 app.post("/api/coach/leads", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -11296,10 +11504,11 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
   const fromRaw = cleanText(req.body?.From || "");
   const phone = normalizePhone(fromRaw);
   const messageSid = cleanText(req.body?.MessageSid || "");
+  let matchedLead = null;
 
   if (phone) {
     try {
-      const matchedLead = await CoachLeadInbox.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
+      matchedLead = await CoachLeadInbox.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
 
       if (matchedLead && body) {
         await registrarActividadSmsCoachLead(matchedLead, {
@@ -11323,12 +11532,14 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
 
   const sessionId = `sms-session-${phone}`;
   const visitorId = `sms-visitor-${phone}`;
+  const leadChefContext = matchedLead ? await resolverCoachChefContextPorLead(matchedLead) : null;
   const resultado = await procesarChatChefCanal({
     pregunta: body,
     sessionId,
     visitorId,
     phoneHint: phone,
-    source: "sms"
+    source: "sms",
+    coachChefContextOverride: leadChefContext
   });
 
   const mensaje = resultado.ok ? resultado.respuesta : resultado.error || "No pude responder en este momento.";
