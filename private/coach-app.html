@@ -69,7 +69,7 @@
               <div class="coach-demo-head">
                 <div>
                   <strong>Paso actual</strong>
-                  <span>Marca en que parte de la demo vas para que el Coach no se adelante.</span>
+                  <span>La ventanilla donde marques el paso es la que manda contexto al Coach.</span>
                 </div>
                 <div class="coach-demo-stage-badge" data-coach-demo-stage-badge>Rompe hielo</div>
               </div>
@@ -79,17 +79,10 @@
                 <span data-coach-demo-stage-copy>Calienta la casa, escucha y no cierres antes de tiempo.</span>
               </div>
 
-              <div class="coach-demo-buttons" role="group" aria-label="Paso actual de la demo">
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="rompe_hielo">Rompe hielo</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="entrega_regalo">Entrega regalo</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="encuesta">Encuesta</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="agua">Agua</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="producto">Producto</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="precio">Precio</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="objeciones">Objeciones</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="cierre">Cierre</button>
-                <button type="button" class="coach-demo-button" data-coach-demo-stage="seguimiento">Seguimiento</button>
-              </div>
+              <p class="mini-note">
+                Baja por la demo y toca <strong>Estoy aqui</strong> en la ventanilla correcta. Asi el Coach entiende tu
+                momento real y te guia sin adelantarse.
+              </p>
             </section>
 
             <section class="coach-demo-card">
@@ -133,6 +126,48 @@
             </p>
           </div>
 
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 10"
+          >
+            <div class="eyebrow">Paso 1</div>
+            <h3>Rompe de hielo</h3>
+            <p>
+              Aqui solo conectas. Habla de donde son, en que trabajan, cuanto tiempo tienen en Estados Unidos y deja
+              que la casa se afloje primero.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="rompe_hielo">Estoy aqui</button>
+            </div>
+
+            <p class="mini-note">
+              En este paso no cierres ni expliques todo. Solo crea confianza y escucha.
+            </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 20"
+          >
+            <div class="eyebrow">Paso 2</div>
+            <h3>Entrega de regalo</h3>
+            <p>
+              Primero cumple lo prometido. Ese regalo abre confianza y te sirve como puente natural para explicar el
+              programa de regalos.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="entrega_regalo">Estoy aqui</button>
+            </div>
+
+            <p class="mini-note">
+              No corras. Cuando sienten que si cumpliste, te escuchan mejor para lo que sigue.
+            </p>
+          </article>
+
           <article class="dashboard-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Comparte el Chef</div>
             <h3>Regalalo rapido desde aqui</h3>
@@ -151,13 +186,21 @@
             </p>
           </article>
 
-          <article class="dashboard-card resource-card" data-coach-workspace-section="cierre">
-            <div class="eyebrow">Recursos / Apoyo</div>
-            <h3>Herramientas listas para tu presentacion</h3>
+          <article
+            class="dashboard-card resource-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 60"
+          >
+            <div class="eyebrow">Paso 6 · Demo</div>
+            <h3>Recursos y pruebas para la demo</h3>
             <p>
               Ten este apoyo a la mano dentro del Coach para revisar productos, presentar mejor y compartir material
               visual sin salirte de tu cabina privada.
             </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="demo_producto">Estoy aqui</button>
+            </div>
 
             <div class="resource-stack">
               <section class="resource-item">
@@ -395,8 +438,12 @@
             </p>
           </article>
 
-          <article class="dashboard-card fourteen-sheet-card" data-coach-workspace-section="prospeccion" hidden>
-            <div class="eyebrow">Programa 4 en 14</div>
+          <article
+            class="dashboard-card fourteen-sheet-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 30"
+          >
+            <div class="eyebrow">Paso 3 · Programa 4 en 14</div>
             <h3>Hoja nativa del programa</h3>
             <p>
               Llena aqui la hoja de 4 en 14 sin salir del Coach. La hoja se guarda dentro de tu sistema y los
@@ -404,6 +451,7 @@
             </p>
 
             <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="programa_4_14">Estoy aqui</button>
               <button
                 type="button"
                 class="secondary-button native-lead-toggle"
@@ -495,9 +543,12 @@
               <section class="fourteen-instant-wrap" data-fourteen-instant-wrap hidden>
                 <div class="fourteen-instant-head">
                   <div>
-                    <strong>Cita instantanea</strong>
+                    <strong>Paso 4 · Cita instantanea</strong>
                     <span>Pregunta al anfitrion: a cual de estas personas le podemos llamar ahorita mismo?</span>
                   </div>
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="cita_instantanea">
+                    Estoy aqui
+                  </button>
                 </div>
 
                 <div class="fourteen-instant-summary" data-fourteen-instant-summary>
@@ -962,8 +1013,12 @@
             </p>
           </article>
 
-          <article class="dashboard-card health-survey-card" data-coach-workspace-section="cierre">
-            <div class="eyebrow">Paso de demo</div>
+          <article
+            class="dashboard-card health-survey-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 50"
+          >
+            <div class="eyebrow">Paso 5 · Encuesta</div>
             <h3>Encuesta de salud</h3>
             <p>
               Esta encuesta se llena en la casa durante la demo. Se guarda dentro del Coach, no sale por correo y te
@@ -971,6 +1026,7 @@
             </p>
 
             <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="encuesta_salud">Estoy aqui</button>
               <button
                 type="button"
                 class="secondary-button health-survey-toggle"
@@ -1319,7 +1375,11 @@
             </p>
           </article>
 
-          <article class="dashboard-card health-survey-folder-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card health-survey-folder-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 55"
+          >
             <div class="eyebrow">Carpeta privada</div>
             <h3>Encuestas de salud</h3>
             <p>
@@ -1367,7 +1427,45 @@
             </p>
           </article>
 
-          <article class="dashboard-card order-calc-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 70"
+          >
+            <div class="eyebrow">Paso 7 · Cierre</div>
+            <h3>Momento de cerrar con apoyo</h3>
+            <p>
+              Aqui ya puedes llamar al jefe, negociar, usar encuesta, calculadora, balance, descuentos y regalos.
+              Desde este punto todo empuja a decision.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="cierre_final">Estoy aqui</button>
+            </div>
+
+            <div class="feature-list compact">
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Usa todo lo que ya gano peso</strong>
+                  <span>Encuesta, agua, presupuesto y objeciones reales de esta casa.</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>No regreses al inicio</strong>
+                  <span>Si ya llegaron aqui, pide decision y reestructura solo lo necesario.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card order-calc-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 71"
+          >
             <div class="eyebrow">Herramienta de cierre</div>
             <h3>Calculadora de pedido</h3>
             <p>
@@ -1453,7 +1551,11 @@
             </p>
           </article>
 
-          <article class="dashboard-card decision-tool-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card decision-tool-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 72"
+          >
             <div class="eyebrow">Herramienta de cierre</div>
             <h3>Balance de decision</h3>
             <p>
@@ -1556,7 +1658,11 @@
             </p>
           </article>
 
-          <article class="dashboard-card buyer-profile-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card buyer-profile-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 73"
+          >
             <div class="eyebrow">Herramienta de lectura</div>
             <h3>Perfil rapido del cliente</h3>
             <p>
@@ -1614,7 +1720,11 @@
             </p>
           </article>
 
-          <article class="dashboard-card daily-prize-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card daily-prize-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 74"
+          >
             <div class="eyebrow">Cierre especial</div>
             <h3>Oferta especial</h3>
             <p>
@@ -1685,7 +1795,43 @@
             </p>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="cierre">
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 80"
+          >
+            <div class="eyebrow">Paso 8 · Invitacion al negocio</div>
+            <h3>Invitalos a hacer lo que tu haces</h3>
+            <p>
+              Si viste apertura, este es el momento para ofrecer la oportunidad de negocio sin enredarte ni hablar de
+              mas.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="coach-demo-button" data-coach-stage-activate="invitacion_negocio">
+                Estoy aqui
+              </button>
+            </div>
+
+            <div class="feature-list compact">
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>Habla de oportunidad</strong>
+                  <span>Solo si viste interes real en crecer, vender o ganar dinero extra.</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot"></div>
+                <div>
+                  <strong>No la mezcles temprano</strong>
+                  <span>Es el ultimo paso, despues de la demo y del cierre principal.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 95">
             <div class="eyebrow">Tu patron</div>
             <h3>Como te esta leyendo el Coach</h3>
             <p>
@@ -1739,7 +1885,7 @@
             </div>
           </article>
 
-          <article class="dashboard-card">
+          <article class="dashboard-card" style="--coach-flow-order: 96">
             <div class="eyebrow">Pulso interno</div>
             <h3>Lo que mas se mueve en la red</h3>
             <p>
@@ -1777,7 +1923,7 @@
             </div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="cierre">
+          <article class="dashboard-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 97">
             <div class="eyebrow">Para que te ayuda hoy</div>
             <h3>Coach listo para vender mejor</h3>
             <p>

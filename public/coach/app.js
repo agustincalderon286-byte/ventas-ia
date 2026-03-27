@@ -38,47 +38,58 @@ const COACH_DEMO_STAGE_CONFIG = [
   {
     id: "rompe_hielo",
     label: "Rompe hielo",
-    copy: "Calienta la casa, escucha y no cierres antes de tiempo."
+    copy: "Calienta la casa, escucha y no cierres antes de tiempo.",
+    coachReply:
+      "Rompe de hielo activo. Habla de donde son, en que trabajan, cuantos anos tienen aqui y solo busca conectar. Todavia no cierres ni expliques todo."
   },
   {
     id: "entrega_regalo",
     label: "Entrega regalo",
-    copy: "Usa el regalo para abrir confianza, no para empujar precio todavia."
+    copy: "Usa el regalo para abrir confianza, no para empujar precio todavia.",
+    coachReply:
+      "Entrega de regalo activa. Cumple primero, crea confianza y conecta ese regalo con el programa de regalos para abrir la siguiente parte."
   },
   {
-    id: "encuesta",
+    id: "programa_4_14",
+    label: "Programa 4 en 14",
+    copy: "Pide las referencias del programa y deja claro como se gana el regalo.",
+    coachReply:
+      "Programa 4 en 14 activo. Pide hasta 10 referencias y recuerda que el regalo se gana si logran 4 demos en 14 dias."
+  },
+  {
+    id: "cita_instantanea",
+    label: "Cita instantanea",
+    copy: "Aqui solo buscas dia y hora. No vendas producto completo por telefono.",
+    coachReply:
+      "Cita instantanea activa. Haz que el anfitrion diga hola y te pase el telefono. Tu solo busca dia y hora, no vendas producto."
+  },
+  {
+    id: "encuesta_salud",
     label: "Encuesta",
-    copy: "Saca datos reales para que el Coach responda con contexto y no con teoria."
+    copy: "Saca datos reales de salud, agua, credito y presupuesto para los cierres de despues.",
+    coachReply:
+      "Encuesta de salud activa. Llenala simple, escucha mucho y deja que sus respuestas te preparen los cierres de despues."
   },
   {
-    id: "agua",
-    label: "Agua",
-    copy: "Si ya hablaron del agua, el Coach puede reforzar salud, filtro y uso diario."
+    id: "demo_producto",
+    label: "Demo",
+    copy: "Aqui ensenas catalogo, uso real, pruebas y valor para esa casa.",
+    coachReply:
+      "Demo activa. Ensena catalogo, uso diario, pruebas de agua y conecta lo visto con lo que mas les serviria en su casa."
   },
   {
-    id: "producto",
-    label: "Producto",
-    copy: "Aqui toca conectar lo que vieron con lo que mas usarian en su casa."
-  },
-  {
-    id: "precio",
-    label: "Precio",
-    copy: "Ya puedes hablar de pagos, ahorro y opciones sin adelantarte al cierre final."
-  },
-  {
-    id: "objeciones",
-    label: "Objeciones",
-    copy: "Resuelve el freno real con datos de la demo antes de volver a pedir decision."
-  },
-  {
-    id: "cierre",
+    id: "cierre_final",
     label: "Cierre",
-    copy: "Pide decision con claridad y usa solo el cierre que mejor encaje en este momento."
+    copy: "Aqui ya puedes usar al jefe y todas las herramientas para pedir decision.",
+    coachReply:
+      "Cierre activo. Ya puedes usar calculadora, balance, descuentos, regalos y apoyo del jefe para pedir decision con claridad."
   },
   {
-    id: "seguimiento",
-    label: "Seguimiento",
-    copy: "Si no cerro hoy, ordena la siguiente accion sin perder el hilo de la demo."
+    id: "invitacion_negocio",
+    label: "Invitacion al negocio",
+    copy: "Ultimo paso para ofrecer la oportunidad solo si viste apertura real.",
+    coachReply:
+      "Invitacion al negocio activa. Ofrece la oportunidad con calma y segun la apertura que viste en la casa, sin mezclarla temprano con la venta principal."
   }
 ];
 const DAILY_PRIZE_OFFERS = {
@@ -4048,7 +4059,7 @@ async function initCoachAppPage() {
   const floatingCoachToggle = document.querySelector("[data-coach-float-toggle]");
   const floatingCoachPanel = document.querySelector("[data-coach-float-panel]");
   const floatingCoachClose = document.querySelector("[data-coach-float-close]");
-  const demoStageButtons = Array.from(document.querySelectorAll("[data-coach-demo-stage]"));
+  const demoStageButtons = Array.from(document.querySelectorAll("[data-coach-stage-activate]"));
   const demoStageBadge = document.querySelector("[data-coach-demo-stage-badge]");
   const demoStageName = document.querySelector("[data-coach-demo-stage-name]");
   const demoStageCopy = document.querySelector("[data-coach-demo-stage-copy]");
@@ -4205,7 +4216,7 @@ async function initCoachAppPage() {
     }
 
     demoStageButtons.forEach(button => {
-      button.classList.toggle("is-active", button.dataset.coachDemoStage === meta.id);
+      button.classList.toggle("is-active", button.dataset.coachStageActivate === meta.id);
     });
   };
 
@@ -4243,8 +4254,20 @@ async function initCoachAppPage() {
 
   demoStageButtons.forEach(button => {
     button.addEventListener("click", () => {
-      const nextStage = button.dataset.coachDemoStage || COACH_DEMO_STAGE_CONFIG[0].id;
+      const nextStage = button.dataset.coachStageActivate || COACH_DEMO_STAGE_CONFIG[0].id;
+      const currentStage = getCoachDemoStageId();
+      const stageMeta = getCoachDemoStageMeta(nextStage);
       setCoachDemoStageId(nextStage);
+
+      registerCoachDemoEvent({
+        id: `stage_${stageMeta.id}`,
+        label: "Paso reportado",
+        detail: stageMeta.label
+      });
+
+      if (currentStage !== stageMeta.id && stageMeta.coachReply) {
+        addCoachMessage(null, "assistant", stageMeta.coachReply);
+      }
     });
   });
 

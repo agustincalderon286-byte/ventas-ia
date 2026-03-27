@@ -3204,6 +3204,14 @@ img {
   margin: 0 auto;
 }
 
+.coach-sidebar > .dashboard-card {
+  order: 100;
+}
+
+.coach-sidebar > .dashboard-card[style*="--coach-flow-order"] {
+  order: var(--coach-flow-order);
+}
+
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
