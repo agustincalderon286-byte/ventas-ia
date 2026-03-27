@@ -1132,13 +1132,15 @@ img {
 }
 
 .native-lead-card,
-.lead-folder-card {
+.lead-folder-card,
+.fourteen-sheet-card {
   position: relative;
   overflow: hidden;
 }
 
 .native-lead-card::before,
-.lead-folder-card::before {
+.lead-folder-card::before,
+.fourteen-sheet-card::before {
   content: "";
   position: absolute;
   width: 220px;
@@ -1157,6 +1159,11 @@ img {
   background: radial-gradient(circle, rgba(120, 182, 255, 0.14), transparent 72%);
 }
 
+.fourteen-sheet-card::before {
+  inset: auto -8% 58% auto;
+  background: radial-gradient(circle, rgba(120, 255, 191, 0.14), transparent 72%);
+}
+
 .native-lead-wrap[hidden],
 .lead-folder-wrap[hidden] {
   display: none !important;
@@ -1165,6 +1172,66 @@ img {
 .native-lead-toggle,
 .lead-folder-toggle {
   min-width: 180px;
+}
+
+.fourteen-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.fourteen-sheet-head strong,
+.fourteen-sheet-head span {
+  display: block;
+}
+
+.fourteen-sheet-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.fourteen-sheet-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.fourteen-sheet-referrals {
+  display: grid;
+  gap: 14px;
+}
+
+.fourteen-sheet-referral {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fourteen-sheet-referral-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fourteen-sheet-referral-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 0.98rem;
+}
+
+.fourteen-sheet-referral-head span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.fourteen-sheet-referral-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .native-lead-form {
@@ -2502,6 +2569,7 @@ img {
   .order-calc-payment-grid,
   .order-calc-metrics,
   .native-lead-grid,
+  .fourteen-sheet-referral-grid,
   .lead-folder-followup,
   .lead-folder-followup-grid,
   .decision-tool-columns,

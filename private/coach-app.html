@@ -251,48 +251,86 @@
             </p>
           </article>
 
-          <article class="dashboard-card lead-form-card" data-coach-workspace-section="prospeccion" hidden>
+          <article class="dashboard-card fourteen-sheet-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Programa 4 en 14</div>
-            <h3>Hoja de referencia (respaldo)</h3>
+            <h3>Hoja nativa del programa</h3>
             <p>
-              Ten aqui mismo la hoja de referencia de 4 en 14 para revisarla o llenarla dentro del Coach sin mezclarla
-              con el flujo principal.
+              Llena aqui la hoja de 4 en 14 sin salir del Coach. La hoja se guarda dentro de tu sistema y los
+              referidos pasan a tu carpeta para trabajarlos despues.
             </p>
 
             <div class="dashboard-actions compact-top">
               <button
                 type="button"
-                class="secondary-button lead-form-toggle"
-                data-fourteen-form-toggle
+                class="secondary-button native-lead-toggle"
+                data-fourteen-sheet-toggle
                 aria-expanded="false"
               >
                 Abrir hoja
               </button>
-              <a class="nav-button" href="#" target="_blank" rel="noreferrer" data-fourteen-form-open-link>
-                Abrir aparte
-              </a>
             </div>
 
-            <div class="lead-form-wrap" data-fourteen-form-wrap hidden>
-              <div class="lead-form-shell">
-                <iframe
-                  class="lead-form-frame"
-                  data-fourteen-form-frame
-                  data-embed-height="5583"
-                  title="Hoja de referencia 4 en 14"
-                  loading="lazy"
-                  frameborder="0"
-                  marginheight="0"
-                  marginwidth="0"
-                >
-                  Loading…
-                </iframe>
-              </div>
+            <div class="native-lead-wrap" data-fourteen-sheet-wrap hidden>
+              <form class="native-lead-form fourteen-sheet-form" data-fourteen-sheet-form>
+                <div class="native-lead-grid">
+                  <label class="native-lead-field">
+                    <span>Nombre del anfitrion</span>
+                    <input type="text" name="hostName" placeholder="Nombre completo" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Telefono del anfitrion</span>
+                    <input type="tel" name="hostPhone" placeholder="7735551234" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Regalo elegido</span>
+                    <input type="text" name="giftSelected" placeholder="Ej. extractores o sarten" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Nombre del representante</span>
+                    <input type="text" name="representativeName" placeholder="Tu nombre o el de tu socio" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Telefono del representante</span>
+                    <input type="tel" name="representativePhone" placeholder="Opcional" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Inicio y vencimiento</span>
+                    <input type="text" name="startWindow" placeholder="Ej. inicia hoy y vence en 14 dias" />
+                  </label>
+                  <label class="native-lead-field native-lead-field-full">
+                    <span>Notas de la hoja</span>
+                    <textarea
+                      name="notes"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="Algo importante sobre el anfitrion o el programa"
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="fourteen-sheet-head">
+                  <div>
+                    <strong>Referidos del programa</strong>
+                    <span>Empieza con 4 y si ocupas mas puedes abrir mas espacios.</span>
+                  </div>
+                  <button type="button" class="nav-button" data-fourteen-sheet-add>
+                    Agregar otro nombre
+                  </button>
+                </div>
+
+                <div class="fourteen-sheet-referrals" data-fourteen-sheet-referrals></div>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button">Guardar hoja</button>
+                  <button type="reset" class="nav-button">Limpiar</button>
+                </div>
+
+                <div class="form-result" data-fourteen-sheet-feedback></div>
+              </form>
             </div>
 
             <p class="mini-note">
-              Sirve como apoyo rapido para el programa 4 en 14 mientras dejamos esta parte lista tambien dentro del
-              maletin.
+              Cada hoja se guarda dentro del Coach y de ahi nacen los leads reales para tu carpeta y tu correo.
             </p>
           </article>
 

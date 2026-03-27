@@ -306,6 +306,40 @@ const coachLeadInboxSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachProgramSheetReferralSchema = new mongoose.Schema(
+  {
+    fullName: String,
+    phone: String,
+    notes: String
+  },
+  { _id: false }
+);
+
+const coachProgramSheetSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  programType: { type: String, default: "4_en_14" },
+  hostName: String,
+  hostPhone: String,
+  giftSelected: String,
+  representativeName: String,
+  representativePhone: String,
+  startWindow: String,
+  notes: String,
+  referrals: [coachProgramSheetReferralSchema],
+  referralCount: { type: Number, default: 0 },
+  createdLeadIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox" }],
+  summary: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -326,6 +360,7 @@ coachLeadInboxSchema.index({ ownerUserId: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
+coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -338,6 +373,8 @@ const CoachDistributorAnalytics =
   mongoose.model("CoachDistributorAnalytics", coachDistributorAnalyticsSchema);
 const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSession", coachSessionSchema);
 const CoachLeadInbox = mongoose.models.CoachLeadInbox || mongoose.model("CoachLeadInbox", coachLeadInboxSchema);
+const CoachProgramSheet =
+  mongoose.models.CoachProgramSheet || mongoose.model("CoachProgramSheet", coachProgramSheetSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json());
@@ -949,6 +986,127 @@ function construirCorreoLeadCoach(userDoc = null, lead = null, destination = nul
   };
 }
 
+function construirCoachProgramSheetDeliveryPayload(userDoc = null, sheetDoc = null, destination = null, createdLeads = []) {
+  return {
+    app: "Agustin 2.0 Coach",
+    kind: "programa_4_en_14",
+    sentAt: new Date().toISOString(),
+    owner: {
+      id: userDoc?._id ? String(userDoc._id) : "",
+      name: userDoc?.name || "",
+      email: userDoc?.email || ""
+    },
+    destination: {
+      type: destination?.type || "carpeta_privada",
+      label: destination?.label || ""
+    },
+    lead: {
+      fullName: sheetDoc?.hostName || "",
+      phone: sheetDoc?.hostPhone || "",
+      interest: sheetDoc?.giftSelected || "Programa 4 en 14",
+      source: "programa_4_en_14",
+      notes: sheetDoc?.summary || ""
+    },
+    sheet: {
+      id: sheetDoc?._id ? String(sheetDoc._id) : "",
+      programType: sheetDoc?.programType || "4_en_14",
+      hostName: sheetDoc?.hostName || "",
+      hostPhone: sheetDoc?.hostPhone || "",
+      giftSelected: sheetDoc?.giftSelected || "",
+      representativeName: sheetDoc?.representativeName || "",
+      representativePhone: sheetDoc?.representativePhone || "",
+      startWindow: sheetDoc?.startWindow || "",
+      notes: sheetDoc?.notes || "",
+      summary: sheetDoc?.summary || "",
+      referralCount: Number(sheetDoc?.referralCount || 0),
+      referrals: Array.isArray(sheetDoc?.referrals) ? sheetDoc.referrals : [],
+      createdAt: sheetDoc?.createdAt || null,
+      updatedAt: sheetDoc?.updatedAt || null
+    },
+    createdLeads: Array.isArray(createdLeads) ? createdLeads : []
+  };
+}
+
+function construirCorreoPrograma414Coach(userDoc = null, sheetDoc = null, destination = null, createdLeads = []) {
+  const ownerName = userDoc?.name || "Distribuidor";
+  const hostName = sheetDoc?.hostName || "Programa 4 en 14";
+  const rows = Array.isArray(sheetDoc?.referrals) ? sheetDoc.referrals : [];
+  const textLines = [
+    `Hola ${ownerName},`,
+    "",
+    "Acabas de guardar una hoja nativa de 4 en 14 en Agustin 2.0 Coach.",
+    "",
+    `Anfitrion: ${sheetDoc?.hostName || "Sin nombre"}`,
+    `Telefono anfitrion: ${sheetDoc?.hostPhone || "Sin telefono"}`,
+    `Regalo elegido: ${sheetDoc?.giftSelected || "Sin regalo"}`,
+    `Representante: ${sheetDoc?.representativeName || "Sin representante"}`,
+    `Telefono representante: ${sheetDoc?.representativePhone || "Sin telefono"}`,
+    `Inicio y vencimiento: ${sheetDoc?.startWindow || "Sin fecha"}`,
+    `Referidos guardados: ${rows.length}`,
+    "",
+    `Resumen: ${sheetDoc?.summary || "Sin resumen"}`,
+    "",
+    "Referidos:"
+  ];
+
+  rows.forEach((referral, index) => {
+    textLines.push(
+      `${index + 1}. ${referral?.fullName || "Sin nombre"} · ${referral?.phone || "Sin telefono"}${referral?.notes ? ` · ${referral.notes}` : ""}`
+    );
+  });
+
+  textLines.push("", `Leads creados o actualizados en tu carpeta: ${createdLeads.length}`);
+
+  const referralRows = rows
+    .map(
+      (referral, index) => `
+        <tr>
+          <td style="padding:8px;border:1px solid #e2e8f0">${index + 1}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(referral?.fullName || "Sin nombre")}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(referral?.phone || "Sin telefono")}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(referral?.notes || "")}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a">
+      <h2 style="margin:0 0 12px">Hoja 4 en 14 guardada</h2>
+      <p style="margin:0 0 18px;color:#475569">Tu hoja nativa del programa ya quedo dentro del Coach y sus referidos ya se movieron a tu carpeta.</p>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Anfitrion</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.hostName || "Sin nombre")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono anfitrion</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.hostPhone || "Sin telefono")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Regalo elegido</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.giftSelected || "Sin regalo")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Representante</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.representativeName || "Sin representante")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono representante</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.representativePhone || "Sin telefono")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Inicio y vencimiento</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(sheetDoc?.startWindow || "Sin fecha")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Referidos guardados</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(String(rows.length))}</td></tr>
+      </table>
+      <p style="margin:18px 0 10px"><strong>Resumen:</strong> ${escapeXml(sheetDoc?.summary || "Sin resumen")}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px">
+        <thead>
+          <tr>
+            <th style="padding:8px;border:1px solid #e2e8f0;text-align:left;background:#f8fafc">#</th>
+            <th style="padding:8px;border:1px solid #e2e8f0;text-align:left;background:#f8fafc">Nombre</th>
+            <th style="padding:8px;border:1px solid #e2e8f0;text-align:left;background:#f8fafc">Telefono</th>
+            <th style="padding:8px;border:1px solid #e2e8f0;text-align:left;background:#f8fafc">Notas</th>
+          </tr>
+        </thead>
+        <tbody>${referralRows}</tbody>
+      </table>
+      <p style="margin:18px 0 0;color:#475569">Leads creados o actualizados en tu carpeta: ${escapeXml(String(createdLeads.length))}</p>
+    </div>
+  `;
+
+  return {
+    subject: `Hoja 4 en 14 guardada para ${ownerName}: ${hostName}`,
+    text: textLines.join("\n"),
+    html,
+    to: destination?.email || ""
+  };
+}
+
 async function enviarCorreoLeadCoach(userDoc = null, lead = null, destination = null) {
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
     return {
@@ -1057,6 +1215,110 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
   }
 }
 
+async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !sheetDoc) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  if (destination.type === "correo_personal") {
+    if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+      return {
+        attempted: true,
+        delivered: false,
+        destination,
+        error: "El correo del sistema todavia no esta configurado."
+      };
+    }
+
+    if (!destination.email) {
+      return {
+        attempted: false,
+        delivered: false,
+        destination,
+        error: "No hay correo destino configurado."
+      };
+    }
+
+    const emailPayload = construirCorreoPrograma414Coach(userDoc, sheetDoc, destination, createdLeads);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM_EMAIL,
+        to: [emailPayload.to],
+        subject: emailPayload.subject,
+        text: emailPayload.text,
+        html: emailPayload.html
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        attempted: true,
+        delivered: false,
+        destination,
+        status: response.status,
+        error: errorData?.message || `Correo respondio ${response.status}`
+      };
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      destination,
+      status: response.status
+    };
+  }
+
+  if (!destination.url) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(destination.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(construirCoachProgramSheetDeliveryPayload(userDoc, sheetDoc, destination, createdLeads)),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    return {
+      attempted: true,
+      delivered: response.ok,
+      destination,
+      status: response.status,
+      error: response.ok ? "" : `Destino respondio ${response.status}`
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    return {
+      attempted: true,
+      delivered: false,
+      destination,
+      error: error?.name === "AbortError" ? "El destino tardo demasiado en responder." : error.message
+    };
+  }
+}
+
 function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
@@ -1091,6 +1353,40 @@ function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead
   };
 }
 
+function programarEnvioCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !sheetDoc) {
+    return {
+      attempted: false,
+      queued: false,
+      destination
+    };
+  }
+
+  setTimeout(() => {
+    enviarCoachProgramSheetADestino(userDoc, profileDoc, sheetDoc, createdLeads)
+      .then(result => {
+        if (!result?.delivered) {
+          console.error(
+            "No pude entregar hoja 4 en 14 al destino:",
+            result?.destination?.type || "desconocido",
+            result?.error || result?.status || "sin detalle"
+          );
+        }
+      })
+      .catch(error => {
+        console.error("Error enviando hoja 4 en 14 al destino:", error.message);
+      });
+  }, 0);
+
+  return {
+    attempted: true,
+    queued: true,
+    destination
+  };
+}
+
 function normalizarCoachLeadStatus(status = "") {
   const value = String(status || "").trim().toLowerCase();
   const validStatuses = ["nuevo", "contactado", "agendado", "cliente", "archivado"];
@@ -1099,7 +1395,16 @@ function normalizarCoachLeadStatus(status = "") {
 
 function normalizarCoachLeadSource(source = "") {
   const value = String(source || "").trim().toLowerCase();
-  const validSources = ["rifa_digital", "llamada", "demo", "referencia", "evento", "captura_manual", "otro"];
+  const validSources = [
+    "rifa_digital",
+    "programa_4_en_14",
+    "llamada",
+    "demo",
+    "referencia",
+    "evento",
+    "captura_manual",
+    "otro"
+  ];
   return validSources.includes(value) ? value : "captura_manual";
 }
 
@@ -1120,6 +1425,225 @@ function parseCoachLeadNextActionAt(value) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function limpiarCoachProgramReferral(item = null) {
+  const fullName = seleccionarNombreConfiable(item?.fullName || item?.name || "") || String(item?.fullName || item?.name || "").trim();
+  const phone = normalizePhone(item?.phone || "");
+  const notes = String(item?.notes || "").trim().slice(0, 240);
+
+  if (!fullName && !phone && !notes) {
+    return null;
+  }
+
+  if (!fullName || !phone) {
+    return null;
+  }
+
+  return {
+    fullName,
+    phone,
+    notes
+  };
+}
+
+function construirCoachProgramSheetSummary(sheet = null) {
+  if (!sheet) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (sheet.hostName) {
+    parts.push(`Anfitrion: ${truncarTextoPrompt(sheet.hostName, 80)}.`);
+  }
+
+  if (sheet.giftSelected) {
+    parts.push(`Regalo: ${truncarTextoPrompt(sheet.giftSelected, 80)}.`);
+  }
+
+  if (sheet.startWindow) {
+    parts.push(`Periodo: ${truncarTextoPrompt(sheet.startWindow, 90)}.`);
+  }
+
+  if (sheet.referralCount) {
+    parts.push(`Referidos guardados: ${sheet.referralCount}.`);
+  }
+
+  if (sheet.representativeName) {
+    parts.push(`Representante: ${truncarTextoPrompt(sheet.representativeName, 80)}.`);
+  }
+
+  if (sheet.notes) {
+    parts.push(`Notas: ${truncarTextoPrompt(sheet.notes, 120)}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+function construirNotasLeadDesdePrograma414(sheet = null, referral = null, index = 0) {
+  const parts = [];
+
+  parts.push(`Programa 4 en 14 · referido ${index + 1}.`);
+
+  if (sheet?.hostName) {
+    parts.push(`Anfitrion: ${sheet.hostName}.`);
+  }
+
+  if (sheet?.hostPhone) {
+    parts.push(`Telefono anfitrion: ${sheet.hostPhone}.`);
+  }
+
+  if (sheet?.giftSelected) {
+    parts.push(`Regalo elegido: ${sheet.giftSelected}.`);
+  }
+
+  if (sheet?.startWindow) {
+    parts.push(`Inicio y vencimiento: ${sheet.startWindow}.`);
+  }
+
+  if (sheet?.representativeName) {
+    parts.push(`Representante: ${sheet.representativeName}.`);
+  }
+
+  if (sheet?.representativePhone) {
+    parts.push(`Telefono representante: ${sheet.representativePhone}.`);
+  }
+
+  if (referral?.notes) {
+    parts.push(`Notas del referido: ${referral.notes}.`);
+  }
+
+  if (sheet?.notes) {
+    parts.push(`Notas de la hoja: ${truncarTextoPrompt(sheet.notes, 120)}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+async function guardarCoachInboxLead({
+  userDoc = null,
+  profileDoc = null,
+  payload = {},
+  sendDestination = true
+} = {}) {
+  const rawName = String(payload?.fullName || payload?.name || "").trim();
+  const fullName = seleccionarNombreConfiable(rawName) || rawName;
+  const phone = normalizePhone(payload?.phone || "");
+  const email = normalizarEmail(payload?.email || "");
+  const city = String(payload?.city || "").trim().slice(0, 80);
+  const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || "");
+  const interest = String(payload?.interest || "").trim().slice(0, 120);
+  const source = normalizarCoachLeadSource(payload?.source || "captura_manual");
+  const notes = String(payload?.notes || "").trim().slice(0, 600);
+  const consentGiven = Boolean(payload?.consentGiven);
+  const nextAction = normalizarCoachLeadNextAction(payload?.nextAction || "");
+  const nextActionAt = parseCoachLeadNextActionAt(payload?.nextActionAt);
+
+  if (!fullName) {
+    const error = new Error("El nombre es requerido.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!phone && !email) {
+    const error = new Error("Necesitas telefono o correo para guardar el lead.");
+    error.status = 400;
+    throw error;
+  }
+
+  const duplicateQuery = [];
+
+  if (phone) {
+    duplicateQuery.push({ phone });
+  }
+
+  if (email) {
+    duplicateQuery.push({ email });
+  }
+
+  const now = new Date();
+  let leadDoc = null;
+
+  if (duplicateQuery.length) {
+    leadDoc = await CoachLeadInbox.findOne({
+      ownerUserId: userDoc?._id,
+      $or: duplicateQuery
+    }).sort({ createdAt: -1 });
+  }
+
+  if (leadDoc) {
+    leadDoc.fullName = fullName || leadDoc.fullName;
+    leadDoc.phone = phone || leadDoc.phone || "";
+    leadDoc.email = email || leadDoc.email || "";
+    leadDoc.city = city || leadDoc.city || "";
+    leadDoc.zipCode = zipCode || leadDoc.zipCode || "";
+    leadDoc.interest = interest || leadDoc.interest || "";
+    leadDoc.source = source || leadDoc.source || "captura_manual";
+    leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
+    leadDoc.nextAction = nextAction || leadDoc.nextAction || "";
+
+    if (nextActionAt) {
+      leadDoc.nextActionAt = nextActionAt;
+    }
+
+    if (notes && notes !== leadDoc.notes) {
+      leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${notes}` : notes;
+    }
+
+    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    leadDoc.updatedAt = now;
+    await leadDoc.save();
+
+    const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
+    const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
+      attempted: false,
+      queued: false,
+      destination: limpiarCoachLeadDestination(profileDoc)
+    };
+
+    return {
+      leadDoc,
+      lead: cleanedLead,
+      duplicate: true,
+      delivery
+    };
+  }
+
+  leadDoc = await CoachLeadInbox.create({
+    ownerUserId: userDoc?._id,
+    ownerEmail: userDoc?.email || "",
+    ownerName: userDoc?.name || "",
+    fullName,
+    phone,
+    email,
+    city,
+    zipCode,
+    interest,
+    source,
+    notes,
+    consentGiven,
+    status: "nuevo",
+    nextAction,
+    nextActionAt,
+    summary: construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
+    lastStatusChangeAt: now,
+    updatedAt: now
+  });
+
+  const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
+  const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
+    attempted: false,
+    queued: false,
+    destination: limpiarCoachLeadDestination(profileDoc)
+  };
+
+  return {
+    leadDoc,
+    lead: cleanedLead,
+    duplicate: false,
+    delivery
+  };
 }
 
 function construirCoachLeadSummary(leadDoc = null) {
@@ -6022,113 +6546,141 @@ app.post("/api/coach/leads", async (req, res) => {
     return;
   }
 
-  const rawName = String(req.body?.fullName || req.body?.name || "").trim();
-  const fullName = seleccionarNombreConfiable(rawName) || rawName;
-  const phone = normalizePhone(req.body?.phone || "");
-  const email = normalizarEmail(req.body?.email || "");
-  const city = String(req.body?.city || "").trim().slice(0, 80);
-  const zipCode = normalizarZipCode(req.body?.zipCode || req.body?.zip || "");
-  const interest = String(req.body?.interest || "").trim().slice(0, 120);
-  const source = normalizarCoachLeadSource(req.body?.source || "captura_manual");
-  const notes = String(req.body?.notes || "").trim().slice(0, 400);
-  const consentGiven = Boolean(req.body?.consentGiven);
-  const nextAction = normalizarCoachLeadNextAction(req.body?.nextAction || "");
-  const nextActionAt = parseCoachLeadNextActionAt(req.body?.nextActionAt);
+  try {
+    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const result = await guardarCoachInboxLead({
+      userDoc: auth.user,
+      profileDoc,
+      payload: req.body || {},
+      sendDestination: true
+    });
 
-  if (!fullName) {
-    return responderCoachError(res, 400, "El nombre es requerido.");
+    res.json({
+      lead: result.lead,
+      duplicate: result.duplicate,
+      delivery: result.delivery
+    });
+  } catch (error) {
+    console.error("Error guardando lead del Coach:", error.message);
+    responderCoachError(res, error.status || 500, error.message || "No pude guardar el lead en este momento.");
+  }
+});
+
+app.post("/api/coach/program-4-in-14", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
   }
 
-  if (!phone && !email) {
-    return responderCoachError(res, 400, "Necesitas telefono o correo para guardar el lead.");
+  const hostName =
+    seleccionarNombreConfiable(req.body?.hostName || "") || String(req.body?.hostName || "").trim();
+  const hostPhone = normalizePhone(req.body?.hostPhone || "");
+  const giftSelected = String(req.body?.giftSelected || "").trim().slice(0, 120);
+  const representativeName =
+    seleccionarNombreConfiable(req.body?.representativeName || "") ||
+    String(req.body?.representativeName || "").trim().slice(0, 100);
+  const representativePhone = normalizePhone(req.body?.representativePhone || "");
+  const startWindow = String(req.body?.startWindow || "").trim().slice(0, 120);
+  const notes = String(req.body?.notes || "").trim().slice(0, 500);
+  const referrals = Array.isArray(req.body?.referrals)
+    ? req.body.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
+    : [];
+
+  if (!hostName) {
+    return responderCoachError(res, 400, "El nombre del anfitrion es requerido.");
+  }
+
+  if (!hostPhone) {
+    return responderCoachError(res, 400, "El telefono del anfitrion es requerido.");
+  }
+
+  if (!referrals.length) {
+    return responderCoachError(res, 400, "Pon por lo menos un referido con nombre y telefono.");
   }
 
   try {
     const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
-    const duplicateQuery = [];
-
-    if (phone) {
-      duplicateQuery.push({ phone });
-    }
-
-    if (email) {
-      duplicateQuery.push({ email });
-    }
-
     const now = new Date();
-    let leadDoc = null;
-
-    if (duplicateQuery.length) {
-      leadDoc = await CoachLeadInbox.findOne({
-        ownerUserId: auth.user._id,
-        $or: duplicateQuery
-      }).sort({ createdAt: -1 });
-    }
-
-    if (leadDoc) {
-      leadDoc.fullName = fullName || leadDoc.fullName;
-      leadDoc.phone = phone || leadDoc.phone || "";
-      leadDoc.email = email || leadDoc.email || "";
-      leadDoc.city = city || leadDoc.city || "";
-      leadDoc.zipCode = zipCode || leadDoc.zipCode || "";
-      leadDoc.interest = interest || leadDoc.interest || "";
-      leadDoc.source = source || leadDoc.source || "captura_manual";
-      leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
-      leadDoc.nextAction = nextAction || leadDoc.nextAction || "";
-
-      if (nextActionAt) {
-        leadDoc.nextActionAt = nextActionAt;
-      }
-
-      if (notes && notes !== leadDoc.notes) {
-        leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${notes}` : notes;
-      }
-
-      leadDoc.summary = construirCoachLeadSummary(leadDoc);
-      leadDoc.updatedAt = now;
-      await leadDoc.save();
-      const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-      const delivery = programarEnvioCoachLeadADestino(auth.user, profileDoc, cleanedLead);
-
-      return res.json({
-        lead: cleanedLead,
-        duplicate: true,
-        delivery
-      });
-    }
-
-    leadDoc = await CoachLeadInbox.create({
+    const sheetBase = {
       ownerUserId: auth.user._id,
       ownerEmail: auth.user.email || "",
       ownerName: auth.user.name || "",
-      fullName,
-      phone,
-      email,
-      city,
-      zipCode,
-      interest,
-      source,
+      programType: "4_en_14",
+      hostName,
+      hostPhone,
+      giftSelected,
+      representativeName,
+      representativePhone,
+      startWindow,
       notes,
-      consentGiven,
-      status: "nuevo",
-      nextAction,
-      nextActionAt,
-      summary: construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
-      lastStatusChangeAt: now,
+      referrals,
+      referralCount: referrals.length,
       updatedAt: now
+    };
+
+    const sheetDoc = await CoachProgramSheet.create({
+      ...sheetBase,
+      summary: construirCoachProgramSheetSummary(sheetBase)
     });
 
-    const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-    const delivery = programarEnvioCoachLeadADestino(auth.user, profileDoc, cleanedLead);
+    const createdLeadIds = [];
+    const createdLeads = [];
+    let duplicates = 0;
+
+    for (let index = 0; index < referrals.length; index += 1) {
+      const referral = referrals[index];
+      const leadResult = await guardarCoachInboxLead({
+        userDoc: auth.user,
+        profileDoc,
+        sendDestination: false,
+        payload: {
+          fullName: referral.fullName,
+          phone: referral.phone,
+          interest: giftSelected
+            ? `Programa 4 en 14 · ${giftSelected}`
+            : "Programa 4 en 14",
+          source: "programa_4_en_14",
+          notes: construirNotasLeadDesdePrograma414(sheetBase, referral, index),
+          consentGiven: true
+        }
+      });
+
+      if (leadResult?.leadDoc?._id) {
+        createdLeadIds.push(leadResult.leadDoc._id);
+      }
+
+      if (leadResult?.lead) {
+        createdLeads.push(leadResult.lead);
+      }
+
+      if (leadResult?.duplicate) {
+        duplicates += 1;
+      }
+    }
+
+    sheetDoc.createdLeadIds = createdLeadIds;
+    sheetDoc.summary = construirCoachProgramSheetSummary({
+      ...sheetBase,
+      referralCount: referrals.length
+    });
+    await sheetDoc.save();
+
+    const delivery = programarEnvioCoachProgramSheetADestino(auth.user, profileDoc, sheetDoc.toObject(), createdLeads);
 
     res.json({
-      lead: cleanedLead,
-      duplicate: false,
+      sheet: {
+        id: String(sheetDoc._id),
+        summary: sheetDoc.summary,
+        referralCount: referrals.length
+      },
+      createdLeadCount: createdLeads.length,
+      duplicateCount: duplicates,
       delivery
     });
   } catch (error) {
-    console.error("Error guardando lead del Coach:", error.message);
-    responderCoachError(res, 500, "No pude guardar el lead en este momento.");
+    console.error("Error guardando hoja 4 en 14 del Coach:", error.message);
+    responderCoachError(res, 500, error.message || "No pude guardar la hoja 4 en 14 en este momento.");
   }
 });
 

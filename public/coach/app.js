@@ -27,9 +27,9 @@ const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
-const GOOGLE_FOURTEEN_FORM_URL =
-  "https://docs.google.com/forms/d/e/1FAIpQLSdGTWqlZOdK9U_OziW7r45wB4AcceK0W1fZnsaN0mZAkZ1HLQ/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
+const FOURTEEN_SHEET_DEFAULT_REFERRALS = 4;
+const FOURTEEN_SHEET_MAX_REFERRALS = 11;
 const COACH_LEAD_STATUS_OPTIONS = [
   { value: "nuevo", label: "Nuevo" },
   { value: "contactado", label: "Contactado" },
@@ -40,6 +40,7 @@ const COACH_LEAD_STATUS_OPTIONS = [
 const COACH_LEAD_SOURCE_LABELS = {
   captura_manual: "Captura manual",
   rifa_digital: "Rifa digital",
+  programa_4_en_14: "Programa 4 en 14",
   llamada: "Llamada",
   demo: "Demo",
   referencia: "Referencia",
@@ -925,16 +926,6 @@ function initLeadFormTool() {
     openLabel: "Abrir rifa",
     closeLabel: "Cerrar rifa"
   });
-
-  initEmbeddedLeadForm({
-    wrapSelector: "[data-fourteen-form-wrap]",
-    toggleSelector: "[data-fourteen-form-toggle]",
-    frameSelector: "[data-fourteen-form-frame]",
-    openLinkSelector: "[data-fourteen-form-open-link]",
-    url: GOOGLE_FOURTEEN_FORM_URL,
-    openLabel: "Abrir hoja",
-    closeLabel: "Cerrar hoja"
-  });
 }
 
 function initLeadDestinationSettings(initialDestination = null) {
@@ -1045,6 +1036,168 @@ function initLeadDestinationSettings(initialDestination = null) {
     } finally {
       setButtonLoading(saveButton, false);
     }
+  });
+}
+
+function createFourteenSheetReferralRow(index) {
+  const row = document.createElement("section");
+  row.className = "fourteen-sheet-referral";
+  row.dataset.fourteenReferralRow = String(index);
+  row.innerHTML = `
+    <div class="fourteen-sheet-referral-head">
+      <div>
+        <strong>Referido ${index}</strong>
+        <span>Nombre, telefono y una nota corta si hace falta.</span>
+      </div>
+    </div>
+    <div class="fourteen-sheet-referral-grid">
+      <label class="native-lead-field">
+        <span>Nombre</span>
+        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
+      </label>
+      <label class="native-lead-field">
+        <span>Telefono</span>
+        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
+      </label>
+      <label class="native-lead-field native-lead-field-full">
+        <span>Notas</span>
+        <input type="text" name="referralNotes${index}" maxlength="240" placeholder="Ej. mejor despues de las 6 pm" />
+      </label>
+    </div>
+  `;
+  return row;
+}
+
+function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
+  const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
+  const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
+  const form = document.querySelector("[data-fourteen-sheet-form]");
+  const referralsRoot = document.querySelector("[data-fourteen-sheet-referrals]");
+  const addButton = document.querySelector("[data-fourteen-sheet-add]");
+  const feedbackNode = document.querySelector("[data-fourteen-sheet-feedback]");
+  let skipNextResetFeedback = false;
+
+  if (!wrap || !toggle || !form || !referralsRoot || !addButton) {
+    return;
+  }
+
+  const syncToggle = open => {
+    wrap.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open ? "Cerrar hoja" : "Abrir hoja";
+  };
+
+  const syncAddButton = () => {
+    const currentCount = referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length;
+    addButton.disabled = currentCount >= FOURTEEN_SHEET_MAX_REFERRALS;
+    addButton.textContent =
+      currentCount >= FOURTEEN_SHEET_MAX_REFERRALS ? "Limite alcanzado" : "Agregar otro nombre";
+  };
+
+  const appendReferralRow = () => {
+    const currentCount = referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length;
+
+    if (currentCount >= FOURTEEN_SHEET_MAX_REFERRALS) {
+      syncAddButton();
+      return;
+    }
+
+    referralsRoot.appendChild(createFourteenSheetReferralRow(currentCount + 1));
+    syncAddButton();
+  };
+
+  const rebuildForm = ({ clearFeedback = true, resetFields = false } = {}) => {
+    if (resetFields) {
+      form.reset();
+    }
+    referralsRoot.innerHTML = "";
+    for (let index = 0; index < FOURTEEN_SHEET_DEFAULT_REFERRALS; index += 1) {
+      appendReferralRow();
+    }
+    if (clearFeedback) {
+      clearMessage(feedbackNode);
+    }
+  };
+
+  syncToggle(false);
+  rebuildForm();
+
+  toggle.addEventListener("click", () => {
+    syncToggle(wrap.hidden);
+  });
+
+  addButton.addEventListener("click", () => {
+    appendReferralRow();
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    const referrals = Array.from(referralsRoot.querySelectorAll("[data-fourteen-referral-row]"))
+      .map((row, index) => ({
+        fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
+        phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
+      }))
+      .filter(item => item.fullName || item.phone || item.notes);
+
+    const payload = {
+      hostName: formData.get("hostName"),
+      hostPhone: formData.get("hostPhone"),
+      giftSelected: formData.get("giftSelected"),
+      representativeName: formData.get("representativeName"),
+      representativePhone: formData.get("representativePhone"),
+      startWindow: formData.get("startWindow"),
+      notes: formData.get("notes"),
+      referrals
+    };
+
+    setButtonLoading(submitButton, true, "Guardando...");
+
+    try {
+      const data = await apiRequest("/api/coach/program-4-in-14", {
+        method: "POST",
+        body: payload
+      });
+
+      const duplicateCopy = data.duplicateCount
+        ? ` ${data.duplicateCount} ya existian y se actualizaron.`
+        : "";
+      const deliveryCopy = data.delivery?.queued
+        ? " Tambien voy mandando la hoja a tu destino."
+        : data.delivery?.attempted
+          ? " Ya intente mandarla a tu destino."
+          : "";
+
+      setMessage(
+        feedbackNode,
+        `Hoja guardada. Se movieron ${data.createdLeadCount || 0} referidos a tu carpeta.${duplicateCopy}${deliveryCopy}`,
+        "success"
+      );
+      skipNextResetFeedback = true;
+      rebuildForm({ clearFeedback: false, resetFields: true });
+      await loadLeads();
+      syncFolderToggle(true);
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  form.addEventListener("reset", () => {
+    window.requestAnimationFrame(() => {
+      if (skipNextResetFeedback) {
+        skipNextResetFeedback = false;
+        rebuildForm({ clearFeedback: false, resetFields: false });
+        return;
+      }
+
+      rebuildForm({ clearFeedback: true, resetFields: false });
+    });
   });
 }
 
@@ -1354,6 +1507,7 @@ function initCoachLeadWorkspace() {
 
   syncCaptureToggle(false);
   syncFolderToggle(false);
+  initFourteenSheetTool({ loadLeads, syncFolderToggle });
 
   captureToggle.addEventListener("click", () => {
     syncCaptureToggle(captureWrap.hidden);
