@@ -27,7 +27,8 @@ const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
-const GOOGLE_RAFFLE_FORM_EMBED_URL = `${GOOGLE_RAFFLE_FORM_URL}?embedded=true`;
+const GOOGLE_FOURTEEN_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSdGTWqlZOdK9U_OziW7r45wB4AcceK0W1fZnsaN0mZAkZ1HLQ/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_LEAD_STATUS_OPTIONS = [
   { value: "nuevo", label: "Nuevo" },
@@ -875,24 +876,30 @@ function initBuyerProfileTool() {
   resetButton?.addEventListener("click", reset);
 }
 
-function initLeadFormTool() {
-  const wrap = document.querySelector("[data-lead-form-wrap]");
-  const toggle = document.querySelector("[data-lead-form-toggle]");
-  const frame = document.querySelector("[data-lead-form-frame]");
-  const openLink = document.querySelector("[data-lead-form-open-link]");
+function initEmbeddedLeadForm({ wrapSelector, toggleSelector, frameSelector, openLinkSelector, url, openLabel, closeLabel }) {
+  const wrap = document.querySelector(wrapSelector);
+  const toggle = document.querySelector(toggleSelector);
+  const frame = document.querySelector(frameSelector);
+  const openLink = document.querySelector(openLinkSelector);
 
   if (!wrap || !toggle || !frame) {
     return;
   }
 
   if (openLink) {
-    openLink.href = GOOGLE_RAFFLE_FORM_URL;
+    openLink.href = url;
+  }
+
+  const embedHeight = Number.parseInt(frame.dataset.embedHeight || "0", 10);
+
+  if (embedHeight > 0) {
+    frame.style.minHeight = `${embedHeight}px`;
   }
 
   const syncLeadFormToggle = open => {
     wrap.hidden = !open;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.textContent = open ? "Cerrar rifa" : "Abrir rifa";
+    toggle.textContent = open ? closeLabel : openLabel;
   };
 
   syncLeadFormToggle(false);
@@ -901,10 +908,32 @@ function initLeadFormTool() {
     const willOpen = wrap.hidden;
 
     if (willOpen && !frame.getAttribute("src")) {
-      frame.setAttribute("src", GOOGLE_RAFFLE_FORM_EMBED_URL);
+      frame.setAttribute("src", `${url}?embedded=true`);
     }
 
     syncLeadFormToggle(willOpen);
+  });
+}
+
+function initLeadFormTool() {
+  initEmbeddedLeadForm({
+    wrapSelector: "[data-lead-form-wrap]",
+    toggleSelector: "[data-lead-form-toggle]",
+    frameSelector: "[data-lead-form-frame]",
+    openLinkSelector: "[data-lead-form-open-link]",
+    url: GOOGLE_RAFFLE_FORM_URL,
+    openLabel: "Abrir rifa",
+    closeLabel: "Cerrar rifa"
+  });
+
+  initEmbeddedLeadForm({
+    wrapSelector: "[data-fourteen-form-wrap]",
+    toggleSelector: "[data-fourteen-form-toggle]",
+    frameSelector: "[data-fourteen-form-frame]",
+    openLinkSelector: "[data-fourteen-form-open-link]",
+    url: GOOGLE_FOURTEEN_FORM_URL,
+    openLabel: "Abrir hoja",
+    closeLabel: "Cerrar hoja"
   });
 }
 
