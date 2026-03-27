@@ -732,6 +732,50 @@ function initOrderCalculator() {
   const weeklyNode = root.querySelector("[data-order-calc-summary-weekly]");
   const dailyNode = root.querySelector("[data-order-calc-summary-daily]");
 
+  const syncProductsFromSurvey = context => {
+    const safeContext = context?.id ? context : getActiveCoachHealthSurveyContext();
+    const topProducts = Array.isArray(safeContext?.topProducts)
+      ? safeContext.topProducts.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+
+    if (!topProducts.length) {
+      return;
+    }
+
+    const lastSurveyId = root.dataset.orderCalcSurveyId || "";
+    const nextSurveyId = safeContext?.id || "";
+    const shouldRefreshAll = Boolean(nextSurveyId) && nextSurveyId !== lastSurveyId;
+
+    productCards.forEach((card, index) => {
+      const nameInput = card.querySelector("[data-order-calc-name]");
+
+      if (!nameInput) {
+        return;
+      }
+
+      const nextName = topProducts[index] || "";
+      const currentValue = String(nameInput.value || "").trim();
+      const isAutofill = nameInput.dataset.orderCalcSource === "survey";
+
+      if (!nextName) {
+        if (shouldRefreshAll && isAutofill) {
+          nameInput.value = "";
+          delete nameInput.dataset.orderCalcSource;
+        }
+        return;
+      }
+
+      if (shouldRefreshAll || !currentValue || isAutofill) {
+        nameInput.value = nextName;
+        nameInput.dataset.orderCalcSource = "survey";
+      }
+    });
+
+    if (nextSurveyId) {
+      root.dataset.orderCalcSurveyId = nextSurveyId;
+    }
+  };
+
   function recalculate() {
     let totalGeneral = 0;
     let totalDown = 0;
@@ -798,7 +842,19 @@ function initOrderCalculator() {
     input.addEventListener("input", recalculate);
   });
 
+  productCards.forEach(card => {
+    const nameInput = card.querySelector("[data-order-calc-name]");
+
+    nameInput?.addEventListener("input", () => {
+      nameInput.dataset.orderCalcSource = "manual";
+    });
+  });
+
   recalculate();
+  syncProductsFromSurvey();
+
+  root.dataset.orderCalcSyncReady = "true";
+  root.syncProductsFromSurvey = syncProductsFromSurvey;
 }
 
 function createDecisionToolRow(kind, index) {
@@ -3665,6 +3721,7 @@ function buildCoachHealthSurveyContext(survey = null) {
     fullName: survey.fullName || "",
     phone: survey.phone || "",
     summary: survey.summary || "",
+    topProducts: Array.isArray(survey.topProducts) ? survey.topProducts : [],
     salesAnalysis: survey.salesAnalysis || {}
   };
 }
@@ -3780,6 +3837,11 @@ function setActiveCoachHealthSurveyContext(context) {
   }
 
   renderActiveHealthSurveyContext(next);
+
+  const orderCalcRoot = document.querySelector("[data-order-calc]");
+  if (orderCalcRoot?.dataset.orderCalcSyncReady === "true" && typeof orderCalcRoot.syncProductsFromSurvey === "function") {
+    orderCalcRoot.syncProductsFromSurvey(next);
+  }
 }
 
 function initFaq() {
@@ -4144,6 +4206,16 @@ async function initCoachAppPage() {
     if (orderCalcToggle) {
       orderCalcToggle.setAttribute("aria-expanded", open ? "true" : "false");
       orderCalcToggle.textContent = open ? "Cerrar calculadora" : "Abrir calculadora";
+    }
+
+    if (open) {
+      const orderCalcRoot = document.querySelector("[data-order-calc]");
+      if (
+        orderCalcRoot?.dataset.orderCalcSyncReady === "true" &&
+        typeof orderCalcRoot.syncProductsFromSurvey === "function"
+      ) {
+        orderCalcRoot.syncProductsFromSurvey(getActiveCoachHealthSurveyContext());
+      }
     }
   };
 
