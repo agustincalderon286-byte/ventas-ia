@@ -1253,7 +1253,9 @@ img {
 .health-survey-wrap[hidden],
 .health-survey-folder-wrap[hidden],
 .recruitment-wrap[hidden],
-.recruitment-folder-wrap[hidden] {
+.recruitment-folder-wrap[hidden],
+.fourteen-instant-wrap[hidden],
+.fourteen-instant-detail[hidden] {
   display: none !important;
 }
 
@@ -1324,6 +1326,155 @@ img {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.fourteen-instant-wrap {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fourteen-instant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fourteen-instant-head strong,
+.fourteen-instant-head span {
+  display: block;
+}
+
+.fourteen-instant-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.fourteen-instant-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.fourteen-instant-summary {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(120, 255, 191, 0.08);
+  border: 1px solid rgba(120, 255, 191, 0.16);
+  color: #eafff3;
+  line-height: 1.65;
+}
+
+.fourteen-instant-list {
+  display: grid;
+  gap: 10px;
+}
+
+.fourteen-instant-picker {
+  width: 100%;
+  padding: 15px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.fourteen-instant-picker:hover,
+.fourteen-instant-picker.is-active {
+  transform: translateY(-1px);
+  border-color: rgba(120, 255, 191, 0.22);
+  background: rgba(120, 255, 191, 0.08);
+}
+
+.fourteen-instant-picker strong,
+.fourteen-instant-picker span {
+  display: block;
+}
+
+.fourteen-instant-picker strong {
+  font-size: 0.98rem;
+}
+
+.fourteen-instant-picker span {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.85rem;
+}
+
+.fourteen-instant-detail {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fourteen-instant-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fourteen-instant-detail-head strong,
+.fourteen-instant-detail-head span {
+  display: block;
+}
+
+.fourteen-instant-detail-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.fourteen-instant-detail-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.fourteen-instant-script-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fourteen-instant-script-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fourteen-instant-script-card.is-focus {
+  grid-column: 1 / -1;
+  background: rgba(255, 205, 120, 0.08);
+  border-color: rgba(255, 205, 120, 0.18);
+}
+
+.fourteen-instant-script-card span,
+.fourteen-instant-script-card strong {
+  display: block;
+}
+
+.fourteen-instant-script-card span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.fourteen-instant-script-card strong {
+  margin-top: 8px;
+  line-height: 1.6;
+  font-size: 0.94rem;
 }
 
 .native-lead-form {
@@ -3334,6 +3485,7 @@ img {
   .native-lead-grid,
   .health-survey-check-grid,
   .fourteen-sheet-referral-grid,
+  .fourteen-instant-script-grid,
   .lead-folder-followup,
   .lead-folder-followup-grid,
   .decision-tool-columns,
@@ -3355,6 +3507,10 @@ img {
   }
 
   .recruitment-folder-head {
+    flex-direction: column;
+  }
+
+  .fourteen-instant-detail-head {
     flex-direction: column;
   }
 

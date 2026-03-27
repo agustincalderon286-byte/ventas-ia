@@ -326,7 +326,13 @@ const coachProgramSheetReferralSchema = new mongoose.Schema(
   {
     fullName: String,
     phone: String,
-    notes: String
+    notes: String,
+    createdLeadId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox", default: null },
+    instantCallStatus: String,
+    instantCallNotes: String,
+    appointmentDetails: String,
+    selectedForInstantCallAt: Date,
+    lastOutcomeAt: Date
   },
   { _id: false }
 );
@@ -1904,6 +1910,80 @@ function construirCoachProgramSheetSummary(sheet = null) {
   return parts.join(" ").trim();
 }
 
+function normalizarCoachProgramInstantStatus(value = "") {
+  const normalizado = String(value || "")
+    .trim()
+    .toLowerCase();
+  const permitidos = new Set(["", "seleccionado", "cita_lograda", "no_contesto", "llamar_despues", "no_quiso"]);
+  return permitidos.has(normalizado) ? normalizado : "";
+}
+
+function construirCoachProgram414Scripts(sheet = null, referral = null) {
+  const referralName = referral?.fullName || "la persona";
+  const hostName = sheet?.hostName || "el anfitrion";
+  const representativeName = sheet?.representativeName || "el representante";
+  const giftLabel = sheet?.giftSelected ? ` por el programa de regalos de ${sheet.giftSelected}` : " por el programa de regalos";
+  const hostScript = `Hola ${referralName}, estoy aqui con ${representativeName} de Royal Prestige${giftLabel}. Te lo paso.`;
+  const repScript = `Hola ${referralName}, gusto saludarte. Estoy aqui con ${hostName} y te marco porque estamos apartando visitas cortas${giftLabel}. Tengo un espacio hoy y otro manana, cual te queda mejor?`;
+  const focus = "No vendas producto completo aqui. Solo amarra dia y hora para la visita.";
+
+  return {
+    hostScript,
+    repScript,
+    focus
+  };
+}
+
+function limpiarCoachProgramReferralView(referral = null, index = 0, sheet = null) {
+  if (!referral) {
+    return null;
+  }
+
+  const scripts = construirCoachProgram414Scripts(sheet, referral);
+
+  return {
+    index,
+    fullName: referral.fullName || "",
+    phone: referral.phone || "",
+    notes: referral.notes || "",
+    createdLeadId: referral.createdLeadId ? String(referral.createdLeadId) : "",
+    instantCallStatus: normalizarCoachProgramInstantStatus(referral.instantCallStatus || ""),
+    instantCallNotes: referral.instantCallNotes || "",
+    appointmentDetails: referral.appointmentDetails || "",
+    selectedForInstantCallAt: referral.selectedForInstantCallAt || null,
+    lastOutcomeAt: referral.lastOutcomeAt || null,
+    scripts
+  };
+}
+
+function limpiarCoachProgramSheet(sheetDoc = null) {
+  if (!sheetDoc) {
+    return null;
+  }
+
+  return {
+    id: String(sheetDoc._id),
+    ownerUserId: sheetDoc.ownerUserId ? String(sheetDoc.ownerUserId) : "",
+    ownerEmail: sheetDoc.ownerEmail || "",
+    ownerName: sheetDoc.ownerName || "",
+    programType: sheetDoc.programType || "4_en_14",
+    hostName: sheetDoc.hostName || "",
+    hostPhone: sheetDoc.hostPhone || "",
+    giftSelected: sheetDoc.giftSelected || "",
+    representativeName: sheetDoc.representativeName || "",
+    representativePhone: sheetDoc.representativePhone || "",
+    startWindow: sheetDoc.startWindow || "",
+    notes: sheetDoc.notes || "",
+    referralCount: Number(sheetDoc.referralCount || 0),
+    summary: sheetDoc.summary || "",
+    referrals: Array.isArray(sheetDoc.referrals)
+      ? sheetDoc.referrals.map((referral, index) => limpiarCoachProgramReferralView(referral, index, sheetDoc)).filter(Boolean)
+      : [],
+    updatedAt: sheetDoc.updatedAt || null,
+    createdAt: sheetDoc.createdAt || null
+  };
+}
+
 function construirNotasLeadDesdePrograma414(sheet = null, referral = null, index = 0) {
   const parts = [];
 
@@ -1942,6 +2022,37 @@ function construirNotasLeadDesdePrograma414(sheet = null, referral = null, index
   }
 
   return parts.join(" ").trim();
+}
+
+function construirPromptPrograma414Activo(context = null) {
+  if (!context?.sheetId || !context?.referral?.fullName) {
+    return "";
+  }
+
+  return `
+PROGRAMA 4 EN 14 ACTIVO EN ESTA SESION:
+- programa_4_en_14_activo: si
+- sheet_id: ${context.sheetId}
+- anfitrion: ${context.hostName || "sin nombre"}
+- telefono_anfitrion: ${context.hostPhone || "sin telefono"}
+- referido_activo: ${context.referral.fullName || "sin nombre"}
+- telefono_referido: ${context.referral.phone || "sin telefono"}
+- regalo_programa: ${context.giftSelected || "sin regalo"}
+- representante: ${context.representativeName || "sin nombre"}
+- estado_llamada: ${context.referral.instantCallStatus || "seleccionado"}
+- notas_del_referido: ${context.referral.notes || "sin notas"}
+- notas_de_llamada: ${context.referral.instantCallNotes || "sin notas"}
+- detalle_de_cita: ${context.referral.appointmentDetails || "sin detalle"}
+- guion_anfitrion: ${context.referral.scripts?.hostScript || "sin guion"}
+- guion_representante: ${context.referral.scripts?.repScript || "sin guion"}
+- enfoque: ${context.referral.scripts?.focus || "cerrar cita"}
+
+INSTRUCCION:
+- toma este contexto como llamada de cita instantanea, no como venta completa del producto
+- si el distribuidor te escribe objeciones como "ahorita no puede", "mandame informacion" o "habla con mi esposo", contesta con frases para cerrar cita, no para vender producto
+- usa el programa de regalos solo como puente para sacar dia y hora
+- no inventes datos fuera de esta hoja
+`;
 }
 
 async function guardarCoachInboxLead({
@@ -7676,6 +7787,9 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
 
       if (leadResult?.leadDoc?._id) {
         createdLeadIds.push(leadResult.leadDoc._id);
+        if (sheetDoc.referrals[index]) {
+          sheetDoc.referrals[index].createdLeadId = leadResult.leadDoc._id;
+        }
       }
 
       if (leadResult?.lead) {
@@ -7697,11 +7811,7 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     const delivery = programarEnvioCoachProgramSheetADestino(auth.user, profileDoc, sheetDoc.toObject(), createdLeads);
 
     res.json({
-      sheet: {
-        id: String(sheetDoc._id),
-        summary: sheetDoc.summary,
-        referralCount: referrals.length
-      },
+      sheet: limpiarCoachProgramSheet(sheetDoc.toObject()),
       createdLeadCount: createdLeads.length,
       duplicateCount: duplicates,
       delivery
@@ -7709,6 +7819,138 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
   } catch (error) {
     console.error("Error guardando hoja 4 en 14 del Coach:", error.message);
     responderCoachError(res, 500, error.message || "No pude guardar la hoja 4 en 14 en este momento.");
+  }
+});
+
+app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-call", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const sheetId = String(req.params?.sheetId || "").trim();
+  const referralIndex = Number.parseInt(req.params?.referralIndex || "", 10);
+  const activate = Boolean(req.body?.activate);
+  const instantCallStatus = normalizarCoachProgramInstantStatus(req.body?.instantCallStatus || "");
+  const instantCallNotes = String(req.body?.instantCallNotes || "").trim().slice(0, 320);
+  const appointmentDetails = String(req.body?.appointmentDetails || "").trim().slice(0, 180);
+
+  if (!sheetId || !mongoose.Types.ObjectId.isValid(sheetId)) {
+    return responderCoachError(res, 400, "Hoja invalida.");
+  }
+
+  if (!Number.isInteger(referralIndex) || referralIndex < 0) {
+    return responderCoachError(res, 400, "Referido invalido.");
+  }
+
+  try {
+    const sheetDoc = await CoachProgramSheet.findOne({
+      _id: sheetId,
+      ownerUserId: auth.user._id
+    });
+
+    if (!sheetDoc) {
+      return responderCoachError(res, 404, "No encontre esa hoja.");
+    }
+
+    if (!Array.isArray(sheetDoc.referrals) || !sheetDoc.referrals[referralIndex]) {
+      return responderCoachError(res, 404, "No encontre ese referido.");
+    }
+
+    const referral = sheetDoc.referrals[referralIndex];
+    const now = new Date();
+
+    if (activate) {
+      referral.selectedForInstantCallAt = now;
+
+      if (!referral.instantCallStatus) {
+        referral.instantCallStatus = "seleccionado";
+      }
+    }
+
+    if (instantCallStatus) {
+      referral.instantCallStatus = instantCallStatus;
+      referral.lastOutcomeAt = now;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "instantCallNotes")) {
+      referral.instantCallNotes = instantCallNotes;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "appointmentDetails")) {
+      referral.appointmentDetails = appointmentDetails;
+    }
+
+    sheetDoc.updatedAt = now;
+    await sheetDoc.save();
+
+    if (referral.createdLeadId && mongoose.Types.ObjectId.isValid(referral.createdLeadId)) {
+      const leadDoc = await CoachLeadInbox.findOne({
+        _id: referral.createdLeadId,
+        ownerUserId: auth.user._id
+      });
+
+      if (leadDoc) {
+        const noteParts = [
+          `Cita instantanea 4 en 14.`,
+          `Anfitrion: ${sheetDoc.hostName || "Sin nombre"}.`,
+          `Referido: ${referral.fullName || "Sin nombre"}.`
+        ];
+
+        if (instantCallStatus) {
+          noteParts.push(`Resultado: ${instantCallStatus.replace(/_/g, " ")}.`);
+        }
+
+        if (appointmentDetails) {
+          noteParts.push(`Detalle: ${appointmentDetails}.`);
+        }
+
+        if (instantCallNotes) {
+          noteParts.push(`Notas: ${instantCallNotes}.`);
+        }
+
+        if (instantCallStatus === "cita_lograda") {
+          leadDoc.status = "agendado";
+          leadDoc.nextAction = "cita";
+          leadDoc.lastContactAt = now;
+          leadDoc.lastStatusChangeAt = now;
+        } else if (instantCallStatus === "llamar_despues") {
+          leadDoc.status = "contactado";
+          leadDoc.nextAction = "seguimiento";
+          leadDoc.lastContactAt = now;
+          leadDoc.lastStatusChangeAt = now;
+        } else if (instantCallStatus === "no_contesto") {
+          leadDoc.status = "contactado";
+          leadDoc.nextAction = "llamar";
+          leadDoc.lastContactAt = now;
+          leadDoc.lastStatusChangeAt = now;
+        } else if (instantCallStatus === "no_quiso") {
+          leadDoc.status = "archivado";
+          leadDoc.nextAction = "";
+          leadDoc.lastContactAt = now;
+          leadDoc.lastStatusChangeAt = now;
+        }
+
+        if (noteParts.length) {
+          const appendedNote = noteParts.join(" ").trim();
+          leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${appendedNote}` : appendedNote;
+        }
+
+        leadDoc.summary = construirCoachLeadSummary(leadDoc);
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      }
+    }
+
+    const cleanedSheet = limpiarCoachProgramSheet(sheetDoc.toObject());
+    res.json({
+      sheet: cleanedSheet,
+      referral: cleanedSheet.referrals[referralIndex] || null
+    });
+  } catch (error) {
+    console.error("Error actualizando cita instantanea 4 en 14:", error.message);
+    responderCoachError(res, 500, "No pude guardar ese resultado en este momento.");
   }
 });
 
@@ -8216,6 +8458,9 @@ app.post("/chat", async (req, res) => {
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
   const activeHealthSurveyId =
     typeof req.body?.activeHealthSurveyId === "string" ? req.body.activeHealthSurveyId.trim() : "";
+  const activeProgram414SheetId =
+    typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
+  const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
@@ -8265,6 +8510,7 @@ app.post("/chat", async (req, res) => {
     let repLeadSummary = null;
     let activeLeadContext = null;
     let activeHealthSurveyContext = null;
+    let activeProgram414Context = null;
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
     let estadoPrompt = "";
     let perfilPrompt = "";
@@ -8308,6 +8554,31 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         if (surveyDoc) {
           activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
           perfilPrompt += construirPromptEncuestaSaludActiva(activeHealthSurveyContext);
+        }
+      }
+
+      if (
+        activeProgram414SheetId &&
+        mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
+        Number.isInteger(activeProgram414ReferralIndex) &&
+        activeProgram414ReferralIndex >= 0
+      ) {
+        const programSheetDoc = await CoachProgramSheet.findOne({
+          _id: activeProgram414SheetId,
+          ownerUserId: coachAuth.user._id
+        }).lean();
+
+        const cleanedSheet = limpiarCoachProgramSheet(programSheetDoc);
+        const selectedReferral = cleanedSheet?.referrals?.[activeProgram414ReferralIndex] || null;
+
+        if (cleanedSheet?.id && selectedReferral) {
+          activeProgram414Context = {
+            ...cleanedSheet,
+            sheetId: cleanedSheet.id,
+            referralIndex: activeProgram414ReferralIndex,
+            referral: selectedReferral
+          };
+          perfilPrompt += construirPromptPrograma414Activo(activeProgram414Context);
         }
       }
 
@@ -8432,6 +8703,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         repLeadSummary,
         activeLeadContext,
         activeHealthSurveyContext,
+        activeProgram414Context,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),

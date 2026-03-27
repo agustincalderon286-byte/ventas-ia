@@ -29,6 +29,7 @@ const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
+const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const DAILY_PRIZE_DURATION_MS = 5 * 60 * 1000;
 const DAILY_PRIZE_OFFERS = {
@@ -1404,7 +1405,23 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   const referralsRoot = document.querySelector("[data-fourteen-sheet-referrals]");
   const addButton = document.querySelector("[data-fourteen-sheet-add]");
   const feedbackNode = document.querySelector("[data-fourteen-sheet-feedback]");
+  const instantWrap = document.querySelector("[data-fourteen-instant-wrap]");
+  const instantSummary = document.querySelector("[data-fourteen-instant-summary]");
+  const instantList = document.querySelector("[data-fourteen-instant-list]");
+  const instantDetail = document.querySelector("[data-fourteen-instant-detail]");
+  const instantName = document.querySelector("[data-fourteen-instant-name]");
+  const instantPhone = document.querySelector("[data-fourteen-instant-phone]");
+  const instantStatus = document.querySelector("[data-fourteen-instant-status]");
+  const instantHostScript = document.querySelector("[data-fourteen-instant-host-script]");
+  const instantRepScript = document.querySelector("[data-fourteen-instant-rep-script]");
+  const instantFocus = document.querySelector("[data-fourteen-instant-focus]");
+  const instantNotes = document.querySelector("[data-fourteen-instant-notes]");
+  const instantAppointment = document.querySelector("[data-fourteen-instant-appointment]");
+  const instantFeedback = document.querySelector("[data-fourteen-instant-feedback]");
+  const instantResultButtons = Array.from(document.querySelectorAll("[data-fourteen-instant-result]"));
   let skipNextResetFeedback = false;
+  let activeSheet = null;
+  let activeReferralIndex = -1;
 
   if (!wrap || !toggle || !form || !referralsRoot || !addButton) {
     return;
@@ -1448,8 +1465,155 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     }
   };
 
+  const setInstantFeedback = (message = "", state = "info") => {
+    if (!instantFeedback) {
+      return;
+    }
+
+    if (!message) {
+      clearMessage(instantFeedback);
+      return;
+    }
+
+    setMessage(instantFeedback, message, state);
+  };
+
+  const resetInstantSelection = ({ keepContext = false } = {}) => {
+    activeReferralIndex = -1;
+
+    if (instantDetail) {
+      instantDetail.hidden = true;
+    }
+
+    if (instantNotes) {
+      instantNotes.value = "";
+    }
+
+    if (instantAppointment) {
+      instantAppointment.value = "";
+    }
+
+    if (!keepContext) {
+      setActiveCoachProgram414Context(null);
+    }
+
+    setInstantFeedback("", "info");
+  };
+
+  const renderInstantSelection = () => {
+    if (!instantDetail || !instantName || !instantPhone || !instantStatus || !instantHostScript || !instantRepScript || !instantFocus) {
+      return;
+    }
+
+    const referral = activeSheet?.referrals?.[activeReferralIndex];
+
+    if (!referral) {
+      resetInstantSelection();
+      return;
+    }
+
+    instantDetail.hidden = false;
+    instantName.textContent = referral.fullName || "Referencia";
+    instantPhone.textContent = referral.phone ? formatLeadPhone(referral.phone) : "Sin telefono";
+    instantStatus.textContent = formatProgram414StatusLabel(referral.instantCallStatus || "seleccionado");
+    instantHostScript.textContent = referral.scripts?.hostScript || "Sin guion todavia.";
+    instantRepScript.textContent = referral.scripts?.repScript || "Sin guion todavia.";
+    instantFocus.textContent = referral.scripts?.focus || "Cierra la cita, no el producto.";
+    if (instantNotes) {
+      instantNotes.value = referral.instantCallNotes || "";
+    }
+    if (instantAppointment) {
+      instantAppointment.value = referral.appointmentDetails || "";
+    }
+
+    Array.from(instantList?.querySelectorAll("[data-fourteen-instant-pick]") || []).forEach(button => {
+      button.classList.toggle("is-active", Number.parseInt(button.dataset.fourteenInstantPick || "-1", 10) === activeReferralIndex);
+    });
+  };
+
+  const renderInstantZone = sheet => {
+    activeSheet = sheet?.id ? sheet : null;
+
+    if (!instantWrap || !instantSummary || !instantList) {
+      return;
+    }
+
+    if (!activeSheet?.id || !Array.isArray(activeSheet.referrals) || !activeSheet.referrals.length) {
+      instantWrap.hidden = true;
+      instantList.innerHTML = "";
+      resetInstantSelection();
+      return;
+    }
+
+    instantWrap.hidden = false;
+    instantSummary.textContent = `Anfitrion: ${activeSheet.hostName || "Sin nombre"}. Ahora pregunta: ¿a cual de estas personas le podemos llamar ahorita mismo?`;
+    instantList.innerHTML = activeSheet.referrals
+      .map(
+        referral => `
+          <button
+            type="button"
+            class="fourteen-instant-picker"
+            data-fourteen-instant-pick="${referral.index}"
+          >
+            <strong>${escapeHtml(referral.fullName || "Sin nombre")}</strong>
+            <span>${escapeHtml(referral.phone ? formatLeadPhone(referral.phone) : "Sin telefono")} · ${escapeHtml(
+              formatProgram414StatusLabel(referral.instantCallStatus || "")
+            )}${referral.notes ? ` · ${escapeHtml(referral.notes)}` : ""}</span>
+          </button>
+        `
+      )
+      .join("");
+
+    Array.from(instantList.querySelectorAll("[data-fourteen-instant-pick]")).forEach(button => {
+      button.addEventListener("click", async () => {
+        const nextIndex = Number.parseInt(button.dataset.fourteenInstantPick || "-1", 10);
+
+        if (!Number.isInteger(nextIndex) || nextIndex < 0 || !activeSheet?.id) {
+          return;
+        }
+
+        try {
+          const data = await apiRequest(
+            `/api/coach/program-4-in-14/${encodeURIComponent(activeSheet.id)}/referrals/${nextIndex}/instant-call`,
+            {
+              method: "PATCH",
+              body: {
+                activate: true
+              }
+            }
+          );
+
+          activeSheet = data.sheet || activeSheet;
+          activeReferralIndex = nextIndex;
+          const context = buildCoachProgram414Context(activeSheet, nextIndex);
+          setActiveCoachProgram414Context(context);
+          renderInstantZone(activeSheet);
+          renderInstantSelection();
+
+          if (context) {
+            addCoachMessage(null, "assistant", buildCoachProgram414Reply(context));
+          }
+        } catch (error) {
+          setInstantFeedback(error.message, "error");
+        }
+      });
+    });
+
+    if (!activeSheet.referrals[activeReferralIndex]) {
+      resetInstantSelection({ keepContext: true });
+      const existingContext = getActiveCoachProgram414Context();
+
+      if (existingContext?.sheetId === activeSheet.id && Number.isInteger(existingContext.referralIndex)) {
+        activeReferralIndex = existingContext.referralIndex;
+      }
+    }
+
+    renderInstantSelection();
+  };
+
   syncToggle(false);
   rebuildForm();
+  renderInstantZone(null);
 
   toggle.addEventListener("click", () => {
     syncToggle(wrap.hidden);
@@ -1506,6 +1670,9 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
         `Hoja guardada. Se movieron ${data.createdLeadCount || 0} referidos a tu carpeta.${duplicateCopy}${deliveryCopy}`,
         "success"
       );
+      activeSheet = data.sheet || null;
+      renderInstantZone(activeSheet);
+      resetInstantSelection();
       skipNextResetFeedback = true;
       rebuildForm({ clearFeedback: false, resetFields: true });
       await loadLeads();
@@ -1526,6 +1693,45 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       }
 
       rebuildForm({ clearFeedback: true, resetFields: false });
+    });
+  });
+
+  instantResultButtons.forEach(button => {
+    button.addEventListener("click", async () => {
+      if (!activeSheet?.id || activeReferralIndex < 0) {
+        setInstantFeedback("Primero elige a quien le van a marcar ahorita.", "error");
+        return;
+      }
+
+      const nextStatus = String(button.dataset.fourteenInstantResult || "").trim();
+      setButtonLoading(button, true, "Guardando...");
+
+      try {
+        const data = await apiRequest(
+          `/api/coach/program-4-in-14/${encodeURIComponent(activeSheet.id)}/referrals/${activeReferralIndex}/instant-call`,
+          {
+            method: "PATCH",
+            body: {
+              instantCallStatus: nextStatus,
+              instantCallNotes: instantNotes?.value || "",
+              appointmentDetails: instantAppointment?.value || ""
+            }
+          }
+        );
+
+        activeSheet = data.sheet || activeSheet;
+        const context = buildCoachProgram414Context(activeSheet, activeReferralIndex);
+        setActiveCoachProgram414Context(context);
+        renderInstantZone(activeSheet);
+        renderInstantSelection();
+        await loadLeads();
+
+        setInstantFeedback(`Resultado guardado: ${formatProgram414StatusLabel(nextStatus)}.`, "success");
+      } catch (error) {
+        setInstantFeedback(error.message, "error");
+      } finally {
+        setButtonLoading(button, false);
+      }
     });
   });
 }
@@ -3042,6 +3248,76 @@ function buildCoachHealthSurveyContext(survey = null) {
   };
 }
 
+function formatProgram414StatusLabel(status = "") {
+  const safeStatus = String(status || "").trim();
+  const labels = {
+    seleccionado: "Lista para marcar",
+    cita_lograda: "Cita lograda",
+    no_contesto: "No contesto",
+    llamar_despues: "Llamar despues",
+    no_quiso: "No quiso"
+  };
+
+  return labels[safeStatus] || "Sin mover";
+}
+
+function buildCoachProgram414Context(sheet = null, referralIndex = -1) {
+  if (!sheet?.id || !Array.isArray(sheet.referrals) || referralIndex < 0 || !sheet.referrals[referralIndex]) {
+    return null;
+  }
+
+  return {
+    sheetId: sheet.id,
+    ownerUserId: sheet.ownerUserId || "",
+    hostName: sheet.hostName || "",
+    hostPhone: sheet.hostPhone || "",
+    giftSelected: sheet.giftSelected || "",
+    representativeName: sheet.representativeName || "",
+    representativePhone: sheet.representativePhone || "",
+    startWindow: sheet.startWindow || "",
+    summary: sheet.summary || "",
+    referralIndex,
+    referral: sheet.referrals[referralIndex]
+  };
+}
+
+function getActiveCoachProgram414Context() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_PROGRAM_414_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function setActiveCoachProgram414Context(context) {
+  if (!context?.sheetId) {
+    window.sessionStorage.removeItem(COACH_ACTIVE_PROGRAM_414_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(COACH_ACTIVE_PROGRAM_414_KEY, JSON.stringify(context));
+}
+
+function buildCoachProgram414Reply(context = null) {
+  if (!context?.referral?.fullName) {
+    return "";
+  }
+
+  const hostScript = context.referral?.scripts?.hostScript || "";
+  const repScript = context.referral?.scripts?.repScript || "";
+  const focus = context.referral?.scripts?.focus || "Cierra cita, no producto.";
+  const statusCopy = formatProgram414StatusLabel(context.referral?.instantCallStatus || "seleccionado");
+  return [
+    `Cita instantanea lista con ${context.referral.fullName}.`,
+    hostScript ? `Anfitrion dice: "${hostScript}"` : "",
+    repScript ? `Tu dices: "${repScript}"` : "",
+    `Estado actual: ${statusCopy}. ${focus}`
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function getActiveCoachHealthSurveyContext() {
   try {
     const raw = window.sessionStorage.getItem(COACH_ACTIVE_HEALTH_SURVEY_KEY);
@@ -3360,11 +3636,16 @@ async function initCoachAppPage() {
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
   const storedHealthSurveyContext = getActiveCoachHealthSurveyContext();
+  const storedProgram414Context = getActiveCoachProgram414Context();
 
   if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== me.user?.id) {
     setActiveCoachHealthSurveyContext(null);
   } else {
     renderActiveHealthSurveyContext(storedHealthSurveyContext);
+  }
+
+  if (storedProgram414Context?.ownerUserId && storedProgram414Context.ownerUserId !== me.user?.id) {
+    setActiveCoachProgram414Context(null);
   }
 
   initCoachWorkspaceTabs();
@@ -3567,6 +3848,10 @@ async function initCoachAppPage() {
           sessionId: getCoachChatSessionId(),
           visitorId: getCoachVisitorId(),
           activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+          activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+          activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
+            ? getActiveCoachProgram414Context().referralIndex
+            : "",
           mode: "coach"
         }
       });
@@ -3585,6 +3870,10 @@ async function initCoachAppPage() {
       renderActiveLeadContext(data.activeLeadContext || null);
       if (data.activeHealthSurveyContext?.id) {
         setActiveCoachHealthSurveyContext(buildCoachHealthSurveyContext(data.activeHealthSurveyContext));
+      }
+
+      if (data.activeProgram414Context?.sheetId) {
+        setActiveCoachProgram414Context(data.activeProgram414Context);
       }
     } catch (error) {
       addCoachMessage(
