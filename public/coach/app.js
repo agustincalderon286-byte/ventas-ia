@@ -31,7 +31,56 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
+const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
+const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
 const DAILY_PRIZE_DURATION_MS = 5 * 60 * 1000;
+const COACH_DEMO_STAGE_CONFIG = [
+  {
+    id: "rompe_hielo",
+    label: "Rompe hielo",
+    copy: "Calienta la casa, escucha y no cierres antes de tiempo."
+  },
+  {
+    id: "entrega_regalo",
+    label: "Entrega regalo",
+    copy: "Usa el regalo para abrir confianza, no para empujar precio todavia."
+  },
+  {
+    id: "encuesta",
+    label: "Encuesta",
+    copy: "Saca datos reales para que el Coach responda con contexto y no con teoria."
+  },
+  {
+    id: "agua",
+    label: "Agua",
+    copy: "Si ya hablaron del agua, el Coach puede reforzar salud, filtro y uso diario."
+  },
+  {
+    id: "producto",
+    label: "Producto",
+    copy: "Aqui toca conectar lo que vieron con lo que mas usarian en su casa."
+  },
+  {
+    id: "precio",
+    label: "Precio",
+    copy: "Ya puedes hablar de pagos, ahorro y opciones sin adelantarte al cierre final."
+  },
+  {
+    id: "objeciones",
+    label: "Objeciones",
+    copy: "Resuelve el freno real con datos de la demo antes de volver a pedir decision."
+  },
+  {
+    id: "cierre",
+    label: "Cierre",
+    copy: "Pide decision con claridad y usa solo el cierre que mejor encaje en este momento."
+  },
+  {
+    id: "seguimiento",
+    label: "Seguimiento",
+    copy: "Si no cerro hoy, ordena la siguiente accion sin perder el hilo de la demo."
+  }
+];
 const DAILY_PRIZE_OFFERS = {
   "305": {
     code: "305",
@@ -326,6 +375,90 @@ function sanitizeZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 5);
 }
 
+function getCoachDemoStageMeta(stageId = "") {
+  return (
+    COACH_DEMO_STAGE_CONFIG.find(item => item.id === String(stageId || "").trim()) ||
+    COACH_DEMO_STAGE_CONFIG[0]
+  );
+}
+
+function getCoachDemoStageId() {
+  try {
+    return getCoachDemoStageMeta(window.sessionStorage.getItem(COACH_DEMO_STAGE_KEY) || "").id;
+  } catch (error) {
+    return COACH_DEMO_STAGE_CONFIG[0].id;
+  }
+}
+
+function sanitizeCoachDemoEvent(event = null) {
+  if (!event || typeof event !== "object") {
+    return null;
+  }
+
+  const id = String(event.id || "").trim().slice(0, 80);
+  const label = String(event.label || "").trim().slice(0, 120);
+  const detail = String(event.detail || "").trim().slice(0, 220);
+  const occurredAt = String(event.occurredAt || new Date().toISOString()).trim();
+
+  if (!label) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+    detail,
+    occurredAt
+  };
+}
+
+function getCoachDemoEvents() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_DEMO_EVENTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(sanitizeCoachDemoEvent).filter(Boolean).slice(0, 8) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function syncCoachDemoContextBroadcast() {
+  window.dispatchEvent(
+    new CustomEvent("coach:demo-sync", {
+      detail: {
+        stageId: getCoachDemoStageId(),
+        events: getCoachDemoEvents()
+      }
+    })
+  );
+}
+
+function setCoachDemoStageId(stageId = "") {
+  const safeStage = getCoachDemoStageMeta(stageId).id;
+  window.sessionStorage.setItem(COACH_DEMO_STAGE_KEY, safeStage);
+  syncCoachDemoContextBroadcast();
+}
+
+function registerCoachDemoEvent(event = null) {
+  const safeEvent = sanitizeCoachDemoEvent(event);
+
+  if (!safeEvent) {
+    return;
+  }
+
+  const current = getCoachDemoEvents();
+  const [latest] = current;
+  const isRepeat =
+    latest &&
+    latest.id === safeEvent.id &&
+    latest.label === safeEvent.label &&
+    latest.detail === safeEvent.detail;
+
+  const nextEvents = isRepeat ? current : [safeEvent, ...current].slice(0, 8);
+  window.sessionStorage.setItem(COACH_DEMO_EVENTS_KEY, JSON.stringify(nextEvents));
+  syncCoachDemoContextBroadcast();
+}
+
 function initCoachWorkspaceTabs() {
   const tabButtons = Array.from(document.querySelectorAll("[data-coach-workspace-tab]"));
   const workspaceSections = Array.from(document.querySelectorAll("[data-coach-workspace-section]"));
@@ -359,7 +492,16 @@ function initCoachWorkspaceTabs() {
 
   tabButtons.forEach(button => {
     button.addEventListener("click", () => {
-      syncWorkspace(button.dataset.coachWorkspaceTab || "cierre");
+      const nextTab = button.dataset.coachWorkspaceTab || "cierre";
+      syncWorkspace(nextTab);
+      registerCoachDemoEvent({
+        id: `workspace_${nextTab}`,
+        label: nextTab === "prospeccion" ? "Cambio a modo prospeccion" : "Cambio a modo cierre",
+        detail:
+          nextTab === "prospeccion"
+            ? "Entraste al lado de captar leads y trabajar calle."
+            : "Entraste al lado de demo, objeciones y cierre."
+      });
     });
   });
 
@@ -767,6 +909,14 @@ function initDecisionTool() {
     if (nextStepNode) nextStepNode.textContent = nextStep;
     if (prosBar) prosBar.style.width = `${prosPercentOfMax}%`;
     if (consBar) consBar.style.width = `${consPercentOfMax}%`;
+
+    if (total > 0) {
+      registerCoachDemoEvent({
+        id: "decision_balance",
+        label: "Se corrio balance de decision",
+        detail: `A favor ${percent}%. Objecion principal: ${topObjection}.`
+      });
+    }
   };
 
   const reset = () => {
@@ -916,6 +1066,11 @@ function initBuyerProfileTool() {
 
     if (!isMixed) {
       applyProfile(topProfile);
+      registerCoachDemoEvent({
+        id: "buyer_profile",
+        label: "Se corrio lectura del cliente",
+        detail: `Perfil dominante: ${topProfile.label}.`
+      });
       return;
     }
 
@@ -924,6 +1079,11 @@ function initBuyerProfileTool() {
       driver: `${topProfile.driver} Tambien trae otra motivacion muy cerca, asi que conviene escuchar mas antes de empujar cierre.`,
       script: `${topProfile.script} Haz una pregunta mas para confirmar que es lo que de verdad pesa hoy.`,
       recommendation: topProfile.recommendation
+    });
+    registerCoachDemoEvent({
+      id: "buyer_profile",
+      label: "Se corrio lectura del cliente",
+      detail: `Perfil dominante: ${topProfile.label} con mezcla.`
     });
   };
 
@@ -1180,6 +1340,11 @@ function initDailyPrizeTool() {
     };
     saveStoredState(currentState);
     renderState(currentState);
+    registerCoachDemoEvent({
+      id: "daily_prize_active",
+      label: "Se activo oferta especial",
+      detail: `${offer.title} con codigo ${offer.code}.`
+    });
   });
 
   resetButton?.addEventListener("click", () => {
@@ -1204,6 +1369,11 @@ function initDailyPrizeTool() {
     };
     saveStoredState(currentState);
     renderState(currentState);
+    registerCoachDemoEvent({
+      id: "daily_prize_claimed",
+      label: "Se reclamo oferta especial",
+      detail: getOffer(currentState.offerCode || currentState.code)?.title || "Oferta especial."
+    });
   });
 }
 
@@ -1720,6 +1890,11 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
           renderInstantSelection();
 
           if (context) {
+            registerCoachDemoEvent({
+              id: "program_414_pick",
+              label: "Se eligio referencia para cita instantanea",
+              detail: `${context.referral.fullName || "Referencia"} desde 4 en 14.`
+            });
             addCoachMessage(null, "assistant", buildCoachProgram414Reply(context));
           }
         } catch (error) {
@@ -1914,6 +2089,11 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
         renderInstantZone(activeSheet);
         renderInstantSelection();
         await loadLeads();
+        registerCoachDemoEvent({
+          id: "program_414_result",
+          label: "Se guardo resultado de cita instantanea",
+          detail: `${formatProgram414StatusLabel(nextStatus)} con ${context?.referral?.fullName || "la referencia"}.`
+        });
 
         setInstantFeedback(`Resultado guardado: ${formatProgram414StatusLabel(nextStatus)}.`, "success");
       } catch (error) {
@@ -1957,6 +2137,12 @@ function initHealthSurveyTool() {
     }
 
     setActiveCoachHealthSurveyContext(context);
+
+    registerCoachDemoEvent({
+      id: "health_survey_active",
+      label: options.announce ? "Se guardo encuesta de salud" : "Se activo encuesta de salud",
+      detail: `${context.fullName || "Casa activa"}${context.salesAnalysis?.recommendedClose ? ` · ${context.salesAnalysis.recommendedClose}` : ""}.`
+    });
 
     if (options.announce && context.salesAnalysis?.coachReply) {
       addCoachMessage(chatMessages, "assistant", context.salesAnalysis.coachReply);
@@ -3862,6 +4048,11 @@ async function initCoachAppPage() {
   const floatingCoachToggle = document.querySelector("[data-coach-float-toggle]");
   const floatingCoachPanel = document.querySelector("[data-coach-float-panel]");
   const floatingCoachClose = document.querySelector("[data-coach-float-close]");
+  const demoStageButtons = Array.from(document.querySelectorAll("[data-coach-demo-stage]"));
+  const demoStageBadge = document.querySelector("[data-coach-demo-stage-badge]");
+  const demoStageName = document.querySelector("[data-coach-demo-stage-name]");
+  const demoStageCopy = document.querySelector("[data-coach-demo-stage-copy]");
+  const demoEventsRoot = document.querySelector("[data-coach-demo-events]");
   const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
   const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
@@ -3881,6 +4072,7 @@ async function initCoachAppPage() {
   const royalOneToggle = document.querySelector("[data-royalone-toggle]");
   const royalOnePanel = document.querySelector("[data-royalone-panel]");
   const royalOneCancelButton = document.querySelector("[data-royalone-cancel]");
+  const royalOneOpenLink = document.querySelector("[data-royalone-open-link]");
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
   const chefShareUrl = `${window.location.origin}/chef/`;
   let floatingCoachMode = "idle";
@@ -3997,6 +4189,67 @@ async function initCoachAppPage() {
   const chatSendButtons = [chatSendButton, floatingChatSendButton].filter(Boolean);
   const chatStatusNodes = [chatStatus, floatingChatStatus].filter(Boolean);
 
+  const renderDemoStage = (stageId = getCoachDemoStageId()) => {
+    const meta = getCoachDemoStageMeta(stageId);
+
+    if (demoStageBadge) {
+      demoStageBadge.textContent = meta.label;
+    }
+
+    if (demoStageName) {
+      demoStageName.textContent = meta.label;
+    }
+
+    if (demoStageCopy) {
+      demoStageCopy.textContent = meta.copy;
+    }
+
+    demoStageButtons.forEach(button => {
+      button.classList.toggle("is-active", button.dataset.coachDemoStage === meta.id);
+    });
+  };
+
+  const renderDemoEvents = (events = getCoachDemoEvents()) => {
+    if (!demoEventsRoot) {
+      return;
+    }
+
+    if (!events.length) {
+      demoEventsRoot.innerHTML =
+        '<div class="coach-demo-event-empty">Todavia no hay senales recientes en esta sesion.</div>';
+      return;
+    }
+
+    demoEventsRoot.innerHTML = events
+      .map(
+        event => `
+          <div class="coach-demo-event">
+            <strong>${escapeHtml(event.label || "Senal reciente")}</strong>
+            <span>${escapeHtml(event.detail || "Sin detalle extra.")}</span>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  const syncDemoContextBar = detail => {
+    renderDemoStage(detail?.stageId || getCoachDemoStageId());
+    renderDemoEvents(Array.isArray(detail?.events) ? detail.events : getCoachDemoEvents());
+  };
+
+  window.addEventListener("coach:demo-sync", event => {
+    syncDemoContextBar(event.detail || null);
+  });
+
+  demoStageButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const nextStage = button.dataset.coachDemoStage || COACH_DEMO_STAGE_CONFIG[0].id;
+      setCoachDemoStageId(nextStage);
+    });
+  });
+
+  syncDemoContextBar();
+
   const toggleCoachChatBusy = loading => {
     chatInputs.forEach(input => {
       input.disabled = loading;
@@ -4030,12 +4283,18 @@ async function initCoachAppPage() {
     toggleCoachChatBusy(true);
 
     try {
+      const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const data = await apiRequest(COACH_CHAT_API_URL, {
         method: "POST",
         body: {
           pregunta: text,
           sessionId: getCoachChatSessionId(),
           visitorId: getCoachVisitorId(),
+          activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
+          activeDemoStage: activeDemoStageMeta.id,
+          activeDemoStageLabel: activeDemoStageMeta.label,
+          activeDemoStageCopy: activeDemoStageMeta.copy,
+          recentCoachEvents: getCoachDemoEvents(),
           activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
           activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
           activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
@@ -4173,7 +4432,16 @@ async function initCoachAppPage() {
     if (royalOneFeedback) {
       royalOneFeedback.textContent = "Pensado para tenerlo a la mano sin robar espacio dentro del Coach.";
     }
-    syncRoyalOneDock(royalOnePanel?.hidden ?? true);
+    const willOpen = royalOnePanel?.hidden ?? true;
+    syncRoyalOneDock(willOpen);
+
+    if (willOpen) {
+      registerCoachDemoEvent({
+        id: "royalone_ready",
+        label: "Se preparo salida a RoyalOne",
+        detail: "Ya estaban listos para intentar el pedido final."
+      });
+    }
   });
 
   document.addEventListener("click", event => {
@@ -4221,7 +4489,16 @@ async function initCoachAppPage() {
 
   orderCalcToggle?.addEventListener("click", () => {
     const isOpen = orderCalcWrap ? !orderCalcWrap.hidden : false;
-    syncOrderCalcToggle(!isOpen);
+    const willOpen = !isOpen;
+    syncOrderCalcToggle(willOpen);
+
+    if (willOpen) {
+      registerCoachDemoEvent({
+        id: "order_calc_open",
+        label: "Se abrio calculadora de pedido",
+        detail: "Ya entraron a hablar de precio, down payment o pagos."
+      });
+    }
   });
 
   waterCheckInput?.addEventListener("input", () => {
@@ -4259,7 +4536,20 @@ async function initCoachAppPage() {
       );
     }
 
+    registerCoachDemoEvent({
+      id: "water_zip_check",
+      label: "Se reviso agua por ZIP",
+      detail: `Consultaron el area ${zip} para hablar de calidad del agua.`
+    });
     window.open("https://www.ewg.org/tapwater/", "_blank", "noopener,noreferrer");
+  });
+
+  royalOneOpenLink?.addEventListener("click", () => {
+    registerCoachDemoEvent({
+      id: "royalone_open",
+      label: "Se abrio RoyalOne",
+      detail: "La demo llego al intento de pedido final."
+    });
   });
 
   portalButtons.forEach(button => {

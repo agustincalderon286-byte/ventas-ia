@@ -2055,6 +2055,55 @@ INSTRUCCION:
 `;
 }
 
+function limpiarCoachDemoEventPrompt(event = null) {
+  if (!event || typeof event !== "object") {
+    return null;
+  }
+
+  const label = truncarTextoPrompt(String(event.label || "").trim(), 100);
+  const detail = truncarTextoPrompt(String(event.detail || "").trim(), 180);
+
+  if (!label) {
+    return null;
+  }
+
+  return {
+    label,
+    detail
+  };
+}
+
+function construirPromptCoachDemoActivo(context = null) {
+  const workspace = String(context?.workspace || "").trim() || "cierre";
+  const stageId = String(context?.stageId || "").trim() || "rompe_hielo";
+  const stageLabel = truncarTextoPrompt(String(context?.stageLabel || "").trim(), 80) || "Rompe hielo";
+  const stageCopy = truncarTextoPrompt(String(context?.stageCopy || "").trim(), 160) || "Sin nota de etapa.";
+  const events = Array.isArray(context?.events) ? context.events.map(limpiarCoachDemoEventPrompt).filter(Boolean).slice(0, 6) : [];
+
+  if (!stageLabel && !events.length) {
+    return "";
+  }
+
+  const eventLines = events.length
+    ? events.map((event, index) => `- senal_${index + 1}: ${event.label}${event.detail ? ` | ${event.detail}` : ""}`).join("\n")
+    : "- sin_senales_recientes: todavia no hay eventos marcados en esta sesion";
+
+  return `
+CONTEXTO DE DEMO ACTIVO EN ESTA SESION:
+- modo_actual: ${workspace}
+- paso_actual_id: ${stageId}
+- paso_actual: ${stageLabel}
+- instruccion_de_paso: ${stageCopy}
+${eventLines}
+
+INSTRUCCION:
+- respeta el paso actual de la demo y no te adelantes a cierres que todavia no toca usar
+- usa las senales recientes solo como pistas reales de esta sesion
+- si ya se reviso agua, calculadora, oferta o RoyalOne, toma eso en cuenta antes de responder
+- si ya se abrio RoyalOne y luego aparece una objecion, asume que la venta ya iba avanzada y ayuda a rearmar el cierre desde ahi
+`;
+}
+
 async function guardarCoachInboxLead({
   userDoc = null,
   profileDoc = null,
@@ -8481,6 +8530,15 @@ app.post("/chat", async (req, res) => {
   const { pregunta, sessionId, visitorId, mode } = req.body;
   const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
+  const activeWorkspace = typeof req.body?.activeWorkspace === "string" ? req.body.activeWorkspace.trim() : "";
+  const activeDemoStage = typeof req.body?.activeDemoStage === "string" ? req.body.activeDemoStage.trim() : "";
+  const activeDemoStageLabel =
+    typeof req.body?.activeDemoStageLabel === "string" ? req.body.activeDemoStageLabel.trim() : "";
+  const activeDemoStageCopy =
+    typeof req.body?.activeDemoStageCopy === "string" ? req.body.activeDemoStageCopy.trim() : "";
+  const recentCoachEvents = Array.isArray(req.body?.recentCoachEvents)
+    ? req.body.recentCoachEvents.map(limpiarCoachDemoEventPrompt).filter(Boolean).slice(0, 6)
+    : [];
   const activeHealthSurveyId =
     typeof req.body?.activeHealthSurveyId === "string" ? req.body.activeHealthSurveyId.trim() : "";
   const activeProgram414SheetId =
@@ -8560,6 +8618,13 @@ CONTEXTO INTERNO DEL COACH:
 - enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
 ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 `;
+      perfilPrompt += construirPromptCoachDemoActivo({
+        workspace: activeWorkspace,
+        stageId: activeDemoStage,
+        stageLabel: activeDemoStageLabel,
+        stageCopy: activeDemoStageCopy,
+        events: recentCoachEvents
+      });
       const leadMemory = await obtenerMemoriaLeadRelacionada({
         question: preguntaLimpia,
         mode: "coach",
