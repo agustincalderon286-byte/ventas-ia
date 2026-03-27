@@ -2187,6 +2187,10 @@ img {
   gap: 8px;
 }
 
+.order-calc-field-name {
+  position: relative;
+}
+
 .order-calc-field span {
   color: var(--muted);
   font-size: 0.84rem;
@@ -2212,6 +2216,72 @@ img {
   outline: none;
   border-color: rgba(215, 38, 69, 0.36);
   box-shadow: 0 0 0 3px rgba(215, 38, 69, 0.12);
+}
+
+.order-calc-match {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.order-calc-match[data-tone="success"] {
+  color: #b8ffd4;
+}
+
+.order-calc-match[data-tone="warning"] {
+  color: #ffd39a;
+}
+
+.order-calc-suggestions {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 12, 20, 0.92);
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.28);
+}
+
+.order-calc-suggestions[hidden] {
+  display: none !important;
+}
+
+.order-calc-suggestion {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.order-calc-suggestion:hover,
+.order-calc-suggestion.is-top {
+  border-color: rgba(255, 205, 120, 0.2);
+  background: rgba(255, 205, 120, 0.08);
+}
+
+.order-calc-suggestion:hover {
+  transform: translateY(-1px);
+}
+
+.order-calc-suggestion strong,
+.order-calc-suggestion span {
+  display: block;
+}
+
+.order-calc-suggestion strong {
+  font-size: 0.9rem;
+}
+
+.order-calc-suggestion span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .order-calc-metrics {

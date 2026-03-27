@@ -650,9 +650,11 @@ function createOrderCalcProductCard(index) {
       </div>
 
       <div class="order-calc-grid">
-        <label class="order-calc-field">
+        <label class="order-calc-field order-calc-field-name">
           <span>Nombre del producto</span>
-          <input type="text" data-order-calc-name placeholder="Ej. Olla de presion" />
+          <input type="text" data-order-calc-name placeholder="Ej. Olla de presion" autocomplete="off" />
+          <div class="order-calc-match" data-order-calc-match>Escribe nombre o codigo para sugerir precio base.</div>
+          <div class="order-calc-suggestions" data-order-calc-suggestions hidden></div>
         </label>
         <label class="order-calc-field">
           <span>Precio</span>
@@ -731,6 +733,190 @@ function initOrderCalculator() {
   const monthlyNode = root.querySelector("[data-order-calc-summary-monthly]");
   const weeklyNode = root.querySelector("[data-order-calc-summary-weekly]");
   const dailyNode = root.querySelector("[data-order-calc-summary-daily]");
+  const catalogSearchCache = new Map();
+
+  const normalizeCatalogLookupText = value =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9ñ]+/g, " ")
+      .trim();
+
+  const setProgrammaticInputValue = (input, value, source, sourceKey = "orderCalcSource") => {
+    if (!input) {
+      return;
+    }
+
+    input.dataset.skipManualMark = "true";
+    input.value = value ?? "";
+    input.dataset[sourceKey] = source;
+    window.requestAnimationFrame(() => {
+      delete input.dataset.skipManualMark;
+    });
+  };
+
+  const getProductNodes = card => ({
+    nameInput: card.querySelector("[data-order-calc-name]"),
+    priceInput: card.querySelector("[data-order-calc-price]"),
+    matchNode: card.querySelector("[data-order-calc-match]"),
+    suggestionsNode: card.querySelector("[data-order-calc-suggestions]")
+  });
+
+  const setMatchMessage = (card, message = "", tone = "") => {
+    const { matchNode } = getProductNodes(card);
+
+    if (!matchNode) {
+      return;
+    }
+
+    matchNode.textContent = message || "Escribe nombre o codigo para sugerir precio base.";
+    matchNode.dataset.tone = tone || "neutral";
+  };
+
+  const hideSuggestions = card => {
+    const { suggestionsNode } = getProductNodes(card);
+
+    if (!suggestionsNode) {
+      return;
+    }
+
+    suggestionsNode.hidden = true;
+    suggestionsNode.innerHTML = "";
+  };
+
+  const applyCatalogMatch = (card, match, options = {}) => {
+    const { nameInput, priceInput } = getProductNodes(card);
+
+    if (!match || !nameInput || !priceInput) {
+      return;
+    }
+
+    const shouldReplaceName = options.replaceName !== false;
+    const shouldReplacePrice =
+      options.forcePrice ||
+      !String(priceInput.value || "").trim() ||
+      priceInput.dataset.orderCalcPriceSource === "catalog";
+
+    if (shouldReplaceName) {
+      setProgrammaticInputValue(nameInput, match.nombre_producto || "", options.nameSource || "catalog");
+    }
+
+    if (shouldReplacePrice && Number.isFinite(Number(match.precio_base_catalogo))) {
+      setProgrammaticInputValue(
+        priceInput,
+        String(match.precio_base_catalogo),
+        options.priceSource || "catalog",
+        "orderCalcPriceSource"
+      );
+    }
+
+    setMatchMessage(
+      card,
+      `${match.codigo_producto || "Sin codigo"} · Base ${formatMoney(Number(match.precio_base_catalogo) || 0)}`,
+      "success"
+    );
+    hideSuggestions(card);
+    recalculate();
+  };
+
+  const searchCatalog = async rawQuery => {
+    const query = String(rawQuery || "").trim();
+
+    if (query.length < 3) {
+      return [];
+    }
+
+    const cacheKey = normalizeCatalogLookupText(query);
+    if (catalogSearchCache.has(cacheKey)) {
+      return catalogSearchCache.get(cacheKey);
+    }
+
+    const data = await apiRequest(`/api/coach/catalog-prices?query=${encodeURIComponent(query)}`);
+    const matches = Array.isArray(data.matches) ? data.matches : [];
+    catalogSearchCache.set(cacheKey, matches);
+    return matches;
+  };
+
+  const renderSuggestions = (card, matches = []) => {
+    const { suggestionsNode } = getProductNodes(card);
+
+    if (!suggestionsNode) {
+      return;
+    }
+
+    if (!matches.length) {
+      hideSuggestions(card);
+      return;
+    }
+
+    suggestionsNode.innerHTML = matches
+      .map(
+        (match, index) => `
+          <button
+            type="button"
+            class="order-calc-suggestion${index === 0 ? " is-top" : ""}"
+            data-order-calc-suggestion="${escapeHtml(match.codigo_producto || match.nombre_producto || "")}"
+          >
+            <strong>${escapeHtml(match.nombre_producto || "Producto sin nombre")}</strong>
+            <span>${escapeHtml(match.codigo_producto || "Sin codigo")} · Base ${escapeHtml(
+              formatMoney(Number(match.precio_base_catalogo) || 0)
+            )}</span>
+          </button>
+        `
+      )
+      .join("");
+    suggestionsNode.hidden = false;
+    suggestionsNode._matches = matches;
+  };
+
+  const tryAutofillCatalogFromName = async (card, query, options = {}) => {
+    const safeQuery = String(query || "").trim();
+
+    if (safeQuery.length < 3) {
+      if (options.clearWhenShort) {
+        hideSuggestions(card);
+        setMatchMessage(card, "Escribe nombre o codigo para sugerir precio base.");
+      }
+      return;
+    }
+
+    try {
+      const matches = await searchCatalog(safeQuery);
+
+      if (!matches.length) {
+        renderSuggestions(card, []);
+        setMatchMessage(card, "No encontre un match claro. Prueba con codigo o nombre mas exacto.", "warning");
+        return;
+      }
+
+      renderSuggestions(card, matches);
+
+      const queryNormalized = normalizeCatalogLookupText(safeQuery);
+      const topMatch = matches[0];
+      const topName = normalizeCatalogLookupText(topMatch.nombre_producto || "");
+      const topCode = normalizeCatalogLookupText(topMatch.codigo_producto || "");
+      const exactEnough =
+        queryNormalized === topName ||
+        queryNormalized === topCode ||
+        (matches.length === 1 && (topName.includes(queryNormalized) || queryNormalized.includes(topName)));
+
+      if (options.autoApplyTop && exactEnough) {
+        applyCatalogMatch(card, topMatch, {
+          replaceName: options.replaceName,
+          forcePrice: options.forcePrice,
+          nameSource: options.nameSource || "catalog",
+          priceSource: options.priceSource || "catalog"
+        });
+        return;
+      }
+
+      setMatchMessage(card, "Elige una opcion para llenar nombre y precio base.", "neutral");
+    } catch (error) {
+      hideSuggestions(card);
+      setMatchMessage(card, "No pude revisar el catalogo ahorita.", "warning");
+    }
+  };
 
   const syncProductsFromSurvey = context => {
     const safeContext = context?.id ? context : getActiveCoachHealthSurveyContext();
@@ -747,9 +933,9 @@ function initOrderCalculator() {
     const shouldRefreshAll = Boolean(nextSurveyId) && nextSurveyId !== lastSurveyId;
 
     productCards.forEach((card, index) => {
-      const nameInput = card.querySelector("[data-order-calc-name]");
+      const { nameInput, priceInput } = getProductNodes(card);
 
-      if (!nameInput) {
+      if (!nameInput || !priceInput) {
         return;
       }
 
@@ -759,15 +945,25 @@ function initOrderCalculator() {
 
       if (!nextName) {
         if (shouldRefreshAll && isAutofill) {
-          nameInput.value = "";
+          setProgrammaticInputValue(nameInput, "", "survey");
           delete nameInput.dataset.orderCalcSource;
+          if (priceInput.dataset.orderCalcPriceSource === "catalog") {
+            setProgrammaticInputValue(priceInput, "", "catalog", "orderCalcPriceSource");
+            delete priceInput.dataset.orderCalcPriceSource;
+          }
         }
         return;
       }
 
       if (shouldRefreshAll || !currentValue || isAutofill) {
-        nameInput.value = nextName;
-        nameInput.dataset.orderCalcSource = "survey";
+        setProgrammaticInputValue(nameInput, nextName, "survey");
+        tryAutofillCatalogFromName(card, nextName, {
+          autoApplyTop: true,
+          replaceName: false,
+          forcePrice: !String(priceInput.value || "").trim() || priceInput.dataset.orderCalcPriceSource === "catalog",
+          nameSource: "survey",
+          priceSource: "catalog"
+        });
       }
     });
 
@@ -843,10 +1039,83 @@ function initOrderCalculator() {
   });
 
   productCards.forEach(card => {
-    const nameInput = card.querySelector("[data-order-calc-name]");
+    const { nameInput, priceInput, suggestionsNode } = getProductNodes(card);
 
     nameInput?.addEventListener("input", () => {
+      if (nameInput.dataset.skipManualMark === "true") {
+        return;
+      }
+
       nameInput.dataset.orderCalcSource = "manual";
+      window.clearTimeout(nameInput._lookupTimer);
+      const query = String(nameInput.value || "").trim();
+
+      if (query.length < 3) {
+        hideSuggestions(card);
+        setMatchMessage(card, "Escribe nombre o codigo para sugerir precio base.");
+        return;
+      }
+
+      nameInput._lookupTimer = window.setTimeout(() => {
+        tryAutofillCatalogFromName(card, query, {
+          autoApplyTop: false,
+          replaceName: false,
+          forcePrice: false
+        });
+      }, 260);
+    });
+
+    nameInput?.addEventListener("blur", () => {
+      const query = String(nameInput.value || "").trim();
+
+      if (query.length >= 3) {
+        tryAutofillCatalogFromName(card, query, {
+          autoApplyTop: true,
+          replaceName: true,
+          forcePrice: false
+        });
+      }
+
+      window.setTimeout(() => {
+        hideSuggestions(card);
+      }, 120);
+    });
+
+    priceInput?.addEventListener("input", () => {
+      if (priceInput.dataset.skipManualMark === "true") {
+        return;
+      }
+
+      priceInput.dataset.orderCalcPriceSource = "manual";
+    });
+
+    suggestionsNode?.addEventListener("mousedown", event => {
+      event.preventDefault();
+    });
+
+    suggestionsNode?.addEventListener("click", event => {
+      const button = event.target.closest("[data-order-calc-suggestion]");
+
+      if (!button) {
+        return;
+      }
+
+      const matches = Array.isArray(suggestionsNode._matches) ? suggestionsNode._matches : [];
+      const matchKey = button.dataset.orderCalcSuggestion || "";
+      const match = matches.find(
+        item => String(item.codigo_producto || item.nombre_producto || "") === matchKey
+      );
+
+      if (!match) {
+        return;
+      }
+
+      applyCatalogMatch(card, match, {
+        replaceName: true,
+        forcePrice: true,
+        nameSource: "catalog",
+        priceSource: "catalog"
+      });
     });
   });
 

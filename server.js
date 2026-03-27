@@ -7450,6 +7450,31 @@ app.put("/api/coach/lead-destination", async (req, res) => {
   }
 });
 
+app.get("/api/coach/catalog-prices", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = String(req.query?.query || "").trim();
+
+    if (query.length < 3) {
+      return res.json({ matches: [] });
+    }
+
+    const result = construirPreciosRelevantesCoach(query);
+
+    res.json({
+      matches: Array.isArray(result.coincidencias) ? result.coincidencias : []
+    });
+  } catch (error) {
+    console.error("Error buscando precios del catalogo del Coach:", error.message);
+    responderCoachError(res, 500, "No pude revisar el catalogo ahorita.");
+  }
+});
+
 app.get("/api/coach/leads", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
