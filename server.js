@@ -7705,6 +7705,31 @@ app.post("/api/coach/health-surveys", async (req, res) => {
   }
 });
 
+app.get("/api/coach/program-4-in-14", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const sheetDocs = await CoachProgramSheet.find({
+      ownerUserId: auth.user._id,
+      programType: "4_en_14"
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json({
+      sheets: sheetDocs.map(limpiarCoachProgramSheet).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error cargando hojas 4 en 14 del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tus hojas 4 en 14.");
+  }
+});
+
 app.post("/api/coach/program-4-in-14", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 

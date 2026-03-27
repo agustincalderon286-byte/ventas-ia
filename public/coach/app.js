@@ -1405,6 +1405,11 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   const referralsRoot = document.querySelector("[data-fourteen-sheet-referrals]");
   const addButton = document.querySelector("[data-fourteen-sheet-add]");
   const feedbackNode = document.querySelector("[data-fourteen-sheet-feedback]");
+  const savedWrap = document.querySelector("[data-fourteen-saved-wrap]");
+  const savedSummary = document.querySelector("[data-fourteen-saved-summary]");
+  const savedList = document.querySelector("[data-fourteen-saved-list]");
+  const savedNote = document.querySelector("[data-fourteen-saved-note]");
+  const savedRefresh = document.querySelector("[data-fourteen-saved-refresh]");
   const instantWrap = document.querySelector("[data-fourteen-instant-wrap]");
   const instantSummary = document.querySelector("[data-fourteen-instant-summary]");
   const instantList = document.querySelector("[data-fourteen-instant-list]");
@@ -1419,6 +1424,9 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   const instantAppointment = document.querySelector("[data-fourteen-instant-appointment]");
   const instantFeedback = document.querySelector("[data-fourteen-instant-feedback]");
   const instantResultButtons = Array.from(document.querySelectorAll("[data-fourteen-instant-result]"));
+  const state = {
+    savedSheets: []
+  };
   let skipNextResetFeedback = false;
   let activeSheet = null;
   let activeReferralIndex = -1;
@@ -1478,6 +1486,72 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     setMessage(instantFeedback, message, state);
   };
 
+  const renderSavedList = () => {
+    if (!savedWrap || !savedSummary || !savedList) {
+      return;
+    }
+
+    savedWrap.hidden = false;
+
+    if (!state.savedSheets.length) {
+      savedSummary.textContent = "Todavia no hay hojas guardadas para retomar cita instantanea.";
+      savedList.innerHTML = '<div class="health-survey-folder-empty">Aun no hay hojas 4 en 14 guardadas.</div>';
+
+      if (savedNote) {
+        savedNote.textContent = "Cuando guardes una hoja, aqui mismo podras volver a abrirla.";
+      }
+      return;
+    }
+
+    const latestSheet = state.savedSheets[0];
+    savedSummary.textContent = `Ultima hoja: ${latestSheet.hostName || "Casa sin nombre"} · ${formatDateTime(
+      latestSheet.updatedAt || latestSheet.createdAt
+    )} · ${latestSheet.referralCount || latestSheet.referrals?.length || 0} referido(s).`;
+
+    savedList.innerHTML = state.savedSheets
+      .map((sheet, index) => {
+        const chips = [
+          sheet.hostPhone ? `<span class="health-survey-folder-chip">${escapeHtml(formatLeadPhone(sheet.hostPhone))}</span>` : "",
+          sheet.giftSelected ? `<span class="health-survey-folder-chip">${escapeHtml(sheet.giftSelected)}</span>` : "",
+          `<span class="health-survey-folder-chip">${escapeHtml(
+            `${sheet.referralCount || sheet.referrals?.length || 0} referido(s)`
+          )}</span>`,
+          sheet.representativeName
+            ? `<span class="health-survey-folder-chip">${escapeHtml(sheet.representativeName)}</span>`
+            : ""
+        ]
+          .filter(Boolean)
+          .join("");
+
+        const isCurrent = activeSheet?.id === sheet.id;
+
+        return `
+          <article class="fourteen-saved-item ${isCurrent ? "is-current" : ""}" data-fourteen-saved-id="${sheet.id}">
+            <div class="health-survey-folder-head">
+              <div>
+                <strong>${escapeHtml(sheet.hostName || "Casa sin nombre")}</strong>
+                <span>${escapeHtml(formatDateTime(sheet.updatedAt || sheet.createdAt))}</span>
+              </div>
+              <span class="lead-status-badge">${index === 0 ? "Ultima hoja" : isCurrent ? "Hoja activa" : "Guardada"}</span>
+            </div>
+            <p class="health-survey-folder-copy">${escapeHtml(sheet.summary || "Sin resumen todavia.")}</p>
+            <div class="health-survey-folder-meta">${chips}</div>
+            <div class="health-survey-folder-actions">
+              <button type="button" class="secondary-button" data-fourteen-saved-open>
+                ${isCurrent ? "Trabajando esta" : "Abrir hoja"}
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+
+    if (savedNote) {
+      savedNote.textContent =
+        "Abrir una hoja no mete toda la historia al chat. El contexto entra al Coach solo cuando eliges la referencia que vas a trabajar.";
+    }
+  };
+
   const resetInstantSelection = ({ keepContext = false } = {}) => {
     activeReferralIndex = -1;
 
@@ -1498,6 +1572,61 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     }
 
     setInstantFeedback("", "info");
+  };
+
+  const activateSavedSheet = (sheet, options = {}) => {
+    activeSheet = sheet?.id ? sheet : null;
+
+    if (!activeSheet?.id) {
+      renderSavedList();
+      renderInstantZone(null);
+      return;
+    }
+
+    const existingContext = getActiveCoachProgram414Context();
+    const shouldKeepContext =
+      options.preserveContextIfSameSheet !== false &&
+      existingContext?.sheetId === activeSheet.id &&
+      Number.isInteger(existingContext?.referralIndex) &&
+      Boolean(activeSheet.referrals?.[existingContext.referralIndex]);
+
+    if (shouldKeepContext) {
+      activeReferralIndex = existingContext.referralIndex;
+    } else {
+      resetInstantSelection({ keepContext: false });
+    }
+
+    renderSavedList();
+    renderInstantZone(activeSheet);
+
+    if (options.scrollToInstant && instantWrap && !instantWrap.hidden) {
+      instantWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const loadSavedSheets = async ({ focusLatest = false, focusSheetId = "", scrollToInstant = false } = {}) => {
+    const data = await apiRequest("/api/coach/program-4-in-14");
+    state.savedSheets = Array.isArray(data.sheets) ? data.sheets : [];
+
+    let sheetToActivate = null;
+
+    if (focusSheetId) {
+      sheetToActivate = state.savedSheets.find(item => item.id === focusSheetId) || null;
+    }
+
+    if (!sheetToActivate && focusLatest) {
+      sheetToActivate = state.savedSheets[0] || null;
+    }
+
+    if (sheetToActivate) {
+      activateSavedSheet(sheetToActivate, { scrollToInstant });
+      return;
+    }
+
+    activeSheet = null;
+    resetInstantSelection({ keepContext: false });
+    renderSavedList();
+    renderInstantZone(null);
   };
 
   const renderInstantSelection = () => {
@@ -1599,13 +1728,16 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       });
     });
 
-    if (!activeSheet.referrals[activeReferralIndex]) {
-      resetInstantSelection({ keepContext: true });
-      const existingContext = getActiveCoachProgram414Context();
+    const existingContext = getActiveCoachProgram414Context();
+    const shouldUseStoredContext =
+      existingContext?.sheetId === activeSheet.id &&
+      Number.isInteger(existingContext?.referralIndex) &&
+      Boolean(activeSheet.referrals?.[existingContext.referralIndex]);
 
-      if (existingContext?.sheetId === activeSheet.id && Number.isInteger(existingContext.referralIndex)) {
-        activeReferralIndex = existingContext.referralIndex;
-      }
+    if (shouldUseStoredContext) {
+      activeReferralIndex = existingContext.referralIndex;
+    } else if (!activeSheet.referrals[activeReferralIndex]) {
+      resetInstantSelection({ keepContext: false });
     }
 
     renderInstantSelection();
@@ -1613,14 +1745,70 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
 
   syncToggle(false);
   rebuildForm();
+  renderSavedList();
   renderInstantZone(null);
 
-  toggle.addEventListener("click", () => {
-    syncToggle(wrap.hidden);
+  toggle.addEventListener("click", async () => {
+    const willOpen = wrap.hidden;
+    syncToggle(willOpen);
+
+    if (!willOpen) {
+      return;
+    }
+
+    try {
+      await loadSavedSheets({ focusLatest: true });
+    } catch (error) {
+      savedWrap && (savedWrap.hidden = false);
+      if (savedSummary) {
+        savedSummary.textContent = "No pude cargar tus hojas guardadas en este momento.";
+      }
+      if (savedList) {
+        savedList.innerHTML = '<div class="health-survey-folder-empty">No pude cargar tus hojas 4 en 14.</div>';
+      }
+      if (savedNote) {
+        savedNote.textContent = error.message || "Intenta otra vez en un momento.";
+      }
+    }
   });
 
   addButton.addEventListener("click", () => {
     appendReferralRow();
+  });
+
+  savedRefresh?.addEventListener("click", async () => {
+    setButtonLoading(savedRefresh, true, "Actualizando...");
+
+    try {
+      await loadSavedSheets({
+        focusLatest: !activeSheet?.id,
+        focusSheetId: activeSheet?.id || ""
+      });
+    } catch (error) {
+      if (savedNote) {
+        savedNote.textContent = error.message || "No pude refrescar tus hojas.";
+      }
+    } finally {
+      setButtonLoading(savedRefresh, false);
+    }
+  });
+
+  savedList?.addEventListener("click", event => {
+    const openButton = event.target.closest("[data-fourteen-saved-open]");
+
+    if (!openButton) {
+      return;
+    }
+
+    const card = openButton.closest("[data-fourteen-saved-id]");
+    const sheetId = card?.dataset.fourteenSavedId || "";
+    const sheet = state.savedSheets.find(item => item.id === sheetId);
+
+    if (!sheet) {
+      return;
+    }
+
+    activateSavedSheet(sheet, { scrollToInstant: true });
   });
 
   form.addEventListener("submit", async event => {
@@ -1670,9 +1858,10 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
         `Hoja guardada. Se movieron ${data.createdLeadCount || 0} referidos a tu carpeta.${duplicateCopy}${deliveryCopy}`,
         "success"
       );
-      activeSheet = data.sheet || null;
-      renderInstantZone(activeSheet);
-      resetInstantSelection();
+      await loadSavedSheets({
+        focusSheetId: data.sheet?.id || "",
+        scrollToInstant: true
+      });
       skipNextResetFeedback = true;
       rebuildForm({ clearFeedback: false, resetFields: true });
       await loadLeads();

@@ -1328,6 +1328,64 @@ img {
   gap: 14px;
 }
 
+.fourteen-saved-wrap {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.fourteen-saved-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fourteen-saved-head strong,
+.fourteen-saved-head span {
+  display: block;
+}
+
+.fourteen-saved-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.fourteen-saved-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.fourteen-saved-summary {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.fourteen-saved-list {
+  display: grid;
+  gap: 12px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.fourteen-saved-item {
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fourteen-saved-item.is-current {
+  border-color: rgba(120, 255, 191, 0.24);
+  background: rgba(120, 255, 191, 0.08);
+}
+
 .fourteen-instant-wrap {
   margin-top: 18px;
   display: grid;
@@ -3507,6 +3565,10 @@ img {
   }
 
   .recruitment-folder-head {
+    flex-direction: column;
+  }
+
+  .fourteen-saved-head {
     flex-direction: column;
   }
 
