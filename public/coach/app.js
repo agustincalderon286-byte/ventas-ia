@@ -38,56 +38,56 @@ const COACH_DEMO_STAGE_CONFIG = [
   {
     id: "rompe_hielo",
     label: "Rompe hielo",
-    copy: "Calienta la casa, escucha y no cierres antes de tiempo.",
+    copy: "Conecta primero y deja que la conversacion agarre confianza.",
     coachReply:
       "Rompe de hielo activo. Habla de donde son, en que trabajan, cuantos anos tienen aqui y solo busca conectar. Todavia no cierres ni expliques todo."
   },
   {
     id: "entrega_regalo",
     label: "Entrega regalo",
-    copy: "Usa el regalo para abrir confianza, no para empujar precio todavia.",
+    copy: "Cumple primero y usa el regalo como puente natural para lo que sigue.",
     coachReply:
       "Entrega de regalo activa. Cumple primero, crea confianza y conecta ese regalo con el programa de regalos para abrir la siguiente parte."
   },
   {
     id: "programa_4_14",
     label: "Programa 4 en 14",
-    copy: "Pide las referencias del programa y deja claro como se gana el regalo.",
+    copy: "Pide referencias con claridad y deja bien explicado como se gana el regalo.",
     coachReply:
       "Programa 4 en 14 activo. Pide hasta 10 referencias y recuerda que el regalo se gana si logran 4 demos en 14 dias."
   },
   {
     id: "cita_instantanea",
     label: "Cita instantanea",
-    copy: "Aqui solo buscas dia y hora. No vendas producto completo por telefono.",
+    copy: "Aqui solo buscas dia y hora. La meta es apartar la cita.",
     coachReply:
       "Cita instantanea activa. Haz que el anfitrion diga hola y te pase el telefono. Tu solo busca dia y hora, no vendas producto."
   },
   {
     id: "encuesta_salud",
     label: "Encuesta",
-    copy: "Saca datos reales de salud, agua, credito y presupuesto para los cierres de despues.",
+    copy: "Recoge informacion util para personalizar mejor la presentacion y el cierre.",
     coachReply:
       "Encuesta de salud activa. Llenala simple, escucha mucho y deja que sus respuestas te preparen los cierres de despues."
   },
   {
     id: "demo_producto",
     label: "Demo",
-    copy: "Aqui ensenas catalogo, uso real, pruebas y valor para esa casa.",
+    copy: "Aqui presentas productos, pruebas y valor segun lo que mas le sirve a esa casa.",
     coachReply:
       "Demo activa. Ensena catalogo, uso diario, pruebas de agua y conecta lo visto con lo que mas les serviria en su casa."
   },
   {
     id: "cierre_final",
     label: "Cierre",
-    copy: "Aqui ya puedes usar al jefe y todas las herramientas para pedir decision.",
+    copy: "Aqui ya puedes usar todas las herramientas para pedir decision con claridad.",
     coachReply:
       "Cierre activo. Ya puedes usar calculadora, balance, descuentos, regalos y apoyo del jefe para pedir decision con claridad."
   },
   {
     id: "invitacion_negocio",
     label: "Invitacion al negocio",
-    copy: "Ultimo paso para ofrecer la oportunidad solo si viste apertura real.",
+    copy: "Ultimo paso para presentar la oportunidad solo si viste apertura real.",
     coachReply:
       "Invitacion al negocio activa. Ofrece la oportunidad con calma y segun la apertura que viste en la casa, sin mezclarla temprano con la venta principal."
   }
@@ -1462,19 +1462,19 @@ function initLeadDestinationSettings(initialDestination = null) {
     const baseLabel = safeDestination.label || formatLeadDestinationLabel(type);
 
     if (type === "carpeta_privada") {
-      return "Tus leads viven solo en tu carpeta privada por ahora.";
+      return "Tus leads se estan guardando aqui para que los trabajes con orden.";
     }
 
     if (type === "correo_personal") {
       if (!safeDestination.email) {
-        return "Tu destino actual es tu correo personal, pero todavia falta el correo.";
+        return "Tu destino actual es correo personal, pero aun falta capturarlo.";
       }
 
       return `Tus leads se guardan en tu carpeta y tambien te llegan a ${safeDestination.email}.`;
     }
 
     if (!safeDestination.url) {
-      return `Tu destino actual es ${baseLabel}, pero todavia falta la URL.`;
+      return `${baseLabel} esta seleccionado, pero aun falta la URL.`;
     }
 
     return `Tus leads se guardan en tu carpeta y tambien se mandan a ${baseLabel}.`;
@@ -1675,11 +1675,11 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     savedWrap.hidden = false;
 
     if (!state.savedSheets.length) {
-      savedSummary.textContent = "Todavia no hay hojas guardadas para retomar cita instantanea.";
+      savedSummary.textContent = "Aqui aparecera tu hoja mas reciente para retomar cita instantanea.";
       savedList.innerHTML = '<div class="health-survey-folder-empty">Aun no hay hojas 4 en 14 guardadas.</div>';
 
       if (savedNote) {
-        savedNote.textContent = "Cuando guardes una hoja, aqui mismo podras volver a abrirla.";
+        savedNote.textContent = "Cuando guardes una hoja, podras volver a abrirla desde aqui.";
       }
       return;
     }
@@ -1728,8 +1728,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       .join("");
 
     if (savedNote) {
-      savedNote.textContent =
-        "Abrir una hoja no mete toda la historia al chat. El contexto entra al Coach solo cuando eliges la referencia que vas a trabajar.";
+      savedNote.textContent = "Elige la referencia que vas a trabajar para recibir apoyo mas preciso en la llamada.";
     }
   };
 
@@ -2041,7 +2040,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
 
       setMessage(
         feedbackNode,
-        `Hoja guardada. Se movieron ${data.createdLeadCount || 0} referidos a tu carpeta.${duplicateCopy}${deliveryCopy}`,
+        `Hoja guardada. Se registraron ${data.createdLeadCount || 0} referido(s).${duplicateCopy}${deliveryCopy}`,
         "success"
       );
       await loadSavedSheets({
@@ -2286,7 +2285,7 @@ function initHealthSurveyTool() {
     if (!state.surveys.length) {
       folderList.innerHTML = '<div class="health-survey-folder-empty">Aun no hay encuestas guardadas.</div>';
       if (folderNote) {
-        folderNote.textContent = "Aun no hay encuestas guardadas en tu carpeta privada.";
+        folderNote.textContent = "Aqui apareceran las encuestas que vayas guardando.";
       }
       return;
     }
@@ -2329,7 +2328,7 @@ function initHealthSurveyTool() {
     folderList.appendChild(fragment);
 
     if (folderNote) {
-      folderNote.textContent = `${state.surveys.length} encuesta(s) guardadas en tu carpeta privada.`;
+      folderNote.textContent = `${state.surveys.length} encuesta(s) listas para consultar.`;
     }
   };
 
@@ -2558,7 +2557,7 @@ function initRecruitmentTool() {
     if (!state.applications.length) {
       folderList.innerHTML = '<div class="recruitment-folder-empty">Aun no hay aplicaciones guardadas.</div>';
       if (folderNote) {
-        folderNote.textContent = "Aun no hay aplicaciones guardadas en tu carpeta privada.";
+        folderNote.textContent = "Aqui apareceran las aplicaciones de trabajo que vayas guardando.";
       }
       return;
     }
@@ -2602,7 +2601,7 @@ function initRecruitmentTool() {
     folderList.appendChild(fragment);
 
     if (folderNote) {
-      folderNote.textContent = `${state.applications.length} aplicacion(es) guardadas en tu carpeta privada.`;
+      folderNote.textContent = `${state.applications.length} aplicacion(es) listas para revisar.`;
     }
   };
 
@@ -2646,7 +2645,7 @@ function initRecruitmentTool() {
           controller.feedbackNode,
           data.created
             ? `Aplicacion guardada.${deliveryCopy}`
-            : `Aplicacion actualizada.${deliveryCopy}`,
+            : `Aplicacion actualizada correctamente.${deliveryCopy}`,
           "success"
         );
       } catch (error) {
@@ -3344,8 +3343,8 @@ function initCoachLeadWorkspace() {
       setMessage(
         captureFeedback,
         data.duplicate
-          ? `Este lead ya existia. Lo actualice en tu carpeta.${deliveryCopy}`
-          : `Lead guardado en tu carpeta privada.${deliveryCopy}`,
+          ? `Este contacto ya existia. Lo actualice correctamente.${deliveryCopy}`
+          : `Lead guardado correctamente.${deliveryCopy}`,
         "success"
       );
       captureForm.reset();
@@ -3753,13 +3752,13 @@ function renderActiveHealthSurveyContext(context) {
   const safeContext = context || {};
   const closeCopy = safeContext.salesAnalysis?.recommendedClose
     ? `Cierre recomendado: ${safeContext.salesAnalysis.recommendedClose}. Producto: ${safeContext.salesAnalysis.recommendedProduct || "sin producto"}.`
-    : "Guarda o abre una encuesta larga para darle contexto real al Coach.";
-  const anchorCopy = safeContext.salesAnalysis?.objectionAnchor || "Sin ancla de objecion todavia.";
+    : "Abre una encuesta de salud para recibir una lectura mas precisa.";
+  const anchorCopy = safeContext.salesAnalysis?.objectionAnchor || "La clave principal de cierre aparecera aqui.";
 
   document.querySelectorAll("[data-coach-health-survey-name]").forEach(node => {
     node.textContent = safeContext.fullName
       ? `${safeContext.fullName}${safeContext.phone ? ` · ${formatLeadPhone(safeContext.phone)}` : ""}`
-      : "Sin casa activa todavia.";
+      : "Selecciona una casa activa.";
   });
 
   document.querySelectorAll("[data-coach-health-survey-close]").forEach(node => {
@@ -4263,7 +4262,7 @@ async function initCoachAppPage() {
 
     if (!events.length) {
       demoEventsRoot.innerHTML =
-        '<div class="coach-demo-event-empty">Todavia no hay senales recientes en esta sesion.</div>';
+        '<div class="coach-demo-event-empty">Aun no hay actividad marcada en esta presentacion.</div>';
       return;
     }
 

@@ -8401,7 +8401,9 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
 });
 
 app.get("/coach/resources/novel-catalog-digital-3.pdf", async (req, res) => {
-  res.redirect("/coach/app/");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  res.sendFile(path.join(PUBLIC_DIR, "coach", "resources", "novel-catalog-digital-3.pdf"));
 });
 
 app.get(["/coach/resources/lista-precios-2026", "/coach/resources/lista-precios-2026/"], async (req, res) => {
