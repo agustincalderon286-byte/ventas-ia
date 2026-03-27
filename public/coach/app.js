@@ -28,6 +28,7 @@ const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
+const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const FOURTEEN_SHEET_DEFAULT_REFERRALS = 4;
 const FOURTEEN_SHEET_MAX_REFERRALS = 11;
 const COACH_LEAD_STATUS_OPTIONS = [
@@ -1247,6 +1248,7 @@ function initHealthSurveyTool() {
   const form = document.querySelector("[data-health-survey-form]");
   const feedbackNode = document.querySelector("[data-health-survey-feedback]");
   const saveButton = document.querySelector("[data-health-survey-save]");
+  const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const folderWrap = document.querySelector("[data-health-survey-folder-wrap]");
   const folderToggle = document.querySelector("[data-health-survey-folder-toggle]");
   const folderList = document.querySelector("[data-health-survey-folder-list]");
@@ -1262,6 +1264,20 @@ function initHealthSurveyTool() {
 
   const state = {
     surveys: []
+  };
+
+  const activateSurvey = (survey, options = {}) => {
+    const context = buildCoachHealthSurveyContext(survey);
+
+    if (!context) {
+      return;
+    }
+
+    setActiveCoachHealthSurveyContext(context);
+
+    if (options.announce && context.salesAnalysis?.coachReply) {
+      addCoachMessage(chatMessages, "assistant", context.salesAnalysis.coachReply);
+    }
   };
 
   const syncFormToggle = open => {
@@ -1440,6 +1456,17 @@ function initHealthSurveyTool() {
   const loadSurveys = async () => {
     const data = await apiRequest("/api/coach/health-surveys");
     state.surveys = Array.isArray(data.surveys) ? data.surveys : [];
+
+    const currentContext = getActiveCoachHealthSurveyContext();
+
+    if (currentContext?.id) {
+      const refreshedSurvey = state.surveys.find(item => item.id === currentContext.id);
+
+      if (refreshedSurvey) {
+        setActiveCoachHealthSurveyContext(buildCoachHealthSurveyContext(refreshedSurvey));
+      }
+    }
+
     renderFolderList();
   };
 
@@ -1475,14 +1502,15 @@ function initHealthSurveyTool() {
         body: payload
       });
 
+      activateSurvey(data.survey, { announce: true });
       fillForm(data.survey);
       await loadSurveys();
       syncFolderToggle(true);
       setMessage(
         feedbackNode,
         data.created
-          ? "Encuesta guardada dentro de tu carpeta privada."
-          : "Encuesta actualizada y guardada dentro de tu carpeta privada.",
+          ? `Encuesta guardada. ${data.survey?.salesAnalysis?.coachReply || ""}`.trim()
+          : `Encuesta actualizada. ${data.survey?.salesAnalysis?.coachReply || ""}`.trim(),
         "success"
       );
     } catch (error) {
@@ -1514,6 +1542,7 @@ function initHealthSurveyTool() {
     }
 
     fillForm(survey);
+    activateSurvey(survey);
     syncFormToggle(true);
     form.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -2701,6 +2730,64 @@ function renderActiveLeadContext(context) {
   });
 }
 
+function buildCoachHealthSurveyContext(survey = null) {
+  if (!survey?.id) {
+    return null;
+  }
+
+  return {
+    id: survey.id,
+    ownerUserId: survey.ownerUserId || "",
+    fullName: survey.fullName || "",
+    phone: survey.phone || "",
+    summary: survey.summary || "",
+    salesAnalysis: survey.salesAnalysis || {}
+  };
+}
+
+function getActiveCoachHealthSurveyContext() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_HEALTH_SURVEY_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function renderActiveHealthSurveyContext(context) {
+  const safeContext = context || {};
+  const closeCopy = safeContext.salesAnalysis?.recommendedClose
+    ? `Cierre recomendado: ${safeContext.salesAnalysis.recommendedClose}. Producto: ${safeContext.salesAnalysis.recommendedProduct || "sin producto"}.`
+    : "Guarda o abre una encuesta larga para darle contexto real al Coach.";
+  const anchorCopy = safeContext.salesAnalysis?.objectionAnchor || "Sin ancla de objecion todavia.";
+
+  document.querySelectorAll("[data-coach-health-survey-name]").forEach(node => {
+    node.textContent = safeContext.fullName
+      ? `${safeContext.fullName}${safeContext.phone ? ` · ${formatLeadPhone(safeContext.phone)}` : ""}`
+      : "Sin casa activa todavia.";
+  });
+
+  document.querySelectorAll("[data-coach-health-survey-close]").forEach(node => {
+    node.textContent = closeCopy;
+  });
+
+  document.querySelectorAll("[data-coach-health-survey-anchor]").forEach(node => {
+    node.textContent = anchorCopy;
+  });
+}
+
+function setActiveCoachHealthSurveyContext(context) {
+  const next = context?.id ? context : null;
+
+  if (next) {
+    window.sessionStorage.setItem(COACH_ACTIVE_HEALTH_SURVEY_KEY, JSON.stringify(next));
+  } else {
+    window.sessionStorage.removeItem(COACH_ACTIVE_HEALTH_SURVEY_KEY);
+  }
+
+  renderActiveHealthSurveyContext(next);
+}
+
 function initFaq() {
   document.querySelectorAll(".faq-card").forEach(card => {
     const trigger = card.querySelector(".faq-trigger");
@@ -2975,6 +3062,14 @@ async function initCoachAppPage() {
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  const storedHealthSurveyContext = getActiveCoachHealthSurveyContext();
+
+  if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== me.user?.id) {
+    setActiveCoachHealthSurveyContext(null);
+  } else {
+    renderActiveHealthSurveyContext(storedHealthSurveyContext);
+  }
+
   initCoachWorkspaceTabs();
   initLeadDestinationSettings(me.profile?.leadDestination || null);
   initCoachPrivateResources();
@@ -3102,6 +3197,7 @@ async function initCoachAppPage() {
           pregunta: text,
           sessionId: getCoachChatSessionId(),
           visitorId: getCoachVisitorId(),
+          activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
           mode: "coach"
         }
       });
@@ -3118,6 +3214,9 @@ async function initCoachAppPage() {
 
       renderCoachRepLeadSummary(data.repLeadSummary || null);
       renderActiveLeadContext(data.activeLeadContext || null);
+      if (data.activeHealthSurveyContext?.id) {
+        setActiveCoachHealthSurveyContext(buildCoachHealthSurveyContext(data.activeHealthSurveyContext));
+      }
     } catch (error) {
       addCoachMessage(
         chatMessages,

@@ -2250,10 +2250,155 @@ function construirCoachHealthSurveySummary(surveyDoc = null) {
   return parts.join(" ").trim();
 }
 
+function extraerMontoEncuestaCoach(value = "") {
+  const match = String(value || "")
+    .replace(/,/g, "")
+    .match(/(\d+(?:\.\d+)?)/);
+  const amount = match ? Number(match[1]) : NaN;
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function construirCoachHealthSurveySalesAnalysis(surveyDoc = null) {
+  if (!surveyDoc) {
+    return {
+      recommendedProduct: "",
+      recommendedClose: "",
+      objectionAnchor: "",
+      usefulAngle: "",
+      coachReply: ""
+    };
+  }
+
+  const topProducts = Array.isArray(surveyDoc.topProducts)
+    ? surveyDoc.topProducts.map(item => String(item || "").trim()).filter(Boolean)
+    : [];
+  const cookingMaterials = Array.isArray(surveyDoc.cookingMaterials)
+    ? surveyDoc.cookingMaterials.map(item => String(item || "").trim()).filter(Boolean)
+    : [];
+  const familyConditions = Array.isArray(surveyDoc.familyConditions)
+    ? surveyDoc.familyConditions.map(item => String(item || "").trim()).filter(Boolean)
+    : [];
+  const weeklyBudgetAmount = extraerMontoEncuestaCoach(surveyDoc.weeklyBudget);
+  const monthlyBudgetAmount = extraerMontoEncuestaCoach(surveyDoc.monthlyBudget);
+  const priority = String(surveyDoc.familyPriority || "").trim();
+  const likesProducts = Number.isFinite(surveyDoc.productLikingScore) && surveyDoc.productLikingScore >= 7;
+  const waterConcern =
+    surveyDoc.tapWaterConcern === "Si" ||
+    /llave/i.test(String(surveyDoc.drinkingWaterType || "")) ||
+    /llave/i.test(String(surveyDoc.cookingWaterType || ""));
+
+  let recommendedProduct = topProducts[0] || "";
+
+  if (!recommendedProduct) {
+    if (waterConcern) {
+      recommendedProduct = "sistema de agua";
+    } else if (surveyDoc.likesNaturalJuices === "Si") {
+      recommendedProduct = "extractor";
+    } else if (cookingMaterials.some(item => /tefelon|aluminio/i.test(item))) {
+      recommendedProduct = "olla o sarten de uso diario";
+    } else {
+      recommendedProduct = "producto de mas uso";
+    }
+  }
+
+  let usefulAngle = "uso diario";
+
+  if (priority === "Salud" || familyConditions.length) {
+    usefulAngle = "salud familiar";
+  } else if (waterConcern) {
+    usefulAngle = "agua y contaminantes";
+  } else if (priority === "Dinero" || weeklyBudgetAmount || monthlyBudgetAmount) {
+    usefulAngle = "presupuesto y ahorro";
+  } else if (priority === "Tiempo") {
+    usefulAngle = "tiempo y practicidad";
+  }
+
+  let recommendedClose = "cierre por uso diario";
+
+  if (priority === "Salud" || familyConditions.length) {
+    recommendedClose = "cierre por salud";
+  } else if (waterConcern) {
+    recommendedClose = "cierre por agua";
+  } else if (weeklyBudgetAmount || monthlyBudgetAmount) {
+    recommendedClose = "cierre por presupuesto";
+  } else if (surveyDoc.creditImproveInterest === "Si") {
+    recommendedClose = "cierre por credito y plan";
+  } else if (likesProducts) {
+    recommendedClose = "cierre por gusto y uso";
+  }
+
+  let objectionAnchor = "";
+
+  if (weeklyBudgetAmount) {
+    objectionAnchor = `Dijo que ${surveyDoc.weeklyBudget} por semana no le afecta tanto.`;
+  } else if (monthlyBudgetAmount) {
+    objectionAnchor = `Dijo que ${surveyDoc.monthlyBudget} al mes lo ve posible.`;
+  } else if (surveyDoc.creditImproveInterest === "Si") {
+    objectionAnchor = "Dijo que le gustaria mejorar o establecer su credito.";
+  } else if (likesProducts) {
+    objectionAnchor = `Califico los productos con ${surveyDoc.productLikingScore}/10.`;
+  } else if (priority) {
+    objectionAnchor = `Dijo que lo mas importante para su familia es ${priority.toLowerCase()}.`;
+  }
+
+  const replyParts = [
+    `Cierre recomendado: ${recommendedClose}.`,
+    `Producto recomendado: ${recommendedProduct}.`
+  ];
+
+  if (objectionAnchor) {
+    replyParts.push(`Ancla util: ${objectionAnchor}`);
+  }
+
+  if (usefulAngle) {
+    replyParts.push(`Habla primero desde ${usefulAngle}.`);
+  }
+
+  return {
+    recommendedProduct,
+    recommendedClose,
+    objectionAnchor,
+    usefulAngle,
+    coachReply: replyParts.join(" ")
+  };
+}
+
+function construirPromptEncuestaSaludActiva(context = null) {
+  if (!context?.id) {
+    return "";
+  }
+
+  return `
+ENCUESTA DE SALUD ACTIVA EN ESTA SESION:
+- casa_activa: si
+- survey_id: ${context.id}
+- nombre: ${context.fullName || "sin nombre"}
+- telefono: ${context.phone || "sin telefono"}
+- resumen: ${context.summary || "sin resumen"}
+- prioridad_familiar: ${context.familyPriority || "sin dato"}
+- presupuesto_semanal: ${context.weeklyBudget || "sin dato"}
+- presupuesto_mensual: ${context.monthlyBudget || "sin dato"}
+- interes_en_mejorar_credito: ${context.creditImproveInterest || "sin dato"}
+- top_productos: ${Array.isArray(context.topProducts) && context.topProducts.length ? context.topProducts.join(", ") : "sin dato"}
+- producto_recomendado: ${context.salesAnalysis?.recommendedProduct || "sin producto"}
+- cierre_recomendado: ${context.salesAnalysis?.recommendedClose || "sin cierre"}
+- ancla_objecion: ${context.salesAnalysis?.objectionAnchor || "sin ancla"}
+- angulo_util: ${context.salesAnalysis?.usefulAngle || "sin angulo"}
+
+INSTRUCCION:
+- usa esta encuesta solo para esta casa y esta sesion
+- si el distribuidor reporta objeciones como "esta caro", "lo voy a pensar" o "ahorita no puedo", responde usando primero lo que el cliente ya dijo en esta encuesta
+- no inventes respuestas que la encuesta no dijo
+- si la encuesta ya dio un presupuesto o deseo de mejorar credito, usalo como ancla con tacto
+`;
+}
+
 function limpiarCoachHealthSurvey(surveyDoc = null) {
   if (!surveyDoc) {
     return null;
   }
+
+  const salesAnalysis = construirCoachHealthSurveySalesAnalysis(surveyDoc);
 
   return {
     id: String(surveyDoc._id),
@@ -2290,6 +2435,7 @@ function limpiarCoachHealthSurvey(surveyDoc = null) {
     monthlyBudget: surveyDoc.monthlyBudget || "",
     topProducts: Array.isArray(surveyDoc.topProducts) ? surveyDoc.topProducts : [],
     summary: surveyDoc.summary || "",
+    salesAnalysis,
     updatedAt: surveyDoc.updatedAt || null,
     createdAt: surveyDoc.createdAt || null
   };
@@ -8068,6 +8214,8 @@ app.post("/chat", async (req, res) => {
   const { pregunta, sessionId, visitorId, mode } = req.body;
   const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
+  const activeHealthSurveyId =
+    typeof req.body?.activeHealthSurveyId === "string" ? req.body.activeHealthSurveyId.trim() : "";
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
@@ -8116,6 +8264,7 @@ app.post("/chat", async (req, res) => {
     let coachAnalyticsDoc = null;
     let repLeadSummary = null;
     let activeLeadContext = null;
+    let activeHealthSurveyContext = null;
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
     let estadoPrompt = "";
     let perfilPrompt = "";
@@ -8149,6 +8298,19 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       activeLeadContext = leadMemory?.leadContext || null;
       perfilPrompt += construirPromptPipelineRepresentante(repLeadSummary);
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
+
+      if (activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)) {
+        const surveyDoc = await CoachHealthSurvey.findOne({
+          _id: activeHealthSurveyId,
+          ownerUserId: coachAuth.user._id
+        }).lean();
+
+        if (surveyDoc) {
+          activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
+          perfilPrompt += construirPromptEncuestaSaludActiva(activeHealthSurveyContext);
+        }
+      }
+
       await guardarMensajeRaw({
         visitorId: visitorIdLimpio,
         sessionId,
@@ -8269,6 +8431,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         profile: limpiarCoachProfile(coachProfileActualizado?.profile, coachProfileActualizado?.analytics),
         repLeadSummary,
         activeLeadContext,
+        activeHealthSurveyContext,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
