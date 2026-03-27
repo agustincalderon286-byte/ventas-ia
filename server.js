@@ -2166,6 +2166,89 @@ INSTRUCCION:
 `;
 }
 
+function limpiarCoachDecisionContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const cleanRows = rows =>
+    Array.isArray(rows)
+      ? rows
+          .map((row, index) => {
+            const text = truncarTextoPrompt(String(row?.text || "").trim(), 140);
+            const weight = Number.parseInt(row?.weight || "0", 10) || 0;
+            const slot = Number.parseInt(row?.slot || "", 10);
+
+            if (!text && weight <= 0) {
+              return null;
+            }
+
+            return {
+              slot: Number.isInteger(slot) && slot > 0 ? slot : index + 1,
+              text,
+              weight
+            };
+          })
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+
+  const pros = cleanRows(context.pros);
+  const cons = cleanRows(context.cons);
+  const summary = {
+    totalPros: Number.parseInt(context.summary?.totalPros || "0", 10) || 0,
+    totalCons: Number.parseInt(context.summary?.totalCons || "0", 10) || 0,
+    percent: Number.parseInt(context.summary?.percent || "0", 10) || 0,
+    message: truncarTextoPrompt(String(context.summary?.message || "").trim(), 220),
+    topObjection: truncarTextoPrompt(String(context.summary?.topObjection || "").trim(), 180),
+    nextStep: truncarTextoPrompt(String(context.summary?.nextStep || "").trim(), 220)
+  };
+
+  if (!pros.length && !cons.length && summary.totalPros <= 0 && summary.totalCons <= 0) {
+    return null;
+  }
+
+  return {
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    activatedAt: String(context.activatedAt || "").trim(),
+    pros,
+    cons,
+    summary
+  };
+}
+
+function construirPromptBalanceDecisionActivo(context = null) {
+  if (!context?.summary) {
+    return "";
+  }
+
+  const prosCopy = Array.isArray(context.pros)
+    ? context.pros.map(row => `${row.text || "sin texto"} (${row.weight})`).join(" | ")
+    : "";
+  const consCopy = Array.isArray(context.cons)
+    ? context.cons.map(row => `${row.text || "sin texto"} (${row.weight})`).join(" | ")
+    : "";
+
+  return `
+BALANCE DE DECISION ACTIVO EN ESTA SESION:
+- balance_decision_activo: si
+- razones_a_favor: ${prosCopy || "sin razones"}
+- objeciones_y_frenos: ${consCopy || "sin objeciones"}
+- total_beneficios: ${context.summary.totalPros}
+- total_objeciones: ${context.summary.totalCons}
+- compra_a_favor: ${context.summary.percent}%
+- lectura_sugerida: ${context.summary.message || "sin lectura"}
+- objecion_principal: ${context.summary.topObjection || "sin objecion"}
+- siguiente_paso: ${context.summary.nextStep || "sin paso"}
+
+INSTRUCCION:
+- usa este balance cuando el distribuidor te pida ayuda con indecision, "lo voy a pensar", "esta caro" o una objecion que ya aparecio aqui
+- responde desde la objecion principal y desde lo que mas peso tuvo a favor
+- no ignores esta lectura para brincar a cierres genericos
+- si el balance todavia no favorece compra, ayuda a resolver el freno antes de pedir decision
+`;
+}
+
 function limpiarCoachDemoEventPrompt(event = null) {
   if (!event || typeof event !== "object") {
     return null;
@@ -8683,6 +8766,7 @@ app.post("/chat", async (req, res) => {
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
+  let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
@@ -8774,6 +8858,17 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
       if (activeOrderCalcContext) {
         perfilPrompt += construirPromptCalculadoraActiva(activeOrderCalcContext);
+      }
+
+      if (
+        activeDecisionContext?.ownerUserId &&
+        activeDecisionContext.ownerUserId !== String(coachAuth.user._id)
+      ) {
+        activeDecisionContext = null;
+      }
+
+      if (activeDecisionContext) {
+        perfilPrompt += construirPromptBalanceDecisionActivo(activeDecisionContext);
       }
 
       const leadMemory = await obtenerMemoriaLeadRelacionada({
@@ -8946,6 +9041,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         activeHealthSurveyContext,
         activeProgram414Context,
         activeOrderCalcContext,
+        activeDecisionContext,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),

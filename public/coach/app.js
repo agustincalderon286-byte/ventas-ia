@@ -31,6 +31,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_ACTIVE_ORDER_CALC_KEY = "agustin-coach-active-order-calc";
+const COACH_ACTIVE_DECISION_KEY = "agustin-coach-active-decision";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
@@ -1311,6 +1312,7 @@ function initDecisionTool() {
   const nextStepNode = root.querySelector("[data-decision-next-step]");
   const prosBar = root.querySelector("[data-decision-bar-pros]");
   const consBar = root.querySelector("[data-decision-bar-cons]");
+  const submitContextButton = root.querySelector("[data-decision-tool-submit-context]");
 
   if (prosContainer && !prosContainer.children.length) {
     prosContainer.innerHTML = Array.from({ length: DECISION_TOOL_ROW_COUNT }, (_, index) =>
@@ -1330,27 +1332,39 @@ function initDecisionTool() {
     toggle.textContent = open ? "Cerrar balance" : "Abrir balance";
   };
 
-  const analyze = () => {
+  const buildCurrentDecisionContext = () => {
     const prosRows = Array.from(prosContainer?.querySelectorAll(".decision-tool-row") || []);
     const consRows = Array.from(consContainer?.querySelectorAll(".decision-tool-row") || []);
+    const pros = [];
+    const cons = [];
     let totalPros = 0;
     let totalCons = 0;
     let maxConValue = 0;
     let maxConText = "";
 
-    prosRows.forEach(row => {
+    prosRows.forEach((row, index) => {
       const text = String(row.querySelector("[data-decision-text]")?.value || "").trim();
       const weight = Number.parseInt(row.querySelector("[data-decision-weight]")?.value || "0", 10) || 0;
       if (text || weight > 0) {
         totalPros += weight;
+        pros.push({
+          slot: index + 1,
+          text,
+          weight
+        });
       }
     });
 
-    consRows.forEach(row => {
+    consRows.forEach((row, index) => {
       const text = String(row.querySelector("[data-decision-text]")?.value || "").trim();
       const weight = Number.parseInt(row.querySelector("[data-decision-weight]")?.value || "0", 10) || 0;
       if (text || weight > 0) {
         totalCons += weight;
+        cons.push({
+          slot: index + 1,
+          text,
+          weight
+        });
       }
       if (weight > maxConValue) {
         maxConValue = weight;
@@ -1378,6 +1392,32 @@ function initDecisionTool() {
       nextStep = "No cierres duro todavia. Resuelve la objecion principal antes de volver a pedir compra.";
     }
 
+    return buildCoachDecisionContext({
+      ownerUserId: root.dataset.decisionOwnerUserId || "",
+      pros,
+      cons,
+      summary: {
+        totalPros,
+        totalCons,
+        percent,
+        message,
+        topObjection,
+        nextStep
+      }
+    });
+  };
+
+  const renderDecisionAnalysis = context => {
+    const safeContext = buildCoachDecisionContext(context);
+    const totalPros = safeContext?.summary?.totalPros || 0;
+    const totalCons = safeContext?.summary?.totalCons || 0;
+    const percent = safeContext?.summary?.percent || 0;
+    const topObjection = safeContext?.summary?.topObjection || "Sin objecion principal todavia.";
+    const message = safeContext?.summary?.message || "Agrega razones y objeciones para leer el cierre.";
+    const nextStep = safeContext?.summary?.nextStep || "Usalo cuando el cliente diga que lo quiere pensar.";
+    const prosPercentOfMax = Math.min(100, Math.round((totalPros / (DECISION_TOOL_ROW_COUNT * 10)) * 100));
+    const consPercentOfMax = Math.min(100, Math.round((totalCons / (DECISION_TOOL_ROW_COUNT * 10)) * 100));
+
     if (totalProsNode) totalProsNode.textContent = String(totalPros);
     if (totalConsNode) totalConsNode.textContent = String(totalCons);
     if (percentNode) percentNode.textContent = `${percent}%`;
@@ -1386,12 +1426,40 @@ function initDecisionTool() {
     if (nextStepNode) nextStepNode.textContent = nextStep;
     if (prosBar) prosBar.style.width = `${prosPercentOfMax}%`;
     if (consBar) consBar.style.width = `${consPercentOfMax}%`;
+  };
 
-    if (total > 0) {
+  const syncDecisionCoachState = () => {
+    const activeContext = getActiveCoachDecisionContext();
+    const draftContext = buildCurrentDecisionContext();
+
+    root._decisionDraftContext = draftContext;
+
+    if (!activeContext?.signature) {
+      renderActiveCoachDecisionContext(null);
+      return;
+    }
+
+    if (draftContext?.signature && draftContext.signature !== activeContext.signature) {
+      renderActiveCoachDecisionContext({
+        ...activeContext,
+        isDirty: true
+      });
+      return;
+    }
+
+    renderActiveCoachDecisionContext(activeContext);
+  };
+
+  const analyze = () => {
+    const context = buildCurrentDecisionContext();
+    renderDecisionAnalysis(context);
+    syncDecisionCoachState();
+
+    if ((context?.summary?.totalPros || 0) + (context?.summary?.totalCons || 0) > 0) {
       registerCoachDemoEvent({
         id: "decision_balance",
         label: "Se corrio balance de decision",
-        detail: `A favor ${percent}%. Objecion principal: ${topObjection}.`
+        detail: `A favor ${context.summary.percent}%. Objecion principal: ${context.summary.topObjection}.`
       });
     }
   };
@@ -1408,6 +1476,7 @@ function initDecisionTool() {
 
   syncDecisionToggle(false);
   analyze();
+  syncDecisionCoachState();
 
   toggle.addEventListener("click", () => {
     syncDecisionToggle(wrap.hidden);
@@ -1415,6 +1484,43 @@ function initDecisionTool() {
 
   runButton?.addEventListener("click", analyze);
   resetButton?.addEventListener("click", reset);
+
+  root.querySelectorAll("input, select").forEach(field => {
+    const eventName = field.tagName === "SELECT" ? "change" : "input";
+    field.addEventListener(eventName, () => {
+      renderDecisionAnalysis(buildCurrentDecisionContext());
+      syncDecisionCoachState();
+    });
+  });
+
+  submitContextButton?.addEventListener("click", () => {
+    const context = buildCurrentDecisionContext();
+
+    if (!context?.signature) {
+      renderActiveCoachDecisionContext({
+        isDirty: true
+      });
+      document.querySelectorAll("[data-decision-context-note]").forEach(node => {
+        node.textContent = "Primero llena al menos una razon o una objecion con peso para pasarlo al Coach.";
+        node.dataset.state = "warning";
+      });
+      return;
+    }
+
+    const nextContext = buildCoachDecisionContext({
+      ...context,
+      activatedAt: new Date().toISOString(),
+      ownerUserId: root.dataset.decisionOwnerUserId || context.ownerUserId || ""
+    });
+
+    setActiveCoachDecisionContext(nextContext);
+    registerCoachDemoEvent({
+      id: "decision_shared",
+      label: "Balance enviado",
+      detail: `A favor ${nextContext.summary.percent}%. Objecion: ${nextContext.summary.topObjection}.`
+    });
+    addCoachMessage(null, "assistant", buildCoachDecisionReply(nextContext));
+  });
 }
 
 function createBuyerProfileQuestionRow(question) {
@@ -4306,6 +4412,135 @@ function setActiveCoachOrderCalcContext(context) {
   renderActiveCoachOrderCalcContext(next);
 }
 
+function buildCoachDecisionContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const cleanRows = rows =>
+    Array.isArray(rows)
+      ? rows
+          .map((row, index) => {
+            const text = String(row?.text || "").trim();
+            const weight = Number.parseInt(row?.weight || "0", 10) || 0;
+            const slot = Number.parseInt(row?.slot || index + 1, 10);
+
+            if (!text && weight <= 0) {
+              return null;
+            }
+
+            return {
+              slot: Number.isInteger(slot) && slot > 0 ? slot : index + 1,
+              text,
+              weight
+            };
+          })
+          .filter(Boolean)
+          .slice(0, DECISION_TOOL_ROW_COUNT)
+      : [];
+
+  const pros = cleanRows(context.pros);
+  const cons = cleanRows(context.cons);
+  const totalPros = Number.parseInt(context.summary?.totalPros || "0", 10) || 0;
+  const totalCons = Number.parseInt(context.summary?.totalCons || "0", 10) || 0;
+  const percent = Number.parseInt(context.summary?.percent || "0", 10) || 0;
+  const message = String(context.summary?.message || "").trim();
+  const topObjection = String(context.summary?.topObjection || "").trim();
+  const nextStep = String(context.summary?.nextStep || "").trim();
+
+  if (!pros.length && !cons.length && totalPros <= 0 && totalCons <= 0) {
+    return null;
+  }
+
+  const signature = JSON.stringify({
+    pros: pros.map(row => ({ slot: row.slot, text: row.text, weight: row.weight })),
+    cons: cons.map(row => ({ slot: row.slot, text: row.text, weight: row.weight })),
+    summary: {
+      totalPros,
+      totalCons,
+      percent,
+      message,
+      topObjection,
+      nextStep
+    }
+  });
+
+  return {
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    activatedAt: String(context.activatedAt || "").trim(),
+    pros,
+    cons,
+    summary: {
+      totalPros,
+      totalCons,
+      percent,
+      message: message || "Sin lectura todavia.",
+      topObjection: topObjection || "Sin objecion principal todavia.",
+      nextStep: nextStep || "Sin siguiente paso todavia."
+    },
+    signature
+  };
+}
+
+function getActiveCoachDecisionContext() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_DECISION_KEY);
+    return raw ? buildCoachDecisionContext(JSON.parse(raw)) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildCoachDecisionReply(context = null) {
+  const safeContext = buildCoachDecisionContext(context);
+
+  if (!safeContext) {
+    return "";
+  }
+
+  return [
+    "Balance de decision listo para Coach.",
+    `Compra a favor ${safeContext.summary.percent}%.`,
+    `Objecion principal: ${safeContext.summary.topObjection}.`,
+    `Siguiente paso: ${safeContext.summary.nextStep}`
+  ].join(" ");
+}
+
+function renderActiveCoachDecisionContext(context = null) {
+  const safeContext = context?.signature ? context : buildCoachDecisionContext(context);
+  const isDirty = Boolean(safeContext?.isDirty);
+  const hasContext = Boolean(safeContext?.signature);
+  const defaultCopy =
+    "Cuando veas clara la objecion real, pasale este balance al Coach para que te responda desde ahi.";
+  const successCopy = hasContext
+    ? `${safeContext.summary.message} Objecion: ${safeContext.summary.topObjection}.`
+    : defaultCopy;
+  const noteCopy = isDirty
+    ? "Cambiaste el balance. Presiona actualizar para pasar esta nueva lectura al Coach."
+    : successCopy;
+
+  document.querySelectorAll("[data-decision-context-note]").forEach(node => {
+    node.textContent = noteCopy;
+    node.dataset.state = isDirty ? "warning" : hasContext ? "success" : "idle";
+  });
+
+  document.querySelectorAll("[data-decision-tool-submit-context]").forEach(button => {
+    button.textContent = hasContext ? "Actualizar balance en Coach" : "Usar este balance con Coach";
+  });
+}
+
+function setActiveCoachDecisionContext(context) {
+  const next = buildCoachDecisionContext(context);
+
+  if (next) {
+    window.sessionStorage.setItem(COACH_ACTIVE_DECISION_KEY, JSON.stringify(next));
+  } else {
+    window.sessionStorage.removeItem(COACH_ACTIVE_DECISION_KEY);
+  }
+
+  renderActiveCoachDecisionContext(next);
+}
+
 function formatProgram414StatusLabel(status = "") {
   const safeStatus = String(status || "").trim();
   const labels = {
@@ -4701,6 +4936,7 @@ async function initCoachAppPage() {
   const storedHealthSurveyContext = getActiveCoachHealthSurveyContext();
   const storedProgram414Context = getActiveCoachProgram414Context();
   const storedOrderCalcContext = getActiveCoachOrderCalcContext();
+  const storedDecisionContext = getActiveCoachDecisionContext();
 
   if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== me.user?.id) {
     setActiveCoachHealthSurveyContext(null);
@@ -4718,6 +4954,12 @@ async function initCoachAppPage() {
     renderActiveCoachOrderCalcContext(storedOrderCalcContext);
   }
 
+  if (storedDecisionContext?.ownerUserId && storedDecisionContext.ownerUserId !== me.user?.id) {
+    setActiveCoachDecisionContext(null);
+  } else {
+    renderActiveCoachDecisionContext(storedDecisionContext);
+  }
+
   initCoachWorkspaceTabs();
   initLeadDestinationSettings(me.profile?.leadDestination || null);
   initCoachPrivateResources();
@@ -4731,6 +4973,10 @@ async function initCoachAppPage() {
     orderCalcRoot.dataset.orderCalcOwnerUserId = me.user?.id || "";
   }
   initDecisionTool();
+  const decisionRoot = document.querySelector("[data-decision-tool]");
+  if (decisionRoot) {
+    decisionRoot.dataset.decisionOwnerUserId = me.user?.id || "";
+  }
   initBuyerProfileTool();
   initDailyPrizeTool();
 
@@ -5022,6 +5268,7 @@ async function initCoachAppPage() {
             ? getActiveCoachProgram414Context().referralIndex
             : "",
           activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
+          activeDecisionContext: getActiveCoachDecisionContext() || null,
           mode: "coach"
         }
       });
@@ -5048,6 +5295,10 @@ async function initCoachAppPage() {
 
       if (data.activeOrderCalcContext?.summary) {
         setActiveCoachOrderCalcContext(data.activeOrderCalcContext);
+      }
+
+      if (data.activeDecisionContext?.summary) {
+        setActiveCoachDecisionContext(data.activeDecisionContext);
       }
     } catch (error) {
       addCoachMessage(

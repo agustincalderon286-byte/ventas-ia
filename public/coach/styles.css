@@ -2678,6 +2678,31 @@ img {
   color: #c9ffd9;
 }
 
+.decision-tool-context {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.decision-tool-context .secondary-button {
+  justify-self: flex-start;
+}
+
+.decision-tool-context-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.decision-tool-context-note[data-state="success"] {
+  color: #ffd8a9;
+}
+
+.decision-tool-context-note[data-state="warning"] {
+  color: #ffd39a;
+}
+
 .buyer-profile-card {
   position: relative;
   overflow: hidden;
