@@ -2687,46 +2687,72 @@ img {
 
 .coach-console {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 24px;
+  grid-template-columns: 1fr;
+  gap: 20px;
   padding: 24px 0 40px;
 }
 
-.coach-chat-card {
-  display: flex;
-  flex-direction: column;
-  min-height: 780px;
-  border-radius: 34px;
-  padding: 28px;
-  background: var(--panel);
+.coach-compact-bar {
+  padding: 22px 24px;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(9, 22, 41, 0.97), rgba(10, 24, 46, 0.9));
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
 }
 
-.coach-chat-header {
+.coach-compact-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
 }
 
-.coach-chat-header h2,
-.coach-chat-header p {
+.coach-compact-head h2,
+.coach-compact-head p {
   margin: 0;
 }
 
-.coach-chat-header h2 {
-  margin-top: 18px;
-  font-size: clamp(2.2rem, 5vw, 3.8rem);
-  line-height: 0.96;
+.coach-compact-head h2 {
+  margin-top: 14px;
+  font-size: clamp(1.7rem, 3.5vw, 2.5rem);
+  line-height: 0.98;
   font-family: "Bricolage Grotesque", sans-serif;
 }
 
-.coach-chat-header p {
-  margin-top: 14px;
+.coach-compact-head p {
+  margin-top: 12px;
   color: var(--muted);
-  line-height: 1.75;
-  max-width: 38rem;
+  line-height: 1.7;
+  max-width: 46rem;
+}
+
+.coach-compact-strip {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.coach-compact-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.coach-compact-card strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1rem;
+}
+
+.coach-compact-card span {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.92rem;
 }
 
 .coach-chat-status {
@@ -2838,6 +2864,8 @@ img {
 .coach-sidebar {
   display: grid;
   gap: 18px;
+  width: min(980px, 100%);
+  margin: 0 auto;
 }
 
 .insight-grid {
@@ -3050,11 +3078,11 @@ img {
 
 .coach-float-dock {
   position: fixed;
-  right: 22px;
+  left: 22px;
   bottom: 22px;
   z-index: 34;
   display: grid;
-  justify-items: end;
+  justify-items: start;
   gap: 12px;
 }
 
@@ -3171,6 +3199,10 @@ img {
   .coach-float-composer textarea {
     min-height: 70px;
   }
+
+  .coach-compact-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (min-width: 981px) {
@@ -3201,7 +3233,8 @@ img {
   .split-section,
   .plan-layout,
   .dashboard-layout,
-  .coach-console {
+  .coach-console,
+  .coach-compact-strip {
     grid-template-columns: 1fr;
   }
 
@@ -3268,7 +3301,7 @@ img {
   .panel,
   .dashboard-card,
   .auth-card,
-  .coach-chat-card {
+  .coach-compact-bar {
     border-radius: 26px;
   }
 
@@ -3277,7 +3310,7 @@ img {
   .plan-card,
   .login-panel,
   .dashboard-card,
-  .coach-chat-card {
+  .coach-compact-bar {
     padding: 24px;
   }
 
@@ -3285,12 +3318,8 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .coach-chat-header {
+  .coach-compact-head {
     flex-direction: column;
-  }
-
-  .coach-chat-card {
-    min-height: 620px;
   }
 
   .insight-grid {
