@@ -2234,6 +2234,7 @@ function construirMapaCoachPrivateResources(resourceDocs = []) {
 function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destination = null) {
   return {
     app: "Agustin 2.0 Coach",
+    kind: "lead",
     sentAt: new Date().toISOString(),
     owner: {
       id: userDoc?._id ? String(userDoc._id) : "",
