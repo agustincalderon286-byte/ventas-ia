@@ -2799,19 +2799,28 @@ function initCoachLeadWorkspace() {
 }
 
 function addCoachMessage(container, role, content) {
-  if (!container) {
+  const targets = Array.from(
+    new Set(
+      [container, ...document.querySelectorAll("[data-coach-chat-messages], [data-coach-chat-messages-floating]")]
+        .filter(Boolean)
+    )
+  );
+
+  if (!targets.length) {
     return;
   }
 
-  const card = document.createElement("article");
-  card.className = `coach-message ${role}`;
+  targets.forEach(target => {
+    const card = document.createElement("article");
+    card.className = `coach-message ${role}`;
 
-  const paragraph = document.createElement("p");
-  paragraph.textContent = content;
-  card.appendChild(paragraph);
+    const paragraph = document.createElement("p");
+    paragraph.textContent = content;
+    card.appendChild(paragraph);
 
-  container.appendChild(card);
-  container.scrollTop = container.scrollHeight;
+    target.appendChild(card);
+    target.scrollTop = target.scrollHeight;
+  });
 }
 
 async function fetchViewer() {
@@ -3375,6 +3384,14 @@ async function initCoachAppPage() {
   const chatInput = document.querySelector("[data-coach-chat-input]");
   const chatSendButton = document.querySelector("[data-coach-chat-send]");
   const chatStatus = document.querySelector("[data-coach-chat-status]");
+  const floatingChatMessages = document.querySelector("[data-coach-chat-messages-floating]");
+  const floatingChatForm = document.querySelector("[data-coach-chat-form-floating]");
+  const floatingChatInput = document.querySelector("[data-coach-chat-input-floating]");
+  const floatingChatSendButton = document.querySelector("[data-coach-chat-send-floating]");
+  const floatingChatStatus = document.querySelector("[data-coach-float-status]");
+  const floatingCoachToggle = document.querySelector("[data-coach-float-toggle]");
+  const floatingCoachPanel = document.querySelector("[data-coach-float-panel]");
+  const floatingCoachClose = document.querySelector("[data-coach-float-close]");
   const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
   const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
@@ -3396,6 +3413,8 @@ async function initCoachAppPage() {
   const royalOneCancelButton = document.querySelector("[data-royalone-cancel]");
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
   const chefShareUrl = `${window.location.origin}/chef/`;
+  let floatingCoachMode = "idle";
+  let floatingCoachArmTimeout = null;
 
   chefShareUrlNodes.forEach(node => {
     node.textContent = chefShareUrl;
@@ -3422,6 +3441,53 @@ async function initCoachAppPage() {
 
   syncOrderCalcToggle(false);
 
+  if (chatMessages && floatingChatMessages) {
+    floatingChatMessages.innerHTML = chatMessages.innerHTML;
+    floatingChatMessages.scrollTop = floatingChatMessages.scrollHeight;
+  }
+
+  const clearFloatingCoachArmTimeout = () => {
+    if (floatingCoachArmTimeout) {
+      window.clearTimeout(floatingCoachArmTimeout);
+      floatingCoachArmTimeout = null;
+    }
+  };
+
+  const syncFloatingCoachDock = nextMode => {
+    if (!floatingCoachToggle || !floatingCoachPanel) {
+      return;
+    }
+
+    clearFloatingCoachArmTimeout();
+    floatingCoachMode = nextMode;
+
+    floatingCoachToggle.classList.toggle("is-armed", nextMode === "armed");
+    floatingCoachToggle.classList.toggle("is-open", nextMode === "open");
+    floatingCoachPanel.hidden = nextMode !== "open";
+    floatingCoachToggle.setAttribute("aria-expanded", nextMode === "open" ? "true" : "false");
+
+    if (nextMode === "open") {
+      floatingCoachToggle.textContent = "Coach activo";
+      window.requestAnimationFrame(() => {
+        if (floatingChatMessages) {
+          floatingChatMessages.scrollTop = floatingChatMessages.scrollHeight;
+        }
+        floatingChatInput?.focus();
+      });
+      return;
+    }
+
+    if (nextMode === "armed") {
+      floatingCoachToggle.textContent = "Abrir Coach";
+      floatingCoachArmTimeout = window.setTimeout(() => {
+        syncFloatingCoachDock("idle");
+      }, 2000);
+      return;
+    }
+
+    floatingCoachToggle.textContent = "Coach";
+  };
+
   const syncRoyalOneDock = open => {
     if (royalOnePanel) {
       royalOnePanel.hidden = !open;
@@ -3434,6 +3500,7 @@ async function initCoachAppPage() {
   };
 
   syncRoyalOneDock(false);
+  syncFloatingCoachDock("idle");
 
   const openChefShareModal = () => {
     if (!chefShareModal) {
@@ -3456,6 +3523,31 @@ async function initCoachAppPage() {
     document.body.classList.remove("modal-open");
   };
 
+  const chatInputs = [chatInput, floatingChatInput].filter(Boolean);
+  const chatSendButtons = [chatSendButton, floatingChatSendButton].filter(Boolean);
+  const chatStatusNodes = [chatStatus, floatingChatStatus].filter(Boolean);
+
+  const toggleCoachChatBusy = loading => {
+    chatInputs.forEach(input => {
+      input.disabled = loading;
+    });
+
+    chatSendButtons.forEach(button => {
+      button.disabled = loading;
+    });
+
+    chatStatusNodes.forEach(node => {
+      node.textContent = loading ? "Pensando..." : "Listo";
+    });
+  };
+
+  const clearCoachChatInputs = () => {
+    chatInputs.forEach(input => {
+      input.value = "";
+      autoResizeTextarea(input);
+    });
+  };
+
   const sendCoachMessage = async rawText => {
     const text = String(rawText || "").trim();
 
@@ -3464,20 +3556,8 @@ async function initCoachAppPage() {
     }
 
     addCoachMessage(chatMessages, "user", text);
-
-    if (chatInput) {
-      chatInput.value = "";
-      autoResizeTextarea(chatInput);
-      chatInput.disabled = true;
-    }
-
-    if (chatSendButton) {
-      chatSendButton.disabled = true;
-    }
-
-    if (chatStatus) {
-      chatStatus.textContent = "Pensando...";
-    }
+    clearCoachChatInputs();
+    toggleCoachChatBusy(true);
 
     try {
       const data = await apiRequest(COACH_CHAT_API_URL, {
@@ -3513,17 +3593,12 @@ async function initCoachAppPage() {
         error.message || "No pude responder en este momento."
       );
     } finally {
-      if (chatInput) {
-        chatInput.disabled = false;
+      toggleCoachChatBusy(false);
+
+      if (floatingCoachMode === "open" && floatingChatInput) {
+        floatingChatInput.focus();
+      } else if (chatInput) {
         chatInput.focus();
-      }
-
-      if (chatSendButton) {
-        chatSendButton.disabled = false;
-      }
-
-      if (chatStatus) {
-        chatStatus.textContent = "Listo";
       }
     }
   };
@@ -3544,7 +3619,42 @@ async function initCoachAppPage() {
     }
   });
 
+  floatingChatForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    sendCoachMessage(floatingChatInput?.value || "");
+  });
+
+  floatingChatInput?.addEventListener("input", () => {
+    autoResizeTextarea(floatingChatInput);
+  });
+
+  floatingChatInput?.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendCoachMessage(floatingChatInput?.value || "");
+    }
+  });
+
   autoResizeTextarea(chatInput);
+  autoResizeTextarea(floatingChatInput);
+
+  floatingCoachToggle?.addEventListener("click", () => {
+    if (floatingCoachMode === "open") {
+      floatingChatInput?.focus();
+      return;
+    }
+
+    if (floatingCoachMode === "armed") {
+      syncFloatingCoachDock("open");
+      return;
+    }
+
+    syncFloatingCoachDock("armed");
+  });
+
+  floatingCoachClose?.addEventListener("click", () => {
+    syncFloatingCoachDock("idle");
+  });
 
   chefShareButtons.forEach(button => {
     button.addEventListener("click", event => {
@@ -3568,6 +3678,11 @@ async function initCoachAppPage() {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && chefShareModal && !chefShareModal.hidden) {
       closeChefShareModal();
+      return;
+    }
+
+    if (event.key === "Escape" && floatingCoachPanel && !floatingCoachPanel.hidden) {
+      syncFloatingCoachDock("idle");
       return;
     }
 

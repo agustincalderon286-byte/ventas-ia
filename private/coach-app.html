@@ -1755,6 +1755,55 @@
         </div>
       </div>
 
+      <div class="coach-float-dock" data-coach-float-dock>
+        <button
+          type="button"
+          class="coach-float-toggle"
+          data-coach-float-toggle
+          aria-expanded="false"
+          aria-controls="coach-float-panel"
+        >
+          Coach
+        </button>
+
+        <div class="coach-float-panel" id="coach-float-panel" data-coach-float-panel hidden>
+          <div class="coach-float-header">
+            <div>
+              <div class="eyebrow">Coach rapido</div>
+              <h3>Tu Coach sigue aqui</h3>
+            </div>
+            <button type="button" class="coach-float-close" data-coach-float-close aria-label="Cerrar widget">×</button>
+          </div>
+
+          <div class="coach-chat-status coach-float-status" data-coach-float-status>Listo</div>
+
+          <div class="coach-messages coach-float-messages" data-coach-chat-messages-floating>
+            <article class="coach-message assistant">
+              <p>
+                Hola, soy Agustin 2.0 Coach. Estoy aqui para ayudarte con objeciones, cierres, precios, pagos,
+                paquetes y negociacion.
+              </p>
+            </article>
+          </div>
+
+          <form class="coach-composer coach-float-composer" data-coach-chat-form-floating>
+            <label class="sr-only" for="coach-float-input">Pregunta al Coach</label>
+            <textarea
+              id="coach-float-input"
+              data-coach-chat-input-floating
+              rows="1"
+              maxlength="2000"
+              placeholder="Escribe aqui sin perder de vista tus herramientas..."
+            ></textarea>
+            <button type="submit" class="primary-button" data-coach-chat-send-floating>Enviar</button>
+          </form>
+
+          <p class="mini-note coach-float-note">
+            Primer toque lo despierta. Segundo toque lo abre. Si no lo abres, vuelve suave en 2 segundos.
+          </p>
+        </div>
+      </div>
+
       <div class="royalone-dock" data-royalone-dock>
         <button
           type="button"

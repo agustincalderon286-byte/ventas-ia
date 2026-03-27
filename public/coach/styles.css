@@ -2991,7 +2991,7 @@ img {
 .royalone-dock {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  bottom: 104px;
   z-index: 32;
   display: grid;
   justify-items: end;
@@ -3048,6 +3048,115 @@ img {
   line-height: 1.68;
 }
 
+.coach-float-dock {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 34;
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.coach-float-toggle {
+  min-height: 54px;
+  min-width: 112px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(18, 106, 155, 0.82), rgba(7, 49, 78, 0.82));
+  color: #f4fbff;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+  opacity: 0.48;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease, background 180ms ease;
+}
+
+.coach-float-toggle:hover,
+.coach-float-toggle.is-armed,
+.coach-float-toggle.is-open {
+  opacity: 1;
+}
+
+.coach-float-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.34);
+}
+
+.coach-float-toggle.is-armed,
+.coach-float-toggle.is-open {
+  background: linear-gradient(135deg, rgba(36, 145, 203, 0.96), rgba(10, 80, 122, 0.94));
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.36);
+}
+
+.coach-float-panel {
+  width: min(380px, calc(100vw - 28px));
+  padding: 18px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(9, 22, 41, 0.99), rgba(10, 24, 46, 0.96));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.coach-float-panel[hidden] {
+  display: none !important;
+}
+
+.coach-float-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coach-float-header h3 {
+  margin: 10px 0 0;
+  font-size: 1.2rem;
+  font-family: "Bricolage Grotesque", sans-serif;
+}
+
+.coach-float-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.coach-float-status {
+  display: inline-flex;
+  margin-top: 14px;
+}
+
+.coach-float-messages {
+  min-height: 240px;
+  max-height: 360px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 24px;
+}
+
+.coach-float-composer {
+  margin-top: 14px;
+}
+
+.coach-float-composer textarea {
+  min-height: 60px;
+}
+
+.coach-float-note {
+  margin: 12px 4px 0;
+}
+
 .footer-note {
   padding: 0 0 40px;
   color: var(--muted);
@@ -3091,7 +3200,7 @@ img {
 
   .royalone-dock {
     right: 16px;
-    bottom: 16px;
+    bottom: 92px;
     left: 16px;
     justify-items: stretch;
   }
@@ -3101,6 +3210,21 @@ img {
   }
 
   .royalone-dock-panel {
+    width: 100%;
+  }
+
+  .coach-float-dock {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    justify-items: stretch;
+  }
+
+  .coach-float-toggle {
+    width: 100%;
+  }
+
+  .coach-float-panel {
     width: 100%;
   }
 
