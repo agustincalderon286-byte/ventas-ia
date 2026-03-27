@@ -32,7 +32,7 @@
           <a class="nav-link" href="/coach/planes/">Plan</a>
           <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer">Ver Chef</a>
           <button class="nav-button" data-open-chef-share>Compartir Chef</button>
-          <button class="nav-button" data-open-billing-portal>Suscripcion</button>
+          <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
         </nav>
       </header>
@@ -118,6 +118,16 @@
                 aria-selected="false"
               >
                 Prospeccion
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
+                data-coach-workspace-tab="equipo"
+                aria-selected="false"
+                data-team-manager-only
+                hidden
+              >
+                Equipo
               </button>
             </div>
             <p class="mini-note">
@@ -965,7 +975,12 @@
             </p>
           </article>
 
-          <article class="dashboard-card lead-destination-card" data-coach-workspace-section="prospeccion" hidden>
+          <article
+            class="dashboard-card lead-destination-card"
+            data-coach-workspace-section="prospeccion"
+            data-team-manager-only
+            hidden
+          >
             <div class="eyebrow">Destino de leads</div>
             <h3>Recibe tus leads donde mas te convenga</h3>
             <p>
@@ -1030,6 +1045,121 @@
             <p class="mini-note">
               Puedes conservar todo ordenado aqui y al mismo tiempo recibir copia en tu destino favorito.
             </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="equipo"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Panel de equipo</div>
+            <h3>Controla tus accesos de campo</h3>
+            <p>
+              Crea accesos para novatos, revisa su actividad y conserva la produccion del equipo bajo tu cuenta.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-team-summary-total>0</strong>
+                <span>Subcuentas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-summary-active>0</strong>
+                <span>Activas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-summary-paused>0</strong>
+                <span>Pausadas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-summary-leads>0</strong>
+                <span>Leads generados</span>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Las subcuentas trabajan en campo, pero la produccion queda protegida dentro de tu cuenta principal.
+            </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="equipo"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Nueva subcuenta</div>
+            <h3>Da acceso rapido a un novato</h3>
+            <p>
+              Crea un acceso de trabajo para que use el Coach sin entregar tu cuenta personal.
+            </p>
+
+            <form class="coach-form" data-team-seat-form>
+              <label>
+                Nombre
+                <input type="text" name="name" maxlength="120" placeholder="Nombre del representante" required />
+              </label>
+              <label>
+                Correo
+                <input type="email" name="email" maxlength="160" placeholder="correo@ejemplo.com" required />
+              </label>
+              <label>
+                Nombre corto opcional
+                <input
+                  type="text"
+                  name="seatLabel"
+                  maxlength="80"
+                  placeholder="Ej. Ana campo o Pedro demos"
+                />
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-team-seat-save>Crear subcuenta</button>
+              </div>
+
+              <div class="form-result" data-team-seat-feedback></div>
+            </form>
+
+            <div class="team-credentials-card" data-team-created-card hidden>
+              <strong>Acceso listo para compartir</strong>
+              <div class="team-credentials-grid">
+                <div>
+                  <span>Correo</span>
+                  <strong data-team-created-email>correo@ejemplo.com</strong>
+                </div>
+                <div>
+                  <span>Contrasena temporal</span>
+                  <strong data-team-created-password>A2-xxxxxx</strong>
+                </div>
+              </div>
+
+              <div class="dashboard-actions compact-top">
+                <button type="button" class="nav-button" data-team-copy-email>Copiar correo</button>
+                <button type="button" class="nav-button" data-team-copy-password>Copiar contrasena</button>
+              </div>
+
+              <p class="mini-note">
+                Comparte esta contrasena una sola vez. Luego esa persona podra cambiarla cuando tenga su cuenta propia.
+              </p>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="equipo"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Subcuentas</div>
+            <h3>Personas activas en tu equipo</h3>
+            <p>
+              Pausa o reactiva accesos sin perder el historial que produjeron dentro de tu operacion.
+            </p>
+
+            <div class="team-seat-list" data-team-seat-list>
+              <div class="team-seat-empty">Todavia no has creado subcuentas en este equipo.</div>
+            </div>
           </article>
 
           <article
@@ -2027,6 +2157,7 @@
           <article
             class="dashboard-card"
             data-coach-workspace-section="prospeccion"
+            data-team-manager-only
             style="--coach-flow-order: 190"
             hidden
           >
@@ -2129,7 +2260,7 @@
             </div>
 
             <div class="dashboard-actions">
-              <button class="secondary-button" data-open-billing-portal>Administrar suscripcion</button>
+              <button class="secondary-button" data-open-billing-portal data-team-manager-only hidden>Administrar suscripcion</button>
               <button class="nav-button" data-coach-logout>Cerrar sesion</button>
             </div>
 

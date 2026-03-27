@@ -879,7 +879,7 @@ img {
 
 .coach-workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -942,6 +942,136 @@ img {
   margin-top: 14px;
   color: var(--muted);
   line-height: 1.75;
+}
+
+.team-credentials-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(215, 38, 69, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.team-credentials-card strong,
+.team-credentials-card span {
+  display: block;
+}
+
+.team-credentials-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.team-credentials-grid div {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(8, 11, 22, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.team-credentials-grid span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.team-credentials-grid strong {
+  margin-top: 8px;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.team-seat-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.team-seat-card {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.team-seat-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.team-seat-head strong,
+.team-seat-head span {
+  display: block;
+}
+
+.team-seat-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.team-seat-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f6fb;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.team-seat-status[data-state="active"] {
+  background: rgba(114, 214, 141, 0.14);
+  border-color: rgba(114, 214, 141, 0.28);
+  color: #dff9e6;
+}
+
+.team-seat-status[data-state="paused"] {
+  background: rgba(255, 205, 120, 0.14);
+  border-color: rgba(255, 205, 120, 0.28);
+  color: #ffeac1;
+}
+
+.team-seat-status[data-state="closed"] {
+  background: rgba(255, 143, 136, 0.12);
+  border-color: rgba(255, 143, 136, 0.3);
+  color: #ffd6d2;
+}
+
+.team-seat-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.team-seat-metrics strong {
+  color: var(--text);
+}
+
+.team-seat-note {
+  margin-bottom: 0;
+}
+
+.team-seat-empty {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+  text-align: center;
 }
 
 .dashboard-actions {
@@ -3719,6 +3849,14 @@ img {
 }
 
 @media (max-width: 720px) {
+  .team-credentials-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-seat-head {
+    flex-direction: column;
+  }
+
   .coach-nav {
     align-items: flex-start;
     flex-direction: column;

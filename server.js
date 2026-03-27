@@ -1209,6 +1209,94 @@ async function construirCoachOwnershipSnapshot(userDoc = null) {
   };
 }
 
+function esCoachTeamManager(userDoc = null) {
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+  return accountType === "owner" || accountType === "leader";
+}
+
+function resolverCoachOwnerUserId(userDoc = null) {
+  if (!userDoc?._id) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  return accountType === "seat" && userDoc.teamOwnerUserId ? userDoc.teamOwnerUserId : userDoc._id;
+}
+
+function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
+  const ownerUserId = resolverCoachOwnerUserId(userDoc);
+  const query = {
+    ...extra,
+    ownerUserId
+  };
+
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+
+  if (accountType === "seat" && userDoc?._id && ownerUserId && String(ownerUserId) !== String(userDoc._id)) {
+    query.generatedByUserId = userDoc._id;
+  }
+
+  return query;
+}
+
+async function coachTieneAccesoOperativo(userDoc = null) {
+  if (!userDoc) {
+    return false;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return false;
+  }
+
+  if (coachTieneAccesoTotal(userDoc)) {
+    return true;
+  }
+
+  if (accountType !== "seat" || !userDoc.teamOwnerUserId) {
+    return false;
+  }
+
+  const ownerUserDoc = await CoachUser.findById(userDoc.teamOwnerUserId)
+    .select("email subscriptionActive subscriptionStatus")
+    .lean();
+
+  return coachTieneAccesoTotal(ownerUserDoc);
+}
+
+async function construirCoachUserView(userDoc = null) {
+  const cleanedUser = limpiarCoachUser(userDoc);
+
+  if (!cleanedUser) {
+    return null;
+  }
+
+  cleanedUser.accessGranted = await coachTieneAccesoOperativo(userDoc);
+  cleanedUser.ownerUserId = resolverCoachOwnerUserId(userDoc) ? String(resolverCoachOwnerUserId(userDoc)) : "";
+  return cleanedUser;
+}
+
+async function obtenerCoachOwnerProfile(userDoc = null, options = {}) {
+  const ownerUserId = resolverCoachOwnerUserId(userDoc);
+
+  if (!ownerUserId) {
+    return null;
+  }
+
+  const query = CoachDistributorProfile.findOne({ userId: ownerUserId });
+  return options?.lean ? query.lean() : query;
+}
+
+function limpiarCoachSeatLabel(value = "") {
+  return String(value || "").trim().slice(0, 80);
+}
+
+function generarCoachSeatPasswordTemporal() {
+  return `A2-${crypto.randomBytes(4).toString("hex")}`;
+}
+
 function limpiarCoachUser(userDoc) {
   if (!userDoc) {
     return null;
@@ -1328,6 +1416,43 @@ function limpiarCoachLeadDestination(profileDoc = null) {
         ? Boolean(email)
         : Boolean(type !== "carpeta_privada" && url),
     updatedAt: profileDoc?.leadDestinationUpdatedAt || null
+  };
+}
+
+function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
+  if (!userDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(userDoc._id),
+    name: userDoc.name || "",
+    email: userDoc.email || "",
+    accountType: normalizarCoachAccountType(userDoc.accountType || "seat"),
+    seatStatus: normalizarCoachSeatStatus(userDoc.seatStatus || "active"),
+    seatLabel: profileDoc?.seatLabel || "",
+    teamRole: profileDoc?.teamRole || resolverCoachTeamRoleDefault(userDoc),
+    chefEnabled: profileDoc?.chefEnabled !== false,
+    createdAt: userDoc.createdAt || null,
+    lastLoginAt: userDoc.lastLoginAt || null,
+    counts: {
+      leads: Number(stats?.leads || 0),
+      surveys: Number(stats?.surveys || 0),
+      programSheets: Number(stats?.programSheets || 0),
+      applications: Number(stats?.applications || 0)
+    }
+  };
+}
+
+function construirCoachTeamSummary(seats = []) {
+  const safeSeats = Array.isArray(seats) ? seats : [];
+
+  return {
+    totalSeats: safeSeats.length,
+    activeSeats: safeSeats.filter(seat => seat?.seatStatus === "active").length,
+    pausedSeats: safeSeats.filter(seat => seat?.seatStatus === "paused").length,
+    closedSeats: safeSeats.filter(seat => seat?.seatStatus === "closed").length,
+    totalGeneratedLeads: safeSeats.reduce((acc, seat) => acc + Number(seat?.counts?.leads || 0), 0)
   };
 }
 
@@ -4391,8 +4516,38 @@ async function requireCoachActivo(req, res) {
     return null;
   }
 
-  if (!coachTieneAccesoTotal(auth.user)) {
+  if (!(await coachTieneAccesoOperativo(auth.user))) {
     responderCoachError(res, 403, "Tu cuenta no tiene una suscripcion activa.");
+    return null;
+  }
+
+  return auth;
+}
+
+async function requireCoachTeamManager(req, res) {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return null;
+  }
+
+  if (!esCoachTeamManager(auth.user)) {
+    responderCoachError(res, 403, "Esta area solo esta disponible para quien administra el equipo.");
+    return null;
+  }
+
+  return auth;
+}
+
+async function requireCoachTeamManagerUser(req, res) {
+  const auth = await requireCoachUser(req, res);
+
+  if (!auth) {
+    return null;
+  }
+
+  if (!esCoachTeamManager(auth.user)) {
+    responderCoachError(res, 403, "Esta accion solo esta disponible para quien administra el equipo.");
     return null;
   }
 
@@ -7841,10 +7996,11 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     await crearCoachSesion(req, res, userDoc._id);
 
     if (accesoDePrueba) {
+      const userView = await construirCoachUserView(userDoc);
       return res.json({
         url: "/coach/app/",
         bypass: true,
-        user: limpiarCoachUser(userDoc)
+        user: userView
       });
     }
 
@@ -7860,7 +8016,7 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     res.json({
       url: checkoutSession.url,
       plan: selectedPlan.code,
-      user: limpiarCoachUser(userDoc)
+      user: await construirCoachUserView(userDoc)
     });
   } catch (error) {
     console.error("Error creando signup checkout Coach:", error.message);
@@ -7890,7 +8046,7 @@ app.post("/api/coach/login", async (req, res) => {
     await asegurarCoachDistributorProfile(userDoc);
     await crearCoachSesion(req, res, userDoc._id);
 
-    res.json({ user: limpiarCoachUser(userDoc) });
+    res.json({ user: await construirCoachUserView(userDoc) });
   } catch (error) {
     console.error("Error login Coach:", error.message);
     responderCoachError(res, 500, "No pude iniciar sesion en este momento.");
@@ -7937,7 +8093,7 @@ app.get("/api/coach/me", async (req, res) => {
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
-      user: limpiarCoachUser(userDoc),
+      user: await construirCoachUserView(userDoc),
       profile: limpiarCoachProfile(profileDoc?.toObject ? profileDoc.toObject() : profileDoc, analyticsDoc),
       networkSummary,
       repLeadSummary: leadMemory?.repLeadSummary || null,
@@ -7949,8 +8105,248 @@ app.get("/api/coach/me", async (req, res) => {
   }
 });
 
+app.get("/api/coach/team", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const seatDocs = await CoachUser.find({
+      teamOwnerUserId: auth.user._id,
+      accountType: "seat"
+    })
+      .sort({ createdAt: -1, name: 1 })
+      .lean();
+
+    const seatIds = seatDocs.map(seat => seat._id).filter(Boolean);
+
+    if (!seatIds.length) {
+      return res.json({
+        summary: construirCoachTeamSummary([]),
+        seats: []
+      });
+    }
+
+    const [profileDocs, leadCounts, surveyCounts, programCounts, applicationCounts] = await Promise.all([
+      CoachDistributorProfile.find({ userId: { $in: seatIds } }).lean(),
+      CoachLeadInbox.aggregate([
+        {
+          $match: {
+            ownerUserId: auth.user._id,
+            generatedByUserId: { $in: seatIds }
+          }
+        },
+        { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
+      ]),
+      CoachHealthSurvey.aggregate([
+        {
+          $match: {
+            ownerUserId: auth.user._id,
+            generatedByUserId: { $in: seatIds }
+          }
+        },
+        { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
+      ]),
+      CoachProgramSheet.aggregate([
+        {
+          $match: {
+            ownerUserId: auth.user._id,
+            generatedByUserId: { $in: seatIds }
+          }
+        },
+        { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
+      ]),
+      CoachRecruitmentApplication.aggregate([
+        {
+          $match: {
+            ownerUserId: auth.user._id,
+            generatedByUserId: { $in: seatIds }
+          }
+        },
+        { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
+      ])
+    ]);
+
+    const profileMap = new Map(profileDocs.map(profile => [String(profile.userId), profile]));
+    const leadMap = new Map(leadCounts.map(item => [String(item._id), Number(item.total || 0)]));
+    const surveyMap = new Map(surveyCounts.map(item => [String(item._id), Number(item.total || 0)]));
+    const programMap = new Map(programCounts.map(item => [String(item._id), Number(item.total || 0)]));
+    const applicationMap = new Map(applicationCounts.map(item => [String(item._id), Number(item.total || 0)]));
+
+    const seats = seatDocs
+      .map(seatDoc =>
+        limpiarCoachTeamSeat(seatDoc, profileMap.get(String(seatDoc._id)) || null, {
+          leads: leadMap.get(String(seatDoc._id)) || 0,
+          surveys: surveyMap.get(String(seatDoc._id)) || 0,
+          programSheets: programMap.get(String(seatDoc._id)) || 0,
+          applications: applicationMap.get(String(seatDoc._id)) || 0
+        })
+      )
+      .filter(Boolean);
+
+    res.json({
+      summary: construirCoachTeamSummary(seats),
+      seats
+    });
+  } catch (error) {
+    console.error("Error cargando equipo del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tu equipo en este momento.");
+  }
+});
+
+app.post("/api/coach/team/seats", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const name = String(req.body?.name || "").trim().slice(0, 120);
+  const email = normalizarEmail(req.body?.email || "");
+  const seatLabel = limpiarCoachSeatLabel(req.body?.seatLabel || "");
+
+  if (!name) {
+    return responderCoachError(res, 400, "El nombre de la subcuenta es requerido.");
+  }
+
+  if (!email) {
+    return responderCoachError(res, 400, "El correo de la subcuenta es requerido.");
+  }
+
+  try {
+    const existingUser = await CoachUser.findOne({ email }).select("_id");
+
+    if (existingUser) {
+      return responderCoachError(res, 409, "Ese correo ya tiene una cuenta creada.");
+    }
+
+    const temporaryPassword = generarCoachSeatPasswordTemporal();
+    const passwordSeguro = crearPasswordSeguro(temporaryPassword);
+    const now = new Date();
+    const seatDoc = await CoachUser.create({
+      name,
+      email,
+      passwordHash: passwordSeguro.hash,
+      passwordSalt: passwordSeguro.salt,
+      accountType: "seat",
+      parentUserId: auth.user._id,
+      billingOwnerUserId: auth.user._id,
+      teamOwnerUserId: auth.user._id,
+      seatStatus: "active",
+      officeId: auth.user.officeId || "",
+      territoryId: auth.user.territoryId || "",
+      subscriptionStatus: "team_access",
+      subscriptionActive: false,
+      updatedAt: now
+    });
+
+    const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
+
+    if (seatLabel && seatProfile.seatLabel !== seatLabel) {
+      seatProfile.seatLabel = seatLabel;
+      seatProfile.updatedAt = now;
+      await seatProfile.save();
+    }
+
+    const cleanedSeat = limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile.toObject(), {
+      leads: 0,
+      surveys: 0,
+      programSheets: 0,
+      applications: 0
+    });
+
+    res.json({
+      seat: cleanedSeat,
+      credentials: {
+        email,
+        temporaryPassword
+      }
+    });
+  } catch (error) {
+    console.error("Error creando subcuenta del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear la subcuenta en este momento.");
+  }
+});
+
+app.patch("/api/coach/team/seats/:userId", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const userId = String(req.params?.userId || "").trim();
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return responderCoachError(res, 400, "Subcuenta invalida.");
+  }
+
+  const requestedStatus = normalizarCoachSeatStatus(req.body?.seatStatus || "");
+  const seatLabel = limpiarCoachSeatLabel(req.body?.seatLabel || "");
+  const shouldUpdateStatus = ["active", "paused", "closed"].includes(requestedStatus);
+
+  if (!shouldUpdateStatus && !seatLabel) {
+    return responderCoachError(res, 400, "No recibi cambios para esa subcuenta.");
+  }
+
+  try {
+    const seatDoc = await CoachUser.findOne({
+      _id: userId,
+      teamOwnerUserId: auth.user._id,
+      accountType: "seat"
+    });
+
+    if (!seatDoc) {
+      return responderCoachError(res, 404, "No encontre esa subcuenta.");
+    }
+
+    const now = new Date();
+
+    if (shouldUpdateStatus) {
+      seatDoc.seatStatus = requestedStatus;
+    }
+
+    seatDoc.updatedAt = now;
+    await seatDoc.save();
+
+    const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
+
+    if (seatLabel && seatProfile.seatLabel !== seatLabel) {
+      seatProfile.seatLabel = seatLabel;
+      seatProfile.updatedAt = now;
+      await seatProfile.save();
+    }
+
+    res.json({
+      seat: limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile.toObject(), {
+        leads: await CoachLeadInbox.countDocuments({
+          ownerUserId: auth.user._id,
+          generatedByUserId: seatDoc._id
+        }),
+        surveys: await CoachHealthSurvey.countDocuments({
+          ownerUserId: auth.user._id,
+          generatedByUserId: seatDoc._id
+        }),
+        programSheets: await CoachProgramSheet.countDocuments({
+          ownerUserId: auth.user._id,
+          generatedByUserId: seatDoc._id
+        }),
+        applications: await CoachRecruitmentApplication.countDocuments({
+          ownerUserId: auth.user._id,
+          generatedByUserId: seatDoc._id
+        })
+      })
+    });
+  } catch (error) {
+    console.error("Error actualizando subcuenta del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar la subcuenta en este momento.");
+  }
+});
+
 app.put("/api/coach/lead-destination", async (req, res) => {
-  const auth = await requireCoachActivo(req, res);
+  const auth = await requireCoachTeamManager(req, res);
 
   if (!auth) {
     return;
@@ -8023,7 +8419,10 @@ app.get("/api/coach/leads", async (req, res) => {
   }
 
   try {
-    const leadDocs = await CoachLeadInbox.find({ ownerUserId: auth.user._id }).sort({ createdAt: -1 }).limit(300).lean();
+    const leadDocs = await CoachLeadInbox.find(construirCoachWorkspaceQuery(auth.user))
+      .sort({ createdAt: -1 })
+      .limit(300)
+      .lean();
     const leads = leadDocs.map(limpiarCoachInboxLead).filter(Boolean);
 
     res.json({
@@ -8044,7 +8443,7 @@ app.post("/api/coach/leads", async (req, res) => {
   }
 
   try {
-    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const result = await guardarCoachInboxLead({
       userDoc: auth.user,
       profileDoc,
@@ -8071,7 +8470,7 @@ app.get("/api/coach/recruitment-applications", async (req, res) => {
   }
 
   try {
-    const applicationDocs = await CoachRecruitmentApplication.find({ ownerUserId: auth.user._id })
+    const applicationDocs = await CoachRecruitmentApplication.find(construirCoachWorkspaceQuery(auth.user))
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(300)
       .lean();
@@ -8118,7 +8517,7 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
 
   try {
     const now = new Date();
-    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const applicationPayload = {
       ownerUserId: ownership.ownerUserId,
@@ -8145,7 +8544,9 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
     let created = false;
 
     if (applicationId) {
-      applicationDoc = await CoachRecruitmentApplication.findOne({ _id: applicationId, ownerUserId: auth.user._id });
+      applicationDoc = await CoachRecruitmentApplication.findOne(
+        construirCoachWorkspaceQuery(auth.user, { _id: applicationId })
+      );
 
       if (!applicationDoc) {
         return responderCoachError(res, 404, "No encontre esa aplicacion.");
@@ -8183,7 +8584,7 @@ app.get("/api/coach/health-surveys", async (req, res) => {
   }
 
   try {
-    const surveyDocs = await CoachHealthSurvey.find({ ownerUserId: auth.user._id })
+    const surveyDocs = await CoachHealthSurvey.find(construirCoachWorkspaceQuery(auth.user))
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(300)
       .lean();
@@ -8301,7 +8702,7 @@ app.post("/api/coach/health-surveys", async (req, res) => {
     let created = false;
 
     if (surveyId) {
-      surveyDoc = await CoachHealthSurvey.findOne({ _id: surveyId, ownerUserId: auth.user._id });
+      surveyDoc = await CoachHealthSurvey.findOne(construirCoachWorkspaceQuery(auth.user, { _id: surveyId }));
 
       if (!surveyDoc) {
         return responderCoachError(res, 404, "No encontre esa encuesta.");
@@ -8335,10 +8736,11 @@ app.get("/api/coach/program-4-in-14", async (req, res) => {
   }
 
   try {
-    const sheetDocs = await CoachProgramSheet.find({
-      ownerUserId: auth.user._id,
-      programType: "4_en_14"
-    })
+    const sheetDocs = await CoachProgramSheet.find(
+      construirCoachWorkspaceQuery(auth.user, {
+        programType: "4_en_14"
+      })
+    )
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(100)
       .lean();
@@ -8386,7 +8788,7 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
   }
 
   try {
-    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const sheetBase = {
@@ -8497,8 +8899,8 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
 
   try {
     const sheetDoc = await CoachProgramSheet.findOne({
-      _id: sheetId,
-      ownerUserId: auth.user._id
+      ...construirCoachWorkspaceQuery(auth.user),
+      _id: sheetId
     });
 
     if (!sheetDoc) {
@@ -8538,8 +8940,8 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
 
     if (referral.createdLeadId && mongoose.Types.ObjectId.isValid(referral.createdLeadId)) {
       const leadDoc = await CoachLeadInbox.findOne({
-        _id: referral.createdLeadId,
-        ownerUserId: auth.user._id
+        ...construirCoachWorkspaceQuery(auth.user),
+        _id: referral.createdLeadId
       });
 
       if (leadDoc) {
@@ -8626,7 +9028,7 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
   const nextActionAt = parseCoachLeadNextActionAt(req.body?.nextActionAt);
 
   try {
-    const leadDoc = await CoachLeadInbox.findOne({ _id: leadId, ownerUserId: auth.user._id });
+    const leadDoc = await CoachLeadInbox.findOne(construirCoachWorkspaceQuery(auth.user, { _id: leadId }));
 
     if (!leadDoc) {
       return responderCoachError(res, 404, "No encontre ese lead.");
@@ -8674,7 +9076,7 @@ app.post("/api/coach/create-checkout-session", async (req, res) => {
     );
   }
 
-  const auth = await requireCoachUser(req, res);
+  const auth = await requireCoachTeamManagerUser(req, res);
   const plan = normalizarPlanCoach(req.body?.plan || "monthly");
 
   if (!auth) {
@@ -8716,7 +9118,7 @@ app.post("/api/coach/create-portal-session", async (req, res) => {
     );
   }
 
-  const auth = await requireCoachActivo(req, res);
+  const auth = await requireCoachTeamManager(req, res);
 
   if (!auth) {
     return;
@@ -8788,7 +9190,7 @@ app.get("/api/coach/checkout-session", async (req, res) => {
     const userActualizado = await sincronizarCoachDesdeCheckoutSession(sessionId);
 
     res.json({
-      user: limpiarCoachUser(userActualizado || auth.user),
+      user: await construirCoachUserView(userActualizado || auth.user),
       session: {
         id: checkoutSession.id,
         status: checkoutSession.status,
@@ -8808,7 +9210,7 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
     return res.redirect("/coach/login/");
   }
 
-  if (!coachTieneAccesoTotal(auth.user)) {
+  if (!(await coachTieneAccesoOperativo(auth.user))) {
     return res.redirect("/coach/planes/");
   }
 
@@ -9180,6 +9582,7 @@ app.post("/chat", async (req, res) => {
     let perfilPrompt = "";
 
     if (modoChat === "coach") {
+      const coachOwnerUserId = String(resolverCoachOwnerUserId(coachAuth.user) || coachAuth.user._id);
       [coachProfileDoc, coachAnalyticsDoc] = await Promise.all([
         CoachDistributorProfile.findOne({ userId: coachAuth.user._id }).lean(),
         CoachDistributorAnalytics.findOne({ userId: coachAuth.user._id }).lean()
@@ -9209,7 +9612,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
       if (
         activeOrderCalcContext?.ownerUserId &&
-        activeOrderCalcContext.ownerUserId !== String(coachAuth.user._id)
+        activeOrderCalcContext.ownerUserId !== coachOwnerUserId
       ) {
         activeOrderCalcContext = null;
       }
@@ -9220,7 +9623,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
       if (
         activeDecisionContext?.ownerUserId &&
-        activeDecisionContext.ownerUserId !== String(coachAuth.user._id)
+        activeDecisionContext.ownerUserId !== coachOwnerUserId
       ) {
         activeDecisionContext = null;
       }
@@ -9240,10 +9643,11 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
 
       if (activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)) {
-        const surveyDoc = await CoachHealthSurvey.findOne({
-          _id: activeHealthSurveyId,
-          ownerUserId: coachAuth.user._id
-        }).lean();
+        const surveyDoc = await CoachHealthSurvey.findOne(
+          construirCoachWorkspaceQuery(coachAuth.user, {
+            _id: activeHealthSurveyId
+          })
+        ).lean();
 
         if (surveyDoc) {
           activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
@@ -9258,8 +9662,8 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         activeProgram414ReferralIndex >= 0
       ) {
         const programSheetDoc = await CoachProgramSheet.findOne({
-          _id: activeProgram414SheetId,
-          ownerUserId: coachAuth.user._id
+          ...construirCoachWorkspaceQuery(coachAuth.user),
+          _id: activeProgram414SheetId
         }).lean();
 
         const cleanedSheet = limpiarCoachProgramSheet(programSheetDoc);

@@ -318,6 +318,32 @@ function formatDate(dateString) {
   }).format(date);
 }
 
+function hasCoachAccess(user = null) {
+  return Boolean(user && (user.accessGranted || user.subscriptionActive));
+}
+
+function getCoachEffectiveOwnerId(user = null) {
+  return String(user?.ownerUserId || user?.teamOwnerUserId || user?.id || "").trim();
+}
+
+function syncCoachManagerUi(user = null) {
+  const canManageTeam = Boolean(user?.managesTeam);
+
+  document.querySelectorAll("[data-team-manager-only]").forEach(node => {
+    if (!canManageTeam) {
+      node.hidden = true;
+      return;
+    }
+
+    if (node.dataset.coachWorkspaceSection) {
+      node.hidden = true;
+      return;
+    }
+
+    node.hidden = false;
+  });
+}
+
 function formatDateTime(dateString) {
   if (!dateString) {
     return "Sin fecha";
@@ -480,7 +506,8 @@ function initCoachWorkspaceTabs() {
     return;
   }
 
-  const validTabs = new Set(tabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
+  const visibleTabButtons = tabButtons.filter(button => !button.hidden);
+  const validTabs = new Set(visibleTabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
   let activeTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre";
 
   if (!validTabs.has(activeTab)) {
@@ -507,13 +534,29 @@ function initCoachWorkspaceTabs() {
     button.addEventListener("click", () => {
       const nextTab = button.dataset.coachWorkspaceTab || "cierre";
       syncWorkspace(nextTab);
+      const labelMeta =
+        {
+          prospeccion: {
+            label: "Cambio a modo prospeccion",
+            detail: "Entraste al lado de captar leads y trabajar calle."
+          },
+          equipo: {
+            label: "Cambio a modo equipo",
+            detail: "Entraste al panel para mover subcuentas y revisar produccion del equipo."
+          },
+          cierre: {
+            label: "Cambio a modo cierre",
+            detail: "Entraste al lado de demo, objeciones y cierre."
+          }
+        }[nextTab] || {
+          label: "Cambio de area",
+          detail: "Entraste a otra area del Coach."
+        };
+
       registerCoachDemoEvent({
         id: `workspace_${nextTab}`,
-        label: nextTab === "prospeccion" ? "Cambio a modo prospeccion" : "Cambio a modo cierre",
-        detail:
-          nextTab === "prospeccion"
-            ? "Entraste al lado de captar leads y trabajar calle."
-            : "Entraste al lado de demo, objeciones y cierre."
+        label: labelMeta.label,
+        detail: labelMeta.detail
       });
     });
   });
@@ -4031,6 +4074,19 @@ async function fetchViewer() {
 }
 
 function updateAuthTargets(user) {
+  const accessLabel =
+    user?.accountType === "seat" && hasCoachAccess(user)
+      ? "Activa por equipo"
+      : user?.subscriptionStatus === "test_access" || user?.subscriptionStatus === "trialing"
+        ? "Prueba activa"
+        : hasCoachAccess(user)
+          ? "Activa"
+          : user?.subscriptionStatus === "past_due"
+            ? "Pago pendiente"
+            : user?.accountType === "seat"
+              ? "Acceso pausado"
+              : "Sin activar";
+
   document.querySelectorAll("[data-coach-user-name]").forEach(node => {
     node.textContent = user?.name || "Distribuidor";
   });
@@ -4040,13 +4096,7 @@ function updateAuthTargets(user) {
   });
 
   document.querySelectorAll("[data-coach-subscription-status]").forEach(node => {
-    node.textContent = user?.subscriptionStatus === "test_access" || user?.subscriptionStatus === "trialing"
-      ? "Prueba activa"
-      : user?.subscriptionActive
-        ? "Activa"
-        : user?.subscriptionStatus === "past_due"
-          ? "Pago pendiente"
-          : "Sin activar";
+    node.textContent = accessLabel;
   });
 
   document.querySelectorAll("[data-coach-subscription-period]").forEach(node => {
@@ -4163,6 +4213,267 @@ function renderCoachNetworkSummary(summary) {
     safeSummary.topStages,
     "Aun no hay etapas globales."
   );
+}
+
+function formatDateTimeShort(value) {
+  if (!value) {
+    return "Sin movimiento todavia";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin movimiento todavia";
+  }
+
+  return new Intl.DateTimeFormat("es-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function formatTeamSeatStatusLabel(status = "") {
+  const labels = {
+    active: "Activa",
+    paused: "Pausada",
+    closed: "Cerrada"
+  };
+
+  return labels[String(status || "").trim()] || "Sin estado";
+}
+
+function renderCoachTeamSummary(summary = null) {
+  const safeSummary = summary || {};
+
+  document.querySelectorAll("[data-team-summary-total]").forEach(node => {
+    node.textContent = String(safeSummary.totalSeats || 0);
+  });
+
+  document.querySelectorAll("[data-team-summary-active]").forEach(node => {
+    node.textContent = String(safeSummary.activeSeats || 0);
+  });
+
+  document.querySelectorAll("[data-team-summary-paused]").forEach(node => {
+    node.textContent = String(safeSummary.pausedSeats || 0);
+  });
+
+  document.querySelectorAll("[data-team-summary-leads]").forEach(node => {
+    node.textContent = String(safeSummary.totalGeneratedLeads || 0);
+  });
+}
+
+function renderCoachTeamCreatedCredentials(credentials = null) {
+  const wrap = document.querySelector("[data-team-created-card]");
+  const emailNode = document.querySelector("[data-team-created-email]");
+  const passwordNode = document.querySelector("[data-team-created-password]");
+
+  if (!wrap || !emailNode || !passwordNode) {
+    return;
+  }
+
+  if (!credentials?.email || !credentials?.temporaryPassword) {
+    wrap.hidden = true;
+    return;
+  }
+
+  emailNode.textContent = credentials.email;
+  passwordNode.textContent = credentials.temporaryPassword;
+  wrap.hidden = false;
+}
+
+function renderCoachTeamSeats(seats = []) {
+  const list = document.querySelector("[data-team-seat-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const safeSeats = Array.isArray(seats) ? seats : [];
+
+  if (!safeSeats.length) {
+    list.innerHTML = '<div class="team-seat-empty">Todavia no has creado subcuentas en este equipo.</div>';
+    return;
+  }
+
+  list.innerHTML = safeSeats
+    .map(
+      seat => `
+        <article class="team-seat-card" data-team-seat-id="${escapeHtml(seat.id || "")}">
+          <div class="team-seat-head">
+            <div>
+              <strong>${escapeHtml(seat.seatLabel || seat.name || "Subcuenta")}</strong>
+              <span>${escapeHtml(seat.name || "Sin nombre")} · ${escapeHtml(seat.email || "Sin correo")}</span>
+            </div>
+            <span class="team-seat-status" data-state="${escapeHtml(seat.seatStatus || "active")}">
+              ${escapeHtml(formatTeamSeatStatusLabel(seat.seatStatus))}
+            </span>
+          </div>
+
+          <div class="team-seat-metrics">
+            <span>Leads: <strong>${Number(seat.counts?.leads || 0)}</strong></span>
+            <span>Encuestas: <strong>${Number(seat.counts?.surveys || 0)}</strong></span>
+            <span>4 en 14: <strong>${Number(seat.counts?.programSheets || 0)}</strong></span>
+            <span>Aplicaciones: <strong>${Number(seat.counts?.applications || 0)}</strong></span>
+          </div>
+
+          <p class="mini-note team-seat-note">
+            Ultima entrada: ${escapeHtml(formatDateTimeShort(seat.lastLoginAt))}.
+          </p>
+
+          <div class="dashboard-actions compact-top">
+            <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || "")}">
+              Copiar correo
+            </button>
+            <button
+              type="button"
+              class="primary-button"
+              data-team-seat-toggle="${escapeHtml(seat.seatStatus === "active" ? "paused" : "active")}"
+            >
+              ${seat.seatStatus === "active" ? "Pausar acceso" : "Reactivar acceso"}
+            </button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function initCoachTeamWorkspace(user = null) {
+  const form = document.querySelector("[data-team-seat-form]");
+  const feedbackNode = document.querySelector("[data-team-seat-feedback]");
+  const submitButton = document.querySelector("[data-team-seat-save]");
+  const list = document.querySelector("[data-team-seat-list]");
+  const copyEmailButton = document.querySelector("[data-team-copy-email]");
+  const copyPasswordButton = document.querySelector("[data-team-copy-password]");
+
+  if (!form || !list) {
+    return;
+  }
+
+  if (!user?.managesTeam) {
+    renderCoachTeamCreatedCredentials(null);
+    renderCoachTeamSummary(null);
+    renderCoachTeamSeats([]);
+    return;
+  }
+
+  let latestCredentials = null;
+
+  const loadTeam = async () => {
+    const data = await apiRequest("/api/coach/team");
+    renderCoachTeamSummary(data.summary || null);
+    renderCoachTeamSeats(data.seats || []);
+  };
+
+  copyEmailButton?.addEventListener("click", async () => {
+    if (!latestCredentials?.email) {
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(latestCredentials.email);
+      setMessage(feedbackNode, "El correo ya quedo copiado.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, "No pude copiar el correo.", "error");
+    }
+  });
+
+  copyPasswordButton?.addEventListener("click", async () => {
+    if (!latestCredentials?.temporaryPassword) {
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(latestCredentials.temporaryPassword);
+      setMessage(feedbackNode, "La contrasena temporal ya quedo copiada.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, "No pude copiar la contrasena.", "error");
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(submitButton, true, "Creando...");
+
+    try {
+      const formData = new FormData(form);
+      const data = await apiRequest("/api/coach/team/seats", {
+        method: "POST",
+        body: {
+          name: formData.get("name"),
+          email: formData.get("email"),
+          seatLabel: formData.get("seatLabel")
+        }
+      });
+
+      latestCredentials = data.credentials || null;
+      renderCoachTeamCreatedCredentials(latestCredentials);
+      setMessage(feedbackNode, "Subcuenta creada correctamente.", "success");
+      form.reset();
+      await loadTeam();
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  list.addEventListener("click", async event => {
+    const copyButton = event.target.closest("[data-team-seat-copy-email]");
+
+    if (copyButton) {
+      try {
+        await copyTextToClipboard(copyButton.dataset.teamSeatCopyEmail || "");
+        setMessage(feedbackNode, "El correo ya quedo copiado.", "success");
+      } catch (error) {
+        setMessage(feedbackNode, "No pude copiar el correo.", "error");
+      }
+      return;
+    }
+
+    const toggleButton = event.target.closest("[data-team-seat-toggle]");
+
+    if (!toggleButton) {
+      return;
+    }
+
+    const card = toggleButton.closest("[data-team-seat-id]");
+    const seatId = card?.dataset.teamSeatId || "";
+    const nextStatus = toggleButton.dataset.teamSeatToggle || "";
+
+    if (!seatId || !nextStatus) {
+      return;
+    }
+
+    setButtonLoading(toggleButton, true, nextStatus === "paused" ? "Pausando..." : "Activando...");
+
+    try {
+      await apiRequest(`/api/coach/team/seats/${encodeURIComponent(seatId)}`, {
+        method: "PATCH",
+        body: {
+          seatStatus: nextStatus
+        }
+      });
+
+      await loadTeam();
+      setMessage(
+        feedbackNode,
+        nextStatus === "paused" ? "La subcuenta quedo pausada." : "La subcuenta volvio a estar activa.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(toggleButton, false);
+    }
+  });
+
+  loadTeam().catch(error => {
+    setMessage(feedbackNode, error.message || "No pude cargar tu equipo.", "error");
+  });
 }
 
 function renderCoachRepLeadSummary(summary) {
@@ -4769,7 +5080,7 @@ async function initPlanPage() {
     });
   });
 
-  if (me.authenticated && user?.subscriptionActive) {
+  if (me.authenticated && hasCoachAccess(user)) {
     signupSection?.setAttribute("hidden", "hidden");
     memberSection?.setAttribute("hidden", "hidden");
     activeSection?.removeAttribute("hidden");
@@ -4864,7 +5175,7 @@ async function initLoginPage() {
   const infoBanner = document.querySelector("[data-login-banner]");
   const me = await fetchViewer();
 
-  if (me.authenticated && me.user?.subscriptionActive) {
+  if (me.authenticated && hasCoachAccess(me.user)) {
     setMessage(
       infoBanner,
       "Tu cuenta ya esta activa. Puedes entrar directo al Coach privado.",
@@ -4896,7 +5207,7 @@ async function initLoginPage() {
         }
       });
 
-      if (data.user?.subscriptionActive) {
+      if (hasCoachAccess(data.user)) {
         window.location.href = "/coach/app/";
         return;
       }
@@ -4923,59 +5234,64 @@ async function initCoachAppPage() {
     return;
   }
 
-  if (!me.user?.subscriptionActive) {
+  if (!hasCoachAccess(me.user)) {
     window.location.href = "/coach/planes/";
     return;
   }
 
+  syncCoachManagerUi(me.user);
   updateAuthTargets(me.user);
   renderCoachProfile(me.profile);
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
   renderActiveLeadContext(me.activeLeadContext);
+  const effectiveOwnerId = getCoachEffectiveOwnerId(me.user);
   const storedHealthSurveyContext = getActiveCoachHealthSurveyContext();
   const storedProgram414Context = getActiveCoachProgram414Context();
   const storedOrderCalcContext = getActiveCoachOrderCalcContext();
   const storedDecisionContext = getActiveCoachDecisionContext();
 
-  if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== me.user?.id) {
+  if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== effectiveOwnerId) {
     setActiveCoachHealthSurveyContext(null);
   } else {
     renderActiveHealthSurveyContext(storedHealthSurveyContext);
   }
 
-  if (storedProgram414Context?.ownerUserId && storedProgram414Context.ownerUserId !== me.user?.id) {
+  if (storedProgram414Context?.ownerUserId && storedProgram414Context.ownerUserId !== effectiveOwnerId) {
     setActiveCoachProgram414Context(null);
   }
 
-  if (storedOrderCalcContext?.ownerUserId && storedOrderCalcContext.ownerUserId !== me.user?.id) {
+  if (storedOrderCalcContext?.ownerUserId && storedOrderCalcContext.ownerUserId !== effectiveOwnerId) {
     setActiveCoachOrderCalcContext(null);
   } else {
     renderActiveCoachOrderCalcContext(storedOrderCalcContext);
   }
 
-  if (storedDecisionContext?.ownerUserId && storedDecisionContext.ownerUserId !== me.user?.id) {
+  if (storedDecisionContext?.ownerUserId && storedDecisionContext.ownerUserId !== effectiveOwnerId) {
     setActiveCoachDecisionContext(null);
   } else {
     renderActiveCoachDecisionContext(storedDecisionContext);
   }
 
   initCoachWorkspaceTabs();
-  initLeadDestinationSettings(me.profile?.leadDestination || null);
+  if (me.user?.managesTeam) {
+    initLeadDestinationSettings(me.profile?.leadDestination || null);
+  }
   initCoachPrivateResources();
   initLeadFormTool();
   initCoachLeadWorkspace();
+  initCoachTeamWorkspace(me.user);
   initRecruitmentTool();
   initHealthSurveyTool();
   initOrderCalculator();
   const orderCalcRoot = document.querySelector("[data-order-calc]");
   if (orderCalcRoot) {
-    orderCalcRoot.dataset.orderCalcOwnerUserId = me.user?.id || "";
+    orderCalcRoot.dataset.orderCalcOwnerUserId = effectiveOwnerId;
   }
   initDecisionTool();
   const decisionRoot = document.querySelector("[data-decision-tool]");
   if (decisionRoot) {
-    decisionRoot.dataset.decisionOwnerUserId = me.user?.id || "";
+    decisionRoot.dataset.decisionOwnerUserId = effectiveOwnerId;
   }
   initBuyerProfileTool();
   initDailyPrizeTool();
@@ -5590,7 +5906,7 @@ async function initSuccessPage() {
     const data = await apiRequest(`/api/coach/checkout-session?session_id=${encodeURIComponent(sessionId)}`);
     updateAuthTargets(data.user);
 
-    if (data.user?.subscriptionActive) {
+    if (hasCoachAccess(data.user)) {
       if (data.user?.subscriptionStatus === "trialing") {
         setMessage(
           statusBox,
