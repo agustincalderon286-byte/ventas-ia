@@ -43,6 +43,12 @@ const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
+const AR_PROTOTYPE_PATH_PREFIX = "/prototipo-agustin20-chef-ar";
+const AR_PROTOTYPE_UNLOCK_PATH = `${AR_PROTOTYPE_PATH_PREFIX}/unlock`;
+const AR_PROTOTYPE_LOCK_PATH = `${AR_PROTOTYPE_PATH_PREFIX}/lock`;
+const AR_PROTOTYPE_COOKIE = "agustin_ar_prototype_access";
+const AR_PROTOTYPE_PIN = String(process.env.AR_PROTOTYPE_PIN || "1645").trim();
+const AR_PROTOTYPE_COOKIE_TTL_MS = 12 * 60 * 60 * 1000;
 const COACH_PRIVATE_RESOURCE_MAX_BYTES = 8 * 1024 * 1024;
 const COACH_PRIVATE_RESOURCE_SLOTS = {
   catalogo_privado: {
@@ -965,6 +971,223 @@ function obtenerBaseUrl(req) {
 
   const protocol = requestEsSeguro(req) ? "https" : "http";
   return `${protocol}://${req.get("host")}`;
+}
+
+function construirAccessoArPrototypeHash() {
+  return crypto
+    .createHash("sha256")
+    .update(`${AR_PROTOTYPE_PIN}|${process.env.AR_PROTOTYPE_PIN_SECRET || "agustin-ar-prototype-v1"}`)
+    .digest("hex");
+}
+
+function construirRedirectArPrototype(value = "") {
+  const input = String(value || "").trim();
+
+  if (!input.startsWith(AR_PROTOTYPE_PATH_PREFIX)) {
+    return `${AR_PROTOTYPE_PATH_PREFIX}/`;
+  }
+
+  return input;
+}
+
+function escaparHtmlLigero(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function arPrototypeTieneAcceso(req) {
+  const cookies = parsearCookies(req.headers?.cookie || "");
+  return cookies[AR_PROTOTYPE_COOKIE] === construirAccessoArPrototypeHash();
+}
+
+function renderArPrototypeLockPage(req, options = {}) {
+  const redirectPath = construirRedirectArPrototype(options.redirectPath || req.originalUrl || `${AR_PROTOTYPE_PATH_PREFIX}/`);
+  const showError = Boolean(options.showError);
+  const pageTitle = "Acceso privado";
+  const actionUrl = `${obtenerBaseUrl(req)}${AR_PROTOTYPE_UNLOCK_PATH}`;
+  const lockUrl = `${obtenerBaseUrl(req)}${AR_PROTOTYPE_LOCK_PATH}`;
+  const errorHtml = showError
+    ? `<div class="lock-error">El PIN no coincide. Intenta otra vez.</div>`
+    : `<div class="lock-note">Esta vista privada solo abre con PIN.</div>`;
+
+  return `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${pageTitle}</title>
+    <style>
+      :root {
+        --navy: #102b5a;
+        --navy-deep: #081a38;
+        --paper: rgba(255, 255, 255, 0.92);
+        --line: rgba(16, 43, 90, 0.12);
+        --ink: #15243f;
+        --muted: #60728e;
+        --red: #c62839;
+        --gold: #dcb86a;
+        --shadow: 0 30px 60px rgba(9, 26, 56, 0.16);
+        --radius: 28px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 22px;
+        font-family: Avenir, Montserrat, "Helvetica Neue", Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(198, 40, 57, 0.13), transparent 24%),
+          radial-gradient(circle at top right, rgba(16, 43, 90, 0.12), transparent 28%),
+          linear-gradient(180deg, #f8fbff 0%, #eef4fb 48%, #f9f6ef 100%);
+      }
+
+      .lock-shell {
+        width: min(100%, 460px);
+        padding: 30px;
+        border-radius: var(--radius);
+        border: 1px solid var(--line);
+        background: var(--paper);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(198, 40, 57, 0.1);
+        color: var(--red);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 16px 0 10px;
+        color: var(--navy);
+        font-size: clamp(2rem, 6vw, 2.8rem);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      form {
+        margin-top: 22px;
+      }
+
+      input {
+        width: 100%;
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(16, 43, 90, 0.16);
+        font-size: 1.15rem;
+        letter-spacing: 0.22em;
+        text-align: center;
+        color: var(--navy-deep);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      input:focus {
+        outline: 2px solid rgba(16, 43, 90, 0.2);
+        border-color: rgba(16, 43, 90, 0.28);
+      }
+
+      .lock-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      button {
+        flex: 1 1 180px;
+        min-height: 52px;
+        border: none;
+        border-radius: 16px;
+        font-weight: 800;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+        color: #fff;
+      }
+
+      .ghost {
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--navy);
+        border: 1px solid rgba(16, 43, 90, 0.14);
+      }
+
+      .lock-error,
+      .lock-note {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+      }
+
+      .lock-error {
+        background: rgba(198, 40, 57, 0.1);
+        color: var(--red);
+      }
+
+      .lock-note {
+        background: rgba(220, 184, 106, 0.16);
+        color: var(--navy);
+      }
+
+      .fineprint {
+        margin-top: 18px;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="lock-shell">
+      <div class="eyebrow">Acceso privado</div>
+      <h1>Prototipo AR</h1>
+      <p>Ingresa el PIN de 4 numeros para abrir esta experiencia privada.</p>
+      <form method="post" action="${actionUrl}">
+        <input type="hidden" name="redirect" value="${escaparHtmlLigero(redirectPath)}" />
+        <input
+          type="password"
+          name="pin"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="4"
+          pattern="[0-9]{4}"
+          placeholder="PIN de 4 numeros"
+          required
+        />
+        ${errorHtml}
+        <div class="lock-actions">
+          <button class="primary" type="submit">Abrir experiencia</button>
+          <button class="ghost" type="submit" formaction="${lockUrl}" formmethod="post">Cerrar acceso</button>
+        </div>
+      </form>
+      <p class="fineprint">Si compartes el link, la persona tambien necesitara el PIN para entrar.</p>
+    </main>
+  </body>
+</html>`;
 }
 
 function convertirUnixADate(unix) {
@@ -10530,6 +10753,44 @@ app.get(/^\/chef\/([a-z0-9-]+)\/?$/i, async (req, res) => {
   }
 
   res.sendFile(path.join(PUBLIC_DIR, "chef", "index.html"));
+});
+
+app.post(AR_PROTOTYPE_UNLOCK_PATH, express.urlencoded({ extended: false }), (req, res) => {
+  const submittedPin = String(req.body?.pin || "").trim();
+  const redirectPath = construirRedirectArPrototype(req.body?.redirect || `${AR_PROTOTYPE_PATH_PREFIX}/`);
+
+  if (submittedPin !== AR_PROTOTYPE_PIN) {
+    return res.status(401).type("html").send(renderArPrototypeLockPage(req, { redirectPath, showError: true }));
+  }
+
+  res.cookie(AR_PROTOTYPE_COOKIE, construirAccessoArPrototypeHash(), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: AR_PROTOTYPE_PATH_PREFIX,
+    maxAge: AR_PROTOTYPE_COOKIE_TTL_MS
+  });
+
+  return res.redirect(redirectPath);
+});
+
+app.post(AR_PROTOTYPE_LOCK_PATH, express.urlencoded({ extended: false }), (req, res) => {
+  res.clearCookie(AR_PROTOTYPE_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: AR_PROTOTYPE_PATH_PREFIX
+  });
+
+  return res.redirect(`${AR_PROTOTYPE_PATH_PREFIX}/`);
+});
+
+app.use(AR_PROTOTYPE_PATH_PREFIX, (req, res, next) => {
+  if (arPrototypeTieneAcceso(req)) {
+    return next();
+  }
+
+  return res.status(401).type("html").send(renderArPrototypeLockPage(req));
 });
 
 app.use(express.static(PUBLIC_DIR));
