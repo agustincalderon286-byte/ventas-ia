@@ -86,6 +86,15 @@ const conversationEntrySchema = new mongoose.Schema(
 const leadSchema = new mongoose.Schema({
   visitorIds: [String],
   sessionIds: [String],
+  coachOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  coachOwnerEmail: { type: String, index: true },
+  coachOwnerName: String,
+  generatedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  generatedByName: String,
+  generatedByAccountType: String,
+  chefSlug: { type: String, index: true },
+  coachInboxLeadId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox", default: null },
+  coachInboxLastSyncedAt: Date,
   name: String,
   email: String,
   phone: String,
@@ -120,6 +129,15 @@ const profileSchema = new mongoose.Schema({
   visitorIds: [String],
   sessionIds: [String],
   leadId: mongoose.Schema.Types.ObjectId,
+  coachOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  coachOwnerEmail: { type: String, index: true },
+  coachOwnerName: String,
+  generatedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  generatedByName: String,
+  generatedByAccountType: String,
+  chefSlug: { type: String, index: true },
+  coachInboxLeadId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox", default: null },
+  coachInboxLastSyncedAt: Date,
   name: String,
   email: String,
   phone: String,
@@ -151,6 +169,10 @@ const messageSchema = new mongoose.Schema({
   sessionId: { type: String, index: true },
   profileId: mongoose.Schema.Types.ObjectId,
   leadId: mongoose.Schema.Types.ObjectId,
+  coachOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  generatedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  generatedByAccountType: String,
+  chefSlug: { type: String, index: true },
   role: String,
   content: String,
   intent: String,
@@ -498,13 +520,16 @@ leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
 leadSchema.index({ visitorIds: 1 });
+leadSchema.index({ coachOwnerUserId: 1, chefSlug: 1, createdAt: -1 });
 profileSchema.index({ email: 1 });
 profileSchema.index({ phone: 1 });
 profileSchema.index({ visitorIds: 1 });
 profileSchema.index({ leadId: 1 });
+profileSchema.index({ coachOwnerUserId: 1, chefSlug: 1, updatedAt: -1 });
 messageSchema.index({ visitorId: 1, createdAt: -1 });
 messageSchema.index({ sessionId: 1, createdAt: -1 });
 messageSchema.index({ intent: 1, role: 1, createdAt: -1 });
+messageSchema.index({ coachOwnerUserId: 1, chefSlug: 1, createdAt: -1 });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachUserSchema.index({ parentUserId: 1, seatStatus: 1 });
@@ -1015,6 +1040,69 @@ function construirCoachChefPath(chefSlug = "") {
   return slug ? `/chef/${slug}/` : "/chef/";
 }
 
+function construirCoachChefTrackingFields(coachChefContext = null) {
+  if (!coachChefContext?.ownership?.ownerUserId) {
+    return {};
+  }
+
+  return {
+    coachOwnerUserId: coachChefContext.ownership.ownerUserId,
+    coachOwnerEmail: coachChefContext.ownership.ownerEmail || "",
+    coachOwnerName: coachChefContext.ownership.ownerName || "",
+    generatedByUserId: coachChefContext.ownership.generatedByUserId || null,
+    generatedByName: coachChefContext.ownership.generatedByName || "",
+    generatedByAccountType: coachChefContext.ownership.generatedByAccountType || "",
+    chefSlug: coachChefContext.slug || ""
+  };
+}
+
+async function resolverCoachChefContextPorSlug(chefSlug = "") {
+  const slug = normalizarCoachChefSlugSegment(chefSlug, 48);
+
+  if (!slug) {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({
+    chefSlug: slug,
+    chefEnabled: { $ne: false }
+  });
+
+  if (!profileDoc?.userId) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findById(profileDoc.userId);
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+
+  if (!(await coachTieneAccesoOperativo(userDoc))) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return null;
+  }
+
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+  return {
+    slug,
+    userDoc,
+    profileDoc,
+    ownerProfileDoc: ownerProfileDoc || profileDoc,
+    ownership
+  };
+}
+
 function construirCoachChefSlugBase(userDoc = null) {
   const nameBase = normalizarCoachChefSlugSegment(userDoc?.name || "", 28);
   const emailBase = normalizarCoachChefSlugSegment(String(userDoc?.email || "").split("@")[0] || "", 28);
@@ -1433,6 +1521,13 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
     seatLabel: profileDoc?.seatLabel || "",
     teamRole: profileDoc?.teamRole || resolverCoachTeamRoleDefault(userDoc),
     chefEnabled: profileDoc?.chefEnabled !== false,
+    chef: {
+      enabled: profileDoc?.chefEnabled !== false,
+      slug: profileDoc?.chefSlug || "",
+      shareCode: profileDoc?.chefShareCode || "",
+      sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
+      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
+    },
     createdAt: userDoc.createdAt || null,
     lastLoginAt: userDoc.lastLoginAt || null,
     counts: {
@@ -2266,6 +2361,7 @@ function normalizarCoachLeadSource(source = "") {
   const validSources = [
     "rifa_digital",
     "programa_4_en_14",
+    "chef_personal",
     "llamada",
     "demo",
     "referencia",
@@ -5389,7 +5485,7 @@ function construirProfileSummary(profile) {
   return partes.join(" ");
 }
 
-async function resolverPerfilExistente(visitorId, email = "", phone = "", leadId = null) {
+async function resolverPerfilExistente(visitorId, email = "", phone = "", leadId = null, coachChefContext = null) {
   const condiciones = [];
 
   if (visitorId) {
@@ -5413,7 +5509,15 @@ async function resolverPerfilExistente(visitorId, email = "", phone = "", leadId
     return null;
   }
 
-  return await Profile.findOne({ $or: condiciones }).sort({ createdAt: 1 });
+  const ownerUserId = coachChefContext?.ownership?.ownerUserId || null;
+  const scopedConditions = ownerUserId
+    ? condiciones.map(condicion => ({
+        ...condicion,
+        coachOwnerUserId: ownerUserId
+      }))
+    : condiciones;
+
+  return await Profile.findOne({ $or: scopedConditions }).sort({ createdAt: 1 });
 }
 
 async function guardarMensajeRaw({
@@ -5421,6 +5525,7 @@ async function guardarMensajeRaw({
   sessionId,
   profileId = null,
   leadId = null,
+  coachChefContext = null,
   role,
   content,
   estadoConversacion = null,
@@ -5444,6 +5549,7 @@ async function guardarMensajeRaw({
       sessionId,
       profileId,
       leadId,
+      ...construirCoachChefTrackingFields(coachChefContext),
       role,
       content,
       intent: intentFinal,
@@ -5461,7 +5567,8 @@ async function guardarOActualizarPerfil({
   sessionId,
   texto,
   estadoConversacion = null,
-  leadGuardado = null
+  leadGuardado = null,
+  coachChefContext = null
 }) {
   if (!visitorId) {
     return null;
@@ -5477,7 +5584,8 @@ async function guardarOActualizarPerfil({
     visitorId,
     leadGuardado?.email || leadInfo?.email || "",
     leadGuardado?.phone || leadInfo?.phone || "",
-    leadGuardado?._id || null
+    leadGuardado?._id || null,
+    coachChefContext
   );
   const productosConfirmados = tieneProductos === "si"
     ? combinarListas(
@@ -5499,6 +5607,46 @@ async function guardarOActualizarPerfil({
     ),
     sessionIds: combinarListas(perfilExistente?.sessionIds || [], sessionId ? [sessionId] : []),
     leadId: leadGuardado?._id || perfilExistente?.leadId || null,
+    coachOwnerUserId:
+      leadGuardado?.coachOwnerUserId ||
+      coachChefContext?.ownership?.ownerUserId ||
+      perfilExistente?.coachOwnerUserId ||
+      null,
+    coachOwnerEmail:
+      leadGuardado?.coachOwnerEmail ||
+      coachChefContext?.ownership?.ownerEmail ||
+      perfilExistente?.coachOwnerEmail ||
+      "",
+    coachOwnerName:
+      leadGuardado?.coachOwnerName ||
+      coachChefContext?.ownership?.ownerName ||
+      perfilExistente?.coachOwnerName ||
+      "",
+    generatedByUserId:
+      leadGuardado?.generatedByUserId ||
+      coachChefContext?.ownership?.generatedByUserId ||
+      perfilExistente?.generatedByUserId ||
+      null,
+    generatedByName:
+      leadGuardado?.generatedByName ||
+      coachChefContext?.ownership?.generatedByName ||
+      perfilExistente?.generatedByName ||
+      "",
+    generatedByAccountType:
+      leadGuardado?.generatedByAccountType ||
+      coachChefContext?.ownership?.generatedByAccountType ||
+      perfilExistente?.generatedByAccountType ||
+      "",
+    chefSlug:
+      leadGuardado?.chefSlug ||
+      coachChefContext?.slug ||
+      perfilExistente?.chefSlug ||
+      "",
+    coachInboxLeadId: leadGuardado?.coachInboxLeadId || perfilExistente?.coachInboxLeadId || null,
+    coachInboxLastSyncedAt:
+      leadGuardado?.coachInboxLastSyncedAt ||
+      perfilExistente?.coachInboxLastSyncedAt ||
+      null,
     name: seleccionarNombreConfiable(
       leadGuardado?.name,
       detallesLead.name,
@@ -6033,7 +6181,7 @@ async function fusionarLeads(primaryLead, duplicateLeads = []) {
   return primaryLead;
 }
 
-async function resolverLeadExistente(sessionId, visitorId = "", email = "", phone = "") {
+async function resolverLeadExistente(sessionId, visitorId = "", email = "", phone = "", coachChefContext = null) {
   const condiciones = [];
 
   if (visitorId) {
@@ -6056,7 +6204,14 @@ async function resolverLeadExistente(sessionId, visitorId = "", email = "", phon
     return null;
   }
 
-  const coincidencias = await Lead.find({ $or: condiciones }).sort({ createdAt: 1 });
+  const ownerUserId = coachChefContext?.ownership?.ownerUserId || null;
+  const scopedConditions = ownerUserId
+    ? condiciones.map(condicion => ({
+        ...condicion,
+        coachOwnerUserId: ownerUserId
+      }))
+    : condiciones;
+  const coincidencias = await Lead.find({ $or: scopedConditions }).sort({ createdAt: 1 });
 
   if (!coincidencias.length) {
     return null;
@@ -6300,7 +6455,13 @@ async function sincronizarLeadAGoogleSheets(lead, profile = null) {
   }
 }
 
-async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConversacion = null) {
+async function guardarLeadSiExiste(
+  texto,
+  sessionId,
+  visitorId = "",
+  estadoConversacion = null,
+  coachChefContext = null
+) {
   const leadInfo = extraerLeadInfo(texto);
   const detallesLead = extraerDetallesLead(texto);
   const bestCallDay = extraerMejorDiaLlamada(texto) || estadoConversacion?.bestCallDay || "";
@@ -6321,7 +6482,7 @@ async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConve
       estadoConversacion?.temasInteres || [],
       detallesLead.temasInteres
     );
-    const leadExistente = await resolverLeadExistente(sessionId, visitorId, email, phone);
+    const leadExistente = await resolverLeadExistente(sessionId, visitorId, email, phone, coachChefContext);
 
     if (!leadExistente && !email && !phone) {
       return null;
@@ -6346,6 +6507,7 @@ async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConve
     const camposActualizar = {
       visitorIds,
       sessionIds,
+      ...construirCoachChefTrackingFields(coachChefContext),
       message: texto,
       updatedAt: new Date(),
       lastInteractionAt: new Date(),
@@ -6470,6 +6632,115 @@ async function guardarLeadSiExiste(texto, sessionId, visitorId = "", estadoConve
     });
   } catch (error) {
     console.log("Error guardando lead MongoDB:", error.message);
+    return null;
+  }
+}
+
+function construirPayloadCoachLeadDesdeChef(leadDoc = null, profileDoc = null, coachChefContext = null) {
+  if (!leadDoc && !profileDoc) {
+    return null;
+  }
+
+  const fullName =
+    seleccionarNombreConfiable(leadDoc?.name, profileDoc?.name) ||
+    String(leadDoc?.name || profileDoc?.name || "").trim();
+  const phone = normalizePhone(leadDoc?.phone || profileDoc?.phone || "");
+  const email = normalizarEmail(leadDoc?.email || profileDoc?.email || "");
+
+  if (!fullName || (!phone && !email)) {
+    return null;
+  }
+
+  const productos = combinarListas(
+    profileDoc?.productosInteres || [],
+    leadDoc?.productos || [],
+    profileDoc?.productos || []
+  );
+  const temas = combinarListas(profileDoc?.temasInteres || [], leadDoc?.temasInteres || []);
+  const interest = productos[0] || temas[0] || "Chef personal";
+  const notes = [
+    "Lead captado desde Chef personal.",
+    coachChefContext?.slug ? `Chef: ${coachChefContext.slug}.` : "",
+    productos.length ? `Productos: ${productos.join(", ")}.` : "",
+    temas.length ? `Temas: ${temas.join(", ")}.` : "",
+    leadDoc?.bestCallDay ? `Mejor dia: ${leadDoc.bestCallDay}.` : "",
+    leadDoc?.bestCallTime ? `Mejor hora: ${leadDoc.bestCallTime}.` : "",
+    leadDoc?.message || profileDoc?.lastUserMessage
+      ? `Ultimo mensaje: ${truncarTextoPrompt(leadDoc?.message || profileDoc?.lastUserMessage || "", 220)}.`
+      : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    fullName,
+    phone,
+    email,
+    interest,
+    notes,
+    source: "chef_personal",
+    consentGiven: true
+  };
+}
+
+async function sincronizarLeadPublicoACoachInbox({
+  texto = "",
+  leadDoc = null,
+  profileDoc = null,
+  coachChefContext = null
+} = {}) {
+  if (!coachChefContext?.userDoc || !leadDoc) {
+    return null;
+  }
+
+  const payload = construirPayloadCoachLeadDesdeChef(leadDoc, profileDoc, coachChefContext);
+
+  if (!payload) {
+    return null;
+  }
+
+  const leadInfo = extraerLeadInfo(texto);
+  const contactSharedNow = Boolean(leadInfo?.phone || leadInfo?.email || detectarEnvioDatosContacto(texto));
+  const alreadySynced = Boolean(leadDoc.coachInboxLeadId || profileDoc?.coachInboxLeadId);
+
+  if (!contactSharedNow && alreadySynced) {
+    return null;
+  }
+
+  try {
+    const ownerProfileDoc = coachChefContext.ownerProfileDoc?.toObject
+      ? coachChefContext.ownerProfileDoc.toObject()
+      : coachChefContext.ownerProfileDoc || null;
+    const result = await guardarCoachInboxLead({
+      userDoc: coachChefContext.userDoc,
+      profileDoc: ownerProfileDoc,
+      payload,
+      sendDestination: !alreadySynced
+    });
+
+    if (!result?.leadDoc?._id) {
+      return null;
+    }
+
+    const syncPayload = {
+      coachInboxLeadId: result.leadDoc._id,
+      coachInboxLastSyncedAt: new Date()
+    };
+
+    await Promise.all([
+      Lead.findByIdAndUpdate(leadDoc._id, {
+        $set: syncPayload
+      }),
+      profileDoc?._id
+        ? Profile.findByIdAndUpdate(profileDoc._id, {
+            $set: syncPayload
+          })
+        : Promise.resolve()
+    ]);
+
+    return result;
+  } catch (error) {
+    console.error("Error sincronizando lead del Chef personal al Coach:", error.message);
     return null;
   }
 }
@@ -6793,14 +7064,22 @@ function construirTwilioMessageResponse(message = "") {
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Message><Body>${escapeXml(body)}</Body></Message></Response>`;
 }
 
-async function sembrarLeadYPerfilCanal({ sessionId, visitorId, phoneHint = "", nameHint = "" }) {
+async function sembrarLeadYPerfilCanal({
+  sessionId,
+  visitorId,
+  phoneHint = "",
+  nameHint = "",
+  coachChefContext = null
+}) {
   const phone = normalizePhone(phoneHint);
   const name = cleanText(nameHint);
-  let leadDoc = await resolverLeadExistente(sessionId, visitorId, "", phone);
-  let profileDoc = await resolverPerfilExistente(visitorId, "", phone, leadDoc?._id || null);
+  const coachTrackingFields = construirCoachChefTrackingFields(coachChefContext);
+  let leadDoc = await resolverLeadExistente(sessionId, visitorId, "", phone, coachChefContext);
+  let profileDoc = await resolverPerfilExistente(visitorId, "", phone, leadDoc?._id || null, coachChefContext);
 
   if (!leadDoc && phone) {
     leadDoc = await Lead.create({
+      ...coachTrackingFields,
       visitorIds: [visitorId],
       sessionIds: [sessionId],
       phone,
@@ -6834,6 +7113,44 @@ async function sembrarLeadYPerfilCanal({ sessionId, visitorId, phoneHint = "", n
       dirty = true;
     }
 
+    if (coachTrackingFields.coachOwnerUserId && String(leadDoc.coachOwnerUserId || "") !== String(coachTrackingFields.coachOwnerUserId)) {
+      leadDoc.coachOwnerUserId = coachTrackingFields.coachOwnerUserId;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.coachOwnerEmail && leadDoc.coachOwnerEmail !== coachTrackingFields.coachOwnerEmail) {
+      leadDoc.coachOwnerEmail = coachTrackingFields.coachOwnerEmail;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.coachOwnerName && leadDoc.coachOwnerName !== coachTrackingFields.coachOwnerName) {
+      leadDoc.coachOwnerName = coachTrackingFields.coachOwnerName;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.generatedByUserId && String(leadDoc.generatedByUserId || "") !== String(coachTrackingFields.generatedByUserId)) {
+      leadDoc.generatedByUserId = coachTrackingFields.generatedByUserId;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.generatedByName && leadDoc.generatedByName !== coachTrackingFields.generatedByName) {
+      leadDoc.generatedByName = coachTrackingFields.generatedByName;
+      dirty = true;
+    }
+
+    if (
+      coachTrackingFields.generatedByAccountType &&
+      leadDoc.generatedByAccountType !== coachTrackingFields.generatedByAccountType
+    ) {
+      leadDoc.generatedByAccountType = coachTrackingFields.generatedByAccountType;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.chefSlug && leadDoc.chefSlug !== coachTrackingFields.chefSlug) {
+      leadDoc.chefSlug = coachTrackingFields.chefSlug;
+      dirty = true;
+    }
+
     if (dirty) {
       leadDoc.updatedAt = new Date();
       leadDoc.lastInteractionAt = new Date();
@@ -6843,6 +7160,7 @@ async function sembrarLeadYPerfilCanal({ sessionId, visitorId, phoneHint = "", n
 
   if (!profileDoc) {
     profileDoc = await Profile.create({
+      ...coachTrackingFields,
       visitorId,
       visitorIds: [visitorId],
       sessionIds: [sessionId],
@@ -6884,6 +7202,50 @@ async function sembrarLeadYPerfilCanal({ sessionId, visitorId, phoneHint = "", n
       dirty = true;
     }
 
+    if (
+      coachTrackingFields.coachOwnerUserId &&
+      String(profileDoc.coachOwnerUserId || "") !== String(coachTrackingFields.coachOwnerUserId)
+    ) {
+      profileDoc.coachOwnerUserId = coachTrackingFields.coachOwnerUserId;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.coachOwnerEmail && profileDoc.coachOwnerEmail !== coachTrackingFields.coachOwnerEmail) {
+      profileDoc.coachOwnerEmail = coachTrackingFields.coachOwnerEmail;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.coachOwnerName && profileDoc.coachOwnerName !== coachTrackingFields.coachOwnerName) {
+      profileDoc.coachOwnerName = coachTrackingFields.coachOwnerName;
+      dirty = true;
+    }
+
+    if (
+      coachTrackingFields.generatedByUserId &&
+      String(profileDoc.generatedByUserId || "") !== String(coachTrackingFields.generatedByUserId)
+    ) {
+      profileDoc.generatedByUserId = coachTrackingFields.generatedByUserId;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.generatedByName && profileDoc.generatedByName !== coachTrackingFields.generatedByName) {
+      profileDoc.generatedByName = coachTrackingFields.generatedByName;
+      dirty = true;
+    }
+
+    if (
+      coachTrackingFields.generatedByAccountType &&
+      profileDoc.generatedByAccountType !== coachTrackingFields.generatedByAccountType
+    ) {
+      profileDoc.generatedByAccountType = coachTrackingFields.generatedByAccountType;
+      dirty = true;
+    }
+
+    if (coachTrackingFields.chefSlug && profileDoc.chefSlug !== coachTrackingFields.chefSlug) {
+      profileDoc.chefSlug = coachTrackingFields.chefSlug;
+      dirty = true;
+    }
+
     if (dirty) {
       profileDoc.updatedAt = new Date();
       await profileDoc.save();
@@ -6899,11 +7261,13 @@ async function procesarChatChefCanal({
   visitorId,
   phoneHint = "",
   nameHint = "",
-  source = "web"
+  source = "web",
+  chefSlug = ""
 }) {
   const preguntaLimpia = cleanText(pregunta);
   const visitorIdLimpio = cleanText(visitorId || sessionId);
   const fastChannel = /^whatsapp/i.test(source);
+  const coachChefContext = fastChannel ? null : await resolverCoachChefContextPorSlug(chefSlug);
 
   if (!preguntaLimpia) {
     return { ok: false, status: 400, error: "pregunta requerida" };
@@ -6943,14 +7307,21 @@ CANAL ACTIVO:
       sessionId,
       visitorId: visitorIdLimpio,
       phoneHint,
-      nameHint
+      nameHint,
+      coachChefContext
     });
 
     hidratarEstadoConversacion(sessionId, profileInicial, leadInicial);
     actualizarEstadoConversacion(sessionId, preguntaLimpia);
     const estadoActual = obtenerEstadoConversacion(sessionId);
 
-    let leadGuardado = await guardarLeadSiExiste(preguntaLimpia, sessionId, visitorIdLimpio, estadoActual);
+    let leadGuardado = await guardarLeadSiExiste(
+      preguntaLimpia,
+      sessionId,
+      visitorIdLimpio,
+      estadoActual,
+      coachChefContext
+    );
 
     if (leadGuardado && (phoneHint || nameHint)) {
       let dirtyLead = false;
@@ -6978,7 +7349,15 @@ CANAL ACTIVO:
       sessionId,
       texto: preguntaLimpia,
       estadoConversacion: estadoConLead,
-      leadGuardado: leadGuardado || leadInicial
+      leadGuardado: leadGuardado || leadInicial,
+      coachChefContext
+    });
+
+    await sincronizarLeadPublicoACoachInbox({
+      texto: preguntaLimpia,
+      leadDoc: leadGuardado || leadInicial,
+      profileDoc: profileGuardado || profileInicial,
+      coachChefContext
     });
 
     if (profileGuardado && (phoneHint || nameHint)) {
@@ -7006,6 +7385,7 @@ CANAL ACTIVO:
       sessionId,
       profileId: profileGuardado?._id || profileInicial?._id || null,
       leadId: leadGuardado?._id || leadInicial?._id || null,
+      coachChefContext,
       role: "user",
       content: preguntaLimpia,
       intent: "chef_chat",
@@ -7080,6 +7460,7 @@ CANAL ACTIVO:
       sessionId,
       profileId: profileFinal?._id || profileGuardado?._id || profileInicial?._id || null,
       leadId: leadFinal?._id || leadGuardado?._id || leadInicial?._id || null,
+      coachChefContext,
       role: "assistant",
       content: respuestaIA.content,
       intent: "chef_chat",
@@ -9502,6 +9883,54 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
   return res.type("text/xml").send(construirTwilioMessageResponse(mensaje));
 });
 
+app.get("/chef/manifest.webmanifest", async (req, res) => {
+  const requestedSlug = normalizarCoachChefSlugSegment(req.query?.slug || "", 48);
+  const chefContext = requestedSlug ? await resolverCoachChefContextPorSlug(requestedSlug) : null;
+  const startPath = chefContext?.slug ? construirCoachChefPath(chefContext.slug) : "/chef/";
+
+  res.type("application/manifest+json");
+  res.send(
+    JSON.stringify(
+      {
+        name: "Agustin 2.0 Chef",
+        short_name: "Agustin Chef",
+        description:
+          "Chef inteligente gratis para recetas, cocina mexicana saludable, agua y uso practico de productos.",
+        start_url: startPath,
+        scope: "/chef/",
+        display: "standalone",
+        background_color: "#f6fbff",
+        theme_color: "#0a2247",
+        icons: [
+          {
+            src: "/chef/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: "/chef/icons/icon-512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      },
+      null,
+      2
+    )
+  );
+});
+
+app.get(/^\/chef\/([a-z0-9-]+)\/?$/i, async (req, res) => {
+  const chefSlug = normalizarCoachChefSlugSegment(req.params?.[0] || "", 48);
+  const chefContext = await resolverCoachChefContextPorSlug(chefSlug);
+
+  if (!chefContext) {
+    return res.redirect("/chef/");
+  }
+
+  res.sendFile(path.join(PUBLIC_DIR, "chef", "index.html"));
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 // =============================
@@ -9509,6 +9938,7 @@ app.use(express.static(PUBLIC_DIR));
 // =============================
 app.post("/chat", async (req, res) => {
   const { pregunta, sessionId, visitorId, mode } = req.body;
+  const chefSlug = typeof req.body?.chefSlug === "string" ? req.body.chefSlug.trim() : "";
   const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
   const activeWorkspace = typeof req.body?.activeWorkspace === "string" ? req.body.activeWorkspace.trim() : "";
@@ -9571,6 +10001,7 @@ app.post("/chat", async (req, res) => {
   try {
     let leadGuardado = null;
     let profileGuardado = null;
+    let coachChefContext = null;
     let coachProfileDoc = null;
     let coachAnalyticsDoc = null;
     let repLeadSummary = null;
@@ -9691,8 +10122,21 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
     } else {
-      const leadPrevio = await resolverLeadExistente(sessionId, visitorIdLimpio, "", "");
-      const perfilPrevio = await resolverPerfilExistente(visitorIdLimpio, "", "", leadPrevio?._id || null);
+      coachChefContext = await resolverCoachChefContextPorSlug(chefSlug);
+      const leadPrevio = await resolverLeadExistente(
+        sessionId,
+        visitorIdLimpio,
+        "",
+        "",
+        coachChefContext
+      );
+      const perfilPrevio = await resolverPerfilExistente(
+        visitorIdLimpio,
+        "",
+        "",
+        leadPrevio?._id || null,
+        coachChefContext
+      );
       hidratarEstadoConversacion(sessionId, perfilPrevio, leadPrevio);
       actualizarEstadoConversacion(sessionId, preguntaLimpia);
       const estadoActual = obtenerEstadoConversacion(sessionId);
@@ -9701,7 +10145,8 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         preguntaLimpia,
         sessionId,
         visitorIdLimpio,
-        estadoActual
+        estadoActual,
+        coachChefContext
       );
       const estadoConLead = actualizarEstadoConversacion(sessionId, preguntaLimpia, leadGuardado);
       profileGuardado = await guardarOActualizarPerfil({
@@ -9709,13 +10154,21 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         sessionId,
         texto: preguntaLimpia,
         estadoConversacion: estadoConLead,
-        leadGuardado
+        leadGuardado,
+        coachChefContext
+      });
+      await sincronizarLeadPublicoACoachInbox({
+        texto: preguntaLimpia,
+        leadDoc: leadGuardado,
+        profileDoc: profileGuardado,
+        coachChefContext
       });
       await guardarMensajeRaw({
         visitorId: visitorIdLimpio,
         sessionId,
         profileId: profileGuardado?._id || null,
         leadId: leadGuardado?._id || null,
+        coachChefContext,
         role: "user",
         content: preguntaLimpia,
         intent: "chef_chat",
@@ -9824,6 +10277,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       sessionId,
       profileId: profileFinal?._id || profileGuardado?._id || null,
       leadId: leadFinal?._id || leadGuardado?._id || null,
+      coachChefContext,
       role: "assistant",
       content: respuestaIA.content,
       intent: "chef_chat",

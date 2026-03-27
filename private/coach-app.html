@@ -30,7 +30,7 @@
         <nav class="coach-nav-links">
           <a class="nav-link" href="/coach/">Landing</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
-          <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer">Ver Chef</a>
+          <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link>Ver Chef</a>
           <button class="nav-button" data-open-chef-share>Compartir Chef</button>
           <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
@@ -186,7 +186,7 @@
             </p>
 
             <div class="dashboard-actions">
-              <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer">Abrir Chef</a>
+              <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link>Abrir Chef</a>
               <button class="nav-button" data-open-chef-share>Mostrar QR</button>
             </div>
 
@@ -2283,6 +2283,7 @@
             class="chef-share-qr"
             src="/chef/share-qr.svg"
             alt="Codigo QR para abrir Agustin 2.0 Chef"
+            data-chef-share-qr
           />
 
           <div class="coach-share-url" data-chef-share-url>https://ventas-ia.onrender.com/chef/</div>

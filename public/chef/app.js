@@ -1,8 +1,39 @@
 const CHAT_API_URL = "/chat";
 const CHEF_STATS_API_URL = "/api/chef/stats";
 const PLATFORM_CONFIG_API_URL = "/api/platform/config";
-const VISITOR_KEY = "agustin-chef-visitor-id";
-const SESSION_KEY = "agustin-chef-session-id";
+
+function normalizeChefSlugSegment(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
+function getChefSlugFromPath(pathname = window.location.pathname) {
+  const match = String(pathname || "").match(/^\/chef\/([a-z0-9-]+)\/?$/i);
+  return normalizeChefSlugSegment(match?.[1] || "");
+}
+
+function buildChefBasePath(slug = "") {
+  const safeSlug = normalizeChefSlugSegment(slug);
+  return safeSlug ? `/chef/${safeSlug}/` : "/chef/";
+}
+
+function buildChefManifestUrl(slug = "") {
+  const safeSlug = normalizeChefSlugSegment(slug);
+  return safeSlug
+    ? `/chef/manifest.webmanifest?slug=${encodeURIComponent(safeSlug)}`
+    : "/chef/manifest.webmanifest";
+}
+
+const chefSlug = getChefSlugFromPath();
+const chefBasePath = buildChefBasePath(chefSlug);
+const VISITOR_KEY = chefSlug ? `agustin-chef-visitor-id:${chefSlug}` : "agustin-chef-visitor-id";
+const SESSION_KEY = chefSlug ? `agustin-chef-session-id:${chefSlug}` : "agustin-chef-session-id";
 
 const input = document.getElementById("chat-input");
 const button = document.getElementById("chat-btn");
@@ -20,6 +51,8 @@ const chefCalendlyModal = document.querySelector("[data-chef-calendly-modal]");
 const chefCalendlyCloseButtons = document.querySelectorAll("[data-close-chef-calendly]");
 const chefCalendlyFrame = document.querySelector("[data-chef-calendly-frame]");
 const chefCalendlyOpenLink = document.querySelector("[data-chef-calendly-open-link]");
+const chefHomeLinks = document.querySelectorAll("[data-chef-home-link]");
+const chefManifestLink = document.querySelector("[data-chef-manifest]");
 let deferredInstallPrompt = null;
 let chefCalendlyUrl = "";
 let chefWhatsAppUrl = "";
@@ -64,6 +97,14 @@ function obtenerSessionId() {
 
 const visitorId = obtenerVisitorId();
 const sessionId = obtenerSessionId();
+
+chefHomeLinks.forEach(link => {
+  link.href = chefBasePath;
+});
+
+if (chefManifestLink) {
+  chefManifestLink.href = buildChefManifestUrl(chefSlug);
+}
 
 function autoResize() {
   if (!input) {
@@ -442,6 +483,7 @@ async function enviarPregunta(forcedText = "") {
         pregunta,
         sessionId,
         visitorId,
+        chefSlug,
         mode: "chef"
       })
     });

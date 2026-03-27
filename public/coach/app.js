@@ -123,6 +123,7 @@ const COACH_LEAD_SOURCE_LABELS = {
   captura_manual: "Captura manual",
   rifa_digital: "Rifa digital",
   programa_4_en_14: "Programa 4 en 14",
+  chef_personal: "Chef personal",
   llamada: "Llamada",
   demo: "Demo",
   referencia: "Referencia",
@@ -647,6 +648,31 @@ function formatLeadStatusLabel(status = "") {
 
 function formatLeadSourceLabel(source = "") {
   return COACH_LEAD_SOURCE_LABELS[source] || "Captura manual";
+}
+
+function buildAbsoluteAppUrl(pathOrUrl = "") {
+  const safeValue = String(pathOrUrl || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(safeValue)) {
+    return safeValue;
+  }
+
+  const normalizedPath = safeValue.startsWith("/") ? safeValue : `/${safeValue}`;
+  return `${window.location.origin}${normalizedPath}`;
+}
+
+function buildChefQrImageUrl(pathOrUrl = "") {
+  const absoluteUrl = buildAbsoluteAppUrl(pathOrUrl);
+
+  if (!absoluteUrl) {
+    return "/chef/share-qr.svg";
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(absoluteUrl)}`;
 }
 
 function escapeHtml(value = "") {
@@ -4328,6 +4354,22 @@ function renderCoachTeamSeats(seats = []) {
             </button>
             <button
               type="button"
+              class="nav-button"
+              data-team-seat-open-chef-share="${escapeHtml(seat.chef?.sharePath || "")}"
+              data-team-seat-label="${escapeHtml(seat.seatLabel || seat.name || "Subcuenta")}"
+            >
+              Chef y QR
+            </button>
+            <a
+              class="nav-button"
+              href="${escapeHtml(seat.chef?.sharePath || "/chef/")}"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir Chef
+            </a>
+            <button
+              type="button"
               class="primary-button"
               data-team-seat-toggle="${escapeHtml(seat.seatStatus === "active" ? "paused" : "active")}"
             >
@@ -4431,6 +4473,20 @@ function initCoachTeamWorkspace(user = null) {
       } catch (error) {
         setMessage(feedbackNode, "No pude copiar el correo.", "error");
       }
+      return;
+    }
+
+    const shareButton = event.target.closest("[data-team-seat-open-chef-share]");
+
+    if (shareButton) {
+      window.dispatchEvent(
+        new CustomEvent("coach:open-chef-share", {
+          detail: {
+            label: shareButton.dataset.teamSeatLabel || "Subcuenta",
+            url: buildAbsoluteAppUrl(shareButton.dataset.teamSeatOpenChefShare || "")
+          }
+        })
+      );
       return;
     }
 
@@ -5316,11 +5372,13 @@ async function initCoachAppPage() {
   const demoEventsRoot = document.querySelector("[data-coach-demo-events]");
   const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
+  const chefSelfOpenLinks = document.querySelectorAll("[data-chef-self-open-link]");
   const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
   const chefShareModal = document.querySelector("[data-chef-share-modal]");
   const chefShareCloseButtons = document.querySelectorAll("[data-close-chef-share]");
   const chefShareUrlNodes = document.querySelectorAll("[data-chef-share-url]");
   const chefShareOpenLinks = document.querySelectorAll("[data-chef-share-open-link]");
+  const chefShareQrNode = document.querySelector("[data-chef-share-qr]");
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
@@ -5335,21 +5393,44 @@ async function initCoachAppPage() {
   const royalOneCancelButton = document.querySelector("[data-royalone-cancel]");
   const royalOneOpenLink = document.querySelector("[data-royalone-open-link]");
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
-  const chefShareUrl = `${window.location.origin}/chef/`;
+  const ownChefSharePath = me.profile?.chef?.sharePath || "/chef/";
+  const ownChefShareUrl = buildAbsoluteAppUrl(ownChefSharePath);
+  let activeChefShare = {
+    label: "Agustin 2.0 Chef",
+    url: ownChefShareUrl
+  };
   let floatingCoachMode = "idle";
   let floatingCoachArmTimeout = null;
 
-  chefShareUrlNodes.forEach(node => {
-    node.textContent = chefShareUrl;
-  });
-
-  chefShareOpenLinks.forEach(node => {
-    node.href = chefShareUrl;
+  chefSelfOpenLinks.forEach(node => {
+    node.href = ownChefShareUrl;
   });
 
   if (nativeShareChefButton && typeof navigator.share !== "function") {
     nativeShareChefButton.hidden = true;
   }
+
+  const renderActiveChefShare = shareTarget => {
+    activeChefShare = {
+      label: String(shareTarget?.label || "Agustin 2.0 Chef").trim() || "Agustin 2.0 Chef",
+      url: buildAbsoluteAppUrl(shareTarget?.url || ownChefShareUrl)
+    };
+
+    chefShareUrlNodes.forEach(node => {
+      node.textContent = activeChefShare.url;
+    });
+
+    chefShareOpenLinks.forEach(node => {
+      node.href = activeChefShare.url;
+    });
+
+    if (chefShareQrNode) {
+      chefShareQrNode.src = buildChefQrImageUrl(activeChefShare.url);
+      chefShareQrNode.alt = `Codigo QR para abrir ${activeChefShare.label}`;
+    }
+  };
+
+  renderActiveChefShare(activeChefShare);
 
   const syncOrderCalcToggle = open => {
     if (orderCalcWrap) {
@@ -5446,6 +5527,11 @@ async function initCoachAppPage() {
     chefShareModal.hidden = false;
     document.body.classList.add("modal-open");
   };
+
+  window.addEventListener("coach:open-chef-share", event => {
+    renderActiveChefShare(event.detail || null);
+    openChefShareModal();
+  });
 
   const closeChefShareModal = () => {
     if (!chefShareModal) {
@@ -5689,6 +5775,10 @@ async function initCoachAppPage() {
   chefShareButtons.forEach(button => {
     button.addEventListener("click", event => {
       event.preventDefault();
+      renderActiveChefShare({
+        label: "Agustin 2.0 Chef",
+        url: ownChefShareUrl
+      });
       openChefShareModal();
     });
   });
@@ -5755,7 +5845,7 @@ async function initCoachAppPage() {
 
   copyChefLinkButton?.addEventListener("click", async () => {
     try {
-      await copyTextToClipboard(chefShareUrl);
+      await copyTextToClipboard(activeChefShare.url);
       if (chefShareFeedback) {
         chefShareFeedback.textContent = "El link del Chef ya quedo copiado.";
       }
@@ -5771,9 +5861,9 @@ async function initCoachAppPage() {
   nativeShareChefButton?.addEventListener("click", async () => {
     try {
       await navigator.share({
-        title: "Agustin 2.0 Chef",
+        title: activeChefShare.label || "Agustin 2.0 Chef",
         text: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable.",
-        url: chefShareUrl
+        url: activeChefShare.url
       });
     } catch (error) {
       // noop
