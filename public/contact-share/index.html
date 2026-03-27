@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subir contactos | Agustin 2.0</title>
+    <meta
+      name="description"
+      content="Pagina privada para compartir contactos con un distribuidor de Agustin 2.0."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/contact-share/styles.css" />
+  </head>
+  <body>
+    <main class="contact-share-shell" data-contact-share-page>
+      <section class="contact-share-hero">
+        <div class="contact-share-badge">Subir contactos</div>
+        <h1>Comparte una lista de contactos de forma simple</h1>
+        <p class="contact-share-copy">
+          Esta pagina te permite subir un archivo <strong>CSV</strong>, <strong>VCF</strong> o pegar contactos en
+          texto para que queden guardados en seguimiento.
+        </p>
+
+        <div class="contact-share-recipient">
+          <strong data-contact-share-recipient>Preparando acceso...</strong>
+          <span data-contact-share-subtitle>En un momento te digo con quien se van a guardar estos contactos.</span>
+        </div>
+      </section>
+
+      <section class="contact-share-card">
+        <div class="contact-share-card-head">
+          <div>
+            <div class="eyebrow">Paso 1</div>
+            <h2>Sube un archivo o pega tus contactos</h2>
+          </div>
+          <span class="contact-share-hint">CSV, VCF o texto</span>
+        </div>
+
+        <form class="contact-share-form" data-contact-share-form>
+          <label class="contact-share-field">
+            <span>Archivo opcional</span>
+            <input type="file" accept=".csv,.vcf,text/csv,text/vcard,text/x-vcard" data-contact-share-file />
+          </label>
+
+          <label class="contact-share-field">
+            <span>O pega los contactos aqui</span>
+            <textarea
+              rows="8"
+              placeholder="Ej.\nMaria Lopez, 7735551234, maria@email.com\nJuan Perez, 3125559876"
+              data-contact-share-text
+            ></textarea>
+          </label>
+
+          <div class="contact-share-actions">
+            <button type="submit" class="primary-button" data-contact-share-submit>Guardar contactos</button>
+            <button type="reset" class="nav-button">Limpiar</button>
+          </div>
+
+          <div class="form-result" data-contact-share-feedback></div>
+        </form>
+      </section>
+
+      <section class="contact-share-grid">
+        <article class="contact-share-card">
+          <div class="eyebrow">Paso 2</div>
+          <h2>Formas recomendadas</h2>
+          <ul class="contact-share-list">
+            <li>Google Contacts: exporta como CSV y subelo aqui.</li>
+            <li>iPhone / iCloud: exporta como VCF y subelo aqui.</li>
+            <li>Si solo son pocos, pegarlos en texto tambien funciona.</li>
+          </ul>
+        </article>
+
+        <article class="contact-share-card">
+          <div class="eyebrow">Privacidad</div>
+          <h2>Tu telefono no se abre solo</h2>
+          <p class="contact-share-copy small">
+            Esta pagina no entra a la libreta de contactos por si sola. Tu decides que archivo compartir o que texto
+            pegar antes de guardarlo.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <script src="/contact-share/app.js"></script>
+  </body>
+</html>

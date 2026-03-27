@@ -122,6 +122,7 @@ const COACH_LEAD_SOURCE_LABELS = {
   captura_manual: "Captura manual",
   rifa_digital: "Rifa digital",
   programa_4_en_14: "Programa 4 en 14",
+  contactos_compartidos: "Contactos compartidos",
   chef_personal: "Chef personal",
   llamada: "Llamada",
   demo: "Demo",
@@ -664,7 +665,7 @@ function buildAbsoluteAppUrl(pathOrUrl = "") {
   return `${window.location.origin}${normalizedPath}`;
 }
 
-function buildChefQrImageUrl(pathOrUrl = "") {
+function buildShareQrImageUrl(pathOrUrl = "") {
   const absoluteUrl = buildAbsoluteAppUrl(pathOrUrl);
 
   if (!absoluteUrl) {
@@ -672,6 +673,10 @@ function buildChefQrImageUrl(pathOrUrl = "") {
   }
 
   return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(absoluteUrl)}`;
+}
+
+function buildChefQrImageUrl(pathOrUrl = "") {
+  return buildShareQrImageUrl(pathOrUrl);
 }
 
 function escapeHtml(value = "") {
@@ -5729,14 +5734,19 @@ async function initCoachAppPage() {
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
   const chefSelfOpenLinks = document.querySelectorAll("[data-chef-self-open-link]");
   const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
+  const contactShareButtons = document.querySelectorAll("[data-open-contact-share]");
   const chefShareModal = document.querySelector("[data-chef-share-modal]");
   const chefShareCloseButtons = document.querySelectorAll("[data-close-chef-share]");
   const chefShareUrlNodes = document.querySelectorAll("[data-chef-share-url]");
   const chefShareOpenLinks = document.querySelectorAll("[data-chef-share-open-link]");
   const chefShareQrNode = document.querySelector("[data-chef-share-qr]");
+  const shareModalEyebrow = document.querySelector("[data-share-modal-eyebrow]");
+  const shareModalDescription = document.querySelector("[data-share-modal-description]");
+  const shareOpenLinkLabels = document.querySelectorAll("[data-share-open-link-label]");
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
+  const contactShareOpenLinks = document.querySelectorAll("[data-contact-share-open-link]");
   const orderCalcToggle = document.querySelector("[data-order-calc-toggle]");
   const orderCalcWrap = document.querySelector("[data-order-calc-wrap]");
   const waterCheckForm = document.querySelector("[data-water-check-form]");
@@ -5750,9 +5760,16 @@ async function initCoachAppPage() {
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
   const ownChefSharePath = me.profile?.chef?.sharePath || "/chef/";
   const ownChefShareUrl = buildAbsoluteAppUrl(ownChefSharePath);
+  const ownContactSharePath = me.profile?.contactShare?.sharePath || "";
+  const ownContactShareUrl = buildAbsoluteAppUrl(ownContactSharePath);
   let activeChefShare = {
     label: "Agustin 2.0 Chef",
-    url: ownChefShareUrl
+    url: ownChefShareUrl,
+    eyebrow: "Comparte el Chef",
+    description:
+      "Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma pagina.",
+    openLabel: "Abrir Chef",
+    shareText: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable."
   };
   let floatingCoachMode = "idle";
   let floatingCoachArmTimeout = null;
@@ -5761,6 +5778,20 @@ async function initCoachAppPage() {
     node.href = ownChefShareUrl;
   });
 
+  contactShareOpenLinks.forEach(node => {
+    node.href = ownContactShareUrl || "/coach/app/";
+  });
+
+  if (!ownContactShareUrl) {
+    contactShareButtons.forEach(button => {
+      button.disabled = true;
+    });
+    contactShareOpenLinks.forEach(node => {
+      node.setAttribute("aria-disabled", "true");
+      node.href = "/coach/app/";
+    });
+  }
+
   if (nativeShareChefButton && typeof navigator.share !== "function") {
     nativeShareChefButton.hidden = true;
   }
@@ -5768,8 +5799,26 @@ async function initCoachAppPage() {
   const renderActiveChefShare = shareTarget => {
     activeChefShare = {
       label: String(shareTarget?.label || "Agustin 2.0 Chef").trim() || "Agustin 2.0 Chef",
-      url: buildAbsoluteAppUrl(shareTarget?.url || ownChefShareUrl)
+      url: buildAbsoluteAppUrl(shareTarget?.url || ownChefShareUrl),
+      eyebrow: String(shareTarget?.eyebrow || "Comparte el Chef").trim() || "Comparte el Chef",
+      description:
+        String(
+          shareTarget?.description ||
+            "Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma pagina."
+        ).trim(),
+      openLabel: String(shareTarget?.openLabel || "Abrir Chef").trim() || "Abrir Chef",
+      shareText:
+        String(shareTarget?.shareText || "Te comparto Agustin 2.0 Chef para recetas y cocina saludable.").trim() ||
+        "Te comparto Agustin 2.0 Chef para recetas y cocina saludable."
     };
+
+    if (shareModalEyebrow) {
+      shareModalEyebrow.textContent = activeChefShare.eyebrow;
+    }
+
+    if (shareModalDescription) {
+      shareModalDescription.textContent = activeChefShare.description;
+    }
 
     chefShareUrlNodes.forEach(node => {
       node.textContent = activeChefShare.url;
@@ -5779,8 +5828,12 @@ async function initCoachAppPage() {
       node.href = activeChefShare.url;
     });
 
+    shareOpenLinkLabels.forEach(node => {
+      node.textContent = activeChefShare.openLabel;
+    });
+
     if (chefShareQrNode) {
-      chefShareQrNode.src = buildChefQrImageUrl(activeChefShare.url);
+      chefShareQrNode.src = buildShareQrImageUrl(activeChefShare.url);
       chefShareQrNode.alt = `Codigo QR para abrir ${activeChefShare.label}`;
     }
   };
@@ -6137,7 +6190,28 @@ async function initCoachAppPage() {
       event.preventDefault();
       renderActiveChefShare({
         label: "Agustin 2.0 Chef",
-        url: ownChefShareUrl
+        url: ownChefShareUrl,
+        eyebrow: "Comparte el Chef",
+        description:
+          "Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma pagina.",
+        openLabel: "Abrir Chef",
+        shareText: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable."
+      });
+      openChefShareModal();
+    });
+  });
+
+  contactShareButtons.forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      renderActiveChefShare({
+        label: "Subir contactos",
+        url: ownContactShareUrl,
+        eyebrow: "Subir contactos",
+        description:
+          "Este QR abre una pagina privada para subir CSV, VCF o pegar contactos. La persona decide que compartir antes de guardarlo.",
+        openLabel: "Abrir pagina",
+        shareText: "Te comparto una pagina privada para subir contactos de forma simple."
       });
       openChefShareModal();
     });
@@ -6207,13 +6281,13 @@ async function initCoachAppPage() {
     try {
       await copyTextToClipboard(activeChefShare.url);
       if (chefShareFeedback) {
-        chefShareFeedback.textContent = "El link del Chef ya quedo copiado.";
+        chefShareFeedback.textContent = "El link ya quedo copiado.";
       }
     } catch (error) {
       if (chefShareFeedback) {
-        chefShareFeedback.textContent = "No pude copiar el link del Chef.";
+        chefShareFeedback.textContent = "No pude copiar el link.";
       } else {
-        setMessage(appMessage, "No pude copiar el link del Chef.", "error");
+        setMessage(appMessage, "No pude copiar el link.", "error");
       }
     }
   });
@@ -6221,8 +6295,8 @@ async function initCoachAppPage() {
   nativeShareChefButton?.addEventListener("click", async () => {
     try {
       await navigator.share({
-        title: activeChefShare.label || "Agustin 2.0 Chef",
-        text: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable.",
+        title: activeChefShare.label || "Agustin 2.0",
+        text: activeChefShare.shareText || "Te comparto este acceso.",
         url: activeChefShare.url
       });
     } catch (error) {

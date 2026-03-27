@@ -195,6 +195,32 @@
             </p>
           </article>
 
+          <article class="dashboard-card" data-coach-workspace-section="prospeccion" hidden>
+            <div class="eyebrow">Subir contactos</div>
+            <h3>Comparte tu pagina privada</h3>
+            <p>
+              Si alguien ya tiene sus contactos organizados, comparte esta pagina para que suba un CSV, un VCF o pegue
+              nombres y telefonos de forma simple.
+            </p>
+
+            <div class="dashboard-actions">
+              <a
+                class="secondary-button"
+                href="/coach/app/"
+                target="_blank"
+                rel="noreferrer"
+                data-contact-share-open-link
+              >
+                Abrir pagina
+              </a>
+              <button class="nav-button" data-open-contact-share>Mostrar QR</button>
+            </div>
+
+            <p class="mini-note">
+              Esta pagina no entra al telefono sola. La persona decide que archivo o texto compartir antes de guardarlo.
+            </p>
+          </article>
+
           <article
             class="dashboard-card resource-card"
             data-coach-workspace-section="cierre"
@@ -2382,9 +2408,9 @@
       <div class="coach-modal-backdrop" data-chef-share-modal hidden>
         <div class="coach-modal-card" role="dialog" aria-modal="true" aria-labelledby="chef-share-title">
           <button class="coach-modal-close" type="button" data-close-chef-share aria-label="Cerrar">×</button>
-          <div class="eyebrow">Comparte el Chef</div>
+          <div class="eyebrow" data-share-modal-eyebrow>Comparte el Chef</div>
           <h3 id="chef-share-title">Escanea o comparte este acceso</h3>
-          <p>
+          <p data-share-modal-description>
             Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma
             pagina.
           </p>
@@ -2400,7 +2426,7 @@
 
           <div class="dashboard-actions">
             <a class="secondary-button" href="/chef/" target="_blank" rel="noreferrer" data-chef-share-open-link>
-              Abrir Chef
+              <span data-share-open-link-label>Abrir Chef</span>
             </a>
             <button class="nav-button" type="button" data-copy-chef-link>Copiar link</button>
             <button class="primary-button" type="button" data-native-share-chef>Compartir</button>

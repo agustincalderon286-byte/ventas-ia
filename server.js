@@ -1339,9 +1339,21 @@ function normalizarCoachChefSlugSegment(value = "", maxLength = 36) {
   return normalized || "";
 }
 
+function normalizarCoachShareCodeSegment(value = "", maxLength = 24) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-f0-9]/g, "")
+    .slice(0, maxLength);
+}
+
 function construirCoachChefPath(chefSlug = "") {
   const slug = normalizarCoachChefSlugSegment(chefSlug, 48);
   return slug ? `/chef/${slug}/` : "/chef/";
+}
+
+function construirCoachContactSharePath(shareCode = "") {
+  const safeCode = normalizarCoachShareCodeSegment(shareCode, 24);
+  return safeCode ? `/contactos/${safeCode}/` : "/coach/app/";
 }
 
 function construirCoachChefTrackingFields(coachChefContext = null) {
@@ -1400,6 +1412,52 @@ async function resolverCoachChefContextPorSlug(chefSlug = "") {
 
   return {
     slug,
+    userDoc,
+    profileDoc,
+    ownerProfileDoc: ownerProfileDoc || profileDoc,
+    ownership
+  };
+}
+
+async function resolverCoachContactShareContextPorCode(shareCode = "") {
+  const safeCode = normalizarCoachShareCodeSegment(shareCode, 24);
+
+  if (!safeCode) {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({
+    chefShareCode: safeCode
+  });
+
+  if (!profileDoc?.userId) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findById(profileDoc.userId);
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+
+  if (!(await coachTieneAccesoOperativo(userDoc))) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return null;
+  }
+
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+  return {
+    shareCode: safeCode,
     userDoc,
     profileDoc,
     ownerProfileDoc: ownerProfileDoc || profileDoc,
@@ -1827,6 +1885,11 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
       sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
       shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
     },
+    contactShare: {
+      shareCode: profileDoc?.chefShareCode || "",
+      sharePath: construirCoachContactSharePath(profileDoc?.chefShareCode || ""),
+      shareUrl: construirCoachContactSharePath(profileDoc?.chefShareCode || "")
+    },
     leadDestination: limpiarCoachLeadDestination(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
@@ -1889,6 +1952,11 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
       shareCode: profileDoc?.chefShareCode || "",
       sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
       shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
+    },
+    contactShare: {
+      shareCode: profileDoc?.chefShareCode || "",
+      sharePath: construirCoachContactSharePath(profileDoc?.chefShareCode || ""),
+      shareUrl: construirCoachContactSharePath(profileDoc?.chefShareCode || "")
     },
     createdAt: userDoc.createdAt || null,
     lastLoginAt: userDoc.lastLoginAt || null,
@@ -2966,6 +3034,7 @@ function normalizarCoachLeadSource(source = "") {
   const validSources = [
     "rifa_digital",
     "programa_4_en_14",
+    "contactos_compartidos",
     "chef_personal",
     "llamada",
     "demo",
@@ -2994,6 +3063,286 @@ function parseCoachLeadNextActionAt(value) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function normalizarCoachContactImportText(value = "", maxLength = 1200000) {
+  return String(value || "").replace(/\r\n?/g, "\n").slice(0, maxLength);
+}
+
+function normalizarCoachContactHeader(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function parseCoachCsvRows(text = "") {
+  const input = normalizarCoachContactImportText(text);
+  const rows = [];
+  let row = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    const next = input[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === ",") {
+      row.push(current);
+      current = "";
+      continue;
+    }
+
+    if (!inQuotes && char === "\n") {
+      row.push(current);
+      rows.push(row);
+      row = [];
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current || row.length) {
+    row.push(current);
+    rows.push(row);
+  }
+
+  return rows
+    .map(item => item.map(value => String(value || "").trim()))
+    .filter(item => item.some(value => value));
+}
+
+function detectarCoachCsvHeaderMap(headers = []) {
+  const normalized = headers.map(normalizarCoachContactHeader);
+  const hasHeaders = normalized.some(header =>
+    /(name|nombre|phone|telefono|email|correo|mail)/i.test(header)
+  );
+  const findIndex = matcher => normalized.findIndex(matcher);
+
+  return {
+    hasHeaders,
+    nameIndex: findIndex(header => /^(name|full name|nombre|nombre completo|fn|display name)$/.test(header)),
+    firstNameIndex: findIndex(header => /^(given name|first name|nombre|nombre 1|nombre de pila)$/.test(header)),
+    lastNameIndex: findIndex(header => /^(family name|last name|apellido|apellidos)$/.test(header)),
+    phoneIndex: findIndex(header => /(phone|telefono|mobile|celular)/.test(header) && (!/type/.test(header) || /value/.test(header))),
+    emailIndex: findIndex(header => /(email|correo|mail)/.test(header) && (!/type/.test(header) || /value/.test(header))),
+    notesIndex: findIndex(header => /(notes|nota|company|empresa|organization|organizacion)/.test(header))
+  };
+}
+
+function construirCoachImportedContact(candidate = {}) {
+  const phone = normalizePhone(candidate.phone || "");
+  const email = normalizarEmail(candidate.email || "");
+  const notes = cleanText(candidate.notes || "").slice(0, 280);
+  let fullName = seleccionarNombreConfiable(
+    candidate.fullName || "",
+    [candidate.firstName || "", candidate.lastName || ""].filter(Boolean).join(" "),
+    candidate.firstName || "",
+    candidate.lastName || ""
+  );
+
+  if (!phone && !email) {
+    return null;
+  }
+
+  if (!fullName) {
+    fullName = email || (phone ? `Contacto ${phone.slice(-4)}` : "Contacto compartido");
+  }
+
+  return {
+    fullName: cleanText(fullName).slice(0, 120),
+    phone,
+    email,
+    notes
+  };
+}
+
+function deduplicarCoachImportedContacts(contacts = []) {
+  const seen = new Map();
+
+  (Array.isArray(contacts) ? contacts : []).forEach(contact => {
+    if (!contact) {
+      return;
+    }
+
+    const key =
+      contact.phone ||
+      contact.email ||
+      normalizarCoachContactHeader(contact.fullName || "");
+
+    if (!key) {
+      return;
+    }
+
+    if (!seen.has(key)) {
+      seen.set(key, contact);
+      return;
+    }
+
+    const previous = seen.get(key);
+    seen.set(key, {
+      ...previous,
+      fullName: previous.fullName || contact.fullName,
+      phone: previous.phone || contact.phone,
+      email: previous.email || contact.email,
+      notes: [previous.notes || "", contact.notes || ""].filter(Boolean).join(" | ").slice(0, 280)
+    });
+  });
+
+  return Array.from(seen.values());
+}
+
+function parseCoachCsvContacts(text = "") {
+  const rows = parseCoachCsvRows(text);
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const headerMap = detectarCoachCsvHeaderMap(rows[0]);
+  const dataRows = headerMap.hasHeaders ? rows.slice(1) : rows;
+
+  return deduplicarCoachImportedContacts(
+    dataRows
+      .map(row => {
+        const firstName = headerMap.firstNameIndex >= 0 ? row[headerMap.firstNameIndex] || "" : "";
+        const lastName = headerMap.lastNameIndex >= 0 ? row[headerMap.lastNameIndex] || "" : "";
+        const fullName =
+          headerMap.nameIndex >= 0
+            ? row[headerMap.nameIndex] || ""
+            : [firstName, lastName].filter(Boolean).join(" ").trim();
+        const phone =
+          headerMap.phoneIndex >= 0
+            ? row[headerMap.phoneIndex] || ""
+            : row.find(value => normalizePhone(value));
+        const email =
+          headerMap.emailIndex >= 0
+            ? row[headerMap.emailIndex] || ""
+            : row.find(value => normalizarEmail(value));
+        const notes = headerMap.notesIndex >= 0 ? row[headerMap.notesIndex] || "" : "";
+        return construirCoachImportedContact({ fullName, firstName, lastName, phone, email, notes });
+      })
+      .filter(Boolean)
+  );
+}
+
+function decodeCoachVcardValue(value = "") {
+  return String(value || "")
+    .replace(/\\n/gi, " ")
+    .replace(/\\,/g, ",")
+    .replace(/\\;/g, ";")
+    .trim();
+}
+
+function parseCoachVcardContacts(text = "") {
+  const safeText = normalizarCoachContactImportText(text).replace(/\n[ \t]/g, "");
+  const blocks = safeText.match(/BEGIN:VCARD[\s\S]*?END:VCARD/gi) || [];
+
+  return deduplicarCoachImportedContacts(
+    blocks
+      .map(block => {
+        const fullNameMatch = block.match(/^FN[^:]*:(.+)$/im);
+        const nMatch = block.match(/^N[^:]*:(.+)$/im);
+        const phoneMatch = block.match(/^TEL[^:]*:(.+)$/im);
+        const emailMatch = block.match(/^EMAIL[^:]*:(.+)$/im);
+        const noteMatch = block.match(/^NOTE[^:]*:(.+)$/im);
+        let fullName = decodeCoachVcardValue(fullNameMatch?.[1] || "");
+
+        if (!fullName && nMatch?.[1]) {
+          const parts = decodeCoachVcardValue(nMatch[1]).split(";").map(part => part.trim());
+          fullName = [parts[1] || "", parts[0] || ""].filter(Boolean).join(" ").trim();
+        }
+
+        return construirCoachImportedContact({
+          fullName,
+          phone: decodeCoachVcardValue(phoneMatch?.[1] || ""),
+          email: decodeCoachVcardValue(emailMatch?.[1] || ""),
+          notes: decodeCoachVcardValue(noteMatch?.[1] || "")
+        });
+      })
+      .filter(Boolean)
+  );
+}
+
+function parseCoachPastedContacts(text = "") {
+  const safeText = normalizarCoachContactImportText(text);
+
+  if (!safeText.trim()) {
+    return [];
+  }
+
+  if (/BEGIN:VCARD/i.test(safeText)) {
+    return parseCoachVcardContacts(safeText);
+  }
+
+  const lines = safeText
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return [];
+  }
+
+  if ((safeText.includes(",") || safeText.includes("\t")) && lines.length > 1) {
+    const csvContacts = parseCoachCsvContacts(safeText);
+
+    if (csvContacts.length) {
+      return csvContacts;
+    }
+  }
+
+  return deduplicarCoachImportedContacts(
+    lines
+      .map(line => {
+        const emailMatch = line.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        const phoneMatch = line.match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/);
+        const email = emailMatch?.[0] || "";
+        const phone = phoneMatch?.[0] || "";
+        const fullName = line
+          .replace(email, " ")
+          .replace(phone, " ")
+          .replace(/[|,;]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        return construirCoachImportedContact({ fullName, phone, email });
+      })
+      .filter(Boolean)
+  );
+}
+
+function parseCoachImportedContacts(importMode = "", rawText = "") {
+  const safeMode = String(importMode || "").trim().toLowerCase();
+  const safeText = normalizarCoachContactImportText(rawText);
+
+  if (!safeText.trim()) {
+    return [];
+  }
+
+  if (safeMode === "vcf") {
+    return parseCoachVcardContacts(safeText);
+  }
+
+  if (safeMode === "csv") {
+    return parseCoachCsvContacts(safeText);
+  }
+
+  return parseCoachPastedContacts(safeText);
 }
 
 function limpiarCoachProgramReferral(item = null) {
@@ -11081,6 +11430,128 @@ app.get(/^\/chef\/([a-z0-9-]+)\/?$/i, async (req, res) => {
   }
 
   res.sendFile(path.join(PUBLIC_DIR, "chef", "index.html"));
+});
+
+app.get(/^\/contactos\/([a-f0-9]+)\/?$/i, async (req, res) => {
+  const shareCode = normalizarCoachShareCodeSegment(req.params?.[0] || "", 24);
+  const shareContext = await resolverCoachContactShareContextPorCode(shareCode);
+
+  if (!shareContext) {
+    return res.redirect("/coach/");
+  }
+
+  res.sendFile(path.join(PUBLIC_DIR, "contact-share", "index.html"));
+});
+
+app.get("/api/public/contact-share/:shareCode", async (req, res) => {
+  try {
+    const shareCode = normalizarCoachShareCodeSegment(req.params?.shareCode || "", 24);
+    const shareContext = await resolverCoachContactShareContextPorCode(shareCode);
+
+    if (!shareContext) {
+      return res.status(404).json({ error: "Ese acceso ya no esta disponible." });
+    }
+
+    res.json({
+      ok: true,
+      shareCode,
+      recipientName:
+        shareContext.profileDoc?.seatLabel ||
+        shareContext.profileDoc?.name ||
+        shareContext.userDoc?.name ||
+        "Distribuidor",
+      ownerName: shareContext.ownership.ownerName || "",
+      ownerEmail: shareContext.ownership.ownerEmail || "",
+      teamRole: shareContext.profileDoc?.teamRole || "",
+      sharePath: construirCoachContactSharePath(shareCode)
+    });
+  } catch (error) {
+    console.error("Error cargando metadata de contacto compartido:", error.message);
+    res.status(500).json({ error: "No pude abrir esta pagina en este momento." });
+  }
+});
+
+app.post("/api/public/contact-share/import", async (req, res) => {
+  try {
+    const shareCode = normalizarCoachShareCodeSegment(req.body?.shareCode || "", 24);
+    const importMode = String(req.body?.importMode || "").trim().toLowerCase();
+    const rawText = normalizarCoachContactImportText(req.body?.rawText || "");
+    const fileName = cleanText(req.body?.fileName || "").slice(0, 120);
+    const shareContext = await resolverCoachContactShareContextPorCode(shareCode);
+
+    if (!shareContext) {
+      return res.status(404).json({ error: "Ese acceso ya no esta disponible." });
+    }
+
+    if (!rawText.trim()) {
+      return res.status(400).json({ error: "Sube un archivo o pega contactos antes de guardar." });
+    }
+
+    const parsedContacts = parseCoachImportedContacts(importMode, rawText).slice(0, 500);
+
+    if (!parsedContacts.length) {
+      return res.status(400).json({
+        error: "No pude encontrar contactos validos. Usa CSV, VCF o pega nombres con telefono o correo."
+      });
+    }
+
+    let importedCount = 0;
+    let duplicateCount = 0;
+    const sampleLeads = [];
+
+    for (const contact of parsedContacts) {
+      const notes = [
+        fileName
+          ? `Importado desde pagina privada de contactos (${fileName}).`
+          : "Importado desde pagina privada de contactos.",
+        contact.notes || ""
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      const result = await guardarCoachInboxLead({
+        userDoc: shareContext.userDoc,
+        profileDoc: shareContext.ownerProfileDoc || shareContext.profileDoc,
+        payload: {
+          fullName: contact.fullName,
+          phone: contact.phone,
+          email: contact.email,
+          interest: "Lista de contactos",
+          source: "contactos_compartidos",
+          notes,
+          consentGiven: false
+        },
+        sendDestination: false
+      });
+
+      if (result.duplicate) {
+        duplicateCount += 1;
+      } else {
+        importedCount += 1;
+      }
+
+      if (sampleLeads.length < 5 && result.lead) {
+        sampleLeads.push(result.lead);
+      }
+    }
+
+    res.json({
+      ok: true,
+      parsedCount: parsedContacts.length,
+      importedCount,
+      duplicateCount,
+      sampleLeads,
+      recipientName:
+        shareContext.profileDoc?.seatLabel ||
+        shareContext.profileDoc?.name ||
+        shareContext.userDoc?.name ||
+        "Distribuidor"
+    });
+  } catch (error) {
+    console.error("Error importando contactos compartidos:", error.message);
+    res.status(500).json({ error: "No pude guardar esos contactos en este momento." });
+  }
 });
 
 app.post(AR_PROTOTYPE_UNLOCK_PATH, express.urlencoded({ extended: false }), (req, res) => {
