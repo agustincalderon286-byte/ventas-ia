@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lista de precios privada | Agustin 2.0 Coach</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #071326;
+        --panel: rgba(9, 22, 41, 0.94);
+        --line: rgba(255, 255, 255, 0.1);
+        --text: #f7f9fc;
+        --muted: #c4cfde;
+        --accent: #d72645;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 22%),
+          linear-gradient(135deg, #050d18 0%, #0a1830 42%, #102444 100%);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        padding: 18px;
+      }
+
+      .viewer-shell {
+        width: min(1280px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 16px;
+      }
+
+      .viewer-card {
+        padding: 18px 20px;
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+      }
+
+      .viewer-card h1,
+      .viewer-card p {
+        margin: 0;
+      }
+
+      .viewer-card h1 {
+        font-size: 1.2rem;
+      }
+
+      .viewer-card p {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .viewer-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(215, 38, 69, 0.15);
+        border: 1px solid rgba(215, 38, 69, 0.25);
+        color: #ffd7df;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .viewer-frame {
+        width: 100%;
+        min-height: calc(100vh - 190px);
+        border: 0;
+        border-radius: 24px;
+        background: #111827;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="viewer-shell">
+      <section class="viewer-card">
+        <span class="viewer-tag">Vista privada</span>
+        <h1>Lista de precios Alianza 2026</h1>
+        <p>
+          Esta vista vive dentro del Coach para consulta rapida. No deje un boton de descarga en la interfaz, aunque
+          en web no existe una proteccion absoluta contra alguien muy tecnico.
+        </p>
+      </section>
+
+      <iframe
+        class="viewer-frame"
+        src="/coach/resources/lista-precios-2026/file/#toolbar=0&navpanes=0&scrollbar=0"
+        title="Lista de precios privada"
+      ></iframe>
+    </main>
+  </body>
+</html>

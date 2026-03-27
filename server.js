@@ -16,6 +16,11 @@ const app = express();
 app.use(cors());
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const PRIVATE_DIR = path.join(process.cwd(), "private");
+const PRIVATE_COACH_RESOURCES_DIR = path.join(PRIVATE_DIR, "resources");
+const PRIVATE_COACH_PRICE_LIST_FILE = path.join(
+  PRIVATE_COACH_RESOURCES_DIR,
+  "royal-prestige-alianza-prices-2026.pdf"
+);
 
 const conversaciones = {};
 const estadosConversacion = {};
@@ -7236,6 +7241,42 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
 
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
 });
+
+app.get(["/coach/resources/lista-precios-2026", "/coach/resources/lista-precios-2026/"], async (req, res) => {
+  const auth = await obtenerCoachAuth(req);
+
+  if (!auth.user) {
+    return res.redirect("/coach/login/");
+  }
+
+  if (!coachTieneAccesoTotal(auth.user)) {
+    return res.redirect("/coach/planes/");
+  }
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  res.sendFile(path.join(PRIVATE_DIR, "coach-price-list-viewer.html"));
+});
+
+app.get(
+  ["/coach/resources/lista-precios-2026/file", "/coach/resources/lista-precios-2026/file/"],
+  async (req, res) => {
+    const auth = await obtenerCoachAuth(req);
+
+    if (!auth.user) {
+      return res.redirect("/coach/login/");
+    }
+
+    if (!coachTieneAccesoTotal(auth.user)) {
+      return res.redirect("/coach/planes/");
+    }
+
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    res.setHeader("Content-Disposition", 'inline; filename="royal-prestige-alianza-prices-2026.pdf"');
+    res.sendFile(PRIVATE_COACH_PRICE_LIST_FILE);
+  }
+);
 
 app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
