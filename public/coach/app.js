@@ -1369,11 +1369,11 @@ function initCoachLeadWorkspace() {
         body: payload
       });
 
-      const deliveryCopy = data.delivery?.attempted
-        ? data.delivery?.delivered
-          ? " Tambien lo mande a tu destino."
-          : " Lo guarde, pero no pude mandarlo a tu destino todavia."
-        : "";
+      const deliveryCopy = data.delivery?.queued
+        ? " Tambien lo estoy mandando a tu destino."
+        : data.delivery?.attempted
+          ? " Ya intente mandarlo a tu destino."
+          : "";
 
       setMessage(
         captureFeedback,

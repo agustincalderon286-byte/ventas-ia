@@ -1057,6 +1057,40 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
   }
 }
 
+function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !lead) {
+    return {
+      attempted: false,
+      queued: false,
+      destination
+    };
+  }
+
+  setTimeout(() => {
+    enviarCoachLeadADestino(userDoc, profileDoc, lead)
+      .then(result => {
+        if (!result?.delivered) {
+          console.error(
+            "No pude entregar lead del Coach al destino:",
+            result?.destination?.type || "desconocido",
+            result?.error || result?.status || "sin detalle"
+          );
+        }
+      })
+      .catch(error => {
+        console.error("Error enviando lead del Coach al destino:", error.message);
+      });
+  }, 0);
+
+  return {
+    attempted: true,
+    queued: true,
+    destination
+  };
+}
+
 function normalizarCoachLeadStatus(status = "") {
   const value = String(status || "").trim().toLowerCase();
   const validStatuses = ["nuevo", "contactado", "agendado", "cliente", "archivado"];
@@ -6054,7 +6088,7 @@ app.post("/api/coach/leads", async (req, res) => {
       leadDoc.updatedAt = now;
       await leadDoc.save();
       const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-      const delivery = await enviarCoachLeadADestino(auth.user, profileDoc, cleanedLead);
+      const delivery = programarEnvioCoachLeadADestino(auth.user, profileDoc, cleanedLead);
 
       return res.json({
         lead: cleanedLead,
@@ -6085,7 +6119,7 @@ app.post("/api/coach/leads", async (req, res) => {
     });
 
     const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-    const delivery = await enviarCoachLeadADestino(auth.user, profileDoc, cleanedLead);
+    const delivery = programarEnvioCoachLeadADestino(auth.user, profileDoc, cleanedLead);
 
     res.json({
       lead: cleanedLead,
