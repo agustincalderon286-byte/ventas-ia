@@ -195,6 +195,13 @@ const coachUserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, trim: true, lowercase: true },
   passwordHash: { type: String, required: true },
   passwordSalt: { type: String, required: true },
+  accountType: { type: String, default: "owner" },
+  parentUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  billingOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  teamOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  seatStatus: { type: String, default: "active" },
+  officeId: { type: String, index: true },
+  territoryId: { type: String, index: true },
   stripeCustomerId: String,
   stripeSubscriptionId: String,
   stripePriceId: String,
@@ -239,6 +246,11 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   focusAreas: [String],
   painAreas: [String],
   preferredCloseStyle: String,
+  chefSlug: String,
+  chefShareCode: String,
+  chefEnabled: { type: Boolean, default: true },
+  teamRole: String,
+  seatLabel: String,
   leadDestinationType: { type: String, default: "carpeta_privada" },
   leadDestinationLabel: String,
   leadDestinationUrl: String,
@@ -302,6 +314,14 @@ const coachLeadInboxSchema = new mongoose.Schema({
   },
   ownerEmail: { type: String, index: true },
   ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
   fullName: { type: String, required: true, trim: true },
   phone: String,
   email: String,
@@ -346,6 +366,14 @@ const coachProgramSheetSchema = new mongoose.Schema({
   },
   ownerEmail: { type: String, index: true },
   ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
   programType: { type: String, default: "4_en_14" },
   hostName: String,
   hostPhone: String,
@@ -371,6 +399,14 @@ const coachHealthSurveySchema = new mongoose.Schema({
   },
   ownerEmail: { type: String, index: true },
   ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
   fullName: { type: String, required: true, trim: true },
   phone: String,
   secondName: String,
@@ -416,6 +452,14 @@ const coachRecruitmentApplicationSchema = new mongoose.Schema({
   },
   ownerEmail: { type: String, index: true },
   ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
   fullName: { type: String, required: true, trim: true },
   phone: String,
   email: String,
@@ -463,17 +507,25 @@ messageSchema.index({ sessionId: 1, createdAt: -1 });
 messageSchema.index({ intent: 1, role: 1, createdAt: -1 });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
+coachUserSchema.index({ parentUserId: 1, seatStatus: 1 });
+coachUserSchema.index({ teamOwnerUserId: 1, seatStatus: 1 });
 coachDistributorProfileSchema.index({ email: 1 });
+coachDistributorProfileSchema.index({ chefSlug: 1 }, { unique: true, sparse: true });
+coachDistributorProfileSchema.index({ chefShareCode: 1 }, { unique: true, sparse: true });
 coachDistributorAnalyticsSchema.index({ email: 1 });
 coachSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 coachLeadInboxSchema.index({ ownerUserId: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
+coachProgramSheetSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachHealthSurveySchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -1 });
 coachPrivateResourceSchema.index({ ownerUserId: 1, slotType: 1 }, { unique: true });
@@ -915,15 +967,268 @@ async function obtenerChefPublicStats() {
   };
 }
 
+function normalizarCoachAccountType(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  const validValues = ["owner", "seat", "leader"];
+  return validValues.includes(safeValue) ? safeValue : "owner";
+}
+
+function normalizarCoachSeatStatus(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  const validValues = ["active", "paused", "promoted", "closed"];
+  return validValues.includes(safeValue) ? safeValue : "active";
+}
+
+function resolverCoachTeamRoleDefault(userDoc = null) {
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+
+  if (accountType === "seat") {
+    return "novato";
+  }
+
+  if (accountType === "leader") {
+    return "lider";
+  }
+
+  return "distribuidor";
+}
+
+function normalizarCoachChefSlugSegment(value = "", maxLength = 36) {
+  const normalized = String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, maxLength);
+
+  return normalized || "";
+}
+
+function construirCoachChefPath(chefSlug = "") {
+  const slug = normalizarCoachChefSlugSegment(chefSlug, 48);
+  return slug ? `/chef/${slug}/` : "/chef/";
+}
+
+function construirCoachChefSlugBase(userDoc = null) {
+  const nameBase = normalizarCoachChefSlugSegment(userDoc?.name || "", 28);
+  const emailBase = normalizarCoachChefSlugSegment(String(userDoc?.email || "").split("@")[0] || "", 28);
+  const idBase = normalizarCoachChefSlugSegment(String(userDoc?._id || "").slice(-8), 12);
+  return nameBase || emailBase || (idBase ? `chef-${idBase}` : "chef");
+}
+
+async function generarCoachChefSlugDisponible(userDoc = null, excludeProfileId = null) {
+  const base = construirCoachChefSlugBase(userDoc);
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const suffix = attempt === 0 ? "" : `-${crypto.randomBytes(2).toString("hex")}`;
+    const candidate = normalizarCoachChefSlugSegment(`${base}${suffix}`, 42);
+    const query = { chefSlug: candidate };
+
+    if (excludeProfileId) {
+      query._id = { $ne: excludeProfileId };
+    }
+
+    const existing = await CoachDistributorProfile.findOne(query).select("_id").lean();
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  return normalizarCoachChefSlugSegment(`chef-${crypto.randomBytes(4).toString("hex")}`, 42);
+}
+
+async function generarCoachChefShareCodeDisponible(excludeProfileId = null) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = crypto.randomBytes(4).toString("hex");
+    const query = { chefShareCode: candidate };
+
+    if (excludeProfileId) {
+      query._id = { $ne: excludeProfileId };
+    }
+
+    const existing = await CoachDistributorProfile.findOne(query).select("_id").lean();
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  return crypto.randomBytes(6).toString("hex");
+}
+
+async function asegurarCoachUserBase(userDoc = null) {
+  if (!userDoc?._id) {
+    return userDoc;
+  }
+
+  let dirty = false;
+
+  if (!userDoc.accountType) {
+    userDoc.accountType = "owner";
+    dirty = true;
+  }
+
+  if (!userDoc.seatStatus) {
+    userDoc.seatStatus = "active";
+    dirty = true;
+  }
+
+  if (!userDoc.billingOwnerUserId) {
+    userDoc.billingOwnerUserId = userDoc._id;
+    dirty = true;
+  }
+
+  if (!userDoc.teamOwnerUserId) {
+    userDoc.teamOwnerUserId = userDoc._id;
+    dirty = true;
+  }
+
+  if (dirty) {
+    userDoc.updatedAt = new Date();
+    await userDoc.save();
+  }
+
+  return userDoc;
+}
+
+async function asegurarCoachDistributorProfile(userDoc = null, profileDoc = null) {
+  if (!userDoc?._id) {
+    return profileDoc || null;
+  }
+
+  const now = new Date();
+  const doc =
+    profileDoc instanceof CoachDistributorProfile
+      ? profileDoc
+      : profileDoc?._id
+        ? await CoachDistributorProfile.findById(profileDoc._id)
+        : (await CoachDistributorProfile.findOne({ userId: userDoc._id })) ||
+          new CoachDistributorProfile({
+            userId: userDoc._id,
+            createdAt: now
+          });
+
+  let dirty = !doc.createdAt;
+
+  if (!doc.createdAt) {
+    doc.createdAt = now;
+  }
+
+  if (doc.name !== (userDoc.name || "")) {
+    doc.name = userDoc.name || "";
+    dirty = true;
+  }
+
+  if (doc.email !== (userDoc.email || "")) {
+    doc.email = userDoc.email || "";
+    dirty = true;
+  }
+
+  const nextSubscriptionStatus = obtenerCoachStatusVisible(userDoc);
+  if (doc.subscriptionStatus !== nextSubscriptionStatus) {
+    doc.subscriptionStatus = nextSubscriptionStatus;
+    dirty = true;
+  }
+
+  if (!doc.teamRole) {
+    doc.teamRole = resolverCoachTeamRoleDefault(userDoc);
+    dirty = true;
+  }
+
+  if (!doc.seatLabel && normalizarCoachAccountType(userDoc.accountType || "owner") === "seat") {
+    doc.seatLabel = userDoc.name || userDoc.email || "Subcuenta";
+    dirty = true;
+  }
+
+  if (typeof doc.chefEnabled !== "boolean") {
+    doc.chefEnabled = true;
+    dirty = true;
+  }
+
+  if (!doc.chefSlug) {
+    doc.chefSlug = await generarCoachChefSlugDisponible(userDoc, doc._id);
+    dirty = true;
+  }
+
+  if (!doc.chefShareCode) {
+    doc.chefShareCode = await generarCoachChefShareCodeDisponible(doc._id);
+    dirty = true;
+  }
+
+  if (dirty) {
+    doc.updatedAt = now;
+    await doc.save();
+  }
+
+  return doc;
+}
+
+async function construirCoachOwnershipSnapshot(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      accountType: "owner",
+      ownerUserId: null,
+      ownerName: "",
+      ownerEmail: "",
+      generatedByUserId: null,
+      generatedByName: "",
+      generatedByAccountType: "owner"
+    };
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const ownerUserId =
+    accountType === "seat" && userDoc.teamOwnerUserId ? userDoc.teamOwnerUserId : userDoc._id;
+  let ownerName = userDoc.name || "";
+  let ownerEmail = userDoc.email || "";
+
+  if (ownerUserId && String(ownerUserId) !== String(userDoc._id)) {
+    const ownerUserDoc = await CoachUser.findById(ownerUserId).select("name email").lean();
+
+    if (ownerUserDoc) {
+      ownerName = ownerUserDoc.name || ownerName;
+      ownerEmail = ownerUserDoc.email || ownerEmail;
+    }
+  }
+
+  return {
+    accountType,
+    ownerUserId,
+    ownerName,
+    ownerEmail,
+    generatedByUserId: userDoc._id,
+    generatedByName: userDoc.name || userDoc.email || "",
+    generatedByAccountType: accountType
+  };
+}
+
 function limpiarCoachUser(userDoc) {
   if (!userDoc) {
     return null;
   }
 
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
   return {
     id: String(userDoc._id),
     name: userDoc.name || "",
     email: userDoc.email || "",
+    accountType,
+    parentUserId: userDoc.parentUserId ? String(userDoc.parentUserId) : "",
+    billingOwnerUserId: userDoc.billingOwnerUserId ? String(userDoc.billingOwnerUserId) : "",
+    teamOwnerUserId: userDoc.teamOwnerUserId ? String(userDoc.teamOwnerUserId) : "",
+    seatStatus,
+    officeId: userDoc.officeId || "",
+    territoryId: userDoc.territoryId || "",
+    managesTeam: accountType === "owner" || accountType === "leader",
     subscriptionStatus: obtenerCoachStatusVisible(userDoc),
     subscriptionActive: coachTieneAccesoTotal(userDoc),
     subscriptionCurrentPeriodEnd: userDoc.subscriptionCurrentPeriodEnd || null,
@@ -975,6 +1280,15 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
     topStages: extraerTopLabels(profileDoc?.topStages || analyticsDoc?.topStages || [], 5),
     focusAreas,
     painAreas,
+    teamRole: profileDoc?.teamRole || "",
+    seatLabel: profileDoc?.seatLabel || "",
+    chef: {
+      enabled: profileDoc?.chefEnabled !== false,
+      slug: profileDoc?.chefSlug || "",
+      shareCode: profileDoc?.chefShareCode || "",
+      sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
+      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
+    },
     leadDestination: limpiarCoachLeadDestination(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
@@ -1966,6 +2280,9 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
     ownerUserId: sheetDoc.ownerUserId ? String(sheetDoc.ownerUserId) : "",
     ownerEmail: sheetDoc.ownerEmail || "",
     ownerName: sheetDoc.ownerName || "",
+    generatedByUserId: sheetDoc.generatedByUserId ? String(sheetDoc.generatedByUserId) : "",
+    generatedByName: sheetDoc.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(sheetDoc.generatedByAccountType || "owner"),
     programType: sheetDoc.programType || "4_en_14",
     hostName: sheetDoc.hostName || "",
     hostPhone: sheetDoc.hostPhone || "",
@@ -2304,6 +2621,7 @@ async function guardarCoachInboxLead({
   payload = {},
   sendDestination = true
 } = {}) {
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
   const rawName = String(payload?.fullName || payload?.name || "").trim();
   const fullName = seleccionarNombreConfiable(rawName) || rawName;
   const phone = normalizePhone(payload?.phone || "");
@@ -2344,7 +2662,7 @@ async function guardarCoachInboxLead({
 
   if (duplicateQuery.length) {
     leadDoc = await CoachLeadInbox.findOne({
-      ownerUserId: userDoc?._id,
+      ownerUserId: ownership.ownerUserId,
       $or: duplicateQuery
     }).sort({ createdAt: -1 });
   }
@@ -2359,6 +2677,15 @@ async function guardarCoachInboxLead({
     leadDoc.source = source || leadDoc.source || "captura_manual";
     leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
     leadDoc.nextAction = nextAction || leadDoc.nextAction || "";
+    if (!leadDoc.generatedByUserId && ownership.generatedByUserId) {
+      leadDoc.generatedByUserId = ownership.generatedByUserId;
+    }
+    if (!leadDoc.generatedByName && ownership.generatedByName) {
+      leadDoc.generatedByName = ownership.generatedByName;
+    }
+    if (!leadDoc.generatedByAccountType && ownership.generatedByAccountType) {
+      leadDoc.generatedByAccountType = ownership.generatedByAccountType;
+    }
 
     if (nextActionAt) {
       leadDoc.nextActionAt = nextActionAt;
@@ -2388,9 +2715,12 @@ async function guardarCoachInboxLead({
   }
 
   leadDoc = await CoachLeadInbox.create({
-    ownerUserId: userDoc?._id,
-    ownerEmail: userDoc?.email || "",
-    ownerName: userDoc?.name || "",
+    ownerUserId: ownership.ownerUserId,
+    ownerEmail: ownership.ownerEmail || "",
+    ownerName: ownership.ownerName || "",
+    generatedByUserId: ownership.generatedByUserId,
+    generatedByName: ownership.generatedByName || "",
+    generatedByAccountType: ownership.generatedByAccountType,
     fullName,
     phone,
     email,
@@ -2464,6 +2794,11 @@ function limpiarCoachInboxLead(leadDoc = null) {
   return {
     id: String(leadDoc._id),
     ownerUserId: leadDoc.ownerUserId ? String(leadDoc.ownerUserId) : "",
+    ownerEmail: leadDoc.ownerEmail || "",
+    ownerName: leadDoc.ownerName || "",
+    generatedByUserId: leadDoc.generatedByUserId ? String(leadDoc.generatedByUserId) : "",
+    generatedByName: leadDoc.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(leadDoc.generatedByAccountType || "owner"),
     fullName: leadDoc.fullName || "",
     phone: leadDoc.phone || "",
     email: leadDoc.email || "",
@@ -2757,6 +3092,11 @@ function limpiarCoachHealthSurvey(surveyDoc = null) {
   return {
     id: String(surveyDoc._id),
     ownerUserId: surveyDoc.ownerUserId ? String(surveyDoc.ownerUserId) : "",
+    ownerEmail: surveyDoc.ownerEmail || "",
+    ownerName: surveyDoc.ownerName || "",
+    generatedByUserId: surveyDoc.generatedByUserId ? String(surveyDoc.generatedByUserId) : "",
+    generatedByName: surveyDoc.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(surveyDoc.generatedByAccountType || "owner"),
     fullName: surveyDoc.fullName || "",
     phone: surveyDoc.phone || "",
     secondName: surveyDoc.secondName || "",
@@ -2837,6 +3177,11 @@ function limpiarCoachRecruitmentApplication(applicationDoc = null) {
   return {
     id: String(applicationDoc._id),
     ownerUserId: applicationDoc.ownerUserId ? String(applicationDoc.ownerUserId) : "",
+    ownerEmail: applicationDoc.ownerEmail || "",
+    ownerName: applicationDoc.ownerName || "",
+    generatedByUserId: applicationDoc.generatedByUserId ? String(applicationDoc.generatedByUserId) : "",
+    generatedByName: applicationDoc.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(applicationDoc.generatedByAccountType || "owner"),
     fullName: applicationDoc.fullName || "",
     phone: applicationDoc.phone || "",
     email: applicationDoc.email || "",
@@ -3720,10 +4065,10 @@ async function actualizarPerfilYAnalyticsCoach({ userDoc, sessionId = "", questi
     createdAt: ahora
   };
 
-  const profile = (await CoachDistributorProfile.findOne({ userId: userDoc._id })) || new CoachDistributorProfile({
-    userId: userDoc._id,
-    createdAt: ahora
-  });
+  const profile = await asegurarCoachDistributorProfile(
+    userDoc,
+    await CoachDistributorProfile.findOne({ userId: userDoc._id })
+  );
 
   profile.name = userDoc.name || profile.name || "";
   profile.email = userDoc.email || profile.email || "";
@@ -7481,10 +7826,17 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
       email,
       passwordHash: passwordSeguro.hash,
       passwordSalt: passwordSeguro.salt,
+      accountType: "owner",
+      seatStatus: "active",
       subscriptionStatus: accesoDePrueba ? "test_access" : "inactive",
       subscriptionActive: false,
       updatedAt: new Date()
     });
+
+    userDoc.billingOwnerUserId = userDoc._id;
+    userDoc.teamOwnerUserId = userDoc._id;
+    await userDoc.save();
+    await asegurarCoachDistributorProfile(userDoc);
 
     await crearCoachSesion(req, res, userDoc._id);
 
@@ -7525,15 +7877,17 @@ app.post("/api/coach/login", async (req, res) => {
   }
 
   try {
-    const userDoc = await CoachUser.findOne({ email });
+    let userDoc = await CoachUser.findOne({ email });
 
     if (!userDoc || !verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash)) {
       return responderCoachError(res, 401, "Correo o contrasena incorrectos.");
     }
 
+    userDoc = await asegurarCoachUserBase(userDoc);
     userDoc.lastLoginAt = new Date();
     userDoc.updatedAt = new Date();
     await userDoc.save();
+    await asegurarCoachDistributorProfile(userDoc);
     await crearCoachSesion(req, res, userDoc._id);
 
     res.json({ user: limpiarCoachUser(userDoc) });
@@ -7564,23 +7918,27 @@ app.get("/api/coach/me", async (req, res) => {
       });
     }
 
-    const [profileDoc, analyticsDoc, networkSummary, leadMemory] = await Promise.all([
-      CoachDistributorProfile.findOne({ userId: auth.user._id }).lean(),
-      CoachDistributorAnalytics.findOne({ userId: auth.user._id }).lean(),
-      coachTieneAccesoTotal(auth.user) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
-      coachTieneAccesoTotal(auth.user)
+    let userDoc = await asegurarCoachUserBase(auth.user);
+
+    const [profileDocRaw, analyticsDoc, networkSummary, leadMemory] = await Promise.all([
+      CoachDistributorProfile.findOne({ userId: userDoc._id }),
+      CoachDistributorAnalytics.findOne({ userId: userDoc._id }).lean(),
+      coachTieneAccesoTotal(userDoc) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
+      coachTieneAccesoTotal(userDoc)
         ? obtenerMemoriaLeadRelacionada({
             mode: "coach",
-            coachUser: auth.user
+            coachUser: userDoc
           })
         : Promise.resolve({ leadContext: null, repLeadSummary: null })
     ]);
 
+    const profileDoc = await asegurarCoachDistributorProfile(userDoc, profileDocRaw);
+
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
-      user: limpiarCoachUser(auth.user),
-      profile: limpiarCoachProfile(profileDoc, analyticsDoc),
+      user: limpiarCoachUser(userDoc),
+      profile: limpiarCoachProfile(profileDoc?.toObject ? profileDoc.toObject() : profileDoc, analyticsDoc),
       networkSummary,
       repLeadSummary: leadMemory?.repLeadSummary || null,
       activeLeadContext: leadMemory?.leadContext || null
@@ -7613,19 +7971,7 @@ app.put("/api/coach/lead-destination", async (req, res) => {
 
   try {
     const now = new Date();
-    const profileDoc =
-      (await CoachDistributorProfile.findOne({ userId: auth.user._id })) ||
-      new CoachDistributorProfile({
-        userId: auth.user._id,
-        name: auth.user.name || "",
-        email: auth.user.email || "",
-        subscriptionStatus: obtenerCoachStatusVisible(auth.user),
-        createdAt: now
-      });
-
-    profileDoc.name = auth.user.name || profileDoc.name || "";
-    profileDoc.email = auth.user.email || profileDoc.email || "";
-    profileDoc.subscriptionStatus = obtenerCoachStatusVisible(auth.user);
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
     profileDoc.leadDestinationType = nextType;
     profileDoc.leadDestinationLabel = nextLabel;
     profileDoc.leadDestinationUrl = ["google_sheets", "webhook_crm"].includes(nextType) ? nextUrl : "";
@@ -7773,10 +8119,14 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
   try {
     const now = new Date();
     const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const applicationPayload = {
-      ownerUserId: auth.user._id,
-      ownerEmail: auth.user.email || "",
-      ownerName: auth.user.name || "",
+      ownerUserId: ownership.ownerUserId,
+      ownerEmail: ownership.ownerEmail || "",
+      ownerName: ownership.ownerName || "",
+      generatedByUserId: ownership.generatedByUserId,
+      generatedByName: ownership.generatedByName || "",
+      generatedByAccountType: ownership.generatedByAccountType,
       fullName,
       phone,
       email,
@@ -7903,10 +8253,14 @@ app.post("/api/coach/health-surveys", async (req, res) => {
 
   try {
     const now = new Date();
+    const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const surveyPayload = {
-      ownerUserId: auth.user._id,
-      ownerEmail: auth.user.email || "",
-      ownerName: auth.user.name || "",
+      ownerUserId: ownership.ownerUserId,
+      ownerEmail: ownership.ownerEmail || "",
+      ownerName: ownership.ownerName || "",
+      generatedByUserId: ownership.generatedByUserId,
+      generatedByName: ownership.generatedByName || "",
+      generatedByAccountType: ownership.generatedByAccountType,
       fullName,
       phone,
       secondName,
@@ -8034,10 +8388,14 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
   try {
     const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
     const now = new Date();
+    const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const sheetBase = {
-      ownerUserId: auth.user._id,
-      ownerEmail: auth.user.email || "",
-      ownerName: auth.user.name || "",
+      ownerUserId: ownership.ownerUserId,
+      ownerEmail: ownership.ownerEmail || "",
+      ownerName: ownership.ownerName || "",
+      generatedByUserId: ownership.generatedByUserId,
+      generatedByName: ownership.generatedByName || "",
+      generatedByAccountType: ownership.generatedByAccountType,
       programType: "4_en_14",
       hostName,
       hostPhone,
