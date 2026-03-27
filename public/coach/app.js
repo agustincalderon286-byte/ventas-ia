@@ -1504,6 +1504,241 @@ function initHealthSurveyTool() {
   });
 }
 
+function initRecruitmentTool() {
+  const formWrap = document.querySelector("[data-recruitment-wrap]");
+  const formToggle = document.querySelector("[data-recruitment-toggle]");
+  const form = document.querySelector("[data-recruitment-form]");
+  const feedbackNode = document.querySelector("[data-recruitment-feedback]");
+  const saveButton = document.querySelector("[data-recruitment-save]");
+  const folderWrap = document.querySelector("[data-recruitment-folder-wrap]");
+  const folderToggle = document.querySelector("[data-recruitment-folder-toggle]");
+  const folderList = document.querySelector("[data-recruitment-folder-list]");
+  const folderNote = document.querySelector("[data-recruitment-folder-note]");
+  const totalNode = document.querySelector("[data-recruitment-total]");
+  const fullTimeNode = document.querySelector("[data-recruitment-full-time]");
+  const drivingNode = document.querySelector("[data-recruitment-driving]");
+  const salesNode = document.querySelector("[data-recruitment-sales]");
+
+  if (!formWrap || !formToggle || !form || !folderWrap || !folderToggle || !folderList) {
+    return;
+  }
+
+  const state = {
+    applications: []
+  };
+
+  const syncFormToggle = open => {
+    formWrap.hidden = !open;
+    formToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    formToggle.textContent = open ? "Cerrar aplicacion" : "Abrir aplicacion";
+  };
+
+  const syncFolderToggle = open => {
+    folderWrap.hidden = !open;
+    folderToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    folderToggle.textContent = open ? "Cerrar carpeta" : "Abrir carpeta";
+  };
+
+  const resetFormState = () => {
+    form.reset();
+    setNamedFieldValue(form, "applicationId", "");
+    clearMessage(feedbackNode);
+  };
+
+  const fillForm = application => {
+    form.reset();
+    setNamedFieldValue(form, "applicationId", application?.id || "");
+    setNamedFieldValue(form, "fullName", application?.fullName || "");
+    setNamedFieldValue(form, "phone", application?.phone || "");
+    setNamedFieldValue(form, "email", application?.email || "");
+    setNamedFieldValue(form, "drives", application?.drives || "");
+    setNamedFieldValue(form, "hasCar", application?.hasCar || "");
+    setNamedFieldValue(form, "customerServiceExperience", application?.customerServiceExperience || "");
+    setNamedFieldValue(form, "workPreference", application?.workPreference || "");
+    setNamedFieldValue(form, "salesExperience", application?.salesExperience || "");
+    setNamedFieldValue(form, "about", application?.about || "");
+    clearMessage(feedbackNode);
+  };
+
+  const collectPayload = () => {
+    const formData = new FormData(form);
+
+    return {
+      applicationId: formData.get("applicationId"),
+      fullName: formData.get("fullName"),
+      phone: formData.get("phone"),
+      email: formData.get("email"),
+      drives: formData.get("drives"),
+      hasCar: formData.get("hasCar"),
+      customerServiceExperience: formData.get("customerServiceExperience"),
+      workPreference: formData.get("workPreference"),
+      salesExperience: formData.get("salesExperience"),
+      about: formData.get("about")
+    };
+  };
+
+  const renderSummary = () => {
+    if (totalNode) {
+      totalNode.textContent = String(state.applications.length);
+    }
+
+    if (fullTimeNode) {
+      fullTimeNode.textContent = String(
+        state.applications.filter(item => item.workPreference === "Tiempo completo").length
+      );
+    }
+
+    if (drivingNode) {
+      drivingNode.textContent = String(state.applications.filter(item => item.drives === "Si").length);
+    }
+
+    if (salesNode) {
+      salesNode.textContent = String(state.applications.filter(item => item.salesExperience === "Si").length);
+    }
+  };
+
+  const renderList = () => {
+    folderList.innerHTML = "";
+    renderSummary();
+
+    if (!state.applications.length) {
+      folderList.innerHTML = '<div class="recruitment-folder-empty">Aun no hay aplicaciones guardadas.</div>';
+      if (folderNote) {
+        folderNote.textContent = "Aun no hay aplicaciones guardadas en tu carpeta privada.";
+      }
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    state.applications.forEach(application => {
+      const card = document.createElement("article");
+      card.className = "recruitment-folder-item";
+      card.dataset.recruitmentId = application.id;
+
+      const chips = [
+        application.phone ? `<span class="recruitment-folder-chip">${escapeHtml(formatLeadPhone(application.phone))}</span>` : "",
+        application.email ? `<span class="recruitment-folder-chip">${escapeHtml(application.email)}</span>` : "",
+        application.workPreference ? `<span class="recruitment-folder-chip">${escapeHtml(application.workPreference)}</span>` : "",
+        application.drives ? `<span class="recruitment-folder-chip">Maneja: ${escapeHtml(application.drives)}</span>` : "",
+        application.hasCar ? `<span class="recruitment-folder-chip">Auto: ${escapeHtml(application.hasCar)}</span>` : "",
+        application.salesExperience ? `<span class="recruitment-folder-chip">Ventas: ${escapeHtml(application.salesExperience)}</span>` : ""
+      ]
+        .filter(Boolean)
+        .join("");
+
+      card.innerHTML = `
+        <div class="recruitment-folder-head">
+          <div>
+            <strong>${escapeHtml(application.fullName || "Candidato sin nombre")}</strong>
+            <span>${escapeHtml(formatDateTime(application.updatedAt || application.createdAt))}</span>
+          </div>
+          <span class="lead-status-badge">Aplicacion guardada</span>
+        </div>
+        <p class="recruitment-folder-copy">${escapeHtml(application.summary || "Sin resumen todavia.")}</p>
+        <div class="recruitment-folder-meta">${chips}</div>
+        <div class="recruitment-folder-actions">
+          <button type="button" class="secondary-button" data-recruitment-open>Abrir aplicacion</button>
+        </div>
+      `;
+
+      fragment.appendChild(card);
+    });
+
+    folderList.appendChild(fragment);
+
+    if (folderNote) {
+      folderNote.textContent = `${state.applications.length} aplicacion(es) guardadas en tu carpeta privada.`;
+    }
+  };
+
+  const loadApplications = async () => {
+    const data = await apiRequest("/api/coach/recruitment-applications");
+    state.applications = Array.isArray(data.applications) ? data.applications : [];
+    renderList();
+  };
+
+  syncFormToggle(false);
+  syncFolderToggle(false);
+
+  formToggle.addEventListener("click", () => {
+    syncFormToggle(formWrap.hidden);
+  });
+
+  folderToggle.addEventListener("click", async () => {
+    const willOpen = folderWrap.hidden;
+    syncFolderToggle(willOpen);
+
+    if (willOpen) {
+      await loadApplications().catch(() => {
+        if (folderNote) {
+          folderNote.textContent = "No pude cargar tu carpeta de aplicaciones.";
+        }
+      });
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      const data = await apiRequest("/api/coach/recruitment-applications", {
+        method: "POST",
+        body: collectPayload()
+      });
+
+      const deliveryCopy = data.delivery?.queued
+        ? " Tambien la estoy mandando a tu destino."
+        : data.delivery?.attempted
+          ? " Ya intente mandarla a tu destino."
+          : "";
+
+      resetFormState();
+      await loadApplications();
+      syncFolderToggle(true);
+      setMessage(
+        feedbackNode,
+        data.created
+          ? `Aplicacion guardada.${deliveryCopy}`
+          : `Aplicacion actualizada.${deliveryCopy}`,
+        "success"
+      );
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
+
+  form.addEventListener("reset", () => {
+    window.requestAnimationFrame(() => {
+      resetFormState();
+    });
+  });
+
+  folderList.addEventListener("click", event => {
+    const openButton = event.target.closest("[data-recruitment-open]");
+
+    if (!openButton) {
+      return;
+    }
+
+    const card = openButton.closest("[data-recruitment-id]");
+    const applicationId = card?.dataset.recruitmentId || "";
+    const application = state.applications.find(item => item.id === applicationId);
+
+    if (!application) {
+      return;
+    }
+
+    fillForm(application);
+    syncFormToggle(true);
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 function initCoachLeadWorkspace() {
   const captureWrap = document.querySelector("[data-native-lead-wrap]");
   const captureToggle = document.querySelector("[data-native-lead-toggle]");
@@ -2481,6 +2716,7 @@ async function initCoachAppPage() {
   initLeadDestinationSettings(me.profile?.leadDestination || null);
   initLeadFormTool();
   initCoachLeadWorkspace();
+  initRecruitmentTool();
   initHealthSurveyTool();
   initOrderCalculator();
   initDecisionTool();

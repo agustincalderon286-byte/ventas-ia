@@ -1135,7 +1135,9 @@ img {
 .lead-folder-card,
 .fourteen-sheet-card,
 .health-survey-card,
-.health-survey-folder-card {
+.health-survey-folder-card,
+.recruitment-card,
+.recruitment-folder-card {
   position: relative;
   overflow: hidden;
 }
@@ -1144,7 +1146,9 @@ img {
 .lead-folder-card::before,
 .fourteen-sheet-card::before,
 .health-survey-card::before,
-.health-survey-folder-card::before {
+.health-survey-folder-card::before,
+.recruitment-card::before,
+.recruitment-folder-card::before {
   content: "";
   position: absolute;
   width: 220px;
@@ -1178,17 +1182,31 @@ img {
   background: radial-gradient(circle, rgba(255, 205, 120, 0.14), transparent 72%);
 }
 
+.recruitment-card::before {
+  inset: -8% auto auto 55%;
+  background: radial-gradient(circle, rgba(157, 242, 181, 0.14), transparent 72%);
+}
+
+.recruitment-folder-card::before {
+  inset: auto -8% 56% auto;
+  background: radial-gradient(circle, rgba(120, 182, 255, 0.14), transparent 72%);
+}
+
 .native-lead-wrap[hidden],
 .lead-folder-wrap[hidden],
 .health-survey-wrap[hidden],
-.health-survey-folder-wrap[hidden] {
+.health-survey-folder-wrap[hidden],
+.recruitment-wrap[hidden],
+.recruitment-folder-wrap[hidden] {
   display: none !important;
 }
 
 .native-lead-toggle,
 .lead-folder-toggle,
 .health-survey-toggle,
-.health-survey-folder-toggle {
+.health-survey-folder-toggle,
+.recruitment-toggle,
+.recruitment-folder-toggle {
   min-width: 180px;
 }
 
@@ -1472,6 +1490,89 @@ img {
 }
 
 .health-survey-folder-empty {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  color: var(--muted);
+  text-align: center;
+}
+
+.recruitment-wrap,
+.recruitment-folder-wrap {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.recruitment-folder-list {
+  display: grid;
+  gap: 14px;
+}
+
+.recruitment-folder-item {
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.recruitment-folder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recruitment-folder-head strong,
+.recruitment-folder-head span {
+  display: block;
+}
+
+.recruitment-folder-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.recruitment-folder-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.recruitment-folder-copy {
+  margin: 14px 0 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.recruitment-folder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recruitment-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #edf2f9;
+  font-size: 0.8rem;
+}
+
+.recruitment-folder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.recruitment-folder-empty {
   padding: 18px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.04);
@@ -2805,6 +2906,10 @@ img {
   }
 
   .health-survey-folder-head {
+    flex-direction: column;
+  }
+
+  .recruitment-folder-head {
     flex-direction: column;
   }
 

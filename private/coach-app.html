@@ -430,6 +430,155 @@
             </p>
           </article>
 
+          <article class="dashboard-card recruitment-card" data-coach-workspace-section="prospeccion" hidden>
+            <div class="eyebrow">Reclutamiento rapido</div>
+            <h3>Aplicacion express</h3>
+            <p>
+              Cuando te topas a alguien en la calle que quiere trabajar, guarda sus datos aqui sin verte improvisado.
+              Se guarda en Mongo y tambien sale al destino del Coach igual que la rifa digital.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button recruitment-toggle"
+                data-recruitment-toggle
+                aria-expanded="false"
+              >
+                Abrir aplicacion
+              </button>
+            </div>
+
+            <div class="recruitment-wrap" data-recruitment-wrap hidden>
+              <form class="native-lead-form recruitment-form" data-recruitment-form>
+                <input type="hidden" name="applicationId" value="" />
+
+                <div class="native-lead-grid">
+                  <label class="native-lead-field">
+                    <span>Nombre</span>
+                    <input type="text" name="fullName" placeholder="Nombre completo" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Telefono</span>
+                    <input type="tel" name="phone" placeholder="7735551234" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Email</span>
+                    <input type="email" name="email" placeholder="Correo electronico" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Manejas</span>
+                    <select name="drives">
+                      <option value="">Elige una opcion</option>
+                      <option value="Si">Si</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Tienes auto propio</span>
+                    <select name="hasCar">
+                      <option value="">Elige una opcion</option>
+                      <option value="Si">Si</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Experiencia en atencion al cliente</span>
+                    <select name="customerServiceExperience">
+                      <option value="">Elige una opcion</option>
+                      <option value="Si">Si</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Buscas</span>
+                    <select name="workPreference">
+                      <option value="">Elige una opcion</option>
+                      <option value="Tiempo completo">Tiempo completo</option>
+                      <option value="Medio tiempo">Medio tiempo</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Experiencia en ventas</span>
+                    <select name="salesExperience">
+                      <option value="">Elige una opcion</option>
+                      <option value="Si">Si</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+                  <label class="native-lead-field native-lead-field-full">
+                    <span>Sobre ti</span>
+                    <textarea
+                      name="about"
+                      rows="4"
+                      maxlength="700"
+                      placeholder="Hablanos de ti, tu experiencia laboral y el empleo que buscas."
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-recruitment-save>Guardar aplicacion</button>
+                  <button type="reset" class="nav-button">Limpiar</button>
+                </div>
+
+                <div class="form-result" data-recruitment-feedback></div>
+              </form>
+            </div>
+
+            <p class="mini-note">
+              Sirve para guardar candidatos rapido y sin perderlos, aunque luego los trabajes en frio.
+            </p>
+          </article>
+
+          <article class="dashboard-card recruitment-folder-card" data-coach-workspace-section="prospeccion" hidden>
+            <div class="eyebrow">Carpeta privada</div>
+            <h3>Aplicaciones de trabajo</h3>
+            <p>
+              Aqui se quedan guardadas las aplicaciones rapidas para que las revises despues sin mezclarlas con leads
+              de venta.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button recruitment-folder-toggle"
+                data-recruitment-folder-toggle
+                aria-expanded="false"
+              >
+                Abrir carpeta
+              </button>
+            </div>
+
+            <div class="recruitment-folder-wrap" data-recruitment-folder-wrap hidden>
+              <div class="insight-grid recruitment-folder-metrics">
+                <div class="mini-stat">
+                  <strong data-recruitment-total>0</strong>
+                  <span>Total</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-recruitment-full-time>0</strong>
+                  <span>Tiempo completo</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-recruitment-driving>0</strong>
+                  <span>Manejan</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-recruitment-sales>0</strong>
+                  <span>Con ventas</span>
+                </div>
+              </div>
+
+              <div class="recruitment-folder-list" data-recruitment-folder-list></div>
+              <p class="mini-note" data-recruitment-folder-note>Aun no hay aplicaciones guardadas.</p>
+            </div>
+
+            <p class="mini-note">
+              Esta carpeta es de reclutamiento rapido. No toca tu carpeta de leads comerciales.
+            </p>
+          </article>
+
           <article class="dashboard-card lead-folder-card" data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Carpeta privada</div>
             <h3>Mis leads</h3>

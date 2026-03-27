@@ -390,6 +390,29 @@ const coachHealthSurveySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachRecruitmentApplicationSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  fullName: { type: String, required: true, trim: true },
+  phone: String,
+  email: String,
+  drives: String,
+  hasCar: String,
+  customerServiceExperience: String,
+  workPreference: String,
+  salesExperience: String,
+  about: String,
+  summary: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -413,6 +436,9 @@ coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -429,6 +455,9 @@ const CoachProgramSheet =
   mongoose.models.CoachProgramSheet || mongoose.model("CoachProgramSheet", coachProgramSheetSchema);
 const CoachHealthSurvey =
   mongoose.models.CoachHealthSurvey || mongoose.model("CoachHealthSurvey", coachHealthSurveySchema);
+const CoachRecruitmentApplication =
+  mongoose.models.CoachRecruitmentApplication ||
+  mongoose.model("CoachRecruitmentApplication", coachRecruitmentApplicationSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json());
@@ -1040,6 +1069,91 @@ function construirCorreoLeadCoach(userDoc = null, lead = null, destination = nul
   };
 }
 
+function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, application = null, destination = null) {
+  return {
+    app: "Agustin 2.0 Coach",
+    kind: "reclutamiento",
+    sentAt: new Date().toISOString(),
+    owner: {
+      id: userDoc?._id ? String(userDoc._id) : "",
+      name: userDoc?.name || "",
+      email: userDoc?.email || ""
+    },
+    destination: {
+      type: destination?.type || "carpeta_privada",
+      label: destination?.label || ""
+    },
+    application: {
+      id: application?.id || "",
+      fullName: application?.fullName || "",
+      phone: application?.phone || "",
+      email: application?.email || "",
+      drives: application?.drives || "",
+      hasCar: application?.hasCar || "",
+      customerServiceExperience: application?.customerServiceExperience || "",
+      workPreference: application?.workPreference || "",
+      salesExperience: application?.salesExperience || "",
+      about: application?.about || "",
+      summary: application?.summary || "",
+      createdAt: application?.createdAt || null,
+      updatedAt: application?.updatedAt || null
+    }
+  };
+}
+
+function construirCorreoCoachRecruitmentApplication(userDoc = null, application = null, destination = null) {
+  const ownerName = userDoc?.name || "Distribuidor";
+  const applicantName = application?.fullName || "Candidato nuevo";
+  const subject = `Nueva aplicacion para ${ownerName}: ${applicantName}`;
+  const lines = [
+    `Hola ${ownerName},`,
+    "",
+    "Te acaba de entrar una aplicacion rapida de reclutamiento en Agustin 2.0 Coach.",
+    "",
+    `Nombre: ${application?.fullName || "Sin nombre"}`,
+    `Telefono: ${application?.phone || "Sin telefono"}`,
+    `Correo: ${application?.email || "Sin correo"}`,
+    `Maneja: ${application?.drives || "Sin dato"}`,
+    `Auto propio: ${application?.hasCar || "Sin dato"}`,
+    `Atencion al cliente: ${application?.customerServiceExperience || "Sin dato"}`,
+    `Busca: ${application?.workPreference || "Sin dato"}`,
+    `Experiencia en ventas: ${application?.salesExperience || "Sin dato"}`,
+    "",
+    `Resumen: ${application?.summary || "Sin resumen"}`,
+    "",
+    `Sobre la persona: ${application?.about || "Sin texto"}`,
+    "",
+    "La aplicacion tambien quedo guardada en tu carpeta privada dentro del Coach."
+  ];
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a">
+      <h2 style="margin:0 0 12px">Nueva aplicacion de reclutamiento</h2>
+      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar una aplicacion rapida dentro de Agustin 2.0 Coach.</p>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Nombre</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.fullName || "Sin nombre")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.phone || "Sin telefono")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Correo</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.email || "Sin correo")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Maneja</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.drives || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Auto propio</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.hasCar || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Atencion al cliente</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.customerServiceExperience || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Busca</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.workPreference || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Experiencia en ventas</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.salesExperience || "Sin dato")}</td></tr>
+      </table>
+      <p style="margin:18px 0 0"><strong>Resumen:</strong> ${escapeXml(application?.summary || "Sin resumen")}</p>
+      <p style="margin:10px 0 0"><strong>Sobre la persona:</strong> ${escapeXml(application?.about || "Sin texto")}</p>
+      <p style="margin:18px 0 0;color:#475569">La aplicacion tambien quedo guardada en tu carpeta privada dentro del Coach.</p>
+    </div>
+  `;
+
+  return {
+    subject,
+    text: lines.join("\n"),
+    html,
+    to: destination?.email || ""
+  };
+}
+
 function construirCoachProgramSheetDeliveryPayload(userDoc = null, sheetDoc = null, destination = null, createdLeads = []) {
   return {
     app: "Agustin 2.0 Coach",
@@ -1269,6 +1383,110 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
   }
 }
 
+async function enviarCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !application) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  if (destination.type === "correo_personal") {
+    if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+      return {
+        attempted: true,
+        delivered: false,
+        destination,
+        error: "El correo del sistema todavia no esta configurado."
+      };
+    }
+
+    if (!destination.email) {
+      return {
+        attempted: false,
+        delivered: false,
+        destination,
+        error: "No hay correo destino configurado."
+      };
+    }
+
+    const emailPayload = construirCorreoCoachRecruitmentApplication(userDoc, application, destination);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM_EMAIL,
+        to: [emailPayload.to],
+        subject: emailPayload.subject,
+        text: emailPayload.text,
+        html: emailPayload.html
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        attempted: true,
+        delivered: false,
+        destination,
+        status: response.status,
+        error: errorData?.message || `Correo respondio ${response.status}`
+      };
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      destination,
+      status: response.status
+    };
+  }
+
+  if (!destination.url) {
+    return {
+      attempted: false,
+      delivered: false,
+      destination
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(destination.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(construirCoachRecruitmentApplicationDeliveryPayload(userDoc, application, destination)),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    return {
+      attempted: true,
+      delivered: response.ok,
+      destination,
+      status: response.status,
+      error: response.ok ? "" : `Destino respondio ${response.status}`
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    return {
+      attempted: true,
+      delivered: false,
+      destination,
+      error: error?.name === "AbortError" ? "El destino tardo demasiado en responder." : error.message
+    };
+  }
+}
+
 async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
@@ -1397,6 +1615,40 @@ function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead
       })
       .catch(error => {
         console.error("Error enviando lead del Coach al destino:", error.message);
+      });
+  }, 0);
+
+  return {
+    attempted: true,
+    queued: true,
+    destination
+  };
+}
+
+function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
+  const destination = limpiarCoachLeadDestination(profileDoc);
+
+  if (!destination.enabled || !application) {
+    return {
+      attempted: false,
+      queued: false,
+      destination
+    };
+  }
+
+  setTimeout(() => {
+    enviarCoachRecruitmentApplicationADestino(userDoc, profileDoc, application)
+      .then(result => {
+        if (!result?.delivered) {
+          console.error(
+            "No pude entregar aplicacion de reclutamiento al destino:",
+            result?.destination?.type || "desconocido",
+            result?.error || result?.status || "sin detalle"
+          );
+        }
+      })
+      .catch(error => {
+        console.error("Error enviando aplicacion de reclutamiento al destino:", error.message);
       });
   }, 0);
 
@@ -1923,6 +2175,63 @@ function limpiarCoachHealthSurvey(surveyDoc = null) {
     summary: surveyDoc.summary || "",
     updatedAt: surveyDoc.updatedAt || null,
     createdAt: surveyDoc.createdAt || null
+  };
+}
+
+function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
+  if (!applicationDoc) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (applicationDoc.workPreference) {
+    parts.push(`Busca ${String(applicationDoc.workPreference).toLowerCase()}.`);
+  }
+
+  if (applicationDoc.drives) {
+    parts.push(`Maneja: ${applicationDoc.drives}.`);
+  }
+
+  if (applicationDoc.hasCar) {
+    parts.push(`Auto propio: ${applicationDoc.hasCar}.`);
+  }
+
+  if (applicationDoc.customerServiceExperience) {
+    parts.push(`Atencion al cliente: ${applicationDoc.customerServiceExperience}.`);
+  }
+
+  if (applicationDoc.salesExperience) {
+    parts.push(`Ventas: ${applicationDoc.salesExperience}.`);
+  }
+
+  if (applicationDoc.about) {
+    parts.push(`Perfil: ${truncarTextoPrompt(applicationDoc.about, 150)}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+function limpiarCoachRecruitmentApplication(applicationDoc = null) {
+  if (!applicationDoc) {
+    return null;
+  }
+
+  return {
+    id: String(applicationDoc._id),
+    ownerUserId: applicationDoc.ownerUserId ? String(applicationDoc.ownerUserId) : "",
+    fullName: applicationDoc.fullName || "",
+    phone: applicationDoc.phone || "",
+    email: applicationDoc.email || "",
+    drives: applicationDoc.drives || "",
+    hasCar: applicationDoc.hasCar || "",
+    customerServiceExperience: applicationDoc.customerServiceExperience || "",
+    workPreference: applicationDoc.workPreference || "",
+    salesExperience: applicationDoc.salesExperience || "",
+    about: applicationDoc.about || "",
+    summary: applicationDoc.summary || "",
+    updatedAt: applicationDoc.updatedAt || null,
+    createdAt: applicationDoc.createdAt || null
   };
 }
 
@@ -6763,6 +7072,114 @@ app.post("/api/coach/leads", async (req, res) => {
   } catch (error) {
     console.error("Error guardando lead del Coach:", error.message);
     responderCoachError(res, error.status || 500, error.message || "No pude guardar el lead en este momento.");
+  }
+});
+
+app.get("/api/coach/recruitment-applications", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const applicationDocs = await CoachRecruitmentApplication.find({ ownerUserId: auth.user._id })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(300)
+      .lean();
+
+    res.json({
+      applications: applicationDocs.map(limpiarCoachRecruitmentApplication).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error cargando aplicaciones del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tu carpeta de aplicaciones.");
+  }
+});
+
+app.post("/api/coach/recruitment-applications", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const applicationId = String(req.body?.applicationId || "").trim();
+  const fullName =
+    seleccionarNombreConfiable(req.body?.fullName || "") || limpiarCoachHealthText(req.body?.fullName || "", 120);
+  const phone = normalizePhone(req.body?.phone || "");
+  const email = normalizarEmail(req.body?.email || "");
+  const drives = limpiarCoachHealthYesNo(req.body?.drives || "");
+  const hasCar = limpiarCoachHealthYesNo(req.body?.hasCar || "");
+  const customerServiceExperience = limpiarCoachHealthYesNo(req.body?.customerServiceExperience || "");
+  const workPreference = limpiarCoachHealthText(req.body?.workPreference || "", 80);
+  const salesExperience = limpiarCoachHealthYesNo(req.body?.salesExperience || "");
+  const about = limpiarCoachHealthText(req.body?.about || "", 700);
+
+  if (!fullName) {
+    return responderCoachError(res, 400, "El nombre es requerido.");
+  }
+
+  if (!phone) {
+    return responderCoachError(res, 400, "El telefono es requerido.");
+  }
+
+  if (applicationId && !mongoose.Types.ObjectId.isValid(applicationId)) {
+    return responderCoachError(res, 400, "Aplicacion invalida.");
+  }
+
+  try {
+    const now = new Date();
+    const profileDoc = await CoachDistributorProfile.findOne({ userId: auth.user._id }).lean();
+    const applicationPayload = {
+      ownerUserId: auth.user._id,
+      ownerEmail: auth.user.email || "",
+      ownerName: auth.user.name || "",
+      fullName,
+      phone,
+      email,
+      drives,
+      hasCar,
+      customerServiceExperience,
+      workPreference,
+      salesExperience,
+      about,
+      updatedAt: now
+    };
+
+    applicationPayload.summary = construirCoachRecruitmentApplicationSummary(applicationPayload);
+
+    let applicationDoc = null;
+    let created = false;
+
+    if (applicationId) {
+      applicationDoc = await CoachRecruitmentApplication.findOne({ _id: applicationId, ownerUserId: auth.user._id });
+
+      if (!applicationDoc) {
+        return responderCoachError(res, 404, "No encontre esa aplicacion.");
+      }
+
+      Object.assign(applicationDoc, applicationPayload);
+      await applicationDoc.save();
+    } else {
+      created = true;
+      applicationDoc = await CoachRecruitmentApplication.create({
+        ...applicationPayload,
+        createdAt: now
+      });
+    }
+
+    const cleanedApplication = limpiarCoachRecruitmentApplication(applicationDoc.toObject());
+    const delivery = programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
+
+    res.json({
+      created,
+      application: cleanedApplication,
+      delivery
+    });
+  } catch (error) {
+    console.error("Error guardando aplicacion de reclutamiento del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar la aplicacion en este momento.");
   }
 });
 
