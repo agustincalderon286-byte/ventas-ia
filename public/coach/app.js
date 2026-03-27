@@ -29,6 +29,7 @@ const GOOGLE_RAFFLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
+const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const FOURTEEN_SHEET_DEFAULT_REFERRALS = 4;
 const FOURTEEN_SHEET_MAX_REFERRALS = 11;
 const COACH_LEAD_STATUS_OPTIONS = [
@@ -145,6 +146,12 @@ const BUYER_PROFILE_QUESTIONS = [
     group: "proof"
   }
 ];
+const DAILY_PRIZE_DEFAULT_STATE = {
+  prizeName: "Olla de 30 cuartos",
+  minimumAmount: 2500,
+  status: "disponible",
+  note: "Valido solo para la primera compra del dia arriba de $2500."
+};
 
 function buildCoachId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -916,6 +923,142 @@ function initBuyerProfileTool() {
 
   runButton?.addEventListener("click", analyze);
   resetButton?.addEventListener("click", reset);
+}
+
+function initDailyPrizeTool() {
+  const wrap = document.querySelector("[data-daily-prize-wrap]");
+  const root = document.querySelector("[data-daily-prize-tool]");
+  const toggle = document.querySelector("[data-daily-prize-toggle]");
+
+  if (!root || !wrap || !toggle) {
+    return;
+  }
+
+  const nameInput = root.querySelector("[data-daily-prize-name]");
+  const minimumInput = root.querySelector("[data-daily-prize-minimum]");
+  const statusSelect = root.querySelector("[data-daily-prize-status]");
+  const noteInput = root.querySelector("[data-daily-prize-note]");
+  const checkButton = root.querySelector("[data-daily-prize-check]");
+  const saveButton = root.querySelector("[data-daily-prize-save]");
+  const resetButton = root.querySelector("[data-daily-prize-reset]");
+  const badgeNode = root.querySelector("[data-daily-prize-badge]");
+  const thresholdNode = root.querySelector("[data-daily-prize-threshold]");
+  const copyNode = root.querySelector("[data-daily-prize-copy]");
+  const noteOutputNode = root.querySelector("[data-daily-prize-note-output]");
+
+  const syncPrizeToggle = open => {
+    wrap.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open ? "Cerrar premio" : "Abrir premio";
+  };
+
+  const getStoredState = () => {
+    try {
+      const raw = window.localStorage.getItem(COACH_DAILY_PRIZE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const saveStoredState = state => {
+    window.localStorage.setItem(COACH_DAILY_PRIZE_KEY, JSON.stringify(state));
+  };
+
+  const buildState = () => ({
+    prizeName: String(nameInput?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.prizeName,
+    minimumAmount: Number.parseFloat(minimumInput?.value || "") || DAILY_PRIZE_DEFAULT_STATE.minimumAmount,
+    status: String(statusSelect?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.status,
+    note: String(noteInput?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.note
+  });
+
+  const getStatusMeta = status => {
+    if (status === "entregado") {
+      return {
+        badge: "Ya se entrego",
+        copy: "Este premio ya salio hoy. No lo uses en la demo. Cambia a calculadora, Franklin o cierre por salud."
+      };
+    }
+
+    if (status === "revisando") {
+      return {
+        badge: "En revision",
+        copy: "Todavia lo estan revisando. No lo prometas como hecho. Usalo solo si la oficina te confirma que sigue vivo."
+      };
+    }
+
+    return {
+      badge: "Disponible hoy",
+      copy: "Disponible hoy. Usalo solo al final, cuando ya viste valor real y la compra si pase el minimo."
+    };
+  };
+
+  const applyStateToFields = state => {
+    if (nameInput) {
+      nameInput.value = state.prizeName;
+    }
+
+    if (minimumInput) {
+      minimumInput.value = String(state.minimumAmount);
+    }
+
+    if (statusSelect) {
+      statusSelect.value = state.status;
+    }
+
+    if (noteInput) {
+      noteInput.value = state.note;
+    }
+  };
+
+  const renderState = state => {
+    const meta = getStatusMeta(state.status);
+
+    if (badgeNode) {
+      badgeNode.textContent = meta.badge;
+    }
+
+    if (thresholdNode) {
+      thresholdNode.textContent = formatMoney(state.minimumAmount);
+    }
+
+    if (copyNode) {
+      copyNode.textContent = `${meta.copy} Premio: ${state.prizeName}.`;
+    }
+
+    if (noteOutputNode) {
+      noteOutputNode.textContent = state.note;
+    }
+  };
+
+  const storedState = {
+    ...DAILY_PRIZE_DEFAULT_STATE,
+    ...(getStoredState() || {})
+  };
+
+  applyStateToFields(storedState);
+  renderState(storedState);
+  syncPrizeToggle(false);
+
+  toggle.addEventListener("click", () => {
+    syncPrizeToggle(wrap.hidden);
+  });
+
+  checkButton?.addEventListener("click", () => {
+    renderState(buildState());
+  });
+
+  saveButton?.addEventListener("click", () => {
+    const nextState = buildState();
+    saveStoredState(nextState);
+    renderState(nextState);
+  });
+
+  resetButton?.addEventListener("click", () => {
+    applyStateToFields(DAILY_PRIZE_DEFAULT_STATE);
+    saveStoredState(DAILY_PRIZE_DEFAULT_STATE);
+    renderState(DAILY_PRIZE_DEFAULT_STATE);
+  });
 }
 
 function initEmbeddedLeadForm({ wrapSelector, toggleSelector, frameSelector, openLinkSelector, url, openLabel, closeLabel }) {
@@ -3080,6 +3223,7 @@ async function initCoachAppPage() {
   initOrderCalculator();
   initDecisionTool();
   initBuyerProfileTool();
+  initDailyPrizeTool();
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");

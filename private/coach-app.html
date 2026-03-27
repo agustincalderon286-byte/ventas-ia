@@ -1491,6 +1491,93 @@
             </p>
           </article>
 
+          <article class="dashboard-card daily-prize-card" data-coach-workspace-section="cierre">
+            <div class="eyebrow">Cierre especial</div>
+            <h3>Premio del dia</h3>
+            <p>
+              Usalo solo cuando la oficina de verdad tenga un premio activo. Esta version es honesta: muestra el
+              estado real y te ayuda a no prometer algo que ya no existe.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button daily-prize-toggle"
+                data-daily-prize-toggle
+                aria-expanded="false"
+              >
+                Abrir premio
+              </button>
+            </div>
+
+            <div class="daily-prize-wrap" data-daily-prize-wrap hidden>
+              <div class="daily-prize-tool" data-daily-prize-tool>
+                <div class="daily-prize-grid">
+                  <label class="daily-prize-field">
+                    <span>Premio</span>
+                    <input type="text" data-daily-prize-name placeholder="Ej. Olla de 30 cuartos" />
+                  </label>
+                  <label class="daily-prize-field">
+                    <span>Minimo de compra</span>
+                    <input type="number" min="0" step="0.01" data-daily-prize-minimum placeholder="2500" />
+                  </label>
+                  <label class="daily-prize-field">
+                    <span>Estado real</span>
+                    <select data-daily-prize-status>
+                      <option value="disponible">Disponible hoy</option>
+                      <option value="revisando">En revision</option>
+                      <option value="entregado">Ya se entrego</option>
+                    </select>
+                  </label>
+                  <label class="daily-prize-field daily-prize-field-full">
+                    <span>Nota real</span>
+                    <textarea
+                      rows="3"
+                      maxlength="220"
+                      data-daily-prize-note
+                      placeholder="Ej. Valido solo para la primera compra del dia arriba de $2500."
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="decision-tool-actions">
+                  <button type="button" class="primary-button" data-daily-prize-check>Verificar disponibilidad</button>
+                  <button type="button" class="secondary-button" data-daily-prize-save>Guardar estado</button>
+                  <button type="button" class="nav-button" data-daily-prize-reset>Volver al ejemplo</button>
+                </div>
+
+                <div class="daily-prize-result">
+                  <div class="daily-prize-result-grid">
+                    <div class="daily-prize-result-card is-main">
+                      <span>Estado actual</span>
+                      <strong data-daily-prize-badge>Disponible hoy</strong>
+                    </div>
+                    <div class="daily-prize-result-card">
+                      <span>Minimo para usarlo</span>
+                      <strong data-daily-prize-threshold>$2,500.00</strong>
+                    </div>
+                    <div class="daily-prize-result-card is-copy">
+                      <span>Lectura honesta</span>
+                      <strong data-daily-prize-copy>
+                        Disponible hoy. Usalo solo al final y solo si la venta ya paso el minimo real.
+                      </strong>
+                    </div>
+                    <div class="daily-prize-result-card">
+                      <span>Nota de oficina</span>
+                      <strong data-daily-prize-note-output>
+                        Valido solo para la primera compra del dia arriba de $2500.
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Este cierre no reemplaza los demas. Solo te ayuda a confirmar si conviene usarlo hoy o cambiar a otro.
+            </p>
+          </article>
+
           <article class="dashboard-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Tu patron</div>
             <h3>Como te esta leyendo el Coach</h3>

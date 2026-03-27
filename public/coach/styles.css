@@ -2504,6 +2504,144 @@ img {
   color: #ccffdb;
 }
 
+.daily-prize-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.daily-prize-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -8% 56% auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 168, 76, 0.16), transparent 72%);
+  pointer-events: none;
+}
+
+.daily-prize-wrap[hidden] {
+  display: none !important;
+}
+
+.daily-prize-toggle {
+  min-width: 180px;
+}
+
+.daily-prize-tool {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.daily-prize-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.daily-prize-field {
+  display: grid;
+  gap: 8px;
+}
+
+.daily-prize-field-full {
+  grid-column: 1 / -1;
+}
+
+.daily-prize-field span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.daily-prize-field input,
+.daily-prize-field select,
+.daily-prize-field textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+}
+
+.daily-prize-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.daily-prize-field input::placeholder,
+.daily-prize-field textarea::placeholder {
+  color: var(--muted);
+}
+
+.daily-prize-field input:focus,
+.daily-prize-field select:focus,
+.daily-prize-field textarea:focus {
+  outline: none;
+  border-color: rgba(255, 168, 76, 0.42);
+  box-shadow: 0 0 0 3px rgba(255, 168, 76, 0.12);
+}
+
+.daily-prize-result {
+  padding: 18px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 168, 76, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 168, 76, 0.18);
+}
+
+.daily-prize-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.daily-prize-result-card {
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.daily-prize-result-card span,
+.daily-prize-result-card strong {
+  display: block;
+}
+
+.daily-prize-result-card span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.daily-prize-result-card strong {
+  margin-top: 8px;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+.daily-prize-result-card.is-main {
+  border-color: rgba(255, 168, 76, 0.24);
+  background: rgba(255, 168, 76, 0.08);
+}
+
+.daily-prize-result-card.is-main strong {
+  color: #ffe5c7;
+}
+
+.daily-prize-result-card.is-copy {
+  border-color: rgba(255, 226, 168, 0.22);
+  background: rgba(255, 226, 168, 0.08);
+}
+
+.daily-prize-result-card.is-copy strong {
+  color: #fff0c6;
+}
+
 .coach-console {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -2973,7 +3111,9 @@ img {
   .decision-tool-columns,
   .decision-tool-scoreboard,
   .decision-tool-insight,
-  .buyer-profile-result-grid {
+  .buyer-profile-result-grid,
+  .daily-prize-grid,
+  .daily-prize-result-grid {
     grid-template-columns: 1fr;
   }
 
