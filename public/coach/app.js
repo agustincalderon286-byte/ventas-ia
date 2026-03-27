@@ -25,8 +25,6 @@ async function apiRequest(url, options = {}) {
 const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
-const GOOGLE_RAFFLE_FORM_URL =
-  "https://docs.google.com/forms/d/e/1FAIpQLSfoxNU7_3BbGUCaal6U04v8ymJCGCuc9sGvfXoHiMxqbQmNyw/viewform";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
@@ -2027,57 +2025,6 @@ function initDailyPrizeTool() {
       label: "Se reclamo oferta especial",
       detail: getOffer(currentState.offerCode || currentState.code)?.title || "Oferta especial."
     });
-  });
-}
-
-function initEmbeddedLeadForm({ wrapSelector, toggleSelector, frameSelector, openLinkSelector, url, openLabel, closeLabel }) {
-  const wrap = document.querySelector(wrapSelector);
-  const toggle = document.querySelector(toggleSelector);
-  const frame = document.querySelector(frameSelector);
-  const openLink = document.querySelector(openLinkSelector);
-
-  if (!wrap || !toggle || !frame) {
-    return;
-  }
-
-  if (openLink) {
-    openLink.href = url;
-  }
-
-  const embedHeight = Number.parseInt(frame.dataset.embedHeight || "0", 10);
-
-  if (embedHeight > 0) {
-    frame.style.minHeight = `${embedHeight}px`;
-  }
-
-  const syncLeadFormToggle = open => {
-    wrap.hidden = !open;
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.textContent = open ? closeLabel : openLabel;
-  };
-
-  syncLeadFormToggle(false);
-
-  toggle.addEventListener("click", () => {
-    const willOpen = wrap.hidden;
-
-    if (willOpen && !frame.getAttribute("src")) {
-      frame.setAttribute("src", `${url}?embedded=true`);
-    }
-
-    syncLeadFormToggle(willOpen);
-  });
-}
-
-function initLeadFormTool() {
-  initEmbeddedLeadForm({
-    wrapSelector: "[data-lead-form-wrap]",
-    toggleSelector: "[data-lead-form-toggle]",
-    frameSelector: "[data-lead-form-frame]",
-    openLinkSelector: "[data-lead-form-open-link]",
-    url: GOOGLE_RAFFLE_FORM_URL,
-    openLabel: "Abrir rifa",
-    closeLabel: "Cerrar rifa"
   });
 }
 
@@ -5632,7 +5579,6 @@ async function initCoachAppPage() {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
   }
   initCoachPrivateResources();
-  initLeadFormTool();
   initCoachLeadWorkspace();
   initCoachTeamWorkspace(me.user);
   initRecruitmentTool();
