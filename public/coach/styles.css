@@ -3093,7 +3093,7 @@ img {
 }
 
 .coach-float-panel {
-  width: min(380px, calc(100vw - 28px));
+  width: min(420px, calc(100vw - 28px));
   padding: 18px;
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(9, 22, 41, 0.99), rgba(10, 24, 46, 0.96));
@@ -3138,8 +3138,8 @@ img {
 }
 
 .coach-float-messages {
-  min-height: 240px;
-  max-height: 360px;
+  min-height: 280px;
+  max-height: 400px;
   margin-top: 14px;
   padding: 14px;
   border-radius: 24px;
@@ -3155,6 +3155,38 @@ img {
 
 .coach-float-note {
   margin: 12px 4px 0;
+}
+
+@media (min-width: 721px) and (max-width: 980px) {
+  .coach-float-panel {
+    width: min(470px, calc(100vw - 36px));
+    padding: 20px;
+  }
+
+  .coach-float-messages {
+    min-height: 320px;
+    max-height: 430px;
+  }
+
+  .coach-float-composer textarea {
+    min-height: 70px;
+  }
+}
+
+@media (min-width: 981px) {
+  .coach-float-panel {
+    width: min(520px, 40vw);
+    padding: 22px;
+  }
+
+  .coach-float-messages {
+    min-height: 360px;
+    max-height: 500px;
+  }
+
+  .coach-float-composer textarea {
+    min-height: 78px;
+  }
 }
 
 .footer-note {
