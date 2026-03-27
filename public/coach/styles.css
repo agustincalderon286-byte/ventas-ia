@@ -1310,6 +1310,49 @@ img {
   gap: 16px;
 }
 
+.lead-folder-panels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lead-panel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.lead-panel-chip strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #edf2f9;
+  font-size: 0.82rem;
+}
+
+.lead-panel-chip.is-active {
+  border-color: rgba(125, 255, 212, 0.32);
+  background: rgba(125, 255, 212, 0.12);
+  color: #eafff7;
+}
+
+.lead-panel-chip.is-active strong {
+  background: rgba(125, 255, 212, 0.2);
+}
+
 .lead-folder-toolbar {
   display: grid;
   gap: 14px;

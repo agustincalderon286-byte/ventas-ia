@@ -1213,10 +1213,13 @@ function initCoachLeadWorkspace() {
   const exportButton = document.querySelector("[data-coach-leads-export]");
   const printButton = document.querySelector("[data-coach-leads-print]");
   const filterButtons = Array.from(document.querySelectorAll("[data-lead-filter]"));
+  const panelButtons = Array.from(document.querySelectorAll("[data-lead-panel]"));
   const totalNode = document.querySelector("[data-coach-leads-total]");
   const newNode = document.querySelector("[data-coach-leads-new]");
   const bookedNode = document.querySelector("[data-coach-leads-booked]");
   const clientsNode = document.querySelector("[data-coach-leads-clients]");
+  const panelRifaNode = document.querySelector("[data-coach-leads-panel-rifa]");
+  const panel414Node = document.querySelector("[data-coach-leads-panel-414]");
 
   if (!captureWrap || !captureToggle || !captureForm || !folderWrap || !folderToggle || !leadList) {
     return;
@@ -1224,7 +1227,8 @@ function initCoachLeadWorkspace() {
 
   const state = {
     leads: [],
-    filter: "todos"
+    filter: "todos",
+    panel: "rifa_capture"
   };
 
   const syncCaptureToggle = open => {
@@ -1239,19 +1243,47 @@ function initCoachLeadWorkspace() {
     folderToggle.textContent = open ? "Cerrar carpeta" : "Abrir carpeta";
   };
 
+  const getLeadPanel = lead => (lead?.source === "programa_4_en_14" ? "program_4_14" : "rifa_capture");
+
+  const getPanelLabel = panel =>
+    panel === "program_4_14" ? "4 en 14" : "Rifa y captura";
+
+  const getPanelLeads = () => state.leads.filter(lead => getLeadPanel(lead) === state.panel);
+
   const getFilteredLeads = () => {
+    const panelLeads = getPanelLeads();
+
     if (state.filter === "todos") {
-      return state.leads;
+      return panelLeads;
     }
 
-    return state.leads.filter(lead => lead.status === state.filter);
+    return panelLeads.filter(lead => lead.status === state.filter);
   };
 
-  const renderSummary = summary => {
-    if (totalNode) totalNode.textContent = String(summary?.total || 0);
-    if (newNode) newNode.textContent = String(summary?.nuevo || 0);
-    if (bookedNode) bookedNode.textContent = String(summary?.agendado || 0);
-    if (clientsNode) clientsNode.textContent = String(summary?.cliente || 0);
+  const buildSummary = leads => {
+    const items = Array.isArray(leads) ? leads : [];
+    return {
+      total: items.length,
+      nuevo: items.filter(lead => lead.status === "nuevo").length,
+      agendado: items.filter(lead => lead.status === "agendado").length,
+      cliente: items.filter(lead => lead.status === "cliente").length
+    };
+  };
+
+  const renderSummary = () => {
+    const panelLeads = getPanelLeads();
+    const summary = buildSummary(panelLeads);
+
+    if (totalNode) totalNode.textContent = String(summary.total || 0);
+    if (newNode) newNode.textContent = String(summary.nuevo || 0);
+    if (bookedNode) bookedNode.textContent = String(summary.agendado || 0);
+    if (clientsNode) clientsNode.textContent = String(summary.cliente || 0);
+    if (panelRifaNode) {
+      panelRifaNode.textContent = String(state.leads.filter(lead => getLeadPanel(lead) === "rifa_capture").length);
+    }
+    if (panel414Node) {
+      panel414Node.textContent = String(state.leads.filter(lead => getLeadPanel(lead) === "program_4_14").length);
+    }
   };
 
   const renderLeadList = () => {
@@ -1261,11 +1293,16 @@ function initCoachLeadWorkspace() {
     filterButtons.forEach(button => {
       button.classList.toggle("is-active", button.dataset.leadFilter === state.filter);
     });
+    panelButtons.forEach(button => {
+      const isActive = button.dataset.leadPanel === state.panel;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
 
     if (!filteredLeads.length) {
-      leadList.innerHTML = `<div class="lead-folder-empty">No hay leads en este filtro todavia.</div>`;
+      leadList.innerHTML = `<div class="lead-folder-empty">No hay leads en este panel con ese filtro todavia.</div>`;
       if (leadListNote) {
-        leadListNote.textContent = "Captura uno nuevo o cambia el filtro para ver mas.";
+        leadListNote.textContent = `No hay resultados en ${getPanelLabel(state.panel)}. Cambia el filtro o guarda uno nuevo.`;
       }
       return;
     }
@@ -1368,7 +1405,7 @@ function initCoachLeadWorkspace() {
     leadList.appendChild(fragment);
 
     if (leadListNote) {
-      leadListNote.textContent = `${filteredLeads.length} lead(s) en este filtro.`;
+      leadListNote.textContent = `${filteredLeads.length} lead(s) en ${getPanelLabel(state.panel)}.`;
     }
   };
 
@@ -1419,7 +1456,7 @@ function initCoachLeadWorkspace() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "coach-leads.csv";
+    link.download = state.panel === "program_4_14" ? "coach-leads-4-en-14.csv" : "coach-leads-rifa-y-captura.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1462,7 +1499,7 @@ function initCoachLeadWorkspace() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Mis leads</title>
+          <title>${getPanelLabel(state.panel)}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
             h1 { margin: 0 0 16px; }
@@ -1472,7 +1509,7 @@ function initCoachLeadWorkspace() {
           </style>
         </head>
         <body>
-          <h1>Mis leads</h1>
+          <h1>${getPanelLabel(state.panel)}</h1>
           <table>
             <thead>
               <tr>
@@ -1501,7 +1538,7 @@ function initCoachLeadWorkspace() {
   const loadLeads = async () => {
     const data = await apiRequest("/api/coach/leads");
     state.leads = Array.isArray(data.leads) ? data.leads : [];
-    renderSummary(data.summary || {});
+    renderSummary();
     renderLeadList();
   };
 
@@ -1582,6 +1619,14 @@ function initCoachLeadWorkspace() {
   filterButtons.forEach(button => {
     button.addEventListener("click", () => {
       state.filter = button.dataset.leadFilter || "todos";
+      renderLeadList();
+    });
+  });
+
+  panelButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      state.panel = button.dataset.leadPanel || "rifa_capture";
+      renderSummary();
       renderLeadList();
     });
   });

@@ -421,7 +421,8 @@
             <div class="eyebrow">Carpeta privada</div>
             <h3>Mis leads</h3>
             <p>
-              Aqui se queda guardado lo que captures con tu formulario nativo. Puedes mover estados, imprimir o exportar.
+              Aqui se queda guardado lo que capturas. Ahora ya esta separado entre rifa/captura y 4 en 14 para
+              trabajarlos distinto sin mezclar flujos.
             </p>
 
             <div class="dashboard-actions compact-top">
@@ -436,6 +437,27 @@
             </div>
 
             <div class="lead-folder-wrap" data-lead-folder-wrap hidden>
+              <div class="lead-folder-panels" role="tablist" aria-label="Tipo de lead">
+                <button
+                  type="button"
+                  class="lead-panel-chip is-active"
+                  data-lead-panel="rifa_capture"
+                  aria-selected="true"
+                >
+                  Rifa y captura
+                  <strong data-coach-leads-panel-rifa>0</strong>
+                </button>
+                <button
+                  type="button"
+                  class="lead-panel-chip"
+                  data-lead-panel="program_4_14"
+                  aria-selected="false"
+                >
+                  4 en 14
+                  <strong data-coach-leads-panel-414>0</strong>
+                </button>
+              </div>
+
               <div class="insight-grid lead-folder-metrics">
                 <div class="mini-stat">
                   <strong data-coach-leads-total>0</strong>
