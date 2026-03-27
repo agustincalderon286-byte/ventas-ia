@@ -2540,6 +2540,10 @@ img {
   gap: 12px;
 }
 
+.daily-prize-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .daily-prize-field {
   display: grid;
   gap: 8px;
@@ -2583,6 +2587,27 @@ img {
   outline: none;
   border-color: rgba(255, 168, 76, 0.42);
   box-shadow: 0 0 0 3px rgba(255, 168, 76, 0.12);
+}
+
+.daily-prize-feedback {
+  padding: 13px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.daily-prize-feedback[data-state="success"] {
+  background: rgba(102, 232, 154, 0.12);
+  border-color: rgba(102, 232, 154, 0.22);
+  color: #ddffea;
+}
+
+.daily-prize-feedback[data-state="error"] {
+  background: rgba(255, 122, 122, 0.12);
+  border-color: rgba(255, 122, 122, 0.24);
+  color: #ffd8d8;
 }
 
 .daily-prize-result {
@@ -2640,6 +2665,24 @@ img {
 
 .daily-prize-result-card.is-copy strong {
   color: #fff0c6;
+}
+
+.daily-prize-progress {
+  margin-top: 16px;
+  width: 100%;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.daily-prize-progress-bar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff9248, #ffb347);
+  transition: width 0.9s linear;
 }
 
 .coach-console {

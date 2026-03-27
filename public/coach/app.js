@@ -30,6 +30,23 @@ const GOOGLE_RAFFLE_FORM_URL =
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
+const DAILY_PRIZE_DURATION_MS = 5 * 60 * 1000;
+const DAILY_PRIZE_OFFERS = {
+  "305": {
+    code: "305",
+    type: "discount",
+    title: "Descuento especial",
+    copy: "Activalo solo cuando ya viste interes real y quieras ayudarles a tomar la decision hoy.",
+    note: "Descuento real disponible solo durante esta activacion."
+  },
+  "14407": {
+    code: "14407",
+    type: "gift",
+    title: "Regalo especial",
+    copy: "Usalo cuando la compra ya va en serio y quieras cerrar con valor extra, no como gancho temprano.",
+    note: "Regalo valido para compra arriba de $2500 mientras esta activacion siga viva."
+  }
+};
 const FOURTEEN_SHEET_DEFAULT_REFERRALS = 4;
 const FOURTEEN_SHEET_MAX_REFERRALS = 11;
 const COACH_LEAD_STATUS_OPTIONS = [
@@ -147,10 +164,12 @@ const BUYER_PROFILE_QUESTIONS = [
   }
 ];
 const DAILY_PRIZE_DEFAULT_STATE = {
-  prizeName: "Olla de 30 cuartos",
-  minimumAmount: 2500,
-  status: "disponible",
-  note: "Valido solo para la primera compra del dia arriba de $2500."
+  code: "",
+  offerCode: "",
+  status: "idle",
+  startedAt: "",
+  expiresAt: "",
+  claimedAt: ""
 };
 
 function buildCoachId(prefix) {
@@ -934,130 +953,256 @@ function initDailyPrizeTool() {
     return;
   }
 
-  const nameInput = root.querySelector("[data-daily-prize-name]");
-  const minimumInput = root.querySelector("[data-daily-prize-minimum]");
-  const statusSelect = root.querySelector("[data-daily-prize-status]");
-  const noteInput = root.querySelector("[data-daily-prize-note]");
-  const checkButton = root.querySelector("[data-daily-prize-check]");
-  const saveButton = root.querySelector("[data-daily-prize-save]");
+  const codeInput = root.querySelector("[data-daily-prize-code]");
+  const activateButton = root.querySelector("[data-daily-prize-activate]");
   const resetButton = root.querySelector("[data-daily-prize-reset]");
-  const badgeNode = root.querySelector("[data-daily-prize-badge]");
-  const thresholdNode = root.querySelector("[data-daily-prize-threshold]");
+  const feedbackNode = root.querySelector("[data-daily-prize-feedback]");
+  const resultNode = root.querySelector("[data-daily-prize-result]");
+  const titleNode = root.querySelector("[data-daily-prize-title]");
+  const timerNode = root.querySelector("[data-daily-prize-timer]");
   const copyNode = root.querySelector("[data-daily-prize-copy]");
   const noteOutputNode = root.querySelector("[data-daily-prize-note-output]");
+  const progressNode = root.querySelector("[data-daily-prize-progress]");
+  const claimButton = root.querySelector("[data-daily-prize-claim]");
+  let timerInterval = null;
+  let currentState = { ...DAILY_PRIZE_DEFAULT_STATE };
 
   const syncPrizeToggle = open => {
     wrap.hidden = !open;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.textContent = open ? "Cerrar premio" : "Abrir premio";
+    toggle.textContent = open ? "Cerrar oferta" : "Abrir oferta";
   };
 
   const getStoredState = () => {
     try {
       const raw = window.localStorage.getItem(COACH_DAILY_PRIZE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && typeof parsed === "object" ? parsed : null;
     } catch (error) {
       return null;
     }
   };
 
   const saveStoredState = state => {
+    if (!state || (state.status === "idle" && !state.offerCode && !state.code)) {
+      window.localStorage.removeItem(COACH_DAILY_PRIZE_KEY);
+      return;
+    }
+
     window.localStorage.setItem(COACH_DAILY_PRIZE_KEY, JSON.stringify(state));
   };
 
-  const buildState = () => ({
-    prizeName: String(nameInput?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.prizeName,
-    minimumAmount: Number.parseFloat(minimumInput?.value || "") || DAILY_PRIZE_DEFAULT_STATE.minimumAmount,
-    status: String(statusSelect?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.status,
-    note: String(noteInput?.value || "").trim() || DAILY_PRIZE_DEFAULT_STATE.note
+  const normalizeState = state => ({
+    ...DAILY_PRIZE_DEFAULT_STATE,
+    ...(state || {})
   });
 
-  const getStatusMeta = status => {
-    if (status === "entregado") {
-      return {
-        badge: "Ya se entrego",
-        copy: "Este premio ya salio hoy. No lo uses en la demo. Cambia a calculadora, Franklin o cierre por salud."
-      };
+  const getOffer = code => DAILY_PRIZE_OFFERS[String(code || "").trim()] || null;
+
+  const stopTimer = () => {
+    if (timerInterval) {
+      window.clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  };
+
+  const setFeedback = (message = "", state = "info") => {
+    if (!feedbackNode) {
+      return;
     }
 
-    if (status === "revisando") {
-      return {
-        badge: "En revision",
-        copy: "Todavia lo estan revisando. No lo prometas como hecho. Usalo solo si la oficina te confirma que sigue vivo."
-      };
+    if (!message) {
+      feedbackNode.hidden = true;
+      feedbackNode.textContent = "";
+      feedbackNode.dataset.state = "info";
+      return;
     }
 
-    return {
-      badge: "Disponible hoy",
-      copy: "Disponible hoy. Usalo solo al final, cuando ya viste valor real y la compra si pase el minimo."
-    };
+    feedbackNode.hidden = false;
+    feedbackNode.textContent = message;
+    feedbackNode.dataset.state = state;
+  };
+
+  const formatCountdown = remainingMs => {
+    const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const updateTimerUi = remainingMs => {
+    const clampedMs = Number.isFinite(remainingMs) ? Math.max(0, remainingMs) : 0;
+
+    if (timerNode) {
+      timerNode.textContent = formatCountdown(clampedMs);
+    }
+
+    if (progressNode) {
+      const percent = Math.max(0, Math.min(100, (clampedMs / DAILY_PRIZE_DURATION_MS) * 100));
+      progressNode.style.width = `${percent}%`;
+    }
   };
 
   const applyStateToFields = state => {
-    if (nameInput) {
-      nameInput.value = state.prizeName;
-    }
-
-    if (minimumInput) {
-      minimumInput.value = String(state.minimumAmount);
-    }
-
-    if (statusSelect) {
-      statusSelect.value = state.status;
-    }
-
-    if (noteInput) {
-      noteInput.value = state.note;
+    if (codeInput) {
+      codeInput.value = state.code || state.offerCode || "";
     }
   };
 
-  const renderState = state => {
-    const meta = getStatusMeta(state.status);
-
-    if (badgeNode) {
-      badgeNode.textContent = meta.badge;
-    }
-
-    if (thresholdNode) {
-      thresholdNode.textContent = formatMoney(state.minimumAmount);
-    }
-
-    if (copyNode) {
-      copyNode.textContent = `${meta.copy} Premio: ${state.prizeName}.`;
-    }
-
-    if (noteOutputNode) {
-      noteOutputNode.textContent = state.note;
-    }
+  const markExpired = () => {
+    currentState = {
+      ...currentState,
+      status: "expired"
+    };
+    saveStoredState(currentState);
+    renderState(currentState);
   };
 
-  const storedState = {
-    ...DAILY_PRIZE_DEFAULT_STATE,
-    ...(getStoredState() || {})
+  const startTimer = () => {
+    stopTimer();
+
+    const tick = () => {
+      const expiresAt = new Date(currentState.expiresAt).getTime();
+      if (!Number.isFinite(expiresAt)) {
+        markExpired();
+        return;
+      }
+
+      const remainingMs = expiresAt - Date.now();
+
+      if (remainingMs <= 0) {
+        markExpired();
+        return;
+      }
+
+      updateTimerUi(remainingMs);
+    };
+
+    tick();
+    timerInterval = window.setInterval(tick, 1000);
   };
 
-  applyStateToFields(storedState);
-  renderState(storedState);
+  const renderState = incomingState => {
+    currentState = normalizeState(incomingState);
+    const offer = getOffer(currentState.offerCode || currentState.code);
+
+    applyStateToFields(currentState);
+
+    if (!resultNode || !titleNode || !copyNode || !noteOutputNode || !claimButton) {
+      return;
+    }
+
+    if (!offer || currentState.status === "idle") {
+      stopTimer();
+      resultNode.hidden = true;
+      claimButton.disabled = true;
+      updateTimerUi(DAILY_PRIZE_DURATION_MS);
+      return;
+    }
+
+    const expiresAtMs = new Date(currentState.expiresAt).getTime();
+
+    if (currentState.status === "active" && (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now())) {
+      currentState = {
+        ...currentState,
+        status: "expired"
+      };
+      saveStoredState(currentState);
+    }
+
+    resultNode.hidden = false;
+    titleNode.textContent = offer.title;
+    copyNode.textContent = offer.copy;
+    noteOutputNode.textContent = offer.note;
+
+    if (currentState.status === "claimed") {
+      stopTimer();
+      claimButton.disabled = true;
+      if (timerNode) {
+        timerNode.textContent = "Reclamada";
+      }
+      if (progressNode) {
+        progressNode.style.width = "100%";
+      }
+      setFeedback("Oferta reclamada. Ya puedes seguir con el cierre final.", "success");
+      return;
+    }
+
+    if (currentState.status === "expired") {
+      stopTimer();
+      claimButton.disabled = true;
+      updateTimerUi(0);
+      setFeedback("Oferta agotada.", "error");
+      return;
+    }
+
+    claimButton.disabled = false;
+    setFeedback("Oferta activa. El tiempo solo ayuda a tomar la decision en este momento.", "info");
+    startTimer();
+  };
+
+  currentState = normalizeState(getStoredState());
+  applyStateToFields(currentState);
+  renderState(currentState);
   syncPrizeToggle(false);
 
   toggle.addEventListener("click", () => {
     syncPrizeToggle(wrap.hidden);
   });
 
-  checkButton?.addEventListener("click", () => {
-    renderState(buildState());
+  codeInput?.addEventListener("input", () => {
+    codeInput.value = String(codeInput.value || "").replace(/[^\d]/g, "").slice(0, 12);
   });
 
-  saveButton?.addEventListener("click", () => {
-    const nextState = buildState();
-    saveStoredState(nextState);
-    renderState(nextState);
+  activateButton?.addEventListener("click", () => {
+    const code = String(codeInput?.value || "").trim();
+    const offer = getOffer(code);
+
+    if (!offer) {
+      currentState = {
+        ...DAILY_PRIZE_DEFAULT_STATE,
+        code
+      };
+      saveStoredState(currentState);
+      renderState(currentState);
+      setFeedback("Codigo invalido. Usa 305 para descuento o 14407 para regalo.", "error");
+      return;
+    }
+
+    currentState = {
+      code,
+      offerCode: offer.code,
+      status: "active",
+      startedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + DAILY_PRIZE_DURATION_MS).toISOString(),
+      claimedAt: ""
+    };
+    saveStoredState(currentState);
+    renderState(currentState);
   });
 
   resetButton?.addEventListener("click", () => {
-    applyStateToFields(DAILY_PRIZE_DEFAULT_STATE);
-    saveStoredState(DAILY_PRIZE_DEFAULT_STATE);
-    renderState(DAILY_PRIZE_DEFAULT_STATE);
+    stopTimer();
+    currentState = { ...DAILY_PRIZE_DEFAULT_STATE };
+    saveStoredState(currentState);
+    setFeedback("", "info");
+    renderState(currentState);
+    codeInput?.focus();
+  });
+
+  claimButton?.addEventListener("click", () => {
+    if (currentState.status !== "active") {
+      return;
+    }
+
+    stopTimer();
+    currentState = {
+      ...currentState,
+      status: "claimed",
+      claimedAt: new Date().toISOString()
+    };
+    saveStoredState(currentState);
+    renderState(currentState);
   });
 }
 
