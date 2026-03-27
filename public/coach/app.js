@@ -2429,11 +2429,16 @@ function initHealthSurveyTool() {
 }
 
 function initRecruitmentTool() {
-  const formWrap = document.querySelector("[data-recruitment-wrap]");
-  const formToggle = document.querySelector("[data-recruitment-toggle]");
-  const form = document.querySelector("[data-recruitment-form]");
-  const feedbackNode = document.querySelector("[data-recruitment-feedback]");
-  const saveButton = document.querySelector("[data-recruitment-save]");
+  const formControllers = Array.from(document.querySelectorAll("[data-recruitment-root]"))
+    .map(root => ({
+      root,
+      wrap: root.querySelector("[data-recruitment-wrap]"),
+      toggle: root.querySelector("[data-recruitment-toggle]"),
+      form: root.querySelector("[data-recruitment-form]"),
+      feedbackNode: root.querySelector("[data-recruitment-feedback]"),
+      saveButton: root.querySelector("[data-recruitment-save]")
+    }))
+    .filter(controller => controller.wrap && controller.toggle && controller.form && controller.feedbackNode);
   const folderWrap = document.querySelector("[data-recruitment-folder-wrap]");
   const folderToggle = document.querySelector("[data-recruitment-folder-toggle]");
   const folderList = document.querySelector("[data-recruitment-folder-list]");
@@ -2443,48 +2448,59 @@ function initRecruitmentTool() {
   const drivingNode = document.querySelector("[data-recruitment-driving]");
   const salesNode = document.querySelector("[data-recruitment-sales]");
 
-  if (!formWrap || !formToggle || !form || !folderWrap || !folderToggle || !folderList) {
+  if (!formControllers.length) {
     return;
   }
 
+  const folderReady = Boolean(folderWrap && folderToggle && folderList);
   const state = {
     applications: []
   };
 
-  const syncFormToggle = open => {
-    formWrap.hidden = !open;
-    formToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    formToggle.textContent = open ? "Cerrar aplicacion" : "Abrir aplicacion";
+  const syncFormToggle = (controller, open) => {
+    controller.wrap.hidden = !open;
+    controller.toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    controller.toggle.textContent = open ? "Cerrar aplicacion" : "Abrir aplicacion";
   };
 
   const syncFolderToggle = open => {
+    if (!folderReady) {
+      return;
+    }
+
     folderWrap.hidden = !open;
     folderToggle.setAttribute("aria-expanded", open ? "true" : "false");
     folderToggle.textContent = open ? "Cerrar carpeta" : "Abrir carpeta";
   };
 
-  const resetFormState = () => {
-    form.reset();
-    setNamedFieldValue(form, "applicationId", "");
-    clearMessage(feedbackNode);
+  const resetControllerForm = controller => {
+    controller.form.reset();
+    setNamedFieldValue(controller.form, "applicationId", "");
+    clearMessage(controller.feedbackNode);
   };
 
-  const fillForm = application => {
-    form.reset();
-    setNamedFieldValue(form, "applicationId", application?.id || "");
-    setNamedFieldValue(form, "fullName", application?.fullName || "");
-    setNamedFieldValue(form, "phone", application?.phone || "");
-    setNamedFieldValue(form, "email", application?.email || "");
-    setNamedFieldValue(form, "drives", application?.drives || "");
-    setNamedFieldValue(form, "hasCar", application?.hasCar || "");
-    setNamedFieldValue(form, "customerServiceExperience", application?.customerServiceExperience || "");
-    setNamedFieldValue(form, "workPreference", application?.workPreference || "");
-    setNamedFieldValue(form, "salesExperience", application?.salesExperience || "");
-    setNamedFieldValue(form, "about", application?.about || "");
-    clearMessage(feedbackNode);
+  const resetAllForms = () => {
+    formControllers.forEach(resetControllerForm);
   };
 
-  const collectPayload = () => {
+  const fillAllForms = application => {
+    formControllers.forEach(controller => {
+      controller.form.reset();
+      setNamedFieldValue(controller.form, "applicationId", application?.id || "");
+      setNamedFieldValue(controller.form, "fullName", application?.fullName || "");
+      setNamedFieldValue(controller.form, "phone", application?.phone || "");
+      setNamedFieldValue(controller.form, "email", application?.email || "");
+      setNamedFieldValue(controller.form, "drives", application?.drives || "");
+      setNamedFieldValue(controller.form, "hasCar", application?.hasCar || "");
+      setNamedFieldValue(controller.form, "customerServiceExperience", application?.customerServiceExperience || "");
+      setNamedFieldValue(controller.form, "workPreference", application?.workPreference || "");
+      setNamedFieldValue(controller.form, "salesExperience", application?.salesExperience || "");
+      setNamedFieldValue(controller.form, "about", application?.about || "");
+      clearMessage(controller.feedbackNode);
+    });
+  };
+
+  const collectPayload = form => {
     const formData = new FormData(form);
 
     return {
@@ -2499,6 +2515,16 @@ function initRecruitmentTool() {
       salesExperience: formData.get("salesExperience"),
       about: formData.get("about")
     };
+  };
+
+  const getPreferredController = () => {
+    const currentWorkspace = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre";
+    const workspaceMatch = formControllers.find(controller => {
+      const section = controller.root.dataset.coachWorkspaceSection || controller.root.closest("[data-coach-workspace-section]")?.dataset.coachWorkspaceSection || "";
+      return section === currentWorkspace;
+    });
+
+    return workspaceMatch || formControllers[0];
   };
 
   const renderSummary = () => {
@@ -2522,6 +2548,10 @@ function initRecruitmentTool() {
   };
 
   const renderList = () => {
+    if (!folderReady) {
+      return;
+    }
+
     folderList.innerHTML = "";
     renderSummary();
 
@@ -2582,14 +2612,58 @@ function initRecruitmentTool() {
     renderList();
   };
 
-  syncFormToggle(false);
+  formControllers.forEach(controller => {
+    syncFormToggle(controller, false);
+  });
   syncFolderToggle(false);
 
-  formToggle.addEventListener("click", () => {
-    syncFormToggle(formWrap.hidden);
+  formControllers.forEach(controller => {
+    controller.toggle.addEventListener("click", () => {
+      syncFormToggle(controller, controller.wrap.hidden);
+    });
+
+    controller.form.addEventListener("submit", async event => {
+      event.preventDefault();
+      clearMessage(controller.feedbackNode);
+      setButtonLoading(controller.saveButton, true, "Guardando...");
+
+      try {
+        const data = await apiRequest("/api/coach/recruitment-applications", {
+          method: "POST",
+          body: collectPayload(controller.form)
+        });
+
+        const deliveryCopy = data.delivery?.queued
+          ? " Tambien la estoy mandando a tu destino."
+          : data.delivery?.attempted
+            ? " Ya intente mandarla a tu destino."
+            : "";
+
+        resetAllForms();
+        await loadApplications();
+        syncFolderToggle(true);
+        setMessage(
+          controller.feedbackNode,
+          data.created
+            ? `Aplicacion guardada.${deliveryCopy}`
+            : `Aplicacion actualizada.${deliveryCopy}`,
+          "success"
+        );
+      } catch (error) {
+        setMessage(controller.feedbackNode, error.message, "error");
+      } finally {
+        setButtonLoading(controller.saveButton, false);
+      }
+    });
+
+    controller.form.addEventListener("reset", () => {
+      window.requestAnimationFrame(() => {
+        resetControllerForm(controller);
+      });
+    });
   });
 
-  folderToggle.addEventListener("click", async () => {
+  folderToggle?.addEventListener("click", async () => {
     const willOpen = folderWrap.hidden;
     syncFolderToggle(willOpen);
 
@@ -2602,47 +2676,7 @@ function initRecruitmentTool() {
     }
   });
 
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    clearMessage(feedbackNode);
-    setButtonLoading(saveButton, true, "Guardando...");
-
-    try {
-      const data = await apiRequest("/api/coach/recruitment-applications", {
-        method: "POST",
-        body: collectPayload()
-      });
-
-      const deliveryCopy = data.delivery?.queued
-        ? " Tambien la estoy mandando a tu destino."
-        : data.delivery?.attempted
-          ? " Ya intente mandarla a tu destino."
-          : "";
-
-      resetFormState();
-      await loadApplications();
-      syncFolderToggle(true);
-      setMessage(
-        feedbackNode,
-        data.created
-          ? `Aplicacion guardada.${deliveryCopy}`
-          : `Aplicacion actualizada.${deliveryCopy}`,
-        "success"
-      );
-    } catch (error) {
-      setMessage(feedbackNode, error.message, "error");
-    } finally {
-      setButtonLoading(saveButton, false);
-    }
-  });
-
-  form.addEventListener("reset", () => {
-    window.requestAnimationFrame(() => {
-      resetFormState();
-    });
-  });
-
-  folderList.addEventListener("click", event => {
+  folderList?.addEventListener("click", event => {
     const openButton = event.target.closest("[data-recruitment-open]");
 
     if (!openButton) {
@@ -2657,9 +2691,11 @@ function initRecruitmentTool() {
       return;
     }
 
-    fillForm(application);
-    syncFormToggle(true);
-    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    fillAllForms(application);
+
+    const preferredController = getPreferredController();
+    syncFormToggle(preferredController, true);
+    preferredController.form.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 

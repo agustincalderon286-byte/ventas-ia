@@ -1248,6 +1248,12 @@ img {
   background: radial-gradient(circle, rgba(120, 182, 255, 0.14), transparent 72%);
 }
 
+.recruitment-card-inline {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .native-lead-wrap[hidden],
 .lead-folder-wrap[hidden],
 .health-survey-wrap[hidden],
