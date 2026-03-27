@@ -32,6 +32,7 @@ const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_ACTIVE_ORDER_CALC_KEY = "agustin-coach-active-order-calc";
 const COACH_ACTIVE_DECISION_KEY = "agustin-coach-active-decision";
+const COACH_ACTIVE_DEMO_OUTCOME_KEY = "agustin-coach-active-demo-outcome";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
@@ -4908,6 +4909,296 @@ function setActiveCoachDecisionContext(context) {
   renderActiveCoachDecisionContext(next);
 }
 
+function formatCoachDemoOutcomeLabel(value = "") {
+  const labels = {
+    venta: "Venta",
+    follow_up: "Follow up",
+    no_venta: "No venta",
+    no_atendio: "No atendio"
+  };
+
+  return labels[String(value || "").trim()] || "Resultado";
+}
+
+function buildCoachDemoOutcomeContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const resultType = String(context.resultType || "").trim();
+  const saleAmount = Number(context.saleAmount);
+  const products = Array.isArray(context.products)
+    ? context.products.map(item => String(item || "").trim()).filter(Boolean).slice(0, 8)
+    : [];
+  const privateReason = String(context.privateReason || "").trim();
+  const activeDemoStage = String(context.activeDemoStage || "").trim();
+  const activeDemoStageLabel = String(context.activeDemoStageLabel || "").trim();
+  const summary = String(context.summary || "").trim();
+
+  if (!resultType && !saleAmount && !products.length && !privateReason && !summary) {
+    return null;
+  }
+
+  return {
+    id: String(context.id || "").trim(),
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    resultType,
+    saleAmount: Number.isFinite(saleAmount) ? Number(saleAmount.toFixed(2)) : 0,
+    products,
+    privateReason,
+    activeDemoStage,
+    activeDemoStageLabel,
+    summary
+  };
+}
+
+function getActiveCoachDemoOutcomeContext() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_DEMO_OUTCOME_KEY);
+    return raw ? buildCoachDemoOutcomeContext(JSON.parse(raw)) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function renderActiveCoachDemoOutcomeContext(context = null) {
+  const safeContext = context?.resultType ? context : buildCoachDemoOutcomeContext(context);
+  const defaultCopy = "Cuando guardes el resultado, Agustin tomara esta demo desde ese estado real.";
+  const noteCopy = safeContext
+    ? `${formatCoachDemoOutcomeLabel(safeContext.resultType)} guardada${safeContext.saleAmount > 0 ? ` · ${formatMoney(
+        safeContext.saleAmount
+      )}` : ""}${safeContext.activeDemoStageLabel ? ` · ${safeContext.activeDemoStageLabel}` : ""}.`
+    : defaultCopy;
+
+  document.querySelectorAll("[data-demo-outcome-context-note]").forEach(node => {
+    node.textContent = noteCopy;
+    node.dataset.state = safeContext ? "success" : "idle";
+  });
+}
+
+function setActiveCoachDemoOutcomeContext(context) {
+  const next = buildCoachDemoOutcomeContext(context);
+
+  if (next) {
+    window.sessionStorage.setItem(COACH_ACTIVE_DEMO_OUTCOME_KEY, JSON.stringify(next));
+  } else {
+    window.sessionStorage.removeItem(COACH_ACTIVE_DEMO_OUTCOME_KEY);
+  }
+
+  renderActiveCoachDemoOutcomeContext(next);
+}
+
+function renderCoachDemoOutcomeWorkspace(payload = null) {
+  const personalSummary = payload?.personalSummary || {};
+  const teamSummary = payload?.teamSummary || {};
+  const outcomes = Array.isArray(payload?.outcomes) ? payload.outcomes : [];
+  const teamOutcomes = Array.isArray(payload?.teamOutcomes) ? payload.teamOutcomes : [];
+
+  document.querySelectorAll("[data-demo-outcome-personal-total]").forEach(node => {
+    node.textContent = String(personalSummary.totalResults || 0);
+  });
+  document.querySelectorAll("[data-demo-outcome-personal-sales]").forEach(node => {
+    node.textContent = String(personalSummary.salesCount || 0);
+  });
+  document.querySelectorAll("[data-demo-outcome-personal-amount]").forEach(node => {
+    node.textContent = formatMoney(personalSummary.soldAmount || 0);
+  });
+  document.querySelectorAll("[data-demo-outcome-team-total]").forEach(node => {
+    node.textContent = String(teamSummary.totalResults || 0);
+  });
+  document.querySelectorAll("[data-demo-outcome-team-sales]").forEach(node => {
+    node.textContent = String(teamSummary.salesCount || 0);
+  });
+  document.querySelectorAll("[data-demo-outcome-team-amount]").forEach(node => {
+    node.textContent = formatMoney(teamSummary.soldAmount || 0);
+  });
+
+  const personalList = document.querySelector("[data-demo-outcome-list]");
+  const personalNote = document.querySelector("[data-demo-outcome-list-note]");
+
+  if (personalList) {
+    if (!outcomes.length) {
+      personalList.innerHTML = '<div class="team-seat-empty">Todavia no has reportado resultados en esta cuenta.</div>';
+    } else {
+      personalList.innerHTML = outcomes
+        .map(
+          outcome => `
+            <article class="demo-outcome-item">
+              <div class="demo-outcome-head">
+                <div>
+                  <strong>${escapeHtml(outcome.resultLabel || "Resultado")}</strong>
+                  <span>${escapeHtml(
+                    outcome.activeDemoStageLabel || outcome.activeDemoStage || "Sin paso reportado"
+                  )}</span>
+                </div>
+                <span class="demo-outcome-pill" data-state="${escapeHtml(outcome.resultType || "follow_up")}">
+                  ${escapeHtml(outcome.saleAmount > 0 ? formatMoney(outcome.saleAmount) : outcome.resultLabel || "Resultado")}
+                </span>
+              </div>
+              <p>${escapeHtml(outcome.summary || "Sin resumen.")}</p>
+              <div class="demo-outcome-meta">
+                <span>${escapeHtml(formatDateTimeShort(outcome.createdAt))}</span>
+                <span>${escapeHtml(
+                  Array.isArray(outcome.products) && outcome.products.length
+                    ? outcome.products.join(", ")
+                    : "Sin producto reportado"
+                )}</span>
+              </div>
+            </article>
+          `
+        )
+        .join("");
+    }
+  }
+
+  if (personalNote) {
+    personalNote.textContent = outcomes.length
+      ? "Estos son tus resultados mas recientes dentro de esta cuenta."
+      : "Aqui apareceran tus resultados mas recientes.";
+  }
+
+  document.querySelectorAll("[data-team-outcome-total]").forEach(node => {
+    node.textContent = String(teamSummary.totalResults || 0);
+  });
+  document.querySelectorAll("[data-team-outcome-sales]").forEach(node => {
+    node.textContent = String(teamSummary.salesCount || 0);
+  });
+  document.querySelectorAll("[data-team-outcome-followups]").forEach(node => {
+    node.textContent = String(teamSummary.followUpCount || 0);
+  });
+  document.querySelectorAll("[data-team-outcome-amount]").forEach(node => {
+    node.textContent = formatMoney(teamSummary.soldAmount || 0);
+  });
+
+  const teamList = document.querySelector("[data-team-outcome-list]");
+  const teamNote = document.querySelector("[data-team-outcome-note]");
+
+  if (teamList) {
+    if (!teamOutcomes.length) {
+      teamList.innerHTML = '<div class="team-seat-empty">Todavia no hay resultados guardados en este equipo.</div>';
+    } else {
+      teamList.innerHTML = teamOutcomes
+        .map(
+          outcome => `
+            <article class="demo-outcome-item">
+              <div class="demo-outcome-head">
+                <div>
+                  <strong>${escapeHtml(outcome.generatedByName || "Equipo")}</strong>
+                  <span>${escapeHtml(outcome.resultLabel || "Resultado")}</span>
+                </div>
+                <span class="demo-outcome-pill" data-state="${escapeHtml(outcome.resultType || "follow_up")}">
+                  ${escapeHtml(outcome.saleAmount > 0 ? formatMoney(outcome.saleAmount) : outcome.resultLabel || "Resultado")}
+                </span>
+              </div>
+              <p>${escapeHtml(outcome.summary || "Sin resumen.")}</p>
+              <div class="demo-outcome-meta">
+                <span>${escapeHtml(formatDateTimeShort(outcome.createdAt))}</span>
+                <span>${escapeHtml(
+                  Array.isArray(outcome.products) && outcome.products.length
+                    ? outcome.products.join(", ")
+                    : "Sin producto reportado"
+                )}</span>
+              </div>
+            </article>
+          `
+        )
+        .join("");
+    }
+  }
+
+  if (teamNote) {
+    teamNote.textContent = teamOutcomes.length
+      ? "Estos son los resultados mas recientes del equipo."
+      : "Los resultados recientes del equipo apareceran aqui.";
+  }
+}
+
+function initCoachDemoOutcomeWorkspace(user = null) {
+  const form = document.querySelector("[data-demo-outcome-form]");
+  const feedbackNode = document.querySelector("[data-demo-outcome-feedback]");
+  const saveButton = document.querySelector("[data-demo-outcome-save]");
+  const typeSelect = document.querySelector("[data-demo-outcome-type]");
+  const amountField = document.querySelector("[data-demo-outcome-amount-field]");
+  const amountInput = document.querySelector("[data-demo-outcome-amount]");
+
+  if (!form || !typeSelect) {
+    return;
+  }
+
+  const syncTypeUi = () => {
+    const isSale = typeSelect.value === "venta";
+    if (amountField) {
+      amountField.hidden = !isSale;
+    }
+    if (!isSale && amountInput) {
+      amountInput.value = "";
+    }
+  };
+
+  const loadOutcomes = async () => {
+    const data = await apiRequest("/api/coach/demo-outcomes");
+    renderCoachDemoOutcomeWorkspace(data);
+  };
+
+  typeSelect.addEventListener("change", syncTypeUi);
+  syncTypeUi();
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(form);
+      const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
+      const data = await apiRequest("/api/coach/demo-outcomes", {
+        method: "POST",
+        body: {
+          resultType: formData.get("resultType"),
+          saleAmount: formData.get("saleAmount"),
+          products: String(formData.get("products") || "")
+            .split(/[\n,;]+/g)
+            .map(item => item.trim())
+            .filter(Boolean),
+          privateReason: formData.get("privateReason"),
+          activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
+          activeDemoStage: activeDemoStageMeta.id,
+          activeDemoStageLabel: activeDemoStageMeta.label,
+          activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+          activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+          activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
+            ? getActiveCoachProgram414Context().referralIndex
+            : "",
+          activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
+          activeDecisionContext: getActiveCoachDecisionContext() || null,
+          recentCoachEvents: getCoachDemoEvents()
+        }
+      });
+
+      setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext || null);
+      setMessage(feedbackNode, "Resultado guardado correctamente.", "success");
+
+      registerCoachDemoEvent({
+        id: `demo_outcome_${data.outcome?.resultType || "follow_up"}`,
+        label: "Se reporto resultado",
+        detail: data.outcome?.summary || data.coachReply || "La demo ya quedo marcada."
+      });
+
+      form.reset();
+      syncTypeUi();
+      await loadOutcomes();
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
+
+  loadOutcomes().catch(error => {
+    setMessage(feedbackNode, error.message || "No pude cargar los resultados.", "error");
+  });
+}
+
 function formatProgram414StatusLabel(status = "") {
   const safeStatus = String(status || "").trim();
   const labels = {
@@ -5306,6 +5597,7 @@ async function initCoachAppPage() {
   const storedProgram414Context = getActiveCoachProgram414Context();
   const storedOrderCalcContext = getActiveCoachOrderCalcContext();
   const storedDecisionContext = getActiveCoachDecisionContext();
+  const storedDemoOutcomeContext = getActiveCoachDemoOutcomeContext();
 
   if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== effectiveOwnerId) {
     setActiveCoachHealthSurveyContext(null);
@@ -5327,6 +5619,12 @@ async function initCoachAppPage() {
     setActiveCoachDecisionContext(null);
   } else {
     renderActiveCoachDecisionContext(storedDecisionContext);
+  }
+
+  if (storedDemoOutcomeContext?.ownerUserId && storedDemoOutcomeContext.ownerUserId !== effectiveOwnerId) {
+    setActiveCoachDemoOutcomeContext(null);
+  } else {
+    renderActiveCoachDemoOutcomeContext(storedDemoOutcomeContext);
   }
 
   initCoachWorkspaceTabs();
@@ -5351,6 +5649,7 @@ async function initCoachAppPage() {
   }
   initBuyerProfileTool();
   initDailyPrizeTool();
+  initCoachDemoOutcomeWorkspace(me.user);
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
@@ -5671,6 +5970,7 @@ async function initCoachAppPage() {
             : "",
           activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
           activeDecisionContext: getActiveCoachDecisionContext() || null,
+          activeDemoOutcomeContext: getActiveCoachDemoOutcomeContext() || null,
           mode: "coach"
         }
       });
@@ -5701,6 +6001,10 @@ async function initCoachAppPage() {
 
       if (data.activeDecisionContext?.summary) {
         setActiveCoachDecisionContext(data.activeDecisionContext);
+      }
+
+      if (data.activeDemoOutcomeContext?.resultType) {
+        setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext);
       }
     } catch (error) {
       addCoachMessage(

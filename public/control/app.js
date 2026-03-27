@@ -48,6 +48,10 @@ function formatDateTime(value = "") {
   }).format(date);
 }
 
+function formatMoney(value = 0) {
+  return `$${(Number(value) || 0).toFixed(2)}`;
+}
+
 function renderTags(target, values = [], formatter = value => value) {
   if (!target) {
     return;
@@ -245,6 +249,29 @@ function hydrateDashboard(data) {
         <td>${escapeHtml(item.pending || "seguimiento")}</td>
         <td>${escapeHtml(item.leadStatus || "sin estado")}</td>
         <td>${escapeHtml(item.summary || "Sin resumen")}</td>
+      </tr>
+    `
+  );
+
+  setText("[data-sponsor-accounts]", String(data.sponsor?.sponsoredAccounts || 0));
+  setText("[data-sponsor-sales]", String(data.sponsor?.salesCount || 0));
+  setText("[data-sponsor-amount]", formatMoney(data.sponsor?.soldAmount || 0));
+  setText("[data-sponsor-commission]", formatMoney(data.sponsor?.estimatedCommission || 0));
+
+  const sponsorTable = document.querySelector("[data-sponsor-sales-table]");
+  if (sponsorTable) {
+    sponsorTable.dataset.cols = "5";
+  }
+  renderTableRows(
+    sponsorTable,
+    data.sponsor?.recentSales || [],
+    item => `
+      <tr>
+        <td>${escapeHtml(formatDateTime(item.createdAt))}</td>
+        <td>${escapeHtml(item.ownerName || "Cuenta patrocinada")}</td>
+        <td>${escapeHtml(item.generatedByName || "Sin dato")}</td>
+        <td>${escapeHtml(formatMoney(item.saleAmount || 0))}</td>
+        <td>${escapeHtml(formatMoney(item.sponsorCommissionAmount || 0))}</td>
       </tr>
     `
   );

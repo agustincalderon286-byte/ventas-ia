@@ -1074,6 +1074,101 @@ img {
   text-align: center;
 }
 
+.demo-outcome-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.demo-outcome-item {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 12px;
+}
+
+.demo-outcome-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.demo-outcome-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.demo-outcome-head strong,
+.demo-outcome-head span {
+  display: block;
+}
+
+.demo-outcome-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.demo-outcome-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f6fb;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.demo-outcome-pill[data-state="venta"] {
+  background: rgba(114, 214, 141, 0.14);
+  border-color: rgba(114, 214, 141, 0.28);
+  color: #dff9e6;
+}
+
+.demo-outcome-pill[data-state="follow_up"] {
+  background: rgba(255, 205, 120, 0.14);
+  border-color: rgba(255, 205, 120, 0.28);
+  color: #ffeac1;
+}
+
+.demo-outcome-pill[data-state="no_venta"],
+.demo-outcome-pill[data-state="no_atendio"] {
+  background: rgba(255, 143, 136, 0.12);
+  border-color: rgba(255, 143, 136, 0.3);
+  color: #ffd6d2;
+}
+
+.demo-outcome-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.demo-outcome-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.demo-outcome-context-note[data-state="success"] {
+  color: #dff9e6;
+}
+
 .dashboard-actions {
   display: flex;
   gap: 12px;
@@ -3854,6 +3949,10 @@ img {
   }
 
   .team-seat-head {
+    flex-direction: column;
+  }
+
+  .demo-outcome-head {
     flex-direction: column;
   }
 

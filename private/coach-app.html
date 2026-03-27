@@ -1163,6 +1163,45 @@
           </article>
 
           <article
+            class="dashboard-card"
+            data-coach-workspace-section="equipo"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Resultados del equipo</div>
+            <h3>Produccion y seguimiento</h3>
+            <p>
+              Aqui ves como va el equipo completo: tus ventas, las de tus subcuentas y los resultados mas recientes.
+            </p>
+
+            <div class="insight-grid demo-outcome-metrics">
+              <div class="mini-stat">
+                <strong data-team-outcome-total>0</strong>
+                <span>Resultados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-outcome-sales>0</strong>
+                <span>Ventas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-outcome-followups>0</strong>
+                <span>Follow up</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-outcome-amount>$0.00</strong>
+                <span>Monto vendido</span>
+              </div>
+            </div>
+
+            <div class="demo-outcome-list demo-outcome-list-team" data-team-outcome-list>
+              <div class="team-seat-empty">Todavia no hay resultados guardados en este equipo.</div>
+            </div>
+            <p class="mini-note" data-team-outcome-note>
+              Los resultados recientes del equipo apareceran aqui.
+            </p>
+          </article>
+
+          <article
             class="dashboard-card health-survey-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 50"
@@ -2098,6 +2137,119 @@
                 privada de reclutamiento.
               </p>
             </div>
+          </article>
+
+          <article
+            class="dashboard-card demo-outcome-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 90"
+          >
+            <div class="eyebrow">Resultado final</div>
+            <h3>Reportar resultado</h3>
+            <p>
+              Marca como termino la visita para dejar claro si fue venta, seguimiento o no cerro. Esto ayuda a medir
+              mejor lo que si esta funcionando.
+            </p>
+
+            <form class="native-lead-form demo-outcome-form" data-demo-outcome-form>
+              <div class="native-lead-grid">
+                <label class="native-lead-field">
+                  <span>Como termino</span>
+                  <select name="resultType" data-demo-outcome-type>
+                    <option value="venta">Venta</option>
+                    <option value="follow_up">Follow up</option>
+                    <option value="no_venta">No venta</option>
+                    <option value="no_atendio">No atendio</option>
+                  </select>
+                </label>
+                <label class="native-lead-field" data-demo-outcome-amount-field hidden>
+                  <span>Cuanto se vendio</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="saleAmount"
+                    placeholder="Ej. 3250"
+                    data-demo-outcome-amount
+                  />
+                </label>
+                <label class="native-lead-field native-lead-field-full">
+                  <span>Productos o paquete</span>
+                  <input
+                    type="text"
+                    name="products"
+                    maxlength="240"
+                    placeholder="Ej. olla, sarten y filtro"
+                    data-demo-outcome-products
+                  />
+                </label>
+                <label class="native-lead-field native-lead-field-full">
+                  <span>Nota privada</span>
+                  <textarea
+                    name="privateReason"
+                    rows="3"
+                    maxlength="320"
+                    placeholder="Ej. cerro por salud, quedo follow up por credito o no se pudo hoy"
+                    data-demo-outcome-reason
+                  ></textarea>
+                </label>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-demo-outcome-save>Guardar resultado</button>
+              </div>
+
+              <div class="form-result" data-demo-outcome-feedback></div>
+              <p class="mini-note demo-outcome-context-note" data-demo-outcome-context-note>
+                Cuando guardes el resultado, Agustin tomara esta demo desde ese estado real.
+              </p>
+            </form>
+          </article>
+
+          <article
+            class="dashboard-card demo-outcome-summary-card"
+            data-coach-workspace-section="cierre"
+            style="--coach-flow-order: 91"
+          >
+            <div class="eyebrow">Marcador</div>
+            <h3>Tus resultados</h3>
+            <p>
+              Aqui ves tu avance personal y el total del equipo sin abrir informacion privada de otras cuentas.
+            </p>
+
+            <div class="insight-grid demo-outcome-metrics">
+              <div class="mini-stat">
+                <strong data-demo-outcome-personal-total>0</strong>
+                <span>Resultados tuyos</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-demo-outcome-personal-sales>0</strong>
+                <span>Ventas tuyas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-demo-outcome-personal-amount>$0.00</strong>
+                <span>Venta personal</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-demo-outcome-team-total>0</strong>
+                <span>Total de equipo</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-demo-outcome-team-sales>0</strong>
+                <span>Ventas del equipo</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-demo-outcome-team-amount>$0.00</strong>
+                <span>Monto del equipo</span>
+              </div>
+            </div>
+
+            <div class="demo-outcome-list" data-demo-outcome-list>
+              <div class="team-seat-empty">Todavia no has reportado resultados en esta cuenta.</div>
+            </div>
+            <p class="mini-note" data-demo-outcome-list-note>
+              Aqui apareceran tus resultados mas recientes.
+            </p>
           </article>
 
           <article class="dashboard-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 95">

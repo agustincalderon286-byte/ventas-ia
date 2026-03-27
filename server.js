@@ -198,6 +198,16 @@ const coachSessionSummarySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const coachDemoEventSnapshotSchema = new mongoose.Schema(
+  {
+    id: String,
+    label: String,
+    detail: String,
+    occurredAt: Date
+  },
+  { _id: false }
+);
+
 const coachDailyRollupSchema = new mongoose.Schema(
   {
     dateKey: String,
@@ -221,6 +231,9 @@ const coachUserSchema = new mongoose.Schema({
   parentUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
   billingOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
   teamOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  sponsorUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
+  sponsorName: String,
+  sponsorCommissionRate: { type: Number, default: 0 },
   seatStatus: { type: String, default: "active" },
   officeId: { type: String, index: true },
   territoryId: { type: String, index: true },
@@ -516,6 +529,59 @@ const coachPrivateResourceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachDemoOutcomeSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  sponsorUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  sponsorName: String,
+  sponsorCommissionRate: { type: Number, default: 0 },
+  sponsorCommissionAmount: { type: Number, default: 0 },
+  reportedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    default: null
+  },
+  reportedByName: String,
+  resultType: { type: String, default: "follow_up" },
+  saleAmount: { type: Number, default: 0 },
+  products: [String],
+  privateReason: String,
+  summary: String,
+  activeWorkspace: String,
+  activeDemoStage: String,
+  activeDemoStageLabel: String,
+  surveyId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachHealthSurvey", default: null },
+  surveyName: String,
+  programSheetId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachProgramSheet", default: null },
+  programHostName: String,
+  programReferralName: String,
+  programReferralIndex: { type: Number, default: -1 },
+  orderCalcContext: { type: mongoose.Schema.Types.Mixed, default: null },
+  decisionContext: { type: mongoose.Schema.Types.Mixed, default: null },
+  demoEvents: [coachDemoEventSnapshotSchema],
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -534,6 +600,7 @@ coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachUserSchema.index({ parentUserId: 1, seatStatus: 1 });
 coachUserSchema.index({ teamOwnerUserId: 1, seatStatus: 1 });
+coachUserSchema.index({ sponsorUserId: 1, accountType: 1 });
 coachDistributorProfileSchema.index({ email: 1 });
 coachDistributorProfileSchema.index({ chefSlug: 1 }, { unique: true, sparse: true });
 coachDistributorProfileSchema.index({ chefShareCode: 1 }, { unique: true, sparse: true });
@@ -554,6 +621,11 @@ coachRecruitmentApplicationSchema.index({ ownerUserId: 1, generatedByUserId: 1, 
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -1 });
 coachPrivateResourceSchema.index({ ownerUserId: 1, slotType: 1 }, { unique: true });
+coachDemoOutcomeSchema.index({ ownerUserId: 1, createdAt: -1 });
+coachDemoOutcomeSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
+coachDemoOutcomeSchema.index({ ownerUserId: 1, resultType: 1, createdAt: -1 });
+coachDemoOutcomeSchema.index({ sponsorUserId: 1, createdAt: -1 });
+coachDemoOutcomeSchema.index({ sponsorUserId: 1, resultType: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -575,6 +647,8 @@ const CoachRecruitmentApplication =
   mongoose.model("CoachRecruitmentApplication", coachRecruitmentApplicationSchema);
 const CoachPrivateResource =
   mongoose.models.CoachPrivateResource || mongoose.model("CoachPrivateResource", coachPrivateResourceSchema);
+const CoachDemoOutcome =
+  mongoose.models.CoachDemoOutcome || mongoose.model("CoachDemoOutcome", coachDemoOutcomeSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -1178,6 +1252,11 @@ async function asegurarCoachUserBase(userDoc = null) {
     dirty = true;
   }
 
+  if (typeof userDoc.sponsorCommissionRate !== "number") {
+    userDoc.sponsorCommissionRate = limpiarCoachCommissionRate(userDoc.sponsorCommissionRate || 0);
+    dirty = true;
+  }
+
   if (dirty) {
     userDoc.updatedAt = new Date();
     await userDoc.save();
@@ -1297,6 +1376,56 @@ async function construirCoachOwnershipSnapshot(userDoc = null) {
   };
 }
 
+function limpiarCoachCommissionRate(value = 0) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+
+  return Number(parsed.toFixed(4));
+}
+
+async function construirCoachSponsorSnapshot(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      sponsorUserId: null,
+      sponsorName: "",
+      sponsorCommissionRate: 0
+    };
+  }
+
+  let sponsorUserId = userDoc.sponsorUserId || null;
+  let sponsorName = String(userDoc.sponsorName || "").trim();
+  let sponsorCommissionRate = limpiarCoachCommissionRate(userDoc.sponsorCommissionRate || 0);
+
+  if (!sponsorUserId && userDoc.teamOwnerUserId && String(userDoc.teamOwnerUserId) !== String(userDoc._id)) {
+    const ownerUserDoc = await CoachUser.findById(userDoc.teamOwnerUserId)
+      .select("sponsorUserId sponsorName sponsorCommissionRate")
+      .lean();
+
+    if (ownerUserDoc?.sponsorUserId) {
+      sponsorUserId = ownerUserDoc.sponsorUserId;
+      sponsorName = String(ownerUserDoc.sponsorName || sponsorName).trim();
+      sponsorCommissionRate = limpiarCoachCommissionRate(ownerUserDoc.sponsorCommissionRate || sponsorCommissionRate);
+    }
+  }
+
+  if (sponsorUserId && !sponsorName) {
+    const sponsorUserDoc = await CoachUser.findById(sponsorUserId).select("name email").lean();
+
+    if (sponsorUserDoc) {
+      sponsorName = sponsorUserDoc.name || sponsorUserDoc.email || sponsorName;
+    }
+  }
+
+  return {
+    sponsorUserId,
+    sponsorName,
+    sponsorCommissionRate
+  };
+}
+
 function esCoachTeamManager(userDoc = null) {
   const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
   return accountType === "owner" || accountType === "leader";
@@ -1401,6 +1530,9 @@ function limpiarCoachUser(userDoc) {
     parentUserId: userDoc.parentUserId ? String(userDoc.parentUserId) : "",
     billingOwnerUserId: userDoc.billingOwnerUserId ? String(userDoc.billingOwnerUserId) : "",
     teamOwnerUserId: userDoc.teamOwnerUserId ? String(userDoc.teamOwnerUserId) : "",
+    sponsorUserId: userDoc.sponsorUserId ? String(userDoc.sponsorUserId) : "",
+    sponsorName: userDoc.sponsorName || "",
+    sponsorCommissionRate: limpiarCoachCommissionRate(userDoc.sponsorCommissionRate || 0),
     seatStatus,
     officeId: userDoc.officeId || "",
     territoryId: userDoc.territoryId || "",
@@ -1549,6 +1681,248 @@ function construirCoachTeamSummary(seats = []) {
     closedSeats: safeSeats.filter(seat => seat?.seatStatus === "closed").length,
     totalGeneratedLeads: safeSeats.reduce((acc, seat) => acc + Number(seat?.counts?.leads || 0), 0)
   };
+}
+
+function normalizarCoachDemoOutcomeType(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  const validValues = ["venta", "follow_up", "no_venta", "no_atendio"];
+  return validValues.includes(safeValue) ? safeValue : "follow_up";
+}
+
+function formatearCoachDemoOutcomeLabel(value = "") {
+  const labels = {
+    venta: "Venta",
+    follow_up: "Follow up",
+    no_venta: "No venta",
+    no_atendio: "No atendio"
+  };
+
+  return labels[normalizarCoachDemoOutcomeType(value)] || "Resultado";
+}
+
+function limpiarCoachDemoOutcomeAmount(value = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : 0;
+}
+
+function limpiarCoachDemoOutcomeProducts(value = []) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(/[\n,;]+/g)
+        .map(item => item.trim());
+
+  return Array.from(
+    new Set(
+      items
+        .map(item => truncarTextoPrompt(String(item || "").trim(), 120))
+        .filter(Boolean)
+        .slice(0, 8)
+    )
+  );
+}
+
+function limpiarCoachDemoOutcomeReason(value = "") {
+  return truncarTextoPrompt(String(value || "").trim(), 320);
+}
+
+function limpiarCoachDemoOutcomeContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const saleAmount = limpiarCoachDemoOutcomeAmount(context.saleAmount || 0);
+  const products = limpiarCoachDemoOutcomeProducts(context.products || []);
+  const privateReason = limpiarCoachDemoOutcomeReason(context.privateReason || "");
+  const activeDemoStage = truncarTextoPrompt(String(context.activeDemoStage || "").trim(), 80);
+  const activeDemoStageLabel = truncarTextoPrompt(String(context.activeDemoStageLabel || "").trim(), 120);
+  const summary = truncarTextoPrompt(String(context.summary || "").trim(), 220);
+  const rawResultType = String(context.resultType || "").trim();
+
+  if (!rawResultType && !saleAmount && !products.length && !privateReason && !summary) {
+    return null;
+  }
+
+  const resultType = normalizarCoachDemoOutcomeType(rawResultType);
+
+  return {
+    id: mongoose.Types.ObjectId.isValid(context.id || "") ? String(context.id) : "",
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    resultType,
+    saleAmount,
+    products,
+    privateReason,
+    activeDemoStage,
+    activeDemoStageLabel,
+    summary
+  };
+}
+
+function construirResumenCoachDemoOutcome(outcome = null) {
+  if (!outcome) {
+    return "";
+  }
+
+  const parts = [`Resultado: ${formatearCoachDemoOutcomeLabel(outcome.resultType)}.`];
+
+  if (limpiarCoachDemoOutcomeAmount(outcome.saleAmount) > 0) {
+    parts.push(`Monto: ${limpiarCoachDemoOutcomeAmount(outcome.saleAmount)}.`);
+  }
+
+  if (Array.isArray(outcome.products) && outcome.products.length) {
+    parts.push(`Productos: ${outcome.products.join(", ")}.`);
+  }
+
+  if (outcome.activeDemoStageLabel) {
+    parts.push(`Paso: ${outcome.activeDemoStageLabel}.`);
+  }
+
+  if (outcome.privateReason) {
+    parts.push(`Nota privada: ${outcome.privateReason}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+function limpiarCoachDemoOutcome(outcomeDoc = null, options = {}) {
+  if (!outcomeDoc?._id) {
+    return null;
+  }
+
+  const includeGenerator = Boolean(options.includeGenerator);
+  const includeSponsor = Boolean(options.includeSponsor);
+  const saleAmount = limpiarCoachDemoOutcomeAmount(outcomeDoc.saleAmount || 0);
+  const sponsorCommissionAmount = limpiarCoachDemoOutcomeAmount(outcomeDoc.sponsorCommissionAmount || 0);
+
+  return {
+    id: String(outcomeDoc._id),
+    ownerUserId: outcomeDoc.ownerUserId ? String(outcomeDoc.ownerUserId) : "",
+    ownerName: outcomeDoc.ownerName || "",
+    generatedByUserId: outcomeDoc.generatedByUserId ? String(outcomeDoc.generatedByUserId) : "",
+    generatedByName: includeGenerator ? outcomeDoc.generatedByName || "" : "",
+    generatedByAccountType: includeGenerator
+      ? normalizarCoachAccountType(outcomeDoc.generatedByAccountType || "owner")
+      : "",
+    resultType: normalizarCoachDemoOutcomeType(outcomeDoc.resultType || ""),
+    resultLabel: formatearCoachDemoOutcomeLabel(outcomeDoc.resultType || ""),
+    saleAmount,
+    products: limpiarCoachDemoOutcomeProducts(outcomeDoc.products || []),
+    privateReason: outcomeDoc.privateReason || "",
+    summary:
+      truncarTextoPrompt(String(outcomeDoc.summary || "").trim(), 220) ||
+      construirResumenCoachDemoOutcome(outcomeDoc),
+    activeDemoStage: outcomeDoc.activeDemoStage || "",
+    activeDemoStageLabel: outcomeDoc.activeDemoStageLabel || "",
+    sponsorCommissionAmount: includeSponsor ? sponsorCommissionAmount : 0,
+    sponsorName: includeSponsor ? outcomeDoc.sponsorName || "" : "",
+    createdAt: outcomeDoc.createdAt || null,
+    updatedAt: outcomeDoc.updatedAt || null
+  };
+}
+
+async function obtenerCoachDemoOutcomeSummary(match = {}) {
+  const [summary] = await CoachDemoOutcome.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        totalResults: { $sum: 1 },
+        salesCount: {
+          $sum: { $cond: [{ $eq: ["$resultType", "venta"] }, 1, 0] }
+        },
+        followUpCount: {
+          $sum: { $cond: [{ $eq: ["$resultType", "follow_up"] }, 1, 0] }
+        },
+        noSaleCount: {
+          $sum: { $cond: [{ $eq: ["$resultType", "no_venta"] }, 1, 0] }
+        },
+        noAnswerCount: {
+          $sum: { $cond: [{ $eq: ["$resultType", "no_atendio"] }, 1, 0] }
+        },
+        soldAmount: {
+          $sum: {
+            $cond: [{ $eq: ["$resultType", "venta"] }, "$saleAmount", 0]
+          }
+        },
+        estimatedCommission: { $sum: "$sponsorCommissionAmount" }
+      }
+    }
+  ]);
+
+  return {
+    totalResults: Number(summary?.totalResults || 0),
+    salesCount: Number(summary?.salesCount || 0),
+    followUpCount: Number(summary?.followUpCount || 0),
+    noSaleCount: Number(summary?.noSaleCount || 0),
+    noAnswerCount: Number(summary?.noAnswerCount || 0),
+    soldAmount: limpiarCoachDemoOutcomeAmount(summary?.soldAmount || 0),
+    estimatedCommission: limpiarCoachDemoOutcomeAmount(summary?.estimatedCommission || 0)
+  };
+}
+
+async function obtenerCoachSponsorOverview(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      sponsoredAccounts: 0,
+      salesCount: 0,
+      soldAmount: 0,
+      estimatedCommission: 0,
+      recentSales: []
+    };
+  }
+
+  const sponsorUserId = userDoc._id;
+  const [sponsoredAccounts, summary, recentSalesDocs] = await Promise.all([
+    CoachUser.countDocuments({
+      sponsorUserId,
+      accountType: { $in: ["owner", "leader"] }
+    }),
+    obtenerCoachDemoOutcomeSummary({
+      sponsorUserId,
+      resultType: "venta"
+    }),
+    CoachDemoOutcome.find({
+      sponsorUserId,
+      resultType: "venta"
+    })
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .lean()
+  ]);
+
+  return {
+    sponsoredAccounts,
+    salesCount: Number(summary.salesCount || 0),
+    soldAmount: limpiarCoachDemoOutcomeAmount(summary.soldAmount || 0),
+    estimatedCommission: limpiarCoachDemoOutcomeAmount(summary.estimatedCommission || 0),
+    recentSales: recentSalesDocs.map(doc => limpiarCoachDemoOutcome(doc, { includeGenerator: true, includeSponsor: true }))
+  };
+}
+
+function construirPromptResultadoDemoActivo(context = null) {
+  if (!context?.resultType) {
+    return "";
+  }
+
+  const productsCopy = Array.isArray(context.products) && context.products.length ? context.products.join(" | ") : "sin productos";
+
+  return `
+RESULTADO DE DEMO ACTIVO EN ESTA SESION:
+- resultado_demo_activo: si
+- resultado_final: ${formatearCoachDemoOutcomeLabel(context.resultType)}
+- monto_reportado: ${limpiarCoachDemoOutcomeAmount(context.saleAmount || 0)}
+- productos_reportados: ${productsCopy}
+- paso_al_reportar: ${context.activeDemoStageLabel || context.activeDemoStage || "sin paso"}
+- nota_privada: ${context.privateReason || "sin nota"}
+- resumen: ${context.summary || "sin resumen"}
+
+INSTRUCCION:
+- si el distribuidor sigue escribiendo despues de reportar este resultado, responde desde este estado real y no como si la demo siguiera en cero
+- si fue venta, enfocate en post cierre, negocio, seguimiento o siguiente paso
+- si fue follow up, no venta o no atendio, usa la nota privada y el paso reportado para sugerir el siguiente movimiento con mas precision
+`;
 }
 
 function normalizarCoachPrivateResourceSlot(slot = "") {
@@ -3517,7 +3891,7 @@ function limpiarTagControl(label = "") {
   return limpio;
 }
 
-async function obtenerControlTowerStats() {
+async function obtenerControlTowerStats(viewerUserDoc = null) {
   const ahora = new Date();
   const inicioHoy = new Date(ahora);
   inicioHoy.setHours(0, 0, 0, 0);
@@ -3547,6 +3921,7 @@ async function obtenerControlTowerStats() {
   const [
     chefSummary,
     coachSummary,
+    sponsorOverview,
     whatsappTodayIds,
     whatsapp7DayIds,
     recentWhatsAppReplies,
@@ -3562,6 +3937,7 @@ async function obtenerControlTowerStats() {
   ] = await Promise.all([
     obtenerChefPublicStats(),
     obtenerCoachNetworkSummary(),
+    obtenerCoachSponsorOverview(viewerUserDoc),
     Message.distinct("visitorId", {
       ...whatsappBaseQuery,
       createdAt: { $gte: inicioHoy }
@@ -3666,6 +4042,7 @@ async function obtenerControlTowerStats() {
     },
     chef: chefSummary,
     coach: coachSummary,
+    sponsor: sponsorOverview,
     whatsapp: {
       repliesToday: whatsappTodayIds.length,
       replies7Days: whatsapp7DayIds.length,
@@ -8615,6 +8992,9 @@ app.post("/api/coach/team/seats", async (req, res) => {
       parentUserId: auth.user._id,
       billingOwnerUserId: auth.user._id,
       teamOwnerUserId: auth.user._id,
+      sponsorUserId: auth.user.sponsorUserId || null,
+      sponsorName: auth.user.sponsorName || "",
+      sponsorCommissionRate: limpiarCoachCommissionRate(auth.user.sponsorCommissionRate || 0),
       seatStatus: "active",
       officeId: auth.user.officeId || "",
       territoryId: auth.user.territoryId || "",
@@ -9448,6 +9828,227 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
   }
 });
 
+app.get("/api/coach/demo-outcomes", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
+    const managesTeam = esCoachTeamManager(auth.user);
+    const personalMatch = {
+      ownerUserId,
+      generatedByUserId: auth.user._id
+    };
+    const teamMatch = { ownerUserId };
+
+    const [personalSummary, teamSummary, personalDocs, teamDocs] = await Promise.all([
+      obtenerCoachDemoOutcomeSummary(personalMatch),
+      obtenerCoachDemoOutcomeSummary(teamMatch),
+      CoachDemoOutcome.find(personalMatch)
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
+      managesTeam
+        ? CoachDemoOutcome.find(teamMatch)
+            .sort({ createdAt: -1 })
+            .limit(12)
+            .lean()
+        : Promise.resolve([])
+    ]);
+
+    res.json({
+      viewerMode: managesTeam ? "manager" : "seat",
+      personalSummary,
+      teamSummary,
+      outcomes: personalDocs.map(doc => limpiarCoachDemoOutcome(doc)),
+      teamOutcomes: managesTeam
+        ? teamDocs.map(doc => limpiarCoachDemoOutcome(doc, { includeGenerator: true }))
+        : []
+    });
+  } catch (error) {
+    console.error("Error cargando resultados de demo del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar los resultados de demo.");
+  }
+});
+
+app.post("/api/coach/demo-outcomes", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const resultType = normalizarCoachDemoOutcomeType(req.body?.resultType || "");
+  const saleAmount = limpiarCoachDemoOutcomeAmount(req.body?.saleAmount || 0);
+  const products = limpiarCoachDemoOutcomeProducts(req.body?.products || []);
+  const privateReason = limpiarCoachDemoOutcomeReason(req.body?.privateReason || "");
+  const activeWorkspace = truncarTextoPrompt(String(req.body?.activeWorkspace || "").trim(), 40);
+  const activeDemoStage = truncarTextoPrompt(String(req.body?.activeDemoStage || "").trim(), 80);
+  const activeDemoStageLabel = truncarTextoPrompt(String(req.body?.activeDemoStageLabel || "").trim(), 120);
+  const recentCoachEvents = Array.isArray(req.body?.recentCoachEvents)
+    ? req.body.recentCoachEvents.map(limpiarCoachDemoEventPrompt).filter(Boolean).slice(0, 6)
+    : [];
+  const activeHealthSurveyId =
+    typeof req.body?.activeHealthSurveyId === "string" ? req.body.activeHealthSurveyId.trim() : "";
+  const activeProgram414SheetId =
+    typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
+  const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
+  let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
+
+  if (resultType === "venta" && saleAmount <= 0) {
+    return responderCoachError(res, 400, "Pon la cantidad de la venta para guardarla bien.");
+  }
+
+  if (!privateReason && !products.length && resultType !== "venta") {
+    return responderCoachError(res, 400, "Agrega una nota corta para recordar por que termino asi.");
+  }
+
+  try {
+    const now = new Date();
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
+    const ownershipSnapshot = await construirCoachOwnershipSnapshot(auth.user);
+    const sponsorSnapshot = await construirCoachSponsorSnapshot(auth.user);
+    let surveyId = null;
+    let surveyName = "";
+    let programSheetId = null;
+    let programHostName = "";
+    let programReferralName = "";
+    let programReferralIndex = -1;
+
+    if (activeOrderCalcContext?.ownerUserId && activeOrderCalcContext.ownerUserId !== String(ownerUserId)) {
+      activeOrderCalcContext = null;
+    }
+
+    if (activeDecisionContext?.ownerUserId && activeDecisionContext.ownerUserId !== String(ownerUserId)) {
+      activeDecisionContext = null;
+    }
+
+    if (activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)) {
+      const surveyDoc = await CoachHealthSurvey.findOne(
+        construirCoachWorkspaceQuery(auth.user, {
+          _id: activeHealthSurveyId
+        })
+      )
+        .select("_id fullName")
+        .lean();
+
+      if (surveyDoc?._id) {
+        surveyId = surveyDoc._id;
+        surveyName = surveyDoc.fullName || "";
+      }
+    }
+
+    if (
+      activeProgram414SheetId &&
+      mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
+      Number.isInteger(activeProgram414ReferralIndex) &&
+      activeProgram414ReferralIndex >= 0
+    ) {
+      const programSheetDoc = await CoachProgramSheet.findOne({
+        ...construirCoachWorkspaceQuery(auth.user),
+        _id: activeProgram414SheetId
+      })
+        .select("_id hostName referrals")
+        .lean();
+
+      const selectedReferral = Array.isArray(programSheetDoc?.referrals)
+        ? programSheetDoc.referrals[activeProgram414ReferralIndex] || null
+        : null;
+
+      if (programSheetDoc?._id && selectedReferral) {
+        programSheetId = programSheetDoc._id;
+        programHostName = programSheetDoc.hostName || "";
+        programReferralName = selectedReferral.fullName || "";
+        programReferralIndex = activeProgram414ReferralIndex;
+      }
+    }
+
+    const sponsorCommissionRate = limpiarCoachCommissionRate(sponsorSnapshot.sponsorCommissionRate || 0);
+    const sponsorCommissionAmount =
+      resultType === "venta" && sponsorSnapshot.sponsorUserId
+        ? limpiarCoachDemoOutcomeAmount(saleAmount * sponsorCommissionRate)
+        : 0;
+
+    const summary = construirResumenCoachDemoOutcome({
+      resultType,
+      saleAmount,
+      products,
+      privateReason,
+      activeDemoStageLabel
+    });
+
+    const outcomeDoc = await CoachDemoOutcome.create({
+      ownerUserId: ownershipSnapshot.ownerUserId,
+      ownerEmail: ownershipSnapshot.ownerEmail || "",
+      ownerName: ownershipSnapshot.ownerName || "",
+      generatedByUserId: ownershipSnapshot.generatedByUserId || null,
+      generatedByName: ownershipSnapshot.generatedByName || "",
+      generatedByAccountType: ownershipSnapshot.generatedByAccountType || "owner",
+      sponsorUserId: sponsorSnapshot.sponsorUserId || null,
+      sponsorName: sponsorSnapshot.sponsorName || "",
+      sponsorCommissionRate,
+      sponsorCommissionAmount,
+      reportedByUserId: auth.user._id,
+      reportedByName: auth.user.name || auth.user.email || "",
+      resultType,
+      saleAmount,
+      products,
+      privateReason,
+      summary,
+      activeWorkspace,
+      activeDemoStage,
+      activeDemoStageLabel,
+      surveyId,
+      surveyName,
+      programSheetId,
+      programHostName,
+      programReferralName,
+      programReferralIndex,
+      orderCalcContext: activeOrderCalcContext,
+      decisionContext: activeDecisionContext,
+      demoEvents: recentCoachEvents.map(event => ({
+        id: event.id || "",
+        label: event.label || "",
+        detail: event.detail || "",
+        occurredAt: now
+      })),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    const cleanedOutcome = limpiarCoachDemoOutcome(outcomeDoc.toObject(), {
+      includeGenerator: esCoachTeamManager(auth.user),
+      includeSponsor: Boolean(sponsorSnapshot.sponsorUserId)
+    });
+
+    res.json({
+      outcome: cleanedOutcome,
+      activeDemoOutcomeContext: limpiarCoachDemoOutcomeContext({
+        id: cleanedOutcome.id,
+        ownerUserId: String(ownerUserId || ""),
+        resultType: cleanedOutcome.resultType,
+        saleAmount: cleanedOutcome.saleAmount,
+        products: cleanedOutcome.products,
+        privateReason: cleanedOutcome.privateReason,
+        activeDemoStage: cleanedOutcome.activeDemoStage,
+        activeDemoStageLabel: cleanedOutcome.activeDemoStageLabel,
+        summary: cleanedOutcome.summary
+      }),
+      coachReply:
+        resultType === "venta"
+          ? "Venta reportada. Esta demo ya quedo marcada como ganada."
+          : `Resultado guardado: ${formatearCoachDemoOutcomeLabel(resultType)}.`
+    });
+  } catch (error) {
+    console.error("Error guardando resultado de demo del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el resultado de esta demo.");
+  }
+});
+
 app.post("/api/coach/create-checkout-session", async (req, res) => {
   if (!stripeListoParaCheckout()) {
     return responderCoachError(
@@ -9799,7 +10400,7 @@ app.get("/api/control/overview", async (req, res) => {
   }
 
   try {
-    const stats = await obtenerControlTowerStats();
+    const stats = await obtenerControlTowerStats(auth.user);
     res.json(stats);
   } catch (error) {
     console.error("Error obteniendo torre de control:", error.message);
@@ -9957,6 +10558,7 @@ app.post("/chat", async (req, res) => {
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
+  let activeDemoOutcomeContext = limpiarCoachDemoOutcomeContext(req.body?.activeDemoOutcomeContext);
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
@@ -10061,6 +10663,17 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 
       if (activeDecisionContext) {
         perfilPrompt += construirPromptBalanceDecisionActivo(activeDecisionContext);
+      }
+
+      if (
+        activeDemoOutcomeContext?.ownerUserId &&
+        activeDemoOutcomeContext.ownerUserId !== coachOwnerUserId
+      ) {
+        activeDemoOutcomeContext = null;
+      }
+
+      if (activeDemoOutcomeContext) {
+        perfilPrompt += construirPromptResultadoDemoActivo(activeDemoOutcomeContext);
       }
 
       const leadMemory = await obtenerMemoriaLeadRelacionada({
@@ -10257,6 +10870,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         activeProgram414Context,
         activeOrderCalcContext,
         activeDecisionContext,
+        activeDemoOutcomeContext,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
