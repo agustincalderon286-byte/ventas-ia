@@ -3696,7 +3696,7 @@ function initCoachLeadWorkspace() {
           ${
             phoneHref
               ? `<a class="secondary-button" href="tel:+1${phoneHref}">Llamar</a>
-                 <a class="nav-button" href="sms:+1${phoneHref}">SMS</a>`
+                 <button type="button" class="nav-button" data-coach-lead-sms-open>Abrir SMS</button>`
               : ""
           }
           ${
@@ -3705,6 +3705,26 @@ function initCoachLeadWorkspace() {
               : ""
           }
         </div>
+        ${
+          phoneHref
+            ? `<div class="lead-folder-sms-wrap" data-coach-lead-sms-wrap hidden>
+                 <label class="lead-folder-field lead-folder-field-full">
+                   <span>Mensaje SMS</span>
+                   <textarea
+                     rows="3"
+                     maxlength="480"
+                     placeholder="Ej. Hola, soy tu representante. Queria confirmar si te queda bien que te llame hoy."
+                     data-coach-lead-sms-message
+                   ></textarea>
+                 </label>
+                 <div class="lead-folder-actions-row lead-folder-sms-actions">
+                   <button type="button" class="nav-button" data-coach-lead-sms-cancel>Cerrar</button>
+                   <button type="button" class="secondary-button" data-coach-lead-sms-send>Enviar SMS</button>
+                 </div>
+                 <div class="form-result" data-coach-lead-sms-feedback></div>
+               </div>`
+            : ""
+        }
         <div class="lead-folder-followup-grid">
           <label class="lead-folder-field">
             <span>Proxima accion</span>
@@ -3741,6 +3761,39 @@ function initCoachLeadWorkspace() {
     if (leadListNote) {
       leadListNote.textContent = `${filteredLeads.length} lead(s) en ${getPanelLabel(state.panel)}.`;
     }
+  };
+
+  const closeAllSmsComposer = () => {
+    leadList.querySelectorAll("[data-coach-lead-sms-wrap]").forEach(node => {
+      node.hidden = true;
+    });
+  };
+
+  const toggleSmsComposer = (card, open) => {
+    if (!card) {
+      return;
+    }
+
+    const wrap = card.querySelector("[data-coach-lead-sms-wrap]");
+    const textarea = card.querySelector("[data-coach-lead-sms-message]");
+    const feedback = card.querySelector("[data-coach-lead-sms-feedback]");
+
+    if (!wrap) {
+      return;
+    }
+
+    if (open) {
+      closeAllSmsComposer();
+      wrap.hidden = false;
+      clearMessage(feedback);
+      window.setTimeout(() => {
+        textarea?.focus();
+      }, 40);
+      return;
+    }
+
+    wrap.hidden = true;
+    clearMessage(feedback);
   };
 
   const exportLeads = () => {
@@ -3966,6 +4019,63 @@ function initCoachLeadWorkspace() {
   });
 
   leadList.addEventListener("click", async event => {
+    const smsOpenButton = event.target.closest("[data-coach-lead-sms-open]");
+
+    if (smsOpenButton) {
+      const card = smsOpenButton.closest("[data-coach-lead-id]");
+      const wrap = card?.querySelector("[data-coach-lead-sms-wrap]");
+      toggleSmsComposer(card, Boolean(wrap?.hidden));
+      return;
+    }
+
+    const smsCancelButton = event.target.closest("[data-coach-lead-sms-cancel]");
+
+    if (smsCancelButton) {
+      const card = smsCancelButton.closest("[data-coach-lead-id]");
+      toggleSmsComposer(card, false);
+      return;
+    }
+
+    const smsSendButton = event.target.closest("[data-coach-lead-sms-send]");
+
+    if (smsSendButton) {
+      const card = smsSendButton.closest("[data-coach-lead-id]");
+      const leadId = card?.dataset.coachLeadId || "";
+      const smsInput = card?.querySelector("[data-coach-lead-sms-message]");
+      const feedback = card?.querySelector("[data-coach-lead-sms-feedback]");
+      const message = String(smsInput?.value || "").trim();
+
+      if (!leadId) {
+        return;
+      }
+
+      if (!message) {
+        setMessage(feedback, "Escribe el mensaje antes de mandarlo.", "error");
+        smsInput?.focus();
+        return;
+      }
+
+      clearMessage(feedback);
+      setButtonLoading(smsSendButton, true, "Enviando...");
+
+      try {
+        await apiRequest(`/api/coach/leads/${encodeURIComponent(leadId)}/sms`, {
+          method: "POST",
+          body: { message }
+        });
+        await loadLeads();
+        if (leadListNote) {
+          leadListNote.textContent = "SMS enviado correctamente.";
+        }
+      } catch (error) {
+        setMessage(feedback, error.message, "error");
+      } finally {
+        setButtonLoading(smsSendButton, false);
+      }
+
+      return;
+    }
+
     const saveButton = event.target.closest("[data-coach-lead-save]");
 
     if (!saveButton) {

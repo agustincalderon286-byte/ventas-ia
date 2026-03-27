@@ -35,8 +35,15 @@ const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
 const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
+const TWILIO_ACCOUNT_SID = String(process.env.TWILIO_ACCOUNT_SID || "").trim();
+const TWILIO_AUTH_TOKEN = String(process.env.TWILIO_AUTH_TOKEN || "").trim();
 const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || "").toLowerCase() === "true";
 const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
+const TWILIO_SMS_ENABLED = String(process.env.TWILIO_SMS_ENABLED || "").toLowerCase() === "true";
+const TWILIO_SMS_WEBHOOK_TOKEN = String(process.env.TWILIO_SMS_WEBHOOK_TOKEN || "").trim();
+const TWILIO_SMS_AI_REPLY_ENABLED = String(process.env.TWILIO_SMS_AI_REPLY_ENABLED || "").toLowerCase() === "true";
+const TWILIO_SMS_FROM = String(process.env.TWILIO_SMS_FROM || "").trim();
+const TWILIO_MESSAGING_SERVICE_SID = String(process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
 const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
 const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
@@ -3603,6 +3610,74 @@ function construirCoachLeadSummary(leadDoc = null) {
   }
 
   return parts.join(" ").trim();
+}
+
+async function guardarMensajeCoachLeadCanal(leadDoc = null, options = {}) {
+  if (!leadDoc?._id) {
+    return null;
+  }
+
+  const role = options.role === "assistant" ? "assistant" : "user";
+  const content = cleanText(options.content || "");
+
+  if (!content) {
+    return null;
+  }
+
+  try {
+    return await Message.create({
+      visitorId: `coach-lead-${String(leadDoc._id)}`,
+      sessionId: `coach-lead-sms-${normalizePhone(leadDoc.phone || "") || String(leadDoc._id)}`,
+      leadId: leadDoc._id,
+      coachOwnerUserId: leadDoc.ownerUserId || null,
+      generatedByUserId: leadDoc.generatedByUserId || null,
+      generatedByAccountType: leadDoc.generatedByAccountType || "",
+      role,
+      content,
+      intent: options.intent || (role === "assistant" ? "sms_saliente" : "sms_entrante"),
+      detectedTopics: ["sms"],
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.error("Error guardando mensaje SMS del lead del Coach:", error.message);
+    return null;
+  }
+}
+
+async function registrarActividadSmsCoachLead(leadDoc = null, options = {}) {
+  if (!leadDoc?._id) {
+    return null;
+  }
+
+  const direction = options.direction === "entrante" ? "entrante" : "saliente";
+  const message = cleanText(options.message || "");
+  const sid = cleanText(options.sid || "");
+  const now = new Date();
+
+  if (message) {
+    const prefix = direction === "entrante" ? "SMS entrante" : "SMS enviado";
+    const sidCopy = sid ? ` SID ${sid}.` : "";
+    const note = `${prefix} ${now.toLocaleString("es-US")}: ${message}.${sidCopy}`.trim();
+    leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${note}` : note;
+  }
+
+  if (leadDoc.status === "nuevo") {
+    leadDoc.status = "contactado";
+    leadDoc.lastStatusChangeAt = now;
+  }
+
+  leadDoc.lastContactAt = now;
+  leadDoc.updatedAt = now;
+  leadDoc.summary = construirCoachLeadSummary(leadDoc);
+  await leadDoc.save();
+
+  await guardarMensajeCoachLeadCanal(leadDoc, {
+    role: direction === "saliente" ? "assistant" : "user",
+    content: message,
+    intent: direction === "saliente" ? "sms_saliente" : "sms_entrante"
+  });
+
+  return leadDoc;
 }
 
 function limpiarCoachInboxLead(leadDoc = null) {
@@ -7651,6 +7726,52 @@ function construirWhatsAppUrl(phone = "", text = "") {
   return `${baseUrl}?text=${encodeURIComponent(message)}`;
 }
 
+function construirTwilioSmsApiAuthHeader() {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    return "";
+  }
+
+  return `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64")}`;
+}
+
+function twilioSmsEstaConfigurado() {
+  return Boolean(
+    TWILIO_SMS_ENABLED &&
+      TWILIO_ACCOUNT_SID &&
+      TWILIO_AUTH_TOKEN &&
+      (TWILIO_MESSAGING_SERVICE_SID || TWILIO_SMS_FROM)
+  );
+}
+
+function formatearTelefonoE164(value = "") {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return "";
+  }
+
+  if (raw.startsWith("+")) {
+    const digits = raw.replace(/\D+/g, "");
+    return digits ? `+${digits}` : "";
+  }
+
+  const digits = String(value || "").replace(/\D+/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return digits.length >= 8 ? `+${digits}` : "";
+}
+
 function escapeXml(value = "") {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -7663,6 +7784,85 @@ function escapeXml(value = "") {
 function construirTwilioMessageResponse(message = "") {
   const body = cleanText(String(message || "No pude responder en este momento.")).slice(0, 1590);
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Message><Body>${escapeXml(body)}</Body></Message></Response>`;
+}
+
+function construirTwilioEmptyResponse() {
+  return `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
+}
+
+async function enviarTwilioSms({ to = "", body = "", statusCallbackUrl = "" } = {}) {
+  const message = cleanText(String(body || "")).slice(0, 1600);
+  const toPhone = formatearTelefonoE164(to);
+
+  if (!twilioSmsEstaConfigurado()) {
+    return {
+      ok: false,
+      error: "Twilio SMS todavia no esta configurado."
+    };
+  }
+
+  if (!toPhone) {
+    return {
+      ok: false,
+      error: "No encontre un telefono valido para enviar SMS."
+    };
+  }
+
+  if (!message) {
+    return {
+      ok: false,
+      error: "El mensaje SMS viene vacio."
+    };
+  }
+
+  const params = new URLSearchParams();
+  params.set("To", toPhone);
+  params.set("Body", message);
+
+  if (TWILIO_MESSAGING_SERVICE_SID) {
+    params.set("MessagingServiceSid", TWILIO_MESSAGING_SERVICE_SID);
+  } else {
+    params.set("From", TWILIO_SMS_FROM);
+  }
+
+  if (statusCallbackUrl) {
+    params.set("StatusCallback", statusCallbackUrl);
+  }
+
+  try {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: construirTwilioSmsApiAuthHeader(),
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data?.message || `Twilio respondio ${response.status}`
+      };
+    }
+
+    return {
+      ok: true,
+      status: response.status,
+      sid: data?.sid || "",
+      to: data?.to || toPhone,
+      from: data?.from || TWILIO_SMS_FROM || "",
+      raw: data
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error.message || "No pude enviar el SMS."
+    };
+  }
 }
 
 async function sembrarLeadYPerfilCanal({
@@ -7867,7 +8067,7 @@ async function procesarChatChefCanal({
 }) {
   const preguntaLimpia = cleanText(pregunta);
   const visitorIdLimpio = cleanText(visitorId || sessionId);
-  const fastChannel = /^whatsapp/i.test(source);
+  const fastChannel = /^(whatsapp|sms)/i.test(source);
   const coachChefContext = fastChannel ? null : await resolverCoachChefContextPorSlug(chefSlug);
 
   if (!preguntaLimpia) {
@@ -7894,10 +8094,11 @@ async function procesarChatChefCanal({
   try {
     const modoChat = "chef";
     const modoPrompt = construirContextoModoPrompt(modoChat);
+    const canalActivo = /^sms/i.test(source) ? "sms" : "whatsapp";
     const modoPromptCanal = fastChannel
       ? `
 CANAL ACTIVO:
-- canal: whatsapp
+- canal: ${canalActivo}
 - prioridad: velocidad y claridad
 - respuesta_maxima: 3 oraciones cortas o lista breve
 - evita respuestas largas, adornos y explicaciones extensas
@@ -9992,6 +10193,61 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
   }
 });
 
+app.post("/api/coach/leads/:leadId/sms", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const leadId = String(req.params?.leadId || "").trim();
+  const message = cleanText(req.body?.message || "").slice(0, 1600);
+
+  if (!mongoose.Types.ObjectId.isValid(leadId)) {
+    return responderCoachError(res, 400, "Lead invalido.");
+  }
+
+  if (!message) {
+    return responderCoachError(res, 400, "Escribe el mensaje que quieres mandar.");
+  }
+
+  if (!twilioSmsEstaConfigurado()) {
+    return responderCoachError(res, 503, "Twilio SMS todavia no esta configurado.");
+  }
+
+  try {
+    const leadDoc = await CoachLeadInbox.findOne(construirCoachWorkspaceQuery(auth.user, { _id: leadId }));
+
+    if (!leadDoc) {
+      return responderCoachError(res, 404, "No encontre ese lead.");
+    }
+
+    const smsResult = await enviarTwilioSms({
+      to: leadDoc.phone || "",
+      body: message
+    });
+
+    if (!smsResult.ok) {
+      return responderCoachError(res, 502, smsResult.error || "No pude enviar el SMS.");
+    }
+
+    await registrarActividadSmsCoachLead(leadDoc, {
+      direction: "saliente",
+      message,
+      sid: smsResult.sid || ""
+    });
+
+    res.json({
+      ok: true,
+      sid: smsResult.sid || "",
+      lead: limpiarCoachInboxLead(leadDoc.toObject())
+    });
+  } catch (error) {
+    console.error("Error enviando SMS del Coach:", error.message);
+    responderCoachError(res, 500, "No pude enviar el SMS en este momento.");
+  }
+});
+
 app.patch("/api/coach/leads/:leadId", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -10655,8 +10911,79 @@ app.get("/api/platform/config", (req, res) => {
     whatsapp: {
       chefUrl: construirWhatsAppUrl(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT),
       chefEnabled: Boolean(construirWhatsAppUrl(WHATSAPP_CHEF_NUMBER, WHATSAPP_CHEF_TEXT))
+    },
+    sms: {
+      enabled: twilioSmsEstaConfigurado(),
+      from: TWILIO_SMS_FROM,
+      messagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
+      webhookPath: "/webhooks/twilio/sms"
     }
   });
+});
+
+app.get("/webhooks/twilio/sms", (req, res) => {
+  res.json({
+    ok: true,
+    mode: "sms",
+    enabled: TWILIO_SMS_ENABLED,
+    messagingServiceSidConfigured: Boolean(TWILIO_MESSAGING_SERVICE_SID),
+    fromConfigured: Boolean(TWILIO_SMS_FROM),
+    aiReplyEnabled: TWILIO_SMS_AI_REPLY_ENABLED,
+    webhookPath: "/webhooks/twilio/sms",
+    tokenRequired: Boolean(TWILIO_SMS_WEBHOOK_TOKEN)
+  });
+});
+
+app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async (req, res) => {
+  if (!TWILIO_SMS_ENABLED) {
+    return res.type("text/xml").send(construirTwilioEmptyResponse());
+  }
+
+  if (TWILIO_SMS_WEBHOOK_TOKEN && cleanText(req.query.token || "") !== TWILIO_SMS_WEBHOOK_TOKEN) {
+    return res.status(403).type("text/plain").send("Webhook no autorizado");
+  }
+
+  const body = cleanText(req.body?.Body || "");
+  const fromRaw = cleanText(req.body?.From || "");
+  const phone = normalizePhone(fromRaw);
+  const messageSid = cleanText(req.body?.MessageSid || "");
+
+  if (phone) {
+    try {
+      const matchedLead = await CoachLeadInbox.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
+
+      if (matchedLead && body) {
+        await registrarActividadSmsCoachLead(matchedLead, {
+          direction: "entrante",
+          message: body,
+          sid: messageSid
+        });
+      }
+    } catch (error) {
+      console.error("Error guardando SMS entrante del Coach:", error.message);
+    }
+  }
+
+  if (!TWILIO_SMS_AI_REPLY_ENABLED) {
+    return res.type("text/xml").send(construirTwilioEmptyResponse());
+  }
+
+  if (!body || !phone) {
+    return res.type("text/xml").send(construirTwilioEmptyResponse());
+  }
+
+  const sessionId = `sms-session-${phone}`;
+  const visitorId = `sms-visitor-${phone}`;
+  const resultado = await procesarChatChefCanal({
+    pregunta: body,
+    sessionId,
+    visitorId,
+    phoneHint: phone,
+    source: "sms"
+  });
+
+  const mensaje = resultado.ok ? resultado.respuesta : resultado.error || "No pude responder en este momento.";
+  return res.type("text/xml").send(construirTwilioMessageResponse(mensaje));
 });
 
 app.get("/webhooks/twilio/whatsapp", (req, res) => {
