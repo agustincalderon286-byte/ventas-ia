@@ -571,6 +571,411 @@
             </p>
           </article>
 
+          <article class="dashboard-card health-survey-card" data-coach-workspace-section="cierre">
+            <div class="eyebrow">Paso de demo</div>
+            <h3>Encuesta de salud</h3>
+            <p>
+              Esta encuesta se llena en la casa durante la demo. Se guarda dentro del Coach, no sale por correo y te
+              deja contexto valioso para seguir cerrando y entrenar mejor el sistema despues.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button health-survey-toggle"
+                data-health-survey-toggle
+                aria-expanded="false"
+              >
+                Abrir encuesta
+              </button>
+            </div>
+
+            <div class="health-survey-wrap" data-health-survey-wrap hidden>
+              <form class="native-lead-form health-survey-form" data-health-survey-form>
+                <input type="hidden" name="surveyId" value="" />
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Casa y familia</strong>
+                    <span>Empieza con lo basico y deja que la conversacion fluya.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Nombre completo</span>
+                      <input type="text" name="fullName" placeholder="Nombre completo" required />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Telefono</span>
+                      <input type="tel" name="phone" placeholder="7735551234" required />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Nombre 2</span>
+                      <input type="text" name="secondName" placeholder="Opcional" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Trabajan actualmente</span>
+                      <select name="workingStatus">
+                        <option value="">Elige una opcion</option>
+                        <option value="Solo esposo">Solo esposo</option>
+                        <option value="Solo esposa">Solo esposa</option>
+                        <option value="Los dos">Los dos</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field native-lead-field-full">
+                      <span>Que ha escuchado decir de Royal Prestige</span>
+                      <textarea
+                        name="heardRoyal"
+                        rows="3"
+                        maxlength="260"
+                        placeholder="Una cosa buena y una cosa mala"
+                      ></textarea>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Cocina y salud</strong>
+                    <span>Preguntas sencillas para entender su realidad de diario.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Que es lo mas importante para su familia</span>
+                      <select name="familyPriority">
+                        <option value="">Elige una opcion</option>
+                        <option value="Tiempo">Tiempo</option>
+                        <option value="Dinero">Dinero</option>
+                        <option value="Salud">Salud</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Por cual razon compra productos de calidad</span>
+                      <select name="qualityReason">
+                        <option value="">Elige una opcion</option>
+                        <option value="Es una inversion duradera">Es una inversion duradera</option>
+                        <option value="Ahorra dinero">Ahorra dinero</option>
+                        <option value="Es una decision inteligente">Es una decision inteligente</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Del 1 al 10 que tanto le gustaron los productos</span>
+                      <input type="number" name="productLikingScore" min="1" max="10" placeholder="1 al 10" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Para cuantas personas cocina</span>
+                      <input type="number" name="cooksForCount" min="1" max="50" placeholder="Numero" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cuanto invierte en alimentos por semana</span>
+                      <input type="text" name="foodSpendWeekly" placeholder="Ej. $200" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cuanto tarda en preparar la comida principal</span>
+                      <input type="text" name="mealPrepTime" placeholder="Ej. 1 hora" />
+                    </label>
+                  </div>
+
+                  <div class="health-survey-check-block">
+                    <strong>En que material cocina sus alimentos</strong>
+                    <div class="health-survey-check-grid">
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="cookingMaterials" value="Aluminio" />
+                        <span>Aluminio</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="cookingMaterials" value="Teflon" />
+                        <span>Teflon</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="cookingMaterials" value="Hierro" />
+                        <span>Hierro</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="cookingMaterials" value="Vidrio" />
+                        <span>Vidrio</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="cookingMaterials" value="Acero inoxidable" />
+                        <span>Acero inoxidable</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="health-survey-check-block">
+                    <strong>Algun miembro de la familia sufre estas dolencias</strong>
+                    <div class="health-survey-check-grid">
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="familyConditions" value="Diabetes" />
+                        <span>Diabetes</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="familyConditions" value="Colesterol" />
+                        <span>Colesterol</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="familyConditions" value="Presion alta" />
+                        <span>Presion alta</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="familyConditions" value="Problemas cardiacos" />
+                        <span>Problemas cardiacos</span>
+                      </label>
+                      <label class="health-survey-check">
+                        <input type="checkbox" name="familyConditions" value="Anemia" />
+                        <span>Anemia</span>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Lo que piensa de la cocina</strong>
+                    <span>Estas respuestas te ayudan a leer mejor el cierre.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Preparar alimentos con poca grasa sera saludable</span>
+                      <select name="lowFatHealthy">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field native-lead-field-full">
+                      <span>Por que si o por que no</span>
+                      <textarea name="lowFatHealthyReason" rows="2" maxlength="220" placeholder="Porque"></textarea>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cree que cocinar en teflon o aluminio afecta sabor e higiene</span>
+                      <select name="cookwareAffects">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field native-lead-field-full">
+                      <span>Por que si o por que no</span>
+                      <textarea name="cookwareAffectsReason" rows="2" maxlength="220" placeholder="Porque"></textarea>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Le gustaria usar utensilios de alta calidad que no contaminen sus alimentos</span>
+                      <select name="qualityInterest">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field native-lead-field-full">
+                      <span>Por que si o por que no</span>
+                      <textarea name="qualityInterestReason" rows="2" maxlength="220" placeholder="Porque"></textarea>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Agua y bebidas</strong>
+                    <span>Ayuda a leer interes en agua, jugos y salud.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Que tipo de agua usan para tomar</span>
+                      <select name="drinkingWaterType">
+                        <option value="">Elige una opcion</option>
+                        <option value="Llave">Llave</option>
+                        <option value="Botella">Botella</option>
+                        <option value="Filtro">Filtro</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Y para cocinar</span>
+                      <select name="cookingWaterType">
+                        <option value="">Elige una opcion</option>
+                        <option value="Llave">Llave</option>
+                        <option value="Botella">Botella</option>
+                        <option value="Filtro">Filtro</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cree que el agua de la tuberia tiene quimicos o contaminantes</span>
+                      <select name="tapWaterConcern">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cuanto invierte en agua por semana</span>
+                      <input type="text" name="waterSpendWeekly" placeholder="Ej. $20" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>A su familia le gustan los jugos naturales</span>
+                      <select name="likesNaturalJuices">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Los toman</span>
+                      <select name="juiceFrequency">
+                        <option value="">Elige una opcion</option>
+                        <option value="Semanal">Semanal</option>
+                        <option value="Quincenal">Quincenal</option>
+                        <option value="Mensual">Mensual</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Credito e inversion</strong>
+                    <span>Sirve para medir bolsillo, apertura y siguiente paso.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Ha tenido problemas con su credito</span>
+                      <select name="creditProblems">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Le gustaria establecerlo o mejorarlo</span>
+                      <select name="creditImproveInterest">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cree que es bueno invertir en productos que ayuden a la salud de su familia</span>
+                      <select name="familyHealthInvestment">
+                        <option value="">Elige una opcion</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Cuanto podria invertir semanalmente sin afectar su bolsillo</span>
+                      <select name="weeklyBudget">
+                        <option value="">Elige una opcion</option>
+                        <option value="$15">$15</option>
+                        <option value="$30">$30</option>
+                        <option value="$45">$45</option>
+                        <option value="$60">$60</option>
+                      </select>
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Mensualmente seria</span>
+                      <select name="monthlyBudget">
+                        <option value="">Elige una opcion</option>
+                        <option value="$60">$60</option>
+                        <option value="$120">$120</option>
+                        <option value="$180">$180</option>
+                        <option value="$240">$240</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="health-survey-section">
+                  <div class="health-survey-section-head">
+                    <strong>Productos de mas uso</strong>
+                    <span>Nombra los 3 productos que mas usaria diario.</span>
+                  </div>
+
+                  <div class="native-lead-grid">
+                    <label class="native-lead-field">
+                      <span>Producto 1</span>
+                      <input type="text" name="topProduct1" placeholder="Ej. Olla de presion" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Producto 2</span>
+                      <input type="text" name="topProduct2" placeholder="Ej. Sarten" />
+                    </label>
+                    <label class="native-lead-field">
+                      <span>Producto 3</span>
+                      <input type="text" name="topProduct3" placeholder="Ej. Extractor" />
+                    </label>
+                  </div>
+
+                  <p class="health-survey-helper">
+                    Sugerencia: si ya eligieron 3 productos, metelos luego en la calculadora de cierre para negociar
+                    sin enredarte.
+                  </p>
+                </section>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-health-survey-save>Guardar encuesta</button>
+                  <button type="reset" class="nav-button">Limpiar</button>
+                </div>
+
+                <div class="form-result" data-health-survey-feedback></div>
+              </form>
+            </div>
+
+            <p class="mini-note">
+              Se queda guardada dentro del Coach y la puedes volver a abrir despues sin perder lo importante.
+            </p>
+          </article>
+
+          <article class="dashboard-card health-survey-folder-card" data-coach-workspace-section="cierre">
+            <div class="eyebrow">Carpeta privada</div>
+            <h3>Encuestas de salud</h3>
+            <p>
+              Aqui se queda cada encuesta guardada por casa. Abrela otra vez cuando quieras seguir la demo o revisar
+              informacion importante de esa familia.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button
+                type="button"
+                class="secondary-button health-survey-folder-toggle"
+                data-health-survey-folder-toggle
+                aria-expanded="false"
+              >
+                Abrir carpeta
+              </button>
+            </div>
+
+            <div class="health-survey-folder-wrap" data-health-survey-folder-wrap hidden>
+              <div class="insight-grid health-survey-folder-metrics">
+                <div class="mini-stat">
+                  <strong data-health-survey-total>0</strong>
+                  <span>Guardadas</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-health-survey-health>0</strong>
+                  <span>Prioridad salud</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-health-survey-water>0</strong>
+                  <span>Ven riesgo en el agua</span>
+                </div>
+                <div class="mini-stat">
+                  <strong data-health-survey-credit>0</strong>
+                  <span>Quieren mejorar credito</span>
+                </div>
+              </div>
+
+              <div class="health-survey-folder-list" data-health-survey-folder-list></div>
+              <p class="mini-note" data-health-survey-folder-note>Aun no hay encuestas guardadas.</p>
+            </div>
+
+            <p class="mini-note">
+              Esta carpeta es solo del lado de cierres para no mezclarla con rifa, calle ni prospeccion.
+            </p>
+          </article>
+
           <article class="dashboard-card order-calc-card" data-coach-workspace-section="cierre">
             <div class="eyebrow">Herramienta de cierre</div>
             <h3>Calculadora de pedido</h3>

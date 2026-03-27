@@ -340,6 +340,51 @@ const coachProgramSheetSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachHealthSurveySchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  fullName: { type: String, required: true, trim: true },
+  phone: String,
+  secondName: String,
+  workingStatus: String,
+  heardRoyal: String,
+  familyPriority: String,
+  qualityReason: String,
+  productLikingScore: Number,
+  cooksForCount: Number,
+  foodSpendWeekly: String,
+  mealPrepTime: String,
+  cookingMaterials: [String],
+  familyConditions: [String],
+  lowFatHealthy: String,
+  lowFatHealthyReason: String,
+  cookwareAffects: String,
+  cookwareAffectsReason: String,
+  qualityInterest: String,
+  qualityInterestReason: String,
+  drinkingWaterType: String,
+  cookingWaterType: String,
+  tapWaterConcern: String,
+  waterSpendWeekly: String,
+  likesNaturalJuices: String,
+  juiceFrequency: String,
+  creditProblems: String,
+  creditImproveInterest: String,
+  familyHealthInvestment: String,
+  weeklyBudget: String,
+  monthlyBudget: String,
+  topProducts: [String],
+  summary: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -361,6 +406,8 @@ coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
+coachHealthSurveySchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachHealthSurveySchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -375,6 +422,8 @@ const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSessio
 const CoachLeadInbox = mongoose.models.CoachLeadInbox || mongoose.model("CoachLeadInbox", coachLeadInboxSchema);
 const CoachProgramSheet =
   mongoose.models.CoachProgramSheet || mongoose.model("CoachProgramSheet", coachProgramSheetSchema);
+const CoachHealthSurvey =
+  mongoose.models.CoachHealthSurvey || mongoose.model("CoachHealthSurvey", coachHealthSurveySchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json());
@@ -1724,6 +1773,152 @@ function construirCoachLeadInboxSummary(leads = []) {
   });
 
   return summary;
+}
+
+function limpiarCoachHealthText(value = "", maxLength = 180) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function limpiarCoachHealthYesNo(value = "") {
+  const limpio = limpiarCoachHealthText(value, 12).toLowerCase();
+
+  if (limpio === "si") {
+    return "Si";
+  }
+
+  if (limpio === "no") {
+    return "No";
+  }
+
+  return "";
+}
+
+function limpiarCoachHealthNumber(value = "", min = 0, max = 999) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function limpiarCoachHealthList(values = [], { maxItems = 8, maxLength = 80 } = {}) {
+  const items = Array.isArray(values) ? values : [values];
+  const unique = [];
+
+  for (const item of items) {
+    const clean = limpiarCoachHealthText(item, maxLength);
+
+    if (!clean) {
+      continue;
+    }
+
+    const exists = unique.some(saved => saved.toLowerCase() === clean.toLowerCase());
+
+    if (exists) {
+      continue;
+    }
+
+    unique.push(clean);
+
+    if (unique.length >= maxItems) {
+      break;
+    }
+  }
+
+  return unique;
+}
+
+function construirCoachHealthSurveySummary(surveyDoc = null) {
+  if (!surveyDoc) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (surveyDoc.familyPriority) {
+    parts.push(`Lo mas importante: ${surveyDoc.familyPriority}.`);
+  }
+
+  if (surveyDoc.qualityReason) {
+    parts.push(`Compra calidad por: ${truncarTextoPrompt(surveyDoc.qualityReason, 70)}.`);
+  }
+
+  if (Number.isFinite(surveyDoc.productLikingScore) && surveyDoc.productLikingScore > 0) {
+    parts.push(`Le gustaron los productos: ${surveyDoc.productLikingScore}/10.`);
+  }
+
+  if (Number.isFinite(surveyDoc.cooksForCount) && surveyDoc.cooksForCount > 0) {
+    parts.push(`Cocina para ${surveyDoc.cooksForCount} persona(s).`);
+  }
+
+  if (Array.isArray(surveyDoc.cookingMaterials) && surveyDoc.cookingMaterials.length) {
+    parts.push(`Hoy cocina con ${surveyDoc.cookingMaterials.join(", ")}.`);
+  }
+
+  if (Array.isArray(surveyDoc.familyConditions) && surveyDoc.familyConditions.length) {
+    parts.push(`Dolencias en casa: ${surveyDoc.familyConditions.join(", ")}.`);
+  }
+
+  if (surveyDoc.tapWaterConcern) {
+    parts.push(`Contaminantes en el agua: ${surveyDoc.tapWaterConcern}.`);
+  }
+
+  if (surveyDoc.creditImproveInterest) {
+    parts.push(`Quiere mejorar credito: ${surveyDoc.creditImproveInterest}.`);
+  }
+
+  if (Array.isArray(surveyDoc.topProducts) && surveyDoc.topProducts.length) {
+    parts.push(`Productos de mas uso: ${surveyDoc.topProducts.join(", ")}.`);
+  }
+
+  return parts.join(" ").trim();
+}
+
+function limpiarCoachHealthSurvey(surveyDoc = null) {
+  if (!surveyDoc) {
+    return null;
+  }
+
+  return {
+    id: String(surveyDoc._id),
+    ownerUserId: surveyDoc.ownerUserId ? String(surveyDoc.ownerUserId) : "",
+    fullName: surveyDoc.fullName || "",
+    phone: surveyDoc.phone || "",
+    secondName: surveyDoc.secondName || "",
+    workingStatus: surveyDoc.workingStatus || "",
+    heardRoyal: surveyDoc.heardRoyal || "",
+    familyPriority: surveyDoc.familyPriority || "",
+    qualityReason: surveyDoc.qualityReason || "",
+    productLikingScore: Number.isFinite(surveyDoc.productLikingScore) ? surveyDoc.productLikingScore : null,
+    cooksForCount: Number.isFinite(surveyDoc.cooksForCount) ? surveyDoc.cooksForCount : null,
+    foodSpendWeekly: surveyDoc.foodSpendWeekly || "",
+    mealPrepTime: surveyDoc.mealPrepTime || "",
+    cookingMaterials: Array.isArray(surveyDoc.cookingMaterials) ? surveyDoc.cookingMaterials : [],
+    familyConditions: Array.isArray(surveyDoc.familyConditions) ? surveyDoc.familyConditions : [],
+    lowFatHealthy: surveyDoc.lowFatHealthy || "",
+    lowFatHealthyReason: surveyDoc.lowFatHealthyReason || "",
+    cookwareAffects: surveyDoc.cookwareAffects || "",
+    cookwareAffectsReason: surveyDoc.cookwareAffectsReason || "",
+    qualityInterest: surveyDoc.qualityInterest || "",
+    qualityInterestReason: surveyDoc.qualityInterestReason || "",
+    drinkingWaterType: surveyDoc.drinkingWaterType || "",
+    cookingWaterType: surveyDoc.cookingWaterType || "",
+    tapWaterConcern: surveyDoc.tapWaterConcern || "",
+    waterSpendWeekly: surveyDoc.waterSpendWeekly || "",
+    likesNaturalJuices: surveyDoc.likesNaturalJuices || "",
+    juiceFrequency: surveyDoc.juiceFrequency || "",
+    creditProblems: surveyDoc.creditProblems || "",
+    creditImproveInterest: surveyDoc.creditImproveInterest || "",
+    familyHealthInvestment: surveyDoc.familyHealthInvestment || "",
+    weeklyBudget: surveyDoc.weeklyBudget || "",
+    monthlyBudget: surveyDoc.monthlyBudget || "",
+    topProducts: Array.isArray(surveyDoc.topProducts) ? surveyDoc.topProducts : [],
+    summary: surveyDoc.summary || "",
+    updatedAt: surveyDoc.updatedAt || null,
+    createdAt: surveyDoc.createdAt || null
+  };
 }
 
 function construirContextoPerfilCoachPrompt(profileDoc = null, analyticsDoc = null) {
@@ -6563,6 +6758,154 @@ app.post("/api/coach/leads", async (req, res) => {
   } catch (error) {
     console.error("Error guardando lead del Coach:", error.message);
     responderCoachError(res, error.status || 500, error.message || "No pude guardar el lead en este momento.");
+  }
+});
+
+app.get("/api/coach/health-surveys", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const surveyDocs = await CoachHealthSurvey.find({ ownerUserId: auth.user._id })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(300)
+      .lean();
+
+    res.json({
+      surveys: surveyDocs.map(limpiarCoachHealthSurvey).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error cargando encuestas de salud del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tu carpeta de encuestas.");
+  }
+});
+
+app.post("/api/coach/health-surveys", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const surveyId = String(req.body?.surveyId || "").trim();
+  const fullName =
+    seleccionarNombreConfiable(req.body?.fullName || "") || limpiarCoachHealthText(req.body?.fullName || "", 120);
+  const phone = normalizePhone(req.body?.phone || "");
+  const secondName =
+    seleccionarNombreConfiable(req.body?.secondName || "") || limpiarCoachHealthText(req.body?.secondName || "", 120);
+  const workingStatus = limpiarCoachHealthText(req.body?.workingStatus || "", 80);
+  const heardRoyal = limpiarCoachHealthText(req.body?.heardRoyal || "", 260);
+  const familyPriority = limpiarCoachHealthText(req.body?.familyPriority || "", 80);
+  const qualityReason = limpiarCoachHealthText(req.body?.qualityReason || "", 120);
+  const productLikingScore = limpiarCoachHealthNumber(req.body?.productLikingScore || "", 1, 10);
+  const cooksForCount = limpiarCoachHealthNumber(req.body?.cooksForCount || "", 1, 50);
+  const foodSpendWeekly = limpiarCoachHealthText(req.body?.foodSpendWeekly || "", 60);
+  const mealPrepTime = limpiarCoachHealthText(req.body?.mealPrepTime || "", 80);
+  const cookingMaterials = limpiarCoachHealthList(req.body?.cookingMaterials || [], { maxItems: 6, maxLength: 60 });
+  const familyConditions = limpiarCoachHealthList(req.body?.familyConditions || [], { maxItems: 8, maxLength: 60 });
+  const lowFatHealthy = limpiarCoachHealthYesNo(req.body?.lowFatHealthy || "");
+  const lowFatHealthyReason = limpiarCoachHealthText(req.body?.lowFatHealthyReason || "", 220);
+  const cookwareAffects = limpiarCoachHealthYesNo(req.body?.cookwareAffects || "");
+  const cookwareAffectsReason = limpiarCoachHealthText(req.body?.cookwareAffectsReason || "", 220);
+  const qualityInterest = limpiarCoachHealthYesNo(req.body?.qualityInterest || "");
+  const qualityInterestReason = limpiarCoachHealthText(req.body?.qualityInterestReason || "", 220);
+  const drinkingWaterType = limpiarCoachHealthText(req.body?.drinkingWaterType || "", 80);
+  const cookingWaterType = limpiarCoachHealthText(req.body?.cookingWaterType || "", 80);
+  const tapWaterConcern = limpiarCoachHealthYesNo(req.body?.tapWaterConcern || "");
+  const waterSpendWeekly = limpiarCoachHealthText(req.body?.waterSpendWeekly || "", 60);
+  const likesNaturalJuices = limpiarCoachHealthYesNo(req.body?.likesNaturalJuices || "");
+  const juiceFrequency = limpiarCoachHealthText(req.body?.juiceFrequency || "", 60);
+  const creditProblems = limpiarCoachHealthYesNo(req.body?.creditProblems || "");
+  const creditImproveInterest = limpiarCoachHealthYesNo(req.body?.creditImproveInterest || "");
+  const familyHealthInvestment = limpiarCoachHealthYesNo(req.body?.familyHealthInvestment || "");
+  const weeklyBudget = limpiarCoachHealthText(req.body?.weeklyBudget || "", 40);
+  const monthlyBudget = limpiarCoachHealthText(req.body?.monthlyBudget || "", 40);
+  const topProducts = limpiarCoachHealthList(req.body?.topProducts || [], { maxItems: 3, maxLength: 120 });
+
+  if (!fullName) {
+    return responderCoachError(res, 400, "El nombre es requerido.");
+  }
+
+  if (!phone) {
+    return responderCoachError(res, 400, "El telefono es requerido.");
+  }
+
+  if (surveyId && !mongoose.Types.ObjectId.isValid(surveyId)) {
+    return responderCoachError(res, 400, "Encuesta invalida.");
+  }
+
+  try {
+    const now = new Date();
+    const surveyPayload = {
+      ownerUserId: auth.user._id,
+      ownerEmail: auth.user.email || "",
+      ownerName: auth.user.name || "",
+      fullName,
+      phone,
+      secondName,
+      workingStatus,
+      heardRoyal,
+      familyPriority,
+      qualityReason,
+      productLikingScore,
+      cooksForCount,
+      foodSpendWeekly,
+      mealPrepTime,
+      cookingMaterials,
+      familyConditions,
+      lowFatHealthy,
+      lowFatHealthyReason,
+      cookwareAffects,
+      cookwareAffectsReason,
+      qualityInterest,
+      qualityInterestReason,
+      drinkingWaterType,
+      cookingWaterType,
+      tapWaterConcern,
+      waterSpendWeekly,
+      likesNaturalJuices,
+      juiceFrequency,
+      creditProblems,
+      creditImproveInterest,
+      familyHealthInvestment,
+      weeklyBudget,
+      monthlyBudget,
+      topProducts,
+      updatedAt: now
+    };
+
+    surveyPayload.summary = construirCoachHealthSurveySummary(surveyPayload);
+
+    let surveyDoc = null;
+    let created = false;
+
+    if (surveyId) {
+      surveyDoc = await CoachHealthSurvey.findOne({ _id: surveyId, ownerUserId: auth.user._id });
+
+      if (!surveyDoc) {
+        return responderCoachError(res, 404, "No encontre esa encuesta.");
+      }
+
+      Object.assign(surveyDoc, surveyPayload);
+      await surveyDoc.save();
+    } else {
+      created = true;
+      surveyDoc = await CoachHealthSurvey.create({
+        ...surveyPayload,
+        createdAt: now
+      });
+    }
+
+    res.json({
+      created,
+      survey: limpiarCoachHealthSurvey(surveyDoc.toObject())
+    });
+  } catch (error) {
+    console.error("Error guardando encuesta de salud del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar la encuesta en este momento.");
   }
 });
 

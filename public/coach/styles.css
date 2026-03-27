@@ -1133,14 +1133,18 @@ img {
 
 .native-lead-card,
 .lead-folder-card,
-.fourteen-sheet-card {
+.fourteen-sheet-card,
+.health-survey-card,
+.health-survey-folder-card {
   position: relative;
   overflow: hidden;
 }
 
 .native-lead-card::before,
 .lead-folder-card::before,
-.fourteen-sheet-card::before {
+.fourteen-sheet-card::before,
+.health-survey-card::before,
+.health-survey-folder-card::before {
   content: "";
   position: absolute;
   width: 220px;
@@ -1164,13 +1168,27 @@ img {
   background: radial-gradient(circle, rgba(120, 255, 191, 0.14), transparent 72%);
 }
 
+.health-survey-card::before {
+  inset: -8% auto auto 58%;
+  background: radial-gradient(circle, rgba(120, 182, 255, 0.16), transparent 72%);
+}
+
+.health-survey-folder-card::before {
+  inset: auto auto 52% -8%;
+  background: radial-gradient(circle, rgba(255, 205, 120, 0.14), transparent 72%);
+}
+
 .native-lead-wrap[hidden],
-.lead-folder-wrap[hidden] {
+.lead-folder-wrap[hidden],
+.health-survey-wrap[hidden],
+.health-survey-folder-wrap[hidden] {
   display: none !important;
 }
 
 .native-lead-toggle,
-.lead-folder-toggle {
+.lead-folder-toggle,
+.health-survey-toggle,
+.health-survey-folder-toggle {
   min-width: 180px;
 }
 
@@ -1302,6 +1320,164 @@ img {
 .native-lead-check input {
   width: 18px;
   height: 18px;
+}
+
+.health-survey-form {
+  margin-top: 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.health-survey-section {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.health-survey-section-head strong,
+.health-survey-section-head span {
+  display: block;
+}
+
+.health-survey-section-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.health-survey-section-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.health-survey-check-block {
+  display: grid;
+  gap: 12px;
+}
+
+.health-survey-check-block strong {
+  font-size: 0.95rem;
+}
+
+.health-survey-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.health-survey-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.health-survey-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.health-survey-check span {
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.health-survey-helper {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.health-survey-folder-wrap {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.health-survey-folder-list {
+  display: grid;
+  gap: 14px;
+}
+
+.health-survey-folder-item {
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.health-survey-folder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.health-survey-folder-head strong,
+.health-survey-folder-head span {
+  display: block;
+}
+
+.health-survey-folder-head strong {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-size: 1rem;
+}
+
+.health-survey-folder-head span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.health-survey-folder-copy {
+  margin: 14px 0 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.health-survey-folder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.health-survey-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #edf2f9;
+  font-size: 0.8rem;
+}
+
+.health-survey-folder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.health-survey-folder-empty {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  color: var(--muted);
+  text-align: center;
 }
 
 .lead-folder-wrap {
@@ -2612,6 +2788,7 @@ img {
   .order-calc-payment-grid,
   .order-calc-metrics,
   .native-lead-grid,
+  .health-survey-check-grid,
   .fourteen-sheet-referral-grid,
   .lead-folder-followup,
   .lead-folder-followup-grid,
@@ -2625,6 +2802,10 @@ img {
   .lead-folder-status-row,
   .buyer-profile-row {
     grid-template-columns: 1fr;
+  }
+
+  .health-survey-folder-head {
+    flex-direction: column;
   }
 
   .coach-message {

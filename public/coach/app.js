@@ -417,6 +417,31 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
+function getCheckedValues(root, fieldName) {
+  return Array.from(root.querySelectorAll(`input[name="${fieldName}"]:checked`))
+    .map(input => String(input.value || "").trim())
+    .filter(Boolean);
+}
+
+function setCheckedValues(root, fieldName, values = []) {
+  const selected = new Set((Array.isArray(values) ? values : []).map(item => String(item || "").trim()));
+  root.querySelectorAll(`input[name="${fieldName}"]`).forEach(input => {
+    input.checked = selected.has(String(input.value || "").trim());
+  });
+}
+
+function setNamedFieldValue(form, fieldName, value) {
+  const field = form.elements.namedItem(fieldName);
+
+  if (!field) {
+    return;
+  }
+
+  if (typeof field.value !== "undefined") {
+    field.value = value ?? "";
+  }
+}
+
 function createOrderCalcProductCard(index) {
   return `
     <section class="order-calc-product" data-order-calc-product>
@@ -1198,6 +1223,284 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
 
       rebuildForm({ clearFeedback: true, resetFields: false });
     });
+  });
+}
+
+function initHealthSurveyTool() {
+  const formWrap = document.querySelector("[data-health-survey-wrap]");
+  const formToggle = document.querySelector("[data-health-survey-toggle]");
+  const form = document.querySelector("[data-health-survey-form]");
+  const feedbackNode = document.querySelector("[data-health-survey-feedback]");
+  const saveButton = document.querySelector("[data-health-survey-save]");
+  const folderWrap = document.querySelector("[data-health-survey-folder-wrap]");
+  const folderToggle = document.querySelector("[data-health-survey-folder-toggle]");
+  const folderList = document.querySelector("[data-health-survey-folder-list]");
+  const folderNote = document.querySelector("[data-health-survey-folder-note]");
+  const totalNode = document.querySelector("[data-health-survey-total]");
+  const healthNode = document.querySelector("[data-health-survey-health]");
+  const waterNode = document.querySelector("[data-health-survey-water]");
+  const creditNode = document.querySelector("[data-health-survey-credit]");
+
+  if (!formWrap || !formToggle || !form || !folderWrap || !folderToggle || !folderList) {
+    return;
+  }
+
+  const state = {
+    surveys: []
+  };
+
+  const syncFormToggle = open => {
+    formWrap.hidden = !open;
+    formToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    formToggle.textContent = open ? "Cerrar encuesta" : "Abrir encuesta";
+  };
+
+  const syncFolderToggle = open => {
+    folderWrap.hidden = !open;
+    folderToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    folderToggle.textContent = open ? "Cerrar carpeta" : "Abrir carpeta";
+  };
+
+  const resetFormState = () => {
+    form.reset();
+    setNamedFieldValue(form, "surveyId", "");
+    setCheckedValues(form, "cookingMaterials", []);
+    setCheckedValues(form, "familyConditions", []);
+    clearMessage(feedbackNode);
+  };
+
+  const fillForm = survey => {
+    form.reset();
+    setNamedFieldValue(form, "surveyId", survey?.id || "");
+    setNamedFieldValue(form, "fullName", survey?.fullName || "");
+    setNamedFieldValue(form, "phone", survey?.phone || "");
+    setNamedFieldValue(form, "secondName", survey?.secondName || "");
+    setNamedFieldValue(form, "workingStatus", survey?.workingStatus || "");
+    setNamedFieldValue(form, "heardRoyal", survey?.heardRoyal || "");
+    setNamedFieldValue(form, "familyPriority", survey?.familyPriority || "");
+    setNamedFieldValue(form, "qualityReason", survey?.qualityReason || "");
+    setNamedFieldValue(form, "productLikingScore", survey?.productLikingScore || "");
+    setNamedFieldValue(form, "cooksForCount", survey?.cooksForCount || "");
+    setNamedFieldValue(form, "foodSpendWeekly", survey?.foodSpendWeekly || "");
+    setNamedFieldValue(form, "mealPrepTime", survey?.mealPrepTime || "");
+    setCheckedValues(form, "cookingMaterials", survey?.cookingMaterials || []);
+    setCheckedValues(form, "familyConditions", survey?.familyConditions || []);
+    setNamedFieldValue(form, "lowFatHealthy", survey?.lowFatHealthy || "");
+    setNamedFieldValue(form, "lowFatHealthyReason", survey?.lowFatHealthyReason || "");
+    setNamedFieldValue(form, "cookwareAffects", survey?.cookwareAffects || "");
+    setNamedFieldValue(form, "cookwareAffectsReason", survey?.cookwareAffectsReason || "");
+    setNamedFieldValue(form, "qualityInterest", survey?.qualityInterest || "");
+    setNamedFieldValue(form, "qualityInterestReason", survey?.qualityInterestReason || "");
+    setNamedFieldValue(form, "drinkingWaterType", survey?.drinkingWaterType || "");
+    setNamedFieldValue(form, "cookingWaterType", survey?.cookingWaterType || "");
+    setNamedFieldValue(form, "tapWaterConcern", survey?.tapWaterConcern || "");
+    setNamedFieldValue(form, "waterSpendWeekly", survey?.waterSpendWeekly || "");
+    setNamedFieldValue(form, "likesNaturalJuices", survey?.likesNaturalJuices || "");
+    setNamedFieldValue(form, "juiceFrequency", survey?.juiceFrequency || "");
+    setNamedFieldValue(form, "creditProblems", survey?.creditProblems || "");
+    setNamedFieldValue(form, "creditImproveInterest", survey?.creditImproveInterest || "");
+    setNamedFieldValue(form, "familyHealthInvestment", survey?.familyHealthInvestment || "");
+    setNamedFieldValue(form, "weeklyBudget", survey?.weeklyBudget || "");
+    setNamedFieldValue(form, "monthlyBudget", survey?.monthlyBudget || "");
+    setNamedFieldValue(form, "topProduct1", survey?.topProducts?.[0] || "");
+    setNamedFieldValue(form, "topProduct2", survey?.topProducts?.[1] || "");
+    setNamedFieldValue(form, "topProduct3", survey?.topProducts?.[2] || "");
+    clearMessage(feedbackNode);
+  };
+
+  const collectPayload = () => {
+    const formData = new FormData(form);
+    const topProducts = [formData.get("topProduct1"), formData.get("topProduct2"), formData.get("topProduct3")]
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+
+    return {
+      surveyId: formData.get("surveyId"),
+      fullName: formData.get("fullName"),
+      phone: formData.get("phone"),
+      secondName: formData.get("secondName"),
+      workingStatus: formData.get("workingStatus"),
+      heardRoyal: formData.get("heardRoyal"),
+      familyPriority: formData.get("familyPriority"),
+      qualityReason: formData.get("qualityReason"),
+      productLikingScore: formData.get("productLikingScore"),
+      cooksForCount: formData.get("cooksForCount"),
+      foodSpendWeekly: formData.get("foodSpendWeekly"),
+      mealPrepTime: formData.get("mealPrepTime"),
+      cookingMaterials: getCheckedValues(form, "cookingMaterials"),
+      familyConditions: getCheckedValues(form, "familyConditions"),
+      lowFatHealthy: formData.get("lowFatHealthy"),
+      lowFatHealthyReason: formData.get("lowFatHealthyReason"),
+      cookwareAffects: formData.get("cookwareAffects"),
+      cookwareAffectsReason: formData.get("cookwareAffectsReason"),
+      qualityInterest: formData.get("qualityInterest"),
+      qualityInterestReason: formData.get("qualityInterestReason"),
+      drinkingWaterType: formData.get("drinkingWaterType"),
+      cookingWaterType: formData.get("cookingWaterType"),
+      tapWaterConcern: formData.get("tapWaterConcern"),
+      waterSpendWeekly: formData.get("waterSpendWeekly"),
+      likesNaturalJuices: formData.get("likesNaturalJuices"),
+      juiceFrequency: formData.get("juiceFrequency"),
+      creditProblems: formData.get("creditProblems"),
+      creditImproveInterest: formData.get("creditImproveInterest"),
+      familyHealthInvestment: formData.get("familyHealthInvestment"),
+      weeklyBudget: formData.get("weeklyBudget"),
+      monthlyBudget: formData.get("monthlyBudget"),
+      topProducts
+    };
+  };
+
+  const renderFolderSummary = () => {
+    if (totalNode) {
+      totalNode.textContent = String(state.surveys.length);
+    }
+
+    if (healthNode) {
+      healthNode.textContent = String(state.surveys.filter(item => item.familyPriority === "Salud").length);
+    }
+
+    if (waterNode) {
+      waterNode.textContent = String(state.surveys.filter(item => item.tapWaterConcern === "Si").length);
+    }
+
+    if (creditNode) {
+      creditNode.textContent = String(state.surveys.filter(item => item.creditImproveInterest === "Si").length);
+    }
+  };
+
+  const renderFolderList = () => {
+    folderList.innerHTML = "";
+    renderFolderSummary();
+
+    if (!state.surveys.length) {
+      folderList.innerHTML = '<div class="health-survey-folder-empty">Aun no hay encuestas guardadas.</div>';
+      if (folderNote) {
+        folderNote.textContent = "Aun no hay encuestas guardadas en tu carpeta privada.";
+      }
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    state.surveys.forEach(survey => {
+      const card = document.createElement("article");
+      card.className = "health-survey-folder-item";
+      card.dataset.healthSurveyId = survey.id;
+
+      const chips = [
+        survey.phone ? `<span class="health-survey-folder-chip">${escapeHtml(formatLeadPhone(survey.phone))}</span>` : "",
+        survey.familyPriority ? `<span class="health-survey-folder-chip">${escapeHtml(survey.familyPriority)}</span>` : "",
+        survey.weeklyBudget ? `<span class="health-survey-folder-chip">Semanal ${escapeHtml(survey.weeklyBudget)}</span>` : "",
+        survey.monthlyBudget ? `<span class="health-survey-folder-chip">Mensual ${escapeHtml(survey.monthlyBudget)}</span>` : "",
+        ...(Array.isArray(survey.topProducts) ? survey.topProducts.slice(0, 3).map(item => `<span class="health-survey-folder-chip">${escapeHtml(item)}</span>`) : [])
+      ]
+        .filter(Boolean)
+        .join("");
+
+      card.innerHTML = `
+        <div class="health-survey-folder-head">
+          <div>
+            <strong>${escapeHtml(survey.fullName || "Casa sin nombre")}</strong>
+            <span>${escapeHtml(formatDateTime(survey.updatedAt || survey.createdAt))}</span>
+          </div>
+          <span class="lead-status-badge">Encuesta guardada</span>
+        </div>
+        <p class="health-survey-folder-copy">${escapeHtml(survey.summary || "Sin resumen todavia.")}</p>
+        <div class="health-survey-folder-meta">${chips}</div>
+        <div class="health-survey-folder-actions">
+          <button type="button" class="secondary-button" data-health-survey-open>Abrir encuesta</button>
+        </div>
+      `;
+
+      fragment.appendChild(card);
+    });
+
+    folderList.appendChild(fragment);
+
+    if (folderNote) {
+      folderNote.textContent = `${state.surveys.length} encuesta(s) guardadas en tu carpeta privada.`;
+    }
+  };
+
+  const loadSurveys = async () => {
+    const data = await apiRequest("/api/coach/health-surveys");
+    state.surveys = Array.isArray(data.surveys) ? data.surveys : [];
+    renderFolderList();
+  };
+
+  syncFormToggle(false);
+  syncFolderToggle(false);
+
+  formToggle.addEventListener("click", () => {
+    syncFormToggle(formWrap.hidden);
+  });
+
+  folderToggle.addEventListener("click", async () => {
+    const willOpen = folderWrap.hidden;
+    syncFolderToggle(willOpen);
+
+    if (willOpen) {
+      await loadSurveys().catch(() => {
+        if (folderNote) {
+          folderNote.textContent = "No pude cargar tu carpeta de encuestas.";
+        }
+      });
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      const payload = collectPayload();
+      const data = await apiRequest("/api/coach/health-surveys", {
+        method: "POST",
+        body: payload
+      });
+
+      fillForm(data.survey);
+      await loadSurveys();
+      syncFolderToggle(true);
+      setMessage(
+        feedbackNode,
+        data.created
+          ? "Encuesta guardada dentro de tu carpeta privada."
+          : "Encuesta actualizada y guardada dentro de tu carpeta privada.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
+
+  form.addEventListener("reset", () => {
+    window.requestAnimationFrame(() => {
+      resetFormState();
+    });
+  });
+
+  folderList.addEventListener("click", event => {
+    const openButton = event.target.closest("[data-health-survey-open]");
+
+    if (!openButton) {
+      return;
+    }
+
+    const card = openButton.closest("[data-health-survey-id]");
+    const surveyId = card?.dataset.healthSurveyId || "";
+    const survey = state.surveys.find(item => item.id === surveyId);
+
+    if (!survey) {
+      return;
+    }
+
+    fillForm(survey);
+    syncFormToggle(true);
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -2178,6 +2481,7 @@ async function initCoachAppPage() {
   initLeadDestinationSettings(me.profile?.leadDestination || null);
   initLeadFormTool();
   initCoachLeadWorkspace();
+  initHealthSurveyTool();
   initOrderCalculator();
   initDecisionTool();
   initBuyerProfileTool();
