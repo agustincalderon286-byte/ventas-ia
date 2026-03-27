@@ -279,6 +279,21 @@ async function copyTextToClipboard(text) {
   return copied;
 }
 
+function sanitizePin4(value = "") {
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 4);
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("No pude leer ese archivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function sanitizeZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 5);
 }
@@ -1739,6 +1754,254 @@ function initRecruitmentTool() {
   });
 }
 
+function initCoachPrivateResources() {
+  const slotIds = ["catalogo_privado", "lista_precios_privada"];
+
+  const getNodes = slotId => ({
+    status: document.querySelector(`[data-private-resource-status="${slotId}"]`),
+    toggle: document.querySelector(`[data-private-resource-toggle="${slotId}"]`),
+    open: document.querySelector(`[data-private-resource-open="${slotId}"]`),
+    remove: document.querySelector(`[data-private-resource-delete="${slotId}"]`),
+    form: document.querySelector(`[data-private-resource-form="${slotId}"]`),
+    file: document.querySelector(`[data-private-resource-file="${slotId}"]`),
+    pin: document.querySelector(`[data-private-resource-pin="${slotId}"]`),
+    save: document.querySelector(`[data-private-resource-save="${slotId}"]`),
+    feedback: document.querySelector(`[data-private-resource-feedback="${slotId}"]`)
+  });
+
+  if (!slotIds.some(slotId => getNodes(slotId).status)) {
+    return;
+  }
+
+  const state = {
+    resources: {}
+  };
+
+  const syncFormVisibility = (slotId, open) => {
+    const { form, toggle } = getNodes(slotId);
+
+    if (!form || !toggle) {
+      return;
+    }
+
+    form.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+
+    const hasFile = Boolean(state.resources?.[slotId]?.hasFile);
+    toggle.textContent = open ? "Cerrar carga" : hasFile ? "Reemplazar archivo" : "Subir archivo";
+  };
+
+  const renderSlot = slotId => {
+    const nodes = getNodes(slotId);
+    const resource = state.resources?.[slotId] || {};
+    const defaultCopy =
+      slotId === "catalogo_privado"
+        ? "Aun no has subido tu catalogo privado."
+        : "Aun no has subido tu lista de precios privada.";
+
+    if (nodes.status) {
+      nodes.status.textContent = resource.hasFile
+        ? `${resource.fileName || "archivo-privado.pdf"} guardado ${formatDateTime(resource.uploadedAt)}. Protegido con PIN.`
+        : defaultCopy;
+    }
+
+    if (nodes.open) {
+      nodes.open.disabled = !resource.hasFile;
+    }
+
+    if (nodes.remove) {
+      nodes.remove.disabled = !resource.hasFile;
+    }
+
+    syncFormVisibility(slotId, !nodes.form?.hidden);
+  };
+
+  const loadResources = async () => {
+    const data = await apiRequest("/api/coach/private-resources");
+    state.resources = data.resources || {};
+    slotIds.forEach(renderSlot);
+  };
+
+  const openResourceFile = async slotId => {
+    const nodes = getNodes(slotId);
+    const resource = state.resources?.[slotId];
+
+    if (!resource?.hasFile) {
+      setMessage(nodes.feedback, "Primero sube un archivo en ese espacio.", "error");
+      return;
+    }
+
+    const pin = sanitizePin4(window.prompt("Escribe tu PIN de 4 numeros para abrir este archivo.") || "");
+
+    if (!pin) {
+      setMessage(nodes.feedback, "Necesitas un PIN valido de 4 numeros.", "error");
+      return;
+    }
+
+    clearMessage(nodes.feedback);
+    const viewer = window.open("", "_blank");
+
+    if (viewer) {
+      viewer.document.write("<p style=\"font-family:Arial,sans-serif;padding:24px\">Abriendo archivo privado...</p>");
+      viewer.document.close();
+    }
+
+    try {
+      const response = await fetch(`/api/coach/private-resources/${slotId}/file`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ pin })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "No pude abrir ese archivo.");
+      }
+
+      const blob = await response.blob();
+      const fileUrl = window.URL.createObjectURL(blob);
+
+      if (viewer) {
+        viewer.location.replace(fileUrl);
+      } else {
+        const tempLink = document.createElement("a");
+        tempLink.href = fileUrl;
+        tempLink.target = "_blank";
+        tempLink.rel = "noreferrer";
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+      }
+
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(fileUrl);
+      }, 60_000);
+
+      setMessage(nodes.feedback, "Archivo abierto.", "success");
+    } catch (error) {
+      if (viewer && !viewer.closed) {
+        viewer.close();
+      }
+
+      setMessage(nodes.feedback, error.message, "error");
+    }
+  };
+
+  slotIds.forEach(slotId => {
+    const nodes = getNodes(slotId);
+
+    if (!nodes.status) {
+      return;
+    }
+
+    syncFormVisibility(slotId, false);
+
+    nodes.pin?.addEventListener("input", () => {
+      nodes.pin.value = sanitizePin4(nodes.pin.value);
+    });
+
+    nodes.toggle?.addEventListener("click", () => {
+      syncFormVisibility(slotId, nodes.form?.hidden);
+      clearMessage(nodes.feedback);
+    });
+
+    nodes.form?.addEventListener("submit", async event => {
+      event.preventDefault();
+      clearMessage(nodes.feedback);
+
+      const file = nodes.file?.files?.[0];
+      const pin = sanitizePin4(nodes.pin?.value || "");
+
+      if (!file) {
+        setMessage(nodes.feedback, "Selecciona un PDF antes de guardar.", "error");
+        return;
+      }
+
+      if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") {
+        setMessage(nodes.feedback, "Solo puedo guardar archivos PDF.", "error");
+        return;
+      }
+
+      if (!pin || pin.length !== 4) {
+        setMessage(nodes.feedback, "El PIN debe tener 4 numeros.", "error");
+        return;
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        setMessage(nodes.feedback, "El PDF es demasiado pesado. Usa uno de hasta 8 MB.", "error");
+        return;
+      }
+
+      setButtonLoading(nodes.save, true, "Guardando...");
+
+      try {
+        const fileData = await readFileAsDataUrl(file);
+        const data = await apiRequest(`/api/coach/private-resources/${slotId}/upload`, {
+          method: "POST",
+          body: {
+            fileName: file.name,
+            fileData,
+            pin
+          }
+        });
+
+        state.resources[slotId] = data.resource || {};
+        nodes.form.reset();
+        syncFormVisibility(slotId, false);
+        renderSlot(slotId);
+        setMessage(nodes.feedback, "Archivo guardado y protegido con PIN.", "success");
+      } catch (error) {
+        setMessage(nodes.feedback, error.message, "error");
+      } finally {
+        setButtonLoading(nodes.save, false);
+      }
+    });
+
+    nodes.open?.addEventListener("click", () => {
+      openResourceFile(slotId);
+    });
+
+    nodes.remove?.addEventListener("click", async () => {
+      clearMessage(nodes.feedback);
+
+      const confirmed = window.confirm(
+        "Si borras este archivo, tambien se borra el PIN. Luego podras subirlo de nuevo con otro PIN. Quieres seguir?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await apiRequest(`/api/coach/private-resources/${slotId}`, {
+          method: "DELETE"
+        });
+
+        state.resources[slotId] = {};
+        nodes.form?.reset();
+        syncFormVisibility(slotId, false);
+        renderSlot(slotId);
+        setMessage(nodes.feedback, "Archivo borrado. Ya puedes subir uno nuevo con otro PIN.", "success");
+      } catch (error) {
+        setMessage(nodes.feedback, error.message, "error");
+      }
+    });
+  });
+
+  loadResources().catch(() => {
+    slotIds.forEach(slotId => {
+      const nodes = getNodes(slotId);
+
+      if (nodes.feedback) {
+        setMessage(nodes.feedback, "No pude cargar tus archivos privados.", "error");
+      }
+    });
+  });
+}
+
 function initCoachLeadWorkspace() {
   const captureWrap = document.querySelector("[data-native-lead-wrap]");
   const captureToggle = document.querySelector("[data-native-lead-toggle]");
@@ -2714,6 +2977,7 @@ async function initCoachAppPage() {
   renderActiveLeadContext(me.activeLeadContext);
   initCoachWorkspaceTabs();
   initLeadDestinationSettings(me.profile?.leadDestination || null);
+  initCoachPrivateResources();
   initLeadFormTool();
   initCoachLeadWorkspace();
   initRecruitmentTool();

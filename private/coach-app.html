@@ -132,23 +132,62 @@
             <div class="resource-stack">
               <section class="resource-item">
                 <div class="resource-copy">
-                  <strong>Catalogo Novel</strong>
-                  <span>Catalogo principal para revisar lineas, productos y apoyo visual durante la presentacion.</span>
+                  <strong>Catalogo privado del distribuidor</strong>
+                  <span>
+                    Este espacio empieza vacio. Sube tu PDF, ponle un PIN de 4 numeros y abrelo solo cuando lo
+                    ocupes.
+                  </span>
+                </div>
+
+                <div class="resource-private-status" data-private-resource-status="catalogo_privado">
+                  Aun no has subido tu catalogo privado.
                 </div>
 
                 <div class="dashboard-actions">
-                  <a
+                  <button
+                    type="button"
                     class="secondary-button"
-                    href="/coach/resources/novel-catalog-digital-3.pdf"
-                    target="_blank"
-                    rel="noreferrer"
+                    data-private-resource-toggle="catalogo_privado"
+                    aria-expanded="false"
                   >
-                    Abrir catalogo
-                  </a>
-                  <a class="nav-button" href="/coach/resources/novel-catalog-digital-3.pdf" download>
-                    Descargar PDF
-                  </a>
+                    Subir archivo
+                  </button>
+                  <button type="button" class="nav-button" data-private-resource-open="catalogo_privado" disabled>
+                    Ver archivo
+                  </button>
+                  <button type="button" class="nav-button" data-private-resource-delete="catalogo_privado" disabled>
+                    Borrar archivo
+                  </button>
                 </div>
+
+                <form class="private-resource-form" data-private-resource-form="catalogo_privado" hidden>
+                  <label class="private-resource-field">
+                    <span>PDF</span>
+                    <input type="file" accept="application/pdf" data-private-resource-file="catalogo_privado" required />
+                  </label>
+                  <label class="private-resource-field">
+                    <span>PIN de 4 numeros</span>
+                    <input
+                      type="password"
+                      inputmode="numeric"
+                      maxlength="4"
+                      pattern="[0-9]{4}"
+                      placeholder="1234"
+                      data-private-resource-pin="catalogo_privado"
+                      required
+                    />
+                  </label>
+                  <div class="dashboard-actions">
+                    <button type="submit" class="primary-button" data-private-resource-save="catalogo_privado">
+                      Guardar catalogo
+                    </button>
+                  </div>
+                  <div class="form-result" data-private-resource-feedback="catalogo_privado"></div>
+                </form>
+
+                <p class="mini-note">
+                  Si olvidas el PIN, solo borra el archivo y vuelve a subirlo con uno nuevo.
+                </p>
               </section>
 
               <section class="resource-item">
@@ -174,15 +213,77 @@
 
               <section class="resource-item">
                 <div class="resource-copy">
-                  <strong>Lista de precios Alianza 2026</strong>
-                  <span>Vista privada para consultar precios dentro del Coach sin dejar un boton directo de descarga.</span>
+                  <strong>Lista de precios privada</strong>
+                  <span>
+                    Este espacio tambien empieza vacio. Cada distribuidor puede subir su propia lista y protegerla con
+                    PIN.
+                  </span>
+                </div>
+
+                <div class="resource-private-status" data-private-resource-status="lista_precios_privada">
+                  Aun no has subido tu lista de precios privada.
                 </div>
 
                 <div class="dashboard-actions">
-                  <a class="secondary-button" href="/coach/resources/lista-precios-2026/" target="_blank" rel="noreferrer">
-                    Ver lista
-                  </a>
+                  <button
+                    type="button"
+                    class="secondary-button"
+                    data-private-resource-toggle="lista_precios_privada"
+                    aria-expanded="false"
+                  >
+                    Subir archivo
+                  </button>
+                  <button
+                    type="button"
+                    class="nav-button"
+                    data-private-resource-open="lista_precios_privada"
+                    disabled
+                  >
+                    Ver archivo
+                  </button>
+                  <button
+                    type="button"
+                    class="nav-button"
+                    data-private-resource-delete="lista_precios_privada"
+                    disabled
+                  >
+                    Borrar archivo
+                  </button>
                 </div>
+
+                <form class="private-resource-form" data-private-resource-form="lista_precios_privada" hidden>
+                  <label class="private-resource-field">
+                    <span>PDF</span>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      data-private-resource-file="lista_precios_privada"
+                      required
+                    />
+                  </label>
+                  <label class="private-resource-field">
+                    <span>PIN de 4 numeros</span>
+                    <input
+                      type="password"
+                      inputmode="numeric"
+                      maxlength="4"
+                      pattern="[0-9]{4}"
+                      placeholder="1234"
+                      data-private-resource-pin="lista_precios_privada"
+                      required
+                    />
+                  </label>
+                  <div class="dashboard-actions">
+                    <button type="submit" class="primary-button" data-private-resource-save="lista_precios_privada">
+                      Guardar lista
+                    </button>
+                  </div>
+                  <div class="form-result" data-private-resource-feedback="lista_precios_privada"></div>
+                </form>
+
+                <p class="mini-note">
+                  Si olvidas el PIN, borra el archivo y vuelve a cargarlo con un PIN nuevo.
+                </p>
               </section>
 
               <section class="resource-item resource-item-water">

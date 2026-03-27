@@ -43,6 +43,17 @@ const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
+const COACH_PRIVATE_RESOURCE_MAX_BYTES = 8 * 1024 * 1024;
+const COACH_PRIVATE_RESOURCE_SLOTS = {
+  catalogo_privado: {
+    label: "Catalogo privado",
+    defaultFileName: "catalogo-privado.pdf"
+  },
+  lista_precios_privada: {
+    label: "Lista de precios privada",
+    defaultFileName: "lista-precios-privada.pdf"
+  }
+};
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -413,6 +424,26 @@ const coachRecruitmentApplicationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachPrivateResourceSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  slotType: { type: String, required: true, trim: true },
+  fileName: String,
+  mimeType: String,
+  fileSize: Number,
+  pinHash: String,
+  fileData: Buffer,
+  uploadedAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -439,6 +470,7 @@ coachHealthSurveySchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -1 });
+coachPrivateResourceSchema.index({ ownerUserId: 1, slotType: 1 }, { unique: true });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -458,9 +490,11 @@ const CoachHealthSurvey =
 const CoachRecruitmentApplication =
   mongoose.models.CoachRecruitmentApplication ||
   mongoose.model("CoachRecruitmentApplication", coachRecruitmentApplicationSchema);
+const CoachPrivateResource =
+  mongoose.models.CoachPrivateResource || mongoose.model("CoachPrivateResource", coachPrivateResourceSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
@@ -975,6 +1009,89 @@ function limpiarCoachLeadDestination(profileDoc = null) {
         : Boolean(type !== "carpeta_privada" && url),
     updatedAt: profileDoc?.leadDestinationUpdatedAt || null
   };
+}
+
+function normalizarCoachPrivateResourceSlot(slot = "") {
+  const normalized = String(slot || "")
+    .trim()
+    .toLowerCase();
+
+  return COACH_PRIVATE_RESOURCE_SLOTS[normalized] ? normalized : "";
+}
+
+function limpiarPinCoachPrivateResource(pin = "") {
+  const limpio = String(pin || "")
+    .replace(/\D/g, "")
+    .slice(0, 4);
+
+  return /^\d{4}$/.test(limpio) ? limpio : "";
+}
+
+function construirHashPinCoachPrivateResource(userId = "", slotType = "", pin = "") {
+  return crypto.createHash("sha256").update(`${String(userId)}:${slotType}:${pin}`).digest("hex");
+}
+
+function normalizarNombreArchivoPdf(value = "", fallback = "archivo.pdf") {
+  const limpio = String(value || "")
+    .replace(/[^\w.\- ]+/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120);
+
+  const base = limpio || fallback.replace(/\.pdf$/i, "");
+  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
+}
+
+function extraerPdfBufferCoachPrivateResource(value = "") {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const match = raw.match(/^data:application\/pdf;base64,(.+)$/i) || raw.match(/^data:.*;base64,(.+)$/i);
+  const base64 = (match ? match[1] : raw).replace(/\s+/g, "");
+
+  try {
+    const buffer = Buffer.from(base64, "base64");
+
+    if (!buffer.length || buffer.slice(0, 4).toString("utf8") !== "%PDF") {
+      return null;
+    }
+
+    return buffer;
+  } catch (error) {
+    return null;
+  }
+}
+
+function limpiarCoachPrivateResource(resourceDoc = null, slotFallback = "") {
+  const slotType = normalizarCoachPrivateResourceSlot(resourceDoc?.slotType || slotFallback);
+  const config = COACH_PRIVATE_RESOURCE_SLOTS[slotType] || {};
+
+  return {
+    slotType,
+    label: config.label || "Archivo privado",
+    hasFile: Boolean(resourceDoc?.fileData?.length || resourceDoc?.fileSize),
+    fileName: resourceDoc?.fileName || "",
+    mimeType: resourceDoc?.mimeType || "application/pdf",
+    fileSize: Number(resourceDoc?.fileSize || 0),
+    uploadedAt: resourceDoc?.uploadedAt || resourceDoc?.updatedAt || null,
+    updatedAt: resourceDoc?.updatedAt || null
+  };
+}
+
+function construirMapaCoachPrivateResources(resourceDocs = []) {
+  const docs = Array.isArray(resourceDocs) ? resourceDocs : [];
+  const map = {};
+
+  for (const slotType of Object.keys(COACH_PRIVATE_RESOURCE_SLOTS)) {
+    const found = docs.find(item => normalizarCoachPrivateResourceSlot(item?.slotType) === slotType);
+    map[slotType] = limpiarCoachPrivateResource(found, slotType);
+  }
+
+  return map;
 }
 
 function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destination = null) {
@@ -7659,39 +7776,180 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
 });
 
+app.get("/api/coach/private-resources", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const resourceDocs = await CoachPrivateResource.find({ ownerUserId: auth.user._id })
+      .select("slotType fileName mimeType fileSize uploadedAt updatedAt")
+      .lean();
+
+    res.json({
+      resources: construirMapaCoachPrivateResources(resourceDocs)
+    });
+  } catch (error) {
+    console.error("Error cargando archivos privados del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tus archivos privados.");
+  }
+});
+
+app.post("/api/coach/private-resources/:slot/upload", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const slotType = normalizarCoachPrivateResourceSlot(req.params?.slot || "");
+  const pin = limpiarPinCoachPrivateResource(req.body?.pin || "");
+  const buffer = extraerPdfBufferCoachPrivateResource(req.body?.fileData || "");
+  const fileName = normalizarNombreArchivoPdf(
+    req.body?.fileName || COACH_PRIVATE_RESOURCE_SLOTS[slotType]?.defaultFileName || "archivo-privado.pdf"
+  );
+
+  if (!slotType) {
+    return responderCoachError(res, 400, "Archivo privado invalido.");
+  }
+
+  if (!pin) {
+    return responderCoachError(res, 400, "El PIN debe tener 4 numeros.");
+  }
+
+  if (!buffer) {
+    return responderCoachError(res, 400, "Solo puedo guardar archivos PDF validos.");
+  }
+
+  if (buffer.length > COACH_PRIVATE_RESOURCE_MAX_BYTES) {
+    return responderCoachError(res, 400, "El PDF es demasiado pesado. Usa uno de hasta 8 MB.");
+  }
+
+  try {
+    const now = new Date();
+    const resourceDoc = await CoachPrivateResource.findOneAndUpdate(
+      { ownerUserId: auth.user._id, slotType },
+      {
+        $set: {
+          ownerEmail: auth.user.email || "",
+          ownerName: auth.user.name || "",
+          slotType,
+          fileName,
+          mimeType: "application/pdf",
+          fileSize: buffer.length,
+          pinHash: construirHashPinCoachPrivateResource(auth.user._id, slotType, pin),
+          fileData: buffer,
+          uploadedAt: now,
+          updatedAt: now
+        },
+        $setOnInsert: {
+          ownerUserId: auth.user._id,
+          createdAt: now
+        }
+      },
+      {
+        new: true,
+        upsert: true
+      }
+    ).lean();
+
+    res.json({
+      resource: limpiarCoachPrivateResource(resourceDoc, slotType)
+    });
+  } catch (error) {
+    console.error("Error guardando archivo privado del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar ese archivo privado.");
+  }
+});
+
+app.delete("/api/coach/private-resources/:slot", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const slotType = normalizarCoachPrivateResourceSlot(req.params?.slot || "");
+
+  if (!slotType) {
+    return responderCoachError(res, 400, "Archivo privado invalido.");
+  }
+
+  try {
+    const deleted = await CoachPrivateResource.findOneAndDelete({
+      ownerUserId: auth.user._id,
+      slotType
+    });
+
+    res.json({
+      deleted: Boolean(deleted),
+      resource: limpiarCoachPrivateResource(null, slotType)
+    });
+  } catch (error) {
+    console.error("Error borrando archivo privado del Coach:", error.message);
+    responderCoachError(res, 500, "No pude borrar ese archivo privado.");
+  }
+});
+
+app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const slotType = normalizarCoachPrivateResourceSlot(req.params?.slot || "");
+  const pin = limpiarPinCoachPrivateResource(req.body?.pin || "");
+
+  if (!slotType) {
+    return responderCoachError(res, 400, "Archivo privado invalido.");
+  }
+
+  if (!pin) {
+    return responderCoachError(res, 400, "Escribe tu PIN de 4 numeros.");
+  }
+
+  try {
+    const resourceDoc = await CoachPrivateResource.findOne({
+      ownerUserId: auth.user._id,
+      slotType
+    });
+
+    if (!resourceDoc?.fileData?.length) {
+      return responderCoachError(res, 404, "Todavia no has subido archivo en ese espacio.");
+    }
+
+    const expectedPinHash = construirHashPinCoachPrivateResource(auth.user._id, slotType, pin);
+
+    if (resourceDoc.pinHash !== expectedPinHash) {
+      return responderCoachError(res, 403, "Ese PIN no coincide.");
+    }
+
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    res.setHeader("Content-Disposition", `inline; filename="${resourceDoc.fileName || "archivo-privado.pdf"}"`);
+    res.type(resourceDoc.mimeType || "application/pdf");
+    res.send(resourceDoc.fileData);
+  } catch (error) {
+    console.error("Error abriendo archivo privado del Coach:", error.message);
+    responderCoachError(res, 500, "No pude abrir ese archivo privado.");
+  }
+});
+
+app.get("/coach/resources/novel-catalog-digital-3.pdf", async (req, res) => {
+  res.redirect("/coach/app/");
+});
+
 app.get(["/coach/resources/lista-precios-2026", "/coach/resources/lista-precios-2026/"], async (req, res) => {
-  const auth = await obtenerCoachAuth(req);
-
-  if (!auth.user) {
-    return res.redirect("/coach/login/");
-  }
-
-  if (!coachTieneAccesoTotal(auth.user)) {
-    return res.redirect("/coach/planes/");
-  }
-
-  res.setHeader("Cache-Control", "private, no-store");
-  res.setHeader("X-Robots-Tag", "noindex, nofollow");
-  res.sendFile(path.join(PRIVATE_DIR, "coach-price-list-viewer.html"));
+  res.redirect("/coach/app/");
 });
 
 app.get(
   ["/coach/resources/lista-precios-2026/file", "/coach/resources/lista-precios-2026/file/"],
   async (req, res) => {
-    const auth = await obtenerCoachAuth(req);
-
-    if (!auth.user) {
-      return res.redirect("/coach/login/");
-    }
-
-    if (!coachTieneAccesoTotal(auth.user)) {
-      return res.redirect("/coach/planes/");
-    }
-
-    res.setHeader("Cache-Control", "private, no-store");
-    res.setHeader("X-Robots-Tag", "noindex, nofollow");
-    res.setHeader("Content-Disposition", 'inline; filename="royal-prestige-alianza-prices-2026.pdf"');
-    res.sendFile(PRIVATE_COACH_PRICE_LIST_FILE);
+    res.redirect("/coach/app/");
   }
 );
 

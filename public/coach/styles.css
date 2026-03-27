@@ -1042,6 +1042,62 @@ img {
   line-height: 1.6;
 }
 
+.resource-private-status {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #edf2f9;
+  line-height: 1.6;
+}
+
+.private-resource-form[hidden] {
+  display: none !important;
+}
+
+.private-resource-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.private-resource-field {
+  display: grid;
+  gap: 8px;
+}
+
+.private-resource-field span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.private-resource-field input[type="file"],
+.private-resource-field input[type="password"] {
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+}
+
+.private-resource-field input[type="password"]::placeholder {
+  color: var(--muted);
+}
+
+.private-resource-field input[type="file"]:focus,
+.private-resource-field input[type="password"]:focus {
+  outline: none;
+  border-color: rgba(120, 182, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(120, 182, 255, 0.12);
+}
+
 .resource-item-water {
   background:
     linear-gradient(180deg, rgba(17, 37, 62, 0.78), rgba(10, 24, 44, 0.88));
