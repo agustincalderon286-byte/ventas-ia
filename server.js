@@ -2055,6 +2055,117 @@ INSTRUCCION:
 `;
 }
 
+function limpiarCoachOrderCalcAmount(value = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0;
+}
+
+function limpiarCoachOrderCalcContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const products = Array.isArray(context.products)
+    ? context.products
+        .map((product, index) => {
+          const name = truncarTextoPrompt(String(product?.name || "").trim(), 120);
+          const code = truncarTextoPrompt(String(product?.code || "").trim(), 40);
+          const basePrice = limpiarCoachOrderCalcAmount(product?.basePrice);
+          const grossTotal = limpiarCoachOrderCalcAmount(product?.grossTotal);
+          const downPayment = limpiarCoachOrderCalcAmount(product?.downPayment);
+          const discountAmount = limpiarCoachOrderCalcAmount(product?.discountAmount);
+          const balance = limpiarCoachOrderCalcAmount(product?.balance);
+          const monthly = limpiarCoachOrderCalcAmount(product?.monthly);
+          const weekly = limpiarCoachOrderCalcAmount(product?.weekly);
+          const daily = limpiarCoachOrderCalcAmount(product?.daily);
+          const slot = Number.parseInt(product?.slot || "", 10);
+
+          if (
+            !name &&
+            !code &&
+            basePrice <= 0 &&
+            grossTotal <= 0 &&
+            downPayment <= 0 &&
+            discountAmount <= 0 &&
+            balance <= 0
+          ) {
+            return null;
+          }
+
+          return {
+            slot: Number.isInteger(slot) && slot > 0 ? slot : index + 1,
+            name,
+            code,
+            basePrice,
+            grossTotal,
+            downPayment,
+            discountAmount,
+            balance,
+            monthly,
+            weekly,
+            daily
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+
+  const summary = {
+    totalGross: limpiarCoachOrderCalcAmount(context.summary?.totalGross),
+    totalDown: limpiarCoachOrderCalcAmount(context.summary?.totalDown),
+    totalDiscount: limpiarCoachOrderCalcAmount(context.summary?.totalDiscount),
+    balanceFinal: limpiarCoachOrderCalcAmount(context.summary?.balanceFinal),
+    monthly: limpiarCoachOrderCalcAmount(context.summary?.monthly),
+    weekly: limpiarCoachOrderCalcAmount(context.summary?.weekly),
+    daily: limpiarCoachOrderCalcAmount(context.summary?.daily)
+  };
+
+  if (!products.length && summary.totalGross <= 0 && summary.balanceFinal <= 0) {
+    return null;
+  }
+
+  return {
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    activatedAt: String(context.activatedAt || "").trim(),
+    products,
+    summary
+  };
+}
+
+function construirPromptCalculadoraActiva(context = null) {
+  if (!context?.summary) {
+    return "";
+  }
+
+  const productLines = Array.isArray(context.products)
+    ? context.products
+        .map(product => {
+          const label = product.name || product.code || `Producto ${product.slot}`;
+          return `${label} · base ${product.basePrice} · balance ${product.balance} · semanal ${product.weekly}`;
+        })
+        .join(" | ")
+    : "";
+
+  return `
+CALCULADORA DE PAGOS ACTIVA EN ESTA SESION:
+- escenario_pago_activo: si
+- productos_activos: ${productLines || "sin producto"}
+- total_bruto: ${context.summary.totalGross}
+- down_payment_total: ${context.summary.totalDown}
+- descuento_total: ${context.summary.totalDiscount}
+- balance_final: ${context.summary.balanceFinal}
+- pago_mensual: ${context.summary.monthly}
+- pago_semanal: ${context.summary.weekly}
+- pago_diario: ${context.summary.daily}
+
+INSTRUCCION:
+- usa estos numeros solo cuando la objecion toque precio, pagos, down payment o descuento
+- responde desde el escenario actual y no inventes rebajas nuevas que no estan aqui
+- si el distribuidor dice "esta caro", apoya primero con semanal, mensual o balance final segun convenga
+- si ya hay un buen down payment o descuento cargado, defendelo antes de saltar a otro cierre
+`;
+}
+
 function limpiarCoachDemoEventPrompt(event = null) {
   if (!event || typeof event !== "object") {
     return null;
@@ -8571,6 +8682,7 @@ app.post("/chat", async (req, res) => {
   const activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   const visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
@@ -8652,6 +8764,18 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         stageCopy: activeDemoStageCopy,
         events: recentCoachEvents
       });
+
+      if (
+        activeOrderCalcContext?.ownerUserId &&
+        activeOrderCalcContext.ownerUserId !== String(coachAuth.user._id)
+      ) {
+        activeOrderCalcContext = null;
+      }
+
+      if (activeOrderCalcContext) {
+        perfilPrompt += construirPromptCalculadoraActiva(activeOrderCalcContext);
+      }
+
       const leadMemory = await obtenerMemoriaLeadRelacionada({
         question: preguntaLimpia,
         mode: "coach",
@@ -8821,6 +8945,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         activeLeadContext,
         activeHealthSurveyContext,
         activeProgram414Context,
+        activeOrderCalcContext,
         usage: {
           usedToday: (coachUsage?.usedToday || 0) + 1,
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),

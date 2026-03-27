@@ -30,6 +30,7 @@ const GOOGLE_RAFFLE_FORM_URL =
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
+const COACH_ACTIVE_ORDER_CALC_KEY = "agustin-coach-active-order-calc";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
@@ -733,6 +734,7 @@ function initOrderCalculator() {
   const monthlyNode = root.querySelector("[data-order-calc-summary-monthly]");
   const weeklyNode = root.querySelector("[data-order-calc-summary-weekly]");
   const dailyNode = root.querySelector("[data-order-calc-summary-daily]");
+  const submitContextButton = root.querySelector("[data-order-calc-submit-context]");
   const catalogSearchCache = new Map();
 
   const normalizeCatalogLookupText = value =>
@@ -810,6 +812,9 @@ function initOrderCalculator() {
         "orderCalcPriceSource"
       );
     }
+
+    card.dataset.orderCalcCatalogCode = String(match.codigo_producto || "").trim();
+    card.dataset.orderCalcCatalogName = String(match.nombre_producto || "").trim();
 
     setMatchMessage(
       card,
@@ -972,6 +977,108 @@ function initOrderCalculator() {
     }
   };
 
+  const buildCurrentOrderCalcContext = () => {
+    const products = [];
+    let totalGeneral = 0;
+    let totalDown = 0;
+    let totalDiscount = 0;
+
+    productCards.forEach((card, index) => {
+      const { nameInput } = getProductNodes(card);
+      const name = String(nameInput?.value || "").trim();
+      const code = String(card.dataset.orderCalcCatalogCode || "").trim();
+      const basePrice = readCalcNumber(card.querySelector("[data-order-calc-price]"));
+      const down = readCalcNumber(card.querySelector("[data-order-calc-down]"));
+      const descFixed = readCalcNumber(card.querySelector("[data-order-calc-desc-fixed]"));
+      const descPercent = readCalcNumber(card.querySelector("[data-order-calc-desc-percent]"));
+      const tax = basePrice * 0.1;
+      const shipping = basePrice * 0.05;
+      const grossTotal = basePrice + tax + shipping;
+      const discountAmount = descFixed + grossTotal * (descPercent / 100);
+      const balance = Math.max(0, grossTotal - down - discountAmount);
+      const monthly = balance * 0.05;
+      const weekly = monthly / 4;
+      const daily = weekly / 7;
+
+      totalGeneral += grossTotal;
+      totalDown += down;
+      totalDiscount += discountAmount;
+
+      if (
+        name ||
+        code ||
+        basePrice > 0 ||
+        down > 0 ||
+        discountAmount > 0 ||
+        balance > 0
+      ) {
+        products.push({
+          slot: index + 1,
+          name,
+          code,
+          basePrice,
+          grossTotal,
+          downPayment: down,
+          discountAmount,
+          balance,
+          monthly,
+          weekly,
+          daily
+        });
+      }
+    });
+
+    const extraDown = readCalcNumber(summaryDown);
+    const extraDescFixed = readCalcNumber(summaryDescFixed);
+    const extraDescPercent = readCalcNumber(summaryDescPercent);
+    const extraDiscount = extraDescFixed + totalGeneral * (extraDescPercent / 100);
+    const finalDown = totalDown + extraDown;
+    const finalDiscount = totalDiscount + extraDiscount;
+    const finalBalance = Math.max(0, totalGeneral - finalDown - finalDiscount);
+    const finalMonthly = finalBalance * 0.05;
+    const finalWeekly = finalMonthly / 4;
+    const finalDaily = finalWeekly / 7;
+
+    return buildCoachOrderCalcContext({
+      ownerUserId: root.dataset.orderCalcOwnerUserId || "",
+      products,
+      summary: {
+        totalGross: totalGeneral,
+        totalDown: finalDown,
+        totalDiscount: finalDiscount,
+        balanceFinal: finalBalance,
+        monthly: finalMonthly,
+        weekly: finalWeekly,
+        daily: finalDaily,
+        extraDown,
+        extraDescFixed,
+        extraDescPercent
+      }
+    });
+  };
+
+  const syncOrderCalcCoachState = () => {
+    const activeContext = getActiveCoachOrderCalcContext();
+    const draftContext = buildCurrentOrderCalcContext();
+
+    root._orderCalcDraftContext = draftContext;
+
+    if (!activeContext?.signature) {
+      renderActiveCoachOrderCalcContext(null);
+      return;
+    }
+
+    if (draftContext?.signature && draftContext.signature !== activeContext.signature) {
+      renderActiveCoachOrderCalcContext({
+        ...activeContext,
+        isDirty: true
+      });
+      return;
+    }
+
+    renderActiveCoachOrderCalcContext(activeContext);
+  };
+
   function recalculate() {
     let totalGeneral = 0;
     let totalDown = 0;
@@ -1032,6 +1139,8 @@ function initOrderCalculator() {
     if (monthlyNode) monthlyNode.textContent = formatMoney(finalMonthly);
     if (weeklyNode) weeklyNode.textContent = formatMoney(finalWeekly);
     if (dailyNode) dailyNode.textContent = formatMoney(finalDaily);
+
+    syncOrderCalcCoachState();
   }
 
   root.querySelectorAll("input").forEach(input => {
@@ -1047,6 +1156,8 @@ function initOrderCalculator() {
       }
 
       nameInput.dataset.orderCalcSource = "manual";
+      delete card.dataset.orderCalcCatalogCode;
+      delete card.dataset.orderCalcCatalogName;
       window.clearTimeout(nameInput._lookupTimer);
       const query = String(nameInput.value || "").trim();
 
@@ -1121,6 +1232,36 @@ function initOrderCalculator() {
 
   recalculate();
   syncProductsFromSurvey();
+  syncOrderCalcCoachState();
+
+  submitContextButton?.addEventListener("click", () => {
+    const context = buildCurrentOrderCalcContext();
+
+    if (!context?.signature) {
+      renderActiveCoachOrderCalcContext({
+        isDirty: true
+      });
+      document.querySelectorAll("[data-order-calc-context-note]").forEach(node => {
+        node.textContent = "Agrega al menos un producto o un escenario de pago antes de pasarlo al Coach.";
+        node.dataset.state = "warning";
+      });
+      return;
+    }
+
+    const nextContext = buildCoachOrderCalcContext({
+      ...context,
+      activatedAt: new Date().toISOString(),
+      ownerUserId: root.dataset.orderCalcOwnerUserId || context.ownerUserId || ""
+    });
+
+    setActiveCoachOrderCalcContext(nextContext);
+    registerCoachDemoEvent({
+      id: "order_calc_shared",
+      label: "Escenario de pago enviado",
+      detail: `Balance ${formatMoney(nextContext.summary.balanceFinal)} · Semanal ${formatMoney(nextContext.summary.weekly)}`
+    });
+    addCoachMessage(null, "assistant", buildCoachOrderCalcReply(nextContext));
+  });
 
   root.dataset.orderCalcSyncReady = "true";
   root.syncProductsFromSurvey = syncProductsFromSurvey;
@@ -3995,6 +4136,176 @@ function buildCoachHealthSurveyContext(survey = null) {
   };
 }
 
+function buildCoachOrderCalcContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const cleanMoney = value => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Number(parsed.toFixed(2)) : 0;
+  };
+
+  const products = Array.isArray(context.products)
+    ? context.products
+        .map((product, index) => {
+          const name = String(product?.name || "").trim();
+          const code = String(product?.code || "").trim();
+          const basePrice = cleanMoney(product?.basePrice);
+          const grossTotal = cleanMoney(product?.grossTotal);
+          const downPayment = cleanMoney(product?.downPayment);
+          const discountAmount = cleanMoney(product?.discountAmount);
+          const balance = cleanMoney(product?.balance);
+          const monthly = cleanMoney(product?.monthly);
+          const weekly = cleanMoney(product?.weekly);
+          const daily = cleanMoney(product?.daily);
+          const slot = Number.parseInt(product?.slot || index + 1, 10);
+
+          if (
+            !name &&
+            !code &&
+            basePrice <= 0 &&
+            grossTotal <= 0 &&
+            downPayment <= 0 &&
+            discountAmount <= 0 &&
+            balance <= 0
+          ) {
+            return null;
+          }
+
+          return {
+            slot: Number.isInteger(slot) && slot > 0 ? slot : index + 1,
+            name,
+            code,
+            basePrice,
+            grossTotal,
+            downPayment,
+            discountAmount,
+            balance,
+            monthly,
+            weekly,
+            daily
+          };
+        })
+        .filter(Boolean)
+        .slice(0, ORDER_CALC_PRODUCT_COUNT)
+    : [];
+
+  const summary = {
+    totalGross: cleanMoney(context.summary?.totalGross),
+    totalDown: cleanMoney(context.summary?.totalDown),
+    totalDiscount: cleanMoney(context.summary?.totalDiscount),
+    balanceFinal: cleanMoney(context.summary?.balanceFinal),
+    monthly: cleanMoney(context.summary?.monthly),
+    weekly: cleanMoney(context.summary?.weekly),
+    daily: cleanMoney(context.summary?.daily),
+    extraDown: cleanMoney(context.summary?.extraDown),
+    extraDescFixed: cleanMoney(context.summary?.extraDescFixed),
+    extraDescPercent: cleanMoney(context.summary?.extraDescPercent)
+  };
+
+  if (!products.length && summary.totalGross <= 0 && summary.balanceFinal <= 0) {
+    return null;
+  }
+
+  const signature = JSON.stringify({
+    products: products.map(product => ({
+      slot: product.slot,
+      name: product.name,
+      code: product.code,
+      basePrice: product.basePrice,
+      downPayment: product.downPayment,
+      discountAmount: product.discountAmount,
+      balance: product.balance
+    })),
+    summary: {
+      totalGross: summary.totalGross,
+      totalDown: summary.totalDown,
+      totalDiscount: summary.totalDiscount,
+      balanceFinal: summary.balanceFinal,
+      monthly: summary.monthly,
+      weekly: summary.weekly,
+      daily: summary.daily
+    }
+  });
+
+  return {
+    ownerUserId: String(context.ownerUserId || "").trim(),
+    activatedAt: String(context.activatedAt || "").trim(),
+    products,
+    summary,
+    signature
+  };
+}
+
+function getActiveCoachOrderCalcContext() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_ORDER_CALC_KEY);
+    return raw ? buildCoachOrderCalcContext(JSON.parse(raw)) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildCoachOrderCalcReply(context = null) {
+  const safeContext = buildCoachOrderCalcContext(context);
+
+  if (!safeContext) {
+    return "";
+  }
+
+  const productCopy = safeContext.products.length
+    ? safeContext.products.map(product => product.name || product.code || `Producto ${product.slot}`).join(", ")
+    : "sin producto";
+
+  return [
+    `Escenario de pago listo para Coach.`,
+    `Productos: ${productCopy}.`,
+    `Balance final ${formatMoney(safeContext.summary.balanceFinal)}.`,
+    `Semanal ${formatMoney(safeContext.summary.weekly)}.`,
+    "Si sale objecion por precio, Agustin ya puede responder con estos numeros."
+  ].join(" ");
+}
+
+function renderActiveCoachOrderCalcContext(context = null) {
+  const safeContext = context?.signature ? context : buildCoachOrderCalcContext(context);
+  const isDirty = Boolean(safeContext?.isDirty);
+  const hasContext = Boolean(safeContext?.signature);
+  const defaultCopy = "Cuando el escenario quede listo, pasalo al Coach para responder con estos numeros.";
+  const productCopy = safeContext?.products?.length
+    ? safeContext.products.map(product => product.name || product.code || `Producto ${product.slot}`).join(", ")
+    : "";
+  const summaryCopy = hasContext
+    ? `${productCopy || "Escenario listo"} · Balance ${formatMoney(safeContext.summary.balanceFinal)} · Semanal ${formatMoney(
+        safeContext.summary.weekly
+      )}.`
+    : defaultCopy;
+  const noteCopy = isDirty
+    ? "Cambiaste los numeros. Presiona actualizar para pasar este nuevo escenario al Coach."
+    : summaryCopy;
+
+  document.querySelectorAll("[data-order-calc-context-note]").forEach(node => {
+    node.textContent = noteCopy;
+    node.dataset.state = isDirty ? "warning" : hasContext ? "success" : "idle";
+  });
+
+  document.querySelectorAll("[data-order-calc-submit-context]").forEach(button => {
+    button.textContent = hasContext ? "Actualizar cierre en Coach" : "Usar este cierre con Coach";
+  });
+}
+
+function setActiveCoachOrderCalcContext(context) {
+  const next = buildCoachOrderCalcContext(context);
+
+  if (next) {
+    window.sessionStorage.setItem(COACH_ACTIVE_ORDER_CALC_KEY, JSON.stringify(next));
+  } else {
+    window.sessionStorage.removeItem(COACH_ACTIVE_ORDER_CALC_KEY);
+  }
+
+  renderActiveCoachOrderCalcContext(next);
+}
+
 function formatProgram414StatusLabel(status = "") {
   const safeStatus = String(status || "").trim();
   const labels = {
@@ -4389,6 +4700,7 @@ async function initCoachAppPage() {
   renderActiveLeadContext(me.activeLeadContext);
   const storedHealthSurveyContext = getActiveCoachHealthSurveyContext();
   const storedProgram414Context = getActiveCoachProgram414Context();
+  const storedOrderCalcContext = getActiveCoachOrderCalcContext();
 
   if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== me.user?.id) {
     setActiveCoachHealthSurveyContext(null);
@@ -4400,6 +4712,12 @@ async function initCoachAppPage() {
     setActiveCoachProgram414Context(null);
   }
 
+  if (storedOrderCalcContext?.ownerUserId && storedOrderCalcContext.ownerUserId !== me.user?.id) {
+    setActiveCoachOrderCalcContext(null);
+  } else {
+    renderActiveCoachOrderCalcContext(storedOrderCalcContext);
+  }
+
   initCoachWorkspaceTabs();
   initLeadDestinationSettings(me.profile?.leadDestination || null);
   initCoachPrivateResources();
@@ -4408,6 +4726,10 @@ async function initCoachAppPage() {
   initRecruitmentTool();
   initHealthSurveyTool();
   initOrderCalculator();
+  const orderCalcRoot = document.querySelector("[data-order-calc]");
+  if (orderCalcRoot) {
+    orderCalcRoot.dataset.orderCalcOwnerUserId = me.user?.id || "";
+  }
   initDecisionTool();
   initBuyerProfileTool();
   initDailyPrizeTool();
@@ -4699,6 +5021,7 @@ async function initCoachAppPage() {
           activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
             ? getActiveCoachProgram414Context().referralIndex
             : "",
+          activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
           mode: "coach"
         }
       });
@@ -4721,6 +5044,10 @@ async function initCoachAppPage() {
 
       if (data.activeProgram414Context?.sheetId) {
         setActiveCoachProgram414Context(data.activeProgram414Context);
+      }
+
+      if (data.activeOrderCalcContext?.summary) {
+        setActiveCoachOrderCalcContext(data.activeOrderCalcContext);
       }
     } catch (error) {
       addCoachMessage(

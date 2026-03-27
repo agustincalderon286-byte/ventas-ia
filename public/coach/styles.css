@@ -2373,6 +2373,31 @@ img {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.order-calc-summary-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.order-calc-summary-actions .secondary-button {
+  justify-self: flex-start;
+}
+
+.order-calc-summary-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.order-calc-summary-note[data-state="success"] {
+  color: #c8ffe0;
+}
+
+.order-calc-summary-note[data-state="warning"] {
+  color: #ffd39a;
+}
+
 .order-calc-rollup-item,
 .order-calc-payment-item {
   padding: 14px;
