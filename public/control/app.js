@@ -1,4 +1,5 @@
 const OVERVIEW_API_URL = "/api/control/overview";
+const COMMUNICATIONS_API_URL = "/api/control/communications";
 const SYSTEM_CODE_LINES = [
   "lead.score = warm",
   "chef.intent = recipe_support",
@@ -126,6 +127,29 @@ async function cargarControlTower() {
   }
 
   return data;
+}
+
+async function controlApiRequest(url, options = {}) {
+  const response = await fetch(url, {
+    method: options.method || "GET",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "No pude completar la accion.");
+  }
+
+  return data;
+}
+
+async function cargarControlCommunications() {
+  return controlApiRequest(COMMUNICATIONS_API_URL);
 }
 
 function setText(selector, value) {
@@ -346,10 +370,287 @@ function hydrateDashboard(data) {
   );
 }
 
+function setControlFeedback(selector, message = "", state = "info") {
+  const node = document.querySelector(selector);
+
+  if (!node) {
+    return;
+  }
+
+  node.textContent = message;
+  node.dataset.state = state;
+}
+
+function renderControlAnnouncementList(items = []) {
+  const list = document.querySelector("[data-control-announcement-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const safeItems = Array.isArray(items) ? items : [];
+
+  if (!safeItems.length) {
+    list.innerHTML = '<div class="table-empty">Todavia no hay boletines internos.</div>';
+    return;
+  }
+
+  list.innerHTML = safeItems
+    .map(
+      item => `
+        <article class="control-inline-card">
+          <strong>${escapeHtml(item.title || "Boletin")}</strong>
+          <span>${escapeHtml(
+            [item.scopeType === "territory" ? item.territoryName || "Territorio" : "Toda la red", item.authorName || "", formatDateTime(item.createdAt)]
+              .filter(Boolean)
+              .join(" · ")
+          )}</span>
+          <p>${escapeHtml(item.body || "")}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderControlTerritoryOptions(items = []) {
+  const select = document.querySelector("[data-control-announcement-territory]");
+
+  if (!select) {
+    return;
+  }
+
+  const safeItems = Array.isArray(items) ? items : [];
+
+  if (!safeItems.length) {
+    select.innerHTML = '<option value="">No hay territorios todavia</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  select.innerHTML = safeItems
+    .map(
+      item => `
+        <option value="${escapeHtml(item.id || "")}">
+          ${escapeHtml(item.name || "Territorio")} · ${escapeHtml(item.officeId || item.territoryId || "Sin oficina")}
+        </option>
+      `
+    )
+    .join("");
+}
+
+function renderControlSupportThreadOptions(items = [], selectedId = "") {
+  const select = document.querySelector("[data-control-support-thread-select]");
+
+  if (!select) {
+    return;
+  }
+
+  const safeItems = Array.isArray(items) ? items : [];
+
+  if (!safeItems.length) {
+    select.innerHTML = '<option value="">Sin conversaciones activas</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  select.innerHTML = safeItems
+    .map(
+      item => `
+        <option value="${escapeHtml(item.id || "")}" ${selectedId && selectedId === item.id ? "selected" : ""}>
+          ${escapeHtml(item.ownerName || item.ownerEmail || "Cuenta")} · ${escapeHtml(
+            `${item.supportUnreadCount || 0} pendientes`
+          )}
+        </option>
+      `
+    )
+    .join("");
+}
+
+function renderControlSupportThread(thread = null) {
+  const view = document.querySelector("[data-control-support-thread-view]");
+
+  if (!view) {
+    return;
+  }
+
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+
+  if (!thread || !messages.length) {
+    view.innerHTML = '<div class="table-empty">Todavia no hay mensajes de soporte.</div>';
+    return;
+  }
+
+  view.innerHTML = messages
+    .map(
+      item => `
+        <article class="control-thread-message" data-sender="${escapeHtml(item.senderScope || "coach_user")}">
+          <strong>${escapeHtml(item.senderScope === "control_tower" ? "Soporte" : item.senderName || thread.ownerName || "Cuenta")}</strong>
+          <span>${escapeHtml(formatDateTime(item.createdAt))}</span>
+          <p>${escapeHtml(item.body || "")}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function hydrateCommunications(data) {
+  const safeData = data || {};
+  const announcements = Array.isArray(safeData.announcements) ? safeData.announcements : [];
+  const territories = Array.isArray(safeData.territories) ? safeData.territories : [];
+  const supportThreads = Array.isArray(safeData.supportThreads) ? safeData.supportThreads : [];
+
+  renderControlAnnouncementList(announcements);
+  renderControlTerritoryOptions(territories);
+
+  setText("[data-support-open-threads]", String(supportThreads.length || 0));
+  setText(
+    "[data-support-unread-threads]",
+    String(supportThreads.filter(item => Number(item.supportUnreadCount || 0) > 0).length || 0)
+  );
+
+  const currentSelect = document.querySelector("[data-control-support-thread-select]");
+  const selectedId =
+    currentSelect?.value && supportThreads.some(item => item.id === currentSelect.value)
+      ? currentSelect.value
+      : supportThreads[0]?.id || "";
+
+  renderControlSupportThreadOptions(supportThreads, selectedId);
+  renderControlSupportThread(supportThreads.find(item => item.id === selectedId) || null);
+}
+
+function initControlCommunications() {
+  const announcementForm = document.querySelector("[data-control-announcement-form]");
+  const announcementFeedback = document.querySelector("[data-control-announcement-feedback]");
+  const announcementButton = document.querySelector("[data-control-announcement-save]");
+  const scopeSelect = document.querySelector("[data-control-announcement-scope]");
+  const territoryField = document.querySelector("[data-control-announcement-territory-field]");
+  const supportSelect = document.querySelector("[data-control-support-thread-select]");
+  const supportForm = document.querySelector("[data-control-support-reply-form]");
+  const supportFeedback = document.querySelector("[data-control-support-feedback]");
+  const supportButton = document.querySelector("[data-control-support-reply-save]");
+
+  if (!announcementForm || !supportForm) {
+    return;
+  }
+
+  let latestCommunications = {
+    territories: [],
+    announcements: [],
+    supportThreads: []
+  };
+
+  const syncScope = () => {
+    if (!territoryField || !scopeSelect) {
+      return;
+    }
+
+    territoryField.hidden = scopeSelect.value !== "territory";
+  };
+
+  const loadCommunications = async () => {
+    latestCommunications = await cargarControlCommunications();
+    hydrateCommunications(latestCommunications);
+    syncScope();
+    return latestCommunications;
+  };
+
+  scopeSelect?.addEventListener("change", syncScope);
+
+  supportSelect?.addEventListener("change", () => {
+    const selectedId = supportSelect.value || "";
+    const thread = (latestCommunications.supportThreads || []).find(item => item.id === selectedId) || null;
+    renderControlSupportThread(thread);
+  });
+
+  announcementForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    setControlFeedback("[data-control-announcement-feedback]", "");
+    if (announcementButton) {
+      announcementButton.disabled = true;
+      announcementButton.textContent = "Mandando...";
+    }
+
+    try {
+      const formData = new FormData(announcementForm);
+      await controlApiRequest("/api/control/announcements", {
+        method: "POST",
+        body: {
+          scopeType: formData.get("scopeType"),
+          territoryId: formData.get("territoryId"),
+          priority: formData.get("priority"),
+          title: formData.get("title"),
+          body: formData.get("body")
+        }
+      });
+      setControlFeedback("[data-control-announcement-feedback]", "Boletin mandado correctamente.", "success");
+      announcementForm.reset();
+      syncScope();
+      await loadCommunications();
+    } catch (error) {
+      setControlFeedback("[data-control-announcement-feedback]", error.message, "error");
+    } finally {
+      if (announcementButton) {
+        announcementButton.disabled = false;
+        announcementButton.textContent = "Mandar boletin";
+      }
+    }
+  });
+
+  supportForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    setControlFeedback("[data-control-support-feedback]", "");
+
+    const selectedId = supportSelect?.value || "";
+
+    if (!selectedId) {
+      setControlFeedback("[data-control-support-feedback]", "Selecciona una conversacion primero.", "error");
+      return;
+    }
+
+    if (supportButton) {
+      supportButton.disabled = true;
+      supportButton.textContent = "Respondiendo...";
+    }
+
+    try {
+      const formData = new FormData(supportForm);
+      await controlApiRequest(`/api/control/support/${encodeURIComponent(selectedId)}/messages`, {
+        method: "POST",
+        body: {
+          body: formData.get("body")
+        }
+      });
+      setControlFeedback("[data-control-support-feedback]", "Respuesta enviada al Coach.", "success");
+      supportForm.reset();
+      await loadCommunications();
+      if (supportSelect) {
+        supportSelect.value = selectedId;
+        const thread = (latestCommunications.supportThreads || []).find(item => item.id === selectedId) || null;
+        renderControlSupportThread(thread);
+      }
+    } catch (error) {
+      setControlFeedback("[data-control-support-feedback]", error.message, "error");
+    } finally {
+      if (supportButton) {
+        supportButton.disabled = false;
+        supportButton.textContent = "Responder soporte";
+      }
+    }
+  });
+
+  loadCommunications().catch(error => {
+    setControlFeedback("[data-control-announcement-feedback]", error.message || "No pude cargar comunicaciones.", "error");
+    setControlFeedback("[data-control-support-feedback]", error.message || "No pude cargar comunicaciones.", "error");
+  });
+}
+
 async function init() {
   buildCodeStream();
   buildBinaryGrid();
   rotateSystemStatus();
+  initControlCommunications();
 
   try {
     const data = await cargarControlTower();

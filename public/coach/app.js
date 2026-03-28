@@ -330,6 +330,7 @@ function getCoachEffectiveOwnerId(user = null) {
 function syncCoachManagerUi(user = null) {
   const canManageTeam = Boolean(user?.managesTeam);
   const canUseTerritory = Boolean(user && user.accountType !== "seat");
+  const canViewControlTower = Boolean(user?.canViewControlTower);
 
   document.querySelectorAll("[data-team-manager-only]").forEach(node => {
     if (!canManageTeam) {
@@ -357,6 +358,10 @@ function syncCoachManagerUi(user = null) {
     }
 
     node.hidden = false;
+  });
+
+  document.querySelectorAll("[data-control-tower-link]").forEach(node => {
+    node.hidden = !canViewControlTower;
   });
 }
 
@@ -582,6 +587,16 @@ function initCoachWorkspaceTabs() {
   });
 
   syncWorkspace(activeTab);
+}
+
+function setCoachWorkspaceTab(nextTab = "cierre") {
+  const button = document.querySelector(`[data-coach-workspace-tab="${String(nextTab || "").trim()}"]`);
+
+  if (!button || button.hidden) {
+    return;
+  }
+
+  button.click();
 }
 
 function normalizeLeadPhone(value = "") {
@@ -5121,6 +5136,185 @@ function initCoachTerritoryWorkspace(user = null) {
   });
 }
 
+function renderCoachMessagesSummary(data = null) {
+  const announcements = Array.isArray(data?.announcements) ? data.announcements : [];
+  const unreadAnnouncements = Number(data?.unread?.announcements || 0);
+  const unreadSupport = Number(data?.unread?.support || 0);
+  const totalUnread = Number(data?.unread?.total || 0);
+
+  document.querySelectorAll("[data-messages-total-announcements]").forEach(node => {
+    node.textContent = String(announcements.length || 0);
+  });
+
+  document.querySelectorAll("[data-messages-unread-announcements]").forEach(node => {
+    node.textContent = String(unreadAnnouncements || 0);
+  });
+
+  document.querySelectorAll("[data-messages-unread-support]").forEach(node => {
+    node.textContent = String(unreadSupport || 0);
+  });
+
+  document.querySelectorAll("[data-messages-total-unread]").forEach(node => {
+    node.textContent = String(totalUnread || 0);
+  });
+
+  document.querySelectorAll("[data-coach-unread-badge]").forEach(node => {
+    node.hidden = !totalUnread;
+    node.textContent = String(totalUnread || 0);
+  });
+}
+
+function renderCoachAnnouncements(announcements = []) {
+  const list = document.querySelector("[data-announcement-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const safeAnnouncements = Array.isArray(announcements) ? announcements : [];
+
+  if (!safeAnnouncements.length) {
+    list.innerHTML = '<div class="team-seat-empty">Todavia no hay boletines para esta cuenta.</div>';
+    return;
+  }
+
+  list.innerHTML = safeAnnouncements
+    .map(
+      item => `
+        <article class="territory-card">
+          <div class="territory-card-head">
+            <div>
+              <div class="eyebrow">${escapeHtml(item.scopeType === "territory" ? "Territorio" : "Boletin maestro")}</div>
+              <h3>${escapeHtml(item.title || "Boletin")}</h3>
+              <p>${escapeHtml(
+                [item.authorName || "Coach", item.territoryName || "", formatDateTimeShort(item.createdAt)]
+                  .filter(Boolean)
+                  .join(" · ")
+              )}</p>
+            </div>
+            <span class="team-seat-status" data-state="${escapeHtml(item.read ? "active" : "paused")}">
+              ${escapeHtml(item.read ? "Leido" : "Nuevo")}
+            </span>
+          </div>
+          <p class="territory-inline-note">${escapeHtml(item.body || "")}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderCoachSupportThread(thread = null) {
+  const list = document.querySelector("[data-support-thread-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+
+  if (!messages.length) {
+    list.innerHTML = '<div class="team-seat-empty">Todavia no hay mensajes de soporte en esta cuenta.</div>';
+    return;
+  }
+
+  list.innerHTML = messages
+    .map(
+      item => `
+        <article class="territory-result-card">
+          <strong>${escapeHtml(item.senderScope === "control_tower" ? "Soporte" : item.senderName || "Tu cuenta")}</strong>
+          <span>${escapeHtml(formatDateTimeShort(item.createdAt))}</span>
+          <p>${escapeHtml(item.body || "")}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function initCoachMessagesWorkspace(user = null) {
+  const form = document.querySelector("[data-support-message-form]");
+  const feedbackNode = document.querySelector("[data-support-message-feedback]");
+  const submitButton = document.querySelector("[data-support-message-save]");
+  const summaryFeedback = document.querySelector("[data-messages-feedback]");
+  const markReadButton = document.querySelector("[data-messages-mark-read]");
+  const quickOpenButtons = document.querySelectorAll("[data-coach-open-messages]");
+
+  if (!form || !summaryFeedback) {
+    return;
+  }
+
+  if (!user) {
+    renderCoachMessagesSummary(null);
+    renderCoachAnnouncements([]);
+    renderCoachSupportThread(null);
+    return;
+  }
+
+  let latestOverview = {
+    announcements: [],
+    supportThread: null,
+    unread: { announcements: 0, support: 0, total: 0 }
+  };
+
+  const loadOverview = async () => {
+    const data = await apiRequest("/api/coach/messages/overview");
+    latestOverview = data || latestOverview;
+    renderCoachMessagesSummary(latestOverview);
+    renderCoachAnnouncements(latestOverview.announcements || []);
+    renderCoachSupportThread(latestOverview.supportThread || null);
+    return latestOverview;
+  };
+
+  quickOpenButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      setCoachWorkspaceTab("mensajes");
+    });
+  });
+
+  markReadButton?.addEventListener("click", async () => {
+    clearMessage(summaryFeedback);
+    setButtonLoading(markReadButton, true, "Marcando...");
+
+    try {
+      await apiRequest("/api/coach/messages/read-all", {
+        method: "POST"
+      });
+      setMessage(summaryFeedback, "Tus boletines y soporte quedaron marcados como leidos.", "success");
+      await loadOverview();
+    } catch (error) {
+      setMessage(summaryFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(markReadButton, false);
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(submitButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(form);
+      await apiRequest("/api/coach/support/messages", {
+        method: "POST",
+        body: {
+          body: formData.get("body")
+        }
+      });
+      setMessage(feedbackNode, "Tu mensaje ya quedo enviado a soporte.", "success");
+      form.reset();
+      await loadOverview();
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  loadOverview().catch(error => {
+    setMessage(summaryFeedback, error.message || "No pude cargar tus mensajes internos.", "error");
+  });
+}
+
 function renderCoachRepLeadSummary(summary) {
   const safeSummary = summary || {};
   const scoreboard = safeSummary.scoreboard || {};
@@ -6222,6 +6416,7 @@ async function initCoachAppPage() {
   initCoachPrivateResources();
   initCoachLeadWorkspace();
   initChefCampaignTool();
+  initCoachMessagesWorkspace(me.user);
   initCoachTeamWorkspace(me.user);
   initCoachTerritoryWorkspace(me.user);
   initRecruitmentTool();

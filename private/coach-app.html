@@ -31,6 +31,7 @@
           <a class="nav-link" href="/coach/">Landing</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
           <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link>Ver Chef</a>
+          <a class="nav-link" href="/control/" data-control-tower-link hidden>Torre</a>
           <button class="nav-button" data-open-chef-share>Compartir Chef</button>
           <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
@@ -43,24 +44,22 @@
             <div>
               <div class="eyebrow">Coach activo</div>
               <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
-              <p>
-                Tu Coach te acompana durante toda la presentacion desde el acceso rapido.
-              </p>
             </div>
 
-            <div class="coach-chat-status" data-coach-chat-status>Listo</div>
+            <div class="coach-compact-actions">
+              <button class="nav-button" type="button" data-coach-open-messages>
+                Mensajes
+                <span class="coach-unread-badge" data-coach-unread-badge hidden>0</span>
+              </button>
+              <a class="nav-button" href="/control/" data-control-tower-link hidden>Ir a torre</a>
+              <div class="coach-chat-status" data-coach-chat-status>Listo</div>
+            </div>
           </div>
 
-          <div class="coach-compact-strip">
-            <div class="coach-compact-card">
-              <strong>Acceso rapido</strong>
-              <span>Tu apoyo principal vive en el widget flotante para que tengas mas espacio para trabajar.</span>
-            </div>
-
+          <div class="coach-compact-strip coach-compact-strip-slim">
             <div class="coach-live-context" data-coach-health-survey-context>
-              <strong data-coach-health-survey-name>Selecciona una casa activa.</strong>
-              <span data-coach-health-survey-close>Abre una encuesta de salud para recibir sugerencias mas precisas.</span>
-              <span data-coach-health-survey-anchor>Las claves de cierre apareceran aqui.</span>
+              <strong data-coach-health-survey-name>El widget flotante sigue siendo tu apoyo principal.</strong>
+              <span data-coach-health-survey-close>Marca el paso correcto y usa Mensajes para ver boletines o pedir soporte.</span>
             </div>
           </div>
 
@@ -122,6 +121,14 @@
               <button
                 type="button"
                 class="coach-workspace-tab"
+                data-coach-workspace-tab="mensajes"
+                aria-selected="false"
+              >
+                Mensajes
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
                 data-coach-workspace-tab="equipo"
                 aria-selected="false"
                 data-team-manager-only
@@ -139,11 +146,96 @@
               >
                 Territorio
               </button>
+              <a
+                class="coach-workspace-tab coach-workspace-tab-link"
+                href="/control/"
+                data-control-tower-link
+                hidden
+              >
+                Torre
+              </a>
             </div>
             <p class="mini-note">
               Cambia de lado segun el momento: presentacion y cierre, o calle y prospeccion.
             </p>
           </div>
+
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+            <div class="eyebrow">Centro interno</div>
+            <h3>Boletines y soporte del Coach</h3>
+            <p>
+              Aqui recibes avisos internos del sistema y puedes escribir directo a soporte tecnico sin salir del Coach.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-messages-total-announcements>0</strong>
+                <span>Boletines</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-messages-unread-announcements>0</strong>
+                <span>Sin leer</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-messages-unread-support>0</strong>
+                <span>Soporte nuevo</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-messages-total-unread>0</strong>
+                <span>Total pendiente</span>
+              </div>
+            </div>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="nav-button" data-messages-mark-read>Marcar todo como leido</button>
+            </div>
+
+            <div class="form-result" data-messages-feedback></div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+            <div class="eyebrow">Boletines</div>
+            <h3>Noticias internas</h3>
+            <p>
+              Aqui aparecen updates del Coach, noticias operativas y avisos importantes enviados desde la torre o por
+              tu estructura territorial.
+            </p>
+
+            <div class="territory-list" data-announcement-list>
+              <div class="team-seat-empty">Todavia no hay boletines para esta cuenta.</div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+            <div class="eyebrow">Soporte tecnico</div>
+            <h3>Escribe directo desde el Coach</h3>
+            <p>
+              Usa este canal para dudas tecnicas, preguntas de uso o problemas operativos sin depender de WhatsApp.
+            </p>
+
+            <form class="coach-form" data-support-message-form>
+              <label>
+                Mensaje
+                <textarea
+                  name="body"
+                  maxlength="1200"
+                  rows="4"
+                  placeholder="Ej. No me abre el QR del Chef, la campaña no salio o necesito ayuda con una cuenta."
+                  required
+                ></textarea>
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-support-message-save>Mandar a soporte</button>
+              </div>
+
+              <div class="form-result" data-support-message-feedback></div>
+            </form>
+
+            <div class="territory-result-list" data-support-thread-list>
+              <div class="team-seat-empty">Todavia no hay mensajes de soporte en esta cuenta.</div>
+            </div>
+          </article>
 
           <article
             class="dashboard-card"

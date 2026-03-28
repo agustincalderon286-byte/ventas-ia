@@ -698,6 +698,85 @@ const coachTerritoryInviteSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachAnnouncementSchema = new mongoose.Schema({
+  authorUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  authorName: String,
+  scopeType: { type: String, default: "global" },
+  territoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachTerritory",
+    default: null,
+    index: true
+  },
+  territoryName: String,
+  title: { type: String, required: true, trim: true },
+  body: { type: String, required: true, trim: true },
+  priority: { type: String, default: "normal" },
+  status: { type: String, default: "active" },
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachAnnouncementReceiptSchema = new mongoose.Schema({
+  announcementId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachAnnouncement",
+    required: true,
+    index: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  readAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachSupportThreadSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    unique: true,
+    index: true
+  },
+  ownerName: String,
+  ownerEmail: String,
+  status: { type: String, default: "open" },
+  ownerUnreadCount: { type: Number, default: 0 },
+  supportUnreadCount: { type: Number, default: 0 },
+  lastMessageAt: Date,
+  lastMessagePreview: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachSupportMessageSchema = new mongoose.Schema({
+  threadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachSupportThread",
+    required: true,
+    index: true
+  },
+  senderUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  senderName: String,
+  senderScope: { type: String, default: "coach_user" },
+  body: { type: String, required: true, trim: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -748,6 +827,11 @@ coachTerritoryMembershipSchema.index({ territoryId: 1, userId: 1 }, { unique: tr
 coachTerritoryMembershipSchema.index({ userId: 1, status: 1, createdAt: -1 });
 coachTerritoryInviteSchema.index({ territoryId: 1, status: 1, createdAt: -1 });
 coachTerritoryInviteSchema.index({ inviteeEmail: 1, status: 1, createdAt: -1 });
+coachAnnouncementSchema.index({ scopeType: 1, territoryId: 1, createdAt: -1 });
+coachAnnouncementSchema.index({ authorUserId: 1, createdAt: -1 });
+coachAnnouncementReceiptSchema.index({ announcementId: 1, userId: 1 }, { unique: true });
+coachSupportThreadSchema.index({ status: 1, lastMessageAt: -1 });
+coachSupportMessageSchema.index({ threadId: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -777,6 +861,15 @@ const CoachTerritoryMembership =
   mongoose.model("CoachTerritoryMembership", coachTerritoryMembershipSchema);
 const CoachTerritoryInvite =
   mongoose.models.CoachTerritoryInvite || mongoose.model("CoachTerritoryInvite", coachTerritoryInviteSchema);
+const CoachAnnouncement =
+  mongoose.models.CoachAnnouncement || mongoose.model("CoachAnnouncement", coachAnnouncementSchema);
+const CoachAnnouncementReceipt =
+  mongoose.models.CoachAnnouncementReceipt ||
+  mongoose.model("CoachAnnouncementReceipt", coachAnnouncementReceiptSchema);
+const CoachSupportThread =
+  mongoose.models.CoachSupportThread || mongoose.model("CoachSupportThread", coachSupportThreadSchema);
+const CoachSupportMessage =
+  mongoose.models.CoachSupportMessage || mongoose.model("CoachSupportMessage", coachSupportMessageSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -1544,6 +1637,32 @@ function limpiarCoachTerritoryText(value = "", maxLength = 80) {
   return cleanText(value || "").slice(0, maxLength);
 }
 
+function normalizarCoachAnnouncementScopeType(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  return ["global", "territory"].includes(safeValue) ? safeValue : "global";
+}
+
+function normalizarCoachAnnouncementPriority(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  return ["normal", "high"].includes(safeValue) ? safeValue : "normal";
+}
+
+function limpiarCoachAnnouncementTitle(value = "") {
+  return cleanText(value || "").slice(0, 120);
+}
+
+function limpiarCoachAnnouncementBody(value = "") {
+  return cleanText(value || "").slice(0, 1200);
+}
+
+function limpiarCoachSupportMessageBody(value = "") {
+  return cleanText(value || "").slice(0, 1200);
+}
+
 function resolverCoachTeamRoleDefault(userDoc = null) {
   const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
 
@@ -2159,6 +2278,7 @@ function limpiarCoachUser(userDoc) {
     officeId: userDoc.officeId || "",
     territoryId: userDoc.territoryId || "",
     managesTeam: accountType === "owner" || accountType === "leader",
+    canViewControlTower: usuarioPuedeVerTorreControl(userDoc),
     subscriptionStatus: obtenerCoachStatusVisible(userDoc),
     subscriptionActive: coachTieneAccesoTotal(userDoc),
     subscriptionCurrentPeriodEnd: userDoc.subscriptionCurrentPeriodEnd || null,
@@ -3025,6 +3145,257 @@ async function obtenerCoachTerritoryWorkspace(userDoc = null) {
         })
       )
       .filter(Boolean)
+  };
+}
+
+async function resolverCoachAudienceOwner(userDoc = null) {
+  if (!userDoc?._id) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+
+  if (accountType === "seat" && userDoc.teamOwnerUserId && String(userDoc.teamOwnerUserId) !== String(userDoc._id)) {
+    const ownerUserDoc = await CoachUser.findById(userDoc.teamOwnerUserId)
+      .select("_id name email officeId territoryId accountType")
+      .lean();
+    return ownerUserDoc || userDoc;
+  }
+
+  return userDoc;
+}
+
+async function obtenerCoachVisibleTerritoryIds(userDoc = null) {
+  const audienceUser = await resolverCoachAudienceOwner(userDoc);
+
+  if (!audienceUser?._id) {
+    return [];
+  }
+
+  const membershipDocs = await CoachTerritoryMembership.find({
+    userId: audienceUser._id,
+    status: "active"
+  })
+    .select("territoryId")
+    .lean();
+
+  return Array.from(
+    new Set(
+      membershipDocs
+        .map(item => (item.territoryId ? String(item.territoryId) : ""))
+        .filter(Boolean)
+    )
+  );
+}
+
+function limpiarCoachAnnouncement(announcementDoc = null, options = {}) {
+  if (!announcementDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(announcementDoc._id),
+    authorName: announcementDoc.authorName || "",
+    scopeType: normalizarCoachAnnouncementScopeType(announcementDoc.scopeType || "global"),
+    territoryId: announcementDoc.territoryId ? String(announcementDoc.territoryId) : "",
+    territoryName: announcementDoc.territoryName || "",
+    title: announcementDoc.title || "",
+    body: announcementDoc.body || "",
+    priority: normalizarCoachAnnouncementPriority(announcementDoc.priority || "normal"),
+    status: announcementDoc.status || "active",
+    createdAt: announcementDoc.createdAt || null,
+    updatedAt: announcementDoc.updatedAt || null,
+    read: Boolean(options.read)
+  };
+}
+
+function limpiarCoachSupportThread(threadDoc = null, options = {}) {
+  if (!threadDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(threadDoc._id),
+    ownerUserId: threadDoc.ownerUserId ? String(threadDoc.ownerUserId) : "",
+    ownerName: threadDoc.ownerName || "",
+    ownerEmail: threadDoc.ownerEmail || "",
+    status: threadDoc.status || "open",
+    ownerUnreadCount: Number(threadDoc.ownerUnreadCount || 0),
+    supportUnreadCount: Number(threadDoc.supportUnreadCount || 0),
+    lastMessageAt: threadDoc.lastMessageAt || null,
+    lastMessagePreview: threadDoc.lastMessagePreview || "",
+    messages: Array.isArray(options.messages) ? options.messages : []
+  };
+}
+
+function limpiarCoachSupportMessage(messageDoc = null) {
+  if (!messageDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(messageDoc._id),
+    threadId: messageDoc.threadId ? String(messageDoc.threadId) : "",
+    senderUserId: messageDoc.senderUserId ? String(messageDoc.senderUserId) : "",
+    senderName: messageDoc.senderName || "",
+    senderScope: messageDoc.senderScope || "coach_user",
+    body: messageDoc.body || "",
+    createdAt: messageDoc.createdAt || null
+  };
+}
+
+async function asegurarCoachSupportThread(userDoc = null) {
+  if (!userDoc?._id) {
+    return null;
+  }
+
+  let threadDoc = await CoachSupportThread.findOne({ ownerUserId: userDoc._id });
+
+  if (threadDoc) {
+    return threadDoc;
+  }
+
+  threadDoc = await CoachSupportThread.create({
+    ownerUserId: userDoc._id,
+    ownerName: userDoc.name || userDoc.email || "",
+    ownerEmail: userDoc.email || "",
+    status: "open",
+    ownerUnreadCount: 0,
+    supportUnreadCount: 0,
+    updatedAt: new Date()
+  });
+
+  return threadDoc;
+}
+
+async function obtenerCoachMessagesOverview(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      announcements: [],
+      supportThread: null,
+      unread: {
+        announcements: 0,
+        support: 0,
+        total: 0
+      }
+    };
+  }
+
+  const visibleTerritoryIds = await obtenerCoachVisibleTerritoryIds(userDoc);
+  const announcementQuery = {
+    status: "active",
+    $or: [{ scopeType: "global" }]
+  };
+
+  if (visibleTerritoryIds.length) {
+    announcementQuery.$or.push({
+      scopeType: "territory",
+      territoryId: { $in: visibleTerritoryIds }
+    });
+  }
+
+  const [announcementDocs, threadDoc] = await Promise.all([
+    CoachAnnouncement.find(announcementQuery)
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    asegurarCoachSupportThread(userDoc)
+  ]);
+
+  const announcementIds = announcementDocs.map(item => item._id).filter(Boolean);
+  const [receiptDocs, supportMessageDocs] = await Promise.all([
+    announcementIds.length
+      ? CoachAnnouncementReceipt.find({
+          announcementId: { $in: announcementIds },
+          userId: userDoc._id
+        })
+          .select("announcementId")
+          .lean()
+      : Promise.resolve([]),
+    threadDoc?._id
+      ? CoachSupportMessage.find({ threadId: threadDoc._id })
+          .sort({ createdAt: 1 })
+          .limit(40)
+          .lean()
+      : Promise.resolve([])
+  ]);
+
+  const receiptSet = new Set(receiptDocs.map(item => String(item.announcementId || "")));
+  const announcements = announcementDocs
+    .map(item =>
+      limpiarCoachAnnouncement(item, {
+        read: receiptSet.has(String(item._id))
+      })
+    )
+    .filter(Boolean);
+
+  const unreadAnnouncements = announcements.filter(item => !item.read).length;
+  const supportMessages = supportMessageDocs.map(item => limpiarCoachSupportMessage(item)).filter(Boolean);
+  const supportThread = limpiarCoachSupportThread(threadDoc, { messages: supportMessages });
+  const unreadSupport = Number(threadDoc?.ownerUnreadCount || 0);
+
+  return {
+    announcements,
+    supportThread,
+    unread: {
+      announcements: unreadAnnouncements,
+      support: unreadSupport,
+      total: unreadAnnouncements + unreadSupport
+    }
+  };
+}
+
+async function obtenerControlCommunicationsOverview() {
+  const [territoryDocs, announcementDocs, threadDocs] = await Promise.all([
+    CoachTerritory.find({ status: "active" })
+      .sort({ createdAt: -1 })
+      .select("name officeId territoryId")
+      .lean(),
+    CoachAnnouncement.find({ status: "active" })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    CoachSupportThread.find({})
+      .sort({ supportUnreadCount: -1, lastMessageAt: -1, createdAt: -1 })
+      .limit(18)
+      .lean()
+  ]);
+
+  const threadIds = threadDocs.map(item => item._id).filter(Boolean);
+  const messages = threadIds.length
+    ? await CoachSupportMessage.find({ threadId: { $in: threadIds } })
+        .sort({ createdAt: -1 })
+        .lean()
+    : [];
+  const messagesByThread = new Map();
+
+  for (const message of messages) {
+    const threadId = String(message.threadId || "");
+    const current = messagesByThread.get(threadId) || [];
+    if (current.length >= 8) {
+      continue;
+    }
+    current.push(message);
+    messagesByThread.set(threadId, current);
+  }
+
+  return {
+    territories: territoryDocs.map(item => ({
+      id: String(item._id),
+      name: item.name || "",
+      officeId: item.officeId || "",
+      territoryId: item.territoryId || ""
+    })),
+    announcements: announcementDocs.map(item => limpiarCoachAnnouncement(item)).filter(Boolean),
+    supportThreads: threadDocs.map(threadDoc =>
+      limpiarCoachSupportThread(threadDoc, {
+        messages: (messagesByThread.get(String(threadDoc._id)) || [])
+          .slice()
+          .reverse()
+          .map(item => limpiarCoachSupportMessage(item))
+          .filter(Boolean)
+      })
+    )
   };
 }
 
@@ -12244,6 +12615,114 @@ app.post("/api/coach/territory-invites/:inviteId/respond", async (req, res) => {
   }
 });
 
+app.get("/api/coach/messages/overview", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const overview = await obtenerCoachMessagesOverview(auth.user);
+    res.json(overview);
+  } catch (error) {
+    console.error("Error cargando mensajes del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tus mensajes en este momento.");
+  }
+});
+
+app.post("/api/coach/messages/read-all", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const overview = await obtenerCoachMessagesOverview(auth.user);
+    const unreadAnnouncementIds = overview.announcements.filter(item => !item.read).map(item => item.id).filter(Boolean);
+
+    if (unreadAnnouncementIds.length) {
+      const now = new Date();
+      await Promise.all(
+        unreadAnnouncementIds.map(announcementId =>
+          CoachAnnouncementReceipt.updateOne(
+            {
+              announcementId,
+              userId: auth.user._id
+            },
+            {
+              $set: {
+                readAt: now
+              },
+              $setOnInsert: {
+                createdAt: now
+              }
+            },
+            { upsert: true }
+          )
+        )
+      );
+    }
+
+    const threadDoc = await asegurarCoachSupportThread(auth.user);
+    if (threadDoc && threadDoc.ownerUnreadCount > 0) {
+      threadDoc.ownerUnreadCount = 0;
+      threadDoc.updatedAt = new Date();
+      await threadDoc.save();
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Error marcando mensajes del Coach como leidos:", error.message);
+    responderCoachError(res, 500, "No pude marcar tus mensajes en este momento.");
+  }
+});
+
+app.post("/api/coach/support/messages", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const body = limpiarCoachSupportMessageBody(req.body?.body || "");
+
+  if (!body) {
+    return responderCoachError(res, 400, "Escribe tu mensaje antes de enviarlo.");
+  }
+
+  try {
+    const now = new Date();
+    const threadDoc = await asegurarCoachSupportThread(auth.user);
+
+    await CoachSupportMessage.create({
+      threadId: threadDoc._id,
+      senderUserId: auth.user._id,
+      senderName: auth.user.name || auth.user.email || "",
+      senderScope: "coach_user",
+      body
+    });
+
+    threadDoc.ownerName = auth.user.name || auth.user.email || "";
+    threadDoc.ownerEmail = auth.user.email || "";
+    threadDoc.status = "open";
+    threadDoc.supportUnreadCount = Number(threadDoc.supportUnreadCount || 0) + 1;
+    threadDoc.lastMessageAt = now;
+    threadDoc.lastMessagePreview = truncarTextoPrompt(body, 180);
+    threadDoc.updatedAt = now;
+    await threadDoc.save();
+
+    res.json({
+      ok: true,
+      thread: limpiarCoachSupportThread(threadDoc)
+    });
+  } catch (error) {
+    console.error("Error enviando mensaje de soporte del Coach:", error.message);
+    responderCoachError(res, 500, "No pude enviar tu mensaje en este momento.");
+  }
+});
+
 app.put("/api/coach/lead-destination", async (req, res) => {
   const auth = await requireCoachTeamManager(req, res);
 
@@ -13696,6 +14175,136 @@ app.get("/api/control/overview", async (req, res) => {
   } catch (error) {
     console.error("Error obteniendo torre de control:", error.message);
     res.status(500).json({ error: "No pude cargar la torre de control." });
+  }
+});
+
+app.get("/api/control/communications", async (req, res) => {
+  const auth = await requireControlTowerAccess(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const data = await obtenerControlCommunicationsOverview();
+    res.json(data);
+  } catch (error) {
+    console.error("Error cargando comunicaciones de la torre:", error.message);
+    res.status(500).json({ error: "No pude cargar las comunicaciones internas." });
+  }
+});
+
+app.post("/api/control/announcements", async (req, res) => {
+  const auth = await requireControlTowerAccess(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const scopeType = normalizarCoachAnnouncementScopeType(req.body?.scopeType || "global");
+  const territoryId = String(req.body?.territoryId || "").trim();
+  const title = limpiarCoachAnnouncementTitle(req.body?.title || "");
+  const body = limpiarCoachAnnouncementBody(req.body?.body || "");
+  const priority = normalizarCoachAnnouncementPriority(req.body?.priority || "normal");
+
+  if (!title) {
+    return res.status(400).json({ error: "Pon un titulo para el boletin." });
+  }
+
+  if (!body) {
+    return res.status(400).json({ error: "Escribe el contenido del boletin." });
+  }
+
+  try {
+    let territoryDoc = null;
+
+    if (scopeType === "territory") {
+      if (!territoryId || !mongoose.Types.ObjectId.isValid(territoryId)) {
+        return res.status(400).json({ error: "Selecciona un territorio valido." });
+      }
+
+      territoryDoc = await CoachTerritory.findOne({
+        _id: territoryId,
+        status: "active"
+      }).lean();
+
+      if (!territoryDoc) {
+        return res.status(404).json({ error: "No encontre ese territorio." });
+      }
+    }
+
+    const now = new Date();
+    const announcementDoc = await CoachAnnouncement.create({
+      authorUserId: auth.user._id,
+      authorName: auth.user.name || auth.user.email || "Control Tower",
+      scopeType,
+      territoryId: scopeType === "territory" ? territoryDoc._id : null,
+      territoryName: scopeType === "territory" ? territoryDoc.name || "" : "",
+      title,
+      body,
+      priority,
+      status: "active",
+      updatedAt: now
+    });
+
+    res.json({
+      announcement: limpiarCoachAnnouncement(announcementDoc.toObject ? announcementDoc.toObject() : announcementDoc)
+    });
+  } catch (error) {
+    console.error("Error creando boletin maestro:", error.message);
+    res.status(500).json({ error: "No pude mandar ese boletin en este momento." });
+  }
+});
+
+app.post("/api/control/support/:threadId/messages", async (req, res) => {
+  const auth = await requireControlTowerAccess(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const threadId = String(req.params?.threadId || "").trim();
+  const body = limpiarCoachSupportMessageBody(req.body?.body || "");
+
+  if (!threadId || !mongoose.Types.ObjectId.isValid(threadId)) {
+    return res.status(400).json({ error: "Thread invalido." });
+  }
+
+  if (!body) {
+    return res.status(400).json({ error: "Escribe tu respuesta antes de mandarla." });
+  }
+
+  try {
+    const threadDoc = await CoachSupportThread.findById(threadId);
+
+    if (!threadDoc) {
+      return res.status(404).json({ error: "No encontre esa conversacion de soporte." });
+    }
+
+    const now = new Date();
+    await CoachSupportMessage.create({
+      threadId: threadDoc._id,
+      senderUserId: auth.user._id,
+      senderName: auth.user.name || auth.user.email || "Soporte",
+      senderScope: "control_tower",
+      body
+    });
+
+    threadDoc.status = "open";
+    threadDoc.supportUnreadCount = 0;
+    threadDoc.ownerUnreadCount = Number(threadDoc.ownerUnreadCount || 0) + 1;
+    threadDoc.lastMessageAt = now;
+    threadDoc.lastMessagePreview = truncarTextoPrompt(body, 180);
+    threadDoc.updatedAt = now;
+    await threadDoc.save();
+
+    res.json({
+      ok: true,
+      thread: limpiarCoachSupportThread(threadDoc)
+    });
+  } catch (error) {
+    console.error("Error respondiendo soporte desde torre:", error.message);
+    res.status(500).json({ error: "No pude mandar la respuesta de soporte." });
   }
 });
 

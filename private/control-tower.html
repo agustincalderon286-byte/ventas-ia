@@ -433,6 +433,122 @@
             </div>
           </article>
         </section>
+
+        <section class="panel-grid control-comms-grid">
+          <article class="panel-card panel-card-wide">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">Boletin maestro</div>
+                <h3>Noticias internas desde la torre</h3>
+              </div>
+            </div>
+
+            <p class="system-copy">
+              Desde aqui mandas updates del Coach, avisos operativos y noticias generales a toda la red o a un
+              territorio especifico.
+            </p>
+
+            <form class="control-form" data-control-announcement-form>
+              <label>
+                Alcance
+                <select name="scopeType" data-control-announcement-scope>
+                  <option value="global">Toda la red</option>
+                  <option value="territory">Territorio especifico</option>
+                </select>
+              </label>
+              <label data-control-announcement-territory-field hidden>
+                Territorio
+                <select name="territoryId" data-control-announcement-territory>
+                  <option value="">Selecciona un territorio</option>
+                </select>
+              </label>
+              <label>
+                Prioridad
+                <select name="priority">
+                  <option value="normal">Normal</option>
+                  <option value="high">Alta</option>
+                </select>
+              </label>
+              <label>
+                Titulo
+                <input type="text" name="title" maxlength="120" placeholder="Ej. Este mes los puntos cuentan doble" required />
+              </label>
+              <label>
+                Contenido
+                <textarea
+                  name="body"
+                  maxlength="1200"
+                  rows="4"
+                  placeholder="Escribe el aviso interno que quieres mandar a la red."
+                  required
+                ></textarea>
+              </label>
+
+              <div class="control-actions-row">
+                <button type="submit" class="ghost-button" data-control-announcement-save>Mandar boletin</button>
+              </div>
+
+              <div class="control-inline-feedback" data-control-announcement-feedback></div>
+            </form>
+
+            <div class="subsection-block">
+              <strong class="section-label">Boletines recientes</strong>
+              <div class="control-inline-list" data-control-announcement-list>
+                <div class="table-empty">Todavia no hay boletines internos.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel-card panel-card-wide">
+            <div class="panel-header">
+              <div>
+                <div class="eyebrow">Soporte interno</div>
+                <h3>Preguntas directas desde el Coach</h3>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="mini-stat">
+                <strong data-support-open-threads>0</strong>
+                <span>Conversaciones</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-support-unread-threads>0</strong>
+                <span>Sin responder</span>
+              </div>
+            </div>
+
+            <label class="control-select-block">
+              Conversacion
+              <select data-control-support-thread-select>
+                <option value="">Selecciona una conversacion</option>
+              </select>
+            </label>
+
+            <div class="control-message-thread" data-control-support-thread-view>
+              <div class="table-empty">Todavia no hay mensajes de soporte.</div>
+            </div>
+
+            <form class="control-form" data-control-support-reply-form>
+              <label>
+                Respuesta
+                <textarea
+                  name="body"
+                  maxlength="1200"
+                  rows="4"
+                  placeholder="Escribe tu respuesta tecnica o el siguiente paso para esa cuenta."
+                  required
+                ></textarea>
+              </label>
+
+              <div class="control-actions-row">
+                <button type="submit" class="ghost-button" data-control-support-reply-save>Responder soporte</button>
+              </div>
+
+              <div class="control-inline-feedback" data-control-support-feedback></div>
+            </form>
+          </article>
+        </section>
       </main>
     </div>
 
