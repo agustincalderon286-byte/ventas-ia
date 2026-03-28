@@ -68,6 +68,10 @@ const COACH_PRIVATE_RESOURCE_SLOTS = {
   }
 };
 const MAX_PROMPT_HISTORY_MESSAGES = Math.max(4, Number(process.env.MAX_PROMPT_HISTORY_MESSAGES || 12));
+const COACH_PROMPT_HISTORY_MESSAGES = Math.max(
+  4,
+  Math.min(MAX_PROMPT_HISTORY_MESSAGES, Number(process.env.COACH_PROMPT_HISTORY_MESSAGES || 8))
+);
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
   Number(process.env.MAX_RAM_SESSION_MESSAGES || 16)
@@ -7417,12 +7421,34 @@ Usa este perfil para personalizar recetas, recomendaciones y seguimiento comerci
 `;
 }
 
-async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_HISTORY_MESSAGES) {
+function obtenerHistorialConversacionMemoria(sessionId, limit = MAX_PROMPT_HISTORY_MESSAGES) {
   if (!sessionId) {
     return [];
   }
 
   const safeLimit = Math.max(1, Number(limit || MAX_PROMPT_HISTORY_MESSAGES));
+
+  return (conversaciones[sessionId] || [])
+    .slice(-safeLimit)
+    .filter(entry => entry?.role && entry?.content)
+    .map(entry => ({
+      role: entry.role,
+      content: entry.content
+    }));
+}
+
+async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_HISTORY_MESSAGES, options = {}) {
+  if (!sessionId) {
+    return [];
+  }
+
+  const safeLimit = Math.max(1, Number(limit || MAX_PROMPT_HISTORY_MESSAGES));
+  const preferMemory = options?.preferMemory === true;
+  const historialMemoria = obtenerHistorialConversacionMemoria(sessionId, safeLimit);
+
+  if (preferMemory && historialMemoria.length) {
+    return historialMemoria;
+  }
 
   try {
     const historialMongo = await Message.find({ sessionId })
@@ -7444,7 +7470,7 @@ async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_
     console.log("Error leyendo historial MongoDB:", error.message);
   }
 
-  return (conversaciones[sessionId] || []).slice(-safeLimit);
+  return historialMemoria;
 }
 
 function obtenerTextoOperativoLead(lead = null, profile = null) {
@@ -11884,6 +11910,7 @@ app.post("/chat", async (req, res) => {
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
     let estadoPrompt = "";
     let perfilPrompt = "";
+    let preferFastCoachContext = false;
 
     if (modoChat === "coach") {
       const coachOwnerUserId = String(resolverCoachOwnerUserId(coachAuth.user) || coachAuth.user._id);
@@ -11947,40 +11974,57 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         perfilPrompt += construirPromptResultadoDemoActivo(activeDemoOutcomeContext);
       }
 
-      const leadMemory = await obtenerMemoriaLeadRelacionada({
+      const leadMemoryPromise = obtenerMemoriaLeadRelacionada({
         question: preguntaLimpia,
         mode: "coach",
         coachUser: coachAuth.user
       });
+      const activeHealthSurveyPromise =
+        activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)
+          ? CoachHealthSurvey.findOne(
+              construirCoachWorkspaceQuery(coachAuth.user, {
+                _id: activeHealthSurveyId
+              })
+            ).lean()
+          : Promise.resolve(null);
+      const activeProgram414Promise =
+        activeProgram414SheetId &&
+        mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
+        Number.isInteger(activeProgram414ReferralIndex) &&
+        activeProgram414ReferralIndex >= 0
+          ? CoachProgramSheet.findOne({
+              ...construirCoachWorkspaceQuery(coachAuth.user),
+              _id: activeProgram414SheetId
+            }).lean()
+          : Promise.resolve(null);
+      const coachUserMessagePromise = guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: null,
+        leadId: null,
+        role: "user",
+        content: preguntaLimpia,
+        intent: "coach_chat",
+        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
+      const [leadMemory, surveyDoc, programSheetDoc] = await Promise.all([
+        leadMemoryPromise,
+        activeHealthSurveyPromise,
+        activeProgram414Promise,
+        coachUserMessagePromise
+      ]);
+
       repLeadSummary = leadMemory?.repLeadSummary || null;
       activeLeadContext = leadMemory?.leadContext || null;
       perfilPrompt += construirPromptPipelineRepresentante(repLeadSummary);
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
 
-      if (activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)) {
-        const surveyDoc = await CoachHealthSurvey.findOne(
-          construirCoachWorkspaceQuery(coachAuth.user, {
-            _id: activeHealthSurveyId
-          })
-        ).lean();
-
-        if (surveyDoc) {
-          activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
-          perfilPrompt += construirPromptEncuestaSaludActiva(activeHealthSurveyContext);
-        }
+      if (surveyDoc) {
+        activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
+        perfilPrompt += construirPromptEncuestaSaludActiva(activeHealthSurveyContext);
       }
 
-      if (
-        activeProgram414SheetId &&
-        mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
-        Number.isInteger(activeProgram414ReferralIndex) &&
-        activeProgram414ReferralIndex >= 0
-      ) {
-        const programSheetDoc = await CoachProgramSheet.findOne({
-          ...construirCoachWorkspaceQuery(coachAuth.user),
-          _id: activeProgram414SheetId
-        }).lean();
-
+      if (programSheetDoc) {
         const cleanedSheet = limpiarCoachProgramSheet(programSheetDoc);
         const selectedReferral = cleanedSheet?.referrals?.[activeProgram414ReferralIndex] || null;
 
@@ -11994,17 +12038,13 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
           perfilPrompt += construirPromptPrograma414Activo(activeProgram414Context);
         }
       }
-
-      await guardarMensajeRaw({
-        visitorId: visitorIdLimpio,
-        sessionId,
-        profileId: null,
-        leadId: null,
-        role: "user",
-        content: preguntaLimpia,
-        intent: "coach_chat",
-        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
-      });
+      preferFastCoachContext = Boolean(
+        activeHealthSurveyContext ||
+          activeProgram414Context ||
+          activeOrderCalcContext ||
+          activeDecisionContext ||
+          activeDemoOutcomeContext
+      );
     } else {
       coachChefContext = await resolverCoachChefContextPorSlug(chefSlug);
       const leadPrevio = await resolverLeadExistente(
@@ -12072,9 +12112,19 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "chef");
     }
 
-    const contexto = await construirContexto(preguntaLimpia, modoChat);
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
-    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId);
+    const contextoPromise =
+      modoChat === "coach" && preferFastCoachContext
+        ? Promise.resolve(construirContextoEstaticoCoach(preguntaLimpia))
+        : construirContexto(preguntaLimpia, modoChat);
+    const historialPromptPromise = obtenerHistorialConversacionPrompt(
+      sessionId,
+      modoChat === "coach" ? COACH_PROMPT_HISTORY_MESSAGES : MAX_PROMPT_HISTORY_MESSAGES,
+      {
+        preferMemory: modoChat === "coach"
+      }
+    );
+    const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -12113,23 +12163,24 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
     registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
 
     if (modoChat === "coach") {
-      await guardarMensajeRaw({
-        visitorId: visitorIdLimpio,
-        sessionId,
-        profileId: null,
-        leadId: null,
-        role: "assistant",
-        content: respuestaIA.content,
-        intent: "coach_chat",
-        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
-      });
-
-      const coachProfileActualizado = await actualizarPerfilYAnalyticsCoach({
-        userDoc: coachAuth.user,
-        sessionId,
-        question: preguntaLimpia,
-        reply: respuestaIA.content
-      });
+      const [, coachProfileActualizado] = await Promise.all([
+        guardarMensajeRaw({
+          visitorId: visitorIdLimpio,
+          sessionId,
+          profileId: null,
+          leadId: null,
+          role: "assistant",
+          content: respuestaIA.content,
+          intent: "coach_chat",
+          detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+        }),
+        actualizarPerfilYAnalyticsCoach({
+          userDoc: coachAuth.user,
+          sessionId,
+          question: preguntaLimpia,
+          reply: respuestaIA.content
+        })
+      ]);
 
       return res.json({
         respuesta: respuestaIA.content,
