@@ -12298,6 +12298,9 @@ REGLAS DE RESPUESTA:
 - Si la pregunta es sobre seguimiento, da un guion corto o el proximo paso mas fuerte
 - Si la pregunta es sobre orden, DocuCite, documentos o aprobacion, di el paso exacto que sigue y que revisar
 - Si la pregunta es sobre reclutamiento, habla claro y sin exagerar
+- Si la pregunta es sobre como usar la pagina, CRM, Agenda, Prospeccion, Equipo, Territorio, Mensajes o Destino de leads, responde como guia interna del sistema
+- En preguntas de uso del sistema da pasos cortos y claros con el nombre real de la pestana o boton
+- En modo ayuda interna no vendas ni cierres; solo explica como se usa la herramienta
 - Si ya sabes en que momento de la demo va, usa ese contexto para dar la accion que sigue
 - Si el mejor movimiento es cerrar, cierra
 - Si el mejor movimiento es callar y amarrar, dilo sin rodeos
@@ -13779,6 +13782,489 @@ MODO ACTIVO:
 INSTRUCCION:
 Responde como Coach privado de ventas. No trates a este usuario como lead ni como cliente final.
 `;
+}
+
+function normalizarCoachHelpText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function coachHelpMatchesAny(text = "", patterns = []) {
+  return patterns.some(pattern => {
+    if (pattern instanceof RegExp) {
+      return pattern.test(text);
+    }
+
+    return text.includes(normalizarCoachHelpText(pattern));
+  });
+}
+
+function formatearCoachHelpWorkspaceLabel(workspace = "") {
+  const labels = {
+    cierre: "Cierre",
+    prospeccion: "Prospeccion",
+    crm: "CRM",
+    agenda: "Agenda",
+    mensajes: "Mensajes",
+    equipo: "Equipo",
+    territorio: "Territorio"
+  };
+
+  return labels[String(workspace || "").trim().toLowerCase()] || "el modulo correcto";
+}
+
+function construirCoachHelpStepsReply({ intro = "", steps = [], outro = "" } = {}) {
+  const numberedSteps = (Array.isArray(steps) ? steps : [])
+    .filter(Boolean)
+    .map((item, index) => `${index + 1}. ${item}`);
+
+  return [intro, numberedSteps.join("\n"), outro].filter(Boolean).join("\n");
+}
+
+function coachQuestionPareceAyudaSistema(question = "", activeWorkspace = "") {
+  const normalizedQuestion = normalizarCoachHelpText(question);
+
+  if (!normalizedQuestion) {
+    return false;
+  }
+
+  const helpIntent = coachHelpMatchesAny(normalizedQuestion, [
+    /manual/,
+    /como/,
+    /donde/,
+    /puedo/,
+    /busco/,
+    /veo/,
+    /abro/,
+    /entro/,
+    /agrego/,
+    /configuro/,
+    /cambio/,
+    /recibo/,
+    /sirve/,
+    /funciona/,
+    /uso/,
+    /usar/,
+    /explica/,
+    /explicame/,
+    /ayuda/
+  ]);
+
+  const systemKeywords = coachHelpMatchesAny(normalizedQuestion, [
+    /crm/,
+    /agenda/,
+    /prospeccion/,
+    /equipo/,
+    /territorio/,
+    /mensajes/,
+    /boletin/,
+    /soporte/,
+    /subcuenta/,
+    /telemarketing/,
+    /4 en 14/,
+    /4 y 14/,
+    /reclutamiento/,
+    /campana chef/,
+    /chef/,
+    /contactos compartidos/,
+    /subir contactos/,
+    /qr/,
+    /destino/,
+    /correo/,
+    /email/,
+    /pagina/,
+    /app/,
+    /coach/
+  ]);
+
+  const workspaceHint = ["crm", "agenda", "prospeccion", "equipo", "territorio", "mensajes"].includes(
+    String(activeWorkspace || "").trim().toLowerCase()
+  );
+
+  const workspaceActionHint =
+    workspaceHint &&
+    coachHelpMatchesAny(normalizedQuestion, [
+      /cita/,
+      /seguimiento/,
+      /nota/,
+      /resultado/,
+      /no atendio/,
+      /follow up/,
+      /reagend/,
+      /venta/,
+      /no venta/,
+      /mapa/,
+      /direccion/
+    ]);
+
+  return (
+    (helpIntent && systemKeywords) ||
+    workspaceActionHint ||
+    coachHelpMatchesAny(normalizedQuestion, [
+      /como funciona la pagina/,
+      /como funciona el coach/,
+      /como se usa/,
+      /que puedes explicar/,
+      /que me puedes explicar/,
+      /que puedo hacer aqui/
+    ])
+  );
+}
+
+function resolverCoachHelpTopic(question = "", activeWorkspace = "") {
+  const normalizedQuestion = normalizarCoachHelpText(question);
+  const workspace = String(activeWorkspace || "").trim().toLowerCase();
+
+  if (!normalizedQuestion) {
+    return "";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [
+      /manual/,
+      /como funciona la pagina/,
+      /como funciona el coach/,
+      /como se usa/,
+      /que puedes explicar/,
+      /que me puedes explicar/,
+      /que puedo hacer aqui/
+    ])
+  ) {
+    return "manual_general";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [/4 en 14/, /4 y 14/, /4 14/]) &&
+    coachHelpMatchesAny(normalizedQuestion, [/crm/, /buscar/, /busco/, /donde/, /veo/, /fila/, /encuentro/])
+  ) {
+    return "crm_4_14";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [/correo/, /email/]) &&
+    coachHelpMatchesAny(normalizedQuestion, [/copia/, /copias/, /lead/, /leads/, /destino/, /recibir/])
+  ) {
+    return "lead_destination_email";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [
+      /agenda/,
+      /hoy/,
+      /semana/,
+      /mapa/,
+      /direccion/,
+      /ya afuera/,
+      /entro a casa/,
+      /reagend/,
+      /follow up/,
+      /no atendio/
+    ])
+  ) {
+    return "agenda";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [
+      /crm/,
+      /fila/,
+      /seguimiento/,
+      /nota/,
+      /detalle/,
+      /telemarketing/,
+      /representante/
+    ])
+  ) {
+    return "crm_workflow";
+  }
+
+  if (coachHelpMatchesAny(normalizedQuestion, [/equipo/, /subcuenta/, /novato/, /contrasena temporal/, /crear cuenta/])) {
+    return "team";
+  }
+
+  if (coachHelpMatchesAny(normalizedQuestion, [/territorio/, /invita/, /invitacion/, /upline/, /co admin/])) {
+    return "territory";
+  }
+
+  if (coachHelpMatchesAny(normalizedQuestion, [/mensajes/, /boletin/, /boletines/, /soporte/, /chat interno/, /notificacion/])) {
+    return "messages";
+  }
+
+  if (
+    coachHelpMatchesAny(normalizedQuestion, [
+      /chef/,
+      /campana chef/,
+      /subir contactos/,
+      /contactos compartidos/,
+      /qr/,
+      /prospeccion/,
+      /destino de leads/
+    ])
+  ) {
+    return "prospection";
+  }
+
+  if (coachHelpMatchesAny(normalizedQuestion, [/reclutamiento/, /aplicacion de trabajo/, /trabajo/])) {
+    return "recruitment";
+  }
+
+  if (workspace === "agenda") {
+    return "agenda";
+  }
+
+  if (workspace === "crm") {
+    return "crm_workflow";
+  }
+
+  if (workspace === "prospeccion") {
+    return "prospection";
+  }
+
+  if (workspace === "equipo") {
+    return "team";
+  }
+
+  if (workspace === "territorio") {
+    return "territory";
+  }
+
+  if (workspace === "mensajes") {
+    return "messages";
+  }
+
+  return "manual_general";
+}
+
+function construirCoachHelpReply({ userDoc = null, profileDoc = null, question = "", activeWorkspace = "" } = {}) {
+  if (!userDoc || !coachQuestionPareceAyudaSistema(question, activeWorkspace)) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const teamRole = normalizarCoachTeamRole(profileDoc?.teamRole || "", userDoc);
+  const portalMode = resolverCoachPortalMode(userDoc, profileDoc);
+  const isTelemarketingPortal = portalMode === "telemarketing";
+  const isTeamManager = esCoachTeamManager(userDoc);
+  const canUseTerritories = coachPuedeUsarTerritorios(userDoc);
+  const topicId = resolverCoachHelpTopic(question, activeWorkspace);
+  const crmWorkspaceHint =
+    String(activeWorkspace || "").trim().toLowerCase() === "crm"
+      ? ""
+      : "Si no estas ahi, cambiate a CRM y te sigues guiando desde esa vista.";
+  const agendaWorkspaceHint =
+    String(activeWorkspace || "").trim().toLowerCase() === "agenda"
+      ? ""
+      : "Si no estas ahi, cambiate a Agenda y te sigues guiando desde esa vista.";
+  const prospectionWorkspaceHint =
+    String(activeWorkspace || "").trim().toLowerCase() === "prospeccion"
+      ? ""
+      : "Si no estas ahi, cambiate a Prospeccion y te sigues guiando desde esa vista.";
+  const messagesWorkspaceHint =
+    String(activeWorkspace || "").trim().toLowerCase() === "mensajes"
+      ? ""
+      : "Si no estas ahi, cambiate a Mensajes y te sigues guiando desde esa vista.";
+
+  if (!topicId) {
+    return null;
+  }
+
+  switch (topicId) {
+    case "crm_4_14":
+      return {
+        topicId,
+        reply: construirCoachHelpStepsReply({
+          intro: "Para encontrar un 4 en 14 dentro del CRM:",
+          steps: [
+            "Abre CRM.",
+            "En Fuente elige 4 en 14.",
+            "Usa Buscar rapido con nombre, telefono, ciudad o una nota del referido.",
+            "Cada referido entra como fila propia; no veras una sola hoja completa.",
+            "Si abres Detalle o tocas 4 en 14, vuelves a la hoja ligada a esa misma casa."
+          ],
+          outro: crmWorkspaceHint
+        })
+      };
+    case "lead_destination_email":
+      return {
+        topicId,
+        reply: isTeamManager
+          ? construirCoachHelpStepsReply({
+              intro: "Para mandarte copia de tus leads al correo:",
+              steps: [
+                "Abre Prospeccion.",
+                "Baja a Destino de leads.",
+                "En Tipo elige Mandarme copia a mi correo.",
+                "Escribe el email donde quieres recibir esas copias.",
+                "Toca Guardar destino y desde ahi las copias nuevas salen a ese correo."
+              ]
+            })
+          : construirCoachHelpStepsReply({
+              intro:
+                "Esa parte la cambia quien administra la cuenta. Si eres novato o telemarketing, no la configuras desde tu portal.",
+              steps: [
+                "Pidele al dueno, distribuidor o junior que abra Prospeccion.",
+                "En Destino de leads que elija Mandarme copia a mi correo.",
+                "Que escriba el email y toque Guardar destino."
+              ]
+            })
+      };
+    case "agenda":
+      return {
+        topicId,
+        reply: construirCoachHelpStepsReply({
+          intro: "Asi se trabaja la Agenda rapida:",
+          steps: [
+            "Abre Agenda.",
+            "Hoy muestra lo urgente y Semana muestra lo que sigue.",
+            "Desde cada cita puedes llamar, abrir mapa o copiar direccion.",
+            "Usa Ya afuera, Entro a casa, No atendio, Reagendar, Follow up, Venta o No venta.",
+            "Lo que marques en Agenda regresa al mismo registro del CRM."
+          ],
+          outro: agendaWorkspaceHint
+        })
+      };
+    case "crm_workflow":
+      return {
+        topicId,
+        reply: construirCoachHelpStepsReply({
+          intro: "Asi se mueve una fila dentro del CRM:",
+          steps: [
+            "Busca la fila por nombre, telefono, ciudad o nota.",
+            "Cambia Estado, Telemarketing, Representante, Proxima accion, Seguimiento o Nota rapida directo en la tabla.",
+            "Usa Llamar, No atendio, Follow up o Cita para moverla sin abrir detalle.",
+            "Toca Guardar si cambiaste campos inline.",
+            "Abre Detalle solo si ocupas direccion, notas privadas o mas contexto."
+          ],
+          outro: crmWorkspaceHint
+        })
+      };
+    case "team":
+      return {
+        topicId,
+        reply: isTeamManager
+          ? construirCoachHelpStepsReply({
+              intro: "Para crear y mover subcuentas desde Equipo:",
+              steps: [
+                "Abre Equipo.",
+                "Crea la subcuenta y elige si sera novato o telemarketing.",
+                "Guarda el acceso temporal para esa persona.",
+                "Si es telemarketing, entra por su portal de telemarketing.",
+                "Si es novato, trabajara dentro de la cuenta principal segun sus permisos."
+              ]
+            })
+          : construirCoachHelpStepsReply({
+              intro: "Las subcuentas las crea quien administra el equipo.",
+              steps: [
+                "Si ocupas una nueva cuenta, escribela al dueno o al junior que maneja el equipo.",
+                "Ellos la crean desde Equipo y te comparten tu acceso."
+              ]
+            })
+      };
+    case "territory":
+      return {
+        topicId,
+        reply: canUseTerritories
+          ? construirCoachHelpStepsReply({
+              intro: "Para mover cuentas propias dentro de Territorio:",
+              steps: [
+                "Abre Territorio.",
+                "Crea o abre el territorio donde vas a trabajar.",
+                "Invita por correo a distribuidor, junior o co admin.",
+                "Si esa persona ya tiene cuenta, la invitacion le aparece dentro del Coach.",
+                "Los leads propios siguen siendo de cada cuenta; el territorio solo comparte actividad y panel."
+              ]
+            })
+          : construirCoachHelpStepsReply({
+              intro: "Territorio solo aparece para cuentas propias, junior en adelante.",
+              steps: [
+                "Si tu cuenta no ve Territorio, todavia trabajas dentro de tu cuenta o de tu jefe.",
+                "Cuando te suban a cuenta propia o junior, ahi ya puedes entrar a esa capa."
+              ]
+            })
+      };
+    case "messages":
+      return {
+        topicId,
+        reply: construirCoachHelpStepsReply({
+          intro: "Mensajes tiene tres usos internos:",
+          steps: [
+            "Boletines para avisos de sistema, territorio o equipo.",
+            "Soporte para escribir preguntas tecnicas sin salir del Coach.",
+            "Chats directos para hablar con equipo y cuentas permitidas.",
+            "Si ya leiste todo, usa Marcar todo como leido."
+          ],
+          outro: messagesWorkspaceHint
+        })
+      };
+    case "prospection":
+      return {
+        topicId,
+        reply: isTelemarketingPortal
+          ? construirCoachHelpStepsReply({
+              intro:
+                "En tu portal de telemarketing lo principal es CRM y Agenda. Prospeccion la maneja quien administra la cuenta.",
+              steps: [
+                "Si ocupas un dato de Chef, contactos o destino de leads, pidelo al distribuidor o junior que administra la cuenta.",
+                "Tu trabajo operativo vive en CRM y Agenda."
+              ]
+            })
+          : construirCoachHelpStepsReply({
+              intro: "En Prospeccion tienes estas piezas principales:",
+              steps: [
+                "Campana Chef para el primer mensaje a Contactos compartidos.",
+                "Subir contactos para CSV, VCF o pegar nombres y telefonos.",
+                "Captura propia y carpeta de leads para rifa y seguimiento.",
+                "Destino de leads para correo personal, Google Sheets o webhook/CRM."
+              ],
+              outro: prospectionWorkspaceHint
+            })
+      };
+    case "recruitment":
+      return {
+        topicId,
+        reply: construirCoachHelpStepsReply({
+          intro: "Las aplicaciones de trabajo ya entran al CRM sin mover nada manual:",
+          steps: [
+            "Abre CRM.",
+            "En Fuente elige Reclutamiento.",
+            "Desde ahi las trabajas igual que cualquier otra fila: estado, seguimiento, nota, cita y resultado."
+          ],
+          outro: crmWorkspaceHint
+        })
+      };
+    case "manual_general":
+    default:
+      return {
+        topicId: "manual_general",
+        reply: isTelemarketingPortal
+          ? construirCoachHelpStepsReply({
+              intro: "Si la pregunta es de uso del sistema, aqui te sirvo como copiloto del portal.",
+              steps: [
+                "CRM para buscar filas, dejar notas y mover estados.",
+                "Agenda para ver hoy o semana y marcar resultados.",
+                "Mensajes para boletines y soporte si tu cuenta lo tiene."
+              ],
+              outro:
+                "Pruebame con algo como: como busco un 4 en 14, como marco una cita o como dejo un follow up."
+            })
+          : construirCoachHelpStepsReply({
+              intro: "Si la pregunta es de uso del sistema, te la explico paso a paso.",
+              steps: [
+                "Prospeccion: Chef, Subir contactos, carpeta y destino de leads.",
+                "CRM y Agenda: seguimiento, citas, resultados y ventas.",
+                "Equipo y Territorio: subcuentas, invitaciones y actividad.",
+                "Mensajes: boletines, chat interno y soporte."
+              ],
+              outro:
+                "Pruebame con algo como: como agrego mi correo, como busco un 4 en 14 o como invito a alguien al territorio."
+            })
+      };
+  }
 }
 
 // =============================
@@ -17371,6 +17857,49 @@ app.post("/chat", async (req, res) => {
         intent: "coach_chat",
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
+
+      const coachHelpReply = construirCoachHelpReply({
+        userDoc: coachAuth.user,
+        profileDoc: coachProfileDoc,
+        question: preguntaLimpia,
+        activeWorkspace
+      });
+
+      if (coachHelpReply?.reply) {
+        registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
+        registrarMensajeMemoria(sessionId, "assistant", coachHelpReply.reply);
+
+        void Promise.allSettled([
+          coachUserMessageTask,
+          guardarMensajeRaw({
+            visitorId: visitorIdLimpio,
+            sessionId,
+            profileId: null,
+            leadId: null,
+            role: "assistant",
+            content: coachHelpReply.reply,
+            intent: "coach_help",
+            detectedTopics: [
+              `coach_user:${String(coachAuth.user._id)}`,
+              `coach_help:${coachHelpReply.topicId || "general"}`
+            ]
+          })
+        ]).catch(error => {
+          console.error("Error guardando ayuda interna del Coach:", error.message);
+        });
+
+        return res.json({
+          respuesta: coachHelpReply.reply,
+          mode: modoChat,
+          coachHelpMode: true,
+          coachHelpTopic: coachHelpReply.topicId || "general",
+          usage: {
+            usedToday: (coachUsage?.usedToday || 0) + 1,
+            remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
+            limitPerDay: COACH_MAX_MESSAGES_PER_DAY
+          }
+        });
+      }
 
       estadoPrompt = `
 ESTADO DEL COACH:
