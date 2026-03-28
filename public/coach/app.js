@@ -5153,12 +5153,76 @@ function initCoachCrmWorkspace(user = null) {
     };
   };
 
+  const buildInlineQuickActionPayload = (row, actionType) => {
+    const payload = getInlineRowPayload(row);
+
+    if (!payload) {
+      return { payload: null, error: "No pude leer esa fila del CRM." };
+    }
+
+    const normalizedAction = String(actionType || "").trim();
+
+    if (normalizedAction === "no_answer") {
+      payload.status = "no_atendio";
+      payload.nextAction = payload.nextAction || "llamar";
+      return { payload, error: "" };
+    }
+
+    if (normalizedAction === "follow_up") {
+      payload.status = "seguimiento";
+      payload.nextAction = "seguimiento";
+      return { payload, error: "" };
+    }
+
+    if (normalizedAction === "appointment") {
+      if (!payload.nextActionAt) {
+        return {
+          payload: null,
+          error: "Pon fecha y hora en Seguimiento antes de marcar una cita."
+        };
+      }
+
+      payload.status = ["cita_agendada", "reagendada"].includes(payload.status) ? "reagendada" : "cita_agendada";
+      payload.nextAction = "cita";
+      return { payload, error: "" };
+    }
+
+    return { payload, error: "" };
+  };
+
   const markInlineRowDirty = (row, dirty = true) => {
     if (!row) {
       return;
     }
 
     row.classList.toggle("is-dirty", dirty);
+  };
+
+  const saveInlineRow = async (row, saveButton, payload, successMessage = "Fila guardada en el CRM.") => {
+    const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+
+    if (!recordId) {
+      return;
+    }
+
+    clearMessage(summaryFeedback);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      await apiRequest(`/api/coach/crm/records/${encodeURIComponent(recordId)}`, {
+        method: "PATCH",
+        body: payload
+      });
+      markInlineRowDirty(row, false);
+      state.activeRecordId = recordId;
+      await loadWorkspace(true);
+      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
+      setMessage(summaryFeedback, successMessage, "success");
+    } catch (error) {
+      setMessage(summaryFeedback, error.message || "No pude guardar esa fila.", "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
   };
 
   const renderDetail = detail => {
@@ -5254,6 +5318,7 @@ function initCoachCrmWorkspace(user = null) {
         const isActive = record.id === state.activeRecordId;
         const cityCopy = [record.city || "", record.zipCode ? `ZIP ${record.zipCode}` : ""].filter(Boolean).join(" · ");
         const notePlaceholder = truncateCoachCrmCell(record.lastNote || record.briefHistory || "", 92);
+        const phoneHref = normalizeLeadPhone(record.phone || "");
         return `
           <article
             class="crm-grid-row${isActive ? " is-active" : ""}"
@@ -5310,8 +5375,20 @@ function initCoachCrmWorkspace(user = null) {
               <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 74) || "Sin historial breve")}</small>
             </span>
             <span class="crm-inline-actions">
-              <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
-              <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
+              <span class="crm-inline-action-grid">
+                ${
+                  phoneHref
+                    ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(phoneHref)}">Llamar</a>`
+                    : '<span class="crm-inline-action-chip is-disabled">Sin telefono</span>'
+                }
+                <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
+                <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
+                <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+              </span>
+              <span class="crm-inline-action-grid crm-inline-action-grid-meta">
+                <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
+                <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
+              </span>
             </span>
           </article>
         `;
@@ -5441,32 +5518,35 @@ function initCoachCrmWorkspace(user = null) {
 
     if (saveButton) {
       const row = saveButton.closest("[data-crm-inline-row]");
-      const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+      saveInlineRow(row, saveButton, getInlineRowPayload(row), "Fila guardada en el CRM.");
+      return;
+    }
 
-      if (!recordId) {
+    const quickActionButton = event.target.closest(
+      "[data-crm-inline-no-answer], [data-crm-inline-follow-up], [data-crm-inline-appointment]"
+    );
+
+    if (quickActionButton) {
+      const row = quickActionButton.closest("[data-crm-inline-row]");
+      const actionType = quickActionButton.hasAttribute("data-crm-inline-no-answer")
+        ? "no_answer"
+        : quickActionButton.hasAttribute("data-crm-inline-follow-up")
+          ? "follow_up"
+          : "appointment";
+      const { payload, error } = buildInlineQuickActionPayload(row, actionType);
+
+      if (error) {
+        setMessage(summaryFeedback, error, "error");
         return;
       }
 
-      clearMessage(summaryFeedback);
-      setButtonLoading(saveButton, true, "Guardando...");
-
-      apiRequest(`/api/coach/crm/records/${encodeURIComponent(recordId)}`, {
-        method: "PATCH",
-        body: getInlineRowPayload(row)
-      })
-        .then(async () => {
-          markInlineRowDirty(row, false);
-          state.activeRecordId = recordId;
-          await loadWorkspace(true);
-          window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
-          setMessage(summaryFeedback, "Fila guardada en el CRM.", "success");
-        })
-        .catch(error => {
-          setMessage(summaryFeedback, error.message || "No pude guardar esa fila.", "error");
-        })
-        .finally(() => {
-          setButtonLoading(saveButton, false);
-        });
+      const successMessage =
+        actionType === "no_answer"
+          ? "Fila marcada como No atendio."
+          : actionType === "follow_up"
+            ? "Fila movida a Follow up."
+            : "Cita marcada y enviada a Agenda.";
+      saveInlineRow(row, quickActionButton, payload, successMessage);
       return;
     }
 

@@ -1424,9 +1424,53 @@ img {
 }
 
 .crm-inline-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
+}
+
+.crm-inline-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crm-inline-action-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.crm-inline-action-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.crm-inline-action-chip.is-disabled {
+  cursor: default;
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.crm-inline-action-grid-meta .nav-button,
+.crm-inline-action-grid-meta .secondary-button {
+  width: 100%;
 }
 
 .crm-inline-actions .nav-button,
@@ -4960,6 +5004,18 @@ html[data-coach-portal-mode="telemarketing"] .crm-inline-select,
 html[data-coach-portal-mode="telemarketing"] .crm-inline-input {
   border-color: rgba(122, 215, 255, 0.18);
   background: rgba(6, 16, 27, 0.76);
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-inline-action-chip {
+  border-color: rgba(122, 215, 255, 0.18);
+  background: rgba(6, 16, 27, 0.76);
+  color: #dff7ff;
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-inline-action-chip:hover {
+  border-color: rgba(122, 215, 255, 0.36);
+  background: rgba(10, 26, 40, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(122, 215, 255, 0.08);
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-grid-row.is-dirty {
