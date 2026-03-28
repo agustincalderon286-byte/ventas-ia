@@ -2140,6 +2140,10 @@ function highLevelLeadSyncEstaConfigurado() {
   return Boolean(HIGHLEVEL_SYNC_ENABLED && HIGHLEVEL_PRIVATE_TOKEN && HIGHLEVEL_LOCATION_ID);
 }
 
+function highLevelSyncEstaConfigurado() {
+  return highLevelLeadSyncEstaConfigurado();
+}
+
 function highLevelOpportunitySyncEstaConfigurado() {
   return Boolean(highLevelLeadSyncEstaConfigurado() && HIGHLEVEL_PIPELINE_ID && HIGHLEVEL_PIPELINE_STAGE_ID);
 }
