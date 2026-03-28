@@ -4070,6 +4070,113 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
   };
 }
 
+function construirCoachAgendaWorkspaceQuery(userDoc = null) {
+  const query = {
+    ...construirCoachCrmWorkspaceQuery(userDoc),
+    status: {
+      $in: ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"]
+    }
+  };
+
+  if (normalizarCoachAccountType(userDoc?.accountType || "owner") === "seat" && userDoc?._id) {
+    query.$or = [
+      { appointmentRepUserId: userDoc._id },
+      {
+        appointmentRepUserId: null,
+        generatedByUserId: userDoc._id
+      }
+    ];
+  }
+
+  return query;
+}
+
+function construirCoachAgendaMapsUrl(recordDoc = null) {
+  const query = [recordDoc?.address || "", recordDoc?.city || "", recordDoc?.zipCode || ""]
+    .map(item => cleanText(item || "").trim())
+    .filter(Boolean)
+    .join(", ");
+
+  if (!query) {
+    return "";
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function limpiarCoachAgendaRecord(recordDoc = null) {
+  const cleaned = limpiarCoachCrmRecord(recordDoc);
+
+  if (!cleaned) {
+    return null;
+  }
+
+  const appointmentAt = cleaned.appointmentAt || cleaned.nextActionAt || null;
+  const phoneDigits = formatearTelefonoE164(cleaned.phone || "");
+
+  return {
+    ...cleaned,
+    appointmentAt,
+    phoneHref: phoneDigits || "",
+    mapsUrl: construirCoachAgendaMapsUrl(cleaned)
+  };
+}
+
+async function obtenerCoachAgendaWorkspace(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      viewerMode: "rep",
+      summary: {
+        today: 0,
+        week: 0,
+        pendingResults: 0,
+        outside: 0
+      },
+      today: [],
+      week: []
+    };
+  }
+
+  await asegurarCoachCrmWorkspace(userDoc);
+  const query = construirCoachAgendaWorkspaceQuery(userDoc);
+  const recordDocs = await CoachCrmRecord.find(query)
+    .sort({ appointmentAt: 1, nextActionAt: 1, updatedAt: -1 })
+    .limit(250)
+    .lean();
+
+  const items = recordDocs
+    .map(limpiarCoachAgendaRecord)
+    .filter(item => item?.appointmentAt)
+    .sort((a, b) => new Date(a.appointmentAt).getTime() - new Date(b.appointmentAt).getTime());
+
+  const now = new Date();
+  const startOfToday = obtenerInicioDia(now);
+  const endOfToday = obtenerFinDia(now);
+  const endOfWeek = obtenerFinDia(new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000));
+  const today = items.filter(item => {
+    const appointmentDate = new Date(item.appointmentAt);
+    return appointmentDate >= startOfToday && appointmentDate <= endOfToday;
+  });
+  const week = items.filter(item => {
+    const appointmentDate = new Date(item.appointmentAt);
+    return appointmentDate >= startOfToday && appointmentDate <= endOfWeek;
+  });
+
+  return {
+    viewerMode: esCoachTeamManager(userDoc) ? "manager" : "rep",
+    summary: {
+      today: today.length,
+      week: week.length,
+      pendingResults: items.filter(item =>
+        ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(item.status)
+      ).length,
+      outside: items.filter(item => item.status === "ya_afuera").length
+    },
+    today,
+    week
+  };
+}
+
 async function obtenerControlCommunicationsOverview() {
   const [territoryDocs, announcementDocs, threadDocs] = await Promise.all([
     CoachTerritory.find({ status: "active" })
@@ -14375,6 +14482,22 @@ app.get("/api/coach/crm/records/:recordId", async (req, res) => {
   }
 });
 
+app.get("/api/coach/agenda", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const data = await obtenerCoachAgendaWorkspace(auth.user);
+    res.json(data);
+  } catch (error) {
+    console.error("Error cargando agenda del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar la agenda en este momento.");
+  }
+});
+
 app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -14444,6 +14567,10 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "address")) {
+      recordDoc.address = truncarCoachCrmText(req.body?.address || "", 240);
+    }
+
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "briefHistory")) {
       recordDoc.briefHistory = truncarCoachCrmText(req.body?.briefHistory || "", 320);
     }
@@ -14493,6 +14620,10 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
       recordDoc.privateNotes = recordDoc.privateNotes ? `${recordDoc.privateNotes}\n\n${note}`.slice(0, 1200) : note;
       updates.note = note;
       activityLines.push(`Nota: ${note}`);
+    }
+
+    if (activityLines.length || note) {
+      recordDoc.lastContactAt = now;
     }
 
     recordDoc.updatedAt = now;

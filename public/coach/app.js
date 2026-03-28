@@ -579,6 +579,10 @@ function initCoachWorkspaceTabs() {
             label: "Cambio a modo prospeccion",
             detail: "Entraste al lado de captar leads y trabajar calle."
           },
+          agenda: {
+            label: "Cambio a modo agenda",
+            detail: "Entraste a la vista rapida de citas y resultados del representante."
+          },
           equipo: {
             label: "Cambio a modo equipo",
             detail: "Entraste al panel para mover subcuentas y revisar produccion del equipo."
@@ -4217,6 +4221,251 @@ function formatCoachCrmMoney(value = 0) {
   });
 }
 
+function formatCoachAgendaAddress(record = null) {
+  return [record?.address || "", record?.city || "", record?.zipCode || ""]
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function promptCoachAgendaDateTime(message = "", fallback = "") {
+  const suggested = formatDateTimeLocalValue(fallback).replace("T", " ");
+  const input = window.prompt(`${message}\nUsa formato YYYY-MM-DD HH:MM`, suggested || "");
+
+  if (input === null) {
+    return null;
+  }
+
+  const safeValue = String(input || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const normalized = safeValue.includes("T") ? safeValue : safeValue.replace(/\s+/, "T");
+  const parsed = new Date(normalized);
+
+  if (Number.isNaN(parsed.getTime())) {
+    window.alert("No pude leer esa fecha. Usa formato YYYY-MM-DD HH:MM.");
+    return undefined;
+  }
+
+  return parsed.toISOString();
+}
+
+function buildCoachAgendaActionPayload(action = "", record = null) {
+  const normalizedAction = String(action || "").trim().toLowerCase();
+
+  if (!normalizedAction || !record?.id) {
+    return null;
+  }
+
+  switch (normalizedAction) {
+    case "outside":
+      return {
+        status: "ya_afuera",
+        lastNote: "Representante ya esta afuera."
+      };
+    case "inside":
+      return {
+        status: "entro_a_casa",
+        lastNote: "Representante entro a casa."
+      };
+    case "demo":
+      return {
+        status: "demo_hecha",
+        lastNote: "Demo hecha."
+      };
+    case "no_answer": {
+      const note = window.prompt("Anota algo rapido para dejar claro que paso.", record.lastNote || "");
+
+      if (note === null) {
+        return null;
+      }
+
+      return {
+        status: "no_atendio",
+        nextAction: "llamar",
+        lastNote: String(note || "").trim() || "No atendio."
+      };
+    }
+    case "follow_up": {
+      const nextDate = promptCoachAgendaDateTime(
+        "Cuando quieres dejar el siguiente seguimiento?",
+        record.nextActionAt || record.appointmentAt || ""
+      );
+
+      if (nextDate === null || typeof nextDate === "undefined") {
+        return null;
+      }
+
+      const note = window.prompt("Nota rapida para el seguimiento.", record.lastNote || "");
+
+      if (note === null) {
+        return null;
+      }
+
+      return {
+        status: "seguimiento",
+        nextAction: "seguimiento",
+        nextActionAt: nextDate,
+        lastNote: String(note || "").trim() || "Follow up programado desde Agenda."
+      };
+    }
+    case "reschedule": {
+      const nextDate = promptCoachAgendaDateTime(
+        "Nueva fecha de cita.",
+        record.appointmentAt || record.nextActionAt || ""
+      );
+
+      if (nextDate === null || typeof nextDate === "undefined" || !nextDate) {
+        return null;
+      }
+
+      const note = window.prompt("Nota rapida para la reagenda.", record.lastNote || "");
+
+      if (note === null) {
+        return null;
+      }
+
+      return {
+        status: "reagendada",
+        nextAction: "cita",
+        nextActionAt: nextDate,
+        lastNote: String(note || "").trim() || "Cita reagendada desde Agenda."
+      };
+    }
+    case "sale": {
+      const rawAmount = window.prompt("Cuanto se vendio?", record.saleAmount ? String(record.saleAmount) : "");
+
+      if (rawAmount === null) {
+        return null;
+      }
+
+      const amount = Number(String(rawAmount || "").replace(/[^0-9.]/g, ""));
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        window.alert("Escribe un monto valido mayor que cero.");
+        return null;
+      }
+
+      const note = window.prompt("Nota rapida de la venta.", record.lastNote || "");
+
+      if (note === null) {
+        return null;
+      }
+
+      return {
+        status: "venta",
+        saleAmount: amount,
+        lastNote: String(note || "").trim() || "Venta reportada desde Agenda."
+      };
+    }
+    case "no_sale": {
+      const note = window.prompt("Nota rapida para dejar claro por que no se vendio.", record.lastNote || "");
+
+      if (note === null) {
+        return null;
+      }
+
+      return {
+        status: "no_venta",
+        lastNote: String(note || "").trim() || "No venta reportada desde Agenda."
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function buildCoachAgendaCard(record = null) {
+  if (!record?.id) {
+    return "";
+  }
+
+  const address = formatCoachAgendaAddress(record);
+  const primaryActions = [
+    record.phoneHref
+      ? `<a class="secondary-button" href="tel:${escapeHtml(record.phoneHref)}">Llamar</a>`
+      : "",
+    record.mapsUrl
+      ? `<a class="nav-button" href="${escapeHtml(record.mapsUrl)}" target="_blank" rel="noreferrer">Mapa</a>`
+      : "",
+    address
+      ? `<button type="button" class="nav-button" data-agenda-copy-address="${escapeHtml(address)}">Copiar direccion</button>`
+      : ""
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const quickActions = [
+    { action: "outside", label: "Ya afuera" },
+    { action: "inside", label: "Entro a casa" },
+    { action: "demo", label: "Demo hecha" },
+    { action: "no_answer", label: "No atendio" },
+    { action: "reschedule", label: "Reagendar" },
+    { action: "follow_up", label: "Follow up" },
+    { action: "sale", label: "Venta" },
+    { action: "no_sale", label: "No venta" }
+  ]
+    .map(
+      item => `
+        <button
+          type="button"
+          class="nav-button"
+          data-agenda-action="${escapeHtml(item.action)}"
+          data-agenda-record-id="${escapeHtml(record.id)}"
+        >
+          ${escapeHtml(item.label)}
+        </button>
+      `
+    )
+    .join("");
+
+  const meta = [
+    record.phone ? formatLeadPhone(record.phone) : "",
+    formatCoachCrmSourceLabel(record.sourceType),
+    record.appointmentRepName || record.assignedTelemarketerName || "",
+    address
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return `
+    <article class="agenda-card">
+      <div class="agenda-card-head">
+        <div>
+          <div class="eyebrow">${escapeHtml(record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora")}</div>
+          <h3>${escapeHtml(record.leadName || "Sin nombre")}</h3>
+          <p>${escapeHtml(meta || "Sin datos extra todavia.")}</p>
+        </div>
+        <span class="team-seat-status" data-state="${escapeHtml(record.statusColor || "blue")}">
+          ${escapeHtml(formatCoachCrmStatusLabel(record.status))}
+        </span>
+      </div>
+
+      <div class="territory-inline-list">
+        <div class="territory-inline-chip">
+          <strong>Historial breve</strong>
+          <span>${escapeHtml(record.briefHistory || "Sin historial breve todavia.")}</span>
+        </div>
+        <div class="territory-inline-chip">
+          <strong>Nota reciente</strong>
+          <span>${escapeHtml(record.lastNote || "Sin nota reciente.")}</span>
+        </div>
+      </div>
+
+      <div class="dashboard-actions compact-top agenda-card-actions">
+        ${primaryActions || '<span class="mini-note">Completa telefono o direccion en el CRM para usar llamadas y mapa.</span>'}
+      </div>
+
+      <div class="dashboard-actions compact-top agenda-card-actions">
+        ${quickActions}
+      </div>
+    </article>
+  `;
+}
+
 function initCoachCrmWorkspace(user = null) {
   const summaryFeedback = document.querySelector("[data-crm-feedback]");
   const sourceFilter = document.querySelector("[data-crm-source-filter]");
@@ -4238,6 +4487,7 @@ function initCoachCrmWorkspace(user = null) {
   const detailStatusInput = document.querySelector("[data-crm-detail-status-input]");
   const detailNextAction = document.querySelector("[data-crm-detail-next-action]");
   const detailNextActionAt = document.querySelector("[data-crm-detail-next-action-at]");
+  const detailAddress = document.querySelector("[data-crm-detail-address]");
   const detailTelemarketer = document.querySelector("[data-crm-detail-telemarketer]");
   const detailRepresentative = document.querySelector("[data-crm-detail-representative]");
   const detailHistoryInput = document.querySelector("[data-crm-detail-history-input]");
@@ -4363,6 +4613,9 @@ function initCoachCrmWorkspace(user = null) {
     ).join("");
     detailNextAction.value = record.nextAction || "";
     detailNextActionAt.value = formatDateTimeLocalValue(record.nextActionAt);
+    if (detailAddress) {
+      detailAddress.value = record.address || "";
+    }
     detailTelemarketer.value = record.assignedTelemarketerUserId || "";
     detailRepresentative.value = record.appointmentRepUserId || "";
     detailHistoryInput.value = record.briefHistory || "";
@@ -4533,6 +4786,7 @@ function initCoachCrmWorkspace(user = null) {
         status: formData.get("status"),
         nextAction: formData.get("nextAction"),
         nextActionAt: nextActionAtValue ? new Date(nextActionAtValue).toISOString() : "",
+        address: formData.get("address"),
         assignedTelemarketerUserId: formData.get("assignedTelemarketerUserId"),
         appointmentRepUserId: formData.get("appointmentRepUserId"),
         briefHistory: formData.get("briefHistory"),
@@ -4547,6 +4801,7 @@ function initCoachCrmWorkspace(user = null) {
       state.activeDetail = data || null;
       renderDetail(state.activeDetail);
       await loadWorkspace(true);
+      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
       setMessage(detailFeedback, "Seguimiento guardado en el CRM.", "success");
     } catch (error) {
       setMessage(detailFeedback, error.message || "No pude guardar este seguimiento.", "error");
@@ -4555,8 +4810,168 @@ function initCoachCrmWorkspace(user = null) {
     }
   });
 
+  window.addEventListener("coach-crm-refresh-request", () => {
+    loadWorkspace(true).catch(error => {
+      setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+    });
+  });
+
   loadWorkspace(true).catch(error => {
     setMessage(summaryFeedback, error.message || "No pude cargar el CRM.", "error");
+  });
+}
+
+function initCoachAgendaWorkspace(user = null) {
+  const feedbackNode = document.querySelector("[data-agenda-feedback]");
+  const refreshButton = document.querySelector("[data-agenda-refresh]");
+  const todayList = document.querySelector("[data-agenda-today-list]");
+  const weekList = document.querySelector("[data-agenda-week-list]");
+
+  if (!feedbackNode || !todayList || !weekList) {
+    return;
+  }
+
+  const state = {
+    records: []
+  };
+
+  const setSummary = summary => {
+    const safeSummary = summary || {};
+    document.querySelectorAll("[data-agenda-today]").forEach(node => {
+      node.textContent = String(safeSummary.today || 0);
+    });
+    document.querySelectorAll("[data-agenda-week]").forEach(node => {
+      node.textContent = String(safeSummary.week || 0);
+    });
+    document.querySelectorAll("[data-agenda-pending-results]").forEach(node => {
+      node.textContent = String(safeSummary.pendingResults || 0);
+    });
+    document.querySelectorAll("[data-agenda-outside]").forEach(node => {
+      node.textContent = String(safeSummary.outside || 0);
+    });
+  };
+
+  const renderList = (target, items = [], emptyCopy = "") => {
+    target.innerHTML = items.length
+      ? items.map(buildCoachAgendaCard).join("")
+      : `<div class="team-seat-empty">${escapeHtml(emptyCopy || "Todavia no hay citas aqui.")}</div>`;
+  };
+
+  const findRecord = recordId =>
+    state.records.find(item => String(item.id || "") === String(recordId || "").trim()) || null;
+
+  const loadWorkspace = async () => {
+    const data = await apiRequest("/api/coach/agenda");
+    const today = Array.isArray(data?.today) ? data.today : [];
+    const week = Array.isArray(data?.week) ? data.week : [];
+
+    state.records = [...today, ...week].filter(
+      (item, index, all) => item?.id && all.findIndex(candidate => candidate.id === item.id) === index
+    );
+
+    setSummary(data?.summary || null);
+    renderList(todayList, today, "Todavia no hay citas para hoy.");
+    renderList(weekList, week, "Todavia no hay citas para esta semana.");
+  };
+
+  const handleAction = async (button, action, recordId) => {
+    const record = findRecord(recordId);
+
+    if (!record) {
+      setMessage(feedbackNode, "No encontre ese movimiento de agenda.", "error");
+      return;
+    }
+
+    const payload = buildCoachAgendaActionPayload(action, record);
+
+    if (!payload) {
+      return;
+    }
+
+    clearMessage(feedbackNode);
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      await apiRequest(`/api/coach/crm/records/${encodeURIComponent(record.id)}`, {
+        method: "PATCH",
+        body: payload
+      });
+      await loadWorkspace();
+      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+      setMessage(feedbackNode, "Agenda actualizada.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, error.message || "No pude guardar ese resultado.", "error");
+    } finally {
+      setButtonLoading(button, false);
+    }
+  };
+
+  const handleListClick = async event => {
+    const copyButton = event.target.closest("[data-agenda-copy-address]");
+
+    if (copyButton) {
+      const address = String(copyButton.getAttribute("data-agenda-copy-address") || "").trim();
+
+      if (!address) {
+        return;
+      }
+
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(address);
+          setMessage(feedbackNode, "Direccion copiada.", "success");
+        } else {
+          window.prompt("Copia esta direccion.", address);
+        }
+      } catch (error) {
+        setMessage(feedbackNode, "No pude copiar la direccion en este momento.", "error");
+      }
+
+      return;
+    }
+
+    const actionButton = event.target.closest("[data-agenda-action]");
+
+    if (!actionButton) {
+      return;
+    }
+
+    const action = String(actionButton.getAttribute("data-agenda-action") || "").trim();
+    const recordId = String(actionButton.getAttribute("data-agenda-record-id") || "").trim();
+    await handleAction(actionButton, action, recordId);
+  };
+
+  if (!user) {
+    setSummary(null);
+    renderList(todayList, [], "Todavia no hay citas para hoy.");
+    renderList(weekList, [], "Todavia no hay citas para esta semana.");
+    return;
+  }
+
+  refreshButton?.addEventListener("click", async () => {
+    clearMessage(feedbackNode);
+    setButtonLoading(refreshButton, true, "Actualizando...");
+
+    try {
+      await loadWorkspace();
+      setMessage(feedbackNode, "Agenda actualizada.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, error.message || "No pude cargar la agenda.", "error");
+    } finally {
+      setButtonLoading(refreshButton, false);
+    }
+  });
+
+  todayList.addEventListener("click", handleListClick);
+  weekList.addEventListener("click", handleListClick);
+  window.addEventListener("coach-agenda-refresh-request", () => {
+    loadWorkspace().catch(error => {
+      setMessage(feedbackNode, error.message || "No pude actualizar la agenda.", "error");
+    });
+  });
+
+  loadWorkspace().catch(error => {
+    setMessage(feedbackNode, error.message || "No pude cargar la agenda.", "error");
   });
 }
 
@@ -7153,6 +7568,7 @@ async function initCoachAppPage() {
   initCoachPrivateResources();
   initCoachLeadWorkspace();
   initCoachCrmWorkspace(me.user);
+  initCoachAgendaWorkspace(me.user);
   initChefCampaignTool();
   initCoachMessagesWorkspace(me.user);
   initCoachTeamWorkspace(me.user);

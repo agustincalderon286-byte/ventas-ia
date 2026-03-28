@@ -1406,6 +1406,47 @@ img {
   margin-top: 18px;
 }
 
+.agenda-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.agenda-card {
+  padding: 20px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agenda-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.agenda-card-head h3,
+.agenda-card-head p {
+  margin: 0;
+}
+
+.agenda-card-head p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.agenda-card-actions {
+  align-items: center;
+}
+
+.agenda-card .nav-button,
+.agenda-card .secondary-button {
+  min-height: 42px;
+  padding: 0 14px;
+}
+
 @media (max-width: 1080px) {
   .crm-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1423,6 +1464,10 @@ img {
   .crm-grid-row span:nth-child(6),
   .crm-grid-row span:nth-child(7) {
     display: none;
+  }
+
+  .agenda-card-head {
+    flex-direction: column;
   }
 }
 

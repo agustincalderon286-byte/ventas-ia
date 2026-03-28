@@ -129,6 +129,14 @@
               <button
                 type="button"
                 class="coach-workspace-tab"
+                data-coach-workspace-tab="agenda"
+                aria-selected="false"
+              >
+                Agenda
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
                 data-coach-workspace-tab="mensajes"
                 aria-selected="false"
               >
@@ -343,6 +351,17 @@
                 </label>
 
                 <label>
+                  Direccion
+                  <input
+                    type="text"
+                    name="address"
+                    maxlength="240"
+                    placeholder="Ej. 123 Main St Apt 2 o referencia de la casa."
+                    data-crm-detail-address
+                  />
+                </label>
+
+                <label>
                   Telemarketer
                   <select name="assignedTelemarketerUserId" data-crm-detail-telemarketer></select>
                 </label>
@@ -407,6 +426,60 @@
               <div class="territory-result-list" data-crm-activity-list>
                 <div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>
               </div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="agenda" hidden>
+            <div class="eyebrow">Agenda rapida</div>
+            <h3>Citas del dia y de la semana</h3>
+            <p>
+              Esta vista esta hecha para el representante. Aqui ve sus citas, marca resultados rapido y manda el
+              movimiento de regreso al CRM sin salir del Coach.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-agenda-today>0</strong>
+                <span>Hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-agenda-week>0</strong>
+                <span>Semana</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-agenda-pending-results>0</strong>
+                <span>Por cerrar</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-agenda-outside>0</strong>
+                <span>Ya afuera</span>
+              </div>
+            </div>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="nav-button" data-agenda-refresh>Actualizar agenda</button>
+            </div>
+
+            <div class="form-result" data-agenda-feedback></div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="agenda" hidden>
+            <div class="eyebrow">Hoy</div>
+            <h3>Trabajo del dia</h3>
+            <p>Abre mapa, llama y marca estado rapido desde el celular o la tableta.</p>
+
+            <div class="agenda-list" data-agenda-today-list>
+              <div class="team-seat-empty">Todavia no hay citas para hoy.</div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="agenda" hidden>
+            <div class="eyebrow">Semana</div>
+            <h3>Lo que sigue</h3>
+            <p>Esta vista te deja ver reagendas, demos pendientes y citas que ya estan puestas.</p>
+
+            <div class="agenda-list" data-agenda-week-list>
+              <div class="team-seat-empty">Todavia no hay citas para esta semana.</div>
             </div>
           </article>
 
