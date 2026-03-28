@@ -6073,7 +6073,7 @@ function construirCoachCrmProgramNotes(sheetDoc = null, referral = null) {
     .slice(0, 1200);
 }
 
-function construirCoachCrmLeadSeedOperation(leadDoc = null) {
+function construirCoachCrmLeadSeedOperation(leadDoc = null, defaultTelemarketer = null) {
   if (!leadDoc?._id || normalizarCoachLeadSource(leadDoc.source || "") === "programa_4_en_14") {
     return null;
   }
@@ -6088,6 +6088,8 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null) {
   const status = resolverCoachCrmStatusDesdeLead(leadDoc);
   const nextActionAt = leadDoc.nextActionAt || null;
   const appointmentAt = leadDoc.status === "agendado" ? nextActionAt : null;
+  const defaultTelemarketerUserId = normalizarCoachCrmObjectId(defaultTelemarketer?.userId || defaultTelemarketer?._id);
+  const defaultTelemarketerName = defaultTelemarketer?.name || defaultTelemarketer?.email || "";
 
   return {
     updateOne: {
@@ -6133,6 +6135,8 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null) {
         },
         $setOnInsert: {
           createdAt: leadDoc.createdAt || new Date(),
+          assignedTelemarketerUserId: defaultTelemarketerUserId,
+          assignedTelemarketerName: defaultTelemarketerName,
           briefHistory: truncarCoachCrmText(leadDoc.summary || construirCoachLeadSummary(leadDoc), 320),
           privateNotes: truncarCoachCrmText(leadDoc.notes || "", 1200),
           lastNote: truncarCoachCrmText(leadDoc.notes || "", 240)
@@ -6143,7 +6147,13 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null) {
   };
 }
 
-function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null, referralIndex = -1, linkedLead = null) {
+function construirCoachCrmProgramSeedOperation(
+  sheetDoc = null,
+  referral = null,
+  referralIndex = -1,
+  linkedLead = null,
+  defaultTelemarketer = null
+) {
   if (!sheetDoc?._id || !referral || !referral.fullName || !referral.phone || !Number.isInteger(referralIndex) || referralIndex < 0) {
     return null;
   }
@@ -6161,6 +6171,8 @@ function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null,
     status === "cita_agendada"
       ? nextActionAt || (referral?.appointmentDetails ? sheetDoc.updatedAt || sheetDoc.createdAt || null : null)
       : null;
+  const defaultTelemarketerUserId = normalizarCoachCrmObjectId(defaultTelemarketer?.userId || defaultTelemarketer?._id);
+  const defaultTelemarketerName = defaultTelemarketer?.name || defaultTelemarketer?.email || "";
 
   return {
     updateOne: {
@@ -6208,6 +6220,8 @@ function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null,
         },
         $setOnInsert: {
           createdAt: sheetDoc.createdAt || new Date(),
+          assignedTelemarketerUserId: defaultTelemarketerUserId,
+          assignedTelemarketerName: defaultTelemarketerName,
           briefHistory: truncarCoachCrmText(construirCoachCrmProgramSummary(sheetDoc, referral), 320),
           privateNotes: truncarCoachCrmText(construirCoachCrmProgramNotes(sheetDoc, referral), 1200),
           lastNote: truncarCoachCrmText(referral.instantCallNotes || referral.notes || "", 240)
@@ -6218,13 +6232,15 @@ function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null,
   };
 }
 
-function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null) {
+function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null, defaultTelemarketer = null) {
   if (!applicationDoc?._id) {
     return null;
   }
 
   const sourceRecordId = String(applicationDoc._id);
   const ownerUserId = normalizarCoachCrmObjectId(applicationDoc.ownerUserId);
+  const defaultTelemarketerUserId = normalizarCoachCrmObjectId(defaultTelemarketer?.userId || defaultTelemarketer?._id);
+  const defaultTelemarketerName = defaultTelemarketer?.name || defaultTelemarketer?.email || "";
 
   if (!ownerUserId) {
     return null;
@@ -6272,8 +6288,8 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null) {
           address: "",
           officeId: "",
           territoryId: "",
-          assignedTelemarketerUserId: null,
-          assignedTelemarketerName: "",
+          assignedTelemarketerUserId: defaultTelemarketerUserId,
+          assignedTelemarketerName: defaultTelemarketerName,
           appointmentRepUserId: null,
           appointmentRepName: "",
           lastContactAt: null,
@@ -6333,10 +6349,77 @@ async function construirCoachCrmViewerQuery(userDoc = null, extra = {}) {
   return query;
 }
 
+async function resolverCoachCrmTelemarketerPorDefecto(userDoc = null) {
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc));
+
+  if (!ownerUserId) {
+    return null;
+  }
+
+  const seatDocs = await CoachUser.find({
+    teamOwnerUserId: ownerUserId,
+    accountType: "seat",
+    seatStatus: "active"
+  })
+    .select("_id name email")
+    .lean();
+
+  if (!seatDocs.length) {
+    return null;
+  }
+
+  const seatIds = seatDocs.map(doc => doc._id).filter(Boolean);
+  const teleProfileDocs = await CoachDistributorProfile.find({
+    userId: { $in: seatIds },
+    teamRole: "telemarketing"
+  })
+    .select("userId teamRole")
+    .lean();
+
+  const teleIds = teleProfileDocs.map(doc => String(doc.userId || "")).filter(Boolean);
+  const teleSeatDocs = seatDocs.filter(doc => teleIds.includes(String(doc._id || "")));
+
+  if (teleSeatDocs.length !== 1) {
+    return null;
+  }
+
+  return {
+    userId: teleSeatDocs[0]._id,
+    name: teleSeatDocs[0].name || teleSeatDocs[0].email || "Telemarketing",
+    email: teleSeatDocs[0].email || ""
+  };
+}
+
+async function asegurarCoachCrmAutoAsignacionTelemarketing(userDoc = null, defaultTelemarketer = null) {
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc));
+  const assignedTelemarketerUserId = normalizarCoachCrmObjectId(
+    defaultTelemarketer?.userId || defaultTelemarketer?._id
+  );
+
+  if (!ownerUserId || !assignedTelemarketerUserId) {
+    return;
+  }
+
+  await CoachCrmRecord.updateMany(
+    {
+      ownerUserId,
+      $or: [{ assignedTelemarketerUserId: null }, { assignedTelemarketerUserId: { $exists: false } }]
+    },
+    {
+      $set: {
+        assignedTelemarketerUserId,
+        assignedTelemarketerName: defaultTelemarketer?.name || defaultTelemarketer?.email || "Telemarketing"
+      }
+    }
+  );
+}
+
 async function asegurarCoachCrmWorkspace(userDoc = null) {
   if (!userDoc?._id) {
     return;
   }
+
+  const defaultTelemarketer = await resolverCoachCrmTelemarketerPorDefecto(userDoc);
 
   const [leadDocs, applicationDocs, sheetDocs] = await Promise.all([
     CoachLeadInbox.find({
@@ -6378,14 +6461,14 @@ async function asegurarCoachCrmWorkspace(userDoc = null) {
   const operations = [];
 
   leadDocs.forEach(leadDoc => {
-    const operation = construirCoachCrmLeadSeedOperation(leadDoc);
+    const operation = construirCoachCrmLeadSeedOperation(leadDoc, defaultTelemarketer);
     if (operation) {
       operations.push(operation);
     }
   });
 
   applicationDocs.forEach(applicationDoc => {
-    const operation = construirCoachCrmRecruitmentSeedOperation(applicationDoc);
+    const operation = construirCoachCrmRecruitmentSeedOperation(applicationDoc, defaultTelemarketer);
     if (operation) {
       operations.push(operation);
     }
@@ -6394,7 +6477,13 @@ async function asegurarCoachCrmWorkspace(userDoc = null) {
   sheetDocs.forEach(sheetDoc => {
     (Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals : []).forEach((referral, referralIndex) => {
       const linkedLead = referral?.createdLeadId ? linkedLeadMap.get(String(referral.createdLeadId)) || null : null;
-      const operation = construirCoachCrmProgramSeedOperation(sheetDoc, referral, referralIndex, linkedLead);
+      const operation = construirCoachCrmProgramSeedOperation(
+        sheetDoc,
+        referral,
+        referralIndex,
+        linkedLead,
+        defaultTelemarketer
+      );
       if (operation) {
         operations.push(operation);
       }
@@ -6407,6 +6496,7 @@ async function asegurarCoachCrmWorkspace(userDoc = null) {
 
   try {
     await CoachCrmRecord.bulkWrite(operations, { ordered: false });
+    await asegurarCoachCrmAutoAsignacionTelemarketing(userDoc, defaultTelemarketer);
   } catch (error) {
     if (error?.code !== 11000) {
       throw error;
