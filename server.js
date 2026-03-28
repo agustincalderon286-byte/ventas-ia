@@ -629,6 +629,75 @@ const coachDemoOutcomeSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachTerritorySchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  officeId: { type: String, index: true },
+  territoryId: { type: String, index: true },
+  createdByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  createdByName: String,
+  status: { type: String, default: "active" },
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachTerritoryMembershipSchema = new mongoose.Schema({
+  territoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachTerritory",
+    required: true,
+    index: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  role: { type: String, default: "member" },
+  status: { type: String, default: "active" },
+  invitedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    default: null
+  },
+  invitedByName: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachTerritoryInviteSchema = new mongoose.Schema({
+  territoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachTerritory",
+    required: true,
+    index: true
+  },
+  inviteeEmail: { type: String, required: true, index: true },
+  inviteeUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    default: null
+  },
+  role: { type: String, default: "member" },
+  status: { type: String, default: "pending" },
+  invitedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  invitedByName: String,
+  note: String,
+  respondedAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -673,6 +742,12 @@ coachDemoOutcomeSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: 
 coachDemoOutcomeSchema.index({ ownerUserId: 1, resultType: 1, createdAt: -1 });
 coachDemoOutcomeSchema.index({ sponsorUserId: 1, createdAt: -1 });
 coachDemoOutcomeSchema.index({ sponsorUserId: 1, resultType: 1, createdAt: -1 });
+coachTerritorySchema.index({ createdByUserId: 1, createdAt: -1 });
+coachTerritorySchema.index({ officeId: 1, territoryId: 1, createdAt: -1 });
+coachTerritoryMembershipSchema.index({ territoryId: 1, userId: 1 }, { unique: true });
+coachTerritoryMembershipSchema.index({ userId: 1, status: 1, createdAt: -1 });
+coachTerritoryInviteSchema.index({ territoryId: 1, status: 1, createdAt: -1 });
+coachTerritoryInviteSchema.index({ inviteeEmail: 1, status: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -696,6 +771,12 @@ const CoachPrivateResource =
   mongoose.models.CoachPrivateResource || mongoose.model("CoachPrivateResource", coachPrivateResourceSchema);
 const CoachDemoOutcome =
   mongoose.models.CoachDemoOutcome || mongoose.model("CoachDemoOutcome", coachDemoOutcomeSchema);
+const CoachTerritory = mongoose.models.CoachTerritory || mongoose.model("CoachTerritory", coachTerritorySchema);
+const CoachTerritoryMembership =
+  mongoose.models.CoachTerritoryMembership ||
+  mongoose.model("CoachTerritoryMembership", coachTerritoryMembershipSchema);
+const CoachTerritoryInvite =
+  mongoose.models.CoachTerritoryInvite || mongoose.model("CoachTerritoryInvite", coachTerritoryInviteSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -1408,6 +1489,59 @@ function normalizarCoachSeatStatus(value = "") {
     .toLowerCase();
   const validValues = ["active", "paused", "promoted", "closed"];
   return validValues.includes(safeValue) ? safeValue : "active";
+}
+
+function normalizarCoachTerritoryRole(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+
+  const aliases = {
+    distribuidor: "member",
+    member: "member",
+    miembro: "member",
+    distribuidor_junior: "junior",
+    junior: "junior",
+    manager: "manager",
+    coadmin: "manager",
+    lider: "manager",
+    owner: "owner"
+  };
+
+  return aliases[safeValue] || "member";
+}
+
+function normalizarCoachTerritoryMembershipStatus(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  const validValues = ["active", "paused", "left"];
+  return validValues.includes(safeValue) ? safeValue : "active";
+}
+
+function normalizarCoachTerritoryInviteStatus(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  const validValues = ["pending", "accepted", "rejected", "cancelled"];
+  return validValues.includes(safeValue) ? safeValue : "pending";
+}
+
+function coachPuedeUsarTerritorios(userDoc = null) {
+  if (!userDoc) {
+    return false;
+  }
+
+  return normalizarCoachAccountType(userDoc.accountType || "owner") !== "seat";
+}
+
+function coachTerritoryRolePuedeAdministrar(role = "") {
+  return ["owner", "manager"].includes(normalizarCoachTerritoryRole(role));
+}
+
+function limpiarCoachTerritoryText(value = "", maxLength = 80) {
+  return cleanText(value || "").slice(0, maxLength);
 }
 
 function resolverCoachTeamRoleDefault(userDoc = null) {
@@ -2469,6 +2603,428 @@ function construirCoachTeamSummary(seats = []) {
     pausedSeats: safeSeats.filter(seat => seat?.seatStatus === "paused").length,
     closedSeats: safeSeats.filter(seat => seat?.seatStatus === "closed").length,
     totalGeneratedLeads: safeSeats.reduce((acc, seat) => acc + Number(seat?.counts?.leads || 0), 0)
+  };
+}
+
+function formatearCoachTerritoryRole(role = "") {
+  const labels = {
+    owner: "Propietario",
+    manager: "Manager",
+    junior: "Distribuidor junior",
+    member: "Distribuidor"
+  };
+
+  return labels[normalizarCoachTerritoryRole(role)] || "Distribuidor";
+}
+
+function limpiarCoachTerritoryInvite(inviteDoc = null, territoryDoc = null, options = {}) {
+  if (!inviteDoc?._id) {
+    return null;
+  }
+
+  const includeTerritory = Boolean(options.includeTerritory);
+  const status = normalizarCoachTerritoryInviteStatus(inviteDoc.status || "pending");
+  const role = normalizarCoachTerritoryRole(inviteDoc.role || "member");
+
+  return {
+    id: String(inviteDoc._id),
+    territoryId: inviteDoc.territoryId ? String(inviteDoc.territoryId) : "",
+    territoryName: includeTerritory ? territoryDoc?.name || "" : "",
+    officeId: includeTerritory ? territoryDoc?.officeId || "" : "",
+    territoryLabel: includeTerritory ? territoryDoc?.territoryId || "" : "",
+    email: inviteDoc.inviteeEmail || "",
+    inviteeUserId: inviteDoc.inviteeUserId ? String(inviteDoc.inviteeUserId) : "",
+    role,
+    roleLabel: formatearCoachTerritoryRole(role),
+    status,
+    invitedByName: inviteDoc.invitedByName || "",
+    note: inviteDoc.note || "",
+    createdAt: inviteDoc.createdAt || null,
+    respondedAt: inviteDoc.respondedAt || null
+  };
+}
+
+function limpiarCoachTerritoryMember(membershipDoc = null, userDoc = null, profileDoc = null, stats = {}) {
+  if (!membershipDoc?.userId || !userDoc?._id) {
+    return null;
+  }
+
+  const role = normalizarCoachTerritoryRole(membershipDoc.role || "member");
+  const seatStats = stats?.seatStats || {};
+
+  return {
+    membershipId: String(membershipDoc._id || ""),
+    userId: String(userDoc._id),
+    name: userDoc.name || profileDoc?.name || "Miembro",
+    email: userDoc.email || profileDoc?.email || "",
+    role,
+    roleLabel: formatearCoachTerritoryRole(role),
+    accountType: normalizarCoachAccountType(userDoc.accountType || "owner"),
+    teamRole: profileDoc?.teamRole || "",
+    officeId: userDoc.officeId || "",
+    territoryId: userDoc.territoryId || "",
+    seatLabel: profileDoc?.seatLabel || "",
+    createdAt: membershipDoc.createdAt || null,
+    lastLoginAt: userDoc.lastLoginAt || null,
+    counts: {
+      leads: Number(stats?.leads || 0),
+      chefLeads: Number(stats?.chefLeads || 0),
+      programSheets: Number(stats?.programSheets || 0),
+      applications: Number(stats?.applications || 0),
+      sales: Number(stats?.sales || 0),
+      soldAmount: limpiarCoachDemoOutcomeAmount(stats?.soldAmount || 0)
+    },
+    seats: {
+      total: Number(seatStats.totalSeats || 0),
+      active: Number(seatStats.activeSeats || 0)
+    }
+  };
+}
+
+async function obtenerCoachTerritoryWorkspace(userDoc = null) {
+  if (!userDoc?._id || !coachPuedeUsarTerritorios(userDoc)) {
+    return {
+      canCreateTerritory: false,
+      territories: [],
+      pendingInvites: []
+    };
+  }
+
+  const safeEmail = normalizarEmail(userDoc.email || "");
+  const [myMembershipDocs, myPendingInviteDocs] = await Promise.all([
+    CoachTerritoryMembership.find({
+      userId: userDoc._id,
+      status: "active"
+    })
+      .sort({ createdAt: -1 })
+      .lean(),
+    safeEmail
+      ? CoachTerritoryInvite.find({
+          inviteeEmail: safeEmail,
+          status: "pending"
+        })
+          .sort({ createdAt: -1 })
+          .lean()
+      : Promise.resolve([])
+  ]);
+
+  const activeTerritoryIds = Array.from(
+    new Set(
+      myMembershipDocs
+        .map(item => (item.territoryId ? String(item.territoryId) : ""))
+        .filter(Boolean)
+    )
+  );
+  const pendingTerritoryIds = Array.from(
+    new Set(
+      myPendingInviteDocs
+        .map(item => (item.territoryId ? String(item.territoryId) : ""))
+        .filter(Boolean)
+    )
+  );
+  const allTerritoryIds = Array.from(new Set([...activeTerritoryIds, ...pendingTerritoryIds]));
+
+  const territoryDocs = allTerritoryIds.length
+    ? await CoachTerritory.find({
+        _id: { $in: allTerritoryIds },
+        status: "active"
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+    : [];
+  const territoryMap = new Map(territoryDocs.map(doc => [String(doc._id), doc]));
+  const activeDocs = territoryDocs.filter(doc => activeTerritoryIds.includes(String(doc._id)));
+
+  const [territoryMembershipDocs, managedInviteDocs] = await Promise.all([
+    activeTerritoryIds.length
+      ? CoachTerritoryMembership.find({
+          territoryId: { $in: activeTerritoryIds },
+          status: "active"
+        }).lean()
+      : Promise.resolve([]),
+    activeTerritoryIds.length
+      ? CoachTerritoryInvite.find({
+          territoryId: { $in: activeTerritoryIds },
+          status: "pending"
+        })
+          .sort({ createdAt: -1 })
+          .lean()
+      : Promise.resolve([])
+  ]);
+
+  const memberUserIds = Array.from(
+    new Set(
+      territoryMembershipDocs
+        .map(item => (item.userId ? String(item.userId) : ""))
+        .filter(Boolean)
+    )
+  );
+
+  const [memberUserDocs, profileDocs, seatDocs, leadAgg, programAgg, applicationAgg, salesAgg, recentOutcomeDocs] =
+    await Promise.all([
+      memberUserIds.length
+        ? CoachUser.find({
+            _id: { $in: memberUserIds }
+          }).lean()
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachDistributorProfile.find({
+            userId: { $in: memberUserIds }
+          }).lean()
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachUser.find({
+            accountType: "seat",
+            teamOwnerUserId: { $in: memberUserIds }
+          })
+            .select("teamOwnerUserId seatStatus")
+            .lean()
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachLeadInbox.aggregate([
+            {
+              $match: {
+                ownerUserId: { $in: memberUserIds }
+              }
+            },
+            {
+              $group: {
+                _id: "$ownerUserId",
+                totalLeads: { $sum: 1 },
+                chefLeads: {
+                  $sum: {
+                    $cond: [{ $eq: ["$source", "chef_personal"] }, 1, 0]
+                  }
+                }
+              }
+            }
+          ])
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachProgramSheet.aggregate([
+            {
+              $match: {
+                ownerUserId: { $in: memberUserIds }
+              }
+            },
+            {
+              $group: {
+                _id: "$ownerUserId",
+                total: { $sum: 1 }
+              }
+            }
+          ])
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachRecruitmentApplication.aggregate([
+            {
+              $match: {
+                ownerUserId: { $in: memberUserIds }
+              }
+            },
+            {
+              $group: {
+                _id: "$ownerUserId",
+                total: { $sum: 1 }
+              }
+            }
+          ])
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachDemoOutcome.aggregate([
+            {
+              $match: {
+                ownerUserId: { $in: memberUserIds }
+              }
+            },
+            {
+              $group: {
+                _id: "$ownerUserId",
+                sales: {
+                  $sum: { $cond: [{ $eq: ["$resultType", "venta"] }, 1, 0] }
+                },
+                soldAmount: {
+                  $sum: {
+                    $cond: [{ $eq: ["$resultType", "venta"] }, "$saleAmount", 0]
+                  }
+                }
+              }
+            }
+          ])
+        : Promise.resolve([]),
+      memberUserIds.length
+        ? CoachDemoOutcome.find({
+            ownerUserId: { $in: memberUserIds }
+          })
+            .sort({ createdAt: -1 })
+            .limit(12)
+            .lean()
+        : Promise.resolve([])
+    ]);
+
+  const memberUserMap = new Map(memberUserDocs.map(doc => [String(doc._id), doc]));
+  const profileMap = new Map(profileDocs.map(doc => [String(doc.userId), doc]));
+  const leadMap = new Map(leadAgg.map(item => [String(item._id), item]));
+  const programMap = new Map(programAgg.map(item => [String(item._id), Number(item.total || 0)]));
+  const applicationMap = new Map(applicationAgg.map(item => [String(item._id), Number(item.total || 0)]));
+  const salesMap = new Map(salesAgg.map(item => [String(item._id), item]));
+  const seatMap = new Map();
+
+  for (const seatDoc of seatDocs) {
+    const ownerId = String(seatDoc.teamOwnerUserId || "");
+
+    if (!ownerId) {
+      continue;
+    }
+
+    const current = seatMap.get(ownerId) || {
+      totalSeats: 0,
+      activeSeats: 0
+    };
+    current.totalSeats += 1;
+
+    if (normalizarCoachSeatStatus(seatDoc.seatStatus || "active") === "active") {
+      current.activeSeats += 1;
+    }
+
+    seatMap.set(ownerId, current);
+  }
+
+  const recentOutcomeByOwner = new Map();
+
+  for (const outcomeDoc of recentOutcomeDocs) {
+    const ownerId = String(outcomeDoc.ownerUserId || "");
+
+    if (!ownerId) {
+      continue;
+    }
+
+    const current = recentOutcomeByOwner.get(ownerId) || [];
+    if (current.length >= 3) {
+      continue;
+    }
+
+    current.push(limpiarCoachDemoOutcome(outcomeDoc, { includeGenerator: true }));
+    recentOutcomeByOwner.set(ownerId, current);
+  }
+
+  const membershipsByTerritory = new Map();
+  territoryMembershipDocs.forEach(item => {
+    const territoryKey = String(item.territoryId || "");
+    const current = membershipsByTerritory.get(territoryKey) || [];
+    current.push(item);
+    membershipsByTerritory.set(territoryKey, current);
+  });
+
+  const invitesByTerritory = new Map();
+  managedInviteDocs.forEach(item => {
+    const territoryKey = String(item.territoryId || "");
+    const current = invitesByTerritory.get(territoryKey) || [];
+    current.push(item);
+    invitesByTerritory.set(territoryKey, current);
+  });
+
+  const myMembershipMap = new Map(myMembershipDocs.map(item => [String(item.territoryId || ""), item]));
+
+  const territories = activeDocs.map(territoryDoc => {
+    const territoryKey = String(territoryDoc._id);
+    const myMembership = myMembershipMap.get(territoryKey) || null;
+    const myRole = normalizarCoachTerritoryRole(myMembership?.role || "member");
+    const canManage = coachTerritoryRolePuedeAdministrar(myRole);
+    const memberRows = (membershipsByTerritory.get(territoryKey) || [])
+      .map(memberDoc => {
+        const memberId = String(memberDoc.userId || "");
+        const memberUserDoc = memberUserMap.get(memberId);
+        if (!memberUserDoc) {
+          return null;
+        }
+
+        const leadStats = leadMap.get(memberId) || { totalLeads: 0, chefLeads: 0 };
+        const salesStats = salesMap.get(memberId) || { sales: 0, soldAmount: 0 };
+
+        return limpiarCoachTerritoryMember(memberDoc, memberUserDoc, profileMap.get(memberId) || null, {
+          leads: leadStats.totalLeads || 0,
+          chefLeads: leadStats.chefLeads || 0,
+          programSheets: programMap.get(memberId) || 0,
+          applications: applicationMap.get(memberId) || 0,
+          sales: salesStats.sales || 0,
+          soldAmount: salesStats.soldAmount || 0,
+          seatStats: seatMap.get(memberId) || null
+        });
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+
+    const summary = memberRows.reduce(
+      (acc, member) => {
+        acc.totalMembers += 1;
+        acc.totalSeats += Number(member.seats?.total || 0);
+        acc.activeSeats += Number(member.seats?.active || 0);
+        acc.totalLeads += Number(member.counts?.leads || 0);
+        acc.chefLeads += Number(member.counts?.chefLeads || 0);
+        acc.programSheets += Number(member.counts?.programSheets || 0);
+        acc.applications += Number(member.counts?.applications || 0);
+        acc.sales += Number(member.counts?.sales || 0);
+        acc.soldAmount += Number(member.counts?.soldAmount || 0);
+        return acc;
+      },
+      {
+        totalMembers: 0,
+        totalSeats: 0,
+        activeSeats: 0,
+        totalLeads: 0,
+        chefLeads: 0,
+        programSheets: 0,
+        applications: 0,
+        sales: 0,
+        soldAmount: 0
+      }
+    );
+
+    const territoryInvites = canManage
+      ? (invitesByTerritory.get(territoryKey) || [])
+          .map(inviteDoc => limpiarCoachTerritoryInvite(inviteDoc, territoryDoc))
+          .filter(Boolean)
+      : [];
+
+    const recentResults = memberRows.flatMap(member => recentOutcomeByOwner.get(member.userId) || []).slice(0, 8);
+
+    return {
+      id: territoryKey,
+      name: territoryDoc.name || "Territorio",
+      officeId: territoryDoc.officeId || "",
+      territoryId: territoryDoc.territoryId || "",
+      myRole,
+      myRoleLabel: formatearCoachTerritoryRole(myRole),
+      canManage,
+      createdAt: territoryDoc.createdAt || null,
+      members: memberRows,
+      invites: territoryInvites,
+      recentResults,
+      summary: {
+        totalMembers: summary.totalMembers,
+        totalSeats: summary.totalSeats,
+        activeSeats: summary.activeSeats,
+        totalLeads: summary.totalLeads,
+        chefLeads: summary.chefLeads,
+        programSheets: summary.programSheets,
+        applications: summary.applications,
+        sales: summary.sales,
+        soldAmount: limpiarCoachDemoOutcomeAmount(summary.soldAmount || 0)
+      }
+    };
+  });
+
+  return {
+    canCreateTerritory: true,
+    territories,
+    pendingInvites: myPendingInviteDocs
+      .map(inviteDoc =>
+        limpiarCoachTerritoryInvite(inviteDoc, territoryMap.get(String(inviteDoc.territoryId || "")) || null, {
+          includeTerritory: true
+        })
+      )
+      .filter(Boolean)
   };
 }
 
@@ -7093,6 +7649,21 @@ async function requireCoachTeamManagerUser(req, res) {
   return auth;
 }
 
+async function requireCoachTerritoryUser(req, res) {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return null;
+  }
+
+  if (!coachPuedeUsarTerritorios(auth.user)) {
+    responderCoachError(res, 403, "Esta area territorial solo esta disponible para cuentas propias.");
+    return null;
+  }
+
+  return auth;
+}
+
 async function requireControlTowerAccess(req, res) {
   const auth = await requireCoachUser(req, res);
 
@@ -11372,6 +11943,304 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
   } catch (error) {
     console.error("Error actualizando subcuenta del Coach:", error.message);
     responderCoachError(res, 500, "No pude actualizar la subcuenta en este momento.");
+  }
+});
+
+app.get("/api/coach/territories", async (req, res) => {
+  const auth = await requireCoachTerritoryUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const workspace = await obtenerCoachTerritoryWorkspace(auth.user);
+    res.json(workspace);
+  } catch (error) {
+    console.error("Error cargando territorios del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar tus territorios en este momento.");
+  }
+});
+
+app.post("/api/coach/territories", async (req, res) => {
+  const auth = await requireCoachTerritoryUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const name = limpiarCoachTerritoryText(req.body?.name || "", 100);
+  const officeId = limpiarCoachTerritoryText(req.body?.officeId || auth.user.officeId || "", 60);
+  const territoryId = limpiarCoachTerritoryText(req.body?.territoryId || auth.user.territoryId || "", 60);
+
+  if (!name) {
+    return responderCoachError(res, 400, "Ponle un nombre al territorio.");
+  }
+
+  try {
+    const now = new Date();
+    const territoryDoc = await CoachTerritory.create({
+      name,
+      officeId,
+      territoryId,
+      createdByUserId: auth.user._id,
+      createdByName: auth.user.name || auth.user.email || "",
+      status: "active",
+      updatedAt: now
+    });
+
+    await CoachTerritoryMembership.create({
+      territoryId: territoryDoc._id,
+      userId: auth.user._id,
+      role: "owner",
+      status: "active",
+      invitedByUserId: auth.user._id,
+      invitedByName: auth.user.name || auth.user.email || "",
+      updatedAt: now
+    });
+
+    if (!auth.user.officeId && officeId) {
+      auth.user.officeId = officeId;
+    }
+
+    if (!auth.user.territoryId && territoryId) {
+      auth.user.territoryId = territoryId;
+    }
+
+    if (auth.user.isModified?.()) {
+      auth.user.updatedAt = now;
+      await auth.user.save();
+    }
+
+    res.json({
+      territory: {
+        id: String(territoryDoc._id),
+        name: territoryDoc.name || "",
+        officeId: territoryDoc.officeId || "",
+        territoryId: territoryDoc.territoryId || ""
+      }
+    });
+  } catch (error) {
+    console.error("Error creando territorio del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear el territorio en este momento.");
+  }
+});
+
+app.post("/api/coach/territories/:territoryId/invites", async (req, res) => {
+  const auth = await requireCoachTerritoryUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const territoryId = String(req.params?.territoryId || "").trim();
+  const inviteeEmail = normalizarEmail(req.body?.email || "");
+  const role = normalizarCoachTerritoryRole(req.body?.role || "member");
+  const note = limpiarCoachTerritoryText(req.body?.note || "", 220);
+
+  if (!territoryId || !mongoose.Types.ObjectId.isValid(territoryId)) {
+    return responderCoachError(res, 400, "Territorio invalido.");
+  }
+
+  if (!inviteeEmail) {
+    return responderCoachError(res, 400, "Pon el correo de la persona que quieres invitar.");
+  }
+
+  try {
+    const [territoryDoc, myMembership] = await Promise.all([
+      CoachTerritory.findOne({ _id: territoryId, status: "active" }).lean(),
+      CoachTerritoryMembership.findOne({
+        territoryId,
+        userId: auth.user._id,
+        status: "active"
+      }).lean()
+    ]);
+
+    if (!territoryDoc) {
+      return responderCoachError(res, 404, "No encontre ese territorio.");
+    }
+
+    if (!myMembership || !coachTerritoryRolePuedeAdministrar(myMembership.role)) {
+      return responderCoachError(res, 403, "No tienes permiso para invitar personas a este territorio.");
+    }
+
+    const existingUser = await CoachUser.findOne({ email: inviteeEmail }).select("_id accountType name email").lean();
+
+    if (existingUser && normalizarCoachAccountType(existingUser.accountType || "owner") === "seat") {
+      return responderCoachError(
+        res,
+        409,
+        "Ese correo ya pertenece a una subcuenta. Usa Equipo si quieres mover novatos."
+      );
+    }
+
+    if (existingUser?._id) {
+      const existingMembership = await CoachTerritoryMembership.findOne({
+        territoryId,
+        userId: existingUser._id,
+        status: "active"
+      }).lean();
+
+      if (existingMembership) {
+        return responderCoachError(res, 409, "Esa cuenta ya forma parte de este territorio.");
+      }
+    }
+
+    const now = new Date();
+    let inviteDoc = await CoachTerritoryInvite.findOne({
+      territoryId,
+      inviteeEmail,
+      status: "pending"
+    });
+
+    if (inviteDoc) {
+      inviteDoc.role = role;
+      inviteDoc.note = note;
+      inviteDoc.inviteeUserId = existingUser?._id || null;
+      inviteDoc.invitedByUserId = auth.user._id;
+      inviteDoc.invitedByName = auth.user.name || auth.user.email || "";
+      inviteDoc.updatedAt = now;
+      await inviteDoc.save();
+    } else {
+      inviteDoc = await CoachTerritoryInvite.create({
+        territoryId,
+        inviteeEmail,
+        inviteeUserId: existingUser?._id || null,
+        role,
+        status: "pending",
+        invitedByUserId: auth.user._id,
+        invitedByName: auth.user.name || auth.user.email || "",
+        note,
+        updatedAt: now
+      });
+    }
+
+    res.json({
+      invite: limpiarCoachTerritoryInvite(inviteDoc.toObject ? inviteDoc.toObject() : inviteDoc, territoryDoc, {
+        includeTerritory: true
+      })
+    });
+  } catch (error) {
+    console.error("Error invitando cuenta al territorio:", error.message);
+    responderCoachError(res, 500, "No pude crear la invitacion en este momento.");
+  }
+});
+
+app.post("/api/coach/territory-invites/:inviteId/respond", async (req, res) => {
+  const auth = await requireCoachTerritoryUser(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const inviteId = String(req.params?.inviteId || "").trim();
+  const action = String(req.body?.action || "").trim().toLowerCase();
+
+  if (!inviteId || !mongoose.Types.ObjectId.isValid(inviteId)) {
+    return responderCoachError(res, 400, "Invitacion invalida.");
+  }
+
+  if (!["accept", "reject"].includes(action)) {
+    return responderCoachError(res, 400, "Accion invalida.");
+  }
+
+  try {
+    const inviteDoc = await CoachTerritoryInvite.findById(inviteId);
+
+    if (!inviteDoc || normalizarCoachTerritoryInviteStatus(inviteDoc.status || "pending") !== "pending") {
+      return responderCoachError(res, 404, "No encontre esa invitacion pendiente.");
+    }
+
+    const userEmail = normalizarEmail(auth.user.email || "");
+
+    if (inviteDoc.inviteeEmail !== userEmail) {
+      return responderCoachError(res, 403, "Esa invitacion no pertenece a tu cuenta.");
+    }
+
+    const territoryDoc = await CoachTerritory.findOne({
+      _id: inviteDoc.territoryId,
+      status: "active"
+    });
+
+    if (!territoryDoc) {
+      return responderCoachError(res, 404, "El territorio ya no esta disponible.");
+    }
+
+    const now = new Date();
+
+    if (action === "reject") {
+      inviteDoc.status = "rejected";
+      inviteDoc.inviteeUserId = auth.user._id;
+      inviteDoc.respondedAt = now;
+      inviteDoc.updatedAt = now;
+      await inviteDoc.save();
+      return res.json({ ok: true, status: "rejected" });
+    }
+
+    let membershipDoc = await CoachTerritoryMembership.findOne({
+      territoryId: territoryDoc._id,
+      userId: auth.user._id
+    });
+
+    if (membershipDoc) {
+      membershipDoc.role = normalizarCoachTerritoryRole(inviteDoc.role || "member");
+      membershipDoc.status = "active";
+      membershipDoc.invitedByUserId = inviteDoc.invitedByUserId || null;
+      membershipDoc.invitedByName = inviteDoc.invitedByName || "";
+      membershipDoc.updatedAt = now;
+      await membershipDoc.save();
+    } else {
+      membershipDoc = await CoachTerritoryMembership.create({
+        territoryId: territoryDoc._id,
+        userId: auth.user._id,
+        role: normalizarCoachTerritoryRole(inviteDoc.role || "member"),
+        status: "active",
+        invitedByUserId: inviteDoc.invitedByUserId || null,
+        invitedByName: inviteDoc.invitedByName || "",
+        updatedAt: now
+      });
+    }
+
+    inviteDoc.status = "accepted";
+    inviteDoc.inviteeUserId = auth.user._id;
+    inviteDoc.respondedAt = now;
+    inviteDoc.updatedAt = now;
+    await inviteDoc.save();
+
+    let userDirty = false;
+
+    if (!auth.user.officeId && territoryDoc.officeId) {
+      auth.user.officeId = territoryDoc.officeId;
+      userDirty = true;
+    }
+
+    if (!auth.user.territoryId && territoryDoc.territoryId) {
+      auth.user.territoryId = territoryDoc.territoryId;
+      userDirty = true;
+    }
+
+    if (userDirty) {
+      auth.user.updatedAt = now;
+      await auth.user.save();
+    }
+
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
+    const role = normalizarCoachTerritoryRole(inviteDoc.role || "member");
+
+    if (role === "junior" && profileDoc.teamRole !== "junior") {
+      profileDoc.teamRole = "junior";
+      profileDoc.updatedAt = now;
+      await profileDoc.save();
+    }
+
+    res.json({
+      ok: true,
+      status: "accepted",
+      membershipId: String(membershipDoc._id)
+    });
+  } catch (error) {
+    console.error("Error respondiendo invitacion territorial:", error.message);
+    responderCoachError(res, 500, "No pude responder la invitacion en este momento.");
   }
 });
 

@@ -129,6 +129,16 @@
               >
                 Equipo
               </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
+                data-coach-workspace-tab="territorio"
+                aria-selected="false"
+                data-territory-access-only
+                hidden
+              >
+                Territorio
+              </button>
             </div>
             <p class="mini-note">
               Cambia de lado segun el momento: presentacion y cierre, o calle y prospeccion.
@@ -1244,6 +1254,160 @@
             <p class="mini-note" data-team-outcome-note>
               Los resultados recientes del equipo apareceran aqui.
             </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="territorio"
+            data-territory-access-only
+            hidden
+          >
+            <div class="eyebrow">Panel territorial</div>
+            <h3>Conecta cuentas serias sin mezclar leads</h3>
+            <p>
+              Invita distribuidores y juniors a tu territorio para ver actividad compartida, sin quitarles la propiedad
+              de sus propios leads.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-territory-summary-total>0</strong>
+                <span>Territorios</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-territory-summary-members>0</strong>
+                <span>Miembros</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-territory-summary-chef>0</strong>
+                <span>Leads Chef</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-territory-summary-sales>$0.00</strong>
+                <span>Ventas</span>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Los novatos siguen entrando como subcuentas. Las cuentas serias se vinculan al territorio con su propio
+              perfil.
+            </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="territorio"
+            data-territory-access-only
+            hidden
+          >
+            <div class="eyebrow">Nuevo territorio</div>
+            <h3>Abre una base territorial</h3>
+            <p>
+              Crea un territorio para sumar distribuidores, juniors y activity tracking sin pedirte que conectes cada
+              cuenta a mano.
+            </p>
+
+            <form class="coach-form" data-territory-create-form>
+              <label>
+                Nombre del territorio
+                <input type="text" name="name" maxlength="100" placeholder="Ej. Territorio Flores" required />
+              </label>
+              <label>
+                Oficina
+                <input type="text" name="officeId" maxlength="60" placeholder="Ej. Flores Team" />
+              </label>
+              <label>
+                Territorio
+                <input type="text" name="territoryId" maxlength="60" placeholder="Ej. Chicago Norte" />
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-territory-create-save>Crear territorio</button>
+              </div>
+
+              <div class="form-result" data-territory-create-feedback></div>
+            </form>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="territorio"
+            data-territory-access-only
+            hidden
+          >
+            <div class="eyebrow">Invitar cuenta</div>
+            <h3>Suma distribuidores y juniors al territorio</h3>
+            <p>
+              Si la persona ya tiene Coach, vera la invitacion dentro de su cuenta. Si todavia no lo tiene, quedara
+              pendiente para cuando se registre con ese correo.
+            </p>
+
+            <form class="coach-form" data-territory-invite-form>
+              <label>
+                Territorio
+                <select name="territoryId" data-territory-invite-select required>
+                  <option value="">Primero crea o carga un territorio</option>
+                </select>
+              </label>
+              <label>
+                Correo
+                <input type="email" name="email" maxlength="160" placeholder="correo@ejemplo.com" required />
+              </label>
+              <label>
+                Rol
+                <select name="role">
+                  <option value="member">Distribuidor</option>
+                  <option value="junior">Distribuidor junior</option>
+                  <option value="manager">Co-admin territorial</option>
+                </select>
+              </label>
+              <label>
+                Nota opcional
+                <input type="text" name="note" maxlength="220" placeholder="Ej. Ver actividad del territorio Flores" />
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-territory-invite-save>Mandar invitacion</button>
+              </div>
+
+              <div class="form-result" data-territory-invite-feedback></div>
+            </form>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="territorio"
+            data-territory-access-only
+            hidden
+          >
+            <div class="eyebrow">Invitaciones recibidas</div>
+            <h3>Acepta territorios desde tu propia cuenta</h3>
+            <p>
+              Aqui te aparecen las invitaciones internas del Coach para unirte a un territorio sin perder tus propios
+              leads.
+            </p>
+
+            <div class="territory-invite-list" data-territory-pending-list>
+              <div class="team-seat-empty">Todavia no tienes invitaciones territoriales pendientes.</div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="territorio"
+            data-territory-access-only
+            hidden
+          >
+            <div class="eyebrow">Territorios activos</div>
+            <h3>Actividad, miembros y resultados</h3>
+            <p>
+              Cada territorio muestra su movimiento agregado: miembros, subcuentas, leads del Chef, 4 en 14,
+              aplicaciones y ventas.
+            </p>
+
+            <div class="territory-list" data-territory-list>
+              <div class="team-seat-empty">Todavia no has creado ni aceptado territorios.</div>
+            </div>
           </article>
 
           <article

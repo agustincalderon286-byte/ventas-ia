@@ -329,9 +329,24 @@ function getCoachEffectiveOwnerId(user = null) {
 
 function syncCoachManagerUi(user = null) {
   const canManageTeam = Boolean(user?.managesTeam);
+  const canUseTerritory = Boolean(user && user.accountType !== "seat");
 
   document.querySelectorAll("[data-team-manager-only]").forEach(node => {
     if (!canManageTeam) {
+      node.hidden = true;
+      return;
+    }
+
+    if (node.dataset.coachWorkspaceSection) {
+      node.hidden = true;
+      return;
+    }
+
+    node.hidden = false;
+  });
+
+  document.querySelectorAll("[data-territory-access-only]").forEach(node => {
+    if (!canUseTerritory) {
       node.hidden = true;
       return;
     }
@@ -544,6 +559,10 @@ function initCoachWorkspaceTabs() {
           equipo: {
             label: "Cambio a modo equipo",
             detail: "Entraste al panel para mover subcuentas y revisar produccion del equipo."
+          },
+          territorio: {
+            label: "Cambio a modo territorio",
+            detail: "Entraste al panel territorial para invitar cuentas y revisar actividad compartida."
           },
           cierre: {
             label: "Cambio a modo cierre",
@@ -4710,6 +4729,398 @@ function initCoachTeamWorkspace(user = null) {
   });
 }
 
+function renderCoachTerritorySummary(workspace = null) {
+  const territories = Array.isArray(workspace?.territories) ? workspace.territories : [];
+  const totals = territories.reduce(
+    (acc, territory) => {
+      acc.territories += 1;
+      acc.members += Number(territory.summary?.totalMembers || 0);
+      acc.chefLeads += Number(territory.summary?.chefLeads || 0);
+      acc.soldAmount += Number(territory.summary?.soldAmount || 0);
+      return acc;
+    },
+    { territories: 0, members: 0, chefLeads: 0, soldAmount: 0 }
+  );
+
+  document.querySelectorAll("[data-territory-summary-total]").forEach(node => {
+    node.textContent = String(totals.territories || 0);
+  });
+
+  document.querySelectorAll("[data-territory-summary-members]").forEach(node => {
+    node.textContent = String(totals.members || 0);
+  });
+
+  document.querySelectorAll("[data-territory-summary-chef]").forEach(node => {
+    node.textContent = String(totals.chefLeads || 0);
+  });
+
+  document.querySelectorAll("[data-territory-summary-sales]").forEach(node => {
+    node.textContent = formatMoney(totals.soldAmount || 0);
+  });
+}
+
+function renderCoachTerritoryInviteOptions(territories = []) {
+  const select = document.querySelector("[data-territory-invite-select]");
+  const submitButton = document.querySelector("[data-territory-invite-save]");
+
+  if (!select) {
+    return;
+  }
+
+  const manageableTerritories = (Array.isArray(territories) ? territories : []).filter(territory => territory?.canManage);
+
+  if (!manageableTerritories.length) {
+    select.innerHTML = '<option value="">Primero crea un territorio o entra a uno como manager</option>';
+    select.disabled = true;
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+    return;
+  }
+
+  select.disabled = false;
+  if (submitButton) {
+    submitButton.disabled = false;
+  }
+
+  select.innerHTML = manageableTerritories
+    .map(
+      territory => `
+        <option value="${escapeHtml(territory.id || "")}">
+          ${escapeHtml(territory.name || "Territorio")} · ${escapeHtml(
+            territory.officeId || territory.territoryId || "Sin oficina"
+          )}
+        </option>
+      `
+    )
+    .join("");
+}
+
+function renderCoachPendingTerritoryInvites(invites = []) {
+  const list = document.querySelector("[data-territory-pending-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const safeInvites = Array.isArray(invites) ? invites : [];
+
+  if (!safeInvites.length) {
+    list.innerHTML = '<div class="team-seat-empty">Todavia no tienes invitaciones territoriales pendientes.</div>';
+    return;
+  }
+
+  list.innerHTML = safeInvites
+    .map(
+      invite => `
+        <article class="territory-invite-card" data-territory-invite-id="${escapeHtml(invite.id || "")}">
+          <div class="team-seat-head">
+            <div>
+              <strong>${escapeHtml(invite.territoryName || "Territorio")}</strong>
+              <span>${escapeHtml(invite.roleLabel || "Distribuidor")} · ${escapeHtml(
+                invite.officeId || invite.territoryLabel || "Sin oficina"
+              )}</span>
+            </div>
+            <span class="team-seat-status" data-state="pending">Pendiente</span>
+          </div>
+          <p class="mini-note">
+            Invitado por ${escapeHtml(invite.invitedByName || "tu equipo")} · ${escapeHtml(
+              formatDateTimeShort(invite.createdAt)
+            )}
+          </p>
+          ${
+            invite.note
+              ? `<p class="territory-inline-note">${escapeHtml(invite.note)}</p>`
+              : ""
+          }
+          <div class="dashboard-actions compact-top">
+            <button type="button" class="primary-button" data-territory-invite-action="accept">Aceptar</button>
+            <button type="button" class="nav-button" data-territory-invite-action="reject">Rechazar</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderCoachTerritories(territories = []) {
+  const list = document.querySelector("[data-territory-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const safeTerritories = Array.isArray(territories) ? territories : [];
+
+  if (!safeTerritories.length) {
+    list.innerHTML = '<div class="team-seat-empty">Todavia no has creado ni aceptado territorios.</div>';
+    return;
+  }
+
+  list.innerHTML = safeTerritories
+    .map(territory => {
+      const membersHtml = Array.isArray(territory.members) && territory.members.length
+        ? territory.members
+            .map(
+              member => `
+                <article class="territory-member-card">
+                  <div class="team-seat-head">
+                    <div>
+                      <strong>${escapeHtml(member.name || "Miembro")}</strong>
+                      <span>${escapeHtml(member.email || "Sin correo")} · ${escapeHtml(
+                        member.roleLabel || "Distribuidor"
+                      )}</span>
+                    </div>
+                    <span class="team-seat-status" data-state="active">${escapeHtml(
+                      member.teamRole || member.accountType || "Cuenta"
+                    )}</span>
+                  </div>
+                  <div class="team-seat-metrics">
+                    <span>Chef: <strong>${Number(member.counts?.chefLeads || 0)}</strong></span>
+                    <span>Leads: <strong>${Number(member.counts?.leads || 0)}</strong></span>
+                    <span>4 en 14: <strong>${Number(member.counts?.programSheets || 0)}</strong></span>
+                    <span>Aplicaciones: <strong>${Number(member.counts?.applications || 0)}</strong></span>
+                    <span>Ventas: <strong>${Number(member.counts?.sales || 0)}</strong></span>
+                  </div>
+                  <p class="mini-note team-seat-note">
+                    Subcuentas activas: ${Number(member.seats?.active || 0)} de ${Number(member.seats?.total || 0)} ·
+                    Ultimo acceso: ${escapeHtml(formatDateTimeShort(member.lastLoginAt))}
+                  </p>
+                </article>
+              `
+            )
+            .join("")
+        : '<div class="team-seat-empty">Todavia no hay miembros activos en este territorio.</div>';
+
+      const invitesHtml = Array.isArray(territory.invites) && territory.invites.length
+        ? territory.invites
+            .map(
+              invite => `
+                <div class="territory-inline-chip">
+                  <strong>${escapeHtml(invite.email || "Sin correo")}</strong>
+                  <span>${escapeHtml(invite.roleLabel || "Distribuidor")} · pendiente</span>
+                </div>
+              `
+            )
+            .join("")
+        : '<div class="team-seat-empty">No hay invitaciones pendientes en este territorio.</div>';
+
+      const resultsHtml = Array.isArray(territory.recentResults) && territory.recentResults.length
+        ? territory.recentResults
+            .map(
+              result => `
+                <article class="territory-result-card">
+                  <strong>${escapeHtml(result.generatedByName || result.ownerName || result.resultLabel || "Resultado")}</strong>
+                  <span>${escapeHtml(result.resultLabel || "Resultado")} · ${escapeHtml(
+                    formatDateTimeShort(result.createdAt)
+                  )}</span>
+                  <p>${escapeHtml(result.summary || "Sin resumen.")}</p>
+                </article>
+              `
+            )
+            .join("")
+        : '<div class="team-seat-empty">Todavia no hay resultados recientes en este territorio.</div>';
+
+      return `
+        <article class="territory-card">
+          <div class="territory-card-head">
+            <div>
+              <div class="eyebrow">Territorio activo</div>
+              <h3>${escapeHtml(territory.name || "Territorio")}</h3>
+              <p>${escapeHtml(
+                [territory.officeId || "", territory.territoryId || "", territory.myRoleLabel || ""]
+                  .filter(Boolean)
+                  .join(" · ") || "Sin datos territoriales"
+              )}</p>
+            </div>
+            ${
+              territory.canManage
+                ? '<span class="team-seat-status" data-state="active">Administra</span>'
+                : '<span class="team-seat-status" data-state="paused">Miembro</span>'
+            }
+          </div>
+
+          <div class="insight-grid territory-stat-grid">
+            <div class="mini-stat"><strong>${Number(territory.summary?.totalMembers || 0)}</strong><span>Miembros</span></div>
+            <div class="mini-stat"><strong>${Number(territory.summary?.activeSeats || 0)}</strong><span>Subcuentas activas</span></div>
+            <div class="mini-stat"><strong>${Number(territory.summary?.chefLeads || 0)}</strong><span>Leads Chef</span></div>
+            <div class="mini-stat"><strong>${Number(territory.summary?.programSheets || 0)}</strong><span>4 en 14</span></div>
+            <div class="mini-stat"><strong>${Number(territory.summary?.applications || 0)}</strong><span>Aplicaciones</span></div>
+            <div class="mini-stat"><strong>${formatMoney(territory.summary?.soldAmount || 0)}</strong><span>Ventas</span></div>
+          </div>
+
+          <div class="territory-section">
+            <strong>Miembros del territorio</strong>
+            <div class="territory-member-list">${membersHtml}</div>
+          </div>
+
+          <div class="territory-section">
+            <strong>Invitaciones pendientes</strong>
+            <div class="territory-inline-list">${invitesHtml}</div>
+          </div>
+
+          <div class="territory-section">
+            <strong>Resultados recientes</strong>
+            <div class="territory-result-list">${resultsHtml}</div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function initCoachTerritoryWorkspace(user = null) {
+  const canUseTerritory = Boolean(user && user.accountType !== "seat");
+  const createForm = document.querySelector("[data-territory-create-form]");
+  const createFeedback = document.querySelector("[data-territory-create-feedback]");
+  const createButton = document.querySelector("[data-territory-create-save]");
+  const inviteForm = document.querySelector("[data-territory-invite-form]");
+  const inviteFeedback = document.querySelector("[data-territory-invite-feedback]");
+  const inviteButton = document.querySelector("[data-territory-invite-save]");
+  const pendingList = document.querySelector("[data-territory-pending-list]");
+
+  if (!createForm || !inviteForm || !pendingList) {
+    return;
+  }
+
+  if (!canUseTerritory) {
+    renderCoachTerritorySummary(null);
+    renderCoachPendingTerritoryInvites([]);
+    renderCoachTerritories([]);
+    renderCoachTerritoryInviteOptions([]);
+    return;
+  }
+
+  let latestWorkspace = {
+    territories: [],
+    pendingInvites: []
+  };
+
+  const loadWorkspace = async () => {
+    const data = await apiRequest("/api/coach/territories");
+    latestWorkspace = data || latestWorkspace;
+    renderCoachTerritorySummary(data);
+    renderCoachPendingTerritoryInvites(data.pendingInvites || []);
+    renderCoachTerritories(data.territories || []);
+    renderCoachTerritoryInviteOptions(data.territories || []);
+    return data;
+  };
+
+  createForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(createFeedback);
+    setButtonLoading(createButton, true, "Creando...");
+
+    try {
+      const formData = new FormData(createForm);
+      const data = await apiRequest("/api/coach/territories", {
+        method: "POST",
+        body: {
+          name: formData.get("name"),
+          officeId: formData.get("officeId"),
+          territoryId: formData.get("territoryId")
+        }
+      });
+
+      setMessage(createFeedback, `Territorio creado: ${data.territory?.name || "Territorio"}.`, "success");
+      createForm.reset();
+      registerCoachDemoEvent({
+        id: "territorio_creado",
+        label: "Territorio creado",
+        detail: `Abriste ${data.territory?.name || "un territorio nuevo"} dentro del Coach.`
+      });
+      await loadWorkspace();
+    } catch (error) {
+      setMessage(createFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(createButton, false);
+    }
+  });
+
+  inviteForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(inviteFeedback);
+    setButtonLoading(inviteButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(inviteForm);
+      const territoryId = String(formData.get("territoryId") || "").trim();
+      const data = await apiRequest(`/api/coach/territories/${encodeURIComponent(territoryId)}/invites`, {
+        method: "POST",
+        body: {
+          email: formData.get("email"),
+          role: formData.get("role"),
+          note: formData.get("note")
+        }
+      });
+
+      setMessage(
+        inviteFeedback,
+        `Invitacion lista para ${data.invite?.email || "la cuenta"} en ${data.invite?.territoryName || "el territorio"}.`,
+        "success"
+      );
+      inviteForm.reset();
+      renderCoachTerritoryInviteOptions(latestWorkspace.territories || []);
+      registerCoachDemoEvent({
+        id: "territorio_invite",
+        label: "Invitacion territorial enviada",
+        detail: `Se invito a ${data.invite?.email || "una cuenta"} al territorio.`
+      });
+      await loadWorkspace();
+    } catch (error) {
+      setMessage(inviteFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(inviteButton, false);
+    }
+  });
+
+  pendingList.addEventListener("click", async event => {
+    const button = event.target.closest("[data-territory-invite-action]");
+
+    if (!button) {
+      return;
+    }
+
+    const card = button.closest("[data-territory-invite-id]");
+    const inviteId = card?.dataset.territoryInviteId || "";
+    const action = button.dataset.territoryInviteAction || "";
+
+    if (!inviteId || !action) {
+      return;
+    }
+
+    setButtonLoading(button, true, action === "accept" ? "Aceptando..." : "Rechazando...");
+
+    try {
+      await apiRequest(`/api/coach/territory-invites/${encodeURIComponent(inviteId)}/respond`, {
+        method: "POST",
+        body: {
+          action
+        }
+      });
+
+      registerCoachDemoEvent({
+        id: action === "accept" ? "territorio_accept" : "territorio_reject",
+        label: action === "accept" ? "Invitacion territorial aceptada" : "Invitacion territorial rechazada",
+        detail:
+          action === "accept"
+            ? "Te uniste a un territorio desde tu propia cuenta."
+            : "Rechazaste una invitacion territorial."
+      });
+      await loadWorkspace();
+    } catch (error) {
+      setMessage(inviteFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(button, false);
+    }
+  });
+
+  loadWorkspace().catch(error => {
+    setMessage(createFeedback, error.message || "No pude cargar tus territorios.", "error");
+    setMessage(inviteFeedback, error.message || "No pude cargar tus territorios.", "error");
+  });
+}
+
 function renderCoachRepLeadSummary(summary) {
   const safeSummary = summary || {};
   const scoreboard = safeSummary.scoreboard || {};
@@ -5812,6 +6223,7 @@ async function initCoachAppPage() {
   initCoachLeadWorkspace();
   initChefCampaignTool();
   initCoachTeamWorkspace(me.user);
+  initCoachTerritoryWorkspace(me.user);
   initRecruitmentTool();
   initHealthSurveyTool();
   initOrderCalculator();

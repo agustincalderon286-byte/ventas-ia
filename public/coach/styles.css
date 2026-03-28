@@ -1074,6 +1074,95 @@ img {
   text-align: center;
 }
 
+.territory-list,
+.territory-invite-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.territory-card,
+.territory-invite-card,
+.territory-member-card,
+.territory-result-card {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.territory-card {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.territory-invite-card,
+.territory-member-card,
+.territory-result-card {
+  padding: 16px 18px;
+}
+
+.territory-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.territory-card-head h3,
+.territory-card-head p {
+  margin: 0;
+}
+
+.territory-card-head p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.territory-stat-grid {
+  gap: 12px;
+}
+
+.territory-section {
+  display: grid;
+  gap: 12px;
+}
+
+.territory-member-list,
+.territory-result-list,
+.territory-inline-list {
+  display: grid;
+  gap: 12px;
+}
+
+.territory-inline-chip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(8, 11, 22, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.territory-inline-chip strong,
+.territory-inline-chip span {
+  display: block;
+}
+
+.territory-inline-chip span {
+  color: var(--muted);
+}
+
+.territory-inline-note,
+.territory-result-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 .demo-outcome-list {
   display: grid;
   gap: 14px;
