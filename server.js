@@ -14073,10 +14073,20 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     return null;
   }
 
+  const crmAction = [{ type: "workspace", workspace: "crm", label: "Ir a CRM" }];
+  const agendaAction = [{ type: "workspace", workspace: "agenda", label: "Abrir Agenda" }];
+  const prospectionAction = [{ type: "workspace", workspace: "prospeccion", label: "Ir a Prospeccion" }];
+  const messagesAction = [{ type: "workspace", workspace: "mensajes", label: "Abrir Mensajes" }];
+  const teamAction = isTeamManager ? [{ type: "workspace", workspace: "equipo", label: "Abrir Equipo" }] : [];
+  const territoryAction = canUseTerritories
+    ? [{ type: "workspace", workspace: "territorio", label: "Abrir Territorio" }]
+    : [];
+
   switch (topicId) {
     case "crm_4_14":
       return {
         topicId,
+        actions: crmAction,
         reply: construirCoachHelpStepsReply({
           intro: "Para encontrar un 4 en 14 dentro del CRM:",
           steps: [
@@ -14092,6 +14102,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "lead_destination_email":
       return {
         topicId,
+        actions: isTeamManager ? prospectionAction : [],
         reply: isTeamManager
           ? construirCoachHelpStepsReply({
               intro: "Para mandarte copia de tus leads al correo:",
@@ -14116,6 +14127,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "agenda":
       return {
         topicId,
+        actions: agendaAction,
         reply: construirCoachHelpStepsReply({
           intro: "Asi se trabaja la Agenda rapida:",
           steps: [
@@ -14131,6 +14143,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "crm_workflow":
       return {
         topicId,
+        actions: crmAction,
         reply: construirCoachHelpStepsReply({
           intro: "Asi se mueve una fila dentro del CRM:",
           steps: [
@@ -14146,6 +14159,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "team":
       return {
         topicId,
+        actions: teamAction,
         reply: isTeamManager
           ? construirCoachHelpStepsReply({
               intro: "Para crear y mover subcuentas desde Equipo:",
@@ -14168,6 +14182,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "territory":
       return {
         topicId,
+        actions: territoryAction,
         reply: canUseTerritories
           ? construirCoachHelpStepsReply({
               intro: "Para mover cuentas propias dentro de Territorio:",
@@ -14190,6 +14205,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "messages":
       return {
         topicId,
+        actions: messagesAction,
         reply: construirCoachHelpStepsReply({
           intro: "Mensajes tiene tres usos internos:",
           steps: [
@@ -14204,6 +14220,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "prospection":
       return {
         topicId,
+        actions: isTelemarketingPortal ? [{ type: "workspace", workspace: "crm", label: "Volver a CRM" }] : prospectionAction,
         reply: isTelemarketingPortal
           ? construirCoachHelpStepsReply({
               intro:
@@ -14227,6 +14244,7 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     case "recruitment":
       return {
         topicId,
+        actions: crmAction,
         reply: construirCoachHelpStepsReply({
           intro: "Las aplicaciones de trabajo ya entran al CRM sin mover nada manual:",
           steps: [
@@ -14241,6 +14259,17 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
     default:
       return {
         topicId: "manual_general",
+        actions: isTelemarketingPortal
+          ? [
+              { type: "workspace", workspace: "crm", label: "Ir a CRM" },
+              { type: "workspace", workspace: "agenda", label: "Abrir Agenda" },
+              { type: "workspace", workspace: "mensajes", label: "Mensajes" }
+            ]
+          : [
+              { type: "workspace", workspace: "prospeccion", label: "Prospeccion" },
+              { type: "workspace", workspace: "crm", label: "CRM" },
+              ...(isTeamManager ? [{ type: "workspace", workspace: "equipo", label: "Equipo" }] : [])
+            ],
         reply: isTelemarketingPortal
           ? construirCoachHelpStepsReply({
               intro: "Si la pregunta es de uso del sistema, aqui te sirvo como copiloto del portal.",
@@ -17893,6 +17922,7 @@ app.post("/chat", async (req, res) => {
           mode: modoChat,
           coachHelpMode: true,
           coachHelpTopic: coachHelpReply.topicId || "general",
+          coachHelpActions: Array.isArray(coachHelpReply.actions) ? coachHelpReply.actions : [],
           usage: {
             usedToday: (coachUsage?.usedToday || 0) + 1,
             remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),

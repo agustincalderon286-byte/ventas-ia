@@ -4087,6 +4087,37 @@ img {
   white-space: pre-wrap;
 }
 
+.coach-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.coach-message-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.coach-message-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .coach-message.assistant {
   align-self: flex-start;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
@@ -4789,6 +4820,17 @@ html[data-coach-portal-mode="telemarketing"] .coach-chat-status {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.8rem;
+}
+
+html[data-coach-portal-mode="telemarketing"] .coach-message-action {
+  border-color: rgba(122, 215, 255, 0.18);
+  background: rgba(8, 18, 30, 0.82);
+  color: #dff7ff;
+}
+
+html[data-coach-portal-mode="telemarketing"] .coach-message-action:hover {
+  border-color: rgba(122, 215, 255, 0.34);
+  background: rgba(10, 26, 40, 0.94);
 }
 
 html[data-coach-portal-mode="telemarketing"] .coach-compact-bar {

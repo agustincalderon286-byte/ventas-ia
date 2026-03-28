@@ -5986,7 +5986,7 @@ function initChefCampaignTool() {
   });
 }
 
-function addCoachMessage(container, role, content) {
+function addCoachMessage(container, role, content, options = {}) {
   const targets = Array.from(
     new Set(
       [container, ...document.querySelectorAll("[data-coach-chat-messages], [data-coach-chat-messages-floating]")]
@@ -6005,6 +6005,29 @@ function addCoachMessage(container, role, content) {
     const paragraph = document.createElement("p");
     paragraph.textContent = content;
     card.appendChild(paragraph);
+
+    const actions = Array.isArray(options?.actions) ? options.actions : [];
+    if (role === "assistant" && actions.length) {
+      const actionsWrap = document.createElement("div");
+      actionsWrap.className = "coach-message-actions";
+
+      actions.forEach(action => {
+        if (action?.type !== "workspace" || !action?.workspace || !action?.label) {
+          return;
+        }
+
+        const actionButton = document.createElement("button");
+        actionButton.type = "button";
+        actionButton.className = "coach-message-action";
+        actionButton.dataset.coachChatActionWorkspace = String(action.workspace || "").trim();
+        actionButton.textContent = String(action.label || "").trim();
+        actionsWrap.appendChild(actionButton);
+      });
+
+      if (actionsWrap.childElementCount) {
+        card.appendChild(actionsWrap);
+      }
+    }
 
     target.appendChild(card);
     target.scrollTop = target.scrollHeight;
@@ -8913,7 +8936,10 @@ async function initCoachAppPage() {
       addCoachMessage(
         chatMessages,
         "assistant",
-        data.respuesta || "No pude responder en este momento."
+        data.respuesta || "No pude responder en este momento.",
+        {
+          actions: Array.isArray(data.coachHelpActions) ? data.coachHelpActions : []
+        }
       );
 
       if (data.profile) {
@@ -8961,6 +8987,24 @@ async function initCoachAppPage() {
   chatForm?.addEventListener("submit", event => {
     event.preventDefault();
     sendCoachMessage(chatInput?.value || "");
+  });
+
+  [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {
+    root.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-coach-chat-action-workspace]");
+
+      if (!actionButton) {
+        return;
+      }
+
+      const nextWorkspace = String(actionButton.dataset.coachChatActionWorkspace || "").trim();
+
+      if (!nextWorkspace) {
+        return;
+      }
+
+      setCoachWorkspaceTab(nextWorkspace);
+    });
   });
 
   chatInput?.addEventListener("input", () => {
