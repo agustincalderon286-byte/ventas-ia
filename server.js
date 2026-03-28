@@ -4204,7 +4204,11 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
     };
   }
 
-  await asegurarCoachCrmWorkspace(userDoc);
+  try {
+    await asegurarCoachCrmWorkspace(userDoc);
+  } catch (error) {
+    console.error("Error sembrando workspace CRM del Coach:", error.message);
+  }
   const query = construirCoachCrmWorkspaceQuery(userDoc);
   const sourceType = normalizarCoachCrmSourceType(filters?.sourceType || "");
   const status = normalizarCoachCrmStatus(filters?.status || "");
@@ -4248,7 +4252,11 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
     return null;
   }
 
-  await asegurarCoachCrmWorkspace(userDoc);
+  try {
+    await asegurarCoachCrmWorkspace(userDoc);
+  } catch (error) {
+    console.error("Error sembrando detalle CRM del Coach:", error.message);
+  }
 
   const recordDoc = await CoachCrmRecord.findOne(
     construirCoachCrmWorkspaceQuery(userDoc, {
@@ -4340,7 +4348,11 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
     };
   }
 
-  await asegurarCoachCrmWorkspace(userDoc);
+  try {
+    await asegurarCoachCrmWorkspace(userDoc);
+  } catch (error) {
+    console.error("Error sembrando agenda CRM del Coach:", error.message);
+  }
   const query = construirCoachAgendaWorkspaceQuery(userDoc);
   const recordDocs = await CoachCrmRecord.find(query)
     .sort({ appointmentAt: 1, nextActionAt: 1, updatedAt: -1 })
@@ -5909,6 +5921,14 @@ function mapearCoachCrmStatusAPrograma414(status = "") {
   }
 }
 
+function normalizarCoachCrmObjectId(value = null) {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) {
+    return null;
+  }
+
+  return value instanceof mongoose.Types.ObjectId ? value : new mongoose.Types.ObjectId(value);
+}
+
 function construirCoachCrmRecordId(sourceType = "", sourceRecordId = "", ownerUserId = "") {
   return [
     "crm",
@@ -5968,6 +5988,12 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null) {
   }
 
   const sourceRecordId = String(leadDoc._id);
+  const ownerUserId = normalizarCoachCrmObjectId(leadDoc.ownerUserId);
+
+  if (!ownerUserId) {
+    return null;
+  }
+
   const status = resolverCoachCrmStatusDesdeLead(leadDoc);
   const nextActionAt = leadDoc.nextActionAt || null;
   const appointmentAt = leadDoc.status === "agendado" ? nextActionAt : null;
@@ -5975,24 +6001,24 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null) {
   return {
     updateOne: {
       filter: {
-        ownerUserId: leadDoc.ownerUserId,
+        ownerUserId,
         sourceType: "lead",
         sourceRecordId
       },
       update: {
         $set: {
-          crmRecordId: construirCoachCrmRecordId("lead", sourceRecordId, leadDoc.ownerUserId),
-          ownerUserId: leadDoc.ownerUserId,
+          crmRecordId: construirCoachCrmRecordId("lead", sourceRecordId, ownerUserId),
+          ownerUserId,
           ownerEmail: leadDoc.ownerEmail || "",
           ownerName: leadDoc.ownerName || "",
-          generatedByUserId: leadDoc.generatedByUserId || null,
+          generatedByUserId: normalizarCoachCrmObjectId(leadDoc.generatedByUserId),
           generatedByName: leadDoc.generatedByName || "",
           generatedByAccountType: leadDoc.generatedByAccountType || "",
           sourceType: "lead",
           sourceRecordId,
           sourceParentId: "",
           sourceSubIndex: -1,
-          linkedLeadId: leadDoc._id,
+          linkedLeadId: normalizarCoachCrmObjectId(leadDoc._id),
           linkedProgramSheetId: null,
           linkedApplicationId: null,
           leadName: leadDoc.fullName || "",
@@ -6031,6 +6057,12 @@ function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null,
     return null;
   }
 
+  const ownerUserId = normalizarCoachCrmObjectId(sheetDoc.ownerUserId);
+
+  if (!ownerUserId) {
+    return null;
+  }
+
   const sourceRecordId = `${String(sheetDoc._id)}:${referralIndex}`;
   const status = resolverCoachCrmStatusDesdePrograma414(referral, linkedLead);
   const nextActionAt = linkedLead?.nextActionAt || null;
@@ -6042,25 +6074,25 @@ function construirCoachCrmProgramSeedOperation(sheetDoc = null, referral = null,
   return {
     updateOne: {
       filter: {
-        ownerUserId: sheetDoc.ownerUserId,
+        ownerUserId,
         sourceType: "programa_4_en_14",
         sourceRecordId
       },
       update: {
         $set: {
-          crmRecordId: construirCoachCrmRecordId("programa_4_en_14", sourceRecordId, sheetDoc.ownerUserId),
-          ownerUserId: sheetDoc.ownerUserId,
+          crmRecordId: construirCoachCrmRecordId("programa_4_en_14", sourceRecordId, ownerUserId),
+          ownerUserId,
           ownerEmail: sheetDoc.ownerEmail || "",
           ownerName: sheetDoc.ownerName || "",
-          generatedByUserId: sheetDoc.generatedByUserId || null,
+          generatedByUserId: normalizarCoachCrmObjectId(sheetDoc.generatedByUserId),
           generatedByName: sheetDoc.generatedByName || "",
           generatedByAccountType: sheetDoc.generatedByAccountType || "",
           sourceType: "programa_4_en_14",
           sourceRecordId,
           sourceParentId: String(sheetDoc._id),
           sourceSubIndex: referralIndex,
-          linkedLeadId: linkedLead?._id || referral.createdLeadId || null,
-          linkedProgramSheetId: sheetDoc._id,
+          linkedLeadId: normalizarCoachCrmObjectId(linkedLead?._id || referral.createdLeadId),
+          linkedProgramSheetId: normalizarCoachCrmObjectId(sheetDoc._id),
           linkedApplicationId: null,
           leadName: referral.fullName || "",
           phone: referral.phone || "",
@@ -6101,21 +6133,26 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null) {
   }
 
   const sourceRecordId = String(applicationDoc._id);
+  const ownerUserId = normalizarCoachCrmObjectId(applicationDoc.ownerUserId);
+
+  if (!ownerUserId) {
+    return null;
+  }
 
   return {
     updateOne: {
       filter: {
-        ownerUserId: applicationDoc.ownerUserId,
+        ownerUserId,
         sourceType: "reclutamiento",
         sourceRecordId
       },
       update: {
         $set: {
-          crmRecordId: construirCoachCrmRecordId("reclutamiento", sourceRecordId, applicationDoc.ownerUserId),
-          ownerUserId: applicationDoc.ownerUserId,
+          crmRecordId: construirCoachCrmRecordId("reclutamiento", sourceRecordId, ownerUserId),
+          ownerUserId,
           ownerEmail: applicationDoc.ownerEmail || "",
           ownerName: applicationDoc.ownerName || "",
-          generatedByUserId: applicationDoc.generatedByUserId || null,
+          generatedByUserId: normalizarCoachCrmObjectId(applicationDoc.generatedByUserId),
           generatedByName: applicationDoc.generatedByName || "",
           generatedByAccountType: applicationDoc.generatedByAccountType || "",
           sourceType: "reclutamiento",
@@ -6124,7 +6161,7 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null) {
           sourceSubIndex: -1,
           linkedLeadId: null,
           linkedProgramSheetId: null,
-          linkedApplicationId: applicationDoc._id,
+          linkedApplicationId: normalizarCoachCrmObjectId(applicationDoc._id),
           leadName: applicationDoc.fullName || "",
           phone: applicationDoc.phone || "",
           email: applicationDoc.email || "",
