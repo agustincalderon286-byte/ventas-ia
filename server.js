@@ -4302,6 +4302,24 @@ function construirCoachAgendaWorkspaceQuery(userDoc = null) {
   return query;
 }
 
+function construirCoachAgendaMetricsQuery(userDoc = null) {
+  const query = {
+    ...construirCoachCrmWorkspaceQuery(userDoc)
+  };
+
+  if (normalizarCoachAccountType(userDoc?.accountType || "owner") === "seat" && userDoc?._id) {
+    query.$or = [
+      { appointmentRepUserId: userDoc._id },
+      {
+        appointmentRepUserId: null,
+        generatedByUserId: userDoc._id
+      }
+    ];
+  }
+
+  return query;
+}
+
 function construirCoachAgendaMapsUrl(recordDoc = null) {
   const query = [recordDoc?.address || "", recordDoc?.city || "", recordDoc?.zipCode || ""]
     .map(item => cleanText(item || "").trim())
@@ -4368,6 +4386,26 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
   const startOfToday = obtenerInicioDia(now);
   const endOfToday = obtenerFinDia(now);
   const endOfWeek = obtenerFinDia(new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000));
+  const metricsQuery = {
+    ...construirCoachAgendaMetricsQuery(userDoc),
+    appointmentAt: {
+      $gte: startOfToday,
+      $lte: endOfWeek
+    }
+  };
+  const weekMetricDocs = await CoachCrmRecord.find(metricsQuery)
+    .sort({ appointmentAt: 1, updatedAt: -1 })
+    .limit(400)
+    .lean();
+  const weekMetricItems = weekMetricDocs.map(limpiarCoachCrmRecord).filter(Boolean);
+  const representativeBuckets = new Map();
+
+  weekMetricItems.forEach(record => {
+    const repKey = record.appointmentRepUserId || record.generatedByUserId || "";
+    const repLabel = record.appointmentRepName || record.generatedByName || "";
+    registrarCoachCrmPerformanceBucket(representativeBuckets, repKey, repLabel, record);
+  });
+
   const today = items.filter(item => {
     const appointmentDate = new Date(item.appointmentAt);
     return appointmentDate >= startOfToday && appointmentDate <= endOfToday;
@@ -4385,7 +4423,15 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
       pendingResults: items.filter(item =>
         ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(item.status)
       ).length,
-      outside: items.filter(item => item.status === "ya_afuera").length
+      outside: items.filter(item => item.status === "ya_afuera").length,
+      inside: weekMetricItems.filter(item => ["entro_a_casa", "demo_hecha", "venta"].includes(item.status)).length,
+      completedWeek: weekMetricItems.filter(item => ["demo_hecha", "venta", "no_venta"].includes(item.status)).length,
+      salesWeek: weekMetricItems.filter(item => item.status === "venta").length,
+      soldWeekAmount: weekMetricItems.reduce(
+        (sum, item) => sum + limpiarCoachDemoOutcomeAmount(item.saleAmount || 0),
+        0
+      ),
+      topRepresentatives: construirCoachCrmPerformanceTopList(representativeBuckets)
     },
     today,
     week
@@ -6299,52 +6345,177 @@ async function asegurarCoachCrmWorkspace(userDoc = null) {
   }
 }
 
+function crearCoachCrmPerformanceBucket(label = "") {
+  return {
+    label: cleanText(label || "").trim().slice(0, 120),
+    total: 0,
+    appointments: 0,
+    sales: 0,
+    soldAmount: 0,
+    noAnswer: 0,
+    followUps: 0,
+    outside: 0,
+    inside: 0,
+    completed: 0
+  };
+}
+
+function registrarCoachCrmPerformanceBucket(bucketMap = new Map(), key = "", label = "", record = null) {
+  const safeKey = String(key || "").trim();
+  const safeLabel = cleanText(label || "").trim();
+
+  if (!safeKey || !safeLabel || !record) {
+    return;
+  }
+
+  const bucket = bucketMap.get(safeKey) || crearCoachCrmPerformanceBucket(safeLabel);
+  const status = normalizarCoachCrmStatus(record.status || "nuevo");
+
+  bucket.total += 1;
+
+  if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(status)) {
+    bucket.appointments += 1;
+  }
+
+  if (status === "no_atendio") {
+    bucket.noAnswer += 1;
+  }
+
+  if (status === "seguimiento") {
+    bucket.followUps += 1;
+  }
+
+  if (status === "ya_afuera") {
+    bucket.outside += 1;
+  }
+
+  if (["entro_a_casa", "demo_hecha", "venta"].includes(status)) {
+    bucket.inside += 1;
+  }
+
+  if (["demo_hecha", "venta", "no_venta"].includes(status)) {
+    bucket.completed += 1;
+  }
+
+  if (status === "venta") {
+    bucket.sales += 1;
+    bucket.soldAmount += limpiarCoachDemoOutcomeAmount(record.saleAmount || 0);
+  }
+
+  bucketMap.set(safeKey, bucket);
+}
+
+function construirCoachCrmPerformanceTopList(bucketMap = new Map(), limit = 3) {
+  return Array.from(bucketMap.values())
+    .filter(item => item?.label)
+    .sort((a, b) => {
+      if (b.soldAmount !== a.soldAmount) {
+        return b.soldAmount - a.soldAmount;
+      }
+      if (b.sales !== a.sales) {
+        return b.sales - a.sales;
+      }
+      if (b.appointments !== a.appointments) {
+        return b.appointments - a.appointments;
+      }
+      if (b.total !== a.total) {
+        return b.total - a.total;
+      }
+      return String(a.label || "").localeCompare(String(b.label || ""), "es", { sensitivity: "base" });
+    })
+    .slice(0, limit)
+    .map(item => ({
+      ...item,
+      soldAmount: limpiarCoachDemoOutcomeAmount(item.soldAmount || 0)
+    }));
+}
+
 function construirCoachCrmSummary(records = []) {
   const safeRecords = Array.isArray(records) ? records : [];
   const now = new Date();
   const startOfToday = obtenerInicioDia(now);
   const endOfToday = obtenerFinDia(now);
-
-  return safeRecords.reduce(
-    (acc, record) => {
-      const status = normalizarCoachCrmStatus(record.status || "nuevo");
-      const sourceType = normalizarCoachCrmSourceType(record.sourceType || "lead");
-      acc.total += 1;
-      acc.bySource[sourceType] = Number(acc.bySource[sourceType] || 0) + 1;
-      acc.byStatus[status] = Number(acc.byStatus[status] || 0) + 1;
-
-      if (record.nextActionAt) {
-        const nextDate = new Date(record.nextActionAt);
-        if (nextDate >= startOfToday && nextDate <= endOfToday) {
-          acc.pendingToday += 1;
-        }
-      }
-
-      if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(status)) {
-        acc.appointments += 1;
-      }
-
-      if (status === "venta") {
-        acc.sales += 1;
-        acc.soldAmount += limpiarCoachDemoOutcomeAmount(record.saleAmount || 0);
-      }
-
-      return acc;
+  const telemarketerBuckets = new Map();
+  const representativeBuckets = new Map();
+  const territoryBuckets = new Map();
+  const summary = {
+    total: 0,
+    pendingToday: 0,
+    appointments: 0,
+    sales: 0,
+    soldAmount: 0,
+    noAnswerCount: 0,
+    followUpCount: 0,
+    territoryCount: 0,
+    bySource: {
+      lead: 0,
+      programa_4_en_14: 0,
+      reclutamiento: 0
     },
-    {
-      total: 0,
-      pendingToday: 0,
-      appointments: 0,
-      sales: 0,
-      soldAmount: 0,
-      bySource: {
-        lead: 0,
-        programa_4_en_14: 0,
-        reclutamiento: 0
-      },
-      byStatus: {}
+    byStatus: {}
+  };
+
+  safeRecords.forEach(record => {
+    const status = normalizarCoachCrmStatus(record.status || "nuevo");
+    const sourceType = normalizarCoachCrmSourceType(record.sourceType || "lead");
+    summary.total += 1;
+    summary.bySource[sourceType] = Number(summary.bySource[sourceType] || 0) + 1;
+    summary.byStatus[status] = Number(summary.byStatus[status] || 0) + 1;
+
+    if (record.nextActionAt) {
+      const nextDate = new Date(record.nextActionAt);
+      if (nextDate >= startOfToday && nextDate <= endOfToday) {
+        summary.pendingToday += 1;
+      }
     }
-  );
+
+    if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(status)) {
+      summary.appointments += 1;
+    }
+
+    if (status === "no_atendio") {
+      summary.noAnswerCount += 1;
+    }
+
+    if (status === "seguimiento") {
+      summary.followUpCount += 1;
+    }
+
+    if (status === "venta") {
+      summary.sales += 1;
+      summary.soldAmount += limpiarCoachDemoOutcomeAmount(record.saleAmount || 0);
+    }
+
+    registrarCoachCrmPerformanceBucket(
+      telemarketerBuckets,
+      record.assignedTelemarketerUserId || "",
+      record.assignedTelemarketerName || "",
+      record
+    );
+    registrarCoachCrmPerformanceBucket(
+      representativeBuckets,
+      record.appointmentRepUserId || "",
+      record.appointmentRepName || "",
+      record
+    );
+    registrarCoachCrmPerformanceBucket(
+      territoryBuckets,
+      record.territoryId || record.officeId || "",
+      record.territoryId || record.officeId || "",
+      record
+    );
+  });
+
+  summary.territoryCount = territoryBuckets.size;
+  summary.closeRate = summary.total ? Number(((summary.sales / summary.total) * 100).toFixed(1)) : 0;
+  summary.appointmentCloseRate = summary.appointments
+    ? Number(((summary.sales / summary.appointments) * 100).toFixed(1))
+    : 0;
+  summary.topTelemarketers = construirCoachCrmPerformanceTopList(telemarketerBuckets);
+  summary.topRepresentatives = construirCoachCrmPerformanceTopList(representativeBuckets);
+  summary.topTerritories = construirCoachCrmPerformanceTopList(territoryBuckets);
+
+  return summary;
 }
 
 function limpiarCoachCrmRecord(recordDoc = null) {

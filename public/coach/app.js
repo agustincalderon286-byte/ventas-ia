@@ -4396,6 +4396,33 @@ function formatCoachCrmMoney(value = 0) {
   });
 }
 
+function formatCoachCrmPercent(value = 0) {
+  const safeValue = Number(value || 0);
+  return `${Number.isFinite(safeValue) ? safeValue.toFixed(1).replace(/\.0$/, "") : "0"}%`;
+}
+
+function renderCoachMetricList(node, items = [], emptyCopy = "Todavia no hay datos para mostrar.") {
+  if (!node) {
+    return;
+  }
+
+  const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+
+  node.innerHTML = safeItems.length
+    ? safeItems
+        .map(
+          item => `
+            <article class="metric-list-item">
+              <strong>${escapeHtml(item.label || "Equipo")}</strong>
+              <span>${escapeHtml(item.secondary || "")}</span>
+              <small>${escapeHtml(item.tertiary || "")}</small>
+            </article>
+          `
+        )
+        .join("")
+    : `<div class="team-seat-empty">${escapeHtml(emptyCopy)}</div>`;
+}
+
 function formatCoachAgendaAddress(record = null) {
   return [record?.address || "", record?.city || "", record?.zipCode || ""]
     .map(item => String(item || "").trim())
@@ -4684,6 +4711,9 @@ function initCoachCrmWorkspace(user = null) {
   const detailSave = document.querySelector("[data-crm-detail-save]");
   const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
   const activityList = document.querySelector("[data-crm-activity-list]");
+  const topTelemarketers = document.querySelector("[data-crm-top-telemarketers]");
+  const topRepresentatives = document.querySelector("[data-crm-top-representatives]");
+  const topTerritories = document.querySelector("[data-crm-top-territories]");
 
   if (!summaryFeedback || !sourceFilter || !statusFilter || !assigneeFilter || !recordList || !detailPanel || !detailForm) {
     return;
@@ -4723,6 +4753,49 @@ function initCoachCrmWorkspace(user = null) {
     document.querySelectorAll("[data-crm-sales-amount]").forEach(node => {
       node.textContent = formatCoachCrmMoney(safeSummary.soldAmount || 0);
     });
+    document.querySelectorAll("[data-crm-close-rate]").forEach(node => {
+      node.textContent = formatCoachCrmPercent(safeSummary.closeRate || 0);
+    });
+    document.querySelectorAll("[data-crm-appointment-close-rate]").forEach(node => {
+      node.textContent = formatCoachCrmPercent(safeSummary.appointmentCloseRate || 0);
+    });
+    document.querySelectorAll("[data-crm-no-answer]").forEach(node => {
+      node.textContent = String(safeSummary.noAnswerCount || 0);
+    });
+    document.querySelectorAll("[data-crm-follow-up]").forEach(node => {
+      node.textContent = String(safeSummary.followUpCount || 0);
+    });
+    document.querySelectorAll("[data-crm-territory-count]").forEach(node => {
+      node.textContent = String(safeSummary.territoryCount || 0);
+    });
+
+    renderCoachMetricList(
+      topTelemarketers,
+      (safeSummary.topTelemarketers || []).map(item => ({
+        label: item.label || "Telemarketing",
+        secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
+        tertiary: `${item.appointments || 0} citas · ${item.total || 0} registros`
+      })),
+      "Todavia no hay telemarketing medible."
+    );
+    renderCoachMetricList(
+      topRepresentatives,
+      (safeSummary.topRepresentatives || []).map(item => ({
+        label: item.label || "Representante",
+        secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
+        tertiary: `${item.appointments || 0} citas · ${item.completed || 0} completadas`
+      })),
+      "Todavia no hay representantes medibles."
+    );
+    renderCoachMetricList(
+      topTerritories,
+      (safeSummary.topTerritories || []).map(item => ({
+        label: item.label || "Territorio",
+        secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
+        tertiary: `${item.appointments || 0} citas · ${item.total || 0} registros`
+      })),
+      "Todavia no hay territorios medibles."
+    );
   };
 
   const renderAssigneeOptions = () => {
@@ -5024,6 +5097,7 @@ function initCoachAgendaWorkspace(user = null) {
   const refreshButton = document.querySelector("[data-agenda-refresh]");
   const todayList = document.querySelector("[data-agenda-today-list]");
   const weekList = document.querySelector("[data-agenda-week-list]");
+  const topRepresentatives = document.querySelector("[data-agenda-top-representatives]");
 
   if (!feedbackNode || !todayList || !weekList) {
     return;
@@ -5047,6 +5121,28 @@ function initCoachAgendaWorkspace(user = null) {
     document.querySelectorAll("[data-agenda-outside]").forEach(node => {
       node.textContent = String(safeSummary.outside || 0);
     });
+    document.querySelectorAll("[data-agenda-inside]").forEach(node => {
+      node.textContent = String(safeSummary.inside || 0);
+    });
+    document.querySelectorAll("[data-agenda-completed-week]").forEach(node => {
+      node.textContent = String(safeSummary.completedWeek || 0);
+    });
+    document.querySelectorAll("[data-agenda-sales-week]").forEach(node => {
+      node.textContent = String(safeSummary.salesWeek || 0);
+    });
+    document.querySelectorAll("[data-agenda-sold-week-amount]").forEach(node => {
+      node.textContent = formatCoachCrmMoney(safeSummary.soldWeekAmount || 0);
+    });
+
+    renderCoachMetricList(
+      topRepresentatives,
+      (safeSummary.topRepresentatives || []).map(item => ({
+        label: item.label || "Representante",
+        secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
+        tertiary: `${item.appointments || 0} citas · ${item.completed || 0} completadas`
+      })),
+      "Todavia no hay representantes medibles esta semana."
+    );
   };
 
   const renderList = (target, items = [], emptyCopy = "") => {
