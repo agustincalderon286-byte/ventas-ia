@@ -72,6 +72,15 @@ const COACH_PROMPT_HISTORY_MESSAGES = Math.max(
   4,
   Math.min(MAX_PROMPT_HISTORY_MESSAGES, Number(process.env.COACH_PROMPT_HISTORY_MESSAGES || 8))
 );
+const COACH_TURBO_MODE = String(process.env.COACH_TURBO_MODE || "true").toLowerCase() !== "false";
+const COACH_TURBO_MAX_HISTORY_MESSAGES = Math.max(
+  2,
+  Math.min(COACH_PROMPT_HISTORY_MESSAGES, Number(process.env.COACH_TURBO_MAX_HISTORY_MESSAGES || 4))
+);
+const COACH_TURBO_MAX_COMPLETION_TOKENS = Math.max(
+  120,
+  Number(process.env.COACH_TURBO_MAX_COMPLETION_TOKENS || 220)
+);
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
   Number(process.env.MAX_RAM_SESSION_MESSAGES || 16)
@@ -3480,6 +3489,46 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
   };
 }
 
+function limpiarCoachProgram414ActiveContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const sheetId = cleanText(context.sheetId || context.id || "");
+  const referral = context.referral && typeof context.referral === "object" ? context.referral : null;
+  const referralFullName = cleanText(referral?.fullName || "");
+
+  if (!sheetId || !referralFullName) {
+    return null;
+  }
+
+  return {
+    sheetId,
+    ownerUserId: cleanText(context.ownerUserId || ""),
+    hostName: cleanText(context.hostName || ""),
+    hostPhone: cleanText(context.hostPhone || ""),
+    giftSelected: cleanText(context.giftSelected || ""),
+    representativeName: cleanText(context.representativeName || ""),
+    representativePhone: cleanText(context.representativePhone || ""),
+    startWindow: cleanText(context.startWindow || ""),
+    summary: cleanText(context.summary || ""),
+    referralIndex: Number.isInteger(context.referralIndex) ? context.referralIndex : -1,
+    referral: {
+      fullName: referralFullName,
+      phone: cleanText(referral?.phone || ""),
+      notes: cleanText(referral?.notes || ""),
+      instantCallStatus: cleanText(referral?.instantCallStatus || ""),
+      instantCallNotes: cleanText(referral?.instantCallNotes || ""),
+      appointmentDetails: cleanText(referral?.appointmentDetails || ""),
+      scripts: {
+        hostScript: cleanText(referral?.scripts?.hostScript || ""),
+        repScript: cleanText(referral?.scripts?.repScript || ""),
+        focus: cleanText(referral?.scripts?.focus || "")
+      }
+    }
+  };
+}
+
 function construirNotasLeadDesdePrograma414(sheet = null, referral = null, index = 0) {
   const parts = [];
 
@@ -4488,6 +4537,179 @@ function limpiarCoachHealthSurvey(surveyDoc = null) {
     updatedAt: surveyDoc.updatedAt || null,
     createdAt: surveyDoc.createdAt || null
   };
+}
+
+function limpiarCoachHealthSurveyActiveContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const id = cleanText(context.id || context._id || "");
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    ownerUserId: cleanText(context.ownerUserId || ""),
+    fullName: cleanText(context.fullName || ""),
+    phone: cleanText(context.phone || ""),
+    summary: cleanText(context.summary || ""),
+    topProducts: Array.isArray(context.topProducts)
+      ? context.topProducts.map(item => cleanText(item)).filter(Boolean).slice(0, 6)
+      : [],
+    salesAnalysis: {
+      recommendedClose: cleanText(context.salesAnalysis?.recommendedClose || ""),
+      recommendedProduct: cleanText(context.salesAnalysis?.recommendedProduct || ""),
+      objectionAnchor: cleanText(context.salesAnalysis?.objectionAnchor || "")
+    }
+  };
+}
+
+function formatearMonedaCoachUsd(value = 0) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "";
+  }
+
+  return `$${amount.toFixed(2)}`;
+}
+
+function construirCoachTurboReply({
+  question = "",
+  activeDemoStage = "",
+  activeHealthSurveyContext = null,
+  activeProgram414Context = null,
+  activeOrderCalcContext = null,
+  activeDecisionContext = null
+} = {}) {
+  const normalized = normalizarTextoBusquedaCoach(question);
+
+  if (!normalized) {
+    return "";
+  }
+
+  const referral = activeProgram414Context?.referral || null;
+  const paymentSummary = activeOrderCalcContext?.summary || null;
+  const weekly = formatearMonedaCoachUsd(paymentSummary?.weekly);
+  const monthly = formatearMonedaCoachUsd(paymentSummary?.monthly);
+  const daily = formatearMonedaCoachUsd(paymentSummary?.daily);
+  const productNames = Array.isArray(activeOrderCalcContext?.products)
+    ? activeOrderCalcContext.products
+        .map(item => cleanText(item?.name || item?.code || ""))
+        .filter(Boolean)
+        .slice(0, 2)
+    : [];
+  const productLabel =
+    activeHealthSurveyContext?.salesAnalysis?.recommendedProduct ||
+    productNames[0] ||
+    "el producto";
+  const objectionAnchor = cleanText(activeHealthSurveyContext?.salesAnalysis?.objectionAnchor || "");
+  const closeLabel = cleanText(activeHealthSurveyContext?.salesAnalysis?.recommendedClose || "");
+  const topObjection = cleanText(activeDecisionContext?.summary?.topObjection || "");
+  const nextStep = cleanText(activeDecisionContext?.summary?.nextStep || "");
+  const isInstantCallLane =
+    Boolean(referral?.fullName) ||
+    /cita_instantanea/i.test(activeDemoStage) ||
+    /cita instantanea|cita instantánea|llamar ahora|marcar ahorita/.test(normalized);
+
+  if (isInstantCallLane) {
+    if (/mandame informacion|manda informacion|manda info|texto|mensaje/.test(normalized)) {
+      return [
+        "No vendas producto por texto en esta llamada.",
+        `Di: "Claro, te mando detalles despues, pero ahorita solo quiero apartarte un espacio rapido. ¿Te queda mejor hoy o manana?"`,
+        referral?.scripts?.focus ? `Enfoque: ${referral.scripts.focus}.` : ""
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    if (/mi esposo|mi esposa|mi pareja|consultarlo con mi esposo|consultarlo con mi esposa/.test(normalized)) {
+      return [
+        "No discutas todo ahorita.",
+        `Di: "Perfecto, justo para eso quiero dejarles la cita ya apartada y verla juntos. ¿Que te queda mejor, hoy mas tarde o manana?"`,
+        referral?.scripts?.repScript ? `Guion corto: "${referral.scripts.repScript}"` : ""
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    if (/ahorita no puedo|ahora no puedo|ahorita no puede|estoy ocupad|ocupada|ocupado|despues|luego/.test(normalized)) {
+      return [
+        "No busques vender. Solo aparta hora.",
+        `Di: "Perfecto, no te quito tiempo. Solo dime que te queda mejor, hoy mas tarde o manana."`,
+        referral?.scripts?.focus ? `Enfoque: ${referral.scripts.focus}.` : ""
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
+
+  if (/esta caro|muy caro|\bcaro\b/.test(normalized)) {
+    return [
+      "No pelees el total. Bajalo a uso y a pago.",
+      weekly || monthly
+        ? `Di: "Entiendo. Lo importante es que ya viste el valor en tu casa. Si te queda en ${
+            weekly || monthly
+          }${monthly && weekly ? ` (${monthly} al mes)` : ""}, ¿eso si lo puedes acomodar?"`
+        : `Di: "Entiendo. Lo importante es si esto si le sirve a tu casa todos los dias. ¿Que parte es la que si te hace sentido?"`,
+      objectionAnchor ? `Ancla: ${objectionAnchor}.` : "",
+      closeLabel ? `Cierre recomendado: ${closeLabel}.` : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (/lo voy a pensar|voy a pensarlo|pensarlo|lo pensare|lo pensar[eé]/.test(normalized)) {
+    return [
+      "Aisla primero la objecion real.",
+      `Di: "Antes de pensarlo, dime que parte te frena mas, el precio o que quieres consultarlo?"`,
+      topObjection ? `Objecion detectada: ${topObjection}.` : "",
+      nextStep ? `Siguiente paso: ${nextStep}.` : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (/ahorita no puedo|ahora no puedo|no puedo ahorita|no se puede ahorita/.test(normalized)) {
+    return [
+      "No discutas todo. Recorta el siguiente paso.",
+      weekly || daily
+        ? `Di: "Si todo lo demas te gusto, lo unico que necesito saber es si ${
+            weekly || daily
+          } si lo puedes acomodar sin sentirlo pesado."`
+        : `Di: "Si lo unico que te frena es el momento, dime que parte si puedes resolver hoy para avanzarte."`,
+      productLabel ? `Regresa al valor diario de ${productLabel}.` : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (/que le digo|como le contesto|como respondo|que respondo/.test(normalized) && /caro|pensar|ahorita no/.test(normalized)) {
+    return [
+      "Ve directo y corto.",
+      weekly
+        ? `Usa esto: "Entiendo. Lo importante es que ya viste el valor. Si te queda en ${weekly} por semana, ¿si te funciona?"`
+        : `Usa esto: "Entiendo. Antes de dejarlo abierto, dime que parte es la que de verdad te frena."`,
+      topObjection ? `Objecion principal que traes: ${topObjection}.` : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (/que producto|cual producto|por donde empiezo|que le enseño|que le recomiendo/.test(normalized)) {
+    return [
+      productLabel ? `Empieza por ${productLabel}.` : "Empieza por el producto mas util para esa casa.",
+      objectionAnchor ? `Conecta con esto: ${objectionAnchor}.` : "",
+      closeLabel ? `Y cuando veas interes, remata con ${closeLabel}.` : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return "";
 }
 
 function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
@@ -10959,6 +11181,8 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
   const activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  let activeHealthSurveyContextFromBody = limpiarCoachHealthSurveyActiveContext(req.body?.activeHealthSurveyContext);
+  let activeProgram414ContextFromBody = limpiarCoachProgram414ActiveContext(req.body?.activeProgram414Context);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
 
@@ -11911,13 +12135,38 @@ app.post("/chat", async (req, res) => {
     let estadoPrompt = "";
     let perfilPrompt = "";
     let preferFastCoachContext = false;
+    let coachUserMessageTask = null;
 
     if (modoChat === "coach") {
       const coachOwnerUserId = String(resolverCoachOwnerUserId(coachAuth.user) || coachAuth.user._id);
+      if (
+        activeHealthSurveyContextFromBody?.ownerUserId &&
+        activeHealthSurveyContextFromBody.ownerUserId !== coachOwnerUserId
+      ) {
+        activeHealthSurveyContextFromBody = null;
+      }
+
+      if (
+        activeProgram414ContextFromBody?.ownerUserId &&
+        activeProgram414ContextFromBody.ownerUserId !== coachOwnerUserId
+      ) {
+        activeProgram414ContextFromBody = null;
+      }
+
       [coachProfileDoc, coachAnalyticsDoc] = await Promise.all([
         CoachDistributorProfile.findOne({ userId: coachAuth.user._id }).lean(),
-        CoachDistributorAnalytics.findOne({ userId: coachAuth.user._id }).lean()
+        COACH_TURBO_MODE ? Promise.resolve(null) : CoachDistributorAnalytics.findOne({ userId: coachAuth.user._id }).lean()
       ]);
+      coachUserMessageTask = guardarMensajeRaw({
+        visitorId: visitorIdLimpio,
+        sessionId,
+        profileId: null,
+        leadId: null,
+        role: "user",
+        content: preguntaLimpia,
+        intent: "coach_chat",
+        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+      });
 
       estadoPrompt = `
 ESTADO DEL COACH:
@@ -11974,13 +12223,75 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         perfilPrompt += construirPromptResultadoDemoActivo(activeDemoOutcomeContext);
       }
 
-      const leadMemoryPromise = obtenerMemoriaLeadRelacionada({
-        question: preguntaLimpia,
-        mode: "coach",
-        coachUser: coachAuth.user
-      });
+      activeHealthSurveyContext = activeHealthSurveyContextFromBody || null;
+      activeProgram414Context = activeProgram414ContextFromBody || null;
+
+      const turboQuickReply = COACH_TURBO_MODE
+        ? construirCoachTurboReply({
+            question: preguntaLimpia,
+            activeDemoStage,
+            activeHealthSurveyContext,
+            activeProgram414Context,
+            activeOrderCalcContext,
+            activeDecisionContext
+          })
+        : "";
+
+      if (turboQuickReply) {
+        registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
+        registrarMensajeMemoria(sessionId, "assistant", turboQuickReply);
+
+        void Promise.allSettled([
+          coachUserMessageTask,
+          guardarMensajeRaw({
+            visitorId: visitorIdLimpio,
+            sessionId,
+            profileId: null,
+            leadId: null,
+            role: "assistant",
+            content: turboQuickReply,
+            intent: "coach_chat",
+            detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+          }),
+          actualizarPerfilYAnalyticsCoach({
+            userDoc: coachAuth.user,
+            sessionId,
+            question: preguntaLimpia,
+            reply: turboQuickReply
+          })
+        ]).catch(error => {
+          console.error("Error guardando respuesta turbo del Coach:", error.message);
+        });
+
+        return res.json({
+          respuesta: turboQuickReply,
+          mode: modoChat,
+          turboMode: true,
+          turboLane: "quick",
+          activeHealthSurveyContext,
+          activeProgram414Context,
+          activeOrderCalcContext,
+          activeDecisionContext,
+          activeDemoOutcomeContext,
+          usage: {
+            usedToday: (coachUsage?.usedToday || 0) + 1,
+            remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
+            limitPerDay: COACH_MAX_MESSAGES_PER_DAY
+          }
+        });
+      }
+
+      const leadMemoryPromise = COACH_TURBO_MODE
+        ? Promise.resolve({ leadContext: null, repLeadSummary: null })
+        : obtenerMemoriaLeadRelacionada({
+            question: preguntaLimpia,
+            mode: "coach",
+            coachUser: coachAuth.user
+          });
       const activeHealthSurveyPromise =
-        activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)
+        activeHealthSurveyContext
+          ? Promise.resolve(activeHealthSurveyContext)
+          : activeHealthSurveyId && mongoose.Types.ObjectId.isValid(activeHealthSurveyId)
           ? CoachHealthSurvey.findOne(
               construirCoachWorkspaceQuery(coachAuth.user, {
                 _id: activeHealthSurveyId
@@ -11988,30 +12299,22 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
             ).lean()
           : Promise.resolve(null);
       const activeProgram414Promise =
-        activeProgram414SheetId &&
-        mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
-        Number.isInteger(activeProgram414ReferralIndex) &&
-        activeProgram414ReferralIndex >= 0
+        activeProgram414Context
+          ? Promise.resolve(activeProgram414Context)
+          : activeProgram414SheetId &&
+            mongoose.Types.ObjectId.isValid(activeProgram414SheetId) &&
+            Number.isInteger(activeProgram414ReferralIndex) &&
+            activeProgram414ReferralIndex >= 0
           ? CoachProgramSheet.findOne({
               ...construirCoachWorkspaceQuery(coachAuth.user),
               _id: activeProgram414SheetId
             }).lean()
           : Promise.resolve(null);
-      const coachUserMessagePromise = guardarMensajeRaw({
-        visitorId: visitorIdLimpio,
-        sessionId,
-        profileId: null,
-        leadId: null,
-        role: "user",
-        content: preguntaLimpia,
-        intent: "coach_chat",
-        detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
-      });
       const [leadMemory, surveyDoc, programSheetDoc] = await Promise.all([
         leadMemoryPromise,
         activeHealthSurveyPromise,
         activeProgram414Promise,
-        coachUserMessagePromise
+        COACH_TURBO_MODE ? Promise.resolve(null) : coachUserMessageTask
       ]);
 
       repLeadSummary = leadMemory?.repLeadSummary || null;
@@ -12020,26 +12323,44 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
 
       if (surveyDoc) {
-        activeHealthSurveyContext = limpiarCoachHealthSurvey(surveyDoc);
+        activeHealthSurveyContext = surveyDoc?.salesAnalysis ? surveyDoc : limpiarCoachHealthSurvey(surveyDoc);
         perfilPrompt += construirPromptEncuestaSaludActiva(activeHealthSurveyContext);
       }
 
       if (programSheetDoc) {
-        const cleanedSheet = limpiarCoachProgramSheet(programSheetDoc);
-        const selectedReferral = cleanedSheet?.referrals?.[activeProgram414ReferralIndex] || null;
-
-        if (cleanedSheet?.id && selectedReferral) {
-          activeProgram414Context = {
-            ...cleanedSheet,
-            sheetId: cleanedSheet.id,
-            referralIndex: activeProgram414ReferralIndex,
-            referral: selectedReferral
-          };
+        if (programSheetDoc?.referral?.fullName) {
+          activeProgram414Context = programSheetDoc;
           perfilPrompt += construirPromptPrograma414Activo(activeProgram414Context);
+        } else {
+          const cleanedSheet = limpiarCoachProgramSheet(programSheetDoc);
+          const selectedReferral = cleanedSheet?.referrals?.[activeProgram414ReferralIndex] || null;
+
+          if (cleanedSheet?.id && selectedReferral) {
+            activeProgram414Context = {
+              ...cleanedSheet,
+              sheetId: cleanedSheet.id,
+              referralIndex: activeProgram414ReferralIndex,
+              referral: selectedReferral
+            };
+            perfilPrompt += construirPromptPrograma414Activo(activeProgram414Context);
+          }
         }
       }
+
+      if (COACH_TURBO_MODE) {
+        perfilPrompt += `
+
+MODO TURBO DEL COACH:
+- responde en espanol simple, corto y accionable
+- usa maximo 4 lineas o un parrafo breve
+- no des teoria larga
+- si ya hay encuesta, calculadora, balance o resultado activo, apoyate primero en eso
+`;
+      }
+
       preferFastCoachContext = Boolean(
-        activeHealthSurveyContext ||
+        COACH_TURBO_MODE ||
+          activeHealthSurveyContext ||
           activeProgram414Context ||
           activeOrderCalcContext ||
           activeDecisionContext ||
@@ -12119,12 +12440,32 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         : construirContexto(preguntaLimpia, modoChat);
     const historialPromptPromise = obtenerHistorialConversacionPrompt(
       sessionId,
-      modoChat === "coach" ? COACH_PROMPT_HISTORY_MESSAGES : MAX_PROMPT_HISTORY_MESSAGES,
+      modoChat === "coach"
+        ? COACH_TURBO_MODE
+          ? COACH_TURBO_MAX_HISTORY_MESSAGES
+          : COACH_PROMPT_HISTORY_MESSAGES
+        : MAX_PROMPT_HISTORY_MESSAGES,
       {
         preferMemory: modoChat === "coach"
       }
     );
     const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
+
+    const openAiPayload = {
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: construirPromptModo(modoChat) },
+        { role: "system", content: modoPrompt },
+        { role: "system", content: contexto },
+        { role: "system", content: estadoPrompt },
+        { role: "system", content: perfilPrompt },
+        ...historialPrompt
+      ]
+    };
+
+    if (modoChat === "coach" && COACH_TURBO_MODE) {
+      openAiPayload.max_completion_tokens = COACH_TURBO_MAX_COMPLETION_TOKENS;
+    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -12132,17 +12473,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        messages: [
-          { role: "system", content: construirPromptModo(modoChat) },
-          { role: "system", content: modoPrompt },
-          { role: "system", content: contexto },
-          { role: "system", content: estadoPrompt },
-          { role: "system", content: perfilPrompt },
-          ...historialPrompt
-        ]
-      })
+      body: JSON.stringify(openAiPayload)
     });
 
     const data = await response.json().catch(() => null);
@@ -12163,6 +12494,49 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
     registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
 
     if (modoChat === "coach") {
+      if (COACH_TURBO_MODE) {
+        void Promise.allSettled([
+          coachUserMessageTask,
+          guardarMensajeRaw({
+            visitorId: visitorIdLimpio,
+            sessionId,
+            profileId: null,
+            leadId: null,
+            role: "assistant",
+            content: respuestaIA.content,
+            intent: "coach_chat",
+            detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
+          }),
+          actualizarPerfilYAnalyticsCoach({
+            userDoc: coachAuth.user,
+            sessionId,
+            question: preguntaLimpia,
+            reply: respuestaIA.content
+          })
+        ]).catch(error => {
+          console.error("Error guardando respuesta turbo del Coach:", error.message);
+        });
+
+        return res.json({
+          respuesta: respuestaIA.content,
+          mode: modoChat,
+          turboMode: true,
+          turboLane: "model",
+          repLeadSummary,
+          activeLeadContext,
+          activeHealthSurveyContext,
+          activeProgram414Context,
+          activeOrderCalcContext,
+          activeDecisionContext,
+          activeDemoOutcomeContext,
+          usage: {
+            usedToday: (coachUsage?.usedToday || 0) + 1,
+            remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
+            limitPerDay: COACH_MAX_MESSAGES_PER_DAY
+          }
+        });
+      }
+
       const [, coachProfileActualizado] = await Promise.all([
         guardarMensajeRaw({
           visitorId: visitorIdLimpio,

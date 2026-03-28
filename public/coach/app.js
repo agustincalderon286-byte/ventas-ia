@@ -6189,7 +6189,9 @@ async function initCoachAppPage() {
           activeDemoStageCopy: activeDemoStageMeta.copy,
           recentCoachEvents: getCoachDemoEvents(),
           activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+          activeHealthSurveyContext: getActiveCoachHealthSurveyContext() || null,
           activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+          activeProgram414Context: getActiveCoachProgram414Context() || null,
           activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
             ? getActiveCoachProgram414Context().referralIndex
             : "",
