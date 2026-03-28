@@ -342,6 +342,26 @@ function hasCoachAccess(user = null) {
   return Boolean(user && (user.accessGranted || user.subscriptionActive));
 }
 
+function getCoachPortalMode(user = null) {
+  const explicitMode = String(user?.portalMode || "").trim().toLowerCase();
+
+  if (explicitMode) {
+    return explicitMode;
+  }
+
+  return window.location.pathname.startsWith("/coach/telemarketing") ? "telemarketing" : "default";
+}
+
+function getCoachHomePath(user = null) {
+  const explicitPath = String(user?.homePath || "").trim();
+
+  if (explicitPath) {
+    return explicitPath;
+  }
+
+  return getCoachPortalMode(user) === "telemarketing" ? "/coach/telemarketing/" : "/coach/app/";
+}
+
 function getCoachEffectiveOwnerId(user = null) {
   return String(user?.ownerUserId || user?.teamOwnerUserId || user?.id || "").trim();
 }
@@ -350,9 +370,33 @@ function syncCoachManagerUi(user = null) {
   const canManageTeam = Boolean(user?.managesTeam);
   const canUseTerritory = Boolean(user && user.accountType !== "seat");
   const canViewControlTower = Boolean(user?.canViewControlTower);
+  const portalMode = getCoachPortalMode(user);
+  const isTelemarketing = portalMode === "telemarketing";
+  const workspaceCopy = isTelemarketing
+    ? "Portal operativo para telemarketing. Aqui solo trabajas el CRM asignado y tus seguimientos."
+    : "Escoge el area donde quieres trabajar hoy. Cada pestaña usa la misma data privada del Coach.";
+
+  document.documentElement.dataset.coachPortalMode = portalMode;
+
+  document.querySelectorAll("[data-coach-home-link]").forEach(node => {
+    node.href = getCoachHomePath(user);
+  });
+
+  document.querySelectorAll("[data-coach-workspace-copy]").forEach(node => {
+    node.textContent = workspaceCopy;
+  });
+
+  document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
+    const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
+    node.hidden = isTelemarketing ? tabId !== "crm" : false;
+  });
+
+  document.querySelectorAll("[data-telemarketing-hide]").forEach(node => {
+    node.hidden = isTelemarketing;
+  });
 
   document.querySelectorAll("[data-team-manager-only]").forEach(node => {
-    if (!canManageTeam) {
+    if (isTelemarketing || !canManageTeam) {
       node.hidden = true;
       return;
     }
@@ -366,7 +410,7 @@ function syncCoachManagerUi(user = null) {
   });
 
   document.querySelectorAll("[data-territory-access-only]").forEach(node => {
-    if (!canUseTerritory) {
+    if (isTelemarketing || !canUseTerritory) {
       node.hidden = true;
       return;
     }
@@ -380,7 +424,7 @@ function syncCoachManagerUi(user = null) {
   });
 
   document.querySelectorAll("[data-control-tower-link]").forEach(node => {
-    node.hidden = !canViewControlTower;
+    node.hidden = isTelemarketing || !canViewControlTower;
   });
 }
 
@@ -548,14 +592,15 @@ function initCoachWorkspaceTabs() {
 
   const visibleTabButtons = tabButtons.filter(button => !button.hidden);
   const validTabs = new Set(visibleTabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
-  let activeTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre";
+  const defaultTab = visibleTabButtons[0]?.dataset.coachWorkspaceTab || "cierre";
+  let activeTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || defaultTab;
 
   if (!validTabs.has(activeTab)) {
-    activeTab = "cierre";
+    activeTab = defaultTab;
   }
 
   const syncWorkspace = nextTab => {
-    const safeTab = validTabs.has(nextTab) ? nextTab : "cierre";
+    const safeTab = validTabs.has(nextTab) ? nextTab : defaultTab;
 
     tabButtons.forEach(button => {
       const isActive = button.dataset.coachWorkspaceTab === safeTab;
@@ -572,10 +617,14 @@ function initCoachWorkspaceTabs() {
 
   tabButtons.forEach(button => {
     button.addEventListener("click", () => {
-      const nextTab = button.dataset.coachWorkspaceTab || "cierre";
+      const nextTab = button.dataset.coachWorkspaceTab || defaultTab;
       syncWorkspace(nextTab);
       const labelMeta =
         {
+          crm: {
+            label: "Cambio a modo CRM",
+            detail: "Entraste a la vista operativa para telemarketing, seguimiento y embudo."
+          },
           prospeccion: {
             label: "Cambio a modo prospeccion",
             detail: "Entraste al lado de captar leads y trabajar calle."
@@ -5602,6 +5651,18 @@ function formatTeamSeatStatusLabel(status = "") {
   return labels[String(status || "").trim()] || "Sin estado";
 }
 
+function formatTeamSeatRoleLabel(role = "") {
+  const labels = {
+    novato: "Novato",
+    telemarketing: "Telemarketing",
+    distribuidor: "Distribuidor",
+    junior: "Distribuidor junior",
+    lider: "Lider"
+  };
+
+  return labels[String(role || "").trim()] || "Subcuenta";
+}
+
 function renderCoachTeamSummary(summary = null) {
   const safeSummary = summary || {};
 
@@ -5657,7 +5718,12 @@ function renderCoachTeamSeats(seats = []) {
 
   list.innerHTML = safeSeats
     .map(
-      seat => `
+      seat => {
+        const teamRoleLabel = formatTeamSeatRoleLabel(seat.teamRole);
+        const seatHomePath = String(seat.homePath || "/coach/app/").trim() || "/coach/app/";
+        const canOpenChef = String(seat.teamRole || "").trim() !== "telemarketing";
+
+        return `
         <article class="team-seat-card" data-team-seat-id="${escapeHtml(seat.id || "")}">
           <div class="team-seat-head">
             <div>
@@ -5677,13 +5743,16 @@ function renderCoachTeamSeats(seats = []) {
           </div>
 
           <p class="mini-note team-seat-note">
-            Ultima entrada: ${escapeHtml(formatDateTimeShort(seat.lastLoginAt))}.
+            Rol: ${escapeHtml(teamRoleLabel)} · Ultima entrada: ${escapeHtml(formatDateTimeShort(seat.lastLoginAt))}.
           </p>
 
           <div class="dashboard-actions compact-top">
             <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || "")}">
               Copiar correo
             </button>
+            ${
+              canOpenChef
+                ? `
             <button
               type="button"
               class="nav-button"
@@ -5700,6 +5769,18 @@ function renderCoachTeamSeats(seats = []) {
             >
               Abrir Chef
             </a>
+            `
+                : `
+            <a
+              class="nav-button"
+              href="${escapeHtml(seatHomePath)}"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir portal
+            </a>
+            `
+            }
             <button
               type="button"
               class="primary-button"
@@ -5709,7 +5790,8 @@ function renderCoachTeamSeats(seats = []) {
             </button>
           </div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 }
@@ -5779,7 +5861,8 @@ function initCoachTeamWorkspace(user = null) {
         body: {
           name: formData.get("name"),
           email: formData.get("email"),
-          seatLabel: formData.get("seatLabel")
+          seatLabel: formData.get("seatLabel"),
+          teamRole: formData.get("teamRole")
         }
       });
 
@@ -7800,7 +7883,7 @@ async function initLoginPage() {
       });
 
       if (hasCoachAccess(data.user)) {
-        window.location.href = "/coach/app/";
+        window.location.href = getCoachHomePath(data.user);
         return;
       }
 
@@ -7880,32 +7963,38 @@ async function initCoachAppPage() {
   }
 
   initCoachWorkspaceTabs();
-  if (me.user?.managesTeam) {
+  const portalMode = getCoachPortalMode(me.user);
+  const isTelemarketingPortal = portalMode === "telemarketing";
+
+  if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
   }
-  initCoachPrivateResources();
-  initCoachLeadWorkspace();
+
   initCoachCrmWorkspace(me.user);
-  initCoachAgendaWorkspace(me.user);
-  initChefCampaignTool();
-  initCoachMessagesWorkspace(me.user);
-  initCoachTeamWorkspace(me.user);
-  initCoachTerritoryWorkspace(me.user);
-  initRecruitmentTool();
-  initHealthSurveyTool();
-  initOrderCalculator();
-  const orderCalcRoot = document.querySelector("[data-order-calc]");
-  if (orderCalcRoot) {
-    orderCalcRoot.dataset.orderCalcOwnerUserId = effectiveOwnerId;
+  if (!isTelemarketingPortal) {
+    initCoachPrivateResources();
+    initCoachLeadWorkspace();
+    initCoachAgendaWorkspace(me.user);
+    initChefCampaignTool();
+    initCoachMessagesWorkspace(me.user);
+    initCoachTeamWorkspace(me.user);
+    initCoachTerritoryWorkspace(me.user);
+    initRecruitmentTool();
+    initHealthSurveyTool();
+    initOrderCalculator();
+    const orderCalcRoot = document.querySelector("[data-order-calc]");
+    if (orderCalcRoot) {
+      orderCalcRoot.dataset.orderCalcOwnerUserId = effectiveOwnerId;
+    }
+    initDecisionTool();
+    const decisionRoot = document.querySelector("[data-decision-tool]");
+    if (decisionRoot) {
+      decisionRoot.dataset.decisionOwnerUserId = effectiveOwnerId;
+    }
+    initBuyerProfileTool();
+    initDailyPrizeTool();
+    initCoachDemoOutcomeWorkspace(me.user);
   }
-  initDecisionTool();
-  const decisionRoot = document.querySelector("[data-decision-tool]");
-  if (decisionRoot) {
-    decisionRoot.dataset.decisionOwnerUserId = effectiveOwnerId;
-  }
-  initBuyerProfileTool();
-  initDailyPrizeTool();
-  initCoachDemoOutcomeWorkspace(me.user);
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
   const chatForm = document.querySelector("[data-coach-chat-form]");
@@ -7957,6 +8046,7 @@ async function initCoachAppPage() {
   const ownChefShareUrl = buildAbsoluteAppUrl(ownChefSharePath);
   const ownContactSharePath = me.profile?.contactShare?.sharePath || "";
   const ownContactShareUrl = buildAbsoluteAppUrl(ownContactSharePath);
+  const ownCoachHomePath = getCoachHomePath(me.user);
   let activeChefShare = {
     label: "Agustin 2.0 Chef",
     url: ownChefShareUrl,
@@ -7974,7 +8064,7 @@ async function initCoachAppPage() {
   });
 
   contactShareOpenLinks.forEach(node => {
-    node.href = ownContactShareUrl || "/coach/app/";
+    node.href = ownContactShareUrl || ownCoachHomePath;
   });
 
   if (!ownContactShareUrl) {
@@ -7983,7 +8073,7 @@ async function initCoachAppPage() {
     });
     contactShareOpenLinks.forEach(node => {
       node.setAttribute("aria-disabled", "true");
-      node.href = "/coach/app/";
+      node.href = ownCoachHomePath;
     });
   }
 

@@ -19,7 +19,7 @@
   <body>
     <div class="coach-shell" data-coach-app-page>
       <header class="coach-nav">
-        <a class="coach-brand" href="/coach/app/">
+        <a class="coach-brand" href="/coach/app/" data-coach-home-link>
           <div class="coach-brand-badge">🧠</div>
           <div class="coach-brand-copy">
             <h1>Agustin 2.0 Coach</h1>
@@ -30,9 +30,9 @@
         <nav class="coach-nav-links">
           <a class="nav-link" href="/coach/">Landing</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
-          <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link>Ver Chef</a>
+          <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link data-telemarketing-hide>Ver Chef</a>
           <a class="nav-link" href="/control/" data-control-tower-link hidden>Torre</a>
-          <button class="nav-button" data-open-chef-share>Compartir Chef</button>
+          <button class="nav-button" data-open-chef-share data-telemarketing-hide>Compartir Chef</button>
           <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
           <button class="primary-button" data-coach-logout>Cerrar sesion</button>
         </nav>
@@ -47,7 +47,7 @@
             </div>
 
             <div class="coach-compact-actions">
-              <button class="nav-button" type="button" data-coach-open-messages>
+              <button class="nav-button" type="button" data-coach-open-messages data-telemarketing-hide>
                 Mensajes
                 <span class="coach-unread-badge" data-coach-unread-badge hidden>0</span>
               </button>
@@ -56,14 +56,14 @@
             </div>
           </div>
 
-          <div class="coach-compact-strip coach-compact-strip-slim">
+          <div class="coach-compact-strip coach-compact-strip-slim" data-telemarketing-hide>
             <div class="coach-live-context" data-coach-health-survey-context>
               <strong data-coach-health-survey-name>El widget flotante sigue siendo tu apoyo principal.</strong>
               <span data-coach-health-survey-close>Marca el paso correcto y usa Mensajes para ver boletines o pedir soporte.</span>
             </div>
           </div>
 
-          <div class="coach-demo-grid">
+          <div class="coach-demo-grid" data-telemarketing-hide>
             <section class="coach-demo-card">
               <div class="coach-demo-head">
                 <div>
@@ -171,7 +171,7 @@
                 Torre
               </a>
             </div>
-            <p class="mini-note">
+            <p class="mini-note" data-coach-workspace-copy>
               Cambia de lado segun el momento: presentacion y cierre, o calle y prospeccion.
             </p>
           </div>
@@ -371,7 +371,7 @@
                 <a href="#" class="nav-button" data-crm-detail-email hidden>Correo</a>
               </div>
 
-              <div class="dashboard-actions compact-top">
+              <div class="dashboard-actions compact-top" data-telemarketing-hide>
                 <button type="button" class="secondary-button" data-crm-open-tool="survey">Encuesta</button>
                 <button type="button" class="nav-button" data-crm-open-tool="program414">4 en 14</button>
                 <button type="button" class="nav-button" data-crm-open-tool="close">Cierre</button>
@@ -1781,9 +1781,9 @@
             hidden
           >
             <div class="eyebrow">Nueva subcuenta</div>
-            <h3>Da acceso rapido a un novato</h3>
+            <h3>Da acceso rapido a una subcuenta</h3>
             <p>
-              Crea un acceso de trabajo para que use el Coach sin entregar tu cuenta personal.
+              Crea un acceso de trabajo para novato o telemarketing sin entregar tu cuenta personal.
             </p>
 
             <form class="coach-form" data-team-seat-form>
@@ -1803,6 +1803,13 @@
                   maxlength="80"
                   placeholder="Ej. Ana campo o Pedro demos"
                 />
+              </label>
+              <label>
+                Rol de trabajo
+                <select name="teamRole">
+                  <option value="novato">Novato</option>
+                  <option value="telemarketing">Telemarketing</option>
+                </select>
               </label>
 
               <div class="dashboard-actions">

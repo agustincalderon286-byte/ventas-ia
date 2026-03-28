@@ -1883,6 +1883,29 @@ function resolverCoachTeamRoleDefault(userDoc = null) {
   return "distribuidor";
 }
 
+function normalizarCoachTeamRole(value = "", userDoc = null) {
+  const safeValue = cleanText(value || "")
+    .trim()
+    .toLowerCase();
+  const validRoles = ["novato", "telemarketing", "distribuidor", "junior", "lider"];
+  return validRoles.includes(safeValue) ? safeValue : resolverCoachTeamRoleDefault(userDoc);
+}
+
+function resolverCoachPortalMode(userDoc = null, profileDoc = null) {
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+  const teamRole = normalizarCoachTeamRole(profileDoc?.teamRole || "", userDoc);
+
+  if (accountType === "seat" && teamRole === "telemarketing") {
+    return "telemarketing";
+  }
+
+  return "default";
+}
+
+function construirCoachHomePath(userDoc = null, profileDoc = null) {
+  return resolverCoachPortalMode(userDoc, profileDoc) === "telemarketing" ? "/coach/telemarketing/" : "/coach/app/";
+}
+
 function normalizarCoachChefSlugSegment(value = "", maxLength = 36) {
   const normalized = String(value || "")
     .toLowerCase()
@@ -2430,15 +2453,25 @@ async function coachTieneAccesoOperativo(userDoc = null) {
   return coachTieneAccesoTotal(ownerUserDoc);
 }
 
-async function construirCoachUserView(userDoc = null) {
+async function construirCoachUserView(userDoc = null, profileDoc = null) {
   const cleanedUser = limpiarCoachUser(userDoc);
 
   if (!cleanedUser) {
     return null;
   }
 
+  const ownProfileDoc =
+    profileDoc?._id || profileDoc?.userId
+      ? profileDoc
+      : userDoc?._id
+        ? await CoachDistributorProfile.findOne({ userId: userDoc._id }).lean()
+        : null;
+
   cleanedUser.accessGranted = await coachTieneAccesoOperativo(userDoc);
   cleanedUser.ownerUserId = resolverCoachOwnerUserId(userDoc) ? String(resolverCoachOwnerUserId(userDoc)) : "";
+  cleanedUser.teamRole = normalizarCoachTeamRole(ownProfileDoc?.teamRole || "", userDoc);
+  cleanedUser.portalMode = resolverCoachPortalMode(userDoc, ownProfileDoc);
+  cleanedUser.homePath = construirCoachHomePath(userDoc, ownProfileDoc);
   return cleanedUser;
 }
 
@@ -2455,6 +2488,13 @@ async function obtenerCoachOwnerProfile(userDoc = null, options = {}) {
 
 function limpiarCoachSeatLabel(value = "") {
   return String(value || "").trim().slice(0, 80);
+}
+
+function normalizarCoachSeatManagedRole(value = "") {
+  const safeValue = cleanText(value || "")
+    .trim()
+    .toLowerCase();
+  return ["novato", "telemarketing"].includes(safeValue) ? safeValue : "novato";
 }
 
 function generarCoachSeatPasswordTemporal() {
@@ -2888,6 +2928,8 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
     return null;
   }
 
+  const teamRole = normalizarCoachTeamRole(profileDoc?.teamRole || "", userDoc);
+
   return {
     id: String(userDoc._id),
     name: userDoc.name || "",
@@ -2895,7 +2937,8 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
     accountType: normalizarCoachAccountType(userDoc.accountType || "seat"),
     seatStatus: normalizarCoachSeatStatus(userDoc.seatStatus || "active"),
     seatLabel: profileDoc?.seatLabel || "",
-    teamRole: profileDoc?.teamRole || resolverCoachTeamRoleDefault(userDoc),
+    teamRole,
+    homePath: construirCoachHomePath(userDoc, { teamRole }),
     chefEnabled: profileDoc?.chefEnabled !== false,
     chef: {
       enabled: profileDoc?.chefEnabled !== false,
@@ -4209,7 +4252,10 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   } catch (error) {
     console.error("Error sembrando workspace CRM del Coach:", error.message);
   }
-  const query = construirCoachCrmWorkspaceQuery(userDoc);
+  const baseQuery = await construirCoachCrmViewerQuery(userDoc);
+  const query = {
+    ...baseQuery
+  };
   const sourceType = normalizarCoachCrmSourceType(filters?.sourceType || "");
   const status = normalizarCoachCrmStatus(filters?.status || "");
 
@@ -4233,7 +4279,7 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
       .sort({ updatedAt: -1, nextActionAt: 1, createdAt: -1 })
       .limit(500)
       .lean(),
-    CoachCrmRecord.find(construirCoachCrmWorkspaceQuery(userDoc))
+    CoachCrmRecord.find(baseQuery)
       .sort({ updatedAt: -1 })
       .limit(800)
       .lean(),
@@ -4258,11 +4304,10 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
     console.error("Error sembrando detalle CRM del Coach:", error.message);
   }
 
-  const recordDoc = await CoachCrmRecord.findOne(
-    construirCoachCrmWorkspaceQuery(userDoc, {
-      _id: recordId
-    })
-  ).lean();
+  const recordQuery = await construirCoachCrmViewerQuery(userDoc, {
+    _id: recordId
+  });
+  const recordDoc = await CoachCrmRecord.findOne(recordQuery).lean();
 
   if (!recordDoc?._id) {
     return null;
@@ -6259,6 +6304,30 @@ function construirCoachCrmWorkspaceQuery(userDoc = null, extra = {}) {
 
   if (accountType === "seat" && userDoc?._id && query.ownerUserId && String(query.ownerUserId) !== String(userDoc._id)) {
     query.generatedByUserId = userDoc._id;
+  }
+
+  return query;
+}
+
+async function construirCoachCrmViewerQuery(userDoc = null, extra = {}) {
+  const query = {
+    ownerUserId: resolverCoachOwnerUserId(userDoc),
+    ...extra
+  };
+
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+
+  if (accountType === "seat" && userDoc?._id && query.ownerUserId && String(query.ownerUserId) !== String(userDoc._id)) {
+    const profileDoc = await CoachDistributorProfile.findOne({ userId: userDoc._id })
+      .select("teamRole")
+      .lean();
+    const teamRole = normalizarCoachTeamRole(profileDoc?.teamRole || "", userDoc);
+
+    if (teamRole === "telemarketing") {
+      query.assignedTelemarketerUserId = userDoc._id;
+    } else {
+      query.generatedByUserId = userDoc._id;
+    }
   }
 
   return query;
@@ -14041,6 +14110,7 @@ app.post("/api/coach/team/seats", async (req, res) => {
   const name = String(req.body?.name || "").trim().slice(0, 120);
   const email = normalizarEmail(req.body?.email || "");
   const seatLabel = limpiarCoachSeatLabel(req.body?.seatLabel || "");
+  const teamRole = normalizarCoachSeatManagedRole(req.body?.teamRole || "");
 
   if (!name) {
     return responderCoachError(res, 400, "El nombre de la subcuenta es requerido.");
@@ -14084,9 +14154,14 @@ app.post("/api/coach/team/seats", async (req, res) => {
 
     if (seatLabel && seatProfile.seatLabel !== seatLabel) {
       seatProfile.seatLabel = seatLabel;
-      seatProfile.updatedAt = now;
-      await seatProfile.save();
     }
+
+    if (seatProfile.teamRole !== teamRole) {
+      seatProfile.teamRole = teamRole;
+    }
+
+    seatProfile.updatedAt = now;
+    await seatProfile.save();
 
     const cleanedSeat = limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile.toObject(), {
       leads: 0,
@@ -14123,9 +14198,11 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
 
   const requestedStatus = normalizarCoachSeatStatus(req.body?.seatStatus || "");
   const seatLabel = limpiarCoachSeatLabel(req.body?.seatLabel || "");
+  const teamRole = normalizarCoachSeatManagedRole(req.body?.teamRole || "");
   const shouldUpdateStatus = ["active", "paused", "closed"].includes(requestedStatus);
+  const shouldUpdateRole = Object.prototype.hasOwnProperty.call(req.body || {}, "teamRole");
 
-  if (!shouldUpdateStatus && !seatLabel) {
+  if (!shouldUpdateStatus && !seatLabel && !shouldUpdateRole) {
     return responderCoachError(res, 400, "No recibi cambios para esa subcuenta.");
   }
 
@@ -14151,8 +14228,19 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
 
     const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
 
+    let profileDirty = false;
+
     if (seatLabel && seatProfile.seatLabel !== seatLabel) {
       seatProfile.seatLabel = seatLabel;
+      profileDirty = true;
+    }
+
+    if (shouldUpdateRole && seatProfile.teamRole !== teamRole) {
+      seatProfile.teamRole = teamRole;
+      profileDirty = true;
+    }
+
+    if (profileDirty) {
       seatProfile.updatedAt = now;
       await seatProfile.save();
     }
@@ -14955,11 +15043,10 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
   }
 
   try {
-    const recordDoc = await CoachCrmRecord.findOne(
-      construirCoachCrmWorkspaceQuery(auth.user, {
-        _id: recordId
-      })
-    );
+    const recordQuery = await construirCoachCrmViewerQuery(auth.user, {
+      _id: recordId
+    });
+    const recordDoc = await CoachCrmRecord.findOne(recordQuery);
 
     if (!recordDoc) {
       return responderCoachError(res, 404, "No encontre ese registro del CRM.");
@@ -16403,6 +16490,25 @@ app.get("/api/coach/checkout-session", async (req, res) => {
 });
 
 app.get(["/coach/app", "/coach/app/"], async (req, res) => {
+  const auth = await obtenerCoachAuth(req);
+
+  if (!auth.user) {
+    return res.redirect("/coach/login/");
+  }
+
+  if (!(await coachTieneAccesoOperativo(auth.user))) {
+    return res.redirect("/coach/planes/");
+  }
+
+  const portalContext = await construirCoachUserView(auth.user);
+  if (portalContext?.portalMode === "telemarketing") {
+    return res.redirect("/coach/telemarketing/");
+  }
+
+  res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
+});
+
+app.get(["/coach/telemarketing", "/coach/telemarketing/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
 
   if (!auth.user) {
