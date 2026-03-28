@@ -9745,6 +9745,12 @@ function obtenerInicioDia(date = new Date()) {
   return inicio;
 }
 
+function obtenerFinDia(date = new Date()) {
+  const fin = new Date(date);
+  fin.setHours(23, 59, 59, 999);
+  return fin;
+}
+
 async function validarLimiteUsoCoach(userDoc = null) {
   if (!userDoc || coachTieneAccesoDePrueba(userDoc.email)) {
     return {
