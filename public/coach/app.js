@@ -372,14 +372,32 @@ function syncCoachManagerUi(user = null) {
   const canViewControlTower = Boolean(user?.canViewControlTower);
   const portalMode = getCoachPortalMode(user);
   const isTelemarketing = portalMode === "telemarketing";
+  const brandSubtitle = isTelemarketing
+    ? "Cabina privada para seguimiento, llamadas y conversion del equipo."
+    : "Area privada para distribuidores";
+  const activeKicker = isTelemarketing ? "Canal telemarketing" : "Coach activo";
+  const statusCopy = isTelemarketing ? "CRM listo" : "Listo";
   const workspaceCopy = isTelemarketing
     ? "Portal operativo para telemarketing. Aqui solo trabajas el CRM asignado y tus seguimientos."
     : "Escoge el area donde quieres trabajar hoy. Cada pestaña usa la misma data privada del Coach.";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
+  document.title = isTelemarketing ? "Telemarketing | Agustin 2.0 Coach" : "Coach Privado | Agustin 2.0 Coach";
 
   document.querySelectorAll("[data-coach-home-link]").forEach(node => {
     node.href = getCoachHomePath(user);
+  });
+
+  document.querySelectorAll("[data-coach-brand-subtitle]").forEach(node => {
+    node.textContent = brandSubtitle;
+  });
+
+  document.querySelectorAll("[data-coach-active-kicker]").forEach(node => {
+    node.textContent = activeKicker;
+  });
+
+  document.querySelectorAll("[data-coach-chat-status]").forEach(node => {
+    node.textContent = statusCopy;
   });
 
   document.querySelectorAll("[data-coach-workspace-copy]").forEach(node => {

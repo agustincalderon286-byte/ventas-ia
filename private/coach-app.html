@@ -14,6 +14,10 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/coach/styles.css" />
   </head>
   <body>
@@ -23,7 +27,7 @@
           <div class="coach-brand-badge">🧠</div>
           <div class="coach-brand-copy">
             <h1>Agustin 2.0 Coach</h1>
-            <p>Area privada para distribuidores</p>
+            <p data-coach-brand-subtitle>Area privada para distribuidores</p>
           </div>
         </a>
 
@@ -42,7 +46,7 @@
         <div class="coach-compact-bar">
           <div class="coach-compact-head">
             <div>
-              <div class="eyebrow">Coach activo</div>
+              <div class="eyebrow" data-coach-active-kicker>Coach activo</div>
               <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
             </div>
 
@@ -176,7 +180,7 @@
             </p>
           </div>
 
-          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+          <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="summary" hidden>
             <div class="eyebrow">CRM operativo</div>
             <h3>Seguimiento nativo del equipo</h3>
             <p>
@@ -271,7 +275,7 @@
             <div class="form-result" data-crm-feedback></div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+          <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="sheet" hidden>
             <div class="eyebrow">Vista operativa</div>
             <h3>Filtra y abre filas del CRM</h3>
             <p>
@@ -333,7 +337,7 @@
             </div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+          <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="detail" hidden>
             <div class="eyebrow">Detalle</div>
             <h3>Editar seguimiento</h3>
             <p>
