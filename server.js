@@ -104,6 +104,13 @@ const CONTROL_TOWER_ACCESS_EMAILS = String(process.env.CONTROL_TOWER_ACCESS_EMAI
   .split(",")
   .map(email => normalizarEmail(email))
   .filter(Boolean);
+const CONTROL_TOWER_TRACKED_EMAILS = String(process.env.CONTROL_TOWER_TRACKED_EMAILS || "")
+  .split(",")
+  .map(email => normalizarEmail(email))
+  .filter(Boolean);
+const COACH_ACCOUNT_PRESETS_JSON = String(process.env.COACH_ACCOUNT_PRESETS_JSON || "").trim();
+const COACH_DEFAULT_SPONSOR_EMAIL = String(process.env.COACH_DEFAULT_SPONSOR_EMAIL || "").trim();
+const COACH_DEFAULT_SPONSOR_RATE = Number(process.env.COACH_DEFAULT_SPONSOR_RATE || 0) || 0;
 const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
@@ -704,6 +711,63 @@ app.use(express.json({ limit: "15mb" }));
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
+}
+
+function obtenerCoachAccountPresets() {
+  if (!COACH_ACCOUNT_PRESETS_JSON) {
+    return [];
+  }
+
+  try {
+    const raw = JSON.parse(COACH_ACCOUNT_PRESETS_JSON);
+
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw
+      .map(item => {
+        const email = normalizarEmail(item?.email || "");
+
+        if (!email) {
+          return null;
+        }
+
+        return {
+          email,
+          label: cleanText(item?.label || "").slice(0, 80),
+          officeId: cleanText(item?.officeId || "").slice(0, 60),
+          territoryId: cleanText(item?.territoryId || "").slice(0, 60),
+          teamRole: cleanText(item?.teamRole || "").slice(0, 40),
+          seatLabel: cleanText(item?.seatLabel || "").slice(0, 80),
+          sponsorEmail: normalizarEmail(item?.sponsorEmail || COACH_DEFAULT_SPONSOR_EMAIL || ""),
+          sponsorCommissionRate: Number(item?.sponsorCommissionRate ?? COACH_DEFAULT_SPONSOR_RATE ?? 0) || 0,
+          watch: item?.watch === false ? false : true
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Error leyendo COACH_ACCOUNT_PRESETS_JSON:", error.message);
+    return [];
+  }
+}
+
+function obtenerCoachAccountPreset(email = "") {
+  const safeEmail = normalizarEmail(email);
+
+  if (!safeEmail) {
+    return null;
+  }
+
+  return obtenerCoachAccountPresets().find(item => item.email === safeEmail) || null;
+}
+
+function obtenerCoachTrackedEmails() {
+  const presetEmails = obtenerCoachAccountPresets()
+    .filter(item => item.watch !== false)
+    .map(item => item.email);
+
+  return Array.from(new Set([...COACH_TEST_ACCESS_EMAILS, ...CONTROL_TOWER_TRACKED_EMAILS, ...presetEmails])).filter(Boolean);
 }
 
 function truncarTextoPrompt(value = "", maxLength = 180) {
@@ -1750,6 +1814,94 @@ async function construirCoachSponsorSnapshot(userDoc = null) {
   };
 }
 
+async function aplicarCoachAccountPreset(userDoc = null, profileDoc = null) {
+  if (!userDoc?._id || !userDoc.email) {
+    return {
+      userDoc,
+      profileDoc,
+      applied: false
+    };
+  }
+
+  const preset = obtenerCoachAccountPreset(userDoc.email);
+
+  if (!preset) {
+    return {
+      userDoc,
+      profileDoc,
+      applied: false
+    };
+  }
+
+  let userDirty = false;
+  let profileDirty = false;
+  let workingProfileDoc = profileDoc || null;
+
+  if (preset.officeId && userDoc.officeId !== preset.officeId) {
+    userDoc.officeId = preset.officeId;
+    userDirty = true;
+  }
+
+  if (preset.territoryId && userDoc.territoryId !== preset.territoryId) {
+    userDoc.territoryId = preset.territoryId;
+    userDirty = true;
+  }
+
+  if (workingProfileDoc) {
+    if (preset.teamRole && workingProfileDoc.teamRole !== preset.teamRole) {
+      workingProfileDoc.teamRole = preset.teamRole;
+      profileDirty = true;
+    }
+
+    if (preset.seatLabel && workingProfileDoc.seatLabel !== preset.seatLabel) {
+      workingProfileDoc.seatLabel = preset.seatLabel;
+      profileDirty = true;
+    }
+  }
+
+  const sponsorEmail = normalizarEmail(preset.sponsorEmail || "");
+  const sponsorCommissionRate = limpiarCoachCommissionRate(preset.sponsorCommissionRate || 0);
+
+  if (sponsorEmail && (!userDoc.sponsorUserId || !userDoc.sponsorName || !userDoc.sponsorCommissionRate)) {
+    const sponsorUserDoc = await CoachUser.findOne({ email: sponsorEmail }).select("_id name email").lean();
+
+    if (sponsorUserDoc?._id) {
+      if (!userDoc.sponsorUserId || String(userDoc.sponsorUserId) !== String(sponsorUserDoc._id)) {
+        userDoc.sponsorUserId = sponsorUserDoc._id;
+        userDirty = true;
+      }
+
+      const sponsorName = sponsorUserDoc.name || sponsorUserDoc.email || "";
+
+      if (sponsorName && userDoc.sponsorName !== sponsorName) {
+        userDoc.sponsorName = sponsorName;
+        userDirty = true;
+      }
+
+      if (sponsorCommissionRate > 0 && userDoc.sponsorCommissionRate !== sponsorCommissionRate) {
+        userDoc.sponsorCommissionRate = sponsorCommissionRate;
+        userDirty = true;
+      }
+    }
+  }
+
+  if (userDirty) {
+    userDoc.updatedAt = new Date();
+    await userDoc.save();
+  }
+
+  if (workingProfileDoc && profileDirty) {
+    workingProfileDoc.updatedAt = new Date();
+    await workingProfileDoc.save();
+  }
+
+  return {
+    userDoc,
+    profileDoc: workingProfileDoc,
+    applied: userDirty || profileDirty
+  };
+}
+
 function esCoachTeamManager(userDoc = null) {
   const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
   return accountType === "owner" || accountType === "leader";
@@ -2519,6 +2671,258 @@ async function obtenerCoachSponsorOverview(userDoc = null) {
     soldAmount: limpiarCoachDemoOutcomeAmount(summary.soldAmount || 0),
     estimatedCommission: limpiarCoachDemoOutcomeAmount(summary.estimatedCommission || 0),
     recentSales: recentSalesDocs.map(doc => limpiarCoachDemoOutcome(doc, { includeGenerator: true, includeSponsor: true }))
+  };
+}
+
+async function obtenerControlTowerTrackedAccounts(viewerUserDoc = null) {
+  const watchedEmails = obtenerCoachTrackedEmails();
+  const presetMap = new Map(obtenerCoachAccountPresets().map(item => [item.email, item]));
+  const ownerMatch = [];
+
+  if (watchedEmails.length) {
+    ownerMatch.push({ email: { $in: watchedEmails } });
+  }
+
+  if (viewerUserDoc?._id) {
+    ownerMatch.push({
+      sponsorUserId: viewerUserDoc._id,
+      accountType: { $in: ["owner", "leader"] }
+    });
+  }
+
+  if (!ownerMatch.length) {
+    return {
+      summary: {
+        trackedAccounts: 0,
+        activeAccounts: 0,
+        pendingAccounts: 0,
+        activeSeats: 0,
+        totalSeats: 0,
+        territories: [],
+        syncedLeads: 0,
+        openOpportunities: 0
+      },
+      accounts: []
+    };
+  }
+
+  const ownerDocs = await CoachUser.find({
+    $or: ownerMatch,
+    accountType: { $in: ["owner", "leader"] }
+  })
+    .sort({ createdAt: -1, name: 1 })
+    .lean();
+  const ownerIds = ownerDocs.map(doc => doc._id).filter(Boolean);
+
+  const [profileDocs, seatDocs, leadAgg, highLevelAgg, salesAgg] = await Promise.all([
+    ownerIds.length
+      ? CoachDistributorProfile.find({ userId: { $in: ownerIds } }).lean()
+      : Promise.resolve([]),
+    ownerIds.length
+      ? CoachUser.find({
+          accountType: "seat",
+          teamOwnerUserId: { $in: ownerIds }
+        })
+          .select("teamOwnerUserId seatStatus")
+          .lean()
+      : Promise.resolve([]),
+    ownerIds.length
+      ? CoachLeadInbox.aggregate([
+          {
+            $match: {
+              ownerUserId: { $in: ownerIds }
+            }
+          },
+          {
+            $group: {
+              _id: "$ownerUserId",
+              totalLeads: { $sum: 1 },
+              syncedLeads: {
+                $sum: {
+                  $cond: [{ $and: [{ $ne: ["$highLevelContactId", null] }, { $ne: ["$highLevelContactId", ""] }] }, 1, 0]
+                }
+              },
+              openOpportunities: {
+                $sum: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $ne: ["$highLevelOpportunityId", null] },
+                        { $ne: ["$highLevelOpportunityId", ""] },
+                        { $ne: ["$highLevelOpportunityStatus", "won"] },
+                        { $ne: ["$highLevelOpportunityStatus", "lost"] }
+                      ]
+                    },
+                    1,
+                    0
+                  ]
+                }
+              }
+            }
+          }
+        ])
+      : Promise.resolve([]),
+    ownerIds.length
+      ? CoachLeadInbox.aggregate([
+          {
+            $match: {
+              ownerUserId: { $in: ownerIds },
+              $or: [
+                { highLevelCampaignId: { $exists: true, $ne: "" } },
+                { highLevelCampaignStatus: { $exists: true, $ne: "" } }
+              ]
+            }
+          },
+          {
+            $group: {
+              _id: "$ownerUserId",
+              campaignSignals: { $sum: 1 }
+            }
+          }
+        ])
+      : Promise.resolve([]),
+    ownerIds.length
+      ? CoachDemoOutcome.aggregate([
+          {
+            $match: {
+              ownerUserId: { $in: ownerIds },
+              resultType: "venta"
+            }
+          },
+          {
+            $group: {
+              _id: "$ownerUserId",
+              salesCount: { $sum: 1 },
+              soldAmount: { $sum: "$saleAmount" }
+            }
+          }
+        ])
+      : Promise.resolve([])
+  ]);
+
+  const profileMap = new Map(profileDocs.map(doc => [String(doc.userId), doc]));
+  const seatStatsMap = new Map();
+  const leadMap = new Map(leadAgg.map(item => [String(item._id), item]));
+  const highLevelMap = new Map(highLevelAgg.map(item => [String(item._id), item]));
+  const salesMap = new Map(salesAgg.map(item => [String(item._id), item]));
+
+  for (const seat of seatDocs) {
+    const ownerId = String(seat.teamOwnerUserId || "");
+
+    if (!ownerId) {
+      continue;
+    }
+
+    const current = seatStatsMap.get(ownerId) || { totalSeats: 0, activeSeats: 0 };
+    current.totalSeats += 1;
+
+    if (normalizarCoachSeatStatus(seat.seatStatus || "active") === "active") {
+      current.activeSeats += 1;
+    }
+
+    seatStatsMap.set(ownerId, current);
+  }
+
+  const accounts = ownerDocs.map(userDoc => {
+    const ownerId = String(userDoc._id);
+    const profileDoc = profileMap.get(ownerId) || null;
+    const preset = presetMap.get(normalizarEmail(userDoc.email || "")) || null;
+    const seatStats = seatStatsMap.get(ownerId) || { totalSeats: 0, activeSeats: 0 };
+    const leadStats = leadMap.get(ownerId) || { totalLeads: 0, syncedLeads: 0, openOpportunities: 0 };
+    const campaignStats = highLevelMap.get(ownerId) || { campaignSignals: 0 };
+    const salesStats = salesMap.get(ownerId) || { salesCount: 0, soldAmount: 0 };
+    const status = coachTieneAcceso(userDoc.subscriptionStatus) || coachTieneAccesoDePrueba(userDoc.email)
+      ? "activa"
+      : userDoc.subscriptionStatus || "pendiente";
+
+    return {
+      email: userDoc.email || "",
+      accountId: ownerId,
+      name: userDoc.name || profileDoc?.name || preset?.label || "Cuenta vigilada",
+      status,
+      accountType: normalizarCoachAccountType(userDoc.accountType || "owner"),
+      teamRole: profileDoc?.teamRole || preset?.teamRole || "",
+      seatLabel: profileDoc?.seatLabel || preset?.seatLabel || "",
+      officeId: userDoc.officeId || preset?.officeId || "",
+      territoryId: userDoc.territoryId || preset?.territoryId || "",
+      totalSeats: seatStats.totalSeats,
+      activeSeats: seatStats.activeSeats,
+      totalLeads: Number(leadStats.totalLeads || 0),
+      syncedLeads: Number(leadStats.syncedLeads || 0),
+      openOpportunities: Number(leadStats.openOpportunities || 0),
+      campaignSignals: Number(campaignStats.campaignSignals || 0),
+      salesCount: Number(salesStats.salesCount || 0),
+      soldAmount: limpiarCoachDemoOutcomeAmount(salesStats.soldAmount || 0),
+      sponsorLinked: Boolean(userDoc.sponsorUserId),
+      sponsorName: userDoc.sponsorName || "",
+      updatedAt: userDoc.updatedAt || userDoc.createdAt || null
+    };
+  });
+
+  const existingEmails = new Set(accounts.map(item => normalizarEmail(item.email)));
+
+  for (const email of watchedEmails) {
+    if (existingEmails.has(email)) {
+      continue;
+    }
+
+    const preset = presetMap.get(email) || null;
+    accounts.push({
+      email,
+      accountId: "",
+      name: preset?.label || "Pendiente de registro",
+      status: "pendiente_registro",
+      accountType: "owner",
+      teamRole: preset?.teamRole || "",
+      seatLabel: preset?.seatLabel || "",
+      officeId: preset?.officeId || "",
+      territoryId: preset?.territoryId || "",
+      totalSeats: 0,
+      activeSeats: 0,
+      totalLeads: 0,
+      syncedLeads: 0,
+      openOpportunities: 0,
+      campaignSignals: 0,
+      salesCount: 0,
+      soldAmount: 0,
+      sponsorLinked: false,
+      sponsorName: "",
+      updatedAt: null
+    });
+  }
+
+  accounts.sort((a, b) => {
+    const aPending = a.status === "pendiente_registro" ? 1 : 0;
+    const bPending = b.status === "pendiente_registro" ? 1 : 0;
+
+    if (aPending !== bPending) {
+      return aPending - bPending;
+    }
+
+    return (a.name || "").localeCompare(b.name || "", "es");
+  });
+
+  const territories = Array.from(
+    new Set(
+      accounts
+        .flatMap(item => [item.territoryId || "", item.officeId || ""])
+        .map(item => cleanText(item))
+        .filter(Boolean)
+    )
+  );
+
+  return {
+    summary: {
+      trackedAccounts: accounts.length,
+      activeAccounts: accounts.filter(item => item.status !== "pendiente_registro").length,
+      pendingAccounts: accounts.filter(item => item.status === "pendiente_registro").length,
+      totalSeats: accounts.reduce((sum, item) => sum + Number(item.totalSeats || 0), 0),
+      activeSeats: accounts.reduce((sum, item) => sum + Number(item.activeSeats || 0), 0),
+      territories,
+      syncedLeads: accounts.reduce((sum, item) => sum + Number(item.syncedLeads || 0), 0),
+      openOpportunities: accounts.reduce((sum, item) => sum + Number(item.openOpportunities || 0), 0)
+    },
+    accounts
   };
 }
 
@@ -5565,6 +5969,7 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     chefSummary,
     coachSummary,
     sponsorOverview,
+    trackedAccounts,
     whatsappTodayIds,
     whatsapp7DayIds,
     recentWhatsAppReplies,
@@ -5581,6 +5986,7 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     obtenerChefPublicStats(),
     obtenerCoachNetworkSummary(),
     obtenerCoachSponsorOverview(viewerUserDoc),
+    obtenerControlTowerTrackedAccounts(viewerUserDoc),
     Message.distinct("visitorId", {
       ...whatsappBaseQuery,
       createdAt: { $gte: inicioHoy }
@@ -5686,6 +6092,7 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     chef: chefSummary,
     coach: coachSummary,
     sponsor: sponsorOverview,
+    tracked: trackedAccounts,
     whatsapp: {
       repliesToday: whatsappTodayIds.length,
       replies7Days: whatsapp7DayIds.length,
@@ -10542,7 +10949,8 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     userDoc.billingOwnerUserId = userDoc._id;
     userDoc.teamOwnerUserId = userDoc._id;
     await userDoc.save();
-    await asegurarCoachDistributorProfile(userDoc);
+    let profileDoc = await asegurarCoachDistributorProfile(userDoc);
+    ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
 
     await crearCoachSesion(req, res, userDoc._id);
 
@@ -10594,7 +11002,8 @@ app.post("/api/coach/login", async (req, res) => {
     userDoc.lastLoginAt = new Date();
     userDoc.updatedAt = new Date();
     await userDoc.save();
-    await asegurarCoachDistributorProfile(userDoc);
+    let profileDoc = await asegurarCoachDistributorProfile(userDoc);
+    ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
     await crearCoachSesion(req, res, userDoc._id);
 
     res.json({ user: await construirCoachUserView(userDoc) });
@@ -10639,7 +11048,8 @@ app.get("/api/coach/me", async (req, res) => {
         : Promise.resolve({ leadContext: null, repLeadSummary: null })
     ]);
 
-    const profileDoc = await asegurarCoachDistributorProfile(userDoc, profileDocRaw);
+    let profileDoc = await asegurarCoachDistributorProfile(userDoc, profileDocRaw);
+    ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
 
     res.json({
       authenticated: true,

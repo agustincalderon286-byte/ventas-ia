@@ -52,6 +52,38 @@ function formatMoney(value = 0) {
   return `$${(Number(value) || 0).toFixed(2)}`;
 }
 
+function formatTrackedStatusLabel(status = "") {
+  const safe = String(status || "").trim().toLowerCase();
+
+  if (safe === "pendiente_registro") {
+    return "Pendiente de registro";
+  }
+
+  if (safe === "test_access") {
+    return "Prueba gratis";
+  }
+
+  if (safe === "activa" || safe === "active" || safe === "trialing") {
+    return "Activa";
+  }
+
+  return safe ? safe.replaceAll("_", " ") : "Sin estado";
+}
+
+function formatAccountTypeLabel(value = "") {
+  const safe = String(value || "").trim().toLowerCase();
+
+  if (safe === "leader") {
+    return "Leader";
+  }
+
+  if (safe === "seat") {
+    return "Subcuenta";
+  }
+
+  return safe === "owner" ? "Principal" : "Cuenta";
+}
+
 function renderTags(target, values = [], formatter = value => value) {
   if (!target) {
     return;
@@ -272,6 +304,43 @@ function hydrateDashboard(data) {
         <td>${escapeHtml(item.generatedByName || "Sin dato")}</td>
         <td>${escapeHtml(formatMoney(item.saleAmount || 0))}</td>
         <td>${escapeHtml(formatMoney(item.sponsorCommissionAmount || 0))}</td>
+      </tr>
+    `
+  );
+
+  setText("[data-tracked-accounts]", String(data.tracked?.summary?.trackedAccounts || 0));
+  setText("[data-tracked-active]", String(data.tracked?.summary?.activeAccounts || 0));
+  setText("[data-tracked-seats]", String(data.tracked?.summary?.activeSeats || 0));
+  setText("[data-tracked-territory-count]", String((data.tracked?.summary?.territories || []).length || 0));
+  setText("[data-tracked-synced]", String(data.tracked?.summary?.syncedLeads || 0));
+  setText("[data-tracked-open]", String(data.tracked?.summary?.openOpportunities || 0));
+
+  renderTags(document.querySelector("[data-tracked-territories]"), data.tracked?.summary?.territories || []);
+
+  const trackedTable = document.querySelector("[data-tracked-accounts-table]");
+  if (trackedTable) {
+    trackedTable.dataset.cols = "9";
+  }
+  renderTableRows(
+    trackedTable,
+    data.tracked?.accounts || [],
+    item => `
+      <tr>
+        <td>${escapeHtml(item.name || "Cuenta vigilada")}</td>
+        <td>${escapeHtml(item.email || "Sin correo")}</td>
+        <td>${escapeHtml(formatTrackedStatusLabel(item.status))}</td>
+        <td>${escapeHtml(
+          [formatAccountTypeLabel(item.accountType), item.teamRole || item.seatLabel || ""].filter(Boolean).join(" · ")
+        )}</td>
+        <td>${escapeHtml([item.officeId || "", item.territoryId || ""].filter(Boolean).join(" · ") || "Sin dato")}</td>
+        <td>${escapeHtml(`${item.activeSeats || 0}/${item.totalSeats || 0}`)}</td>
+        <td>${escapeHtml(String(item.totalLeads || 0))}</td>
+        <td>${escapeHtml(`${item.salesCount || 0} · ${formatMoney(item.soldAmount || 0)}`)}</td>
+        <td>${escapeHtml(
+          `Leads ${item.syncedLeads || 0} · Opp ${item.openOpportunities || 0}${
+            item.campaignSignals ? ` · Camp ${item.campaignSignals}` : ""
+          }`
+        )}</td>
       </tr>
     `
   );
