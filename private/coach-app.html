@@ -174,7 +174,15 @@
               </div>
               <div class="mini-stat">
                 <strong data-messages-unread-announcements>0</strong>
-                <span>Sin leer</span>
+                <span>Boletines nuevos</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-messages-total-direct>0</strong>
+                <span>Chats</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-messages-unread-direct>0</strong>
+                <span>Chats nuevos</span>
               </div>
               <div class="mini-stat">
                 <strong data-messages-unread-support>0</strong>
@@ -203,6 +211,127 @@
 
             <div class="territory-list" data-announcement-list>
               <div class="team-seat-empty">Todavia no hay boletines para esta cuenta.</div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden data-bulletin-card>
+            <div class="eyebrow">Boletin interno</div>
+            <h3>Manda avisos a tu equipo o territorio</h3>
+            <p>
+              Si administras subcuentas o territorios, desde aqui puedes mandar recordatorios y noticias internas sin
+              sacar a nadie del Coach.
+            </p>
+
+            <form class="coach-form" data-bulletin-form hidden>
+              <label>
+                Alcance
+                <select name="scopeType" data-bulletin-scope></select>
+              </label>
+
+              <label data-bulletin-territory-wrap hidden>
+                Territorio
+                <select name="territoryId" data-bulletin-territory-select></select>
+              </label>
+
+              <label>
+                Titulo
+                <input
+                  type="text"
+                  name="title"
+                  maxlength="120"
+                  placeholder="Ej. Este mes los puntos cuentan doble para Las Vegas."
+                  required
+                />
+              </label>
+
+              <label>
+                Mensaje
+                <textarea
+                  name="body"
+                  maxlength="1200"
+                  rows="4"
+                  placeholder="Escribe el aviso que quieres que lea todo tu equipo."
+                  required
+                ></textarea>
+              </label>
+
+              <label>
+                Prioridad
+                <select name="priority">
+                  <option value="normal">Normal</option>
+                  <option value="high">Alta</option>
+                </select>
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-bulletin-save>Mandar boletin</button>
+              </div>
+
+              <div class="form-result" data-bulletin-feedback></div>
+            </form>
+
+            <div class="team-seat-empty" data-bulletin-empty hidden>
+              Esta cuenta recibe boletines, pero no tiene permisos para mandar uno masivo todavia.
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+            <div class="eyebrow">Mensajes directos</div>
+            <h3>Chat interno de equipo</h3>
+            <p>
+              Abre conversaciones privadas con uplines, companeros de territorio, subcuentas o soporte organizativo
+              del equipo.
+            </p>
+
+            <form class="coach-form" data-direct-thread-form>
+              <label>
+                Abre un chat con
+                <select name="targetUserId" data-direct-contact-select></select>
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-direct-thread-open>Abrir chat</button>
+              </div>
+
+              <div class="form-result" data-direct-thread-feedback></div>
+            </form>
+
+            <div class="territory-list" data-direct-thread-list>
+              <div class="team-seat-empty">Todavia no hay chats internos en esta cuenta.</div>
+            </div>
+
+            <div class="territory-card coach-direct-thread-panel" data-direct-thread-panel hidden>
+              <div class="territory-card-head">
+                <div>
+                  <div class="eyebrow">Conversacion activa</div>
+                  <h3 data-direct-thread-name>Selecciona un chat</h3>
+                  <p data-direct-thread-meta>Abre un contacto para ver sus mensajes.</p>
+                </div>
+                <span class="team-seat-status" data-direct-thread-status data-state="active">Activo</span>
+              </div>
+
+              <div class="territory-result-list coach-direct-message-list" data-direct-thread-messages>
+                <div class="team-seat-empty">Selecciona un chat para empezar a escribir.</div>
+              </div>
+
+              <form class="coach-form" data-direct-message-form>
+                <label>
+                  Mensaje
+                  <textarea
+                    name="body"
+                    maxlength="1200"
+                    rows="4"
+                    placeholder="Escribe una pregunta directa o una nota interna para tu equipo."
+                    required
+                  ></textarea>
+                </label>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-direct-message-save>Mandar mensaje</button>
+                </div>
+
+                <div class="form-result" data-direct-message-feedback></div>
+              </form>
             </div>
           </article>
 

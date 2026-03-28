@@ -5138,8 +5138,10 @@ function initCoachTerritoryWorkspace(user = null) {
 
 function renderCoachMessagesSummary(data = null) {
   const announcements = Array.isArray(data?.announcements) ? data.announcements : [];
+  const directThreads = Array.isArray(data?.direct?.threads) ? data.direct.threads : [];
   const unreadAnnouncements = Number(data?.unread?.announcements || 0);
   const unreadSupport = Number(data?.unread?.support || 0);
+  const unreadDirect = Number(data?.unread?.direct || 0);
   const totalUnread = Number(data?.unread?.total || 0);
 
   document.querySelectorAll("[data-messages-total-announcements]").forEach(node => {
@@ -5148,6 +5150,14 @@ function renderCoachMessagesSummary(data = null) {
 
   document.querySelectorAll("[data-messages-unread-announcements]").forEach(node => {
     node.textContent = String(unreadAnnouncements || 0);
+  });
+
+  document.querySelectorAll("[data-messages-total-direct]").forEach(node => {
+    node.textContent = String(directThreads.length || 0);
+  });
+
+  document.querySelectorAll("[data-messages-unread-direct]").forEach(node => {
+    node.textContent = String(unreadDirect || 0);
   });
 
   document.querySelectorAll("[data-messages-unread-support]").forEach(node => {
@@ -5184,10 +5194,24 @@ function renderCoachAnnouncements(announcements = []) {
         <article class="territory-card">
           <div class="territory-card-head">
             <div>
-              <div class="eyebrow">${escapeHtml(item.scopeType === "territory" ? "Territorio" : "Boletin maestro")}</div>
+              <div class="eyebrow">${escapeHtml(
+                item.scopeType === "territory"
+                  ? "Territorio"
+                  : item.scopeType === "team"
+                    ? "Tu equipo"
+                    : "Boletin maestro"
+              )}</div>
               <h3>${escapeHtml(item.title || "Boletin")}</h3>
               <p>${escapeHtml(
-                [item.authorName || "Coach", item.territoryName || "", formatDateTimeShort(item.createdAt)]
+                [
+                  item.authorName || "Coach",
+                  item.scopeType === "territory"
+                    ? item.territoryName || ""
+                    : item.scopeType === "team"
+                      ? item.teamOwnerName || ""
+                      : "",
+                  formatDateTimeShort(item.createdAt)
+                ]
                   .filter(Boolean)
                   .join(" · ")
               )}</p>
@@ -5201,6 +5225,62 @@ function renderCoachAnnouncements(announcements = []) {
       `
     )
     .join("");
+}
+
+function renderCoachBulletinComposer(options = null) {
+  const card = document.querySelector("[data-bulletin-card]");
+  const form = document.querySelector("[data-bulletin-form]");
+  const scopeSelect = document.querySelector("[data-bulletin-scope]");
+  const territoryWrap = document.querySelector("[data-bulletin-territory-wrap]");
+  const territorySelect = document.querySelector("[data-bulletin-territory-select]");
+  const emptyState = document.querySelector("[data-bulletin-empty]");
+
+  if (!card || !form || !scopeSelect || !territoryWrap || !territorySelect || !emptyState) {
+    return;
+  }
+
+  const territories = Array.isArray(options?.territories) ? options.territories : [];
+  const scopeOptions = [];
+
+  if (options?.canSendTeam) {
+    scopeOptions.push({ value: "team", label: "Mi equipo" });
+  }
+
+  if (options?.canSendTerritory && territories.length) {
+    scopeOptions.push({ value: "territory", label: "Mi territorio" });
+  }
+
+  if (!scopeOptions.length) {
+    form.hidden = true;
+    emptyState.hidden = false;
+    return;
+  }
+
+  form.hidden = false;
+  emptyState.hidden = true;
+
+  const previousScope = String(scopeSelect.value || "").trim();
+  const nextScope = scopeOptions.some(item => item.value === previousScope) ? previousScope : scopeOptions[0].value;
+
+  scopeSelect.innerHTML = scopeOptions
+    .map(item => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+    .join("");
+  scopeSelect.value = nextScope;
+  scopeSelect.disabled = scopeOptions.length === 1;
+
+  const previousTerritory = String(territorySelect.value || "").trim();
+  territorySelect.innerHTML = territories.length
+    ? territories
+        .map(item => `<option value="${escapeHtml(item.id || "")}">${escapeHtml(item.name || "Territorio")}</option>`)
+        .join("")
+    : "";
+
+  if (territories.length) {
+    territorySelect.value =
+      territories.some(item => String(item.id || "") === previousTerritory) ? previousTerritory : String(territories[0].id || "");
+  }
+
+  territoryWrap.hidden = nextScope !== "territory";
 }
 
 function renderCoachSupportThread(thread = null) {
@@ -5230,13 +5310,145 @@ function renderCoachSupportThread(thread = null) {
     .join("");
 }
 
+function renderCoachDirectWorkspace(data = null, selectedThreadId = "", currentUserId = "") {
+  const contactSelect = document.querySelector("[data-direct-contact-select]");
+  const threadList = document.querySelector("[data-direct-thread-list]");
+  const threadPanel = document.querySelector("[data-direct-thread-panel]");
+  const threadName = document.querySelector("[data-direct-thread-name]");
+  const threadMeta = document.querySelector("[data-direct-thread-meta]");
+  const threadStatus = document.querySelector("[data-direct-thread-status]");
+  const threadMessages = document.querySelector("[data-direct-thread-messages]");
+  const messageForm = document.querySelector("[data-direct-message-form]");
+  const openButton = document.querySelector("[data-direct-thread-open]");
+
+  if (
+    !contactSelect ||
+    !threadList ||
+    !threadPanel ||
+    !threadName ||
+    !threadMeta ||
+    !threadStatus ||
+    !threadMessages ||
+    !messageForm
+  ) {
+    return "";
+  }
+
+  const contacts = Array.isArray(data?.contacts) ? data.contacts : [];
+  const threads = Array.isArray(data?.threads) ? data.threads : [];
+
+  contactSelect.innerHTML = contacts.length
+    ? contacts
+        .map(
+          item => `
+            <option value="${escapeHtml(item.id || "")}">
+              ${escapeHtml([item.name || "Cuenta", item.relationLabel || ""].filter(Boolean).join(" · "))}
+            </option>
+          `
+        )
+        .join("")
+    : '<option value="">Todavia no tienes contactos internos disponibles</option>';
+  contactSelect.disabled = !contacts.length;
+  if (openButton) {
+    openButton.disabled = !contacts.length;
+  }
+
+  let activeThreadId = selectedThreadId;
+  if (!threads.some(item => item.id === activeThreadId)) {
+    activeThreadId = "";
+  }
+  if (!activeThreadId && threads.length) {
+    activeThreadId = (threads.find(item => item.unread) || threads[0]).id;
+  }
+
+  if (!threads.length) {
+    threadList.innerHTML = contacts.length
+      ? '<div class="team-seat-empty">Abre un contacto para iniciar el primer chat interno de esta cuenta.</div>'
+      : '<div class="team-seat-empty">Todavia no tienes contactos internos disponibles para chat.</div>';
+  } else {
+    threadList.innerHTML = threads
+      .map(item => {
+        const isActive = item.id === activeThreadId;
+        return `
+          <button
+            type="button"
+            class="territory-card coach-direct-thread-card${isActive ? " is-active" : ""}"
+            data-direct-thread-select="${escapeHtml(item.id || "")}"
+          >
+            <div class="territory-card-head">
+              <div>
+                <div class="eyebrow">${escapeHtml(item.contact?.relationLabel || "Chat interno")}</div>
+                <h3>${escapeHtml(item.contact?.name || "Cuenta")}</h3>
+                <p>${escapeHtml(
+                  [item.contact?.email || "", formatDateTimeShort(item.lastMessageAt)].filter(Boolean).join(" · ")
+                )}</p>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(item.unread ? "paused" : "active")}">
+                ${escapeHtml(item.unread ? "Nuevo" : "Activo")}
+              </span>
+            </div>
+            <p class="territory-inline-note">${escapeHtml(item.lastMessagePreview || "Todavia no hay mensajes en este chat.")}</p>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  const activeThread = threads.find(item => item.id === activeThreadId) || null;
+
+  if (!activeThread) {
+    threadPanel.hidden = true;
+    threadName.textContent = "Selecciona un chat";
+    threadMeta.textContent = "Abre un contacto para ver sus mensajes.";
+    threadStatus.dataset.state = "active";
+    threadStatus.textContent = "Activo";
+    threadMessages.innerHTML = '<div class="team-seat-empty">Selecciona un chat para empezar a escribir.</div>';
+    return "";
+  }
+
+  threadPanel.hidden = false;
+  threadName.textContent = activeThread.contact?.name || "Cuenta";
+  threadMeta.textContent = [activeThread.contact?.relationLabel || "", activeThread.contact?.email || ""]
+    .filter(Boolean)
+    .join(" · ");
+  threadStatus.dataset.state = activeThread.unread ? "paused" : "active";
+  threadStatus.textContent = activeThread.unread ? "Nuevo" : "Activo";
+  threadMessages.innerHTML = Array.isArray(activeThread.messages) && activeThread.messages.length
+    ? activeThread.messages
+        .map(item => {
+          const isOwn = String(item.senderUserId || "") === String(currentUserId || "");
+          return `
+            <article class="territory-result-card coach-direct-message-item${isOwn ? " is-own" : ""}">
+              <strong>${escapeHtml(isOwn ? "Tu cuenta" : item.senderName || activeThread.contact?.name || "Cuenta")}</strong>
+              <span>${escapeHtml(formatDateTimeShort(item.createdAt))}</span>
+              <p>${escapeHtml(item.body || "")}</p>
+            </article>
+          `;
+        })
+        .join("")
+    : '<div class="team-seat-empty">Todavia no hay mensajes en este chat.</div>';
+
+  return activeThreadId;
+}
+
 function initCoachMessagesWorkspace(user = null) {
+  const bulletinForm = document.querySelector("[data-bulletin-form]");
+  const bulletinFeedback = document.querySelector("[data-bulletin-feedback]");
+  const bulletinSave = document.querySelector("[data-bulletin-save]");
+  const bulletinScopeSelect = document.querySelector("[data-bulletin-scope]");
   const form = document.querySelector("[data-support-message-form]");
   const feedbackNode = document.querySelector("[data-support-message-feedback]");
   const submitButton = document.querySelector("[data-support-message-save]");
   const summaryFeedback = document.querySelector("[data-messages-feedback]");
   const markReadButton = document.querySelector("[data-messages-mark-read]");
   const quickOpenButtons = document.querySelectorAll("[data-coach-open-messages]");
+  const directThreadForm = document.querySelector("[data-direct-thread-form]");
+  const directThreadFeedback = document.querySelector("[data-direct-thread-feedback]");
+  const directThreadButton = document.querySelector("[data-direct-thread-open]");
+  const directThreadList = document.querySelector("[data-direct-thread-list]");
+  const directMessageForm = document.querySelector("[data-direct-message-form]");
+  const directMessageFeedback = document.querySelector("[data-direct-message-feedback]");
+  const directMessageButton = document.querySelector("[data-direct-message-save]");
 
   if (!form || !summaryFeedback) {
     return;
@@ -5245,6 +5457,8 @@ function initCoachMessagesWorkspace(user = null) {
   if (!user) {
     renderCoachMessagesSummary(null);
     renderCoachAnnouncements([]);
+    renderCoachBulletinComposer(null);
+    renderCoachDirectWorkspace(null, "", "");
     renderCoachSupportThread(null);
     return;
   }
@@ -5252,15 +5466,24 @@ function initCoachMessagesWorkspace(user = null) {
   let latestOverview = {
     announcements: [],
     supportThread: null,
-    unread: { announcements: 0, support: 0, total: 0 }
+    direct: { contacts: [], threads: [], unreadCount: 0 },
+    bulletinOptions: { canSendTeam: false, canSendTerritory: false, territories: [] },
+    unread: { announcements: 0, support: 0, direct: 0, total: 0 }
+  };
+  let activeDirectThreadId = "";
+
+  const refreshOverviewUi = () => {
+    renderCoachMessagesSummary(latestOverview);
+    renderCoachAnnouncements(latestOverview.announcements || []);
+    renderCoachBulletinComposer(latestOverview.bulletinOptions || null);
+    activeDirectThreadId = renderCoachDirectWorkspace(latestOverview.direct || null, activeDirectThreadId, user.id || "");
+    renderCoachSupportThread(latestOverview.supportThread || null);
   };
 
   const loadOverview = async () => {
     const data = await apiRequest("/api/coach/messages/overview");
     latestOverview = data || latestOverview;
-    renderCoachMessagesSummary(latestOverview);
-    renderCoachAnnouncements(latestOverview.announcements || []);
-    renderCoachSupportThread(latestOverview.supportThread || null);
+    refreshOverviewUi();
     return latestOverview;
   };
 
@@ -5278,12 +5501,129 @@ function initCoachMessagesWorkspace(user = null) {
       await apiRequest("/api/coach/messages/read-all", {
         method: "POST"
       });
-      setMessage(summaryFeedback, "Tus boletines y soporte quedaron marcados como leidos.", "success");
+      setMessage(summaryFeedback, "Tus boletines, chats y soporte quedaron marcados como leidos.", "success");
       await loadOverview();
     } catch (error) {
       setMessage(summaryFeedback, error.message, "error");
     } finally {
       setButtonLoading(markReadButton, false);
+    }
+  });
+
+  bulletinScopeSelect?.addEventListener("change", () => {
+    renderCoachBulletinComposer(latestOverview.bulletinOptions || null);
+  });
+
+  bulletinForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(bulletinFeedback);
+    setButtonLoading(bulletinSave, true, "Mandando...");
+
+    try {
+      const formData = new FormData(bulletinForm);
+      await apiRequest("/api/coach/announcements", {
+        method: "POST",
+        body: {
+          scopeType: formData.get("scopeType"),
+          territoryId: formData.get("territoryId"),
+          title: formData.get("title"),
+          body: formData.get("body"),
+          priority: formData.get("priority")
+        }
+      });
+      setMessage(bulletinFeedback, "Tu boletin interno ya se mando.", "success");
+      bulletinForm.reset();
+      renderCoachBulletinComposer(latestOverview.bulletinOptions || null);
+      await loadOverview();
+    } catch (error) {
+      setMessage(bulletinFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(bulletinSave, false);
+    }
+  });
+
+  directThreadForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(directThreadFeedback);
+    setButtonLoading(directThreadButton, true, "Abriendo...");
+
+    try {
+      const formData = new FormData(directThreadForm);
+      const data = await apiRequest("/api/coach/direct/threads", {
+        method: "POST",
+        body: {
+          targetUserId: formData.get("targetUserId")
+        }
+      });
+      activeDirectThreadId = data?.threadId || "";
+      setMessage(directThreadFeedback, "Chat interno listo para usar.", "success");
+      await loadOverview();
+    } catch (error) {
+      setMessage(directThreadFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(directThreadButton, false);
+    }
+  });
+
+  directThreadList?.addEventListener("click", async event => {
+    const button = event.target.closest("[data-direct-thread-select]");
+
+    if (!button) {
+      return;
+    }
+
+    const threadId = String(button.getAttribute("data-direct-thread-select") || "").trim();
+
+    if (!threadId) {
+      return;
+    }
+
+    activeDirectThreadId = threadId;
+    clearMessage(directThreadFeedback);
+    const thread = Array.isArray(latestOverview.direct?.threads)
+      ? latestOverview.direct.threads.find(item => item.id === threadId)
+      : null;
+
+    if (thread?.unread) {
+      try {
+        await apiRequest(`/api/coach/direct/threads/${threadId}/read`, {
+          method: "POST"
+        });
+        await loadOverview();
+      } catch (error) {
+        setMessage(directThreadFeedback, error.message, "error");
+      }
+      return;
+    }
+
+    activeDirectThreadId = renderCoachDirectWorkspace(latestOverview.direct || null, activeDirectThreadId, user.id || "");
+  });
+
+  directMessageForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(directMessageFeedback);
+
+    if (!activeDirectThreadId) {
+      setMessage(directMessageFeedback, "Abre un chat antes de mandar un mensaje.", "error");
+      return;
+    }
+
+    setButtonLoading(directMessageButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(directMessageForm);
+      await apiRequest(`/api/coach/direct/threads/${activeDirectThreadId}/messages`, {
+        method: "POST",
+        body: {
+          body: formData.get("body")
+        }
+      });
+      directMessageForm.reset();
+      await loadOverview();
+    } catch (error) {
+      setMessage(directMessageFeedback, error.message, "error");
+    } finally {
+      setButtonLoading(directMessageButton, false);
     }
   });
 

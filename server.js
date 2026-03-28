@@ -714,6 +714,13 @@ const coachAnnouncementSchema = new mongoose.Schema({
     index: true
   },
   territoryName: String,
+  teamOwnerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    default: null,
+    index: true
+  },
+  teamOwnerName: String,
   title: { type: String, required: true, trim: true },
   body: { type: String, required: true, trim: true },
   priority: { type: String, default: "normal" },
@@ -777,6 +784,40 @@ const coachSupportMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachDirectThreadSchema = new mongoose.Schema({
+  participantUserIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CoachUser",
+      required: true
+    }
+  ],
+  participantKey: { type: String, required: true, unique: true, index: true },
+  unreadByUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "CoachUser" }],
+  lastMessageAt: Date,
+  lastMessagePreview: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachDirectMessageSchema = new mongoose.Schema({
+  threadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachDirectThread",
+    required: true,
+    index: true
+  },
+  senderUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  senderName: String,
+  body: { type: String, required: true, trim: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -829,9 +870,12 @@ coachTerritoryInviteSchema.index({ territoryId: 1, status: 1, createdAt: -1 });
 coachTerritoryInviteSchema.index({ inviteeEmail: 1, status: 1, createdAt: -1 });
 coachAnnouncementSchema.index({ scopeType: 1, territoryId: 1, createdAt: -1 });
 coachAnnouncementSchema.index({ authorUserId: 1, createdAt: -1 });
+coachAnnouncementSchema.index({ scopeType: 1, teamOwnerUserId: 1, createdAt: -1 });
 coachAnnouncementReceiptSchema.index({ announcementId: 1, userId: 1 }, { unique: true });
 coachSupportThreadSchema.index({ status: 1, lastMessageAt: -1 });
 coachSupportMessageSchema.index({ threadId: 1, createdAt: -1 });
+coachDirectThreadSchema.index({ participantUserIds: 1, lastMessageAt: -1 });
+coachDirectMessageSchema.index({ threadId: 1, createdAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -870,6 +914,10 @@ const CoachSupportThread =
   mongoose.models.CoachSupportThread || mongoose.model("CoachSupportThread", coachSupportThreadSchema);
 const CoachSupportMessage =
   mongoose.models.CoachSupportMessage || mongoose.model("CoachSupportMessage", coachSupportMessageSchema);
+const CoachDirectThread =
+  mongoose.models.CoachDirectThread || mongoose.model("CoachDirectThread", coachDirectThreadSchema);
+const CoachDirectMessage =
+  mongoose.models.CoachDirectMessage || mongoose.model("CoachDirectMessage", coachDirectMessageSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -1641,7 +1689,7 @@ function normalizarCoachAnnouncementScopeType(value = "") {
   const safeValue = String(value || "")
     .trim()
     .toLowerCase();
-  return ["global", "territory"].includes(safeValue) ? safeValue : "global";
+  return ["global", "territory", "team"].includes(safeValue) ? safeValue : "global";
 }
 
 function normalizarCoachAnnouncementPriority(value = "") {
@@ -1661,6 +1709,13 @@ function limpiarCoachAnnouncementBody(value = "") {
 
 function limpiarCoachSupportMessageBody(value = "") {
   return cleanText(value || "").slice(0, 1200);
+}
+
+function construirCoachDirectParticipantKey(userIdA = "", userIdB = "") {
+  return [String(userIdA || "").trim(), String(userIdB || "").trim()]
+    .filter(Boolean)
+    .sort()
+    .join("__");
 }
 
 function resolverCoachTeamRoleDefault(userDoc = null) {
@@ -3183,9 +3238,124 @@ async function obtenerCoachVisibleTerritoryIds(userDoc = null) {
     new Set(
       membershipDocs
         .map(item => (item.territoryId ? String(item.territoryId) : ""))
-        .filter(Boolean)
+      .filter(Boolean)
     )
   );
+}
+
+async function obtenerCoachReachableContacts(userDoc = null) {
+  if (!userDoc?._id) {
+    return [];
+  }
+
+  const selfId = String(userDoc._id);
+  const audienceUser = await resolverCoachAudienceOwner(userDoc);
+  const audienceUserId = String(audienceUser?._id || "");
+  const visibleTerritoryIds = await obtenerCoachVisibleTerritoryIds(userDoc);
+  const reachableIds = new Set();
+  const relationMap = new Map();
+
+  const markRelation = (userId, label) => {
+    const safeId = String(userId || "").trim();
+    if (!safeId || safeId === selfId) {
+      return;
+    }
+
+    reachableIds.add(safeId);
+    const current = relationMap.get(safeId) || new Set();
+    if (label) {
+      current.add(label);
+    }
+    relationMap.set(safeId, current);
+  };
+
+  if (audienceUser?.sponsorUserId) {
+    markRelation(audienceUser.sponsorUserId, "Sponsor");
+  }
+
+  if (userDoc.sponsorUserId && String(userDoc.sponsorUserId) !== String(audienceUser?.sponsorUserId || "")) {
+    markRelation(userDoc.sponsorUserId, "Sponsor");
+  }
+
+  if (normalizarCoachAccountType(userDoc.accountType || "owner") === "seat" && audienceUserId && audienceUserId !== selfId) {
+    markRelation(audienceUserId, "Upline directo");
+  }
+
+  if (audienceUserId) {
+    const seatDocs = await CoachUser.find({
+      teamOwnerUserId: audienceUserId,
+      accountType: "seat",
+      seatStatus: "active"
+    })
+      .select("_id")
+      .lean();
+
+    seatDocs.forEach(seatDoc => {
+      const label =
+        String(seatDoc._id || "") === selfId
+          ? ""
+          : normalizarCoachAccountType(userDoc.accountType || "owner") === "seat"
+            ? "Companero de equipo"
+            : "Subcuenta";
+      markRelation(seatDoc._id, label);
+    });
+  }
+
+  if (visibleTerritoryIds.length) {
+    const membershipDocs = await CoachTerritoryMembership.find({
+      territoryId: { $in: visibleTerritoryIds },
+      status: "active"
+    })
+      .select("userId role territoryId")
+      .lean();
+
+    membershipDocs.forEach(item => {
+      markRelation(item.userId, formatearCoachTerritoryRole(item.role || "member"));
+    });
+  }
+
+  const userIds = Array.from(reachableIds);
+
+  if (!userIds.length) {
+    return [];
+  }
+
+  const [userDocs, profileDocs] = await Promise.all([
+    CoachUser.find({
+      _id: { $in: userIds }
+    })
+      .select("name email accountType seatStatus officeId territoryId teamOwnerUserId sponsorUserId")
+      .lean(),
+    CoachDistributorProfile.find({
+      userId: { $in: userIds }
+    }).lean()
+  ]);
+
+  const profileMap = new Map(profileDocs.map(doc => [String(doc.userId), doc]));
+
+  return userDocs
+    .filter(candidate => {
+      const accountType = normalizarCoachAccountType(candidate.accountType || "owner");
+      const seatStatus = normalizarCoachSeatStatus(candidate.seatStatus || "active");
+      return accountType !== "seat" || seatStatus === "active";
+    })
+    .map(candidate => {
+      const candidateId = String(candidate._id || "");
+      const relationLabels = Array.from(relationMap.get(candidateId) || []).filter(Boolean);
+      const profileDoc = profileMap.get(candidateId) || null;
+
+      return {
+        id: candidateId,
+        name: candidate.name || candidate.email || "Cuenta",
+        email: candidate.email || "",
+        accountType: normalizarCoachAccountType(candidate.accountType || "owner"),
+        teamRole: profileDoc?.teamRole || "",
+        officeId: candidate.officeId || "",
+        territoryId: candidate.territoryId || "",
+        relationLabel: relationLabels.join(" · ")
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
 }
 
 function limpiarCoachAnnouncement(announcementDoc = null, options = {}) {
@@ -3199,6 +3369,8 @@ function limpiarCoachAnnouncement(announcementDoc = null, options = {}) {
     scopeType: normalizarCoachAnnouncementScopeType(announcementDoc.scopeType || "global"),
     territoryId: announcementDoc.territoryId ? String(announcementDoc.territoryId) : "",
     territoryName: announcementDoc.territoryName || "",
+    teamOwnerUserId: announcementDoc.teamOwnerUserId ? String(announcementDoc.teamOwnerUserId) : "",
+    teamOwnerName: announcementDoc.teamOwnerName || "",
     title: announcementDoc.title || "",
     body: announcementDoc.body || "",
     priority: normalizarCoachAnnouncementPriority(announcementDoc.priority || "normal"),
@@ -3244,6 +3416,166 @@ function limpiarCoachSupportMessage(messageDoc = null) {
   };
 }
 
+function limpiarCoachDirectMessage(messageDoc = null) {
+  if (!messageDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(messageDoc._id),
+    threadId: messageDoc.threadId ? String(messageDoc.threadId) : "",
+    senderUserId: messageDoc.senderUserId ? String(messageDoc.senderUserId) : "",
+    senderName: messageDoc.senderName || "",
+    body: messageDoc.body || "",
+    createdAt: messageDoc.createdAt || null
+  };
+}
+
+function limpiarCoachDirectThread(threadDoc = null, contact = null, messages = []) {
+  if (!threadDoc?._id) {
+    return null;
+  }
+
+  return {
+    id: String(threadDoc._id),
+    contact,
+    unread: Array.isArray(threadDoc.unreadByUserIds) ? threadDoc.unreadByUserIds.length > 0 : false,
+    lastMessageAt: threadDoc.lastMessageAt || null,
+    lastMessagePreview: threadDoc.lastMessagePreview || "",
+    messages: Array.isArray(messages) ? messages : []
+  };
+}
+
+async function encontrarOCrearCoachDirectThread(userDoc = null, targetUserId = "") {
+  if (!userDoc?._id || !targetUserId || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+    return null;
+  }
+
+  const participantKey = construirCoachDirectParticipantKey(userDoc._id, targetUserId);
+
+  if (!participantKey) {
+    return null;
+  }
+
+  let threadDoc = await CoachDirectThread.findOne({ participantKey });
+
+  if (threadDoc) {
+    return threadDoc;
+  }
+
+  threadDoc = await CoachDirectThread.create({
+    participantUserIds: [userDoc._id, targetUserId],
+    participantKey,
+    unreadByUserIds: [],
+    updatedAt: new Date()
+  });
+
+  return threadDoc;
+}
+
+async function obtenerCoachDirectThreadsOverview(userDoc = null, contacts = []) {
+  if (!userDoc?._id) {
+    return {
+      contacts: [],
+      threads: [],
+      unreadCount: 0
+    };
+  }
+
+  const safeContacts = Array.isArray(contacts) ? contacts : [];
+  const contactMap = new Map(safeContacts.map(item => [String(item.id || ""), item]));
+  const threadDocs = await CoachDirectThread.find({
+    participantUserIds: userDoc._id
+  })
+    .sort({ lastMessageAt: -1, createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  const threadIds = threadDocs.map(item => item._id).filter(Boolean);
+  const messageDocs = threadIds.length
+    ? await CoachDirectMessage.find({
+        threadId: { $in: threadIds }
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+    : [];
+  const messagesByThread = new Map();
+
+  for (const messageDoc of messageDocs) {
+    const threadId = String(messageDoc.threadId || "");
+    const current = messagesByThread.get(threadId) || [];
+
+    if (current.length >= 25) {
+      continue;
+    }
+
+    current.push(messageDoc);
+    messagesByThread.set(threadId, current);
+  }
+
+  const unresolvedContactIds = new Set();
+  threadDocs.forEach(threadDoc => {
+    const participantIds = Array.isArray(threadDoc.participantUserIds) ? threadDoc.participantUserIds.map(item => String(item)) : [];
+    const otherUserId = participantIds.find(item => item && item !== String(userDoc._id));
+
+    if (otherUserId && !contactMap.has(otherUserId)) {
+      unresolvedContactIds.add(otherUserId);
+    }
+  });
+
+  if (unresolvedContactIds.size) {
+    const missingUsers = await CoachUser.find({
+      _id: { $in: Array.from(unresolvedContactIds) }
+    })
+      .select("name email accountType officeId territoryId")
+      .lean();
+
+    missingUsers.forEach(userItem => {
+      contactMap.set(String(userItem._id), {
+        id: String(userItem._id),
+        name: userItem.name || userItem.email || "Cuenta",
+        email: userItem.email || "",
+        accountType: normalizarCoachAccountType(userItem.accountType || "owner"),
+        officeId: userItem.officeId || "",
+        territoryId: userItem.territoryId || "",
+        teamRole: "",
+        relationLabel: "Conversacion activa"
+      });
+    });
+  }
+
+  const threads = threadDocs
+    .map(threadDoc => {
+      const participantIds = Array.isArray(threadDoc.participantUserIds) ? threadDoc.participantUserIds.map(item => String(item)) : [];
+      const otherUserId = participantIds.find(item => item && item !== String(userDoc._id));
+      const directMessages = (messagesByThread.get(String(threadDoc._id)) || [])
+        .slice()
+        .reverse()
+        .map(item => limpiarCoachDirectMessage(item))
+        .filter(Boolean);
+
+      const unreadByUserIds = Array.isArray(threadDoc.unreadByUserIds)
+        ? threadDoc.unreadByUserIds.map(item => String(item))
+        : [];
+
+      return limpiarCoachDirectThread(
+        {
+          ...threadDoc,
+          unreadByUserIds: unreadByUserIds.includes(String(userDoc._id)) ? [userDoc._id] : []
+        },
+        contactMap.get(otherUserId || "") || null,
+        directMessages
+      );
+    })
+    .filter(Boolean);
+
+  return {
+    contacts: safeContacts,
+    threads,
+    unreadCount: threads.filter(item => item.unread).length
+  };
+}
+
 async function asegurarCoachSupportThread(userDoc = null) {
   if (!userDoc?._id) {
     return null;
@@ -3273,19 +3605,39 @@ async function obtenerCoachMessagesOverview(userDoc = null) {
     return {
       announcements: [],
       supportThread: null,
+      direct: {
+        contacts: [],
+        threads: [],
+        unreadCount: 0
+      },
+      bulletinOptions: {
+        canSendTeam: false,
+        canSendTerritory: false,
+        territories: []
+      },
       unread: {
         announcements: 0,
         support: 0,
+        direct: 0,
         total: 0
       }
     };
   }
 
+  const audienceUser = await resolverCoachAudienceOwner(userDoc);
   const visibleTerritoryIds = await obtenerCoachVisibleTerritoryIds(userDoc);
+  const reachableContacts = await obtenerCoachReachableContacts(userDoc);
   const announcementQuery = {
     status: "active",
     $or: [{ scopeType: "global" }]
   };
+
+  if (audienceUser?._id) {
+    announcementQuery.$or.push({
+      scopeType: "team",
+      teamOwnerUserId: audienceUser._id
+    });
+  }
 
   if (visibleTerritoryIds.length) {
     announcementQuery.$or.push({
@@ -3294,12 +3646,14 @@ async function obtenerCoachMessagesOverview(userDoc = null) {
     });
   }
 
-  const [announcementDocs, threadDoc] = await Promise.all([
+  const [announcementDocs, threadDoc, directOverview, territoryWorkspace] = await Promise.all([
     CoachAnnouncement.find(announcementQuery)
       .sort({ createdAt: -1 })
       .limit(20)
       .lean(),
-    asegurarCoachSupportThread(userDoc)
+    asegurarCoachSupportThread(userDoc),
+    obtenerCoachDirectThreadsOverview(userDoc, reachableContacts),
+    coachPuedeUsarTerritorios(userDoc) ? obtenerCoachTerritoryWorkspace(userDoc) : Promise.resolve(null)
   ]);
 
   const announcementIds = announcementDocs.map(item => item._id).filter(Boolean);
@@ -3337,10 +3691,28 @@ async function obtenerCoachMessagesOverview(userDoc = null) {
   return {
     announcements,
     supportThread,
+    direct: directOverview,
+    bulletinOptions: {
+      canSendTeam: esCoachTeamManager(userDoc),
+      canSendTerritory: Array.isArray(territoryWorkspace?.territories)
+        ? territoryWorkspace.territories.some(item => item?.canManage)
+        : false,
+      territories: Array.isArray(territoryWorkspace?.territories)
+        ? territoryWorkspace.territories
+            .filter(item => item?.canManage)
+            .map(item => ({
+              id: item.id,
+              name: item.name || "",
+              officeId: item.officeId || "",
+              territoryId: item.territoryId || ""
+            }))
+        : []
+    },
     unread: {
       announcements: unreadAnnouncements,
       support: unreadSupport,
-      total: unreadAnnouncements + unreadSupport
+      direct: Number(directOverview?.unreadCount || 0),
+      total: unreadAnnouncements + unreadSupport + Number(directOverview?.unreadCount || 0)
     }
   };
 }
@@ -12672,6 +13044,21 @@ app.post("/api/coach/messages/read-all", async (req, res) => {
       await threadDoc.save();
     }
 
+    await CoachDirectThread.updateMany(
+      {
+        participantUserIds: auth.user._id,
+        unreadByUserIds: auth.user._id
+      },
+      {
+        $pull: {
+          unreadByUserIds: auth.user._id
+        },
+        $set: {
+          updatedAt: new Date()
+        }
+      }
+    );
+
     res.json({ ok: true });
   } catch (error) {
     console.error("Error marcando mensajes del Coach como leidos:", error.message);
@@ -12720,6 +13107,253 @@ app.post("/api/coach/support/messages", async (req, res) => {
   } catch (error) {
     console.error("Error enviando mensaje de soporte del Coach:", error.message);
     responderCoachError(res, 500, "No pude enviar tu mensaje en este momento.");
+  }
+});
+
+app.post("/api/coach/announcements", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const scopeType = normalizarCoachAnnouncementScopeType(req.body?.scopeType || "team");
+  const territoryId = String(req.body?.territoryId || "").trim();
+  const title = limpiarCoachAnnouncementTitle(req.body?.title || "");
+  const body = limpiarCoachAnnouncementBody(req.body?.body || "");
+  const priority = normalizarCoachAnnouncementPriority(req.body?.priority || "normal");
+
+  if (!["team", "territory"].includes(scopeType)) {
+    return responderCoachError(res, 400, "Solo puedes mandar boletines al equipo o al territorio.");
+  }
+
+  if (!title) {
+    return responderCoachError(res, 400, "Pon un titulo para el boletin.");
+  }
+
+  if (!body) {
+    return responderCoachError(res, 400, "Escribe el contenido del boletin.");
+  }
+
+  try {
+    let territoryDoc = null;
+    let audienceOwner = null;
+
+    if (scopeType === "team") {
+      if (!esCoachTeamManager(auth.user)) {
+        return responderCoachError(res, 403, "Solo quien administra el equipo puede mandar ese boletin.");
+      }
+
+      audienceOwner = await resolverCoachAudienceOwner(auth.user);
+
+      if (!audienceOwner?._id) {
+        return responderCoachError(res, 400, "No pude encontrar el equipo que va a recibir ese boletin.");
+      }
+    }
+
+    if (scopeType === "territory") {
+      if (!territoryId || !mongoose.Types.ObjectId.isValid(territoryId)) {
+        return responderCoachError(res, 400, "Selecciona un territorio valido.");
+      }
+
+      territoryDoc = await CoachTerritory.findOne({
+        _id: territoryId,
+        status: "active"
+      }).lean();
+
+      if (!territoryDoc) {
+        return responderCoachError(res, 404, "No encontre ese territorio.");
+      }
+
+      const membershipDoc = await CoachTerritoryMembership.findOne({
+        territoryId: territoryDoc._id,
+        userId: auth.user._id,
+        status: "active"
+      }).lean();
+
+      if (!membershipDoc || !coachTerritoryRolePuedeAdministrar(membershipDoc.role || "member")) {
+        return responderCoachError(res, 403, "Solo quien administra ese territorio puede mandar ese boletin.");
+      }
+    }
+
+    const now = new Date();
+    const announcementDoc = await CoachAnnouncement.create({
+      authorUserId: auth.user._id,
+      authorName: auth.user.name || auth.user.email || "Coach",
+      scopeType,
+      territoryId: scopeType === "territory" ? territoryDoc._id : null,
+      territoryName: scopeType === "territory" ? territoryDoc.name || "" : "",
+      teamOwnerUserId: scopeType === "team" ? audienceOwner._id : null,
+      teamOwnerName:
+        scopeType === "team"
+          ? audienceOwner.name || audienceOwner.email || auth.user.name || auth.user.email || "Equipo"
+          : "",
+      title,
+      body,
+      priority,
+      status: "active",
+      updatedAt: now
+    });
+
+    res.json({
+      ok: true,
+      announcement: limpiarCoachAnnouncement(announcementDoc.toObject ? announcementDoc.toObject() : announcementDoc)
+    });
+  } catch (error) {
+    console.error("Error creando boletin interno del Coach:", error.message);
+    responderCoachError(res, 500, "No pude mandar ese boletin en este momento.");
+  }
+});
+
+app.post("/api/coach/direct/threads", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const targetUserId = String(req.body?.targetUserId || "").trim();
+
+  if (!targetUserId || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+    return responderCoachError(res, 400, "Selecciona una cuenta valida para abrir el chat.");
+  }
+
+  try {
+    const contacts = await obtenerCoachReachableContacts(auth.user);
+    const targetContact = contacts.find(item => item.id === targetUserId);
+
+    if (!targetContact) {
+      return responderCoachError(res, 403, "Esa cuenta no esta disponible para chat interno.");
+    }
+
+    const threadDoc = await encontrarOCrearCoachDirectThread(auth.user, targetUserId);
+
+    if (!threadDoc?._id) {
+      return responderCoachError(res, 500, "No pude abrir ese chat en este momento.");
+    }
+
+    await CoachDirectThread.updateOne(
+      {
+        _id: threadDoc._id
+      },
+      {
+        $pull: {
+          unreadByUserIds: auth.user._id
+        },
+        $set: {
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      ok: true,
+      threadId: String(threadDoc._id),
+      contact: targetContact
+    });
+  } catch (error) {
+    console.error("Error abriendo chat interno del Coach:", error.message);
+    responderCoachError(res, 500, "No pude abrir ese chat en este momento.");
+  }
+});
+
+app.post("/api/coach/direct/threads/:threadId/read", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const threadId = String(req.params?.threadId || "").trim();
+
+  if (!threadId || !mongoose.Types.ObjectId.isValid(threadId)) {
+    return responderCoachError(res, 400, "No encontre ese chat.");
+  }
+
+  try {
+    const threadDoc = await CoachDirectThread.findOne({
+      _id: threadId,
+      participantUserIds: auth.user._id
+    });
+
+    if (!threadDoc) {
+      return responderCoachError(res, 404, "No encontre ese chat.");
+    }
+
+    threadDoc.unreadByUserIds = Array.isArray(threadDoc.unreadByUserIds)
+      ? threadDoc.unreadByUserIds.filter(item => String(item) !== String(auth.user._id))
+      : [];
+    threadDoc.updatedAt = new Date();
+    await threadDoc.save();
+
+    res.json({ ok: true, threadId: String(threadDoc._id) });
+  } catch (error) {
+    console.error("Error marcando chat interno como leido:", error.message);
+    responderCoachError(res, 500, "No pude actualizar ese chat.");
+  }
+});
+
+app.post("/api/coach/direct/threads/:threadId/messages", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const threadId = String(req.params?.threadId || "").trim();
+  const body = limpiarCoachSupportMessageBody(req.body?.body || "");
+
+  if (!threadId || !mongoose.Types.ObjectId.isValid(threadId)) {
+    return responderCoachError(res, 400, "No encontre ese chat.");
+  }
+
+  if (!body) {
+    return responderCoachError(res, 400, "Escribe tu mensaje antes de enviarlo.");
+  }
+
+  try {
+    const threadDoc = await CoachDirectThread.findOne({
+      _id: threadId,
+      participantUserIds: auth.user._id
+    });
+
+    if (!threadDoc) {
+      return responderCoachError(res, 404, "No encontre ese chat.");
+    }
+
+    const participantIds = Array.isArray(threadDoc.participantUserIds)
+      ? threadDoc.participantUserIds.map(item => String(item))
+      : [];
+    const targetUserId = participantIds.find(item => item && item !== String(auth.user._id));
+
+    if (!targetUserId) {
+      return responderCoachError(res, 400, "Ese chat no tiene un destinatario valido.");
+    }
+
+    const now = new Date();
+
+    await CoachDirectMessage.create({
+      threadId: threadDoc._id,
+      senderUserId: auth.user._id,
+      senderName: auth.user.name || auth.user.email || "",
+      body
+    });
+
+    threadDoc.lastMessageAt = now;
+    threadDoc.lastMessagePreview = truncarTextoPrompt(body, 180);
+    threadDoc.unreadByUserIds = participantIds
+      .filter(item => item !== String(auth.user._id))
+      .map(item => new mongoose.Types.ObjectId(item));
+    threadDoc.updatedAt = now;
+    await threadDoc.save();
+
+    res.json({
+      ok: true,
+      threadId: String(threadDoc._id)
+    });
+  } catch (error) {
+    console.error("Error enviando chat interno del Coach:", error.message);
+    responderCoachError(res, 500, "No pude enviar ese mensaje en este momento.");
   }
 });
 
@@ -14206,6 +14840,10 @@ app.post("/api/control/announcements", async (req, res) => {
   const title = limpiarCoachAnnouncementTitle(req.body?.title || "");
   const body = limpiarCoachAnnouncementBody(req.body?.body || "");
   const priority = normalizarCoachAnnouncementPriority(req.body?.priority || "normal");
+
+  if (!["global", "territory"].includes(scopeType)) {
+    return res.status(400).json({ error: "La torre solo puede mandar boletines globales o territoriales." });
+  }
 
   if (!title) {
     return res.status(400).json({ error: "Pon un titulo para el boletin." });
