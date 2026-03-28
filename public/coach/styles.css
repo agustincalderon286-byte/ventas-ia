@@ -1407,6 +1407,10 @@ img {
   display: block;
 }
 
+.crm-grid-row small + small {
+  margin-top: 4px;
+}
+
 .crm-inline-select,
 .crm-inline-input {
   width: 100%;
@@ -1421,6 +1425,10 @@ img {
 
 .crm-inline-input[type="datetime-local"] {
   padding-right: 10px;
+}
+
+.crm-inline-address-input {
+  margin-top: 8px;
 }
 
 .crm-inline-actions {
@@ -5124,6 +5132,12 @@ html[data-coach-portal-mode="telemarketing"] .crm-grid-wrap {
   border-radius: 24px;
 }
 
+html[data-coach-portal-mode="telemarketing"] .crm-grid-head,
+html[data-coach-portal-mode="telemarketing"] .crm-grid-row-telemarketing {
+  grid-template-columns: 0.95fr 1.15fr 0.95fr 1.5fr 1fr 1.05fr 1.2fr 1.05fr;
+  gap: 16px;
+}
+
 html[data-coach-portal-mode="telemarketing"] .crm-grid-head {
   padding: 16px 18px;
   background:
@@ -5139,8 +5153,21 @@ html[data-coach-portal-mode="telemarketing"] .crm-grid-list {
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-grid-row {
-  padding: 17px 18px;
+  padding: 18px 18px;
   border-top-color: rgba(122, 215, 255, 0.08);
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-grid-row-telemarketing {
+  align-items: start;
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-grid-row-telemarketing .crm-inline-input,
+html[data-coach-portal-mode="telemarketing"] .crm-grid-row-telemarketing .crm-inline-select {
+  min-height: 38px;
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-grid-row-telemarketing .crm-inline-actions {
+  gap: 10px;
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-grid-row:hover {

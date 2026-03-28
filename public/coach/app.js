@@ -462,7 +462,8 @@ function formatDateTime(dateString) {
     month: "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
   }).format(date);
 }
 
@@ -965,6 +966,74 @@ function formatDateTimeLocalValue(dateString) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatDateTimeEditable12(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours24 = date.getHours();
+  const hours12 = hours24 % 12 || 12;
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const meridiem = hours24 >= 12 ? "PM" : "AM";
+  return `${month}/${day}/${year} ${hours12}:${minutes} ${meridiem}`;
+}
+
+function parseCoachFlexibleDateTimeValue(rawValue = "") {
+  const safeValue = String(rawValue || "").trim();
+
+  if (!safeValue) {
+    return { iso: "", valid: true };
+  }
+
+  let parsed = new Date(safeValue);
+
+  if (Number.isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(safeValue)) {
+    parsed = new Date(safeValue);
+  }
+
+  if (Number.isNaN(parsed.getTime())) {
+    const match = safeValue.match(
+      /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+|\s*T\s*)(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?$/
+    );
+
+    if (match) {
+      const [, monthRaw, dayRaw, yearRaw, hourRaw, minuteRaw, meridiemRaw] = match;
+      let year = Number(yearRaw);
+      if (year < 100) {
+        year += 2000;
+      }
+      let hours = Number(hourRaw);
+      const minutes = Number(minuteRaw);
+      const meridiem = String(meridiemRaw || "").toUpperCase();
+
+      if (meridiem === "PM" && hours < 12) {
+        hours += 12;
+      }
+
+      if (meridiem === "AM" && hours === 12) {
+        hours = 0;
+      }
+
+      parsed = new Date(year, Number(monthRaw) - 1, Number(dayRaw), hours, minutes);
+    }
+  }
+
+  if (Number.isNaN(parsed.getTime())) {
+    return { iso: "", valid: false };
+  }
+
+  return { iso: parsed.toISOString(), valid: true };
 }
 
 function buildAbsoluteAppUrl(pathOrUrl = "") {
@@ -4531,8 +4600,8 @@ function formatCoachAgendaAddress(record = null) {
 }
 
 function promptCoachAgendaDateTime(message = "", fallback = "") {
-  const suggested = formatDateTimeLocalValue(fallback).replace("T", " ");
-  const input = window.prompt(`${message}\nUsa formato YYYY-MM-DD HH:MM`, suggested || "");
+  const suggested = formatDateTimeEditable12(fallback);
+  const input = window.prompt(`${message}\nUsa formato MM/DD/YYYY h:mm AM/PM`, suggested || "");
 
   if (input === null) {
     return null;
@@ -4544,15 +4613,14 @@ function promptCoachAgendaDateTime(message = "", fallback = "") {
     return "";
   }
 
-  const normalized = safeValue.includes("T") ? safeValue : safeValue.replace(/\s+/, "T");
-  const parsed = new Date(normalized);
+  const parsed = parseCoachFlexibleDateTimeValue(safeValue);
 
-  if (Number.isNaN(parsed.getTime())) {
-    window.alert("No pude leer esa fecha. Usa formato YYYY-MM-DD HH:MM.");
+  if (!parsed.valid) {
+    window.alert("No pude leer esa fecha. Usa formato MM/DD/YYYY h:mm AM/PM.");
     return undefined;
   }
 
-  return parsed.toISOString();
+  return parsed.iso;
 }
 
 function buildCoachAgendaActionPayload(action = "", record = null) {
@@ -4689,6 +4757,7 @@ function buildCoachAgendaCard(record = null) {
   const timeCopy = record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora";
   const phoneCopy = record.phone ? formatLeadPhone(record.phone) : "";
   const sourceCopy = formatCoachCrmSourceLabel(record.sourceType);
+  const ownerCopy = record.generatedByName ? `Lead de ${record.generatedByName}` : "";
   const repCopy = record.appointmentRepName || record.assignedTelemarketerName || "";
   const primaryActions = [
     record.phoneHref
@@ -4728,7 +4797,7 @@ function buildCoachAgendaCard(record = null) {
     )
     .join("");
 
-  const metaChips = [phoneCopy, sourceCopy, repCopy]
+  const metaChips = [phoneCopy, sourceCopy, ownerCopy, repCopy]
     .filter(Boolean)
     .map(item => `<span class="agenda-meta-chip">${escapeHtml(item)}</span>`)
     .join("");
@@ -4821,6 +4890,7 @@ function initCoachCrmWorkspace(user = null) {
   const searchFilter = document.querySelector("[data-crm-search-filter]");
   const quickFilterButtons = Array.from(document.querySelectorAll("[data-crm-quick-filter]"));
   const refreshButton = document.querySelector("[data-crm-refresh]");
+  const gridHead = document.querySelector(".crm-grid-head");
   const recordList = document.querySelector("[data-crm-record-list]");
   const detailEmpty = document.querySelector("[data-crm-detail-empty]");
   const detailPanel = document.querySelector("[data-crm-detail-panel]");
@@ -4855,6 +4925,32 @@ function initCoachCrmWorkspace(user = null) {
   const representativesPanelTitle = document.querySelector('[data-crm-panel-title="representatives"]');
   const territoriesPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="territories"]');
   const territoriesPanelTitle = document.querySelector('[data-crm-panel-title="territories"]');
+
+  if (gridHead) {
+    gridHead.innerHTML = isTelemarketingPortal
+      ? `
+          <span>Estado</span>
+          <span>Cliente</span>
+          <span>De quien</span>
+          <span>Ubicacion</span>
+          <span>Proxima accion</span>
+          <span>Seguimiento</span>
+          <span>Nota</span>
+          <span>Acciones</span>
+        `
+      : `
+          <span>Estado</span>
+          <span>Cliente</span>
+          <span>Fuente</span>
+          <span>Ciudad</span>
+          <span>Telemarketing</span>
+          <span>Representante</span>
+          <span>Proxima accion</span>
+          <span>Seguimiento</span>
+          <span>Nota</span>
+          <span>Acciones</span>
+        `;
+  }
 
   if (!summaryFeedback || !sourceFilter || !statusFilter || !assigneeFilter || !recordList || !detailPanel || !detailForm) {
     return;
@@ -5167,17 +5263,26 @@ function initCoachCrmWorkspace(user = null) {
       return null;
     }
 
-    return {
+    const nextActionInput = row.querySelector("[data-crm-inline-next-action-at]");
+    const nextActionRaw = String(nextActionInput?.value || "").trim();
+    const nextActionParsed = parseCoachFlexibleDateTimeValue(nextActionRaw);
+    const addressInput = row.querySelector("[data-crm-inline-address]");
+
+    const payload = {
       status: row.querySelector("[data-crm-inline-status]")?.value || "nuevo",
       assignedTelemarketerUserId: row.querySelector("[data-crm-inline-telemarketer]")?.value || "",
       appointmentRepUserId: row.querySelector("[data-crm-inline-representative]")?.value || "",
       nextAction: row.querySelector("[data-crm-inline-next-action]")?.value || "",
-      nextActionAt: (() => {
-        const raw = String(row.querySelector("[data-crm-inline-next-action-at]")?.value || "").trim();
-        return raw ? new Date(raw).toISOString() : "";
-      })(),
-      lastNote: row.querySelector("[data-crm-inline-note]")?.value || ""
+      nextActionAt: nextActionParsed.iso,
+      lastNote: row.querySelector("[data-crm-inline-note]")?.value || "",
+      _nextActionAtValid: nextActionParsed.valid
     };
+
+    if (addressInput) {
+      payload.address = addressInput.value || "";
+    }
+
+    return payload;
   };
 
   const buildInlineQuickActionPayload = (row, actionType) => {
@@ -5232,13 +5337,23 @@ function initCoachCrmWorkspace(user = null) {
       return;
     }
 
+    if (payload && payload._nextActionAtValid === false) {
+      setMessage(summaryFeedback, "No pude leer la fecha. Usa formato MM/DD/YYYY h:mm AM/PM.", "error");
+      return;
+    }
+
+    const cleanPayload = payload && typeof payload === "object" ? { ...payload } : payload;
+    if (cleanPayload && typeof cleanPayload === "object") {
+      delete cleanPayload._nextActionAtValid;
+    }
+
     clearMessage(summaryFeedback);
     setButtonLoading(saveButton, true, "Guardando...");
 
     try {
       await apiRequest(`/api/coach/crm/records/${encodeURIComponent(recordId)}`, {
         method: "PATCH",
-        body: payload
+        body: cleanPayload
       });
       markInlineRowDirty(row, false);
       state.activeRecordId = recordId;
@@ -5272,8 +5387,10 @@ function initCoachCrmWorkspace(user = null) {
     detailSource.textContent = formatCoachCrmSourceLabel(record.sourceType);
     detailName.textContent = record.leadName || "Registro CRM";
     detailMeta.textContent = [
+      record.generatedByName ? `Lead de ${record.generatedByName}` : "",
       record.phone ? formatLeadPhone(record.phone) : "",
       record.email || "",
+      record.address || "",
       record.city || "",
       record.zipCode ? `ZIP ${record.zipCode}` : ""
     ]
@@ -5344,8 +5461,90 @@ function initCoachCrmWorkspace(user = null) {
       .map(record => {
         const isActive = record.id === state.activeRecordId;
         const cityCopy = [record.city || "", record.zipCode ? `ZIP ${record.zipCode}` : ""].filter(Boolean).join(" · ");
+        const locationCopy = [record.address || "", cityCopy].filter(Boolean).join(" · ");
+        const ownerCopy = record.generatedByName || "Cuenta principal";
         const notePlaceholder = truncateCoachCrmCell(record.lastNote || record.briefHistory || "", 92);
         const phoneHref = normalizeLeadPhone(record.phone || "");
+        const nextActionPreview = record.nextActionAt ? formatDateTime(record.nextActionAt) : "Sin fecha";
+
+        if (isTelemarketingPortal) {
+          return `
+            <article
+              class="crm-grid-row crm-grid-row-telemarketing${isActive ? " is-active" : ""}"
+              data-crm-record-id="${escapeHtml(record.id || "")}"
+              data-crm-inline-row
+            >
+              <span class="crm-status-cell">
+                <span class="crm-status-dot" data-tone="${escapeHtml(record.statusColor || "blue")}"></span>
+                <select class="crm-inline-select" data-crm-inline-status>
+                  ${buildInlineStatusOptions(record.status || "nuevo")}
+                </select>
+              </span>
+              <span>
+                <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
+                <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
+              </span>
+              <span>
+                <strong>${escapeHtml(ownerCopy)}</strong>
+                <small>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</small>
+              </span>
+              <span>
+                <strong>${escapeHtml(record.city || "Sin ubicacion")}</strong>
+                <input
+                  class="crm-inline-input crm-inline-address-input"
+                  type="text"
+                  value="${escapeHtml(record.address || "")}"
+                  placeholder="Direccion o referencia"
+                  data-crm-inline-address
+                />
+                <small>${escapeHtml(locationCopy || "Sin direccion todavia")}</small>
+              </span>
+              <span>
+                <select class="crm-inline-select" data-crm-inline-next-action>
+                  ${buildInlineNextActionOptions(record.nextAction || "")}
+                </select>
+                <small>${escapeHtml(record.appointmentRepName ? `Rep: ${record.appointmentRepName}` : "Rep pendiente")}</small>
+              </span>
+              <span>
+                <input
+                  class="crm-inline-input"
+                  type="text"
+                  value="${escapeHtml(formatDateTimeEditable12(record.nextActionAt))}"
+                  placeholder="03/28/2026 6:30 PM"
+                  data-crm-inline-next-action-at
+                />
+                <small>${escapeHtml(nextActionPreview)}</small>
+              </span>
+              <span>
+                <input
+                  class="crm-inline-input"
+                  type="text"
+                  value="${escapeHtml(record.lastNote || "")}"
+                  placeholder="${escapeHtml(notePlaceholder || "Nota rapida")}"
+                  data-crm-inline-note
+                />
+                <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 84) || "Sin historial breve")}</small>
+              </span>
+              <span class="crm-inline-actions">
+                <span class="crm-inline-action-grid">
+                  ${
+                    phoneHref
+                      ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(phoneHref)}">Llamar</a>`
+                      : '<span class="crm-inline-action-chip is-disabled">Sin telefono</span>'
+                  }
+                  <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
+                  <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
+                  <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+                </span>
+                <span class="crm-inline-action-grid crm-inline-action-grid-meta">
+                  <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
+                  <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
+                </span>
+              </span>
+            </article>
+          `;
+        }
+
         return `
           <article
             class="crm-grid-row${isActive ? " is-active" : ""}"
@@ -5361,11 +5560,12 @@ function initCoachCrmWorkspace(user = null) {
             <span>
               <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
               <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
+              <small>${escapeHtml(`Lead de ${ownerCopy}`)}</small>
             </span>
             <span>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</span>
             <span>
               <strong>${escapeHtml(record.city || "Sin ciudad")}</strong>
-              <small>${escapeHtml(cityCopy || "Ubicacion pendiente")}</small>
+              <small>${escapeHtml(locationCopy || "Ubicacion pendiente")}</small>
             </span>
             <span>
               <select class="crm-inline-select" data-crm-inline-telemarketer>
@@ -5390,6 +5590,7 @@ function initCoachCrmWorkspace(user = null) {
                 value="${escapeHtml(formatDateTimeLocalValue(record.nextActionAt))}"
                 data-crm-inline-next-action-at
               />
+              <small>${escapeHtml(nextActionPreview)}</small>
             </span>
             <span>
               <input
@@ -6226,7 +6427,8 @@ function formatDateTimeShort(value) {
     month: "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
   }).format(date);
 }
 
