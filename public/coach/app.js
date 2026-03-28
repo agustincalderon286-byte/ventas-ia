@@ -5267,11 +5267,15 @@ function initCoachCrmWorkspace(user = null) {
     const nextActionRaw = String(nextActionInput?.value || "").trim();
     const nextActionParsed = parseCoachFlexibleDateTimeValue(nextActionRaw);
     const addressInput = row.querySelector("[data-crm-inline-address]");
+    const telemarketerInput = row.querySelector("[data-crm-inline-telemarketer]");
+    const representativeInput = row.querySelector("[data-crm-inline-representative]");
 
     const payload = {
       status: row.querySelector("[data-crm-inline-status]")?.value || "nuevo",
-      assignedTelemarketerUserId: row.querySelector("[data-crm-inline-telemarketer]")?.value || "",
-      appointmentRepUserId: row.querySelector("[data-crm-inline-representative]")?.value || "",
+      assignedTelemarketerUserId:
+        telemarketerInput?.value || String(row.getAttribute("data-crm-assigned-telemarketer-id") || "").trim(),
+      appointmentRepUserId:
+        representativeInput?.value || String(row.getAttribute("data-crm-appointment-rep-id") || "").trim(),
       nextAction: row.querySelector("[data-crm-inline-next-action]")?.value || "",
       nextActionAt: nextActionParsed.iso,
       lastNote: row.querySelector("[data-crm-inline-note]")?.value || "",
@@ -5472,6 +5476,8 @@ function initCoachCrmWorkspace(user = null) {
             <article
               class="crm-grid-row crm-grid-row-telemarketing${isActive ? " is-active" : ""}"
               data-crm-record-id="${escapeHtml(record.id || "")}"
+              data-crm-assigned-telemarketer-id="${escapeHtml(record.assignedTelemarketerUserId || "")}"
+              data-crm-appointment-rep-id="${escapeHtml(record.appointmentRepUserId || "")}"
               data-crm-inline-row
             >
               <span class="crm-status-cell">
@@ -5480,16 +5486,14 @@ function initCoachCrmWorkspace(user = null) {
                   ${buildInlineStatusOptions(record.status || "nuevo")}
                 </select>
               </span>
-              <span>
-                <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
+              <span class="crm-tele-block crm-tele-client-block">
+                <div class="crm-tele-heading-row">
+                  <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
+                  <span class="crm-tele-pill">${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</span>
+                </div>
                 <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
-              </span>
-              <span>
-                <strong>${escapeHtml(ownerCopy)}</strong>
-                <small>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</small>
-              </span>
-              <span>
-                <strong>${escapeHtml(record.city || "Sin ubicacion")}</strong>
+                <small>${escapeHtml(ownerCopy)}</small>
+                <small>${escapeHtml(cityCopy || "Ubicacion pendiente")}</small>
                 <input
                   class="crm-inline-input crm-inline-address-input"
                   type="text"
@@ -5499,34 +5503,47 @@ function initCoachCrmWorkspace(user = null) {
                 />
                 <small>${escapeHtml(locationCopy || "Sin direccion todavia")}</small>
               </span>
-              <span>
-                <select class="crm-inline-select" data-crm-inline-next-action>
-                  ${buildInlineNextActionOptions(record.nextAction || "")}
-                </select>
-                <small>${escapeHtml(record.appointmentRepName ? `Rep: ${record.appointmentRepName}` : "Rep pendiente")}</small>
-              </span>
-              <span>
-                <input
-                  class="crm-inline-input"
-                  type="text"
-                  value="${escapeHtml(formatDateTimeEditable12(record.nextActionAt))}"
-                  placeholder="03/28/2026 6:30 PM"
-                  data-crm-inline-next-action-at
-                />
+              <span class="crm-tele-block crm-tele-agenda-block">
+                <div class="crm-tele-inline-grid">
+                  <label>
+                    <small>Representante</small>
+                    <select class="crm-inline-select" data-crm-inline-representative>
+                      ${buildInlineAssigneeOptions(record.appointmentRepUserId || "")}
+                    </select>
+                  </label>
+                  <label>
+                    <small>Proxima accion</small>
+                    <select class="crm-inline-select" data-crm-inline-next-action>
+                      ${buildInlineNextActionOptions(record.nextAction || "")}
+                    </select>
+                  </label>
+                </div>
+                <label class="crm-tele-stack">
+                  <small>Seguimiento / cita</small>
+                  <input
+                    class="crm-inline-input"
+                    type="text"
+                    value="${escapeHtml(formatDateTimeEditable12(record.nextActionAt))}"
+                    placeholder="03/28/2026 6:30 PM"
+                    data-crm-inline-next-action-at
+                  />
+                </label>
                 <small>${escapeHtml(nextActionPreview)}</small>
               </span>
-              <span>
-                <input
-                  class="crm-inline-input"
-                  type="text"
-                  value="${escapeHtml(record.lastNote || "")}"
-                  placeholder="${escapeHtml(notePlaceholder || "Nota rapida")}"
-                  data-crm-inline-note
-                />
-                <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 84) || "Sin historial breve")}</small>
+              <span class="crm-tele-block crm-tele-note-block">
+                <label class="crm-tele-stack">
+                  <small>Notas operativas</small>
+                  <textarea
+                    class="crm-inline-input crm-inline-textarea"
+                    rows="4"
+                    placeholder="${escapeHtml(notePlaceholder || "Nota rapida")}"
+                    data-crm-inline-note
+                  >${escapeHtml(record.lastNote || "")}</textarea>
+                </label>
+                <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 150) || "Sin historial breve")}</small>
               </span>
-              <span class="crm-inline-actions">
-                <span class="crm-inline-action-grid">
+              <span class="crm-inline-actions crm-inline-actions-telemarketing">
+                <span class="crm-inline-action-grid crm-inline-action-grid-telemarketing">
                   ${
                     phoneHref
                       ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(phoneHref)}">Llamar</a>`
@@ -5535,8 +5552,6 @@ function initCoachCrmWorkspace(user = null) {
                   <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
                   <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
                   <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
-                </span>
-                <span class="crm-inline-action-grid crm-inline-action-grid-meta">
                   <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
                   <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
                 </span>
@@ -5549,6 +5564,8 @@ function initCoachCrmWorkspace(user = null) {
           <article
             class="crm-grid-row${isActive ? " is-active" : ""}"
             data-crm-record-id="${escapeHtml(record.id || "")}"
+            data-crm-assigned-telemarketer-id="${escapeHtml(record.assignedTelemarketerUserId || "")}"
+            data-crm-appointment-rep-id="${escapeHtml(record.appointmentRepUserId || "")}"
             data-crm-inline-row
           >
             <span class="crm-status-cell">
@@ -5814,7 +5831,7 @@ function initCoachCrmWorkspace(user = null) {
   recordList.addEventListener("input", event => {
     const row = event.target.closest("[data-crm-inline-row]");
 
-    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at]")) {
+    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
       return;
     }
 
@@ -5824,7 +5841,12 @@ function initCoachCrmWorkspace(user = null) {
   recordList.addEventListener("change", event => {
     const row = event.target.closest("[data-crm-inline-row]");
 
-    if (!row || !event.target.closest("[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action]")) {
+    if (
+      !row ||
+      !event.target.closest(
+        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action]"
+      )
+    ) {
       return;
     }
 
@@ -5834,7 +5856,15 @@ function initCoachCrmWorkspace(user = null) {
   recordList.addEventListener("keydown", event => {
     const noteInput = event.target.closest("[data-crm-inline-note]");
 
-    if (!noteInput || event.key !== "Enter" || event.shiftKey) {
+    if (!noteInput || event.key !== "Enter") {
+      return;
+    }
+
+    if (noteInput.tagName === "TEXTAREA" && !event.metaKey && !event.ctrlKey) {
+      return;
+    }
+
+    if (event.shiftKey) {
       return;
     }
 
