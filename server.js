@@ -456,6 +456,12 @@ const coachProgramSheetSchema = new mongoose.Schema({
   },
   generatedByName: String,
   generatedByAccountType: String,
+  linkedCrmRecordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachCrmRecord",
+    default: null,
+    index: true
+  },
   programType: { type: String, default: "4_en_14" },
   hostName: String,
   hostPhone: String,
@@ -489,6 +495,12 @@ const coachHealthSurveySchema = new mongoose.Schema({
   },
   generatedByName: String,
   generatedByAccountType: String,
+  linkedCrmRecordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachCrmRecord",
+    default: null,
+    index: true
+  },
   fullName: { type: String, required: true, trim: true },
   phone: String,
   secondName: String,
@@ -593,6 +605,12 @@ const coachDemoOutcomeSchema = new mongoose.Schema({
   },
   generatedByName: String,
   generatedByAccountType: String,
+  linkedCrmRecordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachCrmRecord",
+    default: null,
+    index: true
+  },
   sponsorUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CoachUser",
@@ -858,6 +876,28 @@ const coachCrmRecordSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+  linkedHealthSurveyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachHealthSurvey",
+    default: null,
+    index: true
+  },
+  linkedHealthSurveyName: String,
+  latestProgramSheetId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachProgramSheet",
+    default: null,
+    index: true
+  },
+  latestProgramSummary: String,
+  latestDemoOutcomeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachDemoOutcome",
+    default: null,
+    index: true
+  },
+  latestDemoOutcomeType: String,
+  latestDemoOutcomeSummary: String,
   officeId: String,
   territoryId: String,
   leadName: String,
@@ -3992,6 +4032,169 @@ async function aplicarCoachCrmActualizacionAProgramaSource(recordDoc = null, upd
   }
 }
 
+async function aplicarCoachCrmActualizacionAFuentes(recordDoc = null, updates = {}) {
+  if (!recordDoc?._id) {
+    return;
+  }
+
+  if (recordDoc.sourceType === "lead") {
+    await aplicarCoachCrmActualizacionALeadSource(recordDoc, updates);
+  } else if (recordDoc.sourceType === "programa_4_en_14") {
+    await aplicarCoachCrmActualizacionAProgramaSource(recordDoc, updates);
+  }
+}
+
+function resolverCoachCrmStatusDesdeDemoOutcome(resultType = "", currentStatus = "") {
+  const safeResult = normalizarCoachDemoOutcomeType(resultType || "");
+
+  switch (safeResult) {
+    case "venta":
+      return "venta";
+    case "no_venta":
+      return "no_venta";
+    case "no_atendio":
+      return "no_atendio";
+    case "follow_up":
+      return "seguimiento";
+    default:
+      return normalizarCoachCrmStatus(currentStatus || "demo_hecha");
+  }
+}
+
+async function vincularCoachCrmConEncuesta(recordDoc = null, surveyDoc = null, userDoc = null) {
+  if (!recordDoc?._id || !surveyDoc?._id) {
+    return null;
+  }
+
+  const now = new Date();
+  const note = `Encuesta guardada${surveyDoc.fullName ? ` para ${surveyDoc.fullName}` : ""}.`;
+  const nextStatus = ["venta", "no_venta"].includes(recordDoc.status)
+    ? normalizarCoachCrmStatus(recordDoc.status)
+    : "entro_a_casa";
+
+  recordDoc.linkedHealthSurveyId = surveyDoc._id;
+  recordDoc.linkedHealthSurveyName = surveyDoc.fullName || "";
+  recordDoc.status = nextStatus;
+  recordDoc.statusColor = resolverCoachCrmStatusColor(nextStatus);
+  recordDoc.lastNote = note;
+  if (!recordDoc.briefHistory && surveyDoc.summary) {
+    recordDoc.briefHistory = truncarCoachCrmText(surveyDoc.summary, 320);
+  }
+  recordDoc.lastContactAt = now;
+  recordDoc.updatedAt = now;
+  await recordDoc.save();
+
+  const updates = {
+    status: nextStatus,
+    note
+  };
+
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await registrarCoachCrmActivity(
+    recordDoc,
+    userDoc,
+    "health_survey",
+    `${note} ${truncarCoachCrmText(surveyDoc.summary || "", 240)}`.trim(),
+    {
+      surveyId: String(surveyDoc._id)
+    }
+  );
+
+  return recordDoc;
+}
+
+async function vincularCoachCrmConPrograma(recordDoc = null, sheetDoc = null, userDoc = null) {
+  if (!recordDoc?._id || !sheetDoc?._id) {
+    return null;
+  }
+
+  const now = new Date();
+  const referralCount = Number(sheetDoc.referralCount || 0);
+  const note = `Hoja 4 en 14 guardada${referralCount ? ` con ${referralCount} referido(s)` : ""}.`;
+  const nextStatus = ["venta", "no_venta", "demo_hecha"].includes(recordDoc.status)
+    ? normalizarCoachCrmStatus(recordDoc.status)
+    : "entro_a_casa";
+
+  recordDoc.latestProgramSheetId = sheetDoc._id;
+  recordDoc.latestProgramSummary = truncarCoachCrmText(sheetDoc.summary || note, 240);
+  recordDoc.status = nextStatus;
+  recordDoc.statusColor = resolverCoachCrmStatusColor(nextStatus);
+  recordDoc.lastNote = note;
+  recordDoc.lastContactAt = now;
+  recordDoc.updatedAt = now;
+  await recordDoc.save();
+
+  const updates = {
+    status: nextStatus,
+    note
+  };
+
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await registrarCoachCrmActivity(
+    recordDoc,
+    userDoc,
+    "program_4_in_14",
+    `${note} ${truncarCoachCrmText(sheetDoc.summary || "", 240)}`.trim(),
+    {
+      sheetId: String(sheetDoc._id),
+      referralCount
+    }
+  );
+
+  return recordDoc;
+}
+
+async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = null, userDoc = null) {
+  if (!recordDoc?._id || !outcomeDoc?._id) {
+    return null;
+  }
+
+  const now = new Date();
+  const nextStatus = resolverCoachCrmStatusDesdeDemoOutcome(outcomeDoc.resultType || "", recordDoc.status || "");
+  const note =
+    truncarCoachCrmText(outcomeDoc.summary || construirResumenCoachDemoOutcome(outcomeDoc), 240) ||
+    `Resultado guardado: ${formatearCoachDemoOutcomeLabel(outcomeDoc.resultType || "")}.`;
+
+  recordDoc.latestDemoOutcomeId = outcomeDoc._id;
+  recordDoc.latestDemoOutcomeType = normalizarCoachDemoOutcomeType(outcomeDoc.resultType || "");
+  recordDoc.latestDemoOutcomeSummary = truncarCoachCrmText(outcomeDoc.summary || note, 240);
+  recordDoc.status = nextStatus;
+  recordDoc.statusColor = resolverCoachCrmStatusColor(nextStatus);
+  recordDoc.lastNote = note;
+  recordDoc.lastContactAt = now;
+  recordDoc.saleAmount = limpiarCoachDemoOutcomeAmount(outcomeDoc.saleAmount || 0);
+  recordDoc.saleResult = nextStatus === "venta" ? "venta" : nextStatus === "no_venta" ? "no_venta" : "";
+  recordDoc.closedAt = ["venta", "no_venta"].includes(nextStatus) ? now : null;
+  recordDoc.soldAt = nextStatus === "venta" ? now : null;
+
+  if (outcomeDoc.surveyId) {
+    recordDoc.linkedHealthSurveyId = outcomeDoc.surveyId;
+    recordDoc.linkedHealthSurveyName = outcomeDoc.surveyName || recordDoc.linkedHealthSurveyName || "";
+  }
+
+  recordDoc.updatedAt = now;
+  await recordDoc.save();
+
+  const updates = {
+    status: nextStatus,
+    note
+  };
+
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await registrarCoachCrmActivity(
+    recordDoc,
+    userDoc,
+    "demo_outcome",
+    note,
+    {
+      outcomeId: String(outcomeDoc._id),
+      resultType: normalizarCoachDemoOutcomeType(outcomeDoc.resultType || "")
+    }
+  );
+
+  return recordDoc;
+}
+
 async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   if (!userDoc?._id) {
     return {
@@ -4346,6 +4549,7 @@ function limpiarCoachDemoOutcome(outcomeDoc = null, options = {}) {
 
   return {
     id: String(outcomeDoc._id),
+    linkedCrmRecordId: outcomeDoc.linkedCrmRecordId ? String(outcomeDoc.linkedCrmRecordId) : "",
     ownerUserId: outcomeDoc.ownerUserId ? String(outcomeDoc.ownerUserId) : "",
     ownerName: outcomeDoc.ownerName || "",
     generatedByUserId: outcomeDoc.generatedByUserId ? String(outcomeDoc.generatedByUserId) : "",
@@ -6125,6 +6329,13 @@ function limpiarCoachCrmRecord(recordDoc = null) {
     linkedLeadId: recordDoc.linkedLeadId ? String(recordDoc.linkedLeadId) : "",
     linkedProgramSheetId: recordDoc.linkedProgramSheetId ? String(recordDoc.linkedProgramSheetId) : "",
     linkedApplicationId: recordDoc.linkedApplicationId ? String(recordDoc.linkedApplicationId) : "",
+    linkedHealthSurveyId: recordDoc.linkedHealthSurveyId ? String(recordDoc.linkedHealthSurveyId) : "",
+    linkedHealthSurveyName: recordDoc.linkedHealthSurveyName || "",
+    latestProgramSheetId: recordDoc.latestProgramSheetId ? String(recordDoc.latestProgramSheetId) : "",
+    latestProgramSummary: recordDoc.latestProgramSummary || "",
+    latestDemoOutcomeId: recordDoc.latestDemoOutcomeId ? String(recordDoc.latestDemoOutcomeId) : "",
+    latestDemoOutcomeType: normalizarCoachDemoOutcomeType(recordDoc.latestDemoOutcomeType || ""),
+    latestDemoOutcomeSummary: recordDoc.latestDemoOutcomeSummary || "",
     officeId: recordDoc.officeId || "",
     territoryId: recordDoc.territoryId || "",
     leadName: recordDoc.leadName || "",
@@ -6561,6 +6772,7 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
 
   return {
     id: String(sheetDoc._id),
+    linkedCrmRecordId: sheetDoc.linkedCrmRecordId ? String(sheetDoc.linkedCrmRecordId) : "",
     ownerUserId: sheetDoc.ownerUserId ? String(sheetDoc.ownerUserId) : "",
     ownerEmail: sheetDoc.ownerEmail || "",
     ownerName: sheetDoc.ownerName || "",
@@ -7942,6 +8154,7 @@ function limpiarCoachHealthSurvey(surveyDoc = null) {
 
   return {
     id: String(surveyDoc._id),
+    linkedCrmRecordId: surveyDoc.linkedCrmRecordId ? String(surveyDoc.linkedCrmRecordId) : "",
     ownerUserId: surveyDoc.ownerUserId ? String(surveyDoc.ownerUserId) : "",
     ownerEmail: surveyDoc.ownerEmail || "",
     ownerName: surveyDoc.ownerName || "",
@@ -15043,6 +15256,7 @@ app.post("/api/coach/health-surveys", async (req, res) => {
   const weeklyBudget = limpiarCoachHealthText(req.body?.weeklyBudget || "", 40);
   const monthlyBudget = limpiarCoachHealthText(req.body?.monthlyBudget || "", 40);
   const topProducts = limpiarCoachHealthList(req.body?.topProducts || [], { maxItems: 3, maxLength: 120 });
+  const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
 
   if (!fullName) {
     return responderCoachError(res, 400, "El nombre es requerido.");
@@ -15059,6 +15273,14 @@ app.post("/api/coach/health-surveys", async (req, res) => {
   try {
     const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
+    const linkedCrmRecordDoc =
+      activeCrmRecordId && mongoose.Types.ObjectId.isValid(activeCrmRecordId)
+        ? await CoachCrmRecord.findOne(
+            construirCoachCrmWorkspaceQuery(auth.user, {
+              _id: activeCrmRecordId
+            })
+          )
+        : null;
     const surveyPayload = {
       ownerUserId: ownership.ownerUserId,
       ownerEmail: ownership.ownerEmail || "",
@@ -15066,6 +15288,7 @@ app.post("/api/coach/health-surveys", async (req, res) => {
       generatedByUserId: ownership.generatedByUserId,
       generatedByName: ownership.generatedByName || "",
       generatedByAccountType: ownership.generatedByAccountType,
+      linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
       fullName,
       phone,
       secondName,
@@ -15122,6 +15345,10 @@ app.post("/api/coach/health-surveys", async (req, res) => {
       });
     }
 
+    if (linkedCrmRecordDoc) {
+      await vincularCoachCrmConEncuesta(linkedCrmRecordDoc, surveyDoc, auth.user);
+    }
+
     res.json({
       created,
       survey: limpiarCoachHealthSurvey(surveyDoc.toObject())
@@ -15175,6 +15402,7 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
   const representativePhone = normalizePhone(req.body?.representativePhone || "");
   const startWindow = String(req.body?.startWindow || "").trim().slice(0, 120);
   const notes = String(req.body?.notes || "").trim().slice(0, 500);
+  const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
   const referrals = Array.isArray(req.body?.referrals)
     ? req.body.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
     : [];
@@ -15195,6 +15423,14 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
+    const linkedCrmRecordDoc =
+      activeCrmRecordId && mongoose.Types.ObjectId.isValid(activeCrmRecordId)
+        ? await CoachCrmRecord.findOne(
+            construirCoachCrmWorkspaceQuery(auth.user, {
+              _id: activeCrmRecordId
+            })
+          )
+        : null;
     const sheetBase = {
       ownerUserId: ownership.ownerUserId,
       ownerEmail: ownership.ownerEmail || "",
@@ -15202,6 +15438,7 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
       generatedByUserId: ownership.generatedByUserId,
       generatedByName: ownership.generatedByName || "",
       generatedByAccountType: ownership.generatedByAccountType,
+      linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
       programType: "4_en_14",
       hostName,
       hostPhone,
@@ -15265,6 +15502,10 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     });
     await sheetDoc.save();
 
+    if (linkedCrmRecordDoc) {
+      await vincularCoachCrmConPrograma(linkedCrmRecordDoc, sheetDoc, auth.user);
+    }
+
     const delivery = programarEnvioCoachProgramSheetADestino(auth.user, profileDoc, sheetDoc.toObject(), createdLeads);
 
     res.json({
@@ -15317,6 +15558,11 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
 
     const referral = sheetDoc.referrals[referralIndex];
     const now = new Date();
+    const noteParts = [
+      `Cita instantanea 4 en 14.`,
+      `Anfitrion: ${sheetDoc.hostName || "Sin nombre"}.`,
+      `Referido: ${referral.fullName || "Sin nombre"}.`
+    ];
 
     if (activate) {
       referral.selectedForInstantCallAt = now;
@@ -15339,65 +15585,94 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
       referral.appointmentDetails = appointmentDetails;
     }
 
+    if (instantCallStatus) {
+      noteParts.push(`Resultado: ${instantCallStatus.replace(/_/g, " ")}.`);
+    }
+
+    if (appointmentDetails) {
+      noteParts.push(`Detalle: ${appointmentDetails}.`);
+    }
+
+    if (instantCallNotes) {
+      noteParts.push(`Notas: ${instantCallNotes}.`);
+    }
+
     sheetDoc.updatedAt = now;
     await sheetDoc.save();
+    let linkedLeadDoc = null;
 
     if (referral.createdLeadId && mongoose.Types.ObjectId.isValid(referral.createdLeadId)) {
-      const leadDoc = await CoachLeadInbox.findOne({
+      linkedLeadDoc = await CoachLeadInbox.findOne({
         ...construirCoachWorkspaceQuery(auth.user),
         _id: referral.createdLeadId
       });
 
-      if (leadDoc) {
-        const noteParts = [
-          `Cita instantanea 4 en 14.`,
-          `Anfitrion: ${sheetDoc.hostName || "Sin nombre"}.`,
-          `Referido: ${referral.fullName || "Sin nombre"}.`
-        ];
-
-        if (instantCallStatus) {
-          noteParts.push(`Resultado: ${instantCallStatus.replace(/_/g, " ")}.`);
-        }
-
-        if (appointmentDetails) {
-          noteParts.push(`Detalle: ${appointmentDetails}.`);
-        }
-
-        if (instantCallNotes) {
-          noteParts.push(`Notas: ${instantCallNotes}.`);
-        }
-
+      if (linkedLeadDoc) {
         if (instantCallStatus === "cita_lograda") {
-          leadDoc.status = "agendado";
-          leadDoc.nextAction = "cita";
-          leadDoc.lastContactAt = now;
-          leadDoc.lastStatusChangeAt = now;
+          linkedLeadDoc.status = "agendado";
+          linkedLeadDoc.nextAction = "cita";
+          linkedLeadDoc.lastContactAt = now;
+          linkedLeadDoc.lastStatusChangeAt = now;
         } else if (instantCallStatus === "llamar_despues") {
-          leadDoc.status = "contactado";
-          leadDoc.nextAction = "seguimiento";
-          leadDoc.lastContactAt = now;
-          leadDoc.lastStatusChangeAt = now;
+          linkedLeadDoc.status = "contactado";
+          linkedLeadDoc.nextAction = "seguimiento";
+          linkedLeadDoc.lastContactAt = now;
+          linkedLeadDoc.lastStatusChangeAt = now;
         } else if (instantCallStatus === "no_contesto") {
-          leadDoc.status = "contactado";
-          leadDoc.nextAction = "llamar";
-          leadDoc.lastContactAt = now;
-          leadDoc.lastStatusChangeAt = now;
+          linkedLeadDoc.status = "contactado";
+          linkedLeadDoc.nextAction = "llamar";
+          linkedLeadDoc.lastContactAt = now;
+          linkedLeadDoc.lastStatusChangeAt = now;
         } else if (instantCallStatus === "no_quiso") {
-          leadDoc.status = "archivado";
-          leadDoc.nextAction = "";
-          leadDoc.lastContactAt = now;
-          leadDoc.lastStatusChangeAt = now;
+          linkedLeadDoc.status = "archivado";
+          linkedLeadDoc.nextAction = "";
+          linkedLeadDoc.lastContactAt = now;
+          linkedLeadDoc.lastStatusChangeAt = now;
         }
 
         if (noteParts.length) {
           const appendedNote = noteParts.join(" ").trim();
-          leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${appendedNote}` : appendedNote;
+          linkedLeadDoc.notes = linkedLeadDoc.notes ? `${linkedLeadDoc.notes}\n\n${appendedNote}` : appendedNote;
         }
 
-        leadDoc.summary = construirCoachLeadSummary(leadDoc);
-        leadDoc.updatedAt = now;
-        await leadDoc.save();
+        linkedLeadDoc.summary = construirCoachLeadSummary(linkedLeadDoc);
+        linkedLeadDoc.updatedAt = now;
+        await linkedLeadDoc.save();
       }
+    }
+
+    const crmRecordDoc = await CoachCrmRecord.findOne(
+      construirCoachCrmWorkspaceQuery(auth.user, {
+        sourceType: "programa_4_en_14",
+        sourceParentId: sheetId,
+        sourceSubIndex: referralIndex
+      })
+    );
+
+    if (crmRecordDoc) {
+      const nextCrmStatus = resolverCoachCrmStatusDesdePrograma414(referral, linkedLeadDoc);
+      const appendedNote = noteParts.join(" ").trim();
+
+      crmRecordDoc.status = nextCrmStatus;
+      crmRecordDoc.statusColor = resolverCoachCrmStatusColor(nextCrmStatus);
+      crmRecordDoc.latestProgramSheetId = sheetDoc._id;
+      crmRecordDoc.latestProgramSummary = truncarCoachCrmText(sheetDoc.summary || "", 240);
+      crmRecordDoc.lastNote = truncarCoachCrmText(appendedNote, 240);
+      crmRecordDoc.lastContactAt = now;
+      crmRecordDoc.updatedAt = now;
+      await crmRecordDoc.save();
+
+      await registrarCoachCrmActivity(
+        crmRecordDoc,
+        auth.user,
+        "program_414_result",
+        truncarCoachCrmText(appendedNote, 320),
+        {
+          sheetId,
+          referralIndex,
+          instantCallStatus
+        }
+      );
     }
 
     const cleanedSheet = limpiarCoachProgramSheet(sheetDoc.toObject());
@@ -15594,6 +15869,7 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
   const activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
 
@@ -15610,6 +15886,14 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
     const ownerUserId = resolverCoachOwnerUserId(auth.user);
     const ownershipSnapshot = await construirCoachOwnershipSnapshot(auth.user);
     const sponsorSnapshot = await construirCoachSponsorSnapshot(auth.user);
+    const linkedCrmRecordDoc =
+      activeCrmRecordId && mongoose.Types.ObjectId.isValid(activeCrmRecordId)
+        ? await CoachCrmRecord.findOne(
+            construirCoachCrmWorkspaceQuery(auth.user, {
+              _id: activeCrmRecordId
+            })
+          )
+        : null;
     let surveyId = null;
     let surveyName = "";
     let programSheetId = null;
@@ -15686,6 +15970,7 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
       generatedByUserId: ownershipSnapshot.generatedByUserId || null,
       generatedByName: ownershipSnapshot.generatedByName || "",
       generatedByAccountType: ownershipSnapshot.generatedByAccountType || "owner",
+      linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
       sponsorUserId: sponsorSnapshot.sponsorUserId || null,
       sponsorName: sponsorSnapshot.sponsorName || "",
       sponsorCommissionRate,
@@ -15717,6 +16002,10 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
       updatedAt: now,
       createdAt: now
     });
+
+    if (linkedCrmRecordDoc) {
+      await vincularCoachCrmConResultadoDemo(linkedCrmRecordDoc, outcomeDoc, auth.user);
+    }
 
     const cleanedOutcome = limpiarCoachDemoOutcome(outcomeDoc.toObject(), {
       includeGenerator: esCoachTeamManager(auth.user),

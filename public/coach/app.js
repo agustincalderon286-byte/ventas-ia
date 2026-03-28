@@ -26,6 +26,7 @@ const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
+const COACH_ACTIVE_CRM_RECORD_KEY = "agustin-coach-active-crm-record";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_ACTIVE_ORDER_CALC_KEY = "agustin-coach-active-order-calc";
@@ -619,6 +620,172 @@ function setCoachWorkspaceTab(nextTab = "cierre") {
   }
 
   button.click();
+}
+
+function buildCoachActiveCrmContext(record = null) {
+  if (!record?.id) {
+    return null;
+  }
+
+  return {
+    id: String(record.id || "").trim(),
+    crmRecordId: String(record.crmRecordId || "").trim(),
+    ownerUserId: String(record.ownerUserId || "").trim(),
+    leadName: String(record.leadName || "").trim(),
+    phone: String(record.phone || "").trim(),
+    email: String(record.email || "").trim(),
+    address: String(record.address || "").trim(),
+    city: String(record.city || "").trim(),
+    zipCode: String(record.zipCode || "").trim(),
+    sourceType: String(record.sourceType || "").trim(),
+    linkedHealthSurveyId: String(record.linkedHealthSurveyId || "").trim(),
+    latestProgramSheetId: String(record.latestProgramSheetId || "").trim(),
+    latestDemoOutcomeId: String(record.latestDemoOutcomeId || "").trim()
+  };
+}
+
+function getActiveCoachCrmContext() {
+  try {
+    const raw = window.sessionStorage.getItem(COACH_ACTIVE_CRM_RECORD_KEY);
+    return raw ? buildCoachActiveCrmContext(JSON.parse(raw)) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function renderActiveCoachCrmContext(context = null) {
+  const safeContext = context?.id ? context : null;
+  const defaultCopy = "Si entras desde CRM o Agenda, esta herramienta queda conectada a la casa activa.";
+  const nameCopy = safeContext?.leadName
+    ? `${safeContext.leadName}${safeContext.phone ? ` · ${formatLeadPhone(safeContext.phone)}` : ""}`
+    : "";
+  const nextCopy = nameCopy
+    ? `Casa activa del CRM: ${nameCopy}. Todo lo que guardes aqui regresara a ese mismo registro.`
+    : defaultCopy;
+
+  document.querySelectorAll("[data-coach-crm-context-note]").forEach(node => {
+    node.textContent = nextCopy;
+  });
+}
+
+function setActiveCoachCrmContext(context = null) {
+  const next = context?.id ? context : null;
+
+  if (next) {
+    window.sessionStorage.setItem(COACH_ACTIVE_CRM_RECORD_KEY, JSON.stringify(next));
+  } else {
+    window.sessionStorage.removeItem(COACH_ACTIVE_CRM_RECORD_KEY);
+  }
+
+  renderActiveCoachCrmContext(next);
+}
+
+function prefillCoachHealthSurveyFromCrm(record = null) {
+  const form = document.querySelector("[data-health-survey-form]");
+
+  if (!form || !record?.id) {
+    return;
+  }
+
+  const surveyId = String(form.elements.namedItem("surveyId")?.value || "").trim();
+
+  if (!surveyId) {
+    setNamedFieldValue(form, "fullName", record.leadName || "");
+    setNamedFieldValue(form, "phone", normalizeLeadPhone(record.phone || ""));
+  }
+}
+
+function prefillCoachProgram414FromCrm(record = null) {
+  const form = document.querySelector("[data-fourteen-sheet-form]");
+
+  if (!form || !record?.id) {
+    return;
+  }
+
+  const hostNameValue = String(form.elements.namedItem("hostName")?.value || "").trim();
+  const hostPhoneValue = String(form.elements.namedItem("hostPhone")?.value || "").trim();
+
+  if (!hostNameValue) {
+    setNamedFieldValue(form, "hostName", record.leadName || "");
+  }
+
+  if (!hostPhoneValue) {
+    setNamedFieldValue(form, "hostPhone", normalizeLeadPhone(record.phone || ""));
+  }
+}
+
+function syncCoachLinkedContextsForCrmRecord(record = null) {
+  if (!record?.id) {
+    return;
+  }
+
+  const recordPhone = normalizeLeadPhone(record.phone || "");
+  const surveyContext = getActiveCoachHealthSurveyContext();
+  const programContext = getActiveCoachProgram414Context();
+
+  if (
+    surveyContext?.id &&
+    surveyContext.id !== record.linkedHealthSurveyId &&
+    recordPhone &&
+    normalizeLeadPhone(surveyContext.phone || "") !== recordPhone
+  ) {
+    setActiveCoachHealthSurveyContext(null);
+  }
+
+  if (
+    programContext?.sheetId &&
+    programContext.sheetId !== record.latestProgramSheetId &&
+    recordPhone &&
+    normalizeLeadPhone(programContext.hostPhone || "") !== recordPhone
+  ) {
+    setActiveCoachProgram414Context(null);
+  }
+}
+
+function openCoachCrmLinkedTool(tool = "", record = null) {
+  const safeTool = String(tool || "").trim().toLowerCase();
+  const safeRecord = buildCoachActiveCrmContext(record);
+
+  if (!safeTool || !safeRecord?.id) {
+    return;
+  }
+
+  setActiveCoachCrmContext(safeRecord);
+  syncCoachLinkedContextsForCrmRecord(safeRecord);
+  setCoachWorkspaceTab("cierre");
+
+  if (safeTool === "survey") {
+    setCoachDemoStageId("encuesta_salud");
+    const toggle = document.querySelector("[data-health-survey-toggle]");
+    const wrap = document.querySelector("[data-health-survey-wrap]");
+
+    if (wrap?.hidden) {
+      toggle?.click();
+    }
+
+    prefillCoachHealthSurveyFromCrm(safeRecord);
+    wrap?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (safeTool === "program414") {
+    setCoachDemoStageId("programa_4_14");
+    const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
+    const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
+
+    if (wrap?.hidden) {
+      toggle?.click();
+    }
+
+    prefillCoachProgram414FromCrm(safeRecord);
+    wrap?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (safeTool === "close") {
+    setCoachDemoStageId("cierre_final");
+    document.querySelector("[data-demo-outcome-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function normalizeLeadPhone(value = "") {
@@ -2688,6 +2855,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       .filter(item => item.fullName || item.phone || item.notes);
 
     const payload = {
+      activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
       hostName: formData.get("hostName"),
       hostPhone: formData.get("hostPhone"),
       giftSelected: formData.get("giftSelected"),
@@ -2724,6 +2892,8 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
         focusSheetId: data.sheet?.id || "",
         scrollToInstant: true
       });
+      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
       skipNextResetFeedback = true;
       rebuildForm({ clearFeedback: false, resetFields: true });
       await loadLeads();
@@ -2776,6 +2946,8 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
         renderInstantZone(activeSheet);
         renderInstantSelection();
         await loadLeads();
+        window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+        window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
         registerCoachDemoEvent({
           id: "program_414_result",
           label: "Se guardo resultado de cita instantanea",
@@ -2903,6 +3075,7 @@ function initHealthSurveyTool() {
 
     return {
       surveyId: formData.get("surveyId"),
+      activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
       fullName: formData.get("fullName"),
       phone: formData.get("phone"),
       secondName: formData.get("secondName"),
@@ -3061,6 +3234,8 @@ function initHealthSurveyTool() {
       activateSurvey(data.survey, { announce: true });
       fillForm(data.survey);
       await loadSurveys();
+      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
       syncFolderToggle(true);
       setMessage(
         feedbackNode,
@@ -4460,6 +4635,18 @@ function buildCoachAgendaCard(record = null) {
       </div>
 
       <div class="dashboard-actions compact-top agenda-card-actions">
+        <button type="button" class="secondary-button" data-agenda-open-tool="survey" data-agenda-record-id="${escapeHtml(
+          record.id
+        )}">Encuesta</button>
+        <button type="button" class="nav-button" data-agenda-open-tool="program414" data-agenda-record-id="${escapeHtml(
+          record.id
+        )}">4 en 14</button>
+        <button type="button" class="nav-button" data-agenda-open-tool="close" data-agenda-record-id="${escapeHtml(
+          record.id
+        )}">Cierre</button>
+      </div>
+
+      <div class="dashboard-actions compact-top agenda-card-actions">
         ${quickActions}
       </div>
     </article>
@@ -4768,6 +4955,17 @@ function initCoachCrmWorkspace(user = null) {
     });
   });
 
+  detailPanel.addEventListener("click", event => {
+    const toolButton = event.target.closest("[data-crm-open-tool]");
+
+    if (!toolButton || !state.activeDetail?.record) {
+      return;
+    }
+
+    const tool = String(toolButton.getAttribute("data-crm-open-tool") || "").trim();
+    openCoachCrmLinkedTool(tool, state.activeDetail.record);
+  });
+
   detailForm.addEventListener("submit", async event => {
     event.preventDefault();
     clearMessage(detailFeedback);
@@ -4931,6 +5129,20 @@ function initCoachAgendaWorkspace(user = null) {
     }
 
     const actionButton = event.target.closest("[data-agenda-action]");
+
+    const openToolButton = event.target.closest("[data-agenda-open-tool]");
+
+    if (openToolButton) {
+      const tool = String(openToolButton.getAttribute("data-agenda-open-tool") || "").trim();
+      const recordId = String(openToolButton.getAttribute("data-agenda-record-id") || "").trim();
+      const record = findRecord(recordId);
+
+      if (record) {
+        openCoachCrmLinkedTool(tool, record);
+      }
+
+      return;
+    }
 
     if (!actionButton) {
       return;
@@ -7098,14 +7310,15 @@ function initCoachDemoOutcomeWorkspace(user = null) {
           activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
           activeDemoStage: activeDemoStageMeta.id,
           activeDemoStageLabel: activeDemoStageMeta.label,
-          activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
-          activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
-          activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
-            ? getActiveCoachProgram414Context().referralIndex
-            : "",
-          activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
-          activeDecisionContext: getActiveCoachDecisionContext() || null,
-          recentCoachEvents: getCoachDemoEvents()
+        activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+        activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+        activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
+          ? getActiveCoachProgram414Context().referralIndex
+          : "",
+        activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
+        activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
+        activeDecisionContext: getActiveCoachDecisionContext() || null,
+        recentCoachEvents: getCoachDemoEvents()
         }
       });
 
@@ -7121,6 +7334,8 @@ function initCoachDemoOutcomeWorkspace(user = null) {
       form.reset();
       syncTypeUi();
       await loadOutcomes();
+      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
     } catch (error) {
       setMessage(feedbackNode, error.message, "error");
     } finally {
@@ -7532,6 +7747,7 @@ async function initCoachAppPage() {
   const storedOrderCalcContext = getActiveCoachOrderCalcContext();
   const storedDecisionContext = getActiveCoachDecisionContext();
   const storedDemoOutcomeContext = getActiveCoachDemoOutcomeContext();
+  const storedCrmContext = getActiveCoachCrmContext();
 
   if (storedHealthSurveyContext?.ownerUserId && storedHealthSurveyContext.ownerUserId !== effectiveOwnerId) {
     setActiveCoachHealthSurveyContext(null);
@@ -7559,6 +7775,12 @@ async function initCoachAppPage() {
     setActiveCoachDemoOutcomeContext(null);
   } else {
     renderActiveCoachDemoOutcomeContext(storedDemoOutcomeContext);
+  }
+
+  if (storedCrmContext?.ownerUserId && storedCrmContext.ownerUserId !== effectiveOwnerId) {
+    setActiveCoachCrmContext(null);
+  } else {
+    renderActiveCoachCrmContext(storedCrmContext);
   }
 
   initCoachWorkspaceTabs();
