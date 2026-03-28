@@ -4980,6 +4980,7 @@ function initCoachCrmWorkspace(user = null) {
     quickFilter: "all",
     searchTerm: ""
   };
+  const autoSaveTimers = new Map();
 
   if (summaryTitle) {
     summaryTitle.textContent = isTelemarketingPortal ? "Cabina de seguimiento" : "Seguimiento nativo del equipo";
@@ -5348,12 +5349,25 @@ function initCoachCrmWorkspace(user = null) {
     row.classList.toggle("is-dirty", dirty);
   };
 
+  const clearInlineAutoSave = row => {
+    const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+
+    if (!recordId || !autoSaveTimers.has(recordId)) {
+      return;
+    }
+
+    window.clearTimeout(autoSaveTimers.get(recordId));
+    autoSaveTimers.delete(recordId);
+  };
+
   const saveInlineRow = async (row, saveButton, payload, successMessage = "Fila guardada en el CRM.") => {
     const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
 
     if (!recordId) {
       return;
     }
+
+    clearInlineAutoSave(row);
 
     if (payload && payload._nextActionAtValid === false) {
       setMessage(summaryFeedback, "No pude leer la fecha. Usa formato MM/DD/YYYY h:mm AM/PM.", "error");
@@ -5383,6 +5397,33 @@ function initCoachCrmWorkspace(user = null) {
     } finally {
       setButtonLoading(saveButton, false);
     }
+  };
+
+  const scheduleTelemarketingAutoSave = (row, delay = 900, successMessage = "Cambio guardado.") => {
+    if (!isTelemarketingPortal || !row) {
+      return;
+    }
+
+    const recordId = String(row.getAttribute("data-crm-record-id") || "").trim();
+
+    if (!recordId) {
+      return;
+    }
+
+    clearInlineAutoSave(row);
+
+    const timerId = window.setTimeout(() => {
+      autoSaveTimers.delete(recordId);
+
+      if (!row.classList.contains("is-dirty")) {
+        return;
+      }
+
+      const saveButton = row.querySelector("[data-crm-inline-save]");
+      saveInlineRow(row, saveButton, getInlineRowPayload(row), successMessage);
+    }, delay);
+
+    autoSaveTimers.set(recordId, timerId);
   };
 
   const renderDetail = detail => {
@@ -5850,6 +5891,7 @@ function initCoachCrmWorkspace(user = null) {
     }
 
     markInlineRowDirty(row, true);
+    scheduleTelemarketingAutoSave(row, 1200, "Cambio guardado.");
   });
 
   recordList.addEventListener("change", event => {
@@ -5865,7 +5907,26 @@ function initCoachCrmWorkspace(user = null) {
     }
 
     markInlineRowDirty(row, true);
+    scheduleTelemarketingAutoSave(row, 120, "Cambio guardado.");
   });
+
+  recordList.addEventListener(
+    "blur",
+    event => {
+      const row = event.target.closest("[data-crm-inline-row]");
+
+      if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+        return;
+      }
+
+      if (!row.classList.contains("is-dirty")) {
+        return;
+      }
+
+      scheduleTelemarketingAutoSave(row, 80, "Cambio guardado.");
+    },
+    true
+  );
 
   recordList.addEventListener("keydown", event => {
     const noteInput = event.target.closest("[data-crm-inline-note]");
