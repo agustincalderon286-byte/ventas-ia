@@ -50,6 +50,15 @@ const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
+const HIGHLEVEL_API_BASE_URL = "https://services.leadconnectorhq.com";
+const HIGHLEVEL_API_VERSION = String(process.env.HIGHLEVEL_API_VERSION || "2021-07-28").trim() || "2021-07-28";
+const HIGHLEVEL_SYNC_ENABLED = String(process.env.HIGHLEVEL_SYNC_ENABLED || "").toLowerCase() === "true";
+const HIGHLEVEL_PRIVATE_TOKEN = String(process.env.HIGHLEVEL_PRIVATE_TOKEN || "").trim();
+const HIGHLEVEL_LOCATION_ID = String(process.env.HIGHLEVEL_LOCATION_ID || "").trim();
+const HIGHLEVEL_PIPELINE_ID = String(process.env.HIGHLEVEL_PIPELINE_ID || "").trim();
+const HIGHLEVEL_PIPELINE_STAGE_ID = String(process.env.HIGHLEVEL_PIPELINE_STAGE_ID || "").trim();
+const HIGHLEVEL_ASSIGNED_TO_USER_ID = String(process.env.HIGHLEVEL_ASSIGNED_TO_USER_ID || "").trim();
+const HIGHLEVEL_WEBHOOK_TOKEN = String(process.env.HIGHLEVEL_WEBHOOK_TOKEN || "").trim();
 const AR_PROTOTYPE_PATH_PREFIX = "/prototipo-agustin20-chef-ar";
 const AR_PROTOTYPE_UNLOCK_PATH = `${AR_PROTOTYPE_PATH_PREFIX}/unlock`;
 const AR_PROTOTYPE_LOCK_PATH = `${AR_PROTOTYPE_PATH_PREFIX}/lock`;
@@ -396,6 +405,20 @@ const coachLeadInboxSchema = new mongoose.Schema({
   nextAction: String,
   nextActionAt: Date,
   summary: String,
+  highLevelContactId: String,
+  highLevelOpportunityId: String,
+  highLevelLocationId: String,
+  highLevelLastSyncAt: Date,
+  highLevelLastSyncStatus: String,
+  highLevelLastSyncError: String,
+  highLevelLastWebhookAt: Date,
+  highLevelOpportunityStatus: String,
+  highLevelOpportunityStageId: String,
+  highLevelOpportunityValue: Number,
+  highLevelCampaignId: String,
+  highLevelCampaignName: String,
+  highLevelCampaignStatus: String,
+  highLevelResultSummary: String,
   tags: [String],
   lastContactAt: Date,
   lastStatusChangeAt: Date,
@@ -1943,6 +1966,293 @@ function limpiarCoachLeadDestination(profileDoc = null) {
         : Boolean(type !== "carpeta_privada" && url),
     updatedAt: profileDoc?.leadDestinationUpdatedAt || null
   };
+}
+
+function highLevelReadOnlyEstaConfigurado() {
+  return Boolean(HIGHLEVEL_PRIVATE_TOKEN);
+}
+
+function highLevelLeadSyncEstaConfigurado() {
+  return Boolean(HIGHLEVEL_SYNC_ENABLED && HIGHLEVEL_PRIVATE_TOKEN && HIGHLEVEL_LOCATION_ID);
+}
+
+function highLevelOpportunitySyncEstaConfigurado() {
+  return Boolean(highLevelLeadSyncEstaConfigurado() && HIGHLEVEL_PIPELINE_ID && HIGHLEVEL_PIPELINE_STAGE_ID);
+}
+
+function highLevelSyncAplicaALead(lead = null) {
+  return highLevelLeadSyncEstaConfigurado() && normalizarCoachLeadSource(lead?.source || "") === "chef_personal";
+}
+
+function construirHighLevelHeaders(extraHeaders = {}, hasJsonBody = false) {
+  const headers = {
+    Authorization: `Bearer ${HIGHLEVEL_PRIVATE_TOKEN}`,
+    Version: HIGHLEVEL_API_VERSION,
+    Accept: "application/json",
+    ...extraHeaders
+  };
+
+  if (hasJsonBody) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return headers;
+}
+
+function leerValorAnidado(obj = null, pathKey = "") {
+  if (!obj || !pathKey) {
+    return undefined;
+  }
+
+  return String(pathKey)
+    .split(".")
+    .filter(Boolean)
+    .reduce((acc, key) => (acc && typeof acc === "object" ? acc[key] : undefined), obj);
+}
+
+function extraerPrimerValorHighLevel(obj = null, pathKeys = []) {
+  for (const pathKey of Array.isArray(pathKeys) ? pathKeys : []) {
+    const value = leerValorAnidado(obj, pathKey);
+    if (value !== undefined && value !== null && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+
+  return "";
+}
+
+function extraerColeccionHighLevel(obj = null, pathKeys = []) {
+  for (const pathKey of Array.isArray(pathKeys) ? pathKeys : []) {
+    const value = leerValorAnidado(obj, pathKey);
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+
+  return Array.isArray(obj) ? obj : [];
+}
+
+function partirNombreHighLevel(fullName = "") {
+  const safeName = seleccionarNombreConfiable(fullName) || cleanText(fullName);
+  const parts = safeName.split(/\s+/).filter(Boolean);
+
+  if (!parts.length) {
+    return {
+      firstName: "Lead",
+      lastName: ""
+    };
+  }
+
+  if (parts.length === 1) {
+    return {
+      firstName: parts[0],
+      lastName: ""
+    };
+  }
+
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" ")
+  };
+}
+
+function construirHighLevelLeadTags(lead = null) {
+  const source = normalizarCoachLeadSource(lead?.source || "captura_manual");
+  const tags = ["Agustin 2.0", "Agustin Chef", "Chef personal", source.replace(/_/g, " ")];
+  return Array.from(new Set(tags.filter(Boolean))).slice(0, 10);
+}
+
+function construirPayloadHighLevelContacto(lead = null) {
+  if (!lead) {
+    return null;
+  }
+
+  const safeName = seleccionarNombreConfiable(lead.fullName) || cleanText(lead.fullName || "");
+  const nameParts = partirNombreHighLevel(safeName);
+  const phone = formatearTelefonoE164(lead.phone || "");
+  const email = normalizarEmail(lead.email || "");
+  const city = cleanText(lead.city || "").slice(0, 80);
+  const postalCode = normalizarZipCode(lead.zipCode || "");
+  const payload = {
+    locationId: HIGHLEVEL_LOCATION_ID,
+    firstName: nameParts.firstName,
+    lastName: nameParts.lastName,
+    name: safeName || `${nameParts.firstName} ${nameParts.lastName}`.trim(),
+    source: "Agustin 2.0 Chef",
+    tags: construirHighLevelLeadTags(lead)
+  };
+
+  if (email) {
+    payload.email = email;
+  }
+
+  if (phone) {
+    payload.phone = phone;
+  }
+
+  if (city) {
+    payload.city = city;
+  }
+
+  if (postalCode) {
+    payload.postalCode = postalCode;
+  }
+
+  return payload;
+}
+
+function construirPayloadHighLevelOpportunity(lead = null, contactId = "") {
+  if (!lead || !contactId || !highLevelOpportunitySyncEstaConfigurado()) {
+    return null;
+  }
+
+  const safeName = seleccionarNombreConfiable(lead.fullName) || cleanText(lead.fullName || "");
+
+  return {
+    locationId: HIGHLEVEL_LOCATION_ID,
+    contactId,
+    pipelineId: HIGHLEVEL_PIPELINE_ID,
+    pipelineStageId: HIGHLEVEL_PIPELINE_STAGE_ID,
+    status: "open",
+    name: `${safeName || "Lead"} · Agustin Chef`,
+    source: "Agustin 2.0 Chef",
+    monetaryValue: 0,
+    assignedTo: HIGHLEVEL_ASSIGNED_TO_USER_ID || undefined
+  };
+}
+
+async function highLevelFetchJson(apiPath = "", options = {}) {
+  if (!HIGHLEVEL_PRIVATE_TOKEN) {
+    return {
+      ok: false,
+      status: 0,
+      error: "Falta HIGHLEVEL_PRIVATE_TOKEN."
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 12000));
+  const requestInit = {
+    method: options.method || "GET",
+    headers: construirHighLevelHeaders(options.headers || {}, options.body !== undefined),
+    signal: controller.signal
+  };
+
+  if (options.body !== undefined) {
+    requestInit.body = JSON.stringify(options.body);
+  }
+
+  try {
+    const response = await fetch(`${HIGHLEVEL_API_BASE_URL}${apiPath}`, requestInit);
+    const data = await response.json().catch(() => null);
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        data,
+        error:
+          extraerPrimerValorHighLevel(data, ["message", "error", "errors.0.message"]) ||
+          `HighLevel respondio ${response.status}`
+      };
+    }
+
+    return {
+      ok: true,
+      status: response.status,
+      data
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    return {
+      ok: false,
+      status: 0,
+      error: error?.name === "AbortError" ? "HighLevel tardo demasiado en responder." : error.message
+    };
+  }
+}
+
+function normalizarListaHighLevel(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => ({
+      id: extraerPrimerValorHighLevel(item, ["id", "_id", "campaignId", "workflowId"]),
+      name: extraerPrimerValorHighLevel(item, ["name", "title"]),
+      status: extraerPrimerValorHighLevel(item, ["status", "state"]),
+      type: extraerPrimerValorHighLevel(item, ["type"])
+    }))
+    .filter(item => item.id || item.name);
+}
+
+async function listarHighLevelCampaigns() {
+  if (!highLevelReadOnlyEstaConfigurado()) {
+    return {
+      ok: false,
+      items: [],
+      error: "HighLevel todavia no esta configurado."
+    };
+  }
+
+  const result = await highLevelFetchJson("/campaigns/");
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      items: [],
+      error: result.error || "No pude leer las campanas de HighLevel."
+    };
+  }
+
+  return {
+    ok: true,
+    items: normalizarListaHighLevel(
+      extraerColeccionHighLevel(result.data, ["campaigns", "data.campaigns", "data", "items"])
+    ).slice(0, 100)
+  };
+}
+
+async function listarHighLevelWorkflows() {
+  if (!highLevelReadOnlyEstaConfigurado()) {
+    return {
+      ok: false,
+      items: [],
+      error: "HighLevel todavia no esta configurado."
+    };
+  }
+
+  const result = await highLevelFetchJson("/workflows/");
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      items: [],
+      error: result.error || "No pude leer los workflows de HighLevel."
+    };
+  }
+
+  return {
+    ok: true,
+    items: normalizarListaHighLevel(
+      extraerColeccionHighLevel(result.data, ["workflows", "data.workflows", "data", "items"])
+    ).slice(0, 100)
+  };
+}
+
+function highLevelWebhookAutorizado(req = null) {
+  const token = cleanText(req?.query?.token || req?.headers?.["x-agustin-highlevel-token"] || "");
+
+  if (!HIGHLEVEL_WEBHOOK_TOKEN || !token) {
+    return false;
+  }
+
+  const expected = Buffer.from(HIGHLEVEL_WEBHOOK_TOKEN);
+  const received = Buffer.from(token);
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, received);
 }
 
 function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
@@ -3933,12 +4243,14 @@ async function guardarCoachInboxLead({
       queued: false,
       destination: limpiarCoachLeadDestination(profileDoc)
     };
+    const highLevel = programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject());
 
     return {
       leadDoc,
       lead: cleanedLead,
       duplicate: true,
-      delivery
+      delivery,
+      highLevel
     };
   }
 
@@ -3972,12 +4284,14 @@ async function guardarCoachInboxLead({
     queued: false,
     destination: limpiarCoachLeadDestination(profileDoc)
   };
+  const highLevel = programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject());
 
   return {
     leadDoc,
     lead: cleanedLead,
     duplicate: false,
-    delivery
+    delivery,
+    highLevel
   };
 }
 
@@ -4009,6 +4323,12 @@ function construirCoachLeadSummary(leadDoc = null) {
 
   if (leadDoc.notes) {
     parts.push(`Notas: ${truncarTextoPrompt(leadDoc.notes, 120)}.`);
+  }
+
+  const highLevelSummary = cleanText(leadDoc.highLevelResultSummary || "").slice(0, 180);
+
+  if (highLevelSummary) {
+    parts.push(`HighLevel: ${highLevelSummary}.`);
   }
 
   return parts.join(" ").trim();
@@ -4169,11 +4489,352 @@ function limpiarCoachInboxLead(leadDoc = null) {
     nextAction: normalizarCoachLeadNextAction(leadDoc.nextAction),
     nextActionAt: leadDoc.nextActionAt || null,
     summary: leadDoc.summary || "",
+    highLevel: {
+      contactId: leadDoc.highLevelContactId || "",
+      opportunityId: leadDoc.highLevelOpportunityId || "",
+      locationId: leadDoc.highLevelLocationId || "",
+      lastSyncAt: leadDoc.highLevelLastSyncAt || null,
+      lastSyncStatus: leadDoc.highLevelLastSyncStatus || "",
+      lastSyncError: leadDoc.highLevelLastSyncError || "",
+      lastWebhookAt: leadDoc.highLevelLastWebhookAt || null,
+      opportunityStatus: leadDoc.highLevelOpportunityStatus || "",
+      opportunityStageId: leadDoc.highLevelOpportunityStageId || "",
+      opportunityValue: Number(leadDoc.highLevelOpportunityValue || 0) || 0,
+      campaignId: leadDoc.highLevelCampaignId || "",
+      campaignName: leadDoc.highLevelCampaignName || "",
+      campaignStatus: leadDoc.highLevelCampaignStatus || "",
+      resultSummary: leadDoc.highLevelResultSummary || ""
+    },
     lastContactAt: leadDoc.lastContactAt || null,
     lastStatusChangeAt: leadDoc.lastStatusChangeAt || null,
     updatedAt: leadDoc.updatedAt || null,
     createdAt: leadDoc.createdAt || null
   };
+}
+
+function construirNotaHighLevelLead(prefix = "", detail = "") {
+  const safePrefix = cleanText(prefix || "").trim();
+  const safeDetail = cleanText(detail || "").trim();
+  return [safePrefix, safeDetail].filter(Boolean).join(": ").trim();
+}
+
+function mapearStatusLeadDesdeHighLevel(eventType = "", opportunityStatus = "") {
+  const safeType = String(eventType || "").trim();
+  const safeStatus = String(opportunityStatus || "").trim().toLowerCase();
+
+  if (safeStatus === "won") {
+    return "cliente";
+  }
+
+  if (["lost", "abandoned", "canceled", "cancelled"].includes(safeStatus)) {
+    return "archivado";
+  }
+
+  if (safeType === "OpportunityStageUpdate") {
+    return "agendado";
+  }
+
+  if (safeStatus === "open" || safeType === "OpportunityCreate") {
+    return "contactado";
+  }
+
+  return "";
+}
+
+async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null, lead = null) {
+  if (!highLevelSyncAplicaALead(lead)) {
+    return {
+      attempted: false,
+      synced: false,
+      reason: "not_applicable"
+    };
+  }
+
+  const leadId = typeof lead?._id === "object" ? String(lead._id) : String(lead?.id || lead?._id || "").trim();
+
+  if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+    return {
+      attempted: false,
+      synced: false,
+      reason: "invalid_lead"
+    };
+  }
+
+  const leadDoc = await CoachLeadInbox.findById(leadId);
+
+  if (!leadDoc) {
+    return {
+      attempted: false,
+      synced: false,
+      reason: "not_found"
+    };
+  }
+
+  const contactPayload = construirPayloadHighLevelContacto(leadDoc.toObject());
+
+  if (!contactPayload || (!contactPayload.phone && !contactPayload.email)) {
+    leadDoc.highLevelLastSyncAt = new Date();
+    leadDoc.highLevelLastSyncStatus = "skipped";
+    leadDoc.highLevelLastSyncError = "Falta telefono o correo para sincronizar con HighLevel.";
+    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    await leadDoc.save();
+    return {
+      attempted: true,
+      synced: false,
+      error: leadDoc.highLevelLastSyncError
+    };
+  }
+
+  let contactResult = null;
+  let contactId = cleanText(leadDoc.highLevelContactId || "");
+
+  if (contactId) {
+    contactResult = await highLevelFetchJson(`/contacts/${contactId}`, {
+      method: "PUT",
+      body: contactPayload
+    });
+  } else {
+    contactResult = await highLevelFetchJson("/contacts/", {
+      method: "POST",
+      body: contactPayload
+    });
+  }
+
+  if (!contactResult?.ok) {
+    leadDoc.highLevelLastSyncAt = new Date();
+    leadDoc.highLevelLastSyncStatus = "error";
+    leadDoc.highLevelLastSyncError = contactResult?.error || "No pude guardar el contacto en HighLevel.";
+    leadDoc.highLevelResultSummary = "No pude sincronizar el contacto.";
+    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    await leadDoc.save();
+
+    return {
+      attempted: true,
+      synced: false,
+      error: leadDoc.highLevelLastSyncError
+    };
+  }
+
+  contactId =
+    contactId ||
+    extraerPrimerValorHighLevel(contactResult.data, ["contact.id", "contact._id", "id", "_id", "contactId"]);
+
+  if (!contactId) {
+    leadDoc.highLevelLastSyncAt = new Date();
+    leadDoc.highLevelLastSyncStatus = "error";
+    leadDoc.highLevelLastSyncError = "HighLevel no regreso el id del contacto.";
+    leadDoc.highLevelResultSummary = "El contacto entro sin id confirmado.";
+    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    await leadDoc.save();
+
+    return {
+      attempted: true,
+      synced: false,
+      error: leadDoc.highLevelLastSyncError
+    };
+  }
+
+  leadDoc.highLevelContactId = contactId;
+  leadDoc.highLevelLocationId = HIGHLEVEL_LOCATION_ID;
+  leadDoc.highLevelLastSyncAt = new Date();
+  leadDoc.highLevelLastSyncStatus = "contact_synced";
+  leadDoc.highLevelLastSyncError = "";
+
+  let opportunityId = cleanText(leadDoc.highLevelOpportunityId || "");
+  let opportunityResult = null;
+
+  if (!opportunityId && highLevelOpportunitySyncEstaConfigurado()) {
+    const opportunityPayload = construirPayloadHighLevelOpportunity(leadDoc.toObject(), contactId);
+    opportunityResult = await highLevelFetchJson("/opportunities", {
+      method: "POST",
+      body: opportunityPayload
+    });
+
+    if (opportunityResult?.ok) {
+      opportunityId = extraerPrimerValorHighLevel(opportunityResult.data, [
+        "opportunity.id",
+        "opportunity._id",
+        "id",
+        "_id",
+        "opportunityId"
+      ]);
+    } else {
+      leadDoc.highLevelLastSyncStatus = "partial";
+      leadDoc.highLevelLastSyncError = opportunityResult?.error || "No pude crear la oportunidad en HighLevel.";
+    }
+  }
+
+  if (opportunityId) {
+    leadDoc.highLevelOpportunityId = opportunityId;
+    leadDoc.highLevelOpportunityStatus = leadDoc.highLevelOpportunityStatus || "open";
+    leadDoc.highLevelOpportunityStageId =
+      leadDoc.highLevelOpportunityStageId || HIGHLEVEL_PIPELINE_STAGE_ID || "";
+  }
+
+  const resultParts = ["Contacto sincronizado en HighLevel"];
+
+  if (leadDoc.highLevelOpportunityId) {
+    resultParts.push("oportunidad abierta");
+  } else if (highLevelOpportunitySyncEstaConfigurado()) {
+    resultParts.push("sin oportunidad confirmada todavia");
+  }
+
+  leadDoc.highLevelResultSummary = resultParts.join(", ");
+  leadDoc.summary = construirCoachLeadSummary(leadDoc);
+  await leadDoc.save();
+
+  return {
+    attempted: true,
+    synced: true,
+    contactId,
+    opportunityId: leadDoc.highLevelOpportunityId || "",
+    partial: leadDoc.highLevelLastSyncStatus === "partial",
+    error: leadDoc.highLevelLastSyncError || ""
+  };
+}
+
+function programarSincronizacionCoachLeadAHighLevel(userDoc = null, profileDoc = null, lead = null) {
+  if (!highLevelSyncAplicaALead(lead)) {
+    return {
+      attempted: false,
+      queued: false
+    };
+  }
+
+  setTimeout(() => {
+    sincronizarCoachLeadAHighLevel(userDoc, profileDoc, lead).catch(error => {
+      console.error("Error sincronizando lead del Coach a HighLevel:", error.message);
+    });
+  }, 0);
+
+  return {
+    attempted: true,
+    queued: true
+  };
+}
+
+async function aplicarEventoHighLevelALead(payload = {}) {
+  const eventType = cleanText(payload?.type || "");
+  const opportunityId =
+    extraerPrimerValorHighLevel(payload, ["id", "opportunityId"]) && /^Opportunity/i.test(eventType)
+      ? extraerPrimerValorHighLevel(payload, ["id", "opportunityId"])
+      : "";
+  const contactId = extraerPrimerValorHighLevel(payload, ["contactId", "contact.id"]);
+  const phone = normalizePhone(payload?.phone || "");
+  const email = normalizarEmail(payload?.email || "");
+  const lookup = [];
+
+  if (opportunityId) {
+    lookup.push({ highLevelOpportunityId: opportunityId });
+  }
+
+  if (contactId) {
+    lookup.push({ highLevelContactId: contactId });
+  }
+
+  if (phone) {
+    lookup.push({ phone });
+  }
+
+  if (email) {
+    lookup.push({ email });
+  }
+
+  if (!lookup.length) {
+    return null;
+  }
+
+  const leadDoc = await CoachLeadInbox.findOne({ $or: lookup }).sort({ updatedAt: -1, createdAt: -1 });
+
+  if (!leadDoc) {
+    return null;
+  }
+
+  const noteParts = [];
+  const nextLeadStatus = mapearStatusLeadDesdeHighLevel(eventType, payload?.status || "");
+
+  if (contactId && !leadDoc.highLevelContactId) {
+    leadDoc.highLevelContactId = contactId;
+  }
+
+  if (opportunityId && !leadDoc.highLevelOpportunityId) {
+    leadDoc.highLevelOpportunityId = opportunityId;
+  }
+
+  if (payload?.locationId) {
+    leadDoc.highLevelLocationId = cleanText(payload.locationId);
+  }
+
+  if (payload?.status !== undefined) {
+    const safeStatus = cleanText(payload.status);
+    if (/^CampaignStatusUpdate$/i.test(eventType)) {
+      leadDoc.highLevelCampaignStatus = safeStatus;
+    } else {
+      leadDoc.highLevelOpportunityStatus = safeStatus;
+    }
+    noteParts.push(`status ${safeStatus}`);
+  }
+
+  if (payload?.pipelineStageId) {
+    leadDoc.highLevelOpportunityStageId = cleanText(payload.pipelineStageId);
+    noteParts.push(`etapa ${leadDoc.highLevelOpportunityStageId}`);
+  }
+
+  if (Number.isFinite(Number(payload?.monetaryValue))) {
+    leadDoc.highLevelOpportunityValue = Number(payload.monetaryValue) || 0;
+    noteParts.push(`valor $${leadDoc.highLevelOpportunityValue}`);
+  }
+
+  if (/^CampaignStatusUpdate$/i.test(eventType)) {
+    leadDoc.highLevelCampaignId = extraerPrimerValorHighLevel(payload, ["campaignId", "id"]);
+    leadDoc.highLevelCampaignName = extraerPrimerValorHighLevel(payload, ["name", "campaignName"]);
+  }
+
+  if (nextLeadStatus && leadDoc.status !== nextLeadStatus) {
+    leadDoc.status = nextLeadStatus;
+    leadDoc.lastStatusChangeAt = new Date();
+  }
+
+  leadDoc.highLevelLastWebhookAt = new Date();
+  leadDoc.highLevelLastSyncStatus = "webhook";
+  leadDoc.highLevelLastSyncError = "";
+
+  const summaryParts = [];
+
+  if (/^CampaignStatusUpdate$/i.test(eventType)) {
+    summaryParts.push("Campana actualizada");
+    if (leadDoc.highLevelCampaignName) {
+      summaryParts.push(leadDoc.highLevelCampaignName);
+    }
+    if (leadDoc.highLevelCampaignStatus) {
+      summaryParts.push(leadDoc.highLevelCampaignStatus);
+    }
+  } else {
+    summaryParts.push(`Evento ${eventType || "HighLevel"}`);
+    if (leadDoc.highLevelOpportunityStatus) {
+      summaryParts.push(`status ${leadDoc.highLevelOpportunityStatus}`);
+    }
+    if (leadDoc.highLevelOpportunityValue > 0) {
+      summaryParts.push(`valor $${leadDoc.highLevelOpportunityValue}`);
+    }
+  }
+
+  leadDoc.highLevelResultSummary = summaryParts.join(" · ").slice(0, 220);
+
+  const note = construirNotaHighLevelLead(
+    `HighLevel ${eventType || "evento"}`,
+    noteParts.join(" · ") || leadDoc.highLevelResultSummary
+  );
+
+  if (note) {
+    leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${note}` : note;
+  }
+
+  leadDoc.updatedAt = new Date();
+  leadDoc.summary = construirCoachLeadSummary(leadDoc);
+  await leadDoc.save();
+
+  return leadDoc;
 }
 
 function construirCoachChefCampaignMessage(leadDoc = null) {
@@ -9985,6 +10646,16 @@ app.get("/api/coach/me", async (req, res) => {
       stripeReady: stripeListoParaCheckout(),
       user: await construirCoachUserView(userDoc),
       profile: limpiarCoachProfile(profileDoc?.toObject ? profileDoc.toObject() : profileDoc, analyticsDoc),
+      integrations: {
+        highLevel: {
+          readOnlyConfigured: highLevelReadOnlyEstaConfigurado(),
+          syncEnabled: highLevelSyncEstaConfigurado(),
+          locationId: HIGHLEVEL_LOCATION_ID || "",
+          pipelineId: HIGHLEVEL_PIPELINE_ID || "",
+          pipelineStageId: HIGHLEVEL_PIPELINE_STAGE_ID || "",
+          webhookPath: "/webhooks/highlevel"
+        }
+      },
       networkSummary,
       repLeadSummary: leadMemory?.repLeadSummary || null,
       activeLeadContext: leadMemory?.leadContext || null
@@ -9992,6 +10663,46 @@ app.get("/api/coach/me", async (req, res) => {
   } catch (error) {
     console.error("Error obteniendo usuario Coach:", error.message);
     responderCoachError(res, 500, "No pude revisar tu cuenta.");
+  }
+});
+
+app.get("/api/coach/integrations/highlevel", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
+    const [campaignsResult, workflowsResult, recentLeadDocs] = await Promise.all([
+      listarHighLevelCampaigns(),
+      listarHighLevelWorkflows(),
+      CoachLeadInbox.find({
+        ownerUserId,
+        $or: [{ highLevelContactId: { $ne: "" } }, { highLevelOpportunityId: { $ne: "" } }]
+      })
+        .sort({ highLevelLastWebhookAt: -1, highLevelLastSyncAt: -1, updatedAt: -1 })
+        .limit(25)
+        .lean()
+    ]);
+
+    res.json({
+      configured: highLevelReadOnlyEstaConfigurado(),
+      syncEnabled: highLevelSyncEstaConfigurado(),
+      locationId: HIGHLEVEL_LOCATION_ID || "",
+      pipelineId: HIGHLEVEL_PIPELINE_ID || "",
+      pipelineStageId: HIGHLEVEL_PIPELINE_STAGE_ID || "",
+      webhookPath: "/webhooks/highlevel",
+      campaigns: campaignsResult.items || [],
+      workflows: workflowsResult.items || [],
+      campaignsError: campaignsResult.ok ? "" : campaignsResult.error || "",
+      workflowsError: workflowsResult.ok ? "" : workflowsResult.error || "",
+      recentLeads: recentLeadDocs.map(doc => limpiarCoachInboxLead(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error leyendo integracion HighLevel:", error.message);
+    responderCoachError(res, 500, "No pude revisar la integracion de HighLevel.");
   }
 });
 
@@ -11724,6 +12435,38 @@ app.get("/api/platform/config", (req, res) => {
       webhookPath: "/webhooks/twilio/sms"
     }
   });
+});
+
+app.get("/webhooks/highlevel", (req, res) => {
+  const authorized = highLevelWebhookAutorizado(req);
+
+  res.json({
+    ok: true,
+    webhookPath: "/webhooks/highlevel",
+    configured: Boolean(HIGHLEVEL_WEBHOOK_TOKEN),
+    authorized,
+    syncEnabled: highLevelSyncEstaConfigurado()
+  });
+});
+
+app.post("/webhooks/highlevel", async (req, res) => {
+  if (!highLevelWebhookAutorizado(req)) {
+    return res.status(401).json({ error: "Webhook token invalido." });
+  }
+
+  try {
+    const updatedLead = await aplicarEventoHighLevelALead(req.body || {});
+
+    return res.json({
+      ok: true,
+      received: true,
+      eventType: cleanText(req.body?.type || ""),
+      matchedLeadId: updatedLead?._id ? String(updatedLead._id) : ""
+    });
+  } catch (error) {
+    console.error("Error procesando webhook de HighLevel:", error.message);
+    return res.status(500).json({ error: "No pude procesar el webhook de HighLevel." });
+  }
 });
 
 app.get("/webhooks/twilio/sms", (req, res) => {
