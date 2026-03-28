@@ -182,11 +182,38 @@
 
           <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="summary" hidden>
             <div class="eyebrow">CRM operativo</div>
-            <h3>Seguimiento nativo del equipo</h3>
-            <p>
+            <h3 data-crm-summary-title>Seguimiento nativo del equipo</h3>
+            <p data-crm-summary-copy>
               Este panel empieza a reemplazar el trabajo de Sheets con una vista interna de leads, 4 en 14 y
               reclutamiento para dar seguimiento sin salir del Coach.
             </p>
+
+            <div class="telemarketing-kpi-strip">
+              <article class="telemarketing-kpi-card">
+                <span>Mi cartera</span>
+                <strong data-crm-personal-total>0</strong>
+              </article>
+              <article class="telemarketing-kpi-card">
+                <span>Para hoy</span>
+                <strong data-crm-personal-today>0</strong>
+              </article>
+              <article class="telemarketing-kpi-card">
+                <span>Citas activas</span>
+                <strong data-crm-personal-appointments>0</strong>
+              </article>
+              <article class="telemarketing-kpi-card">
+                <span>Follow up</span>
+                <strong data-crm-personal-follow-up>0</strong>
+              </article>
+              <article class="telemarketing-kpi-card">
+                <span>Cierre</span>
+                <strong data-crm-personal-close-rate>0%</strong>
+              </article>
+              <article class="telemarketing-kpi-card">
+                <span>Venta $</span>
+                <strong data-crm-personal-sold>$0</strong>
+              </article>
+            </div>
 
             <div class="insight-grid">
               <div class="mini-stat">
@@ -248,24 +275,24 @@
 
             <div class="metric-grid">
               <article class="metric-panel">
-                <div class="eyebrow">Telemarketing</div>
-                <h4>Quien mas mueve el CRM</h4>
+                <div class="eyebrow" data-crm-panel-eyebrow="telemarketing">Telemarketing</div>
+                <h4 data-crm-panel-title="telemarketing">Quien mas mueve el CRM</h4>
                 <div class="metric-list" data-crm-top-telemarketers>
                   <div class="team-seat-empty">Todavia no hay telemarketing medible.</div>
                 </div>
               </article>
 
               <article class="metric-panel">
-                <div class="eyebrow">Representantes</div>
-                <h4>Quien esta cerrando mas</h4>
+                <div class="eyebrow" data-crm-panel-eyebrow="representatives">Representantes</div>
+                <h4 data-crm-panel-title="representatives">Quien esta cerrando mas</h4>
                 <div class="metric-list" data-crm-top-representatives>
                   <div class="team-seat-empty">Todavia no hay representantes medibles.</div>
                 </div>
               </article>
 
               <article class="metric-panel">
-                <div class="eyebrow">Territorio</div>
-                <h4>Donde se esta moviendo mas</h4>
+                <div class="eyebrow" data-crm-panel-eyebrow="territories">Territorio</div>
+                <h4 data-crm-panel-title="territories">Donde se esta moviendo mas</h4>
                 <div class="metric-list" data-crm-top-territories>
                   <div class="team-seat-empty">Todavia no hay territorios medibles.</div>
                 </div>
@@ -277,13 +304,21 @@
 
           <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="sheet" hidden>
             <div class="eyebrow">Vista operativa</div>
-            <h3>Filtra y abre filas del CRM</h3>
-            <p>
+            <h3 data-crm-sheet-title>Filtra y abre filas del CRM</h3>
+            <p data-crm-sheet-copy>
               Usa filtros simples y toca una fila para abrir su detalle. Esta primera fase ya respeta tus leads,
               referidos 4 en 14 y aplicaciones de trabajo.
             </p>
 
             <div class="crm-toolbar">
+              <label class="crm-search-field">
+                Buscar rapido
+                <input
+                  type="search"
+                  placeholder="Nombre, telefono, ciudad, nota..."
+                  data-crm-search-filter
+                />
+              </label>
               <label>
                 Fuente
                 <select data-crm-source-filter>
@@ -321,15 +356,44 @@
               </div>
             </div>
 
+            <div class="crm-quick-filters" data-crm-quick-filters>
+              <button type="button" class="crm-quick-filter-chip is-active" data-crm-quick-filter="all">
+                Todo
+                <strong data-crm-quick-count="all">0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="today">
+                Hoy
+                <strong data-crm-quick-count="today">0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="follow_up">
+                Follow up
+                <strong data-crm-quick-count="follow_up">0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="appointments">
+                Citas
+                <strong data-crm-quick-count="appointments">0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="no_answer">
+                No atendio
+                <strong data-crm-quick-count="no_answer">0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="sales">
+                Venta
+                <strong data-crm-quick-count="sales">0</strong>
+              </button>
+            </div>
+
             <div class="crm-grid-wrap">
               <div class="crm-grid-head">
                 <span>Estado</span>
-                <span>Nombre</span>
+                <span>Cliente</span>
                 <span>Fuente</span>
+                <span>Ciudad</span>
                 <span>Telemarketing</span>
                 <span>Representante</span>
                 <span>Proxima accion</span>
                 <span>Seguimiento</span>
+                <span>Nota</span>
               </div>
               <div class="crm-grid-list" data-crm-record-list>
                 <div class="team-seat-empty">Todavia no hay registros en este CRM.</div>

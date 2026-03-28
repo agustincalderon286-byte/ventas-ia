@@ -4468,6 +4468,39 @@ function formatCoachCrmPercent(value = 0) {
   return `${Number.isFinite(safeValue) ? safeValue.toFixed(1).replace(/\.0$/, "") : "0"}%`;
 }
 
+function truncateCoachCrmCell(value = "", maxLength = 84) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue || safeValue.length <= maxLength) {
+    return safeValue;
+  }
+
+  return `${safeValue.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function normalizeCoachSearchText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function isCoachDateWithinToday(value = "") {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  end.setMilliseconds(-1);
+  return date >= start && date <= end;
+}
+
 function renderCoachMetricList(node, items = [], emptyCopy = "Todavia no hay datos para mostrar.") {
   if (!node) {
     return;
@@ -4748,10 +4781,18 @@ function buildCoachAgendaCard(record = null) {
 }
 
 function initCoachCrmWorkspace(user = null) {
+  const portalMode = getCoachPortalMode(user);
+  const isTelemarketingPortal = portalMode === "telemarketing";
   const summaryFeedback = document.querySelector("[data-crm-feedback]");
+  const summaryTitle = document.querySelector("[data-crm-summary-title]");
+  const summaryCopy = document.querySelector("[data-crm-summary-copy]");
+  const sheetTitle = document.querySelector("[data-crm-sheet-title]");
+  const sheetCopy = document.querySelector("[data-crm-sheet-copy]");
   const sourceFilter = document.querySelector("[data-crm-source-filter]");
   const statusFilter = document.querySelector("[data-crm-status-filter]");
   const assigneeFilter = document.querySelector("[data-crm-assignee-filter]");
+  const searchFilter = document.querySelector("[data-crm-search-filter]");
+  const quickFilterButtons = Array.from(document.querySelectorAll("[data-crm-quick-filter]"));
   const refreshButton = document.querySelector("[data-crm-refresh]");
   const recordList = document.querySelector("[data-crm-record-list]");
   const detailEmpty = document.querySelector("[data-crm-detail-empty]");
@@ -4781,6 +4822,12 @@ function initCoachCrmWorkspace(user = null) {
   const topTelemarketers = document.querySelector("[data-crm-top-telemarketers]");
   const topRepresentatives = document.querySelector("[data-crm-top-representatives]");
   const topTerritories = document.querySelector("[data-crm-top-territories]");
+  const telemarketingPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="telemarketing"]');
+  const telemarketingPanelTitle = document.querySelector('[data-crm-panel-title="telemarketing"]');
+  const representativesPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="representatives"]');
+  const representativesPanelTitle = document.querySelector('[data-crm-panel-title="representatives"]');
+  const territoriesPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="territories"]');
+  const territoriesPanelTitle = document.querySelector('[data-crm-panel-title="territories"]');
 
   if (!summaryFeedback || !sourceFilter || !statusFilter || !assigneeFilter || !recordList || !detailPanel || !detailForm) {
     return;
@@ -4789,10 +4836,57 @@ function initCoachCrmWorkspace(user = null) {
   const state = {
     summary: null,
     records: [],
+    visibleRecords: [],
     assignees: [],
     activeRecordId: "",
-    activeDetail: null
+    activeDetail: null,
+    quickFilter: "all",
+    searchTerm: ""
   };
+
+  if (summaryTitle) {
+    summaryTitle.textContent = isTelemarketingPortal ? "Cabina de seguimiento" : "Seguimiento nativo del equipo";
+  }
+
+  if (summaryCopy) {
+    summaryCopy.textContent = isTelemarketingPortal
+      ? "Aqui se concentra tu cartera asignada. Filtra rapido, encuentra la fila correcta y deja cada seguimiento listo para la siguiente llamada."
+      : "Este panel empieza a reemplazar el trabajo de Sheets con una vista interna de leads, 4 en 14 y reclutamiento para dar seguimiento sin salir del Coach.";
+  }
+
+  if (sheetTitle) {
+    sheetTitle.textContent = isTelemarketingPortal ? "Mesa de llamadas" : "Filtra y abre filas del CRM";
+  }
+
+  if (sheetCopy) {
+    sheetCopy.textContent = isTelemarketingPortal
+      ? "Usa busqueda viva, filtros rapidos y la tabla tipo hoja para moverte sin friccion entre llamadas, citas y notas."
+      : "Usa filtros simples y toca una fila para abrir su detalle. Esta primera fase ya respeta tus leads, referidos 4 en 14 y aplicaciones de trabajo.";
+  }
+
+  if (telemarketingPanelEyebrow) {
+    telemarketingPanelEyebrow.textContent = isTelemarketingPortal ? "Tu pulso" : "Telemarketing";
+  }
+
+  if (telemarketingPanelTitle) {
+    telemarketingPanelTitle.textContent = isTelemarketingPortal ? "Como viene tu cartera" : "Quien mas mueve el CRM";
+  }
+
+  if (representativesPanelEyebrow) {
+    representativesPanelEyebrow.textContent = isTelemarketingPortal ? "Representantes" : "Representantes";
+  }
+
+  if (representativesPanelTitle) {
+    representativesPanelTitle.textContent = isTelemarketingPortal ? "Con quien estas alimentando demos" : "Quien esta cerrando mas";
+  }
+
+  if (territoriesPanelEyebrow) {
+    territoriesPanelEyebrow.textContent = isTelemarketingPortal ? "Radar" : "Territorio";
+  }
+
+  if (territoriesPanelTitle) {
+    territoriesPanelTitle.textContent = isTelemarketingPortal ? "Donde esta cayendo mas movimiento" : "Donde se esta moviendo mas";
+  }
 
   const setSummary = summary => {
     const safeSummary = summary || {};
@@ -4836,14 +4930,46 @@ function initCoachCrmWorkspace(user = null) {
       node.textContent = String(safeSummary.territoryCount || 0);
     });
 
+    document.querySelectorAll("[data-crm-personal-total]").forEach(node => {
+      node.textContent = String(safeSummary.total || 0);
+    });
+    document.querySelectorAll("[data-crm-personal-today]").forEach(node => {
+      node.textContent = String(safeSummary.pendingToday || 0);
+    });
+    document.querySelectorAll("[data-crm-personal-appointments]").forEach(node => {
+      node.textContent = String(safeSummary.appointments || 0);
+    });
+    document.querySelectorAll("[data-crm-personal-follow-up]").forEach(node => {
+      node.textContent = String(safeSummary.followUpCount || 0);
+    });
+    document.querySelectorAll("[data-crm-personal-close-rate]").forEach(node => {
+      node.textContent = formatCoachCrmPercent(safeSummary.closeRate || 0);
+    });
+    document.querySelectorAll("[data-crm-personal-sold]").forEach(node => {
+      node.textContent = formatCoachCrmMoney(safeSummary.soldAmount || 0);
+    });
+
     renderCoachMetricList(
       topTelemarketers,
-      (safeSummary.topTelemarketers || []).map(item => ({
-        label: item.label || "Telemarketing",
-        secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
-        tertiary: `${item.appointments || 0} citas · ${item.total || 0} registros`
-      })),
-      "Todavia no hay telemarketing medible."
+      isTelemarketingPortal
+        ? [
+            {
+              label: "Pendientes de hoy",
+              secondary: `${safeSummary.pendingToday || 0} filas para mover`,
+              tertiary: `${safeSummary.followUpCount || 0} follow up · ${safeSummary.noAnswerCount || 0} no atendio`
+            },
+            {
+              label: "Cartera activa",
+              secondary: `${safeSummary.appointments || 0} citas · ${safeSummary.sales || 0} ventas`,
+              tertiary: `${safeSummary.total || 0} registros · ${formatCoachCrmMoney(safeSummary.soldAmount || 0)}`
+            }
+          ]
+        : (safeSummary.topTelemarketers || []).map(item => ({
+            label: item.label || "Telemarketing",
+            secondary: `${item.sales || 0} ventas · ${formatCoachCrmMoney(item.soldAmount || 0)}`,
+            tertiary: `${item.appointments || 0} citas · ${item.total || 0} registros`
+          })),
+      isTelemarketingPortal ? "Tu pulso aparecera aqui conforme muevas la cartera." : "Todavia no hay telemarketing medible."
     );
     renderCoachMetricList(
       topRepresentatives,
@@ -4863,6 +4989,80 @@ function initCoachCrmWorkspace(user = null) {
       })),
       "Todavia no hay territorios medibles."
     );
+  };
+
+  const buildQuickCounts = records => {
+    const safeRecords = Array.isArray(records) ? records : [];
+
+    return {
+      all: safeRecords.length,
+      today: safeRecords.filter(
+        record => isCoachDateWithinToday(record.nextActionAt) || isCoachDateWithinToday(record.appointmentAt)
+      ).length,
+      follow_up: safeRecords.filter(record => ["seguimiento", "intentando"].includes(record.status)).length,
+      appointments: safeRecords.filter(record =>
+        ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"].includes(record.status)
+      ).length,
+      no_answer: safeRecords.filter(record => record.status === "no_atendio").length,
+      sales: safeRecords.filter(record => record.status === "venta").length
+    };
+  };
+
+  const renderQuickFilters = records => {
+    const counts = buildQuickCounts(records);
+
+    quickFilterButtons.forEach(button => {
+      const filterId = String(button.dataset.crmQuickFilter || "").trim();
+      button.classList.toggle("is-active", filterId === state.quickFilter);
+    });
+
+    document.querySelectorAll("[data-crm-quick-count]").forEach(node => {
+      const key = String(node.dataset.crmQuickCount || "").trim();
+      node.textContent = String(counts[key] || 0);
+    });
+  };
+
+  const matchesQuickFilter = (record, quickFilter) => {
+    switch (String(quickFilter || "").trim()) {
+      case "today":
+        return isCoachDateWithinToday(record.nextActionAt) || isCoachDateWithinToday(record.appointmentAt);
+      case "follow_up":
+        return ["seguimiento", "intentando"].includes(record.status);
+      case "appointments":
+        return ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"].includes(record.status);
+      case "no_answer":
+        return record.status === "no_atendio";
+      case "sales":
+        return record.status === "venta";
+      default:
+        return true;
+    }
+  };
+
+  const matchesSearchFilter = (record, searchTerm) => {
+    const safeSearch = normalizeCoachSearchText(searchTerm);
+
+    if (!safeSearch) {
+      return true;
+    }
+
+    const haystack = normalizeCoachSearchText(
+      [
+        record.leadName,
+        record.phone,
+        record.email,
+        record.city,
+        record.zipCode,
+        record.assignedTelemarketerName,
+        record.appointmentRepName,
+        record.lastNote,
+        record.briefHistory
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+
+    return haystack.includes(safeSearch);
   };
 
   const renderAssigneeOptions = () => {
@@ -4966,14 +5166,30 @@ function initCoachCrmWorkspace(user = null) {
   };
 
   const renderList = () => {
+    const visibleRecords = Array.isArray(state.visibleRecords) ? state.visibleRecords : [];
+
     if (!state.records.length) {
       recordList.innerHTML = '<div class="team-seat-empty">Todavia no hay registros en este CRM.</div>';
       return;
     }
 
-    recordList.innerHTML = state.records
+    if (!visibleRecords.length) {
+      recordList.innerHTML =
+        '<div class="team-seat-empty">No encontre filas con esos filtros. Prueba otra busqueda o limpia un filtro rapido.</div>';
+      return;
+    }
+
+    recordList.innerHTML = visibleRecords
       .map(record => {
         const isActive = record.id === state.activeRecordId;
+        const cityCopy = [record.city || "", record.zipCode ? `ZIP ${record.zipCode}` : ""].filter(Boolean).join(" · ");
+        const nextStepCopy = [
+          formatLeadNextActionLabel(record.nextAction || ""),
+          record.lastContactAt ? `Ultimo toque ${formatDateTimeShort(record.lastContactAt)}` : ""
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        const noteCopy = truncateCoachCrmCell(record.lastNote || record.briefHistory || "Sin nota reciente.", 92);
         return `
           <button
             type="button"
@@ -4989,14 +5205,54 @@ function initCoachCrmWorkspace(user = null) {
               <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
             </span>
             <span>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</span>
+            <span>
+              <strong>${escapeHtml(record.city || "Sin ciudad")}</strong>
+              <small>${escapeHtml(cityCopy || "Ubicacion pendiente")}</small>
+            </span>
             <span>${escapeHtml(record.assignedTelemarketerName || "Sin asignar")}</span>
             <span>${escapeHtml(record.appointmentRepName || "Sin asignar")}</span>
-            <span>${escapeHtml(formatLeadNextActionLabel(record.nextAction || ""))}</span>
+            <span>
+              <strong>${escapeHtml(formatLeadNextActionLabel(record.nextAction || ""))}</strong>
+              <small>${escapeHtml(nextStepCopy || "Sin siguiente paso")}</small>
+            </span>
             <span>${escapeHtml(record.nextActionAt ? formatDateTimeShort(record.nextActionAt) : "Sin fecha")}</span>
+            <span>
+              <strong>${escapeHtml(noteCopy)}</strong>
+              <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 74) || "Sin historial breve")}</small>
+            </span>
           </button>
         `;
       })
       .join("");
+  };
+
+  const applyClientFilters = async (preserveActive = true) => {
+    state.visibleRecords = state.records.filter(
+      record => matchesQuickFilter(record, state.quickFilter) && matchesSearchFilter(record, state.searchTerm)
+    );
+    renderQuickFilters(state.records);
+
+    const nextActiveId =
+      preserveActive && state.visibleRecords.some(item => item.id === state.activeRecordId)
+        ? state.activeRecordId
+        : state.visibleRecords[0]?.id || "";
+    const activeChanged = nextActiveId !== state.activeRecordId;
+    state.activeRecordId = nextActiveId;
+    renderList();
+
+    if (!nextActiveId) {
+      state.activeDetail = null;
+      renderDetail(null);
+      return;
+    }
+
+    if (activeChanged || !state.activeDetail?.record || state.activeDetail.record.id !== nextActiveId) {
+      await loadDetail(nextActiveId);
+    } else {
+      renderDetail(state.activeDetail);
+    }
+
+    renderList();
   };
 
   const buildQuery = () => {
@@ -5018,6 +5274,7 @@ function initCoachCrmWorkspace(user = null) {
       state.activeRecordId = "";
       state.activeDetail = null;
       renderDetail(null);
+      renderList();
       return;
     }
 
@@ -5025,6 +5282,7 @@ function initCoachCrmWorkspace(user = null) {
     state.activeRecordId = recordId;
     state.activeDetail = data || null;
     renderDetail(state.activeDetail);
+    renderList();
   };
 
   const loadWorkspace = async (preserveActive = true) => {
@@ -5035,25 +5293,12 @@ function initCoachCrmWorkspace(user = null) {
     state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
     setSummary(state.summary);
     renderAssigneeOptions();
-
-    const nextActiveId =
-      preserveActive && state.records.some(item => item.id === state.activeRecordId)
-        ? state.activeRecordId
-        : state.records[0]?.id || "";
-
-    state.activeRecordId = nextActiveId;
-    renderList();
-
-    if (nextActiveId) {
-      await loadDetail(nextActiveId);
-      renderList();
-    } else {
-      renderDetail(null);
-    }
+    await applyClientFilters(preserveActive);
   };
 
   if (!user) {
     setSummary(null);
+    renderQuickFilters([]);
     renderList();
     renderDetail(null);
     return;
@@ -5064,6 +5309,22 @@ function initCoachCrmWorkspace(user = null) {
       clearMessage(summaryFeedback);
       loadWorkspace(false).catch(error => {
         setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+      });
+    });
+  });
+
+  searchFilter?.addEventListener("input", () => {
+    state.searchTerm = String(searchFilter.value || "").trim();
+    applyClientFilters(true).catch(error => {
+      setMessage(summaryFeedback, error.message || "No pude aplicar la busqueda del CRM.", "error");
+    });
+  });
+
+  quickFilterButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      state.quickFilter = String(button.dataset.crmQuickFilter || "all").trim() || "all";
+      applyClientFilters(true).catch(error => {
+        setMessage(summaryFeedback, error.message || "No pude aplicar ese filtro rapido.", "error");
       });
     });
   });
