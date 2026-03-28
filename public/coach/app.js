@@ -4802,6 +4802,8 @@ function buildCoachAgendaCard(record = null) {
     .map(item => `<span class="agenda-meta-chip">${escapeHtml(item)}</span>`)
     .join("");
   const routeCopy = address || "Completa direccion en el CRM para usar mapa o copiar ruta.";
+  const noteCopy = record.lastNote || "Sin nota reciente.";
+  const historyCopy = record.briefHistory || "Sin historial breve todavia.";
 
   return `
     <article class="agenda-card">
@@ -4812,10 +4814,21 @@ function buildCoachAgendaCard(record = null) {
         </span>
       </div>
 
-      <div class="agenda-card-head">
-        <div>
+      <div class="agenda-card-head agenda-card-head-executive">
+        <div class="agenda-card-title-block">
+          <div class="agenda-card-label">Agenda ejecutiva</div>
           <h3>${escapeHtml(record.leadName || "Sin nombre")}</h3>
-          <p>${escapeHtml(record.briefHistory || "Sin historial breve todavia.")}</p>
+          <p>${escapeHtml(historyCopy)}</p>
+        </div>
+        <div class="agenda-card-side-kpis">
+          <div class="agenda-side-chip">
+            <strong>Origen</strong>
+            <span>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</span>
+          </div>
+          <div class="agenda-side-chip">
+            <strong>Responsable</strong>
+            <span>${escapeHtml(record.appointmentRepName || record.assignedTelemarketerName || record.generatedByName || "Sin asignar")}</span>
+          </div>
         </div>
       </div>
 
@@ -4823,15 +4836,16 @@ function buildCoachAgendaCard(record = null) {
         ${metaChips || '<span class="agenda-meta-chip">Sin datos extra todavia.</span>'}
       </div>
 
-      <div class="agenda-route-card">
-        <strong>Direccion de cita</strong>
-        <span>${escapeHtml(routeCopy)}</span>
-      </div>
-
-      <div class="territory-inline-list agenda-card-notes">
-        <div class="territory-inline-chip">
-          <strong>Nota reciente</strong>
-          <span>${escapeHtml(record.lastNote || "Sin nota reciente.")}</span>
+      <div class="agenda-card-grid">
+        <div class="agenda-route-card">
+          <strong>Direccion de cita</strong>
+          <span>${escapeHtml(routeCopy)}</span>
+        </div>
+        <div class="territory-inline-list agenda-card-notes">
+          <div class="territory-inline-chip agenda-note-chip">
+            <strong>Nota reciente</strong>
+            <span>${escapeHtml(noteCopy)}</span>
+          </div>
         </div>
       </div>
 
