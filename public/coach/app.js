@@ -5091,6 +5091,76 @@ function initCoachCrmWorkspace(user = null) {
     detailRepresentative.innerHTML = assignmentOptions;
   };
 
+  const crmStatusValues = [
+    "nuevo",
+    "intentando",
+    "no_atendio",
+    "seguimiento",
+    "cita_agendada",
+    "reagendada",
+    "ya_afuera",
+    "entro_a_casa",
+    "demo_hecha",
+    "venta",
+    "no_venta"
+  ];
+
+  const buildInlineStatusOptions = currentValue =>
+    crmStatusValues
+      .map(
+        value =>
+          `<option value="${escapeHtml(value)}"${value === currentValue ? " selected" : ""}>${escapeHtml(
+            formatCoachCrmStatusLabel(value)
+          )}</option>`
+      )
+      .join("");
+
+  const buildInlineNextActionOptions = currentValue =>
+    COACH_LEAD_NEXT_ACTION_OPTIONS.map(
+      option =>
+        `<option value="${escapeHtml(option.value)}"${option.value === currentValue ? " selected" : ""}>${escapeHtml(
+          option.label
+        )}</option>`
+    ).join("");
+
+  const buildInlineAssigneeOptions = currentValue =>
+    [`<option value="">Sin asignar</option>`]
+      .concat(
+        state.assignees.map(
+          item =>
+            `<option value="${escapeHtml(item.id || "")}"${item.id === currentValue ? " selected" : ""}>${escapeHtml(
+              [item.name || "Cuenta", item.relationLabel || ""].filter(Boolean).join(" · ")
+            )}</option>`
+        )
+      )
+      .join("");
+
+  const getInlineRowPayload = row => {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      status: row.querySelector("[data-crm-inline-status]")?.value || "nuevo",
+      assignedTelemarketerUserId: row.querySelector("[data-crm-inline-telemarketer]")?.value || "",
+      appointmentRepUserId: row.querySelector("[data-crm-inline-representative]")?.value || "",
+      nextAction: row.querySelector("[data-crm-inline-next-action]")?.value || "",
+      nextActionAt: (() => {
+        const raw = String(row.querySelector("[data-crm-inline-next-action-at]")?.value || "").trim();
+        return raw ? new Date(raw).toISOString() : "";
+      })(),
+      lastNote: row.querySelector("[data-crm-inline-note]")?.value || ""
+    };
+  };
+
+  const markInlineRowDirty = (row, dirty = true) => {
+    if (!row) {
+      return;
+    }
+
+    row.classList.toggle("is-dirty", dirty);
+  };
+
   const renderDetail = detail => {
     const record = detail?.record || null;
     const activities = Array.isArray(detail?.activities) ? detail.activities : [];
@@ -5183,22 +5253,18 @@ function initCoachCrmWorkspace(user = null) {
       .map(record => {
         const isActive = record.id === state.activeRecordId;
         const cityCopy = [record.city || "", record.zipCode ? `ZIP ${record.zipCode}` : ""].filter(Boolean).join(" · ");
-        const nextStepCopy = [
-          formatLeadNextActionLabel(record.nextAction || ""),
-          record.lastContactAt ? `Ultimo toque ${formatDateTimeShort(record.lastContactAt)}` : ""
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        const noteCopy = truncateCoachCrmCell(record.lastNote || record.briefHistory || "Sin nota reciente.", 92);
+        const notePlaceholder = truncateCoachCrmCell(record.lastNote || record.briefHistory || "", 92);
         return `
-          <button
-            type="button"
+          <article
             class="crm-grid-row${isActive ? " is-active" : ""}"
             data-crm-record-id="${escapeHtml(record.id || "")}"
+            data-crm-inline-row
           >
             <span class="crm-status-cell">
               <span class="crm-status-dot" data-tone="${escapeHtml(record.statusColor || "blue")}"></span>
-              <strong>${escapeHtml(formatCoachCrmStatusLabel(record.status))}</strong>
+              <select class="crm-inline-select" data-crm-inline-status>
+                ${buildInlineStatusOptions(record.status || "nuevo")}
+              </select>
             </span>
             <span>
               <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
@@ -5209,18 +5275,45 @@ function initCoachCrmWorkspace(user = null) {
               <strong>${escapeHtml(record.city || "Sin ciudad")}</strong>
               <small>${escapeHtml(cityCopy || "Ubicacion pendiente")}</small>
             </span>
-            <span>${escapeHtml(record.assignedTelemarketerName || "Sin asignar")}</span>
-            <span>${escapeHtml(record.appointmentRepName || "Sin asignar")}</span>
             <span>
-              <strong>${escapeHtml(formatLeadNextActionLabel(record.nextAction || ""))}</strong>
-              <small>${escapeHtml(nextStepCopy || "Sin siguiente paso")}</small>
+              <select class="crm-inline-select" data-crm-inline-telemarketer>
+                ${buildInlineAssigneeOptions(record.assignedTelemarketerUserId || "")}
+              </select>
             </span>
-            <span>${escapeHtml(record.nextActionAt ? formatDateTimeShort(record.nextActionAt) : "Sin fecha")}</span>
             <span>
-              <strong>${escapeHtml(noteCopy)}</strong>
+              <select class="crm-inline-select" data-crm-inline-representative>
+                ${buildInlineAssigneeOptions(record.appointmentRepUserId || "")}
+              </select>
+            </span>
+            <span>
+              <select class="crm-inline-select" data-crm-inline-next-action>
+                ${buildInlineNextActionOptions(record.nextAction || "")}
+              </select>
+              <small>${escapeHtml(record.lastContactAt ? `Ultimo toque ${formatDateTimeShort(record.lastContactAt)}` : "Sin toque reciente")}</small>
+            </span>
+            <span>
+              <input
+                class="crm-inline-input"
+                type="datetime-local"
+                value="${escapeHtml(formatDateTimeLocalValue(record.nextActionAt))}"
+                data-crm-inline-next-action-at
+              />
+            </span>
+            <span>
+              <input
+                class="crm-inline-input"
+                type="text"
+                value="${escapeHtml(record.lastNote || "")}"
+                placeholder="${escapeHtml(notePlaceholder || "Nota rapida")}"
+                data-crm-inline-note
+              />
               <small>${escapeHtml(truncateCoachCrmCell(record.briefHistory || "", 74) || "Sin historial breve")}</small>
             </span>
-          </button>
+            <span class="crm-inline-actions">
+              <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
+              <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
+            </span>
+          </article>
         `;
       })
       .join("");
@@ -5344,6 +5437,60 @@ function initCoachCrmWorkspace(user = null) {
   });
 
   recordList.addEventListener("click", event => {
+    const saveButton = event.target.closest("[data-crm-inline-save]");
+
+    if (saveButton) {
+      const row = saveButton.closest("[data-crm-inline-row]");
+      const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+
+      if (!recordId) {
+        return;
+      }
+
+      clearMessage(summaryFeedback);
+      setButtonLoading(saveButton, true, "Guardando...");
+
+      apiRequest(`/api/coach/crm/records/${encodeURIComponent(recordId)}`, {
+        method: "PATCH",
+        body: getInlineRowPayload(row)
+      })
+        .then(async () => {
+          markInlineRowDirty(row, false);
+          state.activeRecordId = recordId;
+          await loadWorkspace(true);
+          window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
+          setMessage(summaryFeedback, "Fila guardada en el CRM.", "success");
+        })
+        .catch(error => {
+          setMessage(summaryFeedback, error.message || "No pude guardar esa fila.", "error");
+        })
+        .finally(() => {
+          setButtonLoading(saveButton, false);
+        });
+      return;
+    }
+
+    const openButton = event.target.closest("[data-crm-inline-open]");
+
+    if (openButton) {
+      const row = openButton.closest("[data-crm-inline-row]");
+      const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+
+      if (!recordId) {
+        return;
+      }
+
+      clearMessage(detailFeedback);
+      loadDetail(recordId).catch(error => {
+        setMessage(detailFeedback, error.message || "No pude abrir ese registro.", "error");
+      });
+      return;
+    }
+
+    if (event.target.closest("select, input, textarea, button, a")) {
+      return;
+    }
+
     const button = event.target.closest("[data-crm-record-id]");
 
     if (!button) {
@@ -5354,6 +5501,39 @@ function initCoachCrmWorkspace(user = null) {
     loadDetail(String(button.getAttribute("data-crm-record-id") || "").trim()).catch(error => {
       setMessage(detailFeedback, error.message || "No pude abrir ese registro.", "error");
     });
+  });
+
+  recordList.addEventListener("input", event => {
+    const row = event.target.closest("[data-crm-inline-row]");
+
+    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at]")) {
+      return;
+    }
+
+    markInlineRowDirty(row, true);
+  });
+
+  recordList.addEventListener("change", event => {
+    const row = event.target.closest("[data-crm-inline-row]");
+
+    if (!row || !event.target.closest("[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action]")) {
+      return;
+    }
+
+    markInlineRowDirty(row, true);
+  });
+
+  recordList.addEventListener("keydown", event => {
+    const noteInput = event.target.closest("[data-crm-inline-note]");
+
+    if (!noteInput || event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    const row = noteInput.closest("[data-crm-inline-row]");
+    const saveButton = row?.querySelector("[data-crm-inline-save]");
+    saveButton?.click();
   });
 
   detailPanel.addEventListener("click", event => {
