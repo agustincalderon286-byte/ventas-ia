@@ -1564,6 +1564,10 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 .agenda-summary-card {
   position: relative;
   overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(232, 197, 123, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(15, 27, 42, 0.96), rgba(8, 16, 28, 0.94));
+  border-color: rgba(197, 228, 255, 0.14);
 }
 
 .agenda-card {
@@ -1571,10 +1575,13 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   padding: 20px;
   border-radius: 26px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
-    rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 36px rgba(8, 11, 22, 0.16);
+    radial-gradient(circle at top right, rgba(232, 197, 123, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(15, 27, 42, 0.96), rgba(8, 16, 28, 0.94)),
+    rgba(7, 18, 30, 0.86);
+  border: 1px solid rgba(197, 228, 255, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 197, 123, 0.05),
+    0 22px 46px rgba(4, 11, 19, 0.26);
 }
 
 .agenda-card::before {
@@ -1600,9 +1607,9 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   min-height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(255, 205, 120, 0.12);
-  border: 1px solid rgba(255, 205, 120, 0.2);
-  color: #ffe6a9;
+  background: rgba(232, 197, 123, 0.12);
+  border: 1px solid rgba(232, 197, 123, 0.22);
+  color: #fff0c7;
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -1619,7 +1626,7 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 
 .agenda-card-head p {
   margin-top: 8px;
-  color: var(--muted);
+  color: #bfd6e4;
   line-height: 1.6;
 }
 
@@ -1636,9 +1643,9 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--muted);
+  background: linear-gradient(180deg, rgba(9, 18, 31, 0.9), rgba(6, 14, 24, 0.82));
+  border: 1px solid rgba(197, 228, 255, 0.12);
+  color: #bfd6e4;
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -1649,8 +1656,8 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   margin-top: 16px;
   padding: 15px 16px;
   border-radius: 18px;
-  background: rgba(8, 11, 22, 0.34);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(9, 18, 31, 0.9), rgba(6, 14, 24, 0.82));
+  border: 1px solid rgba(197, 228, 255, 0.12);
 }
 
 .agenda-route-card strong,
@@ -1663,7 +1670,7 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 }
 
 .agenda-route-card span {
-  color: var(--muted);
+  color: #bfd6e4;
   line-height: 1.55;
 }
 
@@ -1676,7 +1683,7 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   gap: 10px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(197, 228, 255, 0.1);
 }
 
 .agenda-card-action-head {
@@ -1691,10 +1698,11 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 
 .agenda-card-action-head strong {
   font-size: 0.92rem;
+  color: #eef7ff;
 }
 
 .agenda-card-action-head span {
-  color: var(--muted);
+  color: #bfd6e4;
   font-size: 0.84rem;
   line-height: 1.5;
 }
@@ -1705,8 +1713,93 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 
 .agenda-card .nav-button,
 .agenda-card .secondary-button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
+  border-color: rgba(197, 228, 255, 0.16);
+  background: rgba(12, 23, 36, 0.8);
+}
+
+.agenda-card .nav-button:hover,
+.agenda-card .secondary-button:hover {
+  border-color: rgba(232, 197, 123, 0.28);
+  background: rgba(16, 29, 44, 0.94);
+}
+
+.agenda-card-head-executive {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.agenda-card-title-block {
+  display: grid;
+  gap: 10px;
+}
+
+.agenda-card-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  width: fit-content;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(197, 228, 255, 0.08);
+  border: 1px solid rgba(197, 228, 255, 0.14);
+  color: #a7d8ef;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.agenda-card-title-block h3 {
+  font-family: "Sora", sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+}
+
+.agenda-card-side-kpis {
+  display: grid;
+  gap: 10px;
+}
+
+.agenda-side-chip {
+  display: grid;
+  gap: 5px;
+  padding: 14px 15px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(17, 32, 49, 0.88), rgba(9, 18, 30, 0.9));
+  border: 1px solid rgba(197, 228, 255, 0.12);
+}
+
+.agenda-side-chip strong {
+  color: #f6dfaa;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agenda-side-chip span {
+  color: #eef7ff;
+  line-height: 1.45;
+}
+
+.agenda-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.agenda-note-chip {
+  min-height: 100%;
+  background: linear-gradient(180deg, rgba(17, 32, 49, 0.88), rgba(9, 18, 30, 0.9));
+  border-color: rgba(197, 228, 255, 0.12);
+}
+
+.agenda-note-chip strong {
+  color: #f6dfaa;
 }
 
 @media (max-width: 1080px) {
@@ -1732,8 +1825,10 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
     display: none;
   }
 
-  .agenda-card-head {
-    flex-direction: column;
+  .agenda-card-head,
+  .agenda-card-head-executive,
+  .agenda-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 
