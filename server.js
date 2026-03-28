@@ -14706,7 +14706,15 @@ app.get("/api/coach/crm/records", async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error("Error cargando CRM del Coach:", error.message);
+    console.error("Error cargando CRM del Coach:", error.stack || error.message);
+
+    if (String(req.query?.debug || "").trim() === "1" && coachTieneAccesoTotal(auth.user)) {
+      return res.status(500).json({
+        error: "No pude cargar el CRM en este momento.",
+        detail: error?.message || "Error desconocido"
+      });
+    }
+
     responderCoachError(res, 500, "No pude cargar el CRM en este momento.");
   }
 });
@@ -14743,7 +14751,15 @@ app.get("/api/coach/agenda", async (req, res) => {
     const data = await obtenerCoachAgendaWorkspace(auth.user);
     res.json(data);
   } catch (error) {
-    console.error("Error cargando agenda del Coach:", error.message);
+    console.error("Error cargando agenda del Coach:", error.stack || error.message);
+
+    if (String(req.query?.debug || "").trim() === "1" && coachTieneAccesoTotal(auth.user)) {
+      return res.status(500).json({
+        error: "No pude cargar la agenda en este momento.",
+        detail: error?.message || "Error desconocido"
+      });
+    }
+
     responderCoachError(res, 500, "No pude cargar la agenda en este momento.");
   }
 });
