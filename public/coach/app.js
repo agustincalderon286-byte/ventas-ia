@@ -4686,6 +4686,10 @@ function buildCoachAgendaCard(record = null) {
   }
 
   const address = formatCoachAgendaAddress(record);
+  const timeCopy = record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora";
+  const phoneCopy = record.phone ? formatLeadPhone(record.phone) : "";
+  const sourceCopy = formatCoachCrmSourceLabel(record.sourceType);
+  const repCopy = record.appointmentRepName || record.assignedTelemarketerName || "";
   const primaryActions = [
     record.phoneHref
       ? `<a class="secondary-button" href="tel:${escapeHtml(record.phoneHref)}">Llamar</a>`
@@ -4724,57 +4728,80 @@ function buildCoachAgendaCard(record = null) {
     )
     .join("");
 
-  const meta = [
-    record.phone ? formatLeadPhone(record.phone) : "",
-    formatCoachCrmSourceLabel(record.sourceType),
-    record.appointmentRepName || record.assignedTelemarketerName || "",
-    address
-  ]
+  const metaChips = [phoneCopy, sourceCopy, repCopy]
     .filter(Boolean)
-    .join(" · ");
+    .map(item => `<span class="agenda-meta-chip">${escapeHtml(item)}</span>`)
+    .join("");
+  const routeCopy = address || "Completa direccion en el CRM para usar mapa o copiar ruta.";
 
   return `
     <article class="agenda-card">
-      <div class="agenda-card-head">
-        <div>
-          <div class="eyebrow">${escapeHtml(record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora")}</div>
-          <h3>${escapeHtml(record.leadName || "Sin nombre")}</h3>
-          <p>${escapeHtml(meta || "Sin datos extra todavia.")}</p>
-        </div>
+      <div class="agenda-card-topline">
+        <span class="agenda-time-pill">${escapeHtml(timeCopy)}</span>
         <span class="team-seat-status" data-state="${escapeHtml(record.statusColor || "blue")}">
           ${escapeHtml(formatCoachCrmStatusLabel(record.status))}
         </span>
       </div>
 
-      <div class="territory-inline-list">
-        <div class="territory-inline-chip">
-          <strong>Historial breve</strong>
-          <span>${escapeHtml(record.briefHistory || "Sin historial breve todavia.")}</span>
+      <div class="agenda-card-head">
+        <div>
+          <h3>${escapeHtml(record.leadName || "Sin nombre")}</h3>
+          <p>${escapeHtml(record.briefHistory || "Sin historial breve todavia.")}</p>
         </div>
+      </div>
+
+      <div class="agenda-card-meta-row">
+        ${metaChips || '<span class="agenda-meta-chip">Sin datos extra todavia.</span>'}
+      </div>
+
+      <div class="agenda-route-card">
+        <strong>Direccion de cita</strong>
+        <span>${escapeHtml(routeCopy)}</span>
+      </div>
+
+      <div class="territory-inline-list agenda-card-notes">
         <div class="territory-inline-chip">
           <strong>Nota reciente</strong>
           <span>${escapeHtml(record.lastNote || "Sin nota reciente.")}</span>
         </div>
       </div>
 
-      <div class="dashboard-actions compact-top agenda-card-actions">
-        ${primaryActions || '<span class="mini-note">Completa telefono o direccion en el CRM para usar llamadas y mapa.</span>'}
+      <div class="agenda-card-action-block">
+        <div class="agenda-card-action-head">
+          <strong>Contacto y ruta</strong>
+          <span>Llama, abre mapa o copia direccion antes de llegar.</span>
+        </div>
+        <div class="dashboard-actions compact-top agenda-card-actions">
+          ${primaryActions || '<span class="mini-note">Completa telefono o direccion en el CRM para usar llamadas y mapa.</span>'}
+        </div>
       </div>
 
-      <div class="dashboard-actions compact-top agenda-card-actions">
-        <button type="button" class="secondary-button" data-agenda-open-tool="survey" data-agenda-record-id="${escapeHtml(
-          record.id
-        )}">Encuesta</button>
-        <button type="button" class="nav-button" data-agenda-open-tool="program414" data-agenda-record-id="${escapeHtml(
-          record.id
-        )}">4 en 14</button>
-        <button type="button" class="nav-button" data-agenda-open-tool="close" data-agenda-record-id="${escapeHtml(
-          record.id
-        )}">Cierre</button>
+      <div class="agenda-card-action-block">
+        <div class="agenda-card-action-head">
+          <strong>Herramientas de visita</strong>
+          <span>Abre la herramienta correcta sin soltar la cita.</span>
+        </div>
+        <div class="dashboard-actions compact-top agenda-card-actions">
+          <button type="button" class="secondary-button" data-agenda-open-tool="survey" data-agenda-record-id="${escapeHtml(
+            record.id
+          )}">Encuesta</button>
+          <button type="button" class="nav-button" data-agenda-open-tool="program414" data-agenda-record-id="${escapeHtml(
+            record.id
+          )}">4 en 14</button>
+          <button type="button" class="nav-button" data-agenda-open-tool="close" data-agenda-record-id="${escapeHtml(
+            record.id
+          )}">Cierre</button>
+        </div>
       </div>
 
-      <div class="dashboard-actions compact-top agenda-card-actions">
-        ${quickActions}
+      <div class="agenda-card-action-block">
+        <div class="agenda-card-action-head">
+          <strong>Resultado rapido</strong>
+          <span>Mueve el estado de la cita y regresa el resultado al CRM.</span>
+        </div>
+        <div class="dashboard-actions compact-top agenda-card-actions">
+          ${quickActions}
+        </div>
       </div>
     </article>
   `;

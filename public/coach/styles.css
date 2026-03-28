@@ -1542,18 +1542,56 @@ img {
   margin-top: 18px;
 }
 
+.agenda-stage-card,
+.agenda-summary-card {
+  position: relative;
+  overflow: hidden;
+}
+
 .agenda-card {
+  position: relative;
   padding: 20px;
   border-radius: 26px;
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 36px rgba(8, 11, 22, 0.16);
+}
+
+.agenda-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 26px 0 0 26px;
+  background: linear-gradient(180deg, rgba(255, 205, 120, 0.9), rgba(120, 182, 255, 0.65));
+}
+
+.agenda-card-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.agenda-time-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 205, 120, 0.12);
+  border: 1px solid rgba(255, 205, 120, 0.2);
+  color: #ffe6a9;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .agenda-card-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: flex-start;
+  display: grid;
+  gap: 10px;
 }
 
 .agenda-card-head h3,
@@ -1565,6 +1603,82 @@ img {
   margin-top: 8px;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.agenda-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.agenda-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.agenda-route-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 15px 16px;
+  border-radius: 18px;
+  background: rgba(8, 11, 22, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agenda-route-card strong,
+.agenda-route-card span {
+  display: block;
+}
+
+.agenda-route-card strong {
+  font-size: 0.94rem;
+}
+
+.agenda-route-card span {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.agenda-card-notes {
+  margin-top: 16px;
+}
+
+.agenda-card-action-block {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agenda-card-action-head {
+  display: grid;
+  gap: 4px;
+}
+
+.agenda-card-action-head strong,
+.agenda-card-action-head span {
+  display: block;
+}
+
+.agenda-card-action-head strong {
+  font-size: 0.92rem;
+}
+
+.agenda-card-action-head span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 
 .agenda-card-actions {
@@ -5064,6 +5178,36 @@ html[data-coach-portal-mode="telemarketing"] .crm-grid-row.is-dirty {
   box-shadow:
     inset 0 0 0 1px rgba(122, 215, 255, 0.2),
     inset 0 0 18px rgba(122, 215, 255, 0.06);
+}
+
+html[data-coach-portal-mode="telemarketing"] .agenda-card {
+  background:
+    linear-gradient(180deg, rgba(10, 24, 38, 0.92), rgba(5, 13, 23, 0.92)),
+    rgba(7, 18, 30, 0.82);
+  border-color: rgba(122, 215, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(122, 215, 255, 0.04),
+    0 18px 36px rgba(4, 11, 19, 0.22);
+}
+
+html[data-coach-portal-mode="telemarketing"] .agenda-card::before {
+  background: linear-gradient(180deg, rgba(122, 215, 255, 0.94), rgba(61, 224, 160, 0.72));
+}
+
+html[data-coach-portal-mode="telemarketing"] .agenda-time-pill {
+  background: rgba(122, 215, 255, 0.12);
+  border-color: rgba(122, 215, 255, 0.18);
+  color: #dff7ff;
+}
+
+html[data-coach-portal-mode="telemarketing"] .agenda-meta-chip,
+html[data-coach-portal-mode="telemarketing"] .agenda-route-card {
+  border-color: rgba(122, 215, 255, 0.12);
+  background: rgba(6, 16, 27, 0.76);
+}
+
+html[data-coach-portal-mode="telemarketing"] .agenda-card-action-block {
+  border-top-color: rgba(122, 215, 255, 0.1);
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-status-dot {
