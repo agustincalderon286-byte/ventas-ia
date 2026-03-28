@@ -121,6 +121,14 @@
               <button
                 type="button"
                 class="coach-workspace-tab"
+                data-coach-workspace-tab="crm"
+                aria-selected="false"
+              >
+                CRM
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
                 data-coach-workspace-tab="mensajes"
                 aria-selected="false"
               >
@@ -159,6 +167,248 @@
               Cambia de lado segun el momento: presentacion y cierre, o calle y prospeccion.
             </p>
           </div>
+
+          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+            <div class="eyebrow">CRM operativo</div>
+            <h3>Seguimiento nativo del equipo</h3>
+            <p>
+              Este panel empieza a reemplazar el trabajo de Sheets con una vista interna de leads, 4 en 14 y
+              reclutamiento para dar seguimiento sin salir del Coach.
+            </p>
+
+            <div class="insight-grid">
+              <div class="mini-stat">
+                <strong data-crm-total>0</strong>
+                <span>Registros</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-pending-today>0</strong>
+                <span>Hoy</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-appointments>0</strong>
+                <span>Citas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-sales>0</strong>
+                <span>Ventas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-source-leads>0</strong>
+                <span>Leads</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-source-program>0</strong>
+                <span>4 en 14</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-source-recruitment>0</strong>
+                <span>Reclutamiento</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-crm-sales-amount>$0</strong>
+                <span>Vendido</span>
+              </div>
+            </div>
+
+            <div class="form-result" data-crm-feedback></div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+            <div class="eyebrow">Vista operativa</div>
+            <h3>Filtra y abre filas del CRM</h3>
+            <p>
+              Usa filtros simples y toca una fila para abrir su detalle. Esta primera fase ya respeta tus leads,
+              referidos 4 en 14 y aplicaciones de trabajo.
+            </p>
+
+            <div class="crm-toolbar">
+              <label>
+                Fuente
+                <select data-crm-source-filter>
+                  <option value="">Todo</option>
+                  <option value="lead">Leads</option>
+                  <option value="programa_4_en_14">4 en 14</option>
+                  <option value="reclutamiento">Reclutamiento</option>
+                </select>
+              </label>
+              <label>
+                Estado
+                <select data-crm-status-filter>
+                  <option value="">Todos</option>
+                  <option value="nuevo">Nuevo</option>
+                  <option value="intentando">Intentando</option>
+                  <option value="no_atendio">No atendio</option>
+                  <option value="seguimiento">Seguimiento</option>
+                  <option value="cita_agendada">Cita agendada</option>
+                  <option value="reagendada">Reagendada</option>
+                  <option value="ya_afuera">Ya afuera</option>
+                  <option value="entro_a_casa">Entro a casa</option>
+                  <option value="demo_hecha">Demo hecha</option>
+                  <option value="venta">Venta</option>
+                  <option value="no_venta">No venta</option>
+                </select>
+              </label>
+              <label>
+                Asignado
+                <select data-crm-assignee-filter>
+                  <option value="">Todos</option>
+                </select>
+              </label>
+              <div class="dashboard-actions compact-top">
+                <button type="button" class="nav-button" data-crm-refresh>Actualizar</button>
+              </div>
+            </div>
+
+            <div class="crm-grid-wrap">
+              <div class="crm-grid-head">
+                <span>Estado</span>
+                <span>Nombre</span>
+                <span>Fuente</span>
+                <span>Telemarketing</span>
+                <span>Representante</span>
+                <span>Proxima accion</span>
+                <span>Seguimiento</span>
+              </div>
+              <div class="crm-grid-list" data-crm-record-list>
+                <div class="team-seat-empty">Todavia no hay registros en este CRM.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="crm" hidden>
+            <div class="eyebrow">Detalle</div>
+            <h3>Editar seguimiento</h3>
+            <p>
+              Cuando abras una fila aqui podras cambiar estado, fecha de seguimiento, asignaciones y notas sin perder
+              el historial del origen.
+            </p>
+
+            <div class="team-seat-empty" data-crm-detail-empty>
+              Selecciona una fila del CRM para abrir su detalle.
+            </div>
+
+            <div class="territory-card crm-detail-panel" data-crm-detail-panel hidden>
+              <div class="territory-card-head">
+                <div>
+                  <div class="eyebrow" data-crm-detail-source>CRM</div>
+                  <h3 data-crm-detail-name>Sin seleccion</h3>
+                  <p data-crm-detail-meta>Abre una fila para trabajarla.</p>
+                </div>
+                <span class="team-seat-status" data-crm-detail-status data-state="active">Activo</span>
+              </div>
+
+              <div class="territory-inline-list">
+                <div class="territory-inline-chip">
+                  <strong>Historial breve</strong>
+                  <span data-crm-detail-history>Sin historial breve todavia.</span>
+                </div>
+                <div class="territory-inline-chip">
+                  <strong>Actividad reciente</strong>
+                  <span data-crm-detail-last-note>Sin nota reciente.</span>
+                </div>
+              </div>
+
+              <div class="dashboard-actions compact-top">
+                <a href="#" class="secondary-button" data-crm-detail-call hidden>Llamar</a>
+                <a href="#" class="nav-button" data-crm-detail-email hidden>Correo</a>
+              </div>
+
+              <form class="coach-form" data-crm-detail-form>
+                <label>
+                  Estado
+                  <select name="status" data-crm-detail-status-input>
+                    <option value="nuevo">Nuevo</option>
+                    <option value="intentando">Intentando</option>
+                    <option value="no_atendio">No atendio</option>
+                    <option value="seguimiento">Seguimiento</option>
+                    <option value="cita_agendada">Cita agendada</option>
+                    <option value="reagendada">Reagendada</option>
+                    <option value="ya_afuera">Ya afuera</option>
+                    <option value="entro_a_casa">Entro a casa</option>
+                    <option value="demo_hecha">Demo hecha</option>
+                    <option value="venta">Venta</option>
+                    <option value="no_venta">No venta</option>
+                  </select>
+                </label>
+
+                <label>
+                  Proxima accion
+                  <select name="nextAction" data-crm-detail-next-action></select>
+                </label>
+
+                <label>
+                  Seguimiento
+                  <input type="datetime-local" name="nextActionAt" data-crm-detail-next-action-at />
+                </label>
+
+                <label>
+                  Telemarketer
+                  <select name="assignedTelemarketerUserId" data-crm-detail-telemarketer></select>
+                </label>
+
+                <label>
+                  Representante
+                  <select name="appointmentRepUserId" data-crm-detail-representative></select>
+                </label>
+
+                <label>
+                  Historial breve
+                  <textarea
+                    name="briefHistory"
+                    rows="3"
+                    maxlength="320"
+                    placeholder="Resumen corto de la casa, lo que ya se trabajo o lo que sigue."
+                    data-crm-detail-history-input
+                  ></textarea>
+                </label>
+
+                <label>
+                  Notas privadas
+                  <textarea
+                    name="privateNotes"
+                    rows="4"
+                    maxlength="1200"
+                    placeholder="Notas internas del CRM para telemarketing y seguimiento."
+                    data-crm-detail-private-notes
+                  ></textarea>
+                </label>
+
+                <label>
+                  Nota rapida
+                  <input
+                    type="text"
+                    name="lastNote"
+                    maxlength="240"
+                    placeholder="Ej. pide llamada despues de las 6 pm o reagendar para jueves."
+                    data-crm-detail-last-note-input
+                  />
+                </label>
+
+                <label>
+                  Venta $
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="saleAmount"
+                    placeholder="0.00"
+                    data-crm-detail-sale-amount
+                  />
+                </label>
+
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-crm-detail-save>Guardar seguimiento</button>
+                </div>
+
+                <div class="form-result" data-crm-detail-feedback></div>
+              </form>
+
+              <div class="territory-result-list" data-crm-activity-list>
+                <div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>
+              </div>
+            </div>
+          </article>
 
           <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
             <div class="eyebrow">Centro interno</div>

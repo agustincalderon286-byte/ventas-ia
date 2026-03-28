@@ -145,6 +145,24 @@ const COACH_LEAD_NEXT_ACTION_OPTIONS = [
   { value: "seguimiento", label: "Dar seguimiento" },
   { value: "correo", label: "Mandar correo" }
 ];
+const COACH_CRM_SOURCE_LABELS = {
+  lead: "Lead",
+  programa_4_en_14: "4 en 14",
+  reclutamiento: "Reclutamiento"
+};
+const COACH_CRM_STATUS_LABELS = {
+  nuevo: "Nuevo",
+  intentando: "Intentando",
+  no_atendio: "No atendio",
+  seguimiento: "Seguimiento",
+  cita_agendada: "Cita agendada",
+  reagendada: "Reagendada",
+  ya_afuera: "Ya afuera",
+  entro_a_casa: "Entro a casa",
+  demo_hecha: "Demo hecha",
+  venta: "Venta",
+  no_venta: "No venta"
+};
 const COACH_PLAN_CONFIG = {
   trial: {
     name: "Prueba gratis de 7 dias",
@@ -682,6 +700,33 @@ function formatLeadStatusLabel(status = "") {
 
 function formatLeadSourceLabel(source = "") {
   return COACH_LEAD_SOURCE_LABELS[source] || "Captura manual";
+}
+
+function formatCoachCrmSourceLabel(sourceType = "") {
+  return COACH_CRM_SOURCE_LABELS[sourceType] || "Lead";
+}
+
+function formatCoachCrmStatusLabel(status = "") {
+  return COACH_CRM_STATUS_LABELS[status] || "Nuevo";
+}
+
+function formatDateTimeLocalValue(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function buildAbsoluteAppUrl(pathOrUrl = "") {
@@ -4163,6 +4208,358 @@ function initCoachLeadWorkspace() {
   printButton?.addEventListener("click", printLeads);
 }
 
+function formatCoachCrmMoney(value = 0) {
+  const amount = Number(value || 0);
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2
+  });
+}
+
+function initCoachCrmWorkspace(user = null) {
+  const summaryFeedback = document.querySelector("[data-crm-feedback]");
+  const sourceFilter = document.querySelector("[data-crm-source-filter]");
+  const statusFilter = document.querySelector("[data-crm-status-filter]");
+  const assigneeFilter = document.querySelector("[data-crm-assignee-filter]");
+  const refreshButton = document.querySelector("[data-crm-refresh]");
+  const recordList = document.querySelector("[data-crm-record-list]");
+  const detailEmpty = document.querySelector("[data-crm-detail-empty]");
+  const detailPanel = document.querySelector("[data-crm-detail-panel]");
+  const detailSource = document.querySelector("[data-crm-detail-source]");
+  const detailName = document.querySelector("[data-crm-detail-name]");
+  const detailMeta = document.querySelector("[data-crm-detail-meta]");
+  const detailStatus = document.querySelector("[data-crm-detail-status]");
+  const detailHistory = document.querySelector("[data-crm-detail-history]");
+  const detailLastNote = document.querySelector("[data-crm-detail-last-note]");
+  const detailCall = document.querySelector("[data-crm-detail-call]");
+  const detailEmail = document.querySelector("[data-crm-detail-email]");
+  const detailForm = document.querySelector("[data-crm-detail-form]");
+  const detailStatusInput = document.querySelector("[data-crm-detail-status-input]");
+  const detailNextAction = document.querySelector("[data-crm-detail-next-action]");
+  const detailNextActionAt = document.querySelector("[data-crm-detail-next-action-at]");
+  const detailTelemarketer = document.querySelector("[data-crm-detail-telemarketer]");
+  const detailRepresentative = document.querySelector("[data-crm-detail-representative]");
+  const detailHistoryInput = document.querySelector("[data-crm-detail-history-input]");
+  const detailPrivateNotes = document.querySelector("[data-crm-detail-private-notes]");
+  const detailLastNoteInput = document.querySelector("[data-crm-detail-last-note-input]");
+  const detailSaleAmount = document.querySelector("[data-crm-detail-sale-amount]");
+  const detailSave = document.querySelector("[data-crm-detail-save]");
+  const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
+  const activityList = document.querySelector("[data-crm-activity-list]");
+
+  if (!summaryFeedback || !sourceFilter || !statusFilter || !assigneeFilter || !recordList || !detailPanel || !detailForm) {
+    return;
+  }
+
+  const state = {
+    summary: null,
+    records: [],
+    assignees: [],
+    activeRecordId: "",
+    activeDetail: null
+  };
+
+  const setSummary = summary => {
+    const safeSummary = summary || {};
+    document.querySelectorAll("[data-crm-total]").forEach(node => {
+      node.textContent = String(safeSummary.total || 0);
+    });
+    document.querySelectorAll("[data-crm-pending-today]").forEach(node => {
+      node.textContent = String(safeSummary.pendingToday || 0);
+    });
+    document.querySelectorAll("[data-crm-appointments]").forEach(node => {
+      node.textContent = String(safeSummary.appointments || 0);
+    });
+    document.querySelectorAll("[data-crm-sales]").forEach(node => {
+      node.textContent = String(safeSummary.sales || 0);
+    });
+    document.querySelectorAll("[data-crm-source-leads]").forEach(node => {
+      node.textContent = String(safeSummary.bySource?.lead || 0);
+    });
+    document.querySelectorAll("[data-crm-source-program]").forEach(node => {
+      node.textContent = String(safeSummary.bySource?.programa_4_en_14 || 0);
+    });
+    document.querySelectorAll("[data-crm-source-recruitment]").forEach(node => {
+      node.textContent = String(safeSummary.bySource?.reclutamiento || 0);
+    });
+    document.querySelectorAll("[data-crm-sales-amount]").forEach(node => {
+      node.textContent = formatCoachCrmMoney(safeSummary.soldAmount || 0);
+    });
+  };
+
+  const renderAssigneeOptions = () => {
+    const options = [`<option value="">Todos</option>`]
+      .concat(
+        state.assignees.map(
+          item => `<option value="${escapeHtml(item.id || "")}">${escapeHtml(item.name || "Cuenta")}</option>`
+        )
+      )
+      .join("");
+    const filterValue = String(assigneeFilter.value || "").trim();
+    assigneeFilter.innerHTML = options;
+    assigneeFilter.value = state.assignees.some(item => item.id === filterValue) ? filterValue : "";
+
+    const assignmentOptions = [`<option value="">Sin asignar</option>`]
+      .concat(
+        state.assignees.map(
+          item =>
+            `<option value="${escapeHtml(item.id || "")}">${escapeHtml(
+              [item.name || "Cuenta", item.relationLabel || ""].filter(Boolean).join(" · ")
+            )}</option>`
+        )
+      )
+      .join("");
+    detailTelemarketer.innerHTML = assignmentOptions;
+    detailRepresentative.innerHTML = assignmentOptions;
+  };
+
+  const renderDetail = detail => {
+    const record = detail?.record || null;
+    const activities = Array.isArray(detail?.activities) ? detail.activities : [];
+
+    if (!record) {
+      detailPanel.hidden = true;
+      detailEmpty.hidden = false;
+      detailName.textContent = "Sin seleccion";
+      detailMeta.textContent = "Abre una fila para trabajarla.";
+      detailHistory.textContent = "Sin historial breve todavia.";
+      detailLastNote.textContent = "Sin nota reciente.";
+      activityList.innerHTML = '<div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>';
+      return;
+    }
+
+    detailPanel.hidden = false;
+    detailEmpty.hidden = true;
+    detailSource.textContent = formatCoachCrmSourceLabel(record.sourceType);
+    detailName.textContent = record.leadName || "Registro CRM";
+    detailMeta.textContent = [
+      record.phone ? formatLeadPhone(record.phone) : "",
+      record.email || "",
+      record.city || "",
+      record.zipCode ? `ZIP ${record.zipCode}` : ""
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    detailStatus.textContent = formatCoachCrmStatusLabel(record.status);
+    detailStatus.dataset.state = record.statusColor || "blue";
+    detailHistory.textContent = record.briefHistory || "Sin historial breve todavia.";
+    detailLastNote.textContent = record.lastNote || "Sin nota reciente.";
+
+    if (detailCall) {
+      const phoneHref = normalizeLeadPhone(record.phone || "");
+      detailCall.hidden = !phoneHref;
+      detailCall.href = phoneHref ? `tel:+1${phoneHref}` : "#";
+    }
+
+    if (detailEmail) {
+      detailEmail.hidden = !record.email;
+      detailEmail.href = record.email ? `mailto:${encodeURIComponent(record.email)}` : "#";
+    }
+
+    detailStatusInput.value = record.status || "nuevo";
+    detailNextAction.innerHTML = COACH_LEAD_NEXT_ACTION_OPTIONS.map(
+      option => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`
+    ).join("");
+    detailNextAction.value = record.nextAction || "";
+    detailNextActionAt.value = formatDateTimeLocalValue(record.nextActionAt);
+    detailTelemarketer.value = record.assignedTelemarketerUserId || "";
+    detailRepresentative.value = record.appointmentRepUserId || "";
+    detailHistoryInput.value = record.briefHistory || "";
+    detailPrivateNotes.value = record.privateNotes || "";
+    detailLastNoteInput.value = "";
+    detailSaleAmount.value = record.saleAmount ? String(record.saleAmount) : "";
+
+    activityList.innerHTML = activities.length
+      ? activities
+          .map(
+            item => `
+              <article class="territory-result-card">
+                <strong>${escapeHtml(item.actorName || "Coach")}</strong>
+                <span>${escapeHtml(formatDateTimeShort(item.createdAt))}</span>
+                <p>${escapeHtml(item.body || "")}</p>
+              </article>
+            `
+          )
+          .join("")
+      : '<div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>';
+  };
+
+  const renderList = () => {
+    if (!state.records.length) {
+      recordList.innerHTML = '<div class="team-seat-empty">Todavia no hay registros en este CRM.</div>';
+      return;
+    }
+
+    recordList.innerHTML = state.records
+      .map(record => {
+        const isActive = record.id === state.activeRecordId;
+        return `
+          <button
+            type="button"
+            class="crm-grid-row${isActive ? " is-active" : ""}"
+            data-crm-record-id="${escapeHtml(record.id || "")}"
+          >
+            <span class="crm-status-cell">
+              <span class="crm-status-dot" data-tone="${escapeHtml(record.statusColor || "blue")}"></span>
+              <strong>${escapeHtml(formatCoachCrmStatusLabel(record.status))}</strong>
+            </span>
+            <span>
+              <strong>${escapeHtml(record.leadName || "Sin nombre")}</strong>
+              <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
+            </span>
+            <span>${escapeHtml(formatCoachCrmSourceLabel(record.sourceType))}</span>
+            <span>${escapeHtml(record.assignedTelemarketerName || "Sin asignar")}</span>
+            <span>${escapeHtml(record.appointmentRepName || "Sin asignar")}</span>
+            <span>${escapeHtml(formatLeadNextActionLabel(record.nextAction || ""))}</span>
+            <span>${escapeHtml(record.nextActionAt ? formatDateTimeShort(record.nextActionAt) : "Sin fecha")}</span>
+          </button>
+        `;
+      })
+      .join("");
+  };
+
+  const buildQuery = () => {
+    const params = new URLSearchParams();
+    if (sourceFilter.value) {
+      params.set("sourceType", sourceFilter.value);
+    }
+    if (statusFilter.value) {
+      params.set("status", statusFilter.value);
+    }
+    if (assigneeFilter.value) {
+      params.set("assignedToUserId", assigneeFilter.value);
+    }
+    return params.toString();
+  };
+
+  const loadDetail = async recordId => {
+    if (!recordId) {
+      state.activeRecordId = "";
+      state.activeDetail = null;
+      renderDetail(null);
+      return;
+    }
+
+    const data = await apiRequest(`/api/coach/crm/records/${encodeURIComponent(recordId)}`);
+    state.activeRecordId = recordId;
+    state.activeDetail = data || null;
+    renderDetail(state.activeDetail);
+  };
+
+  const loadWorkspace = async (preserveActive = true) => {
+    const query = buildQuery();
+    const data = await apiRequest(`/api/coach/crm/records${query ? `?${query}` : ""}`);
+    state.summary = data.summary || null;
+    state.records = Array.isArray(data.records) ? data.records : [];
+    state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
+    setSummary(state.summary);
+    renderAssigneeOptions();
+
+    const nextActiveId =
+      preserveActive && state.records.some(item => item.id === state.activeRecordId)
+        ? state.activeRecordId
+        : state.records[0]?.id || "";
+
+    state.activeRecordId = nextActiveId;
+    renderList();
+
+    if (nextActiveId) {
+      await loadDetail(nextActiveId);
+      renderList();
+    } else {
+      renderDetail(null);
+    }
+  };
+
+  if (!user) {
+    setSummary(null);
+    renderList();
+    renderDetail(null);
+    return;
+  }
+
+  [sourceFilter, statusFilter, assigneeFilter].forEach(select => {
+    select?.addEventListener("change", () => {
+      clearMessage(summaryFeedback);
+      loadWorkspace(false).catch(error => {
+        setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+      });
+    });
+  });
+
+  refreshButton?.addEventListener("click", async () => {
+    clearMessage(summaryFeedback);
+    setButtonLoading(refreshButton, true, "Actualizando...");
+
+    try {
+      await loadWorkspace(true);
+      setMessage(summaryFeedback, "CRM actualizado.", "success");
+    } catch (error) {
+      setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+    } finally {
+      setButtonLoading(refreshButton, false);
+    }
+  });
+
+  recordList.addEventListener("click", event => {
+    const button = event.target.closest("[data-crm-record-id]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(detailFeedback);
+    loadDetail(String(button.getAttribute("data-crm-record-id") || "").trim()).catch(error => {
+      setMessage(detailFeedback, error.message || "No pude abrir ese registro.", "error");
+    });
+  });
+
+  detailForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(detailFeedback);
+
+    if (!state.activeRecordId) {
+      setMessage(detailFeedback, "Selecciona una fila antes de guardar.", "error");
+      return;
+    }
+
+    setButtonLoading(detailSave, true, "Guardando...");
+
+    try {
+      const formData = new FormData(detailForm);
+      const nextActionAtValue = String(formData.get("nextActionAt") || "").trim();
+      const payload = {
+        status: formData.get("status"),
+        nextAction: formData.get("nextAction"),
+        nextActionAt: nextActionAtValue ? new Date(nextActionAtValue).toISOString() : "",
+        assignedTelemarketerUserId: formData.get("assignedTelemarketerUserId"),
+        appointmentRepUserId: formData.get("appointmentRepUserId"),
+        briefHistory: formData.get("briefHistory"),
+        privateNotes: formData.get("privateNotes"),
+        lastNote: formData.get("lastNote"),
+        saleAmount: formData.get("saleAmount")
+      };
+      const data = await apiRequest(`/api/coach/crm/records/${encodeURIComponent(state.activeRecordId)}`, {
+        method: "PATCH",
+        body: payload
+      });
+      state.activeDetail = data || null;
+      renderDetail(state.activeDetail);
+      await loadWorkspace(true);
+      setMessage(detailFeedback, "Seguimiento guardado en el CRM.", "success");
+    } catch (error) {
+      setMessage(detailFeedback, error.message || "No pude guardar este seguimiento.", "error");
+    } finally {
+      setButtonLoading(detailSave, false);
+    }
+  });
+
+  loadWorkspace(true).catch(error => {
+    setMessage(summaryFeedback, error.message || "No pude cargar el CRM.", "error");
+  });
+}
+
 function initChefCampaignTool() {
   const root = document.querySelector("[data-chef-campaign-root]");
   const form = document.querySelector("[data-chef-campaign-form]");
@@ -6755,6 +7152,7 @@ async function initCoachAppPage() {
   }
   initCoachPrivateResources();
   initCoachLeadWorkspace();
+  initCoachCrmWorkspace(me.user);
   initChefCampaignTool();
   initCoachMessagesWorkspace(me.user);
   initCoachTeamWorkspace(me.user);
