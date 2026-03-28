@@ -11181,8 +11181,6 @@ app.post("/api/coach/demo-outcomes", async (req, res) => {
   const activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
-  let activeHealthSurveyContextFromBody = limpiarCoachHealthSurveyActiveContext(req.body?.activeHealthSurveyContext);
-  let activeProgram414ContextFromBody = limpiarCoachProgram414ActiveContext(req.body?.activeProgram414Context);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
 
@@ -12077,6 +12075,8 @@ app.post("/chat", async (req, res) => {
   const activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
   const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  let activeHealthSurveyContextFromBody = limpiarCoachHealthSurveyActiveContext(req.body?.activeHealthSurveyContext);
+  let activeProgram414ContextFromBody = limpiarCoachProgram414ActiveContext(req.body?.activeProgram414Context);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
   let activeDemoOutcomeContext = limpiarCoachDemoOutcomeContext(req.body?.activeDemoOutcomeContext);
