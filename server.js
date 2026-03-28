@@ -96,20 +96,11 @@ const MAX_RAM_SESSION_MESSAGES = Math.max(
 );
 const MAX_RAM_SESSION_STATES = Math.max(100, Number(process.env.MAX_RAM_SESSION_STATES || 500));
 const RAM_SESSION_TTL_MS = Math.max(60 * 60 * 1000, Number(process.env.RAM_SESSION_TTL_MS || 6 * 60 * 60 * 1000));
-const COACH_TEST_ACCESS_EMAILS = String(process.env.COACH_TEST_ACCESS_EMAILS || "")
-  .split(",")
-  .map(email => normalizarEmail(email))
-  .filter(Boolean);
-const CONTROL_TOWER_ACCESS_EMAILS = String(process.env.CONTROL_TOWER_ACCESS_EMAILS || "")
-  .split(",")
-  .map(email => normalizarEmail(email))
-  .filter(Boolean);
-const CONTROL_TOWER_TRACKED_EMAILS = String(process.env.CONTROL_TOWER_TRACKED_EMAILS || "")
-  .split(",")
-  .map(email => normalizarEmail(email))
-  .filter(Boolean);
+const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
+const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_ACCESS_EMAILS || "");
+const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
 const COACH_ACCOUNT_PRESETS_JSON = String(process.env.COACH_ACCOUNT_PRESETS_JSON || "").trim();
-const COACH_DEFAULT_SPONSOR_EMAIL = String(process.env.COACH_DEFAULT_SPONSOR_EMAIL || "").trim();
+const COACH_DEFAULT_SPONSOR_EMAIL = parseCoachEmailList(process.env.COACH_DEFAULT_SPONSOR_EMAIL || "")[0] || "";
 const COACH_DEFAULT_SPONSOR_RATE = Number(process.env.COACH_DEFAULT_SPONSOR_RATE || 0) || 0;
 const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
@@ -711,6 +702,13 @@ app.use(express.json({ limit: "15mb" }));
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
+}
+
+function parseCoachEmailList(value = "") {
+  return String(value || "")
+    .split(/[\n,;]+/)
+    .map(email => normalizarEmail(email))
+    .filter(Boolean);
 }
 
 function obtenerCoachAccountPresets() {
@@ -1815,91 +1813,105 @@ async function construirCoachSponsorSnapshot(userDoc = null) {
 }
 
 async function aplicarCoachAccountPreset(userDoc = null, profileDoc = null) {
-  if (!userDoc?._id || !userDoc.email) {
+  try {
+    if (!userDoc?._id || !userDoc.email) {
+      return {
+        userDoc,
+        profileDoc,
+        applied: false
+      };
+    }
+
+    const preset = obtenerCoachAccountPreset(userDoc.email);
+
+    if (!preset) {
+      return {
+        userDoc,
+        profileDoc,
+        applied: false
+      };
+    }
+
+    let userDirty = false;
+    let profileDirty = false;
+    let workingProfileDoc = profileDoc || null;
+
+    if (preset.officeId && userDoc.officeId !== preset.officeId) {
+      userDoc.officeId = preset.officeId;
+      userDirty = true;
+    }
+
+    if (preset.territoryId && userDoc.territoryId !== preset.territoryId) {
+      userDoc.territoryId = preset.territoryId;
+      userDirty = true;
+    }
+
+    if (workingProfileDoc) {
+      if (preset.teamRole && workingProfileDoc.teamRole !== preset.teamRole) {
+        workingProfileDoc.teamRole = preset.teamRole;
+        profileDirty = true;
+      }
+
+      if (preset.seatLabel && workingProfileDoc.seatLabel !== preset.seatLabel) {
+        workingProfileDoc.seatLabel = preset.seatLabel;
+        profileDirty = true;
+      }
+    }
+
+    const sponsorEmail = normalizarEmail(preset.sponsorEmail || "");
+    const sponsorCommissionRate = limpiarCoachCommissionRate(preset.sponsorCommissionRate || 0);
+    const userEmail = normalizarEmail(userDoc.email || "");
+
+    if (
+      sponsorEmail &&
+      sponsorEmail !== userEmail &&
+      (!userDoc.sponsorUserId || !userDoc.sponsorName || !userDoc.sponsorCommissionRate)
+    ) {
+      const sponsorUserDoc = await CoachUser.findOne({ email: sponsorEmail }).select("_id name email").lean();
+
+      if (sponsorUserDoc?._id) {
+        if (!userDoc.sponsorUserId || String(userDoc.sponsorUserId) !== String(sponsorUserDoc._id)) {
+          userDoc.sponsorUserId = sponsorUserDoc._id;
+          userDirty = true;
+        }
+
+        const sponsorName = sponsorUserDoc.name || sponsorUserDoc.email || "";
+
+        if (sponsorName && userDoc.sponsorName !== sponsorName) {
+          userDoc.sponsorName = sponsorName;
+          userDirty = true;
+        }
+
+        if (sponsorCommissionRate > 0 && userDoc.sponsorCommissionRate !== sponsorCommissionRate) {
+          userDoc.sponsorCommissionRate = sponsorCommissionRate;
+          userDirty = true;
+        }
+      }
+    }
+
+    if (userDirty) {
+      userDoc.updatedAt = new Date();
+      await userDoc.save();
+    }
+
+    if (workingProfileDoc && profileDirty) {
+      workingProfileDoc.updatedAt = new Date();
+      await workingProfileDoc.save();
+    }
+
+    return {
+      userDoc,
+      profileDoc: workingProfileDoc,
+      applied: userDirty || profileDirty
+    };
+  } catch (error) {
+    console.error("Error aplicando preset de cuenta Coach:", error.message);
     return {
       userDoc,
       profileDoc,
       applied: false
     };
   }
-
-  const preset = obtenerCoachAccountPreset(userDoc.email);
-
-  if (!preset) {
-    return {
-      userDoc,
-      profileDoc,
-      applied: false
-    };
-  }
-
-  let userDirty = false;
-  let profileDirty = false;
-  let workingProfileDoc = profileDoc || null;
-
-  if (preset.officeId && userDoc.officeId !== preset.officeId) {
-    userDoc.officeId = preset.officeId;
-    userDirty = true;
-  }
-
-  if (preset.territoryId && userDoc.territoryId !== preset.territoryId) {
-    userDoc.territoryId = preset.territoryId;
-    userDirty = true;
-  }
-
-  if (workingProfileDoc) {
-    if (preset.teamRole && workingProfileDoc.teamRole !== preset.teamRole) {
-      workingProfileDoc.teamRole = preset.teamRole;
-      profileDirty = true;
-    }
-
-    if (preset.seatLabel && workingProfileDoc.seatLabel !== preset.seatLabel) {
-      workingProfileDoc.seatLabel = preset.seatLabel;
-      profileDirty = true;
-    }
-  }
-
-  const sponsorEmail = normalizarEmail(preset.sponsorEmail || "");
-  const sponsorCommissionRate = limpiarCoachCommissionRate(preset.sponsorCommissionRate || 0);
-
-  if (sponsorEmail && (!userDoc.sponsorUserId || !userDoc.sponsorName || !userDoc.sponsorCommissionRate)) {
-    const sponsorUserDoc = await CoachUser.findOne({ email: sponsorEmail }).select("_id name email").lean();
-
-    if (sponsorUserDoc?._id) {
-      if (!userDoc.sponsorUserId || String(userDoc.sponsorUserId) !== String(sponsorUserDoc._id)) {
-        userDoc.sponsorUserId = sponsorUserDoc._id;
-        userDirty = true;
-      }
-
-      const sponsorName = sponsorUserDoc.name || sponsorUserDoc.email || "";
-
-      if (sponsorName && userDoc.sponsorName !== sponsorName) {
-        userDoc.sponsorName = sponsorName;
-        userDirty = true;
-      }
-
-      if (sponsorCommissionRate > 0 && userDoc.sponsorCommissionRate !== sponsorCommissionRate) {
-        userDoc.sponsorCommissionRate = sponsorCommissionRate;
-        userDirty = true;
-      }
-    }
-  }
-
-  if (userDirty) {
-    userDoc.updatedAt = new Date();
-    await userDoc.save();
-  }
-
-  if (workingProfileDoc && profileDirty) {
-    workingProfileDoc.updatedAt = new Date();
-    await workingProfileDoc.save();
-  }
-
-  return {
-    userDoc,
-    profileDoc: workingProfileDoc,
-    applied: userDirty || profileDirty
-  };
 }
 
 function esCoachTeamManager(userDoc = null) {
