@@ -4506,9 +4506,9 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   }
 
   try {
-    await asegurarCoachCrmWorkspace(userDoc);
+    await asegurarCoachCrmWorkspaceSiVacio(userDoc);
   } catch (error) {
-    console.error("Error sembrando workspace CRM del Coach:", error.message);
+    console.error("Error inicializando workspace CRM del Coach:", error.message);
   }
   const baseQuery = await construirCoachCrmViewerQuery(userDoc);
   const query = {
@@ -4557,9 +4557,9 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
   }
 
   try {
-    await asegurarCoachCrmWorkspace(userDoc);
+    await asegurarCoachCrmWorkspaceSiVacio(userDoc);
   } catch (error) {
-    console.error("Error sembrando detalle CRM del Coach:", error.message);
+    console.error("Error inicializando detalle CRM del Coach:", error.message);
   }
 
   const recordQuery = await construirCoachCrmViewerQuery(userDoc, {
@@ -4670,9 +4670,9 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
   }
 
   try {
-    await asegurarCoachCrmWorkspace(userDoc);
+    await asegurarCoachCrmWorkspaceSiVacio(userDoc);
   } catch (error) {
-    console.error("Error sembrando agenda CRM del Coach:", error.message);
+    console.error("Error inicializando agenda CRM del Coach:", error.message);
   }
   const query = construirCoachAgendaWorkspaceQuery(userDoc);
   const recordDocs = await CoachCrmRecord.find(query)
@@ -6558,6 +6558,9 @@ function construirCoachCrmProgramSeedOperation(
           nextActionAt,
           appointmentAt,
           lastContactAt: linkedLead?.lastContactAt || referral.lastOutcomeAt || referral.selectedForInstantCallAt || null,
+          briefHistory: truncarCoachCrmText(construirCoachCrmProgramSummary(sheetDoc, referral), 320),
+          privateNotes: truncarCoachCrmText(construirCoachCrmProgramNotes(sheetDoc, referral), 1200),
+          lastNote: truncarCoachCrmText(referral.instantCallNotes || referral.notes || "", 240),
           saleResult: "",
           saleAmount: 0,
           soldAt: null,
@@ -6568,10 +6571,7 @@ function construirCoachCrmProgramSeedOperation(
         $setOnInsert: {
           createdAt: sheetDoc.createdAt || new Date(),
           assignedTelemarketerUserId: defaultTelemarketerUserId,
-          assignedTelemarketerName: defaultTelemarketerName,
-          briefHistory: truncarCoachCrmText(construirCoachCrmProgramSummary(sheetDoc, referral), 320),
-          privateNotes: truncarCoachCrmText(construirCoachCrmProgramNotes(sheetDoc, referral), 1200),
-          lastNote: truncarCoachCrmText(referral.instantCallNotes || referral.notes || "", 240)
+          assignedTelemarketerName: defaultTelemarketerName
         }
       },
       upsert: true
@@ -6620,6 +6620,12 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null, defaul
           phone: applicationDoc.phone || "",
           email: applicationDoc.email || "",
           interest: applicationDoc.workPreference || "Reclutamiento",
+          briefHistory: truncarCoachCrmText(
+            applicationDoc.summary || construirCoachRecruitmentApplicationSummary(applicationDoc),
+            320
+          ),
+          privateNotes: truncarCoachCrmText(applicationDoc.about || "", 1200),
+          lastNote: truncarCoachCrmText(applicationDoc.about || "", 240),
           sourceUpdatedAt: applicationDoc.updatedAt || applicationDoc.createdAt || null,
           updatedAt: new Date()
         },
@@ -6643,13 +6649,7 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null, defaul
           saleResult: "",
           saleAmount: 0,
           soldAt: null,
-          closedAt: null,
-          briefHistory: truncarCoachCrmText(
-            applicationDoc.summary || construirCoachRecruitmentApplicationSummary(applicationDoc),
-            320
-          ),
-          privateNotes: truncarCoachCrmText(applicationDoc.about || "", 1200),
-          lastNote: truncarCoachCrmText(applicationDoc.about || "", 240)
+          closedAt: null
         }
       },
       upsert: true
@@ -6761,6 +6761,171 @@ async function asegurarCoachCrmAutoAsignacionTelemarketing(userDoc = null, defau
   );
 }
 
+async function ejecutarCoachCrmSeedOperations(userDoc = null, operations = [], defaultTelemarketer = null) {
+  const safeOperations = Array.isArray(operations) ? operations.filter(Boolean) : [];
+
+  if (!userDoc?._id || !safeOperations.length) {
+    return 0;
+  }
+
+  try {
+    await CoachCrmRecord.bulkWrite(safeOperations, { ordered: false });
+    await asegurarCoachCrmAutoAsignacionTelemarketing(userDoc, defaultTelemarketer);
+  } catch (error) {
+    if (error?.code !== 11000) {
+      throw error;
+    }
+  }
+
+  return safeOperations.length;
+}
+
+async function sincronizarCoachLeadInboxACrmRecord(userDoc = null, leadDoc = null, defaultTelemarketer = null) {
+  if (!userDoc?._id || !leadDoc?._id) {
+    return 0;
+  }
+
+  const telemarketer = defaultTelemarketer || (await resolverCoachCrmTelemarketerPorDefecto(userDoc));
+  const operations = [];
+  const leadOperation = construirCoachCrmLeadSeedOperation(leadDoc, telemarketer);
+
+  if (leadOperation) {
+    operations.push(leadOperation);
+  }
+
+  if (normalizarCoachLeadSource(leadDoc.source || "") === "programa_4_en_14") {
+    const sheetDocs = await CoachProgramSheet.find({
+      ownerUserId: leadDoc.ownerUserId,
+      "referrals.createdLeadId": leadDoc._id
+    }).lean();
+
+    sheetDocs.forEach(sheetDoc => {
+      (Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals : []).forEach((referral, referralIndex) => {
+        if (String(referral?.createdLeadId || "") !== String(leadDoc._id)) {
+          return;
+        }
+
+        const programOperation = construirCoachCrmProgramSeedOperation(
+          sheetDoc,
+          referral,
+          referralIndex,
+          leadDoc,
+          telemarketer
+        );
+
+        if (programOperation) {
+          operations.push(programOperation);
+        }
+      });
+    });
+  }
+
+  return ejecutarCoachCrmSeedOperations(userDoc, operations, telemarketer);
+}
+
+async function sincronizarCoachRecruitmentApplicationACrmRecord(userDoc = null, applicationDoc = null, defaultTelemarketer = null) {
+  if (!userDoc?._id || !applicationDoc?._id) {
+    return 0;
+  }
+
+  const telemarketer = defaultTelemarketer || (await resolverCoachCrmTelemarketerPorDefecto(userDoc));
+  const operation = construirCoachCrmRecruitmentSeedOperation(applicationDoc, telemarketer);
+
+  if (!operation) {
+    return 0;
+  }
+
+  return ejecutarCoachCrmSeedOperations(userDoc, [operation], telemarketer);
+}
+
+async function sincronizarCoachProgramSheetACrmRecords(userDoc = null, sheetDoc = null, defaultTelemarketer = null) {
+  if (!userDoc?._id || !sheetDoc?._id) {
+    return 0;
+  }
+
+  const telemarketer = defaultTelemarketer || (await resolverCoachCrmTelemarketerPorDefecto(userDoc));
+  const linkedLeadIds = (Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals : [])
+    .map(referral => referral?.createdLeadId)
+    .filter(id => mongoose.Types.ObjectId.isValid(id));
+  const linkedLeadDocs = linkedLeadIds.length
+    ? await CoachLeadInbox.find({ _id: { $in: linkedLeadIds } }).lean()
+    : [];
+  const linkedLeadMap = new Map(linkedLeadDocs.map(doc => [String(doc._id), doc]));
+  const operations = [];
+
+  (Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals : []).forEach((referral, referralIndex) => {
+    const linkedLead =
+      referral?.createdLeadId ? linkedLeadMap.get(String(referral.createdLeadId)) || null : null;
+    const operation = construirCoachCrmProgramSeedOperation(
+      sheetDoc,
+      referral,
+      referralIndex,
+      linkedLead,
+      telemarketer
+    );
+
+    if (operation) {
+      operations.push(operation);
+    }
+  });
+
+  return ejecutarCoachCrmSeedOperations(userDoc, operations, telemarketer);
+}
+
+async function resolverCoachUserParaLeadInbox(leadDoc = null) {
+  if (!leadDoc) {
+    return null;
+  }
+
+  const candidateUserIds = [leadDoc.ownerUserId, leadDoc.generatedByUserId]
+    .map(value => normalizarCoachCrmObjectId(value))
+    .filter(Boolean);
+
+  for (const userId of candidateUserIds) {
+    let userDoc = await CoachUser.findById(userId);
+
+    if (!userDoc?._id) {
+      continue;
+    }
+
+    userDoc = await asegurarCoachUserBase(userDoc);
+    return userDoc;
+  }
+
+  return null;
+}
+
+async function sincronizarCoachLeadInboxACrmDesdeLead(leadDoc = null, userDoc = null, defaultTelemarketer = null) {
+  if (!leadDoc?._id) {
+    return 0;
+  }
+
+  const effectiveUserDoc = userDoc?._id ? userDoc : await resolverCoachUserParaLeadInbox(leadDoc);
+
+  if (!effectiveUserDoc?._id) {
+    return 0;
+  }
+
+  return sincronizarCoachLeadInboxACrmRecord(effectiveUserDoc, leadDoc, defaultTelemarketer);
+}
+
+async function asegurarCoachCrmWorkspaceSiVacio(userDoc = null) {
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc));
+
+  if (!userDoc?._id || !ownerUserId) {
+    return false;
+  }
+
+  const hasExistingRecords = await CoachCrmRecord.exists({ ownerUserId });
+
+  if (hasExistingRecords) {
+    return false;
+  }
+
+  await asegurarCoachCrmWorkspace(userDoc);
+  return true;
+}
+
 async function asegurarCoachCrmWorkspace(userDoc = null) {
   if (!userDoc?._id) {
     return;
@@ -6841,14 +7006,7 @@ async function asegurarCoachCrmWorkspace(userDoc = null) {
     return;
   }
 
-  try {
-    await CoachCrmRecord.bulkWrite(operations, { ordered: false });
-    await asegurarCoachCrmAutoAsignacionTelemarketing(userDoc, defaultTelemarketer);
-  } catch (error) {
-    if (error?.code !== 11000) {
-      throw error;
-    }
-  }
+  await ejecutarCoachCrmSeedOperations(userDoc, operations, defaultTelemarketer);
 }
 
 function crearCoachCrmPerformanceBucket(label = "") {
@@ -7989,6 +8147,12 @@ async function guardarCoachInboxLead({
     leadDoc.updatedAt = now;
     await leadDoc.save();
 
+    try {
+      await sincronizarCoachLeadInboxACrmRecord(userDoc, leadDoc);
+    } catch (error) {
+      console.error("Error sincronizando lead del Coach al CRM:", error.message);
+    }
+
     const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
     const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
       attempted: false,
@@ -8029,6 +8193,12 @@ async function guardarCoachInboxLead({
     lastStatusChangeAt: now,
     updatedAt: now
   });
+
+  try {
+    await sincronizarCoachLeadInboxACrmRecord(userDoc, leadDoc);
+  } catch (error) {
+    console.error("Error sincronizando lead nuevo del Coach al CRM:", error.message);
+  }
 
   const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
   const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
@@ -8144,6 +8314,12 @@ async function registrarActividadSmsCoachLead(leadDoc = null, options = {}) {
   leadDoc.updatedAt = now;
   leadDoc.summary = construirCoachLeadSummary(leadDoc);
   await leadDoc.save();
+
+  try {
+    await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, options.userDoc || null);
+  } catch (error) {
+    console.error("Error sincronizando actividad SMS al CRM:", error.message);
+  }
 
   await guardarMensajeCoachLeadCanal(leadDoc, {
     role: direction === "saliente" ? "assistant" : "user",
@@ -8360,6 +8536,11 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
     leadDoc.highLevelLastSyncError = "Falta telefono o correo para sincronizar con HighLevel.";
     leadDoc.summary = construirCoachLeadSummary(leadDoc);
     await leadDoc.save();
+    try {
+      await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, userDoc);
+    } catch (error) {
+      console.error("Error reflejando sync omitida de HighLevel en CRM:", error.message);
+    }
     return {
       attempted: true,
       synced: false,
@@ -8389,6 +8570,11 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
     leadDoc.highLevelResultSummary = "No pude sincronizar el contacto.";
     leadDoc.summary = construirCoachLeadSummary(leadDoc);
     await leadDoc.save();
+    try {
+      await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, userDoc);
+    } catch (error) {
+      console.error("Error reflejando error de HighLevel en CRM:", error.message);
+    }
 
     return {
       attempted: true,
@@ -8408,6 +8594,11 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
     leadDoc.highLevelResultSummary = "El contacto entro sin id confirmado.";
     leadDoc.summary = construirCoachLeadSummary(leadDoc);
     await leadDoc.save();
+    try {
+      await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, userDoc);
+    } catch (error) {
+      console.error("Error reflejando contacto sin id de HighLevel en CRM:", error.message);
+    }
 
     return {
       attempted: true,
@@ -8464,6 +8655,11 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
   leadDoc.highLevelResultSummary = resultParts.join(", ");
   leadDoc.summary = construirCoachLeadSummary(leadDoc);
   await leadDoc.save();
+  try {
+    await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, userDoc);
+  } catch (error) {
+    console.error("Error reflejando sync de HighLevel en CRM:", error.message);
+  }
 
   return {
     attempted: true,
@@ -8615,6 +8811,11 @@ async function aplicarEventoHighLevelALead(payload = {}) {
   leadDoc.updatedAt = new Date();
   leadDoc.summary = construirCoachLeadSummary(leadDoc);
   await leadDoc.save();
+  try {
+    await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc);
+  } catch (error) {
+    console.error("Error reflejando webhook de HighLevel en CRM:", error.message);
+  }
 
   return leadDoc;
 }
@@ -12996,8 +13197,6 @@ async function sincronizarLeadPublicoACoachInbox({
         : Promise.resolve()
     ]);
 
-    await asegurarCoachCrmWorkspace(leadRoutingContext.userDoc);
-
     return result;
   } catch (error) {
     console.error("Error sincronizando lead del Chef personal al Coach:", error.message);
@@ -17177,6 +17376,11 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
     }
 
     const cleanedApplication = limpiarCoachRecruitmentApplication(applicationDoc.toObject());
+    try {
+      await sincronizarCoachRecruitmentApplicationACrmRecord(auth.user, applicationDoc);
+    } catch (error) {
+      console.error("Error sincronizando aplicacion de reclutamiento al CRM:", error.message);
+    }
     const delivery = programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
 
     res.json({
@@ -17503,6 +17707,12 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
       await vincularCoachCrmConPrograma(linkedCrmRecordDoc, sheetDoc, auth.user);
     }
 
+    try {
+      await sincronizarCoachProgramSheetACrmRecords(auth.user, sheetDoc);
+    } catch (error) {
+      console.error("Error sincronizando programa 4 en 14 al CRM:", error.message);
+    }
+
     const delivery = programarEnvioCoachProgramSheetADestino(auth.user, profileDoc, sheetDoc.toObject(), createdLeads);
 
     res.json({
@@ -17724,7 +17934,8 @@ app.post("/api/coach/leads/:leadId/sms", async (req, res) => {
     await registrarActividadSmsCoachLead(leadDoc, {
       direction: "saliente",
       message,
-      sid: smsResult.sid || ""
+      sid: smsResult.sid || "",
+      userDoc: auth.user
     });
 
     res.json({
@@ -17788,6 +17999,12 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
     leadDoc.summary = construirCoachLeadSummary(leadDoc);
     leadDoc.updatedAt = now;
     await leadDoc.save();
+
+    try {
+      await sincronizarCoachLeadInboxACrmRecord(auth.user, leadDoc);
+    } catch (error) {
+      console.error("Error sincronizando actualizacion de lead al CRM:", error.message);
+    }
 
     res.json({
       lead: limpiarCoachInboxLead(leadDoc.toObject())
@@ -18659,7 +18876,8 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
         await registrarActividadSmsCoachLead(matchedLead, {
           direction: "entrante",
           message: body,
-          sid: messageSid
+          sid: messageSid,
+          userDoc: leadChefContext?.userDoc || null
         });
       }
     } catch (error) {
