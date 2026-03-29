@@ -1,0 +1,98 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="74" x2="1112" y2="592" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A2247"/>
+      <stop offset="0.55" stop-color="#123D82"/>
+      <stop offset="1" stop-color="#071B37"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(198 118) rotate(44.3) scale(511.596 391.113)">
+      <stop stop-color="#D8EEFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#D8EEFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1030 518) rotate(180) scale(380 240)">
+      <stop stop-color="#F1B95F" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#F1B95F" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="0" y="0" width="1200" height="630" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#021024" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" rx="48" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="48" fill="url(#glowA)"/>
+  <rect width="1200" height="630" rx="48" fill="url(#glowB)"/>
+
+  <g opacity="0.14">
+    <path d="M0 110H1200" stroke="white"/>
+    <path d="M0 202H1200" stroke="white"/>
+    <path d="M0 294H1200" stroke="white"/>
+    <path d="M0 386H1200" stroke="white"/>
+    <path d="M0 478H1200" stroke="white"/>
+    <path d="M110 0V630" stroke="white"/>
+    <path d="M246 0V630" stroke="white"/>
+    <path d="M382 0V630" stroke="white"/>
+    <path d="M518 0V630" stroke="white"/>
+    <path d="M654 0V630" stroke="white"/>
+    <path d="M790 0V630" stroke="white"/>
+    <path d="M926 0V630" stroke="white"/>
+    <path d="M1062 0V630" stroke="white"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="74" width="1056" height="482" rx="38" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="72.5" y="74.5" width="1055" height="481" rx="37.5" stroke="#FFFFFF" stroke-opacity="0.12"/>
+  </g>
+
+    <rect x="118" y="118" width="234" height="54" rx="27" fill="#FFFFFF" fill-opacity="0.12"/>
+  <text x="145" y="153" fill="#D8EEFF" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">
+    Chef inteligente gratis
+  </text>
+
+  <text x="116" y="258" fill="#FFF7EC" font-size="76" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    Agustin 2.0 Chef
+  </text>
+  <text x="116" y="326" fill="#DCE9FF" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="500">
+    Recetas, cocina saludable, agua y ayuda práctica
+  </text>
+  <text x="116" y="370" fill="#DCE9FF" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="500">
+    para tu hogar, gratis y en español.
+  </text>
+
+  <g>
+    <rect x="118" y="432" width="228" height="58" rx="29" fill="#F1B95F"/>
+    <text x="152" y="469" fill="#0A2247" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+      Habla con Chef
+    </text>
+
+    <rect x="366" y="432" width="324" height="58" rx="29" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="400" y="469" fill="#FFF7EC" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">
+      WhatsApp y llamada opcional
+    </text>
+  </g>
+
+  <g transform="translate(808 126)">
+    <rect width="262" height="262" rx="58" fill="#0A2247"/>
+    <rect x="14" y="14" width="234" height="234" rx="50" fill="#123D82"/>
+    <circle cx="131" cy="131" r="90" fill="#FFF7EC"/>
+    <circle cx="197" cy="67" r="22" fill="#C71F37"/>
+    <path d="M96 122C96 101.565 112.565 85 133 85C153.435 85 170 101.565 170 122V130H96V122Z" fill="white"/>
+    <path d="M83 130H183C190.18 130 196 135.82 196 143C196 150.18 190.18 156 183 156H83C75.8203 156 70 150.18 70 143C70 135.82 75.8203 130 83 130Z" fill="white"/>
+    <path d="M109 153H156V183C156 197.912 143.912 210 129 210C114.088 210 102 197.912 102 183V160C102 156.134 105.134 153 109 153Z" fill="#F1B95F"/>
+    <path d="M114 181C118.774 187.067 124.847 190.102 132.379 190.19C139.911 190.102 145.984 187.067 150.758 181" stroke="#0A2247" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="120" cy="168" r="5.5" fill="#0A2247"/>
+    <circle cx="142" cy="168" r="5.5" fill="#0A2247"/>
+    <path d="M54 216C54 207.163 61.1634 200 70 200H192C200.837 200 208 207.163 208 216V224C208 232.837 200.837 240 192 240H70C61.1634 240 54 232.837 54 224V216Z" fill="#123D82"/>
+    <path d="M77 219L88 208L99 219" stroke="#FFF7EC" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M179 210V235" stroke="#FFF7EC" stroke-width="7" stroke-linecap="round"/>
+    <path d="M171 219H187" stroke="#FFF7EC" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <text x="812" y="468" fill="#FFF7EC" font-size="26" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+      Ideal para compartir por QR o link
+    </text>
+    <text x="812" y="507" fill="#D8EEFF" font-size="24" font-family="Arial, Helvetica, sans-serif" font-weight="500">
+      Se ve bien en iPhone, búsquedas y vista previa al compartir.
+    </text>
+  </g>
+</svg>

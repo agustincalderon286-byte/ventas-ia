@@ -83,13 +83,22 @@ a {
 .chef-brand-badge {
   width: 54px;
   height: 54px;
-  border-radius: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  background: linear-gradient(135deg, #ffffff 0%, #dff1ff 100%);
+  flex: 0 0 54px;
+}
+
+.chef-brand-badge img {
+  width: 54px;
+  height: 54px;
+  display: block;
+  border-radius: 18px;
   box-shadow: var(--chef-shadow);
+}
+
+.chef-brand-copy {
+  min-width: 0;
 }
 
 .chef-brand strong,
