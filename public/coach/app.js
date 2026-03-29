@@ -9225,8 +9225,8 @@ async function initCoachAppPage() {
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
+  const chefWhatsAppShareButtons = document.querySelectorAll("[data-open-chef-whatsapp-share]");
   const chefWhatsAppOpenLinks = document.querySelectorAll("[data-chef-whatsapp-open-link]");
-  const chefWhatsAppQrNodes = document.querySelectorAll("[data-chef-whatsapp-qr]");
   const chefWhatsAppUrlNodes = document.querySelectorAll("[data-chef-whatsapp-url]");
   const copyChefWhatsAppLinkButton = document.querySelector("[data-copy-chef-whatsapp-link]");
   const chefWhatsAppShareFeedback = document.querySelector("[data-chef-whatsapp-share-feedback]");
@@ -9271,26 +9271,21 @@ async function initCoachAppPage() {
 
   const syncWhatsAppChefShare = () => {
     const enabled = Boolean(platformConfig?.whatsapp?.chefEnabled && ownChefWhatsAppUrl);
-    const fallbackUrl = enabled ? ownChefWhatsAppUrl : ownCoachHomePath;
+    const targetUrl = enabled ? ownChefWhatsAppUrl : "#";
 
     chefWhatsAppOpenLinks.forEach(node => {
-      node.href = fallbackUrl;
+      node.href = targetUrl;
       if (!enabled) {
         node.setAttribute("aria-disabled", "true");
+        node.setAttribute("tabindex", "-1");
       } else {
         node.removeAttribute("aria-disabled");
+        node.removeAttribute("tabindex");
       }
     });
 
     chefWhatsAppUrlNodes.forEach(node => {
       node.textContent = enabled ? ownChefWhatsAppUrl : "Activa WhatsApp del Chef para mostrar este QR.";
-    });
-
-    chefWhatsAppQrNodes.forEach(node => {
-      node.src = buildShareQrImageUrl(enabled ? ownChefWhatsAppUrl : ownCoachHomePath);
-      node.alt = enabled
-        ? "Codigo QR para abrir Agustin 2.0 Chef en WhatsApp"
-        : "QR temporal de Agustin 2.0 Coach";
     });
 
     if (chefWhatsAppShareCard) {
@@ -9300,6 +9295,10 @@ async function initCoachAppPage() {
     if (copyChefWhatsAppLinkButton) {
       copyChefWhatsAppLinkButton.disabled = !enabled;
     }
+
+    chefWhatsAppShareButtons.forEach(button => {
+      button.disabled = !enabled;
+    });
   };
 
   if (!ownContactShareUrl) {
@@ -9741,6 +9740,30 @@ async function initCoachAppPage() {
           "Este QR abre directo Agustin 2.0 Chef. Despues el cliente puede guardarlo en su telefono desde la misma pagina.",
         openLabel: "Abrir Chef",
         shareText: "Te comparto Agustin 2.0 Chef para recetas y cocina saludable."
+      });
+      openChefShareModal();
+    });
+  });
+
+  chefWhatsAppShareButtons.forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+
+      if (!ownChefWhatsAppUrl) {
+        if (chefWhatsAppShareFeedback) {
+          chefWhatsAppShareFeedback.textContent = "Primero activa el WhatsApp del Chef.";
+        }
+        return;
+      }
+
+      renderActiveChefShare({
+        label: "Agustin 2.0 Chef por WhatsApp",
+        url: ownChefWhatsAppUrl,
+        eyebrow: "Chef por WhatsApp",
+        description:
+          "Este QR abre directo el chat de WhatsApp con Agustin 2.0 Chef para empezar la conversacion sin escribir el numero.",
+        openLabel: "Abrir WhatsApp",
+        shareText: "Te comparto el WhatsApp de Agustin 2.0 Chef para que empieces el chat directo."
       });
       openChefShareModal();
     });
