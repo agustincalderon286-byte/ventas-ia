@@ -5,6 +5,7 @@ import crypto from "crypto";
 import fs from "fs";
 import mongoose from "mongoose";
 import path from "path";
+import { createClient } from "redis";
 import Stripe from "stripe";
 import {
   buscarKnowledgeVectorial,
@@ -26,6 +27,7 @@ const conversaciones = {};
 const estadosConversacion = {};
 const rutasCanalTelefono = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
+const REDIS_URL = String(process.env.REDIS_URL || "").trim();
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const STRIPE_PRICE_ID_MONTHLY = process.env.STRIPE_PRICE_ID || "";
 const STRIPE_PRICE_ID_ANNUAL = process.env.STRIPE_PRICE_ID_ANNUAL || "";
@@ -102,6 +104,10 @@ const MAX_RAM_SESSION_MESSAGES = Math.max(
 );
 const MAX_RAM_SESSION_STATES = Math.max(100, Number(process.env.MAX_RAM_SESSION_STATES || 500));
 const RAM_SESSION_TTL_MS = Math.max(60 * 60 * 1000, Number(process.env.RAM_SESSION_TTL_MS || 6 * 60 * 60 * 1000));
+const REDIS_SESSION_TTL_SECONDS = Math.max(
+  60 * 60,
+  Number(process.env.REDIS_SESSION_TTL_SECONDS || Math.floor(RAM_SESSION_TTL_MS / 1000) || 6 * 60 * 60)
+);
 const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
 const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_ACCESS_EMAILS || "");
 const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
@@ -1113,6 +1119,163 @@ const COACH_ASYNC_JOB_BATCH_SIZE = 6;
 let coachAsyncJobWorkerRunning = false;
 let coachAsyncJobWorkerInterval = null;
 let coachAsyncJobWakeTimer = null;
+let redisClient = null;
+let redisReady = false;
+
+function construirRedisSessionKey(type = "", sessionId = "") {
+  const safeType = cleanText(type || "")
+    .trim()
+    .toLowerCase();
+  const safeSessionId = cleanText(sessionId || "").trim();
+
+  if (!safeType || !safeSessionId) {
+    return "";
+  }
+
+  return `agustin:session:${safeType}:${safeSessionId}`;
+}
+
+function construirRedisRouteKey(channel = "", phone = "") {
+  const routeKey = construirRutaCanalTelefonoKey(channel, phone);
+
+  if (!routeKey) {
+    return "";
+  }
+
+  return `agustin:route:${routeKey}`;
+}
+
+function programarPersistenciaRedis(task, label = "Redis") {
+  Promise.resolve()
+    .then(task)
+    .catch(error => {
+      console.error(`Error sincronizando ${label}:`, error.message);
+    });
+}
+
+async function obtenerRedisClient() {
+  if (!REDIS_URL) {
+    return null;
+  }
+
+  if (!redisClient) {
+    redisClient = createClient({
+      url: REDIS_URL,
+      socket: {
+        reconnectStrategy(retries) {
+          return Math.min(retries * 250, 3000);
+        }
+      }
+    });
+
+    redisClient.on("ready", () => {
+      redisReady = true;
+    });
+    redisClient.on("end", () => {
+      redisReady = false;
+    });
+    redisClient.on("error", error => {
+      redisReady = false;
+      console.error("Redis error:", error.message);
+    });
+  }
+
+  if (!redisClient.isOpen) {
+    await redisClient.connect();
+  }
+
+  return redisClient;
+}
+
+async function iniciarRedis() {
+  if (!REDIS_URL) {
+    console.log("Redis no configurado");
+    return null;
+  }
+
+  try {
+    const client = await obtenerRedisClient();
+
+    if (client?.isReady || redisReady) {
+      console.log("Redis conectado");
+    }
+
+    return client;
+  } catch (error) {
+    redisReady = false;
+    console.error("Error conectando Redis:", error.message);
+    return null;
+  }
+}
+
+async function redisGetJson(key = "") {
+  if (!key) {
+    return null;
+  }
+
+  try {
+    const client = await obtenerRedisClient();
+
+    if (!client) {
+      return null;
+    }
+
+    const raw = await client.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.error("Error leyendo JSON de Redis:", error.message);
+    return null;
+  }
+}
+
+async function redisSetJson(key = "", value = null, ttlSeconds = REDIS_SESSION_TTL_SECONDS) {
+  if (!key || value === undefined) {
+    return false;
+  }
+
+  try {
+    const client = await obtenerRedisClient();
+
+    if (!client) {
+      return false;
+    }
+
+    const payload = JSON.stringify(value ?? null);
+
+    if (ttlSeconds > 0) {
+      await client.set(key, payload, {
+        EX: ttlSeconds
+      });
+    } else {
+      await client.set(key, payload);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error guardando JSON en Redis:", error.message);
+    return false;
+  }
+}
+
+async function redisDelete(key = "") {
+  if (!key) {
+    return false;
+  }
+
+  try {
+    const client = await obtenerRedisClient();
+
+    if (!client) {
+      return false;
+    }
+
+    await client.del(key);
+    return true;
+  } catch (error) {
+    console.error("Error borrando clave en Redis:", error.message);
+    return false;
+  }
+}
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
@@ -1350,6 +1513,7 @@ function marcarSesionActiva(sessionId = "") {
   }
 
   actividadSesiones[sessionId] = Date.now();
+  programarPersistenciaRedis(() => persistirActividadSesionRedis(sessionId), "actividad de sesion en Redis");
 }
 
 function construirRutaCanalTelefonoKey(channel = "", phone = "") {
@@ -1377,6 +1541,10 @@ function registrarRutaCanalTelefono(channel = "", phone = "", ownerUserId = "") 
     ownerUserId: safeOwnerUserId,
     updatedAt: Date.now()
   };
+  programarPersistenciaRedis(
+    () => persistirRutaCanalTelefonoRedis(channel, phone, safeOwnerUserId),
+    "ruta de canal en Redis"
+  );
 }
 
 function obtenerRutaCanalTelefono(channel = "", phone = "") {
@@ -1454,6 +1622,112 @@ function limpiarMemoriaSesiones() {
   }
 }
 
+async function persistirActividadSesionRedis(sessionId = "") {
+  if (!sessionId) {
+    return false;
+  }
+
+  return redisSetJson(
+    construirRedisSessionKey("activity", sessionId),
+    {
+      lastSeenAt: Number(actividadSesiones[sessionId] || Date.now())
+    },
+    REDIS_SESSION_TTL_SECONDS
+  );
+}
+
+async function persistirHistorialSesionRedis(sessionId = "") {
+  if (!sessionId) {
+    return false;
+  }
+
+  return redisSetJson(
+    construirRedisSessionKey("history", sessionId),
+    Array.isArray(conversaciones[sessionId]) ? conversaciones[sessionId] : [],
+    REDIS_SESSION_TTL_SECONDS
+  );
+}
+
+async function persistirEstadoSesionRedis(sessionId = "") {
+  if (!sessionId) {
+    return false;
+  }
+
+  return redisSetJson(
+    construirRedisSessionKey("state", sessionId),
+    estadosConversacion[sessionId] || crearEstadoConversacionBase(),
+    REDIS_SESSION_TTL_SECONDS
+  );
+}
+
+async function asegurarSesionRedisCargada(sessionId = "") {
+  if (!sessionId || !REDIS_URL) {
+    return false;
+  }
+
+  const needActivity = !actividadSesiones[sessionId];
+  const needHistory = !Array.isArray(conversaciones[sessionId]) || !conversaciones[sessionId].length;
+  const needState = !estadosConversacion[sessionId];
+
+  if (!needActivity && !needHistory && !needState) {
+    return false;
+  }
+
+  const [activityPayload, historyPayload, statePayload] = await Promise.all([
+    needActivity ? redisGetJson(construirRedisSessionKey("activity", sessionId)) : Promise.resolve(null),
+    needHistory ? redisGetJson(construirRedisSessionKey("history", sessionId)) : Promise.resolve(null),
+    needState ? redisGetJson(construirRedisSessionKey("state", sessionId)) : Promise.resolve(null)
+  ]);
+
+  if (needActivity && activityPayload?.lastSeenAt) {
+    actividadSesiones[sessionId] = Number(activityPayload.lastSeenAt) || Date.now();
+  }
+
+  if (needHistory && Array.isArray(historyPayload) && historyPayload.length) {
+    conversaciones[sessionId] = historyPayload
+      .filter(entry => entry?.role && entry?.content)
+      .slice(-MAX_RAM_SESSION_MESSAGES);
+  }
+
+  if (needState && statePayload && typeof statePayload === "object") {
+    estadosConversacion[sessionId] = {
+      ...crearEstadoConversacionBase(),
+      ...statePayload
+    };
+  }
+
+  return Boolean(activityPayload || historyPayload || statePayload);
+}
+
+async function persistirRutaCanalTelefonoRedis(channel = "", phone = "", ownerUserId = "") {
+  const routeKey = construirRedisRouteKey(channel, phone);
+  const safeOwnerUserId = String(ownerUserId || "").trim();
+
+  if (!routeKey || !safeOwnerUserId) {
+    return false;
+  }
+
+  return redisSetJson(
+    routeKey,
+    {
+      ownerUserId: safeOwnerUserId,
+      updatedAt: Date.now()
+    },
+    REDIS_SESSION_TTL_SECONDS
+  );
+}
+
+async function obtenerRutaCanalTelefonoRedis(channel = "", phone = "") {
+  const routeKey = construirRedisRouteKey(channel, phone);
+
+  if (!routeKey) {
+    return "";
+  }
+
+  const payload = await redisGetJson(routeKey);
+  return payload?.ownerUserId ? String(payload.ownerUserId).trim() : "";
+}
+
 function registrarMensajeMemoria(sessionId = "", role = "", content = "") {
   if (!sessionId || !role || !content) {
     return;
@@ -1468,6 +1742,7 @@ function registrarMensajeMemoria(sessionId = "", role = "", content = "") {
 
   conversaciones[sessionId].push({ role, content });
   conversaciones[sessionId] = conversaciones[sessionId].slice(-MAX_RAM_SESSION_MESSAGES);
+  programarPersistenciaRedis(() => persistirHistorialSesionRedis(sessionId), "historial de sesion en Redis");
 }
 
 function hidratarEstadoConversacion(sessionId, profile = null, lead = null) {
@@ -1483,6 +1758,8 @@ function hidratarEstadoConversacion(sessionId, profile = null, lead = null) {
   estado.phone = estado.phone || fuente.phone || "";
   estado.bestCallDay = estado.bestCallDay || fuente.bestCallDay || "";
   estado.bestCallTime = estado.bestCallTime || fuente.bestCallTime || "";
+
+  programarPersistenciaRedis(() => persistirEstadoSesionRedis(sessionId), "estado de sesion en Redis");
   estado.direccion = estado.direccion || fuente.direccion || "";
   estado.ocupacion = estado.ocupacion || fuente.ocupacion || "";
   estado.esCliente = estado.esCliente || fuente.esCliente || "";
@@ -12623,6 +12900,7 @@ function obtenerEstadoConversacion(sessionId) {
 
   if (!estadosConversacion[sessionId]) {
     estadosConversacion[sessionId] = crearEstadoConversacionBase();
+    programarPersistenciaRedis(() => persistirEstadoSesionRedis(sessionId), "estado de sesion en Redis");
   }
 
   return estadosConversacion[sessionId];
@@ -12731,6 +13009,7 @@ function actualizarEstadoConversacion(sessionId, texto, leadGuardado = null) {
     }
   }
 
+  programarPersistenciaRedis(() => persistirEstadoSesionRedis(sessionId), "estado de sesion en Redis");
   return estado;
 }
 
@@ -13099,6 +13378,7 @@ async function obtenerHistorialConversacionPrompt(sessionId, limit = MAX_PROMPT_
     return [];
   }
 
+  await asegurarSesionRedisCargada(sessionId);
   const safeLimit = Math.max(1, Number(limit || MAX_PROMPT_HISTORY_MESSAGES));
   const preferMemory = options?.preferMemory === true;
   const historialMemoria = obtenerHistorialConversacionMemoria(sessionId, safeLimit);
@@ -14006,7 +14286,11 @@ async function resolverCoachInboundRouteContext({ channel = "", phone = "", coll
     };
   }
 
-  const routeOwnerUserId = obtenerRutaCanalTelefono(safeChannel, safePhone);
+  let routeOwnerUserId = obtenerRutaCanalTelefono(safeChannel, safePhone);
+
+  if (!routeOwnerUserId) {
+    routeOwnerUserId = await obtenerRutaCanalTelefonoRedis(safeChannel, safePhone);
+  }
   const isPublicLead = collection === "public_lead";
   const Model = isPublicLead ? Lead : CoachLeadInbox;
   const ownerField = isPublicLead ? "coachOwnerUserId" : "ownerUserId";
@@ -14394,6 +14678,8 @@ async function procesarChatChefCanal({
   if (!sessionId) {
     return { ok: false, status: 400, error: "sessionId requerido" };
   }
+
+  await asegurarSesionRedisCargada(sessionId);
 
   const chefUsage = await validarLimiteUsoChef(visitorIdLimpio);
 
@@ -19657,6 +19943,8 @@ app.post("/chat", async (req, res) => {
   if (!sessionId) {
     return res.status(400).json({ error: "sessionId requerido" });
   }
+
+  await asegurarSesionRedisCargada(sessionId);
 
   if (modoChat === "coach") {
     coachAuth = await requireCoachActivo(req, res);
