@@ -24,6 +24,7 @@ const PRIVATE_COACH_PRICE_LIST_FILE = path.join(
 
 const conversaciones = {};
 const estadosConversacion = {};
+const rutasCanalTelefono = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const STRIPE_PRICE_ID_MONTHLY = process.env.STRIPE_PRICE_ID || "";
@@ -1316,6 +1317,77 @@ function marcarSesionActiva(sessionId = "") {
   actividadSesiones[sessionId] = Date.now();
 }
 
+function construirRutaCanalTelefonoKey(channel = "", phone = "") {
+  const safeChannel = cleanText(channel || "")
+    .trim()
+    .toLowerCase();
+  const safePhone = normalizePhone(phone || "");
+
+  if (!safeChannel || !safePhone) {
+    return "";
+  }
+
+  return `${safeChannel}:${safePhone}`;
+}
+
+function registrarRutaCanalTelefono(channel = "", phone = "", ownerUserId = "") {
+  const routeKey = construirRutaCanalTelefonoKey(channel, phone);
+  const safeOwnerUserId = String(ownerUserId || "").trim();
+
+  if (!routeKey || !safeOwnerUserId) {
+    return;
+  }
+
+  rutasCanalTelefono[routeKey] = {
+    ownerUserId: safeOwnerUserId,
+    updatedAt: Date.now()
+  };
+}
+
+function obtenerRutaCanalTelefono(channel = "", phone = "") {
+  const routeKey = construirRutaCanalTelefonoKey(channel, phone);
+
+  if (!routeKey) {
+    return "";
+  }
+
+  const route = rutasCanalTelefono[routeKey];
+
+  return route?.ownerUserId ? String(route.ownerUserId).trim() : "";
+}
+
+function construirCanalSessionId(channel = "", phone = "", ownerUserId = "") {
+  const safeChannel = cleanText(channel || "")
+    .trim()
+    .toLowerCase();
+  const safePhone = normalizePhone(phone || "");
+  const safeOwnerUserId = String(ownerUserId || "public")
+    .trim()
+    .replace(/[^a-z0-9_-]/gi, "");
+
+  if (!safeChannel || !safePhone) {
+    return "";
+  }
+
+  return `${safeChannel}-session-${safeOwnerUserId || "public"}-${safePhone}`;
+}
+
+function construirCanalVisitorId(channel = "", phone = "", ownerUserId = "") {
+  const safeChannel = cleanText(channel || "")
+    .trim()
+    .toLowerCase();
+  const safePhone = normalizePhone(phone || "");
+  const safeOwnerUserId = String(ownerUserId || "public")
+    .trim()
+    .replace(/[^a-z0-9_-]/gi, "");
+
+  if (!safeChannel || !safePhone) {
+    return "";
+  }
+
+  return `${safeChannel}-visitor-${safeOwnerUserId || "public"}-${safePhone}`;
+}
+
 function limpiarMemoriaSesiones() {
   const ahora = Date.now();
   const sesiones = Object.entries(actividadSesiones);
@@ -1338,6 +1410,12 @@ function limpiarMemoriaSesiones() {
     delete actividadSesiones[sessionId];
     delete conversaciones[sessionId];
     delete estadosConversacion[sessionId];
+  }
+
+  for (const [routeKey, route] of Object.entries(rutasCanalTelefono)) {
+    if (ahora - Number(route?.updatedAt || 0) > RAM_SESSION_TTL_MS) {
+      delete rutasCanalTelefono[routeKey];
+    }
   }
 }
 
@@ -2016,6 +2094,51 @@ async function resolverCoachChefContextPorOwnerEmail(email = "") {
   }
 
   let userDoc = await CoachUser.findOne({ email: safeEmail });
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+
+  if (!(await coachTieneAccesoOperativo(userDoc))) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({ userId: userDoc._id });
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const effectiveOwnerProfile = ownerProfileDoc || profileDoc;
+
+  if (!effectiveOwnerProfile) {
+    return null;
+  }
+
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+  return {
+    slug: effectiveOwnerProfile?.chefSlug || profileDoc?.chefSlug || "",
+    userDoc,
+    profileDoc: profileDoc || effectiveOwnerProfile,
+    ownerProfileDoc: effectiveOwnerProfile,
+    ownership
+  };
+}
+
+async function resolverCoachChefContextPorOwnerUserId(userId = "") {
+  const safeUserId = String(userId || "").trim();
+
+  if (!safeUserId || !mongoose.Types.ObjectId.isValid(safeUserId)) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findById(safeUserId);
 
   if (!userDoc) {
     return null;
@@ -13198,6 +13321,131 @@ function construirTwilioSmsApiAuthHeader() {
   return `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64")}`;
 }
 
+function construirTwilioWebhookAbsoluteUrl(req) {
+  const protocolHeader = String(req.headers["x-forwarded-proto"] || "")
+    .split(",")[0]
+    .trim();
+  const protocol = protocolHeader || (requestEsSeguro(req) ? "https" : "http");
+  const host = req.get("host") || "";
+
+  return host ? `${protocol}://${host}${req.originalUrl || req.url || ""}` : "";
+}
+
+function construirTwilioWebhookExpectedSignature(req, authToken = "") {
+  const safeAuthToken = String(authToken || "").trim();
+  const url = construirTwilioWebhookAbsoluteUrl(req);
+
+  if (!safeAuthToken || !url) {
+    return "";
+  }
+
+  const params = req.body && typeof req.body === "object" ? req.body : {};
+  const payload = Object.keys(params)
+    .sort()
+    .reduce((acc, key) => {
+      const value = params[key];
+
+      if (Array.isArray(value)) {
+        return `${acc}${key}${value.join("")}`;
+      }
+
+      return `${acc}${key}${String(value ?? "")}`;
+    }, url);
+
+  return crypto.createHmac("sha1", safeAuthToken).update(payload, "utf8").digest("base64");
+}
+
+function validarFirmaTwilioWebhook(req) {
+  const providedSignature = String(req.headers["x-twilio-signature"] || "").trim();
+
+  if (!TWILIO_AUTH_TOKEN || !providedSignature) {
+    return false;
+  }
+
+  const expectedSignature = construirTwilioWebhookExpectedSignature(req, TWILIO_AUTH_TOKEN);
+
+  if (!expectedSignature) {
+    return false;
+  }
+
+  const expected = Buffer.from(expectedSignature);
+  const provided = Buffer.from(providedSignature);
+
+  if (expected.length !== provided.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, provided);
+}
+
+function resolverOwnerUnicoDesdeDocs(docs = [], fieldName = "") {
+  const ownerIds = Array.from(
+    new Set(
+      (Array.isArray(docs) ? docs : [])
+        .map(doc => String(doc?.[fieldName] || "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  return ownerIds.length === 1 ? ownerIds[0] : "";
+}
+
+async function resolverCoachInboundRouteContext({ channel = "", phone = "", collection = "lead_inbox" } = {}) {
+  const safePhone = normalizePhone(phone || "");
+  const safeChannel = cleanText(channel || "")
+    .trim()
+    .toLowerCase();
+
+  if (!safePhone || !safeChannel) {
+    return {
+      matchedDoc: null,
+      coachChefContext: null,
+      ownerUserId: ""
+    };
+  }
+
+  const routeOwnerUserId = obtenerRutaCanalTelefono(safeChannel, safePhone);
+  const isPublicLead = collection === "public_lead";
+  const Model = isPublicLead ? Lead : CoachLeadInbox;
+  const ownerField = isPublicLead ? "coachOwnerUserId" : "ownerUserId";
+  const docs = await Model.find({ phone: safePhone })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(12);
+  let matchedDoc = null;
+
+  if (routeOwnerUserId) {
+    matchedDoc =
+      docs.find(doc => String(doc?.[ownerField] || "").trim() === routeOwnerUserId) || null;
+  }
+
+  if (!matchedDoc) {
+    const uniqueOwnerUserId = resolverOwnerUnicoDesdeDocs(docs, ownerField);
+
+    if (uniqueOwnerUserId) {
+      matchedDoc =
+        docs.find(doc => String(doc?.[ownerField] || "").trim() === uniqueOwnerUserId) || docs[0] || null;
+    } else if (docs.length === 1) {
+      matchedDoc = docs[0];
+    }
+  }
+
+  let coachChefContext = matchedDoc ? await resolverCoachChefContextPorLead(matchedDoc) : null;
+  const resolvedOwnerUserId =
+    String(coachChefContext?.ownership?.ownerUserId || "") ||
+    String(matchedDoc?.[ownerField] || "").trim() ||
+    routeOwnerUserId;
+
+  if (!coachChefContext && routeOwnerUserId) {
+    coachChefContext = await resolverCoachChefContextPorOwnerUserId(routeOwnerUserId);
+  }
+
+  return {
+    matchedDoc: matchedDoc || null,
+    coachChefContext: coachChefContext || null,
+    ownerUserId: resolvedOwnerUserId || ""
+  };
+}
+
 function twilioSmsEstaConfigurado() {
   return Boolean(
     TWILIO_SMS_ENABLED &&
@@ -13535,6 +13783,7 @@ async function procesarChatChefCanal({
   const fastChannel = /^(whatsapp|sms)/i.test(source);
   const coachChefContext =
     coachChefContextOverride || (fastChannel ? null : await resolverCoachChefContextPorSlug(chefSlug));
+  const sourceChannel = /^sms/i.test(source) ? "sms" : /whatsapp/i.test(source) ? "whatsapp" : "";
 
   if (!preguntaLimpia) {
     return { ok: false, status: 400, error: "pregunta requerida" };
@@ -13552,6 +13801,10 @@ async function procesarChatChefCanal({
       status: 429,
       error: `Por hoy ya usaste tus ${CHEF_MAX_MESSAGES_PER_DAY} mensajes gratis. Manana se reinicia tu acceso.`
     };
+  }
+
+  if (fastChannel && sourceChannel && phoneHint && coachChefContext?.ownership?.ownerUserId) {
+    registrarRutaCanalTelefono(sourceChannel, phoneHint, coachChefContext.ownership.ownerUserId);
   }
 
   marcarSesionActiva(sessionId);
@@ -18375,6 +18628,10 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
     return res.type("text/xml").send(construirTwilioEmptyResponse());
   }
 
+  if (!validarFirmaTwilioWebhook(req)) {
+    return res.status(403).type("text/plain").send("Firma Twilio invalida");
+  }
+
   if (TWILIO_SMS_WEBHOOK_TOKEN && cleanText(req.query.token || "") !== TWILIO_SMS_WEBHOOK_TOKEN) {
     return res.status(403).type("text/plain").send("Webhook no autorizado");
   }
@@ -18384,10 +18641,19 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
   const phone = normalizePhone(fromRaw);
   const messageSid = cleanText(req.body?.MessageSid || "");
   let matchedLead = null;
+  let leadChefContext = null;
+  let ownerUserId = "";
 
   if (phone) {
     try {
-      matchedLead = await CoachLeadInbox.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
+      const resolved = await resolverCoachInboundRouteContext({
+        channel: "sms",
+        phone,
+        collection: "lead_inbox"
+      });
+      matchedLead = resolved.matchedDoc;
+      leadChefContext = resolved.coachChefContext;
+      ownerUserId = resolved.ownerUserId;
 
       if (matchedLead && body) {
         await registrarActividadSmsCoachLead(matchedLead, {
@@ -18401,6 +18667,14 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
     }
   }
 
+  if (!matchedLead || !leadChefContext?.ownership?.ownerUserId) {
+    return res.type("text/xml").send(
+      construirTwilioMessageResponse(
+        "No pude identificar la cuenta correcta para este SMS. Pidele a tu distribuidor que te escriba primero desde su CRM."
+      )
+    );
+  }
+
   if (!TWILIO_SMS_AI_REPLY_ENABLED) {
     return res.type("text/xml").send(construirTwilioEmptyResponse());
   }
@@ -18409,9 +18683,8 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
     return res.type("text/xml").send(construirTwilioEmptyResponse());
   }
 
-  const sessionId = `sms-session-${phone}`;
-  const visitorId = `sms-visitor-${phone}`;
-  const leadChefContext = matchedLead ? await resolverCoachChefContextPorLead(matchedLead) : null;
+  const sessionId = construirCanalSessionId("sms", phone, ownerUserId || leadChefContext.ownership.ownerUserId);
+  const visitorId = construirCanalVisitorId("sms", phone, ownerUserId || leadChefContext.ownership.ownerUserId);
   const resultado = await procesarChatChefCanal({
     pregunta: body,
     sessionId,
@@ -18440,6 +18713,10 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
     return res.type("text/xml").send(construirTwilioMessageResponse("El sandbox de WhatsApp todavia no esta activado."));
   }
 
+  if (!validarFirmaTwilioWebhook(req)) {
+    return res.status(403).type("text/plain").send("Firma Twilio invalida");
+  }
+
   if (TWILIO_WHATSAPP_WEBHOOK_TOKEN && cleanText(req.query.token || "") !== TWILIO_WHATSAPP_WEBHOOK_TOKEN) {
     return res.status(403).type("text/plain").send("Webhook no autorizado");
   }
@@ -18450,6 +18727,7 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
   const profileName = cleanText(req.body?.ProfileName || "");
   let matchedLead = null;
   let leadChefContext = null;
+  let ownerUserId = "";
 
   if (!body) {
     return res.type("text/xml").send(construirTwilioMessageResponse("Recibi tu mensaje vacio. Intenta otra vez con texto."));
@@ -18462,11 +18740,18 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
   }
 
   try {
-    matchedLead = await Lead.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
-    leadChefContext = matchedLead ? await resolverCoachChefContextPorLead(matchedLead) : null;
+    const resolved = await resolverCoachInboundRouteContext({
+      channel: "whatsapp",
+      phone,
+      collection: "public_lead"
+    });
+    matchedLead = resolved.matchedDoc;
+    leadChefContext = resolved.coachChefContext;
+    ownerUserId = resolved.ownerUserId;
 
     if (!leadChefContext) {
       leadChefContext = await resolverCoachChefContextPublicoPredeterminado();
+      ownerUserId = ownerUserId || String(leadChefContext?.ownership?.ownerUserId || "").trim();
     }
 
     if (matchedLead && leadChefContext) {
@@ -18476,8 +18761,8 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
     console.error("Error resolviendo contexto de WhatsApp Chef:", error.message);
   }
 
-  const sessionId = `wa-session-${phone}`;
-  const visitorId = `wa-visitor-${phone}`;
+  const sessionId = construirCanalSessionId("whatsapp", phone, ownerUserId || leadChefContext?.ownership?.ownerUserId || "");
+  const visitorId = construirCanalVisitorId("whatsapp", phone, ownerUserId || leadChefContext?.ownership?.ownerUserId || "");
   const resultado = await procesarChatChefCanal({
     pregunta: body,
     sessionId,
