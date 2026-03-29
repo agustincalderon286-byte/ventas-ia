@@ -29,7 +29,9 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 const STRIPE_PRICE_ID_MONTHLY = process.env.STRIPE_PRICE_ID || "";
 const STRIPE_PRICE_ID_ANNUAL = process.env.STRIPE_PRICE_ID_ANNUAL || "";
 const COACH_SESSION_COOKIE = "agustin_coach_session";
+const COACH_RETURN_SESSION_COOKIE = "agustin_coach_session_return";
 const COACH_SESSION_DAYS = 30;
+const COACH_RETURN_SESSION_MS = 12 * 60 * 60 * 1000;
 const COACH_PASSWORD_MIN = 8;
 const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
@@ -10057,6 +10059,16 @@ function setCoachCookie(res, req, token) {
   });
 }
 
+function setCoachReturnCookie(res, req, token) {
+  res.cookie(COACH_RETURN_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: "/",
+    maxAge: COACH_RETURN_SESSION_MS
+  });
+}
+
 function obtenerCoachIp(req) {
   const forwarded = String(req.headers["x-forwarded-for"] || "")
     .split(",")
@@ -10073,6 +10085,41 @@ function clearCoachCookie(res, req) {
     secure: requestEsSeguro(req),
     path: "/"
   });
+}
+
+function clearCoachReturnCookie(res, req) {
+  res.clearCookie(COACH_RETURN_SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: requestEsSeguro(req),
+    path: "/"
+  });
+}
+
+async function obtenerCoachAuthPorToken(token = "", options = {}) {
+  if (!token) {
+    return { session: null, user: null };
+  }
+
+  const tokenHash = hashTokenSeguro(token);
+  const session = await CoachSession.findOne({
+    tokenHash,
+    expiresAt: { $gt: new Date() }
+  }).populate("userId");
+
+  if (!session || !session.userId) {
+    return { session: null, user: null };
+  }
+
+  if (options.touch !== false) {
+    session.lastSeenAt = new Date();
+    await session.save();
+  }
+
+  return {
+    session,
+    user: session.userId
+  };
 }
 
 async function crearCoachSesion(req, res, userId) {
@@ -10110,39 +10157,31 @@ async function crearCoachSesion(req, res, userId) {
 async function destruirCoachSesion(req, res) {
   const cookies = parsearCookies(req.headers.cookie || "");
   const token = cookies[COACH_SESSION_COOKIE];
+  const returnToken = cookies[COACH_RETURN_SESSION_COOKIE];
 
   if (token) {
     await CoachSession.deleteOne({ tokenHash: hashTokenSeguro(token) });
   }
 
+  if (returnToken) {
+    await CoachSession.deleteOne({ tokenHash: hashTokenSeguro(returnToken) });
+  }
+
   clearCoachCookie(res, req);
+  clearCoachReturnCookie(res, req);
 }
 
 async function obtenerCoachAuth(req) {
   const cookies = parsearCookies(req.headers.cookie || "");
   const token = cookies[COACH_SESSION_COOKIE];
 
-  if (!token) {
-    return { session: null, user: null };
-  }
+  return obtenerCoachAuthPorToken(token, { touch: true });
+}
 
-  const tokenHash = hashTokenSeguro(token);
-  const session = await CoachSession.findOne({
-    tokenHash,
-    expiresAt: { $gt: new Date() }
-  }).populate("userId");
-
-  if (!session || !session.userId) {
-    return { session: null, user: null };
-  }
-
-  session.lastSeenAt = new Date();
-  await session.save();
-
-  return {
-    session,
-    user: session.userId
-  };
+async function obtenerCoachReturnAuth(req) {
+  const cookies = parsearCookies(req.headers.cookie || "");
+  const token = cookies[COACH_RETURN_SESSION_COOKIE];
+  return obtenerCoachAuthPorToken(token, { touch: false });
 }
 
 async function requireCoachUser(req, res) {
@@ -14696,7 +14735,7 @@ app.get("/api/coach/me", async (req, res) => {
 
     let userDoc = await asegurarCoachUserBase(auth.user);
 
-    const [profileDocRaw, analyticsDoc, networkSummary, leadMemory] = await Promise.all([
+    const [profileDocRaw, analyticsDoc, networkSummary, leadMemory, returnAuth] = await Promise.all([
       CoachDistributorProfile.findOne({ userId: userDoc._id }),
       CoachDistributorAnalytics.findOne({ userId: userDoc._id }).lean(),
       coachTieneAccesoTotal(userDoc) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
@@ -14705,11 +14744,13 @@ app.get("/api/coach/me", async (req, res) => {
             mode: "coach",
             coachUser: userDoc
           })
-        : Promise.resolve({ leadContext: null, repLeadSummary: null })
+        : Promise.resolve({ leadContext: null, repLeadSummary: null }),
+      obtenerCoachReturnAuth(req)
     ]);
 
     let profileDoc = await asegurarCoachDistributorProfile(userDoc, profileDocRaw);
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
+    const returnUserView = returnAuth?.user ? await construirCoachUserView(returnAuth.user) : null;
 
     res.json({
       authenticated: true,
@@ -14725,6 +14766,10 @@ app.get("/api/coach/me", async (req, res) => {
           pipelineStageId: HIGHLEVEL_PIPELINE_STAGE_ID || "",
           webhookPath: "/webhooks/highlevel"
         }
+      },
+      sessionSwitch: {
+        canReturn: Boolean(returnUserView),
+        returnUser: returnUserView
       },
       networkSummary,
       repLeadSummary: leadMemory?.repLeadSummary || null,
@@ -15035,6 +15080,104 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
   } catch (error) {
     console.error("Error actualizando subcuenta del Coach:", error.message);
     responderCoachError(res, 500, "No pude actualizar la subcuenta en este momento.");
+  }
+});
+
+app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const userId = String(req.params?.userId || "").trim();
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return responderCoachError(res, 400, "Subcuenta invalida.");
+  }
+
+  try {
+    const cookies = parsearCookies(req.headers.cookie || "");
+    const currentToken = String(cookies[COACH_SESSION_COOKIE] || "").trim();
+
+    if (!currentToken) {
+      return responderCoachError(res, 401, "Necesitas una sesion activa para cambiar de cuenta.");
+    }
+
+    const seatDoc = await CoachUser.findOne({
+      _id: userId,
+      teamOwnerUserId: auth.user._id,
+      accountType: "seat",
+      seatStatus: "active"
+    });
+
+    if (!seatDoc) {
+      return responderCoachError(res, 404, "No encontre esa subcuenta activa.");
+    }
+
+    const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
+    const teamRole = normalizarCoachTeamRole(seatProfile?.teamRole || "", seatDoc);
+
+    if (teamRole !== "telemarketing") {
+      return responderCoachError(res, 400, "Por ahora este acceso directo solo esta disponible para telemarketing.");
+    }
+
+    setCoachReturnCookie(res, req, currentToken);
+    await crearCoachSesion(req, res, seatDoc._id);
+
+    res.json({
+      ok: true,
+      url: construirCoachHomePath(seatDoc, { teamRole }),
+      seat: limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile?.toObject ? seatProfile.toObject() : seatProfile, {})
+    });
+  } catch (error) {
+    console.error("Error cambiando a subcuenta telemarketing:", error.message);
+    responderCoachError(res, 500, "No pude abrir esa subcuenta en este momento.");
+  }
+});
+
+app.post("/api/coach/session/return", async (req, res) => {
+  try {
+    const cookies = parsearCookies(req.headers.cookie || "");
+    const currentToken = String(cookies[COACH_SESSION_COOKIE] || "").trim();
+    const returnToken = String(cookies[COACH_RETURN_SESSION_COOKIE] || "").trim();
+
+    if (!returnToken) {
+      return responderCoachError(res, 400, "No encontre una cuenta principal para retomar.");
+    }
+
+    let returnAuth = await obtenerCoachReturnAuth(req);
+
+    if (!returnAuth.user) {
+      clearCoachReturnCookie(res, req);
+      return responderCoachError(res, 400, "La cuenta original ya no esta disponible.");
+    }
+
+    let returnUserDoc = await asegurarCoachUserBase(returnAuth.user);
+
+    if (!(await coachTieneAccesoOperativo(returnUserDoc))) {
+      clearCoachReturnCookie(res, req);
+      return responderCoachError(res, 403, "La cuenta principal ya no tiene acceso operativo.");
+    }
+
+    if (currentToken && currentToken !== returnToken) {
+      await CoachSession.deleteOne({ tokenHash: hashTokenSeguro(currentToken) });
+    }
+
+    setCoachCookie(res, req, returnToken);
+    clearCoachReturnCookie(res, req);
+    returnAuth = await obtenerCoachAuthPorToken(returnToken, { touch: false });
+    returnUserDoc = await asegurarCoachUserBase(returnAuth.user || returnUserDoc);
+    const returnUserView = await construirCoachUserView(returnUserDoc);
+
+    res.json({
+      ok: true,
+      url: returnUserView?.homePath || construirCoachHomePath(returnUserDoc),
+      user: returnUserView
+    });
+  } catch (error) {
+    console.error("Error regresando a cuenta principal del Coach:", error.message);
+    responderCoachError(res, 500, "No pude regresar a tu cuenta principal.");
   }
 });
 

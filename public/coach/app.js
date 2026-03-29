@@ -6408,6 +6408,17 @@ function updateAuthTargets(user) {
   });
 }
 
+function renderCoachSessionSwitch(sessionSwitch = null) {
+  const returnUser = sessionSwitch?.returnUser || null;
+  const canReturn = Boolean(sessionSwitch?.canReturn && returnUser);
+  const labelBase = returnUser?.name || returnUser?.seatLabel || "mi cuenta";
+
+  document.querySelectorAll("[data-coach-return-session]").forEach(button => {
+    button.hidden = !canReturn;
+    button.textContent = canReturn ? `Volver a ${labelBase}` : "Volver a mi cuenta";
+  });
+}
+
 function formatCoachInsightLabel(value) {
   const limpio = String(value || "").trim();
 
@@ -6618,6 +6629,7 @@ function renderCoachTeamSeats(seats = []) {
         const teamRoleLabel = formatTeamSeatRoleLabel(seat.teamRole);
         const seatHomePath = String(seat.homePath || "/coach/app/").trim() || "/coach/app/";
         const canOpenChef = String(seat.teamRole || "").trim() !== "telemarketing";
+        const canSwitchSession = String(seat.teamRole || "").trim() === "telemarketing" && seat.seatStatus === "active";
 
         return `
         <article class="team-seat-card" data-team-seat-id="${escapeHtml(seat.id || "")}">
@@ -6667,6 +6679,19 @@ function renderCoachTeamSeats(seats = []) {
             </a>
             `
                 : `
+            ${
+              canSwitchSession
+                ? `
+            <button
+              type="button"
+              class="primary-button"
+              data-team-seat-switch-session
+            >
+              Entrar ahora
+            </button>
+            `
+                : ""
+            }
             <a
               class="nav-button"
               href="${escapeHtml(seatHomePath)}"
@@ -6802,6 +6827,31 @@ function initCoachTeamWorkspace(user = null) {
     }
 
     const toggleButton = event.target.closest("[data-team-seat-toggle]");
+
+    const switchButton = event.target.closest("[data-team-seat-switch-session]");
+
+    if (switchButton) {
+      const card = switchButton.closest("[data-team-seat-id]");
+      const seatId = card?.dataset.teamSeatId || "";
+
+      if (!seatId) {
+        return;
+      }
+
+      setButtonLoading(switchButton, true, "Abriendo...");
+
+      try {
+        const data = await apiRequest(`/api/coach/team/seats/${encodeURIComponent(seatId)}/switch`, {
+          method: "POST"
+        });
+
+        window.location.href = data.url || "/coach/telemarketing/";
+      } catch (error) {
+        setMessage(feedbackNode, error.message, "error");
+        setButtonLoading(switchButton, false);
+      }
+      return;
+    }
 
     if (!toggleButton) {
       return;
@@ -8812,6 +8862,7 @@ async function initCoachAppPage() {
 
   syncCoachManagerUi(me.user);
   updateAuthTargets(me.user);
+  renderCoachSessionSwitch(me.sessionSwitch || null);
   renderCoachProfile(me.profile);
   renderCoachNetworkSummary(me.networkSummary);
   renderCoachRepLeadSummary(me.repLeadSummary);
@@ -8912,6 +8963,7 @@ async function initCoachAppPage() {
   const demoEventsRoot = document.querySelector("[data-coach-demo-events]");
   const portalButtons = document.querySelectorAll("[data-open-billing-portal]");
   const logoutButtons = document.querySelectorAll("[data-coach-logout]");
+  const returnSessionButtons = document.querySelectorAll("[data-coach-return-session]");
   const chefSelfOpenLinks = document.querySelectorAll("[data-chef-self-open-link]");
   const chefShareButtons = document.querySelectorAll("[data-open-chef-share]");
   const contactShareButtons = document.querySelectorAll("[data-open-contact-share]");
@@ -9604,6 +9656,25 @@ async function initCoachAppPage() {
         });
 
         window.location.href = "/coach/login/";
+      } catch (error) {
+        setMessage(appMessage, error.message, "error");
+        setButtonLoading(button, false);
+      }
+    });
+  });
+
+  returnSessionButtons.forEach(button => {
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      clearMessage(appMessage);
+      setButtonLoading(button, true, "Volviendo...");
+
+      try {
+        const data = await apiRequest("/api/coach/session/return", {
+          method: "POST"
+        });
+
+        window.location.href = data.url || "/coach/app/";
       } catch (error) {
         setMessage(appMessage, error.message, "error");
         setButtonLoading(button, false);
