@@ -9089,6 +9089,13 @@ async function initCoachAppPage() {
   }
 
   const me = await fetchViewer();
+  let platformConfig = null;
+
+  try {
+    platformConfig = await apiRequest("/api/platform/config");
+  } catch (error) {
+    platformConfig = null;
+  }
 
   if (!me.authenticated) {
     window.location.href = "/coach/login/";
@@ -9218,6 +9225,12 @@ async function initCoachAppPage() {
   const copyChefLinkButton = document.querySelector("[data-copy-chef-link]");
   const nativeShareChefButton = document.querySelector("[data-native-share-chef]");
   const chefShareFeedback = document.querySelector("[data-chef-share-feedback]");
+  const chefWhatsAppOpenLinks = document.querySelectorAll("[data-chef-whatsapp-open-link]");
+  const chefWhatsAppQrNodes = document.querySelectorAll("[data-chef-whatsapp-qr]");
+  const chefWhatsAppUrlNodes = document.querySelectorAll("[data-chef-whatsapp-url]");
+  const copyChefWhatsAppLinkButton = document.querySelector("[data-copy-chef-whatsapp-link]");
+  const chefWhatsAppShareFeedback = document.querySelector("[data-chef-whatsapp-share-feedback]");
+  const chefWhatsAppShareCard = document.querySelector(".coach-whatsapp-share-card");
   const contactShareOpenLinks = document.querySelectorAll("[data-contact-share-open-link]");
   const orderCalcToggle = document.querySelector("[data-order-calc-toggle]");
   const orderCalcWrap = document.querySelector("[data-order-calc-wrap]");
@@ -9232,6 +9245,7 @@ async function initCoachAppPage() {
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
   const ownChefSharePath = me.profile?.chef?.sharePath || "/chef/";
   const ownChefShareUrl = buildAbsoluteAppUrl(ownChefSharePath);
+  const ownChefWhatsAppUrl = String(platformConfig?.whatsapp?.chefUrl || "").trim();
   const ownContactSharePath = me.profile?.contactShare?.sharePath || "";
   const ownContactShareUrl = buildAbsoluteAppUrl(ownContactSharePath);
   const ownCoachHomePath = getCoachHomePath(me.user);
@@ -9255,6 +9269,39 @@ async function initCoachAppPage() {
     node.href = ownContactShareUrl || ownCoachHomePath;
   });
 
+  const syncWhatsAppChefShare = () => {
+    const enabled = Boolean(platformConfig?.whatsapp?.chefEnabled && ownChefWhatsAppUrl);
+    const fallbackUrl = enabled ? ownChefWhatsAppUrl : ownCoachHomePath;
+
+    chefWhatsAppOpenLinks.forEach(node => {
+      node.href = fallbackUrl;
+      if (!enabled) {
+        node.setAttribute("aria-disabled", "true");
+      } else {
+        node.removeAttribute("aria-disabled");
+      }
+    });
+
+    chefWhatsAppUrlNodes.forEach(node => {
+      node.textContent = enabled ? ownChefWhatsAppUrl : "Activa WhatsApp del Chef para mostrar este QR.";
+    });
+
+    chefWhatsAppQrNodes.forEach(node => {
+      node.src = buildShareQrImageUrl(enabled ? ownChefWhatsAppUrl : ownCoachHomePath);
+      node.alt = enabled
+        ? "Codigo QR para abrir Agustin 2.0 Chef en WhatsApp"
+        : "QR temporal de Agustin 2.0 Coach";
+    });
+
+    if (chefWhatsAppShareCard) {
+      chefWhatsAppShareCard.classList.toggle("is-disabled", !enabled);
+    }
+
+    if (copyChefWhatsAppLinkButton) {
+      copyChefWhatsAppLinkButton.disabled = !enabled;
+    }
+  };
+
   if (!ownContactShareUrl) {
     contactShareButtons.forEach(button => {
       button.disabled = true;
@@ -9268,6 +9315,8 @@ async function initCoachAppPage() {
   if (nativeShareChefButton && typeof navigator.share !== "function") {
     nativeShareChefButton.hidden = true;
   }
+
+  syncWhatsAppChefShare();
 
   const renderActiveChefShare = shareTarget => {
     activeChefShare = {
@@ -9784,6 +9833,26 @@ async function initCoachAppPage() {
         chefShareFeedback.textContent = "No pude copiar el link.";
       } else {
         setMessage(appMessage, "No pude copiar el link.", "error");
+      }
+    }
+  });
+
+  copyChefWhatsAppLinkButton?.addEventListener("click", async () => {
+    if (!ownChefWhatsAppUrl) {
+      if (chefWhatsAppShareFeedback) {
+        chefWhatsAppShareFeedback.textContent = "Primero activa el WhatsApp del Chef.";
+      }
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(ownChefWhatsAppUrl);
+      if (chefWhatsAppShareFeedback) {
+        chefWhatsAppShareFeedback.textContent = "El link de WhatsApp ya quedo copiado.";
+      }
+    } catch (error) {
+      if (chefWhatsAppShareFeedback) {
+        chefWhatsAppShareFeedback.textContent = "No pude copiar el link de WhatsApp.";
       }
     }
   });

@@ -4758,6 +4758,69 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   background: #ffffff;
 }
 
+.coach-whatsapp-share-card {
+  background:
+    radial-gradient(circle at top right, rgba(95, 231, 149, 0.16), transparent 32%),
+    linear-gradient(180deg, rgba(8, 33, 22, 0.96), rgba(5, 22, 15, 0.94));
+  border-color: rgba(95, 231, 149, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(95, 231, 149, 0.08),
+    0 18px 36px rgba(3, 15, 10, 0.24);
+}
+
+.coach-whatsapp-share-card.is-disabled {
+  opacity: 0.72;
+}
+
+.coach-whatsapp-share-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+  gap: 20px;
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(95, 231, 149, 0.12), rgba(14, 66, 39, 0.24));
+  border: 1px solid rgba(95, 231, 149, 0.2);
+}
+
+.coach-whatsapp-share-copy {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.coach-whatsapp-share-copy h4 {
+  font-size: 1.16rem;
+  color: #ecfff3;
+}
+
+.coach-whatsapp-share-copy p,
+.coach-whatsapp-share-qr-wrap small {
+  color: #bfe7cc;
+  line-height: 1.65;
+}
+
+.coach-whatsapp-share-qr-wrap {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 10px;
+}
+
+.chef-share-qr-whatsapp {
+  background: linear-gradient(180deg, #ffffff, #edfff2);
+  box-shadow:
+    inset 0 0 0 1px rgba(43, 182, 99, 0.12),
+    0 14px 28px rgba(6, 34, 19, 0.22);
+}
+
+.coach-share-url-inline {
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(95, 231, 149, 0.16);
+  color: #e8fff0;
+}
+
 .coach-share-url {
   margin-top: 14px;
   padding: 12px 14px;
@@ -4767,6 +4830,12 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   color: var(--muted);
   text-align: center;
   word-break: break-word;
+}
+
+@media (max-width: 860px) {
+  .coach-whatsapp-share-inline {
+    grid-template-columns: 1fr;
+  }
 }
 
 .royalone-dock {
