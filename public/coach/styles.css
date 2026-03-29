@@ -1431,6 +1431,18 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   padding-right: 10px;
 }
 
+.crm-inline-datetime-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.crm-inline-picker-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .crm-inline-textarea {
   min-height: 116px;
   padding: 12px;
@@ -1707,6 +1719,100 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   line-height: 1.5;
 }
 
+.agenda-card-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.95fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.agenda-edit-field {
+  display: grid;
+  gap: 8px;
+}
+
+.agenda-edit-field span,
+.agenda-edit-field small {
+  display: block;
+}
+
+.agenda-edit-field span {
+  color: #eef7ff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agenda-edit-field small {
+  color: #bfd6e4;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.agenda-inline-datetime {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.agenda-edit-actions {
+  align-items: stretch;
+}
+
+.agenda-edit-actions .primary-button {
+  min-height: 44px;
+}
+
+.coach-floating-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 8, 14, 0.64);
+  backdrop-filter: blur(12px);
+}
+
+.coach-floating-dialog {
+  width: min(560px, 100%);
+  border-radius: 28px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(232, 197, 123, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(15, 27, 42, 0.98), rgba(8, 16, 28, 0.96));
+  border: 1px solid rgba(197, 228, 255, 0.16);
+  box-shadow: 0 28px 60px rgba(2, 8, 16, 0.45);
+}
+
+.coach-floating-form {
+  display: grid;
+  gap: 14px;
+}
+
+.coach-floating-field {
+  display: grid;
+  gap: 8px;
+}
+
+.coach-floating-field span {
+  color: #eef7ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coach-floating-textarea {
+  min-height: 132px;
+}
+
+.coach-floating-actions {
+  justify-content: flex-end;
+}
+
 .agenda-card-actions {
   align-items: center;
 }
@@ -1827,7 +1933,8 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 
   .agenda-card-head,
   .agenda-card-head-executive,
-  .agenda-card-grid {
+  .agenda-card-grid,
+  .agenda-card-edit-grid {
     grid-template-columns: 1fr;
   }
 }

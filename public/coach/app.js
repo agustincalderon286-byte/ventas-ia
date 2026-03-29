@@ -4599,31 +4599,121 @@ function formatCoachAgendaAddress(record = null) {
     .join(", ");
 }
 
-function promptCoachAgendaDateTime(message = "", fallback = "") {
-  const suggested = formatDateTimeEditable12(fallback);
-  const input = window.prompt(`${message}\nUsa formato MM/DD/YYYY h:mm AM/PM`, suggested || "");
-
-  if (input === null) {
-    return null;
+function openCoachDateTimeInputPicker(input = null) {
+  if (!input) {
+    return;
   }
 
-  const safeValue = String(input || "").trim();
+  input.focus();
 
-  if (!safeValue) {
-    return "";
+  if (typeof input.showPicker === "function") {
+    try {
+      input.showPicker();
+    } catch (error) {
+      // Algunos navegadores restringen showPicker fuera de ciertos contextos.
+    }
   }
-
-  const parsed = parseCoachFlexibleDateTimeValue(safeValue);
-
-  if (!parsed.valid) {
-    window.alert("No pude leer esa fecha. Usa formato MM/DD/YYYY h:mm AM/PM.");
-    return undefined;
-  }
-
-  return parsed.iso;
 }
 
-function buildCoachAgendaActionPayload(action = "", record = null) {
+function openCoachAgendaScheduleDialog({
+  title = "Programar seguimiento",
+  message = "Selecciona fecha, hora y nota.",
+  initialDate = "",
+  initialNote = "",
+  confirmLabel = "Guardar"
+} = {}) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "coach-floating-modal";
+    overlay.innerHTML = `
+      <div class="coach-floating-dialog" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <form class="coach-floating-form" data-coach-floating-form>
+          <div class="eyebrow">Agenda</div>
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(message)}</p>
+          <label class="coach-floating-field">
+            <span>Fecha y hora</span>
+            <input
+              type="datetime-local"
+              class="crm-inline-input"
+              value="${escapeHtml(formatDateTimeLocalValue(initialDate))}"
+              data-coach-floating-datetime
+            />
+          </label>
+          <label class="coach-floating-field">
+            <span>Nota</span>
+            <textarea
+              class="crm-inline-input crm-inline-textarea coach-floating-textarea"
+              rows="4"
+              placeholder="Escribe una nota clara para el siguiente paso."
+              data-coach-floating-note
+            >${escapeHtml(initialNote || "")}</textarea>
+          </label>
+          <div class="form-result" data-coach-floating-feedback></div>
+          <div class="dashboard-actions compact-top coach-floating-actions">
+            <button type="button" class="nav-button" data-coach-floating-cancel>Cancelar</button>
+            <button type="submit" class="primary-button">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const form = overlay.querySelector("[data-coach-floating-form]");
+    const dateInput = overlay.querySelector("[data-coach-floating-datetime]");
+    const noteInput = overlay.querySelector("[data-coach-floating-note]");
+    const feedbackNode = overlay.querySelector("[data-coach-floating-feedback]");
+    const cancelButton = overlay.querySelector("[data-coach-floating-cancel]");
+
+    const cleanup = result => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      overlay.remove();
+      resolve(result);
+    };
+
+    const handleKeyDown = event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cleanup(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) {
+        cleanup(null);
+      }
+    });
+
+    cancelButton?.addEventListener("click", () => cleanup(null));
+
+    form?.addEventListener("submit", event => {
+      event.preventDefault();
+      clearMessage(feedbackNode);
+
+      const parsed = parseCoachFlexibleDateTimeValue(dateInput?.value || "");
+
+      if (!parsed.valid || !parsed.iso) {
+        setMessage(feedbackNode, "Selecciona una fecha y hora validas.", "error");
+        openCoachDateTimeInputPicker(dateInput);
+        return;
+      }
+
+      cleanup({
+        nextActionAt: parsed.iso,
+        note: String(noteInput?.value || "").trim()
+      });
+    });
+
+    window.requestAnimationFrame(() => {
+      openCoachDateTimeInputPicker(dateInput);
+    });
+  });
+}
+
+async function buildCoachAgendaActionPayload(action = "", record = null) {
   const normalizedAction = String(action || "").trim().toLowerCase();
 
   if (!normalizedAction || !record?.id) {
@@ -4660,49 +4750,43 @@ function buildCoachAgendaActionPayload(action = "", record = null) {
       };
     }
     case "follow_up": {
-      const nextDate = promptCoachAgendaDateTime(
-        "Cuando quieres dejar el siguiente seguimiento?",
-        record.nextActionAt || record.appointmentAt || ""
-      );
+      const scheduleResult = await openCoachAgendaScheduleDialog({
+        title: "Programar follow up",
+        message: "Elige la fecha y hora del siguiente seguimiento.",
+        initialDate: record.nextActionAt || record.appointmentAt || "",
+        initialNote: record.lastNote || "",
+        confirmLabel: "Guardar follow up"
+      });
 
-      if (nextDate === null || typeof nextDate === "undefined") {
-        return null;
-      }
-
-      const note = window.prompt("Nota rapida para el seguimiento.", record.lastNote || "");
-
-      if (note === null) {
+      if (!scheduleResult?.nextActionAt) {
         return null;
       }
 
       return {
         status: "seguimiento",
         nextAction: "seguimiento",
-        nextActionAt: nextDate,
-        lastNote: String(note || "").trim() || "Follow up programado desde Agenda."
+        nextActionAt: scheduleResult.nextActionAt,
+        lastNote: scheduleResult.note || "Follow up programado desde Agenda."
       };
     }
     case "reschedule": {
-      const nextDate = promptCoachAgendaDateTime(
-        "Nueva fecha de cita.",
-        record.appointmentAt || record.nextActionAt || ""
-      );
+      const scheduleResult = await openCoachAgendaScheduleDialog({
+        title: "Reagendar cita",
+        message: "Selecciona la nueva fecha y hora de la cita.",
+        initialDate: record.appointmentAt || record.nextActionAt || "",
+        initialNote: record.lastNote || "",
+        confirmLabel: "Guardar reagenda"
+      });
 
-      if (nextDate === null || typeof nextDate === "undefined" || !nextDate) {
-        return null;
-      }
-
-      const note = window.prompt("Nota rapida para la reagenda.", record.lastNote || "");
-
-      if (note === null) {
+      if (!scheduleResult?.nextActionAt) {
         return null;
       }
 
       return {
         status: "reagendada",
         nextAction: "cita",
-        nextActionAt: nextDate,
-        lastNote: String(note || "").trim() || "Cita reagendada desde Agenda."
+        nextActionAt: scheduleResult.nextActionAt,
+        lastNote: scheduleResult.note || "Cita reagendada desde Agenda."
       };
     }
     case "sale": {
@@ -4754,6 +4838,7 @@ function buildCoachAgendaCard(record = null) {
   }
 
   const address = formatCoachAgendaAddress(record);
+  const rawAddress = String(record.address || "").trim();
   const timeCopy = record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora";
   const phoneCopy = record.phone ? formatLeadPhone(record.phone) : "";
   const sourceCopy = formatCoachCrmSourceLabel(record.sourceType);
@@ -4804,6 +4889,10 @@ function buildCoachAgendaCard(record = null) {
   const routeCopy = address || "Completa direccion en el CRM para usar mapa o copiar ruta.";
   const noteCopy = record.lastNote || "Sin nota reciente.";
   const historyCopy = record.briefHistory || "Sin historial breve todavia.";
+  const scheduleLocalValue = formatDateTimeLocalValue(record.appointmentAt || record.nextActionAt);
+  const schedulePreview = record.appointmentAt || record.nextActionAt
+    ? formatDateTime(record.appointmentAt || record.nextActionAt)
+    : "Sin fecha cargada todavia.";
 
   return `
     <article class="agenda-card">
@@ -4861,19 +4950,38 @@ function buildCoachAgendaCard(record = null) {
 
       <div class="agenda-card-action-block">
         <div class="agenda-card-action-head">
-          <strong>Herramientas de visita</strong>
-          <span>Abre la herramienta correcta sin soltar la cita.</span>
+          <strong>Editar cita</strong>
+          <span>Actualiza direccion y fecha desde aqui para que el CRM y la agenda sigan iguales.</span>
         </div>
-        <div class="dashboard-actions compact-top agenda-card-actions">
-          <button type="button" class="secondary-button" data-agenda-open-tool="survey" data-agenda-record-id="${escapeHtml(
-            record.id
-          )}">Encuesta</button>
-          <button type="button" class="nav-button" data-agenda-open-tool="program414" data-agenda-record-id="${escapeHtml(
-            record.id
-          )}">4 en 14</button>
-          <button type="button" class="nav-button" data-agenda-open-tool="close" data-agenda-record-id="${escapeHtml(
-            record.id
-          )}">Cierre</button>
+        <div class="agenda-card-edit-grid">
+          <label class="agenda-edit-field agenda-edit-field-address">
+            <span>Direccion</span>
+            <input
+              type="text"
+              class="crm-inline-input"
+              value="${escapeHtml(rawAddress)}"
+              placeholder="Direccion o referencia"
+              data-agenda-inline-address
+            />
+          </label>
+          <label class="agenda-edit-field">
+            <span>Fecha y hora</span>
+            <div class="agenda-inline-datetime">
+              <input
+                type="datetime-local"
+                class="crm-inline-input"
+                value="${escapeHtml(scheduleLocalValue)}"
+                data-agenda-inline-next-action-at
+              />
+              <button type="button" class="nav-button" data-agenda-open-picker>Abrir calendario</button>
+            </div>
+            <small>${escapeHtml(schedulePreview)}</small>
+          </label>
+          <div class="dashboard-actions compact-top agenda-card-actions agenda-edit-actions">
+            <button type="button" class="primary-button" data-agenda-inline-save data-agenda-record-id="${escapeHtml(
+              record.id
+            )}">Guardar cita</button>
+          </div>
         </div>
       </div>
 
@@ -5360,6 +5468,8 @@ function initCoachCrmWorkspace(user = null) {
     autoSaveTimers.delete(recordId);
   };
 
+  const shouldDeferRowAutoSave = (row, nextTarget = null) => Boolean(row && nextTarget && row.contains(nextTarget));
+
   const saveInlineRow = async (row, saveButton, payload, successMessage = "Fila guardada en el CRM.") => {
     const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
 
@@ -5575,13 +5685,15 @@ function initCoachCrmWorkspace(user = null) {
                 </div>
                 <label class="crm-tele-stack">
                   <small>Seguimiento / cita</small>
-                  <input
-                    class="crm-inline-input"
-                    type="text"
-                    value="${escapeHtml(formatDateTimeEditable12(record.nextActionAt))}"
-                    placeholder="03/28/2026 6:30 PM"
-                    data-crm-inline-next-action-at
-                  />
+                  <div class="crm-inline-datetime-wrap">
+                    <input
+                      class="crm-inline-input"
+                      type="datetime-local"
+                      value="${escapeHtml(formatDateTimeLocalValue(record.nextActionAt))}"
+                      data-crm-inline-next-action-at
+                    />
+                    <button type="button" class="nav-button crm-inline-picker-button" data-crm-inline-open-picker>Abrir calendario</button>
+                  </div>
                 </label>
                 <small>${escapeHtml(nextActionPreview)}</small>
               </span>
@@ -5822,6 +5934,15 @@ function initCoachCrmWorkspace(user = null) {
       return;
     }
 
+    const openPickerButton = event.target.closest("[data-crm-inline-open-picker]");
+
+    if (openPickerButton) {
+      const row = openPickerButton.closest("[data-crm-inline-row]");
+      const dateInput = row?.querySelector("[data-crm-inline-next-action-at]");
+      openCoachDateTimeInputPicker(dateInput);
+      return;
+    }
+
     const quickActionButton = event.target.closest(
       "[data-crm-inline-no-answer], [data-crm-inline-follow-up], [data-crm-inline-appointment]"
     );
@@ -5891,7 +6012,6 @@ function initCoachCrmWorkspace(user = null) {
     }
 
     markInlineRowDirty(row, true);
-    scheduleTelemarketingAutoSave(row, 1200, "Cambio guardado.");
   });
 
   recordList.addEventListener("change", event => {
@@ -5900,7 +6020,7 @@ function initCoachCrmWorkspace(user = null) {
     if (
       !row ||
       !event.target.closest(
-        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action]"
+        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at]"
       )
     ) {
       return;
@@ -5919,11 +6039,15 @@ function initCoachCrmWorkspace(user = null) {
         return;
       }
 
+      if (shouldDeferRowAutoSave(row, event.relatedTarget)) {
+        return;
+      }
+
       if (!row.classList.contains("is-dirty")) {
         return;
       }
 
-      scheduleTelemarketingAutoSave(row, 80, "Cambio guardado.");
+      scheduleTelemarketingAutoSave(row, 180, "Cambio guardado.");
     },
     true
   );
@@ -6097,7 +6221,7 @@ function initCoachAgendaWorkspace(user = null) {
       return;
     }
 
-    const payload = buildCoachAgendaActionPayload(action, record);
+    const payload = await buildCoachAgendaActionPayload(action, record);
 
     if (!payload) {
       return;
@@ -6116,6 +6240,64 @@ function initCoachAgendaWorkspace(user = null) {
       setMessage(feedbackNode, "Agenda actualizada.", "success");
     } catch (error) {
       setMessage(feedbackNode, error.message || "No pude guardar ese resultado.", "error");
+    } finally {
+      setButtonLoading(button, false);
+    }
+  };
+
+  const buildAgendaInlinePayload = card => {
+    if (!card) {
+      return { payload: null, error: "No pude leer esa tarjeta de agenda." };
+    }
+
+    const nextActionInput = card.querySelector("[data-agenda-inline-next-action-at]");
+    const parsed = parseCoachFlexibleDateTimeValue(nextActionInput?.value || "");
+
+    if (!parsed.valid) {
+      return {
+        payload: null,
+        error: "Selecciona una fecha y hora validas para la cita."
+      };
+    }
+
+    return {
+      payload: {
+        address: card.querySelector("[data-agenda-inline-address]")?.value || "",
+        nextActionAt: parsed.iso || ""
+      },
+      error: ""
+    };
+  };
+
+  const handleInlineSave = async (button, recordId) => {
+    const record = findRecord(recordId);
+
+    if (!record) {
+      setMessage(feedbackNode, "No encontre esa cita para guardarla.", "error");
+      return;
+    }
+
+    const card = button.closest(".agenda-card");
+    const { payload, error } = buildAgendaInlinePayload(card);
+
+    if (error) {
+      setMessage(feedbackNode, error, "error");
+      return;
+    }
+
+    clearMessage(feedbackNode);
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      await apiRequest(`/api/coach/crm/records/${encodeURIComponent(record.id)}`, {
+        method: "PATCH",
+        body: payload
+      });
+      await loadWorkspace();
+      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+      setMessage(feedbackNode, "Cita actualizada.", "success");
+    } catch (requestError) {
+      setMessage(feedbackNode, requestError.message || "No pude guardar esta cita.", "error");
     } finally {
       setButtonLoading(button, false);
     }
@@ -6145,21 +6327,24 @@ function initCoachAgendaWorkspace(user = null) {
       return;
     }
 
-    const actionButton = event.target.closest("[data-agenda-action]");
+    const openPickerButton = event.target.closest("[data-agenda-open-picker]");
 
-    const openToolButton = event.target.closest("[data-agenda-open-tool]");
-
-    if (openToolButton) {
-      const tool = String(openToolButton.getAttribute("data-agenda-open-tool") || "").trim();
-      const recordId = String(openToolButton.getAttribute("data-agenda-record-id") || "").trim();
-      const record = findRecord(recordId);
-
-      if (record) {
-        openCoachCrmLinkedTool(tool, record);
-      }
-
+    if (openPickerButton) {
+      const card = openPickerButton.closest(".agenda-card");
+      const input = card?.querySelector("[data-agenda-inline-next-action-at]");
+      openCoachDateTimeInputPicker(input);
       return;
     }
+
+    const inlineSaveButton = event.target.closest("[data-agenda-inline-save]");
+
+    if (inlineSaveButton) {
+      const recordId = String(inlineSaveButton.getAttribute("data-agenda-record-id") || "").trim();
+      await handleInlineSave(inlineSaveButton, recordId);
+      return;
+    }
+
+    const actionButton = event.target.closest("[data-agenda-action]");
 
     if (!actionButton) {
       return;
