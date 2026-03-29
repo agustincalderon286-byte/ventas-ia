@@ -4068,6 +4068,14 @@ async function aplicarCoachCrmActualizacionALeadSource(recordDoc = null, updates
     leadDoc.nextActionAt = parseCoachLeadNextActionAt(updates.nextActionAt);
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "city")) {
+    leadDoc.city = cleanText(updates.city || "").slice(0, 80);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "zipCode")) {
+    leadDoc.zipCode = normalizarZipCode(updates.zipCode || "");
+  }
+
   if (Object.prototype.hasOwnProperty.call(updates || {}, "privateNotesFull")) {
     leadDoc.notes = cleanText(updates.privateNotesFull || "").slice(0, 1200);
   }
@@ -5932,6 +5940,95 @@ function normalizarCoachLeadNextAction(action = "") {
 
 function normalizarZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function inferCoachCityZipFromAddress(value = "") {
+  const safeValue = cleanText(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+
+  if (!safeValue) {
+    return { city: "", zipCode: "" };
+  }
+
+  const zipMatch = safeValue.match(/\b(\d{5}(?:-\d{4})?)\b/);
+  const zipCode = normalizarZipCode(zipMatch?.[1] || "");
+  const stateZipMatch = safeValue.match(/(.+?)(?:,?\s+)([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+  let city = "";
+
+  if (stateZipMatch) {
+    const beforeState = stateZipMatch[1].trim().replace(/,+$/g, "");
+    const commaParts = beforeState
+      .split(",")
+      .map(part => cleanText(part).trim())
+      .filter(Boolean);
+
+    if (commaParts.length >= 2) {
+      city = commaParts[commaParts.length - 1];
+    } else {
+      const tokens = beforeState.split(/\s+/).filter(Boolean);
+      const streetSuffixes = new Set([
+        "st",
+        "street",
+        "ave",
+        "avenue",
+        "rd",
+        "road",
+        "dr",
+        "drive",
+        "ct",
+        "court",
+        "pl",
+        "place",
+        "blvd",
+        "boulevard",
+        "ln",
+        "lane",
+        "way",
+        "pkwy",
+        "parkway",
+        "cir",
+        "circle",
+        "trl",
+        "trail",
+        "hwy",
+        "highway",
+        "ter",
+        "terrace"
+      ]);
+      let streetEndIndex = -1;
+
+      tokens.forEach((token, index) => {
+        const normalizedToken = String(token || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+
+        if (streetSuffixes.has(normalizedToken)) {
+          streetEndIndex = index;
+        }
+      });
+
+      if (streetEndIndex >= 0 && streetEndIndex < tokens.length - 1) {
+        city = tokens.slice(streetEndIndex + 1).join(" ");
+      } else if (tokens.length >= 2) {
+        city = tokens.slice(-2).join(" ");
+      } else {
+        city = beforeState;
+      }
+    }
+  }
+
+  city = cleanText(city)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+
+  if (city) {
+    city = city.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  return { city, zipCode };
 }
 
 function parseCoachLeadNextActionAt(value) {
@@ -16008,7 +16105,20 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "address")) {
-      recordDoc.address = truncarCoachCrmText(req.body?.address || "", 240);
+      const nextAddress = truncarCoachCrmText(req.body?.address || "", 240);
+      const inferredLocation = inferCoachCityZipFromAddress(nextAddress);
+      recordDoc.address = nextAddress;
+      updates.address = nextAddress;
+
+      if (inferredLocation.city) {
+        recordDoc.city = inferredLocation.city;
+        updates.city = inferredLocation.city;
+      }
+
+      if (inferredLocation.zipCode) {
+        recordDoc.zipCode = inferredLocation.zipCode;
+        updates.zipCode = inferredLocation.zipCode;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "briefHistory")) {

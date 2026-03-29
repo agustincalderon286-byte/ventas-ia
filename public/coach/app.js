@@ -4593,10 +4593,63 @@ function renderCoachMetricList(node, items = [], emptyCopy = "Todavia no hay dat
 }
 
 function formatCoachAgendaAddress(record = null) {
-  return [record?.address || "", record?.city || "", record?.zipCode || ""]
-    .map(item => String(item || "").trim())
-    .filter(Boolean)
-    .join(", ");
+  const address = String(record?.address || "").trim();
+  const locationMeta = formatCoachCrmLocationMeta(record);
+
+  if (!address) {
+    return locationMeta;
+  }
+
+  return locationMeta ? `${address} · ${locationMeta}` : address;
+}
+
+function normalizeCoachAddressMatchText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function coachAddressLooksComplete(address = "") {
+  return /\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/i.test(String(address || "").trim());
+}
+
+function coachAddressContainsLocation(address = "", location = "") {
+  const addressKey = normalizeCoachAddressMatchText(address);
+  const locationKey = normalizeCoachAddressMatchText(location);
+  return Boolean(addressKey && locationKey && addressKey.includes(locationKey));
+}
+
+function formatCoachCrmLocationMeta(record = null) {
+  const address = String(record?.address || "").trim();
+  const city = String(record?.city || "").trim();
+  const zipCode = String(record?.zipCode || "").trim();
+
+  if (coachAddressLooksComplete(address)) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (city && !coachAddressContainsLocation(address, city)) {
+    parts.push(city);
+  }
+
+  if (zipCode && !coachAddressContainsLocation(address, zipCode)) {
+    parts.push(`ZIP ${zipCode}`);
+  }
+
+  return parts.join(" · ");
+}
+
+function resolveCoachEditableAddressValue(record = null) {
+  const address = String(record?.address || "").trim();
+
+  if (address) {
+    return address;
+  }
+
+  return [String(record?.city || "").trim(), String(record?.zipCode || "").trim()].filter(Boolean).join(", ");
 }
 
 function openCoachDateTimeInputPicker(input = null) {
@@ -4838,7 +4891,7 @@ function buildCoachAgendaCard(record = null) {
   }
 
   const address = formatCoachAgendaAddress(record);
-  const rawAddress = String(record.address || "").trim();
+  const rawAddress = resolveCoachEditableAddressValue(record);
   const timeCopy = record.appointmentAt ? formatDateTimeShort(record.appointmentAt) : "Sin hora";
   const phoneCopy = record.phone ? formatLeadPhone(record.phone) : "";
   const sourceCopy = formatCoachCrmSourceLabel(record.sourceType);
@@ -4961,6 +5014,7 @@ function buildCoachAgendaCard(record = null) {
               class="crm-inline-input"
               value="${escapeHtml(rawAddress)}"
               placeholder="Direccion o referencia"
+              autocomplete="street-address"
               data-agenda-inline-address
             />
           </label>
@@ -5559,9 +5613,7 @@ function initCoachCrmWorkspace(user = null) {
       record.generatedByName ? `Lead de ${record.generatedByName}` : "",
       record.phone ? formatLeadPhone(record.phone) : "",
       record.email || "",
-      record.address || "",
-      record.city || "",
-      record.zipCode ? `ZIP ${record.zipCode}` : ""
+      formatCoachAgendaAddress(record)
     ]
       .filter(Boolean)
       .join(" · ");
@@ -5588,7 +5640,8 @@ function initCoachCrmWorkspace(user = null) {
     detailNextAction.value = record.nextAction || "";
     detailNextActionAt.value = formatDateTimeLocalValue(record.nextActionAt);
     if (detailAddress) {
-      detailAddress.value = record.address || "";
+      detailAddress.value = resolveCoachEditableAddressValue(record);
+      detailAddress.autocomplete = "street-address";
     }
     detailTelemarketer.value = record.assignedTelemarketerUserId || "";
     detailRepresentative.value = record.appointmentRepUserId || "";
@@ -5629,8 +5682,9 @@ function initCoachCrmWorkspace(user = null) {
     recordList.innerHTML = visibleRecords
       .map(record => {
         const isActive = record.id === state.activeRecordId;
-        const cityCopy = [record.city || "", record.zipCode ? `ZIP ${record.zipCode}` : ""].filter(Boolean).join(" · ");
-        const locationCopy = [record.address || "", cityCopy].filter(Boolean).join(" · ");
+        const cityCopy = formatCoachCrmLocationMeta(record);
+        const locationCopy = formatCoachAgendaAddress(record);
+        const editableAddressValue = resolveCoachEditableAddressValue(record);
         const ownerCopy = record.generatedByName || "Cuenta principal";
         const notePlaceholder = truncateCoachCrmCell(record.lastNote || record.briefHistory || "", 92);
         const phoneHref = normalizeLeadPhone(record.phone || "");
@@ -5658,12 +5712,13 @@ function initCoachCrmWorkspace(user = null) {
                 </div>
                 <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
                 <small>${escapeHtml(ownerCopy)}</small>
-                <small>${escapeHtml(cityCopy || "Ubicacion pendiente")}</small>
+                <small>${escapeHtml(cityCopy || (locationCopy ? "Direccion lista" : "Ubicacion pendiente"))}</small>
                 <input
                   class="crm-inline-input crm-inline-address-input"
                   type="text"
-                  value="${escapeHtml(record.address || "")}"
+                  value="${escapeHtml(editableAddressValue)}"
                   placeholder="Direccion o referencia"
+                  autocomplete="street-address"
                   data-crm-inline-address
                 />
                 <small>${escapeHtml(locationCopy || "Sin direccion todavia")}</small>
