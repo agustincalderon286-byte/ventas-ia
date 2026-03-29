@@ -5115,7 +5115,7 @@ html[data-coach-portal-mode="telemarketing"] .coach-workspace-tab.is-active {
 html[data-coach-portal-mode="telemarketing"] .coach-sidebar {
   width: min(1520px, 100%);
   max-width: none;
-  grid-template-columns: minmax(0, 1.38fr) minmax(420px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
@@ -5126,13 +5126,13 @@ html[data-coach-portal-mode="telemarketing"] .dashboard-card[data-telemarketing-
 }
 
 html[data-coach-portal-mode="telemarketing"] .dashboard-card[data-telemarketing-panel="sheet"] {
-  grid-column: 1;
+  grid-column: 1 / -1;
 }
 
 html[data-coach-portal-mode="telemarketing"] .dashboard-card[data-telemarketing-panel="detail"] {
-  grid-column: 2;
-  position: sticky;
-  top: 24px;
+  grid-column: 1 / -1;
+  position: static;
+  top: auto;
 }
 
 html[data-coach-portal-mode="telemarketing"] .dashboard-card {
