@@ -9137,6 +9137,52 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     ])
   ]);
 
+  const recentWhatsAppPhones = Array.from(
+    new Set(
+      recentWhatsAppReplies
+        .map(item => String(item.sessionId || "").replace(/^wa-session-/, "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  const whatsappLeadDocs = recentWhatsAppPhones.length
+    ? await CoachLeadInbox.find(
+        {
+          phone: { $in: recentWhatsAppPhones }
+        },
+        {
+          fullName: 1,
+          phone: 1,
+          status: 1,
+          source: 1,
+          ownerName: 1,
+          generatedByName: 1,
+          nextActionAt: 1,
+          updatedAt: 1
+        }
+      )
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .lean()
+    : [];
+
+  const whatsappLeadMap = new Map();
+
+  for (const leadDoc of whatsappLeadDocs) {
+    const phoneKey = String(leadDoc?.phone || "").trim();
+
+    if (!phoneKey) {
+      continue;
+    }
+
+    const currentLead = whatsappLeadMap.get(phoneKey);
+    const currentIsChef = normalizarCoachLeadSource(currentLead?.source || "") === "chef_personal";
+    const nextIsChef = normalizarCoachLeadSource(leadDoc?.source || "") === "chef_personal";
+
+    if (!currentLead || (!currentIsChef && nextIsChef)) {
+      whatsappLeadMap.set(phoneKey, leadDoc);
+    }
+  }
+
   return {
     updatedAt: ahora.toISOString(),
     overview: {
@@ -9163,7 +9209,26 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
         topics: (Array.isArray(item.detectedTopics) ? item.detectedTopics : [])
           .map(limpiarTagControl)
           .filter(Boolean),
-        createdAt: item.createdAt || null
+        createdAt: item.createdAt || null,
+        linkedLead: (() => {
+          const phone = String(item.sessionId || "").replace(/^wa-session-/, "").trim();
+          const leadDoc = whatsappLeadMap.get(phone);
+
+          if (!leadDoc?._id) {
+            return null;
+          }
+
+          return {
+            id: String(leadDoc._id),
+            fullName: leadDoc.fullName || "",
+            status: leadDoc.status || "",
+            source: leadDoc.source || "",
+            ownerName: leadDoc.ownerName || "",
+            generatedByName: leadDoc.generatedByName || "",
+            nextActionAt: leadDoc.nextActionAt || null,
+            updatedAt: leadDoc.updatedAt || null
+          };
+        })()
       })),
       topTopics: whatsappTopics
         .map(item => limpiarTagControl(item._id))

@@ -71,6 +71,25 @@ function formatTrackedStatusLabel(status = "") {
   return safe ? safe.replaceAll("_", " ") : "Sin estado";
 }
 
+function formatCoachLeadStatusLabel(status = "") {
+  const safe = String(status || "").trim().toLowerCase();
+
+  switch (safe) {
+    case "nuevo":
+      return "Nuevo";
+    case "contactado":
+      return "Contactado";
+    case "agendado":
+      return "Agendado";
+    case "cliente":
+      return "Cliente";
+    case "archivado":
+      return "Archivado";
+    default:
+      return safe ? safe.replaceAll("_", " ") : "Sin lead";
+  }
+}
+
 function formatAccountTypeLabel(value = "") {
   const safe = String(value || "").trim().toLowerCase();
 
@@ -258,7 +277,7 @@ function hydrateDashboard(data) {
 
   const waTable = document.querySelector("[data-wa-recent-table]");
   if (waTable) {
-    waTable.dataset.cols = "4";
+    waTable.dataset.cols = "5";
   }
   renderTableRows(
     waTable,
@@ -269,6 +288,15 @@ function hydrateDashboard(data) {
         <td>${escapeHtml(item.phone || "Sin dato")}</td>
         <td>${escapeHtml(item.content || "Sin mensaje")}</td>
         <td>${escapeHtml(item.intent || "general")}</td>
+        <td>${
+          item.linkedLead
+            ? `
+              <strong>${escapeHtml(item.linkedLead.fullName || "Lead Chef")}</strong><br />
+              <span>${escapeHtml(formatCoachLeadStatusLabel(item.linkedLead.status))}</span><br />
+              <span>${escapeHtml(item.linkedLead.ownerName || item.linkedLead.generatedByName || "")}</span>
+            `
+            : '<span>Solo chat</span>'
+        }</td>
       </tr>
     `
   );
