@@ -1,13 +1,14 @@
-const CACHE_NAME = "agustin-chef-shell-v3";
+const CACHE_NAME = "agustin-chef-shell-v4";
 const APP_SHELL = [
   "/chef/",
   "/chef/index.html",
   "/chef/styles.css",
   "/chef/app.js",
   "/chef/manifest.webmanifest",
-  "/chef/icons/icon-180.png",
-  "/chef/icons/icon-192.png",
-  "/chef/icons/icon-512.png"
+  "/chef/icons/brand-mark.svg",
+  "/chef/icons/brand-mark-180.png",
+  "/chef/icons/brand-mark-192.png",
+  "/chef/icons/brand-mark-512.png"
 ];
 
 self.addEventListener("install", event => {

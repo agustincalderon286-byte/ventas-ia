@@ -1,0 +1,68 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="78" y1="48" x2="1108" y2="582" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E2E20"/>
+      <stop offset="0.54" stop-color="#128C4A"/>
+      <stop offset="1" stop-color="#0A2247"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(179 111) rotate(36) scale(423 302)">
+      <stop stop-color="#A9FFD1" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#A9FFD1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1032 518) rotate(180) scale(420 240)">
+      <stop stop-color="#EAFBF3" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#EAFBF3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" rx="48" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="48" fill="url(#glowA)"/>
+  <rect width="1200" height="630" rx="48" fill="url(#glowB)"/>
+
+  <rect x="80" y="78" width="1040" height="474" rx="38" fill="#FFFFFF" fill-opacity="0.08"/>
+  <rect x="80.5" y="78.5" width="1039" height="473" rx="37.5" stroke="#FFFFFF" stroke-opacity="0.12"/>
+
+  <g transform="translate(124 124)">
+    <circle cx="84" cy="84" r="84" fill="#0A2247"/>
+    <circle cx="136" cy="34" r="13" fill="#C71F37"/>
+    <path d="M50 73C50 48.1472 70.1472 28 95 28C119.853 28 140 48.1472 140 73V83H50V73Z" fill="white"/>
+    <path d="M36 83H153C160.732 83 167 89.268 167 97C167 104.732 160.732 111 153 111H36C28.268 111 22 104.732 22 97C22 89.268 28.268 83 36 83Z" fill="white"/>
+    <path d="M65 107H128V142C128 161.33 112.33 177 93 177C73.67 177 58 161.33 58 142V114C58 110.134 61.134 107 65 107Z" fill="#F1B95F"/>
+    <circle cx="80" cy="129" r="6.5" fill="#0A2247"/>
+    <circle cx="106" cy="129" r="6.5" fill="#0A2247"/>
+    <path d="M78 148C83.725 155.322 91.0584 158.983 100 159.1C108.942 158.983 116.275 155.322 122 148" stroke="#0A2247" stroke-width="9" stroke-linecap="round"/>
+  </g>
+
+  <rect x="124" y="124" width="254" height="54" rx="27" fill="#FFFFFF" fill-opacity="0.12"/>
+  <text x="154" y="159" fill="#D5FFEA" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    Acceso oficial de WhatsApp
+  </text>
+
+  <text x="124" y="286" fill="#F6FFF9" font-size="72" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    Agustin 2.0 Chef
+  </text>
+  <text x="124" y="352" fill="#D9FFF0" font-size="42" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    por WhatsApp
+  </text>
+  <text x="124" y="417" fill="#E5FFF4" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="500">
+    Entra al chat directo para recetas, cocina saludable,
+  </text>
+  <text x="124" y="456" fill="#E5FFF4" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="500">
+    agua y ayuda práctica para tu hogar.
+  </text>
+
+  <rect x="124" y="492" width="282" height="60" rx="30" fill="#25D366"/>
+  <text x="164" y="531" fill="#093221" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    Abrir WhatsApp
+  </text>
+
+  <g transform="translate(818 142)">
+    <rect width="238" height="238" rx="54" fill="#25D366"/>
+    <path d="M119 53C80.677 53 49.5 83.743 49.5 121.358C49.5 136.183 54.4317 149.903 62.8179 161.031L54 188L82.0141 179.571C92.5337 185.83 105.003 189.717 119 189.717C157.323 189.717 188.5 158.974 188.5 121.358C188.5 83.743 157.323 53 119 53Z" fill="white"/>
+    <path d="M103.289 88.5H95.3107C92.4983 88.5 89.8881 89.9263 88.3807 92.2842C84.9445 97.6595 82.6619 105.515 87.1274 114.905C92.472 126.152 105.802 139.754 117.112 144.731C126.447 148.838 134.579 146.616 140.142 143.262C142.58 141.791 144.055 139.193 144.055 136.396V128.654L126.65 123.78L119.455 132.473C119.455 132.473 108.213 127.265 101.953 112.933L110.44 105.515L103.289 88.5Z" fill="#25D366"/>
+  </g>
+
+  <text x="790" y="442" fill="#E8FFF4" font-size="26" font-family="Arial, Helvetica, sans-serif" font-weight="700">
+    Se ve mejor al compartir y abre el chat en un clic.
+  </text>
+</svg>

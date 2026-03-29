@@ -1934,6 +1934,10 @@ function construirCoachChefPath(chefSlug = "") {
   return slug ? `/chef/${slug}/` : "/chef/";
 }
 
+function construirCoachChefWhatsAppPath() {
+  return "/chef/whatsapp/";
+}
+
 function construirCoachContactSharePath(shareCode = "") {
   const safeCode = normalizarCoachShareCodeSegment(shareCode, 24);
   return safeCode ? `/contactos/${safeCode}/` : "/coach/app/";
@@ -2652,7 +2656,9 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
       slug: profileDoc?.chefSlug || "",
       shareCode: profileDoc?.chefShareCode || "",
       sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
-      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
+      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || ""),
+      whatsappSharePath: construirCoachChefWhatsAppPath(),
+      whatsappShareUrl: construirCoachChefWhatsAppPath()
     },
     contactShare: {
       shareCode: profileDoc?.chefShareCode || "",
@@ -3014,7 +3020,9 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
       slug: profileDoc?.chefSlug || "",
       shareCode: profileDoc?.chefShareCode || "",
       sharePath: construirCoachChefPath(profileDoc?.chefSlug || ""),
-      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || "")
+      shareUrl: construirCoachChefPath(profileDoc?.chefSlug || ""),
+      whatsappSharePath: construirCoachChefWhatsAppPath(),
+      whatsappShareUrl: construirCoachChefWhatsAppPath()
     },
     contactShare: {
       shareCode: profileDoc?.chefShareCode || "",
@@ -18105,12 +18113,12 @@ app.get("/chef/manifest.webmanifest", async (req, res) => {
         theme_color: "#0a2247",
         icons: [
           {
-            src: "/chef/icons/icon-192.png",
+            src: "/chef/icons/brand-mark-192.png",
             sizes: "192x192",
             type: "image/png"
           },
           {
-            src: "/chef/icons/icon-512.png",
+            src: "/chef/icons/brand-mark-512.png",
             sizes: "512x512",
             type: "image/png"
           }
@@ -18120,6 +18128,10 @@ app.get("/chef/manifest.webmanifest", async (req, res) => {
       2
     )
   );
+});
+
+app.get(/^\/chef\/whatsapp\/?$/i, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "chef", "whatsapp", "index.html"));
 });
 
 app.get(/^\/chef\/([a-z0-9-]+)\/?$/i, async (req, res) => {

@@ -9245,7 +9245,8 @@ async function initCoachAppPage() {
   const royalOneFeedback = document.querySelector("[data-royalone-feedback]");
   const ownChefSharePath = me.profile?.chef?.sharePath || "/chef/";
   const ownChefShareUrl = buildAbsoluteAppUrl(ownChefSharePath);
-  const ownChefWhatsAppUrl = String(platformConfig?.whatsapp?.chefUrl || "").trim();
+  const ownChefWhatsAppShareUrl = buildAbsoluteAppUrl(me.profile?.chef?.whatsappSharePath || "/chef/whatsapp/");
+  const directChefWhatsAppUrl = String(platformConfig?.whatsapp?.chefUrl || "").trim();
   const ownContactSharePath = me.profile?.contactShare?.sharePath || "";
   const ownContactShareUrl = buildAbsoluteAppUrl(ownContactSharePath);
   const ownCoachHomePath = getCoachHomePath(me.user);
@@ -9270,8 +9271,8 @@ async function initCoachAppPage() {
   });
 
   const syncWhatsAppChefShare = () => {
-    const enabled = Boolean(platformConfig?.whatsapp?.chefEnabled && ownChefWhatsAppUrl);
-    const targetUrl = enabled ? ownChefWhatsAppUrl : "#";
+    const enabled = Boolean(platformConfig?.whatsapp?.chefEnabled && directChefWhatsAppUrl);
+    const targetUrl = enabled ? ownChefWhatsAppShareUrl : "#";
 
     chefWhatsAppOpenLinks.forEach(node => {
       node.href = targetUrl;
@@ -9285,7 +9286,7 @@ async function initCoachAppPage() {
     });
 
     chefWhatsAppUrlNodes.forEach(node => {
-      node.textContent = enabled ? ownChefWhatsAppUrl : "Activa WhatsApp del Chef para mostrar este QR.";
+      node.textContent = enabled ? ownChefWhatsAppShareUrl : "Activa WhatsApp del Chef para mostrar este QR.";
     });
 
     if (chefWhatsAppShareCard) {
@@ -9749,7 +9750,7 @@ async function initCoachAppPage() {
     button.addEventListener("click", event => {
       event.preventDefault();
 
-      if (!ownChefWhatsAppUrl) {
+      if (!directChefWhatsAppUrl) {
         if (chefWhatsAppShareFeedback) {
           chefWhatsAppShareFeedback.textContent = "Primero activa el WhatsApp del Chef.";
         }
@@ -9758,12 +9759,12 @@ async function initCoachAppPage() {
 
       renderActiveChefShare({
         label: "Agustin 2.0 Chef por WhatsApp",
-        url: ownChefWhatsAppUrl,
+        url: ownChefWhatsAppShareUrl,
         eyebrow: "Chef por WhatsApp",
         description:
-          "Este QR abre directo el chat de WhatsApp con Agustin 2.0 Chef para empezar la conversacion sin escribir el numero.",
-        openLabel: "Abrir WhatsApp",
-        shareText: "Te comparto el WhatsApp de Agustin 2.0 Chef para que empieces el chat directo."
+          "Este QR abre una pagina premium del Chef por WhatsApp para que la persona vea el acceso y luego abra el chat con un clic.",
+        openLabel: "Abrir acceso",
+        shareText: "Te comparto el acceso de Agustin 2.0 Chef por WhatsApp para que empieces el chat directo."
       });
       openChefShareModal();
     });
