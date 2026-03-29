@@ -46,6 +46,7 @@ const TWILIO_SMS_FROM = String(process.env.TWILIO_SMS_FROM || "").trim();
 const TWILIO_MESSAGING_SERVICE_SID = String(process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
 const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
 const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
+const WHATSAPP_CHEF_OWNER_EMAIL = parseCoachEmailList(process.env.WHATSAPP_CHEF_OWNER_EMAIL || "")[0] || "";
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
@@ -1997,6 +1998,72 @@ async function resolverCoachChefContextPorSlug(chefSlug = "") {
     ownerProfileDoc: ownerProfileDoc || profileDoc,
     ownership
   };
+}
+
+async function resolverCoachChefContextPorOwnerEmail(email = "") {
+  const safeEmail = normalizarEmail(email);
+
+  if (!safeEmail) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findOne({ email: safeEmail });
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+
+  if (!(await coachTieneAccesoOperativo(userDoc))) {
+    return null;
+  }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({ userId: userDoc._id });
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const effectiveOwnerProfile = ownerProfileDoc || profileDoc;
+
+  if (!effectiveOwnerProfile) {
+    return null;
+  }
+
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+  return {
+    slug: effectiveOwnerProfile?.chefSlug || profileDoc?.chefSlug || "",
+    userDoc,
+    profileDoc: profileDoc || effectiveOwnerProfile,
+    ownerProfileDoc: effectiveOwnerProfile,
+    ownership
+  };
+}
+
+async function resolverCoachChefContextPublicoPredeterminado() {
+  const candidateEmails = Array.from(
+    new Set([
+      WHATSAPP_CHEF_OWNER_EMAIL,
+      ...CONTROL_TOWER_TRACKED_EMAILS,
+      ...CONTROL_TOWER_ACCESS_EMAILS,
+      ...COACH_TEST_ACCESS_EMAILS
+    ])
+  ).filter(Boolean);
+
+  for (const email of candidateEmails) {
+    const context = await resolverCoachChefContextPorOwnerEmail(email);
+
+    if (context?.userDoc?._id) {
+      return context;
+    }
+  }
+
+  return null;
 }
 
 async function resolverCoachContactShareContextPorCode(shareCode = "") {
@@ -7826,6 +7893,36 @@ async function resolverCoachChefContextPorLead(leadDoc = null) {
   }
 
   return null;
+}
+
+async function adoptarLeadPublicoEnCoachContext(leadDoc = null, coachChefContext = null) {
+  if (!leadDoc?._id || !coachChefContext?.ownership?.ownerUserId) {
+    return leadDoc;
+  }
+
+  const trackingFields = construirCoachChefTrackingFields(coachChefContext);
+  let dirty = false;
+
+  for (const [field, value] of Object.entries(trackingFields)) {
+    const normalizedCurrent =
+      field.endsWith("UserId") || field === "coachOwnerUserId" ? String(leadDoc?.[field] || "") : leadDoc?.[field] || "";
+    const normalizedNext =
+      field.endsWith("UserId") || field === "coachOwnerUserId" ? String(value || "") : value || "";
+
+    if (normalizedNext && normalizedCurrent !== normalizedNext) {
+      leadDoc[field] = value;
+      dirty = true;
+    }
+  }
+
+  if (!dirty) {
+    return leadDoc;
+  }
+
+  leadDoc.updatedAt = new Date();
+  leadDoc.lastInteractionAt = new Date();
+  await leadDoc.save();
+  return leadDoc;
 }
 
 function limpiarCoachInboxLead(leadDoc = null) {
@@ -17626,6 +17723,8 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
   const fromRaw = cleanText(req.body?.From || "");
   const phone = normalizePhone(req.body?.WaId || fromRaw);
   const profileName = cleanText(req.body?.ProfileName || "");
+  let matchedLead = null;
+  let leadChefContext = null;
 
   if (!body) {
     return res.type("text/xml").send(construirTwilioMessageResponse("Recibi tu mensaje vacio. Intenta otra vez con texto."));
@@ -17637,6 +17736,21 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
       .send(construirTwilioMessageResponse("No pude identificar tu numero de WhatsApp. Intenta de nuevo."));
   }
 
+  try {
+    matchedLead = await Lead.findOne({ phone }).sort({ updatedAt: -1, createdAt: -1 });
+    leadChefContext = matchedLead ? await resolverCoachChefContextPorLead(matchedLead) : null;
+
+    if (!leadChefContext) {
+      leadChefContext = await resolverCoachChefContextPublicoPredeterminado();
+    }
+
+    if (matchedLead && leadChefContext) {
+      matchedLead = await adoptarLeadPublicoEnCoachContext(matchedLead, leadChefContext);
+    }
+  } catch (error) {
+    console.error("Error resolviendo contexto de WhatsApp Chef:", error.message);
+  }
+
   const sessionId = `wa-session-${phone}`;
   const visitorId = `wa-visitor-${phone}`;
   const resultado = await procesarChatChefCanal({
@@ -17645,7 +17759,8 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
     visitorId,
     phoneHint: phone,
     nameHint: profileName,
-    source: "whatsapp_sandbox"
+    source: "whatsapp_sandbox",
+    coachChefContextOverride: leadChefContext
   });
 
   const mensaje = resultado.ok ? resultado.respuesta : resultado.error || "No pude responder en este momento.";
