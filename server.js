@@ -966,6 +966,30 @@ const coachCrmActivitySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachAsyncJobSchema = new mongoose.Schema({
+  jobType: { type: String, required: true, index: true },
+  dedupeKey: { type: String, default: "", index: true },
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    default: null,
+    index: true
+  },
+  status: { type: String, default: "pending", index: true },
+  attempts: { type: Number, default: 0 },
+  maxAttempts: { type: Number, default: 4 },
+  nextRunAt: { type: Date, default: Date.now, index: true },
+  lockedAt: Date,
+  lastAttemptAt: Date,
+  completedAt: Date,
+  failedAt: Date,
+  lastError: String,
+  lastResult: { type: mongoose.Schema.Types.Mixed, default: null },
+  payload: { type: mongoose.Schema.Types.Mixed, default: null },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -1029,6 +1053,8 @@ coachCrmRecordSchema.index({ ownerUserId: 1, status: 1, updatedAt: -1 });
 coachCrmRecordSchema.index({ ownerUserId: 1, nextActionAt: 1, updatedAt: -1 });
 coachCrmRecordSchema.index({ ownerUserId: 1, assignedTelemarketerUserId: 1, updatedAt: -1 });
 coachCrmActivitySchema.index({ crmRecordId: 1, createdAt: -1 });
+coachAsyncJobSchema.index({ status: 1, nextRunAt: 1, lockedAt: 1 });
+coachAsyncJobSchema.index({ jobType: 1, dedupeKey: 1, status: 1, updatedAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -1075,9 +1101,18 @@ const CoachCrmRecord =
   mongoose.models.CoachCrmRecord || mongoose.model("CoachCrmRecord", coachCrmRecordSchema);
 const CoachCrmActivity =
   mongoose.models.CoachCrmActivity || mongoose.model("CoachCrmActivity", coachCrmActivitySchema);
+const CoachAsyncJob =
+  mongoose.models.CoachAsyncJob || mongoose.model("CoachAsyncJob", coachAsyncJobSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
+
+const COACH_ASYNC_JOB_POLL_MS = 4000;
+const COACH_ASYNC_JOB_LOCK_MS = 5 * 60 * 1000;
+const COACH_ASYNC_JOB_BATCH_SIZE = 6;
+let coachAsyncJobWorkerRunning = false;
+let coachAsyncJobWorkerInterval = null;
+let coachAsyncJobWakeTimer = null;
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
@@ -5988,7 +6023,339 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
   }
 }
 
-function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
+function construirCoachAsyncJobDedupeKey(jobType = "", userDoc = null, payload = null) {
+  const ownerUserId = String(resolverCoachOwnerUserId(userDoc) || userDoc?._id || "").trim();
+
+  if (!jobType || !ownerUserId) {
+    return "";
+  }
+
+  let sourceId = "";
+
+  if (jobType === "lead_destination") {
+    sourceId = String(payload?.lead?.id || payload?.lead?._id || "").trim();
+  } else if (jobType === "recruitment_destination") {
+    sourceId = String(payload?.application?.id || payload?.application?._id || "").trim();
+  } else if (jobType === "program_destination") {
+    sourceId = String(payload?.sheetDoc?.id || payload?.sheetDoc?._id || payload?.sheet?.id || payload?.sheet?._id || "").trim();
+  } else if (jobType === "highlevel_sync") {
+    sourceId = String(payload?.leadId || payload?.lead?.id || payload?.lead?._id || "").trim();
+  }
+
+  if (!sourceId) {
+    return "";
+  }
+
+  return `${jobType}:${ownerUserId}:${sourceId}`;
+}
+
+function construirCoachAsyncJobRetryAt(attempts = 0) {
+  const safeAttempts = Math.max(Number(attempts) || 0, 0);
+  const delayMs = Math.min(5 * 60 * 1000, 15000 * Math.pow(2, Math.max(safeAttempts - 1, 0)));
+  return new Date(Date.now() + delayMs);
+}
+
+async function encolarCoachAsyncJob({ jobType = "", userDoc = null, payload = null, maxAttempts = 4 } = {}) {
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc) || userDoc?._id);
+
+  if (!jobType || !ownerUserId) {
+    return null;
+  }
+
+  const dedupeKey = construirCoachAsyncJobDedupeKey(jobType, userDoc, payload);
+  const now = new Date();
+
+  if (dedupeKey) {
+    const queuedJob = await CoachAsyncJob.findOneAndUpdate(
+      {
+        jobType,
+        dedupeKey,
+        status: { $in: ["pending", "retrying"] }
+      },
+      {
+        $set: {
+          ownerUserId,
+          payload,
+          nextRunAt: now,
+          updatedAt: now,
+          lastError: ""
+        }
+      },
+      {
+        sort: { updatedAt: -1 },
+        new: true
+      }
+    );
+
+    if (queuedJob?._id) {
+      despertarCoachAsyncJobWorker();
+      return queuedJob;
+    }
+  }
+
+  const jobDoc = await CoachAsyncJob.create({
+    jobType,
+    dedupeKey,
+    ownerUserId,
+    payload,
+    status: "pending",
+    attempts: 0,
+    maxAttempts: Math.max(Number(maxAttempts) || 0, 1),
+    nextRunAt: now,
+    createdAt: now,
+    updatedAt: now
+  });
+
+  despertarCoachAsyncJobWorker();
+  return jobDoc;
+}
+
+async function cargarCoachAsyncJobContext(jobDoc = null) {
+  const ownerUserId = normalizarCoachCrmObjectId(jobDoc?.ownerUserId);
+
+  if (!ownerUserId) {
+    return {
+      userDoc: null,
+      profileDoc: null
+    };
+  }
+
+  let userDoc = await CoachUser.findById(ownerUserId);
+
+  if (!userDoc?._id) {
+    return {
+      userDoc: null,
+      profileDoc: null
+    };
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+  const profileDoc = await obtenerCoachOwnerProfile(userDoc, { lean: true });
+
+  return {
+    userDoc,
+    profileDoc
+  };
+}
+
+async function ejecutarCoachAsyncJob(jobDoc = null) {
+  if (!jobDoc?.jobType) {
+    return {
+      attempted: false,
+      error: "Trabajo asincrono invalido."
+    };
+  }
+
+  const { userDoc, profileDoc } = await cargarCoachAsyncJobContext(jobDoc);
+
+  if (!userDoc?._id) {
+    return {
+      attempted: false,
+      error: "No encontre la cuenta duena de este trabajo."
+    };
+  }
+
+  if (jobDoc.jobType === "lead_destination") {
+    return enviarCoachLeadADestino(userDoc, profileDoc, jobDoc.payload?.lead || null);
+  }
+
+  if (jobDoc.jobType === "recruitment_destination") {
+    return enviarCoachRecruitmentApplicationADestino(userDoc, profileDoc, jobDoc.payload?.application || null);
+  }
+
+  if (jobDoc.jobType === "program_destination") {
+    return enviarCoachProgramSheetADestino(
+      userDoc,
+      profileDoc,
+      jobDoc.payload?.sheetDoc || jobDoc.payload?.sheet || null,
+      Array.isArray(jobDoc.payload?.createdLeads) ? jobDoc.payload.createdLeads : []
+    );
+  }
+
+  if (jobDoc.jobType === "highlevel_sync") {
+    return sincronizarCoachLeadAHighLevel(userDoc, profileDoc, {
+      _id: jobDoc.payload?.leadId || jobDoc.payload?.lead?.id || jobDoc.payload?.lead?._id || ""
+    });
+  }
+
+  return {
+    attempted: false,
+    error: `No reconozco el tipo de job ${jobDoc.jobType}.`
+  };
+}
+
+function coachAsyncJobFueExitoso(jobDoc = null, result = null) {
+  if (!jobDoc?.jobType) {
+    return false;
+  }
+
+  if (jobDoc.jobType === "highlevel_sync") {
+    return (
+      result?.synced === true ||
+      (result?.attempted === false && ["not_applicable", "invalid_lead", "not_found"].includes(result?.reason || ""))
+    );
+  }
+
+  return result?.delivered === true || (result?.attempted === false && !result?.error);
+}
+
+function construirCoachAsyncJobError(result = null, error = null) {
+  return (
+    cleanText(error?.message || "") ||
+    cleanText(result?.error || "") ||
+    cleanText(result?.reason || "") ||
+    "El trabajo asincrono fallo sin detalle."
+  );
+}
+
+async function marcarCoachAsyncJobCompletado(jobDoc = null, result = null) {
+  if (!jobDoc?._id) {
+    return;
+  }
+
+  await CoachAsyncJob.updateOne(
+    { _id: jobDoc._id },
+    {
+      $set: {
+        status: "completed",
+        lockedAt: null,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+        lastError: "",
+        lastResult: result || null
+      }
+    }
+  );
+}
+
+async function marcarCoachAsyncJobFallido(jobDoc = null, result = null, error = null) {
+  if (!jobDoc?._id) {
+    return;
+  }
+
+  const now = new Date();
+  const lastError = construirCoachAsyncJobError(result, error);
+  const reachedMaxAttempts = Number(jobDoc.attempts || 0) >= Math.max(Number(jobDoc.maxAttempts || 0), 1);
+
+  await CoachAsyncJob.updateOne(
+    { _id: jobDoc._id },
+    {
+      $set: {
+        status: reachedMaxAttempts ? "failed" : "retrying",
+        nextRunAt: reachedMaxAttempts ? now : construirCoachAsyncJobRetryAt(jobDoc.attempts || 0),
+        lockedAt: null,
+        failedAt: reachedMaxAttempts ? now : null,
+        updatedAt: now,
+        lastError,
+        lastResult: result || null
+      }
+    }
+  );
+}
+
+async function tomarCoachAsyncJobPendiente() {
+  const now = new Date();
+  const staleLockAt = new Date(now.getTime() - COACH_ASYNC_JOB_LOCK_MS);
+
+  return CoachAsyncJob.findOneAndUpdate(
+    {
+      $or: [
+        {
+          status: "pending",
+          nextRunAt: { $lte: now }
+        },
+        {
+          status: "retrying",
+          nextRunAt: { $lte: now }
+        },
+        {
+          status: "processing",
+          lockedAt: { $lte: staleLockAt }
+        }
+      ]
+    },
+    {
+      $set: {
+        status: "processing",
+        lockedAt: now,
+        lastAttemptAt: now,
+        updatedAt: now
+      },
+      $inc: {
+        attempts: 1
+      }
+    },
+    {
+      sort: {
+        nextRunAt: 1,
+        createdAt: 1
+      },
+      new: true
+    }
+  );
+}
+
+async function procesarCoachAsyncJobs() {
+  if (coachAsyncJobWorkerRunning || mongoose.connection.readyState !== 1) {
+    return;
+  }
+
+  coachAsyncJobWorkerRunning = true;
+
+  try {
+    for (let index = 0; index < COACH_ASYNC_JOB_BATCH_SIZE; index += 1) {
+      const jobDoc = await tomarCoachAsyncJobPendiente();
+
+      if (!jobDoc?._id) {
+        break;
+      }
+
+      try {
+        const result = await ejecutarCoachAsyncJob(jobDoc);
+
+        if (coachAsyncJobFueExitoso(jobDoc, result)) {
+          await marcarCoachAsyncJobCompletado(jobDoc, result);
+        } else {
+          await marcarCoachAsyncJobFallido(jobDoc, result);
+        }
+      } catch (error) {
+        console.error("Error procesando job asincrono del Coach:", jobDoc.jobType, error.message);
+        await marcarCoachAsyncJobFallido(jobDoc, null, error);
+      }
+    }
+  } finally {
+    coachAsyncJobWorkerRunning = false;
+  }
+}
+
+function despertarCoachAsyncJobWorker(delayMs = 200) {
+  if (coachAsyncJobWakeTimer) {
+    return;
+  }
+
+  coachAsyncJobWakeTimer = setTimeout(() => {
+    coachAsyncJobWakeTimer = null;
+    procesarCoachAsyncJobs().catch(error => {
+      console.error("Error despertando cola asincrona del Coach:", error.message);
+    });
+  }, delayMs);
+}
+
+function iniciarCoachAsyncJobWorker() {
+  if (coachAsyncJobWorkerInterval) {
+    return;
+  }
+
+  coachAsyncJobWorkerInterval = setInterval(() => {
+    procesarCoachAsyncJobs().catch(error => {
+      console.error("Error en worker asincrono del Coach:", error.message);
+    });
+  }, COACH_ASYNC_JOB_POLL_MS);
+
+  despertarCoachAsyncJobWorker(500);
+}
+
+async function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
   if (!destination.enabled || !lead) {
@@ -5999,30 +6366,34 @@ function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null, lead
     };
   }
 
-  setTimeout(() => {
-    enviarCoachLeadADestino(userDoc, profileDoc, lead)
-      .then(result => {
-        if (!result?.delivered) {
-          console.error(
-            "No pude entregar lead del Coach al destino:",
-            result?.destination?.type || "desconocido",
-            result?.error || result?.status || "sin detalle"
-          );
-        }
-      })
-      .catch(error => {
-        console.error("Error enviando lead del Coach al destino:", error.message);
-      });
-  }, 0);
+  try {
+    const jobDoc = await encolarCoachAsyncJob({
+      jobType: "lead_destination",
+      userDoc,
+      payload: {
+        lead
+      },
+      maxAttempts: 4
+    });
 
-  return {
-    attempted: true,
-    queued: true,
-    destination
-  };
+    return {
+      attempted: true,
+      queued: Boolean(jobDoc?._id),
+      queueId: jobDoc?._id ? String(jobDoc._id) : "",
+      destination
+    };
+  } catch (error) {
+    console.error("Error encolando lead del Coach al destino:", error.message);
+    return {
+      attempted: true,
+      queued: false,
+      destination,
+      error: error.message
+    };
+  }
 }
 
-function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
+async function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
   if (!destination.enabled || !application) {
@@ -6033,30 +6404,34 @@ function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profi
     };
   }
 
-  setTimeout(() => {
-    enviarCoachRecruitmentApplicationADestino(userDoc, profileDoc, application)
-      .then(result => {
-        if (!result?.delivered) {
-          console.error(
-            "No pude entregar aplicacion de reclutamiento al destino:",
-            result?.destination?.type || "desconocido",
-            result?.error || result?.status || "sin detalle"
-          );
-        }
-      })
-      .catch(error => {
-        console.error("Error enviando aplicacion de reclutamiento al destino:", error.message);
-      });
-  }, 0);
+  try {
+    const jobDoc = await encolarCoachAsyncJob({
+      jobType: "recruitment_destination",
+      userDoc,
+      payload: {
+        application
+      },
+      maxAttempts: 4
+    });
 
-  return {
-    attempted: true,
-    queued: true,
-    destination
-  };
+    return {
+      attempted: true,
+      queued: Boolean(jobDoc?._id),
+      queueId: jobDoc?._id ? String(jobDoc._id) : "",
+      destination
+    };
+  } catch (error) {
+    console.error("Error encolando aplicacion de reclutamiento al destino:", error.message);
+    return {
+      attempted: true,
+      queued: false,
+      destination,
+      error: error.message
+    };
+  }
 }
 
-function programarEnvioCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
+async function programarEnvioCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
   if (!destination.enabled || !sheetDoc) {
@@ -6067,27 +6442,32 @@ function programarEnvioCoachProgramSheetADestino(userDoc = null, profileDoc = nu
     };
   }
 
-  setTimeout(() => {
-    enviarCoachProgramSheetADestino(userDoc, profileDoc, sheetDoc, createdLeads)
-      .then(result => {
-        if (!result?.delivered) {
-          console.error(
-            "No pude entregar hoja 4 en 14 al destino:",
-            result?.destination?.type || "desconocido",
-            result?.error || result?.status || "sin detalle"
-          );
-        }
-      })
-      .catch(error => {
-        console.error("Error enviando hoja 4 en 14 al destino:", error.message);
-      });
-  }, 0);
+  try {
+    const jobDoc = await encolarCoachAsyncJob({
+      jobType: "program_destination",
+      userDoc,
+      payload: {
+        sheetDoc,
+        createdLeads
+      },
+      maxAttempts: 4
+    });
 
-  return {
-    attempted: true,
-    queued: true,
-    destination
-  };
+    return {
+      attempted: true,
+      queued: Boolean(jobDoc?._id),
+      queueId: jobDoc?._id ? String(jobDoc._id) : "",
+      destination
+    };
+  } catch (error) {
+    console.error("Error encolando hoja 4 en 14 al destino:", error.message);
+    return {
+      attempted: true,
+      queued: false,
+      destination,
+      error: error.message
+    };
+  }
 }
 
 function normalizarCoachLeadStatus(status = "") {
@@ -8154,12 +8534,16 @@ async function guardarCoachInboxLead({
     }
 
     const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-    const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
-      attempted: false,
-      queued: false,
-      destination: limpiarCoachLeadDestination(profileDoc)
-    };
-    const highLevel = programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject());
+    const [delivery, highLevel] = await Promise.all([
+      sendDestination
+        ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead)
+        : Promise.resolve({
+            attempted: false,
+            queued: false,
+            destination: limpiarCoachLeadDestination(profileDoc)
+          }),
+      programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject())
+    ]);
 
     return {
       leadDoc,
@@ -8201,12 +8585,16 @@ async function guardarCoachInboxLead({
   }
 
   const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
-  const delivery = sendDestination ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead) : {
-    attempted: false,
-    queued: false,
-    destination: limpiarCoachLeadDestination(profileDoc)
-  };
-  const highLevel = programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject());
+  const [delivery, highLevel] = await Promise.all([
+    sendDestination
+      ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead)
+      : Promise.resolve({
+          attempted: false,
+          queued: false,
+          destination: limpiarCoachLeadDestination(profileDoc)
+        }),
+    programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject())
+  ]);
 
   return {
     leadDoc,
@@ -8671,7 +9059,7 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
   };
 }
 
-function programarSincronizacionCoachLeadAHighLevel(userDoc = null, profileDoc = null, lead = null) {
+async function programarSincronizacionCoachLeadAHighLevel(userDoc = null, profileDoc = null, lead = null) {
   if (!highLevelSyncAplicaALead(lead)) {
     return {
       attempted: false,
@@ -8679,16 +9067,31 @@ function programarSincronizacionCoachLeadAHighLevel(userDoc = null, profileDoc =
     };
   }
 
-  setTimeout(() => {
-    sincronizarCoachLeadAHighLevel(userDoc, profileDoc, lead).catch(error => {
-      console.error("Error sincronizando lead del Coach a HighLevel:", error.message);
+  try {
+    const leadId =
+      typeof lead?._id === "object" ? String(lead._id) : String(lead?.id || lead?._id || "").trim();
+    const jobDoc = await encolarCoachAsyncJob({
+      jobType: "highlevel_sync",
+      userDoc,
+      payload: {
+        leadId
+      },
+      maxAttempts: 4
     });
-  }, 0);
 
-  return {
-    attempted: true,
-    queued: true
-  };
+    return {
+      attempted: true,
+      queued: Boolean(jobDoc?._id),
+      queueId: jobDoc?._id ? String(jobDoc._id) : ""
+    };
+  } catch (error) {
+    console.error("Error encolando sync de HighLevel del Coach:", error.message);
+    return {
+      attempted: true,
+      queued: false,
+      error: error.message
+    };
+  }
 }
 
 async function aplicarEventoHighLevelALead(payload = {}) {
@@ -17381,7 +17784,7 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
     } catch (error) {
       console.error("Error sincronizando aplicacion de reclutamiento al CRM:", error.message);
     }
-    const delivery = programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
+    const delivery = await programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
 
     res.json({
       created,
@@ -17713,7 +18116,12 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
       console.error("Error sincronizando programa 4 en 14 al CRM:", error.message);
     }
 
-    const delivery = programarEnvioCoachProgramSheetADestino(auth.user, profileDoc, sheetDoc.toObject(), createdLeads);
+    const delivery = await programarEnvioCoachProgramSheetADestino(
+      auth.user,
+      profileDoc,
+      sheetDoc.toObject(),
+      createdLeads
+    );
 
     res.json({
       sheet: limpiarCoachProgramSheet(sheetDoc.toObject()),
@@ -19818,6 +20226,7 @@ async function iniciarServidor() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("MongoDB Atlas conectado");
+    iniciarCoachAsyncJobWorker();
 
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
