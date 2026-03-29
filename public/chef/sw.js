@@ -5,7 +5,6 @@ const APP_SHELL = [
   "/chef/styles.css",
   "/chef/app.js",
   "/chef/manifest.webmanifest",
-  "/chef/icons/brand-mark.svg",
   "/chef/icons/brand-mark-180.png",
   "/chef/icons/brand-mark-192.png",
   "/chef/icons/brand-mark-512.png"
