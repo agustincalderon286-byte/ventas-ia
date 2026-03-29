@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "test": "NODE_ENV=test node --test",
     "recipes:fetch": "node scripts/fetch-royalprestige-recipes.js",
     "royal:fetch:site": "node scripts/fetch-royalprestige-site-knowledge.js",
     "knowledge:import": "node scripts/import-knowledge.js",

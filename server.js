@@ -20237,4 +20237,18 @@ async function iniciarServidor() {
   }
 }
 
-iniciarServidor();
+if (process.env.NODE_ENV !== "test") {
+  iniciarServidor();
+}
+
+export {
+  construirCoachCrmLeadSeedOperation,
+  construirCoachCrmSummary,
+  construirPayloadCoachLeadDesdeChef,
+  detectarEnvioDatosContacto,
+  extraerLeadInfo,
+  limpiarCoachAgendaRecord,
+  parseCoachLeadNextActionAt,
+  resolverCoachCrmStatusDesdeDemoOutcome,
+  resolverCoachCrmStatusDesdeLead
+};
