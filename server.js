@@ -108,6 +108,10 @@ const REDIS_SESSION_TTL_SECONDS = Math.max(
   60 * 60,
   Number(process.env.REDIS_SESSION_TTL_SECONDS || Math.floor(RAM_SESSION_TTL_MS / 1000) || 6 * 60 * 60)
 );
+const REDIS_AI_CACHE_TTL_SECONDS = Math.max(
+  10 * 60,
+  Number(process.env.REDIS_AI_CACHE_TTL_SECONDS || 6 * 60 * 60)
+);
 const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
 const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_ACCESS_EMAILS || "");
 const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
@@ -1275,6 +1279,124 @@ async function redisDelete(key = "") {
     console.error("Error borrando clave en Redis:", error.message);
     return false;
   }
+}
+
+function preguntaEsCacheableParaIA(question = "", mode = "coach") {
+  const normalized = normalizarTextoBusquedaCoach(question || "");
+
+  if (!normalized || normalized.length < 6) {
+    return false;
+  }
+
+  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(question || "")) {
+    return false;
+  }
+
+  if (/(?:\+?\d[\d()\-\s]{7,}\d)/.test(question || "")) {
+    return false;
+  }
+
+  if (mode === "chef" && detectarEnvioDatosContacto(question || "")) {
+    return false;
+  }
+
+  return true;
+}
+
+function construirAiCacheSignature(value = null) {
+  return crypto.createHash("sha1").update(JSON.stringify(compactarDatoParaPrompt(value, {
+    maxDepth: 2,
+    maxArrayItems: 4,
+    maxObjectKeys: 8,
+    maxStringLength: 120
+  }))).digest("hex");
+}
+
+function construirAiCacheKey({
+  mode = "coach",
+  scope = "",
+  question = "",
+  activeWorkspace = "",
+  activeDemoStage = "",
+  statePrompt = "",
+  profilePrompt = "",
+  history = [],
+  extra = null
+} = {}) {
+  const normalizedQuestion = normalizarTextoBusquedaCoach(question || "");
+  const safeMode = cleanLower(mode || "coach") || "coach";
+  const safeScope = cleanText(scope || "").trim() || "public";
+
+  if (!normalizedQuestion) {
+    return "";
+  }
+
+  const signature = construirAiCacheSignature({
+    mode: safeMode,
+    scope: safeScope,
+    question: normalizedQuestion,
+    activeWorkspace: cleanText(activeWorkspace || "").trim(),
+    activeDemoStage: cleanText(activeDemoStage || "").trim(),
+    statePrompt: truncarTextoPrompt(statePrompt || "", 500),
+    profilePrompt: truncarTextoPrompt(profilePrompt || "", 1000),
+    history: Array.isArray(history)
+      ? history
+          .filter(entry => entry?.role && entry?.content)
+          .slice(-4)
+          .map(entry => ({
+            role: entry.role,
+            content: truncarTextoPrompt(entry.content || "", 120)
+          }))
+      : [],
+    extra
+  });
+
+  return `agustin:ai-cache:${safeMode}:${safeScope}:${signature}`;
+}
+
+async function obtenerRespuestaAiCacheada(options = {}) {
+  if (!preguntaEsCacheableParaIA(options.question || "", options.mode || "coach")) {
+    return null;
+  }
+
+  const cacheKey = construirAiCacheKey(options);
+
+  if (!cacheKey) {
+    return null;
+  }
+
+  const cachedPayload = await redisGetJson(cacheKey);
+
+  if (!cachedPayload?.reply) {
+    return null;
+  }
+
+  return {
+    cacheKey,
+    reply: String(cachedPayload.reply || ""),
+    createdAt: cachedPayload.createdAt || null
+  };
+}
+
+async function guardarRespuestaAiCacheada(options = {}, reply = "") {
+  if (!reply || !preguntaEsCacheableParaIA(options.question || "", options.mode || "coach")) {
+    return false;
+  }
+
+  const cacheKey = construirAiCacheKey(options);
+
+  if (!cacheKey) {
+    return false;
+  }
+
+  return redisSetJson(
+    cacheKey,
+    {
+      reply: String(reply || "").trim().slice(0, 6000),
+      createdAt: new Date().toISOString()
+    },
+    REDIS_AI_CACHE_TTL_SECONDS
+  );
 }
 
 function normalizarEmail(email = "") {
@@ -14813,48 +14935,86 @@ CANAL ACTIVO:
     const activeLeadContext = leadMemory?.leadContext || null;
     perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "chef");
 
-    const contexto = fastChannel
-      ? construirContextoEstaticoChef(preguntaLimpia)
-      : await construirContexto(preguntaLimpia, modoChat);
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
-    const historialPrompt = await obtenerHistorialConversacionPrompt(sessionId, fastChannel ? 4 : MAX_PROMPT_HISTORY_MESSAGES);
+    const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, fastChannel ? 4 : 6);
+    const aiCacheOptions = {
+      mode: modoChat,
+      scope:
+        String(coachChefContext?.ownership?.ownerUserId || "").trim() ||
+        cleanText(coachChefContext?.slug || chefSlug || "").trim() ||
+        "public",
+      question: preguntaLimpia,
+      activeWorkspace: source,
+      activeDemoStage: canalActivo,
+      statePrompt: `${estadoPrompt}\n${modoPromptCanal}`.trim(),
+      profilePrompt,
+      history: cacheHistory,
+      extra: {
+        fastChannel,
+        activeLeadContext
+      }
+    };
+    const cachedAiReply = await obtenerRespuestaAiCacheada(aiCacheOptions);
+    let respuestaIA = null;
+    let cacheHit = false;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        messages: [
-          { role: "system", content: construirPromptModo(modoChat) },
-          { role: "system", content: modoPrompt },
-          { role: "system", content: modoPromptCanal },
-          { role: "system", content: contexto },
-          { role: "system", content: estadoPrompt },
-          { role: "system", content: perfilPrompt },
-          ...historialPrompt
-        ]
-      })
-    });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        error: "Error OpenAI",
-        detalle: data || { message: "Respuesta invalida del API" }
+    if (cachedAiReply?.reply) {
+      respuestaIA = {
+        role: "assistant",
+        content: cachedAiReply.reply
       };
+      cacheHit = true;
+    } else {
+      const contexto = fastChannel
+        ? construirContextoEstaticoChef(preguntaLimpia)
+        : await construirContexto(preguntaLimpia, modoChat);
+      const historialPrompt = await obtenerHistorialConversacionPrompt(
+        sessionId,
+        fastChannel ? 4 : MAX_PROMPT_HISTORY_MESSAGES
+      );
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-5-mini",
+          messages: [
+            { role: "system", content: construirPromptModo(modoChat) },
+            { role: "system", content: modoPrompt },
+            { role: "system", content: modoPromptCanal },
+            { role: "system", content: contexto },
+            { role: "system", content: estadoPrompt },
+            { role: "system", content: perfilPrompt },
+            ...historialPrompt
+          ]
+        })
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          status: response.status,
+          error: "Error OpenAI",
+          detalle: data || { message: "Respuesta invalida del API" }
+        };
+      }
+
+      if (!data?.choices?.[0]?.message) {
+        return { ok: false, status: 500, error: "Error OpenAI", detalle: data };
+      }
+
+      respuestaIA = data.choices[0].message;
+      programarPersistenciaRedis(
+        () => guardarRespuestaAiCacheada(aiCacheOptions, respuestaIA?.content || ""),
+        "cache IA del Chef"
+      );
     }
 
-    if (!data?.choices?.[0]?.message) {
-      return { ok: false, status: 500, error: "Error OpenAI", detalle: data };
-    }
-
-    const respuestaIA = data.choices[0].message;
     registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
 
     const leadFinal = await guardarRespuestaIAEnPerfil(leadGuardado || leadInicial, respuestaIA.content);
@@ -14886,7 +15046,8 @@ CANAL ACTIVO:
       status: 200,
       respuesta: respuestaIA.content,
       mode: "chef",
-      activeLeadContext
+      activeLeadContext,
+      cacheHit
     };
   } catch (error) {
     console.error(error);
@@ -20330,62 +20491,102 @@ MODO TURBO DEL COACH:
     }
 
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
-    const contextoPromise =
-      modoChat === "coach" && preferFastCoachContext
-        ? Promise.resolve(construirContextoEstaticoCoach(preguntaLimpia))
-        : construirContexto(preguntaLimpia, modoChat);
-    const historialPromptPromise = obtenerHistorialConversacionPrompt(
-      sessionId,
+    const historyLimit =
       modoChat === "coach"
         ? COACH_TURBO_MODE
           ? COACH_TURBO_MAX_HISTORY_MESSAGES
           : COACH_PROMPT_HISTORY_MESSAGES
-        : MAX_PROMPT_HISTORY_MESSAGES,
-      {
-        preferMemory: modoChat === "coach"
+        : MAX_PROMPT_HISTORY_MESSAGES;
+    const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, Math.min(historyLimit, 6));
+    const aiCacheOptions = {
+      mode: modoChat,
+      scope:
+        modoChat === "coach"
+          ? String(resolverCoachOwnerUserId(coachAuth?.user) || coachAuth?.user?._id || "").trim() || "coach"
+          : String(coachChefContext?.ownership?.ownerUserId || "").trim() ||
+            cleanText(coachChefContext?.slug || chefSlug || "").trim() ||
+            "public",
+      question: preguntaLimpia,
+      activeWorkspace,
+      activeDemoStage,
+      statePrompt,
+      profilePrompt,
+      history: cacheHistory,
+      extra: {
+        preferFastCoachContext,
+        activeLeadContext,
+        repLeadSummary,
+        activeHealthSurveyContext,
+        activeProgram414Context,
+        activeOrderCalcContext,
+        activeDecisionContext,
+        activeDemoOutcomeContext
       }
-    );
-    const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
-
-    const openAiPayload = {
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: construirPromptModo(modoChat) },
-        { role: "system", content: modoPrompt },
-        { role: "system", content: contexto },
-        { role: "system", content: estadoPrompt },
-        { role: "system", content: perfilPrompt },
-        ...historialPrompt
-      ]
     };
+    const cachedAiReply = await obtenerRespuestaAiCacheada(aiCacheOptions);
+    let respuestaIA = null;
+    let cacheHit = false;
 
-    if (modoChat === "coach" && COACH_TURBO_MODE) {
-      openAiPayload.max_completion_tokens = COACH_TURBO_MAX_COMPLETION_TOKENS;
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify(openAiPayload)
-    });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: "Error OpenAI",
-        detalle: data || { message: "Respuesta invalida del API" }
+    if (cachedAiReply?.reply) {
+      respuestaIA = {
+        role: "assistant",
+        content: cachedAiReply.reply
+      };
+      cacheHit = true;
+    } else {
+      const contextoPromise =
+        modoChat === "coach" && preferFastCoachContext
+          ? Promise.resolve(construirContextoEstaticoCoach(preguntaLimpia))
+          : construirContexto(preguntaLimpia, modoChat);
+      const historialPromptPromise = obtenerHistorialConversacionPrompt(sessionId, historyLimit, {
+        preferMemory: modoChat === "coach"
       });
-    }
+      const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
 
-    if (!data?.choices?.[0]?.message) {
-      return res.status(500).json({ error: "Error OpenAI", detalle: data });
-    }
+      const openAiPayload = {
+        model: "gpt-5-mini",
+        messages: [
+          { role: "system", content: construirPromptModo(modoChat) },
+          { role: "system", content: modoPrompt },
+          { role: "system", content: contexto },
+          { role: "system", content: estadoPrompt },
+          { role: "system", content: perfilPrompt },
+          ...historialPrompt
+        ]
+      };
 
-    const respuestaIA = data.choices[0].message;
+      if (modoChat === "coach" && COACH_TURBO_MODE) {
+        openAiPayload.max_completion_tokens = COACH_TURBO_MAX_COMPLETION_TOKENS;
+      }
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify(openAiPayload)
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: "Error OpenAI",
+          detalle: data || { message: "Respuesta invalida del API" }
+        });
+      }
+
+      if (!data?.choices?.[0]?.message) {
+        return res.status(500).json({ error: "Error OpenAI", detalle: data });
+      }
+
+      respuestaIA = data.choices[0].message;
+      programarPersistenciaRedis(
+        () => guardarRespuestaAiCacheada(aiCacheOptions, respuestaIA?.content || ""),
+        "cache IA de chat"
+      );
+    }
 
     registrarMensajeMemoria(sessionId, respuestaIA.role, respuestaIA.content);
 
@@ -20417,7 +20618,8 @@ MODO TURBO DEL COACH:
           respuesta: respuestaIA.content,
           mode: modoChat,
           turboMode: true,
-          turboLane: "model",
+          turboLane: cacheHit ? "cache" : "model",
+          cacheHit,
           repLeadSummary,
           activeLeadContext,
           activeHealthSurveyContext,
@@ -20455,6 +20657,7 @@ MODO TURBO DEL COACH:
       return res.json({
         respuesta: respuestaIA.content,
         mode: modoChat,
+        cacheHit,
         profile: limpiarCoachProfile(coachProfileActualizado?.profile, coachProfileActualizado?.analytics),
         repLeadSummary,
         activeLeadContext,
@@ -20494,7 +20697,8 @@ MODO TURBO DEL COACH:
     res.json({
       respuesta: respuestaIA.content,
       mode: modoChat,
-      activeLeadContext
+      activeLeadContext,
+      cacheHit
     });
   } catch (error) {
     console.error(error);
