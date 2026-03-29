@@ -6300,6 +6300,9 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null, defaultTelemarketer 
           nextActionAt,
           appointmentAt,
           lastContactAt: leadDoc.lastContactAt || null,
+          briefHistory: truncarCoachCrmText(leadDoc.summary || construirCoachLeadSummary(leadDoc), 320),
+          privateNotes: truncarCoachCrmText(leadDoc.notes || "", 1200),
+          lastNote: truncarCoachCrmText(leadDoc.notes || "", 240),
           saleResult: status === "venta" ? "venta" : "",
           saleAmount: status === "venta" ? limpiarCoachDemoOutcomeAmount(leadDoc.highLevelOpportunityValue || 0) : 0,
           soldAt: status === "venta" ? leadDoc.updatedAt || leadDoc.createdAt || null : null,
@@ -6310,10 +6313,7 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null, defaultTelemarketer 
         $setOnInsert: {
           createdAt: leadDoc.createdAt || new Date(),
           assignedTelemarketerUserId: defaultTelemarketerUserId,
-          assignedTelemarketerName: defaultTelemarketerName,
-          briefHistory: truncarCoachCrmText(leadDoc.summary || construirCoachLeadSummary(leadDoc), 320),
-          privateNotes: truncarCoachCrmText(leadDoc.notes || "", 1200),
-          lastNote: truncarCoachCrmText(leadDoc.notes || "", 240)
+          assignedTelemarketerName: defaultTelemarketerName
         }
       },
       upsert: true
@@ -7707,10 +7707,14 @@ async function guardarCoachInboxLead({
   const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || "");
   const interest = String(payload?.interest || "").trim().slice(0, 120);
   const source = normalizarCoachLeadSource(payload?.source || "captura_manual");
-  const notes = String(payload?.notes || "").trim().slice(0, 600);
+  const notes = String(payload?.notes || "").trim().slice(0, 1200);
   const consentGiven = Boolean(payload?.consentGiven);
   const nextAction = normalizarCoachLeadNextAction(payload?.nextAction || "");
   const nextActionAt = parseCoachLeadNextActionAt(payload?.nextActionAt);
+  const rawStatus = String(payload?.status || "").trim();
+  const nextStatus = rawStatus ? normalizarCoachLeadStatus(rawStatus) : "";
+  const summaryOverride = String(payload?.summary || "").trim().slice(0, 600);
+  const replaceNotes = payload?.replaceNotes === true;
 
   if (!fullName) {
     const error = new Error("El nombre es requerido.");
@@ -7745,6 +7749,14 @@ async function guardarCoachInboxLead({
   }
 
   if (leadDoc) {
+    const currentStatus = normalizarCoachLeadStatus(leadDoc.status || "nuevo");
+    const statusRank = {
+      nuevo: 0,
+      contactado: 1,
+      agendado: 2,
+      cliente: 3
+    };
+
     leadDoc.fullName = fullName || leadDoc.fullName;
     leadDoc.phone = phone || leadDoc.phone || "";
     leadDoc.email = email || leadDoc.email || "";
@@ -7764,15 +7776,29 @@ async function guardarCoachInboxLead({
       leadDoc.generatedByAccountType = ownership.generatedByAccountType;
     }
 
+    if (
+      nextStatus &&
+      currentStatus !== "archivado" &&
+      (Number(statusRank[nextStatus] || 0) >= Number(statusRank[currentStatus] || 0))
+    ) {
+      if (leadDoc.status !== nextStatus) {
+        leadDoc.lastStatusChangeAt = now;
+      }
+
+      leadDoc.status = nextStatus;
+    }
+
     if (nextActionAt) {
       leadDoc.nextActionAt = nextActionAt;
     }
 
-    if (notes && notes !== leadDoc.notes) {
+    if (replaceNotes) {
+      leadDoc.notes = notes || leadDoc.notes || "";
+    } else if (notes && notes !== leadDoc.notes) {
       leadDoc.notes = leadDoc.notes ? `${leadDoc.notes}\n\n${notes}` : notes;
     }
 
-    leadDoc.summary = construirCoachLeadSummary(leadDoc);
+    leadDoc.summary = summaryOverride || construirCoachLeadSummary(leadDoc);
     leadDoc.updatedAt = now;
     await leadDoc.save();
 
@@ -7809,10 +7835,10 @@ async function guardarCoachInboxLead({
     source,
     notes,
     consentGiven,
-    status: "nuevo",
+    status: nextStatus || "nuevo",
     nextAction,
     nextActionAt,
-    summary: construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
+    summary: summaryOverride || construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
     lastStatusChangeAt: now,
     updatedAt: now
   });
@@ -10921,6 +10947,267 @@ function extraerMejorHoraLlamada(texto = "") {
   return "";
 }
 
+const CHEF_AGENDA_TIME_ZONE = "America/Chicago";
+
+function obtenerComponentesFechaEnZona(date = new Date(), timeZone = CHEF_AGENDA_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const map = {};
+
+  parts.forEach(part => {
+    if (part.type !== "literal") {
+      map[part.type] = part.value;
+    }
+  });
+
+  return {
+    year: Number(map.year || 0),
+    month: Number(map.month || 0),
+    day: Number(map.day || 0),
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0)
+  };
+}
+
+function sumarDiasCalendario(base = null, dayOffset = 0) {
+  if (!base?.year || !base?.month || !base?.day) {
+    return null;
+  }
+
+  const ref = new Date(Date.UTC(base.year, base.month - 1, base.day));
+  ref.setUTCDate(ref.getUTCDate() + Number(dayOffset || 0));
+
+  return {
+    year: ref.getUTCFullYear(),
+    month: ref.getUTCMonth() + 1,
+    day: ref.getUTCDate()
+  };
+}
+
+function construirFechaEnZonaLocal({ year, month, day, hour = 0, minute = 0 } = {}, timeZone = CHEF_AGENDA_TIME_ZONE) {
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const initialUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const initialDate = new Date(initialUtc);
+  const zonedParts = obtenerComponentesFechaEnZona(initialDate, timeZone);
+  const zonedUtc = Date.UTC(
+    zonedParts.year || year,
+    (zonedParts.month || month) - 1,
+    zonedParts.day || day,
+    zonedParts.hour || hour,
+    zonedParts.minute || minute,
+    0,
+    0
+  );
+
+  return new Date(initialUtc - (zonedUtc - initialUtc));
+}
+
+function resolverHoraAgendaChef(label = "") {
+  const normalized = normalizarTextoBusqueda(label || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.includes("mediodia")) {
+    return { hour: 12, minute: 0 };
+  }
+
+  if (normalized.includes("temprano")) {
+    return { hour: 9, minute: 0 };
+  }
+
+  if (normalized.includes("por la manana")) {
+    return { hour: 10, minute: 0 };
+  }
+
+  if (normalized.includes("por la tarde")) {
+    return { hour: 15, minute: 0 };
+  }
+
+  if (normalized.includes("por la noche")) {
+    return { hour: 19, minute: 0 };
+  }
+
+  const match = normalized.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[1] || 0);
+  const minute = Number(match[2] || 0);
+  let meridiem = String(match[3] || "").toLowerCase();
+
+  if (!meridiem) {
+    if (/\bpm\b|tarde|noche/i.test(normalized)) {
+      meridiem = "pm";
+    } else if (/\bam\b|manana|temprano/i.test(normalized)) {
+      meridiem = "am";
+    }
+  }
+
+  if (meridiem === "pm" && hour < 12) {
+    hour += 12;
+  } else if (meridiem === "am" && hour === 12) {
+    hour = 0;
+  }
+
+  if (hour > 23 || minute > 59) {
+    return null;
+  }
+
+  return { hour, minute };
+}
+
+function resolverFechaAgendaChef(bestCallDay = "", timeParts = null, now = new Date(), timeZone = CHEF_AGENDA_TIME_ZONE) {
+  const normalized = normalizarTextoBusqueda(bestCallDay || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const nowParts = obtenerComponentesFechaEnZona(now, timeZone);
+  const todayParts = {
+    year: nowParts.year,
+    month: nowParts.month,
+    day: nowParts.day
+  };
+  const todayDayIndex = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day)).getUTCDay();
+  const nowMinutes = (nowParts.hour || 0) * 60 + (nowParts.minute || 0);
+  const targetMinutes = ((timeParts?.hour || 0) * 60) + (timeParts?.minute || 0);
+  const hasFutureTimeToday = targetMinutes > nowMinutes + 2;
+  const weekdayMap = {
+    domingo: 0,
+    lunes: 1,
+    martes: 2,
+    miercoles: 3,
+    jueves: 4,
+    viernes: 5,
+    sabado: 6
+  };
+
+  if (normalized.includes("hoy")) {
+    return hasFutureTimeToday ? todayParts : sumarDiasCalendario(todayParts, 1);
+  }
+
+  if (normalized.includes("manana")) {
+    return sumarDiasCalendario(todayParts, 1);
+  }
+
+  if (normalized.includes("entre semana")) {
+    if (todayDayIndex >= 1 && todayDayIndex <= 5 && hasFutureTimeToday) {
+      return todayParts;
+    }
+
+    let offset = 1;
+
+    while (offset < 8) {
+      const candidateIndex = (todayDayIndex + offset) % 7;
+
+      if (candidateIndex >= 1 && candidateIndex <= 5) {
+        return sumarDiasCalendario(todayParts, offset);
+      }
+
+      offset += 1;
+    }
+  }
+
+  if (normalized.includes("fin de semana")) {
+    if ((todayDayIndex === 6 || todayDayIndex === 0) && hasFutureTimeToday) {
+      return todayParts;
+    }
+
+    const saturdayOffset = todayDayIndex <= 6 ? (6 - todayDayIndex + 7) % 7 : 6;
+    return sumarDiasCalendario(todayParts, saturdayOffset === 0 ? 7 : saturdayOffset);
+  }
+
+  for (const [label, dayIndex] of Object.entries(weekdayMap)) {
+    if (!normalized.includes(label)) {
+      continue;
+    }
+
+    let offset = (dayIndex - todayDayIndex + 7) % 7;
+
+    if (offset === 0 && !hasFutureTimeToday) {
+      offset = 7;
+    }
+
+    return sumarDiasCalendario(todayParts, offset);
+  }
+
+  return null;
+}
+
+function construirFechaAgendaChef(bestCallDay = "", bestCallTime = "", now = new Date(), timeZone = CHEF_AGENDA_TIME_ZONE) {
+  const timeParts = resolverHoraAgendaChef(bestCallTime);
+  const dayParts = resolverFechaAgendaChef(bestCallDay, timeParts, now, timeZone);
+
+  if (!timeParts || !dayParts) {
+    return null;
+  }
+
+  return construirFechaEnZonaLocal(
+    {
+      year: dayParts.year,
+      month: dayParts.month,
+      day: dayParts.day,
+      hour: timeParts.hour,
+      minute: timeParts.minute
+    },
+    timeZone
+  );
+}
+
+function formatearFechaAgendaChef(date = null, timeZone = CHEF_AGENDA_TIME_ZONE) {
+  if (!date) {
+    return "";
+  }
+
+  const safeDate = date instanceof Date ? date : new Date(date);
+
+  if (Number.isNaN(safeDate.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("es-US", {
+    timeZone,
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(safeDate);
+}
+
+function construirDigestConversacionChef(leadDoc = null, profileDoc = null) {
+  const historialBase =
+    Array.isArray(leadDoc?.conversationHistory) && leadDoc.conversationHistory.length
+      ? leadDoc.conversationHistory
+      : profileDoc?.recentHistory || [];
+
+  return normalizarHistorialConversacion(historialBase)
+    .slice(-6)
+    .map(entry => {
+      const roleLabel = entry.role === "assistant" ? "Chef" : entry.role === "user" ? "Cliente" : "Nota";
+      return `${roleLabel}: ${truncarTextoPrompt(entry.content || "", 90)}`;
+    })
+    .filter(Boolean)
+    .join(" | ")
+    .slice(0, 420);
+}
+
 function extraerOcupacion(texto) {
   const patrones = [
     /(?:me dedico a|trabajo en|trabajo de)\s+([^.\n]+)/i,
@@ -12396,28 +12683,62 @@ function construirPayloadCoachLeadDesdeChef(leadDoc = null, profileDoc = null, c
   );
   const temas = combinarListas(profileDoc?.temasInteres || [], leadDoc?.temasInteres || []);
   const interest = productos[0] || temas[0] || "Chef personal";
-  const notes = [
-    "Lead captado desde Chef personal.",
-    coachChefContext?.slug ? `Chef: ${coachChefContext.slug}.` : "",
-    productos.length ? `Productos: ${productos.join(", ")}.` : "",
-    temas.length ? `Temas: ${temas.join(", ")}.` : "",
-    leadDoc?.bestCallDay ? `Mejor dia: ${leadDoc.bestCallDay}.` : "",
-    leadDoc?.bestCallTime ? `Mejor hora: ${leadDoc.bestCallTime}.` : "",
-    leadDoc?.message || profileDoc?.lastUserMessage
-      ? `Ultimo mensaje: ${truncarTextoPrompt(leadDoc?.message || profileDoc?.lastUserMessage || "", 220)}.`
-      : ""
+  const address = cleanText(leadDoc?.direccion || profileDoc?.direccion || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+  const inferredZone = inferCoachCityZipFromAddress(address);
+  const bestCallDay = leadDoc?.bestCallDay || profileDoc?.bestCallDay || "";
+  const bestCallTime = leadDoc?.bestCallTime || profileDoc?.bestCallTime || "";
+  const appointmentAt = construirFechaAgendaChef(bestCallDay, bestCallTime);
+  const appointmentLabel = formatearFechaAgendaChef(appointmentAt);
+  const quiereLlamada = (leadDoc?.quiereLlamada || profileDoc?.quiereLlamada || "") === "si";
+  const operationalSummary = truncarTextoPrompt(construirResumenLeadOperativo(leadDoc, profileDoc), 280);
+  const profileSummary = truncarTextoPrompt(profileDoc?.profileSummary || "", 220);
+  const conversationDigest = construirDigestConversacionChef(leadDoc, profileDoc);
+  const summary = [
+    operationalSummary || "",
+    appointmentLabel ? `Cita pedida para ${appointmentLabel}.` : quiereLlamada ? "Pidio llamada informativa." : "",
+    profileSummary ? `Perfil: ${profileSummary}.` : ""
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
+    .trim()
+    .slice(0, 600);
+  const notes = [
+    "Lead captado desde Chef personal por WhatsApp.",
+    coachChefContext?.slug ? `Chef: ${coachChefContext.slug}.` : "",
+    appointmentLabel ? `Cita confirmada: ${appointmentLabel}.` : "",
+    bestCallDay ? `Mejor dia: ${bestCallDay}.` : "",
+    bestCallTime ? `Mejor hora: ${bestCallTime}.` : "",
+    productos.length ? `Productos: ${productos.join(", ")}.` : "",
+    temas.length ? `Temas: ${temas.join(", ")}.` : "",
+    address ? `Direccion mencionada: ${address}.` : "",
+    summary ? `Resumen operativo: ${summary}` : "",
+    conversationDigest ? `Conversacion reciente: ${conversationDigest}` : ""
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .slice(0, 1200);
+  const status = appointmentAt ? "agendado" : quiereLlamada ? "contactado" : "nuevo";
+  const nextAction = appointmentAt ? "cita" : quiereLlamada ? "llamar" : "";
 
   return {
     fullName,
     phone,
     email,
+    city: inferredZone.city || "",
+    zipCode: inferredZone.zipCode || "",
     interest,
     notes,
+    summary,
     source: "chef_personal",
-    consentGiven: true
+    consentGiven: true,
+    status,
+    nextAction,
+    nextActionAt: appointmentAt ? appointmentAt.toISOString() : null,
+    replaceNotes: true
   };
 }
 
@@ -12441,7 +12762,7 @@ async function sincronizarLeadPublicoACoachInbox({
   const contactSharedNow = Boolean(leadInfo?.phone || leadInfo?.email || detectarEnvioDatosContacto(texto));
   const alreadySynced = Boolean(leadDoc.coachInboxLeadId || profileDoc?.coachInboxLeadId);
 
-  if (!contactSharedNow && alreadySynced) {
+  if (!contactSharedNow && !alreadySynced) {
     return null;
   }
 
@@ -12475,6 +12796,8 @@ async function sincronizarLeadPublicoACoachInbox({
           })
         : Promise.resolve()
     ]);
+
+    await asegurarCoachCrmWorkspace(coachChefContext.userDoc);
 
     return result;
   } catch (error) {
