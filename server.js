@@ -49,6 +49,8 @@ const TWILIO_MESSAGING_SERVICE_SID = String(process.env.TWILIO_MESSAGING_SERVICE
 const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
 const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
 const WHATSAPP_CHEF_OWNER_EMAIL = parseCoachEmailList(process.env.WHATSAPP_CHEF_OWNER_EMAIL || "")[0] || "";
+const CHEF_PUBLIC_OWNER_EMAIL =
+  parseCoachEmailList(process.env.CHEF_PUBLIC_OWNER_EMAIL || "")[0] || WHATSAPP_CHEF_OWNER_EMAIL || "";
 const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
@@ -2070,6 +2072,54 @@ async function resolverCoachChefContextPublicoPredeterminado() {
   }
 
   return null;
+}
+
+async function resolverCoachChefLeadRoutingContext(coachChefContext = null) {
+  if (!coachChefContext?.ownership?.ownerUserId || !coachChefContext?.userDoc) {
+    return null;
+  }
+
+  const sharerOwnership = coachChefContext.ownership;
+  const fallbackContext = {
+    userDoc: coachChefContext.userDoc,
+    ownerProfileDoc: coachChefContext.ownerProfileDoc || coachChefContext.profileDoc || null,
+    ownership: {
+      accountType: sharerOwnership.accountType || "owner",
+      ownerUserId: sharerOwnership.ownerUserId,
+      ownerName: sharerOwnership.ownerName || "",
+      ownerEmail: sharerOwnership.ownerEmail || "",
+      generatedByUserId: sharerOwnership.generatedByUserId || coachChefContext.userDoc._id,
+      generatedByName: sharerOwnership.generatedByName || coachChefContext.userDoc.name || coachChefContext.userDoc.email || "",
+      generatedByAccountType:
+        sharerOwnership.generatedByAccountType || sharerOwnership.accountType || coachChefContext.userDoc.accountType || "owner"
+    }
+  };
+
+  const overrideEmail = normalizarEmail(CHEF_PUBLIC_OWNER_EMAIL || "");
+
+  if (!overrideEmail || overrideEmail === normalizarEmail(fallbackContext.ownership.ownerEmail || "")) {
+    return fallbackContext;
+  }
+
+  const ownerContext = await resolverCoachChefContextPorOwnerEmail(overrideEmail);
+
+  if (!ownerContext?.ownership?.ownerUserId || !ownerContext?.userDoc) {
+    return fallbackContext;
+  }
+
+  return {
+    userDoc: ownerContext.userDoc,
+    ownerProfileDoc: ownerContext.ownerProfileDoc || ownerContext.profileDoc || fallbackContext.ownerProfileDoc,
+    ownership: {
+      accountType: ownerContext.ownership.accountType || "owner",
+      ownerUserId: ownerContext.ownership.ownerUserId,
+      ownerName: ownerContext.ownership.ownerName || "",
+      ownerEmail: ownerContext.ownership.ownerEmail || "",
+      generatedByUserId: fallbackContext.ownership.generatedByUserId,
+      generatedByName: fallbackContext.ownership.generatedByName,
+      generatedByAccountType: fallbackContext.ownership.generatedByAccountType
+    }
+  };
 }
 
 async function resolverCoachContactShareContextPorCode(shareCode = "") {
@@ -7696,9 +7746,23 @@ async function guardarCoachInboxLead({
   userDoc = null,
   profileDoc = null,
   payload = {},
-  sendDestination = true
+  sendDestination = true,
+  ownershipOverride = null
 } = {}) {
-  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+  const baseOwnership = await construirCoachOwnershipSnapshot(userDoc);
+  const ownership = ownershipOverride?.ownerUserId
+    ? {
+        ...baseOwnership,
+        ...ownershipOverride,
+        ownerUserId: ownershipOverride.ownerUserId,
+        ownerName: ownershipOverride.ownerName || baseOwnership.ownerName || "",
+        ownerEmail: ownershipOverride.ownerEmail || baseOwnership.ownerEmail || "",
+        generatedByUserId: ownershipOverride.generatedByUserId || baseOwnership.generatedByUserId || null,
+        generatedByName: ownershipOverride.generatedByName || baseOwnership.generatedByName || "",
+        generatedByAccountType:
+          ownershipOverride.generatedByAccountType || baseOwnership.generatedByAccountType || "owner"
+      }
+    : baseOwnership;
   const rawName = String(payload?.fullName || payload?.name || "").trim();
   const fullName = seleccionarNombreConfiable(rawName) || rawName;
   const phone = normalizePhone(payload?.phone || "");
@@ -12688,6 +12752,11 @@ function construirPayloadCoachLeadDesdeChef(leadDoc = null, profileDoc = null, c
     .trim()
     .slice(0, 240);
   const inferredZone = inferCoachCityZipFromAddress(address);
+  const generatedByName =
+    coachChefContext?.ownership?.generatedByName ||
+    coachChefContext?.userDoc?.name ||
+    coachChefContext?.userDoc?.email ||
+    "";
   const bestCallDay = leadDoc?.bestCallDay || profileDoc?.bestCallDay || "";
   const bestCallTime = leadDoc?.bestCallTime || profileDoc?.bestCallTime || "";
   const appointmentAt = construirFechaAgendaChef(bestCallDay, bestCallTime);
@@ -12708,6 +12777,7 @@ function construirPayloadCoachLeadDesdeChef(leadDoc = null, profileDoc = null, c
   const notes = [
     "Lead captado desde Chef personal por WhatsApp.",
     coachChefContext?.slug ? `Chef: ${coachChefContext.slug}.` : "",
+    generatedByName ? `Compartido por: ${generatedByName}.` : "",
     appointmentLabel ? `Cita confirmada: ${appointmentLabel}.` : "",
     bestCallDay ? `Mejor dia: ${bestCallDay}.` : "",
     bestCallTime ? `Mejor hora: ${bestCallTime}.` : "",
@@ -12752,7 +12822,12 @@ async function sincronizarLeadPublicoACoachInbox({
     return null;
   }
 
-  const payload = construirPayloadCoachLeadDesdeChef(leadDoc, profileDoc, coachChefContext);
+  const leadRoutingContext = (await resolverCoachChefLeadRoutingContext(coachChefContext)) || {
+    userDoc: coachChefContext.userDoc,
+    ownerProfileDoc: coachChefContext.ownerProfileDoc || coachChefContext.profileDoc || null,
+    ownership: coachChefContext.ownership || null
+  };
+  const payload = construirPayloadCoachLeadDesdeChef(leadDoc, profileDoc, leadRoutingContext);
 
   if (!payload) {
     return null;
@@ -12767,14 +12842,15 @@ async function sincronizarLeadPublicoACoachInbox({
   }
 
   try {
-    const ownerProfileDoc = coachChefContext.ownerProfileDoc?.toObject
-      ? coachChefContext.ownerProfileDoc.toObject()
-      : coachChefContext.ownerProfileDoc || null;
+    const ownerProfileDoc = leadRoutingContext.ownerProfileDoc?.toObject
+      ? leadRoutingContext.ownerProfileDoc.toObject()
+      : leadRoutingContext.ownerProfileDoc || null;
     const result = await guardarCoachInboxLead({
-      userDoc: coachChefContext.userDoc,
+      userDoc: leadRoutingContext.userDoc,
       profileDoc: ownerProfileDoc,
       payload,
-      sendDestination: !alreadySynced
+      sendDestination: !alreadySynced,
+      ownershipOverride: leadRoutingContext.ownership || null
     });
 
     if (!result?.leadDoc?._id) {
@@ -12797,7 +12873,7 @@ async function sincronizarLeadPublicoACoachInbox({
         : Promise.resolve()
     ]);
 
-    await asegurarCoachCrmWorkspace(coachChefContext.userDoc);
+    await asegurarCoachCrmWorkspace(leadRoutingContext.userDoc);
 
     return result;
   } catch (error) {
