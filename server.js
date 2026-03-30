@@ -26,6 +26,7 @@ const PRIVATE_COACH_PRICE_LIST_FILE = path.join(
 const conversaciones = {};
 const estadosConversacion = {};
 const rutasCanalTelefono = {};
+const contextosCoachSesion = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
 const REDIS_URL = String(process.env.REDIS_URL || "").trim();
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -1147,6 +1148,112 @@ function construirRedisSessionKey(type = "", sessionId = "") {
   return `agustin:session:${safeType}:${safeSessionId}`;
 }
 
+function limpiarCoachLeadMemoryContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  const leadId = cleanText(context.leadId || "");
+  const leadName = cleanText(context.leadName || "");
+
+  if (!leadId && !leadName) {
+    return null;
+  }
+
+  return {
+    leadId,
+    leadName,
+    repName: cleanText(context.repName || ""),
+    leadTemperature: cleanText(context.leadTemperature || ""),
+    callStatus: cleanText(context.callStatus || ""),
+    nextStep: cleanText(context.nextStep || ""),
+    bestScriptAngle: cleanText(context.bestScriptAngle || ""),
+    primaryObjection: cleanText(context.primaryObjection || ""),
+    productInterest: cleanText(context.productInterest || ""),
+    waterSource: cleanText(context.waterSource || ""),
+    hasRoyalPrestige: Boolean(context.hasRoyalPrestige),
+    productsOwned: cleanText(context.productsOwned || ""),
+    eventSource: cleanText(context.eventSource || ""),
+    requiresSpousePresent: Boolean(context.requiresSpousePresent),
+    worksLate: Boolean(context.worksLate),
+    travellingOrUnavailable: Boolean(context.travellingOrUnavailable),
+    lastContactSummary: cleanText(context.lastContactSummary || "")
+  };
+}
+
+function limpiarCoachRepLeadSummary(summary = null) {
+  if (!summary || typeof summary !== "object") {
+    return null;
+  }
+
+  return {
+    repName: cleanText(summary.repName || ""),
+    totalLeads: Number(summary.totalLeads || 0) || 0,
+    callbackLeads: Number(summary.callbackLeads || 0) || 0,
+    appointmentLeads: Number(summary.appointmentLeads || 0) || 0,
+    scoreboard: {
+      hot: Number(summary.scoreboard?.hot || 0) || 0,
+      warm: Number(summary.scoreboard?.warm || 0) || 0,
+      cold: Number(summary.scoreboard?.cold || 0) || 0,
+      dead: Number(summary.scoreboard?.dead || 0) || 0
+    },
+    topStatuses: Array.isArray(summary.topStatuses)
+      ? summary.topStatuses.map(item => cleanText(item)).filter(Boolean).slice(0, 6)
+      : [],
+    topScriptAngles: Array.isArray(summary.topScriptAngles)
+      ? summary.topScriptAngles.map(item => cleanText(item)).filter(Boolean).slice(0, 6)
+      : []
+  };
+}
+
+function limpiarCoachDemoEventsParaSesion(events = []) {
+  return (Array.isArray(events) ? events : [])
+    .map(item => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const id = cleanText(item.id || "");
+      const label = cleanText(item.label || "");
+      const detail = cleanText(item.detail || "");
+
+      if (!id && !label && !detail) {
+        return null;
+      }
+
+      return {
+        id,
+        label,
+        detail,
+        createdAt: item.createdAt || null
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function limpiarCoachFastSessionContext(context = null) {
+  if (!context || typeof context !== "object") {
+    return null;
+  }
+
+  return {
+    activeWorkspace: cleanText(context.activeWorkspace || ""),
+    activeDemoStage: cleanText(context.activeDemoStage || ""),
+    activeDemoStageLabel: cleanText(context.activeDemoStageLabel || ""),
+    activeDemoStageCopy: truncarTextoPrompt(String(context.activeDemoStageCopy || "").trim(), 220),
+    recentCoachEvents: limpiarCoachDemoEventsParaSesion(context.recentCoachEvents || []),
+    activeLeadContext: limpiarCoachLeadMemoryContext(context.activeLeadContext),
+    repLeadSummary: limpiarCoachRepLeadSummary(context.repLeadSummary),
+    activeHealthSurveyContext: limpiarCoachHealthSurveyActiveContext(context.activeHealthSurveyContext),
+    activeProgram414Context: limpiarCoachProgram414ActiveContext(context.activeProgram414Context),
+    activeOrderCalcContext: limpiarCoachOrderCalcContext(context.activeOrderCalcContext),
+    activeDecisionContext: limpiarCoachDecisionContext(context.activeDecisionContext),
+    activeDemoOutcomeContext: limpiarCoachDemoOutcomeContext(context.activeDemoOutcomeContext),
+    updatedAt: context.updatedAt || new Date().toISOString()
+  };
+}
+
 function construirRedisRouteKey(channel = "", phone = "") {
   const routeKey = construirRutaCanalTelefonoKey(channel, phone);
 
@@ -1914,6 +2021,7 @@ function limpiarMemoriaSesiones() {
       delete actividadSesiones[sessionId];
       delete conversaciones[sessionId];
       delete estadosConversacion[sessionId];
+      delete contextosCoachSesion[sessionId];
     }
   }
 
@@ -1927,6 +2035,7 @@ function limpiarMemoriaSesiones() {
     delete actividadSesiones[sessionId];
     delete conversaciones[sessionId];
     delete estadosConversacion[sessionId];
+    delete contextosCoachSesion[sessionId];
   }
 
   for (const [routeKey, route] of Object.entries(rutasCanalTelefono)) {
@@ -1974,6 +2083,50 @@ async function persistirEstadoSesionRedis(sessionId = "") {
   );
 }
 
+async function persistirCoachContextoSesionRedis(sessionId = "") {
+  if (!sessionId) {
+    return false;
+  }
+
+  return redisSetJson(
+    construirRedisSessionKey("coach-context", sessionId),
+    contextosCoachSesion[sessionId] || null,
+    REDIS_SESSION_TTL_SECONDS
+  );
+}
+
+function obtenerCoachContextoSesion(sessionId = "") {
+  if (!sessionId) {
+    return null;
+  }
+
+  return contextosCoachSesion[sessionId] || null;
+}
+
+function guardarCoachContextoSesion(sessionId = "", context = null) {
+  if (!sessionId) {
+    return null;
+  }
+
+  const safeContext = limpiarCoachFastSessionContext(context);
+
+  if (!safeContext) {
+    delete contextosCoachSesion[sessionId];
+    programarPersistenciaRedis(
+      () => redisDelete(construirRedisSessionKey("coach-context", sessionId)),
+      "contexto rapido del Coach en Redis"
+    );
+    return null;
+  }
+
+  contextosCoachSesion[sessionId] = safeContext;
+  programarPersistenciaRedis(
+    () => persistirCoachContextoSesionRedis(sessionId),
+    "contexto rapido del Coach en Redis"
+  );
+  return safeContext;
+}
+
 async function asegurarSesionRedisCargada(sessionId = "") {
   if (!sessionId || !REDIS_URL) {
     return false;
@@ -1982,15 +2135,17 @@ async function asegurarSesionRedisCargada(sessionId = "") {
   const needActivity = !actividadSesiones[sessionId];
   const needHistory = !Array.isArray(conversaciones[sessionId]) || !conversaciones[sessionId].length;
   const needState = !estadosConversacion[sessionId];
+  const needCoachContext = !contextosCoachSesion[sessionId];
 
-  if (!needActivity && !needHistory && !needState) {
+  if (!needActivity && !needHistory && !needState && !needCoachContext) {
     return false;
   }
 
-  const [activityPayload, historyPayload, statePayload] = await Promise.all([
+  const [activityPayload, historyPayload, statePayload, coachContextPayload] = await Promise.all([
     needActivity ? redisGetJson(construirRedisSessionKey("activity", sessionId)) : Promise.resolve(null),
     needHistory ? redisGetJson(construirRedisSessionKey("history", sessionId)) : Promise.resolve(null),
-    needState ? redisGetJson(construirRedisSessionKey("state", sessionId)) : Promise.resolve(null)
+    needState ? redisGetJson(construirRedisSessionKey("state", sessionId)) : Promise.resolve(null),
+    needCoachContext ? redisGetJson(construirRedisSessionKey("coach-context", sessionId)) : Promise.resolve(null)
   ]);
 
   if (needActivity && activityPayload?.lastSeenAt) {
@@ -2010,7 +2165,15 @@ async function asegurarSesionRedisCargada(sessionId = "") {
     };
   }
 
-  return Boolean(activityPayload || historyPayload || statePayload);
+  if (needCoachContext && coachContextPayload && typeof coachContextPayload === "object") {
+    contextosCoachSesion[sessionId] = limpiarCoachFastSessionContext(coachContextPayload) || null;
+
+    if (!contextosCoachSesion[sessionId]) {
+      delete contextosCoachSesion[sessionId];
+    }
+  }
+
+  return Boolean(activityPayload || historyPayload || statePayload || coachContextPayload);
 }
 
 async function persistirRutaCanalTelefonoRedis(channel = "", phone = "", ownerUserId = "") {
@@ -20325,20 +20488,20 @@ app.post("/chat", async (req, res) => {
   const chefSlug = typeof req.body?.chefSlug === "string" ? req.body.chefSlug.trim() : "";
   const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
-  const activeWorkspace = typeof req.body?.activeWorkspace === "string" ? req.body.activeWorkspace.trim() : "";
-  const activeDemoStage = typeof req.body?.activeDemoStage === "string" ? req.body.activeDemoStage.trim() : "";
-  const activeDemoStageLabel =
+  let activeWorkspace = typeof req.body?.activeWorkspace === "string" ? req.body.activeWorkspace.trim() : "";
+  let activeDemoStage = typeof req.body?.activeDemoStage === "string" ? req.body.activeDemoStage.trim() : "";
+  let activeDemoStageLabel =
     typeof req.body?.activeDemoStageLabel === "string" ? req.body.activeDemoStageLabel.trim() : "";
-  const activeDemoStageCopy =
+  let activeDemoStageCopy =
     typeof req.body?.activeDemoStageCopy === "string" ? req.body.activeDemoStageCopy.trim() : "";
-  const recentCoachEvents = Array.isArray(req.body?.recentCoachEvents)
+  let recentCoachEvents = Array.isArray(req.body?.recentCoachEvents)
     ? req.body.recentCoachEvents.map(limpiarCoachDemoEventPrompt).filter(Boolean).slice(0, 6)
     : [];
-  const activeHealthSurveyId =
+  let activeHealthSurveyId =
     typeof req.body?.activeHealthSurveyId === "string" ? req.body.activeHealthSurveyId.trim() : "";
-  const activeProgram414SheetId =
+  let activeProgram414SheetId =
     typeof req.body?.activeProgram414SheetId === "string" ? req.body.activeProgram414SheetId.trim() : "";
-  const activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
+  let activeProgram414ReferralIndex = Number.parseInt(req.body?.activeProgram414ReferralIndex || "", 10);
   let activeHealthSurveyContextFromBody = limpiarCoachHealthSurveyActiveContext(req.body?.activeHealthSurveyContext);
   let activeProgram414ContextFromBody = limpiarCoachProgram414ActiveContext(req.body?.activeProgram414Context);
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
@@ -20407,6 +20570,36 @@ app.post("/chat", async (req, res) => {
   }
 
   await asegurarSesionRedisCargada(sessionId);
+  const cachedCoachSessionContext = modoChat === "coach" ? obtenerCoachContextoSesion(sessionId) : null;
+
+  if (cachedCoachSessionContext) {
+    activeWorkspace = activeWorkspace || cachedCoachSessionContext.activeWorkspace || "";
+    activeDemoStage = activeDemoStage || cachedCoachSessionContext.activeDemoStage || "";
+    activeDemoStageLabel = activeDemoStageLabel || cachedCoachSessionContext.activeDemoStageLabel || "";
+    activeDemoStageCopy = activeDemoStageCopy || cachedCoachSessionContext.activeDemoStageCopy || "";
+    recentCoachEvents = recentCoachEvents.length
+      ? recentCoachEvents
+      : limpiarCoachDemoEventsParaSesion(cachedCoachSessionContext.recentCoachEvents || []);
+    activeHealthSurveyId = activeHealthSurveyId || cachedCoachSessionContext.activeHealthSurveyContext?.id || "";
+    activeProgram414SheetId =
+      activeProgram414SheetId || cachedCoachSessionContext.activeProgram414Context?.sheetId || "";
+
+    if (
+      !Number.isInteger(activeProgram414ReferralIndex) &&
+      Number.isInteger(cachedCoachSessionContext.activeProgram414Context?.referralIndex)
+    ) {
+      activeProgram414ReferralIndex = cachedCoachSessionContext.activeProgram414Context.referralIndex;
+    }
+
+    activeHealthSurveyContextFromBody =
+      activeHealthSurveyContextFromBody || cachedCoachSessionContext.activeHealthSurveyContext || null;
+    activeProgram414ContextFromBody =
+      activeProgram414ContextFromBody || cachedCoachSessionContext.activeProgram414Context || null;
+    activeOrderCalcContext = activeOrderCalcContext || cachedCoachSessionContext.activeOrderCalcContext || null;
+    activeDecisionContext = activeDecisionContext || cachedCoachSessionContext.activeDecisionContext || null;
+    activeDemoOutcomeContext =
+      activeDemoOutcomeContext || cachedCoachSessionContext.activeDemoOutcomeContext || null;
+  }
 
   if (modoChat === "coach") {
     coachAuth = await requireCoachActivo(req, res);
@@ -20450,6 +20643,41 @@ app.post("/chat", async (req, res) => {
     let perfilPrompt = "";
     let preferFastCoachContext = false;
     let coachUserMessageTask = null;
+    const persistirCoachFastContext = () => {
+      if (modoChat !== "coach") {
+        return null;
+      }
+
+      return guardarCoachContextoSesion(sessionId, {
+        activeWorkspace,
+        activeDemoStage,
+        activeDemoStageLabel,
+        activeDemoStageCopy,
+        recentCoachEvents,
+        activeLeadContext,
+        repLeadSummary,
+        activeHealthSurveyContext,
+        activeProgram414Context,
+        activeOrderCalcContext,
+        activeDecisionContext,
+        activeDemoOutcomeContext,
+        updatedAt: new Date().toISOString()
+      });
+    };
+
+    if (modoChat === "coach" && cachedCoachSessionContext) {
+      repLeadSummary = limpiarCoachRepLeadSummary(cachedCoachSessionContext.repLeadSummary);
+
+      if (
+        activeHealthSurveyContextFromBody ||
+        activeProgram414ContextFromBody ||
+        activeOrderCalcContext ||
+        activeDecisionContext ||
+        activeDemoOutcomeContext
+      ) {
+        activeLeadContext = limpiarCoachLeadMemoryContext(cachedCoachSessionContext.activeLeadContext);
+      }
+    }
 
     if (modoChat === "coach") {
       const coachOwnerUserId = String(resolverCoachOwnerUserId(coachAuth.user) || coachAuth.user._id);
@@ -20512,6 +20740,7 @@ app.post("/chat", async (req, res) => {
           console.error("Error guardando ayuda interna del Coach:", error.message);
         });
 
+        persistirCoachFastContext();
         return finishChatResponse({
           respuesta: coachHelpReply.reply,
           mode: modoChat,
@@ -20621,6 +20850,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
           console.error("Error guardando respuesta turbo del Coach:", error.message);
         });
 
+        persistirCoachFastContext();
         return finishChatResponse({
           respuesta: turboQuickReply,
           mode: modoChat,
@@ -20639,8 +20869,13 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         });
       }
 
+      const shouldReuseCachedCoachLeadMemory = Boolean(
+        !COACH_TURBO_MODE && repLeadSummary && activeLeadContext
+      );
       const leadMemoryPromise = COACH_TURBO_MODE
-        ? Promise.resolve({ leadContext: null, repLeadSummary: null })
+        ? Promise.resolve({ leadContext: activeLeadContext, repLeadSummary })
+        : shouldReuseCachedCoachLeadMemory
+        ? Promise.resolve({ leadContext: activeLeadContext, repLeadSummary })
         : obtenerMemoriaLeadRelacionada({
             question: preguntaLimpia,
             mode: "coach",
@@ -20675,8 +20910,8 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
         COACH_TURBO_MODE ? Promise.resolve(null) : coachUserMessageTask
       ]);
 
-      repLeadSummary = leadMemory?.repLeadSummary || null;
-      activeLeadContext = leadMemory?.leadContext || null;
+      repLeadSummary = leadMemory?.repLeadSummary || repLeadSummary || null;
+      activeLeadContext = leadMemory?.leadContext || activeLeadContext || null;
       perfilPrompt += construirPromptPipelineRepresentante(repLeadSummary);
       perfilPrompt += construirPromptMemoriaLead(activeLeadContext, "coach");
 
@@ -20952,6 +21187,7 @@ MODO TURBO DEL COACH:
           console.error("Error guardando respuesta turbo del Coach:", error.message);
         });
 
+        persistirCoachFastContext();
         return finishChatResponse({
           respuesta: respuestaIA.content,
           mode: modoChat,
@@ -20994,6 +21230,7 @@ MODO TURBO DEL COACH:
         })
       ]);
 
+      persistirCoachFastContext();
       return finishChatResponse({
         respuesta: respuestaIA.content,
         mode: modoChat,
