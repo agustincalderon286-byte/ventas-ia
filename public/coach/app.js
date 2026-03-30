@@ -5308,6 +5308,67 @@ function initCoachCrmWorkspace(user = null) {
     };
   };
 
+  const crmTelemarketingStatusPriority = {
+    ya_afuera: 0,
+    entro_a_casa: 1,
+    reagendada: 2,
+    cita_agendada: 3,
+    seguimiento: 4,
+    intentando: 5,
+    nuevo: 6,
+    no_atendio: 7,
+    demo_hecha: 8,
+    venta: 9,
+    no_venta: 10
+  };
+
+  const getTelemarketingRecordTime = record => {
+    const rawValue = record?.appointmentAt || record?.nextActionAt || record?.createdAt || "";
+    const parsedValue = rawValue ? new Date(rawValue).getTime() : Number.NaN;
+    return Number.isFinite(parsedValue) ? parsedValue : Number.POSITIVE_INFINITY;
+  };
+
+  const sortTelemarketingVisibleRecords = records => {
+    const safeRecords = Array.isArray(records) ? [...records] : [];
+
+    return safeRecords.sort((left, right) => {
+      const leftTime = getTelemarketingRecordTime(left);
+      const rightTime = getTelemarketingRecordTime(right);
+
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+
+      const leftStatusPriority = crmTelemarketingStatusPriority[left?.status] ?? 50;
+      const rightStatusPriority = crmTelemarketingStatusPriority[right?.status] ?? 50;
+
+      if (leftStatusPriority !== rightStatusPriority) {
+        return leftStatusPriority - rightStatusPriority;
+      }
+
+      const leftCreatedAt = left?.createdAt ? new Date(left.createdAt).getTime() : 0;
+      const rightCreatedAt = right?.createdAt ? new Date(right.createdAt).getTime() : 0;
+
+      if (leftCreatedAt !== rightCreatedAt) {
+        return rightCreatedAt - leftCreatedAt;
+      }
+
+      return String(left?.id || "").localeCompare(String(right?.id || ""), "es", { sensitivity: "base" });
+    });
+  };
+
+  const keepCrmRowInView = recordId => {
+    if (!recordId || !recordList) {
+      return;
+    }
+
+    const matchingRow = Array.from(recordList.querySelectorAll("[data-crm-record-id]")).find(
+      node => String(node.getAttribute("data-crm-record-id") || "").trim() === String(recordId || "").trim()
+    );
+
+    matchingRow?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+
   const renderQuickFilters = records => {
     const counts = buildQuickCounts(records);
 
@@ -5554,6 +5615,7 @@ function initCoachCrmWorkspace(user = null) {
       markInlineRowDirty(row, false);
       state.activeRecordId = recordId;
       await loadWorkspace(true);
+      keepCrmRowInView(recordId);
       window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
       setMessage(summaryFeedback, successMessage, "success");
     } catch (error) {
@@ -5864,9 +5926,10 @@ function initCoachCrmWorkspace(user = null) {
   };
 
   const applyClientFilters = async (preserveActive = true) => {
-    state.visibleRecords = state.records.filter(
+    const filteredRecords = state.records.filter(
       record => matchesQuickFilter(record, state.quickFilter) && matchesSearchFilter(record, state.searchTerm)
     );
+    state.visibleRecords = isTelemarketingPortal ? sortTelemarketingVisibleRecords(filteredRecords) : filteredRecords;
     renderQuickFilters(state.records);
 
     const nextActiveId =
