@@ -5064,6 +5064,7 @@ function initCoachCrmWorkspace(user = null) {
   const statusFilter = document.querySelector("[data-crm-status-filter]");
   const assigneeFilter = document.querySelector("[data-crm-assignee-filter]");
   const searchFilter = document.querySelector("[data-crm-search-filter]");
+  const viewTabButtons = Array.from(document.querySelectorAll("[data-crm-view-tab]"));
   const quickFilterButtons = Array.from(document.querySelectorAll("[data-crm-quick-filter]"));
   const refreshButton = document.querySelector("[data-crm-refresh]");
   const gridWrap = document.querySelector(".crm-grid-wrap");
@@ -5158,9 +5159,14 @@ function initCoachCrmWorkspace(user = null) {
     activeRecordId: "",
     activeDetail: null,
     quickFilter: "all",
-    searchTerm: ""
+    searchTerm: "",
+    crmView: "lead"
   };
   const autoSaveTimers = new Map();
+
+  if (sourceFilter && !String(sourceFilter.value || "").trim()) {
+    sourceFilter.value = "lead";
+  }
 
   if (summaryTitle) {
     summaryTitle.textContent = isTelemarketingPortal ? "Cabina de seguimiento" : "Seguimiento nativo del equipo";
@@ -5398,6 +5404,15 @@ function initCoachCrmWorkspace(user = null) {
     document.querySelectorAll("[data-crm-quick-count]").forEach(node => {
       const key = String(node.dataset.crmQuickCount || "").trim();
       node.textContent = String(counts[key] || 0);
+    });
+  };
+
+  const syncCrmViewTabs = () => {
+    viewTabButtons.forEach(button => {
+      const tabValue = String(button.dataset.crmViewTab || "").trim();
+      const isActive = tabValue === String(sourceFilter.value || "").trim();
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
   };
 
@@ -6244,6 +6259,7 @@ function initCoachCrmWorkspace(user = null) {
     state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
     state.programGroups = Array.isArray(programGroupData?.groups) ? programGroupData.groups : [];
     state.programGroupSummary = programGroupData?.summary || null;
+    syncCrmViewTabs();
     setSummary(state.summary);
     renderAssigneeOptions();
     await applyClientFilters(preserveActive);
@@ -6264,6 +6280,17 @@ function initCoachCrmWorkspace(user = null) {
       clearMessage(summaryFeedback);
       loadWorkspace(false).catch(error => {
         setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+      });
+    });
+  });
+
+  viewTabButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const nextValue = String(button.dataset.crmViewTab || "").trim();
+      sourceFilter.value = nextValue;
+      clearMessage(summaryFeedback);
+      loadWorkspace(false).catch(error => {
+        setMessage(summaryFeedback, error.message || "No pude cambiar esa vista del CRM.", "error");
       });
     });
   });

@@ -1285,6 +1285,30 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   margin-top: 18px;
 }
 
+.crm-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.crm-view-tab {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.crm-view-tab.is-active {
+  border-color: rgba(255, 205, 120, 0.34);
+  background: linear-gradient(135deg, rgba(255, 205, 120, 0.18), rgba(120, 182, 255, 0.14));
+  color: #ffffff;
+}
+
 .crm-toolbar label {
   display: grid;
   gap: 8px;

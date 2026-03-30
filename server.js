@@ -5666,22 +5666,15 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
     };
   }
 
-  const visibleRecordDocs = await CoachCrmRecord.find(
-    await construirCoachCrmViewerQuery(userDoc, {
-      sourceType: "programa_4_en_14"
+  const sheetDocs = await CoachProgramSheet.find(
+    construirCoachWorkspaceQuery(userDoc, {
+      programType: "4_en_14"
     })
   )
-    .sort({ createdAt: -1 })
+    .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
-  const visibleRecords = visibleRecordDocs.map(limpiarCoachCrmRecord).filter(Boolean);
-  const sheetIdSet = new Set(
-    visibleRecords
-      .map(record => String(record.sourceParentId || record.linkedProgramSheetId || "").trim())
-      .filter(Boolean)
-  );
-
-  if (!sheetIdSet.size) {
+  if (!sheetDocs.length) {
     return {
       groups: [],
       summary: {
@@ -5694,21 +5687,42 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
     };
   }
 
-  const validSheetIds = Array.from(sheetIdSet).filter(mongoose.Types.ObjectId.isValid);
-  const sheetDocs = await CoachProgramSheet.find(
-    construirCoachWorkspaceQuery(userDoc, {
-      _id: { $in: validSheetIds }
-    })
-  )
-    .sort({ updatedAt: -1, createdAt: -1 })
-    .lean();
-
   const sheetIdStrings = sheetDocs.map(item => String(item._id || "")).filter(Boolean);
-  const allRecordDocs = await CoachCrmRecord.find({
+  let allRecordDocs = await CoachCrmRecord.find({
     ownerUserId: resolverCoachOwnerUserId(userDoc),
     sourceType: "programa_4_en_14",
     sourceParentId: { $in: sheetIdStrings }
   }).lean();
+
+  const sheetsWithoutRecords = sheetDocs.filter(
+    sheetDoc => !allRecordDocs.some(recordDoc => String(recordDoc.sourceParentId || "") === String(sheetDoc._id || ""))
+  );
+
+  if (sheetsWithoutRecords.length) {
+    for (const sheetDoc of sheetsWithoutRecords) {
+      try {
+        await sincronizarCoachProgramSheetACrmRecords(userDoc, sheetDoc);
+      } catch (error) {
+        console.error("Error resembrando hoja 4 en 14 al CRM:", error.message);
+      }
+    }
+
+    allRecordDocs = await CoachCrmRecord.find({
+      ownerUserId: resolverCoachOwnerUserId(userDoc),
+      sourceType: "programa_4_en_14",
+      sourceParentId: { $in: sheetIdStrings }
+    }).lean();
+  }
+
+  const visibleRecordDocs = await CoachCrmRecord.find(
+    await construirCoachCrmViewerQuery(userDoc, {
+      sourceType: "programa_4_en_14",
+      sourceParentId: { $in: sheetIdStrings }
+    })
+  )
+    .sort({ createdAt: -1 })
+    .lean();
+  const visibleRecords = visibleRecordDocs.map(limpiarCoachCrmRecord).filter(Boolean);
 
   const visibleRecordMap = new Map(
     visibleRecords.map(record => [`${String(record.sourceParentId || "")}:${Number(record.sourceSubIndex ?? -1)}`, record])
