@@ -5159,13 +5159,13 @@ async function registrarCoachCrmActivity(recordDoc = null, userDoc = null, type 
 
 async function aplicarCoachCrmActualizacionALeadSource(recordDoc = null, updates = {}) {
   if (!recordDoc?.sourceRecordId || !mongoose.Types.ObjectId.isValid(recordDoc.sourceRecordId)) {
-    return;
+    return null;
   }
 
   const leadDoc = await CoachLeadInbox.findById(recordDoc.sourceRecordId);
 
   if (!leadDoc) {
-    return;
+    return null;
   }
 
   const now = new Date();
@@ -5233,24 +5233,34 @@ async function aplicarCoachCrmActualizacionALeadSource(recordDoc = null, updates
   leadDoc.summary = construirCoachLeadSummary(leadDoc);
   leadDoc.updatedAt = now;
   await leadDoc.save();
+  return leadDoc;
 }
 
 async function aplicarCoachCrmActualizacionAProgramaSource(recordDoc = null, updates = {}) {
   if (!recordDoc?.sourceParentId || !mongoose.Types.ObjectId.isValid(recordDoc.sourceParentId)) {
-    return;
+    return {
+      sheetDoc: null,
+      linkedLeadDoc: null
+    };
   }
 
   const sheetDoc = await CoachProgramSheet.findById(recordDoc.sourceParentId);
 
   if (!sheetDoc || !Array.isArray(sheetDoc.referrals)) {
-    return;
+    return {
+      sheetDoc: null,
+      linkedLeadDoc: null
+    };
   }
 
   const referralIndex = Number(recordDoc.sourceSubIndex ?? -1);
   const referral = Number.isInteger(referralIndex) && referralIndex >= 0 ? sheetDoc.referrals[referralIndex] : null;
 
   if (!referral) {
-    return;
+    return {
+      sheetDoc,
+      linkedLeadDoc: null
+    };
   }
 
   const now = new Date();
@@ -5290,8 +5300,9 @@ async function aplicarCoachCrmActualizacionAProgramaSource(recordDoc = null, upd
   sheetDoc.updatedAt = now;
   await sheetDoc.save();
 
+  let linkedLeadDoc = null;
   if (recordDoc.linkedLeadId && mongoose.Types.ObjectId.isValid(recordDoc.linkedLeadId)) {
-    await aplicarCoachCrmActualizacionALeadSource(
+    linkedLeadDoc = await aplicarCoachCrmActualizacionALeadSource(
       {
         ...recordDoc,
         sourceRecordId: String(recordDoc.linkedLeadId)
@@ -5299,18 +5310,43 @@ async function aplicarCoachCrmActualizacionAProgramaSource(recordDoc = null, upd
       updates
     );
   }
+
+  return {
+    sheetDoc,
+    linkedLeadDoc
+  };
 }
 
-async function aplicarCoachCrmActualizacionAFuentes(recordDoc = null, updates = {}) {
+async function aplicarCoachCrmActualizacionAFuentes(recordDoc = null, updates = {}, userDoc = null) {
   if (!recordDoc?._id) {
-    return;
+    return null;
   }
 
   if (recordDoc.sourceType === "lead") {
-    await aplicarCoachCrmActualizacionALeadSource(recordDoc, updates);
+    const leadDoc = await aplicarCoachCrmActualizacionALeadSource(recordDoc, updates);
+
+    if (userDoc?._id && leadDoc?._id) {
+      await sincronizarCoachLeadInboxACrmDesdeLead(leadDoc, userDoc);
+    }
+
+    return {
+      leadDoc,
+      sheetDoc: null,
+      linkedLeadDoc: leadDoc
+    };
   } else if (recordDoc.sourceType === "programa_4_en_14") {
-    await aplicarCoachCrmActualizacionAProgramaSource(recordDoc, updates);
+    const syncResult = await aplicarCoachCrmActualizacionAProgramaSource(recordDoc, updates);
+
+    if (userDoc?._id && syncResult?.linkedLeadDoc?._id) {
+      await sincronizarCoachLeadInboxACrmRecord(userDoc, syncResult.linkedLeadDoc);
+    } else if (userDoc?._id && syncResult?.sheetDoc?._id) {
+      await sincronizarCoachProgramSheetACrmRecords(userDoc, syncResult.sheetDoc);
+    }
+
+    return syncResult;
   }
+
+  return null;
 }
 
 function resolverCoachCrmStatusDesdeDemoOutcome(resultType = "", currentStatus = "") {
@@ -5358,7 +5394,7 @@ async function vincularCoachCrmConEncuesta(recordDoc = null, surveyDoc = null, u
     note
   };
 
-  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates, userDoc);
   await registrarCoachCrmActivity(
     recordDoc,
     userDoc,
@@ -5399,7 +5435,7 @@ async function vincularCoachCrmConPrograma(recordDoc = null, sheetDoc = null, us
     note
   };
 
-  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates, userDoc);
   await registrarCoachCrmActivity(
     recordDoc,
     userDoc,
@@ -5533,7 +5569,7 @@ async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = n
     note
   };
 
-  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates);
+  await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates, userDoc);
   await registrarCoachCrmActivity(
     recordDoc,
     userDoc,
@@ -18980,11 +19016,7 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
     recordDoc.updatedAt = now;
     await recordDoc.save();
 
-    if (recordDoc.sourceType === "lead") {
-      await aplicarCoachCrmActualizacionALeadSource(recordDoc, updates);
-    } else if (recordDoc.sourceType === "programa_4_en_14") {
-      await aplicarCoachCrmActualizacionAProgramaSource(recordDoc, updates);
-    }
+    await aplicarCoachCrmActualizacionAFuentes(recordDoc, updates, auth.user);
 
     if (activityLines.length) {
       await registrarCoachCrmActivity(recordDoc, auth.user, "update", activityLines.join(" "), {
