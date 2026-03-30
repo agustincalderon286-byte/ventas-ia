@@ -20509,7 +20509,7 @@ MODO TURBO DEL COACH:
       question: preguntaLimpia,
       activeWorkspace,
       activeDemoStage,
-      statePrompt,
+      statePrompt: estadoPrompt,
       profilePrompt,
       history: cacheHistory,
       extra: {
