@@ -418,6 +418,7 @@ const coachLeadInboxSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true },
   phone: String,
   email: String,
+  address: String,
   city: String,
   zipCode: String,
   interest: String,
@@ -453,6 +454,7 @@ const coachProgramSheetReferralSchema = new mongoose.Schema(
   {
     fullName: String,
     phone: String,
+    address: String,
     notes: String,
     createdLeadId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox", default: null },
     instantCallStatus: String,
@@ -493,6 +495,8 @@ const coachProgramSheetSchema = new mongoose.Schema({
   giftSelected: String,
   representativeName: String,
   representativePhone: String,
+  startDate: Date,
+  deadlineDate: Date,
   startWindow: String,
   notes: String,
   referrals: [coachProgramSheetReferralSchema],
@@ -5202,6 +5206,10 @@ async function aplicarCoachCrmActualizacionALeadSource(recordDoc = null, updates
     leadDoc.nextActionAt = parseCoachLeadNextActionAt(updates.nextActionAt);
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "address")) {
+    leadDoc.address = cleanText(updates.address || "").slice(0, 240);
+  }
+
   if (Object.prototype.hasOwnProperty.call(updates || {}, "city")) {
     leadDoc.city = cleanText(updates.city || "").slice(0, 80);
   }
@@ -5254,6 +5262,13 @@ async function aplicarCoachCrmActualizacionAProgramaSource(recordDoc = null, upd
 
   if (Object.prototype.hasOwnProperty.call(updates || {}, "privateNotesFull")) {
     referral.instantCallNotes = cleanText(updates.privateNotesFull || "").slice(0, 320);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "address")) {
+    referral.address = cleanText(updates.address || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240);
   }
 
   if (updates.note) {
@@ -7706,6 +7721,69 @@ function normalizarZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
 
+function parseCoachProgramSheetDateInput(value = "") {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const safeValue = cleanText(value || "").trim().slice(0, 40);
+
+  if (!safeValue) {
+    return null;
+  }
+
+  const normalizedValue = /^\d{4}-\d{2}-\d{2}$/.test(safeValue) ? `${safeValue}T12:00:00` : safeValue;
+  const parsed = new Date(normalizedValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function construirCoachProgram414DeadlineDate(startDate = null) {
+  const parsedStartDate = parseCoachProgramSheetDateInput(startDate);
+
+  if (!parsedStartDate) {
+    return null;
+  }
+
+  const deadlineDate = new Date(parsedStartDate);
+  deadlineDate.setHours(12, 0, 0, 0);
+  deadlineDate.setDate(deadlineDate.getDate() + 14);
+  return deadlineDate;
+}
+
+function formatearCoachProgram414Date(value = null) {
+  const parsedDate = parseCoachProgramSheetDateInput(value);
+
+  if (!parsedDate) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "2-digit"
+  }).format(parsedDate);
+}
+
+function construirCoachProgram414StartWindow(sheet = null) {
+  const startDate = parseCoachProgramSheetDateInput(sheet?.startDate || "");
+  const deadlineDate =
+    parseCoachProgramSheetDateInput(sheet?.deadlineDate || "") || construirCoachProgram414DeadlineDate(startDate);
+
+  if (startDate && deadlineDate) {
+    return `${formatearCoachProgram414Date(startDate)} - ${formatearCoachProgram414Date(deadlineDate)}`;
+  }
+
+  if (startDate) {
+    return `Inicia ${formatearCoachProgram414Date(startDate)}`;
+  }
+
+  return String(sheet?.startWindow || "").trim().slice(0, 120);
+}
+
 function inferCoachCityZipFromAddress(value = "") {
   const safeValue = cleanText(value || "")
     .replace(/\s+/g, " ")
@@ -7980,8 +8058,17 @@ function construirCoachCrmProgramSummary(sheetDoc = null, referral = null) {
     parts.push(`Regalo: ${truncarTextoPrompt(sheetDoc.giftSelected, 80)}.`);
   }
 
+  const startWindow = construirCoachProgram414StartWindow(sheetDoc);
+  if (startWindow) {
+    parts.push(`Periodo: ${truncarTextoPrompt(startWindow, 90)}.`);
+  }
+
   if (referral?.appointmentDetails) {
     parts.push(`Cita: ${truncarTextoPrompt(referral.appointmentDetails, 120)}.`);
+  }
+
+  if (referral?.address) {
+    parts.push(`Direccion: ${truncarTextoPrompt(referral.address, 140)}.`);
   }
 
   if (referral?.notes) {
@@ -7996,7 +8083,7 @@ function construirCoachCrmProgramSummary(sheetDoc = null, referral = null) {
 }
 
 function construirCoachCrmProgramNotes(sheetDoc = null, referral = null) {
-  return [referral?.notes || "", referral?.instantCallNotes || "", sheetDoc?.notes || ""]
+  return [referral?.address || "", referral?.notes || "", referral?.instantCallNotes || "", sheetDoc?.notes || ""]
     .map(item => cleanText(item || "").trim())
     .filter(Boolean)
     .join("\n\n")
@@ -8097,6 +8184,7 @@ function construirCoachCrmProgramSeedOperation(
   const sourceRecordId = `${String(sheetDoc._id)}:${referralIndex}`;
   const status = resolverCoachCrmStatusDesdePrograma414(referral, linkedLead);
   const nextActionAt = linkedLead?.nextActionAt || null;
+  const inferredLocation = inferCoachCityZipFromAddress(referral?.address || "");
   const appointmentAt =
     status === "cita_agendada"
       ? nextActionAt || (referral?.appointmentDetails ? sheetDoc.updatedAt || sheetDoc.createdAt || null : null)
@@ -8130,8 +8218,9 @@ function construirCoachCrmProgramSeedOperation(
           leadName: referral.fullName || "",
           phone: referral.phone || "",
           email: linkedLead?.email || "",
-          city: linkedLead?.city || "",
-          zipCode: linkedLead?.zipCode || "",
+          address: linkedLead?.address || referral?.address || "",
+          city: linkedLead?.city || inferredLocation.city || "",
+          zipCode: linkedLead?.zipCode || inferredLocation.zipCode || "",
           interest:
             linkedLead?.interest ||
             (sheetDoc.giftSelected ? `Programa 4 en 14 · ${sheetDoc.giftSelected}` : "Programa 4 en 14"),
@@ -9124,9 +9213,13 @@ function parseCoachImportedContacts(importMode = "", rawText = "") {
 function limpiarCoachProgramReferral(item = null) {
   const fullName = seleccionarNombreConfiable(item?.fullName || item?.name || "") || String(item?.fullName || item?.name || "").trim();
   const phone = normalizePhone(item?.phone || "");
+  const address = cleanText(item?.address || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
   const notes = String(item?.notes || "").trim().slice(0, 240);
 
-  if (!fullName && !phone && !notes) {
+  if (!fullName && !phone && !address && !notes) {
     return null;
   }
 
@@ -9137,6 +9230,7 @@ function limpiarCoachProgramReferral(item = null) {
   return {
     fullName,
     phone,
+    address,
     notes
   };
 }
@@ -9156,8 +9250,9 @@ function construirCoachProgramSheetSummary(sheet = null) {
     parts.push(`Regalo: ${truncarTextoPrompt(sheet.giftSelected, 80)}.`);
   }
 
-  if (sheet.startWindow) {
-    parts.push(`Periodo: ${truncarTextoPrompt(sheet.startWindow, 90)}.`);
+  const startWindow = construirCoachProgram414StartWindow(sheet);
+  if (startWindow) {
+    parts.push(`Periodo: ${truncarTextoPrompt(startWindow, 90)}.`);
   }
 
   if (sheet.referralCount) {
@@ -9210,6 +9305,7 @@ function limpiarCoachProgramReferralView(referral = null, index = 0, sheet = nul
     index,
     fullName: referral.fullName || "",
     phone: referral.phone || "",
+    address: referral.address || "",
     notes: referral.notes || "",
     createdLeadId: referral.createdLeadId ? String(referral.createdLeadId) : "",
     instantCallStatus: normalizarCoachProgramInstantStatus(referral.instantCallStatus || ""),
@@ -9241,7 +9337,9 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
     giftSelected: sheetDoc.giftSelected || "",
     representativeName: sheetDoc.representativeName || "",
     representativePhone: sheetDoc.representativePhone || "",
-    startWindow: sheetDoc.startWindow || "",
+    startDate: sheetDoc.startDate || null,
+    deadlineDate: sheetDoc.deadlineDate || null,
+    startWindow: construirCoachProgram414StartWindow(sheetDoc),
     notes: sheetDoc.notes || "",
     referralCount: Number(sheetDoc.referralCount || 0),
     rewardUnlockedAt: sheetDoc.rewardUnlockedAt || null,
@@ -9261,15 +9359,22 @@ function esCoachProgram414DemoContabilizable(recordDoc = null) {
 }
 
 function construirCoachProgram414Deadline(sheetDoc = null) {
-  const baseDate = sheetDoc?.createdAt || sheetDoc?.updatedAt || null;
+  const explicitDeadline = parseCoachProgramSheetDateInput(sheetDoc?.deadlineDate || "");
 
-  if (!baseDate) {
+  if (explicitDeadline) {
+    return explicitDeadline;
+  }
+
+  const startDate =
+    parseCoachProgramSheetDateInput(sheetDoc?.startDate || "") ||
+    parseCoachProgramSheetDateInput(sheetDoc?.createdAt || "") ||
+    parseCoachProgramSheetDateInput(sheetDoc?.updatedAt || "");
+
+  if (!startDate) {
     return null;
   }
 
-  const deadline = new Date(baseDate);
-  deadline.setDate(deadline.getDate() + 14);
-  return deadline;
+  return construirCoachProgram414DeadlineDate(startDate);
 }
 
 function resolverCoachProgram414HostStatus(group = null) {
@@ -9342,9 +9447,9 @@ function construirCoachProgram414HostGroup(sheetDoc = null, visibleRecordMap = n
         fullName: referral?.fullName || visibleRecord.leadName || "",
         phone: visibleRecord.phone || referral?.phone || "",
         email: visibleRecord.email || "",
-        address: visibleRecord.address || "",
-        city: visibleRecord.city || "",
-        zipCode: visibleRecord.zipCode || "",
+        address: visibleRecord.address || referral?.address || "",
+        city: visibleRecord.city || inferCoachCityZipFromAddress(referral?.address || "").city || "",
+        zipCode: visibleRecord.zipCode || inferCoachCityZipFromAddress(referral?.address || "").zipCode || "",
         notes: referral?.notes || "",
         instantCallStatus: normalizarCoachProgramInstantStatus(referral?.instantCallStatus || ""),
         appointmentDetails: referral?.appointmentDetails || "",
@@ -9384,7 +9489,9 @@ function construirCoachProgram414HostGroup(sheetDoc = null, visibleRecordMap = n
     salesCount,
     rewardUnlockedAt: sheetDoc.rewardUnlockedAt || null,
     rewardDeliveredAt: sheetDoc.rewardDeliveredAt || null,
-    startWindow: sheetDoc.startWindow || "",
+    startDate: sheetDoc.startDate || null,
+    deadlineDate: sheetDoc.deadlineDate || deadlineAt || null,
+    startWindow: construirCoachProgram414StartWindow(sheetDoc),
     notes: sheetDoc.notes || "",
     summary: sheetDoc.summary || "",
     createdAt: sheetDoc.createdAt || null,
@@ -9426,6 +9533,7 @@ function limpiarCoachProgram414ActiveContext(context = null) {
     referral: {
       fullName: referralFullName,
       phone: cleanText(referral?.phone || ""),
+      address: cleanText(referral?.address || ""),
       notes: cleanText(referral?.notes || ""),
       instantCallStatus: cleanText(referral?.instantCallStatus || ""),
       instantCallNotes: cleanText(referral?.instantCallNotes || ""),
@@ -9468,6 +9576,10 @@ function construirNotasLeadDesdePrograma414(sheet = null, referral = null, index
     parts.push(`Telefono representante: ${sheet.representativePhone}.`);
   }
 
+  if (referral?.address) {
+    parts.push(`Direccion del referido: ${referral.address}.`);
+  }
+
   if (referral?.notes) {
     parts.push(`Notas del referido: ${referral.notes}.`);
   }
@@ -9496,6 +9608,7 @@ PROGRAMA 4 EN 14 ACTIVO EN ESTA SESION:
 - representante: ${context.representativeName || "sin nombre"}
 - estado_llamada: ${context.referral.instantCallStatus || "seleccionado"}
 - notas_del_referido: ${context.referral.notes || "sin notas"}
+- direccion_del_referido: ${context.referral.address || "sin direccion"}
 - notas_de_llamada: ${context.referral.instantCallNotes || "sin notas"}
 - detalle_de_cita: ${context.referral.appointmentDetails || "sin detalle"}
 - guion_anfitrion: ${context.referral.scripts?.hostScript || "sin guion"}
@@ -9778,8 +9891,13 @@ async function guardarCoachInboxLead({
   const fullName = seleccionarNombreConfiable(rawName) || rawName;
   const phone = normalizePhone(payload?.phone || "");
   const email = normalizarEmail(payload?.email || "");
-  const city = String(payload?.city || "").trim().slice(0, 80);
-  const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || "");
+  const address = cleanText(payload?.address || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+  const inferredLocation = inferCoachCityZipFromAddress(address);
+  const city = String(payload?.city || inferredLocation.city || "").trim().slice(0, 80);
+  const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || inferredLocation.zipCode || "");
   const interest = String(payload?.interest || "").trim().slice(0, 120);
   const source = normalizarCoachLeadSource(payload?.source || "captura_manual");
   const notes = String(payload?.notes || "").trim().slice(0, 1200);
@@ -9835,6 +9953,7 @@ async function guardarCoachInboxLead({
     leadDoc.fullName = fullName || leadDoc.fullName;
     leadDoc.phone = phone || leadDoc.phone || "";
     leadDoc.email = email || leadDoc.email || "";
+    leadDoc.address = address || leadDoc.address || "";
     leadDoc.city = city || leadDoc.city || "";
     leadDoc.zipCode = zipCode || leadDoc.zipCode || "";
     leadDoc.interest = interest || leadDoc.interest || "";
@@ -9914,6 +10033,7 @@ async function guardarCoachInboxLead({
     fullName,
     phone,
     email,
+    address,
     city,
     zipCode,
     interest,
@@ -10175,6 +10295,7 @@ function limpiarCoachInboxLead(leadDoc = null) {
     fullName: leadDoc.fullName || "",
     phone: leadDoc.phone || "",
     email: leadDoc.email || "",
+    address: leadDoc.address || "",
     city: leadDoc.city || "",
     zipCode: leadDoc.zipCode || "",
     interest: leadDoc.interest || "",
@@ -19430,7 +19551,15 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     seleccionarNombreConfiable(req.body?.representativeName || "") ||
     String(req.body?.representativeName || "").trim().slice(0, 100);
   const representativePhone = normalizePhone(req.body?.representativePhone || "");
-  const startWindow = String(req.body?.startWindow || "").trim().slice(0, 120);
+  const startDate = parseCoachProgramSheetDateInput(req.body?.startDate || "");
+  const deadlineDate = startDate
+    ? construirCoachProgram414DeadlineDate(startDate)
+    : parseCoachProgramSheetDateInput(req.body?.deadlineDate || "");
+  const startWindow = construirCoachProgram414StartWindow({
+    startDate,
+    deadlineDate,
+    startWindow: String(req.body?.startWindow || "").trim().slice(0, 120)
+  });
   const notes = String(req.body?.notes || "").trim().slice(0, 500);
   const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
   const referrals = Array.isArray(req.body?.referrals)
@@ -19475,6 +19604,8 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
       giftSelected,
       representativeName,
       representativePhone,
+      startDate,
+      deadlineDate,
       startWindow,
       notes,
       referrals,
@@ -19503,6 +19634,7 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
           interest: giftSelected
             ? `Programa 4 en 14 · ${giftSelected}`
             : "Programa 4 en 14",
+          address: referral.address || "",
           source: "programa_4_en_14",
           notes: construirNotasLeadDesdePrograma414(sheetBase, referral, index),
           consentGiven: true
@@ -21877,6 +22009,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export {
+  construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
   construirCoachCrmSummary,

@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 process.env.NODE_ENV = "test";
 
 const {
+  construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
   construirCoachCrmSummary,
@@ -14,6 +15,14 @@ const {
   limpiarCoachAgendaRecord,
   resolverCoachCrmStatusDesdeDemoOutcome
 } = await import("../server.js");
+
+test("calcula inicio y vencimiento automatico de 4 en 14 desde la fecha de inicio", () => {
+  const startWindow = construirCoachProgram414StartWindow({
+    startDate: "2026-03-30"
+  });
+
+  assert.equal(startWindow, "03/30/26 - 04/13/26");
+});
 
 test("el tablero 4 en 14 consulta por workspace del dueno y no por creador individual", () => {
   const ownerUserId = new mongoose.Types.ObjectId();

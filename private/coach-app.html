@@ -671,10 +671,21 @@
                     <span>Representante</span>
                     <input type="text" name="representativeName" placeholder="Quien va a la casa" />
                   </label>
+                  <label class="native-lead-field">
+                    <span>Fecha de inicio</span>
+                    <input type="date" name="startDate" data-fourteen-start-date />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Fecha de vencimiento</span>
+                    <input type="date" name="deadlineDate" data-fourteen-deadline-date readonly />
+                  </label>
                   <label class="native-lead-field native-lead-field-full">
                     <span>Notas</span>
                     <textarea name="notes" rows="3" maxlength="320" placeholder="Notas del anfitrion o del programa"></textarea>
                   </label>
+                  <p class="mini-note native-lead-field-full" data-fourteen-date-note>
+                    Elige la fecha de inicio y el sistema calcula automaticamente el vencimiento a 14 dias.
+                  </p>
                 </div>
 
                 <div class="fourteen-sheet-head">
@@ -1463,8 +1474,12 @@
                     <input type="tel" name="representativePhone" placeholder="Opcional" />
                   </label>
                   <label class="native-lead-field">
-                    <span>Inicio y vencimiento</span>
-                    <input type="text" name="startWindow" placeholder="Ej. inicia hoy y vence en 14 dias" />
+                    <span>Fecha de inicio</span>
+                    <input type="date" name="startDate" data-fourteen-start-date />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Fecha de vencimiento</span>
+                    <input type="date" name="deadlineDate" data-fourteen-deadline-date readonly />
                   </label>
                   <label class="native-lead-field native-lead-field-full">
                     <span>Notas de la hoja</span>
@@ -1475,6 +1490,9 @@
                       placeholder="Algo importante sobre el anfitrion o el programa"
                     ></textarea>
                   </label>
+                  <p class="mini-note native-lead-field-full" data-fourteen-date-note>
+                    Elige la fecha de inicio y el sistema calcula los 14 dias del programa.
+                  </p>
                 </div>
 
                 <div class="fourteen-sheet-head">

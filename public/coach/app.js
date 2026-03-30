@@ -926,6 +926,39 @@ function buildLeadDateTimeValue(dateValue = "", timeValue = "") {
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
 }
 
+function addDaysToDateInputValue(dateValue = "", days = 0) {
+  if (!dateValue) {
+    return "";
+  }
+
+  const parsed = new Date(`${dateValue}T12:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  parsed.setDate(parsed.getDate() + Number(days || 0));
+  return formatDateInputValue(parsed.toISOString());
+}
+
+function formatDateOnlyLabel(dateValue = "") {
+  if (!dateValue) {
+    return "";
+  }
+
+  const parsed = new Date(`${dateValue}T12:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  }).format(parsed);
+}
+
 function formatLeadPhone(value = "") {
   const digits = normalizeLeadPhone(value);
 
@@ -2545,20 +2578,30 @@ function createFourteenSheetReferralRow(index) {
         <span>Nombre, telefono y una nota corta si hace falta.</span>
       </div>
     </div>
-    <div class="fourteen-sheet-referral-grid">
-      <label class="native-lead-field">
-        <span>Nombre</span>
-        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
-      </label>
-      <label class="native-lead-field">
-        <span>Telefono</span>
-        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
-      </label>
-      <label class="native-lead-field native-lead-field-full">
-        <span>Notas</span>
-        <input type="text" name="referralNotes${index}" maxlength="240" placeholder="Ej. mejor despues de las 6 pm" />
-      </label>
-    </div>
+	    <div class="fourteen-sheet-referral-grid">
+	      <label class="native-lead-field">
+	        <span>Nombre</span>
+	        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
+	      </label>
+	      <label class="native-lead-field">
+	        <span>Telefono</span>
+	        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
+	      </label>
+	      <label class="native-lead-field native-lead-field-full">
+	        <span>Direccion</span>
+	        <input
+	          type="text"
+	          name="referralAddress${index}"
+	          maxlength="240"
+	          placeholder="2059 Desplaines St Blue Island IL 60406"
+	          autocomplete="street-address"
+	        />
+	      </label>
+	      <label class="native-lead-field native-lead-field-full">
+	        <span>Notas</span>
+	        <input type="text" name="referralNotes${index}" maxlength="240" placeholder="Ej. mejor despues de las 6 pm" />
+	      </label>
+	    </div>
   `;
   return row;
 }
@@ -2613,6 +2656,34 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       currentCount >= FOURTEEN_SHEET_MAX_REFERRALS ? "Limite alcanzado" : "Agregar otro nombre";
   };
 
+  const syncFourteenDateRange = (targetForm, { forceToday = false } = {}) => {
+    if (!targetForm) {
+      return;
+    }
+
+    const startInput = targetForm.querySelector('[data-fourteen-start-date]');
+    const deadlineInput = targetForm.querySelector('[data-fourteen-deadline-date]');
+    const noteNode = targetForm.querySelector('[data-fourteen-date-note]');
+
+    if (!startInput || !deadlineInput) {
+      return;
+    }
+
+    if (forceToday && !startInput.value) {
+      startInput.value = formatDateInputValue(new Date().toISOString());
+    }
+
+    const deadlineValue = addDaysToDateInputValue(startInput.value, 14);
+    deadlineInput.value = deadlineValue;
+
+    if (noteNode) {
+      noteNode.textContent =
+        startInput.value && deadlineValue
+          ? `Inicia ${formatDateOnlyLabel(startInput.value)} y vence ${formatDateOnlyLabel(deadlineValue)}.`
+          : "Elige la fecha de inicio y el sistema calcula los 14 dias del programa.";
+    }
+  };
+
   const appendReferralRow = () => {
     const currentCount = referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length;
 
@@ -2636,6 +2707,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     if (clearFeedback) {
       clearMessage(feedbackNode);
     }
+    syncFourteenDateRange(form, { forceToday: true });
   };
 
   const setInstantFeedback = (message = "", state = "info") => {
@@ -2916,6 +2988,11 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   rebuildForm();
   renderSavedList();
   renderInstantZone(null);
+  syncFourteenDateRange(form, { forceToday: true });
+
+  form.querySelector('[data-fourteen-start-date]')?.addEventListener("change", () => {
+    syncFourteenDateRange(form);
+  });
 
   toggle.addEventListener("click", async () => {
     const willOpen = wrap.hidden;
@@ -2990,9 +3067,10 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       .map((row, index) => ({
         fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
         phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
         notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
       }))
-      .filter(item => item.fullName || item.phone || item.notes);
+      .filter(item => item.fullName || item.phone || item.address || item.notes);
 
     const payload = {
       activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
@@ -3001,7 +3079,8 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
       giftSelected: formData.get("giftSelected"),
       representativeName: formData.get("representativeName"),
       representativePhone: formData.get("representativePhone"),
-      startWindow: formData.get("startWindow"),
+      startDate: formData.get("startDate"),
+      deadlineDate: formData.get("deadlineDate"),
       notes: formData.get("notes"),
       referrals
     };
@@ -5921,13 +6000,28 @@ function initCoachCrmWorkspace(user = null) {
   };
 
   const rebuildCrmManualProgramForm = () => {
-    if (!manualProgramReferrals) {
+    if (!manualProgramReferrals || !manualProgramForm) {
       return;
     }
 
+    manualProgramForm.reset();
     manualProgramReferrals.innerHTML = "";
     for (let index = 0; index < FOURTEEN_SHEET_DEFAULT_REFERRALS; index += 1) {
       manualProgramReferrals.appendChild(createFourteenSheetReferralRow(index + 1));
+    }
+    const startInput = manualProgramForm.querySelector('[data-fourteen-start-date]');
+    const deadlineInput = manualProgramForm.querySelector('[data-fourteen-deadline-date]');
+    const noteNode = manualProgramForm.querySelector('[data-fourteen-date-note]');
+    if (startInput && !startInput.value) {
+      startInput.value = formatDateInputValue(new Date().toISOString());
+    }
+    if (deadlineInput) {
+      deadlineInput.value = addDaysToDateInputValue(startInput?.value || "", 14);
+    }
+    if (noteNode) {
+      noteNode.textContent = startInput?.value && deadlineInput?.value
+        ? `Inicia ${formatDateOnlyLabel(startInput.value)} y vence ${formatDateOnlyLabel(deadlineInput.value)}.`
+        : "Elige la fecha de inicio y el sistema calcula automaticamente el vencimiento a 14 dias.";
     }
   };
 
@@ -5950,6 +6044,7 @@ function initCoachCrmWorkspace(user = null) {
           ? group.referrals.flatMap(referral => [
               referral?.fullName,
               referral?.phone,
+              referral?.address,
               referral?.lastNote,
               referral?.briefHistory,
               referral?.appointmentRepName
@@ -6091,6 +6186,7 @@ function initCoachCrmWorkspace(user = null) {
             <div class="crm-program-host-meta">
               <span class="health-survey-folder-chip">Regalo: ${escapeHtml(group.giftSelected || "Sin regalo")}</span>
               <span class="health-survey-folder-chip">Representante: ${escapeHtml(group.representativeName || "Sin asignar")}</span>
+              <span class="health-survey-folder-chip">Periodo: ${escapeHtml(group.startWindow || "Sin periodo")}</span>
               <span class="health-survey-folder-chip">Vence: ${escapeHtml(deadlineCopy)}</span>
               <span class="health-survey-folder-chip">${escapeHtml(String(group.completedDemoCount || 0))}/4 demos</span>
               <span class="health-survey-folder-chip">${escapeHtml(String(group.salesCount || 0))} ventas</span>
@@ -6802,6 +6898,20 @@ function initCoachCrmWorkspace(user = null) {
     manualProgramReferrals.appendChild(createFourteenSheetReferralRow(currentCount + 1));
   });
 
+  manualProgramForm?.querySelector('[data-fourteen-start-date]')?.addEventListener("change", () => {
+    const startInput = manualProgramForm.querySelector('[data-fourteen-start-date]');
+    const deadlineInput = manualProgramForm.querySelector('[data-fourteen-deadline-date]');
+    const noteNode = manualProgramForm.querySelector('[data-fourteen-date-note]');
+    if (deadlineInput) {
+      deadlineInput.value = addDaysToDateInputValue(startInput?.value || "", 14);
+    }
+    if (noteNode) {
+      noteNode.textContent = startInput?.value && deadlineInput?.value
+        ? `Inicia ${formatDateOnlyLabel(startInput.value)} y vence ${formatDateOnlyLabel(deadlineInput.value)}.`
+        : "Elige la fecha de inicio y el sistema calcula automaticamente el vencimiento a 14 dias.";
+    }
+  });
+
   manualLeadForm?.addEventListener("submit", async event => {
     event.preventDefault();
     clearMessage(manualLeadFeedback);
@@ -6846,9 +6956,10 @@ function initCoachCrmWorkspace(user = null) {
       .map((row, index) => ({
         fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
         phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
         notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
       }))
-      .filter(item => item.fullName || item.phone || item.notes);
+      .filter(item => item.fullName || item.phone || item.address || item.notes);
 
     setButtonLoading(submitButton, true, "Guardando...");
 
@@ -6860,12 +6971,13 @@ function initCoachCrmWorkspace(user = null) {
           hostPhone: formData.get("hostPhone"),
           giftSelected: formData.get("giftSelected"),
           representativeName: formData.get("representativeName"),
+          startDate: formData.get("startDate"),
+          deadlineDate: formData.get("deadlineDate"),
           notes: formData.get("notes"),
           referrals
         }
       });
 
-      manualProgramForm.reset();
       rebuildCrmManualProgramForm();
       toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
       setCoachWorkspaceTab("program414");
