@@ -1722,7 +1722,12 @@ function construirCoachCrmWorkspaceCacheKey(userDoc = null, filters = {}, versio
     version: String(version || "0"),
     viewer,
     filters: {
-      sourceType: normalizarCoachCrmSourceType(filters?.sourceType || ""),
+      sourceType: String(filters?.sourceType || "").trim()
+        ? normalizarCoachCrmSourceType(filters?.sourceType || "")
+        : "",
+      excludeSourceType: String(filters?.excludeSourceType || "").trim()
+        ? normalizarCoachCrmSourceType(filters?.excludeSourceType || "")
+        : "",
       status: normalizarCoachCrmStatus(filters?.status || ""),
       assignedToUserId: normalizarCoachCrmObjectId(filters?.assignedToUserId) || ""
     }
@@ -5556,11 +5561,27 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   const query = {
     ...baseQuery
   };
-  const sourceType = normalizarCoachCrmSourceType(filters?.sourceType || "");
+  const allRecordsQuery = {
+    ...baseQuery
+  };
+  const sourceType = String(filters?.sourceType || "").trim()
+    ? normalizarCoachCrmSourceType(filters?.sourceType || "")
+    : "";
+  const excludeSourceType = String(filters?.excludeSourceType || "").trim()
+    ? normalizarCoachCrmSourceType(filters?.excludeSourceType || "")
+    : "";
   const status = normalizarCoachCrmStatus(filters?.status || "");
 
   if (filters?.sourceType) {
     query.sourceType = sourceType;
+  }
+
+  if (excludeSourceType) {
+    allRecordsQuery.sourceType = { $ne: excludeSourceType };
+
+    if (!filters?.sourceType) {
+      query.sourceType = { $ne: excludeSourceType };
+    }
   }
 
   if (filters?.status) {
@@ -5579,7 +5600,7 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
       .sort({ updatedAt: -1, nextActionAt: 1, createdAt: -1 })
       .limit(500)
       .lean(),
-    CoachCrmRecord.find(baseQuery)
+    CoachCrmRecord.find(allRecordsQuery)
       .sort({ updatedAt: -1 })
       .limit(800)
       .lean(),
@@ -5694,12 +5715,23 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
     sourceParentId: { $in: sheetIdStrings }
   }).lean();
 
-  const sheetsWithoutRecords = sheetDocs.filter(
-    sheetDoc => !allRecordDocs.some(recordDoc => String(recordDoc.sourceParentId || "") === String(sheetDoc._id || ""))
-  );
+  const crmRecordCountBySheet = new Map();
+  allRecordDocs.forEach(recordDoc => {
+    const sheetId = String(recordDoc.sourceParentId || "").trim();
+    if (!sheetId) {
+      return;
+    }
+    crmRecordCountBySheet.set(sheetId, Number(crmRecordCountBySheet.get(sheetId) || 0) + 1);
+  });
 
-  if (sheetsWithoutRecords.length) {
-    for (const sheetDoc of sheetsWithoutRecords) {
+  const sheetsNeedingResync = sheetDocs.filter(sheetDoc => {
+    const referralCount = Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals.length : 0;
+    const crmCount = Number(crmRecordCountBySheet.get(String(sheetDoc._id || "")) || 0);
+    return referralCount > 0 && crmCount < referralCount;
+  });
+
+  if (sheetsNeedingResync.length) {
+    for (const sheetDoc of sheetsNeedingResync) {
       try {
         await sincronizarCoachProgramSheetACrmRecords(userDoc, sheetDoc);
       } catch (error) {
@@ -18576,6 +18608,7 @@ app.get("/api/coach/crm/records", async (req, res) => {
 
   try {
     const sourceTypeRaw = String(req.query?.sourceType || "").trim().toLowerCase();
+    const excludeSourceTypeRaw = String(req.query?.excludeSourceType || "").trim().toLowerCase();
     const statusRaw = String(req.query?.status || "").trim().toLowerCase();
     const assignedToUserId = String(req.query?.assignedToUserId || "").trim();
     const allowedStatuses = [
@@ -18593,6 +18626,9 @@ app.get("/api/coach/crm/records", async (req, res) => {
     ];
     const data = await obtenerCoachCrmWorkspace(auth.user, {
       sourceType: ["lead", "programa_4_en_14", "reclutamiento"].includes(sourceTypeRaw) ? sourceTypeRaw : "",
+      excludeSourceType: ["lead", "programa_4_en_14", "reclutamiento"].includes(excludeSourceTypeRaw)
+        ? excludeSourceTypeRaw
+        : "",
       status: allowedStatuses.includes(statusRaw) ? statusRaw : "",
       assignedToUserId
     });

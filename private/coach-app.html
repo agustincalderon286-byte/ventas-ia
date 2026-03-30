@@ -101,6 +101,14 @@
               <button
                 type="button"
                 class="coach-workspace-tab"
+                data-coach-workspace-tab="program414"
+                aria-selected="false"
+              >
+                4 en 14
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
                 data-coach-workspace-tab="agenda"
                 aria-selected="false"
               >
@@ -152,13 +160,12 @@
             <div class="eyebrow">Vista operativa</div>
             <h3 data-crm-sheet-title>Filtra y abre filas del CRM</h3>
             <p data-crm-sheet-copy>
-              Usa filtros simples y toca una fila para abrir su detalle. Esta primera fase ya respeta tus leads,
-              referidos 4 en 14 y aplicaciones de trabajo.
+              Usa filtros simples y toca una fila para abrir su detalle. Aqui se quedan los leads sueltos y el
+              reclutamiento, sin mezclar el programa 4 en 14.
             </p>
 
             <div class="crm-view-tabs" role="tablist" aria-label="Vista del CRM">
               <button type="button" class="crm-view-tab is-active" data-crm-view-tab="lead">Leads</button>
-              <button type="button" class="crm-view-tab" data-crm-view-tab="programa_4_en_14">4 en 14</button>
               <button type="button" class="crm-view-tab" data-crm-view-tab="reclutamiento">Reclutamiento</button>
               <button type="button" class="crm-view-tab" data-crm-view-tab="">Todo</button>
             </div>
@@ -177,7 +184,6 @@
                 <select data-crm-source-filter>
                   <option value="">Todo</option>
                   <option value="lead">Leads</option>
-                  <option value="programa_4_en_14">4 en 14</option>
                   <option value="reclutamiento">Reclutamiento</option>
                 </select>
               </label>
@@ -207,7 +213,6 @@
               <div class="dashboard-actions compact-top">
                 <button type="button" class="nav-button" data-crm-refresh>Actualizar</button>
                 <button type="button" class="secondary-button" data-crm-manual-lead-toggle>Nuevo lead</button>
-                <button type="button" class="secondary-button" data-crm-manual-program-toggle>Nuevo 4 en 14</button>
               </div>
             </div>
 
@@ -243,51 +248,6 @@
               </form>
             </div>
 
-            <div class="native-lead-wrap crm-manual-wrap" data-crm-manual-program-wrap hidden>
-              <form class="native-lead-form fourteen-sheet-form" data-crm-manual-program-form>
-                <div class="native-lead-grid">
-                  <label class="native-lead-field">
-                    <span>Anfitrion</span>
-                    <input type="text" name="hostName" placeholder="Nombre del anfitrion" required />
-                  </label>
-                  <label class="native-lead-field">
-                    <span>Telefono anfitrion</span>
-                    <input type="tel" name="hostPhone" placeholder="7735551234" required />
-                  </label>
-                  <label class="native-lead-field">
-                    <span>Regalo</span>
-                    <input type="text" name="giftSelected" placeholder="Tabla, cuchillo, etc." />
-                  </label>
-                  <label class="native-lead-field">
-                    <span>Representante</span>
-                    <input type="text" name="representativeName" placeholder="Quien va a la casa" />
-                  </label>
-                  <label class="native-lead-field native-lead-field-full">
-                    <span>Notas</span>
-                    <textarea name="notes" rows="3" maxlength="320" placeholder="Notas del anfitrion o del programa"></textarea>
-                  </label>
-                </div>
-
-                <div class="fourteen-sheet-head">
-                  <div>
-                    <strong>Referencias</strong>
-                    <span>Estas referencias quedaran agrupadas bajo el anfitrion.</span>
-                  </div>
-                  <button type="button" class="nav-button" data-crm-manual-program-add>
-                    Agregar referencia
-                  </button>
-                </div>
-
-                <div class="fourteen-sheet-referrals" data-crm-manual-program-referrals></div>
-
-                <div class="dashboard-actions compact-top">
-                  <button type="submit" class="primary-button">Guardar 4 en 14</button>
-                  <button type="button" class="nav-button" data-crm-manual-program-close>Cerrar</button>
-                </div>
-                <div class="form-result" data-crm-manual-program-feedback></div>
-              </form>
-            </div>
-
             <div class="crm-quick-filters" data-crm-quick-filters>
               <button type="button" class="crm-quick-filter-chip is-active" data-crm-quick-filter="all">
                 Todo
@@ -314,18 +274,6 @@
                 <strong data-crm-quick-count="sales">0</strong>
               </button>
             </div>
-
-            <section class="crm-program-groups" data-crm-program-groups hidden>
-              <div class="territory-card-head crm-program-groups-head">
-                <div>
-                  <div class="eyebrow">Vista 4 en 14</div>
-                  <h4>Anfitriones y referencias</h4>
-                  <p class="mini-note">Aqui ves quien es el anfitrion, su regalo, el representante y el avance real por demos hechas.</p>
-                </div>
-                <div class="crm-program-groups-summary" data-crm-program-groups-summary></div>
-              </div>
-              <div class="crm-program-group-list" data-crm-program-group-list></div>
-            </section>
 
             <div class="crm-grid-wrap">
               <div class="crm-grid-head">
@@ -621,6 +569,81 @@
             </div>
 
             <div class="form-result" data-crm-feedback></div>
+          </article>
+
+          <article class="dashboard-card" data-coach-workspace-section="program414" hidden>
+            <div class="eyebrow">Programa 4 en 14</div>
+            <h3>Anfitriones y referencias</h3>
+            <p>
+              Aqui se trabaja el programa agrupado por anfitrion. Cada bloque conserva su regalo, representante,
+              progreso real por demos y referencias interactivas sin mezclarse con los leads sueltos.
+            </p>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="nav-button" data-program-414-refresh>Actualizar</button>
+              <button type="button" class="secondary-button" data-crm-manual-program-toggle>Nuevo 4 en 14</button>
+            </div>
+
+            <div class="native-lead-wrap crm-manual-wrap" data-crm-manual-program-wrap hidden>
+              <form class="native-lead-form fourteen-sheet-form" data-crm-manual-program-form>
+                <div class="native-lead-grid">
+                  <label class="native-lead-field">
+                    <span>Anfitrion</span>
+                    <input type="text" name="hostName" placeholder="Nombre del anfitrion" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Telefono anfitrion</span>
+                    <input type="tel" name="hostPhone" placeholder="7735551234" required />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Regalo</span>
+                    <input type="text" name="giftSelected" placeholder="Tabla, cuchillo, etc." />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Representante</span>
+                    <input type="text" name="representativeName" placeholder="Quien va a la casa" />
+                  </label>
+                  <label class="native-lead-field native-lead-field-full">
+                    <span>Notas</span>
+                    <textarea name="notes" rows="3" maxlength="320" placeholder="Notas del anfitrion o del programa"></textarea>
+                  </label>
+                </div>
+
+                <div class="fourteen-sheet-head">
+                  <div>
+                    <strong>Referencias</strong>
+                    <span>Estas referencias quedaran agrupadas bajo el anfitrion.</span>
+                  </div>
+                  <button type="button" class="nav-button" data-crm-manual-program-add>
+                    Agregar referencia
+                  </button>
+                </div>
+
+                <div class="fourteen-sheet-referrals" data-crm-manual-program-referrals></div>
+
+                <div class="dashboard-actions compact-top">
+                  <button type="submit" class="primary-button">Guardar 4 en 14</button>
+                  <button type="button" class="nav-button" data-crm-manual-program-close>Cerrar</button>
+                </div>
+                <div class="form-result" data-crm-manual-program-feedback></div>
+              </form>
+            </div>
+
+            <section class="crm-program-groups">
+              <div class="territory-card-head crm-program-groups-head">
+                <div>
+                  <div class="eyebrow">Vista agrupada</div>
+                  <h4>Bloques completos por anfitrion</h4>
+                  <p class="mini-note">Haz scroll y trabaja cada programa completo: anfitrion, regalo, representante y referencias vivas.</p>
+                </div>
+                <div class="crm-program-groups-summary" data-crm-program-groups-summary></div>
+              </div>
+              <div class="crm-program-group-list" data-crm-program-group-list>
+                <div class="team-seat-empty">Todavia no hay programas 4 en 14 guardados.</div>
+              </div>
+            </section>
+
+            <div class="form-result" data-program-414-feedback></div>
           </article>
 
           <article class="dashboard-card agenda-stage-card" data-coach-workspace-section="agenda" hidden>

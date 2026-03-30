@@ -378,7 +378,7 @@ function syncCoachManagerUi(user = null) {
   const activeKicker = isTelemarketing ? "Canal telemarketing" : "Coach activo";
   const statusCopy = isTelemarketing ? "CRM listo" : "Listo";
   const workspaceCopy = isTelemarketing
-    ? "Portal operativo para telemarketing. Aqui solo trabajas el CRM asignado y tus seguimientos."
+    ? "Portal operativo para telemarketing. Aqui trabajas tu CRM asignado y el tablero 4 en 14 sin salir del flujo."
     : "Escoge el area donde quieres trabajar hoy. Cada pestaña usa la misma data privada del Coach.";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
@@ -406,7 +406,7 @@ function syncCoachManagerUi(user = null) {
 
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
-    node.hidden = isTelemarketing ? tabId !== "crm" : false;
+    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : false;
   });
 
   document.querySelectorAll("[data-telemarketing-hide]").forEach(node => {
@@ -643,6 +643,10 @@ function initCoachWorkspaceTabs() {
           crm: {
             label: "Cambio a modo CRM",
             detail: "Entraste a la vista operativa para telemarketing, seguimiento y embudo."
+          },
+          program414: {
+            label: "Cambio a modo 4 en 14",
+            detail: "Entraste al tablero agrupado de anfitriones y referencias del programa."
           },
           prospeccion: {
             label: "Cambio a modo prospeccion",
@@ -5100,6 +5104,8 @@ function initCoachCrmWorkspace(user = null) {
   const programGroupsWrap = document.querySelector("[data-crm-program-groups]");
   const programGroupsSummary = document.querySelector("[data-crm-program-groups-summary]");
   const programGroupList = document.querySelector("[data-crm-program-group-list]");
+  const programFeedback = document.querySelector("[data-program-414-feedback]");
+  const programRefreshButton = document.querySelector("[data-program-414-refresh]");
   const manualLeadToggle = document.querySelector("[data-crm-manual-lead-toggle]");
   const manualLeadWrap = document.querySelector("[data-crm-manual-lead-wrap]");
   const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
@@ -5118,6 +5124,7 @@ function initCoachCrmWorkspace(user = null) {
   const representativesPanelTitle = document.querySelector('[data-crm-panel-title="representatives"]');
   const territoriesPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="territories"]');
   const territoriesPanelTitle = document.querySelector('[data-crm-panel-title="territories"]');
+  const feedbackNodes = [summaryFeedback, programFeedback].filter(Boolean);
 
   if (gridHead) {
     gridHead.innerHTML = isTelemarketingPortal
@@ -5164,6 +5171,14 @@ function initCoachCrmWorkspace(user = null) {
   };
   const autoSaveTimers = new Map();
 
+  const clearWorkspaceFeedback = () => {
+    feedbackNodes.forEach(node => clearMessage(node));
+  };
+
+  const setWorkspaceFeedback = (message, type = "info") => {
+    feedbackNodes.forEach(node => setMessage(node, message, type));
+  };
+
   if (sourceFilter && !String(sourceFilter.value || "").trim()) {
     sourceFilter.value = "lead";
   }
@@ -5175,7 +5190,7 @@ function initCoachCrmWorkspace(user = null) {
   if (summaryCopy) {
     summaryCopy.textContent = isTelemarketingPortal
       ? "Aqui se concentra tu cartera asignada. Filtra rapido, encuentra la fila correcta y deja cada seguimiento listo para la siguiente llamada."
-      : "Este panel empieza a reemplazar el trabajo de Sheets con una vista interna de leads, 4 en 14 y reclutamiento para dar seguimiento sin salir del Coach.";
+      : "Este panel concentra los leads sueltos y el reclutamiento para trabajar seguimiento sin mezclar el programa 4 en 14.";
   }
 
   if (sheetTitle) {
@@ -5185,7 +5200,7 @@ function initCoachCrmWorkspace(user = null) {
   if (sheetCopy) {
     sheetCopy.textContent = isTelemarketingPortal
       ? "Usa busqueda viva, filtros rapidos y la tabla tipo hoja para moverte sin friccion entre llamadas, citas y notas."
-      : "Usa filtros simples y toca una fila para abrir su detalle. Esta primera fase ya respeta tus leads, referidos 4 en 14 y aplicaciones de trabajo.";
+      : "Usa filtros simples y toca una fila para abrir su detalle. Aqui se quedan los leads individuales y el reclutamiento.";
   }
 
   if (telemarketingPanelEyebrow) {
@@ -5230,7 +5245,7 @@ function initCoachCrmWorkspace(user = null) {
       node.textContent = String(safeSummary.bySource?.lead || 0);
     });
     document.querySelectorAll("[data-crm-source-program]").forEach(node => {
-      node.textContent = String(safeSummary.bySource?.programa_4_en_14 || 0);
+      node.textContent = String(state.programGroupSummary?.totalHosts || safeSummary.bySource?.programa_4_en_14 || 0);
     });
     document.querySelectorAll("[data-crm-source-recruitment]").forEach(node => {
       node.textContent = String(safeSummary.bySource?.reclutamiento || 0);
@@ -5382,11 +5397,13 @@ function initCoachCrmWorkspace(user = null) {
   };
 
   const keepCrmRowInView = recordId => {
-    if (!recordId || !recordList) {
+    if (!recordId) {
       return;
     }
 
-    const matchingRow = Array.from(recordList.querySelectorAll("[data-crm-record-id]")).find(
+    const matchingRow = Array.from(
+      document.querySelectorAll("[data-crm-record-list] [data-crm-record-id], [data-crm-program-group-list] [data-crm-record-id]")
+    ).find(
       node => String(node.getAttribute("data-crm-record-id") || "").trim() === String(recordId || "").trim()
     );
 
@@ -5628,7 +5645,7 @@ function initCoachCrmWorkspace(user = null) {
     clearInlineAutoSave(row);
 
     if (payload && payload._nextActionAtValid === false) {
-      setMessage(summaryFeedback, "No pude leer la fecha. Usa formato MM/DD/YYYY h:mm AM/PM.", "error");
+      setWorkspaceFeedback("No pude leer la fecha. Usa formato MM/DD/YYYY h:mm AM/PM.", "error");
       return;
     }
 
@@ -5637,7 +5654,7 @@ function initCoachCrmWorkspace(user = null) {
       delete cleanPayload._nextActionAtValid;
     }
 
-    clearMessage(summaryFeedback);
+    clearWorkspaceFeedback();
     setButtonLoading(saveButton, true, "Guardando...");
 
     try {
@@ -5650,9 +5667,9 @@ function initCoachCrmWorkspace(user = null) {
       await loadWorkspace(true);
       keepCrmRowInView(recordId);
       window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
-      setMessage(summaryFeedback, successMessage, "success");
+      setWorkspaceFeedback(successMessage, "success");
     } catch (error) {
-      setMessage(summaryFeedback, error.message || "No pude guardar esa fila.", "error");
+      setWorkspaceFeedback(error.message || "No pude guardar esa fila.", "error");
     } finally {
       setButtonLoading(saveButton, false);
     }
@@ -5893,29 +5910,10 @@ function initCoachCrmWorkspace(user = null) {
   };
 
   const renderProgramGroups = () => {
-    if (!programGroupsWrap || !programGroupList || !programGroupsSummary) {
+    if (!programGroupList || !programGroupsSummary) {
       return;
     }
-
-    const shouldShow = sourceFilter.value === "programa_4_en_14";
-    programGroupsWrap.hidden = !shouldShow;
-    if (gridWrap) {
-      gridWrap.hidden = shouldShow;
-    }
-
-    if (!shouldShow) {
-      return;
-    }
-
-    const visibleIdSet = new Set((state.visibleRecords || []).map(record => String(record.id || "")));
-    const displayedGroups = (state.programGroups || [])
-      .map(group => ({
-        ...group,
-        referrals: Array.isArray(group.referrals)
-          ? group.referrals.filter(referral => visibleIdSet.has(String(referral.crmRecordId || "")))
-          : []
-      }))
-      .filter(group => group.referrals.length);
+    const displayedGroups = Array.isArray(state.programGroups) ? state.programGroups : [];
 
     const summary = displayedGroups.reduce(
       (acc, group) => {
@@ -5929,6 +5927,9 @@ function initCoachCrmWorkspace(user = null) {
       { totalHosts: 0, totalCompletedDemos: 0, fulfilledHosts: 0 }
     );
 
+    if (programGroupsWrap) {
+      programGroupsWrap.hidden = false;
+    }
     programGroupsSummary.innerHTML = `
       <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalHosts || 0))} anfitriones</span>
       <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalCompletedDemos || 0))} demos hechas</span>
@@ -6229,6 +6230,7 @@ function initCoachCrmWorkspace(user = null) {
     if (assigneeFilter.value) {
       params.set("assignedToUserId", assigneeFilter.value);
     }
+    params.set("excludeSourceType", "programa_4_en_14");
     return params.toString();
   };
 
@@ -6255,7 +6257,9 @@ function initCoachCrmWorkspace(user = null) {
       apiRequest("/api/coach/crm/program-4-in-14/groups").catch(() => null)
     ]);
     state.summary = data.summary || null;
-    state.records = Array.isArray(data.records) ? data.records : [];
+    state.records = Array.isArray(data.records)
+      ? data.records.filter(record => String(record?.sourceType || "").trim() !== "programa_4_en_14")
+      : [];
     state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
     state.programGroups = Array.isArray(programGroupData?.groups) ? programGroupData.groups : [];
     state.programGroupSummary = programGroupData?.summary || null;
@@ -6277,9 +6281,9 @@ function initCoachCrmWorkspace(user = null) {
 
   [sourceFilter, statusFilter, assigneeFilter].forEach(select => {
     select?.addEventListener("change", () => {
-      clearMessage(summaryFeedback);
+      clearWorkspaceFeedback();
       loadWorkspace(false).catch(error => {
-        setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+        setWorkspaceFeedback(error.message || "No pude actualizar el CRM.", "error");
       });
     });
   });
@@ -6288,9 +6292,9 @@ function initCoachCrmWorkspace(user = null) {
     button.addEventListener("click", () => {
       const nextValue = String(button.dataset.crmViewTab || "").trim();
       sourceFilter.value = nextValue;
-      clearMessage(summaryFeedback);
+      clearWorkspaceFeedback();
       loadWorkspace(false).catch(error => {
-        setMessage(summaryFeedback, error.message || "No pude cambiar esa vista del CRM.", "error");
+        setWorkspaceFeedback(error.message || "No pude cambiar esa vista del CRM.", "error");
       });
     });
   });
@@ -6298,7 +6302,7 @@ function initCoachCrmWorkspace(user = null) {
   searchFilter?.addEventListener("input", () => {
     state.searchTerm = String(searchFilter.value || "").trim();
     applyClientFilters(true).catch(error => {
-      setMessage(summaryFeedback, error.message || "No pude aplicar la busqueda del CRM.", "error");
+      setWorkspaceFeedback(error.message || "No pude aplicar la busqueda del CRM.", "error");
     });
   });
 
@@ -6306,22 +6310,36 @@ function initCoachCrmWorkspace(user = null) {
     button.addEventListener("click", () => {
       state.quickFilter = String(button.dataset.crmQuickFilter || "all").trim() || "all";
       applyClientFilters(true).catch(error => {
-        setMessage(summaryFeedback, error.message || "No pude aplicar ese filtro rapido.", "error");
+        setWorkspaceFeedback(error.message || "No pude aplicar ese filtro rapido.", "error");
       });
     });
   });
 
   refreshButton?.addEventListener("click", async () => {
-    clearMessage(summaryFeedback);
+    clearWorkspaceFeedback();
     setButtonLoading(refreshButton, true, "Actualizando...");
 
     try {
       await loadWorkspace(true);
-      setMessage(summaryFeedback, "CRM actualizado.", "success");
+      setWorkspaceFeedback("CRM actualizado.", "success");
     } catch (error) {
-      setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+      setWorkspaceFeedback(error.message || "No pude actualizar el CRM.", "error");
     } finally {
       setButtonLoading(refreshButton, false);
+    }
+  });
+
+  programRefreshButton?.addEventListener("click", async () => {
+    clearWorkspaceFeedback();
+    setButtonLoading(programRefreshButton, true, "Actualizando...");
+
+    try {
+      await loadWorkspace(true);
+      setWorkspaceFeedback("Vista 4 en 14 actualizada.", "success");
+    } catch (error) {
+      setWorkspaceFeedback(error.message || "No pude actualizar el 4 en 14.", "error");
+    } finally {
+      setButtonLoading(programRefreshButton, false);
     }
   });
 
@@ -6357,7 +6375,7 @@ function initCoachCrmWorkspace(user = null) {
       const { payload, error } = buildInlineQuickActionPayload(row, actionType);
 
       if (error) {
-        setMessage(summaryFeedback, error, "error");
+        setWorkspaceFeedback(error, "error");
         return;
       }
 
@@ -6505,7 +6523,7 @@ function initCoachCrmWorkspace(user = null) {
       const { payload, error } = buildInlineQuickActionPayload(row, actionType);
 
       if (error) {
-        setMessage(summaryFeedback, error, "error");
+        setWorkspaceFeedback(error, "error");
         return;
       }
 
@@ -6669,7 +6687,7 @@ function initCoachCrmWorkspace(user = null) {
       manualLeadForm.reset();
       toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, false);
       await loadWorkspace(true);
-      setMessage(summaryFeedback, "Lead manual guardado en el CRM.", "success");
+      setWorkspaceFeedback("Lead manual guardado en el CRM.", "success");
     } catch (error) {
       setMessage(manualLeadFeedback, error.message || "No pude guardar ese lead manual.", "error");
     } finally {
@@ -6709,9 +6727,9 @@ function initCoachCrmWorkspace(user = null) {
       manualProgramForm.reset();
       rebuildCrmManualProgramForm();
       toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
-      sourceFilter.value = "programa_4_en_14";
+      setCoachWorkspaceTab("program414");
       await loadWorkspace(false);
-      setMessage(summaryFeedback, "Programa 4 en 14 guardado en el CRM.", "success");
+      setWorkspaceFeedback("Programa 4 en 14 guardado y agrupado en su tablero.", "success");
     } catch (error) {
       setMessage(manualProgramFeedback, error.message || "No pude guardar ese 4 en 14.", "error");
     } finally {
@@ -6774,7 +6792,7 @@ function initCoachCrmWorkspace(user = null) {
 
   window.addEventListener("coach-crm-refresh-request", () => {
     loadWorkspace(true).catch(error => {
-      setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
+      setWorkspaceFeedback(error.message || "No pude actualizar el CRM.", "error");
     });
   });
 
@@ -6783,7 +6801,7 @@ function initCoachCrmWorkspace(user = null) {
   toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
 
   loadWorkspace(true).catch(error => {
-    setMessage(summaryFeedback, error.message || "No pude cargar el CRM.", "error");
+    setWorkspaceFeedback(error.message || "No pude cargar el CRM.", "error");
   });
 }
 
