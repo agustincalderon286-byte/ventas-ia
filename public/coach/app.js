@@ -5066,6 +5066,7 @@ function initCoachCrmWorkspace(user = null) {
   const searchFilter = document.querySelector("[data-crm-search-filter]");
   const quickFilterButtons = Array.from(document.querySelectorAll("[data-crm-quick-filter]"));
   const refreshButton = document.querySelector("[data-crm-refresh]");
+  const gridWrap = document.querySelector(".crm-grid-wrap");
   const gridHead = document.querySelector(".crm-grid-head");
   const recordList = document.querySelector("[data-crm-record-list]");
   const detailEmpty = document.querySelector("[data-crm-detail-empty]");
@@ -5744,6 +5745,116 @@ function initCoachCrmWorkspace(user = null) {
       : '<div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>';
   };
 
+  const buildProgramGroupedReferralMarkup = (referral, group) => {
+    const phoneHref = normalizeLeadPhone(referral.phone || "");
+    const ownerCopy = group?.hostName ? `De parte de ${group.hostName}` : "Programa 4 en 14";
+    const locationCopy = formatCoachAgendaAddress({
+      address: referral.address || "",
+      city: referral.city || "",
+      zipCode: referral.zipCode || ""
+    });
+    const editableAddressValue = resolveCoachEditableAddressValue({
+      address: referral.address || "",
+      city: referral.city || "",
+      zipCode: referral.zipCode || ""
+    });
+    const nextActionPreview = referral.nextActionAt
+      ? formatDateTime(referral.nextActionAt)
+      : referral.appointmentAt
+        ? formatDateTime(referral.appointmentAt)
+        : "Sin fecha";
+
+    return `
+      <article
+        class="crm-grid-row crm-grid-row-telemarketing crm-program-referral-row"
+        data-crm-record-id="${escapeHtml(referral.crmRecordId || "")}"
+        data-crm-assigned-telemarketer-id="${escapeHtml(referral.assignedTelemarketerUserId || "")}"
+        data-crm-appointment-rep-id="${escapeHtml(referral.appointmentRepUserId || "")}"
+        data-crm-inline-row
+      >
+        <span class="crm-status-cell">
+          <span class="crm-status-dot" data-tone="${escapeHtml(referral.statusColor || "blue")}"></span>
+          <select class="crm-inline-select" data-crm-inline-status>
+            ${buildInlineStatusOptions(referral.status || "nuevo")}
+          </select>
+        </span>
+        <span class="crm-tele-block crm-tele-client-block">
+          <div class="crm-tele-heading-row">
+            <strong>${escapeHtml(referral.fullName || "Sin nombre")}</strong>
+            <span class="crm-tele-pill">${escapeHtml(group?.giftSelected || "4 en 14")}</span>
+          </div>
+          <small>${escapeHtml(referral.phone ? formatLeadPhone(referral.phone) : referral.email || "Sin contacto")}</small>
+          <small>${escapeHtml(ownerCopy)}</small>
+          <small>${escapeHtml(locationCopy || "Ubicacion pendiente")}</small>
+          <input
+            class="crm-inline-input crm-inline-address-input"
+            type="text"
+            value="${escapeHtml(editableAddressValue)}"
+            placeholder="Direccion o referencia"
+            autocomplete="street-address"
+            data-crm-inline-address
+          />
+          <small>${escapeHtml(group?.remainingToReward > 0 ? `Faltan ${group.remainingToReward} demos para el regalo` : "Anfitrion cumplido")}</small>
+        </span>
+        <span class="crm-tele-block crm-tele-agenda-block">
+          <div class="crm-tele-inline-grid">
+            <label>
+              <small>Representante</small>
+              <select class="crm-inline-select" data-crm-inline-representative>
+                ${buildInlineAssigneeOptions(referral.appointmentRepUserId || "")}
+              </select>
+            </label>
+            <label>
+              <small>Proxima accion</small>
+              <select class="crm-inline-select" data-crm-inline-next-action>
+                ${buildInlineNextActionOptions(referral.nextAction || "")}
+              </select>
+            </label>
+          </div>
+          <label class="crm-tele-stack">
+            <small>Seguimiento / cita</small>
+            <div class="crm-inline-datetime-wrap">
+              <input
+                class="crm-inline-input"
+                type="datetime-local"
+                value="${escapeHtml(formatDateTimeLocalValue(referral.nextActionAt || referral.appointmentAt))}"
+                data-crm-inline-next-action-at
+              />
+              <button type="button" class="nav-button crm-inline-picker-button" data-crm-inline-open-picker>Abrir calendario</button>
+            </div>
+          </label>
+          <small>${escapeHtml(nextActionPreview)}</small>
+        </span>
+        <span class="crm-tele-block crm-tele-note-block">
+          <label class="crm-tele-stack">
+            <small>Notas operativas</small>
+            <textarea
+              class="crm-inline-input crm-inline-textarea"
+              rows="4"
+              placeholder="${escapeHtml(truncateCoachCrmCell(referral.lastNote || referral.briefHistory || "", 92) || "Nota rapida")}"
+              data-crm-inline-note
+            >${escapeHtml(referral.lastNote || "")}</textarea>
+          </label>
+          <small>${escapeHtml(truncateCoachCrmCell(referral.briefHistory || referral.notes || "", 150) || "Sin historial breve")}</small>
+        </span>
+        <span class="crm-inline-actions crm-inline-actions-telemarketing">
+          <span class="crm-inline-action-grid crm-inline-action-grid-telemarketing">
+            ${
+              phoneHref
+                ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(phoneHref)}">Llamar</a>`
+                : '<span class="crm-inline-action-chip is-disabled">Sin telefono</span>'
+            }
+            <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
+            <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
+            <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+            <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
+            <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
+          </span>
+        </span>
+      </article>
+    `;
+  };
+
   const toggleCrmManualWrap = (targetWrap, targetToggle, shouldOpen = false) => {
     if (!targetWrap) {
       return;
@@ -5773,25 +5884,49 @@ function initCoachCrmWorkspace(user = null) {
 
     const shouldShow = sourceFilter.value === "programa_4_en_14";
     programGroupsWrap.hidden = !shouldShow;
+    if (gridWrap) {
+      gridWrap.hidden = shouldShow;
+    }
 
     if (!shouldShow) {
       return;
     }
 
-    const summary = state.programGroupSummary || {};
+    const visibleIdSet = new Set((state.visibleRecords || []).map(record => String(record.id || "")));
+    const displayedGroups = (state.programGroups || [])
+      .map(group => ({
+        ...group,
+        referrals: Array.isArray(group.referrals)
+          ? group.referrals.filter(referral => visibleIdSet.has(String(referral.crmRecordId || "")))
+          : []
+      }))
+      .filter(group => group.referrals.length);
+
+    const summary = displayedGroups.reduce(
+      (acc, group) => {
+        acc.totalHosts += 1;
+        acc.totalCompletedDemos += Number(group.completedDemoCount || 0);
+        if (group.rewardReady) {
+          acc.fulfilledHosts += 1;
+        }
+        return acc;
+      },
+      { totalHosts: 0, totalCompletedDemos: 0, fulfilledHosts: 0 }
+    );
+
     programGroupsSummary.innerHTML = `
       <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalHosts || 0))} anfitriones</span>
       <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalCompletedDemos || 0))} demos hechas</span>
       <span class="health-survey-folder-chip">${escapeHtml(String(summary.fulfilledHosts || 0))} cumplidos</span>
     `;
 
-    if (!state.programGroups.length) {
+    if (!displayedGroups.length) {
       programGroupList.innerHTML =
         '<div class="team-seat-empty">No encontre programas 4 en 14 para esta vista.</div>';
       return;
     }
 
-    programGroupList.innerHTML = state.programGroups
+    programGroupList.innerHTML = displayedGroups
       .map(group => {
         const deadlineCopy = group.deadlineAt ? formatDateTime(group.deadlineAt) : "Sin fecha";
         const hostPhoneCopy = group.hostPhone ? formatLeadPhone(group.hostPhone) : "Sin telefono";
@@ -5830,36 +5965,7 @@ function initCoachCrmWorkspace(user = null) {
 
             <div class="crm-program-referral-list">
               ${group.referrals
-                .map(
-                  referral => `
-                    <article class="crm-program-referral-card">
-                      <div>
-                        <strong>${escapeHtml(referral.fullName || "Sin nombre")}</strong>
-                        <span>${escapeHtml(referral.phone ? formatLeadPhone(referral.phone) : "Sin telefono")}</span>
-                      </div>
-                      <div>
-                        <span class="team-seat-status" data-state="${escapeHtml(referral.statusColor || "blue")}">${escapeHtml(
-                          referral.statusLabel || "Nuevo"
-                        )}</span>
-                        <span>${escapeHtml(referral.appointmentRepName || group.representativeName || "Sin representante")}</span>
-                      </div>
-                      <div>
-                        <span>${escapeHtml(referral.demoCompleted ? "Cuenta para regalo" : "Aun no cuenta")}</span>
-                        <small>${escapeHtml(referral.lastNote || referral.notes || "Sin nota reciente")}</small>
-                      </div>
-                      <div class="dashboard-actions compact-top">
-                        ${
-                          referral.phone
-                            ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(normalizeLeadPhone(referral.phone))}">Llamar</a>`
-                            : '<span class="crm-inline-action-chip is-disabled">Sin telefono</span>'
-                        }
-                        <button type="button" class="secondary-button" data-crm-program-open-record="${escapeHtml(
-                          referral.crmRecordId || ""
-                        )}">Abrir referencia</button>
-                      </div>
-                    </article>
-                  `
-                )
+                .map(referral => buildProgramGroupedReferralMarkup(referral, group))
                 .join("")}
             </div>
           </article>
@@ -6072,6 +6178,7 @@ function initCoachCrmWorkspace(user = null) {
     );
     state.visibleRecords = isTelemarketingPortal ? sortTelemarketingVisibleRecords(filteredRecords) : filteredRecords;
     renderQuickFilters(state.records);
+    renderProgramGroups();
 
     const nextActiveId =
       preserveActive && state.visibleRecords.some(item => item.id === state.activeRecordId)
@@ -6340,22 +6447,135 @@ function initCoachCrmWorkspace(user = null) {
   });
 
   programGroupList?.addEventListener("click", event => {
-    const openButton = event.target.closest("[data-crm-program-open-record]");
+    const saveButton = event.target.closest("[data-crm-inline-save]");
 
-    if (!openButton) {
+    if (saveButton) {
+      const row = saveButton.closest("[data-crm-inline-row]");
+      saveInlineRow(row, saveButton, getInlineRowPayload(row), "Referencia guardada en 4 en 14.");
       return;
     }
 
-    const recordId = String(openButton.getAttribute("data-crm-program-open-record") || "").trim();
+    const openPickerButton = event.target.closest("[data-crm-inline-open-picker]");
 
-    if (!recordId) {
+    if (openPickerButton) {
+      const row = openPickerButton.closest("[data-crm-inline-row]");
+      const dateInput = row?.querySelector("[data-crm-inline-next-action-at]");
+      openCoachDateTimeInputPicker(dateInput);
       return;
     }
 
-    clearMessage(detailFeedback);
-    loadDetail(recordId).catch(error => {
-      setMessage(detailFeedback, error.message || "No pude abrir esa referencia.", "error");
-    });
+    const quickActionButton = event.target.closest(
+      "[data-crm-inline-no-answer], [data-crm-inline-follow-up], [data-crm-inline-appointment]"
+    );
+
+    if (quickActionButton) {
+      const row = quickActionButton.closest("[data-crm-inline-row]");
+      const actionType = quickActionButton.hasAttribute("data-crm-inline-no-answer")
+        ? "no_answer"
+        : quickActionButton.hasAttribute("data-crm-inline-follow-up")
+          ? "follow_up"
+          : "appointment";
+      const { payload, error } = buildInlineQuickActionPayload(row, actionType);
+
+      if (error) {
+        setMessage(summaryFeedback, error, "error");
+        return;
+      }
+
+      const successMessage =
+        actionType === "no_answer"
+          ? "Referencia marcada como No atendio."
+          : actionType === "follow_up"
+            ? "Referencia movida a Follow up."
+            : "Cita marcada dentro de 4 en 14.";
+      saveInlineRow(row, quickActionButton, payload, successMessage);
+      return;
+    }
+
+    const openButton = event.target.closest("[data-crm-inline-open]");
+
+    if (openButton) {
+      const row = openButton.closest("[data-crm-inline-row]");
+      const recordId = String(row?.getAttribute("data-crm-record-id") || "").trim();
+
+      if (!recordId) {
+        return;
+      }
+
+      clearMessage(detailFeedback);
+      loadDetail(recordId).catch(error => {
+        setMessage(detailFeedback, error.message || "No pude abrir esa referencia.", "error");
+      });
+    }
+  });
+
+  programGroupList?.addEventListener("input", event => {
+    const row = event.target.closest("[data-crm-inline-row]");
+
+    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+      return;
+    }
+
+    markInlineRowDirty(row, true);
+  });
+
+  programGroupList?.addEventListener("change", event => {
+    const row = event.target.closest("[data-crm-inline-row]");
+
+    if (
+      !row ||
+      !event.target.closest(
+        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at]"
+      )
+    ) {
+      return;
+    }
+
+    markInlineRowDirty(row, true);
+    scheduleTelemarketingAutoSave(row, 120, "Cambio guardado.");
+  });
+
+  programGroupList?.addEventListener(
+    "blur",
+    event => {
+      const row = event.target.closest("[data-crm-inline-row]");
+
+      if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+        return;
+      }
+
+      if (shouldDeferRowAutoSave(row, event.relatedTarget)) {
+        return;
+      }
+
+      if (!row.classList.contains("is-dirty")) {
+        return;
+      }
+
+      scheduleTelemarketingAutoSave(row, 180, "Cambio guardado.");
+    },
+    true
+  );
+
+  programGroupList?.addEventListener("keydown", event => {
+    const noteInput = event.target.closest("[data-crm-inline-note]");
+
+    if (!noteInput || event.key !== "Enter") {
+      return;
+    }
+
+    if (noteInput.tagName === "TEXTAREA" && !event.metaKey && !event.ctrlKey) {
+      return;
+    }
+
+    if (event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    const row = noteInput.closest("[data-crm-inline-row]");
+    const saveButton = row?.querySelector("[data-crm-inline-save]");
+    saveButton?.click();
   });
 
   manualLeadToggle?.addEventListener("click", () => {
