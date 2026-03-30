@@ -5106,6 +5106,15 @@ function initCoachCrmWorkspace(user = null) {
   const programGroupList = document.querySelector("[data-crm-program-group-list]");
   const programFeedback = document.querySelector("[data-program-414-feedback]");
   const programRefreshButton = document.querySelector("[data-program-414-refresh]");
+  const programSearchInput = document.querySelector("[data-program-414-search]");
+  const programHostStatusFilter = document.querySelector("[data-program-414-host-status]");
+  const programReferralStatusFilter = document.querySelector("[data-program-414-referral-status]");
+  const programRepresentativeFilter = document.querySelector("[data-program-414-representative]");
+  const programTotalHosts = document.querySelector("[data-program-414-total-hosts]");
+  const programTotalReferrals = document.querySelector("[data-program-414-total-referrals]");
+  const programTotalDemos = document.querySelector("[data-program-414-total-demos]");
+  const programTotalFulfilled = document.querySelector("[data-program-414-total-fulfilled]");
+  const programTotalSales = document.querySelector("[data-program-414-total-sales]");
   const manualLeadToggle = document.querySelector("[data-crm-manual-lead-toggle]");
   const manualLeadWrap = document.querySelector("[data-crm-manual-lead-wrap]");
   const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
@@ -5167,7 +5176,8 @@ function initCoachCrmWorkspace(user = null) {
     activeDetail: null,
     quickFilter: "all",
     searchTerm: "",
-    crmView: "lead"
+    crmView: "lead",
+    programSearchTerm: ""
   };
   const autoSaveTimers = new Map();
 
@@ -5500,6 +5510,18 @@ function initCoachCrmWorkspace(user = null) {
       .join("");
     detailTelemarketer.innerHTML = assignmentOptions;
     detailRepresentative.innerHTML = assignmentOptions;
+    if (programRepresentativeFilter) {
+      programRepresentativeFilter.innerHTML = [`<option value="">Todos</option>`]
+        .concat(
+          state.assignees.map(
+            item =>
+              `<option value="${escapeHtml(item.id || "")}">${escapeHtml(
+                [item.name || "Cuenta", item.relationLabel || ""].filter(Boolean).join(" · ")
+              )}</option>`
+          )
+        )
+        .join("");
+    }
   };
 
   const crmStatusValues = [
@@ -5909,11 +5931,111 @@ function initCoachCrmWorkspace(user = null) {
     }
   };
 
+  const matchesProgramGroupSearch = group => {
+    const safeSearch = normalizeCoachSearchText(state.programSearchTerm);
+
+    if (!safeSearch) {
+      return true;
+    }
+
+    const haystack = normalizeCoachSearchText(
+      [
+        group?.hostName,
+        group?.hostPhone,
+        group?.giftSelected,
+        group?.representativeName,
+        group?.notes,
+        group?.summary,
+        ...(Array.isArray(group?.referrals)
+          ? group.referrals.flatMap(referral => [
+              referral?.fullName,
+              referral?.phone,
+              referral?.lastNote,
+              referral?.briefHistory,
+              referral?.appointmentRepName
+            ])
+          : [])
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+
+    return haystack.includes(safeSearch);
+  };
+
+  const matchesProgramGroupFilters = group => {
+    const hostStatusValue = String(programHostStatusFilter?.value || "").trim();
+    const referralStatusValue = String(programReferralStatusFilter?.value || "").trim();
+    const representativeValue = String(programRepresentativeFilter?.value || "").trim();
+
+    if (hostStatusValue && String(group?.hostStatus || "").trim() !== hostStatusValue) {
+      return false;
+    }
+
+    const referrals = Array.isArray(group?.referrals) ? group.referrals : [];
+
+    if (referralStatusValue && !referrals.some(referral => String(referral?.status || "").trim() === referralStatusValue)) {
+      return false;
+    }
+
+    if (
+      representativeValue &&
+      !referrals.some(
+        referral => String(referral?.appointmentRepUserId || "").trim() === representativeValue
+      ) &&
+      !state.assignees.some(
+        item =>
+          String(item?.id || "").trim() === representativeValue &&
+          String(item?.name || "").trim() === String(group?.representativeName || "").trim()
+      )
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const renderProgramGroupMetrics = groups => {
+    const safeGroups = Array.isArray(groups) ? groups : [];
+    const totals = safeGroups.reduce(
+      (acc, group) => {
+        acc.hosts += 1;
+        acc.referrals += Array.isArray(group.referrals) ? group.referrals.length : 0;
+        acc.demos += Number(group.completedDemoCount || 0);
+        acc.sales += Number(group.salesCount || 0);
+        if (group.rewardReady) {
+          acc.fulfilled += 1;
+        }
+        return acc;
+      },
+      { hosts: 0, referrals: 0, demos: 0, sales: 0, fulfilled: 0 }
+    );
+
+    if (programTotalHosts) {
+      programTotalHosts.textContent = String(totals.hosts || 0);
+    }
+    if (programTotalReferrals) {
+      programTotalReferrals.textContent = String(totals.referrals || 0);
+    }
+    if (programTotalDemos) {
+      programTotalDemos.textContent = String(totals.demos || 0);
+    }
+    if (programTotalFulfilled) {
+      programTotalFulfilled.textContent = String(totals.fulfilled || 0);
+    }
+    if (programTotalSales) {
+      programTotalSales.textContent = String(totals.sales || 0);
+    }
+  };
+
   const renderProgramGroups = () => {
     if (!programGroupList || !programGroupsSummary) {
       return;
     }
-    const displayedGroups = Array.isArray(state.programGroups) ? state.programGroups : [];
+    const displayedGroups = (Array.isArray(state.programGroups) ? state.programGroups : [])
+      .filter(group => matchesProgramGroupSearch(group) && matchesProgramGroupFilters(group));
+
+    renderProgramGroupMetrics(displayedGroups);
 
     const summary = displayedGroups.reduce(
       (acc, group) => {
@@ -6315,6 +6437,17 @@ function initCoachCrmWorkspace(user = null) {
     });
   });
 
+  [programHostStatusFilter, programReferralStatusFilter, programRepresentativeFilter].forEach(select => {
+    select?.addEventListener("change", () => {
+      renderProgramGroups();
+    });
+  });
+
+  programSearchInput?.addEventListener("input", () => {
+    state.programSearchTerm = String(programSearchInput.value || "").trim();
+    renderProgramGroups();
+  });
+
   refreshButton?.addEventListener("click", async () => {
     clearWorkspaceFeedback();
     setButtonLoading(refreshButton, true, "Actualizando...");
@@ -6341,6 +6474,14 @@ function initCoachCrmWorkspace(user = null) {
     } finally {
       setButtonLoading(programRefreshButton, false);
     }
+  });
+
+  document.querySelectorAll('[data-coach-workspace-tab="program414"]').forEach(button => {
+    button.addEventListener("click", () => {
+      loadWorkspace(true).catch(error => {
+        setWorkspaceFeedback(error.message || "No pude cargar el 4 en 14.", "error");
+      });
+    });
   });
 
   recordList.addEventListener("click", event => {

@@ -579,6 +579,74 @@
               progreso real por demos y referencias interactivas sin mezclarse con los leads sueltos.
             </p>
 
+            <div class="crm-toolbar">
+              <label class="crm-search-field">
+                Buscar rapido
+                <input
+                  type="search"
+                  placeholder="Anfitrion, referencia, telefono, regalo..."
+                  data-program-414-search
+                />
+              </label>
+              <label>
+                Estado anfitrion
+                <select data-program-414-host-status>
+                  <option value="">Todos</option>
+                  <option value="abierto">Abierto</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="cumplido">Cumplido</option>
+                  <option value="regalo_entregado">Regalo entregado</option>
+                  <option value="vencido">Vencido</option>
+                </select>
+              </label>
+              <label>
+                Estado referencia
+                <select data-program-414-referral-status>
+                  <option value="">Todos</option>
+                  <option value="nuevo">Nuevo</option>
+                  <option value="intentando">Intentando</option>
+                  <option value="no_atendio">No atendio</option>
+                  <option value="seguimiento">Seguimiento</option>
+                  <option value="cita_agendada">Cita agendada</option>
+                  <option value="reagendada">Reagendada</option>
+                  <option value="ya_afuera">Ya afuera</option>
+                  <option value="entro_a_casa">Entro a casa</option>
+                  <option value="demo_hecha">Demo hecha</option>
+                  <option value="venta">Venta</option>
+                  <option value="no_venta">No venta</option>
+                </select>
+              </label>
+              <label>
+                Representante
+                <select data-program-414-representative>
+                  <option value="">Todos</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="crm-quick-filters">
+              <button type="button" class="crm-quick-filter-chip is-static">
+                Anfitriones
+                <strong data-program-414-total-hosts>0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip is-static">
+                Referencias
+                <strong data-program-414-total-referrals>0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip is-static">
+                Demos
+                <strong data-program-414-total-demos>0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip is-static">
+                Cumplidos
+                <strong data-program-414-total-fulfilled>0</strong>
+              </button>
+              <button type="button" class="crm-quick-filter-chip is-static">
+                Ventas
+                <strong data-program-414-total-sales>0</strong>
+              </button>
+            </div>
+
             <div class="dashboard-actions compact-top">
               <button type="button" class="nav-button" data-program-414-refresh>Actualizar</button>
               <button type="button" class="secondary-button" data-crm-manual-program-toggle>Nuevo 4 en 14</button>
