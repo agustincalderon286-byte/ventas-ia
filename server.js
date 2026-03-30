@@ -1418,6 +1418,150 @@ function preguntaEsCacheableParaIA(question = "", mode = "coach") {
   return true;
 }
 
+const AI_CACHE_SEMANTIC_STOPWORDS = new Set([
+  "como",
+  "donde",
+  "que",
+  "porque",
+  "para",
+  "por",
+  "con",
+  "sin",
+  "una",
+  "uno",
+  "unos",
+  "unas",
+  "del",
+  "de",
+  "la",
+  "el",
+  "los",
+  "las",
+  "me",
+  "mi",
+  "tu",
+  "su",
+  "se",
+  "ya",
+  "aqui",
+  "ahi",
+  "este",
+  "esta",
+  "esto",
+  "esas",
+  "esos",
+  "esas",
+  "quiero",
+  "puedo",
+  "puedes",
+  "dime",
+  "explica",
+  "explicame",
+  "ayuda",
+  "usar",
+  "uso",
+  "sirve",
+  "funciona",
+  "agustin",
+  "coach"
+]);
+
+function construirTokensSemanticosIA(question = "", maxTokens = 6) {
+  return tokenizarTextoBusquedaCoach(question)
+    .filter(token => token.length >= 3 && !AI_CACHE_SEMANTIC_STOPWORDS.has(token))
+    .slice(0, Math.max(1, maxTokens));
+}
+
+function construirPreguntaSemanticaIA({
+  question = "",
+  mode = "coach",
+  activeWorkspace = "",
+  activeDemoStage = ""
+} = {}) {
+  const normalizedQuestion = normalizarTextoBusquedaCoach(question || "");
+
+  if (!normalizedQuestion) {
+    return "";
+  }
+
+  const safeWorkspace = cleanLower(activeWorkspace || "");
+  const safeDemoStage = cleanLower(activeDemoStage || "");
+  const semanticTokens = construirTokensSemanticosIA(question, 6);
+
+  if (mode === "coach") {
+    if (coachQuestionPareceAyudaSistema(question, activeWorkspace)) {
+      return [
+        "coach_help",
+        resolverCoachHelpTopic(question, activeWorkspace) || "general",
+        safeWorkspace || "workspace"
+      ]
+        .filter(Boolean)
+        .join(":");
+    }
+
+    const objections = extraerObjecionesCoach(question);
+    if (objections.length) {
+      return ["coach_obj", objections[0], safeDemoStage || "general"].filter(Boolean).join(":");
+    }
+
+    const closes = extraerCierresConsultadosCoach(question);
+    if (closes.length) {
+      return ["coach_close", closes[0], safeDemoStage || "general"].filter(Boolean).join(":");
+    }
+
+    if (detectarConsultaPrecio(question)) {
+      return [
+        "coach_price",
+        semanticTokens.slice(0, 4).join("_") || "general",
+        safeDemoStage || "general"
+      ]
+        .filter(Boolean)
+        .join(":");
+    }
+
+    const topic = detectarTemaCoach(normalizedQuestion);
+    const topicLabels = Object.entries(topic)
+      .filter(([, enabled]) => enabled)
+      .map(([label]) => label)
+      .slice(0, 3);
+
+    return [
+      "coach",
+      topicLabels.join("+") || "general",
+      semanticTokens.slice(0, 5).join("_") || normalizedQuestion.slice(0, 80),
+      safeWorkspace || "workspace",
+      safeDemoStage || "stage"
+    ]
+      .filter(Boolean)
+      .join(":");
+  }
+
+  const messageIntent = detectarIntentoMensaje(question, {
+    interesComercial: false,
+    consultaPrecio: false
+  });
+
+  switch (messageIntent) {
+    case "consulta_precio":
+      return "chef:price";
+    case "acepta_llamada":
+      return "chef:accept_call";
+    case "rechaza_llamada":
+      return "chef:reject_call";
+    case "consulta_receta":
+      return ["chef_recipe", semanticTokens.slice(0, 5).join("_") || "general"].join(":");
+    case "consulta_producto":
+      return ["chef_product", semanticTokens.slice(0, 5).join("_") || "general"].join(":");
+    default:
+      return [
+        "chef",
+        semanticTokens.slice(0, 5).join("_") || normalizedQuestion.slice(0, 80)
+      ]
+        .filter(Boolean)
+        .join(":");
+  }
+}
+
 function construirAiCacheSignature(value = null) {
   return crypto.createHash("sha1").update(JSON.stringify(compactarDatoParaPrompt(value, {
     maxDepth: 2,
@@ -1441,6 +1585,12 @@ function construirAiCacheKey({
   const normalizedQuestion = normalizarTextoBusquedaCoach(question || "");
   const safeMode = cleanLower(mode || "coach") || "coach";
   const safeScope = cleanText(scope || "").trim() || "public";
+  const semanticQuestion = construirPreguntaSemanticaIA({
+    question,
+    mode: safeMode,
+    activeWorkspace,
+    activeDemoStage
+  });
 
   if (!normalizedQuestion) {
     return "";
@@ -1449,7 +1599,7 @@ function construirAiCacheKey({
   const signature = construirAiCacheSignature({
     mode: safeMode,
     scope: safeScope,
-    question: normalizedQuestion,
+    question: semanticQuestion || normalizedQuestion,
     activeWorkspace: cleanText(activeWorkspace || "").trim(),
     activeDemoStage: cleanText(activeDemoStage || "").trim(),
     statePrompt: truncarTextoPrompt(statePrompt || "", 500),
