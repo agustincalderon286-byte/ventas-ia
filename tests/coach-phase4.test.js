@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 process.env.NODE_ENV = "test";
 
 const {
+  construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
   construirCoachCrmSummary,
   construirPayloadCoachLeadDesdeChef,
@@ -13,6 +14,25 @@ const {
   limpiarCoachAgendaRecord,
   resolverCoachCrmStatusDesdeDemoOutcome
 } = await import("../server.js");
+
+test("el tablero 4 en 14 consulta por workspace del dueno y no por creador individual", () => {
+  const ownerUserId = new mongoose.Types.ObjectId();
+  const seatUserId = new mongoose.Types.ObjectId();
+  const query = construirCoachProgramSheetWorkspaceQuery(
+    {
+      _id: seatUserId,
+      accountType: "seat",
+      teamOwnerUserId: ownerUserId
+    },
+    {
+      programType: "4_en_14"
+    }
+  );
+
+  assert.equal(String(query.ownerUserId), String(ownerUserId));
+  assert.equal(query.programType, "4_en_14");
+  assert.equal("generatedByUserId" in query, false);
+});
 
 test("detecta datos de contacto compartidos desde Chef", () => {
   const texto =

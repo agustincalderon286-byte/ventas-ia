@@ -3618,6 +3618,13 @@ function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
   return query;
 }
 
+function construirCoachProgramSheetWorkspaceQuery(userDoc = null, extra = {}) {
+  return {
+    ...extra,
+    ownerUserId: resolverCoachOwnerUserId(userDoc)
+  };
+}
+
 async function coachTieneAccesoOperativo(userDoc = null) {
   if (!userDoc) {
     return false;
@@ -5688,7 +5695,7 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
   }
 
   const sheetDocs = await CoachProgramSheet.find(
-    construirCoachWorkspaceQuery(userDoc, {
+    construirCoachProgramSheetWorkspaceQuery(userDoc, {
       programType: "4_en_14"
     })
   )
@@ -19391,7 +19398,7 @@ app.get("/api/coach/program-4-in-14", async (req, res) => {
 
   try {
     const sheetDocs = await CoachProgramSheet.find(
-      construirCoachWorkspaceQuery(auth.user, {
+      construirCoachProgramSheetWorkspaceQuery(auth.user, {
         programType: "4_en_14"
       })
     )
@@ -21870,6 +21877,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export {
+  construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
   construirCoachCrmSummary,
   construirPayloadCoachLeadDesdeChef,
