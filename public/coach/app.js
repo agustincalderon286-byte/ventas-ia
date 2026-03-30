@@ -5095,6 +5095,21 @@ function initCoachCrmWorkspace(user = null) {
   const topTelemarketers = document.querySelector("[data-crm-top-telemarketers]");
   const topRepresentatives = document.querySelector("[data-crm-top-representatives]");
   const topTerritories = document.querySelector("[data-crm-top-territories]");
+  const programGroupsWrap = document.querySelector("[data-crm-program-groups]");
+  const programGroupsSummary = document.querySelector("[data-crm-program-groups-summary]");
+  const programGroupList = document.querySelector("[data-crm-program-group-list]");
+  const manualLeadToggle = document.querySelector("[data-crm-manual-lead-toggle]");
+  const manualLeadWrap = document.querySelector("[data-crm-manual-lead-wrap]");
+  const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
+  const manualLeadClose = document.querySelector("[data-crm-manual-lead-close]");
+  const manualLeadFeedback = document.querySelector("[data-crm-manual-lead-feedback]");
+  const manualProgramToggle = document.querySelector("[data-crm-manual-program-toggle]");
+  const manualProgramWrap = document.querySelector("[data-crm-manual-program-wrap]");
+  const manualProgramForm = document.querySelector("[data-crm-manual-program-form]");
+  const manualProgramClose = document.querySelector("[data-crm-manual-program-close]");
+  const manualProgramAdd = document.querySelector("[data-crm-manual-program-add]");
+  const manualProgramReferrals = document.querySelector("[data-crm-manual-program-referrals]");
+  const manualProgramFeedback = document.querySelector("[data-crm-manual-program-feedback]");
   const telemarketingPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="telemarketing"]');
   const telemarketingPanelTitle = document.querySelector('[data-crm-panel-title="telemarketing"]');
   const representativesPanelEyebrow = document.querySelector('[data-crm-panel-eyebrow="representatives"]');
@@ -5136,6 +5151,8 @@ function initCoachCrmWorkspace(user = null) {
     summary: null,
     records: [],
     visibleRecords: [],
+    programGroups: [],
+    programGroupSummary: null,
     assignees: [],
     activeRecordId: "",
     activeDetail: null,
@@ -5727,6 +5744,130 @@ function initCoachCrmWorkspace(user = null) {
       : '<div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>';
   };
 
+  const toggleCrmManualWrap = (targetWrap, targetToggle, shouldOpen = false) => {
+    if (!targetWrap) {
+      return;
+    }
+
+    targetWrap.hidden = !shouldOpen;
+    if (targetToggle) {
+      targetToggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    }
+  };
+
+  const rebuildCrmManualProgramForm = () => {
+    if (!manualProgramReferrals) {
+      return;
+    }
+
+    manualProgramReferrals.innerHTML = "";
+    for (let index = 0; index < FOURTEEN_SHEET_DEFAULT_REFERRALS; index += 1) {
+      manualProgramReferrals.appendChild(createFourteenSheetReferralRow(index + 1));
+    }
+  };
+
+  const renderProgramGroups = () => {
+    if (!programGroupsWrap || !programGroupList || !programGroupsSummary) {
+      return;
+    }
+
+    const shouldShow = sourceFilter.value === "programa_4_en_14";
+    programGroupsWrap.hidden = !shouldShow;
+
+    if (!shouldShow) {
+      return;
+    }
+
+    const summary = state.programGroupSummary || {};
+    programGroupsSummary.innerHTML = `
+      <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalHosts || 0))} anfitriones</span>
+      <span class="health-survey-folder-chip">${escapeHtml(String(summary.totalCompletedDemos || 0))} demos hechas</span>
+      <span class="health-survey-folder-chip">${escapeHtml(String(summary.fulfilledHosts || 0))} cumplidos</span>
+    `;
+
+    if (!state.programGroups.length) {
+      programGroupList.innerHTML =
+        '<div class="team-seat-empty">No encontre programas 4 en 14 para esta vista.</div>';
+      return;
+    }
+
+    programGroupList.innerHTML = state.programGroups
+      .map(group => {
+        const deadlineCopy = group.deadlineAt ? formatDateTime(group.deadlineAt) : "Sin fecha";
+        const hostPhoneCopy = group.hostPhone ? formatLeadPhone(group.hostPhone) : "Sin telefono";
+        const statusTone =
+          group.hostStatus === "cumplido" || group.hostStatus === "regalo_entregado"
+            ? "green"
+            : group.hostStatus === "vencido"
+              ? "rose"
+              : "amber";
+
+        return `
+          <article class="territory-result-card crm-program-host-card">
+            <div class="territory-card-head">
+              <div>
+                <div class="eyebrow">Anfitrion 4 en 14</div>
+                <strong>${escapeHtml(group.hostName || "Sin anfitrion")}</strong>
+                <p>${escapeHtml([hostPhoneCopy, group.generatedByName ? `Subido por ${group.generatedByName}` : ""].filter(Boolean).join(" · "))}</p>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(statusTone)}">${escapeHtml(
+                formatProgram414HostStatusLabel(group.hostStatus)
+              )}</span>
+            </div>
+
+            <div class="crm-program-host-meta">
+              <span class="health-survey-folder-chip">Regalo: ${escapeHtml(group.giftSelected || "Sin regalo")}</span>
+              <span class="health-survey-folder-chip">Representante: ${escapeHtml(group.representativeName || "Sin asignar")}</span>
+              <span class="health-survey-folder-chip">Vence: ${escapeHtml(deadlineCopy)}</span>
+              <span class="health-survey-folder-chip">${escapeHtml(String(group.completedDemoCount || 0))}/4 demos</span>
+              <span class="health-survey-folder-chip">${escapeHtml(String(group.salesCount || 0))} ventas</span>
+              ${
+                group.rewardReady
+                  ? '<span class="health-survey-folder-chip is-success">Regalo ganado</span>'
+                  : `<span class="health-survey-folder-chip">Faltan ${escapeHtml(String(group.remainingToReward || 0))}</span>`
+              }
+            </div>
+
+            <div class="crm-program-referral-list">
+              ${group.referrals
+                .map(
+                  referral => `
+                    <article class="crm-program-referral-card">
+                      <div>
+                        <strong>${escapeHtml(referral.fullName || "Sin nombre")}</strong>
+                        <span>${escapeHtml(referral.phone ? formatLeadPhone(referral.phone) : "Sin telefono")}</span>
+                      </div>
+                      <div>
+                        <span class="team-seat-status" data-state="${escapeHtml(referral.statusColor || "blue")}">${escapeHtml(
+                          referral.statusLabel || "Nuevo"
+                        )}</span>
+                        <span>${escapeHtml(referral.appointmentRepName || group.representativeName || "Sin representante")}</span>
+                      </div>
+                      <div>
+                        <span>${escapeHtml(referral.demoCompleted ? "Cuenta para regalo" : "Aun no cuenta")}</span>
+                        <small>${escapeHtml(referral.lastNote || referral.notes || "Sin nota reciente")}</small>
+                      </div>
+                      <div class="dashboard-actions compact-top">
+                        ${
+                          referral.phone
+                            ? `<a class="crm-inline-action-chip" href="tel:+1${escapeHtml(normalizeLeadPhone(referral.phone))}">Llamar</a>`
+                            : '<span class="crm-inline-action-chip is-disabled">Sin telefono</span>'
+                        }
+                        <button type="button" class="secondary-button" data-crm-program-open-record="${escapeHtml(
+                          referral.crmRecordId || ""
+                        )}">Abrir referencia</button>
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  };
+
   const renderList = () => {
     const visibleRecords = Array.isArray(state.visibleRecords) ? state.visibleRecords : [];
 
@@ -5987,13 +6128,19 @@ function initCoachCrmWorkspace(user = null) {
 
   const loadWorkspace = async (preserveActive = true) => {
     const query = buildQuery();
-    const data = await apiRequest(`/api/coach/crm/records${query ? `?${query}` : ""}`);
+    const [data, programGroupData] = await Promise.all([
+      apiRequest(`/api/coach/crm/records${query ? `?${query}` : ""}`),
+      apiRequest("/api/coach/crm/program-4-in-14/groups").catch(() => null)
+    ]);
     state.summary = data.summary || null;
     state.records = Array.isArray(data.records) ? data.records : [];
     state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
+    state.programGroups = Array.isArray(programGroupData?.groups) ? programGroupData.groups : [];
+    state.programGroupSummary = programGroupData?.summary || null;
     setSummary(state.summary);
     renderAssigneeOptions();
     await applyClientFilters(preserveActive);
+    renderProgramGroups();
   };
 
   if (!user) {
@@ -6001,6 +6148,7 @@ function initCoachCrmWorkspace(user = null) {
     renderQuickFilters([]);
     renderList();
     renderDetail(null);
+    renderProgramGroups();
     return;
   }
 
@@ -6191,6 +6339,139 @@ function initCoachCrmWorkspace(user = null) {
     saveButton?.click();
   });
 
+  programGroupList?.addEventListener("click", event => {
+    const openButton = event.target.closest("[data-crm-program-open-record]");
+
+    if (!openButton) {
+      return;
+    }
+
+    const recordId = String(openButton.getAttribute("data-crm-program-open-record") || "").trim();
+
+    if (!recordId) {
+      return;
+    }
+
+    clearMessage(detailFeedback);
+    loadDetail(recordId).catch(error => {
+      setMessage(detailFeedback, error.message || "No pude abrir esa referencia.", "error");
+    });
+  });
+
+  manualLeadToggle?.addEventListener("click", () => {
+    const shouldOpen = manualLeadWrap?.hidden;
+    toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, shouldOpen);
+    if (shouldOpen) {
+      toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
+    }
+  });
+
+  manualLeadClose?.addEventListener("click", () => {
+    toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, false);
+  });
+
+  manualProgramToggle?.addEventListener("click", () => {
+    const shouldOpen = manualProgramWrap?.hidden;
+    toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, shouldOpen);
+    if (shouldOpen) {
+      toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, false);
+    }
+  });
+
+  manualProgramClose?.addEventListener("click", () => {
+    toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
+  });
+
+  manualProgramAdd?.addEventListener("click", () => {
+    if (!manualProgramReferrals) {
+      return;
+    }
+
+    const currentCount = manualProgramReferrals.querySelectorAll("[data-fourteen-referral-row]").length;
+
+    if (currentCount >= FOURTEEN_SHEET_MAX_REFERRALS) {
+      return;
+    }
+
+    manualProgramReferrals.appendChild(createFourteenSheetReferralRow(currentCount + 1));
+  });
+
+  manualLeadForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(manualLeadFeedback);
+
+    const submitButton = manualLeadForm.querySelector('button[type="submit"]');
+    const formData = new FormData(manualLeadForm);
+
+    setButtonLoading(submitButton, true, "Guardando...");
+
+    try {
+      await apiRequest("/api/coach/leads", {
+        method: "POST",
+        body: {
+          fullName: formData.get("fullName"),
+          phone: formData.get("phone"),
+          city: formData.get("city"),
+          interest: formData.get("interest"),
+          notes: formData.get("notes"),
+          consentGiven: true,
+          source: "captura_manual"
+        }
+      });
+
+      manualLeadForm.reset();
+      toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, false);
+      await loadWorkspace(true);
+      setMessage(summaryFeedback, "Lead manual guardado en el CRM.", "success");
+    } catch (error) {
+      setMessage(manualLeadFeedback, error.message || "No pude guardar ese lead manual.", "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  manualProgramForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(manualProgramFeedback);
+
+    const submitButton = manualProgramForm.querySelector('button[type="submit"]');
+    const formData = new FormData(manualProgramForm);
+    const referrals = Array.from(manualProgramReferrals?.querySelectorAll("[data-fourteen-referral-row]") || [])
+      .map((row, index) => ({
+        fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
+        phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
+      }))
+      .filter(item => item.fullName || item.phone || item.notes);
+
+    setButtonLoading(submitButton, true, "Guardando...");
+
+    try {
+      await apiRequest("/api/coach/program-4-in-14", {
+        method: "POST",
+        body: {
+          hostName: formData.get("hostName"),
+          hostPhone: formData.get("hostPhone"),
+          giftSelected: formData.get("giftSelected"),
+          representativeName: formData.get("representativeName"),
+          notes: formData.get("notes"),
+          referrals
+        }
+      });
+
+      manualProgramForm.reset();
+      rebuildCrmManualProgramForm();
+      toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
+      sourceFilter.value = "programa_4_en_14";
+      await loadWorkspace(false);
+      setMessage(summaryFeedback, "Programa 4 en 14 guardado en el CRM.", "success");
+    } catch (error) {
+      setMessage(manualProgramFeedback, error.message || "No pude guardar ese 4 en 14.", "error");
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
   detailPanel.addEventListener("click", event => {
     const toolButton = event.target.closest("[data-crm-open-tool]");
 
@@ -6249,6 +6530,10 @@ function initCoachCrmWorkspace(user = null) {
       setMessage(summaryFeedback, error.message || "No pude actualizar el CRM.", "error");
     });
   });
+
+  rebuildCrmManualProgramForm();
+  toggleCrmManualWrap(manualLeadWrap, manualLeadToggle, false);
+  toggleCrmManualWrap(manualProgramWrap, manualProgramToggle, false);
 
   loadWorkspace(true).catch(error => {
     setMessage(summaryFeedback, error.message || "No pude cargar el CRM.", "error");
@@ -8815,6 +9100,19 @@ function formatProgram414StatusLabel(status = "") {
   };
 
   return labels[safeStatus] || "Sin mover";
+}
+
+function formatProgram414HostStatusLabel(status = "") {
+  const safeStatus = String(status || "").trim();
+  const labels = {
+    abierto: "Abierto",
+    en_progreso: "En progreso",
+    cumplido: "Cumplido",
+    regalo_entregado: "Regalo entregado",
+    vencido: "Vencido"
+  };
+
+  return labels[safeStatus] || "Abierto";
 }
 
 function buildCoachProgram414Context(sheet = null, referralIndex = -1) {

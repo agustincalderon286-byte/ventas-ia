@@ -1363,6 +1363,70 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   overflow: hidden;
 }
 
+.crm-manual-wrap {
+  margin-top: 14px;
+}
+
+.crm-program-groups {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.crm-program-groups-head {
+  align-items: flex-start;
+}
+
+.crm-program-groups-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.crm-program-group-list {
+  display: grid;
+  gap: 14px;
+}
+
+.crm-program-host-card {
+  display: grid;
+  gap: 14px;
+}
+
+.crm-program-host-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.health-survey-folder-chip.is-success {
+  background: rgba(14, 159, 110, 0.14);
+  border-color: rgba(14, 159, 110, 0.35);
+  color: #0f9f6e;
+}
+
+.crm-program-referral-list {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-program-referral-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.15fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  align-items: start;
+}
+
+.crm-program-referral-card > div {
+  display: grid;
+  gap: 4px;
+}
+
 .crm-grid-head,
 .crm-grid-row {
   display: grid;
@@ -5928,6 +5992,10 @@ html[data-coach-portal-mode="telemarketing"] .team-seat-status {
   }
 
   .telemarketing-kpi-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-program-referral-card {
     grid-template-columns: 1fr;
   }
 

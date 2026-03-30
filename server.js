@@ -498,6 +498,8 @@ const coachProgramSheetSchema = new mongoose.Schema({
   referrals: [coachProgramSheetReferralSchema],
   referralCount: { type: Number, default: 0 },
   createdLeadIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox" }],
+  rewardUnlockedAt: Date,
+  rewardDeliveredAt: Date,
   summary: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
@@ -5386,6 +5388,88 @@ async function vincularCoachCrmConPrograma(recordDoc = null, sheetDoc = null, us
   return recordDoc;
 }
 
+async function actualizarCoachProgram414ProgresoYAviso(sheetId = null, userDoc = null) {
+  const validSheetId = normalizarCoachCrmObjectId(sheetId);
+
+  if (!validSheetId) {
+    return null;
+  }
+
+  const sheetDoc = await CoachProgramSheet.findById(validSheetId);
+
+  if (!sheetDoc?._id) {
+    return null;
+  }
+
+  const recordDocs = await CoachCrmRecord.find({
+    ownerUserId: sheetDoc.ownerUserId,
+    sourceType: "programa_4_en_14",
+    sourceParentId: String(sheetDoc._id)
+  }).lean();
+
+  const allRecordMap = new Map(
+    recordDocs
+      .map(limpiarCoachCrmRecord)
+      .filter(Boolean)
+      .map(record => [`${String(record.sourceParentId || "")}:${Number(record.sourceSubIndex ?? -1)}`, record])
+  );
+  const group = construirCoachProgram414HostGroup(sheetDoc.toObject(), allRecordMap, allRecordMap);
+
+  if (!group) {
+    return null;
+  }
+
+  const now = new Date();
+  let touched = false;
+
+  if (group.rewardReady && !sheetDoc.rewardUnlockedAt) {
+    sheetDoc.rewardUnlockedAt = now;
+    touched = true;
+
+    if (userDoc?._id) {
+      await CoachAnnouncement.create({
+        authorUserId: userDoc._id,
+        authorName: userDoc.name || userDoc.email || "Agustin 2.0",
+        scopeType: "team",
+        territoryId: null,
+        territoryName: "",
+        teamOwnerUserId: sheetDoc.ownerUserId,
+        teamOwnerName: sheetDoc.ownerName || "",
+        title: `${sheetDoc.hostName || "Anfitrion"} ya gano su regalo`,
+        body: `${sheetDoc.hostName || "El anfitrion"} llego a ${group.completedDemoCount}/4 demos hechas y ya desbloqueo su regalo de ${sheetDoc.giftSelected || "4 en 14"}.`,
+        priority: "high",
+        status: "active",
+        updatedAt: now,
+        createdAt: now
+      });
+    }
+  }
+
+  const nextSummary = construirCoachProgramSheetSummary({
+    ...sheetDoc.toObject(),
+    referralCount: sheetDoc.referralCount || group.referralCount
+  });
+
+  if (sheetDoc.summary !== nextSummary) {
+    sheetDoc.summary = nextSummary;
+    touched = true;
+  }
+
+  if (touched) {
+    sheetDoc.updatedAt = now;
+    await sheetDoc.save();
+  }
+
+  const finalGroup = {
+    ...group,
+    rewardUnlockedAt: sheetDoc.rewardUnlockedAt || null,
+    rewardDeliveredAt: sheetDoc.rewardDeliveredAt || null
+  };
+  finalGroup.hostStatus = resolverCoachProgram414HostStatus(finalGroup);
+  finalGroup.rewardReady = finalGroup.hostStatus === "cumplido" || finalGroup.hostStatus === "regalo_entregado";
+  return finalGroup;
+}
+
 async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = null, userDoc = null) {
   if (!recordDoc?._id || !outcomeDoc?._id) {
     return null;
@@ -5434,6 +5518,14 @@ async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = n
     }
   );
   await invalidarCoachWorkspaceCaches(userDoc, recordDoc.ownerUserId);
+
+  if (recordDoc.sourceType === "programa_4_en_14" && recordDoc.linkedProgramSheetId) {
+    try {
+      await actualizarCoachProgram414ProgresoYAviso(recordDoc.linkedProgramSheetId, userDoc);
+    } catch (error) {
+      console.error("Error actualizando progreso 4 en 14:", error.message);
+    }
+  }
 
   return recordDoc;
 }
@@ -5558,6 +5650,102 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
   }
 
   return detailPayload;
+}
+
+async function obtenerCoachProgram414Groups(userDoc = null) {
+  if (!userDoc?._id) {
+    return {
+      groups: [],
+      summary: {
+        totalHosts: 0,
+        openHosts: 0,
+        fulfilledHosts: 0,
+        totalReferrals: 0,
+        totalCompletedDemos: 0
+      }
+    };
+  }
+
+  const visibleRecordDocs = await CoachCrmRecord.find(
+    await construirCoachCrmViewerQuery(userDoc, {
+      sourceType: "programa_4_en_14"
+    })
+  )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const visibleRecords = visibleRecordDocs.map(limpiarCoachCrmRecord).filter(Boolean);
+  const sheetIdSet = new Set(
+    visibleRecords
+      .map(record => String(record.sourceParentId || record.linkedProgramSheetId || "").trim())
+      .filter(Boolean)
+  );
+
+  if (!sheetIdSet.size) {
+    return {
+      groups: [],
+      summary: {
+        totalHosts: 0,
+        openHosts: 0,
+        fulfilledHosts: 0,
+        totalReferrals: 0,
+        totalCompletedDemos: 0
+      }
+    };
+  }
+
+  const validSheetIds = Array.from(sheetIdSet).filter(mongoose.Types.ObjectId.isValid);
+  const sheetDocs = await CoachProgramSheet.find(
+    construirCoachWorkspaceQuery(userDoc, {
+      _id: { $in: validSheetIds }
+    })
+  )
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+
+  const sheetIdStrings = sheetDocs.map(item => String(item._id || "")).filter(Boolean);
+  const allRecordDocs = await CoachCrmRecord.find({
+    ownerUserId: resolverCoachOwnerUserId(userDoc),
+    sourceType: "programa_4_en_14",
+    sourceParentId: { $in: sheetIdStrings }
+  }).lean();
+
+  const visibleRecordMap = new Map(
+    visibleRecords.map(record => [`${String(record.sourceParentId || "")}:${Number(record.sourceSubIndex ?? -1)}`, record])
+  );
+  const allRecordMap = new Map(
+    allRecordDocs
+      .map(limpiarCoachCrmRecord)
+      .filter(Boolean)
+      .map(record => [`${String(record.sourceParentId || "")}:${Number(record.sourceSubIndex ?? -1)}`, record])
+  );
+
+  const groups = sheetDocs
+    .map(sheetDoc => construirCoachProgram414HostGroup(sheetDoc, visibleRecordMap, allRecordMap))
+    .filter(group => group && group.referrals.length);
+
+  const summary = groups.reduce(
+    (acc, group) => {
+      acc.totalHosts += 1;
+      acc.totalReferrals += Number(group.referralCount || 0);
+      acc.totalCompletedDemos += Number(group.completedDemoCount || 0);
+      if (["cumplido", "regalo_entregado"].includes(group.hostStatus)) {
+        acc.fulfilledHosts += 1;
+      } else {
+        acc.openHosts += 1;
+      }
+      return acc;
+    },
+    {
+      totalHosts: 0,
+      openHosts: 0,
+      fulfilledHosts: 0,
+      totalReferrals: 0,
+      totalCompletedDemos: 0
+    }
+  );
+
+  return { groups, summary };
 }
 
 function construirCoachAgendaWorkspaceQuery(userDoc = null) {
@@ -9003,6 +9191,8 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
     startWindow: sheetDoc.startWindow || "",
     notes: sheetDoc.notes || "",
     referralCount: Number(sheetDoc.referralCount || 0),
+    rewardUnlockedAt: sheetDoc.rewardUnlockedAt || null,
+    rewardDeliveredAt: sheetDoc.rewardDeliveredAt || null,
     summary: sheetDoc.summary || "",
     referrals: Array.isArray(sheetDoc.referrals)
       ? sheetDoc.referrals.map((referral, index) => limpiarCoachProgramReferralView(referral, index, sheetDoc)).filter(Boolean)
@@ -9010,6 +9200,141 @@ function limpiarCoachProgramSheet(sheetDoc = null) {
     updatedAt: sheetDoc.updatedAt || null,
     createdAt: sheetDoc.createdAt || null
   };
+}
+
+function esCoachProgram414DemoContabilizable(recordDoc = null) {
+  const status = normalizarCoachCrmStatus(recordDoc?.status || "");
+  return ["demo_hecha", "venta", "no_venta"].includes(status);
+}
+
+function construirCoachProgram414Deadline(sheetDoc = null) {
+  const baseDate = sheetDoc?.createdAt || sheetDoc?.updatedAt || null;
+
+  if (!baseDate) {
+    return null;
+  }
+
+  const deadline = new Date(baseDate);
+  deadline.setDate(deadline.getDate() + 14);
+  return deadline;
+}
+
+function resolverCoachProgram414HostStatus(group = null) {
+  if (!group) {
+    return "abierto";
+  }
+
+  if (group.rewardDeliveredAt) {
+    return "regalo_entregado";
+  }
+
+  if (group.rewardUnlockedAt || Number(group.completedDemoCount || 0) >= 4) {
+    return "cumplido";
+  }
+
+  const deadlineAt = group.deadlineAt ? new Date(group.deadlineAt) : null;
+  if (deadlineAt && Number.isFinite(deadlineAt.getTime()) && deadlineAt.getTime() < Date.now()) {
+    return "vencido";
+  }
+
+  if (Number(group.appointmentCount || 0) > 0 || Number(group.completedDemoCount || 0) > 0) {
+    return "en_progreso";
+  }
+
+  return "abierto";
+}
+
+function construirCoachProgram414HostGroup(sheetDoc = null, visibleRecordMap = new Map(), allRecordMap = new Map()) {
+  if (!sheetDoc?._id) {
+    return null;
+  }
+
+  const referrals = Array.isArray(sheetDoc.referrals) ? sheetDoc.referrals : [];
+  const hostId = String(sheetDoc._id);
+  const deadlineAt = construirCoachProgram414Deadline(sheetDoc);
+  let completedDemoCount = 0;
+  let appointmentCount = 0;
+  let salesCount = 0;
+
+  referrals.forEach((referral, index) => {
+    const allRecord = allRecordMap.get(`${hostId}:${index}`) || null;
+    if (!allRecord) {
+      return;
+    }
+
+    if (esCoachProgram414DemoContabilizable(allRecord)) {
+      completedDemoCount += 1;
+    }
+
+    if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha", "venta", "no_venta"].includes(allRecord.status)) {
+      appointmentCount += 1;
+    }
+
+    if (normalizarCoachCrmStatus(allRecord.status || "") === "venta") {
+      salesCount += 1;
+    }
+  });
+
+  const visibleReferrals = referrals
+    .map((referral, index) => {
+      const visibleRecord = visibleRecordMap.get(`${hostId}:${index}`) || null;
+
+      if (!visibleRecord) {
+        return null;
+      }
+
+      return {
+        index,
+        crmRecordId: visibleRecord.id || "",
+        fullName: referral?.fullName || visibleRecord.leadName || "",
+        phone: visibleRecord.phone || referral?.phone || "",
+        notes: referral?.notes || "",
+        instantCallStatus: normalizarCoachProgramInstantStatus(referral?.instantCallStatus || ""),
+        appointmentDetails: referral?.appointmentDetails || "",
+        lastOutcomeAt: referral?.lastOutcomeAt || visibleRecord.lastContactAt || null,
+        status: visibleRecord.status || "nuevo",
+        statusLabel: formatearCoachCrmStatusLabel(visibleRecord.status || "nuevo"),
+        statusColor: visibleRecord.statusColor || resolverCoachCrmStatusColor(visibleRecord.status || "nuevo"),
+        appointmentAt: visibleRecord.appointmentAt || visibleRecord.nextActionAt || null,
+        assignedTelemarketerName: visibleRecord.assignedTelemarketerName || "",
+        appointmentRepName:
+          visibleRecord.appointmentRepName || sheetDoc.representativeName || "",
+        lastNote: visibleRecord.lastNote || referral?.instantCallNotes || referral?.notes || "",
+        demoCompleted: esCoachProgram414DemoContabilizable(visibleRecord),
+        saleAmount: limpiarCoachDemoOutcomeAmount(visibleRecord.saleAmount || 0)
+      };
+    })
+    .filter(Boolean);
+
+  const group = {
+    id: hostId,
+    hostName: sheetDoc.hostName || "",
+    hostPhone: sheetDoc.hostPhone || "",
+    giftSelected: sheetDoc.giftSelected || "",
+    representativeName: sheetDoc.representativeName || "",
+    representativePhone: sheetDoc.representativePhone || "",
+    generatedByName: sheetDoc.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(sheetDoc.generatedByAccountType || "owner"),
+    referralCount: Number(sheetDoc.referralCount || referrals.length || 0),
+    visibleReferralCount: visibleReferrals.length,
+    completedDemoCount,
+    appointmentCount,
+    salesCount,
+    rewardUnlockedAt: sheetDoc.rewardUnlockedAt || null,
+    rewardDeliveredAt: sheetDoc.rewardDeliveredAt || null,
+    startWindow: sheetDoc.startWindow || "",
+    notes: sheetDoc.notes || "",
+    summary: sheetDoc.summary || "",
+    createdAt: sheetDoc.createdAt || null,
+    updatedAt: sheetDoc.updatedAt || null,
+    deadlineAt: deadlineAt ? deadlineAt.toISOString() : null,
+    remainingToReward: Math.max(0, 4 - completedDemoCount),
+    referrals: visibleReferrals
+  };
+
+  group.hostStatus = resolverCoachProgram414HostStatus(group);
+  group.rewardReady = group.hostStatus === "cumplido" || group.hostStatus === "regalo_entregado";
+  return group;
 }
 
 function limpiarCoachProgram414ActiveContext(context = null) {
@@ -18264,6 +18589,22 @@ app.get("/api/coach/crm/records", async (req, res) => {
   }
 });
 
+app.get("/api/coach/crm/program-4-in-14/groups", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const data = await obtenerCoachProgram414Groups(auth.user);
+    res.json(data);
+  } catch (error) {
+    console.error("Error cargando grupos 4 en 14 del CRM:", error.message);
+    responderCoachError(res, 500, "No pude cargar la vista 4 en 14 del CRM.");
+  }
+});
+
 app.get("/api/coach/crm/records/:recordId", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -18467,6 +18808,13 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
     }
 
     await invalidarCoachWorkspaceCaches(auth.user, recordDoc.ownerUserId);
+    if (recordDoc.sourceType === "programa_4_en_14" && recordDoc.linkedProgramSheetId) {
+      try {
+        await actualizarCoachProgram414ProgresoYAviso(recordDoc.linkedProgramSheetId, auth.user);
+      } catch (progressError) {
+        console.error("Error recalculando 4 en 14 desde CRM:", progressError.message);
+      }
+    }
     const detail = await obtenerCoachCrmRecordDetail(auth.user, recordId);
     res.json(detail);
   } catch (error) {
