@@ -14938,6 +14938,7 @@ CANAL ACTIVO:
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
     const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, fastChannel ? 4 : 6);
     const statePrompt = `${estadoPrompt}\n${modoPromptCanal}`.trim();
+    const profilePrompt = perfilPrompt;
     const aiCacheOptions = {
       mode: modoChat,
       scope:
@@ -20500,6 +20501,7 @@ MODO TURBO DEL COACH:
         : MAX_PROMPT_HISTORY_MESSAGES;
     const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, Math.min(historyLimit, 6));
     const statePrompt = estadoPrompt;
+    const profilePrompt = perfilPrompt;
     const aiCacheOptions = {
       mode: modoChat,
       scope:
