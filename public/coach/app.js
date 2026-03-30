@@ -6559,51 +6559,79 @@ function initChefCampaignTool() {
   });
 }
 
-function addCoachMessage(container, role, content, options = {}) {
-  const targets = Array.from(
+function getCoachMessageTargets(container) {
+  return Array.from(
     new Set(
       [container, ...document.querySelectorAll("[data-coach-chat-messages], [data-coach-chat-messages-floating]")]
         .filter(Boolean)
     )
   );
+}
 
-  if (!targets.length) {
+function renderCoachMessageActions(card, actions = []) {
+  if (!card) {
     return;
   }
 
-  targets.forEach(target => {
+  card.querySelector(".coach-message-actions")?.remove();
+
+  if (!Array.isArray(actions) || !actions.length) {
+    return;
+  }
+
+  const actionsWrap = document.createElement("div");
+  actionsWrap.className = "coach-message-actions";
+
+  actions.forEach(action => {
+    if (action?.type !== "workspace" || !action?.workspace || !action?.label) {
+      return;
+    }
+
+    const actionButton = document.createElement("button");
+    actionButton.type = "button";
+    actionButton.className = "coach-message-action";
+    actionButton.dataset.coachChatActionWorkspace = String(action.workspace || "").trim();
+    actionButton.textContent = String(action.label || "").trim();
+    actionsWrap.appendChild(actionButton);
+  });
+
+  if (actionsWrap.childElementCount) {
+    card.appendChild(actionsWrap);
+  }
+}
+
+function addCoachMessage(container, role, content, options = {}) {
+  const targets = getCoachMessageTargets(container);
+
+  if (!targets.length) {
+    return [];
+  }
+
+  return targets.map(target => {
     const card = document.createElement("article");
     card.className = `coach-message ${role}`;
 
     const paragraph = document.createElement("p");
     paragraph.textContent = content;
     card.appendChild(paragraph);
-
-    const actions = Array.isArray(options?.actions) ? options.actions : [];
-    if (role === "assistant" && actions.length) {
-      const actionsWrap = document.createElement("div");
-      actionsWrap.className = "coach-message-actions";
-
-      actions.forEach(action => {
-        if (action?.type !== "workspace" || !action?.workspace || !action?.label) {
-          return;
-        }
-
-        const actionButton = document.createElement("button");
-        actionButton.type = "button";
-        actionButton.className = "coach-message-action";
-        actionButton.dataset.coachChatActionWorkspace = String(action.workspace || "").trim();
-        actionButton.textContent = String(action.label || "").trim();
-        actionsWrap.appendChild(actionButton);
-      });
-
-      if (actionsWrap.childElementCount) {
-        card.appendChild(actionsWrap);
-      }
-    }
-
+    renderCoachMessageActions(card, Array.isArray(options?.actions) ? options.actions : []);
     target.appendChild(card);
     target.scrollTop = target.scrollHeight;
+    return { target, card, paragraph };
+  });
+}
+
+function updateCoachMessage(messageHandles, content, options = {}) {
+  const handles = Array.isArray(messageHandles) ? messageHandles : [];
+
+  handles.forEach(handle => {
+    if (!handle?.paragraph || !handle?.card || !handle?.target) {
+      return;
+    }
+
+    handle.paragraph.textContent = content;
+    renderCoachMessageActions(handle.card, Array.isArray(options?.actions) ? options.actions : []);
+    handle.target.scrollTop = handle.target.scrollHeight;
   });
 }
 
@@ -9553,6 +9581,13 @@ async function initCoachAppPage() {
 
   syncDemoContextBar();
 
+  const setCoachChatStatusText = text => {
+    const safeText = String(text || "").trim() || "Listo";
+    chatStatusNodes.forEach(node => {
+      node.textContent = safeText;
+    });
+  };
+
   const toggleCoachChatBusy = loading => {
     chatInputs.forEach(input => {
       input.disabled = loading;
@@ -9562,9 +9597,7 @@ async function initCoachAppPage() {
       button.disabled = loading;
     });
 
-    chatStatusNodes.forEach(node => {
-      node.textContent = loading ? "Pensando..." : "Listo";
-    });
+    setCoachChatStatusText(loading ? "Pensando..." : "Listo");
   };
 
   const clearCoachChatInputs = () => {
@@ -9572,6 +9605,93 @@ async function initCoachAppPage() {
       input.value = "";
       autoResizeTextarea(input);
     });
+  };
+
+  const streamCoachChatReply = async (payload, handlers = {}) => {
+    const response = await fetch(COACH_CHAT_API_URL, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ...payload,
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "No pude completar esa accion.");
+    }
+
+    if (!response.body) {
+      return await response.json().catch(() => ({}));
+    }
+
+    const decoder = new TextDecoder();
+    const reader = response.body.getReader();
+    let buffer = "";
+    let finalPayload = null;
+
+    const processLine = line => {
+      const safeLine = String(line || "").trim();
+
+      if (!safeLine) {
+        return;
+      }
+
+      let parsed = null;
+
+      try {
+        parsed = JSON.parse(safeLine);
+      } catch (error) {
+        return;
+      }
+
+      if (parsed.type === "status") {
+        handlers.onStatus?.(parsed.message || "");
+        return;
+      }
+
+      if (parsed.type === "delta") {
+        handlers.onDelta?.(parsed.content || "");
+        return;
+      }
+
+      if (parsed.type === "error") {
+        throw new Error(parsed.error || "No pude responder en este momento.");
+      }
+
+      if (parsed.type === "done") {
+        finalPayload = parsed.payload || null;
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      let lineBreakIndex = buffer.indexOf("\n");
+
+      while (lineBreakIndex >= 0) {
+        const nextLine = buffer.slice(0, lineBreakIndex);
+        buffer = buffer.slice(lineBreakIndex + 1);
+        processLine(nextLine);
+        lineBreakIndex = buffer.indexOf("\n");
+      }
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      processLine(buffer);
+    }
+
+    return finalPayload || {};
   };
 
   const sendCoachMessage = async rawText => {
@@ -9584,42 +9704,54 @@ async function initCoachAppPage() {
     addCoachMessage(chatMessages, "user", text);
     clearCoachChatInputs();
     toggleCoachChatBusy(true);
+    setCoachChatStatusText("Conectando...");
+    let assistantMessageHandles = [];
 
     try {
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
-      const data = await apiRequest(COACH_CHAT_API_URL, {
-        method: "POST",
-        body: {
-          pregunta: text,
-          sessionId: getCoachChatSessionId(),
-          visitorId: getCoachVisitorId(),
-          activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
-          activeDemoStage: activeDemoStageMeta.id,
-          activeDemoStageLabel: activeDemoStageMeta.label,
-          activeDemoStageCopy: activeDemoStageMeta.copy,
-          recentCoachEvents: getCoachDemoEvents(),
-          activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
-          activeHealthSurveyContext: getActiveCoachHealthSurveyContext() || null,
-          activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
-          activeProgram414Context: getActiveCoachProgram414Context() || null,
-          activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
-            ? getActiveCoachProgram414Context().referralIndex
-            : "",
-          activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
-          activeDecisionContext: getActiveCoachDecisionContext() || null,
-          activeDemoOutcomeContext: getActiveCoachDemoOutcomeContext() || null,
-          mode: "coach"
+      const requestBody = {
+        pregunta: text,
+        sessionId: getCoachChatSessionId(),
+        visitorId: getCoachVisitorId(),
+        activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
+        activeDemoStage: activeDemoStageMeta.id,
+        activeDemoStageLabel: activeDemoStageMeta.label,
+        activeDemoStageCopy: activeDemoStageMeta.copy,
+        recentCoachEvents: getCoachDemoEvents(),
+        activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+        activeHealthSurveyContext: getActiveCoachHealthSurveyContext() || null,
+        activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+        activeProgram414Context: getActiveCoachProgram414Context() || null,
+        activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
+          ? getActiveCoachProgram414Context().referralIndex
+          : "",
+        activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
+        activeDecisionContext: getActiveCoachDecisionContext() || null,
+        activeDemoOutcomeContext: getActiveCoachDemoOutcomeContext() || null,
+        mode: "coach"
+      };
+      assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
+      let streamedReply = "";
+      const data = await streamCoachChatReply(requestBody, {
+        onStatus: message => {
+          if (message) {
+            setCoachChatStatusText(message);
+          }
+        },
+        onDelta: chunk => {
+          if (!chunk) {
+            return;
+          }
+
+          streamedReply += chunk;
+          updateCoachMessage(assistantMessageHandles, streamedReply || "...");
         }
       });
+      const finalReply = data.respuesta || streamedReply || "No pude responder en este momento.";
 
-      addCoachMessage(
-        chatMessages,
-        "assistant",
-        data.respuesta || "No pude responder en este momento.",
-        {
-          actions: Array.isArray(data.coachHelpActions) ? data.coachHelpActions : []
-        }
-      );
+      updateCoachMessage(assistantMessageHandles, finalReply, {
+        actions: Array.isArray(data.coachHelpActions) ? data.coachHelpActions : []
+      });
 
       if (data.profile) {
         renderCoachProfile(data.profile);
@@ -9647,11 +9779,11 @@ async function initCoachAppPage() {
         setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext);
       }
     } catch (error) {
-      addCoachMessage(
-        chatMessages,
-        "assistant",
-        error.message || "No pude responder en este momento."
-      );
+      if (assistantMessageHandles.length) {
+        updateCoachMessage(assistantMessageHandles, error.message || "No pude responder en este momento.");
+      } else {
+        addCoachMessage(chatMessages, "assistant", error.message || "No pude responder en este momento.");
+      }
     } finally {
       toggleCoachChatBusy(false);
 

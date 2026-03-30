@@ -1399,6 +1399,97 @@ async function guardarRespuestaAiCacheada(options = {}, reply = "") {
   );
 }
 
+function prepararRespuestaStreamingChat(res) {
+  res.status(200);
+  res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+}
+
+function escribirEventoStreamingChat(res, event = {}) {
+  if (!res || res.writableEnded) {
+    return;
+  }
+
+  res.write(`${JSON.stringify(event)}\n`);
+}
+
+async function consumirStreamingOpenAiChat(response, onDelta) {
+  if (!response?.body) {
+    return "";
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let reply = "";
+
+  const procesarBloque = rawChunk => {
+    const safeChunk = String(rawChunk || "");
+
+    if (!safeChunk) {
+      return false;
+    }
+
+    const lines = safeChunk.split(/\r?\n/);
+
+    for (const line of lines) {
+      if (!line.startsWith("data:")) {
+        continue;
+      }
+
+      const payload = line.slice(5).trim();
+
+      if (!payload) {
+        continue;
+      }
+
+      if (payload === "[DONE]") {
+        return true;
+      }
+
+      try {
+        const parsed = JSON.parse(payload);
+        const delta = parsed?.choices?.[0]?.delta?.content;
+
+        if (typeof delta === "string" && delta) {
+          reply += delta;
+          onDelta?.(delta);
+        }
+      } catch (error) {
+        console.error("Error parseando stream de OpenAI:", error.message);
+      }
+    }
+
+    return false;
+  };
+
+  for await (const chunk of response.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+
+    let separatorIndex = buffer.indexOf("\n\n");
+    while (separatorIndex >= 0) {
+      const rawEvent = buffer.slice(0, separatorIndex);
+      buffer = buffer.slice(separatorIndex + 2);
+
+      if (procesarBloque(rawEvent)) {
+        return reply;
+      }
+
+      separatorIndex = buffer.indexOf("\n\n");
+    }
+  }
+
+  buffer += decoder.decode();
+
+  if (buffer.trim()) {
+    procesarBloque(buffer);
+  }
+
+  return reply;
+}
+
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
 }
@@ -20096,6 +20187,54 @@ app.post("/chat", async (req, res) => {
   let coachAuth = null;
   let coachUsage = null;
   let chefUsage = null;
+  const shouldStreamResponse = modoChat === "coach" && req.body?.stream === true;
+  let chatStreamStarted = false;
+
+  const ensureChatStream = () => {
+    if (!shouldStreamResponse || chatStreamStarted) {
+      return;
+    }
+
+    prepararRespuestaStreamingChat(res);
+    chatStreamStarted = true;
+  };
+
+  const sendChatStreamEvent = (type, payload = {}) => {
+    if (!shouldStreamResponse) {
+      return;
+    }
+
+    ensureChatStream();
+    escribirEventoStreamingChat(res, { type, ...payload });
+  };
+
+  const finishChatResponse = (payload = {}, options = {}) => {
+    if (!shouldStreamResponse) {
+      return res.json(payload);
+    }
+
+    const replyToEmit = options.emitReply ?? payload?.respuesta ?? "";
+    if (replyToEmit) {
+      sendChatStreamEvent("delta", { content: replyToEmit });
+    }
+    sendChatStreamEvent("done", { payload });
+    res.end();
+    return null;
+  };
+
+  const failChatResponse = async (status = 500, payload = {}) => {
+    if (!shouldStreamResponse || !chatStreamStarted) {
+      return res.status(status).json(payload);
+    }
+
+    sendChatStreamEvent("error", {
+      status,
+      error: payload?.error || "Error servidor",
+      detalle: payload?.detalle || null
+    });
+    res.end();
+    return null;
+  };
 
   if (!preguntaLimpia) {
     return res.status(400).json({ error: "pregunta requerida" });
@@ -20211,7 +20350,7 @@ app.post("/chat", async (req, res) => {
           console.error("Error guardando ayuda interna del Coach:", error.message);
         });
 
-        return res.json({
+        return finishChatResponse({
           respuesta: coachHelpReply.reply,
           mode: modoChat,
           coachHelpMode: true,
@@ -20320,7 +20459,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
           console.error("Error guardando respuesta turbo del Coach:", error.message);
         });
 
-        return res.json({
+        return finishChatResponse({
           respuesta: turboQuickReply,
           mode: modoChat,
           turboMode: true,
@@ -20559,6 +20698,14 @@ MODO TURBO DEL COACH:
         openAiPayload.max_completion_tokens = COACH_TURBO_MAX_COMPLETION_TOKENS;
       }
 
+      if (shouldStreamResponse) {
+        openAiPayload.stream = true;
+      }
+
+      if (shouldStreamResponse) {
+        sendChatStreamEvent("status", { message: "Pensando..." });
+      }
+
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -20568,20 +20715,49 @@ MODO TURBO DEL COACH:
         body: JSON.stringify(openAiPayload)
       });
 
-      const data = await response.json().catch(() => null);
-
       if (!response.ok) {
-        return res.status(response.status).json({
+        const rawError = await response.text().catch(() => "");
+        let parsedError = null;
+
+        try {
+          parsedError = rawError ? JSON.parse(rawError) : null;
+        } catch (error) {
+          parsedError = rawError ? { message: rawError } : null;
+        }
+
+        return failChatResponse(response.status, {
           error: "Error OpenAI",
-          detalle: data || { message: "Respuesta invalida del API" }
+          detalle: parsedError || { message: "Respuesta invalida del API" }
         });
       }
 
-      if (!data?.choices?.[0]?.message) {
-        return res.status(500).json({ error: "Error OpenAI", detalle: data });
+      if (shouldStreamResponse) {
+        const streamedReply = await consumirStreamingOpenAiChat(response, delta => {
+          sendChatStreamEvent("status", { message: "Escribiendo..." });
+          sendChatStreamEvent("delta", { content: delta });
+        });
+
+        if (!streamedReply) {
+          return failChatResponse(500, {
+            error: "Error OpenAI",
+            detalle: { message: "No llego contenido del stream." }
+          });
+        }
+
+        respuestaIA = {
+          role: "assistant",
+          content: streamedReply
+        };
+      } else {
+        const data = await response.json().catch(() => null);
+
+        if (!data?.choices?.[0]?.message) {
+          return failChatResponse(500, { error: "Error OpenAI", detalle: data });
+        }
+
+        respuestaIA = data.choices[0].message;
       }
 
-      respuestaIA = data.choices[0].message;
       programarPersistenciaRedis(
         () => guardarRespuestaAiCacheada(aiCacheOptions, respuestaIA?.content || ""),
         "cache IA de chat"
@@ -20614,7 +20790,7 @@ MODO TURBO DEL COACH:
           console.error("Error guardando respuesta turbo del Coach:", error.message);
         });
 
-        return res.json({
+        return finishChatResponse({
           respuesta: respuestaIA.content,
           mode: modoChat,
           turboMode: true,
@@ -20632,6 +20808,8 @@ MODO TURBO DEL COACH:
             remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
             limitPerDay: COACH_MAX_MESSAGES_PER_DAY
           }
+        }, {
+          emitReply: cacheHit ? respuestaIA.content : ""
         });
       }
 
@@ -20654,7 +20832,7 @@ MODO TURBO DEL COACH:
         })
       ]);
 
-      return res.json({
+      return finishChatResponse({
         respuesta: respuestaIA.content,
         mode: modoChat,
         cacheHit,
@@ -20671,6 +20849,8 @@ MODO TURBO DEL COACH:
           remainingToday: Math.max((coachUsage?.remainingToday || COACH_MAX_MESSAGES_PER_DAY) - 1, 0),
           limitPerDay: COACH_MAX_MESSAGES_PER_DAY
         }
+      }, {
+        emitReply: cacheHit ? respuestaIA.content : ""
       });
     }
 
@@ -20702,7 +20882,7 @@ MODO TURBO DEL COACH:
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error servidor" });
+    return failChatResponse(500, { error: "Error servidor" });
   }
 });
 
