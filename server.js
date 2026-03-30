@@ -112,6 +112,14 @@ const REDIS_AI_CACHE_TTL_SECONDS = Math.max(
   10 * 60,
   Number(process.env.REDIS_AI_CACHE_TTL_SECONDS || 6 * 60 * 60)
 );
+const REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS = Math.max(
+  30,
+  Number(process.env.REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS || 90)
+);
+const REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS = Math.max(
+  REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS,
+  Number(process.env.REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS || 7 * 24 * 60 * 60)
+);
 const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
 const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_ACCESS_EMAILS || "");
 const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
@@ -1397,6 +1405,99 @@ async function guardarRespuestaAiCacheada(options = {}, reply = "") {
     },
     REDIS_AI_CACHE_TTL_SECONDS
   );
+}
+
+function construirCoachWorkspaceCacheOwnerId(userDoc = null, ownerUserId = "") {
+  return (
+    normalizarCoachCrmObjectId(ownerUserId) ||
+    normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc)) ||
+    normalizarCoachCrmObjectId(userDoc?._id) ||
+    ""
+  );
+}
+
+function construirCoachWorkspaceViewerSignature(userDoc = null) {
+  return {
+    userId: normalizarCoachCrmObjectId(userDoc?._id) || "",
+    ownerUserId: construirCoachWorkspaceCacheOwnerId(userDoc),
+    accountType: normalizarCoachAccountType(userDoc?.accountType || "owner"),
+    teamOwnerUserId: normalizarCoachCrmObjectId(userDoc?.teamOwnerUserId) || ""
+  };
+}
+
+function construirCoachWorkspaceVersionCacheKey(ownerUserId = "") {
+  const safeOwnerId = construirCoachWorkspaceCacheOwnerId(null, ownerUserId);
+  return safeOwnerId ? `agustin:workspace-cache:version:${safeOwnerId}` : "";
+}
+
+async function obtenerCoachWorkspaceCacheVersion(userDoc = null, ownerUserId = "") {
+  const safeOwnerId = construirCoachWorkspaceCacheOwnerId(userDoc, ownerUserId);
+
+  if (!safeOwnerId) {
+    return "0";
+  }
+
+  const payload = await redisGetJson(construirCoachWorkspaceVersionCacheKey(safeOwnerId));
+  return String(payload?.version || "0");
+}
+
+async function invalidarCoachWorkspaceCaches(userDoc = null, ownerUserId = "") {
+  const safeOwnerId = construirCoachWorkspaceCacheOwnerId(userDoc, ownerUserId);
+
+  if (!safeOwnerId) {
+    return false;
+  }
+
+  return redisSetJson(
+    construirCoachWorkspaceVersionCacheKey(safeOwnerId),
+    {
+      version: `${Date.now()}-${safeOwnerId}`
+    },
+    REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS
+  );
+}
+
+function construirCoachCrmWorkspaceCacheKey(userDoc = null, filters = {}, version = "0") {
+  const viewer = construirCoachWorkspaceViewerSignature(userDoc);
+  const signature = construirAiCacheSignature({
+    version: String(version || "0"),
+    viewer,
+    filters: {
+      sourceType: normalizarCoachCrmSourceType(filters?.sourceType || ""),
+      status: normalizarCoachCrmStatus(filters?.status || ""),
+      assignedToUserId: normalizarCoachCrmObjectId(filters?.assignedToUserId) || ""
+    }
+  });
+
+  return viewer.ownerUserId ? `agustin:workspace-cache:crm:${viewer.ownerUserId}:${signature}` : "";
+}
+
+function construirCoachAgendaWorkspaceCacheKey(userDoc = null, version = "0") {
+  const viewer = construirCoachWorkspaceViewerSignature(userDoc);
+  const signature = construirAiCacheSignature({
+    version: String(version || "0"),
+    viewer,
+    mode: "agenda"
+  });
+
+  return viewer.ownerUserId ? `agustin:workspace-cache:agenda:${viewer.ownerUserId}:${signature}` : "";
+}
+
+function construirCoachCrmDetailCacheKey(userDoc = null, recordId = "", version = "0") {
+  const viewer = construirCoachWorkspaceViewerSignature(userDoc);
+  const safeRecordId = normalizarCoachCrmObjectId(recordId) || "";
+
+  if (!viewer.ownerUserId || !safeRecordId) {
+    return "";
+  }
+
+  const signature = construirAiCacheSignature({
+    version: String(version || "0"),
+    viewer,
+    recordId: safeRecordId
+  });
+
+  return `agustin:workspace-cache:crm-detail:${viewer.ownerUserId}:${signature}`;
 }
 
 function prepararRespuestaStreamingChat(res) {
@@ -4925,6 +5026,7 @@ async function vincularCoachCrmConEncuesta(recordDoc = null, surveyDoc = null, u
       surveyId: String(surveyDoc._id)
     }
   );
+  await invalidarCoachWorkspaceCaches(userDoc, recordDoc.ownerUserId);
 
   return recordDoc;
 }
@@ -4966,6 +5068,7 @@ async function vincularCoachCrmConPrograma(recordDoc = null, sheetDoc = null, us
       referralCount
     }
   );
+  await invalidarCoachWorkspaceCaches(userDoc, recordDoc.ownerUserId);
 
   return recordDoc;
 }
@@ -5017,6 +5120,7 @@ async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = n
       resultType: normalizarCoachDemoOutcomeType(outcomeDoc.resultType || "")
     }
   );
+  await invalidarCoachWorkspaceCaches(userDoc, recordDoc.ownerUserId);
 
   return recordDoc;
 }
@@ -5035,6 +5139,14 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   } catch (error) {
     console.error("Error inicializando workspace CRM del Coach:", error.message);
   }
+  const cacheVersion = await obtenerCoachWorkspaceCacheVersion(userDoc);
+  const cacheKey = construirCoachCrmWorkspaceCacheKey(userDoc, filters, cacheVersion);
+  const cachedWorkspace = cacheKey ? await redisGetJson(cacheKey) : null;
+
+  if (cachedWorkspace?.summary && Array.isArray(cachedWorkspace?.records) && Array.isArray(cachedWorkspace?.assignees)) {
+    return cachedWorkspace;
+  }
+
   const baseQuery = await construirCoachCrmViewerQuery(userDoc);
   const query = {
     ...baseQuery
@@ -5069,11 +5181,20 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
     obtenerCoachCrmAssignableContacts(userDoc)
   ]);
 
-  return {
+  const workspacePayload = {
     summary: construirCoachCrmSummary(allRecordDocs),
     records: recordDocs.map(limpiarCoachCrmRecord).filter(Boolean),
     assignees
   };
+
+  if (cacheKey) {
+    programarPersistenciaRedis(
+      () => redisSetJson(cacheKey, workspacePayload, REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS),
+      "cache del CRM"
+    );
+  }
+
+  return workspacePayload;
 }
 
 async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
@@ -5085,6 +5206,14 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
     await asegurarCoachCrmWorkspaceSiVacio(userDoc);
   } catch (error) {
     console.error("Error inicializando detalle CRM del Coach:", error.message);
+  }
+
+  const cacheVersion = await obtenerCoachWorkspaceCacheVersion(userDoc);
+  const cacheKey = construirCoachCrmDetailCacheKey(userDoc, recordId, cacheVersion);
+  const cachedDetail = cacheKey ? await redisGetJson(cacheKey) : null;
+
+  if (cachedDetail?.record) {
+    return cachedDetail;
   }
 
   const recordQuery = await construirCoachCrmViewerQuery(userDoc, {
@@ -5103,10 +5232,19 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
     .limit(25)
     .lean();
 
-  return {
+  const detailPayload = {
     record: limpiarCoachCrmRecord(recordDoc),
     activities: activityDocs.map(limpiarCoachCrmActivity).filter(Boolean)
   };
+
+  if (cacheKey) {
+    programarPersistenciaRedis(
+      () => redisSetJson(cacheKey, detailPayload, REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS),
+      "cache detalle CRM"
+    );
+  }
+
+  return detailPayload;
 }
 
 function construirCoachAgendaWorkspaceQuery(userDoc = null) {
@@ -5199,6 +5337,18 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
   } catch (error) {
     console.error("Error inicializando agenda CRM del Coach:", error.message);
   }
+  const cacheVersion = await obtenerCoachWorkspaceCacheVersion(userDoc);
+  const cacheKey = construirCoachAgendaWorkspaceCacheKey(userDoc, cacheVersion);
+  const cachedWorkspace = cacheKey ? await redisGetJson(cacheKey) : null;
+
+  if (
+    cachedWorkspace?.summary &&
+    Array.isArray(cachedWorkspace?.today) &&
+    Array.isArray(cachedWorkspace?.week)
+  ) {
+    return cachedWorkspace;
+  }
+
   const query = construirCoachAgendaWorkspaceQuery(userDoc);
   const recordDocs = await CoachCrmRecord.find(query)
     .sort({ appointmentAt: 1, nextActionAt: 1, updatedAt: -1 })
@@ -5243,7 +5393,7 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
     return appointmentDate >= startOfToday && appointmentDate <= endOfWeek;
   });
 
-  return {
+  const workspacePayload = {
     viewerMode: esCoachTeamManager(userDoc) ? "manager" : "rep",
     summary: {
       today: today.length,
@@ -5264,6 +5414,15 @@ async function obtenerCoachAgendaWorkspace(userDoc = null) {
     today,
     week
   };
+
+  if (cacheKey) {
+    programarPersistenciaRedis(
+      () => redisSetJson(cacheKey, workspacePayload, REDIS_COACH_WORKSPACE_CACHE_TTL_SECONDS),
+      "cache de agenda"
+    );
+  }
+
+  return workspacePayload;
 }
 
 async function obtenerControlCommunicationsOverview() {
@@ -7641,6 +7800,7 @@ async function ejecutarCoachCrmSeedOperations(userDoc = null, operations = [], d
   try {
     await CoachCrmRecord.bulkWrite(safeOperations, { ordered: false });
     await asegurarCoachCrmAutoAsignacionTelemarketing(userDoc, defaultTelemarketer);
+    await invalidarCoachWorkspaceCaches(userDoc);
   } catch (error) {
     if (error?.code !== 11000) {
       throw error;
@@ -17993,6 +18153,7 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
       });
     }
 
+    await invalidarCoachWorkspaceCaches(auth.user, recordDoc.ownerUserId);
     const detail = await obtenerCoachCrmRecordDetail(auth.user, recordId);
     res.json(detail);
   } catch (error) {
@@ -18826,6 +18987,7 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
           instantCallStatus
         }
       );
+      await invalidarCoachWorkspaceCaches(auth.user, crmRecordDoc.ownerUserId);
     }
 
     const cleanedSheet = limpiarCoachProgramSheet(sheetDoc.toObject());
