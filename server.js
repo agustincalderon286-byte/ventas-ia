@@ -14937,16 +14937,17 @@ CANAL ACTIVO:
 
     registrarMensajeMemoria(sessionId, "user", preguntaLimpia);
     const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, fastChannel ? 4 : 6);
+    const statePrompt = `${estadoPrompt}\n${modoPromptCanal}`.trim();
     const aiCacheOptions = {
       mode: modoChat,
       scope:
         String(coachChefContext?.ownership?.ownerUserId || "").trim() ||
-        cleanText(coachChefContext?.slug || chefSlug || "").trim() ||
-        "public",
+            cleanText(coachChefContext?.slug || chefSlug || "").trim() ||
+            "public",
       question: preguntaLimpia,
       activeWorkspace: source,
       activeDemoStage: canalActivo,
-      statePrompt: `${estadoPrompt}\n${modoPromptCanal}`.trim(),
+      statePrompt,
       profilePrompt,
       history: cacheHistory,
       extra: {
@@ -20498,6 +20499,7 @@ MODO TURBO DEL COACH:
           : COACH_PROMPT_HISTORY_MESSAGES
         : MAX_PROMPT_HISTORY_MESSAGES;
     const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, Math.min(historyLimit, 6));
+    const statePrompt = estadoPrompt;
     const aiCacheOptions = {
       mode: modoChat,
       scope:
@@ -20509,7 +20511,7 @@ MODO TURBO DEL COACH:
       question: preguntaLimpia,
       activeWorkspace,
       activeDemoStage,
-      statePrompt: estadoPrompt,
+      statePrompt,
       profilePrompt,
       history: cacheHistory,
       extra: {
