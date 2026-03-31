@@ -483,6 +483,7 @@
               shadow-intensity="1.15"
               exposure="1"
               environment-image="neutral"
+              tone-mapping="commerce"
               ar-placement="floor"
             ></model-viewer>
 
@@ -565,12 +566,12 @@
             </button>
 
             <button class="product-card" type="button" data-product-id="revoexample">
-              <strong>Revo Scan Example</strong>
-              <span>Mesh real escaneado con Revo Metro, optimizado para comparar calidad 3D dentro de la web.</span>
+              <strong>Revo Stainless Concept</strong>
+              <span>Scan real de Revo Metro con acabado espejo tipo acero inoxidable para validar el look premium.</span>
               <div class="product-tags">
                 <span class="product-tag">Scan real</span>
-                <span class="product-tag">3D web</span>
-                <span class="product-tag">AR Android</span>
+                <span class="product-tag">Acero espejo</span>
+                <span class="product-tag">3D + AR</span>
               </div>
             </button>
           </div>
@@ -655,16 +656,19 @@
         },
         revoexample: {
           id: "revoexample",
-          title: "Revo Scan Example Mesh",
-          modeBadge: "Scan real 3D + AR",
-          copy: "Este ejemplo viene de un mesh escaneado con Revo Metro y optimizado para web. Ahora tambien abre en iPhone con Quick Look para probar el flujo real del scan dentro de Chef.",
+          title: "Revo Stainless Concept",
+          modeBadge: "Acero espejo 3D + AR",
+          copy: "Esta prueba toma un scan real de Revo Metro y le aplica un acabado metalico tipo acero inoxidable espejo para validar el look premium que luego usariamos en ollas Royal Prestige.",
           helper:
-            "En esta version el scan se puede rotar dentro de la web, Android compatible puede intentar AR desde el visor y iPhone o iPad ya lo pueden abrir con Quick Look gracias al USDZ.",
+            "Aqui ya no estas viendo el mesh crudo. Estas viendo la version tratada para web y AR, con material metalico y reflejo pensado como referencia visual antes de pasar a una olla real.",
           hasViewer: true,
-          src: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-medium.glb",
-          iosSrc: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-low.usdz",
+          src: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-stainless-medium.glb",
+          iosSrc: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-stainless-low.usdz",
           poster: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-preview.png",
           actionLabel: "Ver en tu espacio",
+          environmentImage: "legacy",
+          exposure: "1.12",
+          shadowIntensity: "0.8",
           fallbackTitle: "",
           fallbackCopy: "",
           fallbackChipOne: "",
@@ -701,6 +705,9 @@
         viewerModeBadge.textContent = product.modeBadge;
         viewerHelper.textContent = product.helper;
         openArButton.textContent = product.actionLabel;
+        viewer.setAttribute("environment-image", product.environmentImage || "neutral");
+        viewer.setAttribute("exposure", product.exposure || "1");
+        viewer.setAttribute("shadow-intensity", product.shadowIntensity || "1.15");
 
         productCards.forEach(card => {
           card.classList.toggle("active", card.dataset.productId === product.id);
