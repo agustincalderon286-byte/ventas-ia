@@ -13,6 +13,7 @@ const {
   detectarEnvioDatosContacto,
   extraerLeadInfo,
   limpiarCoachAgendaRecord,
+  parseCoachProgram414ImportedSheets,
   resolverCoachCrmStatusDesdeDemoOutcome
 } = await import("../server.js");
 
@@ -217,4 +218,23 @@ test("resume ventas y resultados operativos del CRM", () => {
   assert.equal(summary.bySource.lead, 1);
   assert.equal(summary.bySource.programa_4_en_14, 1);
   assert.equal(summary.bySource.reclutamiento, 1);
+});
+
+test("agrupa un csv de 4 en 14 por anfitrion para importacion compartida", () => {
+  const csv = [
+    "Nombre,Telefono,Nombre de Anfitrion,Relacion con el cliente,Direccion,Comentario de Telemarketing",
+    "Maria Lopez,7735551111,Ana Ruiz,Prima,2059 Desplaines St,Quiere que la llamen el jueves",
+    "Jose Perez,3125552222,Ana Ruiz,Vecino,,No contesto",
+    "Lupita Gomez,8475553333,Referidos de Carmen Flores,Comadre,123 Main St,Lista para visita"
+  ].join("\n");
+
+  const sheets = parseCoachProgram414ImportedSheets("csv", csv);
+
+  assert.equal(sheets.length, 2);
+  assert.equal(sheets[0].hostName, "Ana Ruiz");
+  assert.equal(sheets[0].referrals.length, 2);
+  assert.equal(sheets[0].referrals[0].address, "2059 Desplaines St");
+  assert.match(sheets[0].referrals[1].notes, /Relacion: Vecino/);
+  assert.equal(sheets[1].hostName, "Carmen Flores");
+  assert.equal(sheets[1].referrals.length, 1);
 });

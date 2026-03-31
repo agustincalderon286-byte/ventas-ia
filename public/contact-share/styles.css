@@ -150,6 +150,7 @@ body {
 }
 
 .contact-share-field input,
+.contact-share-field select,
 .contact-share-field textarea {
   width: 100%;
   border-radius: 18px;
@@ -164,6 +165,12 @@ body {
   padding: 12px 14px;
 }
 
+.contact-share-field select {
+  min-height: 54px;
+  padding: 12px 14px;
+  appearance: none;
+}
+
 .contact-share-field textarea {
   min-height: 180px;
   padding: 14px 16px;
@@ -172,6 +179,7 @@ body {
 }
 
 .contact-share-field input:focus,
+.contact-share-field select:focus,
 .contact-share-field textarea:focus {
   outline: none;
   border-color: rgba(255, 209, 102, 0.35);

@@ -5593,6 +5593,149 @@ async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = n
   return recordDoc;
 }
 
+async function crearCoachProgram414Sheet({
+  userDoc = null,
+  profileDoc = null,
+  ownership = null,
+  linkedCrmRecordDoc = null,
+  payload = null,
+  sendDestination = true
+} = {}) {
+  if (!userDoc?._id || !payload) {
+    throw new Error("No pude preparar la hoja 4 en 14.");
+  }
+
+  const hostName =
+    seleccionarNombreConfiable(payload?.hostName || "") || String(payload?.hostName || "").trim();
+  const hostPhone = normalizePhone(payload?.hostPhone || "");
+  const giftSelected = String(payload?.giftSelected || "").trim().slice(0, 120);
+  const representativeName =
+    seleccionarNombreConfiable(payload?.representativeName || "") ||
+    String(payload?.representativeName || "").trim().slice(0, 100);
+  const representativePhone = normalizePhone(payload?.representativePhone || "");
+  const startDate = parseCoachProgramSheetDateInput(payload?.startDate || "");
+  const deadlineDate = startDate
+    ? construirCoachProgram414DeadlineDate(startDate)
+    : parseCoachProgramSheetDateInput(payload?.deadlineDate || "");
+  const startWindow = construirCoachProgram414StartWindow({
+    startDate,
+    deadlineDate,
+    startWindow: String(payload?.startWindow || "").trim().slice(0, 120)
+  });
+  const notes = String(payload?.notes || "").trim().slice(0, 500);
+  const referrals = Array.isArray(payload?.referrals)
+    ? payload.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
+    : [];
+
+  if (!hostName) {
+    throw new Error("El nombre del anfitrion es requerido.");
+  }
+
+  if (!referrals.length) {
+    throw new Error("Pon por lo menos un referido con nombre y telefono.");
+  }
+
+  const effectiveOwnership = ownership || (await construirCoachOwnershipSnapshot(userDoc));
+  const now = new Date();
+  const sheetBase = {
+    ownerUserId: effectiveOwnership.ownerUserId,
+    ownerEmail: effectiveOwnership.ownerEmail || "",
+    ownerName: effectiveOwnership.ownerName || "",
+    generatedByUserId: effectiveOwnership.generatedByUserId,
+    generatedByName: effectiveOwnership.generatedByName || "",
+    generatedByAccountType: effectiveOwnership.generatedByAccountType,
+    linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
+    programType: "4_en_14",
+    hostName,
+    hostPhone,
+    giftSelected,
+    representativeName,
+    representativePhone,
+    startDate,
+    deadlineDate,
+    startWindow,
+    notes,
+    referrals,
+    referralCount: referrals.length,
+    updatedAt: now
+  };
+
+  const sheetDoc = await CoachProgramSheet.create({
+    ...sheetBase,
+    summary: construirCoachProgramSheetSummary(sheetBase)
+  });
+
+  const createdLeadIds = [];
+  const createdLeads = [];
+  let duplicates = 0;
+
+  for (let index = 0; index < referrals.length; index += 1) {
+    const referral = referrals[index];
+    const leadResult = await guardarCoachInboxLead({
+      userDoc,
+      profileDoc,
+      sendDestination: false,
+      payload: {
+        fullName: referral.fullName,
+        phone: referral.phone,
+        interest: giftSelected ? `Programa 4 en 14 · ${giftSelected}` : "Programa 4 en 14",
+        address: referral.address || "",
+        source: "programa_4_en_14",
+        notes: construirNotasLeadDesdePrograma414(sheetBase, referral, index),
+        consentGiven: true
+      }
+    });
+
+    if (leadResult?.leadDoc?._id) {
+      createdLeadIds.push(leadResult.leadDoc._id);
+      if (sheetDoc.referrals[index]) {
+        sheetDoc.referrals[index].createdLeadId = leadResult.leadDoc._id;
+      }
+    }
+
+    if (leadResult?.lead) {
+      createdLeads.push(leadResult.lead);
+    }
+
+    if (leadResult?.duplicate) {
+      duplicates += 1;
+    }
+  }
+
+  sheetDoc.createdLeadIds = createdLeadIds;
+  sheetDoc.summary = construirCoachProgramSheetSummary({
+    ...sheetBase,
+    referralCount: referrals.length
+  });
+  await sheetDoc.save();
+
+  if (linkedCrmRecordDoc) {
+    await vincularCoachCrmConPrograma(linkedCrmRecordDoc, sheetDoc, userDoc);
+  }
+
+  try {
+    await sincronizarCoachProgramSheetACrmRecords(userDoc, sheetDoc);
+  } catch (error) {
+    console.error("Error sincronizando programa 4 en 14 al CRM:", error.message);
+  }
+
+  const delivery = sendDestination
+    ? await programarEnvioCoachProgramSheetADestino(userDoc, profileDoc, sheetDoc.toObject(), createdLeads)
+    : {
+        attempted: false,
+        delivered: false,
+        destination: null,
+        skipped: true
+      };
+
+  return {
+    sheetDoc,
+    createdLeads,
+    duplicates,
+    delivery
+  };
+}
+
 async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
   if (!userDoc?._id) {
     return {
@@ -9139,6 +9282,291 @@ function parseCoachCsvContacts(text = "") {
       })
       .filter(Boolean)
   );
+}
+
+function detectarCoachProgram414HeaderMap(headers = []) {
+  const normalized = headers.map(normalizarCoachContactHeader);
+  const findIndex = matcher => normalized.findIndex(matcher);
+
+  const hostNameIndex = findIndex(header =>
+    /^(host|host name|anfitrion|anfitrion name|nombre de anfitrion|nombre anfitrion)$/.test(header)
+  );
+  const referralNameIndex = findIndex(header =>
+    /^(name|full name|nombre|nombre completo|referral|referral name|referido|referido nombre)$/.test(header)
+  );
+  const phoneIndex = findIndex(header =>
+    /(phone|telefono|mobile|celular)/.test(header) && !/(host|anfitrion|representante)/.test(header)
+  );
+
+  return {
+    hostNameIndex,
+    hostPhoneIndex: findIndex(header =>
+      /(host phone|telefono anfitrion|anfitrion telefono|telefono del anfitrion)/.test(header)
+    ),
+    giftIndex: findIndex(header =>
+      /(gift|regalo|premio)/.test(header)
+    ),
+    representativeNameIndex: findIndex(header =>
+      /(representative|representante)/.test(header) && !/(phone|telefono)/.test(header)
+    ),
+    representativePhoneIndex: findIndex(header =>
+      /(representative phone|telefono representante|representante telefono)/.test(header)
+    ),
+    startDateIndex: findIndex(header =>
+      /(start date|fecha inicio|inicio)/.test(header) && !/(window|periodo)/.test(header)
+    ),
+    deadlineDateIndex: findIndex(header =>
+      /(deadline|fecha vencimiento|vencimiento|fecha limite|fecha limite)/.test(header)
+    ),
+    sheetNotesIndex: findIndex(header =>
+      /(host notes|notas anfitrion|sheet notes|notas hoja|program notes|notas programa)/.test(header)
+    ),
+    referralNameIndex,
+    phoneIndex,
+    relationshipIndex: findIndex(header =>
+      /(relationship|relacion|parentesco)/.test(header)
+    ),
+    addressIndex: findIndex(header =>
+      /(address|direccion|domicilio|ruta)/.test(header)
+    ),
+    callDateIndex: findIndex(header =>
+      /(call date|fecha llamada|fecha de llamada)/.test(header)
+    ),
+    telemarketingCommentIndex: findIndex(header =>
+      /(telemarketing|comentario de telemarketing|nota telemarketing|comentario tm)/.test(header)
+    ),
+    referredCommentIndex: findIndex(header =>
+      /(comentario del referido|referred comment|nota del referido|comentario referido)/.test(header)
+    ),
+    resultIndex: findIndex(header =>
+      /^(result|resultado|status|estado)$/.test(header)
+    ),
+    notesIndex: findIndex(header =>
+      /^(notes|nota|notas|comment|comments|comentario|comentarios)$/.test(header)
+    ),
+    hasProgramColumns: hostNameIndex >= 0 && referralNameIndex >= 0 && phoneIndex >= 0
+  };
+}
+
+function normalizarCoachProgram414HostName(rawValue = "", lastHostName = "") {
+  const safeRaw = cleanText(rawValue || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!safeRaw) {
+    return lastHostName || "";
+  }
+
+  const normalized = normalizarCoachContactHeader(safeRaw);
+  const aliasMatch = safeRaw.match(/^(referidos?|ref|red)\s+de\s+(.+)$/i);
+  if (aliasMatch?.[2]) {
+    const sourceName = seleccionarNombreConfiable(aliasMatch[2], aliasMatch[2]) || cleanText(aliasMatch[2]);
+    return sourceName.slice(0, 120);
+  }
+
+  if (["amiga", "amigo", "hermano", "hermana", "sobrino", "sobrina", "referido"].includes(normalized)) {
+    return lastHostName || "";
+  }
+
+  if (normalized === "martha" && lastHostName) {
+    return lastHostName;
+  }
+
+  return (seleccionarNombreConfiable(safeRaw, safeRaw) || safeRaw).slice(0, 120);
+}
+
+function construirCoachProgram414ReferralNotes(row = {}, flags = []) {
+  const parts = [];
+
+  if (row.relationship) {
+    parts.push(`Relacion: ${row.relationship}`);
+  }
+
+  if (row.callDate) {
+    parts.push(`Fecha llamada: ${row.callDate}`);
+  }
+
+  if (row.telemarketingComment) {
+    parts.push(`Telemarketing: ${row.telemarketingComment}`);
+  }
+
+  if (row.referredComment) {
+    parts.push(`Referido: ${row.referredComment}`);
+  }
+
+  if (row.result) {
+    parts.push(`Resultado: ${row.result}`);
+  }
+
+  if (row.notes) {
+    parts.push(`Notas: ${row.notes}`);
+  }
+
+  if (Array.isArray(flags) && flags.length) {
+    parts.push(`Revision: ${flags.join(", ")}`);
+  }
+
+  return parts.join(" | ").slice(0, 240);
+}
+
+function parseCoachProgram414ImportedSheets(importMode = "", rawText = "") {
+  const safeMode = String(importMode || "").trim().toLowerCase();
+  const safeText = normalizarCoachContactImportText(rawText);
+
+  if (!safeText.trim() || safeMode === "vcf") {
+    return [];
+  }
+
+  const rows = parseCoachCsvRows(safeText);
+
+  if (rows.length < 2) {
+    return [];
+  }
+
+  const headerMap = detectarCoachProgram414HeaderMap(rows[0]);
+
+  if (!headerMap.hasProgramColumns) {
+    return [];
+  }
+
+  const groups = new Map();
+  let lastHostName = "";
+
+  rows.slice(1).forEach(row => {
+    const referralName = seleccionarNombreConfiable(row[headerMap.referralNameIndex] || "") || cleanText(row[headerMap.referralNameIndex] || "");
+    const phone = normalizePhone(row[headerMap.phoneIndex] || "");
+    const hostName = normalizarCoachProgram414HostName(
+      headerMap.hostNameIndex >= 0 ? row[headerMap.hostNameIndex] || "" : "",
+      lastHostName
+    );
+
+    if (hostName) {
+      lastHostName = hostName;
+    }
+
+    if (!hostName || !referralName || !phone) {
+      return;
+    }
+
+    const hostKey = normalizarCoachContactHeader(hostName) || hostName;
+    const hostPhone = normalizePhone(headerMap.hostPhoneIndex >= 0 ? row[headerMap.hostPhoneIndex] || "" : "");
+    const giftSelected = cleanText(headerMap.giftIndex >= 0 ? row[headerMap.giftIndex] || "" : "").slice(0, 120);
+    const representativeName = (
+      seleccionarNombreConfiable(
+        headerMap.representativeNameIndex >= 0 ? row[headerMap.representativeNameIndex] || "" : ""
+      ) || cleanText(headerMap.representativeNameIndex >= 0 ? row[headerMap.representativeNameIndex] || "" : "")
+    ).slice(0, 100);
+    const representativePhone = normalizePhone(
+      headerMap.representativePhoneIndex >= 0 ? row[headerMap.representativePhoneIndex] || "" : ""
+    );
+    const startDate = parseCoachProgramSheetDateInput(
+      headerMap.startDateIndex >= 0 ? row[headerMap.startDateIndex] || "" : ""
+    );
+    const deadlineDate = startDate
+      ? construirCoachProgram414DeadlineDate(startDate)
+      : parseCoachProgramSheetDateInput(headerMap.deadlineDateIndex >= 0 ? row[headerMap.deadlineDateIndex] || "" : "");
+    const sheetNotes = cleanText(headerMap.sheetNotesIndex >= 0 ? row[headerMap.sheetNotesIndex] || "" : "").slice(0, 500);
+    const relationship = cleanText(headerMap.relationshipIndex >= 0 ? row[headerMap.relationshipIndex] || "" : "").slice(0, 80);
+    const address = cleanText(headerMap.addressIndex >= 0 ? row[headerMap.addressIndex] || "" : "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240);
+    const callDate = cleanText(headerMap.callDateIndex >= 0 ? row[headerMap.callDateIndex] || "" : "").slice(0, 60);
+    const telemarketingComment = cleanText(
+      headerMap.telemarketingCommentIndex >= 0 ? row[headerMap.telemarketingCommentIndex] || "" : ""
+    ).slice(0, 240);
+    const referredComment = cleanText(
+      headerMap.referredCommentIndex >= 0 ? row[headerMap.referredCommentIndex] || "" : ""
+    ).slice(0, 240);
+    const result = cleanText(headerMap.resultIndex >= 0 ? row[headerMap.resultIndex] || "" : "").slice(0, 80);
+    const notes = cleanText(headerMap.notesIndex >= 0 ? row[headerMap.notesIndex] || "" : "").slice(0, 240);
+    const flags = [];
+
+    if (!address) {
+      flags.push("direccion_pendiente");
+    }
+
+    const group =
+      groups.get(hostKey) ||
+      {
+        hostName,
+        hostPhone,
+        giftSelected,
+        representativeName,
+        representativePhone,
+        startDate,
+        deadlineDate,
+        notes: sheetNotes,
+        referrals: []
+      };
+
+    if (!group.hostPhone && hostPhone) {
+      group.hostPhone = hostPhone;
+    }
+    if (!group.giftSelected && giftSelected) {
+      group.giftSelected = giftSelected;
+    }
+    if (!group.representativeName && representativeName) {
+      group.representativeName = representativeName;
+    }
+    if (!group.representativePhone && representativePhone) {
+      group.representativePhone = representativePhone;
+    }
+    if (!group.startDate && startDate) {
+      group.startDate = startDate;
+    }
+    if (!group.deadlineDate && deadlineDate) {
+      group.deadlineDate = deadlineDate;
+    }
+    if (!group.notes && sheetNotes) {
+      group.notes = sheetNotes;
+    }
+
+    const referral = limpiarCoachProgramReferral({
+      fullName: referralName,
+      phone,
+      address,
+      notes: construirCoachProgram414ReferralNotes(
+        {
+          relationship,
+          callDate,
+          telemarketingComment,
+          referredComment,
+          result,
+          notes
+        },
+        flags
+      )
+    });
+
+    if (!referral) {
+      return;
+    }
+
+    group.referrals.push(referral);
+    groups.set(hostKey, group);
+  });
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      referrals: deduplicarCoachImportedContacts(
+        group.referrals.map(referral => ({
+          fullName: referral.fullName,
+          phone: referral.phone,
+          email: "",
+          notes: referral.notes
+        }))
+      ).map(item =>
+        limpiarCoachProgramReferral({
+          fullName: item.fullName,
+          phone: item.phone,
+          address: group.referrals.find(ref => ref.phone === item.phone && ref.fullName === item.fullName)?.address || "",
+          notes: item.notes
+        })
+      ).filter(Boolean)
+    }))
+    .filter(group => group.hostName && Array.isArray(group.referrals) && group.referrals.length);
 }
 
 function decodeCoachVcardValue(value = "") {
@@ -19575,44 +20003,10 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     return;
   }
 
-  const hostName =
-    seleccionarNombreConfiable(req.body?.hostName || "") || String(req.body?.hostName || "").trim();
-  const hostPhone = normalizePhone(req.body?.hostPhone || "");
-  const giftSelected = String(req.body?.giftSelected || "").trim().slice(0, 120);
-  const representativeName =
-    seleccionarNombreConfiable(req.body?.representativeName || "") ||
-    String(req.body?.representativeName || "").trim().slice(0, 100);
-  const representativePhone = normalizePhone(req.body?.representativePhone || "");
-  const startDate = parseCoachProgramSheetDateInput(req.body?.startDate || "");
-  const deadlineDate = startDate
-    ? construirCoachProgram414DeadlineDate(startDate)
-    : parseCoachProgramSheetDateInput(req.body?.deadlineDate || "");
-  const startWindow = construirCoachProgram414StartWindow({
-    startDate,
-    deadlineDate,
-    startWindow: String(req.body?.startWindow || "").trim().slice(0, 120)
-  });
-  const notes = String(req.body?.notes || "").trim().slice(0, 500);
   const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
-  const referrals = Array.isArray(req.body?.referrals)
-    ? req.body.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
-    : [];
-
-  if (!hostName) {
-    return responderCoachError(res, 400, "El nombre del anfitrion es requerido.");
-  }
-
-  if (!hostPhone) {
-    return responderCoachError(res, 400, "El telefono del anfitrion es requerido.");
-  }
-
-  if (!referrals.length) {
-    return responderCoachError(res, 400, "Pon por lo menos un referido con nombre y telefono.");
-  }
 
   try {
     const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
-    const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const linkedCrmRecordDoc =
       activeCrmRecordId && mongoose.Types.ObjectId.isValid(activeCrmRecordId)
@@ -19622,96 +20016,14 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
             })
           )
         : null;
-    const sheetBase = {
-      ownerUserId: ownership.ownerUserId,
-      ownerEmail: ownership.ownerEmail || "",
-      ownerName: ownership.ownerName || "",
-      generatedByUserId: ownership.generatedByUserId,
-      generatedByName: ownership.generatedByName || "",
-      generatedByAccountType: ownership.generatedByAccountType,
-      linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
-      programType: "4_en_14",
-      hostName,
-      hostPhone,
-      giftSelected,
-      representativeName,
-      representativePhone,
-      startDate,
-      deadlineDate,
-      startWindow,
-      notes,
-      referrals,
-      referralCount: referrals.length,
-      updatedAt: now
-    };
-
-    const sheetDoc = await CoachProgramSheet.create({
-      ...sheetBase,
-      summary: construirCoachProgramSheetSummary(sheetBase)
-    });
-
-    const createdLeadIds = [];
-    const createdLeads = [];
-    let duplicates = 0;
-
-    for (let index = 0; index < referrals.length; index += 1) {
-      const referral = referrals[index];
-      const leadResult = await guardarCoachInboxLead({
-        userDoc: auth.user,
-        profileDoc,
-        sendDestination: false,
-        payload: {
-          fullName: referral.fullName,
-          phone: referral.phone,
-          interest: giftSelected
-            ? `Programa 4 en 14 · ${giftSelected}`
-            : "Programa 4 en 14",
-          address: referral.address || "",
-          source: "programa_4_en_14",
-          notes: construirNotasLeadDesdePrograma414(sheetBase, referral, index),
-          consentGiven: true
-        }
-      });
-
-      if (leadResult?.leadDoc?._id) {
-        createdLeadIds.push(leadResult.leadDoc._id);
-        if (sheetDoc.referrals[index]) {
-          sheetDoc.referrals[index].createdLeadId = leadResult.leadDoc._id;
-        }
-      }
-
-      if (leadResult?.lead) {
-        createdLeads.push(leadResult.lead);
-      }
-
-      if (leadResult?.duplicate) {
-        duplicates += 1;
-      }
-    }
-
-    sheetDoc.createdLeadIds = createdLeadIds;
-    sheetDoc.summary = construirCoachProgramSheetSummary({
-      ...sheetBase,
-      referralCount: referrals.length
-    });
-    await sheetDoc.save();
-
-    if (linkedCrmRecordDoc) {
-      await vincularCoachCrmConPrograma(linkedCrmRecordDoc, sheetDoc, auth.user);
-    }
-
-    try {
-      await sincronizarCoachProgramSheetACrmRecords(auth.user, sheetDoc);
-    } catch (error) {
-      console.error("Error sincronizando programa 4 en 14 al CRM:", error.message);
-    }
-
-    const delivery = await programarEnvioCoachProgramSheetADestino(
-      auth.user,
+    const { sheetDoc, createdLeads, duplicates, delivery } = await crearCoachProgram414Sheet({
+      userDoc: auth.user,
       profileDoc,
-      sheetDoc.toObject(),
-      createdLeads
-    );
+      ownership,
+      linkedCrmRecordDoc,
+      payload: req.body,
+      sendDestination: true
+    });
 
     res.json({
       sheet: limpiarCoachProgramSheet(sheetDoc.toObject()),
@@ -21089,6 +21401,7 @@ app.post("/api/public/contact-share/import", async (req, res) => {
   try {
     const shareCode = normalizarCoachShareCodeSegment(req.body?.shareCode || "", 24);
     const importMode = String(req.body?.importMode || "").trim().toLowerCase();
+    const targetType = String(req.body?.targetType || "contacts").trim().toLowerCase();
     const rawText = normalizarCoachContactImportText(req.body?.rawText || "");
     const fileName = cleanText(req.body?.fileName || "").slice(0, 120);
     const shareContext = await resolverCoachContactShareContextPorCode(shareCode);
@@ -21099,6 +21412,66 @@ app.post("/api/public/contact-share/import", async (req, res) => {
 
     if (!rawText.trim()) {
       return res.status(400).json({ error: "Sube un archivo o pega contactos antes de guardar." });
+    }
+
+    if (targetType === "program_4_14") {
+      const parsedSheets = parseCoachProgram414ImportedSheets(importMode, rawText).slice(0, 80);
+
+      if (!parsedSheets.length) {
+        return res.status(400).json({
+          error: "No pude encontrar un CSV de 4 en 14 valido. Necesito anfitrion, nombre y telefono del referido."
+        });
+      }
+
+      const profileDoc = await obtenerCoachOwnerProfile(shareContext.userDoc, { lean: true });
+      const ownership = shareContext.ownership || (await construirCoachOwnershipSnapshot(shareContext.userDoc));
+      const sampleSheets = [];
+      let createdLeadCount = 0;
+      let duplicateCount = 0;
+
+      for (const sheet of parsedSheets) {
+        const payload = {
+          ...sheet,
+          notes: [
+            fileName ? `Importado desde pagina privada 4 en 14 (${fileName}).` : "Importado desde pagina privada 4 en 14.",
+            sheet.notes || ""
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim()
+            .slice(0, 500)
+        };
+
+        const result = await crearCoachProgram414Sheet({
+          userDoc: shareContext.userDoc,
+          profileDoc: shareContext.ownerProfileDoc || profileDoc,
+          ownership,
+          payload,
+          sendDestination: false
+        });
+
+        createdLeadCount += Array.isArray(result.createdLeads) ? result.createdLeads.length : 0;
+        duplicateCount += Number(result.duplicates || 0);
+
+        if (sampleSheets.length < 5 && result.sheetDoc) {
+          sampleSheets.push(limpiarCoachProgramSheet(result.sheetDoc.toObject()));
+        }
+      }
+
+      return res.json({
+        ok: true,
+        targetType,
+        parsedCount: parsedSheets.length,
+        importedCount: parsedSheets.length,
+        duplicateCount,
+        createdLeadCount,
+        sampleSheets,
+        recipientName:
+          shareContext.profileDoc?.seatLabel ||
+          shareContext.profileDoc?.name ||
+          shareContext.userDoc?.name ||
+          "Distribuidor"
+      });
     }
 
     const parsedContacts = parseCoachImportedContacts(importMode, rawText).slice(0, 500);
@@ -22049,6 +22422,7 @@ export {
   detectarEnvioDatosContacto,
   extraerLeadInfo,
   limpiarCoachAgendaRecord,
+  parseCoachProgram414ImportedSheets,
   parseCoachLeadNextActionAt,
   resolverCoachCrmStatusDesdeDemoOutcome,
   resolverCoachCrmStatusDesdeLead

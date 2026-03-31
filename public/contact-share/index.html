@@ -36,12 +36,20 @@
         <div class="contact-share-card-head">
           <div>
             <div class="eyebrow">Paso 1</div>
-            <h2>Sube un archivo o pega tus contactos</h2>
+            <h2>Sube un archivo o pega tu informacion</h2>
           </div>
-          <span class="contact-share-hint">CSV, VCF o texto</span>
+          <span class="contact-share-hint" data-contact-share-mode-hint>CSV, VCF o texto</span>
         </div>
 
         <form class="contact-share-form" data-contact-share-form>
+          <label class="contact-share-field">
+            <span>Que vas a subir</span>
+            <select data-contact-share-target>
+              <option value="contacts">Contactos simples</option>
+              <option value="program_4_14">Programa 4 en 14</option>
+            </select>
+          </label>
+
           <label class="contact-share-field">
             <span>Archivo opcional</span>
             <input type="file" accept=".csv,.vcf,text/csv,text/vcard,text/x-vcard" data-contact-share-file />
@@ -56,6 +64,10 @@
             ></textarea>
           </label>
 
+          <p class="contact-share-copy small" data-contact-share-target-copy>
+            Usa CSV, VCF o texto simple si solo quieres guardar contactos para seguimiento.
+          </p>
+
           <div class="contact-share-actions">
             <button type="submit" class="primary-button" data-contact-share-submit>Guardar contactos</button>
             <button type="reset" class="nav-button">Limpiar</button>
@@ -69,7 +81,7 @@
         <article class="contact-share-card">
           <div class="eyebrow">Paso 2</div>
           <h2>Formas recomendadas</h2>
-          <ul class="contact-share-list">
+          <ul class="contact-share-list" data-contact-share-recommendations>
             <li>Google Contacts: exporta como CSV y subelo aqui.</li>
             <li>iPhone / iCloud: exporta como VCF y subelo aqui.</li>
             <li>Si solo son pocos, pegarlos en texto tambien funciona.</li>
