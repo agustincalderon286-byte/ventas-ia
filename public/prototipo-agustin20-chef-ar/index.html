@@ -563,6 +563,16 @@
                 <span class="product-tag">iPhone / iPad</span>
               </div>
             </button>
+
+            <button class="product-card" type="button" data-product-id="revoexample">
+              <strong>Revo Scan Example</strong>
+              <span>Mesh real escaneado con Revo Metro, optimizado para comparar calidad 3D dentro de la web.</span>
+              <div class="product-tags">
+                <span class="product-tag">Scan real</span>
+                <span class="product-tag">3D web</span>
+                <span class="product-tag">AR Android</span>
+              </div>
+            </button>
           </div>
         </aside>
       </section>
@@ -642,6 +652,23 @@
             "Pensado para mostrar visión y rango de producto. Aquí ya puedes enseñar que Agustin 2.0 Chef podría abrir varias experiencias AR desde el mismo sitio.",
           fallbackChipOne: "Pitch privado",
           fallbackChipTwo: "iPhone / iPad"
+        },
+        revoexample: {
+          id: "revoexample",
+          title: "Revo Scan Example Mesh",
+          modeBadge: "Scan real 3D",
+          copy: "Este ejemplo viene de un mesh escaneado con Revo Metro y optimizado para web. Sirve para medir si la calidad real del scanner ya aguanta una experiencia tipo Chef.",
+          helper:
+            "En esta versión el scan ya se puede rotar dentro de la web. Android compatible podría abrir AR desde el visor. En iPhone todavía faltaría exportar USDZ para Quick Look nativo.",
+          hasViewer: true,
+          src: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-medium.glb",
+          iosSrc: "",
+          poster: "/prototipo-agustin20-chef-ar/assets/revo-example-bust-preview.png",
+          actionLabel: "Ver scan 3D",
+          fallbackTitle: "",
+          fallbackCopy: "",
+          fallbackChipOne: "",
+          fallbackChipTwo: ""
         }
       };
 
@@ -683,9 +710,14 @@
           viewer.style.display = "block";
           fallbackView.style.display = "none";
           viewer.setAttribute("src", product.src);
-          viewer.setAttribute("ios-src", product.iosSrc);
+          if (product.iosSrc) {
+            viewer.setAttribute("ios-src", product.iosSrc);
+            quickLookLink.setAttribute("href", product.iosSrc);
+          } else {
+            viewer.removeAttribute("ios-src");
+            quickLookLink.setAttribute("href", "#");
+          }
           viewer.setAttribute("poster", product.poster);
-          quickLookLink.setAttribute("href", product.iosSrc);
           return;
         }
 
@@ -712,7 +744,7 @@
           }
         }
 
-        if (isIosLike() && quickLookLink?.href) {
+        if (isIosLike() && activeProduct.iosSrc && quickLookLink?.href) {
           quickLookLink.click();
           return;
         }
