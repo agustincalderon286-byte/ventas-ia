@@ -1733,11 +1733,65 @@ function construirCoachCrmWorkspaceCacheKey(userDoc = null, filters = {}, versio
         ? normalizarCoachCrmSourceType(filters?.excludeSourceType || "")
         : "",
       status: normalizarCoachCrmStatus(filters?.status || ""),
-      assignedToUserId: normalizarCoachCrmObjectId(filters?.assignedToUserId) || ""
+      assignedToUserId: normalizarCoachCrmObjectId(filters?.assignedToUserId) || "",
+      search: cleanText(filters?.search || "").trim().slice(0, 120),
+      quickFilter: String(filters?.quickFilter || "").trim().toLowerCase(),
+      page: normalizarCoachWorkspacePage(filters?.page || 1),
+      pageSize: normalizarCoachWorkspacePageSize(filters?.pageSize || "", 160, 240)
     }
   });
 
   return viewer.ownerUserId ? `agustin:workspace-cache:crm:${viewer.ownerUserId}:${signature}` : "";
+}
+
+function normalizarCoachWorkspacePage(value = "", fallback = 1) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  return Math.max(1, Number.isFinite(parsed) ? parsed : fallback);
+}
+
+function normalizarCoachWorkspacePageSize(value = "", fallback = 160, max = 240) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  const safeFallback = Math.max(1, Math.min(Number.isFinite(fallback) ? fallback : 160, max));
+  return Math.max(1, Math.min(Number.isFinite(parsed) ? parsed : safeFallback, max));
+}
+
+function construirCoachWorkspacePagination(requestedPage = 1, pageSize = 160, total = 0) {
+  const safeTotal = Math.max(0, Number.isFinite(total) ? total : 0);
+  const safePageSize = Math.max(1, Number.isFinite(pageSize) ? pageSize : 160);
+  const totalPages = Math.max(1, Math.ceil(safeTotal / safePageSize) || 1);
+  const page = Math.min(Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1), totalPages);
+
+  return {
+    page,
+    pageSize: safePageSize,
+    total: safeTotal,
+    totalPages,
+    hasPreviousPage: page > 1,
+    hasNextPage: page < totalPages,
+    offset: (page - 1) * safePageSize
+  };
+}
+
+function limpiarCoachWorkspacePagination(pagination = null) {
+  if (!pagination) {
+    return {
+      page: 1,
+      pageSize: 160,
+      total: 0,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false
+    };
+  }
+
+  return {
+    page: Number(pagination.page || 1),
+    pageSize: Number(pagination.pageSize || 160),
+    total: Number(pagination.total || 0),
+    totalPages: Number(pagination.totalPages || 1),
+    hasPreviousPage: Boolean(pagination.hasPreviousPage),
+    hasNextPage: Boolean(pagination.hasNextPage)
+  };
 }
 
 function construirCoachAgendaWorkspaceCacheKey(userDoc = null, version = "0") {
@@ -5736,35 +5790,81 @@ async function crearCoachProgram414Sheet({
   };
 }
 
-async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
-  if (!userDoc?._id) {
-    return {
-      summary: construirCoachCrmSummary([]),
-      records: [],
-      assignees: []
-    };
+function agregarCoachQueryCondition(query = {}, condition = null) {
+  if (!condition || typeof condition !== "object" || !Object.keys(condition).length) {
+    return query;
   }
 
-  try {
-    await asegurarCoachCrmWorkspaceSiVacio(userDoc);
-  } catch (error) {
-    console.error("Error inicializando workspace CRM del Coach:", error.message);
-  }
-  const cacheVersion = await obtenerCoachWorkspaceCacheVersion(userDoc);
-  const cacheKey = construirCoachCrmWorkspaceCacheKey(userDoc, filters, cacheVersion);
-  const cachedWorkspace = cacheKey ? await redisGetJson(cacheKey) : null;
-
-  if (cachedWorkspace?.summary && Array.isArray(cachedWorkspace?.records) && Array.isArray(cachedWorkspace?.assignees)) {
-    return cachedWorkspace;
+  if (!Array.isArray(query.$and)) {
+    query.$and = [];
   }
 
-  const baseQuery = await construirCoachCrmViewerQuery(userDoc);
-  const query = {
-    ...baseQuery
-  };
-  const allRecordsQuery = {
-    ...baseQuery
-  };
+  query.$and.push(condition);
+  return query;
+}
+
+function construirCoachCrmSearchCondition(search = "") {
+  const searchText = cleanText(search || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+
+  if (!searchText) {
+    return null;
+  }
+
+  const regex = new RegExp(escapeRegex(searchText), "i");
+  const phoneDigits = searchText.replace(/\D/g, "");
+  const clauses = [
+    { leadName: regex },
+    { phone: regex },
+    { email: regex },
+    { city: regex },
+    { zipCode: regex },
+    { address: regex },
+    { assignedTelemarketerName: regex },
+    { appointmentRepName: regex },
+    { lastNote: regex },
+    { briefHistory: regex }
+  ];
+
+  if (phoneDigits && phoneDigits !== searchText) {
+    clauses.push({ phone: new RegExp(escapeRegex(phoneDigits)) });
+  }
+
+  return { $or: clauses };
+}
+
+function construirCoachCrmQuickFilterCondition(quickFilter = "") {
+  const normalized = String(quickFilter || "").trim().toLowerCase();
+  const now = new Date();
+  const startOfToday = obtenerInicioDia(now);
+  const endOfToday = obtenerFinDia(now);
+
+  switch (normalized) {
+    case "today":
+      return {
+        $or: [
+          { nextActionAt: { $gte: startOfToday, $lte: endOfToday } },
+          { appointmentAt: { $gte: startOfToday, $lte: endOfToday } }
+        ]
+      };
+    case "follow_up":
+      return { status: { $in: ["seguimiento", "intentando"] } };
+    case "appointments":
+      return { status: { $in: ["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"] } };
+    case "no_answer":
+      return { status: "no_atendio" };
+    case "sales":
+      return { status: "venta" };
+    default:
+      return null;
+  }
+}
+
+async function construirCoachCrmWorkspaceListQuery(userDoc = null, filters = {}, options = {}) {
+  const includeQuickFilter = options?.includeQuickFilter !== false;
+  const query = await construirCoachCrmViewerQuery(userDoc);
   const sourceType = String(filters?.sourceType || "").trim()
     ? normalizarCoachCrmSourceType(filters?.sourceType || "")
     : "";
@@ -5773,45 +5873,161 @@ async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
     : "";
   const status = normalizarCoachCrmStatus(filters?.status || "");
 
-  if (filters?.sourceType) {
-    query.sourceType = sourceType;
+  if (sourceType) {
+    agregarCoachQueryCondition(query, { sourceType });
+  } else if (excludeSourceType) {
+    agregarCoachQueryCondition(query, { sourceType: { $ne: excludeSourceType } });
   }
 
-  if (excludeSourceType) {
-    allRecordsQuery.sourceType = { $ne: excludeSourceType };
-
-    if (!filters?.sourceType) {
-      query.sourceType = { $ne: excludeSourceType };
-    }
-  }
-
-  if (filters?.status) {
-    query.status = status;
+  if (status) {
+    agregarCoachQueryCondition(query, { status });
   }
 
   if (filters?.assignedToUserId && mongoose.Types.ObjectId.isValid(filters.assignedToUserId)) {
-    query.$or = [
-      { assignedTelemarketerUserId: filters.assignedToUserId },
-      { appointmentRepUserId: filters.assignedToUserId }
-    ];
+    agregarCoachQueryCondition(query, {
+      $or: [
+        { assignedTelemarketerUserId: filters.assignedToUserId },
+        { appointmentRepUserId: filters.assignedToUserId }
+      ]
+    });
   }
 
-  const [recordDocs, allRecordDocs, assignees] = await Promise.all([
-    CoachCrmRecord.find(query)
-      .sort({ updatedAt: -1, nextActionAt: 1, createdAt: -1 })
-      .limit(500)
-      .lean(),
-    CoachCrmRecord.find(allRecordsQuery)
-      .sort({ updatedAt: -1 })
-      .limit(800)
-      .lean(),
+  const searchCondition = construirCoachCrmSearchCondition(filters?.search || "");
+  if (searchCondition) {
+    agregarCoachQueryCondition(query, searchCondition);
+  }
+
+  if (includeQuickFilter) {
+    const quickCondition = construirCoachCrmQuickFilterCondition(filters?.quickFilter || "");
+    if (quickCondition) {
+      agregarCoachQueryCondition(query, quickCondition);
+    }
+  }
+
+  return query;
+}
+
+function construirCoachCrmQuickCounts(records = []) {
+  const safeRecords = Array.isArray(records) ? records : [];
+  const now = new Date();
+  const startOfToday = obtenerInicioDia(now);
+  const endOfToday = obtenerFinDia(now);
+
+  return safeRecords.reduce(
+    (acc, record) => {
+      const status = normalizarCoachCrmStatus(record?.status || "nuevo");
+      acc.all += 1;
+
+      const nextActionAt = record?.nextActionAt ? new Date(record.nextActionAt) : null;
+      const appointmentAt = record?.appointmentAt ? new Date(record.appointmentAt) : null;
+
+      if (
+        (nextActionAt && Number.isFinite(nextActionAt.getTime()) && nextActionAt >= startOfToday && nextActionAt <= endOfToday) ||
+        (appointmentAt &&
+          Number.isFinite(appointmentAt.getTime()) &&
+          appointmentAt >= startOfToday &&
+          appointmentAt <= endOfToday)
+      ) {
+        acc.today += 1;
+      }
+
+      if (["seguimiento", "intentando"].includes(status)) {
+        acc.follow_up += 1;
+      }
+
+      if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"].includes(status)) {
+        acc.appointments += 1;
+      }
+
+      if (status === "no_atendio") {
+        acc.no_answer += 1;
+      }
+
+      if (status === "venta") {
+        acc.sales += 1;
+      }
+
+      return acc;
+    },
+    {
+      all: 0,
+      today: 0,
+      follow_up: 0,
+      appointments: 0,
+      no_answer: 0,
+      sales: 0
+    }
+  );
+}
+
+async function obtenerCoachCrmWorkspace(userDoc = null, filters = {}) {
+  if (!userDoc?._id) {
+    return {
+      summary: construirCoachCrmSummary([]),
+      quickCounts: construirCoachCrmQuickCounts([]),
+      records: [],
+      assignees: [],
+      pagination: limpiarCoachWorkspacePagination()
+    };
+  }
+
+  try {
+    await asegurarCoachCrmWorkspaceSiVacio(userDoc);
+  } catch (error) {
+    console.error("Error inicializando workspace CRM del Coach:", error.message);
+  }
+
+  const requestedPage = normalizarCoachWorkspacePage(filters?.page || 1, 1);
+  const pageSize = normalizarCoachWorkspacePageSize(filters?.pageSize || "", 160, 240);
+  const cacheVersion = await obtenerCoachWorkspaceCacheVersion(userDoc);
+  const cacheKey = construirCoachCrmWorkspaceCacheKey(
+    userDoc,
+    {
+      ...filters,
+      page: requestedPage,
+      pageSize
+    },
+    cacheVersion
+  );
+  const cachedWorkspace = cacheKey ? await redisGetJson(cacheKey) : null;
+
+  if (
+    cachedWorkspace?.summary &&
+    cachedWorkspace?.quickCounts &&
+    Array.isArray(cachedWorkspace?.records) &&
+    Array.isArray(cachedWorkspace?.assignees) &&
+    cachedWorkspace?.pagination
+  ) {
+    return cachedWorkspace;
+  }
+
+  const [baseListQuery, pagedQuery, assignees] = await Promise.all([
+    construirCoachCrmWorkspaceListQuery(userDoc, filters, { includeQuickFilter: false }),
+    construirCoachCrmWorkspaceListQuery(userDoc, filters, { includeQuickFilter: true }),
     obtenerCoachCrmAssignableContacts(userDoc)
   ]);
 
+  const summaryProjection =
+    "status sourceType nextActionAt appointmentAt saleAmount assignedTelemarketerUserId assignedTelemarketerName appointmentRepUserId appointmentRepName territoryId officeId";
+
+  const [summaryDocs, totalCount] = await Promise.all([
+    CoachCrmRecord.find(baseListQuery).select(summaryProjection).lean(),
+    CoachCrmRecord.countDocuments(pagedQuery)
+  ]);
+
+  const pagination = construirCoachWorkspacePagination(requestedPage, pageSize, totalCount);
+  const recordDocs = await CoachCrmRecord.find(pagedQuery)
+    .sort({ updatedAt: -1, nextActionAt: 1, createdAt: -1 })
+    .skip(pagination.offset)
+    .limit(pagination.pageSize)
+    .lean();
+
   const workspacePayload = {
-    summary: construirCoachCrmSummary(allRecordDocs),
+    summary: construirCoachCrmSummary(summaryDocs),
+    quickCounts: construirCoachCrmQuickCounts(summaryDocs),
     records: recordDocs.map(limpiarCoachCrmRecord).filter(Boolean),
-    assignees
+    assignees,
+    pagination: limpiarCoachWorkspacePagination(pagination)
   };
 
   if (cacheKey) {
@@ -5874,19 +6090,127 @@ async function obtenerCoachCrmRecordDetail(userDoc = null, recordId = "") {
   return detailPayload;
 }
 
-async function obtenerCoachProgram414Groups(userDoc = null) {
-  if (!userDoc?._id) {
-    return {
-      groups: [],
-      summary: {
-        totalHosts: 0,
-        openHosts: 0,
-        fulfilledHosts: 0,
-        totalReferrals: 0,
-        totalCompletedDemos: 0
+function construirCoachProgram414GroupsSummary(groups = []) {
+  const safeGroups = Array.isArray(groups) ? groups : [];
+
+  return safeGroups.reduce(
+    (acc, group) => {
+      acc.totalHosts += 1;
+      acc.totalReferrals += Number(group.referralCount || 0);
+      acc.totalCompletedDemos += Number(group.completedDemoCount || 0);
+      acc.totalSales += Number(group.salesCount || 0);
+      if (["cumplido", "regalo_entregado"].includes(group.hostStatus)) {
+        acc.fulfilledHosts += 1;
+      } else {
+        acc.openHosts += 1;
       }
-    };
+      return acc;
+    },
+    {
+      totalHosts: 0,
+      openHosts: 0,
+      fulfilledHosts: 0,
+      totalReferrals: 0,
+      totalCompletedDemos: 0,
+      totalSales: 0
+    }
+  );
+}
+
+function matchesCoachProgram414GroupSearch(group = null, searchTerm = "") {
+  const safeSearch = normalizarTextoBusqueda(searchTerm || "");
+
+  if (!safeSearch) {
+    return true;
   }
+
+  const haystack = normalizarTextoBusqueda(
+    [
+      group?.hostName,
+      group?.hostPhone,
+      group?.giftSelected,
+      group?.representativeName,
+      group?.notes,
+      group?.summary,
+      ...(Array.isArray(group?.referrals)
+        ? group.referrals.flatMap(referral => [
+            referral?.fullName,
+            referral?.phone,
+            referral?.address,
+            referral?.lastNote,
+            referral?.briefHistory,
+            referral?.appointmentRepName
+          ])
+        : [])
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return haystack.includes(safeSearch);
+}
+
+function matchesCoachProgram414GroupFilters(group = null, filters = {}, assigneeNameMap = new Map()) {
+  if (!group) {
+    return false;
+  }
+
+  const hostStatusValue = String(filters?.hostStatus || "").trim().toLowerCase();
+  const referralStatusValue = normalizarCoachCrmStatus(filters?.referralStatus || "");
+  const representativeValue = normalizarCoachCrmObjectId(filters?.representativeUserId) || "";
+
+  if (hostStatusValue && String(group.hostStatus || "").trim().toLowerCase() !== hostStatusValue) {
+    return false;
+  }
+
+  const referrals = Array.isArray(group.referrals) ? group.referrals : [];
+
+  if (referralStatusValue && !referrals.some(referral => normalizarCoachCrmStatus(referral?.status || "") === referralStatusValue)) {
+    return false;
+  }
+
+  if (representativeValue) {
+    const representativeName = normalizarTextoBusqueda(assigneeNameMap.get(representativeValue) || "");
+    const groupRepresentativeName = normalizarTextoBusqueda(group.representativeName || "");
+    const referralMatch = referrals.some(
+      referral => normalizarCoachCrmObjectId(referral?.appointmentRepUserId || "") === representativeValue
+    );
+
+    if (!referralMatch && (!representativeName || representativeName !== groupRepresentativeName)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function obtenerCoachProgram414Groups(userDoc = null, filters = {}) {
+  const emptyPayload = {
+    groups: [],
+    summary: {
+      totalHosts: 0,
+      openHosts: 0,
+      fulfilledHosts: 0,
+      totalReferrals: 0,
+      totalCompletedDemos: 0,
+      totalSales: 0
+    },
+    pagination: limpiarCoachWorkspacePagination({
+      page: 1,
+      pageSize: 18,
+      total: 0,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false
+    })
+  };
+
+  if (!userDoc?._id) {
+    return emptyPayload;
+  }
+
+  const requestedPage = normalizarCoachWorkspacePage(filters?.page || 1, 1);
+  const pageSize = normalizarCoachWorkspacePageSize(filters?.pageSize || "", 18, 60);
 
   const sheetDocs = await CoachProgramSheet.find(
     construirCoachProgramSheetWorkspaceQuery(userDoc, {
@@ -5898,14 +6222,10 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
 
   if (!sheetDocs.length) {
     return {
-      groups: [],
-      summary: {
-        totalHosts: 0,
-        openHosts: 0,
-        fulfilledHosts: 0,
-        totalReferrals: 0,
-        totalCompletedDemos: 0
-      }
+      ...emptyPayload,
+      pagination: limpiarCoachWorkspacePagination(
+        construirCoachWorkspacePagination(requestedPage, pageSize, 0)
+      )
     };
   }
 
@@ -5947,14 +6267,17 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
     }).lean();
   }
 
-  const visibleRecordDocs = await CoachCrmRecord.find(
-    await construirCoachCrmViewerQuery(userDoc, {
-      sourceType: "programa_4_en_14",
-      sourceParentId: { $in: sheetIdStrings }
-    })
-  )
-    .sort({ createdAt: -1 })
-    .lean();
+  const [visibleRecordDocs, assignees] = await Promise.all([
+    CoachCrmRecord.find(
+      await construirCoachCrmViewerQuery(userDoc, {
+        sourceType: "programa_4_en_14",
+        sourceParentId: { $in: sheetIdStrings }
+      })
+    )
+      .sort({ createdAt: -1 })
+      .lean(),
+    obtenerCoachCrmAssignableContacts(userDoc)
+  ]);
   const visibleRecords = visibleRecordDocs.map(limpiarCoachCrmRecord).filter(Boolean);
 
   const visibleRecordMap = new Map(
@@ -5966,33 +6289,25 @@ async function obtenerCoachProgram414Groups(userDoc = null) {
       .filter(Boolean)
       .map(record => [`${String(record.sourceParentId || "")}:${Number(record.sourceSubIndex ?? -1)}`, record])
   );
-
-  const groups = sheetDocs
-    .map(sheetDoc => construirCoachProgram414HostGroup(sheetDoc, visibleRecordMap, allRecordMap))
-    .filter(group => group && group.referrals.length);
-
-  const summary = groups.reduce(
-    (acc, group) => {
-      acc.totalHosts += 1;
-      acc.totalReferrals += Number(group.referralCount || 0);
-      acc.totalCompletedDemos += Number(group.completedDemoCount || 0);
-      if (["cumplido", "regalo_entregado"].includes(group.hostStatus)) {
-        acc.fulfilledHosts += 1;
-      } else {
-        acc.openHosts += 1;
-      }
-      return acc;
-    },
-    {
-      totalHosts: 0,
-      openHosts: 0,
-      fulfilledHosts: 0,
-      totalReferrals: 0,
-      totalCompletedDemos: 0
-    }
+  const assigneeNameMap = new Map(
+    (Array.isArray(assignees) ? assignees : []).map(item => [String(item.id || ""), item.name || ""])
   );
 
-  return { groups, summary };
+  const filteredGroups = sheetDocs
+    .map(sheetDoc => construirCoachProgram414HostGroup(sheetDoc, visibleRecordMap, allRecordMap))
+    .filter(group => group && group.referrals.length)
+    .filter(group => matchesCoachProgram414GroupSearch(group, filters?.search || ""))
+    .filter(group => matchesCoachProgram414GroupFilters(group, filters, assigneeNameMap));
+
+  const summary = construirCoachProgram414GroupsSummary(filteredGroups);
+  const pagination = construirCoachWorkspacePagination(requestedPage, pageSize, filteredGroups.length);
+  const groups = filteredGroups.slice(pagination.offset, pagination.offset + pagination.pageSize);
+
+  return {
+    groups,
+    summary,
+    pagination: limpiarCoachWorkspacePagination(pagination)
+  };
 }
 
 function construirCoachAgendaWorkspaceQuery(userDoc = null) {
@@ -8978,14 +9293,18 @@ function construirCoachCrmSummary(records = []) {
     summary.bySource[sourceType] = Number(summary.bySource[sourceType] || 0) + 1;
     summary.byStatus[status] = Number(summary.byStatus[status] || 0) + 1;
 
-    if (record.nextActionAt) {
-      const nextDate = new Date(record.nextActionAt);
-      if (nextDate >= startOfToday && nextDate <= endOfToday) {
+    if (record.nextActionAt || record.appointmentAt) {
+      const nextDate = record.nextActionAt ? new Date(record.nextActionAt) : null;
+      const appointmentDate = record.appointmentAt ? new Date(record.appointmentAt) : null;
+      if (
+        (nextDate && nextDate >= startOfToday && nextDate <= endOfToday) ||
+        (appointmentDate && appointmentDate >= startOfToday && appointmentDate <= endOfToday)
+      ) {
         summary.pendingToday += 1;
       }
     }
 
-    if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa"].includes(status)) {
+    if (["cita_agendada", "reagendada", "ya_afuera", "entro_a_casa", "demo_hecha"].includes(status)) {
       summary.appointments += 1;
     }
 
@@ -8993,7 +9312,7 @@ function construirCoachCrmSummary(records = []) {
       summary.noAnswerCount += 1;
     }
 
-    if (status === "seguimiento") {
+    if (["seguimiento", "intentando"].includes(status)) {
       summary.followUpCount += 1;
     }
 
@@ -19203,6 +19522,10 @@ app.get("/api/coach/crm/records", async (req, res) => {
     const excludeSourceTypeRaw = String(req.query?.excludeSourceType || "").trim().toLowerCase();
     const statusRaw = String(req.query?.status || "").trim().toLowerCase();
     const assignedToUserId = String(req.query?.assignedToUserId || "").trim();
+    const search = cleanText(req.query?.search || "").trim().slice(0, 120);
+    const quickFilter = String(req.query?.quickFilter || "").trim().toLowerCase();
+    const page = normalizarCoachWorkspacePage(req.query?.page || 1, 1);
+    const pageSize = normalizarCoachWorkspacePageSize(req.query?.pageSize || "", 160, 240);
     const allowedStatuses = [
       "nuevo",
       "intentando",
@@ -19222,7 +19545,11 @@ app.get("/api/coach/crm/records", async (req, res) => {
         ? excludeSourceTypeRaw
         : "",
       status: allowedStatuses.includes(statusRaw) ? statusRaw : "",
-      assignedToUserId
+      assignedToUserId,
+      search,
+      quickFilter,
+      page,
+      pageSize
     });
 
     res.json(data);
@@ -19248,7 +19575,14 @@ app.get("/api/coach/crm/program-4-in-14/groups", async (req, res) => {
   }
 
   try {
-    const data = await obtenerCoachProgram414Groups(auth.user);
+    const data = await obtenerCoachProgram414Groups(auth.user, {
+      search: cleanText(req.query?.search || "").trim().slice(0, 120),
+      hostStatus: String(req.query?.hostStatus || "").trim().toLowerCase(),
+      referralStatus: String(req.query?.referralStatus || "").trim().toLowerCase(),
+      representativeUserId: String(req.query?.representativeUserId || "").trim(),
+      page: normalizarCoachWorkspacePage(req.query?.page || 1, 1),
+      pageSize: normalizarCoachWorkspacePageSize(req.query?.pageSize || "", 18, 60)
+    });
     res.json(data);
   } catch (error) {
     console.error("Error cargando grupos 4 en 14 del CRM:", error.message);

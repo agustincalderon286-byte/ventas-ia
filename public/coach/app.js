@@ -5153,6 +5153,10 @@ function initCoachCrmWorkspace(user = null) {
   const gridWrap = document.querySelector(".crm-grid-wrap");
   const gridHead = document.querySelector(".crm-grid-head");
   const recordList = document.querySelector("[data-crm-record-list]");
+  const crmPaginationWrap = document.querySelector("[data-crm-pagination]");
+  const crmPaginationCopy = document.querySelector("[data-crm-pagination-copy]");
+  const crmPaginationPrev = document.querySelector("[data-crm-pagination-prev]");
+  const crmPaginationNext = document.querySelector("[data-crm-pagination-next]");
   const detailEmpty = document.querySelector("[data-crm-detail-empty]");
   const detailPanel = document.querySelector("[data-crm-detail-panel]");
   const detailSource = document.querySelector("[data-crm-detail-source]");
@@ -5194,6 +5198,10 @@ function initCoachCrmWorkspace(user = null) {
   const programTotalDemos = document.querySelector("[data-program-414-total-demos]");
   const programTotalFulfilled = document.querySelector("[data-program-414-total-fulfilled]");
   const programTotalSales = document.querySelector("[data-program-414-total-sales]");
+  const programPaginationWrap = document.querySelector("[data-program-414-pagination]");
+  const programPaginationCopy = document.querySelector("[data-program-414-pagination-copy]");
+  const programPaginationPrev = document.querySelector("[data-program-414-pagination-prev]");
+  const programPaginationNext = document.querySelector("[data-program-414-pagination-next]");
   const manualLeadToggle = document.querySelector("[data-crm-manual-lead-toggle]");
   const manualLeadWrap = document.querySelector("[data-crm-manual-lead-wrap]");
   const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
@@ -5244,8 +5252,25 @@ function initCoachCrmWorkspace(user = null) {
     return;
   }
 
+  const createDefaultPagination = pageSize => ({
+    page: 1,
+    pageSize,
+    total: 0,
+    totalPages: 1,
+    hasPreviousPage: false,
+    hasNextPage: false
+  });
+
   const state = {
     summary: null,
+    quickCounts: {
+      all: 0,
+      today: 0,
+      follow_up: 0,
+      appointments: 0,
+      no_answer: 0,
+      sales: 0
+    },
     records: [],
     visibleRecords: [],
     programGroups: [],
@@ -5256,9 +5281,13 @@ function initCoachCrmWorkspace(user = null) {
     quickFilter: "all",
     searchTerm: "",
     crmView: "lead",
-    programSearchTerm: ""
+    crmPagination: createDefaultPagination(isTelemarketingPortal ? 120 : 160),
+    programSearchTerm: "",
+    programPagination: createDefaultPagination(isTelemarketingPortal ? 12 : 18)
   };
   const autoSaveTimers = new Map();
+  let crmSearchTimer = 0;
+  let programSearchTimer = 0;
 
   const clearWorkspaceFeedback = () => {
     feedbackNodes.forEach(node => clearMessage(node));
@@ -5499,9 +5528,8 @@ function initCoachCrmWorkspace(user = null) {
     matchingRow?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
 
-  const renderQuickFilters = records => {
-    const counts = buildQuickCounts(records);
-
+  const renderQuickFilters = () => {
+    const counts = state.quickCounts || {};
     quickFilterButtons.forEach(button => {
       const filterId = String(button.dataset.crmQuickFilter || "").trim();
       button.classList.toggle("is-active", filterId === state.quickFilter);
@@ -5520,6 +5548,48 @@ function initCoachCrmWorkspace(user = null) {
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
+  };
+
+  const renderCrmPagination = () => {
+    if (!crmPaginationWrap || !crmPaginationCopy || !crmPaginationPrev || !crmPaginationNext) {
+      return;
+    }
+
+    const pagination = state.crmPagination || createDefaultPagination(isTelemarketingPortal ? 120 : 160);
+    const shouldShow = Number(pagination.total || 0) > Number(pagination.pageSize || 0);
+
+    crmPaginationWrap.hidden = !shouldShow;
+
+    if (!shouldShow) {
+      return;
+    }
+
+    const start = pagination.total ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
+    const end = Math.min(pagination.total || 0, pagination.page * pagination.pageSize);
+    crmPaginationCopy.textContent = `Mostrando ${start}-${end} de ${pagination.total || 0} leads. Pagina ${pagination.page || 1} de ${pagination.totalPages || 1}.`;
+    crmPaginationPrev.disabled = !pagination.hasPreviousPage;
+    crmPaginationNext.disabled = !pagination.hasNextPage;
+  };
+
+  const renderProgramPagination = () => {
+    if (!programPaginationWrap || !programPaginationCopy || !programPaginationPrev || !programPaginationNext) {
+      return;
+    }
+
+    const pagination = state.programPagination || createDefaultPagination(isTelemarketingPortal ? 12 : 18);
+    const shouldShow = Number(pagination.total || 0) > Number(pagination.pageSize || 0);
+
+    programPaginationWrap.hidden = !shouldShow;
+
+    if (!shouldShow) {
+      return;
+    }
+
+    const start = pagination.total ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
+    const end = Math.min(pagination.total || 0, pagination.page * pagination.pageSize);
+    programPaginationCopy.textContent = `Mostrando ${start}-${end} de ${pagination.total || 0} anfitriones. Pagina ${pagination.page || 1} de ${pagination.totalPages || 1}.`;
+    programPaginationPrev.disabled = !pagination.hasPreviousPage;
+    programPaginationNext.disabled = !pagination.hasNextPage;
   };
 
   const matchesQuickFilter = (record, quickFilter) => {
@@ -5590,6 +5660,7 @@ function initCoachCrmWorkspace(user = null) {
     detailTelemarketer.innerHTML = assignmentOptions;
     detailRepresentative.innerHTML = assignmentOptions;
     if (programRepresentativeFilter) {
+      const programRepresentativeValue = String(programRepresentativeFilter.value || "").trim();
       programRepresentativeFilter.innerHTML = [`<option value="">Todos</option>`]
         .concat(
           state.assignees.map(
@@ -5600,6 +5671,9 @@ function initCoachCrmWorkspace(user = null) {
           )
         )
         .join("");
+      programRepresentativeFilter.value = state.assignees.some(item => item.id === programRepresentativeValue)
+        ? programRepresentativeValue
+        : "";
     }
   };
 
@@ -6090,36 +6164,22 @@ function initCoachCrmWorkspace(user = null) {
     return true;
   };
 
-  const renderProgramGroupMetrics = groups => {
-    const safeGroups = Array.isArray(groups) ? groups : [];
-    const totals = safeGroups.reduce(
-      (acc, group) => {
-        acc.hosts += 1;
-        acc.referrals += Array.isArray(group.referrals) ? group.referrals.length : 0;
-        acc.demos += Number(group.completedDemoCount || 0);
-        acc.sales += Number(group.salesCount || 0);
-        if (group.rewardReady) {
-          acc.fulfilled += 1;
-        }
-        return acc;
-      },
-      { hosts: 0, referrals: 0, demos: 0, sales: 0, fulfilled: 0 }
-    );
-
+  const renderProgramGroupMetrics = summary => {
+    const totals = summary || {};
     if (programTotalHosts) {
-      programTotalHosts.textContent = String(totals.hosts || 0);
+      programTotalHosts.textContent = String(totals.totalHosts || 0);
     }
     if (programTotalReferrals) {
-      programTotalReferrals.textContent = String(totals.referrals || 0);
+      programTotalReferrals.textContent = String(totals.totalReferrals || 0);
     }
     if (programTotalDemos) {
-      programTotalDemos.textContent = String(totals.demos || 0);
+      programTotalDemos.textContent = String(totals.totalCompletedDemos || 0);
     }
     if (programTotalFulfilled) {
-      programTotalFulfilled.textContent = String(totals.fulfilled || 0);
+      programTotalFulfilled.textContent = String(totals.fulfilledHosts || 0);
     }
     if (programTotalSales) {
-      programTotalSales.textContent = String(totals.sales || 0);
+      programTotalSales.textContent = String(totals.totalSales || 0);
     }
   };
 
@@ -6127,22 +6187,17 @@ function initCoachCrmWorkspace(user = null) {
     if (!programGroupList || !programGroupsSummary) {
       return;
     }
-    const displayedGroups = (Array.isArray(state.programGroups) ? state.programGroups : [])
-      .filter(group => matchesProgramGroupSearch(group) && matchesProgramGroupFilters(group));
+    const displayedGroups = Array.isArray(state.programGroups) ? state.programGroups : [];
+    const summary = state.programGroupSummary || {
+      totalHosts: 0,
+      openHosts: 0,
+      fulfilledHosts: 0,
+      totalReferrals: 0,
+      totalCompletedDemos: 0,
+      totalSales: 0
+    };
 
-    renderProgramGroupMetrics(displayedGroups);
-
-    const summary = displayedGroups.reduce(
-      (acc, group) => {
-        acc.totalHosts += 1;
-        acc.totalCompletedDemos += Number(group.completedDemoCount || 0);
-        if (group.rewardReady) {
-          acc.fulfilledHosts += 1;
-        }
-        return acc;
-      },
-      { totalHosts: 0, totalCompletedDemos: 0, fulfilledHosts: 0 }
-    );
+    renderProgramGroupMetrics(summary);
 
     if (programGroupsWrap) {
       programGroupsWrap.hidden = false;
@@ -6156,6 +6211,7 @@ function initCoachCrmWorkspace(user = null) {
     if (!displayedGroups.length) {
       programGroupList.innerHTML =
         '<div class="team-seat-empty">No encontre programas 4 en 14 para esta vista.</div>';
+      renderProgramPagination();
       return;
     }
 
@@ -6206,6 +6262,7 @@ function initCoachCrmWorkspace(user = null) {
         `;
       })
       .join("");
+    renderProgramPagination();
   };
 
   const renderList = () => {
@@ -6213,12 +6270,14 @@ function initCoachCrmWorkspace(user = null) {
 
     if (!state.records.length) {
       recordList.innerHTML = '<div class="team-seat-empty">Todavia no hay registros en este CRM.</div>';
+      renderCrmPagination();
       return;
     }
 
     if (!visibleRecords.length) {
       recordList.innerHTML =
         '<div class="team-seat-empty">No encontre filas con esos filtros. Prueba otra busqueda o limpia un filtro rapido.</div>';
+      renderCrmPagination();
       return;
     }
 
@@ -6404,15 +6463,13 @@ function initCoachCrmWorkspace(user = null) {
         `;
       })
       .join("");
+    renderCrmPagination();
   };
 
   const applyClientFilters = async (preserveActive = true) => {
-    const filteredRecords = state.records.filter(
-      record => matchesQuickFilter(record, state.quickFilter) && matchesSearchFilter(record, state.searchTerm)
-    );
+    const filteredRecords = Array.isArray(state.records) ? [...state.records] : [];
     state.visibleRecords = isTelemarketingPortal ? sortTelemarketingVisibleRecords(filteredRecords) : filteredRecords;
-    renderQuickFilters(state.records);
-    renderProgramGroups();
+    renderQuickFilters();
 
     const nextActiveId =
       preserveActive && state.visibleRecords.some(item => item.id === state.activeRecordId)
@@ -6448,7 +6505,36 @@ function initCoachCrmWorkspace(user = null) {
     if (assigneeFilter.value) {
       params.set("assignedToUserId", assigneeFilter.value);
     }
+    if (state.searchTerm) {
+      params.set("search", state.searchTerm);
+    }
+    if (state.quickFilter && state.quickFilter !== "all") {
+      params.set("quickFilter", state.quickFilter);
+    }
+    params.set("page", String(state.crmPagination.page || 1));
+    params.set("pageSize", String(state.crmPagination.pageSize || (isTelemarketingPortal ? 120 : 160)));
     params.set("excludeSourceType", "programa_4_en_14");
+    return params.toString();
+  };
+
+  const buildProgramQuery = () => {
+    const params = new URLSearchParams();
+
+    if (state.programSearchTerm) {
+      params.set("search", state.programSearchTerm);
+    }
+    if (programHostStatusFilter?.value) {
+      params.set("hostStatus", programHostStatusFilter.value);
+    }
+    if (programReferralStatusFilter?.value) {
+      params.set("referralStatus", programReferralStatusFilter.value);
+    }
+    if (programRepresentativeFilter?.value) {
+      params.set("representativeUserId", programRepresentativeFilter.value);
+    }
+
+    params.set("page", String(state.programPagination.page || 1));
+    params.set("pageSize", String(state.programPagination.pageSize || (isTelemarketingPortal ? 12 : 18)));
     return params.toString();
   };
 
@@ -6468,39 +6554,66 @@ function initCoachCrmWorkspace(user = null) {
     renderList();
   };
 
-  const loadWorkspace = async (preserveActive = true) => {
+  const loadCrmWorkspace = async (preserveActive = true) => {
     const query = buildQuery();
-    const [data, programGroupData] = await Promise.all([
-      apiRequest(`/api/coach/crm/records${query ? `?${query}` : ""}`),
-      apiRequest("/api/coach/crm/program-4-in-14/groups").catch(() => null)
-    ]);
+    const data = await apiRequest(`/api/coach/crm/records${query ? `?${query}` : ""}`);
     state.summary = data.summary || null;
+    state.quickCounts = data.quickCounts || {
+      all: 0,
+      today: 0,
+      follow_up: 0,
+      appointments: 0,
+      no_answer: 0,
+      sales: 0
+    };
     state.records = Array.isArray(data.records)
       ? data.records.filter(record => String(record?.sourceType || "").trim() !== "programa_4_en_14")
       : [];
     state.assignees = Array.isArray(data.assignees) ? data.assignees : [];
-    state.programGroups = Array.isArray(programGroupData?.groups) ? programGroupData.groups : [];
-    state.programGroupSummary = programGroupData?.summary || null;
+    state.crmPagination = data.pagination || createDefaultPagination(isTelemarketingPortal ? 120 : 160);
     syncCrmViewTabs();
     setSummary(state.summary);
     renderAssigneeOptions();
     await applyClientFilters(preserveActive);
+  };
+
+  const loadProgramGroups = async () => {
+    const query = buildProgramQuery();
+    const data = await apiRequest(`/api/coach/crm/program-4-in-14/groups${query ? `?${query}` : ""}`);
+    state.programGroups = Array.isArray(data?.groups) ? data.groups : [];
+    state.programGroupSummary = data?.summary || {
+      totalHosts: 0,
+      openHosts: 0,
+      fulfilledHosts: 0,
+      totalReferrals: 0,
+      totalCompletedDemos: 0,
+      totalSales: 0
+    };
+    state.programPagination = data?.pagination || createDefaultPagination(isTelemarketingPortal ? 12 : 18);
+    setSummary(state.summary);
     renderProgramGroups();
+  };
+
+  const loadWorkspace = async (preserveActive = true) => {
+    await Promise.all([loadCrmWorkspace(preserveActive), loadProgramGroups()]);
   };
 
   if (!user) {
     setSummary(null);
-    renderQuickFilters([]);
+    renderQuickFilters();
     renderList();
     renderDetail(null);
     renderProgramGroups();
+    renderCrmPagination();
+    renderProgramPagination();
     return;
   }
 
   [sourceFilter, statusFilter, assigneeFilter].forEach(select => {
     select?.addEventListener("change", () => {
+      state.crmPagination.page = 1;
       clearWorkspaceFeedback();
-      loadWorkspace(false).catch(error => {
+      loadCrmWorkspace(false).catch(error => {
         setWorkspaceFeedback(error.message || "No pude actualizar el CRM.", "error");
       });
     });
@@ -6510,8 +6623,9 @@ function initCoachCrmWorkspace(user = null) {
     button.addEventListener("click", () => {
       const nextValue = String(button.dataset.crmViewTab || "").trim();
       sourceFilter.value = nextValue;
+      state.crmPagination.page = 1;
       clearWorkspaceFeedback();
-      loadWorkspace(false).catch(error => {
+      loadCrmWorkspace(false).catch(error => {
         setWorkspaceFeedback(error.message || "No pude cambiar esa vista del CRM.", "error");
       });
     });
@@ -6519,15 +6633,20 @@ function initCoachCrmWorkspace(user = null) {
 
   searchFilter?.addEventListener("input", () => {
     state.searchTerm = String(searchFilter.value || "").trim();
-    applyClientFilters(true).catch(error => {
-      setWorkspaceFeedback(error.message || "No pude aplicar la busqueda del CRM.", "error");
-    });
+    state.crmPagination.page = 1;
+    clearTimeout(crmSearchTimer);
+    crmSearchTimer = window.setTimeout(() => {
+      loadCrmWorkspace(false).catch(error => {
+        setWorkspaceFeedback(error.message || "No pude aplicar la busqueda del CRM.", "error");
+      });
+    }, 220);
   });
 
   quickFilterButtons.forEach(button => {
     button.addEventListener("click", () => {
       state.quickFilter = String(button.dataset.crmQuickFilter || "all").trim() || "all";
-      applyClientFilters(true).catch(error => {
+      state.crmPagination.page = 1;
+      loadCrmWorkspace(false).catch(error => {
         setWorkspaceFeedback(error.message || "No pude aplicar ese filtro rapido.", "error");
       });
     });
@@ -6535,13 +6654,22 @@ function initCoachCrmWorkspace(user = null) {
 
   [programHostStatusFilter, programReferralStatusFilter, programRepresentativeFilter].forEach(select => {
     select?.addEventListener("change", () => {
-      renderProgramGroups();
+      state.programPagination.page = 1;
+      loadProgramGroups().catch(error => {
+        setWorkspaceFeedback(error.message || "No pude actualizar el 4 en 14.", "error");
+      });
     });
   });
 
   programSearchInput?.addEventListener("input", () => {
     state.programSearchTerm = String(programSearchInput.value || "").trim();
-    renderProgramGroups();
+    state.programPagination.page = 1;
+    clearTimeout(programSearchTimer);
+    programSearchTimer = window.setTimeout(() => {
+      loadProgramGroups().catch(error => {
+        setWorkspaceFeedback(error.message || "No pude buscar dentro de 4 en 14.", "error");
+      });
+    }, 220);
   });
 
   refreshButton?.addEventListener("click", async () => {
@@ -6549,7 +6677,7 @@ function initCoachCrmWorkspace(user = null) {
     setButtonLoading(refreshButton, true, "Actualizando...");
 
     try {
-      await loadWorkspace(true);
+      await loadCrmWorkspace(true);
       setWorkspaceFeedback("CRM actualizado.", "success");
     } catch (error) {
       setWorkspaceFeedback(error.message || "No pude actualizar el CRM.", "error");
@@ -6563,7 +6691,7 @@ function initCoachCrmWorkspace(user = null) {
     setButtonLoading(programRefreshButton, true, "Actualizando...");
 
     try {
-      await loadWorkspace(true);
+      await loadProgramGroups();
       setWorkspaceFeedback("Vista 4 en 14 actualizada.", "success");
     } catch (error) {
       setWorkspaceFeedback(error.message || "No pude actualizar el 4 en 14.", "error");
@@ -6574,9 +6702,49 @@ function initCoachCrmWorkspace(user = null) {
 
   document.querySelectorAll('[data-coach-workspace-tab="program414"]').forEach(button => {
     button.addEventListener("click", () => {
-      loadWorkspace(true).catch(error => {
+      loadProgramGroups().catch(error => {
         setWorkspaceFeedback(error.message || "No pude cargar el 4 en 14.", "error");
       });
+    });
+  });
+
+  crmPaginationPrev?.addEventListener("click", () => {
+    if (!state.crmPagination.hasPreviousPage) {
+      return;
+    }
+    state.crmPagination.page = Math.max(1, Number(state.crmPagination.page || 1) - 1);
+    loadCrmWorkspace(false).catch(error => {
+      setWorkspaceFeedback(error.message || "No pude cambiar la pagina del CRM.", "error");
+    });
+  });
+
+  crmPaginationNext?.addEventListener("click", () => {
+    if (!state.crmPagination.hasNextPage) {
+      return;
+    }
+    state.crmPagination.page = Number(state.crmPagination.page || 1) + 1;
+    loadCrmWorkspace(false).catch(error => {
+      setWorkspaceFeedback(error.message || "No pude cambiar la pagina del CRM.", "error");
+    });
+  });
+
+  programPaginationPrev?.addEventListener("click", () => {
+    if (!state.programPagination.hasPreviousPage) {
+      return;
+    }
+    state.programPagination.page = Math.max(1, Number(state.programPagination.page || 1) - 1);
+    loadProgramGroups().catch(error => {
+      setWorkspaceFeedback(error.message || "No pude cambiar la pagina de 4 en 14.", "error");
+    });
+  });
+
+  programPaginationNext?.addEventListener("click", () => {
+    if (!state.programPagination.hasNextPage) {
+      return;
+    }
+    state.programPagination.page = Number(state.programPagination.page || 1) + 1;
+    loadProgramGroups().catch(error => {
+      setWorkspaceFeedback(error.message || "No pude cambiar la pagina de 4 en 14.", "error");
     });
   });
 
