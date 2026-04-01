@@ -15,4 +15,4 @@ services:
       - key: METALWORKS_CRM_PASSWORD
         sync: false
       - key: METALWORKS_CRM_ALLOWED_EMAILS
-        value: agustincalderon286@gmail.com
+        value: agustincalderon423@gmail.com,agustincalderon286@gmail.com
