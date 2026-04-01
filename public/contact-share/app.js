@@ -205,7 +205,7 @@ async function initContactSharePage() {
         feedbackNode,
         targetType === "program_4_14"
           ? `Listo. Se procesaron ${data.parsedCount || 0} hojas 4 en 14. Referencias creadas o actualizadas: ${data.createdLeadCount || 0}. Duplicados: ${data.duplicateCount || 0}.`
-          : `Listo. Se procesaron ${data.parsedCount || 0} contactos. Nuevos: ${data.importedCount || 0}. Ya existentes: ${data.duplicateCount || 0}.`,
+          : `Listo. Se procesaron ${data.parsedCount || 0} contactos. Nuevos: ${data.importedCount || 0}. Actualizados: ${data.duplicateCount || 0}.`,
         "success"
       );
     } catch (error) {

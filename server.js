@@ -21474,7 +21474,7 @@ app.post("/api/public/contact-share/import", async (req, res) => {
       });
     }
 
-    const parsedContacts = parseCoachImportedContacts(importMode, rawText).slice(0, 500);
+    const parsedContacts = parseCoachImportedContacts(importMode, rawText);
 
     if (!parsedContacts.length) {
       return res.status(400).json({
