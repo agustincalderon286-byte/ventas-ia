@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import path from "path";
 import { createClient } from "redis";
 import Stripe from "stripe";
+import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -1131,6 +1132,11 @@ const CoachAsyncJob =
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
+registerMetalworksCrm(app, {
+  mongoose,
+  publicDir: PUBLIC_DIR,
+  privateDir: PRIVATE_DIR
+});
 
 const COACH_ASYNC_JOB_POLL_MS = 4000;
 const COACH_ASYNC_JOB_LOCK_MS = 5 * 60 * 1000;

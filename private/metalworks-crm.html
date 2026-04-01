@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works CRM</title>
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+  </head>
+  <body class="crm-app-page">
+    <div class="crm-shell">
+      <header class="crm-header">
+        <div>
+          <p class="crm-eyebrow">Private CRM</p>
+          <h1>Chicago Metal Works &amp; Fencing</h1>
+          <p class="crm-subtitle">
+            Leads, seguimiento y metricas del sitio en un solo panel.
+          </p>
+        </div>
+        <div class="crm-header-actions">
+          <div class="crm-user-chip" data-crm-user-chip></div>
+          <button class="crm-secondary-button" type="button" data-crm-refresh>
+            Recargar
+          </button>
+          <button class="crm-secondary-button" type="button" data-crm-logout>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      <section class="crm-summary-grid" data-crm-summary></section>
+
+      <section class="crm-toolbar">
+        <label class="crm-search">
+          <span>Buscar</span>
+          <input
+            type="search"
+            placeholder="Nombre, telefono, servicio o direccion"
+            data-crm-search
+          />
+        </label>
+
+        <label>
+          <span>Status</span>
+          <select data-crm-status-filter>
+            <option value="">Todos</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Servicio</span>
+          <select data-crm-service-filter>
+            <option value="">Todos</option>
+          </select>
+        </label>
+      </section>
+
+      <main class="crm-main-grid">
+        <section class="crm-panel crm-leads-panel">
+          <div class="crm-panel-head">
+            <h2>Leads</h2>
+            <p data-crm-leads-count>0 leads</p>
+          </div>
+          <div class="crm-lead-list" data-crm-lead-list></div>
+          <p class="crm-empty-state" data-crm-empty-state hidden>
+            Aun no hay leads que coincidan con este filtro.
+          </p>
+        </section>
+
+        <section class="crm-panel crm-detail-panel">
+          <div class="crm-panel-head">
+            <h2>Detalle del lead</h2>
+            <p data-crm-detail-status>Selecciona un lead</p>
+          </div>
+
+          <div class="crm-detail-wrap" data-crm-detail-wrap hidden>
+            <div class="crm-detail-meta" data-crm-detail-meta></div>
+
+            <form class="crm-detail-form" data-crm-detail-form>
+              <label>
+                <span>Status</span>
+                <select name="status" data-crm-detail-status-input></select>
+              </label>
+
+              <label>
+                <span>Proxima accion</span>
+                <input
+                  type="text"
+                  name="nextAction"
+                  maxlength="160"
+                  placeholder="Ej. llamar despues de las 5 pm"
+                />
+              </label>
+
+              <label>
+                <span>Fecha de seguimiento</span>
+                <input type="datetime-local" name="nextActionAt" />
+              </label>
+
+              <label>
+                <span>Monto estimado</span>
+                <input
+                  type="number"
+                  name="estimateAmount"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </label>
+
+              <label class="crm-field-full">
+                <span>Notas privadas</span>
+                <textarea
+                  name="privateNotes"
+                  rows="5"
+                  placeholder="Detalles utiles sobre medidas, ubicacion, objeciones o prioridad."
+                ></textarea>
+              </label>
+
+              <label class="crm-field-full">
+                <span>Agregar nota al timeline</span>
+                <textarea
+                  name="note"
+                  rows="3"
+                  placeholder="Ej. Se hablo con el cliente, pidio que le mande estimate manana."
+                ></textarea>
+              </label>
+
+              <div class="crm-form-actions">
+                <button type="submit" class="crm-primary-button">
+                  Guardar seguimiento
+                </button>
+                <p class="crm-form-result" data-crm-detail-feedback></p>
+              </div>
+            </form>
+
+            <section class="crm-activity-section">
+              <div class="crm-panel-head tight">
+                <h3>Actividad reciente</h3>
+              </div>
+              <div class="crm-activity-list" data-crm-activity-list></div>
+            </section>
+          </div>
+
+          <p class="crm-empty-state" data-crm-detail-empty>
+            Selecciona un lead para ver su informacion y trabajar seguimiento.
+          </p>
+        </section>
+      </main>
+
+      <section class="crm-panel">
+        <div class="crm-panel-head">
+          <h2>Metricas recientes</h2>
+          <p>Ultimos eventos del sitio y del CRM</p>
+        </div>
+        <div class="crm-activity-list" data-crm-global-activity></div>
+      </section>
+    </div>
+
+    <script src="/metalworks-crm/app.js"></script>
+  </body>
+</html>

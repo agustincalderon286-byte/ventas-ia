@@ -1,13 +1,18 @@
 services:
   - type: web
-    name: ventas-ia
+    name: cmwf-crm-api
     runtime: node
-    plan: free
-    buildCommand: npm ci
+    buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/metalworks-crm/me
+    autoDeploy: true
+    plan: free
     envVars:
-      - key: OPENAI_API_KEY
-        sync: false
+      - key: NODE_ENV
+        value: production
       - key: MONGODB_URI
         sync: false
+      - key: METALWORKS_CRM_PASSWORD
+        sync: false
+      - key: METALWORKS_CRM_ALLOWED_EMAILS
+        value: agustincalderon286@gmail.com

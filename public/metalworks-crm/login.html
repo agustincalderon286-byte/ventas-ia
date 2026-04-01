@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works CRM Login</title>
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+  </head>
+  <body class="crm-login-page">
+    <main class="crm-login-shell">
+      <section class="crm-login-card">
+        <p class="crm-eyebrow">Private CRM</p>
+        <h1>Chicago Metal Works &amp; Fencing</h1>
+        <p class="crm-login-copy">
+          Entra a tu panel privado para ver leads, notas, seguimiento y metricas
+          del sitio.
+        </p>
+
+        <form class="crm-login-form" data-crm-login-form>
+          <label>
+            <span>Correo</span>
+            <input
+              type="email"
+              name="email"
+              placeholder="agustincalderon286@gmail.com"
+              autocomplete="username"
+              required
+            />
+          </label>
+
+          <label>
+            <span>Password</span>
+            <input
+              type="password"
+              name="password"
+              placeholder="Tu password del CRM"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+
+          <button type="submit" class="crm-primary-button">
+            Entrar al CRM
+          </button>
+          <p class="crm-form-result" data-crm-login-feedback></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="/metalworks-crm/login.js"></script>
+  </body>
+</html>
