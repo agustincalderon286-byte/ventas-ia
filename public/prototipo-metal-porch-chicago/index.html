@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Porch Repair | Landings, Stairs & Repainting</title>
+    <meta
+      name="description"
+      content="Landing page prototype for Chicago metal porch repair, stair replacement, landing replacement, welding repairs, rust treatment and repainting for multi-story porches."
+    />
+    <meta
+      name="keywords"
+      content="metal porch repair chicago, metal stair repair chicago, landing replacement chicago, metal porch painting chicago, rusted stairs repair chicago, back porch repair chicago, porch violation repair chicago"
+    />
+    <meta property="og:title" content="Chicago Metal Porch Repair | Calderon Steel" />
+    <meta
+      property="og:description"
+      content="Repairs, repainting, stair replacement and landing replacement for multi-story metal porches in Chicago."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ventas-ia.onrender.com/prototipo-metal-porch-chicago/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b1017;
+        --panel: rgba(14, 23, 34, 0.82);
+        --panel-strong: #121b28;
+        --paper: #f5f1e9;
+        --ink: #ecf1f7;
+        --muted: #93a4b8;
+        --line: rgba(255, 255, 255, 0.08);
+        --accent: #f59f0b;
+        --accent-strong: #ffb938;
+        --accent-soft: rgba(245, 159, 11, 0.14);
+        --ok: #34d399;
+        --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+        --radius-xl: 30px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(245, 159, 11, 0.12), transparent 24%),
+          radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.08), transparent 22%),
+          linear-gradient(180deg, #071019 0%, #0d1520 45%, #111b28 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 36px 36px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent 92%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      main {
+        position: relative;
+        z-index: 1;
+        width: min(1200px, calc(100% - 28px));
+        margin: 18px auto 48px;
+      }
+
+      .topbar,
+      .hero,
+      .section-card,
+      .cta-band {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px 18px;
+        align-items: center;
+        padding: 14px 18px;
+        border-radius: 999px;
+      }
+
+      .topbar strong,
+      .eyebrow,
+      .badge,
+      .stat-label,
+      .service-kicker,
+      .step-number {
+        font-family: "League Spartan", sans-serif;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .topbar-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
+      .pill-link {
+        padding: 9px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .hero {
+        margin-top: 16px;
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+        gap: 0;
+      }
+
+      .hero-copy,
+      .hero-panel {
+        padding: 34px;
+      }
+
+      .hero-copy {
+        position: relative;
+        background:
+          linear-gradient(135deg, rgba(245, 159, 11, 0.08), transparent 46%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 100%);
+      }
+
+      .eyebrow,
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+      }
+
+      .eyebrow {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .badge {
+        background: rgba(52, 211, 153, 0.12);
+        color: var(--ok);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: "League Spartan", sans-serif;
+        line-height: 0.98;
+      }
+
+      .hero h1 {
+        margin-top: 18px;
+        font-size: clamp(3.2rem, 7vw, 6.1rem);
+        max-width: 760px;
+      }
+
+      .hero h1 span {
+        color: var(--accent-strong);
+      }
+
+      .lede {
+        max-width: 760px;
+        margin-top: 18px;
+        color: #d8e0ea;
+        font-size: 1.06rem;
+        line-height: 1.75;
+      }
+
+      .hero-points {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .hero-point,
+      .service-card,
+      .fit-card,
+      .process-step,
+      .keyword-card {
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .hero-point {
+        padding: 14px 15px;
+      }
+
+      .hero-point strong,
+      .cta-panel h3,
+      .service-card h3,
+      .fit-card h3,
+      .process-step h3,
+      .keyword-card h3,
+      .faq-item summary {
+        font-family: "League Spartan", sans-serif;
+      }
+
+      .hero-point p,
+      .subcopy,
+      .cta-copy,
+      .section-intro,
+      .service-card p,
+      .fit-card p,
+      .process-step p,
+      .keyword-card p,
+      .faq-item p {
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .primary-btn,
+      .secondary-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 54px;
+        padding: 0 22px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 0.98rem;
+      }
+
+      .primary-btn {
+        color: #111827;
+        background: linear-gradient(135deg, #f7c14a, #f59f0b);
+        box-shadow: 0 18px 34px rgba(245, 159, 11, 0.28);
+      }
+
+      .secondary-btn {
+        color: var(--ink);
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .hero-panel {
+        border-left: 1px solid var(--line);
+        background:
+          radial-gradient(circle at top center, rgba(255, 255, 255, 0.06), transparent 34%),
+          linear-gradient(180deg, rgba(12, 18, 28, 0.94), rgba(10, 16, 25, 0.94));
+      }
+
+      .cta-panel {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .cta-panel h3 {
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+      }
+
+      .quote-box {
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .quote-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .quote-item {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        gap: 12px;
+        align-items: start;
+        color: #d7e0ea;
+      }
+
+      .quote-item span:first-child {
+        color: var(--accent-strong);
+        font-weight: 900;
+      }
+
+      .contact-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .contact-card {
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .contact-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 1.02rem;
+      }
+
+      .stat-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .stat {
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .stat strong {
+        display: block;
+        font-family: "League Spartan", sans-serif;
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+      }
+
+      .stat-label {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .section-card {
+        margin-top: 16px;
+        padding: 28px;
+        border-radius: var(--radius-xl);
+      }
+
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 14px 18px;
+        align-items: end;
+      }
+
+      .section-head h2 {
+        font-size: clamp(2rem, 5vw, 3.25rem);
+      }
+
+      .section-intro {
+        max-width: 720px;
+        margin-top: 12px;
+      }
+
+      .services-grid,
+      .fit-grid,
+      .process-grid,
+      .keyword-grid,
+      .areas-grid {
+        display: grid;
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .services-grid,
+      .fit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .process-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .keyword-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .service-card,
+      .fit-card,
+      .keyword-card {
+        padding: 20px;
+      }
+
+      .service-kicker {
+        color: var(--accent-strong);
+        font-size: 0.8rem;
+      }
+
+      .service-card h3,
+      .fit-card h3,
+      .keyword-card h3 {
+        margin-top: 10px;
+        font-size: 1.55rem;
+      }
+
+      .process-step {
+        position: relative;
+        padding: 18px;
+        overflow: hidden;
+      }
+
+      .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-size: 0.92rem;
+        font-weight: 800;
+      }
+
+      .process-step h3 {
+        margin-top: 14px;
+        font-size: 1.35rem;
+      }
+
+      .areas-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .area-chip {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        text-align: center;
+        font-weight: 700;
+        color: #dce5ef;
+      }
+
+      .faq-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .faq-item {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 18px 20px;
+      }
+
+      .faq-item summary {
+        cursor: pointer;
+        list-style: none;
+        font-size: 1.22rem;
+      }
+
+      .faq-item summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .faq-item p {
+        margin-top: 12px;
+      }
+
+      .cta-band {
+        margin-top: 16px;
+        padding: 28px;
+        border-radius: var(--radius-xl);
+      }
+
+      .cta-band-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+        gap: 18px;
+        align-items: center;
+      }
+
+      .cta-band h2 {
+        font-size: clamp(2.1rem, 5vw, 3.7rem);
+      }
+
+      .mini-proof {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .mini-proof span {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: #d4dce5;
+        font-weight: 700;
+      }
+
+      footer {
+        padding: 18px 6px 0;
+        color: var(--muted);
+        text-align: center;
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 1100px) {
+        .hero-grid,
+        .cta-band-grid,
+        .process-grid,
+        .keyword-grid,
+        .areas-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .hero-panel {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+
+        .hero-grid,
+        .cta-band-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 780px) {
+        .hero-copy,
+        .hero-panel,
+        .section-card,
+        .cta-band {
+          padding: 22px;
+        }
+
+        .hero-points,
+        .services-grid,
+        .fit-grid,
+        .process-grid,
+        .keyword-grid,
+        .areas-grid,
+        .stat-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          border-radius: 24px;
+        }
+
+        .hero h1 {
+          font-size: clamp(2.5rem, 14vw, 4rem);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="topbar">
+        <strong>Chicago Multi-Story Metal Porch Specialists</strong>
+        <div class="topbar-links">
+          <a class="pill-link" href="tel:7082521376">Call 708-252-1376</a>
+          <a class="pill-link" href="mailto:info@calderonsteelrailings.com">Email Photos for a Quote</a>
+        </div>
+      </section>
+
+      <section class="hero">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">Metal Porch Repair in Chicago</div>
+            <h1>
+              Repair rusted
+              <span>landings, stairs and multi-story back porches</span>
+              without sending people to a generic welder.
+            </h1>
+            <p class="lede">
+              Prototype landing page focused on high-intent searches in Chicago for metal porch repainting,
+              stair replacement, landing replacement, structural welding repairs and code-focused exterior work
+              on 3 to 5 story porch systems.
+            </p>
+
+            <div class="hero-points">
+              <article class="hero-point">
+                <strong>Built for Chicago building owners</strong>
+                <p>3-flats, 4-flats, small apartment buildings, condo associations and owner-managed properties.</p>
+              </article>
+              <article class="hero-point">
+                <strong>Not just paint</strong>
+                <p>We repair rust, replace damaged stair sections, change landings and reinforce weak metal.</p>
+              </article>
+              <article class="hero-point">
+                <strong>Fast field quoting</strong>
+                <p>Phone call first, photo review second, then an on-site look if the job is a fit.</p>
+              </article>
+              <article class="hero-point">
+                <strong>High-intent service angle</strong>
+                <p>Great fit for searches around metal porch repair, stair replacement and violation-driven work.</p>
+              </article>
+            </div>
+
+            <div class="hero-actions">
+              <a class="primary-btn" href="#quote">Get a Porch Repair Quote</a>
+              <a class="secondary-btn" href="#services">See Service Focus</a>
+            </div>
+          </div>
+
+          <aside class="hero-panel">
+            <div class="cta-panel">
+              <div class="badge">Best fit: 3 to 5 story porch systems</div>
+              <h3>What this landing should make clear fast</h3>
+              <p class="cta-copy">
+                You repaint and repair exterior metal porch systems, replace unsafe landings, replace damaged
+                stair sections and handle serious Chicago exterior metal work that usually starts with rust,
+                loose tread sections or code pressure.
+              </p>
+
+              <div class="quote-box">
+                <strong>Ideal call-to-action message</strong>
+                <div class="quote-list">
+                  <div class="quote-item"><span>01</span><span>Tell us how many floors the porch has.</span></div>
+                  <div class="quote-item"><span>02</span><span>Send photos of the landing, stairs and any visible rust.</span></div>
+                  <div class="quote-item"><span>03</span><span>Get a fast answer on repaint, repair or replacement scope.</span></div>
+                </div>
+              </div>
+
+              <div class="contact-stack">
+                <a class="contact-card" href="tel:7082521376">
+                  <strong>Call Now</strong>
+                  <span>708-252-1376</span>
+                </a>
+                <a class="contact-card" href="mailto:info@calderonsteelrailings.com?subject=Chicago%20Metal%20Porch%20Repair%20Quote">
+                  <strong>Email Photos</strong>
+                  <span>info@calderonsteelrailings.com</span>
+                </a>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="stat-strip">
+        <article class="stat">
+          <strong>Landing replacement</strong>
+          <div class="stat-label">For weak, rusted or unsafe platform sections</div>
+        </article>
+        <article class="stat">
+          <strong>Stair repair</strong>
+          <div class="stat-label">Replace damaged treads, sections and welded joints</div>
+        </article>
+        <article class="stat">
+          <strong>Repainting</strong>
+          <div class="stat-label">Surface prep, rust treatment and durable exterior finish</div>
+        </article>
+        <article class="stat">
+          <strong>Chicago focused</strong>
+          <div class="stat-label">Built around the way local customers actually search</div>
+        </article>
+      </section>
+
+      <section class="section-card" id="services">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Service focus</div>
+            <h2>What this page should rank and convert for</h2>
+            <p class="section-intro">
+              The money service is not generic welding. It is exterior metal porch repair for aging multi-story
+              properties where the owner already knows the stairs, landing or paint system needs attention.
+            </p>
+          </div>
+        </div>
+
+        <div class="services-grid">
+          <article class="service-card">
+            <div class="service-kicker">Keyword cluster 01</div>
+            <h3>Metal porch repair</h3>
+            <p>
+              Core keyword bucket for Chicago owners searching for serious repairs to rusted exterior porch
+              systems, back porches and steel stair structures.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-kicker">Keyword cluster 02</div>
+            <h3>Landing replacement</h3>
+            <p>
+              Strong commercial intent for damaged or soft-feeling landings, unstable platform sections and
+              metal landing rebuilds.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-kicker">Keyword cluster 03</div>
+            <h3>Stair section replacement</h3>
+            <p>
+              Good fit for searches around rusted metal stairs, broken treads, loose riser sections and stair
+              reconstruction.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-kicker">Keyword cluster 04</div>
+            <h3>Repainting and rust control</h3>
+            <p>
+              Captures people searching for metal porch painting, rust repair, refinishing and exterior steel
+              restoration in Chicago.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Best customer fit</div>
+            <h2>Who this landing page should speak to</h2>
+            <p class="section-intro">
+              A narrow page usually converts better. This one is built for property owners and managers with
+              real exterior metal porch problems, not shoppers looking for decorative railing only.
+            </p>
+          </div>
+        </div>
+
+        <div class="fit-grid">
+          <article class="fit-card">
+            <h3>3-flat and 4-flat buildings</h3>
+            <p>Owners dealing with aging rear metal porches, stairs, rust spots, loose treads or unsafe landing sections.</p>
+          </article>
+          <article class="fit-card">
+            <h3>Small apartment properties</h3>
+            <p>Multi-unit buildings that need repairs before the structure gets worse or becomes a tenant problem.</p>
+          </article>
+          <article class="fit-card">
+            <h3>Condo associations</h3>
+            <p>Shared buildings where repainting, stair replacement and metal repairs need a professional exterior crew.</p>
+          </article>
+          <article class="fit-card">
+            <h3>Violation-driven jobs</h3>
+            <p>Searches triggered by inspection pressure, unsafe conditions or urgency around visible deterioration.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">How the sale happens</div>
+            <h2>Simple process for a high-intent landing page</h2>
+          </div>
+        </div>
+
+        <div class="process-grid">
+          <article class="process-step">
+            <div class="step-number">Step 1</div>
+            <h3>Owner sees the ad</h3>
+            <p>Searches for metal porch repair, landing replacement, stair repair or rusted exterior stairs in Chicago.</p>
+          </article>
+          <article class="process-step">
+            <div class="step-number">Step 2</div>
+            <h3>Owner calls or sends photos</h3>
+            <p>Fast qualification based on building type, number of floors and visible problem areas.</p>
+          </article>
+          <article class="process-step">
+            <div class="step-number">Step 3</div>
+            <h3>Scope gets narrowed</h3>
+            <p>Repaint only, landing replacement, stair replacement, welding repair or full structural upgrade path.</p>
+          </article>
+          <article class="process-step">
+            <div class="step-number">Step 4</div>
+            <h3>Field estimate closes</h3>
+            <p>Once the prospect already understands the type of problem, the estimate conversation gets easier.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Keyword direction</div>
+            <h2>Search intent buckets worth testing first</h2>
+            <p class="section-intro">
+              These are the types of searches this prototype is built around. They are not all broad-volume
+              terms. They are the kind of phrases that signal a job is real.
+            </p>
+          </div>
+        </div>
+
+        <div class="keyword-grid">
+          <article class="keyword-card">
+            <h3>Metal porch repair Chicago</h3>
+            <p>Broadest high-intent service phrase and probably the anchor ad group.</p>
+          </article>
+          <article class="keyword-card">
+            <h3>Metal stair repair Chicago</h3>
+            <p>Great for damaged treads, rusted stair runs and section replacement.</p>
+          </article>
+          <article class="keyword-card">
+            <h3>Landing replacement Chicago</h3>
+            <p>Narrower, but highly valuable when the platform section is the real issue.</p>
+          </article>
+          <article class="keyword-card">
+            <h3>Metal porch painting Chicago</h3>
+            <p>Useful for repaint jobs that often uncover larger repair opportunities.</p>
+          </article>
+          <article class="keyword-card">
+            <h3>Back porch repair Chicago</h3>
+            <p>Good natural-language phrase for residential and multi-unit Chicago searches.</p>
+          </article>
+          <article class="keyword-card">
+            <h3>Porch violation repair Chicago</h3>
+            <p>Strong urgency and likely better conversion quality when the need is immediate.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Chicago coverage</div>
+            <h2>Neighborhood and suburb angle</h2>
+            <p class="section-intro">
+              For later expansion, this landing could fork into tighter local pages for the South Side and nearby
+              suburbs where older exterior metal porches are common.
+            </p>
+          </div>
+        </div>
+
+        <div class="areas-grid">
+          <div class="area-chip">Chicago</div>
+          <div class="area-chip">Blue Island</div>
+          <div class="area-chip">Dolton</div>
+          <div class="area-chip">Tinley Park</div>
+          <div class="area-chip">Palos Park</div>
+          <div class="area-chip">Oak Lawn</div>
+          <div class="area-chip">Bridgeview</div>
+          <div class="area-chip">Evergreen Park</div>
+          <div class="area-chip">Burbank</div>
+          <div class="area-chip">Hickory Hills</div>
+          <div class="area-chip">Orland Park</div>
+          <div class="area-chip">South Suburbs</div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">FAQ</div>
+            <h2>Questions this page should answer fast</h2>
+          </div>
+        </div>
+
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>Do you repair rusted metal porches in Chicago?</summary>
+            <p>
+              Yes. This concept page is built around rusted metal porch repairs, repainting, stair repairs,
+              landing replacement and structural steel fixes for exterior porch systems.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>Can you replace only the landing or only a stair section?</summary>
+            <p>
+              That is exactly the kind of job this page is trying to attract. Many prospects do not need a full
+              rebuild. They need a dangerous section corrected quickly and correctly.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>Is this page for decorative railings or for real porch repairs?</summary>
+            <p>
+              Real porch repairs. The copy is intentionally focused on landings, stairs, rust, repainting and
+              multi-story exterior metal structures so the right jobs call in.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>Would this work for Google Ads?</summary>
+            <p>
+              Yes. The structure is intentionally conversion-first: one service, one city, one main problem,
+              direct CTA and keyword alignment with the searcher’s real need.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="cta-band" id="quote">
+        <div class="cta-band-grid">
+          <div>
+            <div class="eyebrow">Call to action</div>
+            <h2>Need a quote for a Chicago metal porch, landing or stair repair job?</h2>
+            <p class="section-intro">
+              Call now or send a few photos. Best results come from sending the full porch, close-ups of the rust
+              or damaged section and the number of floors involved.
+            </p>
+            <div class="mini-proof">
+              <span>Metal porch repainting</span>
+              <span>Landing replacement</span>
+              <span>Stair section replacement</span>
+              <span>Exterior welding repairs</span>
+            </div>
+          </div>
+
+          <div class="contact-stack">
+            <a class="primary-btn" href="tel:7082521376">Call 708-252-1376</a>
+            <a
+              class="secondary-btn"
+              href="mailto:info@calderonsteelrailings.com?subject=Chicago%20Metal%20Porch%20Repair%20Quote"
+            >
+              Email Photos for a Quote
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Prototype landing page for Chicago metal porch repair, stair replacement and landing replacement.
+      </footer>
+    </main>
+  </body>
+</html>
