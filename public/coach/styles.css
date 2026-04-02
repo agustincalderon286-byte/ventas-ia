@@ -5624,10 +5624,20 @@ html[data-coach-portal-mode="telemarketing"] .crm-tele-inline-grid {
   gap: 12px;
 }
 
+html[data-coach-portal-mode="telemarketing"] .crm-tele-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 html[data-coach-portal-mode="telemarketing"] .crm-tele-inline-grid label,
 html[data-coach-portal-mode="telemarketing"] .crm-tele-stack {
   display: grid;
   gap: 6px;
+}
+
+html[data-coach-portal-mode="telemarketing"] .crm-tele-stack-wide {
+  grid-column: 1 / -1;
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-tele-inline-grid small,
@@ -5665,6 +5675,18 @@ html[data-coach-portal-mode="telemarketing"] .crm-inline-action-grid-telemarketi
 html[data-coach-portal-mode="telemarketing"] .crm-inline-action-grid-telemarketing .nav-button,
 html[data-coach-portal-mode="telemarketing"] .crm-inline-action-grid-telemarketing .crm-inline-action-chip {
   min-height: 42px;
+}
+
+@media (max-width: 1200px) {
+  html[data-coach-portal-mode="telemarketing"] .crm-tele-profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  html[data-coach-portal-mode="telemarketing"] .crm-tele-profile-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 html[data-coach-portal-mode="telemarketing"] .crm-grid-row:hover {

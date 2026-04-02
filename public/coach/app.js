@@ -5783,24 +5783,32 @@ function initCoachCrmWorkspace(user = null) {
       return null;
     }
 
-    const nextActionInput = row.querySelector("[data-crm-inline-next-action-at]");
-    const nextActionRaw = String(nextActionInput?.value || "").trim();
-    const nextActionParsed = parseCoachFlexibleDateTimeValue(nextActionRaw);
-    const addressInput = row.querySelector("[data-crm-inline-address]");
-    const telemarketerInput = row.querySelector("[data-crm-inline-telemarketer]");
-    const representativeInput = row.querySelector("[data-crm-inline-representative]");
+  const nextActionInput = row.querySelector("[data-crm-inline-next-action-at]");
+  const nextActionRaw = String(nextActionInput?.value || "").trim();
+  const nextActionParsed = parseCoachFlexibleDateTimeValue(nextActionRaw);
+  const addressInput = row.querySelector("[data-crm-inline-address]");
+  const zipInput = row.querySelector("[data-crm-inline-zip]");
+  const areaNotesInput = row.querySelector("[data-crm-inline-area-notes]");
+  const birthdayInput = row.querySelector("[data-crm-inline-birthday]");
+  const childrenCountInput = row.querySelector("[data-crm-inline-children-count]");
+  const telemarketerInput = row.querySelector("[data-crm-inline-telemarketer]");
+  const representativeInput = row.querySelector("[data-crm-inline-representative]");
 
-    const payload = {
-      status: row.querySelector("[data-crm-inline-status]")?.value || "nuevo",
+  const payload = {
+    status: row.querySelector("[data-crm-inline-status]")?.value || "nuevo",
       assignedTelemarketerUserId:
         telemarketerInput?.value || String(row.getAttribute("data-crm-assigned-telemarketer-id") || "").trim(),
-      appointmentRepUserId:
-        representativeInput?.value || String(row.getAttribute("data-crm-appointment-rep-id") || "").trim(),
-      nextAction: row.querySelector("[data-crm-inline-next-action]")?.value || "",
-      nextActionAt: nextActionParsed.iso,
-      lastNote: row.querySelector("[data-crm-inline-note]")?.value || "",
-      _nextActionAtValid: nextActionParsed.valid
-    };
+    appointmentRepUserId:
+      representativeInput?.value || String(row.getAttribute("data-crm-appointment-rep-id") || "").trim(),
+    nextAction: row.querySelector("[data-crm-inline-next-action]")?.value || "",
+    nextActionAt: nextActionParsed.iso,
+    lastNote: row.querySelector("[data-crm-inline-note]")?.value || "",
+    zipCode: zipInput?.value || "",
+    areaNotes: areaNotesInput?.value || "",
+    birthday: birthdayInput?.value || "",
+    childrenCount: childrenCountInput?.value || "",
+    _nextActionAtValid: nextActionParsed.valid
+  };
 
     if (addressInput) {
       payload.address = addressInput.value || "";
@@ -6051,6 +6059,9 @@ function initCoachCrmWorkspace(user = null) {
       city: referral.city || "",
       zipCode: referral.zipCode || ""
     });
+    const householdSummary = buildCoachCrmHouseholdSummary(referral, {
+      includeZip: !(locationCopy || referral.zipCode)
+    });
     const nextActionPreview = referral.nextActionAt
       ? formatDateTime(referral.nextActionAt)
       : referral.appointmentAt
@@ -6079,6 +6090,7 @@ function initCoachCrmWorkspace(user = null) {
           <small>${escapeHtml(referral.phone ? formatLeadPhone(referral.phone) : referral.email || "Sin contacto")}</small>
           <small>${escapeHtml(ownerCopy)}</small>
           <small>${escapeHtml(locationCopy || "Ubicacion pendiente")}</small>
+          ${householdSummary ? `<small>${escapeHtml(householdSummary)}</small>` : ""}
           <input
             class="crm-inline-input crm-inline-address-input"
             type="text"
@@ -6087,6 +6099,56 @@ function initCoachCrmWorkspace(user = null) {
             autocomplete="street-address"
             data-crm-inline-address
           />
+          <div class="crm-tele-profile-grid">
+            <label class="crm-tele-stack">
+              <small>ZIP</small>
+              <input
+                class="crm-inline-input"
+                type="text"
+                inputmode="numeric"
+                maxlength="10"
+                value="${escapeHtml(referral.zipCode || "")}"
+                placeholder="60623"
+                data-crm-inline-zip
+              />
+            </label>
+            <label class="crm-tele-stack">
+              <small>Cumple</small>
+              <input
+                class="crm-inline-input"
+                type="date"
+                value="${escapeHtml(formatDateOnlyInputValue(referral.birthday || ""))}"
+                data-crm-inline-birthday
+              />
+            </label>
+            <label class="crm-tele-stack">
+              <small>Hijos</small>
+              <input
+                class="crm-inline-input"
+                type="number"
+                min="0"
+                step="1"
+                value="${
+                  Number.isFinite(Number(referral.childrenCount)) && Number(referral.childrenCount) >= 0
+                    ? escapeHtml(String(referral.childrenCount))
+                    : ""
+                }"
+                placeholder="0"
+                data-crm-inline-children-count
+              />
+            </label>
+            <label class="crm-tele-stack crm-tele-stack-wide">
+              <small>Zona / referencia</small>
+              <input
+                class="crm-inline-input"
+                type="text"
+                maxlength="240"
+                value="${escapeHtml(referral.areaNotes || "")}"
+                placeholder="Ej. Esquina, 2do piso, cerca de la escuela"
+                data-crm-inline-area-notes
+              />
+            </label>
+          </div>
           <small>${escapeHtml(group?.remainingToReward > 0 ? `Faltan ${group.remainingToReward} demos para el regalo` : "Anfitrion cumplido")}</small>
         </span>
         <span class="crm-tele-block crm-tele-agenda-block">
@@ -6413,6 +6475,56 @@ function initCoachCrmWorkspace(user = null) {
                   autocomplete="street-address"
                   data-crm-inline-address
                 />
+                <div class="crm-tele-profile-grid">
+                  <label class="crm-tele-stack">
+                    <small>ZIP</small>
+                    <input
+                      class="crm-inline-input"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="10"
+                      value="${escapeHtml(record.zipCode || "")}"
+                      placeholder="60623"
+                      data-crm-inline-zip
+                    />
+                  </label>
+                  <label class="crm-tele-stack">
+                    <small>Cumple</small>
+                    <input
+                      class="crm-inline-input"
+                      type="date"
+                      value="${escapeHtml(formatDateOnlyInputValue(record.birthday || ""))}"
+                      data-crm-inline-birthday
+                    />
+                  </label>
+                  <label class="crm-tele-stack">
+                    <small>Hijos</small>
+                    <input
+                      class="crm-inline-input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value="${
+                        Number.isFinite(Number(record.childrenCount)) && Number(record.childrenCount) >= 0
+                          ? escapeHtml(String(record.childrenCount))
+                          : ""
+                      }"
+                      placeholder="0"
+                      data-crm-inline-children-count
+                    />
+                  </label>
+                  <label class="crm-tele-stack crm-tele-stack-wide">
+                    <small>Zona / referencia</small>
+                    <input
+                      class="crm-inline-input"
+                      type="text"
+                      maxlength="240"
+                      value="${escapeHtml(record.areaNotes || "")}"
+                      placeholder="Ej. Casa azul, edificio de ladrillo, cerca de Kedzie"
+                      data-crm-inline-area-notes
+                    />
+                  </label>
+                </div>
                 <small>${escapeHtml(locationCopy || "Sin direccion todavia")}</small>
               </span>
               <span class="crm-tele-block crm-tele-agenda-block">
@@ -6920,7 +7032,12 @@ function initCoachCrmWorkspace(user = null) {
   recordList.addEventListener("input", event => {
     const row = event.target.closest("[data-crm-inline-row]");
 
-    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+    if (
+      !row ||
+      !event.target.closest(
+        "[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address], [data-crm-inline-zip], [data-crm-inline-area-notes], [data-crm-inline-birthday], [data-crm-inline-children-count]"
+      )
+    ) {
       return;
     }
 
@@ -6933,7 +7050,7 @@ function initCoachCrmWorkspace(user = null) {
     if (
       !row ||
       !event.target.closest(
-        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at]"
+        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at], [data-crm-inline-birthday]"
       )
     ) {
       return;
@@ -6948,7 +7065,12 @@ function initCoachCrmWorkspace(user = null) {
     event => {
       const row = event.target.closest("[data-crm-inline-row]");
 
-      if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+      if (
+        !row ||
+        !event.target.closest(
+          "[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address], [data-crm-inline-zip], [data-crm-inline-area-notes], [data-crm-inline-birthday], [data-crm-inline-children-count]"
+        )
+      ) {
         return;
       }
 
@@ -7052,7 +7174,12 @@ function initCoachCrmWorkspace(user = null) {
   programGroupList?.addEventListener("input", event => {
     const row = event.target.closest("[data-crm-inline-row]");
 
-    if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+    if (
+      !row ||
+      !event.target.closest(
+        "[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address], [data-crm-inline-zip], [data-crm-inline-area-notes], [data-crm-inline-birthday], [data-crm-inline-children-count]"
+      )
+    ) {
       return;
     }
 
@@ -7065,7 +7192,7 @@ function initCoachCrmWorkspace(user = null) {
     if (
       !row ||
       !event.target.closest(
-        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at]"
+        "[data-crm-inline-status], [data-crm-inline-telemarketer], [data-crm-inline-representative], [data-crm-inline-next-action], [data-crm-inline-next-action-at], [data-crm-inline-birthday]"
       )
     ) {
       return;
@@ -7080,7 +7207,12 @@ function initCoachCrmWorkspace(user = null) {
     event => {
       const row = event.target.closest("[data-crm-inline-row]");
 
-      if (!row || !event.target.closest("[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address]")) {
+      if (
+        !row ||
+        !event.target.closest(
+          "[data-crm-inline-note], [data-crm-inline-next-action-at], [data-crm-inline-address], [data-crm-inline-zip], [data-crm-inline-area-notes], [data-crm-inline-birthday], [data-crm-inline-children-count]"
+        )
+      ) {
         return;
       }
 
