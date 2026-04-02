@@ -12,6 +12,10 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY
+        value: "20"
       - key: METALWORKS_CRM_PASSWORD
         sync: false
       - key: METALWORKS_CRM_ALLOWED_EMAILS

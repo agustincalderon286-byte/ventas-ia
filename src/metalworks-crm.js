@@ -4,6 +4,10 @@ import path from "node:path";
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
+const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
+  1,
+  Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
+);
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
   "contacted",
@@ -18,7 +22,53 @@ const METALWORKS_CRM_PUBLIC_EVENT_TYPES = new Set([
   "email_click",
   "quote_submit",
   "quote_submit_fallback",
+  "assistant_open",
+  "assistant_cta_click",
 ]);
+const METALWORKS_ASSISTANT_SYSTEM_PROMPT = `
+You are Agustin 2.0 for Chicago Metal Works & Fencing.
+
+ROLE:
+- You help website visitors for a Chicago metalwork business.
+- Main services: railings, handrails, gate repair, gate installation, fence repair, fence fabrication, mobile welding, custom metal fabrication, stairs, balconies, porch railings, ornamental ironwork.
+
+GOAL:
+- Help the visitor quickly understand the next best step.
+- Increase conversions to quote request or phone call.
+- Qualify the job without sounding pushy.
+
+VOICE:
+- Default to English.
+- If the visitor writes in Spanish, you may answer in Spanish.
+- Sound practical, friendly, clear, and contractor-like.
+- Do not sound like a generic corporate chatbot.
+- Keep it short.
+
+RULES:
+- Most replies should be 2 or 3 short sentences.
+- Ask for photos early when that will help.
+- Ask whether it is repair, replacement, or new installation when useful.
+- Ask for ZIP code or job location when useful.
+- Ask for the best phone number only when it helps move the quote forward.
+- If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
+- Do not give exact final pricing without enough detail.
+- If enough context exists, you may give a rough range and clearly frame it as preliminary.
+- Push toward quote form or phone call when the visitor shows real buying intent.
+
+SERVICE FIT:
+- High-fit: metalwork, welding, railings, handrails, gates, fences, fabrication, stairs, balconies, porch railings.
+- Low-fit: painting, flooring, handyman-only work, foundation-only work, door-only work that is not metal-related.
+- If the project is low-fit, politely say the business mainly focuses on metalwork and related repairs or fabrication.
+
+QUOTE GUIDANCE:
+- Fastest quote path: photos, rough measurements, ZIP code, and whether the project is repair or new build.
+- If the visitor asks price too early, ask for photos and measurements first.
+
+DO NOT:
+- Do not talk about Chef, Coach, Royal Prestige, cooking, product sales, or internal distributor tools.
+- Do not invent licensing, permits, warranties, or timelines you do not know.
+- Do not make safety guarantees or structural promises.
+`;
 
 function cleanText(value = "", maxLength = 0) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
@@ -163,9 +213,227 @@ function formatActivityTitle(type = "") {
     lead_created: "Lead creado",
     lead_updated: "Lead actualizado",
     note_added: "Nota agregada",
+    assistant_open: "Assistant abierto",
+    assistant_cta_click: "Assistant CTA",
+    assistant_user_message: "Mensaje al assistant",
+    assistant_ai_reply: "Respuesta del assistant",
+    assistant_fallback: "Fallback del assistant",
   };
 
   return labels[type] || "Actividad";
+}
+
+function detectSpanish(value = "") {
+  return /[¿¡]|\b(hola|precio|cotiza|reparacion|reparación|porton|portón|barandal|soldadura|cerca|reja|gracias|necesito|quiero|ayuda)\b/i.test(
+    String(value || ""),
+  );
+}
+
+function buildAssistantFallbackReply(message = "") {
+  const text = cleanText(message, 500).toLowerCase();
+  const inSpanish = detectSpanish(message);
+
+  if (
+    /unsafe|danger|falling|broken loose|asap|today|urgent|emergency|unsafe stair|unsafe railing/i.test(
+      text,
+    )
+  ) {
+    return inSpanish
+      ? "Si la pieza esta floja, peligrosa o urgente, llama ahora al 773 798 4107. Si puedes, manda fotos y tu ZIP code para decirte mas rapido si parece reparacion o reemplazo."
+      : "If the metalwork is loose, unsafe, or urgent, call 773 798 4107 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
+  }
+
+  if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
+    return inSpanish
+      ? "La forma mas rapida de cotizar es mandar fotos, medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
+      : "The fastest way to get pricing is to send photos, rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
+  }
+
+  if (/gate|gates|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
+    return inSpanish
+      ? "Si, ayudamos con reparacion de portones, bisagras, latches, portones arrastrando y portones nuevos. Manda una foto, dime si es reparacion o reemplazo, y agrega tu ZIP code para decirte el siguiente paso."
+      : "Yes, we help with gate repair, hinges, latches, dragging gates, and new metal gates. Send a photo, tell me if it is a repair or replacement, and include your ZIP code so I can point you to the next step.";
+  }
+
+  if (/railing|handrail|stairs|stair|balcony|porch|barandal|pasamano|pasamanos/i.test(text)) {
+    return inSpanish
+      ? "Trabajamos barandales, pasamanos, escaleras, balcones y porches. Si mandas fotos, medidas aproximadas y tu ZIP code, te digo si parece reparacion o instalacion nueva."
+      : "We work on porch railings, handrails, stairs, balconies, and related repairs or replacement work. If you send photos, rough measurements, and your ZIP code, I can help you figure out whether it looks like a repair or a new install.";
+  }
+
+  if (/fence|fencing|ornamental|iron fence|metal fence|cerca|reja/i.test(text)) {
+    return inSpanish
+      ? "Si, hacemos reparacion de cercas metalicas, secciones dañadas, fabricacion y trabajo nuevo. Manda unas fotos, dime si es reparacion o nuevo trabajo, y agrega tu ZIP code."
+      : "Yes, we handle metal fence repair, damaged sections, fabrication, and new fence work. Send a few photos, tell me if it is repair or new work, and include your ZIP code.";
+  }
+
+  if (/weld|welding|mobile welding|on[- ]site|solda/i.test(text)) {
+    return inSpanish
+      ? "Si hacemos soldadura y reparaciones de metal en muchos trabajos del area de Chicago. Manda fotos de la pieza o del daño, junto con la ubicacion, y te digo el mejor siguiente paso."
+      : "Yes, we do welding and metal repair work for many Chicago-area projects. Send photos of the damaged metalwork or the piece you want built, along with the job location, and I’ll point you to the best next step.";
+  }
+
+  if (/where|service area|zip|coverage|chicago|blue island|suburb|cobertura/i.test(text)) {
+    return inSpanish
+      ? "Trabajamos Chicago, Blue Island y suburbios cercanos. Mandame tu ciudad o ZIP code con una nota corta del proyecto y te confirmo cobertura."
+      : "We serve Chicago, Blue Island, and nearby suburbs. Send your city or ZIP code with a short note about the project, and I can confirm coverage fast.";
+  }
+
+  return inSpanish
+    ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos usa el quote form para moverlo mas rapido."
+    : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, use the quote form so we can move faster.";
+}
+
+function buildAssistantContext(message = "", pagePath = "") {
+  const text = cleanText(message, 500).toLowerCase();
+  const contextParts = [];
+
+  contextParts.push(`
+METAL WORKS WEBSITE CONTEXT:
+- Business: Chicago Metal Works & Fencing
+- Service area: Chicago, Blue Island, and nearby suburbs
+- Main CTA phone: 773 798 4107
+- Best quote path: photos, rough measurements, ZIP code, and whether the job is repair or new build
+- Public website page: ${cleanText(pagePath || "", 120) || "/"}
+`);
+
+  if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
+    contextParts.push(`
+QUOTE RULE:
+- Do not give a firm final price without enough detail.
+- Ask for photos, rough measurements, ZIP code, and whether the job is repair or new installation.
+- If enough context exists, frame price as a preliminary range.
+`);
+  }
+
+  if (/gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
+    contextParts.push(`
+GATE CONTEXT:
+- Common issues: dragging gates, latch issues, hinge issues, frame repairs, rewelds, replacement sections.
+- Move toward photo + repair vs replace + ZIP code.
+`);
+  }
+
+  if (/railing|handrail|stairs|stair|balcony|porch|barandal|pasamano|pasamanos/i.test(text)) {
+    contextParts.push(`
+RAILING CONTEXT:
+- Typical work: porch railings, stair handrails, balcony railings, repairs, replacements, new installs.
+- Ask where the railing is located and whether it is repair or new work.
+`);
+  }
+
+  if (/fence|fencing|ornamental|iron fence|metal fence|cerca|reja/i.test(text)) {
+    contextParts.push(`
+FENCE CONTEXT:
+- Typical work: metal fence repair, damaged sections, ornamental fence fabrication, new fence installs.
+- Ask for photos and the damaged area or total linear area if known.
+`);
+  }
+
+  if (/weld|welding|mobile welding|on[- ]site|solda/i.test(text)) {
+    contextParts.push(`
+WELDING CONTEXT:
+- Mobile welding and on-site metal repairs are part of the service mix.
+- Ask what piece needs welding, whether it is still installed, and where the job is located.
+`);
+  }
+
+  if (
+    /painting|floor|flooring|handyman|foundation|drywall|plumbing|electric|electrical|roof|door only/i.test(
+      text,
+    )
+  ) {
+    contextParts.push(`
+FIT FILTER:
+- The company mainly focuses on metalwork, welding, gates, fences, railings, stairs, and fabrication.
+- If the request is not really metal-related, say so politely and do not oversell.
+`);
+  }
+
+  return contextParts.join("\n");
+}
+
+function normalizeAssistantHistory(history = []) {
+  return (Array.isArray(history) ? history : [])
+    .map((item) => ({
+      role: item?.role === "assistant" ? "assistant" : "user",
+      content: cleanText(item?.content || "", 500),
+    }))
+    .filter((item) => item.content)
+    .slice(-6);
+}
+
+async function generateAssistantReply({
+  message = "",
+  history = [],
+  pagePath = "",
+} = {}) {
+  const fallbackReply = buildAssistantFallbackReply(message);
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+
+  if (!apiKey) {
+    return {
+      reply: fallbackReply,
+      usedFallback: true,
+      reason: "OPENAI_API_KEY missing",
+    };
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        max_completion_tokens: 220,
+        messages: [
+          {
+            role: "system",
+            content: METALWORKS_ASSISTANT_SYSTEM_PROMPT,
+          },
+          {
+            role: "system",
+            content: buildAssistantContext(message, pagePath),
+          },
+          ...normalizeAssistantHistory(history),
+          {
+            role: "user",
+            content: cleanText(message, 500),
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json().catch(() => null);
+    const reply = cleanText(data?.choices?.[0]?.message?.content || "", 1500);
+
+    if (!response.ok || !reply) {
+      return {
+        reply: fallbackReply,
+        usedFallback: true,
+        reason:
+          cleanText(
+            data?.error?.message || data?.message || `OpenAI error ${response.status}`,
+            240,
+          ) || "OpenAI error",
+      };
+    }
+
+    return {
+      reply,
+      usedFallback: false,
+      reason: "",
+    };
+  } catch (error) {
+    return {
+      reply: fallbackReply,
+      usedFallback: true,
+      reason: cleanText(error?.message || "Assistant error", 240),
+    };
+  }
 }
 
 function cleanLead(doc = null) {
@@ -1005,6 +1273,87 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error saving Metal Works public event:", error.message);
       respondError(res, 500, "No pude guardar ese evento.");
+    }
+  });
+
+  app.post("/api/public/metalworks/assistant", async (req, res) => {
+    try {
+      const message = cleanText(req.body?.message || "", 500);
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const history = normalizeAssistantHistory(req.body?.history || []);
+
+      if (!message) {
+        return respondError(res, 400, "Message is required.");
+      }
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const usedToday = visitorId
+        ? await MetalworksLeadActivity.countDocuments({
+            activityType: "assistant_user_message",
+            createdAt: { $gte: startOfDay },
+            "meta.visitorId": visitorId,
+          })
+        : 0;
+
+      if (visitorId && usedToday >= METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY) {
+        return res.status(429).json({
+          error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 773 798 4107 or try again tomorrow.`,
+        });
+      }
+
+      await appendActivity({
+        activityType: "assistant_user_message",
+        title: "Mensaje al assistant",
+        body: message,
+        meta: {
+          visitorId,
+          sessionId,
+          pageTitle: cleanText(req.body?.pageTitle || "", 160),
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      const result = await generateAssistantReply({
+        message,
+        history,
+        pagePath,
+      });
+
+      await appendActivity({
+        activityType: result.usedFallback ? "assistant_fallback" : "assistant_ai_reply",
+        title: result.usedFallback ? "Fallback del assistant" : "Respuesta del assistant",
+        body: result.reply,
+        meta: {
+          visitorId,
+          sessionId,
+          reason: result.reason || "",
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      res.json({
+        ok: true,
+        respuesta: result.reply,
+        usedFallback: result.usedFallback,
+        remainingToday: visitorId
+          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
+          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+      });
+    } catch (error) {
+      console.error("Error in Metal Works assistant:", error.message);
+      respondError(res, 500, "I could not answer right now.");
     }
   });
 }
