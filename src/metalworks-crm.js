@@ -417,7 +417,16 @@ async function generateAssistantReply({
       },
       body: JSON.stringify({
         model: "gpt-5-mini",
-        max_output_tokens: 220,
+        max_output_tokens: 420,
+        reasoning: {
+          effort: "low",
+        },
+        text: {
+          verbosity: "low",
+          format: {
+            type: "text",
+          },
+        },
         input: [
           {
             role: "system",
