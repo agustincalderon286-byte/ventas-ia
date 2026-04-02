@@ -232,8 +232,29 @@
                     <input type="text" name="city" placeholder="Ciudad" />
                   </label>
                   <label class="native-lead-field">
+                    <span>ZIP Code</span>
+                    <input type="text" name="zipCode" inputmode="numeric" maxlength="10" placeholder="60623" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Fecha de cumple</span>
+                    <input type="date" name="birthday" />
+                  </label>
+                  <label class="native-lead-field">
+                    <span>Hijos</span>
+                    <input type="number" name="childrenCount" min="0" step="1" placeholder="0" />
+                  </label>
+                  <label class="native-lead-field">
                     <span>Interes</span>
                     <input type="text" name="interest" placeholder="Producto o interes" />
+                  </label>
+                  <label class="native-lead-field native-lead-field-full">
+                    <span>Zona / referencia</span>
+                    <textarea
+                      name="areaNotes"
+                      rows="2"
+                      maxlength="240"
+                      placeholder="Ej. Little Village, cerca de Cermak y Pulaski, casa gris de esquina"
+                    ></textarea>
                   </label>
                   <label class="native-lead-field native-lead-field-full">
                     <span>Notas</span>
@@ -385,6 +406,46 @@
                     maxlength="240"
                     placeholder="Ej. 123 Main St Apt 2 o referencia de la casa."
                     data-crm-detail-address
+                  />
+                </label>
+
+                <label>
+                  ZIP Code
+                  <input
+                    type="text"
+                    name="zipCode"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="Ej. 60623"
+                    data-crm-detail-zip
+                  />
+                </label>
+
+                <label>
+                  Zona / referencia
+                  <textarea
+                    name="areaNotes"
+                    rows="2"
+                    maxlength="240"
+                    placeholder="Ej. Cerca de la Pink Line, edificio de ladrillo, 2do piso."
+                    data-crm-detail-area-notes
+                  ></textarea>
+                </label>
+
+                <label>
+                  Fecha de cumple
+                  <input type="date" name="birthday" data-crm-detail-birthday />
+                </label>
+
+                <label>
+                  Hijos
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="childrenCount"
+                    placeholder="0"
+                    data-crm-detail-children-count
                   />
                 </label>
 

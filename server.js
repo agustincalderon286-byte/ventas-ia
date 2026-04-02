@@ -422,6 +422,9 @@ const coachLeadInboxSchema = new mongoose.Schema({
   address: String,
   city: String,
   zipCode: String,
+  birthday: String,
+  childrenCount: { type: Number, default: null },
+  areaNotes: String,
   interest: String,
   source: { type: String, default: "captura_manual" },
   notes: String,
@@ -938,6 +941,9 @@ const coachCrmRecordSchema = new mongoose.Schema({
   address: String,
   city: String,
   zipCode: String,
+  birthday: String,
+  childrenCount: { type: Number, default: null },
+  areaNotes: String,
   interest: String,
   status: { type: String, default: "nuevo", index: true },
   statusColor: { type: String, default: "blue" },
@@ -5278,6 +5284,18 @@ async function aplicarCoachCrmActualizacionALeadSource(recordDoc = null, updates
     leadDoc.zipCode = normalizarZipCode(updates.zipCode || "");
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "birthday")) {
+    leadDoc.birthday = normalizarCoachBirthday(updates.birthday || "");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "childrenCount")) {
+    leadDoc.childrenCount = normalizarCoachChildrenCount(updates.childrenCount);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates || {}, "areaNotes")) {
+    leadDoc.areaNotes = truncarCoachCrmText(updates.areaNotes || "", 240);
+  }
+
   if (Object.prototype.hasOwnProperty.call(updates || {}, "privateNotesFull")) {
     leadDoc.notes = cleanText(updates.privateNotesFull || "").slice(0, 1200);
   }
@@ -5827,6 +5845,7 @@ function construirCoachCrmSearchCondition(search = "") {
     { email: regex },
     { city: regex },
     { zipCode: regex },
+    { areaNotes: regex },
     { address: regex },
     { assignedTelemarketerName: regex },
     { appointmentRepName: regex },
@@ -8221,6 +8240,43 @@ function normalizarZipCode(value = "") {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
 
+function normalizarCoachBirthday(value = "") {
+  const safeValue = cleanText(value || "").trim().slice(0, 40);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(safeValue)) {
+    return safeValue;
+  }
+
+  const parsed = new Date(safeValue);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizarCoachChildrenCount(value = null) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function parseCoachProgramSheetDateInput(value = "") {
   if (!value) {
     return null;
@@ -8636,6 +8692,9 @@ function construirCoachCrmLeadSeedOperation(leadDoc = null, defaultTelemarketer 
           email: leadDoc.email || "",
           city: leadDoc.city || "",
           zipCode: leadDoc.zipCode || "",
+          birthday: leadDoc.birthday || "",
+          childrenCount: normalizarCoachChildrenCount(leadDoc.childrenCount),
+          areaNotes: leadDoc.areaNotes || "",
           interest: leadDoc.interest || "",
           status,
           statusColor: resolverCoachCrmStatusColor(status),
@@ -9393,6 +9452,12 @@ function limpiarCoachCrmRecord(recordDoc = null) {
     address: recordDoc.address || "",
     city: recordDoc.city || "",
     zipCode: recordDoc.zipCode || "",
+    birthday: recordDoc.birthday || "",
+    childrenCount:
+      Number.isFinite(Number(recordDoc.childrenCount)) && Number(recordDoc.childrenCount) >= 0
+        ? Number(recordDoc.childrenCount)
+        : null,
+    areaNotes: recordDoc.areaNotes || "",
     interest: recordDoc.interest || "",
     status: normalizarCoachCrmStatus(recordDoc.status || "nuevo"),
     statusColor: recordDoc.statusColor || resolverCoachCrmStatusColor(recordDoc.status || "nuevo"),
@@ -10687,6 +10752,9 @@ async function guardarCoachInboxLead({
   const inferredLocation = inferCoachCityZipFromAddress(address);
   const city = String(payload?.city || inferredLocation.city || "").trim().slice(0, 80);
   const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || inferredLocation.zipCode || "");
+  const birthday = normalizarCoachBirthday(payload?.birthday || payload?.birthDate || "");
+  const childrenCount = normalizarCoachChildrenCount(payload?.childrenCount);
+  const areaNotes = truncarCoachCrmText(payload?.areaNotes || payload?.locationNotes || "", 240);
   const interest = String(payload?.interest || "").trim().slice(0, 120);
   const source = normalizarCoachLeadSource(payload?.source || "captura_manual");
   const notes = String(payload?.notes || "").trim().slice(0, 1200);
@@ -10745,6 +10813,15 @@ async function guardarCoachInboxLead({
     leadDoc.address = address || leadDoc.address || "";
     leadDoc.city = city || leadDoc.city || "";
     leadDoc.zipCode = zipCode || leadDoc.zipCode || "";
+    if (birthday) {
+      leadDoc.birthday = birthday;
+    }
+    if (childrenCount !== null) {
+      leadDoc.childrenCount = childrenCount;
+    }
+    if (areaNotes) {
+      leadDoc.areaNotes = areaNotes;
+    }
     leadDoc.interest = interest || leadDoc.interest || "";
     leadDoc.source = source || leadDoc.source || "captura_manual";
     leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
@@ -10825,6 +10902,9 @@ async function guardarCoachInboxLead({
     address,
     city,
     zipCode,
+    birthday,
+    childrenCount,
+    areaNotes,
     interest,
     source,
     notes,
@@ -11087,6 +11167,12 @@ function limpiarCoachInboxLead(leadDoc = null) {
     address: leadDoc.address || "",
     city: leadDoc.city || "",
     zipCode: leadDoc.zipCode || "",
+    birthday: leadDoc.birthday || "",
+    childrenCount:
+      Number.isFinite(Number(leadDoc.childrenCount)) && Number(leadDoc.childrenCount) >= 0
+        ? Number(leadDoc.childrenCount)
+        : null,
+    areaNotes: leadDoc.areaNotes || "",
     interest: leadDoc.interest || "",
     source: leadDoc.source || "captura_manual",
     notes: leadDoc.notes || "",
@@ -19724,6 +19810,26 @@ app.patch("/api/coach/crm/records/:recordId", async (req, res) => {
         recordDoc.zipCode = inferredLocation.zipCode;
         updates.zipCode = inferredLocation.zipCode;
       }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "zipCode")) {
+      recordDoc.zipCode = normalizarZipCode(req.body?.zipCode || "");
+      updates.zipCode = recordDoc.zipCode;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "birthday")) {
+      recordDoc.birthday = normalizarCoachBirthday(req.body?.birthday || "");
+      updates.birthday = recordDoc.birthday;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "childrenCount")) {
+      recordDoc.childrenCount = normalizarCoachChildrenCount(req.body?.childrenCount);
+      updates.childrenCount = recordDoc.childrenCount;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "areaNotes")) {
+      recordDoc.areaNotes = truncarCoachCrmText(req.body?.areaNotes || "", 240);
+      updates.areaNotes = recordDoc.areaNotes;
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "briefHistory")) {

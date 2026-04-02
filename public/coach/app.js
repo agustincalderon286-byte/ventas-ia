@@ -900,6 +900,31 @@ function formatDateInputValue(dateString) {
   return `${year}-${month}-${day}`;
 }
 
+function formatDateOnlyInputValue(value = "") {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(safeValue)) {
+    return safeValue;
+  }
+
+  return formatDateInputValue(safeValue);
+}
+
+function formatCoachBirthdayLabel(value = "") {
+  const safeValue = formatDateOnlyInputValue(value);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const [year, month, day] = safeValue.split("-");
+  return [month, day, year].filter(Boolean).join("/");
+}
+
 function formatTimeInputValue(dateString) {
   if (!dateString) {
     return "";
@@ -4630,6 +4655,34 @@ function truncateCoachCrmCell(value = "", maxLength = 84) {
   return `${safeValue.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
 }
 
+function buildCoachCrmHouseholdSummary(record = null, options = {}) {
+  const includeZip = options?.includeZip !== false;
+  const parts = [];
+  const zipCode = String(record?.zipCode || "").trim();
+  const areaNotes = truncateCoachCrmCell(record?.areaNotes || "", 84);
+  const birthdayLabel = formatCoachBirthdayLabel(record?.birthday || "");
+  const childrenCountValue = Number(record?.childrenCount);
+  const hasChildrenCount = Number.isFinite(childrenCountValue) && childrenCountValue >= 0;
+
+  if (includeZip && zipCode) {
+    parts.push(`ZIP ${zipCode}`);
+  }
+
+  if (areaNotes) {
+    parts.push(areaNotes);
+  }
+
+  if (birthdayLabel) {
+    parts.push(`Cumple ${birthdayLabel}`);
+  }
+
+  if (hasChildrenCount) {
+    parts.push(`${childrenCountValue} hijo${childrenCountValue === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" · ");
+}
+
 function normalizeCoachSearchText(value = "") {
   return String(value || "")
     .toLowerCase()
@@ -5172,6 +5225,10 @@ function initCoachCrmWorkspace(user = null) {
   const detailNextAction = document.querySelector("[data-crm-detail-next-action]");
   const detailNextActionAt = document.querySelector("[data-crm-detail-next-action-at]");
   const detailAddress = document.querySelector("[data-crm-detail-address]");
+  const detailZip = document.querySelector("[data-crm-detail-zip]");
+  const detailAreaNotes = document.querySelector("[data-crm-detail-area-notes]");
+  const detailBirthday = document.querySelector("[data-crm-detail-birthday]");
+  const detailChildrenCount = document.querySelector("[data-crm-detail-children-count]");
   const detailTelemarketer = document.querySelector("[data-crm-detail-telemarketer]");
   const detailRepresentative = document.querySelector("[data-crm-detail-representative]");
   const detailHistoryInput = document.querySelector("[data-crm-detail-history-input]");
@@ -5888,10 +5945,23 @@ function initCoachCrmWorkspace(user = null) {
       detailMeta.textContent = "Abre una fila para trabajarla.";
       detailHistory.textContent = "Sin historial breve todavia.";
       detailLastNote.textContent = "Sin nota reciente.";
+      if (detailZip) {
+        detailZip.value = "";
+      }
+      if (detailAreaNotes) {
+        detailAreaNotes.value = "";
+      }
+      if (detailBirthday) {
+        detailBirthday.value = "";
+      }
+      if (detailChildrenCount) {
+        detailChildrenCount.value = "";
+      }
       activityList.innerHTML = '<div class="team-seat-empty">Todavia no hay actividad guardada para esta fila.</div>';
       return;
     }
 
+    const householdSummary = buildCoachCrmHouseholdSummary(record, { includeZip: false });
     detailPanel.hidden = false;
     detailEmpty.hidden = true;
     detailSource.textContent = formatCoachCrmSourceLabel(record.sourceType);
@@ -5900,7 +5970,8 @@ function initCoachCrmWorkspace(user = null) {
       record.generatedByName ? `Lead de ${record.generatedByName}` : "",
       record.phone ? formatLeadPhone(record.phone) : "",
       record.email || "",
-      formatCoachAgendaAddress(record)
+      formatCoachAgendaAddress(record),
+      householdSummary
     ]
       .filter(Boolean)
       .join(" · ");
@@ -5929,6 +6000,21 @@ function initCoachCrmWorkspace(user = null) {
     if (detailAddress) {
       detailAddress.value = resolveCoachEditableAddressValue(record);
       detailAddress.autocomplete = "street-address";
+    }
+    if (detailZip) {
+      detailZip.value = record.zipCode || "";
+    }
+    if (detailAreaNotes) {
+      detailAreaNotes.value = record.areaNotes || "";
+    }
+    if (detailBirthday) {
+      detailBirthday.value = formatDateOnlyInputValue(record.birthday || "");
+    }
+    if (detailChildrenCount) {
+      detailChildrenCount.value =
+        Number.isFinite(Number(record.childrenCount)) && Number(record.childrenCount) >= 0
+          ? String(record.childrenCount)
+          : "";
     }
     detailTelemarketer.value = record.assignedTelemarketerUserId || "";
     detailRepresentative.value = record.appointmentRepUserId || "";
@@ -6287,6 +6373,9 @@ function initCoachCrmWorkspace(user = null) {
         const cityCopy = formatCoachCrmLocationMeta(record);
         const locationCopy = formatCoachAgendaAddress(record);
         const editableAddressValue = resolveCoachEditableAddressValue(record);
+        const householdSummary = buildCoachCrmHouseholdSummary(record, {
+          includeZip: !(cityCopy || locationCopy)
+        });
         const ownerCopy = record.generatedByName || "Cuenta principal";
         const notePlaceholder = truncateCoachCrmCell(record.lastNote || record.briefHistory || "", 92);
         const phoneHref = normalizeLeadPhone(record.phone || "");
@@ -6315,6 +6404,7 @@ function initCoachCrmWorkspace(user = null) {
                 <small>${escapeHtml(record.phone ? formatLeadPhone(record.phone) : record.email || "Sin contacto")}</small>
                 <small>${escapeHtml(ownerCopy)}</small>
                 <small>${escapeHtml(cityCopy || (locationCopy ? "Direccion lista" : "Ubicacion pendiente"))}</small>
+                ${householdSummary ? `<small>${escapeHtml(householdSummary)}</small>` : ""}
                 <input
                   class="crm-inline-input crm-inline-address-input"
                   type="text"
@@ -7096,6 +7186,10 @@ function initCoachCrmWorkspace(user = null) {
           fullName: formData.get("fullName"),
           phone: formData.get("phone"),
           city: formData.get("city"),
+          zipCode: formData.get("zipCode"),
+          birthday: formData.get("birthday"),
+          childrenCount: formData.get("childrenCount"),
+          areaNotes: formData.get("areaNotes"),
           interest: formData.get("interest"),
           notes: formData.get("notes"),
           consentGiven: true,
@@ -7188,6 +7282,10 @@ function initCoachCrmWorkspace(user = null) {
         nextAction: formData.get("nextAction"),
         nextActionAt: nextActionAtValue ? new Date(nextActionAtValue).toISOString() : "",
         address: formData.get("address"),
+        zipCode: formData.get("zipCode"),
+        areaNotes: formData.get("areaNotes"),
+        birthday: formData.get("birthday"),
+        childrenCount: formData.get("childrenCount"),
         assignedTelemarketerUserId: formData.get("assignedTelemarketerUserId"),
         appointmentRepUserId: formData.get("appointmentRepUserId"),
         briefHistory: formData.get("briefHistory"),
