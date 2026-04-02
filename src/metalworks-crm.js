@@ -9,13 +9,13 @@ const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "classic",
-    themeLabel: "Owner Mode",
+    skin: "intel-ops",
+    themeLabel: "Intel Ops Mode",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "classic",
-    themeLabel: "Owner Mode",
+    skin: "intel-ops",
+    themeLabel: "Intel Ops Mode",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",

@@ -49,6 +49,24 @@ body[data-crm-skin="goku-blue"] {
     linear-gradient(180deg, #02050f 0%, #071223 38%, #0b1730 100%);
 }
 
+body[data-crm-skin="intel-ops"] {
+  --crm-bg: #07110c;
+  --crm-panel: rgba(6, 18, 13, 0.88);
+  --crm-line: rgba(111, 255, 170, 0.18);
+  --crm-ink: #e9fff1;
+  --crm-muted: #8ea79a;
+  --crm-red: #89ffb7;
+  --crm-red-deep: #2fd67a;
+  --crm-charcoal: #ecfff3;
+  --crm-gold: #ffcf6e;
+  --crm-green: #8effc1;
+  --crm-blue: #8effc1;
+  --crm-shadow: 0 24px 60px rgba(1, 10, 6, 0.55);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(135, 255, 194, 0.12), transparent 18%),
+    linear-gradient(180deg, #020805 0%, #07110c 42%, #0a1911 100%);
+}
+
 body[data-crm-skin="goku-blue"]::before,
 body[data-crm-skin="goku-blue"]::after {
   content: "";
@@ -73,6 +91,41 @@ body[data-crm-skin="goku-blue"]::after {
     linear-gradient(128deg, transparent 0 36%, rgba(120, 93, 255, 0.12) 37%, transparent 42%);
   mix-blend-mode: screen;
   opacity: 0.9;
+}
+
+body[data-crm-skin="intel-ops"]::before,
+body[data-crm-skin="intel-ops"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body[data-crm-skin="intel-ops"]::before {
+  background:
+    radial-gradient(circle at 50% 22%, rgba(143, 255, 196, 0.14), transparent 14%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(142, 255, 193, 0.05) 0 2px,
+      transparent 2px 8px
+    ),
+    linear-gradient(90deg, transparent 49.4%, rgba(142, 255, 193, 0.08) 49.7%, transparent 50.2%);
+  mix-blend-mode: screen;
+}
+
+body[data-crm-skin="intel-ops"]::after {
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 207, 110, 0.08), transparent 12%),
+    radial-gradient(circle at 82% 64%, rgba(142, 255, 193, 0.08), transparent 14%),
+    conic-gradient(
+      from 210deg at 50% 50%,
+      transparent 0deg 300deg,
+      rgba(142, 255, 193, 0.22) 320deg,
+      transparent 340deg 360deg
+    );
+  opacity: 0.5;
+  filter: blur(10px);
 }
 
 button,
@@ -186,6 +239,18 @@ body[data-crm-skin="goku-blue"] .crm-detail-form textarea {
   box-shadow: inset 0 0 0 1px rgba(77, 230, 255, 0.06);
 }
 
+body[data-crm-skin="intel-ops"] .crm-login-form input,
+body[data-crm-skin="intel-ops"] .crm-toolbar input,
+body[data-crm-skin="intel-ops"] .crm-toolbar select,
+body[data-crm-skin="intel-ops"] .crm-detail-form input,
+body[data-crm-skin="intel-ops"] .crm-detail-form select,
+body[data-crm-skin="intel-ops"] .crm-detail-form textarea {
+  background: rgba(5, 16, 12, 0.96);
+  color: var(--crm-ink);
+  border-color: rgba(111, 255, 170, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(143, 255, 196, 0.04);
+}
+
 .crm-primary-button,
 .crm-secondary-button {
   min-height: 50px;
@@ -218,12 +283,33 @@ body[data-crm-skin="goku-blue"] .crm-login-alias {
   color: var(--crm-ink);
 }
 
+body[data-crm-skin="intel-ops"] .crm-secondary-button,
+body[data-crm-skin="intel-ops"] .crm-card-action,
+body[data-crm-skin="intel-ops"] .crm-action-link,
+body[data-crm-skin="intel-ops"] .crm-chip,
+body[data-crm-skin="intel-ops"] .crm-user-chip,
+body[data-crm-skin="intel-ops"] .crm-theme-badge,
+body[data-crm-skin="intel-ops"] .crm-login-alias {
+  background: rgba(111, 255, 170, 0.08);
+  border-color: rgba(111, 255, 170, 0.16);
+  color: var(--crm-ink);
+}
+
 body[data-crm-skin="goku-blue"] .crm-primary-button {
   background: linear-gradient(135deg, #1be8ff 0%, #6a5cff 48%, #ff4bd9 100%);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 14px 30px rgba(59, 121, 255, 0.28),
     0 0 38px rgba(255, 72, 214, 0.22);
+}
+
+body[data-crm-skin="intel-ops"] .crm-primary-button {
+  background: linear-gradient(135deg, #8effc1 0%, #49d993 56%, #ffc95f 100%);
+  color: #04120b;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 12px 30px rgba(49, 163, 102, 0.28),
+    0 0 34px rgba(142, 255, 193, 0.18);
 }
 
 body[data-crm-skin="goku-blue"] .crm-login-card,
@@ -241,6 +327,21 @@ body[data-crm-skin="goku-blue"] .crm-activity-card {
   backdrop-filter: blur(18px);
 }
 
+body[data-crm-skin="intel-ops"] .crm-login-card,
+body[data-crm-skin="intel-ops"] .crm-panel,
+body[data-crm-skin="intel-ops"] .crm-summary-card,
+body[data-crm-skin="intel-ops"] .crm-lead-card,
+body[data-crm-skin="intel-ops"] .crm-activity-card {
+  background:
+    linear-gradient(180deg, rgba(8, 20, 14, 0.96) 0%, rgba(5, 13, 10, 0.92) 100%);
+  border-color: rgba(111, 255, 170, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(111, 255, 170, 0.05),
+    0 22px 48px rgba(2, 8, 5, 0.48),
+    inset 0 0 0 1px rgba(255, 207, 110, 0.04);
+  backdrop-filter: blur(14px);
+}
+
 body[data-crm-skin="goku-blue"] .crm-header h1,
 body[data-crm-skin="goku-blue"] .crm-login-card h1 {
   color: #fafdff;
@@ -249,13 +350,28 @@ body[data-crm-skin="goku-blue"] .crm-login-card h1 {
     0 0 28px rgba(255, 78, 212, 0.18);
 }
 
+body[data-crm-skin="intel-ops"] .crm-header h1,
+body[data-crm-skin="intel-ops"] .crm-login-card h1 {
+  color: #f5fff8;
+  text-shadow: 0 0 12px rgba(111, 255, 170, 0.18);
+}
+
 body[data-crm-skin="goku-blue"] .crm-eyebrow {
   color: #7ae9ff;
   text-shadow: 0 0 16px rgba(82, 215, 255, 0.35);
 }
 
+body[data-crm-skin="intel-ops"] .crm-eyebrow {
+  color: #98ffc8;
+  text-shadow: 0 0 12px rgba(111, 255, 170, 0.2);
+}
+
 body[data-crm-skin="goku-blue"] .crm-summary-card strong {
   text-shadow: 0 0 18px rgba(77, 230, 255, 0.18);
+}
+
+body[data-crm-skin="intel-ops"] .crm-summary-card strong {
+  text-shadow: 0 0 14px rgba(111, 255, 170, 0.12);
 }
 
 body[data-crm-skin="goku-blue"] .crm-lead-card:hover,
@@ -264,6 +380,14 @@ body[data-crm-skin="goku-blue"] .crm-lead-card.is-active {
   box-shadow:
     0 0 0 1px rgba(255, 78, 212, 0.14),
     0 0 28px rgba(91, 226, 255, 0.12);
+}
+
+body[data-crm-skin="intel-ops"] .crm-lead-card:hover,
+body[data-crm-skin="intel-ops"] .crm-lead-card.is-active {
+  border-color: rgba(255, 207, 110, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(111, 255, 170, 0.08),
+    0 0 24px rgba(111, 255, 170, 0.08);
 }
 
 .crm-form-result[data-tone="error"] {
@@ -475,6 +599,23 @@ body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="booked"],
 body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="won"] {
   background: rgba(119, 255, 211, 0.14);
   color: #b6ffe8;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="new"] {
+  background: rgba(111, 255, 170, 0.12);
+  color: #a7ffcf;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="contacted"],
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="quoted"] {
+  background: rgba(255, 207, 110, 0.14);
+  color: #ffd783;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="booked"],
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
+  background: rgba(111, 255, 170, 0.16);
+  color: #b9ffda;
 }
 
 .crm-lead-card-meta,
