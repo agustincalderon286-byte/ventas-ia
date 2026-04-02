@@ -22,6 +22,20 @@ async function apiRequest(url, options = {}) {
   return data;
 }
 
+const METALWORKS_CONTACT = {
+  phoneDisplay: "773 798 4107",
+  phoneDigits: "7737984107",
+  email: "agustincalderon286@gmail.com",
+};
+
+const ESTIMATE_COST_FIELDS = [
+  "estimateMaterialsCost",
+  "estimateLaborCost",
+  "estimateCoatingCost",
+  "estimateMiscCost",
+  "estimateDiscount",
+];
+
 const state = {
   dashboard: null,
   leadDetail: null,
@@ -42,6 +56,7 @@ const detailEmpty = document.querySelector("[data-crm-detail-empty]");
 const detailMeta = document.querySelector("[data-crm-detail-meta]");
 const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
+const detailPanel = document.querySelector(".crm-detail-panel");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
 const globalActivityList = document.querySelector("[data-crm-global-activity]");
@@ -53,6 +68,12 @@ const userChip = document.querySelector("[data-crm-user-chip]");
 const refreshButton = document.querySelector("[data-crm-refresh]");
 const logoutButton = document.querySelector("[data-crm-logout]");
 const statusInput = document.querySelector("[data-crm-detail-status-input]");
+const callLink = document.querySelector("[data-crm-call-link]");
+const textLink = document.querySelector("[data-crm-text-link]");
+const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
+const sendEstimateButton = document.querySelector("[data-crm-send-estimate]");
+const openEmailDraftButton = document.querySelector("[data-crm-open-email-draft]");
+const copyEstimateButton = document.querySelector("[data-crm-copy-estimate]");
 
 function escapeHtml(value = "") {
   return String(value || "")
@@ -81,12 +102,30 @@ function formatDate(value = "") {
   });
 }
 
+function formatDateOnly(value = "") {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function formatCurrency(value = 0) {
   const amount = Number(value || 0) || 0;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
@@ -106,6 +145,22 @@ function toDatetimeLocalValue(value = "") {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toDateInputValue(value = "") {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function setDetailFeedback(message = "", tone = "") {
@@ -128,6 +183,203 @@ function buildQueryString(filters = {}) {
   });
 
   return params.toString();
+}
+
+function normalizePhoneDigits(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return digits.slice(1);
+  }
+
+  if (digits.length >= 10) {
+    return digits.slice(0, 10);
+  }
+
+  return digits;
+}
+
+function getLeadPhoneDigits(lead = null) {
+  return normalizePhoneDigits(lead?.phone || lead?.phoneDisplay || "");
+}
+
+function buildTelHref(phoneDigits = "") {
+  if (!phoneDigits) {
+    return "#";
+  }
+
+  return `tel:+1${phoneDigits}`;
+}
+
+function buildSmsHref(phoneDigits = "") {
+  if (!phoneDigits) {
+    return "#";
+  }
+
+  return `sms:+1${phoneDigits}`;
+}
+
+function getNumberInputValue(input) {
+  const raw = String(input?.value || "").trim();
+  if (!raw) {
+    return 0;
+  }
+
+  const amount = Number(raw);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function hasBreakdownValues() {
+  const form = detailForm?.elements;
+
+  if (!form) {
+    return false;
+  }
+
+  return ESTIMATE_COST_FIELDS.some((fieldName) =>
+    String(form[fieldName]?.value || "").trim(),
+  );
+}
+
+function calculateEstimateTotal(lead = null) {
+  const form = detailForm?.elements;
+
+  if (!form) {
+    return Number(lead?.estimateAmount || 0) || 0;
+  }
+
+  const materials = getNumberInputValue(form.estimateMaterialsCost);
+  const labor = getNumberInputValue(form.estimateLaborCost);
+  const coating = getNumberInputValue(form.estimateCoatingCost);
+  const misc = getNumberInputValue(form.estimateMiscCost);
+  const discount = getNumberInputValue(form.estimateDiscount);
+  const total = materials + labor + coating + misc - discount;
+  return Math.max(0, Math.round(total * 100) / 100);
+}
+
+function syncEstimateTotalFromForm() {
+  if (!detailForm?.elements?.estimateAmount) {
+    return;
+  }
+
+  const amountInput = detailForm.elements.estimateAmount;
+  const breakdownMode = hasBreakdownValues();
+
+  amountInput.readOnly = breakdownMode;
+  amountInput.dataset.mode = breakdownMode ? "auto" : "manual";
+
+  if (breakdownMode) {
+    amountInput.value = calculateEstimateTotal(state.leadDetail?.lead).toFixed(2);
+  }
+}
+
+function buildEstimateSnapshot() {
+  const lead = state.leadDetail?.lead || {};
+  const form = detailForm?.elements;
+  const breakdownMode = hasBreakdownValues();
+  const total = breakdownMode
+    ? calculateEstimateTotal(lead)
+    : Number(form?.estimateAmount?.value || lead.estimateAmount || 0) || 0;
+
+  return {
+    fullName: String(lead.fullName || "").trim(),
+    firstName:
+      String(lead.fullName || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)[0] || "there",
+    email: String(lead.email || "").trim(),
+    projectType: String(lead.projectType || "").trim(),
+    location: String(lead.location || "").trim(),
+    title: String(form?.estimateTitle?.value || lead.estimateTitle || "").trim(),
+    scope: String(form?.estimateScope?.value || lead.estimateScope || "").trim(),
+    notes: String(form?.estimateNotes?.value || lead.estimateNotes || "").trim(),
+    validUntil:
+      String(form?.estimateValidUntil?.value || "").trim() ||
+      toDateInputValue(lead.estimateValidUntil || ""),
+    total,
+  };
+}
+
+function buildEstimateSubject(snapshot) {
+  const projectLabel = snapshot.title || snapshot.projectType || "metal repair estimate";
+  return `Estimate from Chicago Metal Works & Fencing - ${projectLabel}`;
+}
+
+function buildEstimateBody(snapshot) {
+  const lines = [
+    `Hi ${snapshot.firstName},`,
+    "",
+    "Thank you for contacting Chicago Metal Works & Fencing.",
+    "",
+    `Project: ${snapshot.title || snapshot.projectType || "Metal repair"}`,
+    `Estimated total: ${formatCurrency(snapshot.total)}`,
+    snapshot.validUntil
+      ? `Valid until: ${formatDateOnly(snapshot.validUntil)}`
+      : "",
+    snapshot.location ? `Location: ${snapshot.location}` : "",
+    "",
+    snapshot.scope ? `Scope of work:\n${snapshot.scope}` : "",
+    snapshot.notes ? `Notes / exclusions:\n${snapshot.notes}` : "",
+    "",
+    `To move forward, reply to this email or call/text ${METALWORKS_CONTACT.phoneDisplay}.`,
+    "",
+    "Chicago Metal Works & Fencing",
+    METALWORKS_CONTACT.phoneDisplay,
+    METALWORKS_CONTACT.email,
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function openEmailDraft({ silent = false } = {}) {
+  const snapshot = buildEstimateSnapshot();
+
+  if (!snapshot.email) {
+    setDetailFeedback("Este lead no tiene correo todavia.", "error");
+    return false;
+  }
+
+  const mailto = `mailto:${encodeURIComponent(snapshot.email)}?subject=${encodeURIComponent(
+    buildEstimateSubject(snapshot),
+  )}&body=${encodeURIComponent(buildEstimateBody(snapshot))}`;
+
+  window.location.href = mailto;
+
+  if (!silent) {
+    setDetailFeedback("Draft abierto en tu correo.", "muted");
+  }
+
+  return true;
+}
+
+async function copyEstimateText() {
+  const snapshot = buildEstimateSnapshot();
+
+  if (!snapshot.title && !snapshot.scope && !snapshot.total) {
+    setDetailFeedback("Primero arma el estimate para poder copiarlo.", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(buildEstimateBody(snapshot));
+    setDetailFeedback("Estimate copiado.", "success");
+  } catch (error) {
+    setDetailFeedback("No pude copiarlo automaticamente.", "error");
+  }
+}
+
+function scrollDetailIntoView() {
+  if (!detailPanel || window.innerWidth > 960) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    detailPanel.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 80);
 }
 
 function renderSummary(summary = {}, serviceBreakdown = []) {
@@ -242,6 +494,8 @@ function renderLeadList(leads = []) {
   leadList.innerHTML = leads
     .map((lead) => {
       const isActive = lead.id === state.selectedLeadId;
+      const phoneDigits = getLeadPhoneDigits(lead);
+
       return `
         <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
           <div class="crm-lead-card-head">
@@ -260,14 +514,61 @@ function renderLeadList(leads = []) {
           <div class="crm-micro-list">
             <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
             ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+            ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
+          </div>
+          <div class="crm-lead-card-summary">
+            ${
+              lead.lastContactAt
+                ? `<span><strong>Last contact:</strong> ${escapeHtml(formatDate(lead.lastContactAt))}</span>`
+                : ""
+            }
+            ${
+              lead.estimateSentAt
+                ? `<span><strong>Estimate sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+                : ""
+            }
+          </div>
+          <div class="crm-card-actions">
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
+                : ""
+            }
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
+                : ""
+            }
+            <button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Quote</button>
           </div>
         </article>
       `;
     })
     .join("");
 
+  leadList.querySelectorAll("[data-prevent-select]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  leadList.querySelectorAll("[data-card-open-quote]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const leadId = String(button.getAttribute("data-card-open-quote") || "").trim();
+      if (!leadId) {
+        return;
+      }
+
+      state.selectedLeadId = leadId;
+      renderLeadList(leads);
+      await loadLeadDetail(leadId);
+      scrollDetailIntoView();
+    });
+  });
+
   leadList.querySelectorAll("[data-lead-id]").forEach((card) => {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", async () => {
       const leadId = String(card.getAttribute("data-lead-id") || "").trim();
       if (!leadId) {
         return;
@@ -275,7 +576,8 @@ function renderLeadList(leads = []) {
 
       state.selectedLeadId = leadId;
       renderLeadList(leads);
-      loadLeadDetail(leadId);
+      await loadLeadDetail(leadId);
+      scrollDetailIntoView();
     });
   });
 }
@@ -298,11 +600,7 @@ function renderActivityCards(target, activities = []) {
             <h3>${escapeHtml(item.title || "Actividad")}</h3>
             <span class="crm-chip">${escapeHtml(formatDate(item.createdAt) || "")}</span>
           </div>
-          ${
-            item.body
-              ? `<p>${escapeHtml(item.body)}</p>`
-              : ""
-          }
+          ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ""}
           ${
             item.pagePath
               ? `<div class="crm-activity-meta"><span>${escapeHtml(item.pagePath)}</span></div>`
@@ -314,6 +612,38 @@ function renderActivityCards(target, activities = []) {
     .join("");
 }
 
+function syncDetailQuickActions(lead = null) {
+  const phoneDigits = getLeadPhoneDigits(lead);
+  const hasPhone = Boolean(phoneDigits);
+  const hasEmail = Boolean(lead?.email);
+
+  if (callLink) {
+    callLink.hidden = !hasPhone;
+    callLink.href = hasPhone ? buildTelHref(phoneDigits) : "#";
+  }
+
+  if (textLink) {
+    textLink.hidden = !hasPhone;
+    textLink.href = hasPhone ? buildSmsHref(phoneDigits) : "#";
+  }
+
+  if (markQuotedButton) {
+    markQuotedButton.disabled = !lead?.id;
+  }
+
+  if (sendEstimateButton) {
+    sendEstimateButton.disabled = !lead?.id || !hasEmail;
+  }
+
+  if (openEmailDraftButton) {
+    openEmailDraftButton.disabled = !lead?.id || !hasEmail;
+  }
+
+  if (copyEstimateButton) {
+    copyEstimateButton.disabled = !lead?.id;
+  }
+}
+
 function renderLeadDetail(detail = null) {
   state.leadDetail = detail;
 
@@ -323,6 +653,7 @@ function renderLeadDetail(detail = null) {
     detailStatus.textContent = "Selecciona un lead";
     detailMeta.innerHTML = "";
     activityList.innerHTML = "";
+    syncDetailQuickActions(null);
     return;
   }
 
@@ -335,10 +666,21 @@ function renderLeadDetail(detail = null) {
       <span class="crm-chip">${escapeHtml(lead.phoneDisplay || lead.phone || "")}</span>
       ${lead.email ? `<span class="crm-chip">${escapeHtml(lead.email)}</span>` : ""}
       ${lead.location ? `<span class="crm-chip">${escapeHtml(lead.location)}</span>` : ""}
+      ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
     </div>
     <div class="crm-detail-meta">
       <span><strong>Creado:</strong> ${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
       <span><strong>Ultimo contacto:</strong> ${escapeHtml(formatDate(lead.lastContactAt) || "Sin registrar")}</span>
+      ${
+        lead.estimateSentAt
+          ? `<span><strong>Estimate sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+          : ""
+      }
+      ${
+        lead.estimateSentTo
+          ? `<span><strong>Sent to:</strong> ${escapeHtml(lead.estimateSentTo)}</span>`
+          : ""
+      }
       <span><strong>Pagina:</strong> ${escapeHtml(lead.pagePath || lead.pageUrl || "Sin dato")}</span>
       ${
         lead.tracking?.utmCampaign
@@ -364,11 +706,88 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
     detailForm.elements.estimateAmount.value = lead.estimateAmount || "";
+    detailForm.elements.estimateTitle.value = lead.estimateTitle || "";
+    detailForm.elements.estimateScope.value = lead.estimateScope || "";
+    detailForm.elements.estimateMaterialsCost.value = lead.estimateMaterialsCost || "";
+    detailForm.elements.estimateLaborCost.value = lead.estimateLaborCost || "";
+    detailForm.elements.estimateCoatingCost.value = lead.estimateCoatingCost || "";
+    detailForm.elements.estimateMiscCost.value = lead.estimateMiscCost || "";
+    detailForm.elements.estimateDiscount.value = lead.estimateDiscount || "";
+    detailForm.elements.estimateValidUntil.value = toDateInputValue(lead.estimateValidUntil);
+    detailForm.elements.estimateNotes.value = lead.estimateNotes || "";
     detailForm.elements.privateNotes.value = lead.privateNotes || "";
     detailForm.elements.note.value = "";
   }
 
+  syncEstimateTotalFromForm();
+  syncDetailQuickActions(lead);
   renderActivityCards(activityList, detail.activity || []);
+}
+
+function buildLeadPayloadFromForm() {
+  const formData = new FormData(detailForm);
+  const lead = state.leadDetail?.lead || {};
+  const breakdownMode = hasBreakdownValues();
+  const body = {
+    status: String(formData.get("status") || "").trim(),
+    nextAction: String(formData.get("nextAction") || "").trim(),
+    nextActionAt: String(formData.get("nextActionAt") || "").trim(),
+    estimateAmount: breakdownMode
+      ? String(calculateEstimateTotal(lead))
+      : String(formData.get("estimateAmount") || "").trim(),
+    estimateTitle: String(formData.get("estimateTitle") || "").trim(),
+    estimateScope: String(formData.get("estimateScope") || "").trim(),
+    estimateValidUntil: String(formData.get("estimateValidUntil") || "").trim(),
+    estimateNotes: String(formData.get("estimateNotes") || "").trim(),
+    privateNotes: String(formData.get("privateNotes") || "").trim(),
+    note: String(formData.get("note") || "").trim(),
+  };
+
+  if (breakdownMode) {
+    ESTIMATE_COST_FIELDS.forEach((fieldName) => {
+      body[fieldName] = String(formData.get(fieldName) || "").trim();
+    });
+  }
+
+  return body;
+}
+
+async function saveLeadChanges(
+  overrides = {},
+  { successMessage = "", refreshDashboard = true, showFeedback = true } = {},
+) {
+  if (!state.selectedLeadId || !detailForm) {
+    return null;
+  }
+
+  if (showFeedback) {
+    setDetailFeedback("Guardando...", "muted");
+  }
+
+  const body = {
+    ...buildLeadPayloadFromForm(),
+    ...overrides,
+  };
+
+  const detail = await apiRequest(
+    `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}`,
+    {
+      method: "PATCH",
+      body,
+    },
+  );
+
+  renderLeadDetail(detail);
+
+  if (successMessage) {
+    setDetailFeedback(successMessage, "success");
+  }
+
+  if (refreshDashboard) {
+    await loadDashboard();
+  }
+
+  return detail;
 }
 
 async function loadDashboard() {
@@ -411,36 +830,79 @@ async function loadLeadDetail(leadId) {
 async function handleSaveLead(event) {
   event.preventDefault();
 
-  if (!state.selectedLeadId || !detailForm) {
+  try {
+    await saveLeadChanges({}, { successMessage: "Seguimiento guardado." });
+  } catch (error) {
+    setDetailFeedback(error.message, "error");
+  }
+}
+
+async function handleMarkQuoted() {
+  if (!state.selectedLeadId) {
     return;
   }
 
-  setDetailFeedback("Guardando...", "muted");
-
-  const formData = new FormData(detailForm);
-  const body = {
-    status: String(formData.get("status") || "").trim(),
-    nextAction: String(formData.get("nextAction") || "").trim(),
-    nextActionAt: String(formData.get("nextActionAt") || "").trim(),
-    estimateAmount: String(formData.get("estimateAmount") || "").trim(),
-    privateNotes: String(formData.get("privateNotes") || "").trim(),
-    note: String(formData.get("note") || "").trim(),
-  };
+  if (statusInput) {
+    statusInput.value = "quoted";
+  }
 
   try {
-    const detail = await apiRequest(
-      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}`,
+    await saveLeadChanges({ status: "quoted" }, { successMessage: "Lead marcado como quoted." });
+  } catch (error) {
+    setDetailFeedback(error.message, "error");
+  }
+}
+
+async function handleSendEstimate() {
+  const snapshot = buildEstimateSnapshot();
+
+  if (!snapshot.email) {
+    setDetailFeedback("Este lead no tiene correo todavia.", "error");
+    return;
+  }
+
+  if (!snapshot.title && !snapshot.scope && !snapshot.total) {
+    setDetailFeedback("Primero arma el estimate para poder enviarlo.", "error");
+    return;
+  }
+
+  try {
+    setDetailFeedback("Guardando estimate...", "muted");
+    await saveLeadChanges({}, { refreshDashboard: false, showFeedback: false });
+    setDetailFeedback("Enviando estimate...", "muted");
+
+    const result = await apiRequest(
+      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/send-estimate`,
       {
-        method: "PATCH",
-        body,
+        method: "POST",
       },
     );
 
-    renderLeadDetail(detail);
-    setDetailFeedback("Seguimiento guardado.", "success");
+    renderLeadDetail({
+      lead: result.lead,
+      activity: result.activity || [],
+    });
+
+    if (result.delivered) {
+      setDetailFeedback(result.message || "Estimate enviado al cliente.", "success");
+      await loadDashboard();
+      return;
+    }
+
+    openEmailDraft({ silent: true });
+    setDetailFeedback(
+      result.message || "No pude enviarlo desde el sistema. Te abri un draft para mandarlo rapido.",
+      "muted",
+    );
     await loadDashboard();
   } catch (error) {
-    setDetailFeedback(error.message, "error");
+    const draftOpened = openEmailDraft({ silent: true });
+    setDetailFeedback(
+      draftOpened
+        ? "No pude enviarlo desde el sistema. Te abri un draft para terminarlo rapido."
+        : error.message,
+      draftOpened ? "muted" : "error",
+    );
   }
 }
 
@@ -471,6 +933,25 @@ function bindFilters() {
   });
 }
 
+function bindDetailActions() {
+  detailForm?.addEventListener("submit", handleSaveLead);
+  markQuotedButton?.addEventListener("click", handleMarkQuoted);
+  sendEstimateButton?.addEventListener("click", handleSendEstimate);
+  openEmailDraftButton?.addEventListener("click", () => {
+    openEmailDraft();
+  });
+  copyEstimateButton?.addEventListener("click", copyEstimateText);
+
+  detailForm?.addEventListener("input", (event) => {
+    const fieldName = event.target?.name || "";
+    if (!ESTIMATE_COST_FIELDS.includes(fieldName)) {
+      return;
+    }
+
+    syncEstimateTotalFromForm();
+  });
+}
+
 async function init() {
   const me = await apiRequest("/api/metalworks-crm/me");
 
@@ -484,9 +965,9 @@ async function init() {
   }
 
   bindFilters();
+  bindDetailActions();
   refreshButton?.addEventListener("click", loadDashboard);
   logoutButton?.addEventListener("click", handleLogout);
-  detailForm?.addEventListener("submit", handleSaveLead);
 
   await loadDashboard();
 }

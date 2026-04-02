@@ -74,6 +74,26 @@
 
           <div class="crm-detail-wrap" data-crm-detail-wrap hidden>
             <div class="crm-detail-meta" data-crm-detail-meta></div>
+            <div class="crm-quick-actions">
+              <a href="#" class="crm-secondary-button crm-action-link" data-crm-call-link hidden>
+                Call
+              </a>
+              <a href="#" class="crm-secondary-button crm-action-link" data-crm-text-link hidden>
+                Text
+              </a>
+              <button type="button" class="crm-secondary-button" data-crm-mark-quoted>
+                Mark Quoted
+              </button>
+              <button type="button" class="crm-secondary-button" data-crm-send-estimate>
+                Send Estimate
+              </button>
+              <button type="button" class="crm-secondary-button" data-crm-open-email-draft>
+                Open Email Draft
+              </button>
+              <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
+                Copy Estimate
+              </button>
+            </div>
 
             <form class="crm-detail-form" data-crm-detail-form>
               <label>
@@ -97,7 +117,7 @@
               </label>
 
               <label>
-                <span>Monto estimado</span>
+                <span>Estimate total</span>
                 <input
                   type="number"
                   name="estimateAmount"
@@ -105,6 +125,61 @@
                   step="0.01"
                   placeholder="0.00"
                 />
+              </label>
+
+              <label class="crm-field-full">
+                <span>Estimate title</span>
+                <input
+                  type="text"
+                  name="estimateTitle"
+                  maxlength="160"
+                  placeholder="Ej. Front porch landing repair and repaint"
+                />
+              </label>
+
+              <label class="crm-field-full">
+                <span>Estimate scope</span>
+                <textarea
+                  name="estimateScope"
+                  rows="4"
+                  placeholder="Describe el trabajo: rust removal, handrail repair, prep, primer, top coat, welding, etc."
+                ></textarea>
+              </label>
+
+              <div class="crm-field-full crm-estimate-grid">
+                <label>
+                  <span>Materials</span>
+                  <input type="number" name="estimateMaterialsCost" min="0" step="0.01" placeholder="0.00" />
+                </label>
+                <label>
+                  <span>Labor</span>
+                  <input type="number" name="estimateLaborCost" min="0" step="0.01" placeholder="0.00" />
+                </label>
+                <label>
+                  <span>Primer / top coat</span>
+                  <input type="number" name="estimateCoatingCost" min="0" step="0.01" placeholder="0.00" />
+                </label>
+                <label>
+                  <span>Misc / travel</span>
+                  <input type="number" name="estimateMiscCost" min="0" step="0.01" placeholder="0.00" />
+                </label>
+                <label>
+                  <span>Discount</span>
+                  <input type="number" name="estimateDiscount" min="0" step="0.01" placeholder="0.00" />
+                </label>
+                <label>
+                  <span>Valid until</span>
+                  <input type="date" name="estimateValidUntil" />
+                </label>
+              </div>
+
+              <label class="crm-field-full">
+                <span>Estimate notes / exclusions</span>
+                <textarea
+                  name="estimateNotes"
+                  rows="4"
+                  placeholder="Ej. Price does not include permit fees, hidden structural damage, or concrete work."
+                ></textarea>
               </label>
 
               <label class="crm-field-full">

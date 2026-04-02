@@ -4,6 +4,8 @@ import path from "node:path";
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
+const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
+const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
   1,
   Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
@@ -174,6 +176,203 @@ function normalizeStatus(value = "") {
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
 }
 
+function normalizeMoney(value = 0) {
+  const amount = Number(value || 0);
+
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round(amount * 100) / 100);
+}
+
+function parseDateOnly(value = "") {
+  const safeValue = cleanText(value || "", 40);
+
+  if (!safeValue) {
+    return null;
+  }
+
+  if (safeValue instanceof Date) {
+    return Number.isNaN(safeValue.getTime()) ? null : safeValue;
+  }
+
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(safeValue)
+    ? `${safeValue}T12:00:00`
+    : safeValue;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatMoneyLabel(value = 0) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(normalizeMoney(value));
+}
+
+function formatDateLabel(value = "") {
+  if (!value) {
+    return "";
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function escapeHtmlMarkup(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatMultilineHtml(value = "") {
+  return escapeHtmlMarkup(value).replace(/\n/g, "<br />");
+}
+
+function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
+  const fullName = cleanText(lead?.fullName || "", 120);
+  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || "there";
+  const projectLabel =
+    cleanText(lead?.estimateTitle || "", 160) ||
+    cleanText(lead?.projectType || "", 120) ||
+    "metal repair project";
+  const total = formatMoneyLabel(lead?.estimateAmount || 0);
+  const validUntil = formatDateLabel(lead?.estimateValidUntil || "");
+  const location = cleanText(lead?.location || "", 160);
+  const scope = cleanText(lead?.estimateScope || lead?.details || "", 2400);
+  const notes = cleanText(lead?.estimateNotes || "", 2400);
+  const subject = `Estimate from Chicago Metal Works & Fencing - ${projectLabel}`;
+  const textLines = [
+    `Hi ${firstName},`,
+    "",
+    "Thank you for contacting Chicago Metal Works & Fencing.",
+    "",
+    `Project: ${projectLabel}`,
+    `Estimated total: ${total}`,
+    validUntil ? `Valid until: ${validUntil}` : "",
+    location ? `Location: ${location}` : "",
+    "",
+    scope ? `Scope of work:\n${scope}` : "",
+    notes ? `Notes / exclusions:\n${notes}` : "",
+    "",
+    `To move forward, reply to this email or call/text ${METALWORKS_CONTACT_PHONE_DISPLAY}.`,
+    "",
+    "Chicago Metal Works & Fencing",
+    METALWORKS_CONTACT_PHONE_DISPLAY,
+    METALWORKS_CONTACT_EMAIL,
+  ].filter(Boolean);
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f8f5ef;padding:24px;color:#1e2428">
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd0;border-radius:18px;padding:28px">
+        <p style="margin:0 0 16px">Hi ${escapeHtmlMarkup(firstName)},</p>
+        <p style="margin:0 0 16px">Thank you for contacting <strong>Chicago Metal Works &amp; Fencing</strong>.</p>
+        <div style="border:1px solid #eadfcd;border-radius:16px;padding:18px;margin:0 0 18px;background:#fffaf2">
+          <p style="margin:0 0 10px"><strong>Project:</strong> ${escapeHtmlMarkup(projectLabel)}</p>
+          <p style="margin:0 0 10px"><strong>Estimated total:</strong> ${escapeHtmlMarkup(total)}</p>
+          ${validUntil ? `<p style="margin:0 0 10px"><strong>Valid until:</strong> ${escapeHtmlMarkup(validUntil)}</p>` : ""}
+          ${location ? `<p style="margin:0"><strong>Location:</strong> ${escapeHtmlMarkup(location)}</p>` : ""}
+        </div>
+        ${
+          scope
+            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Scope of work</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(scope)}</p></div>`
+            : ""
+        }
+        ${
+          notes
+            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Notes / exclusions</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(notes)}</p></div>`
+            : ""
+        }
+        <p style="margin:0 0 18px">To move forward, reply to this email or call/text <strong>${escapeHtmlMarkup(METALWORKS_CONTACT_PHONE_DISPLAY)}</strong>.</p>
+        <p style="margin:0;color:#66717a">
+          Chicago Metal Works &amp; Fencing<br />
+          ${escapeHtmlMarkup(METALWORKS_CONTACT_PHONE_DISPLAY)}<br />
+          ${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}
+        </p>
+      </div>
+    </div>
+  `;
+
+  return {
+    to: normalizeEmail(lead?.email || ""),
+    subject,
+    text: textLines.join("\n"),
+    html,
+    replyTo: normalizeEmail(replyTo || "") || METALWORKS_CONTACT_EMAIL,
+  };
+}
+
+async function sendMetalworksEstimateEmail(lead = null, replyTo = "") {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const fromEmail = String(process.env.RESEND_FROM_EMAIL || "").trim();
+
+  if (!apiKey || !fromEmail) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Email sending is not configured yet.",
+    };
+  }
+
+  const payload = buildMetalworksEstimateEmail(lead, replyTo);
+
+  if (!payload.to) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "This lead does not have an email address yet.",
+    };
+  }
+
+  const body = {
+    from: fromEmail,
+    to: [payload.to],
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html,
+    reply_to: payload.replyTo,
+  };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      delivered: false,
+      status: response.status,
+      error: errorData?.message || `Email service responded ${response.status}.`,
+    };
+  }
+
+  return {
+    attempted: true,
+    delivered: true,
+    status: response.status,
+  };
+}
+
 function buildTrackingPayload(payload = {}) {
   return {
     gclid: cleanText(payload?.gclid || "", 120),
@@ -213,6 +412,7 @@ function formatActivityTitle(type = "") {
     lead_created: "Lead creado",
     lead_updated: "Lead actualizado",
     note_added: "Nota agregada",
+    estimate_sent: "Estimate enviado",
     assistant_open: "Assistant abierto",
     assistant_cta_click: "Assistant CTA",
     assistant_user_message: "Mensaje al assistant",
@@ -502,7 +702,18 @@ function cleanLead(doc = null) {
     nextAction: doc.nextAction || "",
     nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
     privateNotes: doc.privateNotes || "",
+    estimateTitle: doc.estimateTitle || "",
+    estimateScope: doc.estimateScope || "",
+    estimateMaterialsCost: normalizeMoney(doc.estimateMaterialsCost || 0),
+    estimateLaborCost: normalizeMoney(doc.estimateLaborCost || 0),
+    estimateCoatingCost: normalizeMoney(doc.estimateCoatingCost || 0),
+    estimateMiscCost: normalizeMoney(doc.estimateMiscCost || 0),
+    estimateDiscount: normalizeMoney(doc.estimateDiscount || 0),
     estimateAmount: Number(doc.estimateAmount || 0) || 0,
+    estimateValidUntil: doc.estimateValidUntil ? new Date(doc.estimateValidUntil).toISOString() : "",
+    estimateNotes: doc.estimateNotes || "",
+    estimateSentAt: doc.estimateSentAt ? new Date(doc.estimateSentAt).toISOString() : "",
+    estimateSentTo: doc.estimateSentTo || "",
     pageTitle: doc.pageTitle || "",
     pagePath: doc.pagePath || "",
     pageUrl: doc.pageUrl || "",
@@ -557,6 +768,8 @@ function buildLeadQuery(filters = {}) {
       { location: pattern },
       { details: pattern },
       { projectType: pattern },
+      { estimateTitle: pattern },
+      { estimateScope: pattern },
     ];
   }
 
@@ -686,7 +899,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     nextAction: String,
     nextActionAt: Date,
     privateNotes: String,
+    estimateTitle: String,
+    estimateScope: String,
+    estimateMaterialsCost: { type: Number, default: 0 },
+    estimateLaborCost: { type: Number, default: 0 },
+    estimateCoatingCost: { type: Number, default: 0 },
+    estimateMiscCost: { type: Number, default: 0 },
+    estimateDiscount: { type: Number, default: 0 },
     estimateAmount: { type: Number, default: 0 },
+    estimateValidUntil: Date,
+    estimateNotes: String,
+    estimateSentAt: Date,
+    estimateSentTo: String,
     sourceType: { type: String, default: "website_form", index: true },
     pageTitle: String,
     pagePath: String,
@@ -724,7 +948,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     tokenHash: { type: String, required: true, unique: true, index: true },
     ipAddress: String,
     userAgent: String,
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
     lastSeenAt: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
   });
@@ -1063,9 +1287,43 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? cleanText(req.body?.privateNotes || "", 4000)
         : null;
       const estimateAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateAmount")
-        ? Number(req.body?.estimateAmount || 0) || 0
+        ? normalizeMoney(req.body?.estimateAmount || 0)
+        : null;
+      const estimateTitle = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateTitle")
+        ? cleanText(req.body?.estimateTitle || "", 160)
+        : null;
+      const estimateScope = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateScope")
+        ? cleanText(req.body?.estimateScope || "", 2400)
+        : null;
+      const estimateMaterialsCost = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateMaterialsCost")
+        ? normalizeMoney(req.body?.estimateMaterialsCost || 0)
+        : null;
+      const estimateLaborCost = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateLaborCost")
+        ? normalizeMoney(req.body?.estimateLaborCost || 0)
+        : null;
+      const estimateCoatingCost = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateCoatingCost")
+        ? normalizeMoney(req.body?.estimateCoatingCost || 0)
+        : null;
+      const estimateMiscCost = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateMiscCost")
+        ? normalizeMoney(req.body?.estimateMiscCost || 0)
+        : null;
+      const estimateDiscount = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateDiscount")
+        ? normalizeMoney(req.body?.estimateDiscount || 0)
+        : null;
+      const estimateValidUntilRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateValidUntil")
+        ? String(req.body?.estimateValidUntil || "").trim()
+        : null;
+      const estimateValidUntil = estimateValidUntilRaw === null
+        ? null
+        : estimateValidUntilRaw
+          ? parseDateOnly(estimateValidUntilRaw)
+          : null;
+      const estimateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateNotes")
+        ? cleanText(req.body?.estimateNotes || "", 2400)
         : null;
       const note = cleanText(req.body?.note || "", 600);
+      let estimateChanged = false;
+      let estimateMoneyChanged = false;
 
       if (nextStatus && leadDoc.status !== nextStatus) {
         changes.push(`Estado: ${labelStatus(leadDoc.status)} -> ${labelStatus(nextStatus)}`);
@@ -1095,8 +1353,94 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.privateNotes = privateNotes;
       }
 
-      if (estimateAmount !== null) {
-        leadDoc.estimateAmount = estimateAmount;
+      if (estimateTitle !== null) {
+        if (leadDoc.estimateTitle !== estimateTitle) {
+          estimateChanged = true;
+        }
+        leadDoc.estimateTitle = estimateTitle;
+      }
+
+      if (estimateScope !== null) {
+        if (leadDoc.estimateScope !== estimateScope) {
+          estimateChanged = true;
+        }
+        leadDoc.estimateScope = estimateScope;
+      }
+
+      if (estimateMaterialsCost !== null) {
+        if (normalizeMoney(leadDoc.estimateMaterialsCost || 0) !== estimateMaterialsCost) {
+          estimateChanged = true;
+          estimateMoneyChanged = true;
+        }
+        leadDoc.estimateMaterialsCost = estimateMaterialsCost;
+      }
+
+      if (estimateLaborCost !== null) {
+        if (normalizeMoney(leadDoc.estimateLaborCost || 0) !== estimateLaborCost) {
+          estimateChanged = true;
+          estimateMoneyChanged = true;
+        }
+        leadDoc.estimateLaborCost = estimateLaborCost;
+      }
+
+      if (estimateCoatingCost !== null) {
+        if (normalizeMoney(leadDoc.estimateCoatingCost || 0) !== estimateCoatingCost) {
+          estimateChanged = true;
+          estimateMoneyChanged = true;
+        }
+        leadDoc.estimateCoatingCost = estimateCoatingCost;
+      }
+
+      if (estimateMiscCost !== null) {
+        if (normalizeMoney(leadDoc.estimateMiscCost || 0) !== estimateMiscCost) {
+          estimateChanged = true;
+          estimateMoneyChanged = true;
+        }
+        leadDoc.estimateMiscCost = estimateMiscCost;
+      }
+
+      if (estimateDiscount !== null) {
+        if (normalizeMoney(leadDoc.estimateDiscount || 0) !== estimateDiscount) {
+          estimateChanged = true;
+          estimateMoneyChanged = true;
+        }
+        leadDoc.estimateDiscount = estimateDiscount;
+      }
+
+      if (estimateValidUntilRaw !== null) {
+        if (String(leadDoc.estimateValidUntil || "") !== String(estimateValidUntil || "")) {
+          estimateChanged = true;
+        }
+        leadDoc.estimateValidUntil = estimateValidUntil;
+      }
+
+      if (estimateNotes !== null) {
+        if (leadDoc.estimateNotes !== estimateNotes) {
+          estimateChanged = true;
+        }
+        leadDoc.estimateNotes = estimateNotes;
+      }
+
+      if (estimateMoneyChanged || estimateAmount !== null) {
+        const nextEstimateAmount = estimateMoneyChanged
+          ? normalizeMoney(
+              (estimateMaterialsCost !== null ? estimateMaterialsCost : leadDoc.estimateMaterialsCost || 0) +
+                (estimateLaborCost !== null ? estimateLaborCost : leadDoc.estimateLaborCost || 0) +
+                (estimateCoatingCost !== null ? estimateCoatingCost : leadDoc.estimateCoatingCost || 0) +
+                (estimateMiscCost !== null ? estimateMiscCost : leadDoc.estimateMiscCost || 0) -
+                (estimateDiscount !== null ? estimateDiscount : leadDoc.estimateDiscount || 0),
+            )
+          : normalizeMoney(estimateAmount || 0);
+
+        if (normalizeMoney(leadDoc.estimateAmount || 0) !== nextEstimateAmount) {
+          estimateChanged = true;
+        }
+
+        leadDoc.estimateAmount = nextEstimateAmount;
+      }
+
+      if (estimateChanged) {
+        changes.push(`Estimate: ${formatMoneyLabel(leadDoc.estimateAmount || 0)}`);
       }
 
       if (changes.length || note) {
@@ -1147,6 +1491,93 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error updating Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar ese lead.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/leads/:leadId/send-estimate", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId);
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      if (!normalizeEmail(leadDoc.email || "")) {
+        return respondError(res, 400, "Este lead no tiene correo todavia.");
+      }
+
+      if (
+        !cleanText(leadDoc.estimateTitle || "", 160) &&
+        !cleanText(leadDoc.estimateScope || "", 2400) &&
+        !normalizeMoney(leadDoc.estimateAmount || 0)
+      ) {
+        return respondError(res, 400, "Primero guarda un estimate para poder enviarlo.");
+      }
+
+      const delivery = await sendMetalworksEstimateEmail(leadDoc, auth.email);
+      let activityDocs = [];
+
+      if (delivery.delivered) {
+        const sentAt = new Date();
+        const statusBefore = normalizeStatus(leadDoc.status || "new");
+        let statusLine = "";
+
+        leadDoc.estimateSentAt = sentAt;
+        leadDoc.estimateSentTo = normalizeEmail(leadDoc.email || "");
+        leadDoc.lastContactAt = sentAt;
+        leadDoc.updatedAt = sentAt;
+
+        if (["new", "contacted"].includes(statusBefore)) {
+          leadDoc.status = "quoted";
+          statusLine = " Status changed to Quoted.";
+        }
+
+        await leadDoc.save();
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "estimate_sent",
+          title: "Estimate sent",
+          body: `Estimate sent to ${leadDoc.estimateSentTo}.${statusLine}`.trim(),
+          meta: {
+            adminEmail: auth.email,
+            sentTo: leadDoc.estimateSentTo,
+          },
+          req,
+        });
+      }
+
+      const updatedLead = await MetalworksLead.findById(leadId).lean();
+      activityDocs = await MetalworksLeadActivity.find({ leadId })
+        .sort({ createdAt: -1 })
+        .limit(80)
+        .lean();
+
+      res.json({
+        ok: true,
+        delivered: Boolean(delivery.delivered),
+        fallbackUsed: !delivery.delivered,
+        message: delivery.delivered
+          ? "Estimate sent to the client."
+          : delivery.error || "I could not send it from the system.",
+        lead: cleanLead(updatedLead),
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error sending Metal Works estimate:", error.message);
+      respondError(res, 500, "No pude enviar ese estimate.");
     }
   });
 

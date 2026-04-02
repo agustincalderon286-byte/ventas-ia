@@ -228,6 +228,10 @@ textarea {
   padding: 20px;
 }
 
+.crm-detail-panel {
+  position: relative;
+}
+
 .crm-panel-head {
   display: flex;
   justify-content: space-between;
@@ -332,12 +336,66 @@ textarea {
   gap: 18px;
 }
 
+.crm-quick-actions,
+.crm-card-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-quick-actions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.crm-action-link,
+.crm-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  background: rgba(16, 20, 23, 0.04);
+  color: var(--crm-charcoal);
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.crm-card-action {
+  min-height: 42px;
+  width: 100%;
+}
+
+.crm-card-action:hover,
+.crm-action-link:hover {
+  background: rgba(179, 32, 37, 0.08);
+}
+
+.crm-secondary-button:disabled,
+.crm-card-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .crm-detail-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .crm-field-full {
   grid-column: 1 / -1;
+}
+
+.crm-estimate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.crm-detail-form input[readonly] {
+  background: rgba(16, 20, 23, 0.05);
+  color: var(--crm-charcoal);
+  font-weight: 800;
 }
 
 .crm-form-actions {
@@ -351,6 +409,14 @@ textarea {
 .crm-activity-card p {
   margin: 8px 0 0;
   white-space: pre-wrap;
+}
+
+.crm-lead-card-summary {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  color: var(--crm-muted);
+  font-size: 0.9rem;
 }
 
 .crm-micro-list {
@@ -371,11 +437,20 @@ textarea {
   font-weight: 700;
 }
 
+@media (min-width: 1081px) {
+  .crm-detail-panel {
+    position: sticky;
+    top: 18px;
+    align-self: start;
+  }
+}
+
 @media (max-width: 1080px) {
   .crm-summary-grid,
   .crm-toolbar,
   .crm-main-grid,
-  .crm-detail-form {
+  .crm-detail-form,
+  .crm-estimate-grid {
     grid-template-columns: 1fr;
   }
 
@@ -396,7 +471,27 @@ textarea {
     border-radius: 20px;
   }
 
+  .crm-quick-actions,
+  .crm-card-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-lead-card-head {
+    flex-direction: column;
+  }
+
   .crm-summary-card strong {
     font-size: 1.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .crm-quick-actions,
+  .crm-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-form-actions {
+    align-items: stretch;
   }
 }
