@@ -38,9 +38,9 @@ const CRM_THEME_PRESETS = {
     themeLabel: "Owner Mode",
   },
   "calderonrigoberto51@gmail.com": {
-    displayName: "Goku Blue",
+    displayName: "Rigo",
     skin: "goku-blue",
-    themeLabel: "Goku Blue Mode",
+    themeLabel: "Rigo // Goku Blue Mode",
   },
 };
 

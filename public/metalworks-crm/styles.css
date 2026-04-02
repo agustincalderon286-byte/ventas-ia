@@ -20,6 +20,8 @@
 
 body {
   margin: 0;
+  position: relative;
+  overflow-x: hidden;
   font-family: "Manrope", "Segoe UI", sans-serif;
   color: var(--crm-ink);
   background:
@@ -30,7 +32,7 @@ body {
 body[data-crm-skin="goku-blue"] {
   --crm-bg: #071223;
   --crm-panel: rgba(10, 18, 36, 0.9);
-  --crm-line: rgba(97, 214, 255, 0.18);
+  --crm-line: rgba(97, 214, 255, 0.24);
   --crm-ink: #f4f8ff;
   --crm-muted: #9bb0d7;
   --crm-red: #3fdcff;
@@ -41,10 +43,36 @@ body[data-crm-skin="goku-blue"] {
   --crm-blue: #7bd7ff;
   --crm-shadow: 0 24px 60px rgba(4, 7, 20, 0.45);
   background:
-    radial-gradient(circle at 22% 18%, rgba(82, 215, 255, 0.32), transparent 22%),
-    radial-gradient(circle at 78% 24%, rgba(255, 78, 212, 0.24), transparent 24%),
-    radial-gradient(circle at 50% 55%, rgba(113, 71, 255, 0.22), transparent 38%),
-    linear-gradient(180deg, #030814 0%, #071223 40%, #0b1730 100%);
+    radial-gradient(circle at 18% 14%, rgba(82, 215, 255, 0.42), transparent 18%),
+    radial-gradient(circle at 82% 18%, rgba(255, 78, 212, 0.34), transparent 21%),
+    radial-gradient(circle at 50% 48%, rgba(113, 71, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, #02050f 0%, #071223 38%, #0b1730 100%);
+}
+
+body[data-crm-skin="goku-blue"]::before,
+body[data-crm-skin="goku-blue"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body[data-crm-skin="goku-blue"]::before {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(77, 230, 255, 0.22), transparent 20%),
+    radial-gradient(circle at 50% 42%, rgba(255, 71, 215, 0.18), transparent 18%),
+    radial-gradient(circle at 50% 72%, rgba(72, 118, 255, 0.18), transparent 24%);
+  filter: blur(24px) saturate(140%);
+}
+
+body[data-crm-skin="goku-blue"]::after {
+  background:
+    linear-gradient(72deg, transparent 0 18%, rgba(90, 231, 255, 0.16) 19%, transparent 22%),
+    linear-gradient(105deg, transparent 0 62%, rgba(255, 90, 222, 0.12) 63%, transparent 67%),
+    linear-gradient(128deg, transparent 0 36%, rgba(120, 93, 255, 0.12) 37%, transparent 42%);
+  mix-blend-mode: screen;
+  opacity: 0.9;
 }
 
 button,
@@ -82,6 +110,12 @@ textarea {
   border-radius: var(--crm-radius);
   background: var(--crm-panel);
   box-shadow: var(--crm-shadow);
+}
+
+.crm-login-shell,
+.crm-shell {
+  position: relative;
+  z-index: 1;
 }
 
 .crm-login-card {
@@ -149,6 +183,7 @@ body[data-crm-skin="goku-blue"] .crm-detail-form textarea {
   background: rgba(8, 15, 30, 0.95);
   color: var(--crm-ink);
   border-color: rgba(97, 214, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(77, 230, 255, 0.06);
 }
 
 .crm-primary-button,
@@ -181,6 +216,54 @@ body[data-crm-skin="goku-blue"] .crm-login-alias {
   background: rgba(97, 214, 255, 0.08);
   border-color: rgba(97, 214, 255, 0.18);
   color: var(--crm-ink);
+}
+
+body[data-crm-skin="goku-blue"] .crm-primary-button {
+  background: linear-gradient(135deg, #1be8ff 0%, #6a5cff 48%, #ff4bd9 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 14px 30px rgba(59, 121, 255, 0.28),
+    0 0 38px rgba(255, 72, 214, 0.22);
+}
+
+body[data-crm-skin="goku-blue"] .crm-login-card,
+body[data-crm-skin="goku-blue"] .crm-panel,
+body[data-crm-skin="goku-blue"] .crm-summary-card,
+body[data-crm-skin="goku-blue"] .crm-lead-card,
+body[data-crm-skin="goku-blue"] .crm-activity-card {
+  background:
+    linear-gradient(180deg, rgba(12, 22, 44, 0.92) 0%, rgba(8, 14, 30, 0.9) 100%);
+  border-color: rgba(97, 214, 255, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(97, 214, 255, 0.05),
+    0 22px 48px rgba(4, 7, 20, 0.4),
+    0 0 32px rgba(76, 228, 255, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+body[data-crm-skin="goku-blue"] .crm-header h1,
+body[data-crm-skin="goku-blue"] .crm-login-card h1 {
+  color: #fafdff;
+  text-shadow:
+    0 0 12px rgba(82, 215, 255, 0.35),
+    0 0 28px rgba(255, 78, 212, 0.18);
+}
+
+body[data-crm-skin="goku-blue"] .crm-eyebrow {
+  color: #7ae9ff;
+  text-shadow: 0 0 16px rgba(82, 215, 255, 0.35);
+}
+
+body[data-crm-skin="goku-blue"] .crm-summary-card strong {
+  text-shadow: 0 0 18px rgba(77, 230, 255, 0.18);
+}
+
+body[data-crm-skin="goku-blue"] .crm-lead-card:hover,
+body[data-crm-skin="goku-blue"] .crm-lead-card.is-active {
+  border-color: rgba(255, 78, 212, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(255, 78, 212, 0.14),
+    0 0 28px rgba(91, 226, 255, 0.12);
 }
 
 .crm-form-result[data-tone="error"] {

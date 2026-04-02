@@ -18,9 +18,9 @@ const METALWORKS_CRM_USER_PROFILES = {
     themeLabel: "Owner Mode",
   },
   "calderonrigoberto51@gmail.com": {
-    displayName: "Goku Blue",
+    displayName: "Rigo",
     skin: "goku-blue",
-    themeLabel: "Goku Blue Mode",
+    themeLabel: "Rigo // Goku Blue Mode",
   },
 };
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
