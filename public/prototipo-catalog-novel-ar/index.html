@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novel AR Best Effort</title>
+    <script
+      type="module"
+      src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
+    ></script>
+    <style>
+      :root {
+        --bg: #07101d;
+        --bg2: #0f2037;
+        --panel: rgba(8, 17, 32, 0.84);
+        --line: rgba(111, 170, 255, 0.25);
+        --text: #eef4ff;
+        --muted: #aebcd8;
+        --accent: #5bb2ff;
+        --accent-2: #fd5e66;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(91, 178, 255, 0.18), transparent 32%),
+          radial-gradient(circle at top right, rgba(253, 94, 102, 0.14), transparent 28%),
+          linear-gradient(160deg, var(--bg), var(--bg2));
+      }
+
+      .wrap {
+        width: min(1180px, calc(100vw - 28px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      .top {
+        display: grid;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(91, 178, 255, 0.12);
+        border: 1px solid rgba(91, 178, 255, 0.2);
+        color: #d8ebff;
+        font-size: 0.84rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.8rem);
+        line-height: 0.96;
+        max-width: 11ch;
+      }
+
+      .lede {
+        max-width: 62ch;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 1.02rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 0.96fr 1.04fr;
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        box-shadow: 0 24px 80px rgba(3, 8, 18, 0.38);
+        overflow: hidden;
+        backdrop-filter: blur(18px);
+      }
+
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        padding: 18px 20px 0;
+      }
+
+      .panel-head h2 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .panel-head span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .reference-box {
+        padding: 14px 20px 20px;
+      }
+
+      .reference-box img {
+        width: 100%;
+        display: block;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .reference-note,
+      .viewer-note {
+        margin: 14px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.94rem;
+      }
+
+      .viewer-shell {
+        padding: 10px 10px 18px;
+      }
+
+      model-viewer {
+        width: 100%;
+        height: min(76vh, 720px);
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.16), transparent 18%),
+          linear-gradient(180deg, #11233f, #09111e);
+      }
+
+      .action-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 0 16px 4px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), #84d1ff);
+        color: #04111f;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding: 0 16px 16px;
+      }
+
+      .stat {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 0.78rem;
+        color: #dce8ff;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .stat span {
+        color: var(--muted);
+        line-height: 1.45;
+        font-size: 0.92rem;
+      }
+
+      .foot {
+        margin-top: 18px;
+        padding: 18px 20px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        model-viewer {
+          height: 62vh;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="top">
+        <span class="eyebrow">Nuevo Prototipo Separado · Best Effort AR</span>
+        <h1>Novel Pot from catalog image to AR concept</h1>
+        <p class="lede">
+          Este experimento está separado de tu demo actual. Toma la olla de la portada del catálogo
+          como referencia visual y la convierte en un modelo 3D aproximado para mostrar cómo se vería
+          una experiencia de realidad aumentada para un inversionista.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Catalog Reference</h2>
+            <span>Fuente visual original</span>
+          </div>
+          <div class="reference-box">
+            <img
+              src="/prototipo-catalog-novel-ar/assets/catalog-reference.png"
+              alt="Novel catalog cover used as the visual reference"
+            />
+            <p class="reference-note">
+              La geometría no es CAD exacta. Es una reconstrucción visual rápida basada en una sola
+              imagen de catálogo, suficiente para enseñar el concepto de “con el equipo correcto”.
+            </p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>3D + AR Best Effort</h2>
+            <span>Modelo nuevo aislado del demo anterior</span>
+          </div>
+          <div class="viewer-shell">
+            <model-viewer
+              id="novelViewer"
+              src="/prototipo-catalog-novel-ar/assets/novel-best-effort.glb"
+              poster="/prototipo-catalog-novel-ar/assets/catalog-product-cover.webp"
+              alt="Best effort 3D reconstruction of the Novel pot"
+              ar
+              ar-modes="webxr scene-viewer"
+              ar-scale="fixed"
+              camera-controls
+              auto-rotate
+              shadow-intensity="1.1"
+              exposure="1"
+              environment-image="neutral"
+            >
+              <button class="btn btn-primary" slot="ar-button">Open In AR</button>
+            </model-viewer>
+          </div>
+          <div class="action-bar">
+            <button class="btn btn-primary" id="arBtn">View In Your Space</button>
+            <a class="btn btn-secondary" href="/prototipo-catalog-novel-ar/assets/novel-best-effort.glb">
+              Download GLB
+            </a>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <strong>What It Shows</strong>
+              <span>Que sí se puede convertir una referencia de catálogo en una experiencia 3D enseñable.</span>
+            </div>
+            <div class="stat">
+              <strong>Best On</strong>
+              <span>Android con AR o navegador moderno con WebXR para abrirlo en cámara.</span>
+            </div>
+            <div class="stat">
+              <strong>Honest Limit</strong>
+              <span>En iPhone faltaría generar un archivo USDZ para Quick Look nativo.</span>
+            </div>
+          </div>
+          <p class="viewer-note">
+            Si el botón AR no aparece en tu teléfono, igual puedes rotar y enseñar el modelo 3D en la
+            misma página. Para una versión comercial, el siguiente paso sería subir precisión y exportar
+            también a USDZ.
+          </p>
+        </article>
+      </section>
+
+      <section class="foot">
+        Este prototipo no modificó tu demo anterior. Vive aparte para que puedas compararlo, enseñarlo y
+        decidir si vale la pena invertir en un pipeline 3D/AR más serio.
+      </section>
+    </main>
+
+    <script>
+      const viewer = document.getElementById("novelViewer");
+      const arBtn = document.getElementById("arBtn");
+
+      arBtn?.addEventListener("click", async () => {
+        if (viewer && typeof viewer.activateAR === "function") {
+          try {
+            await viewer.activateAR();
+          } catch (error) {
+            console.error("AR launch failed", error);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
