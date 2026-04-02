@@ -363,6 +363,34 @@ function normalizeAssistantHistory(history = []) {
     .slice(-6);
 }
 
+function extractAssistantResponseText(data = null) {
+  const directText = cleanText(data?.output_text || "", 1500);
+
+  if (directText) {
+    return directText;
+  }
+
+  const outputItems = Array.isArray(data?.output) ? data.output : [];
+
+  for (const item of outputItems) {
+    if (item?.type !== "message") {
+      continue;
+    }
+
+    const parts = Array.isArray(item?.content) ? item.content : [];
+
+    for (const part of parts) {
+      const text = cleanText(part?.text || "", 1500);
+
+      if (part?.type === "output_text" && text) {
+        return text;
+      }
+    }
+  }
+
+  return "";
+}
+
 async function generateAssistantReply({
   message = "",
   history = [],
@@ -381,7 +409,7 @@ async function generateAssistantReply({
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -389,8 +417,8 @@ async function generateAssistantReply({
       },
       body: JSON.stringify({
         model: "gpt-5-mini",
-        max_completion_tokens: 220,
-        messages: [
+        max_output_tokens: 220,
+        input: [
           {
             role: "system",
             content: METALWORKS_ASSISTANT_SYSTEM_PROMPT,
@@ -409,7 +437,7 @@ async function generateAssistantReply({
     });
 
     const data = await response.json().catch(() => null);
-    const reply = cleanText(data?.choices?.[0]?.message?.content || "", 1500);
+    const reply = extractAssistantResponseText(data);
 
     if (!response.ok || !reply) {
       const errorMessage =
