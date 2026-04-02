@@ -372,6 +372,7 @@ async function generateAssistantReply({
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
 
   if (!apiKey) {
+    console.warn("[metalworks-assistant] OPENAI_API_KEY missing or empty");
     return {
       reply: fallbackReply,
       usedFallback: true,
@@ -411,14 +412,19 @@ async function generateAssistantReply({
     const reply = cleanText(data?.choices?.[0]?.message?.content || "", 1500);
 
     if (!response.ok || !reply) {
+      const errorMessage =
+        cleanText(
+          data?.error?.message || data?.message || `OpenAI error ${response.status}`,
+          240,
+        ) || "OpenAI error";
+      console.warn("[metalworks-assistant] OpenAI fallback", {
+        status: response.status,
+        reason: errorMessage,
+      });
       return {
         reply: fallbackReply,
         usedFallback: true,
-        reason:
-          cleanText(
-            data?.error?.message || data?.message || `OpenAI error ${response.status}`,
-            240,
-          ) || "OpenAI error",
+        reason: errorMessage,
       };
     }
 
@@ -428,6 +434,9 @@ async function generateAssistantReply({
       reason: "",
     };
   } catch (error) {
+    console.warn("[metalworks-assistant] Assistant request failed", {
+      reason: cleanText(error?.message || "Assistant error", 240),
+    });
     return {
       reply: fallbackReply,
       usedFallback: true,
