@@ -6,6 +6,23 @@ const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
+const METALWORKS_CRM_USER_PROFILES = {
+  "agustincalderon286@gmail.com": {
+    displayName: "Agustin",
+    skin: "classic",
+    themeLabel: "Owner Mode",
+  },
+  "agustincalderon423@gmail.com": {
+    displayName: "Agustin",
+    skin: "classic",
+    themeLabel: "Owner Mode",
+  },
+  "calderonrigoberto51@gmail.com": {
+    displayName: "Goku Blue",
+    skin: "goku-blue",
+    themeLabel: "Goku Blue Mode",
+  },
+};
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
   1,
   Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
@@ -158,9 +175,13 @@ function getClientIp(req) {
 }
 
 function getAllowedEmails() {
-  return parseEmailList(
-    process.env.METALWORKS_CRM_ALLOWED_EMAILS || METALWORKS_CRM_DEFAULT_EMAIL,
-  );
+  return Array.from(
+    new Set([
+      METALWORKS_CRM_DEFAULT_EMAIL,
+      ...Object.keys(METALWORKS_CRM_USER_PROFILES),
+      ...parseEmailList(process.env.METALWORKS_CRM_ALLOWED_EMAILS || ""),
+    ]),
+  ).filter(Boolean);
 }
 
 function getMetalworksPassword() {
@@ -169,6 +190,18 @@ function getMetalworksPassword() {
 
 function metalworksCrmConfigured() {
   return Boolean(getAllowedEmails().length && getMetalworksPassword());
+}
+
+function getMetalworksCrmProfile(email = "") {
+  const safeEmail = normalizeEmail(email || "");
+  const preset = METALWORKS_CRM_USER_PROFILES[safeEmail] || {};
+
+  return {
+    email: safeEmail,
+    displayName: preset.displayName || (safeEmail ? safeEmail.split("@")[0] : "CMWF Admin"),
+    skin: preset.skin || "classic",
+    themeLabel: preset.themeLabel || "",
+  };
 }
 
 function normalizeStatus(value = "") {
@@ -1129,12 +1162,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   app.get("/api/metalworks-crm/me", async (req, res) => {
     try {
       const auth = await getAuth(req, { touch: true });
+      const fallbackEmail =
+        auth.email || getAllowedEmails()[0] || METALWORKS_CRM_DEFAULT_EMAIL;
       res.json({
         authenticated: Boolean(auth.email),
         configured: metalworksCrmConfigured(),
         email: auth.email || "",
-        allowedEmail:
-          getAllowedEmails()[0] || METALWORKS_CRM_DEFAULT_EMAIL,
+        allowedEmail: fallbackEmail,
+        profile: getMetalworksCrmProfile(fallbackEmail),
       });
     } catch (error) {
       console.error("Error loading Metal Works auth:", error.message);
@@ -1170,7 +1205,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     try {
       await createSession(req, res, email);
-      res.json({ ok: true, email });
+      res.json({ ok: true, email, profile: getMetalworksCrmProfile(email) });
     } catch (error) {
       console.error("Error logging into Metal Works CRM:", error.message);
       respondError(res, 500, "No pude iniciar sesion en el CRM.");

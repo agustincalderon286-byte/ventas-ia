@@ -68,6 +68,7 @@ const userChip = document.querySelector("[data-crm-user-chip]");
 const refreshButton = document.querySelector("[data-crm-refresh]");
 const logoutButton = document.querySelector("[data-crm-logout]");
 const statusInput = document.querySelector("[data-crm-detail-status-input]");
+const themeBadge = document.querySelector("[data-crm-theme-badge]");
 const callLink = document.querySelector("[data-crm-call-link]");
 const textLink = document.querySelector("[data-crm-text-link]");
 const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
@@ -170,6 +171,22 @@ function setDetailFeedback(message = "", tone = "") {
 
   detailFeedback.textContent = message;
   detailFeedback.dataset.tone = tone;
+}
+
+function applyProfileTheme(profile = {}, fallbackEmail = "") {
+  const skin = String(profile.skin || "classic").trim() || "classic";
+  const displayName = String(profile.displayName || fallbackEmail || "Admin").trim();
+  const label = String(profile.themeLabel || "").trim();
+  document.body.dataset.crmSkin = skin;
+
+  if (userChip) {
+    userChip.textContent = displayName;
+  }
+
+  if (themeBadge) {
+    themeBadge.hidden = !label;
+    themeBadge.textContent = label || "";
+  }
 }
 
 function buildQueryString(filters = {}) {
@@ -960,9 +977,7 @@ async function init() {
     return;
   }
 
-  if (userChip) {
-    userChip.textContent = me.email || "Admin";
-  }
+  applyProfileTheme(me.profile || {}, me.email || "");
 
   bindFilters();
   bindDetailActions();

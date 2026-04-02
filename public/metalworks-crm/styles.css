@@ -27,6 +27,26 @@ body {
     linear-gradient(180deg, #f8f5ef 0%, var(--crm-bg) 100%);
 }
 
+body[data-crm-skin="goku-blue"] {
+  --crm-bg: #071223;
+  --crm-panel: rgba(10, 18, 36, 0.9);
+  --crm-line: rgba(97, 214, 255, 0.18);
+  --crm-ink: #f4f8ff;
+  --crm-muted: #9bb0d7;
+  --crm-red: #3fdcff;
+  --crm-red-deep: #7b5cff;
+  --crm-charcoal: #f4f8ff;
+  --crm-gold: #ff53de;
+  --crm-green: #77ffd3;
+  --crm-blue: #7bd7ff;
+  --crm-shadow: 0 24px 60px rgba(4, 7, 20, 0.45);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(82, 215, 255, 0.32), transparent 22%),
+    radial-gradient(circle at 78% 24%, rgba(255, 78, 212, 0.24), transparent 24%),
+    radial-gradient(circle at 50% 55%, rgba(113, 71, 255, 0.22), transparent 38%),
+    linear-gradient(180deg, #030814 0%, #071223 40%, #0b1730 100%);
+}
+
 button,
 input,
 select,
@@ -120,6 +140,17 @@ textarea {
   resize: vertical;
 }
 
+body[data-crm-skin="goku-blue"] .crm-login-form input,
+body[data-crm-skin="goku-blue"] .crm-toolbar input,
+body[data-crm-skin="goku-blue"] .crm-toolbar select,
+body[data-crm-skin="goku-blue"] .crm-detail-form input,
+body[data-crm-skin="goku-blue"] .crm-detail-form select,
+body[data-crm-skin="goku-blue"] .crm-detail-form textarea {
+  background: rgba(8, 15, 30, 0.95);
+  color: var(--crm-ink);
+  border-color: rgba(97, 214, 255, 0.16);
+}
+
 .crm-primary-button,
 .crm-secondary-button {
   min-height: 50px;
@@ -138,6 +169,18 @@ textarea {
 .crm-secondary-button {
   background: rgba(16, 20, 23, 0.06);
   color: var(--crm-charcoal);
+}
+
+body[data-crm-skin="goku-blue"] .crm-secondary-button,
+body[data-crm-skin="goku-blue"] .crm-card-action,
+body[data-crm-skin="goku-blue"] .crm-action-link,
+body[data-crm-skin="goku-blue"] .crm-chip,
+body[data-crm-skin="goku-blue"] .crm-user-chip,
+body[data-crm-skin="goku-blue"] .crm-theme-badge,
+body[data-crm-skin="goku-blue"] .crm-login-alias {
+  background: rgba(97, 214, 255, 0.08);
+  border-color: rgba(97, 214, 255, 0.18);
+  color: var(--crm-ink);
 }
 
 .crm-form-result[data-tone="error"] {
@@ -180,6 +223,17 @@ textarea {
   color: var(--crm-charcoal);
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.crm-theme-badge,
+.crm-login-alias {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(16, 20, 23, 0.06);
+  color: var(--crm-charcoal);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .crm-summary-grid {
@@ -321,6 +375,23 @@ textarea {
 .crm-status-badge[data-status="archived"] {
   background: rgba(16, 20, 23, 0.08);
   color: var(--crm-charcoal);
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="new"] {
+  background: rgba(97, 214, 255, 0.16);
+  color: #9be7ff;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="contacted"],
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="quoted"] {
+  background: rgba(255, 83, 222, 0.18);
+  color: #ffb5ef;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="booked"],
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="won"] {
+  background: rgba(119, 255, 211, 0.14);
+  color: #b6ffe8;
 }
 
 .crm-lead-card-meta,

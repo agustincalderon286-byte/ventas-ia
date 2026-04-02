@@ -24,6 +24,25 @@ async function apiRequest(url, options = {}) {
 
 const loginForm = document.querySelector("[data-crm-login-form]");
 const feedback = document.querySelector("[data-crm-login-feedback]");
+const aliasBadge = document.querySelector("[data-crm-login-alias]");
+
+const CRM_THEME_PRESETS = {
+  "agustincalderon286@gmail.com": {
+    displayName: "Agustin",
+    skin: "classic",
+    themeLabel: "Owner Mode",
+  },
+  "agustincalderon423@gmail.com": {
+    displayName: "Agustin",
+    skin: "classic",
+    themeLabel: "Owner Mode",
+  },
+  "calderonrigoberto51@gmail.com": {
+    displayName: "Goku Blue",
+    skin: "goku-blue",
+    themeLabel: "Goku Blue Mode",
+  },
+};
 
 function setFeedback(message = "", tone = "") {
   if (!feedback) {
@@ -32,6 +51,28 @@ function setFeedback(message = "", tone = "") {
 
   feedback.textContent = message;
   feedback.dataset.tone = tone;
+}
+
+function resolveProfile(email = "") {
+  const safeEmail = String(email || "").trim().toLowerCase();
+  const preset = CRM_THEME_PRESETS[safeEmail] || {};
+  return {
+    displayName: preset.displayName || "",
+    skin: preset.skin || "classic",
+    themeLabel: preset.themeLabel || "",
+  };
+}
+
+function applyThemePreview(email = "") {
+  const profile = resolveProfile(email);
+  document.body.dataset.crmSkin = profile.skin || "classic";
+
+  if (!aliasBadge) {
+    return;
+  }
+
+  aliasBadge.hidden = !profile.themeLabel;
+  aliasBadge.textContent = profile.themeLabel || "";
 }
 
 async function init() {
@@ -54,12 +95,18 @@ async function init() {
     if (loginForm?.elements?.email && me.allowedEmail) {
       loginForm.elements.email.value = me.allowedEmail;
     }
+
+    applyThemePreview(me.email || me.allowedEmail || "");
   } catch (error) {
     setFeedback(error.message, "error");
   }
 }
 
 if (loginForm) {
+  loginForm.elements.email?.addEventListener("input", () => {
+    applyThemePreview(loginForm.elements.email.value);
+  });
+
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     setFeedback("Entrando...", "muted");
