@@ -8139,6 +8139,7 @@ function renderCoachProfile(profile) {
   const salesSummary = salesTracking.summary || {};
   const webhookUrl = buildCoachAbsoluteUrl(salesTracking.webhookPath || "");
   const sourceSummary = Array.isArray(salesSummary.bySource) ? salesSummary.bySource : [];
+  const funnelSummary = Array.isArray(salesSummary.byFunnel) ? salesSummary.byFunnel : [];
   const recentWins = Array.isArray(salesSummary.recentWins) ? salesSummary.recentWins : [];
 
   document.querySelectorAll("[data-coach-profile-level]").forEach(node => {
@@ -8226,6 +8227,22 @@ function renderCoachProfile(profile) {
       .join(" | ");
   });
 
+  document.querySelectorAll("[data-coach-hl-sales-funnel-summary]").forEach(node => {
+    if (!funnelSummary.length) {
+      node.textContent = "Aun no hay funnels con ventas atribuidas.";
+      return;
+    }
+
+    node.textContent = funnelSummary
+      .map(item => {
+        const pipeline = String(item.pipelineName || "").trim();
+        const stage = String(item.stageName || "").trim();
+        const label = [pipeline, stage].filter(Boolean).join(" / ") || "Sin funnel definido";
+        return `${label}: ${item.wonSales} venta${Number(item.wonSales) === 1 ? "" : "s"} · ${formatMoney(item.revenue || 0)}`;
+      })
+      .join(" | ");
+  });
+
   document.querySelectorAll("[data-coach-hl-sales-recent-list]").forEach(node => {
     if (!recentWins.length) {
       node.innerHTML = '<div class="team-seat-empty">Todavia no hay ventas atribuidas desde HighLevel.</div>';
@@ -8239,16 +8256,32 @@ function renderCoachProfile(profile) {
         const amount = formatMoney(item.amount || 0);
         const closedAt = item.closedAt ? formatDateTimeShort(item.closedAt) : "Sin fecha";
         const contact = item.phone ? escapeHtml(formatLeadPhone(item.phone)) : escapeHtml(item.email || "Sin contacto");
+        const pipeline = escapeHtml(String(item.pipelineName || "").trim() || "Sin funnel");
+        const stage = escapeHtml(String(item.stageName || "").trim() || "Sin etapa");
+        const campaign = escapeHtml(String(item.campaignName || "").trim() || "Sin campana");
+        const eventType = escapeHtml(String(item.lastEventType || "").trim() || "Sin evento");
 
         return `
           <article class="demo-outcome-item">
-            <div>
-              <strong>${name}</strong>
-              <span>${source} · ${contact}</span>
+            <div class="demo-outcome-head">
+              <div>
+                <strong>${name}</strong>
+                <span>${source} · ${contact}</span>
+              </div>
+              <div class="demo-outcome-meta">
+                <span>${escapeHtml(amount)}</span>
+                <span>${escapeHtml(closedAt)}</span>
+              </div>
             </div>
             <div class="demo-outcome-meta">
-              <strong>${escapeHtml(amount)}</strong>
-              <span>${escapeHtml(closedAt)}</span>
+              <span>Funnel: ${pipeline}</span>
+              <span>Etapa: ${stage}</span>
+              <span>Campana: ${campaign}</span>
+              <span>Evento: ${eventType}</span>
+            </div>
+            <div class="demo-outcome-meta">
+              <span>Fuente: ${source}</span>
+              <span>${contact}</span>
             </div>
           </article>
         `;

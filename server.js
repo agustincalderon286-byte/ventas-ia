@@ -449,12 +449,16 @@ const coachLeadInboxSchema = new mongoose.Schema({
   highLevelLastSyncStatus: String,
   highLevelLastSyncError: String,
   highLevelLastWebhookAt: Date,
+  highLevelPipelineId: String,
+  highLevelPipelineName: String,
   highLevelOpportunityStatus: String,
   highLevelOpportunityStageId: String,
+  highLevelOpportunityStageName: String,
   highLevelOpportunityValue: Number,
   highLevelCampaignId: String,
   highLevelCampaignName: String,
   highLevelCampaignStatus: String,
+  highLevelLastEventType: String,
   highLevelResultSummary: String,
   tags: [String],
   lastContactAt: Date,
@@ -3986,11 +3990,12 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
       revenue: 0,
       lastSaleAt: null,
       bySource: [],
+      byFunnel: [],
       recentWins: []
     };
   }
 
-  const [trackedLeads, salesSummary, sourceSummary, recentWins] = await Promise.all([
+  const [trackedLeads, salesSummary, sourceSummary, funnelSummary, recentWins] = await Promise.all([
     CoachLeadInbox.countDocuments({
       ownerUserId: safeOwnerUserId,
       $or: [
@@ -4039,6 +4044,32 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
       },
       { $limit: 8 }
     ]),
+    CoachLeadInbox.aggregate([
+      {
+        $match: {
+          ownerUserId: safeOwnerUserId,
+          highLevelOpportunityStatus: "won"
+        }
+      },
+      {
+        $group: {
+          _id: {
+            pipelineName: { $ifNull: ["$highLevelPipelineName", ""] },
+            stageName: { $ifNull: ["$highLevelOpportunityStageName", ""] }
+          },
+          wonSales: { $sum: 1 },
+          revenue: { $sum: { $ifNull: ["$highLevelOpportunityValue", 0] } },
+          lastSaleAt: { $max: "$highLevelLastWebhookAt" }
+        }
+      },
+      {
+        $sort: {
+          revenue: -1,
+          wonSales: -1
+        }
+      },
+      { $limit: 8 }
+    ]),
     CoachLeadInbox.find({
       ownerUserId: safeOwnerUserId,
       highLevelOpportunityStatus: "won"
@@ -4062,6 +4093,15 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
           lastSaleAt: item?.lastSaleAt || null
         }))
       : [],
+    byFunnel: Array.isArray(funnelSummary)
+      ? funnelSummary.map(item => ({
+          pipelineName: cleanText(item?._id?.pipelineName || "").slice(0, 120),
+          stageName: cleanText(item?._id?.stageName || "").slice(0, 120),
+          wonSales: Number(item?.wonSales || 0),
+          revenue: limpiarCoachDemoOutcomeAmount(item?.revenue || 0),
+          lastSaleAt: item?.lastSaleAt || null
+        }))
+      : [],
     recentWins: Array.isArray(recentWins)
       ? recentWins.map(doc => ({
           id: String(doc?._id || ""),
@@ -4071,7 +4111,11 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
           email: doc?.email || "",
           amount: limpiarCoachDemoOutcomeAmount(doc?.highLevelOpportunityValue || 0),
           closedAt: doc?.highLevelLastWebhookAt || doc?.updatedAt || doc?.createdAt || null,
-          opportunityStatus: cleanText(doc?.highLevelOpportunityStatus || "").toLowerCase()
+          opportunityStatus: cleanText(doc?.highLevelOpportunityStatus || "").toLowerCase(),
+          pipelineName: cleanText(doc?.highLevelPipelineName || "").slice(0, 120),
+          stageName: cleanText(doc?.highLevelOpportunityStageName || "").slice(0, 120),
+          campaignName: cleanText(doc?.highLevelCampaignName || "").slice(0, 120),
+          lastEventType: cleanText(doc?.highLevelLastEventType || "").slice(0, 120)
         }))
       : []
   };
@@ -11450,12 +11494,16 @@ function limpiarCoachInboxLead(leadDoc = null) {
       lastSyncStatus: leadDoc.highLevelLastSyncStatus || "",
       lastSyncError: leadDoc.highLevelLastSyncError || "",
       lastWebhookAt: leadDoc.highLevelLastWebhookAt || null,
+      pipelineId: leadDoc.highLevelPipelineId || "",
+      pipelineName: leadDoc.highLevelPipelineName || "",
       opportunityStatus: leadDoc.highLevelOpportunityStatus || "",
       opportunityStageId: leadDoc.highLevelOpportunityStageId || "",
+      opportunityStageName: leadDoc.highLevelOpportunityStageName || "",
       opportunityValue: Number(leadDoc.highLevelOpportunityValue || 0) || 0,
       campaignId: leadDoc.highLevelCampaignId || "",
       campaignName: leadDoc.highLevelCampaignName || "",
       campaignStatus: leadDoc.highLevelCampaignStatus || "",
+      lastEventType: leadDoc.highLevelLastEventType || "",
       resultSummary: leadDoc.highLevelResultSummary || ""
     },
     lastContactAt: leadDoc.lastContactAt || null,
@@ -11637,6 +11685,7 @@ async function sincronizarCoachLeadAHighLevel(userDoc = null, profileDoc = null,
     leadDoc.highLevelOpportunityStatus = leadDoc.highLevelOpportunityStatus || "open";
     leadDoc.highLevelOpportunityStageId =
       leadDoc.highLevelOpportunityStageId || HIGHLEVEL_PIPELINE_STAGE_ID || "";
+    leadDoc.highLevelPipelineId = leadDoc.highLevelPipelineId || HIGHLEVEL_PIPELINE_ID || "";
   }
 
   const resultParts = ["Contacto sincronizado en HighLevel"];
@@ -11732,6 +11781,38 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
     "opportunity.stageName",
     "pipelineStage"
   ]);
+  const pipelineId = extraerPrimerValorHighLevel(payload, [
+    "pipelineId",
+    "funnelId",
+    "opportunity.pipelineId",
+    "opportunity.funnelId",
+    "pipeline.id",
+    "funnel.id"
+  ]);
+  const pipelineName = extraerPrimerValorHighLevel(payload, [
+    "pipelineName",
+    "funnelName",
+    "opportunity.pipelineName",
+    "opportunity.funnelName",
+    "pipeline.name",
+    "funnel.name"
+  ]);
+  const campaignId = extraerPrimerValorHighLevel(payload, [
+    "campaignId",
+    "campaign.id",
+    "campaign._id",
+    "opportunity.campaignId"
+  ]);
+  const campaignName = extraerPrimerValorHighLevel(payload, [
+    "campaignName",
+    "campaign.name",
+    "opportunity.campaignName"
+  ]);
+  const locationId = extraerPrimerValorHighLevel(payload, [
+    "locationId",
+    "location.id",
+    "opportunity.locationId"
+  ]);
   const monetaryValueRaw = extraerPrimerValorHighLevel(payload, [
     "monetaryValue",
     "amount",
@@ -11798,8 +11879,8 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
     leadDoc.highLevelOpportunityId = opportunityId;
   }
 
-  if (payload?.locationId) {
-    leadDoc.highLevelLocationId = cleanText(payload.locationId);
+  if (locationId) {
+    leadDoc.highLevelLocationId = cleanText(locationId);
   }
 
   if (effectiveStatus) {
@@ -11818,7 +11899,17 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
   }
 
   if (stageName) {
+    leadDoc.highLevelOpportunityStageName = cleanText(stageName);
     noteParts.push(`etapa_nombre ${stageName}`);
+  }
+
+  if (pipelineId) {
+    leadDoc.highLevelPipelineId = cleanText(pipelineId);
+  }
+
+  if (pipelineName) {
+    leadDoc.highLevelPipelineName = cleanText(pipelineName);
+    noteParts.push(`funnel ${leadDoc.highLevelPipelineName}`);
   }
 
   if (Number.isFinite(Number(monetaryValueRaw))) {
@@ -11826,9 +11917,20 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
     noteParts.push(`valor $${leadDoc.highLevelOpportunityValue}`);
   }
 
-  if (/^CampaignStatusUpdate$/i.test(eventType)) {
+  if (campaignId) {
+    leadDoc.highLevelCampaignId = cleanText(campaignId);
+  } else if (/^CampaignStatusUpdate$/i.test(eventType)) {
     leadDoc.highLevelCampaignId = extraerPrimerValorHighLevel(payload, ["campaignId", "id"]);
+  }
+
+  if (campaignName) {
+    leadDoc.highLevelCampaignName = cleanText(campaignName);
+  } else if (/^CampaignStatusUpdate$/i.test(eventType)) {
     leadDoc.highLevelCampaignName = extraerPrimerValorHighLevel(payload, ["name", "campaignName"]);
+  }
+
+  if (leadDoc.highLevelCampaignName) {
+    noteParts.push(`campana ${leadDoc.highLevelCampaignName}`);
   }
 
   if (nextLeadStatus && leadDoc.status !== nextLeadStatus) {
@@ -11837,6 +11939,7 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
   }
 
   leadDoc.highLevelLastWebhookAt = new Date();
+  leadDoc.highLevelLastEventType = eventType || leadDoc.highLevelLastEventType || "";
   leadDoc.highLevelLastSyncStatus = "webhook";
   leadDoc.highLevelLastSyncError = "";
 
@@ -11852,6 +11955,15 @@ async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
     }
   } else {
     summaryParts.push(`Evento ${eventType || "HighLevel"}`);
+    if (leadDoc.highLevelPipelineName) {
+      summaryParts.push(`funnel ${leadDoc.highLevelPipelineName}`);
+    }
+    if (leadDoc.highLevelOpportunityStageName) {
+      summaryParts.push(`etapa ${leadDoc.highLevelOpportunityStageName}`);
+    }
+    if (leadDoc.highLevelCampaignName) {
+      summaryParts.push(`campana ${leadDoc.highLevelCampaignName}`);
+    }
     if (leadDoc.highLevelOpportunityStatus) {
       summaryParts.push(`status ${leadDoc.highLevelOpportunityStatus}`);
     }
