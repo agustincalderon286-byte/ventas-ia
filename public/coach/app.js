@@ -2481,18 +2481,31 @@ function initDailyPrizeTool() {
   });
 }
 
-function initLeadDestinationSettings(initialDestination = null) {
-  const form = document.querySelector("[data-lead-destination-form]");
-  const typeSelect = document.querySelector("[data-lead-destination-type]");
-  const labelInput = document.querySelector("[data-lead-destination-label]");
-  const emailInput = document.querySelector("[data-lead-destination-email]");
-  const urlInput = document.querySelector("[data-lead-destination-url]");
-  const extraWrap = document.querySelector("[data-lead-destination-extra]");
-  const emailField = document.querySelector("[data-lead-destination-email-field]");
-  const urlField = document.querySelector("[data-lead-destination-url-field]");
-  const currentNode = document.querySelector("[data-lead-destination-current]");
-  const feedbackNode = document.querySelector("[data-lead-destination-feedback]");
-  const saveButton = document.querySelector("[data-lead-destination-save]");
+function initCoachDestinationSettings({
+  selectors = {},
+  endpoint = "/api/coach/lead-destination",
+  initialDestination = null,
+  successMessage = "Destino guardado. Esta parte ya se siente mas tuya.",
+  baseSummary = "Tus leads se estan guardando aqui para que los trabajes con orden.",
+  emailSummaryMissing = "Tu destino actual es correo personal, pero aun falta capturarlo.",
+  emailSummary = email => `Tus leads se guardan en tu carpeta y tambien te llegan a ${email}.`,
+  pendingUrlSummary = label => `${label} esta seleccionado, pero aun falta la URL.`,
+  readySummary = label => `Tus leads se guardan en tu carpeta y tambien se mandan a ${label}.`,
+  googleSheetsPlaceholder = "Ej. Mi hoja de rifa",
+  emailPlaceholder = "Ej. Correo de trabajo",
+  webhookPlaceholder = "Ej. Mi GoHighLevel o Mi CRM"
+} = {}) {
+  const form = document.querySelector(selectors.form);
+  const typeSelect = document.querySelector(selectors.type);
+  const labelInput = document.querySelector(selectors.label);
+  const emailInput = document.querySelector(selectors.email);
+  const urlInput = document.querySelector(selectors.url);
+  const extraWrap = document.querySelector(selectors.extra);
+  const emailField = document.querySelector(selectors.emailField);
+  const urlField = document.querySelector(selectors.urlField);
+  const currentNode = document.querySelector(selectors.current);
+  const feedbackNode = document.querySelector(selectors.feedback);
+  const saveButton = document.querySelector(selectors.save);
 
   if (!form || !typeSelect || !labelInput || !emailInput || !urlInput || !extraWrap || !currentNode) {
     return;
@@ -2504,22 +2517,22 @@ function initLeadDestinationSettings(initialDestination = null) {
     const baseLabel = safeDestination.label || formatLeadDestinationLabel(type);
 
     if (type === "carpeta_privada") {
-      return "Tus leads se estan guardando aqui para que los trabajes con orden.";
+      return baseSummary;
     }
 
     if (type === "correo_personal") {
       if (!safeDestination.email) {
-        return "Tu destino actual es correo personal, pero aun falta capturarlo.";
+        return emailSummaryMissing;
       }
 
-      return `Tus leads se guardan en tu carpeta y tambien te llegan a ${safeDestination.email}.`;
+      return emailSummary(safeDestination.email);
     }
 
     if (!safeDestination.url) {
-      return `${baseLabel} esta seleccionado, pero aun falta la URL.`;
+      return pendingUrlSummary(baseLabel);
     }
 
-    return `Tus leads se guardan en tu carpeta y tambien se mandan a ${baseLabel}.`;
+    return readySummary(baseLabel);
   };
 
   const syncExtraFields = () => {
@@ -2538,10 +2551,10 @@ function initLeadDestinationSettings(initialDestination = null) {
     urlInput.required = needsUrl;
     labelInput.placeholder =
       type === "google_sheets"
-        ? "Ej. Mi hoja de rifa"
+        ? googleSheetsPlaceholder
         : type === "correo_personal"
-          ? "Ej. Correo de trabajo"
-          : "Ej. Mi GoHighLevel o Mi CRM";
+          ? emailPlaceholder
+          : webhookPlaceholder;
   };
 
   const applyDestination = destination => {
@@ -2567,7 +2580,7 @@ function initLeadDestinationSettings(initialDestination = null) {
     setButtonLoading(saveButton, true, "Guardando...");
 
     try {
-      const data = await apiRequest("/api/coach/lead-destination", {
+      const data = await apiRequest(endpoint, {
         method: "PUT",
         body: {
           type: typeSelect.value,
@@ -2583,12 +2596,62 @@ function initLeadDestinationSettings(initialDestination = null) {
         renderCoachProfile(data.profile);
       }
 
-      setMessage(feedbackNode, "Destino guardado. Esta parte ya se siente mas tuya.", "success");
+      setMessage(feedbackNode, successMessage, "success");
     } catch (error) {
       setMessage(feedbackNode, error.message, "error");
     } finally {
       setButtonLoading(saveButton, false);
     }
+  });
+}
+
+function initLeadDestinationSettings(initialDestination = null) {
+  initCoachDestinationSettings({
+    selectors: {
+      form: "[data-lead-destination-form]",
+      type: "[data-lead-destination-type]",
+      label: "[data-lead-destination-label]",
+      email: "[data-lead-destination-email]",
+      url: "[data-lead-destination-url]",
+      extra: "[data-lead-destination-extra]",
+      emailField: "[data-lead-destination-email-field]",
+      urlField: "[data-lead-destination-url-field]",
+      current: "[data-lead-destination-current]",
+      feedback: "[data-lead-destination-feedback]",
+      save: "[data-lead-destination-save]"
+    },
+    endpoint: "/api/coach/lead-destination",
+    initialDestination,
+    successMessage: "Destino guardado. Esta parte ya se siente mas tuya."
+  });
+}
+
+function initProgram414DestinationSettings(initialDestination = null) {
+  initCoachDestinationSettings({
+    selectors: {
+      form: "[data-program-414-destination-form]",
+      type: "[data-program-414-destination-type]",
+      label: "[data-program-414-destination-label]",
+      email: "[data-program-414-destination-email]",
+      url: "[data-program-414-destination-url]",
+      extra: "[data-program-414-destination-extra]",
+      emailField: "[data-program-414-destination-email-field]",
+      urlField: "[data-program-414-destination-url-field]",
+      current: "[data-program-414-destination-current]",
+      feedback: "[data-program-414-destination-feedback]",
+      save: "[data-program-414-destination-save]"
+    },
+    endpoint: "/api/coach/program-414-destination",
+    initialDestination,
+    successMessage: "Destino 4 en 14 guardado. Ya puedes separarlo sin mezclar tus leads.",
+    baseSummary: "Tu 4 en 14 sigue interno en Coach hasta que elijas otro destino.",
+    emailSummaryMissing: "Tu destino 4 en 14 es correo personal, pero aun falta capturarlo.",
+    emailSummary: email => `La hoja y sus referidos tambien se mandan a ${email}.`,
+    pendingUrlSummary: label => `${label} esta seleccionado para 4 en 14, pero aun falta la URL.`,
+    readySummary: label => `Tu hoja 4 en 14 y sus referidos individuales tambien se mandan a ${label}.`,
+    googleSheetsPlaceholder: "Ej. Mi hoja 4 en 14",
+    emailPlaceholder: "Ej. Correo del equipo",
+    webhookPlaceholder: "Ej. Mi HighLevel 4 en 14"
   });
 }
 
@@ -10516,6 +10579,7 @@ async function initCoachAppPage() {
 
   if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
+    initProgram414DestinationSettings(me.profile?.program414Destination || null);
   }
 
   initCoachCrmWorkspace(me.user);

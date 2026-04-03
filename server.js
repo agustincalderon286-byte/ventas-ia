@@ -350,6 +350,11 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   leadDestinationUrl: String,
   leadDestinationEmail: String,
   leadDestinationUpdatedAt: Date,
+  program414DestinationType: { type: String, default: "carpeta_privada" },
+  program414DestinationLabel: String,
+  program414DestinationUrl: String,
+  program414DestinationEmail: String,
+  program414DestinationUpdatedAt: Date,
   lastQuestion: String,
   lastCoachReply: String,
   lastInteractionAt: Date,
@@ -3862,6 +3867,7 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
       shareUrl: construirCoachContactSharePath(profileDoc?.chefShareCode || "")
     },
     leadDestination: limpiarCoachLeadDestination(profileDoc),
+    program414Destination: limpiarCoachProgram414Destination(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
     recentSessionsSummary: (profileDoc?.recentSessionsSummary || []).slice(0, 4).map(item => ({
@@ -3878,11 +3884,13 @@ function normalizarCoachLeadDestinationType(type = "") {
   return validTypes.includes(value) ? value : "carpeta_privada";
 }
 
-function limpiarCoachLeadDestination(profileDoc = null) {
-  const type = normalizarCoachLeadDestinationType(profileDoc?.leadDestinationType || "carpeta_privada");
-  const url = limpiarUrlExterna(profileDoc?.leadDestinationUrl || "");
-  const email = normalizarEmail(profileDoc?.leadDestinationEmail || "");
-  const label = String(profileDoc?.leadDestinationLabel || "").trim().slice(0, 80);
+function construirCoachDestinationSnapshot({
+  type = "carpeta_privada",
+  url = "",
+  email = "",
+  label = "",
+  updatedAt = null
+} = {}) {
   const destinationLabels = {
     carpeta_privada: "Solo mi carpeta privada",
     google_sheets: "Google Sheets",
@@ -3891,16 +3899,41 @@ function limpiarCoachLeadDestination(profileDoc = null) {
   };
 
   return {
-    type,
-    label: label || destinationLabels[type],
-    url,
-    email,
+    type: normalizarCoachLeadDestinationType(type),
+    label: String(label || "").trim().slice(0, 80) || destinationLabels[normalizarCoachLeadDestinationType(type)],
+    url: limpiarUrlExterna(url || ""),
+    email: normalizarEmail(email || ""),
     enabled:
-      type === "correo_personal"
-        ? Boolean(email)
-        : Boolean(type !== "carpeta_privada" && url),
-    updatedAt: profileDoc?.leadDestinationUpdatedAt || null
+      normalizarCoachLeadDestinationType(type) === "correo_personal"
+        ? Boolean(normalizarEmail(email || ""))
+        : Boolean(normalizarCoachLeadDestinationType(type) !== "carpeta_privada" && limpiarUrlExterna(url || "")),
+    updatedAt: updatedAt || null
   };
+}
+
+function limpiarCoachLeadDestination(profileDoc = null) {
+  return construirCoachDestinationSnapshot({
+    type: profileDoc?.leadDestinationType || "carpeta_privada",
+    url: profileDoc?.leadDestinationUrl || "",
+    email: profileDoc?.leadDestinationEmail || "",
+    label: profileDoc?.leadDestinationLabel || "",
+    updatedAt: profileDoc?.leadDestinationUpdatedAt || null
+  });
+}
+
+function limpiarCoachProgram414Destination(profileDoc = null) {
+  return construirCoachDestinationSnapshot({
+    type: profileDoc?.program414DestinationType || "carpeta_privada",
+    url: profileDoc?.program414DestinationUrl || "",
+    email: profileDoc?.program414DestinationEmail || "",
+    label: profileDoc?.program414DestinationLabel || "",
+    updatedAt: profileDoc?.program414DestinationUpdatedAt || null
+  });
+}
+
+function resolverCoachProgram414SheetDestination(profileDoc = null) {
+  const explicitDestination = limpiarCoachProgram414Destination(profileDoc);
+  return explicitDestination.enabled ? explicitDestination : limpiarCoachLeadDestination(profileDoc);
 }
 
 function highLevelReadOnlyEstaConfigurado() {
@@ -5797,18 +5830,27 @@ async function crearCoachProgram414Sheet({
     console.error("Error sincronizando programa 4 en 14 al CRM:", error.message);
   }
 
-  const delivery = sendDestination
-    ? await programarEnvioCoachProgramSheetADestino(userDoc, profileDoc, sheetDoc.toObject(), createdLeads)
-    : {
-        attempted: false,
-        delivered: false,
-        destination: null,
-        skipped: true
-      };
+  const [delivery, leadDeliveries] = sendDestination
+    ? await Promise.all([
+        programarEnvioCoachProgramSheetADestino(userDoc, profileDoc, sheetDoc.toObject(), createdLeads),
+        Promise.all(
+          createdLeads.map(lead => programarEnvioCoachProgramLeadADestino(userDoc, profileDoc, lead))
+        )
+      ])
+    : [
+        {
+          attempted: false,
+          delivered: false,
+          destination: null,
+          skipped: true
+        },
+        []
+      ];
 
   return {
     sheetDoc,
     createdLeads,
+    leadDeliveries,
     duplicates,
     delivery
   };
@@ -7500,24 +7542,29 @@ async function enviarCorreoLeadCoach(userDoc = null, lead = null, destination = 
 
 async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
+  return enviarCoachLeadAAjusteDestino(userDoc, destination, lead);
+}
 
-  if (!destination.enabled || !lead) {
+async function enviarCoachLeadAAjusteDestino(userDoc = null, destination = null, lead = null) {
+  const safeDestination = destination || construirCoachDestinationSnapshot();
+
+  if (!safeDestination.enabled || !lead) {
     return {
       attempted: false,
       delivered: false,
-      destination
+      destination: safeDestination
     };
   }
 
-  if (destination.type === "correo_personal") {
-    return enviarCorreoLeadCoach(userDoc, lead, destination);
+  if (safeDestination.type === "correo_personal") {
+    return enviarCorreoLeadCoach(userDoc, lead, safeDestination);
   }
 
-  if (!destination.url) {
+  if (!safeDestination.url) {
     return {
       attempted: false,
       delivered: false,
-      destination
+      destination: safeDestination
     };
   }
 
@@ -7525,10 +7572,10 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(destination.url, {
+    const response = await fetch(safeDestination.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(construirCoachLeadDeliveryPayload(userDoc, lead, destination)),
+      body: JSON.stringify(construirCoachLeadDeliveryPayload(userDoc, lead, safeDestination)),
       signal: controller.signal
     });
 
@@ -7537,7 +7584,7 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
     return {
       attempted: true,
       delivered: response.ok,
-      destination,
+      destination: safeDestination,
       status: response.status,
       error: response.ok ? "" : `Destino respondio ${response.status}`
     };
@@ -7546,7 +7593,7 @@ async function enviarCoachLeadADestino(userDoc = null, profileDoc = null, lead =
     return {
       attempted: true,
       delivered: false,
-      destination,
+      destination: safeDestination,
       error: error?.name === "AbortError" ? "El destino tardo demasiado en responder." : error.message
     };
   }
@@ -7657,36 +7704,46 @@ async function enviarCoachRecruitmentApplicationADestino(userDoc = null, profile
 }
 
 async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
-  const destination = limpiarCoachLeadDestination(profileDoc);
+  const destination = resolverCoachProgram414SheetDestination(profileDoc);
+  return enviarCoachProgramSheetAAjusteDestino(userDoc, destination, sheetDoc, createdLeads);
+}
 
-  if (!destination.enabled || !sheetDoc) {
+async function enviarCoachProgramSheetAAjusteDestino(
+  userDoc = null,
+  destination = null,
+  sheetDoc = null,
+  createdLeads = []
+) {
+  const safeDestination = destination || construirCoachDestinationSnapshot();
+
+  if (!safeDestination.enabled || !sheetDoc) {
     return {
       attempted: false,
       delivered: false,
-      destination
+      destination: safeDestination
     };
   }
 
-  if (destination.type === "correo_personal") {
+  if (safeDestination.type === "correo_personal") {
     if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
       return {
         attempted: true,
         delivered: false,
-        destination,
+        destination: safeDestination,
         error: "El correo del sistema todavia no esta configurado."
       };
     }
 
-    if (!destination.email) {
+    if (!safeDestination.email) {
       return {
         attempted: false,
         delivered: false,
-        destination,
+        destination: safeDestination,
         error: "No hay correo destino configurado."
       };
     }
 
-    const emailPayload = construirCorreoPrograma414Coach(userDoc, sheetDoc, destination, createdLeads);
+    const emailPayload = construirCorreoPrograma414Coach(userDoc, sheetDoc, safeDestination, createdLeads);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -7707,7 +7764,7 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
       return {
         attempted: true,
         delivered: false,
-        destination,
+        destination: safeDestination,
         status: response.status,
         error: errorData?.message || `Correo respondio ${response.status}`
       };
@@ -7716,16 +7773,16 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
     return {
       attempted: true,
       delivered: true,
-      destination,
+      destination: safeDestination,
       status: response.status
     };
   }
 
-  if (!destination.url) {
+  if (!safeDestination.url) {
     return {
       attempted: false,
       delivered: false,
-      destination
+      destination: safeDestination
     };
   }
 
@@ -7733,10 +7790,10 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(destination.url, {
+    const response = await fetch(safeDestination.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(construirCoachProgramSheetDeliveryPayload(userDoc, sheetDoc, destination, createdLeads)),
+      body: JSON.stringify(construirCoachProgramSheetDeliveryPayload(userDoc, sheetDoc, safeDestination, createdLeads)),
       signal: controller.signal
     });
 
@@ -7745,7 +7802,7 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
     return {
       attempted: true,
       delivered: response.ok,
-      destination,
+      destination: safeDestination,
       status: response.status,
       error: response.ok ? "" : `Destino respondio ${response.status}`
     };
@@ -7754,7 +7811,7 @@ async function enviarCoachProgramSheetADestino(userDoc = null, profileDoc = null
     return {
       attempted: true,
       delivered: false,
-      destination,
+      destination: safeDestination,
       error: error?.name === "AbortError" ? "El destino tardo demasiado en responder." : error.message
     };
   }
@@ -7770,6 +7827,8 @@ function construirCoachAsyncJobDedupeKey(jobType = "", userDoc = null, payload =
   let sourceId = "";
 
   if (jobType === "lead_destination") {
+    sourceId = String(payload?.lead?.id || payload?.lead?._id || "").trim();
+  } else if (jobType === "program_lead_destination") {
     sourceId = String(payload?.lead?.id || payload?.lead?._id || "").trim();
   } else if (jobType === "recruitment_destination") {
     sourceId = String(payload?.application?.id || payload?.application?._id || "").trim();
@@ -7894,6 +7953,14 @@ async function ejecutarCoachAsyncJob(jobDoc = null) {
 
   if (jobDoc.jobType === "lead_destination") {
     return enviarCoachLeadADestino(userDoc, profileDoc, jobDoc.payload?.lead || null);
+  }
+
+  if (jobDoc.jobType === "program_lead_destination") {
+    return enviarCoachLeadAAjusteDestino(
+      userDoc,
+      limpiarCoachProgram414Destination(profileDoc),
+      jobDoc.payload?.lead || null
+    );
   }
 
   if (jobDoc.jobType === "recruitment_destination") {
@@ -8130,6 +8197,44 @@ async function programarEnvioCoachLeadADestino(userDoc = null, profileDoc = null
   }
 }
 
+async function programarEnvioCoachProgramLeadADestino(userDoc = null, profileDoc = null, lead = null) {
+  const destination = limpiarCoachProgram414Destination(profileDoc);
+
+  if (!destination.enabled || !lead) {
+    return {
+      attempted: false,
+      queued: false,
+      destination
+    };
+  }
+
+  try {
+    const jobDoc = await encolarCoachAsyncJob({
+      jobType: "program_lead_destination",
+      userDoc,
+      payload: {
+        lead
+      },
+      maxAttempts: 4
+    });
+
+    return {
+      attempted: true,
+      queued: Boolean(jobDoc?._id),
+      queueId: jobDoc?._id ? String(jobDoc._id) : "",
+      destination
+    };
+  } catch (error) {
+    console.error("Error encolando lead 4 en 14 al destino:", error.message);
+    return {
+      attempted: true,
+      queued: false,
+      destination,
+      error: error.message
+    };
+  }
+}
+
 async function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
   const destination = limpiarCoachLeadDestination(profileDoc);
 
@@ -8169,7 +8274,7 @@ async function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null,
 }
 
 async function programarEnvioCoachProgramSheetADestino(userDoc = null, profileDoc = null, sheetDoc = null, createdLeads = []) {
-  const destination = limpiarCoachLeadDestination(profileDoc);
+  const destination = resolverCoachProgram414SheetDestination(profileDoc);
 
   if (!destination.enabled || !sheetDoc) {
     return {
@@ -20004,6 +20109,47 @@ app.put("/api/coach/lead-destination", async (req, res) => {
   } catch (error) {
     console.error("Error guardando destino de leads del Coach:", error.message);
     responderCoachError(res, 500, "No pude guardar el destino de leads.");
+  }
+});
+
+app.put("/api/coach/program-414-destination", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
+  const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
+  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  const nextEmail = normalizarEmail(req.body?.email || "");
+
+  if (nextType === "correo_personal" && !nextEmail) {
+    return responderCoachError(res, 400, "Pon el correo donde quieres recibir tu 4 en 14.");
+  }
+
+  if (["google_sheets", "webhook_crm"].includes(nextType) && !nextUrl) {
+    return responderCoachError(res, 400, "Pon la URL de tu destino para guardar esta conexion de 4 en 14.");
+  }
+
+  try {
+    const now = new Date();
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
+    profileDoc.program414DestinationType = nextType;
+    profileDoc.program414DestinationLabel = nextLabel;
+    profileDoc.program414DestinationUrl = ["google_sheets", "webhook_crm"].includes(nextType) ? nextUrl : "";
+    profileDoc.program414DestinationEmail = nextType === "correo_personal" ? nextEmail : "";
+    profileDoc.program414DestinationUpdatedAt = now;
+    profileDoc.updatedAt = now;
+    await profileDoc.save();
+
+    res.json({
+      destination: limpiarCoachProgram414Destination(profileDoc),
+      profile: limpiarCoachProfile(profileDoc, null)
+    });
+  } catch (error) {
+    console.error("Error guardando destino 4 en 14 del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el destino de 4 en 14.");
   }
 });
 

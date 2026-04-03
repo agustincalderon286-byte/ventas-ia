@@ -2088,6 +2088,78 @@
           </article>
 
           <article
+            class="dashboard-card lead-destination-card"
+            data-coach-workspace-section="prospeccion"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Destino 4 en 14</div>
+            <h3>Separa tu 4 en 14 de los leads normales</h3>
+            <p>
+              Usa otro webhook o CRM para mandar la hoja 4 en 14 y tambien cada referido como lead individual.
+            </p>
+
+            <div class="lead-destination-status" data-program-414-destination-current>
+              Tu 4 en 14 sigue interno en Coach hasta que elijas otro destino.
+            </div>
+
+            <form class="lead-destination-form" data-program-414-destination-form>
+              <label class="native-lead-field">
+                <span>Donde quieres recibir tu 4 en 14 tambien</span>
+                <select name="type" data-program-414-destination-type>
+                  <option value="carpeta_privada">Solo mi carpeta privada</option>
+                  <option value="correo_personal">Mandarme copia a mi correo</option>
+                  <option value="google_sheets">Google Sheets / Apps Script</option>
+                  <option value="webhook_crm">Webhook / CRM</option>
+                </select>
+              </label>
+
+              <div class="lead-destination-extra" data-program-414-destination-extra hidden>
+                <label class="native-lead-field">
+                  <span>Nombre de tu destino</span>
+                  <input
+                    type="text"
+                    name="label"
+                    maxlength="80"
+                    placeholder="Ej. Mi HighLevel 4 en 14"
+                    data-program-414-destination-label
+                  />
+                </label>
+
+                <label class="native-lead-field" data-program-414-destination-email-field hidden>
+                  <span>Correo donde quieres recibirlo</span>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="tucorreo@gmail.com"
+                    data-program-414-destination-email
+                  />
+                </label>
+
+                <label class="native-lead-field" data-program-414-destination-url-field>
+                  <span>URL del destino</span>
+                  <input
+                    type="url"
+                    name="url"
+                    placeholder="https://..."
+                    data-program-414-destination-url
+                  />
+                </label>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-program-414-destination-save>Guardar destino 4 en 14</button>
+              </div>
+
+              <div class="form-result" data-program-414-destination-feedback></div>
+            </form>
+
+            <p class="mini-note">
+              Si lo conectas a HighLevel, la hoja llega estructurada y cada referido sale tambien como lead individual.
+            </p>
+          </article>
+
+          <article
             class="dashboard-card"
             data-coach-workspace-section="equipo"
             data-team-manager-only
