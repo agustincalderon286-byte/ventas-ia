@@ -8138,6 +8138,8 @@ function renderCoachProfile(profile) {
   const salesTracking = safeProfile.highLevelSalesTracking || {};
   const salesSummary = salesTracking.summary || {};
   const webhookUrl = buildCoachAbsoluteUrl(salesTracking.webhookPath || "");
+  const sourceSummary = Array.isArray(salesSummary.bySource) ? salesSummary.bySource : [];
+  const recentWins = Array.isArray(salesSummary.recentWins) ? salesSummary.recentWins : [];
 
   document.querySelectorAll("[data-coach-profile-level]").forEach(node => {
     node.textContent = formatCoachInsightLabel(safeProfile.level || "novato");
@@ -8211,6 +8213,47 @@ function renderCoachProfile(profile) {
 
   document.querySelectorAll("[data-coach-hl-sales-last]").forEach(node => {
     node.textContent = salesSummary.lastSaleAt ? formatDateTimeShort(salesSummary.lastSaleAt) : "Sin cierres";
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-source-summary]").forEach(node => {
+    if (!sourceSummary.length) {
+      node.textContent = "Aun no hay fuentes con ventas atribuidas.";
+      return;
+    }
+
+    node.textContent = sourceSummary
+      .map(item => `${formatLeadSourceLabel(item.source)}: ${item.wonSales} venta${Number(item.wonSales) === 1 ? "" : "s"} · ${formatMoney(item.revenue || 0)}`)
+      .join(" | ");
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-recent-list]").forEach(node => {
+    if (!recentWins.length) {
+      node.innerHTML = '<div class="team-seat-empty">Todavia no hay ventas atribuidas desde HighLevel.</div>';
+      return;
+    }
+
+    node.innerHTML = recentWins
+      .map(item => {
+        const name = escapeHtml(item.fullName || "Lead");
+        const source = escapeHtml(formatLeadSourceLabel(item.source));
+        const amount = formatMoney(item.amount || 0);
+        const closedAt = item.closedAt ? formatDateTimeShort(item.closedAt) : "Sin fecha";
+        const contact = item.phone ? escapeHtml(formatLeadPhone(item.phone)) : escapeHtml(item.email || "Sin contacto");
+
+        return `
+          <article class="demo-outcome-item">
+            <div>
+              <strong>${name}</strong>
+              <span>${source} · ${contact}</span>
+            </div>
+            <div class="demo-outcome-meta">
+              <strong>${escapeHtml(amount)}</strong>
+              <span>${escapeHtml(closedAt)}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
   });
 }
 

@@ -3984,11 +3984,13 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
       trackedLeads: 0,
       wonSales: 0,
       revenue: 0,
-      lastSaleAt: null
+      lastSaleAt: null,
+      bySource: [],
+      recentWins: []
     };
   }
 
-  const [trackedLeads, salesSummary] = await Promise.all([
+  const [trackedLeads, salesSummary, sourceSummary, recentWins] = await Promise.all([
     CoachLeadInbox.countDocuments({
       ownerUserId: safeOwnerUserId,
       $or: [
@@ -4012,7 +4014,38 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
           lastSaleAt: { $max: "$highLevelLastWebhookAt" }
         }
       }
-    ])
+    ]),
+    CoachLeadInbox.aggregate([
+      {
+        $match: {
+          ownerUserId: safeOwnerUserId,
+          highLevelOpportunityStatus: "won"
+        }
+      },
+      {
+        $group: {
+          _id: "$source",
+          wonSales: { $sum: 1 },
+          revenue: { $sum: { $ifNull: ["$highLevelOpportunityValue", 0] } },
+          lastSaleAt: { $max: "$highLevelLastWebhookAt" }
+        }
+      },
+      {
+        $sort: {
+          revenue: -1,
+          wonSales: -1,
+          _id: 1
+        }
+      },
+      { $limit: 8 }
+    ]),
+    CoachLeadInbox.find({
+      ownerUserId: safeOwnerUserId,
+      highLevelOpportunityStatus: "won"
+    })
+      .sort({ highLevelLastWebhookAt: -1, updatedAt: -1 })
+      .limit(8)
+      .lean()
   ]);
 
   const summary = salesSummary[0] || {};
@@ -4020,7 +4053,27 @@ async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
     trackedLeads: Number(trackedLeads || 0),
     wonSales: Number(summary.wonSales || 0),
     revenue: limpiarCoachDemoOutcomeAmount(summary.revenue || 0),
-    lastSaleAt: summary.lastSaleAt || null
+    lastSaleAt: summary.lastSaleAt || null,
+    bySource: Array.isArray(sourceSummary)
+      ? sourceSummary.map(item => ({
+          source: normalizarCoachLeadSource(item?._id || "captura_manual"),
+          wonSales: Number(item?.wonSales || 0),
+          revenue: limpiarCoachDemoOutcomeAmount(item?.revenue || 0),
+          lastSaleAt: item?.lastSaleAt || null
+        }))
+      : [],
+    recentWins: Array.isArray(recentWins)
+      ? recentWins.map(doc => ({
+          id: String(doc?._id || ""),
+          fullName: doc?.fullName || "Lead",
+          source: normalizarCoachLeadSource(doc?.source || "captura_manual"),
+          phone: doc?.phone || "",
+          email: doc?.email || "",
+          amount: limpiarCoachDemoOutcomeAmount(doc?.highLevelOpportunityValue || 0),
+          closedAt: doc?.highLevelLastWebhookAt || doc?.updatedAt || doc?.createdAt || null,
+          opportunityStatus: cleanText(doc?.highLevelOpportunityStatus || "").toLowerCase()
+        }))
+      : []
   };
 }
 
