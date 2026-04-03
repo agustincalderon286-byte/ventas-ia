@@ -8190,6 +8190,13 @@ function renderCoachTeamSeats(seats = []) {
             <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || "")}">
               Copiar correo
             </button>
+            <button
+              type="button"
+              class="nav-button"
+              data-team-seat-reset-password
+            >
+              Reset password
+            </button>
             ${
               canOpenChef
                 ? `
@@ -8361,6 +8368,48 @@ function initCoachTeamWorkspace(user = null) {
     const toggleButton = event.target.closest("[data-team-seat-toggle]");
 
     const switchButton = event.target.closest("[data-team-seat-switch-session]");
+    const resetPasswordButton = event.target.closest("[data-team-seat-reset-password]");
+
+    if (resetPasswordButton) {
+      const card = resetPasswordButton.closest("[data-team-seat-id]");
+      const seatId = card?.dataset.teamSeatId || "";
+      const seatName =
+        card?.querySelector(".team-seat-head strong")?.textContent?.trim() || "esa subcuenta";
+
+      if (!seatId) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Vas a generar una nueva contrasena temporal para ${seatName}. Esa persona tendra que usar la nueva contrasena para entrar.`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setButtonLoading(resetPasswordButton, true, "Reseteando...");
+
+      try {
+        const data = await apiRequest(`/api/coach/team/seats/${encodeURIComponent(seatId)}/reset-password`, {
+          method: "POST"
+        });
+
+        latestCredentials = data.credentials || null;
+        renderCoachTeamCreatedCredentials(latestCredentials);
+        await loadTeam();
+        setMessage(
+          feedbackNode,
+          `Nueva contrasena temporal lista para ${seatName}.`,
+          "success"
+        );
+      } catch (error) {
+        setMessage(feedbackNode, error.message, "error");
+      } finally {
+        setButtonLoading(resetPasswordButton, false);
+      }
+      return;
+    }
 
     if (switchButton) {
       const card = switchButton.closest("[data-team-seat-id]");

@@ -18836,6 +18836,56 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
   }
 });
 
+app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const userId = String(req.params?.userId || "").trim();
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return responderCoachError(res, 400, "Subcuenta invalida.");
+  }
+
+  try {
+    const seatDoc = await CoachUser.findOne({
+      _id: userId,
+      teamOwnerUserId: auth.user._id,
+      accountType: "seat"
+    });
+
+    if (!seatDoc) {
+      return responderCoachError(res, 404, "No encontre esa subcuenta.");
+    }
+
+    const temporaryPassword = generarCoachSeatPasswordTemporal();
+    const passwordSeguro = crearPasswordSeguro(temporaryPassword);
+
+    seatDoc.passwordHash = passwordSeguro.hash;
+    seatDoc.passwordSalt = passwordSeguro.salt;
+    seatDoc.updatedAt = new Date();
+    await seatDoc.save();
+
+    await CoachSession.deleteMany({ userId: seatDoc._id });
+
+    const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
+
+    res.json({
+      seat: limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile?.toObject ? seatProfile.toObject() : seatProfile, {}),
+      credentials: {
+        email: seatDoc.email || "",
+        temporaryPassword
+      },
+      forcedSignOut: true
+    });
+  } catch (error) {
+    console.error("Error reseteando password de subcuenta Coach:", error.message);
+    responderCoachError(res, 500, "No pude resetear la contrasena de esa subcuenta.");
+  }
+});
+
 app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
   const auth = await requireCoachTeamManager(req, res);
 
