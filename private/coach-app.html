@@ -2160,6 +2160,87 @@
           </article>
 
           <article
+            class="dashboard-card lead-destination-card"
+            data-coach-workspace-section="prospeccion"
+            data-team-manager-only
+            hidden
+          >
+            <div class="eyebrow">Tracking de ventas HighLevel</div>
+            <h3>Mide cuantas ventas salen de Agustin 2.0</h3>
+            <p>
+              Dale a tu cliente una URL unica para que su workflow de HighLevel mande las ventas ganadas de regreso.
+            </p>
+
+            <div class="lead-destination-status" data-coach-hl-sales-current>
+              Este tracking esta apagado hasta que lo actives y compartas la URL.
+            </div>
+
+            <form class="lead-destination-form" data-coach-hl-sales-form>
+              <label class="native-lead-field">
+                <span>Activar tracking de ventas</span>
+                <select name="enabled" data-coach-hl-sales-enabled-input>
+                  <option value="off">Apagado</option>
+                  <option value="on">Activo</option>
+                </select>
+              </label>
+
+              <label class="native-lead-field">
+                <span>Nombre de la etapa ganada en HighLevel (opcional)</span>
+                <input
+                  type="text"
+                  name="wonStageName"
+                  maxlength="120"
+                  placeholder="Ej. Closed Won"
+                  data-coach-hl-sales-won-stage-input
+                />
+              </label>
+
+              <label class="native-lead-field native-lead-field-full">
+                <span>Webhook de ventas</span>
+                <div class="share-copy-row">
+                  <input
+                    type="text"
+                    readonly
+                    value=""
+                    data-coach-hl-sales-webhook-url
+                    placeholder="Activa el tracking para generar tu URL"
+                  />
+                  <button type="button" class="nav-button" data-coach-hl-sales-copy-webhook>Copiar URL</button>
+                </div>
+              </label>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-coach-hl-sales-save>Guardar tracking</button>
+              </div>
+
+              <div class="form-result" data-coach-hl-sales-feedback></div>
+            </form>
+
+            <div class="insight-grid lead-folder-metrics">
+              <div class="mini-stat">
+                <strong data-coach-hl-sales-tracked>0</strong>
+                <span>Leads trackeados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-coach-hl-sales-won>0</strong>
+                <span>Ventas ganadas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-coach-hl-sales-revenue>$0.00</strong>
+                <span>Revenue atribuido</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-coach-hl-sales-last>Sin cierres</strong>
+                <span>Ultimo cierre</span>
+              </div>
+            </div>
+
+            <p class="mini-note">
+              Tu cliente crea el workflow en su HighLevel. Tu sistema solo recibe las ventas cerradas para atribuirlas.
+            </p>
+          </article>
+
+          <article
             class="dashboard-card"
             data-coach-workspace-section="equipo"
             data-team-manager-only

@@ -498,6 +498,20 @@ async function copyTextToClipboard(text) {
   return copied;
 }
 
+function buildCoachAbsoluteUrl(path = "") {
+  const safePath = String(path || "").trim();
+
+  if (!safePath) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(safePath)) {
+    return safePath;
+  }
+
+  return `${window.location.origin}${safePath.startsWith("/") ? safePath : `/${safePath}`}`;
+}
+
 function sanitizePin4(value = "") {
   return String(value || "")
     .replace(/\D/g, "")
@@ -2652,6 +2666,68 @@ function initProgram414DestinationSettings(initialDestination = null) {
     googleSheetsPlaceholder: "Ej. Mi hoja 4 en 14",
     emailPlaceholder: "Ej. Correo del equipo",
     webhookPlaceholder: "Ej. Mi HighLevel 4 en 14"
+  });
+}
+
+function initCoachHighLevelSalesTrackingSettings(initialTracking = null) {
+  const form = document.querySelector("[data-coach-hl-sales-form]");
+  const enabledSelect = document.querySelector("[data-coach-hl-sales-enabled-input]");
+  const wonStageInput = document.querySelector("[data-coach-hl-sales-won-stage-input]");
+  const feedbackNode = document.querySelector("[data-coach-hl-sales-feedback]");
+  const saveButton = document.querySelector("[data-coach-hl-sales-save]");
+  const copyButton = document.querySelector("[data-coach-hl-sales-copy-webhook]");
+  const webhookUrlInput = document.querySelector("[data-coach-hl-sales-webhook-url]");
+
+  if (!form || !enabledSelect || !wonStageInput || !feedbackNode || !saveButton || !copyButton || !webhookUrlInput) {
+    return;
+  }
+
+  const safeTracking = initialTracking || {};
+  enabledSelect.value = safeTracking.enabled ? "on" : "off";
+  wonStageInput.value = safeTracking.wonStageName || "";
+  webhookUrlInput.value = buildCoachAbsoluteUrl(safeTracking.webhookPath || "");
+
+  copyButton.addEventListener("click", async () => {
+    clearMessage(feedbackNode);
+    const url = String(webhookUrlInput.value || "").trim();
+
+    if (!url) {
+      setMessage(feedbackNode, "Activa el tracking primero para generar la URL.", "error");
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(url);
+      setMessage(feedbackNode, "Webhook copiado. Ya lo puedes pegar en HighLevel.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, "No pude copiar la URL ahorita.", "error");
+    }
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(feedbackNode);
+    setButtonLoading(saveButton, true, "Guardando...");
+
+    try {
+      const data = await apiRequest("/api/coach/highlevel-sales-tracking", {
+        method: "PUT",
+        body: {
+          enabled: enabledSelect.value === "on",
+          wonStageName: wonStageInput.value
+        }
+      });
+
+      if (data.profile) {
+        renderCoachProfile(data.profile);
+      }
+
+      setMessage(feedbackNode, "Tracking guardado. Ya puedes compartir este webhook con tu cliente.", "success");
+    } catch (error) {
+      setMessage(feedbackNode, error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
   });
 }
 
@@ -8059,6 +8135,9 @@ function renderCoachTagList(target, items, emptyText = "Sin datos") {
 
 function renderCoachProfile(profile) {
   const safeProfile = profile || {};
+  const salesTracking = safeProfile.highLevelSalesTracking || {};
+  const salesSummary = salesTracking.summary || {};
+  const webhookUrl = buildCoachAbsoluteUrl(salesTracking.webhookPath || "");
 
   document.querySelectorAll("[data-coach-profile-level]").forEach(node => {
     node.textContent = formatCoachInsightLabel(safeProfile.level || "novato");
@@ -8088,6 +8167,50 @@ function renderCoachProfile(profile) {
 
   document.querySelectorAll("[data-coach-profile-style]").forEach(node => {
     node.textContent = formatCoachInsightLabel(safeProfile.supportStyle || "directo");
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-enabled-input]").forEach(node => {
+    node.value = salesTracking.enabled ? "on" : "off";
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-won-stage-input]").forEach(node => {
+    node.value = salesTracking.wonStageName || "";
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-webhook-url]").forEach(node => {
+    node.value = webhookUrl || "";
+    node.placeholder = salesTracking.webhookPath ? "Webhook listo para compartir" : "Activa el tracking para generar tu URL";
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-current]").forEach(node => {
+    if (!salesTracking.webhookPath) {
+      node.textContent = "Activa el tracking para generar una URL unica de webhook para tu cliente.";
+      return;
+    }
+
+    if (!salesTracking.enabled) {
+      node.textContent = "La URL ya existe, pero el tracking esta apagado. Activalo cuando vayas a probar.";
+      return;
+    }
+
+    const stageCopy = salesTracking.wonStageName ? ` Etapa ganada: ${salesTracking.wonStageName}.` : "";
+    node.textContent = `Tracking activo.${stageCopy}`;
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-tracked]").forEach(node => {
+    node.textContent = String(salesSummary.trackedLeads || 0);
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-won]").forEach(node => {
+    node.textContent = String(salesSummary.wonSales || 0);
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-revenue]").forEach(node => {
+    node.textContent = formatMoney(salesSummary.revenue || 0);
+  });
+
+  document.querySelectorAll("[data-coach-hl-sales-last]").forEach(node => {
+    node.textContent = salesSummary.lastSaleAt ? formatDateTimeShort(salesSummary.lastSaleAt) : "Sin cierres";
   });
 }
 
@@ -10580,6 +10703,7 @@ async function initCoachAppPage() {
   if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
     initProgram414DestinationSettings(me.profile?.program414Destination || null);
+    initCoachHighLevelSalesTrackingSettings(me.profile?.highLevelSalesTracking || null);
   }
 
   initCoachCrmWorkspace(me.user);

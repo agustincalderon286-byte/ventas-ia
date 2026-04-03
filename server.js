@@ -355,6 +355,10 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   program414DestinationUrl: String,
   program414DestinationEmail: String,
   program414DestinationUpdatedAt: Date,
+  highLevelSalesTrackingEnabled: { type: Boolean, default: false },
+  highLevelSalesWonStageName: String,
+  highLevelSalesWebhookToken: { type: String, index: true },
+  highLevelSalesTrackingUpdatedAt: Date,
   lastQuestion: String,
   lastCoachReply: String,
   lastInteractionAt: Date,
@@ -3030,6 +3034,25 @@ function normalizarCoachShareCodeSegment(value = "", maxLength = 24) {
     .slice(0, maxLength);
 }
 
+function normalizarCoachWebhookToken(value = "", maxLength = 48) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-f0-9]/g, "")
+    .slice(0, maxLength);
+}
+
+function generarCoachWebhookToken(lengthBytes = 18) {
+  return crypto.randomBytes(Math.max(Number(lengthBytes) || 18, 12)).toString("hex");
+}
+
+function normalizarCoachCompareText(value = "") {
+  return cleanText(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function construirCoachChefPath(chefSlug = "") {
   const slug = normalizarCoachChefSlugSegment(chefSlug, 48);
   return slug ? `/chef/${slug}/` : "/chef/";
@@ -3042,6 +3065,11 @@ function construirCoachChefWhatsAppPath() {
 function construirCoachContactSharePath(shareCode = "") {
   const safeCode = normalizarCoachShareCodeSegment(shareCode, 24);
   return safeCode ? `/contactos/${safeCode}/` : "/coach/app/";
+}
+
+function construirCoachHighLevelSalesWebhookPath(webhookToken = "") {
+  const safeToken = normalizarCoachWebhookToken(webhookToken, 64);
+  return safeToken ? `/webhooks/coach/highlevel-sales/${safeToken}` : "";
 }
 
 function construirCoachChefTrackingFields(coachChefContext = null) {
@@ -3868,6 +3896,7 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
     },
     leadDestination: limpiarCoachLeadDestination(profileDoc),
     program414Destination: limpiarCoachProgram414Destination(profileDoc),
+    highLevelSalesTracking: limpiarCoachHighLevelSalesTracking(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
     recentSessionsSummary: (profileDoc?.recentSessionsSummary || []).slice(0, 4).map(item => ({
@@ -3934,6 +3963,80 @@ function limpiarCoachProgram414Destination(profileDoc = null) {
 function resolverCoachProgram414SheetDestination(profileDoc = null) {
   const explicitDestination = limpiarCoachProgram414Destination(profileDoc);
   return explicitDestination.enabled ? explicitDestination : limpiarCoachLeadDestination(profileDoc);
+}
+
+function limpiarCoachHighLevelSalesTracking(profileDoc = null) {
+  const webhookToken = normalizarCoachWebhookToken(profileDoc?.highLevelSalesWebhookToken || "", 64);
+  return {
+    enabled: Boolean(profileDoc?.highLevelSalesTrackingEnabled && webhookToken),
+    wonStageName: cleanText(profileDoc?.highLevelSalesWonStageName || "").slice(0, 120),
+    webhookTokenConfigured: Boolean(webhookToken),
+    webhookPath: construirCoachHighLevelSalesWebhookPath(webhookToken),
+    updatedAt: profileDoc?.highLevelSalesTrackingUpdatedAt || null
+  };
+}
+
+async function obtenerCoachHighLevelSalesSummary(ownerUserId = null) {
+  const safeOwnerUserId = normalizarCoachCrmObjectId(ownerUserId);
+
+  if (!safeOwnerUserId) {
+    return {
+      trackedLeads: 0,
+      wonSales: 0,
+      revenue: 0,
+      lastSaleAt: null
+    };
+  }
+
+  const [trackedLeads, salesSummary] = await Promise.all([
+    CoachLeadInbox.countDocuments({
+      ownerUserId: safeOwnerUserId,
+      $or: [
+        { highLevelContactId: { $ne: "" } },
+        { highLevelOpportunityId: { $ne: "" } },
+        { highLevelLastWebhookAt: { $ne: null } }
+      ]
+    }),
+    CoachLeadInbox.aggregate([
+      {
+        $match: {
+          ownerUserId: safeOwnerUserId,
+          highLevelOpportunityStatus: "won"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          wonSales: { $sum: 1 },
+          revenue: { $sum: { $ifNull: ["$highLevelOpportunityValue", 0] } },
+          lastSaleAt: { $max: "$highLevelLastWebhookAt" }
+        }
+      }
+    ])
+  ]);
+
+  const summary = salesSummary[0] || {};
+  return {
+    trackedLeads: Number(trackedLeads || 0),
+    wonSales: Number(summary.wonSales || 0),
+    revenue: limpiarCoachDemoOutcomeAmount(summary.revenue || 0),
+    lastSaleAt: summary.lastSaleAt || null
+  };
+}
+
+async function construirCoachProfilePayload(profileDoc = null, analyticsDoc = null, ownerUserId = null) {
+  const cleaned = limpiarCoachProfile(profileDoc?.toObject ? profileDoc.toObject() : profileDoc, analyticsDoc);
+
+  if (!cleaned) {
+    return null;
+  }
+
+  const summary = await obtenerCoachHighLevelSalesSummary(ownerUserId || profileDoc?.userId || "");
+  cleaned.highLevelSalesTracking = {
+    ...(cleaned.highLevelSalesTracking || {}),
+    summary
+  };
+  return cleaned;
 }
 
 function highLevelReadOnlyEstaConfigurado() {
@@ -11545,15 +11648,58 @@ async function programarSincronizacionCoachLeadAHighLevel(userDoc = null, profil
   }
 }
 
-async function aplicarEventoHighLevelALead(payload = {}) {
-  const eventType = cleanText(payload?.type || "");
-  const opportunityId =
-    extraerPrimerValorHighLevel(payload, ["id", "opportunityId"]) && /^Opportunity/i.test(eventType)
-      ? extraerPrimerValorHighLevel(payload, ["id", "opportunityId"])
-      : "";
-  const contactId = extraerPrimerValorHighLevel(payload, ["contactId", "contact.id"]);
-  const phone = normalizePhone(payload?.phone || "");
-  const email = normalizarEmail(payload?.email || "");
+async function aplicarEventoHighLevelALead(payload = {}, options = {}) {
+  const ownerUserId = normalizarCoachCrmObjectId(options?.ownerUserId || "");
+  const configuredWonStageName = cleanText(options?.wonStageName || "").slice(0, 120);
+  const eventType = cleanText(payload?.type || payload?.eventType || "OpportunityStageUpdate");
+  const opportunityId = extraerPrimerValorHighLevel(payload, [
+    "id",
+    "opportunityId",
+    "opportunity.id",
+    "opportunity.opportunityId"
+  ]);
+  const contactId = extraerPrimerValorHighLevel(payload, ["contactId", "contact.id", "contact._id"]);
+  const phone = normalizePhone(
+    payload?.phone ||
+      extraerPrimerValorHighLevel(payload, ["phone", "contact.phone", "contact.phoneNumber", "phoneNumber"])
+  );
+  const email = normalizarEmail(
+    payload?.email || extraerPrimerValorHighLevel(payload, ["email", "contact.email", "contactEmail"])
+  );
+  const stageId = extraerPrimerValorHighLevel(payload, [
+    "pipelineStageId",
+    "stageId",
+    "opportunity.pipelineStageId",
+    "opportunity.stageId"
+  ]);
+  const stageName = extraerPrimerValorHighLevel(payload, [
+    "pipelineStageName",
+    "stageName",
+    "opportunity.pipelineStageName",
+    "opportunity.stageName",
+    "pipelineStage"
+  ]);
+  const monetaryValueRaw = extraerPrimerValorHighLevel(payload, [
+    "monetaryValue",
+    "amount",
+    "value",
+    "opportunity.monetaryValue",
+    "opportunity.amount",
+    "opportunity.value"
+  ]);
+  let effectiveStatus = cleanText(
+    payload?.status || extraerPrimerValorHighLevel(payload, ["status", "opportunity.status"])
+  ).toLowerCase();
+
+  if (
+    !effectiveStatus &&
+    configuredWonStageName &&
+    stageName &&
+    normalizarCoachCompareText(stageName) === normalizarCoachCompareText(configuredWonStageName)
+  ) {
+    effectiveStatus = "won";
+  }
+
   const lookup = [];
 
   if (opportunityId) {
@@ -11576,14 +11722,20 @@ async function aplicarEventoHighLevelALead(payload = {}) {
     return null;
   }
 
-  const leadDoc = await CoachLeadInbox.findOne({ $or: lookup }).sort({ updatedAt: -1, createdAt: -1 });
+  const leadQuery = { $or: lookup };
+
+  if (ownerUserId) {
+    leadQuery.ownerUserId = ownerUserId;
+  }
+
+  const leadDoc = await CoachLeadInbox.findOne(leadQuery).sort({ updatedAt: -1, createdAt: -1 });
 
   if (!leadDoc) {
     return null;
   }
 
   const noteParts = [];
-  const nextLeadStatus = mapearStatusLeadDesdeHighLevel(eventType, payload?.status || "");
+  const nextLeadStatus = mapearStatusLeadDesdeHighLevel(eventType, effectiveStatus);
 
   if (contactId && !leadDoc.highLevelContactId) {
     leadDoc.highLevelContactId = contactId;
@@ -11597,8 +11749,8 @@ async function aplicarEventoHighLevelALead(payload = {}) {
     leadDoc.highLevelLocationId = cleanText(payload.locationId);
   }
 
-  if (payload?.status !== undefined) {
-    const safeStatus = cleanText(payload.status);
+  if (effectiveStatus) {
+    const safeStatus = cleanText(effectiveStatus);
     if (/^CampaignStatusUpdate$/i.test(eventType)) {
       leadDoc.highLevelCampaignStatus = safeStatus;
     } else {
@@ -11607,13 +11759,17 @@ async function aplicarEventoHighLevelALead(payload = {}) {
     noteParts.push(`status ${safeStatus}`);
   }
 
-  if (payload?.pipelineStageId) {
-    leadDoc.highLevelOpportunityStageId = cleanText(payload.pipelineStageId);
+  if (stageId) {
+    leadDoc.highLevelOpportunityStageId = cleanText(stageId);
     noteParts.push(`etapa ${leadDoc.highLevelOpportunityStageId}`);
   }
 
-  if (Number.isFinite(Number(payload?.monetaryValue))) {
-    leadDoc.highLevelOpportunityValue = Number(payload.monetaryValue) || 0;
+  if (stageName) {
+    noteParts.push(`etapa_nombre ${stageName}`);
+  }
+
+  if (Number.isFinite(Number(monetaryValueRaw))) {
+    leadDoc.highLevelOpportunityValue = Number(monetaryValueRaw) || 0;
     noteParts.push(`valor $${leadDoc.highLevelOpportunityValue}`);
   }
 
@@ -18610,11 +18766,13 @@ app.get("/api/coach/me", async (req, res) => {
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
     const returnUserView = returnAuth?.user ? await construirCoachUserView(returnAuth.user) : null;
 
+    const profilePayload = await construirCoachProfilePayload(profileDoc, analyticsDoc, userDoc._id);
+
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
       user: await construirCoachUserView(userDoc),
-      profile: limpiarCoachProfile(profileDoc?.toObject ? profileDoc.toObject() : profileDoc, analyticsDoc),
+      profile: profilePayload,
       integrations: {
         highLevel: {
           readOnlyConfigured: highLevelReadOnlyEstaConfigurado(),
@@ -20104,7 +20262,7 @@ app.put("/api/coach/lead-destination", async (req, res) => {
 
     res.json({
       destination: limpiarCoachLeadDestination(profileDoc),
-      profile: limpiarCoachProfile(profileDoc, null)
+      profile: await construirCoachProfilePayload(profileDoc, null, auth.user._id)
     });
   } catch (error) {
     console.error("Error guardando destino de leads del Coach:", error.message);
@@ -20145,11 +20303,45 @@ app.put("/api/coach/program-414-destination", async (req, res) => {
 
     res.json({
       destination: limpiarCoachProgram414Destination(profileDoc),
-      profile: limpiarCoachProfile(profileDoc, null)
+      profile: await construirCoachProfilePayload(profileDoc, null, auth.user._id)
     });
   } catch (error) {
     console.error("Error guardando destino 4 en 14 del Coach:", error.message);
     responderCoachError(res, 500, "No pude guardar el destino de 4 en 14.");
+  }
+});
+
+app.put("/api/coach/highlevel-sales-tracking", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const enabled = req.body?.enabled === true;
+  const wonStageName = cleanText(req.body?.wonStageName || "").slice(0, 120);
+
+  try {
+    const now = new Date();
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
+
+    if (!profileDoc.highLevelSalesWebhookToken) {
+      profileDoc.highLevelSalesWebhookToken = generarCoachWebhookToken(18);
+    }
+
+    profileDoc.highLevelSalesTrackingEnabled = enabled;
+    profileDoc.highLevelSalesWonStageName = wonStageName;
+    profileDoc.highLevelSalesTrackingUpdatedAt = now;
+    profileDoc.updatedAt = now;
+    await profileDoc.save();
+
+    res.json({
+      tracking: limpiarCoachHighLevelSalesTracking(profileDoc),
+      profile: await construirCoachProfilePayload(profileDoc, null, auth.user._id)
+    });
+  } catch (error) {
+    console.error("Error guardando tracking de ventas HighLevel del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el tracking de ventas de HighLevel.");
   }
 });
 
@@ -21758,6 +21950,70 @@ app.get("/webhooks/highlevel", (req, res) => {
     authorized,
     syncEnabled: highLevelSyncEstaConfigurado()
   });
+});
+
+app.get("/webhooks/coach/highlevel-sales/:token", async (req, res) => {
+  const safeToken = normalizarCoachWebhookToken(req.params?.token || "", 64);
+
+  if (!safeToken) {
+    return res.status(400).json({ error: "Webhook token invalido." });
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({
+    highLevelSalesWebhookToken: safeToken
+  }).lean();
+
+  if (!profileDoc?.userId) {
+    return res.status(404).json({ error: "No encontre esta integracion." });
+  }
+
+  const tracking = limpiarCoachHighLevelSalesTracking(profileDoc);
+
+  return res.json({
+    ok: true,
+    configured: tracking.enabled,
+    wonStageName: tracking.wonStageName || "",
+    webhookPath: tracking.webhookPath || "",
+    label: profileDoc?.name || profileDoc?.email || "Coach"
+  });
+});
+
+app.post("/webhooks/coach/highlevel-sales/:token", async (req, res) => {
+  const safeToken = normalizarCoachWebhookToken(req.params?.token || "", 64);
+
+  if (!safeToken) {
+    return res.status(400).json({ error: "Webhook token invalido." });
+  }
+
+  try {
+    const profileDoc = await CoachDistributorProfile.findOne({
+      highLevelSalesWebhookToken: safeToken
+    });
+
+    if (!profileDoc?.userId || !profileDoc.highLevelSalesTrackingEnabled) {
+      return res.status(404).json({ error: "No encontre una integracion activa para ese token." });
+    }
+
+    const updatedLead = await aplicarEventoHighLevelALead(req.body || {}, {
+      ownerUserId: profileDoc.userId,
+      wonStageName: profileDoc.highLevelSalesWonStageName || ""
+    });
+
+    profileDoc.highLevelSalesTrackingUpdatedAt = new Date();
+    await profileDoc.save();
+
+    return res.json({
+      ok: true,
+      received: true,
+      matchedLeadId: updatedLead?._id ? String(updatedLead._id) : "",
+      leadStatus: updatedLead?.status || "",
+      opportunityStatus: updatedLead?.highLevelOpportunityStatus || "",
+      opportunityValue: Number(updatedLead?.highLevelOpportunityValue || 0) || 0
+    });
+  } catch (error) {
+    console.error("Error procesando webhook de ventas HighLevel del Coach:", error.message);
+    return res.status(500).json({ error: "No pude procesar el webhook de ventas de HighLevel." });
+  }
 });
 
 app.post("/webhooks/highlevel", async (req, res) => {
