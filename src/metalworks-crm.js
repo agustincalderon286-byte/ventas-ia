@@ -27,6 +27,9 @@ const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
   1,
   Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
 );
+const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
+const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
+const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
   "contacted",
@@ -69,6 +72,7 @@ RULES:
 - Ask whether it is repair, replacement, or new installation when useful.
 - Ask for ZIP code or job location when useful.
 - Ask for the best phone number only when it helps move the quote forward.
+- If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
 - If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
@@ -649,9 +653,30 @@ function detectSpanish(value = "") {
   );
 }
 
-function buildAssistantFallbackReply(message = "") {
+function buildAssistantFallbackReply(message = "", conversationState = null) {
   const text = cleanText(message, 500).toLowerCase();
   const inSpanish = detectSpanish(message);
+  const callbackIntent = conversationState?.callbackIntent === "yes";
+  const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
+    ? conversationState.callbackMissingFields
+    : [];
+
+  if (callbackIntent) {
+    if (callbackMissingFields.length) {
+      const missingLabel = callbackMissingFields.join(", ");
+
+      return inSpanish
+        ? `Claro. Para dejar la llamada bien pedida mandame solo esto: ${missingLabel}.`
+        : `Absolutely. To save the callback request, send just these details: ${missingLabel}.`;
+    }
+
+    const callbackLabel =
+      cleanText(conversationState?.callbackLabel || "", 120) || "your requested time";
+
+    return inSpanish
+      ? `Perfecto. Ya tengo tu solicitud de llamada para ${callbackLabel}. Si puedes, manda fotos y tu ZIP code para preparar mejor el seguimiento.`
+      : `Perfect. I have your callback request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
+  }
 
   if (
     /unsafe|danger|falling|broken loose|asap|today|urgent|emergency|unsafe stair|unsafe railing/i.test(
@@ -790,6 +815,769 @@ function buildAssistantHistoryDigest(history = []) {
     .slice(0, 1800);
 }
 
+function normalizeAssistantSearchText(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function selectAssistantText(...values) {
+  for (const value of values) {
+    const safeValue = cleanText(value || "", 160);
+
+    if (safeValue) {
+      return safeValue;
+    }
+  }
+
+  return "";
+}
+
+function selectAssistantLongestText(...values) {
+  return values
+    .map((value) => cleanText(value || "", 320))
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length)[0] || "";
+}
+
+function mergeAssistantUniqueValues(...lists) {
+  return Array.from(
+    new Set(
+      lists.flatMap((list) => (Array.isArray(list) ? list : [list])).map((item) => cleanText(item || "", 120)).filter(Boolean),
+    ),
+  );
+}
+
+function extractAssistantContactInfo(text = "") {
+  const source = String(text || "");
+  const emailMatch = source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  const phoneMatch = source.match(
+    /(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/,
+  );
+  const email = emailMatch ? normalizeEmail(emailMatch[0]) : "";
+  const phoneDisplay = phoneMatch ? cleanText(phoneMatch[0], 40) : "";
+  const phone = phoneDisplay ? normalizePhone(phoneDisplay) : "";
+
+  return {
+    email,
+    phone,
+    phoneDisplay,
+  };
+}
+
+function assistantNameLooksReliable(value = "") {
+  const safeValue = cleanText(value || "", 80).replace(/[.,;!?]+$/, "");
+
+  if (!safeValue) {
+    return false;
+  }
+
+  const normalized = normalizeAssistantSearchText(safeValue);
+  const blockedPattern =
+    /\b(quote|estimate|repair|gate|fence|railing|welding|fabrication|project|callback|call|phone|number|email|zip|address|service|need|looking|quiero|necesito|cotizacion|cotiza|llamada|telefono|correo|zip code)\b/;
+
+  if (blockedPattern.test(normalized)) {
+    return false;
+  }
+
+  const words = safeValue.split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 4;
+}
+
+function extractAssistantName(text = "") {
+  const patterns = [
+    /(?:my name is|this is|mi nombre es|soy)\s+([a-zA-ZÀ-ÿ' -]{2,60})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = String(text || "").match(pattern);
+
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const candidate = match[1]
+      .split(/\s+(?:and|y)\s+(?:my|mi)\b/i)[0]
+      .split(/\s+(?:phone|telefono|tel|email|correo|zip|address|direccion)\b/i)[0]
+      .trim()
+      .replace(/[.,;!?]+$/, "");
+
+    if (assistantNameLooksReliable(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function extractAssistantZipCode(text = "") {
+  const source = String(text || "");
+  const zipMatch = source.match(/\b(\d{5})(?:-\d{4})?\b/);
+  return zipMatch ? zipMatch[1] : "";
+}
+
+function inferAssistantProjectTypeFromText(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/\b(porch|landing|rust|repaint|primer|top coat|paint failure)\b/.test(normalized)) {
+    return "Metal porch repair / restoration";
+  }
+
+  if (/\b(gate|hinge|latch|dragging|sagging|porton)\b/.test(normalized)) {
+    return "Gate fabrication / gate repair";
+  }
+
+  if (/\b(railing|handrail|stairs|stair|balcony|barandal|pasamano|pasamanos)\b/.test(normalized)) {
+    return "Custom railings / handrails";
+  }
+
+  if (/\b(fence|fencing|ornamental|iron fence|metal fence|cerca|reja)\b/.test(normalized)) {
+    return "Fence fabrication / fence repair";
+  }
+
+  if (/\b(weld|welding|mobile welding|solda)\b/.test(normalized)) {
+    return "Mobile welding";
+  }
+
+  if (/\b(fabricat|custom metal|custom build)\b/.test(normalized)) {
+    return "Custom metal fabrication";
+  }
+
+  if (/\b(repair|broken|damage|loose|replace|replacement|install)\b/.test(normalized)) {
+    return "Metal repair";
+  }
+
+  return "";
+}
+
+function extractAssistantLocation(text = "") {
+  const safeText = String(text || "");
+  const zipCode = extractAssistantZipCode(safeText);
+
+  if (zipCode) {
+    return `ZIP ${zipCode}`;
+  }
+
+  const cityLabels = [
+    "Chicago",
+    "Blue Island",
+    "Oak Lawn",
+    "Evergreen Park",
+    "Cicero",
+    "Berwyn",
+    "Bridgeview",
+    "Burbank",
+    "Alsip",
+    "Crestwood",
+    "Tinley Park",
+  ];
+  const normalized = normalizeAssistantSearchText(safeText);
+
+  for (const city of cityLabels) {
+    if (normalized.includes(normalizeAssistantSearchText(city))) {
+      return city;
+    }
+  }
+
+  const addressMatch = safeText.match(
+    /(?:address is|located at|at|direccion es|estoy en|vivo en)\s+([^.\n]+)/i,
+  );
+
+  if (addressMatch?.[1]) {
+    return cleanText(addressMatch[1], 160).replace(/[.,;!?]+$/, "");
+  }
+
+  return "";
+}
+
+function detectAssistantCallbackIntent(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+
+  return /(?:call me|give me a call|can you call|can someone call|talk by phone|talk on the phone|phone call|schedule a call|set up a call|reach me|follow up by phone|llamame|llamarme|me pueden llamar|quiero una llamada|quiero llamada|agendar llamada|agendar una llamada|hablar por telefono|marcame)/.test(
+    normalized,
+  );
+}
+
+function detectAssistantCallbackDecline(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+
+  return /(?:do not call|dont call|no call please|prefer email|text only|solo texto|no me llamen|no quiero llamada|sin llamada|prefiero mensaje|prefiero texto)/.test(
+    normalized,
+  );
+}
+
+function extractAssistantPreferredDay(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+  const patterns = [
+    /(?:best day(?: to call)?|prefer(?:ably)?|call me|llamame|me pueden llamar|mejor dia(?: para llamar)?|prefiero)\s+([^.\n]+)/i,
+    /\b(today|tomorrow|weekday|weekdays|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|hoy|manana|entre semana|fin de semana|lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/i,
+  ];
+  const catalog = [
+    "entre semana",
+    "fin de semana",
+    "weekday",
+    "weekdays",
+    "weekend",
+    "hoy",
+    "today",
+    "manana",
+    "tomorrow",
+    "lunes",
+    "monday",
+    "martes",
+    "tuesday",
+    "miercoles",
+    "wednesday",
+    "jueves",
+    "thursday",
+    "viernes",
+    "friday",
+    "sabado",
+    "saturday",
+    "domingo",
+    "sunday",
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+
+    if (!match) {
+      continue;
+    }
+
+    const segment = cleanText(match[1] || match[0], 80);
+    const normalizedSegment = normalizeAssistantSearchText(segment);
+
+    for (const item of catalog) {
+      if (normalizedSegment.includes(item)) {
+        return item;
+      }
+    }
+  }
+
+  return "";
+}
+
+function extractAssistantPreferredTime(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+  const segments = [normalized];
+  const contextPatterns = [
+    /(?:best time(?: to call)?|call me|llamame|me pueden llamar|mejor hora(?: para llamar)?|prefiero)\s+([^.\n]+)/i,
+  ];
+
+  for (const pattern of contextPatterns) {
+    const match = normalized.match(pattern);
+
+    if (match?.[1]) {
+      segments.unshift(cleanText(match[1], 90));
+    }
+  }
+
+  const timePatterns = [
+    /\b((?:after|before|despues|antes)\s+(?:the\s+)?(?:las\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
+    /\b((?:around|about|como|tipo)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
+    /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i,
+    /\b(morning|afternoon|evening|night|noon|temprano|mediodia|manana|tarde|noche)\b/i,
+  ];
+
+  for (const segment of segments) {
+    for (const pattern of timePatterns) {
+      const match = String(segment || "").match(pattern);
+
+      if (match?.[1]) {
+        return cleanText(match[1], 50);
+      }
+    }
+  }
+
+  return "";
+}
+
+function getAssistantZonedParts(date = new Date(), timeZone = METALWORKS_CALLBACK_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const map = {};
+
+  parts.forEach((part) => {
+    if (part.type !== "literal") {
+      map[part.type] = part.value;
+    }
+  });
+
+  return {
+    year: Number(map.year || 0),
+    month: Number(map.month || 0),
+    day: Number(map.day || 0),
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0),
+  };
+}
+
+function addAssistantCalendarDays(base = null, dayOffset = 0) {
+  if (!base?.year || !base?.month || !base?.day) {
+    return null;
+  }
+
+  const reference = new Date(Date.UTC(base.year, base.month - 1, base.day));
+  reference.setUTCDate(reference.getUTCDate() + Number(dayOffset || 0));
+
+  return {
+    year: reference.getUTCFullYear(),
+    month: reference.getUTCMonth() + 1,
+    day: reference.getUTCDate(),
+  };
+}
+
+function buildAssistantZonedDate(
+  { year, month, day, hour = 0, minute = 0 } = {},
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const initialUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const initialDate = new Date(initialUtc);
+  const zonedParts = getAssistantZonedParts(initialDate, timeZone);
+  const zonedUtc = Date.UTC(
+    zonedParts.year || year,
+    (zonedParts.month || month) - 1,
+    zonedParts.day || day,
+    zonedParts.hour || hour,
+    zonedParts.minute || minute,
+    0,
+    0,
+  );
+
+  return new Date(initialUtc - (zonedUtc - initialUtc));
+}
+
+function resolveAssistantTimeParts(label = "") {
+  const normalized = normalizeAssistantSearchText(label || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.includes("noon") || normalized.includes("mediodia")) {
+    return { hour: 12, minute: 0 };
+  }
+
+  if (normalized.includes("morning") || normalized.includes("temprano") || normalized.includes("manana")) {
+    return { hour: 10, minute: 0 };
+  }
+
+  if (normalized.includes("afternoon") || normalized.includes("tarde")) {
+    return { hour: 15, minute: 0 };
+  }
+
+  if (normalized.includes("evening") || normalized.includes("night") || normalized.includes("noche")) {
+    return { hour: 18, minute: 0 };
+  }
+
+  const match = normalized.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[1] || 0);
+  const minute = Number(match[2] || 0);
+  let meridiem = String(match[3] || "").toLowerCase();
+
+  if (!meridiem) {
+    if (/\b(pm|afternoon|evening|night|tarde|noche)\b/.test(normalized)) {
+      meridiem = "pm";
+    } else if (/\b(am|morning|temprano|manana)\b/.test(normalized)) {
+      meridiem = "am";
+    }
+  }
+
+  if (meridiem === "pm" && hour < 12) {
+    hour += 12;
+  } else if (meridiem === "am" && hour === 12) {
+    hour = 0;
+  }
+
+  if (hour > 23 || minute > 59) {
+    return null;
+  }
+
+  return { hour, minute };
+}
+
+function resolveAssistantDayParts(
+  bestContactDay = "",
+  timeParts = null,
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const normalized = normalizeAssistantSearchText(bestContactDay || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const nowParts = getAssistantZonedParts(now, timeZone);
+  const todayParts = {
+    year: nowParts.year,
+    month: nowParts.month,
+    day: nowParts.day,
+  };
+  const todayIndex = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day)).getUTCDay();
+  const nowMinutes = (nowParts.hour || 0) * 60 + (nowParts.minute || 0);
+  const targetMinutes = ((timeParts?.hour || 0) * 60) + (timeParts?.minute || 0);
+  const hasFutureTimeToday = targetMinutes > nowMinutes + 2;
+  const weekdayMap = {
+    sunday: 0,
+    domingo: 0,
+    monday: 1,
+    lunes: 1,
+    tuesday: 2,
+    martes: 2,
+    wednesday: 3,
+    miercoles: 3,
+    thursday: 4,
+    jueves: 4,
+    friday: 5,
+    viernes: 5,
+    saturday: 6,
+    sabado: 6,
+  };
+
+  if (normalized.includes("today") || normalized.includes("hoy")) {
+    return hasFutureTimeToday ? todayParts : addAssistantCalendarDays(todayParts, 1);
+  }
+
+  if (normalized.includes("tomorrow") || normalized.includes("manana")) {
+    return addAssistantCalendarDays(todayParts, 1);
+  }
+
+  if (normalized.includes("weekday") || normalized.includes("weekdays") || normalized.includes("entre semana")) {
+    if (todayIndex >= 1 && todayIndex <= 5 && hasFutureTimeToday) {
+      return todayParts;
+    }
+
+    for (let offset = 1; offset < 8; offset += 1) {
+      const candidateIndex = (todayIndex + offset) % 7;
+
+      if (candidateIndex >= 1 && candidateIndex <= 5) {
+        return addAssistantCalendarDays(todayParts, offset);
+      }
+    }
+  }
+
+  if (normalized.includes("weekend") || normalized.includes("fin de semana")) {
+    if ((todayIndex === 6 || todayIndex === 0) && hasFutureTimeToday) {
+      return todayParts;
+    }
+
+    const saturdayOffset = (6 - todayIndex + 7) % 7;
+    return addAssistantCalendarDays(todayParts, saturdayOffset === 0 ? 7 : saturdayOffset);
+  }
+
+  for (const [label, dayIndex] of Object.entries(weekdayMap)) {
+    if (!normalized.includes(label)) {
+      continue;
+    }
+
+    let offset = (dayIndex - todayIndex + 7) % 7;
+
+    if (offset === 0 && !hasFutureTimeToday) {
+      offset = 7;
+    }
+
+    return addAssistantCalendarDays(todayParts, offset);
+  }
+
+  return null;
+}
+
+function buildAssistantNextActionAt(
+  bestContactDay = "",
+  bestContactTime = "",
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const timeParts = resolveAssistantTimeParts(bestContactTime);
+  const dayParts = resolveAssistantDayParts(bestContactDay, timeParts, now, timeZone);
+
+  if (!timeParts || !dayParts) {
+    return null;
+  }
+
+  return buildAssistantZonedDate(
+    {
+      year: dayParts.year,
+      month: dayParts.month,
+      day: dayParts.day,
+      hour: timeParts.hour,
+      minute: timeParts.minute,
+    },
+    timeZone,
+  );
+}
+
+function formatAssistantCallbackLabel({
+  nextActionAt = null,
+  bestContactDay = "",
+  bestContactTime = "",
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+} = {}) {
+  if (nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())) {
+    return formatDateTimeLabel(nextActionAt, timeZone);
+  }
+
+  const parts = [cleanText(bestContactDay || "", 40), cleanText(bestContactTime || "", 40)].filter(Boolean);
+  return parts.join(" ").trim();
+}
+
+function buildAssistantConversationItems({
+  history = [],
+  message = "",
+  reply = "",
+} = {}) {
+  const items = normalizeAssistantHistory(history);
+  const safeMessage = cleanText(message || "", 500);
+  const safeReply = cleanText(reply || "", 1500);
+  const lastItem = items[items.length - 1];
+
+  if (safeMessage && !(lastItem?.role === "user" && lastItem?.content === safeMessage)) {
+    items.push({
+      role: "user",
+      content: safeMessage,
+    });
+  }
+
+  const lastAfterUser = items[items.length - 1];
+
+  if (safeReply && !(lastAfterUser?.role === "assistant" && lastAfterUser?.content === safeReply)) {
+    items.push({
+      role: "assistant",
+      content: safeReply,
+    });
+  }
+
+  return items.slice(-METALWORKS_ASSISTANT_HISTORY_LIMIT);
+}
+
+function buildAssistantConversationSignals({
+  history = [],
+  lead = null,
+  pagePath = "",
+} = {}) {
+  const items = normalizeAssistantHistory(history);
+  const userMessages = items.filter((item) => item.role === "user").map((item) => item.content);
+  const combinedUserText = userMessages.join("\n");
+  const latestUserMessage = userMessages[userMessages.length - 1] || "";
+  let name = selectAssistantText(lead?.fullName, "");
+  let email = normalizeEmail(lead?.email || "");
+  let phone = normalizePhone(lead?.phone || "");
+  let phoneDisplay = cleanText(lead?.phoneDisplay || "", 40);
+  let projectType = cleanText(lead?.projectType || "", 120);
+  let location = cleanText(lead?.location || "", 160);
+  let bestContactDay = cleanText(lead?.bestContactDay || "", 80);
+  let bestContactTime = cleanText(lead?.bestContactTime || "", 80);
+  let callbackIntent = cleanText(lead?.callbackIntent || "", 12);
+
+  userMessages.forEach((entry) => {
+    const contactInfo = extractAssistantContactInfo(entry);
+    const entryName = extractAssistantName(entry);
+    const entryProjectType = inferAssistantProjectTypeFromText(entry);
+    const entryLocation = extractAssistantLocation(entry);
+    const entryBestDay = extractAssistantPreferredDay(entry);
+    const entryBestTime = extractAssistantPreferredTime(entry);
+
+    if (entryName) {
+      name = entryName;
+    }
+
+    if (contactInfo.email) {
+      email = contactInfo.email;
+    }
+
+    if (contactInfo.phone) {
+      phone = contactInfo.phone;
+      phoneDisplay = contactInfo.phoneDisplay || phoneDisplay || contactInfo.phone;
+    }
+
+    if (entryProjectType) {
+      projectType = entryProjectType;
+    }
+
+    if (entryLocation) {
+      location = entryLocation;
+    }
+
+    if (entryBestDay) {
+      bestContactDay = entryBestDay;
+    }
+
+    if (entryBestTime) {
+      bestContactTime = entryBestTime;
+    }
+
+    if (detectAssistantCallbackIntent(entry)) {
+      callbackIntent = "yes";
+    }
+
+    if (detectAssistantCallbackDecline(entry)) {
+      callbackIntent = "no";
+    }
+  });
+
+  if (!projectType && /metal-porch-repair|porch/i.test(pagePath || "")) {
+    projectType = "Metal porch repair / restoration";
+  }
+
+  const nextActionAt = buildAssistantNextActionAt(bestContactDay, bestContactTime);
+  const callbackLabel = formatAssistantCallbackLabel({
+    nextActionAt,
+    bestContactDay,
+    bestContactTime,
+  });
+  const callbackMissingFields =
+    callbackIntent === "yes"
+      ? [
+          !name ? "name" : "",
+          !phone && !email ? "phone or email" : "",
+          !bestContactDay ? "best day to call" : "",
+          !bestContactTime ? "best time to call" : "",
+        ].filter(Boolean)
+      : [];
+  const serviceSummarySource =
+    [...userMessages]
+      .reverse()
+      .find((entry) => inferAssistantProjectTypeFromText(entry)) ||
+    [...userMessages]
+      .reverse()
+      .find((entry) =>
+        /\b(gate|fence|railing|handrail|stairs|stair|balcony|porch|weld|welding|rust|repair|replace|install|fabricat|metal)\b/i.test(
+          normalizeAssistantSearchText(entry),
+        ),
+      ) ||
+    latestUserMessage;
+  const detailsSummary = [
+    projectType ? `Service: ${projectType}.` : "",
+    location ? `Location: ${location}.` : "",
+    serviceSummarySource ? `Request: ${cleanText(serviceSummarySource, 320)}.` : "",
+    callbackIntent === "yes" ? "Visitor asked for a callback." : "",
+    callbackLabel ? `Best callback window: ${callbackLabel}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .slice(0, 1500);
+  const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
+
+  return {
+    items,
+    userMessages,
+    combinedUserText,
+    latestUserMessage,
+    inSpanish,
+    name,
+    email,
+    phone,
+    phoneDisplay,
+    projectType,
+    location,
+    bestContactDay,
+    bestContactTime,
+    callbackIntent: callbackIntent === "no" ? "no" : callbackIntent === "yes" ? "yes" : "",
+    callbackMissingFields,
+    nextActionAt,
+    callbackLabel,
+    detailsSummary,
+    shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
+    shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
+    conversationDigest: buildAssistantHistoryDigest(items),
+  };
+}
+
+function buildAssistantStatePrompt(state = {}) {
+  const callbackIntent = state?.callbackIntent === "yes" ? "yes" : state?.callbackIntent === "no" ? "no" : "unknown";
+  const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
+  const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
+
+  return `
+CALL CAPTURE STATE:
+- callback_intent: ${callbackIntent}
+- visitor_name: ${state?.name || "pending"}
+- phone: ${state?.phoneDisplay || state?.phone || "pending"}
+- email: ${state?.email || "pending"}
+- project_type: ${state?.projectType || "pending"}
+- location: ${state?.location || "pending"}
+- best_day_to_call: ${state?.bestContactDay || "pending"}
+- best_time_to_call: ${state?.bestContactTime || "pending"}
+- callback_window: ${callbackLabel}
+- missing_callback_fields: ${missingFields || "none"}
+
+INSTRUCTIONS:
+- If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
+- If callback_intent is yes and contact details are already present, confirm the callback request and ask for photos or ZIP code only if still useful.
+- Do not say the callback is booked unless the visitor actually gave a specific day and time.
+- Keep replies practical, short, and contractor-like.
+`;
+}
+
+function stripAssistantNotesBlock(value = "") {
+  const source = String(value || "");
+  const markerIndex = source.indexOf(METALWORKS_ASSISTANT_NOTES_MARKER);
+
+  if (markerIndex === -1) {
+    return source.trim();
+  }
+
+  return source.slice(0, markerIndex).trim();
+}
+
+function buildAssistantPrivateNotes(state = {}) {
+  return [
+    "Source: Agustin 2.0 website assistant.",
+    state?.projectType ? `Project type: ${state.projectType}.` : "",
+    state?.location ? `Location: ${state.location}.` : "",
+    state?.callbackIntent === "yes" ? "Callback requested: yes." : "",
+    state?.callbackIntent === "no" ? "Callback requested: no." : "",
+    state?.callbackLabel ? `Best callback window: ${state.callbackLabel}.` : "",
+    state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
+    state?.conversationDigest ? `Recent conversation:\n${state.conversationDigest}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 2600);
+}
+
+function mergeAssistantPrivateNotes(existingNotes = "", state = {}) {
+  const manualNotes = stripAssistantNotesBlock(existingNotes);
+  const generatedNotes = buildAssistantPrivateNotes(state);
+
+  if (!generatedNotes) {
+    return manualNotes;
+  }
+
+  return [manualNotes, `${METALWORKS_ASSISTANT_NOTES_MARKER}\n${generatedNotes}`]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim()
+    .slice(0, 4000);
+}
+
 function extractAssistantResponseText(data = null) {
   const directText = cleanText(data?.output_text || "", 1500);
 
@@ -822,8 +1610,9 @@ async function generateAssistantReply({
   message = "",
   history = [],
   pagePath = "",
+  conversationState = null,
 } = {}) {
-  const fallbackReply = buildAssistantFallbackReply(message);
+  const fallbackReply = buildAssistantFallbackReply(message, conversationState);
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
 
   if (!apiKey) {
@@ -862,6 +1651,10 @@ async function generateAssistantReply({
           {
             role: "system",
             content: buildAssistantContext(message, pagePath),
+          },
+          {
+            role: "system",
+            content: buildAssistantStatePrompt(conversationState || {}),
           },
           ...normalizeAssistantHistory(history),
           {
@@ -928,7 +1721,16 @@ function cleanLead(doc = null) {
     statusLabel: labelStatus(doc.status || "new"),
     nextAction: doc.nextAction || "",
     nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
+    bestContactDay: doc.bestContactDay || "",
+    bestContactTime: doc.bestContactTime || "",
+    callbackIntent: doc.callbackIntent || "",
+    callbackRequestedAt: doc.callbackRequestedAt
+      ? new Date(doc.callbackRequestedAt).toISOString()
+      : "",
+    callbackAlertedAt: doc.callbackAlertedAt ? new Date(doc.callbackAlertedAt).toISOString() : "",
     privateNotes: doc.privateNotes || "",
+    lastUserMessage: doc.lastUserMessage || "",
+    lastAssistantMessage: doc.lastAssistantMessage || "",
     estimateTitle: doc.estimateTitle || "",
     estimateScope: doc.estimateScope || "",
     estimateMaterialsCost: normalizeMoney(doc.estimateMaterialsCost || 0),
@@ -1112,6 +1914,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     },
     { _id: false },
   );
+  const conversationEntrySchema = new mongoose.Schema(
+    {
+      role: String,
+      content: String,
+      createdAt: { type: Date, default: Date.now },
+    },
+    { _id: false },
+  );
 
   const metalworksLeadSchema = new mongoose.Schema({
     fullName: { type: String, required: true, trim: true, index: true },
@@ -1146,6 +1956,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     ipAddress: String,
     userAgent: String,
     tracking: trackingSchema,
+    visitorIds: [String],
+    sessionIds: [String],
+    conversationHistory: [conversationEntrySchema],
+    lastUserMessage: String,
+    lastAssistantMessage: String,
+    bestContactDay: String,
+    bestContactTime: String,
+    callbackIntent: String,
+    callbackRequestedAt: Date,
+    callbackAlertedAt: Date,
     lastContactAt: Date,
     updatedAt: Date,
     createdAt: { type: Date, default: Date.now },
@@ -1183,6 +2003,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
   metalworksLeadSchema.index({ status: 1, updatedAt: -1 });
+  metalworksLeadSchema.index({ visitorIds: 1 });
+  metalworksLeadSchema.index({ sessionIds: 1 });
   metalworksLeadActivitySchema.index({ leadId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
   metalworksCrmSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
@@ -1328,6 +2150,177 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
       tracking: buildTrackingPayload(tracking),
     });
+  }
+
+  async function resolveConversationLead({ visitorId = "", sessionId = "", email = "", phone = "" } = {}) {
+    const conditions = [];
+
+    if (phone) {
+      conditions.push({ phone });
+    }
+
+    if (email) {
+      conditions.push({ email });
+    }
+
+    if (visitorId) {
+      conditions.push({ visitorIds: visitorId });
+    }
+
+    if (sessionId) {
+      conditions.push({ sessionIds: sessionId });
+    }
+
+    if (!conditions.length) {
+      return null;
+    }
+
+    return MetalworksLead.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
+  function resolveAssistantLeadStatus(currentLead = null, state = {}) {
+    const currentStatus = normalizeStatus(currentLead?.status || "new");
+
+    if (["won", "lost", "archived"].includes(currentStatus)) {
+      return currentStatus;
+    }
+
+    if (state?.callbackIntent === "yes" && state?.nextActionAt) {
+      return "booked";
+    }
+
+    if (state?.callbackIntent === "yes" || state?.phone || state?.email) {
+      return "contacted";
+    }
+
+    return currentStatus || "new";
+  }
+
+  function normalizeStoredConversationHistory(history = []) {
+    return (Array.isArray(history) ? history : [])
+      .map((entry) => ({
+        role: entry?.role === "assistant" ? "assistant" : "user",
+        content: cleanText(entry?.content || "", 500),
+        createdAt: entry?.createdAt ? new Date(entry.createdAt) : new Date(),
+      }))
+      .filter((entry) => entry.content)
+      .slice(-METALWORKS_ASSISTANT_HISTORY_LIMIT);
+  }
+
+  function mergeConversationHistory(existingHistory = [], nextHistory = []) {
+    const merged = [
+      ...normalizeStoredConversationHistory(existingHistory),
+      ...normalizeStoredConversationHistory(nextHistory),
+    ];
+    const deduped = [];
+
+    merged.forEach((entry) => {
+      const lastEntry = deduped[deduped.length - 1];
+
+      if (lastEntry?.role === entry.role && lastEntry?.content === entry.content) {
+        return;
+      }
+
+      deduped.push(entry);
+    });
+
+    return deduped.slice(-METALWORKS_ASSISTANT_HISTORY_LIMIT);
+  }
+
+  async function upsertConversationLead({
+    currentLead = null,
+    state = {},
+    pageTitle = "",
+    pagePath = "",
+    pageUrl = "",
+    referrer = "",
+    tracking = {},
+    req = null,
+    assistantReply = "",
+  } = {}) {
+    if (!state?.shouldCreateLead && !currentLead?._id) {
+      return null;
+    }
+
+    const now = new Date();
+    const leadDoc = currentLead || new MetalworksLead();
+    const existingConversationHistory = currentLead?.conversationHistory || [];
+    const mergedHistory = mergeConversationHistory(existingConversationHistory, state.items || []);
+    const effectiveName =
+      selectAssistantText(state?.name || "", currentLead?.fullName || "") || "Website chat lead";
+    const effectivePhone = normalizePhone(state?.phone || currentLead?.phone || "");
+    const effectivePhoneDisplay =
+      cleanText(state?.phoneDisplay || currentLead?.phoneDisplay || "", 40) || effectivePhone;
+    const effectiveEmail = normalizeEmail(state?.email || currentLead?.email || "");
+    const effectiveProjectType = selectAssistantText(
+      state?.projectType || "",
+      currentLead?.projectType || "",
+    );
+    const effectiveLocation = selectAssistantLongestText(
+      state?.location || "",
+      currentLead?.location || "",
+    );
+    const effectiveDetails = selectAssistantLongestText(
+      state?.detailsSummary || "",
+      currentLead?.details || "",
+    );
+
+    leadDoc.fullName = effectiveName;
+    leadDoc.phone = effectivePhone;
+    leadDoc.phoneDisplay = effectivePhoneDisplay;
+    leadDoc.email = effectiveEmail;
+    leadDoc.projectType = effectiveProjectType;
+    leadDoc.location = effectiveLocation;
+    leadDoc.details = effectiveDetails;
+    leadDoc.status = resolveAssistantLeadStatus(currentLead, state);
+    leadDoc.nextAction =
+      state?.callbackIntent === "yes"
+        ? "call back from assistant chat"
+        : currentLead?.nextAction || "";
+    leadDoc.nextActionAt = state?.nextActionAt || currentLead?.nextActionAt || null;
+    leadDoc.privateNotes = mergeAssistantPrivateNotes(currentLead?.privateNotes || "", state);
+    leadDoc.sourceType =
+      cleanText(currentLead?.sourceType || "", 80) || "assistant_chat";
+    leadDoc.pageTitle = cleanText(pageTitle || currentLead?.pageTitle || "", 160);
+    leadDoc.pagePath = cleanText(pagePath || currentLead?.pagePath || "", 240);
+    leadDoc.pageUrl = cleanText(pageUrl || currentLead?.pageUrl || "", 500);
+    leadDoc.referrer = cleanText(referrer || currentLead?.referrer || "", 500);
+    leadDoc.ipAddress = req ? cleanText(getClientIp(req), 120) : cleanText(currentLead?.ipAddress || "", 120);
+    leadDoc.userAgent = req
+      ? cleanText(req.headers["user-agent"] || "", 400)
+      : cleanText(currentLead?.userAgent || "", 400);
+    leadDoc.tracking = buildTrackingPayload(tracking || currentLead?.tracking || {});
+    leadDoc.visitorIds = mergeAssistantUniqueValues(currentLead?.visitorIds || [], state?.visitorId || "");
+    leadDoc.sessionIds = mergeAssistantUniqueValues(currentLead?.sessionIds || [], state?.sessionId || "");
+    leadDoc.conversationHistory = mergedHistory;
+    leadDoc.lastUserMessage = cleanText(state?.latestUserMessage || currentLead?.lastUserMessage || "", 500);
+    leadDoc.lastAssistantMessage = cleanText(
+      assistantReply || currentLead?.lastAssistantMessage || "",
+      1500,
+    );
+    leadDoc.bestContactDay = cleanText(state?.bestContactDay || currentLead?.bestContactDay || "", 80);
+    leadDoc.bestContactTime = cleanText(state?.bestContactTime || currentLead?.bestContactTime || "", 80);
+    leadDoc.callbackIntent =
+      state?.callbackIntent === "yes" || state?.callbackIntent === "no"
+        ? state.callbackIntent
+        : cleanText(currentLead?.callbackIntent || "", 12);
+
+    if (state?.callbackIntent === "yes" && !leadDoc.callbackRequestedAt) {
+      leadDoc.callbackRequestedAt = now;
+    }
+
+    if (state?.callbackIntent === "yes" || state?.phone || state?.email) {
+      leadDoc.lastContactAt = now;
+    }
+
+    leadDoc.updatedAt = now;
+
+    if (!leadDoc.createdAt) {
+      leadDoc.createdAt = now;
+    }
+
+    await leadDoc.save();
+    return leadDoc;
   }
 
   app.get(
@@ -2171,8 +3164,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const message = cleanText(req.body?.message || "", 500);
       const visitorId = cleanText(req.body?.visitorId || "", 120);
       const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
       const pagePath = cleanText(req.body?.pagePath || "", 240);
       const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
       const tracking = buildTrackingPayload(req.body?.tracking || {});
       const history = normalizeAssistantHistory(req.body?.history || []);
 
@@ -2197,14 +3192,84 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         });
       }
 
+      const userConversationItems = buildAssistantConversationItems({
+        history,
+        message,
+      });
+      let conversationState = buildAssistantConversationSignals({
+        history: userConversationItems,
+        pagePath,
+      });
+      let currentLead = await resolveConversationLead({
+        visitorId,
+        sessionId,
+        email: conversationState.email,
+        phone: conversationState.phone,
+      });
+
+      if (currentLead) {
+        conversationState = buildAssistantConversationSignals({
+          history: userConversationItems,
+          lead: currentLead,
+          pagePath,
+        });
+      }
+
+      conversationState = {
+        ...conversationState,
+        visitorId,
+        sessionId,
+      };
+
+      const leadExistedBeforeMessage = Boolean(currentLead?._id);
+      const previousLeadStatus = normalizeStatus(currentLead?.status || "new");
+      const previousLeadNextActionAt = currentLead?.nextActionAt
+        ? new Date(currentLead.nextActionAt).toISOString()
+        : "";
+      let leadDoc = await upsertConversationLead({
+        currentLead,
+        state: conversationState,
+        pageTitle,
+        pagePath,
+        pageUrl,
+        referrer,
+        tracking,
+        req,
+      });
+
+      if (!leadExistedBeforeMessage && leadDoc?._id) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body:
+            conversationState.callbackIntent === "yes"
+              ? "Agustin 2.0 creo un lead conversacional para seguimiento de llamada."
+              : "Agustin 2.0 creo un lead conversacional desde el chat del sitio.",
+          meta: {
+            sourceType: "assistant_chat",
+            projectType: leadDoc.projectType || "",
+            location: leadDoc.location || "",
+            visitorId,
+            sessionId,
+            pageTitle,
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
       await appendActivity({
+        leadId: leadDoc?._id || currentLead?._id || null,
         activityType: "assistant_user_message",
         title: "Mensaje al assistant",
         body: message,
         meta: {
           visitorId,
           sessionId,
-          pageTitle: cleanText(req.body?.pageTitle || "", 160),
+          pageTitle,
         },
         req,
         pagePath,
@@ -2214,11 +3279,101 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       const result = await generateAssistantReply({
         message,
-        history,
+        history: userConversationItems,
         pagePath,
+        conversationState,
       });
 
+      const conversationItemsWithReply = buildAssistantConversationItems({
+        history: userConversationItems,
+        reply: result.reply,
+      });
+      const finalState = {
+        ...buildAssistantConversationSignals({
+          history: conversationItemsWithReply,
+          lead: leadDoc || currentLead,
+          pagePath,
+        }),
+        visitorId,
+        sessionId,
+      };
+
+      leadDoc = await upsertConversationLead({
+        currentLead: leadDoc || currentLead,
+        state: finalState,
+        pageTitle,
+        pagePath,
+        pageUrl,
+        referrer,
+        tracking,
+        req,
+        assistantReply: result.reply,
+      });
+
+      const currentLeadNextActionAt = leadDoc?.nextActionAt
+        ? new Date(leadDoc.nextActionAt).toISOString()
+        : "";
+
+      if (
+        leadDoc?._id &&
+        finalState.callbackIntent === "yes" &&
+        finalState.nextActionAt &&
+        (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt)
+      ) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "assistant_booking_requested",
+          title: leadExistedBeforeMessage
+            ? "Cita del assistant actualizada"
+            : "Cita del assistant guardada",
+          body: finalState.callbackLabel
+            ? `Agustin 2.0 detecto una llamada pedida para ${finalState.callbackLabel}.`
+            : "Agustin 2.0 detecto una llamada pedida desde la conversacion.",
+          meta: {
+            duplicate: leadExistedBeforeMessage,
+            requestedAt: finalState.nextActionAt.toISOString(),
+            visitorId,
+            sessionId,
+            pageTitle,
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
+      let alertDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
+        try {
+          alertDelivery = await sendMetalworksLeadAlertEmail({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType:
+              finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
+            requestedAt: finalState.nextActionAt,
+            requestedAtLabel: finalState.callbackLabel,
+            timeZone: METALWORKS_CALLBACK_TIME_ZONE,
+            pagePath,
+            pageUrl,
+            conversationDigest: finalState.conversationDigest,
+          });
+
+          if (alertDelivery.delivered) {
+            leadDoc.callbackAlertedAt = new Date();
+            leadDoc.updatedAt = new Date();
+            await leadDoc.save();
+          }
+        } catch (error) {
+          console.error("Error sending Metal Works assistant alert:", error.message);
+        }
+      }
+
       await appendActivity({
+        leadId: leadDoc?._id || currentLead?._id || null,
         activityType: result.usedFallback ? "assistant_fallback" : "assistant_ai_reply",
         title: result.usedFallback ? "Fallback del assistant" : "Respuesta del assistant",
         body: result.reply,
@@ -2237,6 +3392,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ok: true,
         respuesta: result.reply,
         usedFallback: result.usedFallback,
+        leadCaptured: Boolean(leadDoc?._id),
+        leadId: leadDoc?._id ? String(leadDoc._id) : "",
+        callbackCaptured: Boolean(
+          leadDoc?._id && finalState.callbackIntent === "yes" && finalState.nextActionAt,
+        ),
+        callbackLabel: finalState.callbackLabel || "",
+        notified: Boolean(alertDelivery.delivered),
         remainingToday: visitorId
           ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
           : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,

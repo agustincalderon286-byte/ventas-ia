@@ -130,6 +130,17 @@ function formatCurrency(value = 0) {
   }).format(amount);
 }
 
+function formatLeadSource(value = "") {
+  const source = String(value || "").trim();
+  const labels = {
+    website_form: "Website form",
+    assistant_chat: "Assistant chat",
+    assistant_booking: "Assistant callback",
+  };
+
+  return labels[source] || source.replace(/_/g, " ").trim();
+}
+
 function toDatetimeLocalValue(value = "") {
   if (!value) {
     return "";
@@ -531,7 +542,13 @@ function renderLeadList(leads = []) {
           <div class="crm-micro-list">
             <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
             ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+            ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
             ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
+            ${
+              lead.callbackIntent === "yes" && lead.nextActionAt
+                ? `<span class="crm-chip">Callback: ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+                : ""
+            }
           </div>
           <div class="crm-lead-card-summary">
             ${
@@ -684,10 +701,26 @@ function renderLeadDetail(detail = null) {
       ${lead.email ? `<span class="crm-chip">${escapeHtml(lead.email)}</span>` : ""}
       ${lead.location ? `<span class="crm-chip">${escapeHtml(lead.location)}</span>` : ""}
       ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+      ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
+      ${
+        lead.callbackIntent === "yes" && lead.nextActionAt
+          ? `<span class="crm-chip">Callback ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+          : ""
+      }
     </div>
     <div class="crm-detail-meta">
       <span><strong>Creado:</strong> ${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
       <span><strong>Ultimo contacto:</strong> ${escapeHtml(formatDate(lead.lastContactAt) || "Sin registrar")}</span>
+      ${
+        lead.callbackRequestedAt
+          ? `<span><strong>Callback requested:</strong> ${escapeHtml(formatDate(lead.callbackRequestedAt))}</span>`
+          : ""
+      }
+      ${
+        lead.callbackAlertedAt
+          ? `<span><strong>Callback alerted:</strong> ${escapeHtml(formatDate(lead.callbackAlertedAt))}</span>`
+          : ""
+      }
       ${
         lead.estimateSentAt
           ? `<span><strong>Estimate sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
