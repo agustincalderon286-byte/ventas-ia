@@ -119,6 +119,18 @@ function parseEmailList(value = "") {
     .filter(Boolean);
 }
 
+function getMetalworksNotificationEmails() {
+  return Array.from(
+    new Set(
+      parseEmailList(
+        process.env.METALWORKS_LEAD_NOTIFY_EMAILS ||
+          process.env.METALWORKS_LEAD_NOTIFY_EMAIL ||
+          METALWORKS_CONTACT_EMAIL,
+      ),
+    ),
+  ).filter(Boolean);
+}
+
 function escapeRegex(value = "") {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -261,6 +273,37 @@ function formatDateLabel(value = "") {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatDateTimeLabel(value = "", timeZone = "") {
+  if (!value) {
+    return "";
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const options = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
+
+  if (timeZone) {
+    try {
+      return date.toLocaleString("en-US", {
+        ...options,
+        timeZone,
+      });
+    } catch {}
+  }
+
+  return date.toLocaleString("en-US", options);
 }
 
 function escapeHtmlMarkup(value = "") {
@@ -406,6 +449,149 @@ async function sendMetalworksEstimateEmail(lead = null, replyTo = "") {
   };
 }
 
+function buildMetalworksLeadAlertEmail({
+  lead = null,
+  alertType = "lead",
+  requestedAt = "",
+  requestedAtLabel = "",
+  timeZone = "",
+  pagePath = "",
+  pageUrl = "",
+  conversationDigest = "",
+} = {}) {
+  const fullName = cleanText(lead?.fullName || "", 120) || "Lead";
+  const projectLabel =
+    cleanText(lead?.projectType || "", 120) ||
+    cleanText(lead?.estimateTitle || "", 160) ||
+    "metalwork request";
+  const location = cleanText(lead?.location || "", 160) || "Not provided";
+  const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40) || "Not provided";
+  const email = normalizeEmail(lead?.email || "") || "Not provided";
+  const details = cleanText(lead?.details || "", 2400) || "No details provided.";
+  const notifyTo = getMetalworksNotificationEmails();
+  const callbackLabel =
+    cleanText(requestedAtLabel || "", 120) ||
+    formatDateTimeLabel(requestedAt, timeZone) ||
+    "No time selected";
+  const subjectPrefix =
+    alertType === "assistant_callback" ? "New assistant callback request" : "New Metal Works lead";
+  const subject = `${subjectPrefix} - ${fullName}`;
+  const intro =
+    alertType === "assistant_callback"
+      ? "A website visitor asked Agustin 2.0 for a callback and the request was saved in the CRM."
+      : "A new lead was saved in the Chicago Metal Works CRM.";
+  const textLines = [
+    intro,
+    "",
+    `Name: ${fullName}`,
+    `Phone: ${phone}`,
+    `Email: ${email}`,
+    `Project type: ${projectLabel}`,
+    `Location: ${location}`,
+    alertType === "assistant_callback" ? `Requested callback time: ${callbackLabel}` : "",
+    pagePath ? `Page: ${pagePath}` : "",
+    pageUrl ? `URL: ${pageUrl}` : "",
+    "",
+    "Project details:",
+    details,
+    conversationDigest ? "Recent assistant conversation:" : "",
+    conversationDigest || "",
+  ].filter(Boolean);
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f8f5ef;padding:24px;color:#1e2428">
+      <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd0;border-radius:18px;padding:28px">
+        <p style="margin:0 0 16px">${escapeHtmlMarkup(intro)}</p>
+        <div style="border:1px solid #eadfcd;border-radius:16px;padding:18px;margin:0 0 18px;background:#fffaf2">
+          <p style="margin:0 0 10px"><strong>Name:</strong> ${escapeHtmlMarkup(fullName)}</p>
+          <p style="margin:0 0 10px"><strong>Phone:</strong> ${escapeHtmlMarkup(phone)}</p>
+          <p style="margin:0 0 10px"><strong>Email:</strong> ${escapeHtmlMarkup(email)}</p>
+          <p style="margin:0 0 10px"><strong>Project type:</strong> ${escapeHtmlMarkup(projectLabel)}</p>
+          <p style="margin:0 0 10px"><strong>Location:</strong> ${escapeHtmlMarkup(location)}</p>
+          ${
+            alertType === "assistant_callback"
+              ? `<p style="margin:0 0 10px"><strong>Requested callback time:</strong> ${escapeHtmlMarkup(callbackLabel)}</p>`
+              : ""
+          }
+          ${pagePath ? `<p style="margin:0 0 10px"><strong>Page:</strong> ${escapeHtmlMarkup(pagePath)}</p>` : ""}
+          ${pageUrl ? `<p style="margin:0"><strong>URL:</strong> ${escapeHtmlMarkup(pageUrl)}</p>` : ""}
+        </div>
+        <div style="margin:0 0 18px">
+          <p style="margin:0 0 8px"><strong>Project details</strong></p>
+          <p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(details)}</p>
+        </div>
+        ${
+          conversationDigest
+            ? `<div style="margin:0"><p style="margin:0 0 8px"><strong>Recent assistant conversation</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(conversationDigest)}</p></div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+
+  return {
+    to: notifyTo,
+    subject,
+    text: textLines.join("\n"),
+    html,
+    replyTo: normalizeEmail(lead?.email || "") || METALWORKS_CONTACT_EMAIL,
+  };
+}
+
+async function sendMetalworksLeadAlertEmail(options = {}) {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const fromEmail = String(process.env.RESEND_FROM_EMAIL || "").trim();
+
+  if (!apiKey || !fromEmail) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Email sending is not configured yet.",
+    };
+  }
+
+  const payload = buildMetalworksLeadAlertEmail(options);
+
+  if (!payload.to.length) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "No destination email is configured for Metal Works lead alerts.",
+    };
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
+      reply_to: payload.replyTo,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      delivered: false,
+      status: response.status,
+      error: errorData?.message || `Email service responded ${response.status}.`,
+    };
+  }
+
+  return {
+    attempted: true,
+    delivered: true,
+    status: response.status,
+  };
+}
+
 function buildTrackingPayload(payload = {}) {
   return {
     gclid: cleanText(payload?.gclid || "", 120),
@@ -451,6 +637,7 @@ function formatActivityTitle(type = "") {
     assistant_user_message: "Mensaje al assistant",
     assistant_ai_reply: "Respuesta del assistant",
     assistant_fallback: "Fallback del assistant",
+    assistant_booking_requested: "Cita pedida desde assistant",
   };
 
   return labels[type] || "Actividad";
@@ -594,6 +781,13 @@ function normalizeAssistantHistory(history = []) {
     }))
     .filter((item) => item.content)
     .slice(-6);
+}
+
+function buildAssistantHistoryDigest(history = []) {
+  return normalizeAssistantHistory(history)
+    .map((item) => `${item.role === "assistant" ? "Agustin" : "Visitor"}: ${item.content}`)
+    .join("\n")
+    .slice(0, 1800);
 }
 
 function extractAssistantResponseText(data = null) {
@@ -1752,6 +1946,190 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error saving public Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar tu quote en este momento.");
+    }
+  });
+
+  app.post("/api/public/metalworks/appointments", async (req, res) => {
+    try {
+      const fullName = cleanText(req.body?.name || "", 120);
+      const phone = normalizePhone(req.body?.phone || "");
+      const phoneDisplay = cleanText(req.body?.phone || "", 40);
+      const email = normalizeEmail(req.body?.email || "");
+      const projectType = cleanText(req.body?.projectType || "", 120);
+      const location = cleanText(req.body?.location || "", 160);
+      const details = cleanText(req.body?.details || "", 3000);
+      const preferredDateTimeRaw = cleanText(req.body?.preferredDateTime || "", 80);
+      const preferredDateTime = preferredDateTimeRaw ? new Date(preferredDateTimeRaw) : null;
+      const timeZone = cleanText(req.body?.timezone || "", 80);
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const conversationDigest = buildAssistantHistoryDigest(req.body?.conversationHistory || []);
+
+      if (!fullName) {
+        return respondError(res, 400, "El nombre es requerido.");
+      }
+
+      if (!phone) {
+        return respondError(res, 400, "El telefono es requerido.");
+      }
+
+      if (!details) {
+        return respondError(res, 400, "Los detalles del proyecto son requeridos.");
+      }
+
+      if (!(preferredDateTime instanceof Date) || Number.isNaN(preferredDateTime.getTime())) {
+        return respondError(res, 400, "Selecciona una fecha valida para la cita.");
+      }
+
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const duplicateMatch = [{ phone }];
+
+      if (email) {
+        duplicateMatch.push({ email });
+      }
+
+      let leadDoc = await MetalworksLead.findOne({
+        createdAt: { $gte: thirtyDaysAgo },
+        $or: duplicateMatch,
+      }).sort({
+        createdAt: -1,
+      });
+      const now = new Date();
+      const duplicate = Boolean(leadDoc);
+      const requestedAtLabel = formatDateTimeLabel(preferredDateTime, timeZone);
+      const callbackNote = [
+        `Callback requested for ${requestedAtLabel}${timeZone ? ` (${timeZone})` : ""}.`,
+        conversationDigest ? `Recent assistant conversation:\n${conversationDigest}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 3200);
+
+      if (leadDoc) {
+        leadDoc.fullName = fullName || leadDoc.fullName;
+        leadDoc.phone = phone;
+        leadDoc.phoneDisplay = phoneDisplay;
+        leadDoc.email = email || leadDoc.email || "";
+        leadDoc.projectType = projectType || leadDoc.projectType || "";
+        leadDoc.location = location || leadDoc.location || "";
+        leadDoc.details = details || leadDoc.details || "";
+        leadDoc.status = "booked";
+        leadDoc.nextAction = "callback_requested";
+        leadDoc.nextActionAt = preferredDateTime;
+        leadDoc.sourceType = leadDoc.sourceType || "assistant_booking";
+        leadDoc.pageTitle = pageTitle || leadDoc.pageTitle || "";
+        leadDoc.pagePath = pagePath || leadDoc.pagePath || "";
+        leadDoc.pageUrl = pageUrl || leadDoc.pageUrl || "";
+        leadDoc.referrer = referrer || leadDoc.referrer || "";
+        leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+        leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+        leadDoc.tracking = tracking;
+        leadDoc.lastContactAt = now;
+        leadDoc.privateNotes = [String(leadDoc.privateNotes || "").trim(), callbackNote]
+          .filter(Boolean)
+          .join("\n\n")
+          .slice(0, 4000);
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      } else {
+        leadDoc = await MetalworksLead.create({
+          fullName,
+          phone,
+          phoneDisplay,
+          email,
+          projectType,
+          location,
+          details,
+          status: "booked",
+          nextAction: "callback_requested",
+          nextActionAt: preferredDateTime,
+          privateNotes: callbackNote,
+          sourceType: "assistant_booking",
+          pageTitle,
+          pagePath,
+          pageUrl,
+          referrer,
+          ipAddress: cleanText(getClientIp(req), 120),
+          userAgent: cleanText(req.headers["user-agent"] || "", 400),
+          tracking,
+          lastContactAt: now,
+          updatedAt: now,
+          createdAt: now,
+        });
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body: `${fullName} pidio una cita desde el assistant.`,
+          meta: {
+            projectType,
+            location,
+            requestedAt: preferredDateTime.toISOString(),
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "assistant_booking_requested",
+        title: duplicate ? "Cita del assistant actualizada" : "Cita del assistant guardada",
+        body: duplicate
+          ? `El visitante actualizo la hora pedida para ${requestedAtLabel}.`
+          : `El assistant guardo una cita pedida para ${requestedAtLabel}.`,
+        meta: {
+          duplicate,
+          requestedAt: preferredDateTime.toISOString(),
+          timeZone,
+          visitorId,
+          sessionId,
+          pageTitle,
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      let alertDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      try {
+        alertDelivery = await sendMetalworksLeadAlertEmail({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "assistant_callback",
+          requestedAt: preferredDateTime,
+          requestedAtLabel,
+          timeZone,
+          pagePath,
+          pageUrl,
+          conversationDigest,
+        });
+      } catch (error) {
+        console.error("Error sending Metal Works callback alert:", error.message);
+      }
+
+      res.json({
+        ok: true,
+        duplicate,
+        notified: Boolean(alertDelivery.delivered),
+        requestedAtLabel,
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works assistant appointment:", error.message);
+      respondError(res, 500, "No pude guardar la cita en este momento.");
     }
   });
 
