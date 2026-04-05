@@ -13,7 +13,7 @@ Use this with Thumbtack's request form:
 - Client URI: `https://www.chicagometalworksandfencing.com/ask-agustin.html`
 - Production redirect URI: `https://cmwf-crm-api.onrender.com/integrations/thumbtack/oauth/callback`
 - API redirect alias: `https://cmwf-crm-api.onrender.com/api/integrations/thumbtack/oauth/callback`
-- Logo URI: `https://www.chicagometalworksandfencing.com/assets/logo.svg`
+- Logo URI: `https://www.chicagometalworksandfencing.com/assets/logo.png`
 - Privacy policy: `https://www.chicagometalworksandfencing.com/privacy.html`
 - Terms of service: `https://www.chicagometalworksandfencing.com/terms.html`
 
@@ -61,7 +61,7 @@ Use this text:
   - `http://localhost:3000/integrations/thumbtack/oauth/callback`
 - Contacts:
   - `agustincalderon286@gmail.com`
-- Logo URI: `https://www.chicagometalworksandfencing.com/assets/logo.svg`
+- Logo URI: `https://www.chicagometalworksandfencing.com/assets/logo.png`
 - Policy URI: `https://www.chicagometalworksandfencing.com/privacy.html`
 - Terms of Service URI: `https://www.chicagometalworksandfencing.com/terms.html`
 
