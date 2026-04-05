@@ -665,6 +665,41 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   gap: 18px;
 }
 
+.crm-photo-section {
+  display: grid;
+  gap: 12px;
+}
+
+.crm-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.crm-photo-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  border-radius: 18px;
+  background: rgba(16, 20, 23, 0.04);
+  color: var(--crm-charcoal);
+  text-decoration: none;
+}
+
+.crm-photo-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.crm-photo-card span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  word-break: break-word;
+}
+
 .crm-quick-actions,
 .crm-card-actions {
   display: grid;

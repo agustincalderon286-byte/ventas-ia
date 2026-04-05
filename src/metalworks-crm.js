@@ -31,6 +31,9 @@ const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
+const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
+const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
+const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
   "contacted",
@@ -74,6 +77,7 @@ RULES:
 - Ask for ZIP code or job location when useful.
 - Ask for the best phone number only when it helps move the quote forward.
 - If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
+- If the visitor has project photos, tell them they can upload them directly in the chat.
 - If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
@@ -643,6 +647,7 @@ function formatActivityTitle(type = "") {
     assistant_ai_reply: "Respuesta del assistant",
     assistant_fallback: "Fallback del assistant",
     assistant_booking_requested: "Cita pedida desde assistant",
+    assistant_photo_uploaded: "Fotos subidas desde assistant",
   };
 
   return labels[type] || "Actividad";
@@ -691,8 +696,8 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
     return inSpanish
-      ? "La forma mas rapida de cotizar es mandar fotos, medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
-      : "The fastest way to get pricing is to send photos, rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
+      ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
+      : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
   }
 
   if (/gate|gates|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
@@ -726,8 +731,8 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   }
 
   return inSpanish
-    ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos usa el quote form para moverlo mas rapido."
-    : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, use the quote form so we can move faster.";
+    ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos subelas aqui en el chat para moverlo mas rapido."
+    : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
 }
 
 function buildAssistantContext(message = "", pagePath = "") {
@@ -1415,6 +1420,9 @@ function buildAssistantConversationSignals({
   let bestContactDay = cleanText(lead?.bestContactDay || "", 80);
   let bestContactTime = cleanText(lead?.bestContactTime || "", 80);
   let callbackIntent = cleanText(lead?.callbackIntent || "", 12);
+  const photoFileCount = Array.isArray(lead?.photoFileNames)
+    ? lead.photoFileNames.filter(Boolean).length
+    : 0;
   let previousAssistantMessage = "";
 
   items.forEach((entry) => {
@@ -1539,6 +1547,7 @@ function buildAssistantConversationSignals({
     nextActionAt,
     callbackLabel,
     detailsSummary,
+    photoFileCount,
     shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
     shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
     conversationDigest: buildAssistantHistoryDigest(items),
@@ -1558,6 +1567,7 @@ CALL CAPTURE STATE:
 - email: ${state?.email || "pending"}
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
+- uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
 - best_day_to_call: ${state?.bestContactDay || "pending"}
 - best_time_to_call: ${state?.bestContactTime || "pending"}
 - callback_window: ${callbackLabel}
@@ -1566,6 +1576,7 @@ CALL CAPTURE STATE:
 INSTRUCTIONS:
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the callback request and ask for photos or ZIP code only if still useful.
+- If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
 - Do not say the callback is booked unless the visitor actually gave a specific day and time.
 - Keep replies practical, short, and contractor-like.
 `;
@@ -1587,6 +1598,7 @@ function buildAssistantPrivateNotes(state = {}) {
     "Source: Agustin 2.0 website assistant.",
     state?.projectType ? `Project type: ${state.projectType}.` : "",
     state?.location ? `Location: ${state.location}.` : "",
+    state?.photoFileCount ? `Uploaded photos: ${state.photoFileCount}.` : "",
     state?.callbackIntent === "yes" ? "Callback requested: yes." : "",
     state?.callbackIntent === "no" ? "Callback requested: no." : "",
     state?.callbackLabel ? `Best callback window: ${state.callbackLabel}.` : "",
@@ -1610,6 +1622,76 @@ function mergeAssistantPrivateNotes(existingNotes = "", state = {}) {
     .join("\n\n")
     .trim()
     .slice(0, 4000);
+}
+
+function sanitizeLeadAssetFileName(value = "", fallbackName = "project-photo.jpg") {
+  const rawName = String(value || "").trim();
+  const sanitized = rawName
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleanText(sanitized || fallbackName, 120) || fallbackName;
+}
+
+function normalizeLeadAssetMimeType(value = "") {
+  const safeValue = cleanText(value || "", 80).toLowerCase();
+
+  if (/^image\/(?:jpeg|jpg|png|webp|gif|heic|heif|bmp)$/i.test(safeValue)) {
+    return safeValue === "image/jpg" ? "image/jpeg" : safeValue;
+  }
+
+  return "";
+}
+
+function parseAssistantLeadAssetUpload(payload = {}) {
+  const explicitMimeType = normalizeLeadAssetMimeType(payload?.mimeType || "");
+  const dataUrl = String(payload?.dataUrl || "").trim();
+  const dataUrlMatch = dataUrl.match(/^data:([^;]+);base64,([A-Za-z0-9+/=\s]+)$/i);
+  const mimeType = normalizeLeadAssetMimeType(dataUrlMatch?.[1] || explicitMimeType);
+
+  if (!mimeType) {
+    throw new Error("Only image uploads are allowed.");
+  }
+
+  if (!dataUrlMatch?.[2]) {
+    throw new Error("Image payload is invalid.");
+  }
+
+  const buffer = Buffer.from(dataUrlMatch[2].replace(/\s+/g, ""), "base64");
+
+  if (!buffer.length) {
+    throw new Error("Image payload is empty.");
+  }
+
+  if (buffer.length > METALWORKS_LEAD_ASSET_MAX_BYTES) {
+    throw new Error("Each image must be 2 MB or less after upload.");
+  }
+
+  return {
+    fileName: sanitizeLeadAssetFileName(payload?.fileName || ""),
+    mimeType,
+    sizeBytes: buffer.length,
+    fileData: buffer,
+  };
+}
+
+function cleanLeadAsset(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    leadId: doc.leadId ? String(doc.leadId) : "",
+    fileName: doc.fileName || "",
+    mimeType: doc.mimeType || "",
+    sizeBytes: Number(doc.sizeBytes || 0) || 0,
+    uploadedAt: doc.uploadedAt ? new Date(doc.uploadedAt).toISOString() : "",
+    downloadUrl: doc._id
+      ? `/api/metalworks-crm/assets/${encodeURIComponent(String(doc._id))}/content`
+      : "",
+  };
 }
 
 function extractAssistantResponseText(data = null) {
@@ -2037,6 +2119,25 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now, index: true },
   });
 
+  const metalworksLeadAssetSchema = new mongoose.Schema({
+    leadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    visitorId: { type: String, index: true },
+    sessionId: { type: String, index: true },
+    sourceType: { type: String, default: "assistant_chat_photo" },
+    fileName: String,
+    mimeType: String,
+    sizeBytes: Number,
+    fileData: Buffer,
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    updatedAt: Date,
+    createdAt: { type: Date, default: Date.now },
+  });
+
   const metalworksCrmSessionSchema = new mongoose.Schema({
     adminEmail: { type: String, required: true, index: true },
     tokenHash: { type: String, required: true, unique: true, index: true },
@@ -2054,6 +2155,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadSchema.index({ sessionIds: 1 });
   metalworksLeadActivitySchema.index({ leadId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
+  metalworksLeadAssetSchema.index({ leadId: 1, uploadedAt: -1 });
+  metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
+  metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
   metalworksCrmSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   const MetalworksLead =
@@ -2062,6 +2166,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksLeadActivity =
     mongoose.models.MetalworksLeadActivity ||
     mongoose.model("MetalworksLeadActivity", metalworksLeadActivitySchema);
+  const MetalworksLeadAsset =
+    mongoose.models.MetalworksLeadAsset ||
+    mongoose.model("MetalworksLeadAsset", metalworksLeadAssetSchema);
   const MetalworksCrmSession =
     mongoose.models.MetalworksCrmSession ||
     mongoose.model("MetalworksCrmSession", metalworksCrmSessionSchema);
@@ -2197,6 +2304,60 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
       tracking: buildTrackingPayload(tracking),
     });
+  }
+
+  async function syncLeadAssetsToLead({
+    leadId = null,
+    visitorIds = [],
+    sessionIds = [],
+  } = {}) {
+    if (!leadId) {
+      return 0;
+    }
+
+    const conditions = [];
+    const safeVisitorIds = mergeAssistantUniqueValues(visitorIds || []);
+    const safeSessionIds = mergeAssistantUniqueValues(sessionIds || []);
+
+    if (safeVisitorIds.length) {
+      conditions.push({ visitorId: { $in: safeVisitorIds } });
+    }
+
+    if (safeSessionIds.length) {
+      conditions.push({ sessionId: { $in: safeSessionIds } });
+    }
+
+    if (!conditions.length) {
+      return 0;
+    }
+
+    const result = await MetalworksLeadAsset.updateMany(
+      {
+        $or: conditions,
+        leadId: { $ne: leadId },
+      },
+      {
+        $set: {
+          leadId,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return Number(result?.modifiedCount || 0) || 0;
+  }
+
+  async function listLeadAssets(leadId = null) {
+    if (!leadId) {
+      return [];
+    }
+
+    const docs = await MetalworksLeadAsset.find({ leadId })
+      .sort({ uploadedAt: -1, createdAt: -1 })
+      .limit(24)
+      .lean();
+
+    return docs.map(cleanLeadAsset).filter(Boolean);
   }
 
   async function resolveConversationLead({ visitorId = "", sessionId = "", email = "", phone = "" } = {}) {
@@ -2370,6 +2531,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     await leadDoc.save();
+    await syncLeadAssetsToLead({
+      leadId: leadDoc._id,
+      visitorIds: leadDoc.visitorIds || [],
+      sessionIds: leadDoc.sessionIds || [],
+    });
     return leadDoc;
   }
 
@@ -2510,8 +2676,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 404, "No encontre ese lead.");
       }
 
+      const assets = await listLeadAssets(leadId);
+
       res.json({
         lead: cleanLead(leadDoc, { includeConversation: true }),
+        assets,
         activity: activityDocs.map(cleanActivity).filter(Boolean),
       });
     } catch (error) {
@@ -2835,14 +3004,54 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           .limit(80)
           .lean(),
       ]);
+      const assets = await listLeadAssets(leadId);
 
       res.json({
         lead: cleanLead(updatedLead, { includeConversation: true }),
+        assets,
         activity: activityDocs.map(cleanActivity).filter(Boolean),
       });
     } catch (error) {
       console.error("Error updating Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar ese lead.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/assets/:assetId/content", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const assetId = String(req.params?.assetId || "").trim();
+
+    if (!assetId || !mongoose.Types.ObjectId.isValid(assetId)) {
+      return respondError(res, 400, "Asset invalido.");
+    }
+
+    try {
+      const assetDoc = await MetalworksLeadAsset.findById(assetId).select(
+        "mimeType fileName fileData",
+      );
+
+      if (!assetDoc?.fileData) {
+        return respondError(res, 404, "No encontre esa foto.");
+      }
+
+      res.setHeader(
+        "Content-Type",
+        normalizeLeadAssetMimeType(assetDoc.mimeType || "") || "application/octet-stream",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${sanitizeLeadAssetFileName(assetDoc.fileName || "project-photo.jpg")}"`,
+      );
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.send(assetDoc.fileData);
+    } catch (error) {
+      console.error("Error loading Metal Works asset:", error.message);
+      respondError(res, 500, "No pude cargar esa foto.");
     }
   });
 
@@ -2916,6 +3125,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         .sort({ createdAt: -1 })
         .limit(80)
         .lean();
+      const assets = await listLeadAssets(leadId);
 
       res.json({
         ok: true,
@@ -2924,7 +3134,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         message: delivery.delivered
           ? "Estimate sent to the client."
           : delivery.error || "I could not send it from the system.",
-        lead: cleanLead(updatedLead),
+        lead: cleanLead(updatedLead, { includeConversation: true }),
+        assets,
         activity: activityDocs.map(cleanActivity).filter(Boolean),
       });
     } catch (error) {
@@ -3243,6 +3454,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         console.error("Error sending Metal Works callback alert:", error.message);
       }
 
+      await syncLeadAssetsToLead({
+        leadId: leadDoc._id,
+        visitorIds: [visitorId],
+        sessionIds: [sessionId],
+      });
+
       res.json({
         ok: true,
         duplicate,
@@ -3253,6 +3470,125 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error saving Metal Works assistant appointment:", error.message);
       respondError(res, 500, "No pude guardar la cita en este momento.");
+    }
+  });
+
+  app.post("/api/public/metalworks/assistant/photos", async (req, res) => {
+    try {
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
+
+      if (!visitorId && !sessionId) {
+        return respondError(res, 400, "Missing assistant visitor session.");
+      }
+
+      if (!filePayloads.length) {
+        return respondError(res, 400, "Add at least one image.");
+      }
+
+      if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+        return respondError(
+          res,
+          400,
+          `Upload up to ${METALWORKS_LEAD_ASSET_MAX_FILES} images at a time.`,
+        );
+      }
+
+      const parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      const totalBytes = parsedFiles.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+
+      if (totalBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Total image upload is too large.");
+      }
+
+      let leadDoc = await resolveConversationLead({
+        visitorId,
+        sessionId,
+      });
+
+      if (!leadDoc) {
+        leadDoc = await upsertConversationLead({
+          currentLead: null,
+          state: {
+            shouldCreateLead: true,
+            visitorId,
+            sessionId,
+            items: [],
+            latestUserMessage: "",
+            detailsSummary: "Visitor uploaded project photos from the assistant chat.",
+          },
+          pageTitle,
+          pagePath,
+          pageUrl,
+          referrer,
+          tracking,
+          req,
+        });
+      }
+
+      if (!leadDoc?._id) {
+        return respondError(res, 500, "I could not create a lead for these photos.");
+      }
+
+      const now = new Date();
+      const assetDocs = await Promise.all(
+        parsedFiles.map((item) =>
+          MetalworksLeadAsset.create({
+            leadId: leadDoc._id,
+            visitorId,
+            sessionId,
+            sourceType: "assistant_chat_photo",
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            fileData: item.fileData,
+            uploadedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          }),
+        ),
+      );
+
+      leadDoc.photoFileNames = mergeAssistantUniqueValues(
+        leadDoc.photoFileNames || [],
+        parsedFiles.map((item) => item.fileName),
+      );
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+      await leadDoc.save();
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "assistant_photo_uploaded",
+        title: "Fotos subidas desde assistant",
+        body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} en el chat.`,
+        meta: {
+          visitorId,
+          sessionId,
+          pageTitle,
+          fileNames: parsedFiles.map((item) => item.fileName),
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      res.json({
+        ok: true,
+        uploadedCount: assetDocs.length,
+        leadId: String(leadDoc._id),
+        assets: assetDocs.map(cleanLeadAsset).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works assistant photos:", error.message);
+      respondError(res, 500, error?.message || "I could not save those photos.");
     }
   });
 

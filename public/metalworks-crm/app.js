@@ -81,6 +81,9 @@ const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-
 const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
 const conversationThread = document.querySelector("[data-crm-conversation-thread]");
 const conversationSummary = document.querySelector("[data-crm-conversation-summary]");
+const photoSection = document.querySelector("[data-crm-photo-section]");
+const photoGrid = document.querySelector("[data-crm-photo-grid]");
+const photoSummary = document.querySelector("[data-crm-photo-summary]");
 
 function escapeHtml(value = "") {
   return String(value || "")
@@ -703,6 +706,43 @@ function renderConversationThread(messages = []) {
     .join("");
 }
 
+function renderLeadAssets(assets = []) {
+  if (!photoSection || !photoGrid || !photoSummary) {
+    return;
+  }
+
+  const safeAssets = Array.isArray(assets) ? assets.filter((item) => item?.downloadUrl) : [];
+
+  if (!safeAssets.length) {
+    photoSection.hidden = true;
+    photoSummary.textContent = "No photos yet.";
+    photoGrid.innerHTML = "";
+    return;
+  }
+
+  photoSection.hidden = false;
+  photoSummary.textContent = `${safeAssets.length} photo${safeAssets.length === 1 ? "" : "s"} saved`;
+  photoGrid.innerHTML = safeAssets
+    .map(
+      (asset) => `
+        <a
+          class="crm-photo-card"
+          href="${escapeHtml(asset.downloadUrl || "#")}"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <img
+            src="${escapeHtml(asset.downloadUrl || "")}"
+            alt="${escapeHtml(asset.fileName || "Project photo")}"
+            loading="lazy"
+          />
+          <span>${escapeHtml(asset.fileName || "Project photo")}</span>
+        </a>
+      `,
+    )
+    .join("");
+}
+
 function syncDetailQuickActions(lead = null) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const hasPhone = Boolean(phoneDigits);
@@ -745,6 +785,7 @@ function renderLeadDetail(detail = null) {
     detailMeta.innerHTML = "";
     activityList.innerHTML = "";
     renderConversationThread([]);
+    renderLeadAssets([]);
     syncDetailQuickActions(null);
     setDetailTab("profile");
     return;
@@ -838,6 +879,7 @@ function renderLeadDetail(detail = null) {
 
   syncEstimateTotalFromForm();
   syncDetailQuickActions(lead);
+  renderLeadAssets(detail.assets || []);
   renderConversationThread(lead.conversationHistory || []);
   renderActivityCards(activityList, detail.activity || []);
   setDetailTab(state.detailTab || "profile");
