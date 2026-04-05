@@ -40,6 +40,7 @@ const state = {
   dashboard: null,
   leadDetail: null,
   selectedLeadId: "",
+  detailTab: "profile",
   filters: {
     search: "",
     status: "",
@@ -60,6 +61,7 @@ const detailPanel = document.querySelector(".crm-detail-panel");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
 const globalActivityList = document.querySelector("[data-crm-global-activity]");
+const globalActivitySummary = document.querySelector("[data-crm-global-activity-summary]");
 const leadsCount = document.querySelector("[data-crm-leads-count]");
 const statusFilter = document.querySelector("[data-crm-status-filter]");
 const serviceFilter = document.querySelector("[data-crm-service-filter]");
@@ -75,6 +77,10 @@ const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
 const sendEstimateButton = document.querySelector("[data-crm-send-estimate]");
 const openEmailDraftButton = document.querySelector("[data-crm-open-email-draft]");
 const copyEstimateButton = document.querySelector("[data-crm-copy-estimate]");
+const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-tab]"));
+const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
+const conversationThread = document.querySelector("[data-crm-conversation-thread]");
+const conversationSummary = document.querySelector("[data-crm-conversation-summary]");
 
 function escapeHtml(value = "") {
   return String(value || "")
@@ -310,15 +316,15 @@ function buildEstimateSnapshot() {
     : Number(form?.estimateAmount?.value || lead.estimateAmount || 0) || 0;
 
   return {
-    fullName: String(lead.fullName || "").trim(),
+    fullName: String(form?.fullName?.value || lead.fullName || "").trim(),
     firstName:
-      String(lead.fullName || "")
+      String(form?.fullName?.value || lead.fullName || "")
         .trim()
         .split(/\s+/)
         .filter(Boolean)[0] || "there",
-    email: String(lead.email || "").trim(),
-    projectType: String(lead.projectType || "").trim(),
-    location: String(lead.location || "").trim(),
+    email: String(form?.email?.value || lead.email || "").trim(),
+    projectType: String(form?.projectType?.value || lead.projectType || "").trim(),
+    location: String(form?.location?.value || lead.location || "").trim(),
     title: String(form?.estimateTitle?.value || lead.estimateTitle || "").trim(),
     scope: String(form?.estimateScope?.value || lead.estimateScope || "").trim(),
     notes: String(form?.estimateNotes?.value || lead.estimateNotes || "").trim(),
@@ -327,6 +333,22 @@ function buildEstimateSnapshot() {
       toDateInputValue(lead.estimateValidUntil || ""),
     total,
   };
+}
+
+function setDetailTab(tab = "profile") {
+  const nextTab = String(tab || "profile").trim() || "profile";
+  state.detailTab = nextTab;
+
+  detailTabButtons.forEach((button) => {
+    const isActive = String(button.dataset.crmDetailTab || "") === nextTab;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  detailViews.forEach((view) => {
+    const viewName = String(view.dataset.crmDetailView || "").trim();
+    view.hidden = viewName !== nextTab;
+  });
 }
 
 function buildEstimateSubject(snapshot) {
@@ -616,10 +638,12 @@ function renderLeadList(leads = []) {
   });
 }
 
-function renderActivityCards(target, activities = []) {
+function renderActivityCards(target, activities = [], options = {}) {
   if (!target) {
     return;
   }
+
+  const hideBody = Boolean(options.hideBody);
 
   if (!activities.length) {
     target.innerHTML = '<p class="crm-empty-state">Aun no hay actividad guardada.</p>';
@@ -634,7 +658,7 @@ function renderActivityCards(target, activities = []) {
             <h3>${escapeHtml(item.title || "Actividad")}</h3>
             <span class="crm-chip">${escapeHtml(formatDate(item.createdAt) || "")}</span>
           </div>
-          ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ""}
+          ${item.body && !hideBody ? `<p>${escapeHtml(item.body)}</p>` : ""}
           ${
             item.pagePath
               ? `<div class="crm-activity-meta"><span>${escapeHtml(item.pagePath)}</span></div>`
@@ -643,6 +667,39 @@ function renderActivityCards(target, activities = []) {
         </article>
       `,
     )
+    .join("");
+}
+
+function renderConversationThread(messages = []) {
+  if (!conversationThread || !conversationSummary) {
+    return;
+  }
+
+  const safeMessages = Array.isArray(messages) ? messages.filter((item) => item?.content) : [];
+
+  if (!safeMessages.length) {
+    conversationSummary.textContent = "Sin transcript guardado.";
+    conversationThread.innerHTML =
+      '<p class="crm-empty-state">Todavia no hay conversacion guardada para este lead.</p>';
+    return;
+  }
+
+  conversationSummary.textContent = `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
+  conversationThread.innerHTML = safeMessages
+    .map((item) => {
+      const role = item.role === "assistant" ? "assistant" : "user";
+      const roleLabel = role === "assistant" ? "Agustin 2.0" : "Cliente";
+
+      return `
+        <article class="crm-conversation-card" data-role="${escapeHtml(role)}">
+          <div class="crm-lead-card-head">
+            <h3>${escapeHtml(roleLabel)}</h3>
+            <span class="crm-chip">${escapeHtml(formatDate(item.createdAt) || "")}</span>
+          </div>
+          <p>${escapeHtml(item.content || "")}</p>
+        </article>
+      `;
+    })
     .join("");
 }
 
@@ -687,7 +744,9 @@ function renderLeadDetail(detail = null) {
     detailStatus.textContent = "Selecciona un lead";
     detailMeta.innerHTML = "";
     activityList.innerHTML = "";
+    renderConversationThread([]);
     syncDetailQuickActions(null);
+    setDetailTab("profile");
     return;
   }
 
@@ -752,9 +811,17 @@ function renderLeadDetail(detail = null) {
   `;
 
   if (detailForm) {
+    detailForm.elements.fullName.value = lead.fullName || "";
+    detailForm.elements.phoneDisplay.value = lead.phoneDisplay || lead.phone || "";
+    detailForm.elements.email.value = lead.email || "";
+    detailForm.elements.projectType.value = lead.projectType || "";
+    detailForm.elements.location.value = lead.location || "";
     detailForm.elements.status.value = lead.status || "new";
+    detailForm.elements.bestContactDay.value = lead.bestContactDay || "";
+    detailForm.elements.bestContactTime.value = lead.bestContactTime || "";
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
+    detailForm.elements.details.value = lead.details || "";
     detailForm.elements.estimateAmount.value = lead.estimateAmount || "";
     detailForm.elements.estimateTitle.value = lead.estimateTitle || "";
     detailForm.elements.estimateScope.value = lead.estimateScope || "";
@@ -771,7 +838,9 @@ function renderLeadDetail(detail = null) {
 
   syncEstimateTotalFromForm();
   syncDetailQuickActions(lead);
+  renderConversationThread(lead.conversationHistory || []);
   renderActivityCards(activityList, detail.activity || []);
+  setDetailTab(state.detailTab || "profile");
 }
 
 function buildLeadPayloadFromForm() {
@@ -779,9 +848,17 @@ function buildLeadPayloadFromForm() {
   const lead = state.leadDetail?.lead || {};
   const breakdownMode = hasBreakdownValues();
   const body = {
+    fullName: String(formData.get("fullName") || "").trim(),
+    phoneDisplay: String(formData.get("phoneDisplay") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    projectType: String(formData.get("projectType") || "").trim(),
+    location: String(formData.get("location") || "").trim(),
     status: String(formData.get("status") || "").trim(),
+    bestContactDay: String(formData.get("bestContactDay") || "").trim(),
+    bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
     nextActionAt: String(formData.get("nextActionAt") || "").trim(),
+    details: String(formData.get("details") || "").trim(),
     estimateAmount: breakdownMode
       ? String(calculateEstimateTotal(lead))
       : String(formData.get("estimateAmount") || "").trim(),
@@ -851,7 +928,11 @@ async function loadDashboard() {
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
   renderFilters(dashboard);
   renderLeadList(dashboard.leads || []);
-  renderActivityCards(globalActivityList, dashboard.recentActivity || []);
+  renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
+  if (globalActivitySummary) {
+    const totalEvents = Array.isArray(dashboard.recentActivity) ? dashboard.recentActivity.length : 0;
+    globalActivitySummary.textContent = `${totalEvents} evento${totalEvents === 1 ? "" : "s"}`;
+  }
 
   if (dashboard.leads?.length) {
     const selectedStillVisible = dashboard.leads.some(
@@ -999,6 +1080,12 @@ function bindDetailActions() {
     }
 
     syncEstimateTotalFromForm();
+  });
+
+  detailTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setDetailTab(button.dataset.crmDetailTab || "profile");
+    });
   });
 }
 

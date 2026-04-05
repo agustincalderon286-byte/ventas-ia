@@ -516,8 +516,14 @@ body[data-crm-skin="intel-ops"] .crm-lead-card.is-active {
   gap: 12px;
 }
 
+.crm-conversation-thread {
+  display: grid;
+  gap: 12px;
+}
+
 .crm-lead-card,
-.crm-activity-card {
+.crm-activity-card,
+.crm-conversation-card {
   border: 1px solid rgba(30, 36, 40, 0.1);
   border-radius: 18px;
   padding: 14px;
@@ -631,6 +637,34 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   gap: 18px;
 }
 
+.crm-detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.crm-tab-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  background: rgba(16, 20, 23, 0.04);
+  color: var(--crm-charcoal);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.crm-tab-button.is-active {
+  background: linear-gradient(135deg, var(--crm-red) 0%, var(--crm-red-deep) 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.crm-detail-view {
+  display: grid;
+  gap: 18px;
+}
+
 .crm-quick-actions,
 .crm-card-actions {
   display: grid;
@@ -706,6 +740,19 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   white-space: pre-wrap;
 }
 
+.crm-conversation-card p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+
+.crm-conversation-card[data-role="assistant"] {
+  border-color: rgba(29, 79, 145, 0.18);
+}
+
+.crm-conversation-card[data-role="user"] {
+  border-color: rgba(199, 164, 96, 0.22);
+}
+
 .crm-lead-card-summary {
   display: grid;
   gap: 4px;
@@ -730,6 +777,19 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   color: var(--crm-charcoal);
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.crm-summary-toggle {
+  cursor: pointer;
+  list-style: none;
+}
+
+.crm-summary-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.crm-global-feed[open] .crm-summary-toggle {
+  margin-bottom: 16px;
 }
 
 @media (min-width: 1081px) {
@@ -769,6 +829,11 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   .crm-quick-actions,
   .crm-card-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-detail-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .crm-lead-card-head {

@@ -30,6 +30,7 @@ const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
 const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
+const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
   "contacted",
@@ -877,7 +878,7 @@ function assistantNameLooksReliable(value = "") {
 
   const normalized = normalizeAssistantSearchText(safeValue);
   const blockedPattern =
-    /\b(quote|estimate|repair|gate|fence|railing|welding|fabrication|project|callback|call|phone|number|email|zip|address|service|need|looking|quiero|necesito|cotizacion|cotiza|llamada|telefono|correo|zip code)\b/;
+    /\b(quote|estimate|repair|gate|fence|railing|welding|fabrication|project|callback|call|phone|number|email|zip|address|service|need|looking|quiero|necesito|cotizacion|cotiza|llamada|telefono|correo|zip code|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|morning|afternoon|evening|night|weekday|weekend|am|pm)\b/;
 
   if (blockedPattern.test(normalized)) {
     return false;
@@ -887,9 +888,29 @@ function assistantNameLooksReliable(value = "") {
   return words.length >= 1 && words.length <= 4;
 }
 
+function sanitizeAssistantStoredName(value = "") {
+  const safeValue = cleanText(value || "", 80).replace(/[.,;!?]+$/, "");
+  const normalized = normalizeAssistantSearchText(safeValue);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (
+    normalized === normalizeAssistantSearchText(METALWORKS_ASSISTANT_PLACEHOLDER_NAME) ||
+    normalized === "lead" ||
+    normalized === "website lead"
+  ) {
+    return "";
+  }
+
+  return safeValue;
+}
+
 function extractAssistantName(text = "") {
   const patterns = [
     /(?:my name is|this is|mi nombre es|soy)\s+([a-zA-ZÀ-ÿ' -]{2,60})/i,
+    /(?:i am|i'm|im|me llamo)\s+([a-zA-ZÀ-ÿ' -]{2,60})/i,
   ];
 
   for (const pattern of patterns) {
@@ -1385,7 +1406,7 @@ function buildAssistantConversationSignals({
   const userMessages = items.filter((item) => item.role === "user").map((item) => item.content);
   const combinedUserText = userMessages.join("\n");
   const latestUserMessage = userMessages[userMessages.length - 1] || "";
-  let name = selectAssistantText(lead?.fullName, "");
+  let name = sanitizeAssistantStoredName(lead?.fullName || "");
   let email = normalizeEmail(lead?.email || "");
   let phone = normalizePhone(lead?.phone || "");
   let phoneDisplay = cleanText(lead?.phoneDisplay || "", 40);
@@ -1394,17 +1415,31 @@ function buildAssistantConversationSignals({
   let bestContactDay = cleanText(lead?.bestContactDay || "", 80);
   let bestContactTime = cleanText(lead?.bestContactTime || "", 80);
   let callbackIntent = cleanText(lead?.callbackIntent || "", 12);
+  let previousAssistantMessage = "";
 
-  userMessages.forEach((entry) => {
-    const contactInfo = extractAssistantContactInfo(entry);
-    const entryName = extractAssistantName(entry);
-    const entryProjectType = inferAssistantProjectTypeFromText(entry);
-    const entryLocation = extractAssistantLocation(entry);
-    const entryBestDay = extractAssistantPreferredDay(entry);
-    const entryBestTime = extractAssistantPreferredTime(entry);
+  items.forEach((entry) => {
+    if (entry.role === "assistant") {
+      previousAssistantMessage = entry.content || "";
+      return;
+    }
+
+    const entryText = entry.content || "";
+    const contactInfo = extractAssistantContactInfo(entryText);
+    const entryName = extractAssistantName(entryText);
+    const entryProjectType = inferAssistantProjectTypeFromText(entryText);
+    const entryLocation = extractAssistantLocation(entryText);
+    const entryBestDay = extractAssistantPreferredDay(entryText);
+    const entryBestTime = extractAssistantPreferredTime(entryText);
+    const normalizedPreviousAssistant = normalizeAssistantSearchText(previousAssistantMessage);
+    const cleanedEntry = cleanText(entryText, 80).replace(/[.,;!?]+$/, "");
+    const askedForName =
+      /\b(name|nombre)\b/.test(normalizedPreviousAssistant) &&
+      !/\b(company|empresa|service|job|quote|estimate)\b/.test(normalizedPreviousAssistant);
 
     if (entryName) {
       name = entryName;
+    } else if (!name && askedForName && assistantNameLooksReliable(cleanedEntry)) {
+      name = cleanedEntry;
     }
 
     if (contactInfo.email) {
@@ -1432,11 +1467,11 @@ function buildAssistantConversationSignals({
       bestContactTime = entryBestTime;
     }
 
-    if (detectAssistantCallbackIntent(entry)) {
+    if (detectAssistantCallbackIntent(entryText)) {
       callbackIntent = "yes";
     }
 
-    if (detectAssistantCallbackDecline(entry)) {
+    if (detectAssistantCallbackDecline(entryText)) {
       callbackIntent = "no";
     }
   });
@@ -1556,7 +1591,6 @@ function buildAssistantPrivateNotes(state = {}) {
     state?.callbackIntent === "no" ? "Callback requested: no." : "",
     state?.callbackLabel ? `Best callback window: ${state.callbackLabel}.` : "",
     state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
-    state?.conversationDigest ? `Recent conversation:\n${state.conversationDigest}` : "",
   ]
     .filter(Boolean)
     .join("\n")
@@ -1702,7 +1736,7 @@ async function generateAssistantReply({
   }
 }
 
-function cleanLead(doc = null) {
+function cleanLead(doc = null, { includeConversation = false } = {}) {
   if (!doc) {
     return null;
   }
@@ -1731,6 +1765,15 @@ function cleanLead(doc = null) {
     privateNotes: doc.privateNotes || "",
     lastUserMessage: doc.lastUserMessage || "",
     lastAssistantMessage: doc.lastAssistantMessage || "",
+    conversationHistory: includeConversation
+      ? (Array.isArray(doc.conversationHistory) ? doc.conversationHistory : [])
+          .map((entry) => ({
+            role: entry?.role === "assistant" ? "assistant" : "user",
+            content: cleanText(entry?.content || "", 1500),
+            createdAt: entry?.createdAt ? new Date(entry.createdAt).toISOString() : "",
+          }))
+          .filter((entry) => entry.content)
+      : [],
     estimateTitle: doc.estimateTitle || "",
     estimateScope: doc.estimateScope || "",
     estimateMaterialsCost: normalizeMoney(doc.estimateMaterialsCost || 0),
@@ -1826,7 +1869,11 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
     serviceBreakdown,
   ] = await Promise.all([
     MetalworksLead.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
-    MetalworksLeadActivity.find({})
+    MetalworksLeadActivity.find({
+      activityType: {
+        $nin: ["assistant_user_message", "assistant_ai_reply", "assistant_fallback"],
+      },
+    })
       .sort({ createdAt: -1 })
       .limit(40)
       .lean(),
@@ -2247,7 +2294,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const existingConversationHistory = currentLead?.conversationHistory || [];
     const mergedHistory = mergeConversationHistory(existingConversationHistory, state.items || []);
     const effectiveName =
-      selectAssistantText(state?.name || "", currentLead?.fullName || "") || "Website chat lead";
+      selectAssistantText(
+        sanitizeAssistantStoredName(state?.name || ""),
+        sanitizeAssistantStoredName(currentLead?.fullName || ""),
+      ) || METALWORKS_ASSISTANT_PLACEHOLDER_NAME;
     const effectivePhone = normalizePhone(state?.phone || currentLead?.phone || "");
     const effectivePhoneDisplay =
       cleanText(state?.phoneDisplay || currentLead?.phoneDisplay || "", 40) || effectivePhone;
@@ -2461,7 +2511,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       res.json({
-        lead: cleanLead(leadDoc),
+        lead: cleanLead(leadDoc, { includeConversation: true }),
         activity: activityDocs.map(cleanActivity).filter(Boolean),
       });
     } catch (error) {
@@ -2491,6 +2541,31 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       const changes = [];
+      const fullName = Object.prototype.hasOwnProperty.call(req.body || {}, "fullName")
+        ? cleanText(req.body?.fullName || "", 120)
+        : null;
+      const phoneDisplayRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "phoneDisplay")
+        ? cleanText(req.body?.phoneDisplay || "", 40)
+        : null;
+      const phone = phoneDisplayRaw !== null ? normalizePhone(phoneDisplayRaw) : null;
+      const email = Object.prototype.hasOwnProperty.call(req.body || {}, "email")
+        ? normalizeEmail(req.body?.email || "")
+        : null;
+      const projectType = Object.prototype.hasOwnProperty.call(req.body || {}, "projectType")
+        ? cleanText(req.body?.projectType || "", 120)
+        : null;
+      const location = Object.prototype.hasOwnProperty.call(req.body || {}, "location")
+        ? cleanText(req.body?.location || "", 160)
+        : null;
+      const details = Object.prototype.hasOwnProperty.call(req.body || {}, "details")
+        ? cleanText(req.body?.details || "", 3000)
+        : null;
+      const bestContactDay = Object.prototype.hasOwnProperty.call(req.body || {}, "bestContactDay")
+        ? cleanText(req.body?.bestContactDay || "", 80)
+        : null;
+      const bestContactTime = Object.prototype.hasOwnProperty.call(req.body || {}, "bestContactTime")
+        ? cleanText(req.body?.bestContactTime || "", 80)
+        : null;
       const nextStatus = Object.prototype.hasOwnProperty.call(req.body || {}, "status")
         ? normalizeStatus(req.body?.status || "new")
         : null;
@@ -2546,6 +2621,57 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const note = cleanText(req.body?.note || "", 600);
       let estimateChanged = false;
       let estimateMoneyChanged = false;
+      let profileChanged = false;
+
+      if (fullName !== null) {
+        const nextFullName =
+          fullName || sanitizeAssistantStoredName(leadDoc.fullName || "") || METALWORKS_ASSISTANT_PLACEHOLDER_NAME;
+
+        if (leadDoc.fullName !== nextFullName) {
+          leadDoc.fullName = nextFullName;
+          profileChanged = true;
+        }
+      }
+
+      if (phoneDisplayRaw !== null) {
+        const nextPhoneDisplay = phoneDisplayRaw || "";
+
+        if (leadDoc.phone !== phone || leadDoc.phoneDisplay !== nextPhoneDisplay) {
+          leadDoc.phone = phone || "";
+          leadDoc.phoneDisplay = nextPhoneDisplay;
+          profileChanged = true;
+        }
+      }
+
+      if (email !== null && leadDoc.email !== email) {
+        leadDoc.email = email;
+        profileChanged = true;
+      }
+
+      if (projectType !== null && leadDoc.projectType !== projectType) {
+        leadDoc.projectType = projectType;
+        profileChanged = true;
+      }
+
+      if (location !== null && leadDoc.location !== location) {
+        leadDoc.location = location;
+        profileChanged = true;
+      }
+
+      if (details !== null && leadDoc.details !== details) {
+        leadDoc.details = details;
+        profileChanged = true;
+      }
+
+      if (bestContactDay !== null && leadDoc.bestContactDay !== bestContactDay) {
+        leadDoc.bestContactDay = bestContactDay;
+        profileChanged = true;
+      }
+
+      if (bestContactTime !== null && leadDoc.bestContactTime !== bestContactTime) {
+        leadDoc.bestContactTime = bestContactTime;
+        profileChanged = true;
+      }
 
       if (nextStatus && leadDoc.status !== nextStatus) {
         changes.push(`Estado: ${labelStatus(leadDoc.status)} -> ${labelStatus(nextStatus)}`);
@@ -2665,6 +2791,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push(`Estimate: ${formatMoneyLabel(leadDoc.estimateAmount || 0)}`);
       }
 
+      if (profileChanged) {
+        changes.push("Perfil del cliente actualizado");
+      }
+
       if (changes.length || note) {
         leadDoc.lastContactAt = new Date();
       }
@@ -2707,7 +2837,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       ]);
 
       res.json({
-        lead: cleanLead(updatedLead),
+        lead: cleanLead(updatedLead, { includeConversation: true }),
         activity: activityDocs.map(cleanActivity).filter(Boolean),
       });
     } catch (error) {

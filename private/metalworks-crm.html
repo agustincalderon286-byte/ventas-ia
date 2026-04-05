@@ -74,144 +74,211 @@
           </div>
 
           <div class="crm-detail-wrap" data-crm-detail-wrap hidden>
-            <div class="crm-detail-meta" data-crm-detail-meta></div>
-            <div class="crm-quick-actions">
-              <a href="#" class="crm-secondary-button crm-action-link" data-crm-call-link hidden>
-                Call
-              </a>
-              <a href="#" class="crm-secondary-button crm-action-link" data-crm-text-link hidden>
-                Text
-              </a>
-              <button type="button" class="crm-secondary-button" data-crm-mark-quoted>
-                Mark Quoted
+            <div class="crm-detail-tabs" data-crm-detail-tabs>
+              <button type="button" class="crm-tab-button is-active" data-crm-detail-tab="profile">
+                Perfil
               </button>
-              <button type="button" class="crm-secondary-button" data-crm-send-estimate>
-                Send Estimate
+              <button type="button" class="crm-tab-button" data-crm-detail-tab="conversation">
+                Conversacion
               </button>
-              <button type="button" class="crm-secondary-button" data-crm-open-email-draft>
-                Open Email Draft
-              </button>
-              <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
-                Copy Estimate
+              <button type="button" class="crm-tab-button" data-crm-detail-tab="timeline">
+                Timeline
               </button>
             </div>
 
-            <form class="crm-detail-form" data-crm-detail-form>
-              <label>
-                <span>Status</span>
-                <select name="status" data-crm-detail-status-input></select>
-              </label>
-
-              <label>
-                <span>Proxima accion</span>
-                <input
-                  type="text"
-                  name="nextAction"
-                  maxlength="160"
-                  placeholder="Ej. llamar despues de las 5 pm"
-                />
-              </label>
-
-              <label>
-                <span>Fecha de seguimiento</span>
-                <input type="datetime-local" name="nextActionAt" />
-              </label>
-
-              <label>
-                <span>Estimate total</span>
-                <input
-                  type="number"
-                  name="estimateAmount"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </label>
-
-              <label class="crm-field-full">
-                <span>Estimate title</span>
-                <input
-                  type="text"
-                  name="estimateTitle"
-                  maxlength="160"
-                  placeholder="Ej. Front porch landing repair and repaint"
-                />
-              </label>
-
-              <label class="crm-field-full">
-                <span>Estimate scope</span>
-                <textarea
-                  name="estimateScope"
-                  rows="4"
-                  placeholder="Describe el trabajo: rust removal, handrail repair, prep, primer, top coat, welding, etc."
-                ></textarea>
-              </label>
-
-              <div class="crm-field-full crm-estimate-grid">
-                <label>
-                  <span>Materials</span>
-                  <input type="number" name="estimateMaterialsCost" min="0" step="0.01" placeholder="0.00" />
-                </label>
-                <label>
-                  <span>Labor</span>
-                  <input type="number" name="estimateLaborCost" min="0" step="0.01" placeholder="0.00" />
-                </label>
-                <label>
-                  <span>Primer / top coat</span>
-                  <input type="number" name="estimateCoatingCost" min="0" step="0.01" placeholder="0.00" />
-                </label>
-                <label>
-                  <span>Misc / travel</span>
-                  <input type="number" name="estimateMiscCost" min="0" step="0.01" placeholder="0.00" />
-                </label>
-                <label>
-                  <span>Discount</span>
-                  <input type="number" name="estimateDiscount" min="0" step="0.01" placeholder="0.00" />
-                </label>
-                <label>
-                  <span>Valid until</span>
-                  <input type="date" name="estimateValidUntil" />
-                </label>
-              </div>
-
-              <label class="crm-field-full">
-                <span>Estimate notes / exclusions</span>
-                <textarea
-                  name="estimateNotes"
-                  rows="4"
-                  placeholder="Ej. Price does not include permit fees, hidden structural damage, or concrete work."
-                ></textarea>
-              </label>
-
-              <label class="crm-field-full">
-                <span>Notas privadas</span>
-                <textarea
-                  name="privateNotes"
-                  rows="5"
-                  placeholder="Detalles utiles sobre medidas, ubicacion, objeciones o prioridad."
-                ></textarea>
-              </label>
-
-              <label class="crm-field-full">
-                <span>Agregar nota al timeline</span>
-                <textarea
-                  name="note"
-                  rows="3"
-                  placeholder="Ej. Se hablo con el cliente, pidio que le mande estimate manana."
-                ></textarea>
-              </label>
-
-              <div class="crm-form-actions">
-                <button type="submit" class="crm-primary-button">
-                  Guardar seguimiento
+            <section class="crm-detail-view" data-crm-detail-view="profile">
+              <div class="crm-detail-meta" data-crm-detail-meta></div>
+              <div class="crm-quick-actions">
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-call-link hidden>
+                  Call
+                </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-text-link hidden>
+                  Text
+                </a>
+                <button type="button" class="crm-secondary-button" data-crm-mark-quoted>
+                  Mark Quoted
                 </button>
-                <p class="crm-form-result" data-crm-detail-feedback></p>
+                <button type="button" class="crm-secondary-button" data-crm-send-estimate>
+                  Send Estimate
+                </button>
+                <button type="button" class="crm-secondary-button" data-crm-open-email-draft>
+                  Open Email Draft
+                </button>
+                <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
+                  Copy Estimate
+                </button>
               </div>
-            </form>
 
-            <section class="crm-activity-section">
+              <form class="crm-detail-form" data-crm-detail-form>
+                <label>
+                  <span>Nombre</span>
+                  <input type="text" name="fullName" maxlength="120" placeholder="Nombre del cliente" />
+                </label>
+
+                <label>
+                  <span>Telefono</span>
+                  <input type="tel" name="phoneDisplay" maxlength="40" placeholder="773 555 1212" />
+                </label>
+
+                <label>
+                  <span>Email</span>
+                  <input type="email" name="email" maxlength="160" placeholder="cliente@email.com" />
+                </label>
+
+                <label>
+                  <span>Servicio</span>
+                  <input type="text" name="projectType" maxlength="120" placeholder="Gate repair, railings, welding..." />
+                </label>
+
+                <label>
+                  <span>Ubicacion / ZIP</span>
+                  <input type="text" name="location" maxlength="160" placeholder="Chicago o ZIP 60632" />
+                </label>
+
+                <label>
+                  <span>Status</span>
+                  <select name="status" data-crm-detail-status-input></select>
+                </label>
+
+                <label>
+                  <span>Mejor dia para llamar</span>
+                  <input type="text" name="bestContactDay" maxlength="80" placeholder="Tomorrow, Friday, weekend..." />
+                </label>
+
+                <label>
+                  <span>Mejor hora para llamar</span>
+                  <input type="text" name="bestContactTime" maxlength="80" placeholder="After 5 pm, morning..." />
+                </label>
+
+                <label>
+                  <span>Proxima accion</span>
+                  <input
+                    type="text"
+                    name="nextAction"
+                    maxlength="160"
+                    placeholder="Ej. llamar despues de las 5 pm"
+                  />
+                </label>
+
+                <label>
+                  <span>Fecha de seguimiento</span>
+                  <input type="datetime-local" name="nextActionAt" />
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Resumen del proyecto</span>
+                  <textarea
+                    name="details"
+                    rows="4"
+                    placeholder="Resumen limpio del trabajo pedido, medidas, problema y prioridad."
+                  ></textarea>
+                </label>
+
+                <label>
+                  <span>Estimate total</span>
+                  <input
+                    type="number"
+                    name="estimateAmount"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Estimate title</span>
+                  <input
+                    type="text"
+                    name="estimateTitle"
+                    maxlength="160"
+                    placeholder="Ej. Front porch landing repair and repaint"
+                  />
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Estimate scope</span>
+                  <textarea
+                    name="estimateScope"
+                    rows="4"
+                    placeholder="Describe el trabajo: rust removal, handrail repair, prep, primer, top coat, welding, etc."
+                  ></textarea>
+                </label>
+
+                <div class="crm-field-full crm-estimate-grid">
+                  <label>
+                    <span>Materials</span>
+                    <input type="number" name="estimateMaterialsCost" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>
+                    <span>Labor</span>
+                    <input type="number" name="estimateLaborCost" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>
+                    <span>Primer / top coat</span>
+                    <input type="number" name="estimateCoatingCost" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>
+                    <span>Misc / travel</span>
+                    <input type="number" name="estimateMiscCost" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>
+                    <span>Discount</span>
+                    <input type="number" name="estimateDiscount" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>
+                    <span>Valid until</span>
+                    <input type="date" name="estimateValidUntil" />
+                  </label>
+                </div>
+
+                <label class="crm-field-full">
+                  <span>Estimate notes / exclusions</span>
+                  <textarea
+                    name="estimateNotes"
+                    rows="4"
+                    placeholder="Ej. Price does not include permit fees, hidden structural damage, or concrete work."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Notas privadas</span>
+                  <textarea
+                    name="privateNotes"
+                    rows="5"
+                    placeholder="Resumen del lead, objeciones, prioridad y notas internas."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Agregar nota al timeline</span>
+                  <textarea
+                    name="note"
+                    rows="3"
+                    placeholder="Ej. Se hablo con el cliente, pidio que le mande estimate manana."
+                  ></textarea>
+                </label>
+
+                <div class="crm-form-actions">
+                  <button type="submit" class="crm-primary-button">
+                    Guardar seguimiento
+                  </button>
+                  <p class="crm-form-result" data-crm-detail-feedback></p>
+                </div>
+              </form>
+            </section>
+
+            <section class="crm-detail-view" data-crm-detail-view="conversation" hidden>
+              <div class="crm-panel-head tight">
+                <h3>Conversacion completa</h3>
+                <p data-crm-conversation-summary>Sin transcript guardado.</p>
+              </div>
+              <div class="crm-conversation-thread" data-crm-conversation-thread></div>
+            </section>
+
+            <section class="crm-detail-view" data-crm-detail-view="timeline" hidden>
               <div class="crm-panel-head tight">
                 <h3>Actividad reciente</h3>
+                <p>Timeline de este cliente</p>
               </div>
               <div class="crm-activity-list" data-crm-activity-list></div>
             </section>
@@ -223,13 +290,16 @@
         </section>
       </main>
 
-      <section class="crm-panel">
-        <div class="crm-panel-head">
-          <h2>Metricas recientes</h2>
-          <p>Ultimos eventos del sitio y del CRM</p>
-        </div>
+      <details class="crm-panel crm-global-feed">
+        <summary class="crm-panel-head crm-summary-toggle">
+          <div>
+            <h2>Feed operativo</h2>
+            <p>Vista compacta de eventos del sitio y CRM</p>
+          </div>
+          <span class="crm-chip" data-crm-global-activity-summary>0 eventos</span>
+        </summary>
         <div class="crm-activity-list" data-crm-global-activity></div>
-      </section>
+      </details>
     </div>
 
     <script src="/metalworks-crm/app.js"></script>
