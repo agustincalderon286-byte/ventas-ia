@@ -328,6 +328,131 @@ function formatMultilineHtml(value = "") {
   return escapeHtmlMarkup(value).replace(/\n/g, "<br />");
 }
 
+function buildThumbtackOauthCallbackPage({
+  code = "",
+  state = "",
+  error = "",
+  errorDescription = "",
+} = {}) {
+  const safeCode = cleanText(code || "", 240);
+  const safeState = cleanText(state || "", 240);
+  const safeError = cleanText(error || "", 160);
+  const safeErrorDescription = cleanText(errorDescription || "", 600);
+  const completed = Boolean(safeCode) && !safeError;
+  const title = safeError
+    ? "Thumbtack connection was not completed"
+    : completed
+      ? "Thumbtack connection request received"
+      : "Thumbtack callback endpoint is ready";
+  const message = safeError
+    ? safeErrorDescription || "Thumbtack returned an authorization error."
+    : completed
+      ? "Chicago Metal Works & Fencing received the authorization redirect. You can close this window and return to the app."
+      : "This endpoint is reserved for official Thumbtack OAuth redirects for Chicago Metal Works & Fencing.";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtmlMarkup(title)}</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: Manrope, system-ui, sans-serif;
+        color: #f7f4ef;
+        background:
+          radial-gradient(circle at top left, rgba(255, 122, 69, 0.18), transparent 28%),
+          radial-gradient(circle at 82% 12%, rgba(122, 184, 200, 0.12), transparent 24%),
+          linear-gradient(180deg, #0c1117 0%, #111723 48%, #0d1117 100%);
+      }
+
+      .card {
+        width: min(100%, 720px);
+        padding: 32px;
+        border: 1px solid rgba(210, 217, 224, 0.12);
+        border-radius: 28px;
+        background: rgba(17, 24, 33, 0.92);
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.34);
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: #ffd2bf;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: Oswald, Impact, sans-serif;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      p,
+      li {
+        color: #c1cad3;
+        line-height: 1.75;
+      }
+
+      .meta {
+        margin-top: 22px;
+        padding: 18px;
+        border: 1px solid rgba(210, 217, 224, 0.12);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      ul {
+        margin: 14px 0 0;
+        padding-left: 18px;
+      }
+
+      a {
+        color: #f7f4ef;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <article class="card">
+      <p class="eyebrow">Chicago Metal Works &amp; Fencing</p>
+      <h1>${escapeHtmlMarkup(title)}</h1>
+      <p>${escapeHtmlMarkup(message)}</p>
+      <div class="meta">
+        <ul>
+          <li>Authorization code received: ${completed ? "Yes" : "No"}</li>
+          <li>State received: ${safeState ? "Yes" : "No"}</li>
+          ${safeError ? `<li>Error: ${escapeHtmlMarkup(safeError)}</li>` : ""}
+        </ul>
+      </div>
+      <p>
+        Need help? Call <a href="tel:+17737984107">773 798 4107</a> or email
+        <a href="mailto:${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}">${escapeHtmlMarkup(
+          METALWORKS_CONTACT_EMAIL,
+        )}</a>.
+      </p>
+    </article>
+  </body>
+</html>`;
+}
+
 function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
   const fullName = cleanText(lead?.fullName || "", 120);
   const firstName = fullName.split(/\s+/).filter(Boolean)[0] || "there";
@@ -2538,6 +2663,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     });
     return leadDoc;
   }
+
+  app.get(
+    [
+      "/integrations/thumbtack/oauth/callback",
+      "/api/integrations/thumbtack/oauth/callback",
+    ],
+    (req, res) => {
+      const code = cleanText(req.query?.code || "", 240);
+      const state = cleanText(req.query?.state || "", 240);
+      const error = cleanText(req.query?.error || "", 160);
+      const errorDescription = cleanText(req.query?.error_description || "", 600);
+
+      res.setHeader("Cache-Control", "no-store");
+      res.type("html").send(
+        buildThumbtackOauthCallbackPage({
+          code,
+          state,
+          error,
+          errorDescription,
+        }),
+      );
+    },
+  );
 
   app.get(
     ["/metalworks-crm/login", "/metalworks-crm/login/"],
