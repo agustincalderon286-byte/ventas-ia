@@ -9809,6 +9809,18 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const attributionSourceList = document.querySelector("[data-marketing-attribution-source-list]");
   const attributionCampaignList = document.querySelector("[data-marketing-attribution-campaign-list]");
   const attributionCaptureList = document.querySelector("[data-marketing-attribution-capture-list]");
+  const intakeCreateForm = document.querySelector("[data-marketing-intake-create-form]");
+  const intakeCreateSaveButton = document.querySelector("[data-marketing-intake-create-save]");
+  const intakeCreateFeedback = document.querySelector("[data-marketing-intake-create-feedback]");
+  const intakeConfigForm = document.querySelector("[data-marketing-intake-config-form]");
+  const intakeSaveButton = document.querySelector("[data-marketing-intake-save]");
+  const intakePreviewButton = document.querySelector("[data-marketing-intake-preview]");
+  const intakeFeedback = document.querySelector("[data-marketing-intake-feedback]");
+  const intakeSelect = document.querySelector("[data-marketing-intake-select]");
+  const intakeEndpointPath = document.querySelector("[data-marketing-intake-endpoint-path]");
+  const intakeSummaryCopy = document.querySelector("[data-marketing-intake-summary-copy]");
+  const intakePreviewList = document.querySelector("[data-marketing-intake-preview-list]");
+  const intakeList = document.querySelector("[data-marketing-intake-list]");
   const connectorForm = document.querySelector("[data-marketing-connector-form]");
   const connectorSaveButton = document.querySelector("[data-marketing-connector-save]");
   const connectorFeedback = document.querySelector("[data-marketing-connector-feedback]");
@@ -9841,6 +9853,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !attributionSourceList ||
     !attributionCampaignList ||
     !attributionCaptureList ||
+    !intakeCreateForm ||
+    !intakeConfigForm ||
+    !intakeSelect ||
+    !intakePreviewList ||
+    !intakeList ||
     !connectorForm ||
     !connectorSelect ||
     !connectorChipList ||
@@ -9859,8 +9876,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     campaigns: document.querySelector("[data-marketing-summary-campaigns]"),
     creatives: document.querySelector("[data-marketing-summary-creatives]"),
     publications: document.querySelector("[data-marketing-summary-publications]"),
+    intakeSources: document.querySelector("[data-marketing-summary-intakes]"),
     events: document.querySelector("[data-marketing-summary-events]"),
     connected: document.querySelector("[data-marketing-health-connected]"),
+    activeIntakeSources: document.querySelector("[data-marketing-health-active-intakes]"),
     failedPublications: document.querySelector("[data-marketing-health-failed-publications]"),
     failedEvents: document.querySelector("[data-marketing-health-failed-events]"),
     captureTotal: document.querySelector("[data-marketing-capture-total]"),
@@ -9888,6 +9907,18 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const publicationCampaignSelect = publicationForm.querySelector("[data-marketing-publication-campaign-select]");
   const publicationCreativeSelect = publicationForm.querySelector("[data-marketing-publication-creative-select]");
   const publicationReviewSelect = publicationOpsForm.querySelector("[data-marketing-publication-review-select]");
+  const intakeCreateIntegrationSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-integration-select]");
+  const intakeCreateChannelSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-channel-select]");
+  const intakeCreateCampaignSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-campaign-select]");
+  const intakeCreateCaptureSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-capture-select]");
+  const intakeCreateTypeSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-type-select]");
+  const intakeCreateStatusSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-status-select]");
+  const intakeIntegrationSelect = intakeConfigForm.querySelector("[data-marketing-intake-integration-select]");
+  const intakeChannelSelect = intakeConfigForm.querySelector("[data-marketing-intake-channel-select]");
+  const intakeCampaignSelect = intakeConfigForm.querySelector("[data-marketing-intake-campaign-select]");
+  const intakeStatusSelect = intakeConfigForm.querySelector("[data-marketing-intake-status-select]");
+  const intakeCaptureSelect = intakeConfigForm.querySelector("[data-marketing-intake-capture-select]");
+  const intakeTypeSelect = intakeConfigForm.querySelector("[data-marketing-intake-type-select]");
   const connectorStatusSelect = connectorForm.querySelector("[data-marketing-connector-status-select]");
   const connectorConnectionSelect = connectorForm.querySelector("[data-marketing-connector-connection-select]");
   const connectorAuthSelect = connectorForm.querySelector("[data-marketing-connector-auth-select]");
@@ -9904,10 +9935,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     campaigns: [],
     creatives: [],
     publications: [],
+    intakeSources: [],
     events: [],
     selectedIntegrationId: "",
     selectedPublicationId: "",
-    publicationWorkflow: null
+    selectedIntakeSourceId: "",
+    publicationWorkflow: null,
+    intakePreview: null
   };
 
   const renderEmptyState = (target, message) => {
@@ -9995,10 +10029,12 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         campaigns: Number(baseCounts.campaigns || 0),
         creatives: Number(baseCounts.creatives || 0),
         publications: Number(baseCounts.publications || 0),
+        intakeSources: Number(baseCounts.intakeSources || state.module?.intakeSourcesCount || 0),
         events: Number(baseCounts.events || 0)
       },
       health: {
         connectedIntegrations: Number(state.overview?.health?.connectedIntegrations || 0),
+        activeIntakeSources: Number(state.overview?.health?.activeIntakeSources || 0),
         failedPublications: Number(state.overview?.health?.failedPublications || 0),
         failedEvents: Number(state.overview?.health?.failedEvents || 0)
       },
@@ -10099,6 +10135,29 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     return getSelectedPublication();
   };
 
+  const getSelectedIntakeSource = () =>
+    state.intakeSources.find(entry => String(entry?.id || "") === String(state.selectedIntakeSourceId || "")) || null;
+
+  const syncSelectedIntakeSource = preferredId => {
+    const candidateId = String(preferredId || state.selectedIntakeSourceId || "").trim();
+    const availableIds = state.intakeSources.map(item => String(item?.id || "")).filter(Boolean);
+
+    if (!availableIds.length) {
+      state.selectedIntakeSourceId = "";
+      state.intakePreview = null;
+      return null;
+    }
+
+    const nextId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
+
+    if (String(state.selectedIntakeSourceId || "") !== String(nextId)) {
+      state.intakePreview = null;
+    }
+
+    state.selectedIntakeSourceId = nextId;
+    return getSelectedIntakeSource();
+  };
+
   const getIntegrationLabel = integrationId => {
     const item = state.integrations.find(entry => String(entry?.id || "") === String(integrationId || ""));
     return item?.label || item?.productLabel || "Sin integracion";
@@ -10127,8 +10186,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     setSummaryValue(summaryNodes.campaigns, overview.counts.campaigns);
     setSummaryValue(summaryNodes.creatives, overview.counts.creatives);
     setSummaryValue(summaryNodes.publications, overview.counts.publications);
+    setSummaryValue(summaryNodes.intakeSources, overview.counts.intakeSources);
     setSummaryValue(summaryNodes.events, overview.counts.events);
     setSummaryValue(summaryNodes.connected, overview.health.connectedIntegrations);
+    setSummaryValue(summaryNodes.activeIntakeSources, overview.health.activeIntakeSources);
     setSummaryValue(summaryNodes.failedPublications, overview.health.failedPublications);
     setSummaryValue(summaryNodes.failedEvents, overview.health.failedEvents);
     setSummaryValue(summaryNodes.captureTotal, overview.capture.totalCaptures);
@@ -10246,6 +10307,207 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       .join("");
   };
 
+  const renderIntakePrep = () => {
+    const intakeSource = syncSelectedIntakeSource();
+    const preview =
+      state.intakePreview && String(state.intakePreview?.intakeSourceId || "") === String(intakeSource?.id || "")
+        ? state.intakePreview
+        : null;
+
+    if (intakeSelect) {
+      intakeSelect.value = state.selectedIntakeSourceId || "";
+    }
+
+    if (!intakeSource) {
+      intakeConfigForm.reset();
+      if (intakeEndpointPath) {
+        intakeEndpointPath.value = "";
+      }
+      if (intakeSummaryCopy) {
+        intakeSummaryCopy.textContent =
+          "Selecciona una fuente para ver su endpoint, su ultimo estado y el resultado del mapeo.";
+      }
+      renderEmptyState(intakePreviewList, "El diagnostico del intake aparecera aqui.");
+      if (intakeSaveButton) intakeSaveButton.disabled = true;
+      if (intakePreviewButton) intakePreviewButton.disabled = true;
+      return;
+    }
+
+    if (intakeSaveButton) intakeSaveButton.disabled = false;
+    if (intakePreviewButton) intakePreviewButton.disabled = false;
+
+    intakeConfigForm.elements.intakeSourceId.value = intakeSource.id || "";
+    intakeConfigForm.elements.label.value = intakeSource.label || "";
+    intakeConfigForm.elements.acceptedFields.value = stringifyListInput(intakeSource.acceptedFields || []);
+    intakeConfigForm.elements.fieldMap.value = stringifyConfigInput(intakeSource.fieldMap || null);
+    intakeConfigForm.elements.staticPayload.value = stringifyConfigInput(intakeSource.staticPayload || null);
+    intakeConfigForm.elements.notes.value = intakeSource.notes || "";
+    if (intakeIntegrationSelect) intakeIntegrationSelect.value = intakeSource.integrationId || "";
+    if (intakeChannelSelect) intakeChannelSelect.value = intakeSource.channelId || "";
+    if (intakeCampaignSelect) intakeCampaignSelect.value = intakeSource.campaignId || "";
+    if (intakeStatusSelect) intakeStatusSelect.value = intakeSource.status || "draft";
+    if (intakeCaptureSelect) intakeCaptureSelect.value = intakeSource.captureType || "lead";
+    if (intakeTypeSelect) intakeTypeSelect.value = intakeSource.intakeType || "webhook";
+
+    const endpointUrl = intakeSource.endpointPath
+      ? new URL(intakeSource.endpointPath, window.location.origin).toString()
+      : "";
+
+    if (intakeEndpointPath) {
+      intakeEndpointPath.value = endpointUrl || intakeSource.endpointPath || "";
+    }
+
+    if (intakeSummaryCopy) {
+      intakeSummaryCopy.textContent = [
+        intakeSource.label || "Fuente de captura",
+        intakeSource.endpointPath || "Sin endpoint",
+        intakeSource.lastCaptureAt
+          ? `Ultima captura ${formatDateTimeShort(intakeSource.lastCaptureAt)}`
+          : "Sin capturas todavia"
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+
+    const diagnostics = [
+      {
+        label: "Estado",
+        value: intakeSource.statusLabel || "Borrador"
+      },
+      {
+        label: "Captura",
+        value: intakeSource.captureTypeLabel || "Lead"
+      },
+      {
+        label: "Tipo",
+        value: intakeSource.intakeTypeLabel || "Webhook"
+      },
+      {
+        label: "Integracion",
+        value: getIntegrationLabel(intakeSource.integrationId)
+      },
+      {
+        label: "Canal",
+        value: getChannelLabel(intakeSource.channelId)
+      },
+      {
+        label: "Campana",
+        value: getCampaignLabel(intakeSource.campaignId)
+      },
+      {
+        label: "Campos esperados",
+        value: Array.isArray(intakeSource.acceptedFields) && intakeSource.acceptedFields.length
+          ? intakeSource.acceptedFields.join(", ")
+          : "Sin lista todavia"
+      },
+      {
+        label: "Mapa activo",
+        value: Array.isArray(intakeSource.fieldMapKeys) && intakeSource.fieldMapKeys.length
+          ? intakeSource.fieldMapKeys.join(", ")
+          : "Usa payload directo"
+      },
+      {
+        label: "Ultimo estado",
+        value: intakeSource.lastCaptureAt
+          ? `${intakeSource.lastCaptureStatusLabel || "Procesado"} · ${intakeSource.lastCaptureSummary || "Sin resumen"}`
+          : "Sin capturas publicas"
+      }
+    ];
+
+    if (preview) {
+      diagnostics.push({
+        label: "Preview",
+        value: preview.validation?.ready
+          ? "Listo para guardar"
+          : `${Number(preview.validation?.errors?.length || 0)} error(es)`
+      });
+      diagnostics.push({
+        label: "Warnings",
+        value: Array.isArray(preview.validation?.warnings) && preview.validation.warnings.length
+          ? preview.validation.warnings.join(", ")
+          : "Sin warnings"
+      });
+      diagnostics.push({
+        label: "Campos mapeados",
+        value: Array.isArray(preview.mappedFieldKeys) && preview.mappedFieldKeys.length
+          ? preview.mappedFieldKeys.join(", ")
+          : "Sin override de mapa"
+      });
+      diagnostics.push({
+        label: "Payload preview",
+        value: preview.payload && typeof preview.payload === "object"
+          ? `${Object.keys(preview.payload).length} campo(s)`
+          : "Sin payload"
+      });
+    }
+
+    intakePreviewList.innerHTML = diagnostics
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Dato")}</strong>
+            <span>${escapeHtml(item.value || "Pendiente")}</span>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  const renderIntakeSources = () => {
+    if (!state.intakeSources.length) {
+      renderEmptyState(intakeList, "Todavia no hay fuentes de captura preparadas en esta cuenta.");
+      return;
+    }
+
+    intakeList.innerHTML = state.intakeSources
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.label || "Fuente de captura")}</strong>
+                <span>${escapeHtml(
+                  [item.captureTypeLabel || "Lead", item.intakeTypeLabel || "Webhook", getCampaignLabel(item.campaignId)]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
+              <span>Canal: <strong>${escapeHtml(getChannelLabel(item.channelId))}</strong></span>
+              <span>Endpoint: <strong>${escapeHtml(item.endpointPath || "Pendiente")}</strong></span>
+              <span>Ultimo estado: <strong>${escapeHtml(item.lastCaptureStatusLabel || "Sin captura")}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(
+                item.lastCaptureSummary ||
+                  item.notes ||
+                  item.endpointPath ||
+                  "Fuente lista para recibir payloads y guardar primero en el Coach."
+              )}
+            </p>
+
+            <div class="dashboard-actions">
+              <button
+                type="button"
+                class="nav-button"
+                data-marketing-select-intake="${escapeHtml(item.id || "")}"
+              >
+                ${String(item.id || "") === String(state.selectedIntakeSourceId || "") ? "Editando" : "Preparar"}
+              </button>
+            </div>
+          </article>
+        `
+      )
+      .join("");
+  };
+
   const syncMarketingSelects = () => {
     buildSelectOptions({
       target: templateSelect,
@@ -10313,6 +10575,63 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     buildChoiceSelectOptions(publicationReviewSelect, state.catalog?.statuses?.review || [], "Revision");
 
     buildSelectOptions({
+      target: intakeCreateIntegrationSelect,
+      items: state.integrations,
+      placeholder: "Sin integracion ligada",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildSelectOptions({
+      target: intakeCreateChannelSelect,
+      items: state.channels,
+      placeholder: "Sin canal ligado",
+      labelBuilder: item => item?.label || item?.channelTypeLabel || "Canal"
+    });
+
+    buildSelectOptions({
+      target: intakeCreateCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Sin campana ligada",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildChoiceSelectOptions(intakeCreateCaptureSelect, state.catalog?.captureTypes || [], "Tipo de captura");
+    buildChoiceSelectOptions(intakeCreateTypeSelect, state.catalog?.intakeTypes || [], "Tipo de intake");
+    buildChoiceSelectOptions(intakeCreateStatusSelect, state.catalog?.statuses?.intakeSources || [], "Estado");
+
+    buildSelectOptions({
+      target: intakeSelect,
+      items: state.intakeSources,
+      placeholder: "Selecciona una fuente",
+      labelBuilder: item => item?.label || "Fuente de captura"
+    });
+
+    buildSelectOptions({
+      target: intakeIntegrationSelect,
+      items: state.integrations,
+      placeholder: "Sin integracion ligada",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildSelectOptions({
+      target: intakeChannelSelect,
+      items: state.channels,
+      placeholder: "Sin canal ligado",
+      labelBuilder: item => item?.label || item?.channelTypeLabel || "Canal"
+    });
+
+    buildSelectOptions({
+      target: intakeCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Sin campana ligada",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildChoiceSelectOptions(intakeStatusSelect, state.catalog?.statuses?.intakeSources || [], "Estado");
+    buildChoiceSelectOptions(intakeCaptureSelect, state.catalog?.captureTypes || [], "Tipo de captura");
+    buildChoiceSelectOptions(intakeTypeSelect, state.catalog?.intakeTypes || [], "Tipo de intake");
+
+    buildSelectOptions({
       target: connectorSelect,
       items: state.integrations,
       placeholder: "Selecciona una integracion preparada",
@@ -10325,6 +10644,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     buildChoiceSelectOptions(connectorAccountTypeSelect, state.catalog?.accountTypes || [], "Tipo de cuenta");
     buildChoiceSelectOptions(healthStatusSelect, state.catalog?.statuses?.health || [], "Resultado del check");
     buildChoiceSelectOptions(healthConnectionSelect, state.catalog?.statuses?.connection || [], "Conexion despues del check");
+
+    if (intakeSelect) {
+      intakeSelect.value = state.selectedIntakeSourceId || "";
+    }
   };
 
   const renderConnectorPrep = () => {
@@ -10879,18 +11202,31 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncMarketingSelects();
     syncSelectedIntegration();
     syncSelectedPublication();
+    syncSelectedIntakeSource();
     renderPublicationWorkflow();
+    renderIntakePrep();
     renderConnectorPrep();
     renderIntegrations();
     renderChannels();
     renderCampaigns();
     renderCreatives();
     renderPublications();
+    renderIntakeSources();
     renderEvents();
   };
 
   const loadWorkspace = async () => {
-    const [catalog, overviewData, integrationsData, channelsData, campaignsData, creativesData, publicationsData, eventsData] =
+    const [
+      catalog,
+      overviewData,
+      integrationsData,
+      channelsData,
+      campaignsData,
+      creativesData,
+      publicationsData,
+      intakeSourcesData,
+      eventsData
+    ] =
       await Promise.all([
         apiRequest("/api/coach/marketing/catalog"),
         apiRequest("/api/coach/marketing/overview"),
@@ -10899,6 +11235,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         apiRequest("/api/coach/marketing/campaigns?limit=24"),
         apiRequest("/api/coach/marketing/creatives?limit=24"),
         apiRequest("/api/coach/marketing/publications?limit=24"),
+        apiRequest("/api/coach/marketing/intake-sources?limit=24"),
         apiRequest("/api/coach/marketing/events?limit=16")
       ]);
 
@@ -10909,9 +11246,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.campaigns = Array.isArray(campaignsData?.items) ? campaignsData.items : [];
     state.creatives = Array.isArray(creativesData?.items) ? creativesData.items : [];
     state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
+    state.intakeSources = Array.isArray(intakeSourcesData?.items) ? intakeSourcesData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
     syncSelectedIntegration();
     syncSelectedPublication();
+    syncSelectedIntakeSource();
     renderAll();
 
     if (state.selectedPublicationId) {
@@ -10975,6 +11314,26 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedPublication(button.dataset.marketingSelectPublication || "");
     renderPublications();
     loadPublicationWorkflow(state.selectedPublicationId).catch(() => {});
+  });
+
+  intakeSelect?.addEventListener("change", () => {
+    clearMessage(intakeFeedback);
+    syncSelectedIntakeSource(intakeSelect.value || "");
+    renderIntakePrep();
+    renderIntakeSources();
+  });
+
+  intakeList.addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-select-intake]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(intakeFeedback);
+    syncSelectedIntakeSource(button.dataset.marketingSelectIntake || "");
+    renderIntakePrep();
+    renderIntakeSources();
   });
 
   refreshButton.addEventListener("click", async () => {
@@ -11047,6 +11406,129 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(integrationFeedback, error.message || "No pude guardar la integracion.", "error");
     } finally {
       setButtonLoading(integrationSaveButton, false);
+    }
+  });
+
+  intakeCreateForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(intakeCreateFeedback);
+    setButtonLoading(intakeCreateSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(intakeCreateForm);
+      const data = await apiRequest("/api/coach/marketing/intake-sources", {
+        method: "POST",
+        body: {
+          integrationId: formData.get("integrationId"),
+          channelId: formData.get("channelId"),
+          campaignId: formData.get("campaignId"),
+          label: formData.get("label"),
+          captureType: formData.get("captureType"),
+          intakeType: formData.get("intakeType"),
+          status: formData.get("status"),
+          notes: formData.get("notes")
+        }
+      });
+
+      state.selectedIntakeSourceId = data?.intakeSource?.id || state.selectedIntakeSourceId;
+      state.intakePreview = null;
+      intakeCreateForm.reset();
+      await loadWorkspace();
+      setMessage(intakeCreateFeedback, "Fuente de captura guardada dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(intakeCreateFeedback, error.message || "No pude guardar la fuente de captura.", "error");
+    } finally {
+      setButtonLoading(intakeCreateSaveButton, false);
+    }
+  });
+
+  intakeConfigForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(intakeFeedback);
+
+    const intakeSource = getSelectedIntakeSource();
+
+    if (!intakeSource?.id) {
+      setMessage(intakeFeedback, "Primero selecciona una fuente de captura para prepararla.", "error");
+      return;
+    }
+
+    setButtonLoading(intakeSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(intakeConfigForm);
+      const data = await apiRequest(`/api/coach/marketing/intake-sources/${intakeSource.id}`, {
+        method: "PUT",
+        body: {
+          integrationId: formData.get("integrationId"),
+          channelId: formData.get("channelId"),
+          campaignId: formData.get("campaignId"),
+          label: formData.get("label"),
+          status: formData.get("status"),
+          captureType: formData.get("captureType"),
+          intakeType: formData.get("intakeType"),
+          acceptedFields: parseListInput(formData.get("acceptedFields")),
+          fieldMap: parseConfigInput(formData.get("fieldMap")),
+          staticPayload: parseConfigInput(formData.get("staticPayload")),
+          notes: formData.get("notes")
+        }
+      });
+
+      state.selectedIntakeSourceId = data?.intakeSource?.id || intakeSource.id;
+      state.intakePreview = null;
+      await loadWorkspace();
+      setMessage(intakeFeedback, "Fuente de captura preparada dentro del Coach.", "success");
+    } catch (error) {
+      setMessage(intakeFeedback, error.message || "No pude guardar la preparacion de la fuente.", "error");
+    } finally {
+      setButtonLoading(intakeSaveButton, false);
+    }
+  });
+
+  intakePreviewButton?.addEventListener("click", async () => {
+    clearMessage(intakeFeedback);
+    const intakeSource = getSelectedIntakeSource();
+
+    if (!intakeSource?.id) {
+      setMessage(intakeFeedback, "Primero selecciona una fuente para probar su mapeo.", "error");
+      return;
+    }
+
+    const samplePayload = parseConfigInput(intakeConfigForm.elements.samplePayload?.value || "");
+
+    if (!samplePayload || typeof samplePayload !== "object") {
+      setMessage(intakeFeedback, "Pegame un payload de prueba valido en JSON o formato clave: valor.", "error");
+      return;
+    }
+
+    setButtonLoading(intakePreviewButton, true, "Probando...");
+
+    try {
+      const data = await apiRequest(`/api/coach/marketing/intake-sources/${intakeSource.id}/preview`, {
+        method: "POST",
+        body: {
+          payload: samplePayload
+        }
+      });
+
+      state.selectedIntakeSourceId = data?.intakeSource?.id || intakeSource.id;
+      state.intakePreview = {
+        intakeSourceId: data?.intakeSource?.id || intakeSource.id,
+        ...(data?.preview || {})
+      };
+      await loadWorkspace();
+      renderIntakePrep();
+      setMessage(
+        intakeFeedback,
+        data?.preview?.validation?.ready
+          ? "El mapeo ya quedo listo para guardar capturas reales."
+          : "El preview encontro campos faltantes antes de guardar una captura real.",
+        data?.preview?.validation?.ready ? "success" : "error"
+      );
+    } catch (error) {
+      setMessage(intakeFeedback, error.message || "No pude probar el mapeo de esta fuente.", "error");
+    } finally {
+      setButtonLoading(intakePreviewButton, false);
     }
   });
 
