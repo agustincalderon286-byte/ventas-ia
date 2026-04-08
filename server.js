@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 5;
+const COACH_MARKETING_FOUNDATION_VERSION = 6;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -391,6 +391,20 @@ const COACH_MARKETING_CAPTURE_TYPE_OPTIONS = Object.freeze([
   { value: "recruitment", label: "Reclutamiento" },
   { value: "program_4_en_14", label: "4 en 14" },
   { value: "custom", label: "Otra captura" }
+]);
+const COACH_MARKETING_INTAKE_TYPE_OPTIONS = Object.freeze([
+  { value: "webhook", label: "Webhook" },
+  { value: "lead_form", label: "Lead form" },
+  { value: "landing_page", label: "Landing page" },
+  { value: "import", label: "Importacion" },
+  { value: "custom", label: "Custom" }
+]);
+const COACH_MARKETING_INTAKE_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "ready", label: "Lista" },
+  { value: "active", label: "Activa" },
+  { value: "paused", label: "Pausada" },
+  { value: "archived", label: "Archivada" }
 ]);
 const COACH_LEAD_SOURCE_OPTIONS = Object.freeze([
   { value: "captura_manual", label: "Captura manual" },
@@ -1746,6 +1760,64 @@ const coachMarketingEventSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachMarketingIntakeSourceSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  channelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingChannel",
+    default: null,
+    index: true
+  },
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCampaign",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  captureType: { type: String, default: "lead", index: true },
+  intakeType: { type: String, default: "webhook", index: true },
+  label: String,
+  status: { type: String, default: "draft", index: true },
+  endpointToken: { type: String, default: "", index: true },
+  externalSourceId: String,
+  externalSourceName: String,
+  acceptedFields: [String],
+  fieldMap: { type: mongoose.Schema.Types.Mixed, default: null },
+  staticPayload: { type: mongoose.Schema.Types.Mixed, default: null },
+  notes: String,
+  lastCaptureStatus: { type: String, default: "queued" },
+  lastCaptureAt: Date,
+  lastCaptureSummary: String,
+  lastPreviewAt: Date,
+  lastPreviewPayload: { type: mongoose.Schema.Types.Mixed, default: null },
+  lastError: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -1838,6 +1910,11 @@ coachMarketingEventSchema.index({ ownerUserId: 1, occurredAt: -1 });
 coachMarketingEventSchema.index({ ownerUserId: 1, generatedByUserId: 1, occurredAt: -1 });
 coachMarketingEventSchema.index({ ownerUserId: 1, provider: 1, eventType: 1, occurredAt: -1 });
 coachMarketingEventSchema.index({ ownerUserId: 1, status: 1, occurredAt: -1 });
+coachMarketingIntakeSourceSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingIntakeSourceSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingIntakeSourceSchema.index({ ownerUserId: 1, integrationId: 1, status: 1, updatedAt: -1 });
+coachMarketingIntakeSourceSchema.index({ ownerUserId: 1, captureType: 1, status: 1, updatedAt: -1 });
+coachMarketingIntakeSourceSchema.index({ endpointToken: 1 }, { unique: true, sparse: true });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -1900,6 +1977,9 @@ const CoachMarketingPublication =
   mongoose.model("CoachMarketingPublication", coachMarketingPublicationSchema);
 const CoachMarketingEvent =
   mongoose.models.CoachMarketingEvent || mongoose.model("CoachMarketingEvent", coachMarketingEventSchema);
+const CoachMarketingIntakeSource =
+  mongoose.models.CoachMarketingIntakeSource ||
+  mongoose.model("CoachMarketingIntakeSource", coachMarketingIntakeSourceSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -3823,6 +3903,11 @@ function construirCoachContactSharePath(shareCode = "") {
   return safeCode ? `/contactos/${safeCode}/` : "/coach/app/";
 }
 
+function construirCoachMarketingIntakePath(endpointToken = "") {
+  const safeToken = normalizarCoachWebhookToken(endpointToken, 48);
+  return safeToken ? `/api/public/marketing-intake/${safeToken}` : "";
+}
+
 function construirCoachHighLevelSalesWebhookPath(webhookToken = "") {
   const safeToken = normalizarCoachWebhookToken(webhookToken, 64);
   return safeToken ? `/webhooks/coach/highlevel-sales/${safeToken}` : "";
@@ -4908,6 +4993,14 @@ function normalizarCoachMarketingHealthStatus(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_HEALTH_STATUS_OPTIONS, "pending");
 }
 
+function normalizarCoachMarketingIntakeType(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_INTAKE_TYPE_OPTIONS, "webhook");
+}
+
+function normalizarCoachMarketingIntakeStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_INTAKE_STATUS_OPTIONS, "draft");
+}
+
 function obtenerCoachMarketingProductDefinition(product = "") {
   return obtenerCoachMarketingOptionValue(COACH_MARKETING_PRODUCT_OPTIONS, product);
 }
@@ -5574,7 +5667,9 @@ function construirCoachMarketingRoutes() {
     campaigns: "/api/coach/marketing/campaigns",
     creatives: "/api/coach/marketing/creatives",
     publications: "/api/coach/marketing/publications",
-    events: "/api/coach/marketing/events"
+    intakeSources: "/api/coach/marketing/intake-sources",
+    events: "/api/coach/marketing/events",
+    publicIntakeBase: "/api/public/marketing-intake/:token"
   };
 }
 
@@ -5637,6 +5732,7 @@ function construirCoachMarketingCatalog() {
       campaigns: COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS,
       creatives: COACH_MARKETING_CREATIVE_STATUS_OPTIONS,
       publications: COACH_MARKETING_PUBLICATION_STATUS_OPTIONS,
+      intakeSources: COACH_MARKETING_INTAKE_STATUS_OPTIONS,
       review: COACH_MARKETING_REVIEW_STATUS_OPTIONS,
       events: COACH_MARKETING_EVENT_STATUS_OPTIONS,
       health: COACH_MARKETING_HEALTH_STATUS_OPTIONS
@@ -5649,7 +5745,8 @@ function construirCoachMarketingCatalog() {
     creativeTypes: COACH_MARKETING_CREATIVE_TYPE_OPTIONS,
     publicationModes: COACH_MARKETING_PUBLICATION_MODE_OPTIONS,
     eventDirections: COACH_MARKETING_EVENT_DIRECTION_OPTIONS,
-    captureTypes: COACH_MARKETING_CAPTURE_TYPE_OPTIONS
+    captureTypes: COACH_MARKETING_CAPTURE_TYPE_OPTIONS,
+    intakeTypes: COACH_MARKETING_INTAKE_TYPE_OPTIONS
   };
 }
 
@@ -5936,6 +6033,475 @@ function limpiarCoachMarketingEvent(doc = null) {
     occurredAt: doc.occurredAt || doc.createdAt || null,
     processedAt: doc.processedAt || null,
     lastError: truncarTextoPrompt(cleanText(doc.lastError || ""), 200)
+  };
+}
+
+function limpiarCoachMarketingIntakeSource(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const captureType = normalizarCoachMarketingCaptureType(doc.captureType || "");
+  const intakeType = normalizarCoachMarketingIntakeType(doc.intakeType || "");
+  const status = normalizarCoachMarketingIntakeStatus(doc.status || "");
+  const endpointToken = normalizarCoachWebhookToken(doc.endpointToken || "", 48);
+  const acceptedFields = limpiarCoachMarketingStringArray(doc.acceptedFields || [], 20, 120);
+  const fieldMap = limpiarCoachMarketingConfig(doc.fieldMap || null);
+  const staticPayload = limpiarCoachMarketingConfig(doc.staticPayload || null);
+  const lastCaptureStatus = normalizarCoachMarketingEventStatus(doc.lastCaptureStatus || "queued");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    channelId: doc?.channelId ? String(doc.channelId) : "",
+    campaignId: doc?.campaignId ? String(doc.campaignId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    captureType,
+    captureTypeLabel: formatearCoachMarketingChoiceLabel(captureType, COACH_MARKETING_CAPTURE_TYPE_OPTIONS),
+    intakeType,
+    intakeTypeLabel: formatearCoachMarketingChoiceLabel(intakeType, COACH_MARKETING_INTAKE_TYPE_OPTIONS),
+    label: cleanText(doc.label || "").slice(0, 140) || "Fuente de captura",
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_INTAKE_STATUS_OPTIONS),
+    endpointToken,
+    endpointPath: construirCoachMarketingIntakePath(endpointToken),
+    externalSourceId: cleanText(doc.externalSourceId || "").slice(0, 120),
+    externalSourceName: cleanText(doc.externalSourceName || "").slice(0, 120),
+    acceptedFields,
+    fieldMap,
+    fieldMapKeys: fieldMap ? Object.keys(fieldMap) : [],
+    staticPayload,
+    staticPayloadKeys: staticPayload ? Object.keys(staticPayload) : [],
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    lastCaptureStatus,
+    lastCaptureStatusLabel: formatearCoachMarketingChoiceLabel(lastCaptureStatus, COACH_MARKETING_EVENT_STATUS_OPTIONS),
+    lastCaptureAt: doc.lastCaptureAt || null,
+    lastCaptureSummary: truncarTextoPrompt(cleanText(doc.lastCaptureSummary || ""), 220),
+    lastPreviewAt: doc.lastPreviewAt || null,
+    lastPreviewPayload: limpiarCoachMarketingConfig(doc.lastPreviewPayload || null),
+    lastError: truncarTextoPrompt(cleanText(doc.lastError || ""), 200),
+    isPublicReady: ["ready", "active"].includes(status) && Boolean(endpointToken)
+  };
+}
+
+const COACH_MARKETING_INTAKE_DIRECT_FIELDS = Object.freeze([
+  "fullName",
+  "name",
+  "phone",
+  "email",
+  "address",
+  "city",
+  "zipCode",
+  "zip",
+  "birthday",
+  "birthDate",
+  "childrenCount",
+  "areaNotes",
+  "locationNotes",
+  "interest",
+  "source",
+  "sourceDetail",
+  "notes",
+  "consentGiven",
+  "nextAction",
+  "nextActionAt",
+  "status",
+  "summary",
+  "replaceNotes",
+  "drives",
+  "hasCar",
+  "customerServiceExperience",
+  "workPreference",
+  "positionApplied",
+  "role",
+  "vacancy",
+  "salesExperience",
+  "about",
+  "experience",
+  "landingPageUrl",
+  "pageUrl",
+  "destinationUrl",
+  "referrerUrl",
+  "referrer",
+  "pageTitle",
+  "utmSource",
+  "utm_source",
+  "utmMedium",
+  "utm_medium",
+  "utmCampaign",
+  "utm_campaign",
+  "utmTerm",
+  "utm_term",
+  "utmContent",
+  "utm_content",
+  "gclid",
+  "fbclid",
+  "ttclid",
+  "campaign",
+  "campaignName",
+  "campaignId",
+  "adset",
+  "adsetName",
+  "adsetId",
+  "ad",
+  "adName",
+  "adId",
+  "provider",
+  "product",
+  "medium",
+  "platform",
+  "network",
+  "channelId",
+  "channelLabel",
+  "creativeId",
+  "creativeLabel",
+  "captureType",
+  "recordSource"
+]);
+
+function coachMarketingPayloadHasValue(value) {
+  if (value === 0 || value === false) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(item => coachMarketingPayloadHasValue(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.keys(value).length > 0;
+  }
+
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function leerCoachMarketingPayloadPath(payload = {}, rawPath = "") {
+  const safePayload = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  const safePath = String(rawPath || "")
+    .trim()
+    .replace(/\[(\d+)\]/g, ".$1");
+
+  if (!safePath) {
+    return undefined;
+  }
+
+  const parts = safePath
+    .split(".")
+    .map(item => item.trim())
+    .filter(Boolean);
+  let current = safePayload;
+
+  for (const part of parts) {
+    if (!current || typeof current !== "object" || !(part in current)) {
+      return undefined;
+    }
+
+    current = current[part];
+  }
+
+  return current;
+}
+
+function resolverCoachMarketingMappedValue(payload = {}, mappingSpec = null) {
+  const candidatePaths = (Array.isArray(mappingSpec) ? mappingSpec : [mappingSpec])
+    .map(item => cleanText(item || "").trim())
+    .filter(Boolean);
+
+  for (const path of candidatePaths) {
+    const value = leerCoachMarketingPayloadPath(payload, path);
+
+    if (coachMarketingPayloadHasValue(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function construirCoachMarketingIntakeBasePayload(rawPayload = {}) {
+  const safePayload = rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload) ? rawPayload : {};
+  const basePayload = {};
+
+  COACH_MARKETING_INTAKE_DIRECT_FIELDS.forEach(key => {
+    if (coachMarketingPayloadHasValue(safePayload[key])) {
+      basePayload[key] = safePayload[key];
+    }
+  });
+
+  if (safePayload.attribution && typeof safePayload.attribution === "object" && !Array.isArray(safePayload.attribution)) {
+    basePayload.attribution = safePayload.attribution;
+  }
+
+  return basePayload;
+}
+
+function construirCoachMarketingIntakePayload(intakeSourceDoc = null, rawPayload = {}, refs = {}) {
+  const intakeSource = limpiarCoachMarketingIntakeSource(intakeSourceDoc);
+  const basePayload = construirCoachMarketingIntakeBasePayload(rawPayload);
+  const mappedPayload = {};
+  const fieldMap = intakeSource?.fieldMap && typeof intakeSource.fieldMap === "object" ? intakeSource.fieldMap : {};
+
+  Object.entries(fieldMap).forEach(([targetField, sourceSpec]) => {
+    const safeTargetField = cleanText(targetField || "").slice(0, 80);
+
+    if (!safeTargetField) {
+      return;
+    }
+
+    const mappedValue = resolverCoachMarketingMappedValue(rawPayload, sourceSpec);
+
+    if (coachMarketingPayloadHasValue(mappedValue)) {
+      mappedPayload[safeTargetField] = mappedValue;
+    }
+  });
+
+  const payload = {
+    ...basePayload,
+    ...mappedPayload,
+    ...((intakeSource?.staticPayload && typeof intakeSource.staticPayload === "object") ? intakeSource.staticPayload : {})
+  };
+  const provider = resolverCoachMarketingProviderDesdeRefs(intakeSource?.provider || "", refs);
+  const product = resolverCoachMarketingProductDesdeRefs(intakeSource?.product || "", refs);
+  const channelLabel =
+    cleanText(refs?.channelDoc?.label || refs?.channelDoc?.channelType || "").slice(0, 120) ||
+    cleanText(payload.channelLabel || "").slice(0, 120);
+  const campaignName =
+    cleanText(refs?.campaignDoc?.name || payload.campaign || payload.campaignName || "").slice(0, 160);
+  const defaultSource =
+    inferirCoachLeadSourceDigital(payload) ||
+    ((provider !== "custom" || product !== "custom" || intakeSource?.intakeType !== "custom")
+      ? "campana_digital"
+      : "captura_manual");
+
+  if (!coachMarketingPayloadHasValue(payload.captureType)) {
+    payload.captureType = intakeSource?.captureType || "lead";
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.source)) {
+    payload.source = defaultSource;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.provider)) {
+    payload.provider = provider;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.product)) {
+    payload.product = product;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.channelId) && refs?.channelDoc?._id) {
+    payload.channelId = String(refs.channelDoc._id);
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.channelLabel) && channelLabel) {
+    payload.channelLabel = channelLabel;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.campaignId) && refs?.campaignDoc?._id) {
+    payload.campaignId = String(refs.campaignDoc._id);
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.campaign) && campaignName) {
+    payload.campaign = campaignName;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.campaignName) && campaignName) {
+    payload.campaignName = campaignName;
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.landingPageUrl)) {
+    payload.landingPageUrl =
+      limpiarUrlExterna(refs?.campaignDoc?.landingPageUrl || refs?.channelDoc?.landingPageUrl || "") || "";
+  }
+
+  if (!coachMarketingPayloadHasValue(payload.sourceDetail)) {
+    payload.sourceDetail = `${intakeSource?.intakeTypeLabel || "Webhook"} · ${intakeSource?.label || "Fuente preparada"}`;
+  }
+
+  return {
+    intakeSource,
+    payload,
+    mappedFieldKeys: Object.keys(mappedPayload),
+    rawKeys: Object.keys(rawPayload && typeof rawPayload === "object" ? rawPayload : {}).slice(0, 40)
+  };
+}
+
+function validarCoachMarketingIntakePayload(payload = {}, captureType = "lead") {
+  const safeCaptureType = normalizarCoachMarketingCaptureType(captureType || "");
+  const fullName = seleccionarNombreConfiable(cleanText(payload?.fullName || payload?.name || "").slice(0, 140));
+  const phone = normalizePhone(payload?.phone || "");
+  const email = normalizarEmail(payload?.email || "");
+  const errors = [];
+  const warnings = [];
+
+  if (!fullName) {
+    errors.push("Falta nombre completo.");
+  }
+
+  if (!phone && !email) {
+    errors.push("Necesitas telefono o correo.");
+  }
+
+  if (safeCaptureType === "recruitment") {
+    const positionApplied = cleanText(payload?.positionApplied || payload?.role || payload?.vacancy || "").slice(0, 120);
+    const about = cleanText(payload?.about || payload?.notes || payload?.experience || "").slice(0, 220);
+
+    if (!positionApplied) {
+      warnings.push("Todavia no hay vacante o puesto aplicado.");
+    }
+
+    if (!about) {
+      warnings.push("Todavia no hay resumen de experiencia.");
+    }
+  } else {
+    const interest = cleanText(payload?.interest || "").slice(0, 120);
+
+    if (!interest) {
+      warnings.push("Todavia no hay interes principal del lead.");
+    }
+  }
+
+  if (!cleanText(payload?.campaign || payload?.campaignName || payload?.utmCampaign || payload?.utm_campaign || "")) {
+    warnings.push("Aun no se detecta campana en el payload.");
+  }
+
+  return {
+    ready: errors.length === 0,
+    errors,
+    warnings,
+    requiredCount: 2,
+    completedRequiredCount: (!fullName ? 0 : 1) + (!(phone || email) ? 0 : 1)
+  };
+}
+
+function construirCoachMarketingIntakePreview(intakeSourceDoc = null, rawPayload = {}, refs = {}) {
+  const intakeBuild = construirCoachMarketingIntakePayload(intakeSourceDoc, rawPayload, refs);
+  const validation = validarCoachMarketingIntakePayload(
+    intakeBuild.payload,
+    intakeBuild.intakeSource?.captureType || "lead"
+  );
+  const payloadPreview = limpiarCoachMarketingConfig(intakeBuild.payload) || {};
+  const summary = validation.ready
+    ? `El payload ya esta listo para guardarse como ${intakeBuild.intakeSource?.captureTypeLabel || "captura"}.`
+    : validation.errors.join(" ");
+
+  return {
+    ...intakeBuild,
+    payloadPreview,
+    validation,
+    summary,
+    endpointPath: intakeBuild.intakeSource?.endpointPath || ""
+  };
+}
+
+async function generarCoachMarketingIntakeTokenUnico() {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const endpointToken = normalizarCoachWebhookToken(generarCoachWebhookToken(18), 48);
+
+    if (!endpointToken) {
+      continue;
+    }
+
+    const exists = await CoachMarketingIntakeSource.exists({ endpointToken });
+
+    if (!exists) {
+      return endpointToken;
+    }
+  }
+
+  throw new Error("No pude generar un token unico para esta fuente de captura.");
+}
+
+async function registrarCoachMarketingIntakePreviewState(intakeSourceDoc = null, payloadPreview = null, touchedAt = new Date()) {
+  if (!intakeSourceDoc?._id) {
+    return null;
+  }
+
+  intakeSourceDoc.lastPreviewAt = touchedAt;
+  intakeSourceDoc.lastPreviewPayload = limpiarCoachMarketingConfig(payloadPreview || null);
+  intakeSourceDoc.updatedAt = touchedAt;
+  await intakeSourceDoc.save();
+  return limpiarCoachMarketingIntakeSource(intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc);
+}
+
+async function registrarCoachMarketingIntakeCaptureState(
+  intakeSourceDoc = null,
+  { status = "processed", summary = "", lastError = "", touchedAt = new Date() } = {}
+) {
+  if (!intakeSourceDoc?._id) {
+    return null;
+  }
+
+  intakeSourceDoc.lastCaptureStatus = normalizarCoachMarketingEventStatus(status || "");
+  intakeSourceDoc.lastCaptureAt = touchedAt;
+  intakeSourceDoc.lastCaptureSummary = truncarTextoPrompt(cleanText(summary || ""), 220);
+  intakeSourceDoc.lastError = truncarTextoPrompt(cleanText(lastError || ""), 200);
+  intakeSourceDoc.updatedAt = touchedAt;
+  await intakeSourceDoc.save();
+  return limpiarCoachMarketingIntakeSource(intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc);
+}
+
+async function resolverCoachMarketingIntakeContextPorToken(endpointToken = "", options = {}) {
+  const safeToken = normalizarCoachWebhookToken(endpointToken, 48);
+
+  if (!safeToken) {
+    return null;
+  }
+
+  const query = {
+    endpointToken: safeToken
+  };
+
+  if (options.includeInactive !== true) {
+    query.status = { $in: ["ready", "active"] };
+  }
+
+  const intakeSourceDoc = await CoachMarketingIntakeSource.findOne(query);
+
+  if (!intakeSourceDoc?.ownerUserId) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findById(intakeSourceDoc.ownerUserId);
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
+
+  if (!(await coachTieneAccesoOperativo(userDoc))) {
+    return null;
+  }
+
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const ownership = {
+    ownerUserId: intakeSourceDoc.ownerUserId,
+    ownerName: cleanText(intakeSourceDoc.ownerName || userDoc?.name || "").slice(0, 120),
+    ownerEmail: normalizarEmail(intakeSourceDoc.ownerEmail || userDoc?.email || ""),
+    generatedByUserId: intakeSourceDoc.generatedByUserId || null,
+    generatedByName: cleanText(intakeSourceDoc.generatedByName || "").slice(0, 120),
+    generatedByAccountType: normalizarCoachAccountType(intakeSourceDoc.generatedByAccountType || "owner")
+  };
+  const refs = await cargarCoachMarketingWorkspaceRefs(userDoc, {
+    integrationId: intakeSourceDoc.integrationId || "",
+    channelId: intakeSourceDoc.channelId || "",
+    campaignId: intakeSourceDoc.campaignId || ""
+  });
+
+  return {
+    token: safeToken,
+    userDoc,
+    ownerProfileDoc,
+    ownership,
+    intakeSourceDoc,
+    intakeSource: limpiarCoachMarketingIntakeSource(intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc),
+    refs
   };
 }
 
@@ -6381,13 +6947,18 @@ async function asegurarCoachMarketingWorkspaceBase(userDoc = null) {
 }
 
 async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
-  const integrationsCount = await CoachMarketingIntegration.countDocuments(construirCoachWorkspaceQuery(userDoc));
+  const query = construirCoachWorkspaceQuery(userDoc);
+  const [integrationsCount, intakeSourcesCount] = await Promise.all([
+    CoachMarketingIntegration.countDocuments(query),
+    CoachMarketingIntakeSource.countDocuments(query)
+  ]);
 
   return {
     foundationVersion: COACH_MARKETING_FOUNDATION_VERSION,
     routes: construirCoachMarketingRoutes(),
     bootstrapped: integrationsCount > 0,
     integrationsCount,
+    intakeSourcesCount,
     supportedProviders: COACH_MARKETING_PROVIDER_OPTIONS.map(item => ({
       provider: item.value,
       label: item.label
@@ -6577,8 +7148,10 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     campaignsCount,
     creativesCount,
     publicationsCount,
+    intakeSourcesCount,
     eventsCount,
     connectedIntegrations,
+    activeIntakeSources,
     failedPublications,
     failedEvents,
     providerSummary,
@@ -6593,10 +7166,15 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     CoachMarketingCampaign.countDocuments(query),
     CoachMarketingCreative.countDocuments(query),
     CoachMarketingPublication.countDocuments(query),
+    CoachMarketingIntakeSource.countDocuments(query),
     CoachMarketingEvent.countDocuments(query),
     CoachMarketingIntegration.countDocuments({
       ...query,
       connectionStatus: "connected"
+    }),
+    CoachMarketingIntakeSource.countDocuments({
+      ...query,
+      status: { $in: ["ready", "active"] }
     }),
     CoachMarketingPublication.countDocuments({
       ...query,
@@ -6638,10 +7216,12 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
       campaigns: campaignsCount,
       creatives: creativesCount,
       publications: publicationsCount,
+      intakeSources: intakeSourcesCount,
       events: eventsCount
     },
     health: {
       connectedIntegrations,
+      activeIntakeSources,
       failedPublications,
       failedEvents
     },
@@ -23443,6 +24023,422 @@ app.post("/api/coach/marketing/publications/:publicationId/mark-published", asyn
   }
 });
 
+app.get("/api/coach/marketing/intake-sources", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const statusFilter = String(req.query?.status || "").trim();
+    const captureTypeFilter = String(req.query?.captureType || "").trim();
+    const intakeTypeFilter = String(req.query?.intakeType || "").trim();
+    const integrationId = normalizarCoachCrmObjectId(req.query?.integrationId || "");
+    const channelId = normalizarCoachCrmObjectId(req.query?.channelId || "");
+    const campaignId = normalizarCoachCrmObjectId(req.query?.campaignId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingIntakeStatus(statusFilter);
+    }
+
+    if (captureTypeFilter) {
+      query.captureType = normalizarCoachMarketingCaptureType(captureTypeFilter);
+    }
+
+    if (intakeTypeFilter) {
+      query.intakeType = normalizarCoachMarketingIntakeType(intakeTypeFilter);
+    }
+
+    if (integrationId) {
+      query.integrationId = integrationId;
+    }
+
+    if (channelId) {
+      query.channelId = channelId;
+    }
+
+    if (campaignId) {
+      query.campaignId = campaignId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingIntakeSource.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingIntakeSource.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingIntakeSource(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando fuentes de captura de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar las fuentes de captura.");
+  }
+});
+
+app.post("/api/coach/marketing/intake-sources", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: req.body?.integrationId || "",
+      channelId: req.body?.channelId || "",
+      campaignId: req.body?.campaignId || ""
+    });
+
+    if (req.body?.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion para esa fuente de captura.");
+    }
+
+    if (req.body?.channelId && !refs.channelDoc) {
+      return responderCoachError(res, 404, "No encontre el canal para esa fuente de captura.");
+    }
+
+    if (req.body?.campaignId && !refs.campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana para esa fuente de captura.");
+    }
+
+    const provider = resolverCoachMarketingProviderDesdeRefs(req.body?.provider || "", refs);
+    const product = resolverCoachMarketingProductDesdeRefs(req.body?.product || "", refs);
+    const captureType = normalizarCoachMarketingCaptureType(req.body?.captureType || "lead");
+    const intakeType = normalizarCoachMarketingIntakeType(req.body?.intakeType || "webhook");
+    const now = new Date();
+    const endpointToken = await generarCoachMarketingIntakeTokenUnico();
+    const label =
+      cleanText(req.body?.label || "").slice(0, 140) ||
+      cleanText(refs.campaignDoc?.name || refs.channelDoc?.label || "").slice(0, 140) ||
+      `${formatearCoachMarketingChoiceLabel(captureType, COACH_MARKETING_CAPTURE_TYPE_OPTIONS)} ${formatearCoachMarketingChoiceLabel(intakeType, COACH_MARKETING_INTAKE_TYPE_OPTIONS)}`;
+    const intakeSourceDoc = await CoachMarketingIntakeSource.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      provider,
+      product,
+      captureType,
+      intakeType,
+      label,
+      status: normalizarCoachMarketingIntakeStatus(req.body?.status || "draft"),
+      endpointToken,
+      externalSourceId: cleanText(req.body?.externalSourceId || "").slice(0, 120),
+      externalSourceName: cleanText(req.body?.externalSourceName || "").slice(0, 120),
+      acceptedFields: limpiarCoachMarketingStringArray(req.body?.acceptedFields || [], 20, 120),
+      fieldMap: limpiarCoachMarketingConfig(req.body?.fieldMap || null),
+      staticPayload: limpiarCoachMarketingConfig(req.body?.staticPayload || null),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    const intakeSource = limpiarCoachMarketingIntakeSource(
+      intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "intake_source_created",
+      entityType: "intake_source",
+      entityId: intakeSource.id,
+      status: "processed",
+      summary: `Se preparo la fuente ${intakeSource.label || "de captura"}.`,
+      payload: {
+        captureType: intakeSource.captureType,
+        intakeType: intakeSource.intakeType,
+        endpointPath: intakeSource.endpointPath
+      }
+    });
+
+    res.json({
+      intakeSource
+    });
+  } catch (error) {
+    console.error("Error creando fuente de captura de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear la fuente de captura.");
+  }
+});
+
+app.put("/api/coach/marketing/intake-sources/:intakeSourceId", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const intakeSourceId = normalizarCoachCrmObjectId(req.params?.intakeSourceId || "");
+
+  if (!intakeSourceId) {
+    return responderCoachError(res, 400, "No encontre la fuente de captura que quieres actualizar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const intakeSourceDoc = await CoachMarketingIntakeSource.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: intakeSourceId })
+    );
+
+    if (!intakeSourceDoc) {
+      return responderCoachError(res, 404, "No encontre la fuente de captura.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: hasField("integrationId") ? body.integrationId || "" : intakeSourceDoc.integrationId || "",
+      channelId: hasField("channelId") ? body.channelId || "" : intakeSourceDoc.channelId || "",
+      campaignId: hasField("campaignId") ? body.campaignId || "" : intakeSourceDoc.campaignId || ""
+    });
+
+    if (hasField("integrationId") && body.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion para esa fuente.");
+    }
+
+    if (hasField("channelId") && body.channelId && !refs.channelDoc) {
+      return responderCoachError(res, 404, "No encontre el canal para esa fuente.");
+    }
+
+    if (hasField("campaignId") && body.campaignId && !refs.campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana para esa fuente.");
+    }
+
+    const previousIntakeSource = limpiarCoachMarketingIntakeSource(
+      intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc
+    );
+    const provider = resolverCoachMarketingProviderDesdeRefs(
+      hasField("provider") ? body.provider || "" : intakeSourceDoc.provider || "",
+      refs
+    );
+    const product = resolverCoachMarketingProductDesdeRefs(
+      hasField("product") ? body.product || "" : intakeSourceDoc.product || "",
+      refs
+    );
+
+    intakeSourceDoc.provider = provider;
+    intakeSourceDoc.product = product;
+
+    if (hasField("integrationId")) {
+      intakeSourceDoc.integrationId = refs.integrationDoc?._id || null;
+    }
+
+    if (hasField("channelId")) {
+      intakeSourceDoc.channelId = refs.channelDoc?._id || null;
+    }
+
+    if (hasField("campaignId")) {
+      intakeSourceDoc.campaignId = refs.campaignDoc?._id || null;
+    }
+
+    if (hasField("captureType")) {
+      intakeSourceDoc.captureType = normalizarCoachMarketingCaptureType(body.captureType || "lead");
+    }
+
+    if (hasField("intakeType")) {
+      intakeSourceDoc.intakeType = normalizarCoachMarketingIntakeType(body.intakeType || "webhook");
+    }
+
+    if (hasField("label")) {
+      intakeSourceDoc.label = cleanText(body.label || "").slice(0, 140);
+    }
+
+    if (hasField("status")) {
+      intakeSourceDoc.status = normalizarCoachMarketingIntakeStatus(body.status || "draft");
+    }
+
+    if (hasField("externalSourceId")) {
+      intakeSourceDoc.externalSourceId = cleanText(body.externalSourceId || "").slice(0, 120);
+    }
+
+    if (hasField("externalSourceName")) {
+      intakeSourceDoc.externalSourceName = cleanText(body.externalSourceName || "").slice(0, 120);
+    }
+
+    if (hasField("acceptedFields")) {
+      intakeSourceDoc.acceptedFields = limpiarCoachMarketingStringArray(body.acceptedFields || [], 20, 120);
+    }
+
+    if (hasField("fieldMap")) {
+      intakeSourceDoc.fieldMap = limpiarCoachMarketingConfig(body.fieldMap || null);
+    }
+
+    if (hasField("staticPayload")) {
+      intakeSourceDoc.staticPayload = limpiarCoachMarketingConfig(body.staticPayload || null);
+    }
+
+    if (hasField("notes")) {
+      intakeSourceDoc.notes = truncarTextoPrompt(cleanText(body.notes || ""), 220);
+    }
+
+    if (!normalizarCoachWebhookToken(intakeSourceDoc.endpointToken || "", 48)) {
+      intakeSourceDoc.endpointToken = await generarCoachMarketingIntakeTokenUnico();
+    }
+
+    intakeSourceDoc.updatedAt = new Date();
+    await intakeSourceDoc.save();
+
+    const intakeSource = limpiarCoachMarketingIntakeSource(
+      intakeSourceDoc?.toObject ? intakeSourceDoc.toObject() : intakeSourceDoc
+    );
+    const updatedFields = [
+      previousIntakeSource?.integrationId !== intakeSource.integrationId ? "integrationId" : "",
+      previousIntakeSource?.channelId !== intakeSource.channelId ? "channelId" : "",
+      previousIntakeSource?.campaignId !== intakeSource.campaignId ? "campaignId" : "",
+      previousIntakeSource?.label !== intakeSource.label ? "label" : "",
+      previousIntakeSource?.status !== intakeSource.status ? "status" : "",
+      previousIntakeSource?.captureType !== intakeSource.captureType ? "captureType" : "",
+      previousIntakeSource?.intakeType !== intakeSource.intakeType ? "intakeType" : "",
+      previousIntakeSource?.externalSourceId !== intakeSource.externalSourceId ? "externalSourceId" : "",
+      previousIntakeSource?.externalSourceName !== intakeSource.externalSourceName ? "externalSourceName" : "",
+      JSON.stringify(previousIntakeSource?.acceptedFields || []) !== JSON.stringify(intakeSource?.acceptedFields || [])
+        ? "acceptedFields"
+        : "",
+      JSON.stringify(previousIntakeSource?.fieldMap || null) !== JSON.stringify(intakeSource?.fieldMap || null)
+        ? "fieldMap"
+        : "",
+      JSON.stringify(previousIntakeSource?.staticPayload || null) !== JSON.stringify(intakeSource?.staticPayload || null)
+        ? "staticPayload"
+        : "",
+      previousIntakeSource?.notes !== intakeSource.notes ? "notes" : ""
+    ].filter(Boolean);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      provider: intakeSource.provider,
+      product: intakeSource.product,
+      direction: "internal",
+      eventType: "intake_source_updated",
+      entityType: "intake_source",
+      entityId: intakeSource.id,
+      status: "processed",
+      summary: `Se actualizo la fuente ${intakeSource.label || "de captura"}.`,
+      payload: {
+        updatedFields,
+        endpointPath: intakeSource.endpointPath,
+        acceptedFields: intakeSource.acceptedFields
+      }
+    });
+
+    res.json({
+      intakeSource,
+      updatedFields
+    });
+  } catch (error) {
+    console.error("Error actualizando fuente de captura del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar la fuente de captura.");
+  }
+});
+
+app.post("/api/coach/marketing/intake-sources/:intakeSourceId/preview", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const intakeSourceId = normalizarCoachCrmObjectId(req.params?.intakeSourceId || "");
+
+  if (!intakeSourceId) {
+    return responderCoachError(res, 400, "No encontre la fuente de captura que quieres probar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const intakeSourceDoc = await CoachMarketingIntakeSource.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: intakeSourceId })
+    );
+
+    if (!intakeSourceDoc) {
+      return responderCoachError(res, 404, "No encontre la fuente de captura.");
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: intakeSourceDoc.integrationId || "",
+      channelId: intakeSourceDoc.channelId || "",
+      campaignId: intakeSourceDoc.campaignId || ""
+    });
+    const rawPayload =
+      req.body?.payload && typeof req.body.payload === "object" && !Array.isArray(req.body.payload)
+        ? req.body.payload
+        : req.body && typeof req.body === "object" && !Array.isArray(req.body)
+          ? req.body
+          : {};
+
+    if (!Object.keys(rawPayload).length) {
+      return responderCoachError(res, 400, "Pegame un payload de prueba para mapearlo.");
+    }
+
+    const preview = construirCoachMarketingIntakePreview(intakeSourceDoc, rawPayload, refs);
+    const touchedAt = new Date();
+    const intakeSource = await registrarCoachMarketingIntakePreviewState(
+      intakeSourceDoc,
+      preview.payloadPreview,
+      touchedAt
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      provider: preview.intakeSource?.provider || "",
+      product: preview.intakeSource?.product || "",
+      direction: "internal",
+      eventType: "intake_source_previewed",
+      entityType: "intake_source",
+      entityId: intakeSource?.id || String(intakeSourceId),
+      status: preview.validation.ready ? "processed" : "ignored",
+      summary:
+        preview.summary ||
+        `Se probo el mapeo de ${preview.intakeSource?.label || "la fuente de captura"}.`,
+      payload: {
+        validation: preview.validation,
+        mappedFieldKeys: preview.mappedFieldKeys,
+        rawKeys: preview.rawKeys,
+        endpointPath: preview.endpointPath
+      },
+      occurredAt: touchedAt
+    });
+
+    res.json({
+      intakeSource,
+      preview: {
+        summary: preview.summary,
+        validation: preview.validation,
+        endpointPath: preview.endpointPath,
+        mappedFieldKeys: preview.mappedFieldKeys,
+        rawKeys: preview.rawKeys,
+        payload: preview.payloadPreview
+      }
+    });
+  } catch (error) {
+    console.error("Error probando fuente de captura del Coach:", error.message);
+    responderCoachError(res, 500, "No pude probar el mapeo de esta fuente.");
+  }
+});
+
 app.get("/api/coach/marketing/events", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -27036,6 +28032,202 @@ app.get(/^\/contactos\/([a-f0-9]+)\/?$/i, async (req, res) => {
   }
 
   res.sendFile(path.join(PUBLIC_DIR, "contact-share", "index.html"));
+});
+
+app.get("/api/public/marketing-intake/:endpointToken", async (req, res) => {
+  try {
+    const intakeContext = await resolverCoachMarketingIntakeContextPorToken(req.params?.endpointToken || "");
+
+    if (!intakeContext?.intakeSource) {
+      return res.status(404).json({ error: "Esa fuente de captura ya no esta disponible." });
+    }
+
+    res.json({
+      ok: true,
+      label: intakeContext.intakeSource.label || "Fuente de captura",
+      status: intakeContext.intakeSource.status,
+      statusLabel: intakeContext.intakeSource.statusLabel,
+      captureType: intakeContext.intakeSource.captureType,
+      captureTypeLabel: intakeContext.intakeSource.captureTypeLabel,
+      intakeType: intakeContext.intakeSource.intakeType,
+      intakeTypeLabel: intakeContext.intakeSource.intakeTypeLabel,
+      endpointPath: intakeContext.intakeSource.endpointPath,
+      acceptedFields: intakeContext.intakeSource.acceptedFields || [],
+      provider: intakeContext.intakeSource.provider,
+      providerLabel: intakeContext.intakeSource.providerLabel,
+      product: intakeContext.intakeSource.product,
+      productLabel: intakeContext.intakeSource.productLabel
+    });
+  } catch (error) {
+    console.error("Error cargando metadata de fuente de captura publica:", error.message);
+    res.status(500).json({ error: "No pude abrir esta fuente de captura en este momento." });
+  }
+});
+
+app.post("/api/public/marketing-intake/:endpointToken", async (req, res) => {
+  try {
+    const intakeContext = await resolverCoachMarketingIntakeContextPorToken(req.params?.endpointToken || "");
+    const honeypot = cleanText(req.body?.website || req.body?.company || "").slice(0, 120);
+
+    if (!intakeContext?.intakeSourceDoc || !intakeContext?.intakeSource) {
+      return res.status(404).json({ error: "Esa fuente de captura ya no esta disponible." });
+    }
+
+    if (honeypot) {
+      return res.status(200).json({ ok: true, ignored: true });
+    }
+
+    const rawPayload =
+      req.body?.payload && typeof req.body.payload === "object" && !Array.isArray(req.body.payload)
+        ? req.body.payload
+        : req.body && typeof req.body === "object" && !Array.isArray(req.body)
+          ? req.body
+          : {};
+    const preview = construirCoachMarketingIntakePreview(
+      intakeContext.intakeSourceDoc,
+      rawPayload,
+      intakeContext.refs || {}
+    );
+    const validationSummary = preview.validation.errors.join(" ").trim();
+
+    await registrarCoachMarketingIntakePreviewState(
+      intakeContext.intakeSourceDoc,
+      preview.payloadPreview,
+      new Date()
+    );
+
+    if (!preview.validation.ready) {
+      const failedSource = await registrarCoachMarketingIntakeCaptureState(intakeContext.intakeSourceDoc, {
+        status: "failed",
+        summary: validationSummary || "El payload no cumplio los campos requeridos.",
+        lastError: validationSummary || "Payload incompleto."
+      });
+
+      await registrarCoachMarketingEvent({
+        userDoc: intakeContext.userDoc,
+        workspaceSnapshot: intakeContext.ownership,
+        integrationId: intakeContext.refs?.integrationDoc?._id || null,
+        channelId: intakeContext.refs?.channelDoc?._id || null,
+        campaignId: intakeContext.refs?.campaignDoc?._id || null,
+        provider: failedSource?.provider || preview.intakeSource?.provider || "",
+        product: failedSource?.product || preview.intakeSource?.product || "",
+        direction: "inbound",
+        eventType: "intake_capture_failed",
+        entityType: "intake_source",
+        entityId: failedSource?.id || intakeContext.intakeSource.id,
+        status: "failed",
+        summary: validationSummary || "El payload publico no paso la validacion minima.",
+        payload: {
+          validation: preview.validation,
+          endpointPath: preview.endpointPath,
+          mappedFieldKeys: preview.mappedFieldKeys
+        },
+        lastError: validationSummary || "Payload incompleto."
+      });
+
+      return res.status(400).json({
+        error: validationSummary || "No pude guardar esta captura todavia.",
+        validation: preview.validation,
+        intakeSource: failedSource || intakeContext.intakeSource,
+        preview: {
+          payload: preview.payloadPreview,
+          mappedFieldKeys: preview.mappedFieldKeys,
+          endpointPath: preview.endpointPath
+        }
+      });
+    }
+
+    const captureType = preview.intakeSource?.captureType || "lead";
+    let result = null;
+
+    if (captureType === "lead") {
+      result = await guardarCoachInboxLead({
+        userDoc: intakeContext.userDoc,
+        profileDoc: intakeContext.ownerProfileDoc,
+        payload: preview.payload,
+        ownershipOverride: intakeContext.ownership,
+        sendDestination: true
+      });
+    } else if (captureType === "recruitment") {
+      result = await guardarCoachRecruitmentApplication({
+        userDoc: intakeContext.userDoc,
+        profileDoc: intakeContext.ownerProfileDoc,
+        payload: preview.payload,
+        ownershipOverride: intakeContext.ownership,
+        sendDestination: true
+      });
+    } else {
+      const error = new Error("Por ahora esta fase solo guarda leads y reclutamiento.");
+      error.status = 400;
+      throw error;
+    }
+
+    const touchedAt = new Date();
+    const intakeSource = await registrarCoachMarketingIntakeCaptureState(intakeContext.intakeSourceDoc, {
+      status: "processed",
+      summary:
+        captureType === "lead"
+          ? `Lead guardado desde ${preview.intakeSource?.label || "fuente preparada"}.`
+          : `Aplicacion guardada desde ${preview.intakeSource?.label || "fuente preparada"}.`,
+      lastError: "",
+      touchedAt
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: intakeContext.userDoc,
+      workspaceSnapshot: intakeContext.ownership,
+      integrationId: intakeContext.refs?.integrationDoc?._id || null,
+      channelId: intakeContext.refs?.channelDoc?._id || null,
+      campaignId: intakeContext.refs?.campaignDoc?._id || null,
+      provider: intakeSource?.provider || preview.intakeSource?.provider || "",
+      product: intakeSource?.product || preview.intakeSource?.product || "",
+      direction: "inbound",
+      eventType: "intake_capture_processed",
+      entityType: "intake_source",
+      entityId: intakeSource?.id || intakeContext.intakeSource.id,
+      status: "processed",
+      summary:
+        captureType === "lead"
+          ? `Lead procesado desde ${preview.intakeSource?.label || "fuente preparada"}.`
+          : `Aplicacion procesada desde ${preview.intakeSource?.label || "fuente preparada"}.`,
+      payload: {
+        captureType,
+        endpointPath: preview.endpointPath,
+        mappedFieldKeys: preview.mappedFieldKeys,
+        duplicate: result?.duplicate === true
+      },
+      occurredAt: touchedAt
+    });
+
+    res.status(201).json({
+      ok: true,
+      captureType,
+      intakeSource,
+      preview: {
+        endpointPath: preview.endpointPath,
+        mappedFieldKeys: preview.mappedFieldKeys,
+        payload: preview.payloadPreview
+      },
+      result:
+        captureType === "lead"
+          ? {
+              duplicate: result?.duplicate === true,
+              lead: result?.lead || null,
+              delivery: result?.delivery || null,
+              highLevel: result?.highLevel || null
+            }
+          : {
+              created: result?.created === true,
+              application: result?.application || null,
+              delivery: result?.delivery || null
+            }
+    });
+  } catch (error) {
+    console.error("Error guardando captura publica de marketing:", error.message);
+    res.status(error.status || 500).json({
+      error: error.message || "No pude guardar esta captura en este momento."
+    });
+  }
 });
 
 app.get("/api/public/contact-share/:shareCode", async (req, res) => {

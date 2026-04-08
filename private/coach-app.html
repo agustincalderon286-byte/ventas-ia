@@ -2370,6 +2370,10 @@
                 <span>Publicaciones</span>
               </div>
               <div class="mini-stat">
+                <strong data-marketing-summary-intakes>0</strong>
+                <span>Fuentes de captura</span>
+              </div>
+              <div class="mini-stat">
                 <strong data-marketing-summary-events>0</strong>
                 <span>Eventos</span>
               </div>
@@ -2383,6 +2387,10 @@
               <div class="mini-stat">
                 <strong data-marketing-health-failed-publications>0</strong>
                 <span>Publicaciones fallidas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-health-active-intakes>0</strong>
+                <span>Fuentes activas</span>
               </div>
               <div class="mini-stat">
                 <strong data-marketing-health-failed-events>0</strong>
@@ -2459,6 +2467,190 @@
                 <div class="eyebrow">Capturas recientes</div>
                 <div class="territory-result-list" data-marketing-attribution-capture-list>
                   <div class="team-seat-empty">Las capturas recientes apareceran aqui.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Fuentes de captura</div>
+            <h3>Prepara endpoints publicos antes de conectar las APIs</h3>
+            <p>
+              Aqui dejas listas las entradas que luego van a recibir leads o aplicaciones desde Meta, TikTok, Google,
+              landings o webhooks propios, pero guardando todo primero en el Coach.
+            </p>
+
+            <div class="marketing-two-column">
+              <form class="coach-form marketing-form-card" data-marketing-intake-create-form>
+                <h4>Nueva fuente</h4>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-intake-create-integration-select>
+                    <option value="">Sin integracion ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Canal
+                  <select name="channelId" data-marketing-intake-create-channel-select>
+                    <option value="">Sin canal ligado</option>
+                  </select>
+                </label>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-intake-create-campaign-select>
+                    <option value="">Sin campana ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre visible
+                  <input type="text" name="label" maxlength="140" placeholder="Ej. Meta lead form reclutamiento" required />
+                </label>
+                <label>
+                  Tipo de captura
+                  <select name="captureType" data-marketing-intake-create-capture-select></select>
+                </label>
+                <label>
+                  Tipo de intake
+                  <select name="intakeType" data-marketing-intake-create-type-select></select>
+                </label>
+                <label>
+                  Estado inicial
+                  <select name="status" data-marketing-intake-create-status-select></select>
+                </label>
+                <label class="marketing-field-full">
+                  Notas
+                  <textarea
+                    name="notes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que fuente externa va a terminar conectando aqui?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-intake-create-save>Guardar fuente</button>
+                </div>
+                <div class="form-result" data-marketing-intake-create-feedback></div>
+              </form>
+
+              <form class="coach-form marketing-form-card" data-marketing-intake-config-form>
+                <h4>Preparar intake</h4>
+                <label>
+                  Fuente
+                  <select name="intakeSourceId" data-marketing-intake-select>
+                    <option value="">Selecciona una fuente</option>
+                  </select>
+                </label>
+                <label>
+                  Endpoint publico
+                  <input type="text" name="endpointPath" readonly data-marketing-intake-endpoint-path placeholder="Se genera al guardar la fuente" />
+                </label>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-intake-integration-select>
+                    <option value="">Sin integracion ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Canal
+                  <select name="channelId" data-marketing-intake-channel-select>
+                    <option value="">Sin canal ligado</option>
+                  </select>
+                </label>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-intake-campaign-select>
+                    <option value="">Sin campana ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre visible
+                  <input type="text" name="label" maxlength="140" placeholder="Ej. Google lead webhook" />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" data-marketing-intake-status-select></select>
+                </label>
+                <label>
+                  Tipo de captura
+                  <select name="captureType" data-marketing-intake-capture-select></select>
+                </label>
+                <label>
+                  Tipo de intake
+                  <select name="intakeType" data-marketing-intake-type-select></select>
+                </label>
+                <label class="marketing-field-full">
+                  Campos esperados
+                  <textarea
+                    name="acceptedFields"
+                    rows="3"
+                    maxlength="520"
+                    placeholder="Ej. full_name, phone_number, email, campaign_name"
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Mapa de campos
+                  <textarea
+                    name="fieldMap"
+                    rows="5"
+                    maxlength="900"
+                    placeholder='fullName: full_name,name&#10;phone: phone_number,mobile&#10;email: email&#10;campaign: campaign_name'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Payload estatico
+                  <textarea
+                    name="staticPayload"
+                    rows="5"
+                    maxlength="900"
+                    placeholder='source: campana_digital&#10;utmMedium: paid_social&#10;positionApplied: Sales Representative'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Payload de prueba
+                  <textarea
+                    name="samplePayload"
+                    rows="6"
+                    maxlength="1800"
+                    placeholder='{"full_name":"Maria Perez","phone_number":"7735551212","email":"maria@example.com","campaign_name":"Meta Jobs Chicago"}'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Notas
+                  <textarea
+                    name="notes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que falta para conectar esta fuente con una API real?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-intake-save>Guardar preparacion</button>
+                  <button type="button" class="nav-button" data-marketing-intake-preview>Probar mapeo</button>
+                </div>
+                <div class="form-result" data-marketing-intake-feedback></div>
+              </form>
+            </div>
+
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Diagnostico del intake</h4>
+                <p class="mini-note" data-marketing-intake-summary-copy>
+                  Selecciona una fuente para ver su endpoint, su ultimo estado y el resultado del mapeo.
+                </p>
+
+                <div class="territory-inline-list marketing-chip-stack" data-marketing-intake-preview-list>
+                  <div class="team-seat-empty">El diagnostico del intake aparecera aqui.</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="eyebrow">Fuentes preparadas</div>
+                <div class="team-seat-list" data-marketing-intake-list>
+                  <div class="team-seat-empty">Todavia no hay fuentes de captura preparadas en esta cuenta.</div>
                 </div>
               </div>
             </div>
