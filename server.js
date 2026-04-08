@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 8;
+const COACH_MARKETING_FOUNDATION_VERSION = 9;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -4625,6 +4625,180 @@ function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
   return query;
 }
 
+function normalizarCoachMarketingViewScope(value = "", userDoc = null) {
+  const accountType = normalizarCoachAccountType(userDoc?.accountType || "owner");
+  const safeValue = cleanText(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (accountType === "seat") {
+    return "mine";
+  }
+
+  return safeValue === "mine" ? "mine" : "team";
+}
+
+async function listarCoachMarketingWorkspaceMembers(userDoc = null, profileDoc = null) {
+  if (!userDoc?._id) {
+    return [];
+  }
+
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc));
+  const currentUserId = normalizarCoachCrmObjectId(userDoc._id);
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const currentProfileDoc =
+    profileDoc?.userId || profileDoc?._id
+      ? profileDoc
+      : await CoachDistributorProfile.findOne({ userId: userDoc._id }).select("teamRole seatLabel").lean();
+  const currentTeamRole = normalizarCoachTeamRole(currentProfileDoc?.teamRole || "", userDoc);
+  const currentLabel =
+    cleanText(currentProfileDoc?.seatLabel || "").slice(0, 80) || userDoc.name || userDoc.email || "Mi cuenta";
+  const members = [
+    {
+      userId: currentUserId,
+      label: currentLabel,
+      name: userDoc.name || "",
+      email: userDoc.email || "",
+      accountType,
+      teamRole: currentTeamRole,
+      seatStatus: normalizarCoachSeatStatus(userDoc.seatStatus || "active"),
+      isCurrentUser: true,
+      isOwner: currentUserId && ownerUserId && String(currentUserId) === String(ownerUserId)
+    }
+  ];
+
+  if (!esCoachTeamManager(userDoc) || !ownerUserId || String(currentUserId) !== String(ownerUserId)) {
+    return members;
+  }
+
+  const seatDocs = await CoachUser.find({
+    teamOwnerUserId: ownerUserId,
+    accountType: "seat"
+  })
+    .select("_id name email accountType seatStatus")
+    .lean();
+  const seatIds = seatDocs.map(doc => doc?._id).filter(Boolean);
+  const seatProfiles = seatIds.length
+    ? await CoachDistributorProfile.find({ userId: { $in: seatIds } }).select("userId teamRole seatLabel").lean()
+    : [];
+  const seatProfileMap = new Map(
+    (Array.isArray(seatProfiles) ? seatProfiles : [])
+      .map(doc => [String(doc?.userId || ""), doc])
+      .filter(entry => entry[0])
+  );
+
+  const seatMembers = (Array.isArray(seatDocs) ? seatDocs : [])
+    .map(seatDoc => {
+      const seatId = String(seatDoc?._id || "");
+      const seatProfile = seatProfileMap.get(seatId) || null;
+      const seatLabel =
+        cleanText(seatProfile?.seatLabel || "").slice(0, 80) || seatDoc?.name || seatDoc?.email || "Subcuenta";
+
+      return {
+        userId: seatId,
+        label: seatLabel,
+        name: seatDoc?.name || "",
+        email: seatDoc?.email || "",
+        accountType: normalizarCoachAccountType(seatDoc?.accountType || "seat"),
+        teamRole: normalizarCoachTeamRole(seatProfile?.teamRole || "", seatDoc),
+        seatStatus: normalizarCoachSeatStatus(seatDoc?.seatStatus || "active"),
+        isCurrentUser: currentUserId && seatId && String(currentUserId) === String(seatId),
+        isOwner: false
+      };
+    })
+    .sort((left, right) => {
+      const leftStatus = left.seatStatus === "active" ? 0 : left.seatStatus === "paused" ? 1 : 2;
+      const rightStatus = right.seatStatus === "active" ? 0 : right.seatStatus === "paused" ? 1 : 2;
+      return leftStatus - rightStatus || left.label.localeCompare(right.label);
+    });
+
+  return members.concat(seatMembers);
+}
+
+async function construirCoachMarketingAccessContext(userDoc = null, options = {}) {
+  if (!userDoc?._id) {
+    return {
+      ownerUserId: "",
+      currentUserId: "",
+      accountType: "owner",
+      teamRole: "distribuidor",
+      viewerMode: "owner",
+      scope: "team",
+      generatedByUserId: "",
+      canUseMarketing: false,
+      canFilterTeam: false,
+      canManageAllTeamData: false,
+      canEditOwnData: false,
+      scopeOptions: [],
+      teamMembers: [],
+      activeSeatCount: 0,
+      totalSeatCount: 0
+    };
+  }
+
+  const safeProfileDoc =
+    options.profileDoc?.userId || options.profileDoc?._id
+      ? options.profileDoc
+      : await CoachDistributorProfile.findOne({ userId: userDoc._id }).select("teamRole seatLabel").lean();
+  const ownerUserId = normalizarCoachCrmObjectId(resolverCoachOwnerUserId(userDoc));
+  const currentUserId = normalizarCoachCrmObjectId(userDoc._id);
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const teamRole = normalizarCoachTeamRole(safeProfileDoc?.teamRole || "", userDoc);
+  const viewerMode = esCoachTeamManager(userDoc) ? "manager" : "seat";
+  const canUseMarketing = resolverCoachPortalMode(userDoc, safeProfileDoc) !== "telemarketing";
+  const teamMembers = await listarCoachMarketingWorkspaceMembers(userDoc, safeProfileDoc);
+  const memberIds = new Set(teamMembers.map(item => String(item?.userId || "")).filter(Boolean));
+  const requestedScope = normalizarCoachMarketingViewScope(options.scope || "", userDoc);
+  let generatedByUserId = "";
+
+  if (accountType === "seat") {
+    generatedByUserId = currentUserId;
+  } else if (requestedScope === "mine") {
+    generatedByUserId = currentUserId;
+  } else {
+    const requestedGeneratedByUserId = normalizarCoachCrmObjectId(options.generatedByUserId || "");
+    generatedByUserId = requestedGeneratedByUserId && memberIds.has(String(requestedGeneratedByUserId))
+      ? String(requestedGeneratedByUserId)
+      : "";
+  }
+
+  const scope = generatedByUserId && String(generatedByUserId) === String(currentUserId) ? "mine" : requestedScope;
+  const scopeOptions =
+    accountType === "seat"
+      ? [{ value: "mine", label: "Solo lo mio" }]
+      : [
+          { value: "team", label: "Todo el equipo" },
+          { value: "mine", label: "Solo lo mio" }
+        ];
+  const seats = teamMembers.filter(item => !item.isOwner);
+
+  return {
+    ownerUserId: ownerUserId || "",
+    currentUserId: currentUserId || "",
+    accountType,
+    teamRole,
+    viewerMode,
+    scope,
+    generatedByUserId: generatedByUserId || "",
+    canUseMarketing,
+    canFilterTeam: viewerMode === "manager",
+    canManageAllTeamData: viewerMode === "manager",
+    canEditOwnData: canUseMarketing,
+    scopeOptions,
+    teamMembers,
+    activeSeatCount: seats.filter(item => item.seatStatus === "active").length,
+    totalSeatCount: seats.length
+  };
+}
+
+function construirCoachMarketingVisibilityQuery(access = null, extra = {}) {
+  return {
+    ...extra,
+    ownerUserId: normalizarCoachCrmObjectId(access?.ownerUserId || ""),
+    ...(access?.generatedByUserId ? { generatedByUserId: normalizarCoachCrmObjectId(access.generatedByUserId) } : {})
+  };
+}
+
 function construirCoachProgramSheetWorkspaceQuery(userDoc = null, extra = {}) {
   return {
     ...extra,
@@ -6592,30 +6766,23 @@ function resolverCoachMarketingListLimit(value = "", fallback = 25, max = 100) {
 
 async function cargarCoachMarketingWorkspaceRefs(
   userDoc = null,
-  { integrationId = "", channelId = "", campaignId = "", creativeId = "", publicationId = "" } = {}
+  { integrationId = "", channelId = "", campaignId = "", creativeId = "", publicationId = "" } = {},
+  access = null
 ) {
   const safeIntegrationId = normalizarCoachCrmObjectId(integrationId);
   const safeChannelId = normalizarCoachCrmObjectId(channelId);
   const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
   const safeCreativeId = normalizarCoachCrmObjectId(creativeId);
   const safePublicationId = normalizarCoachCrmObjectId(publicationId);
+  const buildQuery = extra =>
+    access ? construirCoachMarketingVisibilityQuery(access, extra) : construirCoachWorkspaceQuery(userDoc, extra);
 
   const [integrationDoc, channelDoc, campaignDoc, creativeDoc, publicationDoc] = await Promise.all([
-    safeIntegrationId
-      ? CoachMarketingIntegration.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeIntegrationId })).lean()
-      : Promise.resolve(null),
-    safeChannelId
-      ? CoachMarketingChannel.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeChannelId })).lean()
-      : Promise.resolve(null),
-    safeCampaignId
-      ? CoachMarketingCampaign.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeCampaignId })).lean()
-      : Promise.resolve(null),
-    safeCreativeId
-      ? CoachMarketingCreative.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeCreativeId })).lean()
-      : Promise.resolve(null),
-    safePublicationId
-      ? CoachMarketingPublication.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safePublicationId })).lean()
-      : Promise.resolve(null)
+    safeIntegrationId ? CoachMarketingIntegration.findOne(buildQuery({ _id: safeIntegrationId })).lean() : Promise.resolve(null),
+    safeChannelId ? CoachMarketingChannel.findOne(buildQuery({ _id: safeChannelId })).lean() : Promise.resolve(null),
+    safeCampaignId ? CoachMarketingCampaign.findOne(buildQuery({ _id: safeCampaignId })).lean() : Promise.resolve(null),
+    safeCreativeId ? CoachMarketingCreative.findOne(buildQuery({ _id: safeCreativeId })).lean() : Promise.resolve(null),
+    safePublicationId ? CoachMarketingPublication.findOne(buildQuery({ _id: safePublicationId })).lean() : Promise.resolve(null)
   ]);
 
   return {
@@ -6702,7 +6869,7 @@ function construirCoachMarketingPublicationCapabilityList(publicationDoc = null,
   return Array.from(capabilities.values());
 }
 
-async function obtenerCoachMarketingCampaignSupportStats(userDoc = null, campaignId = "") {
+async function obtenerCoachMarketingCampaignSupportStats(userDoc = null, campaignId = "", access = null) {
   const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
 
   if (!safeCampaignId || !userDoc?._id) {
@@ -6714,13 +6881,15 @@ async function obtenerCoachMarketingCampaignSupportStats(userDoc = null, campaig
     };
   }
 
-  const creativeQuery = construirCoachWorkspaceQuery(userDoc, { campaignId: safeCampaignId });
-  const readyCreativeQuery = construirCoachWorkspaceQuery(userDoc, {
+  const buildQuery = extra =>
+    access ? construirCoachMarketingVisibilityQuery(access, extra) : construirCoachWorkspaceQuery(userDoc, extra);
+  const creativeQuery = buildQuery({ campaignId: safeCampaignId });
+  const readyCreativeQuery = buildQuery({
     campaignId: safeCampaignId,
     status: { $in: ["ready", "approved"] }
   });
-  const publicationQuery = construirCoachWorkspaceQuery(userDoc, { campaignId: safeCampaignId });
-  const readyPublicationQuery = construirCoachWorkspaceQuery(userDoc, {
+  const publicationQuery = buildQuery({ campaignId: safeCampaignId });
+  const readyPublicationQuery = buildQuery({
     campaignId: safeCampaignId,
     status: { $in: ["queued", "scheduled", "published"] }
   });
@@ -7334,8 +7503,12 @@ async function asegurarCoachMarketingWorkspaceBase(userDoc = null) {
   };
 }
 
-async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
-  const query = construirCoachWorkspaceQuery(userDoc);
+async function obtenerCoachMarketingModuleSnapshot(userDoc = null, options = {}) {
+  const access =
+    options.access && typeof options.access === "object"
+      ? options.access
+      : await construirCoachMarketingAccessContext(userDoc, options);
+  const query = construirCoachMarketingVisibilityQuery(access);
   const [integrationsCount, intakeSourcesCount] = await Promise.all([
     CoachMarketingIntegration.countDocuments(query),
     CoachMarketingIntakeSource.countDocuments(query)
@@ -7347,6 +7520,34 @@ async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
     bootstrapped: integrationsCount > 0,
     integrationsCount,
     intakeSourcesCount,
+    permissions: {
+      viewerMode: access.viewerMode || "seat",
+      accountType: access.accountType || "owner",
+      teamRole: access.teamRole || "distribuidor",
+      scope: access.scope || "mine",
+      generatedByUserId: access.generatedByUserId || "",
+      canUseMarketing: Boolean(access.canUseMarketing),
+      canFilterTeam: Boolean(access.canFilterTeam),
+      canManageAllTeamData: Boolean(access.canManageAllTeamData),
+      canEditOwnData: Boolean(access.canEditOwnData)
+    },
+    team: {
+      totalMembers: Number(access.teamMembers?.length || 0),
+      totalSeats: Number(access.totalSeatCount || 0),
+      activeSeats: Number(access.activeSeatCount || 0),
+      members: Array.isArray(access.teamMembers)
+        ? access.teamMembers.map(item => ({
+            userId: item.userId || "",
+            label: item.label || item.name || item.email || "Miembro",
+            accountType: item.accountType || "owner",
+            teamRole: item.teamRole || "",
+            seatStatus: item.seatStatus || "active",
+            isCurrentUser: Boolean(item.isCurrentUser),
+            isOwner: Boolean(item.isOwner)
+          }))
+        : [],
+      scopeOptions: Array.isArray(access.scopeOptions) ? access.scopeOptions : []
+    },
     supportedProviders: COACH_MARKETING_PROVIDER_OPTIONS.map(item => ({
       provider: item.value,
       label: item.label
@@ -7354,8 +7555,12 @@ async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
   };
 }
 
-async function obtenerCoachMarketingAttributionOverview(userDoc = null) {
-  const query = construirCoachWorkspaceQuery(userDoc);
+async function obtenerCoachMarketingAttributionOverview(userDoc = null, options = {}) {
+  const access =
+    options.access && typeof options.access === "object"
+      ? options.access
+      : await construirCoachMarketingAccessContext(userDoc, options);
+  const query = construirCoachMarketingVisibilityQuery(access);
   const [leadTotal, applicationTotal, leadDocs, applicationDocs] = await Promise.all([
     CoachLeadInbox.countDocuments(query),
     CoachRecruitmentApplication.countDocuments(query),
@@ -7527,8 +7732,12 @@ async function obtenerCoachMarketingAttributionOverview(userDoc = null) {
   };
 }
 
-async function obtenerCoachMarketingReportingOverview(userDoc = null) {
-  const query = construirCoachWorkspaceQuery(userDoc);
+async function obtenerCoachMarketingReportingOverview(userDoc = null, options = {}) {
+  const access =
+    options.access && typeof options.access === "object"
+      ? options.access
+      : await construirCoachMarketingAccessContext(userDoc, options);
+  const query = construirCoachMarketingVisibilityQuery(access);
   const [campaignDocs, leadDocs, applicationDocs] = await Promise.all([
     CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).lean(),
     CoachLeadInbox.find(query)
@@ -7792,8 +8001,12 @@ async function obtenerCoachMarketingReportingOverview(userDoc = null) {
   };
 }
 
-async function obtenerCoachMarketingOverview(userDoc = null) {
-  const query = construirCoachWorkspaceQuery(userDoc);
+async function obtenerCoachMarketingOverview(userDoc = null, options = {}) {
+  const access =
+    options.access && typeof options.access === "object"
+      ? options.access
+      : await construirCoachMarketingAccessContext(userDoc, options);
+  const query = construirCoachMarketingVisibilityQuery(access);
 
   const [
     integrationsCount,
@@ -7857,14 +8070,25 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingPublication.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(10).lean(),
-    obtenerCoachMarketingAttributionOverview(userDoc),
-    obtenerCoachMarketingReportingOverview(userDoc)
+    obtenerCoachMarketingAttributionOverview(userDoc, { access }),
+    obtenerCoachMarketingReportingOverview(userDoc, { access })
   ]);
 
   return {
     foundationVersion: COACH_MARKETING_FOUNDATION_VERSION,
     routes: construirCoachMarketingRoutes(),
     bootstrapped: integrationsCount > 0,
+    permissions: {
+      viewerMode: access.viewerMode || "seat",
+      accountType: access.accountType || "owner",
+      teamRole: access.teamRole || "distribuidor",
+      scope: access.scope || "mine",
+      generatedByUserId: access.generatedByUserId || "",
+      canUseMarketing: Boolean(access.canUseMarketing),
+      canFilterTeam: Boolean(access.canFilterTeam),
+      canManageAllTeamData: Boolean(access.canManageAllTeamData),
+      canEditOwnData: Boolean(access.canEditOwnData)
+    },
     counts: {
       integrations: integrationsCount,
       channels: channelsCount,
@@ -7913,6 +8137,23 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
       returnOnAdSpend: 0,
       topCampaigns: [],
       recentCampaigns: []
+    },
+    team: {
+      totalMembers: Number(access.teamMembers?.length || 0),
+      totalSeats: Number(access.totalSeatCount || 0),
+      activeSeats: Number(access.activeSeatCount || 0),
+      members: Array.isArray(access.teamMembers)
+        ? access.teamMembers.map(item => ({
+            userId: item.userId || "",
+            label: item.label || item.name || item.email || "Miembro",
+            accountType: item.accountType || "owner",
+            teamRole: item.teamRole || "",
+            seatStatus: item.seatStatus || "active",
+            isCurrentUser: Boolean(item.isCurrentUser),
+            isOwner: Boolean(item.isOwner)
+          }))
+        : [],
+      scopeOptions: Array.isArray(access.scopeOptions) ? access.scopeOptions : []
     },
     providers: Array.isArray(providerSummary)
       ? providerSummary.map(item => {
@@ -23342,9 +23583,10 @@ app.get("/api/coach/me", async (req, res) => {
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
     const returnUserView = returnAuth?.user ? await construirCoachUserView(returnAuth.user) : null;
 
+    const marketingAccess = await construirCoachMarketingAccessContext(userDoc, { profileDoc });
     const [profilePayload, marketing] = await Promise.all([
       construirCoachProfilePayload(profileDoc, analyticsDoc, userDoc._id),
-      obtenerCoachMarketingModuleSnapshot(userDoc)
+      obtenerCoachMarketingModuleSnapshot(userDoc, { access: marketingAccess, profileDoc })
     ]);
 
     res.json({
@@ -23417,6 +23659,34 @@ app.get("/api/coach/integrations/highlevel", async (req, res) => {
   }
 });
 
+app.use("/api/coach/marketing", async (req, res, next) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
+    const access = await construirCoachMarketingAccessContext(auth.user, {
+      profileDoc,
+      scope: req.query?.scope || "",
+      generatedByUserId: req.query?.generatedByUserId || ""
+    });
+
+    if (!access.canUseMarketing) {
+      return responderCoachError(res, 403, "Esta subcuenta no tiene acceso al modulo de marketing.");
+    }
+
+    req.coachMarketingAccess = access;
+    req.coachMarketingProfile = profileDoc;
+    return next();
+  } catch (error) {
+    console.error("Error validando acceso al modulo de marketing:", error.message);
+    return responderCoachError(res, 500, "No pude validar tu acceso al modulo de marketing.");
+  }
+});
+
 app.get("/api/coach/marketing/catalog", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -23444,7 +23714,7 @@ app.post("/api/coach/marketing/bootstrap", async (req, res) => {
     res.json({
       created: result.created,
       total: result.total,
-      overview: await obtenerCoachMarketingOverview(auth.user)
+      overview: await obtenerCoachMarketingOverview(auth.user, { access: req.coachMarketingAccess })
     });
   } catch (error) {
     console.error("Error preparando base de marketing del Coach:", error.message);
@@ -23460,7 +23730,7 @@ app.get("/api/coach/marketing/overview", async (req, res) => {
   }
 
   try {
-    res.json(await obtenerCoachMarketingOverview(auth.user));
+    res.json(await obtenerCoachMarketingOverview(auth.user, { access: req.coachMarketingAccess }));
   } catch (error) {
     console.error("Error cargando overview de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude cargar el overview de marketing.");
@@ -23475,7 +23745,7 @@ app.get("/api/coach/marketing/integrations", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const providerFilter = String(req.query?.provider || "").trim();
     const statusFilter = String(req.query?.status || "").trim();
     const connectionFilter = String(req.query?.connectionStatus || "").trim();
@@ -23644,7 +23914,7 @@ app.put("/api/coach/marketing/integrations/:integrationId", async (req, res) => 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const integrationDoc = await CoachMarketingIntegration.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: integrationId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: integrationId })
     );
 
     if (!integrationDoc) {
@@ -23831,7 +24101,7 @@ app.post("/api/coach/marketing/integrations/:integrationId/health-check", async 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const integrationDoc = await CoachMarketingIntegration.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: integrationId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: integrationId })
     );
 
     if (!integrationDoc) {
@@ -23923,7 +24193,7 @@ app.get("/api/coach/marketing/channels", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const statusFilter = String(req.query?.status || "").trim();
     const channelTypeFilter = String(req.query?.channelType || "").trim();
     const integrationId = normalizarCoachCrmObjectId(req.query?.integrationId || "");
@@ -23965,9 +24235,13 @@ app.post("/api/coach/marketing/channels", async (req, res) => {
 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: req.body?.integrationId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: req.body?.integrationId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (req.body?.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion de marketing que quieres usar.");
@@ -24042,7 +24316,7 @@ app.get("/api/coach/marketing/campaigns", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const statusFilter = String(req.query?.status || "").trim();
     const objectiveFilter = String(req.query?.objective || "").trim();
     const campaignTypeFilter = String(req.query?.campaignType || "").trim();
@@ -24100,19 +24374,23 @@ app.get("/api/coach/marketing/campaigns/:campaignId/workflow", async (req, res) 
 
   try {
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     ).lean();
 
     if (!campaignDoc) {
       return responderCoachError(res, 404, "No encontre la campana de marketing.");
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId,
-      integrationId: campaignDoc.integrationId || "",
-      channelId: campaignDoc.primaryChannelId || ""
-    });
-    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId,
+        integrationId: campaignDoc.integrationId || "",
+        channelId: campaignDoc.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId, req.coachMarketingAccess);
     const workflow = construirCoachMarketingCampaignWorkflow(campaignDoc, refs, supportStats);
     await registrarCoachMarketingCampaignWorkflowState(campaignId, workflow);
 
@@ -24142,7 +24420,7 @@ app.put("/api/coach/marketing/campaigns/:campaignId", async (req, res) => {
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     );
 
     if (!campaignDoc) {
@@ -24151,11 +24429,15 @@ app.put("/api/coach/marketing/campaigns/:campaignId", async (req, res) => {
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId,
-      integrationId: hasField("integrationId") ? body.integrationId || "" : campaignDoc.integrationId || "",
-      channelId: hasField("primaryChannelId") ? body.primaryChannelId || "" : campaignDoc.primaryChannelId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId,
+        integrationId: hasField("integrationId") ? body.integrationId || "" : campaignDoc.integrationId || "",
+        channelId: hasField("primaryChannelId") ? body.primaryChannelId || "" : campaignDoc.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (hasField("integrationId") && body.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion elegida para esta campana.");
@@ -24299,7 +24581,7 @@ app.put("/api/coach/marketing/campaigns/:campaignId", async (req, res) => {
 
     campaignDoc.updatedAt = new Date();
 
-    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId, req.coachMarketingAccess);
     const workflow = construirCoachMarketingCampaignWorkflow(
       campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
       refs,
@@ -24385,10 +24667,14 @@ app.post("/api/coach/marketing/campaigns", async (req, res) => {
 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: req.body?.integrationId || "",
-      channelId: req.body?.primaryChannelId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: req.body?.integrationId || "",
+        channelId: req.body?.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (req.body?.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion elegida para esa campana.");
@@ -24509,7 +24795,7 @@ app.post("/api/coach/marketing/campaigns/:campaignId/queue", async (req, res) =>
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     );
 
     if (!campaignDoc) {
@@ -24580,12 +24866,16 @@ app.post("/api/coach/marketing/campaigns/:campaignId/queue", async (req, res) =>
       campaignDoc.endAt = normalizarCoachOptionalDate(req.body?.endAt || null);
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId,
-      integrationId: campaignDoc.integrationId || "",
-      channelId: campaignDoc.primaryChannelId || ""
-    });
-    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId,
+        integrationId: campaignDoc.integrationId || "",
+        channelId: campaignDoc.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId, req.coachMarketingAccess);
     const workflowBeforeQueue = construirCoachMarketingCampaignWorkflow(
       campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
       refs,
@@ -24669,7 +24959,7 @@ app.post("/api/coach/marketing/campaigns/:campaignId/mark-live", async (req, res
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     );
 
     if (!campaignDoc) {
@@ -24692,12 +24982,16 @@ app.post("/api/coach/marketing/campaigns/:campaignId/mark-live", async (req, res
       campaignDoc.startAt = normalizarCoachOptionalDate(req.body?.startAt || null);
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId,
-      integrationId: campaignDoc.integrationId || "",
-      channelId: campaignDoc.primaryChannelId || ""
-    });
-    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId,
+        integrationId: campaignDoc.integrationId || "",
+        channelId: campaignDoc.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId, req.coachMarketingAccess);
     const workflowBeforeLaunch = construirCoachMarketingCampaignWorkflow(
       campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
       refs,
@@ -24776,19 +25070,23 @@ app.post("/api/coach/marketing/campaigns/:campaignId/pause", async (req, res) =>
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     );
 
     if (!campaignDoc) {
       return responderCoachError(res, 404, "No encontre la campana de marketing.");
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId,
-      integrationId: campaignDoc.integrationId || "",
-      channelId: campaignDoc.primaryChannelId || ""
-    });
-    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId,
+        integrationId: campaignDoc.integrationId || "",
+        channelId: campaignDoc.primaryChannelId || ""
+      },
+      req.coachMarketingAccess
+    );
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId, req.coachMarketingAccess);
     const now = new Date();
     campaignDoc.status = "paused";
     campaignDoc.pausedAt = normalizarCoachOptionalDate(req.body?.pausedAt || null) || now;
@@ -24853,7 +25151,7 @@ app.post("/api/coach/marketing/campaigns/:campaignId/reporting", async (req, res
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const campaignDoc = await CoachMarketingCampaign.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: campaignId })
     );
 
     if (!campaignDoc) {
@@ -24931,7 +25229,7 @@ app.post("/api/coach/marketing/campaigns/:campaignId/reporting", async (req, res
 
     res.json({
       campaign: cleanedCampaign,
-      overview: await obtenerCoachMarketingOverview(auth.user)
+      overview: await obtenerCoachMarketingOverview(auth.user, { access: req.coachMarketingAccess })
     });
   } catch (error) {
     console.error("Error actualizando resultados de campana del Coach:", error.message);
@@ -24947,7 +25245,7 @@ app.get("/api/coach/marketing/creatives", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const statusFilter = String(req.query?.status || "").trim();
     const creativeTypeFilter = String(req.query?.creativeType || "").trim();
     const campaignId = normalizarCoachCrmObjectId(req.query?.campaignId || "");
@@ -24995,9 +25293,13 @@ app.post("/api/coach/marketing/creatives", async (req, res) => {
 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      campaignId: req.body?.campaignId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        campaignId: req.body?.campaignId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (req.body?.campaignId && !refs.campaignDoc) {
       return responderCoachError(res, 404, "No encontre la campana de ese creativo.");
@@ -25068,7 +25370,7 @@ app.get("/api/coach/marketing/publications", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const statusFilter = String(req.query?.status || "").trim();
     const modeFilter = String(req.query?.mode || "").trim();
     const channelId = normalizarCoachCrmObjectId(req.query?.channelId || "");
@@ -25121,20 +25423,24 @@ app.get("/api/coach/marketing/publications/:publicationId/workflow", async (req,
 
   try {
     const publicationDoc = await CoachMarketingPublication.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: publicationId })
     ).lean();
 
     if (!publicationDoc) {
       return responderCoachError(res, 404, "No encontre la publicacion de marketing.");
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      publicationId,
-      integrationId: publicationDoc.integrationId || "",
-      channelId: publicationDoc.channelId || "",
-      campaignId: publicationDoc.campaignId || "",
-      creativeId: publicationDoc.creativeId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        publicationId,
+        integrationId: publicationDoc.integrationId || "",
+        channelId: publicationDoc.channelId || "",
+        campaignId: publicationDoc.campaignId || "",
+        creativeId: publicationDoc.creativeId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     res.json({
       publication: limpiarCoachMarketingPublication(publicationDoc),
@@ -25155,12 +25461,16 @@ app.post("/api/coach/marketing/publications", async (req, res) => {
 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: req.body?.integrationId || "",
-      channelId: req.body?.channelId || "",
-      campaignId: req.body?.campaignId || "",
-      creativeId: req.body?.creativeId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: req.body?.integrationId || "",
+        channelId: req.body?.channelId || "",
+        campaignId: req.body?.campaignId || "",
+        creativeId: req.body?.creativeId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (req.body?.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion para esa publicacion.");
@@ -25275,7 +25585,7 @@ app.post("/api/coach/marketing/publications/:publicationId/queue", async (req, r
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const publicationDoc = await CoachMarketingPublication.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: publicationId })
     );
 
     if (!publicationDoc) {
@@ -25302,13 +25612,17 @@ app.post("/api/coach/marketing/publications/:publicationId/queue", async (req, r
       publicationDoc.notes = truncarTextoPrompt(cleanText(req.body?.notes || ""), 220);
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      publicationId,
-      integrationId: publicationDoc.integrationId || "",
-      channelId: publicationDoc.channelId || "",
-      campaignId: publicationDoc.campaignId || "",
-      creativeId: publicationDoc.creativeId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        publicationId,
+        integrationId: publicationDoc.integrationId || "",
+        channelId: publicationDoc.channelId || "",
+        campaignId: publicationDoc.campaignId || "",
+        creativeId: publicationDoc.creativeId || ""
+      },
+      req.coachMarketingAccess
+    );
     const workflowBeforeQueue = construirCoachMarketingPublicationWorkflow(
       publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc,
       refs
@@ -25389,20 +25703,24 @@ app.post("/api/coach/marketing/publications/:publicationId/mark-published", asyn
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const publicationDoc = await CoachMarketingPublication.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: publicationId })
     );
 
     if (!publicationDoc) {
       return responderCoachError(res, 404, "No encontre la publicacion de marketing.");
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      publicationId,
-      integrationId: publicationDoc.integrationId || "",
-      channelId: publicationDoc.channelId || "",
-      campaignId: publicationDoc.campaignId || "",
-      creativeId: publicationDoc.creativeId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        publicationId,
+        integrationId: publicationDoc.integrationId || "",
+        channelId: publicationDoc.channelId || "",
+        campaignId: publicationDoc.campaignId || "",
+        creativeId: publicationDoc.creativeId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     publicationDoc.status = "published";
     publicationDoc.reviewStatus = normalizarCoachMarketingReviewStatus(
@@ -25465,7 +25783,7 @@ app.get("/api/coach/marketing/intake-sources", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const statusFilter = String(req.query?.status || "").trim();
     const captureTypeFilter = String(req.query?.captureType || "").trim();
     const intakeTypeFilter = String(req.query?.intakeType || "").trim();
@@ -25522,11 +25840,15 @@ app.post("/api/coach/marketing/intake-sources", async (req, res) => {
 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: req.body?.integrationId || "",
-      channelId: req.body?.channelId || "",
-      campaignId: req.body?.campaignId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: req.body?.integrationId || "",
+        channelId: req.body?.channelId || "",
+        campaignId: req.body?.campaignId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (req.body?.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion para esa fuente de captura.");
@@ -25627,7 +25949,7 @@ app.put("/api/coach/marketing/intake-sources/:intakeSourceId", async (req, res) 
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const intakeSourceDoc = await CoachMarketingIntakeSource.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: intakeSourceId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: intakeSourceId })
     );
 
     if (!intakeSourceDoc) {
@@ -25636,11 +25958,15 @@ app.put("/api/coach/marketing/intake-sources/:intakeSourceId", async (req, res) 
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: hasField("integrationId") ? body.integrationId || "" : intakeSourceDoc.integrationId || "",
-      channelId: hasField("channelId") ? body.channelId || "" : intakeSourceDoc.channelId || "",
-      campaignId: hasField("campaignId") ? body.campaignId || "" : intakeSourceDoc.campaignId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: hasField("integrationId") ? body.integrationId || "" : intakeSourceDoc.integrationId || "",
+        channelId: hasField("channelId") ? body.channelId || "" : intakeSourceDoc.channelId || "",
+        campaignId: hasField("campaignId") ? body.campaignId || "" : intakeSourceDoc.campaignId || ""
+      },
+      req.coachMarketingAccess
+    );
 
     if (hasField("integrationId") && body.integrationId && !refs.integrationDoc) {
       return responderCoachError(res, 404, "No encontre la integracion para esa fuente.");
@@ -25800,18 +26126,22 @@ app.post("/api/coach/marketing/intake-sources/:intakeSourceId/preview", async (r
   try {
     const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
     const intakeSourceDoc = await CoachMarketingIntakeSource.findOne(
-      construirCoachWorkspaceQuery(auth.user, { _id: intakeSourceId })
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: intakeSourceId })
     );
 
     if (!intakeSourceDoc) {
       return responderCoachError(res, 404, "No encontre la fuente de captura.");
     }
 
-    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
-      integrationId: intakeSourceDoc.integrationId || "",
-      channelId: intakeSourceDoc.channelId || "",
-      campaignId: intakeSourceDoc.campaignId || ""
-    });
+    const refs = await cargarCoachMarketingWorkspaceRefs(
+      auth.user,
+      {
+        integrationId: intakeSourceDoc.integrationId || "",
+        channelId: intakeSourceDoc.channelId || "",
+        campaignId: intakeSourceDoc.campaignId || ""
+      },
+      req.coachMarketingAccess
+    );
     const rawPayload =
       req.body?.payload && typeof req.body.payload === "object" && !Array.isArray(req.body.payload)
         ? req.body.payload
@@ -25881,7 +26211,7 @@ app.get("/api/coach/marketing/events", async (req, res) => {
   }
 
   try {
-    const query = construirCoachWorkspaceQuery(auth.user);
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
     const providerFilter = String(req.query?.provider || "").trim();
     const statusFilter = String(req.query?.status || "").trim();
     const eventTypeFilter = cleanText(req.query?.eventType || "").slice(0, 80);

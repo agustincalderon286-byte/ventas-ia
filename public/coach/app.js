@@ -9770,10 +9770,32 @@ function resolveCoachMarketingBadgeState(value = "") {
   return states[String(value || "").trim().toLowerCase()] || "slate";
 }
 
+function formatCoachMarketingViewerMode(value = "") {
+  const labels = {
+    manager: "Manager",
+    leader: "Leader",
+    seat: "Seat",
+    owner: "Owner"
+  };
+
+  return labels[String(value || "").trim().toLowerCase()] || "Seat";
+}
+
+function formatCoachMarketingScopeLabel(value = "") {
+  return String(value || "").trim().toLowerCase() === "mine" ? "Solo lo mio" : "Todo el equipo";
+}
+
 function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const bootstrapButton = document.querySelector("[data-marketing-bootstrap]");
   const refreshButton = document.querySelector("[data-marketing-refresh]");
   const summaryFeedback = document.querySelector("[data-marketing-feedback]");
+  const visibilityForm = document.querySelector("[data-marketing-visibility-form]");
+  const visibilityApplyButton = document.querySelector("[data-marketing-visibility-apply]");
+  const visibilityFeedback = document.querySelector("[data-marketing-visibility-feedback]");
+  const visibilityScopeSelect = document.querySelector("[data-marketing-visibility-scope-select]");
+  const visibilityMemberSelect = document.querySelector("[data-marketing-visibility-member-select]");
+  const visibilityCopy = document.querySelector("[data-marketing-visibility-copy]");
+  const teamChipList = document.querySelector("[data-marketing-team-chip-list]");
   const providerList = document.querySelector("[data-marketing-provider-list]");
   const integrationForm = document.querySelector("[data-marketing-integration-form]");
   const integrationSaveButton = document.querySelector("[data-marketing-integration-save]");
@@ -9852,6 +9874,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   if (
     !bootstrapButton ||
     !refreshButton ||
+    !visibilityForm ||
+    !visibilityScopeSelect ||
+    !visibilityMemberSelect ||
+    !teamChipList ||
     !providerList ||
     !integrationForm ||
     !integrationList ||
@@ -9904,6 +9930,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     publications: document.querySelector("[data-marketing-summary-publications]"),
     intakeSources: document.querySelector("[data-marketing-summary-intakes]"),
     events: document.querySelector("[data-marketing-summary-events]"),
+    permissionMode: document.querySelector("[data-marketing-permission-mode]"),
+    permissionScope: document.querySelector("[data-marketing-permission-scope]"),
+    teamSeats: document.querySelector("[data-marketing-team-seats]"),
+    teamMembers: document.querySelector("[data-marketing-team-members]"),
     connected: document.querySelector("[data-marketing-health-connected]"),
     activeIntakeSources: document.querySelector("[data-marketing-health-active-intakes]"),
     failedPublications: document.querySelector("[data-marketing-health-failed-publications]"),
@@ -9982,7 +10012,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     selectedIntakeSourceId: "",
     campaignWorkflow: null,
     publicationWorkflow: null,
-    intakePreview: null
+    intakePreview: null,
+    filters: {
+      scope: marketingModule?.permissions?.scope || "team",
+      generatedByUserId: marketingModule?.permissions?.generatedByUserId || ""
+    }
   };
 
   const renderEmptyState = (target, message) => {
@@ -10057,6 +10091,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
   const getOverviewSnapshot = () => {
     const baseCounts = state.overview?.counts || {};
+    const basePermissions = state.overview?.permissions || state.module?.permissions || {};
+    const baseTeam = state.overview?.team || state.module?.team || {};
 
     return {
       foundationVersion: state.overview?.foundationVersion || state.module?.foundationVersion || 1,
@@ -10115,8 +10151,51 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         recentCampaigns: Array.isArray(state.overview?.reporting?.recentCampaigns)
           ? state.overview.reporting.recentCampaigns
           : []
+      },
+      permissions: {
+        viewerMode: String(basePermissions.viewerMode || "seat"),
+        accountType: String(basePermissions.accountType || state.module?.permissions?.accountType || "owner"),
+        teamRole: String(basePermissions.teamRole || "distribuidor"),
+        scope: String(basePermissions.scope || state.filters.scope || "team"),
+        generatedByUserId: String(basePermissions.generatedByUserId || state.filters.generatedByUserId || ""),
+        canUseMarketing: basePermissions.canUseMarketing !== false,
+        canFilterTeam: Boolean(basePermissions.canFilterTeam),
+        canManageAllTeamData: Boolean(basePermissions.canManageAllTeamData),
+        canEditOwnData: basePermissions.canEditOwnData !== false
+      },
+      team: {
+        totalMembers: Number(baseTeam.totalMembers || 0),
+        totalSeats: Number(baseTeam.totalSeats || 0),
+        activeSeats: Number(baseTeam.activeSeats || 0),
+        members: Array.isArray(baseTeam.members) ? baseTeam.members : [],
+        scopeOptions: Array.isArray(baseTeam.scopeOptions) ? baseTeam.scopeOptions : []
       }
     };
+  };
+
+  const buildMarketingQueryString = extraParams => {
+    const params = new URLSearchParams();
+    const effectiveScope = String(state.filters.scope || "").trim() || "team";
+    const effectiveMember = String(state.filters.generatedByUserId || "").trim();
+
+    if (effectiveScope) {
+      params.set("scope", effectiveScope);
+    }
+
+    if (effectiveMember) {
+      params.set("generatedByUserId", effectiveMember);
+    }
+
+    Object.entries(extraParams || {}).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === "") {
+        return;
+      }
+
+      params.set(key, String(value));
+    });
+
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
   };
 
   const buildSelectOptions = ({
@@ -10266,6 +10345,16 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     return item?.name || "Sin creativo";
   };
 
+  const getMarketingActorLabel = item => {
+    if (!item || typeof item !== "object") {
+      return "Sin responsable";
+    }
+
+    const baseLabel = String(item.generatedByName || item.ownerName || "").trim();
+    const roleLabel = item.generatedByAccountType ? formatCoachMarketingViewerMode(item.generatedByAccountType) : "";
+    return [baseLabel || "Sin responsable", roleLabel].filter(Boolean).join(" · ");
+  };
+
   const renderOverview = () => {
     const overview = getOverviewSnapshot();
 
@@ -10294,6 +10383,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     setSummaryValue(summaryNodes.reportingSales, overview.reporting.effectiveWonSales);
     setSummaryValue(summaryNodes.reportingRevenue, formatMoney(overview.reporting.effectiveRevenueAmount || 0));
     setSummaryValue(summaryNodes.reportingRoas, `${Number(overview.reporting.returnOnAdSpend || 0).toFixed(2)}x`);
+    setSummaryValue(summaryNodes.permissionMode, formatCoachMarketingViewerMode(overview.permissions.viewerMode));
+    setSummaryValue(summaryNodes.permissionScope, formatCoachMarketingScopeLabel(overview.permissions.scope));
+    setSummaryValue(summaryNodes.teamSeats, overview.team.activeSeats);
+    setSummaryValue(summaryNodes.teamMembers, overview.team.totalMembers);
 
     bootstrapButton.textContent = overview.bootstrapped ? "Verificar base" : "Preparar base";
 
@@ -10302,6 +10395,104 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         ? "Tu base ya tiene estructura interna. Desde aqui puedes seguir agregando integraciones, canales, campanas, creativos y publicaciones antes de enchufar APIs reales."
         : "Cuando prepares la base, Coach te crea los borradores iniciales para Meta, Google, TikTok, Instagram y Facebook sin pedirte credenciales todavia.";
     }
+  };
+
+  const renderVisibilityPanel = () => {
+    const overview = getOverviewSnapshot();
+    const teamMembers = Array.isArray(overview.team.members) ? overview.team.members : [];
+    const scopeOptions = Array.isArray(overview.team.scopeOptions) ? overview.team.scopeOptions : [];
+    const scopeFromServer = overview.permissions.scope || "team";
+    const serverMemberId = String(overview.permissions.generatedByUserId || "").trim();
+
+    buildSelectOptions({
+      target: visibilityScopeSelect,
+      items: scopeOptions,
+      placeholder: "Vista",
+      placeholderValue: "",
+      valueKey: "value",
+      labelBuilder: item => item?.label || item?.value || "Vista"
+    });
+
+    buildSelectOptions({
+      target: visibilityMemberSelect,
+      items: teamMembers,
+      placeholder: overview.permissions.canFilterTeam ? "Todo el equipo" : "Mi espacio",
+      labelBuilder: item => item?.label || item?.name || item?.email || "Miembro"
+    });
+
+    state.filters.scope = overview.permissions.canFilterTeam ? state.filters.scope || scopeFromServer : "mine";
+
+    if (serverMemberId) {
+      state.filters.generatedByUserId = serverMemberId;
+    }
+
+    if (
+      state.filters.generatedByUserId &&
+      !teamMembers.some(item => String(item?.userId || "") === String(state.filters.generatedByUserId || ""))
+    ) {
+      state.filters.generatedByUserId = "";
+    }
+
+    visibilityScopeSelect.value = state.filters.scope || scopeFromServer;
+
+    if (!overview.permissions.canFilterTeam) {
+      state.filters.scope = "mine";
+      state.filters.generatedByUserId = "";
+    } else if (state.filters.scope === "mine") {
+      state.filters.generatedByUserId = "";
+    }
+
+    if (visibilityMemberSelect) {
+      visibilityMemberSelect.disabled = !overview.permissions.canFilterTeam || state.filters.scope === "mine";
+      visibilityMemberSelect.value = state.filters.generatedByUserId || "";
+    }
+
+    if (visibilityScopeSelect) {
+      visibilityScopeSelect.disabled = !overview.permissions.canFilterTeam;
+    }
+
+    if (visibilityApplyButton) {
+      visibilityApplyButton.disabled = !overview.permissions.canUseMarketing;
+    }
+
+    if (visibilityCopy) {
+      const memberLabel =
+        teamMembers.find(item => String(item?.userId || "") === String(state.filters.generatedByUserId || ""))?.label || "";
+      visibilityCopy.textContent = [
+        `${formatCoachMarketingViewerMode(overview.permissions.viewerMode)} · ${formatTeamSeatRoleLabel(
+          overview.permissions.teamRole || ""
+        )}`,
+        formatCoachMarketingScopeLabel(state.filters.scope || overview.permissions.scope || "team"),
+        memberLabel ? `Filtrado por ${memberLabel}` : "",
+        overview.permissions.canManageAllTeamData ? "Puedes ver y operar el equipo completo." : "Solo operas tu propio espacio."
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+
+    if (!teamMembers.length) {
+      renderEmptyState(teamChipList, "Los miembros visibles apareceran aqui.");
+      return;
+    }
+
+    teamChipList.innerHTML = teamMembers
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || item.name || "Miembro")}</strong>
+            <span>${escapeHtml(
+              [
+                item.isOwner ? "Owner" : formatCoachMarketingViewerMode(item.accountType || "seat"),
+                formatTeamSeatRoleLabel(item.teamRole || ""),
+                item.isCurrentUser ? "Tu sesion" : ""
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            )}</span>
+          </div>
+        `
+      )
+      .join("");
   };
 
   const renderProviderList = () => {
@@ -10576,6 +10767,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
             <div class="team-seat-metrics">
               <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
               <span>Canal: <strong>${escapeHtml(getChannelLabel(item.channelId))}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Endpoint: <strong>${escapeHtml(item.endpointPath || "Pendiente")}</strong></span>
               <span>Ultimo estado: <strong>${escapeHtml(item.lastCaptureStatusLabel || "Sin captura")}</strong></span>
             </div>
@@ -10924,6 +11116,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
               <span>Estado: <strong>${escapeHtml(item.statusLabel || "Borrador")}</strong></span>
               <span>Auth: <strong>${escapeHtml(item.authModeLabel || "Manual")}</strong></span>
               <span>Cuenta: <strong>${escapeHtml(item.accountTypeLabel || "Custom")}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Capacidades: <strong>${Number(item.capabilities?.length || 0)}</strong></span>
               <span>Scopes: <strong>${escapeHtml(
                 `${Number(item.grantedScopeTotal || 0)}/${Number(item.expectedScopeTotal || 0)}`
@@ -10980,6 +11173,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
             <div class="team-seat-metrics">
               <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Publicar: <strong>${item.defaultForPublishing ? "Si" : "No"}</strong></span>
               <span>Captura: <strong>${item.defaultForLeadCapture ? "Si" : "No"}</strong></span>
             </div>
@@ -11018,6 +11212,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
             <div class="team-seat-metrics">
               <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
               <span>Canal: <strong>${escapeHtml(getChannelLabel(item.primaryChannelId))}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Budget: <strong>${escapeHtml(formatMoney(item.budgetAmount || 0))}</strong></span>
               <span>Revision: <strong>${escapeHtml(item.reviewStatusLabel || "Borrador")}</strong></span>
               <span>Checklist: <strong>${escapeHtml(`${Number(item.lastWorkflowScore || 0)}%`)}</strong></span>
@@ -11412,6 +11607,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
             <div class="team-seat-metrics">
               <span>Headline: <strong>${escapeHtml(item.headline || "Sin headline")}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Media slots: <strong>${Number(item.mediaSlots?.length || 0)}</strong></span>
             </div>
 
@@ -11450,6 +11646,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
             <div class="team-seat-metrics">
               <span>Creativo: <strong>${escapeHtml(getCreativeLabel(item.creativeId))}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Revision: <strong>${escapeHtml(item.reviewStatusLabel || "Borrador")}</strong></span>
               <span>Programada: <strong>${escapeHtml(formatDateTimeShort(item.scheduledAt))}</strong></span>
             </div>
@@ -11649,7 +11846,12 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
           <article class="territory-result-card">
             <strong>${escapeHtml(item.summary || item.eventType || "Evento de marketing")}</strong>
             <span>${escapeHtml(
-              [item.providerLabel || "Sistema", item.statusLabel || "Sin estado", formatDateTimeShort(item.occurredAt)]
+              [
+                item.providerLabel || "Sistema",
+                item.statusLabel || "Sin estado",
+                getMarketingActorLabel(item),
+                formatDateTimeShort(item.occurredAt)
+              ]
                 .filter(Boolean)
                 .join(" · ")
             )}</span>
@@ -11666,6 +11868,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
   const renderAll = () => {
     renderOverview();
+    renderVisibilityPanel();
     renderProviderList();
     renderAttributionSources();
     renderAttributionCampaigns();
@@ -11690,6 +11893,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   };
 
   const loadWorkspace = async () => {
+    const query = buildMarketingQueryString();
     const [
       catalog,
       overviewData,
@@ -11703,18 +11907,20 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     ] =
       await Promise.all([
         apiRequest("/api/coach/marketing/catalog"),
-        apiRequest("/api/coach/marketing/overview"),
-        apiRequest("/api/coach/marketing/integrations?limit=24"),
-        apiRequest("/api/coach/marketing/channels?limit=24"),
-        apiRequest("/api/coach/marketing/campaigns?limit=24"),
-        apiRequest("/api/coach/marketing/creatives?limit=24"),
-        apiRequest("/api/coach/marketing/publications?limit=24"),
-        apiRequest("/api/coach/marketing/intake-sources?limit=24"),
-        apiRequest("/api/coach/marketing/events?limit=16")
+        apiRequest(`/api/coach/marketing/overview${query}`),
+        apiRequest(`/api/coach/marketing/integrations${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/channels${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/campaigns${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/creatives${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/publications${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/intake-sources${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/events${buildMarketingQueryString({ limit: 16 })}`)
       ]);
 
     state.catalog = catalog || null;
     state.overview = overviewData || null;
+    state.filters.scope = state.overview?.permissions?.scope || state.filters.scope || "team";
+    state.filters.generatedByUserId = state.overview?.permissions?.generatedByUserId || "";
     state.integrations = Array.isArray(integrationsData?.items) ? integrationsData.items : [];
     state.channels = Array.isArray(channelsData?.items) ? channelsData.items : [];
     state.campaigns = Array.isArray(campaignsData?.items) ? campaignsData.items : [];
@@ -11754,6 +11960,39 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     if (blueprint && labelInput && !String(labelInput.value || "").trim()) {
       labelInput.value = blueprint.label || blueprint.productLabel || "";
+    }
+  });
+
+  visibilityScopeSelect?.addEventListener("change", () => {
+    clearMessage(visibilityFeedback);
+    state.filters.scope = String(visibilityScopeSelect.value || "").trim() || "team";
+
+    if (state.filters.scope === "mine") {
+      state.filters.generatedByUserId = "";
+    }
+
+    renderVisibilityPanel();
+  });
+
+  visibilityForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(visibilityFeedback);
+    setButtonLoading(visibilityApplyButton, true, "Aplicando...");
+
+    try {
+      const formData = new FormData(visibilityForm);
+      const nextScope = String(formData.get("scope") || state.filters.scope || "team").trim() || "team";
+      const nextMember =
+        nextScope === "mine" ? "" : String(formData.get("generatedByUserId") || "").trim();
+
+      state.filters.scope = nextScope;
+      state.filters.generatedByUserId = nextMember;
+      await loadWorkspace();
+      setMessage(visibilityFeedback, "Vista multiusuario actualizada.", "success");
+    } catch (error) {
+      setMessage(visibilityFeedback, error.message || "No pude actualizar la visibilidad.", "error");
+    } finally {
+      setButtonLoading(visibilityApplyButton, false);
     }
   });
 

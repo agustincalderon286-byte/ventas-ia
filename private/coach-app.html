@@ -2398,6 +2398,57 @@
               </div>
             </div>
 
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Permisos y visibilidad</h4>
+
+                <div class="marketing-diagnostic-grid">
+                  <div class="mini-stat">
+                    <strong data-marketing-permission-mode>Seat</strong>
+                    <span>Modo</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-permission-scope>Solo lo mio</strong>
+                    <span>Vista</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-team-seats>0</strong>
+                    <span>Seats activas</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-team-members>0</strong>
+                    <span>Miembros visibles</span>
+                  </div>
+                </div>
+
+                <p class="mini-note" data-marketing-visibility-copy>
+                  Aqui veras quien puede operar este workspace y si estas viendo tu espacio o todo el equipo.
+                </p>
+
+                <div class="territory-inline-list" data-marketing-team-chip-list>
+                  <div class="team-seat-empty">Los miembros visibles apareceran aqui.</div>
+                </div>
+              </div>
+
+              <form class="coach-form marketing-form-card" data-marketing-visibility-form>
+                <h4>Filtrar workspace</h4>
+                <label>
+                  Vista
+                  <select name="scope" data-marketing-visibility-scope-select></select>
+                </label>
+                <label>
+                  Miembro
+                  <select name="generatedByUserId" data-marketing-visibility-member-select>
+                    <option value="">Todo el equipo</option>
+                  </select>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-visibility-apply>Aplicar vista</button>
+                </div>
+                <div class="form-result" data-marketing-visibility-feedback></div>
+              </form>
+            </div>
+
             <div class="dashboard-actions compact-top">
               <button type="button" class="primary-button" data-marketing-bootstrap>Preparar base</button>
               <button type="button" class="nav-button" data-marketing-refresh>Actualizar</button>
