@@ -93,6 +93,14 @@
               <button
                 type="button"
                 class="coach-workspace-tab"
+                data-coach-workspace-tab="marketing"
+                aria-selected="false"
+              >
+                Marketing
+              </button>
+              <button
+                type="button"
+                class="coach-workspace-tab"
                 data-coach-workspace-tab="crm"
                 aria-selected="false"
               >
@@ -2325,6 +2333,409 @@
             <p class="mini-note">
               Tu cliente crea el workflow en su HighLevel. Tu sistema solo recibe las ventas cerradas para atribuirlas.
             </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Base operativa</div>
+            <h3>Centro de marketing del Coach</h3>
+            <p>
+              Aqui preparas la estructura para publicar, correr campanas y recibir leads desde el Coach, aunque todavia
+              no conectemos Meta, TikTok o Google.
+            </p>
+
+            <div class="insight-grid marketing-summary-grid">
+              <div class="mini-stat">
+                <strong data-marketing-summary-integrations>0</strong>
+                <span>Integraciones</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-summary-channels>0</strong>
+                <span>Canales</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-summary-campaigns>0</strong>
+                <span>Campanas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-summary-creatives>0</strong>
+                <span>Creativos</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-summary-publications>0</strong>
+                <span>Publicaciones</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-summary-events>0</strong>
+                <span>Eventos</span>
+              </div>
+            </div>
+
+            <div class="insight-grid marketing-summary-grid marketing-summary-grid-secondary">
+              <div class="mini-stat">
+                <strong data-marketing-health-connected>0</strong>
+                <span>Conectadas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-health-failed-publications>0</strong>
+                <span>Publicaciones fallidas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-health-failed-events>0</strong>
+                <span>Eventos fallidos</span>
+              </div>
+            </div>
+
+            <div class="dashboard-actions compact-top">
+              <button type="button" class="primary-button" data-marketing-bootstrap>Preparar base</button>
+              <button type="button" class="nav-button" data-marketing-refresh>Actualizar</button>
+            </div>
+
+            <div class="form-result" data-marketing-feedback></div>
+
+            <p class="mini-note" data-marketing-overview-copy>
+              Cuando prepares la base, Coach te crea los borradores iniciales para Meta, Google, TikTok, Instagram y
+              Facebook sin pedirte credenciales todavia.
+            </p>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Integraciones y canales</div>
+            <h3>Conectores preparados por usuario</h3>
+            <p>
+              Cada usuario del Coach podra tener sus propias cuentas, paginas, pixels, propiedades o webhooks sin
+              mezclarlas con otras cuentas del sistema.
+            </p>
+
+            <div class="marketing-two-column">
+              <form class="coach-form marketing-form-card" data-marketing-integration-form>
+                <h4>Nueva integracion</h4>
+                <label>
+                  Plantilla base
+                  <select name="templateKey" data-marketing-template-select>
+                    <option value="">Selecciona una plantilla</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre visible
+                  <input type="text" name="label" maxlength="120" placeholder="Ej. Meta Ads principal" />
+                </label>
+                <label>
+                  Estado inicial
+                  <select name="status" data-marketing-integration-status-select>
+                    <option value="draft">Borrador</option>
+                    <option value="ready">Lista</option>
+                    <option value="active">Activa</option>
+                    <option value="paused">Pausada</option>
+                  </select>
+                </label>
+                <label>
+                  Notas
+                  <textarea
+                    name="notes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que va a manejar esta integracion dentro del Coach?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-integration-save>Guardar integracion</button>
+                </div>
+                <div class="form-result" data-marketing-integration-feedback></div>
+              </form>
+
+              <form class="coach-form marketing-form-card" data-marketing-channel-form>
+                <h4>Nuevo canal</h4>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-channel-integration-select>
+                    <option value="">Sin integracion ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Tipo de canal
+                  <select name="channelType" data-marketing-channel-type-select>
+                    <option value="page">Page</option>
+                    <option value="profile">Profile</option>
+                    <option value="channel">Channel</option>
+                    <option value="ad_account">Ad account</option>
+                    <option value="landing_page">Landing page</option>
+                    <option value="website">Website</option>
+                    <option value="lead_form">Lead form</option>
+                    <option value="webhook">Webhook</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre del canal
+                  <input type="text" name="label" maxlength="120" placeholder="Ej. Instagram Agustin" required />
+                </label>
+                <label>
+                  Handle / referencia
+                  <input type="text" name="handle" maxlength="120" placeholder="@agustincoach o account-123" />
+                </label>
+                <label>
+                  Landing o URL
+                  <input type="url" name="landingPageUrl" maxlength="240" placeholder="https://..." />
+                </label>
+                <label class="marketing-checkbox">
+                  <input type="checkbox" name="defaultForPublishing" />
+                  <span>Usarlo por defecto para publicar</span>
+                </label>
+                <label class="marketing-checkbox">
+                  <input type="checkbox" name="defaultForLeadCapture" />
+                  <span>Usarlo por defecto para recibir leads</span>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-channel-save>Guardar canal</button>
+                </div>
+                <div class="form-result" data-marketing-channel-feedback></div>
+              </form>
+            </div>
+
+            <div class="marketing-three-column">
+              <div>
+                <div class="eyebrow">Integraciones</div>
+                <div class="team-seat-list" data-marketing-integration-list>
+                  <div class="team-seat-empty">Todavia no hay integraciones preparadas en esta cuenta.</div>
+                </div>
+              </div>
+              <div>
+                <div class="eyebrow">Canales</div>
+                <div class="team-seat-list" data-marketing-channel-list>
+                  <div class="team-seat-empty">Todavia no hay canales creados en esta cuenta.</div>
+                </div>
+              </div>
+              <div>
+                <div class="eyebrow">Proveedores soportados</div>
+                <div class="territory-inline-list" data-marketing-provider-list>
+                  <div class="team-seat-empty">El catalogo de proveedores aparecera aqui.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Campanas</div>
+            <h3>Define la estructura antes de conectar APIs</h3>
+            <p>
+              Desde aqui dejas listo objetivo, presupuesto, landing, canal y notas para que despues solo se enchufe la
+              plataforma real.
+            </p>
+
+            <form class="coach-form" data-marketing-campaign-form>
+              <div class="marketing-two-column">
+                <label>
+                  Nombre de campana
+                  <input type="text" name="name" maxlength="140" placeholder="Ej. Reclutamiento Chicago abril" required />
+                </label>
+                <label>
+                  Objetivo
+                  <select name="objective" data-marketing-objective-select>
+                    <option value="leads">Leads</option>
+                    <option value="sales">Ventas</option>
+                    <option value="recruitment">Reclutamiento</option>
+                    <option value="traffic">Trafico</option>
+                    <option value="engagement">Interaccion</option>
+                  </select>
+                </label>
+                <label>
+                  Tipo
+                  <select name="campaignType" data-marketing-campaign-type-select>
+                    <option value="paid">Pagada</option>
+                    <option value="organic">Organica</option>
+                    <option value="hybrid">Hibrida</option>
+                    <option value="automation">Automatizacion</option>
+                  </select>
+                </label>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-campaign-integration-select>
+                    <option value="">Sin integracion ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Canal principal
+                  <select name="primaryChannelId" data-marketing-campaign-channel-select>
+                    <option value="">Sin canal principal</option>
+                  </select>
+                </label>
+                <label>
+                  Presupuesto diario
+                  <input type="number" name="budgetAmount" min="0" step="0.01" placeholder="20.00" />
+                </label>
+                <label>
+                  Landing page
+                  <input type="url" name="landingPageUrl" maxlength="240" placeholder="https://..." />
+                </label>
+                <label>
+                  Meta principal
+                  <input type="text" name="primaryGoal" maxlength="120" placeholder="Ej. Solicitudes guardadas" />
+                </label>
+                <label class="marketing-field-full">
+                  Audiencia resumida
+                  <textarea name="audienceSummary" rows="3" maxlength="220" placeholder="Quien debe ver esta campana?"></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Notas
+                  <textarea name="notes" rows="3" maxlength="220" placeholder="Hipotesis, oferta o pendientes de assets"></textarea>
+                </label>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-marketing-campaign-save>Guardar campana</button>
+              </div>
+              <div class="form-result" data-marketing-campaign-feedback></div>
+            </form>
+
+            <div class="team-seat-list" data-marketing-campaign-list>
+              <div class="team-seat-empty">Todavia no hay campanas preparadas en esta cuenta.</div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Creativos y publicaciones</div>
+            <h3>Deja armado el contenido para publicar o anunciar</h3>
+            <p>
+              Esta es la base para que luego el Coach publique, programe o mande assets a cada plataforma desde una sola
+              vista.
+            </p>
+
+            <div class="marketing-two-column">
+              <form class="coach-form marketing-form-card" data-marketing-creative-form>
+                <h4>Nuevo creativo</h4>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-creative-campaign-select>
+                    <option value="">Sin campana ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre
+                  <input type="text" name="name" maxlength="140" placeholder="Ej. Reel reclutamiento 1" required />
+                </label>
+                <label>
+                  Tipo de creativo
+                  <select name="creativeType" data-marketing-creative-type-select>
+                    <option value="image">Imagen</option>
+                    <option value="video">Video</option>
+                    <option value="carousel">Carrusel</option>
+                    <option value="story">Story</option>
+                    <option value="reel">Reel</option>
+                    <option value="text">Texto</option>
+                    <option value="mixed">Mixto</option>
+                  </select>
+                </label>
+                <label>
+                  Headline
+                  <input type="text" name="headline" maxlength="160" placeholder="Mensaje principal" />
+                </label>
+                <label>
+                  URL destino
+                  <input type="url" name="destinationUrl" maxlength="240" placeholder="https://..." />
+                </label>
+                <label class="marketing-field-full">
+                  Copy principal
+                  <textarea name="primaryText" rows="4" maxlength="320" placeholder="Texto del anuncio o publicacion"></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-creative-save>Guardar creativo</button>
+                </div>
+                <div class="form-result" data-marketing-creative-feedback></div>
+              </form>
+
+              <form class="coach-form marketing-form-card" data-marketing-publication-form>
+                <h4>Nueva publicacion</h4>
+                <label>
+                  Canal
+                  <select name="channelId" data-marketing-publication-channel-select>
+                    <option value="">Sin canal ligado</option>
+                  </select>
+                </label>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-publication-campaign-select>
+                    <option value="">Sin campana ligada</option>
+                  </select>
+                </label>
+                <label>
+                  Creativo
+                  <select name="creativeId" data-marketing-publication-creative-select>
+                    <option value="">Sin creativo ligado</option>
+                  </select>
+                </label>
+                <label>
+                  Modo
+                  <select name="mode" data-marketing-publication-mode-select>
+                    <option value="organic">Organica</option>
+                    <option value="paid">Pagada</option>
+                    <option value="hybrid">Hibrida</option>
+                  </select>
+                </label>
+                <label>
+                  Etiqueta
+                  <input type="text" name="label" maxlength="140" placeholder="Ej. Programacion reel abril" required />
+                </label>
+                <label>
+                  URL destino
+                  <input type="url" name="destinationUrl" maxlength="240" placeholder="https://..." />
+                </label>
+                <label class="marketing-field-full">
+                  Caption
+                  <textarea name="caption" rows="4" maxlength="320" placeholder="Copy final de la publicacion"></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-publication-save>Guardar publicacion</button>
+                </div>
+                <div class="form-result" data-marketing-publication-feedback></div>
+              </form>
+            </div>
+
+            <div class="marketing-two-column marketing-two-column-lists">
+              <div>
+                <div class="eyebrow">Creativos</div>
+                <div class="team-seat-list" data-marketing-creative-list>
+                  <div class="team-seat-empty">Todavia no hay creativos preparados en esta cuenta.</div>
+                </div>
+              </div>
+              <div>
+                <div class="eyebrow">Publicaciones</div>
+                <div class="team-seat-list" data-marketing-publication-list>
+                  <div class="team-seat-empty">Todavia no hay publicaciones preparadas en esta cuenta.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Event log</div>
+            <h3>Todo lo que el sistema vaya preparando</h3>
+            <p>
+              Aqui quedara el inbox interno de eventos para integraciones, sincronizaciones, leads, publicaciones y
+              resultados futuros.
+            </p>
+
+            <div class="territory-result-list" data-marketing-event-list>
+              <div class="team-seat-empty">Todavia no hay eventos registrados en el modulo de marketing.</div>
+            </div>
           </article>
 
           <article

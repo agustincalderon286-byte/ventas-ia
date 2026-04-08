@@ -666,6 +666,10 @@ function initCoachWorkspaceTabs() {
             label: "Cambio a modo prospeccion",
             detail: "Entraste al lado de captar leads y trabajar calle."
           },
+          marketing: {
+            label: "Cambio a modo marketing",
+            detail: "Entraste al centro para preparar integraciones, campanas, publicaciones y leads futuros."
+          },
           agenda: {
             label: "Cambio a modo agenda",
             detail: "Entraste a la vista rapida de citas y resultados del representante."
@@ -9737,6 +9741,787 @@ function renderActiveLeadContext(context) {
   });
 }
 
+function resolveCoachMarketingBadgeState(value = "") {
+  const states = {
+    active: "green",
+    connected: "green",
+    published: "green",
+    approved: "green",
+    processed: "green",
+    ok: "green",
+    ready: "blue",
+    scheduled: "blue",
+    internal_review: "blue",
+    queued: "sky",
+    pending: "amber",
+    paused: "amber",
+    needs_assets: "amber",
+    attention: "amber",
+    draft: "slate",
+    archived: "slate",
+    not_connected: "slate",
+    ignored: "slate",
+    blocked: "rose",
+    failed: "rose",
+    error: "rose"
+  };
+
+  return states[String(value || "").trim().toLowerCase()] || "slate";
+}
+
+function initCoachMarketingWorkspace(user = null, marketingModule = null) {
+  const bootstrapButton = document.querySelector("[data-marketing-bootstrap]");
+  const refreshButton = document.querySelector("[data-marketing-refresh]");
+  const summaryFeedback = document.querySelector("[data-marketing-feedback]");
+  const providerList = document.querySelector("[data-marketing-provider-list]");
+  const integrationForm = document.querySelector("[data-marketing-integration-form]");
+  const integrationSaveButton = document.querySelector("[data-marketing-integration-save]");
+  const integrationFeedback = document.querySelector("[data-marketing-integration-feedback]");
+  const integrationList = document.querySelector("[data-marketing-integration-list]");
+  const channelForm = document.querySelector("[data-marketing-channel-form]");
+  const channelSaveButton = document.querySelector("[data-marketing-channel-save]");
+  const channelFeedback = document.querySelector("[data-marketing-channel-feedback]");
+  const channelList = document.querySelector("[data-marketing-channel-list]");
+  const campaignForm = document.querySelector("[data-marketing-campaign-form]");
+  const campaignSaveButton = document.querySelector("[data-marketing-campaign-save]");
+  const campaignFeedback = document.querySelector("[data-marketing-campaign-feedback]");
+  const campaignList = document.querySelector("[data-marketing-campaign-list]");
+  const creativeForm = document.querySelector("[data-marketing-creative-form]");
+  const creativeSaveButton = document.querySelector("[data-marketing-creative-save]");
+  const creativeFeedback = document.querySelector("[data-marketing-creative-feedback]");
+  const creativeList = document.querySelector("[data-marketing-creative-list]");
+  const publicationForm = document.querySelector("[data-marketing-publication-form]");
+  const publicationSaveButton = document.querySelector("[data-marketing-publication-save]");
+  const publicationFeedback = document.querySelector("[data-marketing-publication-feedback]");
+  const publicationList = document.querySelector("[data-marketing-publication-list]");
+  const eventList = document.querySelector("[data-marketing-event-list]");
+  const overviewCopy = document.querySelector("[data-marketing-overview-copy]");
+
+  if (
+    !bootstrapButton ||
+    !refreshButton ||
+    !providerList ||
+    !integrationForm ||
+    !integrationList ||
+    !channelForm ||
+    !channelList ||
+    !campaignForm ||
+    !campaignList ||
+    !creativeForm ||
+    !creativeList ||
+    !publicationForm ||
+    !publicationList ||
+    !eventList
+  ) {
+    return;
+  }
+
+  if (getCoachPortalMode(user) === "telemarketing") {
+    return;
+  }
+
+  const summaryNodes = {
+    integrations: document.querySelector("[data-marketing-summary-integrations]"),
+    channels: document.querySelector("[data-marketing-summary-channels]"),
+    campaigns: document.querySelector("[data-marketing-summary-campaigns]"),
+    creatives: document.querySelector("[data-marketing-summary-creatives]"),
+    publications: document.querySelector("[data-marketing-summary-publications]"),
+    events: document.querySelector("[data-marketing-summary-events]"),
+    connected: document.querySelector("[data-marketing-health-connected]"),
+    failedPublications: document.querySelector("[data-marketing-health-failed-publications]"),
+    failedEvents: document.querySelector("[data-marketing-health-failed-events]")
+  };
+
+  const templateSelect = integrationForm.querySelector("[data-marketing-template-select]");
+  const channelIntegrationSelect = channelForm.querySelector("[data-marketing-channel-integration-select]");
+  const campaignIntegrationSelect = campaignForm.querySelector("[data-marketing-campaign-integration-select]");
+  const campaignChannelSelect = campaignForm.querySelector("[data-marketing-campaign-channel-select]");
+  const creativeCampaignSelect = creativeForm.querySelector("[data-marketing-creative-campaign-select]");
+  const publicationChannelSelect = publicationForm.querySelector("[data-marketing-publication-channel-select]");
+  const publicationCampaignSelect = publicationForm.querySelector("[data-marketing-publication-campaign-select]");
+  const publicationCreativeSelect = publicationForm.querySelector("[data-marketing-publication-creative-select]");
+
+  const state = {
+    module: marketingModule || {},
+    catalog: null,
+    overview: null,
+    integrations: [],
+    channels: [],
+    campaigns: [],
+    creatives: [],
+    publications: [],
+    events: []
+  };
+
+  const renderEmptyState = (target, message) => {
+    if (!target) {
+      return;
+    }
+
+    target.innerHTML = `<div class="team-seat-empty">${escapeHtml(message)}</div>`;
+  };
+
+  const setSummaryValue = (node, value) => {
+    if (node) {
+      node.textContent = String(value || 0);
+    }
+  };
+
+  const getOverviewSnapshot = () => {
+    const baseCounts = state.overview?.counts || {};
+
+    return {
+      foundationVersion: state.overview?.foundationVersion || state.module?.foundationVersion || 1,
+      bootstrapped:
+        state.overview?.bootstrapped === true ||
+        state.module?.bootstrapped === true ||
+        Number(state.module?.integrationsCount || 0) > 0,
+      counts: {
+        integrations: Number(baseCounts.integrations || state.module?.integrationsCount || 0),
+        channels: Number(baseCounts.channels || 0),
+        campaigns: Number(baseCounts.campaigns || 0),
+        creatives: Number(baseCounts.creatives || 0),
+        publications: Number(baseCounts.publications || 0),
+        events: Number(baseCounts.events || 0)
+      },
+      health: {
+        connectedIntegrations: Number(state.overview?.health?.connectedIntegrations || 0),
+        failedPublications: Number(state.overview?.health?.failedPublications || 0),
+        failedEvents: Number(state.overview?.health?.failedEvents || 0)
+      }
+    };
+  };
+
+  const buildSelectOptions = ({
+    target = null,
+    items = [],
+    placeholder = "Selecciona una opcion",
+    placeholderValue = "",
+    valueKey = "id",
+    labelBuilder = item => item?.label || item?.name || "Sin nombre"
+  } = {}) => {
+    if (!target) {
+      return;
+    }
+
+    const previousValue = target.value;
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    target.innerHTML = [
+      `<option value="${escapeHtml(String(placeholderValue))}">${escapeHtml(placeholder)}</option>`,
+      ...safeItems.map(item => {
+        const rawValue = typeof valueKey === "function" ? valueKey(item) : item?.[valueKey];
+        const label = labelBuilder(item);
+        return `<option value="${escapeHtml(String(rawValue || ""))}">${escapeHtml(label)}</option>`;
+      })
+    ].join("");
+
+    const hasPreviousValue = safeItems.some(item => {
+      const rawValue = typeof valueKey === "function" ? valueKey(item) : item?.[valueKey];
+      return String(rawValue || "") === String(previousValue || "");
+    });
+
+    target.value = hasPreviousValue ? previousValue : String(placeholderValue);
+  };
+
+  const getIntegrationLabel = integrationId => {
+    const item = state.integrations.find(entry => String(entry?.id || "") === String(integrationId || ""));
+    return item?.label || item?.productLabel || "Sin integracion";
+  };
+
+  const getChannelLabel = channelId => {
+    const item = state.channels.find(entry => String(entry?.id || "") === String(channelId || ""));
+    return item?.label || item?.channelTypeLabel || "Sin canal";
+  };
+
+  const getCampaignLabel = campaignId => {
+    const item = state.campaigns.find(entry => String(entry?.id || "") === String(campaignId || ""));
+    return item?.name || "Sin campana";
+  };
+
+  const getCreativeLabel = creativeId => {
+    const item = state.creatives.find(entry => String(entry?.id || "") === String(creativeId || ""));
+    return item?.name || "Sin creativo";
+  };
+
+  const renderOverview = () => {
+    const overview = getOverviewSnapshot();
+
+    setSummaryValue(summaryNodes.integrations, overview.counts.integrations);
+    setSummaryValue(summaryNodes.channels, overview.counts.channels);
+    setSummaryValue(summaryNodes.campaigns, overview.counts.campaigns);
+    setSummaryValue(summaryNodes.creatives, overview.counts.creatives);
+    setSummaryValue(summaryNodes.publications, overview.counts.publications);
+    setSummaryValue(summaryNodes.events, overview.counts.events);
+    setSummaryValue(summaryNodes.connected, overview.health.connectedIntegrations);
+    setSummaryValue(summaryNodes.failedPublications, overview.health.failedPublications);
+    setSummaryValue(summaryNodes.failedEvents, overview.health.failedEvents);
+
+    bootstrapButton.textContent = overview.bootstrapped ? "Verificar base" : "Preparar base";
+
+    if (overviewCopy) {
+      overviewCopy.textContent = overview.bootstrapped
+        ? "Tu base ya tiene estructura interna. Desde aqui puedes seguir agregando integraciones, canales, campanas, creativos y publicaciones antes de enchufar APIs reales."
+        : "Cuando prepares la base, Coach te crea los borradores iniciales para Meta, Google, TikTok, Instagram y Facebook sin pedirte credenciales todavia.";
+    }
+  };
+
+  const renderProviderList = () => {
+    const providers = Array.isArray(state.catalog?.providers)
+      ? state.catalog.providers
+      : Array.isArray(state.module?.supportedProviders)
+        ? state.module.supportedProviders.map(item => ({
+            label: item?.label || item?.provider || "Proveedor",
+            products: []
+          }))
+        : [];
+
+    if (!providers.length) {
+      renderEmptyState(providerList, "El catalogo de proveedores aparecera aqui.");
+      return;
+    }
+
+    providerList.innerHTML = providers
+      .map(provider => {
+        const totalProducts = Array.isArray(provider.products) ? provider.products.length : 0;
+        return `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(provider.label || "Proveedor")}</strong>
+            <span>${escapeHtml(totalProducts ? `${totalProducts} productos listos` : "Proveedor soportado")}</span>
+          </div>
+        `;
+      })
+      .join("");
+  };
+
+  const syncMarketingSelects = () => {
+    buildSelectOptions({
+      target: templateSelect,
+      items: state.catalog?.blueprints || [],
+      placeholder: "Selecciona una plantilla",
+      labelBuilder: item => `${item?.label || item?.productLabel || "Integracion"} · ${item?.providerLabel || ""}`.trim()
+    });
+
+    buildSelectOptions({
+      target: channelIntegrationSelect,
+      items: state.integrations,
+      placeholder: "Sin integracion ligada",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildSelectOptions({
+      target: campaignIntegrationSelect,
+      items: state.integrations,
+      placeholder: "Sin integracion ligada",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildSelectOptions({
+      target: campaignChannelSelect,
+      items: state.channels,
+      placeholder: "Sin canal principal",
+      labelBuilder: item => item?.label || item?.channelTypeLabel || "Canal"
+    });
+
+    buildSelectOptions({
+      target: creativeCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Sin campana ligada",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildSelectOptions({
+      target: publicationChannelSelect,
+      items: state.channels,
+      placeholder: "Sin canal ligado",
+      labelBuilder: item => item?.label || item?.channelTypeLabel || "Canal"
+    });
+
+    buildSelectOptions({
+      target: publicationCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Sin campana ligada",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildSelectOptions({
+      target: publicationCreativeSelect,
+      items: state.creatives,
+      placeholder: "Sin creativo ligado",
+      labelBuilder: item => item?.name || "Creativo"
+    });
+  };
+
+  const renderIntegrations = () => {
+    if (!state.integrations.length) {
+      renderEmptyState(integrationList, "Todavia no hay integraciones preparadas en esta cuenta.");
+      return;
+    }
+
+    integrationList.innerHTML = state.integrations
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.label || item.productLabel || "Integracion")}</strong>
+                <span>${escapeHtml(`${item.productLabel || "Producto"} · ${item.providerLabel || "Proveedor"}`)}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(
+                resolveCoachMarketingBadgeState(item.connectionStatus || item.status)
+              )}">
+                ${escapeHtml(item.connectionStatusLabel || item.statusLabel || "Sin estado")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Estado: <strong>${escapeHtml(item.statusLabel || "Borrador")}</strong></span>
+              <span>Auth: <strong>${escapeHtml(item.authModeLabel || "Manual")}</strong></span>
+              <span>Cuenta: <strong>${escapeHtml(item.accountTypeLabel || "Custom")}</strong></span>
+              <span>Capacidades: <strong>${Number(item.capabilities?.length || 0)}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(
+                item.description || item.notes || "Integracion lista para recibir cuentas, permisos y futuros sync jobs."
+              )}
+            </p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderChannels = () => {
+    if (!state.channels.length) {
+      renderEmptyState(channelList, "Todavia no hay canales creados en esta cuenta.");
+      return;
+    }
+
+    channelList.innerHTML = state.channels
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.label || item.channelTypeLabel || "Canal")}</strong>
+                <span>${escapeHtml(
+                  [item.channelTypeLabel || "Canal", item.handle || item.externalChannelName || ""].filter(Boolean).join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
+              <span>Publicar: <strong>${item.defaultForPublishing ? "Si" : "No"}</strong></span>
+              <span>Captura: <strong>${item.defaultForLeadCapture ? "Si" : "No"}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(item.landingPageUrl || item.notes || "Canal listo para usarse como origen de publicacion o captura.")}
+            </p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderCampaigns = () => {
+    if (!state.campaigns.length) {
+      renderEmptyState(campaignList, "Todavia no hay campanas preparadas en esta cuenta.");
+      return;
+    }
+
+    campaignList.innerHTML = state.campaigns
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.name || "Campana")}</strong>
+                <span>${escapeHtml(
+                  [item.objectiveLabel || "Objetivo", item.campaignTypeLabel || "Tipo"].filter(Boolean).join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
+              <span>Canal: <strong>${escapeHtml(getChannelLabel(item.primaryChannelId))}</strong></span>
+              <span>Budget: <strong>${escapeHtml(formatMoney(item.budgetAmount || 0))}</strong></span>
+              <span>Revision: <strong>${escapeHtml(item.reviewStatusLabel || "Borrador")}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(
+                item.primaryGoal ||
+                  item.audienceSummary ||
+                  item.landingPageUrl ||
+                  item.notes ||
+                  "Campana lista para recibir audiencias, presupuesto y configuracion por plataforma."
+              )}
+            </p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderCreatives = () => {
+    if (!state.creatives.length) {
+      renderEmptyState(creativeList, "Todavia no hay creativos preparados en esta cuenta.");
+      return;
+    }
+
+    creativeList.innerHTML = state.creatives
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.name || "Creativo")}</strong>
+                <span>${escapeHtml(
+                  [item.creativeTypeLabel || "Tipo", getCampaignLabel(item.campaignId)].filter(Boolean).join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Headline: <strong>${escapeHtml(item.headline || "Sin headline")}</strong></span>
+              <span>Media slots: <strong>${Number(item.mediaSlots?.length || 0)}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(item.primaryText || item.description || item.destinationUrl || "Creativo listo para versionarse y aprobarse.")}
+            </p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderPublications = () => {
+    if (!state.publications.length) {
+      renderEmptyState(publicationList, "Todavia no hay publicaciones preparadas en esta cuenta.");
+      return;
+    }
+
+    publicationList.innerHTML = state.publications
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.label || "Publicacion")}</strong>
+                <span>${escapeHtml(
+                  [item.modeLabel || "Modo", getChannelLabel(item.channelId), getCampaignLabel(item.campaignId)]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Creativo: <strong>${escapeHtml(getCreativeLabel(item.creativeId))}</strong></span>
+              <span>Revision: <strong>${escapeHtml(item.reviewStatusLabel || "Borrador")}</strong></span>
+              <span>Programada: <strong>${escapeHtml(formatDateTimeShort(item.scheduledAt))}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(item.caption || item.destinationUrl || item.notes || "Publicacion lista para entrar a cola o calendarizarse.")}
+            </p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderEvents = () => {
+    if (!state.events.length) {
+      renderEmptyState(eventList, "Todavia no hay eventos registrados en el modulo de marketing.");
+      return;
+    }
+
+    eventList.innerHTML = state.events
+      .map(
+        item => `
+          <article class="territory-result-card">
+            <strong>${escapeHtml(item.summary || item.eventType || "Evento de marketing")}</strong>
+            <span>${escapeHtml(
+              [item.providerLabel || "Sistema", item.statusLabel || "Sin estado", formatDateTimeShort(item.occurredAt)]
+                .filter(Boolean)
+                .join(" · ")
+            )}</span>
+            <p>${escapeHtml(
+              [item.entityType || "", item.entityId ? `ID ${item.entityId}` : "", item.lastError || ""]
+                .filter(Boolean)
+                .join(" · ") || "Evento interno del modulo de marketing."
+            )}</p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderAll = () => {
+    renderOverview();
+    renderProviderList();
+    syncMarketingSelects();
+    renderIntegrations();
+    renderChannels();
+    renderCampaigns();
+    renderCreatives();
+    renderPublications();
+    renderEvents();
+  };
+
+  const loadWorkspace = async () => {
+    const [catalog, overviewData, integrationsData, channelsData, campaignsData, creativesData, publicationsData, eventsData] =
+      await Promise.all([
+        apiRequest("/api/coach/marketing/catalog"),
+        apiRequest("/api/coach/marketing/overview"),
+        apiRequest("/api/coach/marketing/integrations?limit=24"),
+        apiRequest("/api/coach/marketing/channels?limit=24"),
+        apiRequest("/api/coach/marketing/campaigns?limit=24"),
+        apiRequest("/api/coach/marketing/creatives?limit=24"),
+        apiRequest("/api/coach/marketing/publications?limit=24"),
+        apiRequest("/api/coach/marketing/events?limit=16")
+      ]);
+
+    state.catalog = catalog || null;
+    state.overview = overviewData || null;
+    state.integrations = Array.isArray(integrationsData?.items) ? integrationsData.items : [];
+    state.channels = Array.isArray(channelsData?.items) ? channelsData.items : [];
+    state.campaigns = Array.isArray(campaignsData?.items) ? campaignsData.items : [];
+    state.creatives = Array.isArray(creativesData?.items) ? creativesData.items : [];
+    state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
+    state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
+    renderAll();
+  };
+
+  templateSelect?.addEventListener("change", () => {
+    const selectedTemplateKey = String(templateSelect.value || "").trim();
+    const blueprint = Array.isArray(state.catalog?.blueprints)
+      ? state.catalog.blueprints.find(item => String(item?.templateKey || "") === selectedTemplateKey)
+      : null;
+    const labelInput = integrationForm.querySelector('input[name="label"]');
+
+    if (blueprint && labelInput && !String(labelInput.value || "").trim()) {
+      labelInput.value = blueprint.label || blueprint.productLabel || "";
+    }
+  });
+
+  refreshButton.addEventListener("click", async () => {
+    clearMessage(summaryFeedback);
+    setButtonLoading(refreshButton, true, "Actualizando...");
+
+    try {
+      await loadWorkspace();
+      setMessage(summaryFeedback, "Workspace de marketing actualizado.", "success");
+    } catch (error) {
+      setMessage(summaryFeedback, error.message || "No pude actualizar el workspace de marketing.", "error");
+    } finally {
+      setButtonLoading(refreshButton, false);
+    }
+  });
+
+  bootstrapButton.addEventListener("click", async () => {
+    clearMessage(summaryFeedback);
+    setButtonLoading(bootstrapButton, true, "Preparando...");
+
+    try {
+      const data = await apiRequest("/api/coach/marketing/bootstrap", {
+        method: "POST"
+      });
+
+      state.overview = data?.overview || state.overview;
+      await loadWorkspace();
+      setMessage(
+        summaryFeedback,
+        Array.isArray(data?.created) && data.created.length
+          ? `Base preparada. Se crearon ${data.created.length} integraciones borrador.`
+          : "La base ya estaba preparada. Revise que todo siga en su lugar.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(summaryFeedback, error.message || "No pude preparar la base de marketing.", "error");
+    } finally {
+      setButtonLoading(bootstrapButton, false);
+    }
+  });
+
+  integrationForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(integrationFeedback);
+    setButtonLoading(integrationSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(integrationForm);
+      const data = await apiRequest("/api/coach/marketing/integrations", {
+        method: "POST",
+        body: {
+          templateKey: formData.get("templateKey"),
+          label: formData.get("label"),
+          status: formData.get("status"),
+          notes: formData.get("notes")
+        }
+      });
+
+      integrationForm.reset();
+      await loadWorkspace();
+      setMessage(
+        integrationFeedback,
+        data?.duplicate
+          ? "Esa integracion ya existia en tu cuenta y la deje cargada otra vez."
+          : "Integracion guardada dentro del workspace de marketing.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(integrationFeedback, error.message || "No pude guardar la integracion.", "error");
+    } finally {
+      setButtonLoading(integrationSaveButton, false);
+    }
+  });
+
+  channelForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(channelFeedback);
+    setButtonLoading(channelSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(channelForm);
+      await apiRequest("/api/coach/marketing/channels", {
+        method: "POST",
+        body: {
+          integrationId: formData.get("integrationId"),
+          channelType: formData.get("channelType"),
+          label: formData.get("label"),
+          handle: formData.get("handle"),
+          landingPageUrl: formData.get("landingPageUrl"),
+          defaultForPublishing: Boolean(channelForm.querySelector('input[name="defaultForPublishing"]')?.checked),
+          defaultForLeadCapture: Boolean(channelForm.querySelector('input[name="defaultForLeadCapture"]')?.checked)
+        }
+      });
+
+      channelForm.reset();
+      await loadWorkspace();
+      setMessage(channelFeedback, "Canal guardado dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(channelFeedback, error.message || "No pude guardar el canal.", "error");
+    } finally {
+      setButtonLoading(channelSaveButton, false);
+    }
+  });
+
+  campaignForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(campaignFeedback);
+    setButtonLoading(campaignSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(campaignForm);
+      await apiRequest("/api/coach/marketing/campaigns", {
+        method: "POST",
+        body: {
+          name: formData.get("name"),
+          objective: formData.get("objective"),
+          campaignType: formData.get("campaignType"),
+          integrationId: formData.get("integrationId"),
+          primaryChannelId: formData.get("primaryChannelId"),
+          budgetAmount: formData.get("budgetAmount"),
+          landingPageUrl: formData.get("landingPageUrl"),
+          primaryGoal: formData.get("primaryGoal"),
+          audienceSummary: formData.get("audienceSummary"),
+          notes: formData.get("notes")
+        }
+      });
+
+      campaignForm.reset();
+      await loadWorkspace();
+      setMessage(campaignFeedback, "Campana guardada dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(campaignFeedback, error.message || "No pude guardar la campana.", "error");
+    } finally {
+      setButtonLoading(campaignSaveButton, false);
+    }
+  });
+
+  creativeForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(creativeFeedback);
+    setButtonLoading(creativeSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(creativeForm);
+      await apiRequest("/api/coach/marketing/creatives", {
+        method: "POST",
+        body: {
+          campaignId: formData.get("campaignId"),
+          name: formData.get("name"),
+          creativeType: formData.get("creativeType"),
+          headline: formData.get("headline"),
+          destinationUrl: formData.get("destinationUrl"),
+          primaryText: formData.get("primaryText")
+        }
+      });
+
+      creativeForm.reset();
+      await loadWorkspace();
+      setMessage(creativeFeedback, "Creativo guardado dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(creativeFeedback, error.message || "No pude guardar el creativo.", "error");
+    } finally {
+      setButtonLoading(creativeSaveButton, false);
+    }
+  });
+
+  publicationForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(publicationFeedback);
+    setButtonLoading(publicationSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(publicationForm);
+      await apiRequest("/api/coach/marketing/publications", {
+        method: "POST",
+        body: {
+          channelId: formData.get("channelId"),
+          campaignId: formData.get("campaignId"),
+          creativeId: formData.get("creativeId"),
+          mode: formData.get("mode"),
+          label: formData.get("label"),
+          destinationUrl: formData.get("destinationUrl"),
+          caption: formData.get("caption")
+        }
+      });
+
+      publicationForm.reset();
+      await loadWorkspace();
+      setMessage(publicationFeedback, "Publicacion guardada dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(publicationFeedback, error.message || "No pude guardar la publicacion.", "error");
+    } finally {
+      setButtonLoading(publicationSaveButton, false);
+    }
+  });
+
+  renderAll();
+  loadWorkspace().catch(error => {
+    setMessage(summaryFeedback, error.message || "No pude cargar el workspace de marketing.", "error");
+  });
+}
+
 function buildCoachHealthSurveyContext(survey = null) {
   if (!survey?.id) {
     return null;
@@ -10814,6 +11599,7 @@ async function initCoachAppPage() {
 
   initCoachCrmWorkspace(me.user);
   if (!isTelemarketingPortal) {
+    initCoachMarketingWorkspace(me.user, me.marketing || null);
     initCoachPrivateResources();
     initCoachLeadWorkspace();
     initCoachAgendaWorkspace(me.user);

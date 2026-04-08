@@ -1164,6 +1164,77 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   text-align: center;
 }
 
+.marketing-summary-grid {
+  margin-top: 18px;
+}
+
+.marketing-summary-grid-secondary {
+  margin-top: 12px;
+}
+
+.marketing-two-column,
+.marketing-three-column {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.marketing-two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.marketing-three-column {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+}
+
+.marketing-two-column-lists {
+  margin-top: 22px;
+}
+
+.marketing-form-card {
+  margin-top: 0;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  align-self: start;
+}
+
+.marketing-form-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.marketing-field-full {
+  grid-column: 1 / -1;
+}
+
+.marketing-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(8, 11, 22, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+
+.marketing-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: #ffcd78;
+}
+
+.marketing-checkbox span {
+  line-height: 1.55;
+}
+
 .territory-list,
 .territory-invite-list {
   display: grid;
@@ -5945,6 +6016,11 @@ html[data-coach-portal-mode="telemarketing"] .team-seat-status {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-two-column,
+  .marketing-three-column {
     grid-template-columns: 1fr;
   }
 
