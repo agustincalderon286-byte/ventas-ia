@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 7;
+const COACH_MARKETING_FOUNDATION_VERSION = 8;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -1600,6 +1600,16 @@ const coachMarketingCampaignSchema = new mongoose.Schema({
   pausedAt: Date,
   lastWorkflowScore: { type: Number, default: 0 },
   lastWorkflowAt: Date,
+  reportedImpressions: { type: Number, default: 0 },
+  reportedClicks: { type: Number, default: 0 },
+  reportedSpendAmount: { type: Number, default: 0 },
+  reportedConversionCount: { type: Number, default: 0 },
+  reportedQualifiedLeadCount: { type: Number, default: 0 },
+  reportedAppointmentCount: { type: Number, default: 0 },
+  reportedWonSalesCount: { type: Number, default: 0 },
+  reportedRevenueAmount: { type: Number, default: 0 },
+  reportingNotes: String,
+  resultsUpdatedAt: Date,
   externalCampaignId: String,
   lastSyncAt: Date,
   updatedAt: Date,
@@ -5588,6 +5598,21 @@ function resolverCoachAttributionDesdeDocumento(doc = null, options = {}) {
   });
 }
 
+function construirCoachMarketingCampaignMatchKey(campaignId = "", campaignName = "") {
+  const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
+
+  if (safeCampaignId) {
+    return `id:${safeCampaignId}`;
+  }
+
+  const safeName = cleanText(campaignName || "")
+    .trim()
+    .toLowerCase()
+    .slice(0, 160);
+
+  return safeName ? `name:${safeName}` : "";
+}
+
 function construirCoachAttributionResumen(attribution = null) {
   const safeAttribution = limpiarCoachAttributionSnapshot(attribution);
 
@@ -5681,6 +5706,8 @@ function construirCoachMarketingRoutes() {
     integrations: "/api/coach/marketing/integrations",
     channels: "/api/coach/marketing/channels",
     campaigns: "/api/coach/marketing/campaigns",
+    campaignWorkflow: "/api/coach/marketing/campaigns/:campaignId/workflow",
+    campaignReporting: "/api/coach/marketing/campaigns/:campaignId/reporting",
     creatives: "/api/coach/marketing/creatives",
     publications: "/api/coach/marketing/publications",
     intakeSources: "/api/coach/marketing/intake-sources",
@@ -5904,6 +5931,19 @@ function limpiarCoachMarketingCampaign(doc = null) {
   const objective = normalizarCoachMarketingObjective(doc.objective || "");
   const status = normalizarCoachMarketingCampaignStatus(doc.status || "");
   const reviewStatus = normalizarCoachMarketingReviewStatus(doc.reviewStatus || "");
+  const reportedImpressions = limpiarCoachMarketingCount(doc.reportedImpressions || 0, 999999999);
+  const reportedClicks = limpiarCoachMarketingCount(doc.reportedClicks || 0, 999999999);
+  const reportedSpendAmount = limpiarCoachMarketingMoney(doc.reportedSpendAmount || 0);
+  const reportedConversionCount = limpiarCoachMarketingCount(doc.reportedConversionCount || 0, 999999999);
+  const reportedQualifiedLeadCount = limpiarCoachMarketingCount(doc.reportedQualifiedLeadCount || 0, 999999999);
+  const reportedAppointmentCount = limpiarCoachMarketingCount(doc.reportedAppointmentCount || 0, 999999999);
+  const reportedWonSalesCount = limpiarCoachMarketingCount(doc.reportedWonSalesCount || 0, 999999999);
+  const reportedRevenueAmount = limpiarCoachMarketingMoney(doc.reportedRevenueAmount || 0);
+  const reportedCtrPercent = reportedImpressions > 0 ? Number(((reportedClicks / reportedImpressions) * 100).toFixed(2)) : 0;
+  const reportedCpcAmount = reportedClicks > 0 ? Number((reportedSpendAmount / reportedClicks).toFixed(2)) : 0;
+  const reportedConversionRatePercent =
+    reportedClicks > 0 ? Number(((reportedConversionCount / reportedClicks) * 100).toFixed(2)) : 0;
+  const reportedRoa = reportedSpendAmount > 0 ? Number((reportedRevenueAmount / reportedSpendAmount).toFixed(2)) : 0;
 
   return {
     ...limpiarCoachMarketingBaseDoc(doc),
@@ -5946,6 +5986,20 @@ function limpiarCoachMarketingCampaign(doc = null) {
     pausedAt: doc.pausedAt || null,
     lastWorkflowScore: limpiarCoachMarketingCount(doc.lastWorkflowScore || 0, 100),
     lastWorkflowAt: doc.lastWorkflowAt || null,
+    reportedImpressions,
+    reportedClicks,
+    reportedSpendAmount,
+    reportedConversionCount,
+    reportedQualifiedLeadCount,
+    reportedAppointmentCount,
+    reportedWonSalesCount,
+    reportedRevenueAmount,
+    reportingNotes: truncarTextoPrompt(cleanText(doc.reportingNotes || ""), 220),
+    resultsUpdatedAt: doc.resultsUpdatedAt || null,
+    reportedCtrPercent,
+    reportedCpcAmount,
+    reportedConversionRatePercent,
+    reportedRoa,
     externalCampaignId: cleanText(doc.externalCampaignId || "").slice(0, 120),
     lastSyncAt: doc.lastSyncAt || null
   };
@@ -7473,6 +7527,271 @@ async function obtenerCoachMarketingAttributionOverview(userDoc = null) {
   };
 }
 
+async function obtenerCoachMarketingReportingOverview(userDoc = null) {
+  const query = construirCoachWorkspaceQuery(userDoc);
+  const [campaignDocs, leadDocs, applicationDocs] = await Promise.all([
+    CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).lean(),
+    CoachLeadInbox.find(query)
+      .select(
+        [
+          "source",
+          "utmSource",
+          "utmMedium",
+          "utmCampaign",
+          "campaignName",
+          "marketingProvider",
+          "marketingProduct",
+          "highLevelOpportunityStatus",
+          "highLevelOpportunityValue",
+          "updatedAt",
+          "createdAt",
+          "attribution"
+        ].join(" ")
+      )
+      .lean(),
+    CoachRecruitmentApplication.find(query)
+      .select(
+        [
+          "source",
+          "utmSource",
+          "utmMedium",
+          "utmCampaign",
+          "campaignName",
+          "marketingProvider",
+          "marketingProduct",
+          "updatedAt",
+          "createdAt",
+          "attribution"
+        ].join(" ")
+      )
+      .lean()
+  ]);
+
+  const campaigns = (Array.isArray(campaignDocs) ? campaignDocs : []).map(doc => limpiarCoachMarketingCampaign(doc)).filter(Boolean);
+  const campaignStatsMap = new Map();
+
+  campaigns.forEach(campaign => {
+    campaignStatsMap.set(String(campaign.id || ""), {
+      campaign,
+      capturedLeads: 0,
+      capturedRecruitment: 0,
+      attributedWonSales: 0,
+      attributedRevenueAmount: 0
+    });
+  });
+
+  const statsByMatchKey = new Map();
+  campaigns.forEach(campaign => {
+    const key = construirCoachMarketingCampaignMatchKey(campaign.id, campaign.name);
+
+    if (key) {
+      statsByMatchKey.set(key, campaignStatsMap.get(String(campaign.id || "")) || null);
+    }
+  });
+
+  const matchCampaignStats = attribution => {
+    const campaignIdKey = construirCoachMarketingCampaignMatchKey(attribution?.campaignId || "", "");
+    if (campaignIdKey && statsByMatchKey.has(campaignIdKey)) {
+      return statsByMatchKey.get(campaignIdKey) || null;
+    }
+
+    const campaignNameKey = construirCoachMarketingCampaignMatchKey("", attribution?.campaign || "");
+    if (campaignNameKey && statsByMatchKey.has(campaignNameKey)) {
+      return statsByMatchKey.get(campaignNameKey) || null;
+    }
+
+    return null;
+  };
+
+  (Array.isArray(leadDocs) ? leadDocs : []).forEach(doc => {
+    const attribution = resolverCoachAttributionDesdeDocumento(doc, {
+      captureType: "lead",
+      recordSource: doc?.source || "captura_manual"
+    });
+    const stats = matchCampaignStats(attribution);
+
+    if (!stats) {
+      return;
+    }
+
+    stats.capturedLeads += 1;
+
+    if (String(doc?.highLevelOpportunityStatus || "").trim().toLowerCase() === "won") {
+      stats.attributedWonSales += 1;
+      stats.attributedRevenueAmount += limpiarCoachDemoOutcomeAmount(doc?.highLevelOpportunityValue || 0);
+    }
+  });
+
+  (Array.isArray(applicationDocs) ? applicationDocs : []).forEach(doc => {
+    const attribution = resolverCoachAttributionDesdeDocumento(doc, {
+      captureType: "recruitment",
+      recordSource: doc?.source || "captura_manual"
+    });
+    const stats = matchCampaignStats(attribution);
+
+    if (!stats) {
+      return;
+    }
+
+    stats.capturedRecruitment += 1;
+  });
+
+  const campaignReports = campaigns.map(campaign => {
+    const stats = campaignStatsMap.get(String(campaign.id || "")) || {
+      capturedLeads: 0,
+      capturedRecruitment: 0,
+      attributedWonSales: 0,
+      attributedRevenueAmount: 0
+    };
+    const effectiveWonSales = Math.max(
+      limpiarCoachMarketingCount(campaign.reportedWonSalesCount || 0, 999999999),
+      limpiarCoachMarketingCount(stats.attributedWonSales || 0, 999999999)
+    );
+    const effectiveRevenueAmount = Math.max(
+      limpiarCoachMarketingMoney(campaign.reportedRevenueAmount || 0),
+      limpiarCoachDemoOutcomeAmount(stats.attributedRevenueAmount || 0)
+    );
+    const capturedLeads = limpiarCoachMarketingCount(stats.capturedLeads || 0, 999999999);
+    const capturedRecruitment = limpiarCoachMarketingCount(stats.capturedRecruitment || 0, 999999999);
+    const reportedSpendAmount = limpiarCoachMarketingMoney(campaign.reportedSpendAmount || 0);
+    const costPerLead = capturedLeads > 0 ? Number((reportedSpendAmount / capturedLeads).toFixed(2)) : 0;
+    const costPerCapture =
+      capturedLeads + capturedRecruitment > 0
+        ? Number((reportedSpendAmount / (capturedLeads + capturedRecruitment)).toFixed(2))
+        : 0;
+    const returnOnAdSpend = reportedSpendAmount > 0 ? Number((effectiveRevenueAmount / reportedSpendAmount).toFixed(2)) : 0;
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      status: campaign.status,
+      statusLabel: campaign.statusLabel || "Borrador",
+      objective: campaign.objective,
+      objectiveLabel: campaign.objectiveLabel || "Objetivo",
+      campaignType: campaign.campaignType,
+      campaignTypeLabel: campaign.campaignTypeLabel || "Tipo",
+      provider: campaign.provider,
+      providerLabel: campaign.providerLabel || "Proveedor",
+      product: campaign.product,
+      productLabel: campaign.productLabel || "Producto",
+      reportedImpressions: campaign.reportedImpressions || 0,
+      reportedClicks: campaign.reportedClicks || 0,
+      reportedSpendAmount,
+      reportedConversionCount: campaign.reportedConversionCount || 0,
+      reportedQualifiedLeadCount: campaign.reportedQualifiedLeadCount || 0,
+      reportedAppointmentCount: campaign.reportedAppointmentCount || 0,
+      reportedWonSalesCount: campaign.reportedWonSalesCount || 0,
+      reportedRevenueAmount: campaign.reportedRevenueAmount || 0,
+      capturedLeads,
+      capturedRecruitment,
+      attributedWonSales: limpiarCoachMarketingCount(stats.attributedWonSales || 0, 999999999),
+      attributedRevenueAmount: limpiarCoachDemoOutcomeAmount(stats.attributedRevenueAmount || 0),
+      effectiveWonSales,
+      effectiveRevenueAmount,
+      reportedCtrPercent: campaign.reportedCtrPercent || 0,
+      reportedCpcAmount: campaign.reportedCpcAmount || 0,
+      reportedConversionRatePercent: campaign.reportedConversionRatePercent || 0,
+      returnOnAdSpend,
+      costPerLead,
+      costPerCapture,
+      budgetAmount: campaign.budgetAmount || 0,
+      currency: campaign.currency || "USD",
+      resultsUpdatedAt: campaign.resultsUpdatedAt || campaign.updatedAt || campaign.createdAt || null,
+      launchNotes: campaign.launchNotes || "",
+      reportingNotes: campaign.reportingNotes || "",
+      landingPageUrl: campaign.landingPageUrl || ""
+    };
+  });
+
+  const totals = campaignReports.reduce(
+    (acc, item) => {
+      acc.activeCampaigns += ["active", "queued", "scheduled"].includes(item.status) ? 1 : 0;
+      acc.liveCampaigns += item.status === "active" ? 1 : 0;
+      acc.withSpend += item.reportedSpendAmount > 0 ? 1 : 0;
+      acc.budgetAmount += limpiarCoachMarketingMoney(item.budgetAmount || 0);
+      acc.reportedImpressions += Number(item.reportedImpressions || 0);
+      acc.reportedClicks += Number(item.reportedClicks || 0);
+      acc.reportedSpendAmount += limpiarCoachMarketingMoney(item.reportedSpendAmount || 0);
+      acc.reportedConversions += Number(item.reportedConversionCount || 0);
+      acc.reportedQualifiedLeads += Number(item.reportedQualifiedLeadCount || 0);
+      acc.reportedAppointments += Number(item.reportedAppointmentCount || 0);
+      acc.effectiveWonSales += Number(item.effectiveWonSales || 0);
+      acc.effectiveRevenueAmount += limpiarCoachMarketingMoney(item.effectiveRevenueAmount || 0);
+      acc.capturedLeads += Number(item.capturedLeads || 0);
+      acc.capturedRecruitment += Number(item.capturedRecruitment || 0);
+      return acc;
+    },
+    {
+      activeCampaigns: 0,
+      liveCampaigns: 0,
+      withSpend: 0,
+      budgetAmount: 0,
+      reportedImpressions: 0,
+      reportedClicks: 0,
+      reportedSpendAmount: 0,
+      reportedConversions: 0,
+      reportedQualifiedLeads: 0,
+      reportedAppointments: 0,
+      effectiveWonSales: 0,
+      effectiveRevenueAmount: 0,
+      capturedLeads: 0,
+      capturedRecruitment: 0
+    }
+  );
+
+  const ctrPercent =
+    totals.reportedImpressions > 0
+      ? Number(((totals.reportedClicks / totals.reportedImpressions) * 100).toFixed(2))
+      : 0;
+  const costPerClick =
+    totals.reportedClicks > 0 ? Number((totals.reportedSpendAmount / totals.reportedClicks).toFixed(2)) : 0;
+  const costPerLead =
+    totals.capturedLeads > 0 ? Number((totals.reportedSpendAmount / totals.capturedLeads).toFixed(2)) : 0;
+  const returnOnAdSpend =
+    totals.reportedSpendAmount > 0
+      ? Number((totals.effectiveRevenueAmount / totals.reportedSpendAmount).toFixed(2))
+      : 0;
+
+  return {
+    activeCampaigns: totals.activeCampaigns,
+    liveCampaigns: totals.liveCampaigns,
+    campaignsWithSpend: totals.withSpend,
+    budgetAmount: limpiarCoachMarketingMoney(totals.budgetAmount),
+    reportedImpressions: totals.reportedImpressions,
+    reportedClicks: totals.reportedClicks,
+    reportedSpendAmount: limpiarCoachMarketingMoney(totals.reportedSpendAmount),
+    reportedConversions: totals.reportedConversions,
+    reportedQualifiedLeads: totals.reportedQualifiedLeads,
+    reportedAppointments: totals.reportedAppointments,
+    effectiveWonSales: totals.effectiveWonSales,
+    effectiveRevenueAmount: limpiarCoachMarketingMoney(totals.effectiveRevenueAmount),
+    capturedLeads: totals.capturedLeads,
+    capturedRecruitment: totals.capturedRecruitment,
+    ctrPercent,
+    costPerClick,
+    costPerLead,
+    returnOnAdSpend,
+    topCampaigns: campaignReports
+      .slice()
+      .sort(
+        (left, right) =>
+          right.effectiveRevenueAmount - left.effectiveRevenueAmount ||
+          right.capturedLeads - left.capturedLeads ||
+          right.reportedSpendAmount - left.reportedSpendAmount ||
+          left.name.localeCompare(right.name)
+      )
+      .slice(0, 8),
+    recentCampaigns: campaignReports
+      .slice()
+      .sort(
+        (left, right) =>
+          new Date(right.resultsUpdatedAt || 0).getTime() - new Date(left.resultsUpdatedAt || 0).getTime() ||
+          left.name.localeCompare(right.name)
+      )
+      .slice(0, 8)
+  };
+}
+
 async function obtenerCoachMarketingOverview(userDoc = null) {
   const query = construirCoachWorkspaceQuery(userDoc);
 
@@ -7493,7 +7812,8 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     recentCampaignDocs,
     recentPublicationDocs,
     recentEventDocs,
-    attributionOverview
+    attributionOverview,
+    reportingOverview
   ] = await Promise.all([
     CoachMarketingIntegration.countDocuments(query),
     CoachMarketingChannel.countDocuments(query),
@@ -7537,7 +7857,8 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingPublication.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(10).lean(),
-    obtenerCoachMarketingAttributionOverview(userDoc)
+    obtenerCoachMarketingAttributionOverview(userDoc),
+    obtenerCoachMarketingReportingOverview(userDoc)
   ]);
 
   return {
@@ -7570,6 +7891,28 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
       topCampaigns: [],
       topMediums: [],
       recentCaptures: []
+    },
+    reporting: reportingOverview || {
+      activeCampaigns: 0,
+      liveCampaigns: 0,
+      campaignsWithSpend: 0,
+      budgetAmount: 0,
+      reportedImpressions: 0,
+      reportedClicks: 0,
+      reportedSpendAmount: 0,
+      reportedConversions: 0,
+      reportedQualifiedLeads: 0,
+      reportedAppointments: 0,
+      effectiveWonSales: 0,
+      effectiveRevenueAmount: 0,
+      capturedLeads: 0,
+      capturedRecruitment: 0,
+      ctrPercent: 0,
+      costPerClick: 0,
+      costPerLead: 0,
+      returnOnAdSpend: 0,
+      topCampaigns: [],
+      recentCampaigns: []
     },
     providers: Array.isArray(providerSummary)
       ? providerSummary.map(item => {
@@ -24491,6 +24834,108 @@ app.post("/api/coach/marketing/campaigns/:campaignId/pause", async (req, res) =>
   } catch (error) {
     console.error("Error pausando campana de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude pausar la campana.");
+  }
+});
+
+app.post("/api/coach/marketing/campaigns/:campaignId/reporting", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres reportar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    );
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
+
+    if (hasField("reportedImpressions")) {
+      campaignDoc.reportedImpressions = limpiarCoachMarketingCount(body.reportedImpressions || 0, 999999999);
+    }
+
+    if (hasField("reportedClicks")) {
+      campaignDoc.reportedClicks = limpiarCoachMarketingCount(body.reportedClicks || 0, 999999999);
+    }
+
+    if (hasField("reportedSpendAmount")) {
+      campaignDoc.reportedSpendAmount = limpiarCoachMarketingMoney(body.reportedSpendAmount || 0);
+    }
+
+    if (hasField("reportedConversionCount")) {
+      campaignDoc.reportedConversionCount = limpiarCoachMarketingCount(body.reportedConversionCount || 0, 999999999);
+    }
+
+    if (hasField("reportedQualifiedLeadCount")) {
+      campaignDoc.reportedQualifiedLeadCount = limpiarCoachMarketingCount(body.reportedQualifiedLeadCount || 0, 999999999);
+    }
+
+    if (hasField("reportedAppointmentCount")) {
+      campaignDoc.reportedAppointmentCount = limpiarCoachMarketingCount(body.reportedAppointmentCount || 0, 999999999);
+    }
+
+    if (hasField("reportedWonSalesCount")) {
+      campaignDoc.reportedWonSalesCount = limpiarCoachMarketingCount(body.reportedWonSalesCount || 0, 999999999);
+    }
+
+    if (hasField("reportedRevenueAmount")) {
+      campaignDoc.reportedRevenueAmount = limpiarCoachMarketingMoney(body.reportedRevenueAmount || 0);
+    }
+
+    if (hasField("reportingNotes")) {
+      campaignDoc.reportingNotes = truncarTextoPrompt(cleanText(body.reportingNotes || ""), 220);
+    }
+
+    const now = new Date();
+    campaignDoc.resultsUpdatedAt = normalizarCoachOptionalDate(body.resultsUpdatedAt || null) || now;
+    campaignDoc.updatedAt = now;
+    await campaignDoc.save();
+
+    const cleanedCampaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: campaignDoc.integrationId || null,
+      channelId: campaignDoc.primaryChannelId || null,
+      campaignId: campaignDoc._id,
+      provider: cleanedCampaign.provider,
+      product: cleanedCampaign.product,
+      direction: "internal",
+      eventType: "campaign_reporting_updated",
+      entityType: "campaign",
+      entityId: cleanedCampaign.id,
+      status: "processed",
+      summary: `Se actualizaron resultados para ${cleanedCampaign.name || "la campana"}.`,
+      payload: {
+        reportedImpressions: cleanedCampaign.reportedImpressions || 0,
+        reportedClicks: cleanedCampaign.reportedClicks || 0,
+        reportedSpendAmount: cleanedCampaign.reportedSpendAmount || 0,
+        reportedConversions: cleanedCampaign.reportedConversionCount || 0,
+        reportedRevenueAmount: cleanedCampaign.reportedRevenueAmount || 0
+      }
+    });
+
+    res.json({
+      campaign: cleanedCampaign,
+      overview: await obtenerCoachMarketingOverview(auth.user)
+    });
+  } catch (error) {
+    console.error("Error actualizando resultados de campana del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar los resultados de la campana.");
   }
 });
 
