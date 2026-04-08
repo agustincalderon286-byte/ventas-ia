@@ -132,6 +132,272 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
+const COACH_MARKETING_FOUNDATION_VERSION = 1;
+const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
+  { value: "meta", label: "Meta" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "google", label: "Google" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "webhook", label: "Webhook" },
+  { value: "custom", label: "Custom" }
+]);
+const COACH_MARKETING_PRODUCT_OPTIONS = Object.freeze([
+  {
+    value: "meta_ads",
+    provider: "meta",
+    label: "Meta Ads",
+    description: "Campanas pagadas para Facebook e Instagram.",
+    authMode: "oauth_placeholder",
+    accountType: "ad_account",
+    capabilities: ["campaigns", "adsets", "ads", "lead_forms", "insights"]
+  },
+  {
+    value: "facebook_page",
+    provider: "facebook",
+    label: "Facebook Page",
+    description: "Publicacion organica y mensajes para paginas de Facebook.",
+    authMode: "oauth_placeholder",
+    accountType: "page",
+    capabilities: ["organic_publishing", "comments", "messages", "insights"]
+  },
+  {
+    value: "instagram_business",
+    provider: "instagram",
+    label: "Instagram Business",
+    description: "Publicacion organica y medicion para cuentas Business/Creator.",
+    authMode: "oauth_placeholder",
+    accountType: "profile",
+    capabilities: ["organic_publishing", "reels", "stories", "insights"]
+  },
+  {
+    value: "google_ads",
+    provider: "google",
+    label: "Google Ads",
+    description: "Campanas de busqueda y performance con conversiones.",
+    authMode: "oauth_placeholder",
+    accountType: "ad_account",
+    capabilities: ["campaigns", "keywords", "conversions", "insights"]
+  },
+  {
+    value: "google_analytics",
+    provider: "google",
+    label: "Google Analytics 4",
+    description: "Medicion, eventos y atribucion para sitios y landings.",
+    authMode: "oauth_placeholder",
+    accountType: "analytics_property",
+    capabilities: ["events", "conversions", "audiences", "reports"]
+  },
+  {
+    value: "tiktok_business",
+    provider: "tiktok",
+    label: "TikTok Business",
+    description: "Publicacion y gestion de activos de TikTok Business.",
+    authMode: "oauth_placeholder",
+    accountType: "business",
+    capabilities: ["organic_publishing", "videos", "comments", "insights"]
+  },
+  {
+    value: "tiktok_ads",
+    provider: "tiktok",
+    label: "TikTok Ads",
+    description: "Campanas de trafico, leads y reclutamiento en TikTok Ads.",
+    authMode: "oauth_placeholder",
+    accountType: "ad_account",
+    capabilities: ["campaigns", "ads", "lead_forms", "insights"]
+  },
+  {
+    value: "youtube_channel",
+    provider: "youtube",
+    label: "YouTube Channel",
+    description: "Publicacion y analitica de contenido largo y shorts.",
+    authMode: "oauth_placeholder",
+    accountType: "channel",
+    capabilities: ["organic_publishing", "shorts", "videos", "insights"]
+  },
+  {
+    value: "linkedin_page",
+    provider: "linkedin",
+    label: "LinkedIn Page",
+    description: "Publicacion organica y base para futuras campanas B2B.",
+    authMode: "oauth_placeholder",
+    accountType: "page",
+    capabilities: ["organic_publishing", "comments", "insights"]
+  },
+  {
+    value: "custom_webhook",
+    provider: "webhook",
+    label: "Webhook personalizado",
+    description: "Entrada o salida generica para CRMs, ETLs o conectores propios.",
+    authMode: "webhook_placeholder",
+    accountType: "webhook",
+    capabilities: ["lead_ingestion", "event_push", "event_pull"],
+    bootstrap: false
+  },
+  {
+    value: "custom",
+    provider: "custom",
+    label: "Integracion personalizada",
+    description: "Espacio libre para conectores internos o futuras APIs.",
+    authMode: "manual_placeholder",
+    accountType: "custom",
+    capabilities: ["custom"],
+    bootstrap: false
+  }
+]);
+const COACH_MARKETING_AUTH_MODE_OPTIONS = Object.freeze([
+  { value: "oauth_placeholder", label: "OAuth pendiente" },
+  { value: "api_key_placeholder", label: "API key pendiente" },
+  { value: "webhook_placeholder", label: "Webhook pendiente" },
+  { value: "manual_placeholder", label: "Manual / preparado" },
+  { value: "native", label: "Nativo" }
+]);
+const COACH_MARKETING_ACCOUNT_TYPE_OPTIONS = Object.freeze([
+  { value: "business", label: "Business" },
+  { value: "workspace", label: "Workspace" },
+  { value: "page", label: "Page" },
+  { value: "profile", label: "Profile" },
+  { value: "channel", label: "Channel" },
+  { value: "ad_account", label: "Ad account" },
+  { value: "ad_pixel", label: "Pixel" },
+  { value: "analytics_property", label: "Analytics property" },
+  { value: "website", label: "Website" },
+  { value: "form", label: "Form" },
+  { value: "webhook", label: "Webhook" },
+  { value: "custom", label: "Custom" }
+]);
+const COACH_MARKETING_INTEGRATION_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "ready", label: "Lista" },
+  { value: "active", label: "Activa" },
+  { value: "paused", label: "Pausada" },
+  { value: "archived", label: "Archivada" }
+]);
+const COACH_MARKETING_CONNECTION_STATUS_OPTIONS = Object.freeze([
+  { value: "not_connected", label: "Sin conectar" },
+  { value: "pending", label: "Pendiente" },
+  { value: "connected", label: "Conectada" },
+  { value: "error", label: "Con error" },
+  { value: "archived", label: "Archivada" }
+]);
+const COACH_MARKETING_CHANNEL_TYPE_OPTIONS = Object.freeze([
+  { value: "page", label: "Page" },
+  { value: "profile", label: "Profile" },
+  { value: "channel", label: "Channel" },
+  { value: "ad_account", label: "Ad account" },
+  { value: "analytics_property", label: "Analytics property" },
+  { value: "lead_form", label: "Lead form" },
+  { value: "landing_page", label: "Landing page" },
+  { value: "website", label: "Website" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "phone", label: "Telefono" },
+  { value: "webhook", label: "Webhook" },
+  { value: "custom", label: "Custom" }
+]);
+const COACH_MARKETING_CHANNEL_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "ready", label: "Listo" },
+  { value: "active", label: "Activo" },
+  { value: "paused", label: "Pausado" },
+  { value: "archived", label: "Archivado" }
+]);
+const COACH_MARKETING_CAMPAIGN_TYPE_OPTIONS = Object.freeze([
+  { value: "paid", label: "Pagada" },
+  { value: "organic", label: "Organica" },
+  { value: "hybrid", label: "Hibrida" },
+  { value: "automation", label: "Automatizacion" }
+]);
+const COACH_MARKETING_OBJECTIVE_OPTIONS = Object.freeze([
+  { value: "leads", label: "Leads" },
+  { value: "sales", label: "Ventas" },
+  { value: "recruitment", label: "Reclutamiento" },
+  { value: "traffic", label: "Trafico" },
+  { value: "engagement", label: "Interaccion" },
+  { value: "awareness", label: "Reconocimiento" },
+  { value: "messages", label: "Mensajes" },
+  { value: "appointments", label: "Citas" },
+  { value: "custom", label: "Custom" }
+]);
+const COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "ready", label: "Lista" },
+  { value: "scheduled", label: "Programada" },
+  { value: "active", label: "Activa" },
+  { value: "paused", label: "Pausada" },
+  { value: "archived", label: "Archivada" }
+]);
+const COACH_MARKETING_REVIEW_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "needs_assets", label: "Faltan assets" },
+  { value: "internal_review", label: "Revision interna" },
+  { value: "approved", label: "Aprobado" },
+  { value: "blocked", label: "Bloqueado" }
+]);
+const COACH_MARKETING_CREATIVE_TYPE_OPTIONS = Object.freeze([
+  { value: "image", label: "Imagen" },
+  { value: "video", label: "Video" },
+  { value: "carousel", label: "Carrusel" },
+  { value: "story", label: "Story" },
+  { value: "reel", label: "Reel" },
+  { value: "text", label: "Texto" },
+  { value: "mixed", label: "Mixto" }
+]);
+const COACH_MARKETING_CREATIVE_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "ready", label: "Listo" },
+  { value: "approved", label: "Aprobado" },
+  { value: "archived", label: "Archivado" }
+]);
+const COACH_MARKETING_MEDIA_SLOT_STATUS_OPTIONS = Object.freeze([
+  { value: "pending", label: "Pendiente" },
+  { value: "ready", label: "Listo" },
+  { value: "approved", label: "Aprobado" },
+  { value: "missing", label: "Faltante" }
+]);
+const COACH_MARKETING_PUBLICATION_MODE_OPTIONS = Object.freeze([
+  { value: "organic", label: "Organica" },
+  { value: "paid", label: "Pagada" },
+  { value: "hybrid", label: "Hibrida" }
+]);
+const COACH_MARKETING_PUBLICATION_STATUS_OPTIONS = Object.freeze([
+  { value: "draft", label: "Borrador" },
+  { value: "queued", label: "En cola" },
+  { value: "scheduled", label: "Programada" },
+  { value: "published", label: "Publicada" },
+  { value: "failed", label: "Fallida" },
+  { value: "archived", label: "Archivada" }
+]);
+const COACH_MARKETING_EVENT_DIRECTION_OPTIONS = Object.freeze([
+  { value: "inbound", label: "Entrante" },
+  { value: "outbound", label: "Saliente" },
+  { value: "internal", label: "Interno" }
+]);
+const COACH_MARKETING_EVENT_STATUS_OPTIONS = Object.freeze([
+  { value: "queued", label: "En cola" },
+  { value: "processed", label: "Procesado" },
+  { value: "ignored", label: "Ignorado" },
+  { value: "failed", label: "Fallido" }
+]);
+const COACH_MARKETING_HEALTH_STATUS_OPTIONS = Object.freeze([
+  { value: "pending", label: "Pendiente" },
+  { value: "ok", label: "Ok" },
+  { value: "attention", label: "Atencion" },
+  { value: "error", label: "Error" }
+]);
+const COACH_MARKETING_INTEGRATION_BLUEPRINTS = Object.freeze(
+  COACH_MARKETING_PRODUCT_OPTIONS.filter(item => item.bootstrap !== false).map(item => ({
+    templateKey: item.value,
+    provider: item.provider,
+    product: item.value,
+    label: item.label,
+    description: item.description,
+    authMode: item.authMode,
+    accountType: item.accountType,
+    capabilities: item.capabilities
+  }))
+);
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -263,6 +529,19 @@ const coachDemoEventSnapshotSchema = new mongoose.Schema(
     label: String,
     detail: String,
     occurredAt: Date
+  },
+  { _id: false }
+);
+
+const coachMarketingMediaSlotSchema = new mongoose.Schema(
+  {
+    slotKey: String,
+    label: String,
+    assetType: String,
+    status: { type: String, default: "pending" },
+    sourceUrl: String,
+    fileName: String,
+    notes: String
   },
   { _id: false }
 );
@@ -1056,6 +1335,309 @@ const coachAsyncJobSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+const coachMarketingIntegrationSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  templateKey: { type: String, default: "", index: true },
+  label: String,
+  description: String,
+  status: { type: String, default: "draft", index: true },
+  connectionStatus: { type: String, default: "not_connected", index: true },
+  authMode: { type: String, default: "manual_placeholder" },
+  accountType: { type: String, default: "workspace" },
+  accountLabel: String,
+  externalBusinessId: String,
+  externalAccountId: String,
+  externalAccountName: String,
+  expectedScopes: [String],
+  grantedScopes: [String],
+  missingScopes: [String],
+  capabilities: [String],
+  config: { type: mongoose.Schema.Types.Mixed, default: null },
+  notes: String,
+  lastHealthStatus: { type: String, default: "pending" },
+  lastHealthCheckAt: Date,
+  lastSyncAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachMarketingChannelSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  channelType: { type: String, default: "custom", index: true },
+  label: String,
+  handle: String,
+  status: { type: String, default: "draft", index: true },
+  externalChannelId: String,
+  externalChannelName: String,
+  landingPageUrl: String,
+  defaultForPublishing: { type: Boolean, default: false },
+  defaultForLeadCapture: { type: Boolean, default: false },
+  metadata: { type: mongoose.Schema.Types.Mixed, default: null },
+  notes: String,
+  lastSyncAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachMarketingCampaignSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  primaryChannelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingChannel",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  campaignType: { type: String, default: "paid", index: true },
+  objective: { type: String, default: "leads", index: true },
+  name: { type: String, required: true, trim: true },
+  status: { type: String, default: "draft", index: true },
+  reviewStatus: { type: String, default: "draft", index: true },
+  budgetType: { type: String, default: "daily" },
+  budgetAmount: { type: Number, default: 0 },
+  currency: { type: String, default: "USD" },
+  landingPageUrl: String,
+  primaryGoal: String,
+  audienceSummary: String,
+  geoSummary: String,
+  languageSummary: String,
+  trackingTemplate: { type: mongoose.Schema.Types.Mixed, default: null },
+  notes: String,
+  startAt: Date,
+  endAt: Date,
+  externalCampaignId: String,
+  lastSyncAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachMarketingCreativeSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCampaign",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  creativeType: { type: String, default: "mixed", index: true },
+  name: { type: String, required: true, trim: true },
+  status: { type: String, default: "draft", index: true },
+  headline: String,
+  primaryText: String,
+  description: String,
+  callToAction: String,
+  destinationUrl: String,
+  mediaSlots: [coachMarketingMediaSlotSchema],
+  notes: String,
+  reviewNotes: String,
+  externalCreativeId: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachMarketingPublicationSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  channelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingChannel",
+    default: null,
+    index: true
+  },
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCampaign",
+    default: null,
+    index: true
+  },
+  creativeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCreative",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  mode: { type: String, default: "organic", index: true },
+  label: String,
+  status: { type: String, default: "draft", index: true },
+  reviewStatus: { type: String, default: "draft", index: true },
+  caption: String,
+  destinationUrl: String,
+  scheduledAt: Date,
+  publishedAt: Date,
+  externalPublicationId: String,
+  externalPostUrl: String,
+  notes: String,
+  lastSyncAt: Date,
+  lastError: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const coachMarketingEventSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  channelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingChannel",
+    default: null,
+    index: true
+  },
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCampaign",
+    default: null,
+    index: true
+  },
+  creativeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCreative",
+    default: null,
+    index: true
+  },
+  publicationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingPublication",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  direction: { type: String, default: "internal", index: true },
+  eventType: { type: String, default: "workspace_updated", index: true },
+  entityType: { type: String, default: "workspace", index: true },
+  entityId: String,
+  status: { type: String, default: "queued", index: true },
+  fingerprint: { type: String, default: "", index: true },
+  summary: String,
+  payload: { type: mongoose.Schema.Types.Mixed, default: null },
+  occurredAt: { type: Date, default: Date.now, index: true },
+  processedAt: Date,
+  lastError: String,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -1121,6 +1703,29 @@ coachCrmRecordSchema.index({ ownerUserId: 1, assignedTelemarketerUserId: 1, upda
 coachCrmActivitySchema.index({ crmRecordId: 1, createdAt: -1 });
 coachAsyncJobSchema.index({ status: 1, nextRunAt: 1, lockedAt: 1 });
 coachAsyncJobSchema.index({ jobType: 1, dedupeKey: 1, status: 1, updatedAt: -1 });
+coachMarketingIntegrationSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingIntegrationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingIntegrationSchema.index({ ownerUserId: 1, provider: 1, product: 1, updatedAt: -1 });
+coachMarketingIntegrationSchema.index({ ownerUserId: 1, templateKey: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingChannelSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingChannelSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingChannelSchema.index({ ownerUserId: 1, integrationId: 1, updatedAt: -1 });
+coachMarketingChannelSchema.index({ ownerUserId: 1, channelType: 1, status: 1, updatedAt: -1 });
+coachMarketingCampaignSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingCampaignSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingCampaignSchema.index({ ownerUserId: 1, integrationId: 1, status: 1, updatedAt: -1 });
+coachMarketingCampaignSchema.index({ ownerUserId: 1, objective: 1, status: 1, updatedAt: -1 });
+coachMarketingCreativeSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingCreativeSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingCreativeSchema.index({ ownerUserId: 1, campaignId: 1, status: 1, updatedAt: -1 });
+coachMarketingPublicationSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingPublicationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingPublicationSchema.index({ ownerUserId: 1, channelId: 1, status: 1, updatedAt: -1 });
+coachMarketingPublicationSchema.index({ ownerUserId: 1, scheduledAt: 1, status: 1, updatedAt: -1 });
+coachMarketingEventSchema.index({ ownerUserId: 1, occurredAt: -1 });
+coachMarketingEventSchema.index({ ownerUserId: 1, generatedByUserId: 1, occurredAt: -1 });
+coachMarketingEventSchema.index({ ownerUserId: 1, provider: 1, eventType: 1, occurredAt: -1 });
+coachMarketingEventSchema.index({ ownerUserId: 1, status: 1, occurredAt: -1 });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -1169,6 +1774,20 @@ const CoachCrmActivity =
   mongoose.models.CoachCrmActivity || mongoose.model("CoachCrmActivity", coachCrmActivitySchema);
 const CoachAsyncJob =
   mongoose.models.CoachAsyncJob || mongoose.model("CoachAsyncJob", coachAsyncJobSchema);
+const CoachMarketingIntegration =
+  mongoose.models.CoachMarketingIntegration ||
+  mongoose.model("CoachMarketingIntegration", coachMarketingIntegrationSchema);
+const CoachMarketingChannel =
+  mongoose.models.CoachMarketingChannel || mongoose.model("CoachMarketingChannel", coachMarketingChannelSchema);
+const CoachMarketingCampaign =
+  mongoose.models.CoachMarketingCampaign || mongoose.model("CoachMarketingCampaign", coachMarketingCampaignSchema);
+const CoachMarketingCreative =
+  mongoose.models.CoachMarketingCreative || mongoose.model("CoachMarketingCreative", coachMarketingCreativeSchema);
+const CoachMarketingPublication =
+  mongoose.models.CoachMarketingPublication ||
+  mongoose.model("CoachMarketingPublication", coachMarketingPublicationSchema);
+const CoachMarketingEvent =
+  mongoose.models.CoachMarketingEvent || mongoose.model("CoachMarketingEvent", coachMarketingEventSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -4051,6 +4670,968 @@ function limpiarCoachHighLevelSalesTracking(profileDoc = null) {
     webhookTokenConfigured: Boolean(webhookToken),
     webhookPath: construirCoachHighLevelSalesWebhookPath(webhookToken),
     updatedAt: profileDoc?.highLevelSalesTrackingUpdatedAt || null
+  };
+}
+
+function obtenerCoachMarketingOptionValue(options = [], value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Array.isArray(options) ? options.find(item => item?.value === normalized) || null : null;
+}
+
+function normalizarCoachMarketingChoice(value = "", options = [], fallback = "custom") {
+  const option = obtenerCoachMarketingOptionValue(options, value);
+  return option?.value || fallback;
+}
+
+function formatearCoachMarketingTokenLabel(value = "") {
+  return String(value || "")
+    .trim()
+    .split("_")
+    .filter(Boolean)
+    .map(part => (part.length > 3 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part.toUpperCase()))
+    .join(" ");
+}
+
+function formatearCoachMarketingChoiceLabel(value = "", options = [], fallback = "") {
+  const option = obtenerCoachMarketingOptionValue(options, value);
+  return option?.label || fallback || formatearCoachMarketingTokenLabel(value);
+}
+
+function normalizarCoachMarketingProvider(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_PROVIDER_OPTIONS, "custom");
+}
+
+function normalizarCoachMarketingProduct(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_PRODUCT_OPTIONS, "custom");
+}
+
+function normalizarCoachMarketingAuthMode(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_AUTH_MODE_OPTIONS, "manual_placeholder");
+}
+
+function normalizarCoachMarketingAccountType(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_ACCOUNT_TYPE_OPTIONS, "custom");
+}
+
+function normalizarCoachMarketingIntegrationStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_INTEGRATION_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingConnectionStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CONNECTION_STATUS_OPTIONS, "not_connected");
+}
+
+function normalizarCoachMarketingChannelType(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CHANNEL_TYPE_OPTIONS, "custom");
+}
+
+function normalizarCoachMarketingChannelStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CHANNEL_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingCampaignType(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CAMPAIGN_TYPE_OPTIONS, "paid");
+}
+
+function normalizarCoachMarketingObjective(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_OBJECTIVE_OPTIONS, "leads");
+}
+
+function normalizarCoachMarketingCampaignStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingReviewStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_REVIEW_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingCreativeType(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CREATIVE_TYPE_OPTIONS, "mixed");
+}
+
+function normalizarCoachMarketingCreativeStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_CREATIVE_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingMediaSlotStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_MEDIA_SLOT_STATUS_OPTIONS, "pending");
+}
+
+function normalizarCoachMarketingPublicationMode(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_PUBLICATION_MODE_OPTIONS, "organic");
+}
+
+function normalizarCoachMarketingPublicationStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_PUBLICATION_STATUS_OPTIONS, "draft");
+}
+
+function normalizarCoachMarketingEventDirection(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_EVENT_DIRECTION_OPTIONS, "internal");
+}
+
+function normalizarCoachMarketingEventStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_EVENT_STATUS_OPTIONS, "queued");
+}
+
+function normalizarCoachMarketingHealthStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_HEALTH_STATUS_OPTIONS, "pending");
+}
+
+function obtenerCoachMarketingProductDefinition(product = "") {
+  return obtenerCoachMarketingOptionValue(COACH_MARKETING_PRODUCT_OPTIONS, product);
+}
+
+function obtenerCoachMarketingBlueprint(templateKey = "") {
+  const safeKey = String(templateKey || "").trim().toLowerCase();
+  return COACH_MARKETING_INTEGRATION_BLUEPRINTS.find(item => item.templateKey === safeKey) || null;
+}
+
+function limpiarCoachMarketingStringArray(values = [], maxItems = 12, maxLength = 80) {
+  const safeValues = Array.isArray(values) ? values : [values];
+  const unique = new Set();
+  const cleaned = [];
+
+  for (const value of safeValues) {
+    const safeValue = cleanText(value || "").slice(0, maxLength);
+
+    if (!safeValue || unique.has(safeValue)) {
+      continue;
+    }
+
+    unique.add(safeValue);
+    cleaned.push(safeValue);
+
+    if (cleaned.length >= maxItems) {
+      break;
+    }
+  }
+
+  return cleaned;
+}
+
+function limpiarCoachMarketingConfig(config = null) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return null;
+  }
+
+  const safeConfig = {};
+
+  for (const [rawKey, rawValue] of Object.entries(config).slice(0, 20)) {
+    const key = cleanText(rawKey || "").slice(0, 60);
+
+    if (!key) {
+      continue;
+    }
+
+    if (rawValue === null || rawValue === undefined) {
+      continue;
+    }
+
+    if (typeof rawValue === "number" || typeof rawValue === "boolean") {
+      safeConfig[key] = rawValue;
+      continue;
+    }
+
+    if (Array.isArray(rawValue)) {
+      const cleanedList = limpiarCoachMarketingStringArray(rawValue, 12, 120);
+
+      if (cleanedList.length) {
+        safeConfig[key] = cleanedList;
+      }
+      continue;
+    }
+
+    if (typeof rawValue === "object") {
+      const nested = {};
+
+      for (const [nestedKeyRaw, nestedValueRaw] of Object.entries(rawValue).slice(0, 10)) {
+        const nestedKey = cleanText(nestedKeyRaw || "").slice(0, 50);
+
+        if (!nestedKey || nestedValueRaw === null || nestedValueRaw === undefined) {
+          continue;
+        }
+
+        if (typeof nestedValueRaw === "number" || typeof nestedValueRaw === "boolean") {
+          nested[nestedKey] = nestedValueRaw;
+        } else if (Array.isArray(nestedValueRaw)) {
+          const nestedArray = limpiarCoachMarketingStringArray(nestedValueRaw, 8, 100);
+
+          if (nestedArray.length) {
+            nested[nestedKey] = nestedArray;
+          }
+        } else {
+          const nestedText = cleanText(nestedValueRaw || "").slice(0, 160);
+
+          if (nestedText) {
+            nested[nestedKey] = nestedText;
+          }
+        }
+      }
+
+      if (Object.keys(nested).length) {
+        safeConfig[key] = nested;
+      }
+      continue;
+    }
+
+    const safeText = cleanText(rawValue || "").slice(0, 160);
+
+    if (safeText) {
+      safeConfig[key] = safeText;
+    }
+  }
+
+  return Object.keys(safeConfig).length ? safeConfig : null;
+}
+
+function limpiarCoachMarketingMoney(value = 0) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  return Math.round(parsed * 100) / 100;
+}
+
+function normalizarCoachOptionalDate(value = null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date?.getTime?.()) ? date : null;
+}
+
+function limpiarCoachMarketingMediaSlots(slots = []) {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
+  return safeSlots
+    .slice(0, 12)
+    .map(slot => {
+      const slotKey = cleanText(slot?.slotKey || "").slice(0, 50);
+      const label = cleanText(slot?.label || "").slice(0, 80);
+      const assetType = cleanText(slot?.assetType || "").slice(0, 50) || "asset";
+      const status = normalizarCoachMarketingMediaSlotStatus(slot?.status || "");
+      const sourceUrl = limpiarUrlExterna(slot?.sourceUrl || "");
+      const fileName = cleanText(slot?.fileName || "").slice(0, 120);
+      const notes = truncarTextoPrompt(cleanText(slot?.notes || ""), 180);
+
+      if (!slotKey && !label && !sourceUrl && !fileName) {
+        return null;
+      }
+
+      return {
+        slotKey: slotKey || label.toLowerCase().replace(/\s+/g, "_") || assetType,
+        label: label || formatearCoachMarketingTokenLabel(slotKey || assetType),
+        assetType,
+        status,
+        statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_MEDIA_SLOT_STATUS_OPTIONS),
+        sourceUrl,
+        fileName,
+        notes
+      };
+    })
+    .filter(Boolean);
+}
+
+async function construirCoachWorkspaceActorSnapshot(userDoc = null) {
+  const ownerUserId = resolverCoachOwnerUserId(userDoc);
+
+  if (!ownerUserId || !userDoc?._id) {
+    return null;
+  }
+
+  let ownerName = userDoc?.name || "";
+  let ownerEmail = normalizarEmail(userDoc?.email || "");
+
+  if (String(ownerUserId) !== String(userDoc._id)) {
+    const ownerDoc = await CoachUser.findById(ownerUserId).select("name email").lean();
+    ownerName = ownerDoc?.name || ownerName;
+    ownerEmail = normalizarEmail(ownerDoc?.email || ownerEmail);
+  }
+
+  return {
+    ownerUserId,
+    ownerName,
+    ownerEmail,
+    generatedByUserId: userDoc._id,
+    generatedByName: userDoc?.name || "",
+    generatedByAccountType: normalizarCoachAccountType(userDoc?.accountType || "owner")
+  };
+}
+
+function construirCoachMarketingActorQuery(userDoc = null, extra = {}) {
+  return {
+    ...extra,
+    ownerUserId: resolverCoachOwnerUserId(userDoc),
+    generatedByUserId: userDoc?._id || null
+  };
+}
+
+function construirCoachMarketingRoutes() {
+  return {
+    overview: "/api/coach/marketing/overview",
+    catalog: "/api/coach/marketing/catalog",
+    bootstrap: "/api/coach/marketing/bootstrap",
+    integrations: "/api/coach/marketing/integrations",
+    channels: "/api/coach/marketing/channels",
+    campaigns: "/api/coach/marketing/campaigns",
+    creatives: "/api/coach/marketing/creatives",
+    publications: "/api/coach/marketing/publications",
+    events: "/api/coach/marketing/events"
+  };
+}
+
+function construirCoachMarketingCatalog() {
+  const providerMap = new Map(
+    COACH_MARKETING_PROVIDER_OPTIONS.map(option => [
+      option.value,
+      {
+        provider: option.value,
+        label: option.label,
+        products: []
+      }
+    ])
+  );
+
+  for (const product of COACH_MARKETING_PRODUCT_OPTIONS) {
+    const provider = providerMap.get(product.provider);
+
+    if (!provider) {
+      continue;
+    }
+
+    provider.products.push({
+      value: product.value,
+      label: product.label,
+      description: product.description,
+      authMode: normalizarCoachMarketingAuthMode(product.authMode || ""),
+      authModeLabel: formatearCoachMarketingChoiceLabel(product.authMode || "", COACH_MARKETING_AUTH_MODE_OPTIONS),
+      accountType: normalizarCoachMarketingAccountType(product.accountType || ""),
+      accountTypeLabel: formatearCoachMarketingChoiceLabel(product.accountType || "", COACH_MARKETING_ACCOUNT_TYPE_OPTIONS),
+      capabilities: limpiarCoachMarketingStringArray(product.capabilities || [], 16, 40),
+      bootstrap: product.bootstrap !== false
+    });
+  }
+
+  return {
+    foundationVersion: COACH_MARKETING_FOUNDATION_VERSION,
+    routes: construirCoachMarketingRoutes(),
+    providers: Array.from(providerMap.values()).filter(item => item.products.length),
+    blueprints: COACH_MARKETING_INTEGRATION_BLUEPRINTS.map(item => ({
+      templateKey: item.templateKey,
+      provider: item.provider,
+      providerLabel: formatearCoachMarketingChoiceLabel(item.provider, COACH_MARKETING_PROVIDER_OPTIONS),
+      product: item.product,
+      productLabel: formatearCoachMarketingChoiceLabel(item.product, COACH_MARKETING_PRODUCT_OPTIONS),
+      label: item.label,
+      description: item.description,
+      authMode: item.authMode,
+      authModeLabel: formatearCoachMarketingChoiceLabel(item.authMode, COACH_MARKETING_AUTH_MODE_OPTIONS),
+      accountType: item.accountType,
+      accountTypeLabel: formatearCoachMarketingChoiceLabel(item.accountType, COACH_MARKETING_ACCOUNT_TYPE_OPTIONS),
+      capabilities: limpiarCoachMarketingStringArray(item.capabilities || [], 16, 40)
+    })),
+    statuses: {
+      integrations: COACH_MARKETING_INTEGRATION_STATUS_OPTIONS,
+      connection: COACH_MARKETING_CONNECTION_STATUS_OPTIONS,
+      channels: COACH_MARKETING_CHANNEL_STATUS_OPTIONS,
+      campaigns: COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS,
+      creatives: COACH_MARKETING_CREATIVE_STATUS_OPTIONS,
+      publications: COACH_MARKETING_PUBLICATION_STATUS_OPTIONS,
+      review: COACH_MARKETING_REVIEW_STATUS_OPTIONS,
+      events: COACH_MARKETING_EVENT_STATUS_OPTIONS,
+      health: COACH_MARKETING_HEALTH_STATUS_OPTIONS
+    },
+    authModes: COACH_MARKETING_AUTH_MODE_OPTIONS,
+    accountTypes: COACH_MARKETING_ACCOUNT_TYPE_OPTIONS,
+    channelTypes: COACH_MARKETING_CHANNEL_TYPE_OPTIONS,
+    campaignTypes: COACH_MARKETING_CAMPAIGN_TYPE_OPTIONS,
+    objectives: COACH_MARKETING_OBJECTIVE_OPTIONS,
+    creativeTypes: COACH_MARKETING_CREATIVE_TYPE_OPTIONS,
+    publicationModes: COACH_MARKETING_PUBLICATION_MODE_OPTIONS,
+    eventDirections: COACH_MARKETING_EVENT_DIRECTION_OPTIONS
+  };
+}
+
+function limpiarCoachMarketingBaseDoc(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc?._id || ""),
+    ownerUserId: doc?.ownerUserId ? String(doc.ownerUserId) : "",
+    ownerName: doc?.ownerName || "",
+    generatedByUserId: doc?.generatedByUserId ? String(doc.generatedByUserId) : "",
+    generatedByName: doc?.generatedByName || "",
+    generatedByAccountType: normalizarCoachAccountType(doc?.generatedByAccountType || "owner"),
+    createdAt: doc?.createdAt || null,
+    updatedAt: doc?.updatedAt || null
+  };
+}
+
+function limpiarCoachMarketingIntegration(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const productDefinition = obtenerCoachMarketingProductDefinition(doc.product || "");
+  const provider = normalizarCoachMarketingProvider(doc.provider || productDefinition?.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const status = normalizarCoachMarketingIntegrationStatus(doc.status || "");
+  const connectionStatus = normalizarCoachMarketingConnectionStatus(doc.connectionStatus || "");
+  const authMode = normalizarCoachMarketingAuthMode(doc.authMode || productDefinition?.authMode || "");
+  const accountType = normalizarCoachMarketingAccountType(doc.accountType || productDefinition?.accountType || "");
+  const healthStatus = normalizarCoachMarketingHealthStatus(doc.lastHealthStatus || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    templateKey: cleanText(doc.templateKey || "").slice(0, 80),
+    label: cleanText(doc.label || "").slice(0, 120) || productDefinition?.label || formatearCoachMarketingTokenLabel(product),
+    description:
+      truncarTextoPrompt(cleanText(doc.description || ""), 220) ||
+      truncarTextoPrompt(productDefinition?.description || "", 220),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_INTEGRATION_STATUS_OPTIONS),
+    connectionStatus,
+    connectionStatusLabel: formatearCoachMarketingChoiceLabel(
+      connectionStatus,
+      COACH_MARKETING_CONNECTION_STATUS_OPTIONS
+    ),
+    authMode,
+    authModeLabel: formatearCoachMarketingChoiceLabel(authMode, COACH_MARKETING_AUTH_MODE_OPTIONS),
+    accountType,
+    accountTypeLabel: formatearCoachMarketingChoiceLabel(accountType, COACH_MARKETING_ACCOUNT_TYPE_OPTIONS),
+    accountLabel: cleanText(doc.accountLabel || "").slice(0, 120),
+    externalBusinessId: cleanText(doc.externalBusinessId || "").slice(0, 120),
+    externalAccountId: cleanText(doc.externalAccountId || "").slice(0, 120),
+    externalAccountName: cleanText(doc.externalAccountName || "").slice(0, 120),
+    expectedScopes: limpiarCoachMarketingStringArray(doc.expectedScopes || [], 20, 60),
+    grantedScopes: limpiarCoachMarketingStringArray(doc.grantedScopes || [], 20, 60),
+    missingScopes: limpiarCoachMarketingStringArray(doc.missingScopes || [], 20, 60),
+    capabilities: limpiarCoachMarketingStringArray(
+      doc.capabilities || productDefinition?.capabilities || [],
+      20,
+      50
+    ),
+    config: limpiarCoachMarketingConfig(doc.config),
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    lastHealthStatus: healthStatus,
+    lastHealthStatusLabel: formatearCoachMarketingChoiceLabel(healthStatus, COACH_MARKETING_HEALTH_STATUS_OPTIONS),
+    lastHealthCheckAt: doc.lastHealthCheckAt || null,
+    lastSyncAt: doc.lastSyncAt || null
+  };
+}
+
+function limpiarCoachMarketingChannel(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const channelType = normalizarCoachMarketingChannelType(doc.channelType || "");
+  const status = normalizarCoachMarketingChannelStatus(doc.status || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    channelType,
+    channelTypeLabel: formatearCoachMarketingChoiceLabel(channelType, COACH_MARKETING_CHANNEL_TYPE_OPTIONS),
+    label: cleanText(doc.label || "").slice(0, 120) || formatearCoachMarketingTokenLabel(channelType),
+    handle: cleanText(doc.handle || "").slice(0, 120),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_CHANNEL_STATUS_OPTIONS),
+    externalChannelId: cleanText(doc.externalChannelId || "").slice(0, 120),
+    externalChannelName: cleanText(doc.externalChannelName || "").slice(0, 120),
+    landingPageUrl: limpiarUrlExterna(doc.landingPageUrl || ""),
+    defaultForPublishing: doc?.defaultForPublishing === true,
+    defaultForLeadCapture: doc?.defaultForLeadCapture === true,
+    metadata: limpiarCoachMarketingConfig(doc.metadata),
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    lastSyncAt: doc.lastSyncAt || null
+  };
+}
+
+function limpiarCoachMarketingCampaign(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const campaignType = normalizarCoachMarketingCampaignType(doc.campaignType || "");
+  const objective = normalizarCoachMarketingObjective(doc.objective || "");
+  const status = normalizarCoachMarketingCampaignStatus(doc.status || "");
+  const reviewStatus = normalizarCoachMarketingReviewStatus(doc.reviewStatus || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    primaryChannelId: doc?.primaryChannelId ? String(doc.primaryChannelId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    campaignType,
+    campaignTypeLabel: formatearCoachMarketingChoiceLabel(campaignType, COACH_MARKETING_CAMPAIGN_TYPE_OPTIONS),
+    objective,
+    objectiveLabel: formatearCoachMarketingChoiceLabel(objective, COACH_MARKETING_OBJECTIVE_OPTIONS),
+    name: cleanText(doc.name || "").slice(0, 140),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS),
+    reviewStatus,
+    reviewStatusLabel: formatearCoachMarketingChoiceLabel(reviewStatus, COACH_MARKETING_REVIEW_STATUS_OPTIONS),
+    budgetType: cleanText(doc.budgetType || "daily").slice(0, 20),
+    budgetAmount: limpiarCoachMarketingMoney(doc.budgetAmount || 0),
+    currency: cleanText(doc.currency || "USD")
+      .toUpperCase()
+      .slice(0, 8) || "USD",
+    landingPageUrl: limpiarUrlExterna(doc.landingPageUrl || ""),
+    primaryGoal: cleanText(doc.primaryGoal || "").slice(0, 120),
+    audienceSummary: truncarTextoPrompt(cleanText(doc.audienceSummary || ""), 220),
+    geoSummary: truncarTextoPrompt(cleanText(doc.geoSummary || ""), 180),
+    languageSummary: truncarTextoPrompt(cleanText(doc.languageSummary || ""), 120),
+    trackingTemplate: limpiarCoachMarketingConfig(doc.trackingTemplate),
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    startAt: doc.startAt || null,
+    endAt: doc.endAt || null,
+    externalCampaignId: cleanText(doc.externalCampaignId || "").slice(0, 120),
+    lastSyncAt: doc.lastSyncAt || null
+  };
+}
+
+function limpiarCoachMarketingCreative(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const creativeType = normalizarCoachMarketingCreativeType(doc.creativeType || "");
+  const status = normalizarCoachMarketingCreativeStatus(doc.status || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    campaignId: doc?.campaignId ? String(doc.campaignId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    creativeType,
+    creativeTypeLabel: formatearCoachMarketingChoiceLabel(creativeType, COACH_MARKETING_CREATIVE_TYPE_OPTIONS),
+    name: cleanText(doc.name || "").slice(0, 140),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_CREATIVE_STATUS_OPTIONS),
+    headline: cleanText(doc.headline || "").slice(0, 160),
+    primaryText: truncarTextoPrompt(cleanText(doc.primaryText || ""), 320),
+    description: truncarTextoPrompt(cleanText(doc.description || ""), 240),
+    callToAction: cleanText(doc.callToAction || "").slice(0, 80),
+    destinationUrl: limpiarUrlExterna(doc.destinationUrl || ""),
+    mediaSlots: limpiarCoachMarketingMediaSlots(doc.mediaSlots || []),
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    reviewNotes: truncarTextoPrompt(cleanText(doc.reviewNotes || ""), 220),
+    externalCreativeId: cleanText(doc.externalCreativeId || "").slice(0, 120)
+  };
+}
+
+function limpiarCoachMarketingPublication(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const mode = normalizarCoachMarketingPublicationMode(doc.mode || "");
+  const status = normalizarCoachMarketingPublicationStatus(doc.status || "");
+  const reviewStatus = normalizarCoachMarketingReviewStatus(doc.reviewStatus || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    channelId: doc?.channelId ? String(doc.channelId) : "",
+    campaignId: doc?.campaignId ? String(doc.campaignId) : "",
+    creativeId: doc?.creativeId ? String(doc.creativeId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    mode,
+    modeLabel: formatearCoachMarketingChoiceLabel(mode, COACH_MARKETING_PUBLICATION_MODE_OPTIONS),
+    label: cleanText(doc.label || "").slice(0, 140),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_PUBLICATION_STATUS_OPTIONS),
+    reviewStatus,
+    reviewStatusLabel: formatearCoachMarketingChoiceLabel(reviewStatus, COACH_MARKETING_REVIEW_STATUS_OPTIONS),
+    caption: truncarTextoPrompt(cleanText(doc.caption || ""), 320),
+    destinationUrl: limpiarUrlExterna(doc.destinationUrl || ""),
+    scheduledAt: doc.scheduledAt || null,
+    publishedAt: doc.publishedAt || null,
+    externalPublicationId: cleanText(doc.externalPublicationId || "").slice(0, 120),
+    externalPostUrl: limpiarUrlExterna(doc.externalPostUrl || ""),
+    notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    lastSyncAt: doc.lastSyncAt || null,
+    lastError: truncarTextoPrompt(cleanText(doc.lastError || ""), 200)
+  };
+}
+
+function limpiarCoachMarketingEvent(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const direction = normalizarCoachMarketingEventDirection(doc.direction || "");
+  const status = normalizarCoachMarketingEventStatus(doc.status || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    channelId: doc?.channelId ? String(doc.channelId) : "",
+    campaignId: doc?.campaignId ? String(doc.campaignId) : "",
+    creativeId: doc?.creativeId ? String(doc.creativeId) : "",
+    publicationId: doc?.publicationId ? String(doc.publicationId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    direction,
+    directionLabel: formatearCoachMarketingChoiceLabel(direction, COACH_MARKETING_EVENT_DIRECTION_OPTIONS),
+    eventType: cleanText(doc.eventType || "").slice(0, 80),
+    entityType: cleanText(doc.entityType || "").slice(0, 80),
+    entityId: cleanText(doc.entityId || "").slice(0, 120),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_EVENT_STATUS_OPTIONS),
+    fingerprint: cleanText(doc.fingerprint || "").slice(0, 160),
+    summary: truncarTextoPrompt(cleanText(doc.summary || ""), 220),
+    payload: limpiarCoachMarketingConfig(doc.payload),
+    occurredAt: doc.occurredAt || doc.createdAt || null,
+    processedAt: doc.processedAt || null,
+    lastError: truncarTextoPrompt(cleanText(doc.lastError || ""), 200)
+  };
+}
+
+function resolverCoachMarketingListLimit(value = "", fallback = 25, max = 100) {
+  const parsed = Number.parseInt(value || "", 10);
+  return Math.max(1, Math.min(Number.isFinite(parsed) ? parsed : fallback, max));
+}
+
+async function cargarCoachMarketingWorkspaceRefs(
+  userDoc = null,
+  { integrationId = "", channelId = "", campaignId = "", creativeId = "", publicationId = "" } = {}
+) {
+  const safeIntegrationId = normalizarCoachCrmObjectId(integrationId);
+  const safeChannelId = normalizarCoachCrmObjectId(channelId);
+  const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
+  const safeCreativeId = normalizarCoachCrmObjectId(creativeId);
+  const safePublicationId = normalizarCoachCrmObjectId(publicationId);
+
+  const [integrationDoc, channelDoc, campaignDoc, creativeDoc, publicationDoc] = await Promise.all([
+    safeIntegrationId
+      ? CoachMarketingIntegration.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeIntegrationId })).lean()
+      : Promise.resolve(null),
+    safeChannelId
+      ? CoachMarketingChannel.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeChannelId })).lean()
+      : Promise.resolve(null),
+    safeCampaignId
+      ? CoachMarketingCampaign.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeCampaignId })).lean()
+      : Promise.resolve(null),
+    safeCreativeId
+      ? CoachMarketingCreative.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safeCreativeId })).lean()
+      : Promise.resolve(null),
+    safePublicationId
+      ? CoachMarketingPublication.findOne(construirCoachWorkspaceQuery(userDoc, { _id: safePublicationId })).lean()
+      : Promise.resolve(null)
+  ]);
+
+  return {
+    integrationDoc,
+    channelDoc,
+    campaignDoc,
+    creativeDoc,
+    publicationDoc
+  };
+}
+
+function resolverCoachMarketingProviderDesdeRefs(value = "", refs = {}) {
+  return normalizarCoachMarketingProvider(
+    value ||
+      refs?.publicationDoc?.provider ||
+      refs?.creativeDoc?.provider ||
+      refs?.campaignDoc?.provider ||
+      refs?.channelDoc?.provider ||
+      refs?.integrationDoc?.provider ||
+      "custom"
+  );
+}
+
+function resolverCoachMarketingProductDesdeRefs(value = "", refs = {}) {
+  return normalizarCoachMarketingProduct(
+    value ||
+      refs?.publicationDoc?.product ||
+      refs?.creativeDoc?.product ||
+      refs?.campaignDoc?.product ||
+      refs?.channelDoc?.product ||
+      refs?.integrationDoc?.product ||
+      "custom"
+  );
+}
+
+async function registrarCoachMarketingEvent({
+  userDoc = null,
+  workspaceSnapshot = null,
+  integrationId = null,
+  channelId = null,
+  campaignId = null,
+  creativeId = null,
+  publicationId = null,
+  provider = "",
+  product = "",
+  direction = "internal",
+  eventType = "workspace_updated",
+  entityType = "workspace",
+  entityId = "",
+  status = "processed",
+  fingerprint = "",
+  summary = "",
+  payload = null,
+  occurredAt = new Date(),
+  lastError = ""
+} = {}) {
+  try {
+    const snapshot = workspaceSnapshot || (await construirCoachWorkspaceActorSnapshot(userDoc));
+
+    if (!snapshot?.ownerUserId) {
+      return null;
+    }
+
+    const eventDoc = await CoachMarketingEvent.create({
+      ownerUserId: snapshot.ownerUserId,
+      ownerEmail: snapshot.ownerEmail || "",
+      ownerName: snapshot.ownerName || "",
+      generatedByUserId: snapshot.generatedByUserId || null,
+      generatedByName: snapshot.generatedByName || "",
+      generatedByAccountType: snapshot.generatedByAccountType || "owner",
+      integrationId: normalizarCoachCrmObjectId(integrationId),
+      channelId: normalizarCoachCrmObjectId(channelId),
+      campaignId: normalizarCoachCrmObjectId(campaignId),
+      creativeId: normalizarCoachCrmObjectId(creativeId),
+      publicationId: normalizarCoachCrmObjectId(publicationId),
+      provider: normalizarCoachMarketingProvider(provider || ""),
+      product: normalizarCoachMarketingProduct(product || ""),
+      direction: normalizarCoachMarketingEventDirection(direction || ""),
+      eventType: cleanText(eventType || "").slice(0, 80) || "workspace_updated",
+      entityType: cleanText(entityType || "").slice(0, 80) || "workspace",
+      entityId: cleanText(entityId || "").slice(0, 120),
+      status: normalizarCoachMarketingEventStatus(status || ""),
+      fingerprint: cleanText(fingerprint || "").slice(0, 160),
+      summary: truncarTextoPrompt(cleanText(summary || ""), 220),
+      payload: limpiarCoachMarketingConfig(payload),
+      occurredAt,
+      processedAt: normalizarCoachMarketingEventStatus(status || "") === "processed" ? occurredAt : null,
+      lastError: truncarTextoPrompt(cleanText(lastError || ""), 200),
+      updatedAt: occurredAt
+    });
+
+    return limpiarCoachMarketingEvent(eventDoc?.toObject ? eventDoc.toObject() : eventDoc);
+  } catch (error) {
+    console.error("Error registrando evento de marketing del Coach:", error.message);
+    return null;
+  }
+}
+
+async function asegurarCoachMarketingWorkspaceBase(userDoc = null) {
+  const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(userDoc);
+
+  if (!workspaceSnapshot?.ownerUserId || !workspaceSnapshot?.generatedByUserId) {
+    return {
+      created: [],
+      total: 0,
+      templateKeys: []
+    };
+  }
+
+  const templateKeys = COACH_MARKETING_INTEGRATION_BLUEPRINTS.map(item => item.templateKey);
+  const existingDocs = await CoachMarketingIntegration.find({
+    ownerUserId: workspaceSnapshot.ownerUserId,
+    generatedByUserId: workspaceSnapshot.generatedByUserId,
+    templateKey: { $in: templateKeys }
+  })
+    .select("templateKey")
+    .lean();
+  const existingKeys = new Set(existingDocs.map(doc => String(doc.templateKey || "").trim().toLowerCase()).filter(Boolean));
+  const now = new Date();
+  const docsToCreate = COACH_MARKETING_INTEGRATION_BLUEPRINTS.filter(
+    blueprint => !existingKeys.has(blueprint.templateKey)
+  ).map(blueprint => ({
+    ownerUserId: workspaceSnapshot.ownerUserId,
+    ownerEmail: workspaceSnapshot.ownerEmail || "",
+    ownerName: workspaceSnapshot.ownerName || "",
+    generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+    generatedByName: workspaceSnapshot.generatedByName || "",
+    generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+    provider: normalizarCoachMarketingProvider(blueprint.provider || ""),
+    product: normalizarCoachMarketingProduct(blueprint.product || ""),
+    templateKey: blueprint.templateKey,
+    label: blueprint.label,
+    description: blueprint.description,
+    status: "draft",
+    connectionStatus: "not_connected",
+    authMode: normalizarCoachMarketingAuthMode(blueprint.authMode || ""),
+    accountType: normalizarCoachMarketingAccountType(blueprint.accountType || ""),
+    capabilities: limpiarCoachMarketingStringArray(blueprint.capabilities || [], 16, 40),
+    lastHealthStatus: "pending",
+    updatedAt: now,
+    createdAt: now
+  }));
+
+  const createdDocs = docsToCreate.length ? await CoachMarketingIntegration.insertMany(docsToCreate) : [];
+
+  if (docsToCreate.length) {
+    await registrarCoachMarketingEvent({
+      userDoc,
+      workspaceSnapshot,
+      provider: "custom",
+      product: "custom",
+      direction: "internal",
+      eventType: "workspace_bootstrapped",
+      entityType: "marketing_workspace",
+      entityId: String(workspaceSnapshot.ownerUserId || ""),
+      status: "processed",
+      fingerprint: `workspace_bootstrap:${workspaceSnapshot.ownerUserId}:${workspaceSnapshot.generatedByUserId}`,
+      summary: `Se preparo la base de marketing con ${docsToCreate.length} integraciones borrador.`,
+      payload: {
+        createdTemplateKeys: docsToCreate.map(item => item.templateKey),
+        foundationVersion: COACH_MARKETING_FOUNDATION_VERSION
+      }
+    });
+  }
+
+  return {
+    created: createdDocs.map(doc => limpiarCoachMarketingIntegration(doc?.toObject ? doc.toObject() : doc)).filter(Boolean),
+    total: existingDocs.length + createdDocs.length,
+    templateKeys
+  };
+}
+
+async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
+  const integrationsCount = await CoachMarketingIntegration.countDocuments(construirCoachWorkspaceQuery(userDoc));
+
+  return {
+    foundationVersion: COACH_MARKETING_FOUNDATION_VERSION,
+    routes: construirCoachMarketingRoutes(),
+    bootstrapped: integrationsCount > 0,
+    integrationsCount,
+    supportedProviders: COACH_MARKETING_PROVIDER_OPTIONS.map(item => ({
+      provider: item.value,
+      label: item.label
+    }))
+  };
+}
+
+async function obtenerCoachMarketingOverview(userDoc = null) {
+  const query = construirCoachWorkspaceQuery(userDoc);
+
+  const [
+    integrationsCount,
+    channelsCount,
+    campaignsCount,
+    creativesCount,
+    publicationsCount,
+    eventsCount,
+    connectedIntegrations,
+    failedPublications,
+    failedEvents,
+    providerSummary,
+    recentIntegrationDocs,
+    recentCampaignDocs,
+    recentPublicationDocs,
+    recentEventDocs
+  ] = await Promise.all([
+    CoachMarketingIntegration.countDocuments(query),
+    CoachMarketingChannel.countDocuments(query),
+    CoachMarketingCampaign.countDocuments(query),
+    CoachMarketingCreative.countDocuments(query),
+    CoachMarketingPublication.countDocuments(query),
+    CoachMarketingEvent.countDocuments(query),
+    CoachMarketingIntegration.countDocuments({
+      ...query,
+      connectionStatus: "connected"
+    }),
+    CoachMarketingPublication.countDocuments({
+      ...query,
+      status: "failed"
+    }),
+    CoachMarketingEvent.countDocuments({
+      ...query,
+      status: "failed"
+    }),
+    CoachMarketingIntegration.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: "$provider",
+          total: { $sum: 1 },
+          connected: {
+            $sum: {
+              $cond: [{ $eq: ["$connectionStatus", "connected"] }, 1, 0]
+            }
+          }
+        }
+      },
+      { $sort: { total: -1, _id: 1 } }
+    ]),
+    CoachMarketingIntegration.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
+    CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
+    CoachMarketingPublication.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
+    CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(10).lean()
+  ]);
+
+  return {
+    foundationVersion: COACH_MARKETING_FOUNDATION_VERSION,
+    routes: construirCoachMarketingRoutes(),
+    bootstrapped: integrationsCount > 0,
+    counts: {
+      integrations: integrationsCount,
+      channels: channelsCount,
+      campaigns: campaignsCount,
+      creatives: creativesCount,
+      publications: publicationsCount,
+      events: eventsCount
+    },
+    health: {
+      connectedIntegrations,
+      failedPublications,
+      failedEvents
+    },
+    providers: Array.isArray(providerSummary)
+      ? providerSummary.map(item => {
+          const provider = normalizarCoachMarketingProvider(item?._id || "");
+          return {
+            provider,
+            label: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+            total: Number(item?.total || 0),
+            connected: Number(item?.connected || 0)
+          };
+        })
+      : [],
+    recent: {
+      integrations: recentIntegrationDocs.map(doc => limpiarCoachMarketingIntegration(doc)).filter(Boolean),
+      campaigns: recentCampaignDocs.map(doc => limpiarCoachMarketingCampaign(doc)).filter(Boolean),
+      publications: recentPublicationDocs.map(doc => limpiarCoachMarketingPublication(doc)).filter(Boolean),
+      events: recentEventDocs.map(doc => limpiarCoachMarketingEvent(doc)).filter(Boolean)
+    }
   };
 }
 
@@ -19247,13 +20828,17 @@ app.get("/api/coach/me", async (req, res) => {
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
     const returnUserView = returnAuth?.user ? await construirCoachUserView(returnAuth.user) : null;
 
-    const profilePayload = await construirCoachProfilePayload(profileDoc, analyticsDoc, userDoc._id);
+    const [profilePayload, marketing] = await Promise.all([
+      construirCoachProfilePayload(profileDoc, analyticsDoc, userDoc._id),
+      obtenerCoachMarketingModuleSnapshot(userDoc)
+    ]);
 
     res.json({
       authenticated: true,
       stripeReady: stripeListoParaCheckout(),
       user: await construirCoachUserView(userDoc),
       profile: profilePayload,
+      marketing,
       integrations: {
         highLevel: {
           readOnlyConfigured: highLevelReadOnlyEstaConfigurado(),
@@ -19315,6 +20900,794 @@ app.get("/api/coach/integrations/highlevel", async (req, res) => {
   } catch (error) {
     console.error("Error leyendo integracion HighLevel:", error.message);
     responderCoachError(res, 500, "No pude revisar la integracion de HighLevel.");
+  }
+});
+
+app.get("/api/coach/marketing/catalog", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    res.json(construirCoachMarketingCatalog());
+  } catch (error) {
+    console.error("Error cargando catalogo de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar el catalogo de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/bootstrap", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const result = await asegurarCoachMarketingWorkspaceBase(auth.user);
+    res.json({
+      created: result.created,
+      total: result.total,
+      overview: await obtenerCoachMarketingOverview(auth.user)
+    });
+  } catch (error) {
+    console.error("Error preparando base de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude preparar la base de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/overview", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    res.json(await obtenerCoachMarketingOverview(auth.user));
+  } catch (error) {
+    console.error("Error cargando overview de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar el overview de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/integrations", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const providerFilter = String(req.query?.provider || "").trim();
+    const statusFilter = String(req.query?.status || "").trim();
+    const connectionFilter = String(req.query?.connectionStatus || "").trim();
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (providerFilter) {
+      query.provider = normalizarCoachMarketingProvider(providerFilter);
+    }
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingIntegrationStatus(statusFilter);
+    }
+
+    if (connectionFilter) {
+      query.connectionStatus = normalizarCoachMarketingConnectionStatus(connectionFilter);
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingIntegration.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingIntegration.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingIntegration(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando integraciones de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar las integraciones de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/integrations", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+
+    if (!workspaceSnapshot?.ownerUserId) {
+      return responderCoachError(res, 400, "No pude preparar el workspace de marketing.");
+    }
+
+    const templateKey = cleanText(req.body?.templateKey || "").slice(0, 80).toLowerCase();
+    const blueprint = obtenerCoachMarketingBlueprint(templateKey);
+
+    if (templateKey && blueprint) {
+      const existingDoc = await CoachMarketingIntegration.findOne(
+        construirCoachMarketingActorQuery(auth.user, { templateKey: blueprint.templateKey })
+      ).lean();
+
+      if (existingDoc) {
+        return res.json({
+          duplicate: true,
+          integration: limpiarCoachMarketingIntegration(existingDoc)
+        });
+      }
+    }
+
+    const productDefinition = obtenerCoachMarketingProductDefinition(req.body?.product || blueprint?.product || "");
+    const provider = normalizarCoachMarketingProvider(
+      req.body?.provider || blueprint?.provider || productDefinition?.provider || ""
+    );
+    const product = normalizarCoachMarketingProduct(req.body?.product || blueprint?.product || "");
+    const now = new Date();
+    const integrationDoc = await CoachMarketingIntegration.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      provider,
+      product,
+      templateKey: blueprint?.templateKey || templateKey,
+      label:
+        cleanText(req.body?.label || "").slice(0, 120) ||
+        blueprint?.label ||
+        productDefinition?.label ||
+        formatearCoachMarketingTokenLabel(product),
+      description:
+        truncarTextoPrompt(cleanText(req.body?.description || ""), 220) ||
+        truncarTextoPrompt(blueprint?.description || productDefinition?.description || "", 220),
+      status: normalizarCoachMarketingIntegrationStatus(req.body?.status || "draft"),
+      connectionStatus: normalizarCoachMarketingConnectionStatus(req.body?.connectionStatus || "not_connected"),
+      authMode: normalizarCoachMarketingAuthMode(req.body?.authMode || blueprint?.authMode || productDefinition?.authMode),
+      accountType: normalizarCoachMarketingAccountType(
+        req.body?.accountType || blueprint?.accountType || productDefinition?.accountType
+      ),
+      accountLabel: cleanText(req.body?.accountLabel || "").slice(0, 120),
+      externalBusinessId: cleanText(req.body?.externalBusinessId || "").slice(0, 120),
+      externalAccountId: cleanText(req.body?.externalAccountId || "").slice(0, 120),
+      externalAccountName: cleanText(req.body?.externalAccountName || "").slice(0, 120),
+      expectedScopes: limpiarCoachMarketingStringArray(req.body?.expectedScopes || [], 20, 60),
+      grantedScopes: limpiarCoachMarketingStringArray(req.body?.grantedScopes || [], 20, 60),
+      missingScopes: limpiarCoachMarketingStringArray(req.body?.missingScopes || [], 20, 60),
+      capabilities: limpiarCoachMarketingStringArray(
+        req.body?.capabilities || blueprint?.capabilities || productDefinition?.capabilities || [],
+        20,
+        50
+      ),
+      config: limpiarCoachMarketingConfig(req.body?.config || null),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      lastHealthStatus: normalizarCoachMarketingHealthStatus(req.body?.lastHealthStatus || "pending"),
+      lastHealthCheckAt: normalizarCoachOptionalDate(req.body?.lastHealthCheckAt || null),
+      lastSyncAt: normalizarCoachOptionalDate(req.body?.lastSyncAt || null),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "integration_created",
+      entityType: "integration",
+      entityId: String(integrationDoc._id || ""),
+      status: "processed",
+      summary: `Se preparo la integracion ${integrationDoc.label || product}.`,
+      payload: {
+        templateKey: blueprint?.templateKey || templateKey,
+        connectionStatus: integrationDoc.connectionStatus
+      }
+    });
+
+    res.json({
+      duplicate: false,
+      integration: limpiarCoachMarketingIntegration(integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc)
+    });
+  } catch (error) {
+    console.error("Error creando integracion de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear la integracion de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/channels", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const statusFilter = String(req.query?.status || "").trim();
+    const channelTypeFilter = String(req.query?.channelType || "").trim();
+    const integrationId = normalizarCoachCrmObjectId(req.query?.integrationId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingChannelStatus(statusFilter);
+    }
+
+    if (channelTypeFilter) {
+      query.channelType = normalizarCoachMarketingChannelType(channelTypeFilter);
+    }
+
+    if (integrationId) {
+      query.integrationId = integrationId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingChannel.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingChannel.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingChannel(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando canales de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar los canales de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/channels", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: req.body?.integrationId || ""
+    });
+
+    if (req.body?.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing que quieres usar.");
+    }
+
+    const provider = resolverCoachMarketingProviderDesdeRefs(req.body?.provider || "", refs);
+    const product = resolverCoachMarketingProductDesdeRefs(req.body?.product || "", refs);
+    const channelType = normalizarCoachMarketingChannelType(req.body?.channelType || refs.integrationDoc?.accountType || "");
+    const now = new Date();
+    const channelDoc = await CoachMarketingChannel.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      integrationId: refs.integrationDoc?._id || null,
+      provider,
+      product,
+      channelType,
+      label:
+        cleanText(req.body?.label || "").slice(0, 120) ||
+        cleanText(refs.integrationDoc?.label || "").slice(0, 120) ||
+        formatearCoachMarketingTokenLabel(channelType),
+      handle: cleanText(req.body?.handle || "").slice(0, 120),
+      status: normalizarCoachMarketingChannelStatus(req.body?.status || "draft"),
+      externalChannelId: cleanText(req.body?.externalChannelId || "").slice(0, 120),
+      externalChannelName: cleanText(req.body?.externalChannelName || "").slice(0, 120),
+      landingPageUrl: limpiarUrlExterna(req.body?.landingPageUrl || ""),
+      defaultForPublishing: req.body?.defaultForPublishing === true,
+      defaultForLeadCapture: req.body?.defaultForLeadCapture === true,
+      metadata: limpiarCoachMarketingConfig(req.body?.metadata || null),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      lastSyncAt: normalizarCoachOptionalDate(req.body?.lastSyncAt || null),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: channelDoc._id,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "channel_created",
+      entityType: "channel",
+      entityId: String(channelDoc._id || ""),
+      status: "processed",
+      summary: `Se preparo el canal ${channelDoc.label || channelType}.`,
+      payload: {
+        channelType,
+        integrationId: refs.integrationDoc?._id ? String(refs.integrationDoc._id) : ""
+      }
+    });
+
+    res.json({
+      channel: limpiarCoachMarketingChannel(channelDoc?.toObject ? channelDoc.toObject() : channelDoc)
+    });
+  } catch (error) {
+    console.error("Error creando canal de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear el canal de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/campaigns", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const statusFilter = String(req.query?.status || "").trim();
+    const objectiveFilter = String(req.query?.objective || "").trim();
+    const campaignTypeFilter = String(req.query?.campaignType || "").trim();
+    const integrationId = normalizarCoachCrmObjectId(req.query?.integrationId || "");
+    const primaryChannelId = normalizarCoachCrmObjectId(req.query?.primaryChannelId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingCampaignStatus(statusFilter);
+    }
+
+    if (objectiveFilter) {
+      query.objective = normalizarCoachMarketingObjective(objectiveFilter);
+    }
+
+    if (campaignTypeFilter) {
+      query.campaignType = normalizarCoachMarketingCampaignType(campaignTypeFilter);
+    }
+
+    if (integrationId) {
+      query.integrationId = integrationId;
+    }
+
+    if (primaryChannelId) {
+      query.primaryChannelId = primaryChannelId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingCampaign.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingCampaign(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando campanas de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar las campanas de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/campaigns", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const name = cleanText(req.body?.name || "").slice(0, 140);
+
+  if (!name) {
+    return responderCoachError(res, 400, "Ponle un nombre a la campana.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: req.body?.integrationId || "",
+      channelId: req.body?.primaryChannelId || ""
+    });
+
+    if (req.body?.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion elegida para esa campana.");
+    }
+
+    if (req.body?.primaryChannelId && !refs.channelDoc) {
+      return responderCoachError(res, 404, "No encontre el canal principal de esa campana.");
+    }
+
+    const provider = resolverCoachMarketingProviderDesdeRefs(req.body?.provider || "", refs);
+    const product = resolverCoachMarketingProductDesdeRefs(req.body?.product || "", refs);
+    const now = new Date();
+    const campaignDoc = await CoachMarketingCampaign.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      integrationId: refs.integrationDoc?._id || null,
+      primaryChannelId: refs.channelDoc?._id || null,
+      provider,
+      product,
+      campaignType: normalizarCoachMarketingCampaignType(req.body?.campaignType || "paid"),
+      objective: normalizarCoachMarketingObjective(req.body?.objective || "leads"),
+      name,
+      status: normalizarCoachMarketingCampaignStatus(req.body?.status || "draft"),
+      reviewStatus: normalizarCoachMarketingReviewStatus(req.body?.reviewStatus || "draft"),
+      budgetType: cleanText(req.body?.budgetType || "daily").slice(0, 20) || "daily",
+      budgetAmount: limpiarCoachMarketingMoney(req.body?.budgetAmount || 0),
+      currency:
+        cleanText(req.body?.currency || "USD")
+          .toUpperCase()
+          .slice(0, 8) || "USD",
+      landingPageUrl: limpiarUrlExterna(req.body?.landingPageUrl || refs.channelDoc?.landingPageUrl || ""),
+      primaryGoal: cleanText(req.body?.primaryGoal || "").slice(0, 120),
+      audienceSummary: truncarTextoPrompt(cleanText(req.body?.audienceSummary || ""), 220),
+      geoSummary: truncarTextoPrompt(cleanText(req.body?.geoSummary || ""), 180),
+      languageSummary: truncarTextoPrompt(cleanText(req.body?.languageSummary || ""), 120),
+      trackingTemplate: limpiarCoachMarketingConfig(req.body?.trackingTemplate || null),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      startAt: normalizarCoachOptionalDate(req.body?.startAt || null),
+      endAt: normalizarCoachOptionalDate(req.body?.endAt || null),
+      externalCampaignId: cleanText(req.body?.externalCampaignId || "").slice(0, 120),
+      lastSyncAt: normalizarCoachOptionalDate(req.body?.lastSyncAt || null),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: campaignDoc._id,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "campaign_created",
+      entityType: "campaign",
+      entityId: String(campaignDoc._id || ""),
+      status: "processed",
+      summary: `Se preparo la campana ${campaignDoc.name || "sin nombre"}.`,
+      payload: {
+        objective: campaignDoc.objective,
+        campaignType: campaignDoc.campaignType
+      }
+    });
+
+    res.json({
+      campaign: limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc)
+    });
+  } catch (error) {
+    console.error("Error creando campana de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear la campana de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/creatives", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const statusFilter = String(req.query?.status || "").trim();
+    const creativeTypeFilter = String(req.query?.creativeType || "").trim();
+    const campaignId = normalizarCoachCrmObjectId(req.query?.campaignId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingCreativeStatus(statusFilter);
+    }
+
+    if (creativeTypeFilter) {
+      query.creativeType = normalizarCoachMarketingCreativeType(creativeTypeFilter);
+    }
+
+    if (campaignId) {
+      query.campaignId = campaignId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingCreative.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingCreative.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingCreative(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando creativos de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar los creativos de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/creatives", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const name = cleanText(req.body?.name || "").slice(0, 140);
+
+  if (!name) {
+    return responderCoachError(res, 400, "Ponle un nombre al creativo.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId: req.body?.campaignId || ""
+    });
+
+    if (req.body?.campaignId && !refs.campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de ese creativo.");
+    }
+
+    const provider = resolverCoachMarketingProviderDesdeRefs(req.body?.provider || "", refs);
+    const product = resolverCoachMarketingProductDesdeRefs(req.body?.product || "", refs);
+    const now = new Date();
+    const creativeDoc = await CoachMarketingCreative.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      campaignId: refs.campaignDoc?._id || null,
+      provider,
+      product,
+      creativeType: normalizarCoachMarketingCreativeType(req.body?.creativeType || "mixed"),
+      name,
+      status: normalizarCoachMarketingCreativeStatus(req.body?.status || "draft"),
+      headline: cleanText(req.body?.headline || "").slice(0, 160),
+      primaryText: truncarTextoPrompt(cleanText(req.body?.primaryText || ""), 320),
+      description: truncarTextoPrompt(cleanText(req.body?.description || ""), 240),
+      callToAction: cleanText(req.body?.callToAction || "").slice(0, 80),
+      destinationUrl: limpiarUrlExterna(req.body?.destinationUrl || refs.campaignDoc?.landingPageUrl || ""),
+      mediaSlots: limpiarCoachMarketingMediaSlots(req.body?.mediaSlots || []),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      reviewNotes: truncarTextoPrompt(cleanText(req.body?.reviewNotes || ""), 220),
+      externalCreativeId: cleanText(req.body?.externalCreativeId || "").slice(0, 120),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      campaignId: refs.campaignDoc?._id || null,
+      creativeId: creativeDoc._id,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "creative_created",
+      entityType: "creative",
+      entityId: String(creativeDoc._id || ""),
+      status: "processed",
+      summary: `Se preparo el creativo ${creativeDoc.name || "sin nombre"}.`,
+      payload: {
+        creativeType: creativeDoc.creativeType,
+        mediaSlots: (creativeDoc.mediaSlots || []).length
+      }
+    });
+
+    res.json({
+      creative: limpiarCoachMarketingCreative(creativeDoc?.toObject ? creativeDoc.toObject() : creativeDoc)
+    });
+  } catch (error) {
+    console.error("Error creando creativo de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear el creativo de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/publications", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const statusFilter = String(req.query?.status || "").trim();
+    const modeFilter = String(req.query?.mode || "").trim();
+    const channelId = normalizarCoachCrmObjectId(req.query?.channelId || "");
+    const campaignId = normalizarCoachCrmObjectId(req.query?.campaignId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 40, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingPublicationStatus(statusFilter);
+    }
+
+    if (modeFilter) {
+      query.mode = normalizarCoachMarketingPublicationMode(modeFilter);
+    }
+
+    if (channelId) {
+      query.channelId = channelId;
+    }
+
+    if (campaignId) {
+      query.campaignId = campaignId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingPublication.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingPublication.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingPublication(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando publicaciones de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar las publicaciones de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/publications", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      integrationId: req.body?.integrationId || "",
+      channelId: req.body?.channelId || "",
+      campaignId: req.body?.campaignId || "",
+      creativeId: req.body?.creativeId || ""
+    });
+
+    if (req.body?.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion para esa publicacion.");
+    }
+
+    if (req.body?.channelId && !refs.channelDoc) {
+      return responderCoachError(res, 404, "No encontre el canal para esa publicacion.");
+    }
+
+    if (req.body?.campaignId && !refs.campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana para esa publicacion.");
+    }
+
+    if (req.body?.creativeId && !refs.creativeDoc) {
+      return responderCoachError(res, 404, "No encontre el creativo para esa publicacion.");
+    }
+
+    const provider = resolverCoachMarketingProviderDesdeRefs(req.body?.provider || "", refs);
+    const product = resolverCoachMarketingProductDesdeRefs(req.body?.product || "", refs);
+    const mode = normalizarCoachMarketingPublicationMode(req.body?.mode || "organic");
+    const label =
+      cleanText(req.body?.label || "").slice(0, 140) ||
+      cleanText(refs.creativeDoc?.name || "").slice(0, 140) ||
+      cleanText(refs.campaignDoc?.name || "").slice(0, 140);
+
+    if (!label) {
+      return responderCoachError(res, 400, "Ponle un nombre o etiqueta a la publicacion.");
+    }
+
+    const now = new Date();
+    const publicationDoc = await CoachMarketingPublication.create({
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      creativeId: refs.creativeDoc?._id || null,
+      provider,
+      product,
+      mode,
+      label,
+      status: normalizarCoachMarketingPublicationStatus(req.body?.status || "draft"),
+      reviewStatus: normalizarCoachMarketingReviewStatus(req.body?.reviewStatus || "draft"),
+      caption:
+        truncarTextoPrompt(cleanText(req.body?.caption || ""), 320) ||
+        truncarTextoPrompt(cleanText(refs.creativeDoc?.primaryText || ""), 320),
+      destinationUrl:
+        limpiarUrlExterna(req.body?.destinationUrl || "") ||
+        limpiarUrlExterna(refs.creativeDoc?.destinationUrl || "") ||
+        limpiarUrlExterna(refs.campaignDoc?.landingPageUrl || ""),
+      scheduledAt: normalizarCoachOptionalDate(req.body?.scheduledAt || null),
+      publishedAt: normalizarCoachOptionalDate(req.body?.publishedAt || null),
+      externalPublicationId: cleanText(req.body?.externalPublicationId || "").slice(0, 120),
+      externalPostUrl: limpiarUrlExterna(req.body?.externalPostUrl || ""),
+      notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      lastSyncAt: normalizarCoachOptionalDate(req.body?.lastSyncAt || null),
+      lastError: truncarTextoPrompt(cleanText(req.body?.lastError || ""), 200),
+      updatedAt: now,
+      createdAt: now
+    });
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      creativeId: refs.creativeDoc?._id || null,
+      publicationId: publicationDoc._id,
+      provider,
+      product,
+      direction: "internal",
+      eventType: "publication_created",
+      entityType: "publication",
+      entityId: String(publicationDoc._id || ""),
+      status: "processed",
+      summary: `Se preparo la publicacion ${publicationDoc.label || "sin etiqueta"}.`,
+      payload: {
+        mode,
+        scheduledAt: publicationDoc.scheduledAt || null
+      }
+    });
+
+    res.json({
+      publication: limpiarCoachMarketingPublication(
+        publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc
+      )
+    });
+  } catch (error) {
+    console.error("Error creando publicacion de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude crear la publicacion de marketing.");
+  }
+});
+
+app.get("/api/coach/marketing/events", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachWorkspaceQuery(auth.user);
+    const providerFilter = String(req.query?.provider || "").trim();
+    const statusFilter = String(req.query?.status || "").trim();
+    const eventTypeFilter = cleanText(req.query?.eventType || "").slice(0, 80);
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 60, 150);
+
+    if (providerFilter) {
+      query.provider = normalizarCoachMarketingProvider(providerFilter);
+    }
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingEventStatus(statusFilter);
+    }
+
+    if (eventTypeFilter) {
+      query.eventType = eventTypeFilter;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingEvent.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingEvent(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando eventos de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar los eventos de marketing.");
   }
 });
 
