@@ -2927,6 +2927,83 @@
               </form>
             </div>
 
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <form class="coach-form marketing-form-card" data-marketing-publication-ops-form>
+                <h4>Operacion organica</h4>
+                <label>
+                  Publicacion
+                  <select name="publicationId" data-marketing-publication-ops-select>
+                    <option value="">Selecciona una publicacion</option>
+                  </select>
+                </label>
+                <label>
+                  Revision
+                  <select name="reviewStatus" data-marketing-publication-review-select></select>
+                </label>
+                <label>
+                  Programar para
+                  <input type="datetime-local" name="scheduledAt" />
+                </label>
+                <label class="marketing-field-full">
+                  Resumen interno
+                  <textarea
+                    name="summary"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Ej. Lista para salir cuando conectemos Meta Publishing"
+                  ></textarea>
+                </label>
+                <label>
+                  URL publicada
+                  <input type="url" name="externalPostUrl" maxlength="240" placeholder="https://facebook.com/..." />
+                </label>
+                <label>
+                  ID externo
+                  <input type="text" name="externalPublicationId" maxlength="120" placeholder="post_123 o media_456" />
+                </label>
+                <div class="dashboard-actions">
+                  <button type="button" class="nav-button" data-marketing-publication-validate>Validar</button>
+                  <button type="button" class="primary-button" data-marketing-publication-queue>Mandar a cola</button>
+                  <button type="button" class="nav-button" data-marketing-publication-publish>Registrar publicada</button>
+                </div>
+                <div class="form-result" data-marketing-publication-ops-feedback></div>
+              </form>
+
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Checklist organico</h4>
+                <p class="mini-note" data-marketing-publication-workflow-copy>
+                  Selecciona una publicacion para revisar si ya esta lista para programarse o publicarse.
+                </p>
+
+                <div class="marketing-diagnostic-grid">
+                  <div class="mini-stat">
+                    <strong data-marketing-publication-score>0%</strong>
+                    <span>Readiness</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-publication-ok>0</strong>
+                    <span>Checks ok</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-publication-attention>0</strong>
+                    <span>Atencion</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-publication-errors>0</strong>
+                    <span>Bloqueos</span>
+                  </div>
+                </div>
+
+                <div class="territory-result-list" data-marketing-publication-check-list>
+                  <div class="team-seat-empty">El checklist de publicacion aparecera aqui.</div>
+                </div>
+
+                <div class="territory-inline-list marketing-chip-stack" data-marketing-publication-preview-list>
+                  <div class="team-seat-empty">La vista previa del canal y la pieza aparecera aqui.</div>
+                </div>
+              </div>
+            </div>
+
             <div class="marketing-two-column marketing-two-column-lists">
               <div>
                 <div class="eyebrow">Creativos</div>

@@ -9795,6 +9795,15 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const publicationSaveButton = document.querySelector("[data-marketing-publication-save]");
   const publicationFeedback = document.querySelector("[data-marketing-publication-feedback]");
   const publicationList = document.querySelector("[data-marketing-publication-list]");
+  const publicationOpsForm = document.querySelector("[data-marketing-publication-ops-form]");
+  const publicationOpsSelect = document.querySelector("[data-marketing-publication-ops-select]");
+  const publicationValidateButton = document.querySelector("[data-marketing-publication-validate]");
+  const publicationQueueButton = document.querySelector("[data-marketing-publication-queue]");
+  const publicationPublishButton = document.querySelector("[data-marketing-publication-publish]");
+  const publicationOpsFeedback = document.querySelector("[data-marketing-publication-ops-feedback]");
+  const publicationWorkflowCopy = document.querySelector("[data-marketing-publication-workflow-copy]");
+  const publicationCheckList = document.querySelector("[data-marketing-publication-check-list]");
+  const publicationPreviewList = document.querySelector("[data-marketing-publication-preview-list]");
   const eventList = document.querySelector("[data-marketing-event-list]");
   const overviewCopy = document.querySelector("[data-marketing-overview-copy]");
   const attributionSourceList = document.querySelector("[data-marketing-attribution-source-list]");
@@ -9824,6 +9833,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !creativeList ||
     !publicationForm ||
     !publicationList ||
+    !publicationOpsForm ||
+    !publicationOpsSelect ||
+    !publicationCheckList ||
+    !publicationPreviewList ||
     !eventList ||
     !attributionSourceList ||
     !attributionCampaignList ||
@@ -9856,6 +9869,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     captureAttributed: document.querySelector("[data-marketing-capture-attributed]"),
     captureCampaigns: document.querySelector("[data-marketing-capture-campaigns]"),
     captureMediums: document.querySelector("[data-marketing-capture-mediums]"),
+    publicationScore: document.querySelector("[data-marketing-publication-score]"),
+    publicationOk: document.querySelector("[data-marketing-publication-ok]"),
+    publicationAttention: document.querySelector("[data-marketing-publication-attention]"),
+    publicationErrors: document.querySelector("[data-marketing-publication-errors]"),
     connectorScopeTotal: document.querySelector("[data-marketing-connector-scope-total]"),
     connectorScopeGranted: document.querySelector("[data-marketing-connector-scope-granted]"),
     connectorScopeMissing: document.querySelector("[data-marketing-connector-scope-missing]"),
@@ -9870,6 +9887,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const publicationChannelSelect = publicationForm.querySelector("[data-marketing-publication-channel-select]");
   const publicationCampaignSelect = publicationForm.querySelector("[data-marketing-publication-campaign-select]");
   const publicationCreativeSelect = publicationForm.querySelector("[data-marketing-publication-creative-select]");
+  const publicationReviewSelect = publicationOpsForm.querySelector("[data-marketing-publication-review-select]");
   const connectorStatusSelect = connectorForm.querySelector("[data-marketing-connector-status-select]");
   const connectorConnectionSelect = connectorForm.querySelector("[data-marketing-connector-connection-select]");
   const connectorAuthSelect = connectorForm.querySelector("[data-marketing-connector-auth-select]");
@@ -9887,7 +9905,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     creatives: [],
     publications: [],
     events: [],
-    selectedIntegrationId: ""
+    selectedIntegrationId: "",
+    selectedPublicationId: "",
+    publicationWorkflow: null
   };
 
   const renderEmptyState = (target, message) => {
@@ -10054,6 +10074,29 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     state.selectedIntegrationId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
     return getSelectedIntegration();
+  };
+
+  const getSelectedPublication = () =>
+    state.publications.find(entry => String(entry?.id || "") === String(state.selectedPublicationId || "")) || null;
+
+  const syncSelectedPublication = preferredId => {
+    const candidateId = String(preferredId || state.selectedPublicationId || "").trim();
+    const availableIds = state.publications.map(item => String(item?.id || "")).filter(Boolean);
+
+    if (!availableIds.length) {
+      state.selectedPublicationId = "";
+      state.publicationWorkflow = null;
+      return null;
+    }
+
+    const nextId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
+
+    if (String(state.selectedPublicationId || "") !== String(nextId)) {
+      state.publicationWorkflow = null;
+    }
+
+    state.selectedPublicationId = nextId;
+    return getSelectedPublication();
   };
 
   const getIntegrationLabel = integrationId => {
@@ -10259,6 +10302,15 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       placeholder: "Sin creativo ligado",
       labelBuilder: item => item?.name || "Creativo"
     });
+
+    buildSelectOptions({
+      target: publicationOpsSelect,
+      items: state.publications,
+      placeholder: "Selecciona una publicacion",
+      labelBuilder: item => item?.label || "Publicacion"
+    });
+
+    buildChoiceSelectOptions(publicationReviewSelect, state.catalog?.statuses?.review || [], "Revision");
 
     buildSelectOptions({
       target: connectorSelect,
@@ -10611,10 +10663,184 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
             <p class="mini-note team-seat-note">
               ${escapeHtml(item.caption || item.destinationUrl || item.notes || "Publicacion lista para entrar a cola o calendarizarse.")}
             </p>
+
+            <div class="dashboard-actions">
+              <button
+                type="button"
+                class="nav-button"
+                data-marketing-select-publication="${escapeHtml(item.id || "")}"
+              >
+                ${String(item.id || "") === String(state.selectedPublicationId || "") ? "Operando" : "Operar"}
+              </button>
+            </div>
           </article>
         `
       )
       .join("");
+  };
+
+  const renderPublicationWorkflow = () => {
+    const publication = syncSelectedPublication();
+    const workflow =
+      state.publicationWorkflow && String(state.publicationWorkflow.publicationId || "") === String(publication?.id || "")
+        ? state.publicationWorkflow
+        : null;
+
+    if (publicationOpsSelect) {
+      publicationOpsSelect.value = state.selectedPublicationId || "";
+    }
+
+    if (!publication) {
+      publicationOpsForm.reset();
+      setSummaryValue(summaryNodes.publicationScore, "0%");
+      setSummaryValue(summaryNodes.publicationOk, 0);
+      setSummaryValue(summaryNodes.publicationAttention, 0);
+      setSummaryValue(summaryNodes.publicationErrors, 0);
+      if (publicationWorkflowCopy) {
+        publicationWorkflowCopy.textContent =
+          "Selecciona una publicacion para revisar si ya esta lista para programarse o publicarse.";
+      }
+      renderEmptyState(publicationCheckList, "El checklist de publicacion aparecera aqui.");
+      renderEmptyState(publicationPreviewList, "La vista previa del canal y la pieza aparecera aqui.");
+      if (publicationValidateButton) publicationValidateButton.disabled = true;
+      if (publicationQueueButton) publicationQueueButton.disabled = true;
+      if (publicationPublishButton) publicationPublishButton.disabled = true;
+      return;
+    }
+
+    if (publicationValidateButton) publicationValidateButton.disabled = false;
+    if (publicationPublishButton) publicationPublishButton.disabled = false;
+
+    publicationOpsForm.elements.publicationId.value = publication.id || "";
+    if (publicationReviewSelect) {
+      publicationReviewSelect.value = publication.reviewStatus || "draft";
+    }
+    publicationOpsForm.elements.scheduledAt.value = formatDateTimeLocalValue(publication.scheduledAt || "");
+    publicationOpsForm.elements.externalPostUrl.value = publication.externalPostUrl || "";
+    publicationOpsForm.elements.externalPublicationId.value = publication.externalPublicationId || "";
+    publicationOpsForm.elements.summary.value = "";
+
+    if (!workflow) {
+      setSummaryValue(summaryNodes.publicationScore, "0%");
+      setSummaryValue(summaryNodes.publicationOk, 0);
+      setSummaryValue(summaryNodes.publicationAttention, 0);
+      setSummaryValue(summaryNodes.publicationErrors, 0);
+      if (publicationWorkflowCopy) {
+        publicationWorkflowCopy.textContent =
+          "Valida esta publicacion para ver bloqueos, readiness y sugerencias del flujo organico.";
+      }
+      renderEmptyState(publicationCheckList, "Todavia no cargamos el checklist de esta pieza.");
+      renderEmptyState(publicationPreviewList, "La vista previa del canal y la pieza aparecera aqui.");
+      if (publicationQueueButton) {
+        publicationQueueButton.disabled = false;
+      }
+      return;
+    }
+
+    setSummaryValue(summaryNodes.publicationScore, `${Number(workflow.readinessScore || 0)}%`);
+    setSummaryValue(summaryNodes.publicationOk, workflow.okCount || 0);
+    setSummaryValue(summaryNodes.publicationAttention, workflow.attentionCount || 0);
+    setSummaryValue(summaryNodes.publicationErrors, workflow.errorCount || 0);
+
+    if (publicationWorkflowCopy) {
+      publicationWorkflowCopy.textContent =
+        workflow.summary ||
+        "La publicacion ya tiene workflow cargado dentro del modulo organico.";
+    }
+
+    publicationCheckList.innerHTML = Array.isArray(workflow.checks) && workflow.checks.length
+      ? workflow.checks
+          .map(
+            item => `
+              <article class="territory-result-card">
+                <strong>${escapeHtml(item.label || "Check")}</strong>
+                <span>${escapeHtml(
+                  [
+                    item.state === "ok" ? "Ok" : item.state === "attention" ? "Atencion" : "Bloqueo",
+                    publication.statusLabel || "Borrador"
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+                <p>${escapeHtml(item.message || "Sin detalle")}</p>
+              </article>
+            `
+          )
+          .join("")
+      : `<div class="team-seat-empty">No hay checks disponibles para esta publicacion.</div>`;
+
+    publicationPreviewList.innerHTML = [
+      {
+        label: "Canal",
+        value: workflow.preview?.channelLabel || "Sin canal"
+      },
+      {
+        label: "Integracion",
+        value: workflow.preview?.integrationLabel || "Sin integracion"
+      },
+      {
+        label: "Campana",
+        value: workflow.preview?.campaignName || "Sin campana"
+      },
+      {
+        label: "Creativo",
+        value: workflow.preview?.creativeName || "Sin creativo"
+      },
+      {
+        label: "Formato",
+        value: workflow.preview?.creativeTypeLabel || "Sin formato"
+      },
+      {
+        label: "Programacion",
+        value: workflow.schedule?.scheduledAt ? formatDateTimeShort(workflow.schedule.scheduledAt) : "Sin fecha"
+      },
+      {
+        label: "Destino",
+        value: workflow.preview?.destinationUrl || "Sin URL final"
+      },
+      {
+        label: "Assets listos",
+        value: `${Number(workflow.preview?.mediaReady || 0)}/${Number(workflow.preview?.mediaTotal || 0)}`
+      }
+    ]
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Dato")}</strong>
+            <span>${escapeHtml(item.value || "Pendiente")}</span>
+          </div>
+        `
+      )
+      .join("");
+
+    if (publicationQueueButton) {
+      publicationQueueButton.disabled = workflow.errorCount > 0 || publication.status === "published";
+    }
+  };
+
+  const loadPublicationWorkflow = async (preferredId = "", { silent = false } = {}) => {
+    const publication = syncSelectedPublication(preferredId);
+
+    if (!publication?.id) {
+      state.publicationWorkflow = null;
+      renderPublicationWorkflow();
+      return null;
+    }
+
+    try {
+      const data = await apiRequest(`/api/coach/marketing/publications/${publication.id}/workflow`);
+      state.selectedPublicationId = data?.publication?.id || publication.id;
+      state.publicationWorkflow = data?.workflow || null;
+      renderPublicationWorkflow();
+      return data;
+    } catch (error) {
+      state.publicationWorkflow = null;
+      renderPublicationWorkflow();
+      if (!silent) {
+        setMessage(publicationOpsFeedback, error.message || "No pude cargar el workflow de la publicacion.", "error");
+      }
+      throw error;
+    }
   };
 
   const renderEvents = () => {
@@ -10652,6 +10878,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     renderRecentCaptures();
     syncMarketingSelects();
     syncSelectedIntegration();
+    syncSelectedPublication();
+    renderPublicationWorkflow();
     renderConnectorPrep();
     renderIntegrations();
     renderChannels();
@@ -10683,7 +10911,16 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
     syncSelectedIntegration();
+    syncSelectedPublication();
     renderAll();
+
+    if (state.selectedPublicationId) {
+      try {
+        await loadPublicationWorkflow(state.selectedPublicationId, { silent: true });
+      } catch (error) {
+        // The publication card already renders a graceful empty state when workflow fails.
+      }
+    }
   };
 
   templateSelect?.addEventListener("change", () => {
@@ -10718,6 +10955,26 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedIntegration(button.dataset.marketingSelectIntegration || "");
     renderConnectorPrep();
     renderIntegrations();
+  });
+
+  publicationOpsSelect?.addEventListener("change", () => {
+    clearMessage(publicationOpsFeedback);
+    syncSelectedPublication(publicationOpsSelect.value || "");
+    renderPublications();
+    loadPublicationWorkflow(state.selectedPublicationId).catch(() => {});
+  });
+
+  publicationList.addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-select-publication]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(publicationOpsFeedback);
+    syncSelectedPublication(button.dataset.marketingSelectPublication || "");
+    renderPublications();
+    loadPublicationWorkflow(state.selectedPublicationId).catch(() => {});
   });
 
   refreshButton.addEventListener("click", async () => {
@@ -10972,7 +11229,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     try {
       const formData = new FormData(publicationForm);
-      await apiRequest("/api/coach/marketing/publications", {
+      const data = await apiRequest("/api/coach/marketing/publications", {
         method: "POST",
         body: {
           channelId: formData.get("channelId"),
@@ -10985,6 +11242,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         }
       });
 
+      state.selectedPublicationId = data?.publication?.id || state.selectedPublicationId;
       publicationForm.reset();
       await loadWorkspace();
       setMessage(publicationFeedback, "Publicacion guardada dentro del workspace de marketing.", "success");
@@ -10992,6 +11250,82 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(publicationFeedback, error.message || "No pude guardar la publicacion.", "error");
     } finally {
       setButtonLoading(publicationSaveButton, false);
+    }
+  });
+
+  publicationValidateButton?.addEventListener("click", async () => {
+    clearMessage(publicationOpsFeedback);
+    setButtonLoading(publicationValidateButton, true, "Validando...");
+
+    try {
+      await loadPublicationWorkflow(state.selectedPublicationId);
+      setMessage(publicationOpsFeedback, "Checklist organico actualizado.", "success");
+    } catch (error) {
+      setMessage(publicationOpsFeedback, error.message || "No pude validar la publicacion.", "error");
+    } finally {
+      setButtonLoading(publicationValidateButton, false);
+    }
+  });
+
+  publicationQueueButton?.addEventListener("click", async () => {
+    clearMessage(publicationOpsFeedback);
+    const publication = getSelectedPublication();
+
+    if (!publication?.id) {
+      setMessage(publicationOpsFeedback, "Primero selecciona una publicacion.", "error");
+      return;
+    }
+
+    setButtonLoading(publicationQueueButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(publicationOpsForm);
+      await apiRequest(`/api/coach/marketing/publications/${publication.id}/queue`, {
+        method: "POST",
+        body: {
+          reviewStatus: formData.get("reviewStatus"),
+          scheduledAt: formData.get("scheduledAt") ? new Date(formData.get("scheduledAt")).toISOString() : "",
+          summary: formData.get("summary")
+        }
+      });
+
+      await loadWorkspace();
+      setMessage(publicationOpsFeedback, "La publicacion ya entro al flujo organico del Coach.", "success");
+    } catch (error) {
+      setMessage(publicationOpsFeedback, error.message || "No pude mandar la publicacion a cola.", "error");
+    } finally {
+      setButtonLoading(publicationQueueButton, false);
+    }
+  });
+
+  publicationPublishButton?.addEventListener("click", async () => {
+    clearMessage(publicationOpsFeedback);
+    const publication = getSelectedPublication();
+
+    if (!publication?.id) {
+      setMessage(publicationOpsFeedback, "Primero selecciona una publicacion.", "error");
+      return;
+    }
+
+    setButtonLoading(publicationPublishButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(publicationOpsForm);
+      await apiRequest(`/api/coach/marketing/publications/${publication.id}/mark-published`, {
+        method: "POST",
+        body: {
+          reviewStatus: formData.get("reviewStatus"),
+          externalPostUrl: formData.get("externalPostUrl"),
+          externalPublicationId: formData.get("externalPublicationId")
+        }
+      });
+
+      await loadWorkspace();
+      setMessage(publicationOpsFeedback, "La publicacion quedo registrada como publicada.", "success");
+    } catch (error) {
+      setMessage(publicationOpsFeedback, error.message || "No pude registrar la publicacion como publicada.", "error");
+    } finally {
+      setButtonLoading(publicationPublishButton, false);
     }
   });
 

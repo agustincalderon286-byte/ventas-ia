@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 4;
+const COACH_MARKETING_FOUNDATION_VERSION = 5;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -6003,6 +6003,235 @@ function resolverCoachMarketingProductDesdeRefs(value = "", refs = {}) {
       refs?.integrationDoc?.product ||
       "custom"
   );
+}
+
+function resumirCoachMarketingMediaSlotsPublication(mediaSlots = []) {
+  const safeSlots = Array.isArray(mediaSlots) ? mediaSlots.filter(Boolean) : [];
+  let ready = 0;
+  let pending = 0;
+  let missing = 0;
+  let withAsset = 0;
+
+  safeSlots.forEach(slot => {
+    const status = normalizarCoachMarketingMediaSlotStatus(slot?.status || "");
+    const hasAsset = Boolean(cleanText(slot?.sourceUrl || "").slice(0, 240) || cleanText(slot?.fileName || "").slice(0, 140));
+
+    if (hasAsset) {
+      withAsset += 1;
+    }
+
+    if (status === "ready" || status === "approved" || hasAsset) {
+      ready += 1;
+    } else if (status === "missing") {
+      missing += 1;
+    } else {
+      pending += 1;
+    }
+  });
+
+  return {
+    total: safeSlots.length,
+    ready,
+    pending,
+    missing,
+    withAsset
+  };
+}
+
+function coachMarketingCreativeNecesitaMedia(creativeType = "") {
+  const safeType = normalizarCoachMarketingCreativeType(creativeType || "");
+  return ["image", "video", "carousel", "story", "reel", "mixed"].includes(safeType);
+}
+
+function construirCoachMarketingPublicationCapabilityList(publicationDoc = null, refs = {}) {
+  const publicationProduct = normalizarCoachMarketingProduct(
+    publicationDoc?.product || refs?.integrationDoc?.product || refs?.creativeDoc?.product || refs?.campaignDoc?.product || ""
+  );
+  const productDefinition = obtenerCoachMarketingProductDefinition(publicationProduct || "");
+  const capabilities = new Set();
+
+  limpiarCoachMarketingStringArray(refs?.integrationDoc?.capabilities || [], 20, 50).forEach(item => capabilities.add(item));
+  limpiarCoachMarketingStringArray(productDefinition?.capabilities || [], 20, 50).forEach(item => capabilities.add(item));
+
+  return Array.from(capabilities.values());
+}
+
+function construirCoachMarketingPublicationWorkflow(publicationDoc = null, refs = {}) {
+  const publication = limpiarCoachMarketingPublication(publicationDoc);
+
+  if (!publication) {
+    return null;
+  }
+
+  const integration = limpiarCoachMarketingIntegration(refs?.integrationDoc || null);
+  const channel = limpiarCoachMarketingChannel(refs?.channelDoc || null);
+  const campaign = limpiarCoachMarketingCampaign(refs?.campaignDoc || null);
+  const creative = limpiarCoachMarketingCreative(refs?.creativeDoc || null);
+  const capabilities = construirCoachMarketingPublicationCapabilityList(publicationDoc, refs);
+  const capabilitySet = new Set(capabilities.map(item => String(item || "").trim().toLowerCase()).filter(Boolean));
+  const creativeType = creative?.creativeType || "text";
+  const creativeTypeLabel =
+    creative?.creativeTypeLabel || formatearCoachMarketingChoiceLabel(creativeType, COACH_MARKETING_CREATIVE_TYPE_OPTIONS);
+  const mediaSummary = resumirCoachMarketingMediaSlotsPublication(creative?.mediaSlots || []);
+  const needsMedia = coachMarketingCreativeNecesitaMedia(creativeType);
+  const allowedChannelType = ["page", "profile", "channel"].includes(channel?.channelType || "");
+  const hasOrganicCapability = capabilitySet.has("organic_publishing");
+  const hasFormatCapability =
+    hasOrganicCapability ||
+    (creativeType === "reel" && capabilitySet.has("reels")) ||
+    (creativeType === "story" && capabilitySet.has("stories")) ||
+    (creativeType === "video" && (capabilitySet.has("videos") || capabilitySet.has("shorts"))) ||
+    (creativeType === "carousel" && capabilitySet.has("organic_publishing")) ||
+    (creativeType === "image" && capabilitySet.has("organic_publishing")) ||
+    creativeType === "text";
+  const reviewReady = publication.reviewStatus === "approved";
+  const contentBody =
+    truncarTextoPrompt(cleanText(publication.caption || creative?.primaryText || creative?.headline || ""), 320) || "";
+  const hasContent = Boolean(contentBody || publication.label || creative?.name);
+  const mediaReady = !needsMedia || mediaSummary.ready > 0;
+  const modeReady = ["organic", "hybrid"].includes(publication.mode);
+  const now = new Date();
+  const scheduledAt = normalizarCoachOptionalDate(publication.scheduledAt || null);
+  const scheduleIsFuture = scheduledAt ? scheduledAt.getTime() > now.getTime() : false;
+  const scheduleIsPast = scheduledAt ? scheduledAt.getTime() <= now.getTime() : false;
+  const connectionReady = ["connected", "pending"].includes(integration?.connectionStatus || "");
+  const checks = [
+    {
+      key: "mode",
+      label: "Modo organico",
+      state: modeReady ? "ok" : "error",
+      message: modeReady
+        ? `La publicacion esta marcada como ${publication.modeLabel || "organica"}.`
+        : "Cambia el modo a Organica o Hibrida para usar este flujo."
+    },
+    {
+      key: "channel",
+      label: "Canal listo",
+      state: channel?.id && allowedChannelType ? "ok" : channel?.id ? "attention" : "error",
+      message: channel?.id
+        ? allowedChannelType
+          ? `${channel.label || channel.channelTypeLabel || "Canal"} esta ligado a la publicacion.`
+          : "El canal existe, pero no es del tipo correcto para publicar organico."
+        : "Liga un canal tipo Page, Profile o Channel."
+    },
+    {
+      key: "integration",
+      label: "Integracion base",
+      state: integration?.id ? (connectionReady ? "ok" : "attention") : "error",
+      message: integration?.id
+        ? connectionReady
+          ? `${integration.label || integration.productLabel || "Integracion"} ya esta preparada para publicar luego.`
+          : "La integracion existe, pero todavia no esta marcada como lista o conectada."
+        : "Liga esta publicacion a una integracion preparada."
+    },
+    {
+      key: "capabilities",
+      label: "Capacidad organica",
+      state: hasFormatCapability ? "ok" : "error",
+      message: hasFormatCapability
+        ? `${integration?.productLabel || publication.productLabel || "La integracion"} soporta este formato organico.`
+        : "La integracion elegida no declara capacidad de publicacion organica para este formato."
+    },
+    {
+      key: "content",
+      label: "Copy final",
+      state: hasContent ? "ok" : "error",
+      message: hasContent
+        ? "Ya existe caption o texto principal para esta pieza."
+        : "Agrega caption o copy principal antes de mandarla a cola."
+    },
+    {
+      key: "assets",
+      label: "Assets",
+      state: mediaReady ? "ok" : needsMedia ? "error" : "ok",
+      message: needsMedia
+        ? mediaReady
+          ? `Hay ${mediaSummary.ready} asset(s) listos para ${creativeTypeLabel.toLowerCase()}.`
+          : "Este formato necesita al menos un asset listo en el creativo."
+        : "Este formato puede salir solo con texto."
+    },
+    {
+      key: "review",
+      label: "Revision interna",
+      state: reviewReady ? "ok" : publication.reviewStatus === "internal_review" ? "attention" : "error",
+      message: reviewReady
+        ? "La publicacion ya esta aprobada internamente."
+        : publication.reviewStatus === "internal_review"
+          ? "Aun esta en revision interna. Apruebala antes de mandarla a cola."
+          : "Marca la publicacion como aprobada para entrar al flujo organico."
+    },
+    {
+      key: "schedule",
+      label: "Calendario",
+      state: publication.status === "published" ? "ok" : scheduleIsFuture || !scheduledAt ? "ok" : "attention",
+      message: publication.status === "published"
+        ? "La publicacion ya quedo marcada como publicada."
+        : scheduleIsFuture
+          ? "Ya tiene fecha futura y puede entrar programada."
+          : scheduleIsPast
+            ? "La fecha programada ya paso; si la mandas a cola quedara lista para salir."
+            : "Puedes dejarla sin fecha para publicarla manual o mandarla a cola inmediata."
+    }
+  ];
+
+  const errors = checks.filter(item => item.state === "error");
+  const attentions = checks.filter(item => item.state === "attention");
+  const okCount = checks.filter(item => item.state === "ok").length;
+  const readinessScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        ((okCount * 100) + attentions.length * 55 + (checks.length - okCount - attentions.length) * 0) /
+          Math.max(checks.length, 1)
+      )
+    )
+  );
+  const readyForQueue = errors.length === 0 && reviewReady;
+  const readyForPublish = readyForQueue && (!scheduledAt || scheduleIsPast) && publication.status !== "published";
+  const summary = publication.status === "published"
+    ? "Esta publicacion ya quedo registrada como publicada."
+    : readyForPublish
+      ? "La pieza esta lista para entrar a cola o publicarse en cuanto conectes la API."
+      : readyForQueue
+        ? "La pieza esta lista para programarse en el calendario organico."
+        : errors.length
+          ? `Faltan ${errors.length} punto(s) criticos antes de publicarla.`
+          : "Todavia hay detalles por revisar antes de programarla.";
+
+  return {
+    publicationId: publication.id,
+    readyForQueue,
+    readyForPublish,
+    readinessScore,
+    okCount,
+    attentionCount: attentions.length,
+    errorCount: errors.length,
+    summary,
+    checks,
+    capabilities,
+    schedule: {
+      scheduledAt: scheduledAt || null,
+      isFuture: scheduleIsFuture,
+      isPastOrDue: scheduleIsPast,
+      publishedAt: publication.publishedAt || null,
+      status: publication.status,
+      statusLabel: publication.statusLabel || "Borrador"
+    },
+    preview: {
+      publicationLabel: publication.label || "Publicacion",
+      channelLabel: channel?.label || channel?.channelTypeLabel || "Sin canal",
+      integrationLabel: integration?.label || integration?.productLabel || "Sin integracion",
+      campaignName: campaign?.name || "Sin campana",
+      creativeName: creative?.name || "Sin creativo",
+      creativeType,
+      creativeTypeLabel,
+      caption: contentBody,
+      destinationUrl: publication.destinationUrl || creative?.destinationUrl || campaign?.landingPageUrl || "",
+      mediaTotal: mediaSummary.total,
+      mediaReady: mediaSummary.ready
+    }
+  };
 }
 
 async function registrarCoachMarketingEvent({
@@ -22863,6 +23092,46 @@ app.get("/api/coach/marketing/publications", async (req, res) => {
   }
 });
 
+app.get("/api/coach/marketing/publications/:publicationId/workflow", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const publicationId = normalizarCoachCrmObjectId(req.params?.publicationId || "");
+
+  if (!publicationId) {
+    return responderCoachError(res, 400, "No encontre la publicacion que quieres revisar.");
+  }
+
+  try {
+    const publicationDoc = await CoachMarketingPublication.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+    ).lean();
+
+    if (!publicationDoc) {
+      return responderCoachError(res, 404, "No encontre la publicacion de marketing.");
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      publicationId,
+      integrationId: publicationDoc.integrationId || "",
+      channelId: publicationDoc.channelId || "",
+      campaignId: publicationDoc.campaignId || "",
+      creativeId: publicationDoc.creativeId || ""
+    });
+
+    res.json({
+      publication: limpiarCoachMarketingPublication(publicationDoc),
+      workflow: construirCoachMarketingPublicationWorkflow(publicationDoc, refs)
+    });
+  } catch (error) {
+    console.error("Error cargando workflow de publicacion del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar el workflow de la publicacion.");
+  }
+});
+
 app.post("/api/coach/marketing/publications", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -22973,6 +23242,204 @@ app.post("/api/coach/marketing/publications", async (req, res) => {
   } catch (error) {
     console.error("Error creando publicacion de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude crear la publicacion de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/publications/:publicationId/queue", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const publicationId = normalizarCoachCrmObjectId(req.params?.publicationId || "");
+
+  if (!publicationId) {
+    return responderCoachError(res, 400, "No encontre la publicacion que quieres preparar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const publicationDoc = await CoachMarketingPublication.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+    );
+
+    if (!publicationDoc) {
+      return responderCoachError(res, 404, "No encontre la publicacion de marketing.");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "reviewStatus")) {
+      publicationDoc.reviewStatus = normalizarCoachMarketingReviewStatus(req.body?.reviewStatus || "draft");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "scheduledAt")) {
+      publicationDoc.scheduledAt = normalizarCoachOptionalDate(req.body?.scheduledAt || null);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "caption")) {
+      publicationDoc.caption = truncarTextoPrompt(cleanText(req.body?.caption || ""), 320);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "destinationUrl")) {
+      publicationDoc.destinationUrl = limpiarUrlExterna(req.body?.destinationUrl || "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "notes")) {
+      publicationDoc.notes = truncarTextoPrompt(cleanText(req.body?.notes || ""), 220);
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      publicationId,
+      integrationId: publicationDoc.integrationId || "",
+      channelId: publicationDoc.channelId || "",
+      campaignId: publicationDoc.campaignId || "",
+      creativeId: publicationDoc.creativeId || ""
+    });
+    const workflowBeforeQueue = construirCoachMarketingPublicationWorkflow(
+      publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc,
+      refs
+    );
+
+    if (!workflowBeforeQueue?.readyForQueue) {
+      return responderCoachError(
+        res,
+        400,
+        workflowBeforeQueue?.summary || "La publicacion todavia no esta lista para entrar a cola."
+      );
+    }
+
+    const now = new Date();
+    const scheduledAt = normalizarCoachOptionalDate(publicationDoc.scheduledAt || null);
+    publicationDoc.status = scheduledAt && scheduledAt.getTime() > now.getTime() ? "scheduled" : "queued";
+    publicationDoc.lastError = "";
+    publicationDoc.updatedAt = now;
+    await publicationDoc.save();
+
+    const publication = limpiarCoachMarketingPublication(publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc);
+    const workflow = construirCoachMarketingPublicationWorkflow(
+      publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc,
+      refs
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      creativeId: refs.creativeDoc?._id || null,
+      publicationId: publicationDoc._id,
+      provider: publication.provider,
+      product: publication.product,
+      direction: "internal",
+      eventType: publication.status === "scheduled" ? "publication_scheduled" : "publication_queued",
+      entityType: "publication",
+      entityId: publication.id,
+      status: "processed",
+      summary:
+        truncarTextoPrompt(cleanText(req.body?.summary || ""), 220) ||
+        (publication.status === "scheduled"
+          ? `Se programo la publicacion ${publication.label || "sin etiqueta"}.`
+          : `La publicacion ${publication.label || "sin etiqueta"} entro a cola organica.`),
+      payload: {
+        mode: publication.mode,
+        scheduledAt: publication.scheduledAt || null,
+        reviewStatus: publication.reviewStatus,
+        readinessScore: workflow?.readinessScore || 0
+      }
+    });
+
+    res.json({
+      publication,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error preparando cola de publicacion organica del Coach:", error.message);
+    responderCoachError(res, 500, "No pude mandar la publicacion a cola.");
+  }
+});
+
+app.post("/api/coach/marketing/publications/:publicationId/mark-published", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const publicationId = normalizarCoachCrmObjectId(req.params?.publicationId || "");
+
+  if (!publicationId) {
+    return responderCoachError(res, 400, "No encontre la publicacion que quieres cerrar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const publicationDoc = await CoachMarketingPublication.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: publicationId })
+    );
+
+    if (!publicationDoc) {
+      return responderCoachError(res, 404, "No encontre la publicacion de marketing.");
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      publicationId,
+      integrationId: publicationDoc.integrationId || "",
+      channelId: publicationDoc.channelId || "",
+      campaignId: publicationDoc.campaignId || "",
+      creativeId: publicationDoc.creativeId || ""
+    });
+
+    publicationDoc.status = "published";
+    publicationDoc.reviewStatus = normalizarCoachMarketingReviewStatus(
+      req.body?.reviewStatus || publicationDoc.reviewStatus || "approved"
+    );
+    publicationDoc.publishedAt = normalizarCoachOptionalDate(req.body?.publishedAt || null) || new Date();
+    publicationDoc.externalPostUrl = limpiarUrlExterna(req.body?.externalPostUrl || publicationDoc.externalPostUrl || "");
+    publicationDoc.externalPublicationId = cleanText(
+      req.body?.externalPublicationId || publicationDoc.externalPublicationId || ""
+    ).slice(0, 120);
+    publicationDoc.lastSyncAt = new Date();
+    publicationDoc.lastError = "";
+    publicationDoc.updatedAt = new Date();
+    await publicationDoc.save();
+
+    const publication = limpiarCoachMarketingPublication(publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc);
+    const workflow = construirCoachMarketingPublicationWorkflow(
+      publicationDoc?.toObject ? publicationDoc.toObject() : publicationDoc,
+      refs
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: refs.campaignDoc?._id || null,
+      creativeId: refs.creativeDoc?._id || null,
+      publicationId: publicationDoc._id,
+      provider: publication.provider,
+      product: publication.product,
+      direction: "internal",
+      eventType: "publication_marked_published",
+      entityType: "publication",
+      entityId: publication.id,
+      status: "processed",
+      summary: `Se registro como publicada ${publication.label || "la pieza organica"}.`,
+      payload: {
+        publishedAt: publication.publishedAt || null,
+        externalPostUrl: publication.externalPostUrl || "",
+        externalPublicationId: publication.externalPublicationId || ""
+      }
+    });
+
+    res.json({
+      publication,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error registrando publicacion publicada del Coach:", error.message);
+    responderCoachError(res, 500, "No pude registrar la publicacion como publicada.");
   }
 });
 
