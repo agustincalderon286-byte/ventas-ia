@@ -387,6 +387,28 @@ const COACH_MARKETING_HEALTH_STATUS_OPTIONS = Object.freeze([
   { value: "attention", label: "Atencion" },
   { value: "error", label: "Error" }
 ]);
+const COACH_MARKETING_AUTH_SESSION_STATUS_OPTIONS = Object.freeze([
+  { value: "not_prepared", label: "Sin preparar" },
+  { value: "prepared", label: "Preparada" },
+  { value: "sent", label: "Enviada" },
+  { value: "connected", label: "Conectada" },
+  { value: "expired", label: "Expirada" },
+  { value: "error", label: "Con error" }
+]);
+const COACH_MARKETING_TOKEN_STATUS_OPTIONS = Object.freeze([
+  { value: "missing", label: "Faltante" },
+  { value: "ready", label: "Lista" },
+  { value: "expiring", label: "Por expirar" },
+  { value: "expired", label: "Expirada" },
+  { value: "error", label: "Con error" }
+]);
+const COACH_MARKETING_SYNC_STATUS_OPTIONS = Object.freeze([
+  { value: "idle", label: "Idle" },
+  { value: "queued", label: "En cola" },
+  { value: "running", label: "Corriendo" },
+  { value: "ok", label: "Ok" },
+  { value: "error", label: "Con error" }
+]);
 const COACH_MARKETING_CAPTURE_TYPE_OPTIONS = Object.freeze([
   { value: "lead", label: "Lead" },
   { value: "recruitment", label: "Reclutamiento" },
@@ -1496,6 +1518,21 @@ const coachMarketingIntegrationSchema = new mongoose.Schema({
   notes: String,
   lastHealthStatus: { type: String, default: "pending" },
   lastHealthCheckAt: Date,
+  authSessionStatus: { type: String, default: "not_prepared" },
+  authSessionToken: String,
+  authSessionStartedAt: Date,
+  authSessionExpiresAt: Date,
+  authStartPath: String,
+  authCallbackPath: String,
+  tokenStatus: { type: String, default: "missing" },
+  accessTokenExpiresAt: Date,
+  refreshTokenAvailable: { type: Boolean, default: false },
+  lastTokenRefreshAt: Date,
+  syncStatus: { type: String, default: "idle" },
+  lastSyncRequestedAt: Date,
+  lastSyncJobId: String,
+  nextSyncAt: Date,
+  lastSyncSummary: String,
   lastSyncAt: Date,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
@@ -1912,6 +1949,7 @@ coachMarketingIntegrationSchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachMarketingIntegrationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachMarketingIntegrationSchema.index({ ownerUserId: 1, provider: 1, product: 1, updatedAt: -1 });
 coachMarketingIntegrationSchema.index({ ownerUserId: 1, templateKey: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingIntegrationSchema.index({ ownerUserId: 1, syncStatus: 1, updatedAt: -1 });
 coachMarketingChannelSchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachMarketingChannelSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachMarketingChannelSchema.index({ ownerUserId: 1, integrationId: 1, updatedAt: -1 });
@@ -5188,6 +5226,18 @@ function normalizarCoachMarketingHealthStatus(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_HEALTH_STATUS_OPTIONS, "pending");
 }
 
+function normalizarCoachMarketingAuthSessionStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_AUTH_SESSION_STATUS_OPTIONS, "not_prepared");
+}
+
+function normalizarCoachMarketingTokenStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_TOKEN_STATUS_OPTIONS, "missing");
+}
+
+function normalizarCoachMarketingSyncStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_SYNC_STATUS_OPTIONS, "idle");
+}
+
 function normalizarCoachMarketingIntakeType(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_INTAKE_TYPE_OPTIONS, "webhook");
 }
@@ -5198,6 +5248,26 @@ function normalizarCoachMarketingIntakeStatus(value = "") {
 
 function obtenerCoachMarketingProductDefinition(product = "") {
   return obtenerCoachMarketingOptionValue(COACH_MARKETING_PRODUCT_OPTIONS, product);
+}
+
+function generarCoachMarketingConnectionToken(length = 32) {
+  return crypto.randomBytes(Math.max(Number(length) || 0, 12)).toString("hex");
+}
+
+function construirCoachMarketingIntegrationConnectPath(integrationId = "", sessionToken = "") {
+  const safeIntegrationId = normalizarCoachCrmObjectId(integrationId);
+  const safeToken = cleanText(sessionToken || "").slice(0, 120);
+
+  if (!safeIntegrationId || !safeToken) {
+    return "";
+  }
+
+  return `/api/coach/marketing/integrations/${safeIntegrationId}/oauth/start?session=${safeToken}`;
+}
+
+function construirCoachMarketingIntegrationCallbackPath(integrationId = "") {
+  const safeIntegrationId = normalizarCoachCrmObjectId(integrationId);
+  return safeIntegrationId ? `/api/coach/marketing/integrations/${safeIntegrationId}/oauth/callback` : "";
 }
 
 function obtenerCoachMarketingBlueprint(templateKey = "") {
@@ -5878,6 +5948,9 @@ function construirCoachMarketingRoutes() {
     catalog: "/api/coach/marketing/catalog",
     bootstrap: "/api/coach/marketing/bootstrap",
     integrations: "/api/coach/marketing/integrations",
+    integrationConnectionSession: "/api/coach/marketing/integrations/:integrationId/connection-session",
+    integrationTokenState: "/api/coach/marketing/integrations/:integrationId/token-state",
+    integrationQueueSync: "/api/coach/marketing/integrations/:integrationId/queue-sync",
     channels: "/api/coach/marketing/channels",
     campaigns: "/api/coach/marketing/campaigns",
     campaignWorkflow: "/api/coach/marketing/campaigns/:campaignId/workflow",
@@ -5952,7 +6025,10 @@ function construirCoachMarketingCatalog() {
       intakeSources: COACH_MARKETING_INTAKE_STATUS_OPTIONS,
       review: COACH_MARKETING_REVIEW_STATUS_OPTIONS,
       events: COACH_MARKETING_EVENT_STATUS_OPTIONS,
-      health: COACH_MARKETING_HEALTH_STATUS_OPTIONS
+      health: COACH_MARKETING_HEALTH_STATUS_OPTIONS,
+      authSession: COACH_MARKETING_AUTH_SESSION_STATUS_OPTIONS,
+      token: COACH_MARKETING_TOKEN_STATUS_OPTIONS,
+      sync: COACH_MARKETING_SYNC_STATUS_OPTIONS
     },
     authModes: COACH_MARKETING_AUTH_MODE_OPTIONS,
     accountTypes: COACH_MARKETING_ACCOUNT_TYPE_OPTIONS,
@@ -5997,6 +6073,9 @@ function limpiarCoachMarketingIntegration(doc = null) {
   const authMode = normalizarCoachMarketingAuthMode(doc.authMode || productDefinition?.authMode || "");
   const accountType = normalizarCoachMarketingAccountType(doc.accountType || productDefinition?.accountType || "");
   const healthStatus = normalizarCoachMarketingHealthStatus(doc.lastHealthStatus || "");
+  const authSessionStatus = normalizarCoachMarketingAuthSessionStatus(doc.authSessionStatus || "");
+  const tokenStatus = normalizarCoachMarketingTokenStatus(doc.tokenStatus || "");
+  const syncStatus = normalizarCoachMarketingSyncStatus(doc.syncStatus || "");
   const expectedScopes = resolverCoachMarketingExpectedScopes({
     product,
     provider,
@@ -6056,6 +6135,29 @@ function limpiarCoachMarketingIntegration(doc = null) {
     lastHealthStatus: healthStatus,
     lastHealthStatusLabel: formatearCoachMarketingChoiceLabel(healthStatus, COACH_MARKETING_HEALTH_STATUS_OPTIONS),
     lastHealthCheckAt: doc.lastHealthCheckAt || null,
+    authSessionStatus,
+    authSessionStatusLabel: formatearCoachMarketingChoiceLabel(
+      authSessionStatus,
+      COACH_MARKETING_AUTH_SESSION_STATUS_OPTIONS
+    ),
+    authSessionStartedAt: doc.authSessionStartedAt || null,
+    authSessionExpiresAt: doc.authSessionExpiresAt || null,
+    authStartPath:
+      cleanText(doc.authStartPath || "").slice(0, 240) ||
+      construirCoachMarketingIntegrationConnectPath(doc._id || "", doc.authSessionToken || ""),
+    authCallbackPath:
+      cleanText(doc.authCallbackPath || "").slice(0, 240) || construirCoachMarketingIntegrationCallbackPath(doc._id || ""),
+    tokenStatus,
+    tokenStatusLabel: formatearCoachMarketingChoiceLabel(tokenStatus, COACH_MARKETING_TOKEN_STATUS_OPTIONS),
+    accessTokenExpiresAt: doc.accessTokenExpiresAt || null,
+    refreshTokenAvailable: doc.refreshTokenAvailable === true,
+    lastTokenRefreshAt: doc.lastTokenRefreshAt || null,
+    syncStatus,
+    syncStatusLabel: formatearCoachMarketingChoiceLabel(syncStatus, COACH_MARKETING_SYNC_STATUS_OPTIONS),
+    lastSyncRequestedAt: doc.lastSyncRequestedAt || null,
+    lastSyncJobId: cleanText(doc.lastSyncJobId || "").slice(0, 120),
+    nextSyncAt: doc.nextSyncAt || null,
+    lastSyncSummary: truncarTextoPrompt(cleanText(doc.lastSyncSummary || ""), 220),
     lastSyncAt: doc.lastSyncAt || null
   };
 }
@@ -12290,6 +12392,8 @@ function construirCoachAsyncJobDedupeKey(jobType = "", userDoc = null, payload =
     sourceId = String(payload?.sheetDoc?.id || payload?.sheetDoc?._id || payload?.sheet?.id || payload?.sheet?._id || "").trim();
   } else if (jobType === "highlevel_sync") {
     sourceId = String(payload?.leadId || payload?.lead?.id || payload?.lead?._id || "").trim();
+  } else if (jobType === "marketing_integration_sync") {
+    sourceId = String(payload?.integrationId || payload?.integration?.id || payload?.integration?._id || "").trim();
   }
 
   if (!sourceId) {
@@ -12434,6 +12538,68 @@ async function ejecutarCoachAsyncJob(jobDoc = null) {
     return sincronizarCoachLeadAHighLevel(userDoc, profileDoc, {
       _id: jobDoc.payload?.leadId || jobDoc.payload?.lead?.id || jobDoc.payload?.lead?._id || ""
     });
+  }
+
+  if (jobDoc.jobType === "marketing_integration_sync") {
+    const integrationId = normalizarCoachCrmObjectId(
+      jobDoc.payload?.integrationId || jobDoc.payload?.integration?.id || jobDoc.payload?.integration?._id || ""
+    );
+
+    if (!integrationId) {
+      return {
+        attempted: false,
+        error: "No encontre la integracion para el sync."
+      };
+    }
+
+    const integrationDoc = await CoachMarketingIntegration.findOne({
+      _id: integrationId,
+      ownerUserId: resolverCoachOwnerUserId(userDoc)
+    });
+
+    if (!integrationDoc?._id) {
+      return {
+        attempted: false,
+        error: "No encontre la integracion a sincronizar."
+      };
+    }
+
+    const now = new Date();
+    integrationDoc.syncStatus = "ok";
+    integrationDoc.lastSyncAt = now;
+    integrationDoc.nextSyncAt = null;
+    integrationDoc.lastSyncSummary =
+      truncarTextoPrompt(cleanText(jobDoc.payload?.summary || ""), 220) ||
+      "Sync base ejecutado. La capa real de API ya puede enchufarse aqui despues.";
+    integrationDoc.updatedAt = now;
+    await integrationDoc.save();
+
+    await registrarCoachMarketingEvent({
+      userDoc,
+      integrationId: integrationDoc._id,
+      provider: integrationDoc.provider || "custom",
+      product: integrationDoc.product || "custom",
+      direction: "internal",
+      eventType: "integration_sync_completed",
+      entityType: "integration",
+      entityId: String(integrationDoc._id || ""),
+      status: "processed",
+      summary: `Sync interno completado para ${integrationDoc.label || integrationDoc.product || "la integracion"}.`,
+      payload: {
+        requestedByUserId: jobDoc.payload?.requestedByUserId || "",
+        requestedByName: jobDoc.payload?.requestedByName || "",
+        fullSync: jobDoc.payload?.fullSync === true,
+        summary: integrationDoc.lastSyncSummary || ""
+      }
+    });
+
+    return {
+      attempted: true,
+      delivered: true,
+      synced: true,
+      integrationId: String(integrationDoc._id || ""),
+      summary: integrationDoc.lastSyncSummary || ""
+    };
   }
 
   return {
@@ -24182,6 +24348,252 @@ app.post("/api/coach/marketing/integrations/:integrationId/health-check", async 
   } catch (error) {
     console.error("Error registrando health check de integracion del Coach:", error.message);
     responderCoachError(res, 500, "No pude registrar el health check de la integracion.");
+  }
+});
+
+app.post("/api/coach/marketing/integrations/:integrationId/connection-session", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const integrationId = normalizarCoachCrmObjectId(req.params?.integrationId || "");
+
+  if (!integrationId) {
+    return responderCoachError(res, 400, "No encontre la integracion que quieres preparar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const integrationDoc = await CoachMarketingIntegration.findOne(
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: integrationId })
+    );
+
+    if (!integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const occurredAt = new Date();
+    const sessionToken = generarCoachMarketingConnectionToken(18);
+    const expiresAt = new Date(occurredAt.getTime() + 30 * 60 * 1000);
+    const nextConnectionStatus =
+      integrationDoc.connectionStatus === "connected"
+        ? "connected"
+        : normalizarCoachMarketingConnectionStatus(body.connectionStatus || "pending");
+
+    integrationDoc.authSessionStatus = "prepared";
+    integrationDoc.authSessionToken = sessionToken;
+    integrationDoc.authSessionStartedAt = occurredAt;
+    integrationDoc.authSessionExpiresAt = expiresAt;
+    integrationDoc.authStartPath = construirCoachMarketingIntegrationConnectPath(integrationDoc._id, sessionToken);
+    integrationDoc.authCallbackPath = construirCoachMarketingIntegrationCallbackPath(integrationDoc._id);
+    integrationDoc.connectionStatus = nextConnectionStatus;
+    integrationDoc.updatedAt = occurredAt;
+    await integrationDoc.save();
+
+    const integration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const event = await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider: integration.provider,
+      product: integration.product,
+      direction: "internal",
+      eventType: "integration_auth_prepared",
+      entityType: "integration",
+      entityId: integration.id,
+      status: "processed",
+      summary:
+        truncarTextoPrompt(cleanText(body.summary || ""), 220) ||
+        `Se preparo la sesion de conexion para ${integration.label || integration.productLabel || "la integracion"}.`,
+      payload: {
+        authSessionStatus: integration.authSessionStatus,
+        authStartPath: integration.authStartPath,
+        authCallbackPath: integration.authCallbackPath,
+        authSessionExpiresAt: integration.authSessionExpiresAt
+      },
+      occurredAt
+    });
+
+    res.json({
+      integration,
+      event
+    });
+  } catch (error) {
+    console.error("Error preparando sesion de conexion del Coach:", error.message);
+    responderCoachError(res, 500, "No pude preparar la sesion de conexion.");
+  }
+});
+
+app.post("/api/coach/marketing/integrations/:integrationId/token-state", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const integrationId = normalizarCoachCrmObjectId(req.params?.integrationId || "");
+
+  if (!integrationId) {
+    return responderCoachError(res, 400, "No encontre la integracion que quieres actualizar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const integrationDoc = await CoachMarketingIntegration.findOne(
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: integrationId })
+    );
+
+    if (!integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const occurredAt = new Date();
+    const tokenStatus = normalizarCoachMarketingTokenStatus(body.tokenStatus || integrationDoc.tokenStatus || "missing");
+    const accessTokenExpiresAt = normalizarCoachOptionalDate(body.accessTokenExpiresAt || null);
+    const refreshTokenAvailable = body.refreshTokenAvailable === true;
+
+    integrationDoc.tokenStatus = tokenStatus;
+    integrationDoc.accessTokenExpiresAt = accessTokenExpiresAt;
+    integrationDoc.refreshTokenAvailable = refreshTokenAvailable;
+    integrationDoc.lastTokenRefreshAt = occurredAt;
+
+    if (tokenStatus === "ready") {
+      integrationDoc.connectionStatus = "connected";
+      integrationDoc.authSessionStatus = "connected";
+    } else if (["expired", "error"].includes(tokenStatus)) {
+      integrationDoc.connectionStatus = "error";
+    }
+
+    integrationDoc.updatedAt = occurredAt;
+    await integrationDoc.save();
+
+    const integration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const event = await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider: integration.provider,
+      product: integration.product,
+      direction: "internal",
+      eventType: "integration_token_updated",
+      entityType: "integration",
+      entityId: integration.id,
+      status: tokenStatus === "error" ? "failed" : "processed",
+      summary:
+        truncarTextoPrompt(cleanText(body.summary || ""), 220) ||
+        `Se actualizo el estado del token para ${integration.label || integration.productLabel || "la integracion"}.`,
+      payload: {
+        tokenStatus: integration.tokenStatus,
+        accessTokenExpiresAt: integration.accessTokenExpiresAt,
+        refreshTokenAvailable: integration.refreshTokenAvailable,
+        connectionStatus: integration.connectionStatus
+      },
+      occurredAt
+    });
+
+    res.json({
+      integration,
+      event
+    });
+  } catch (error) {
+    console.error("Error actualizando token del conector del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar el estado del token.");
+  }
+});
+
+app.post("/api/coach/marketing/integrations/:integrationId/queue-sync", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const integrationId = normalizarCoachCrmObjectId(req.params?.integrationId || "");
+
+  if (!integrationId) {
+    return responderCoachError(res, 400, "No encontre la integracion que quieres sincronizar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const integrationDoc = await CoachMarketingIntegration.findOne(
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: integrationId })
+    );
+
+    if (!integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const occurredAt = new Date();
+    integrationDoc.syncStatus = "queued";
+    integrationDoc.lastSyncRequestedAt = occurredAt;
+    integrationDoc.nextSyncAt = occurredAt;
+    integrationDoc.lastSyncSummary =
+      truncarTextoPrompt(cleanText(body.summary || ""), 220) ||
+      "Sync base encolado. Aqui se colgara la llamada real al API despues.";
+    integrationDoc.updatedAt = occurredAt;
+    await integrationDoc.save();
+
+    const queuedJob = await encolarCoachAsyncJob({
+      jobType: "marketing_integration_sync",
+      userDoc: auth.user,
+      payload: {
+        integrationId,
+        requestedByUserId: String(auth.user?._id || ""),
+        requestedByName: auth.user?.name || auth.user?.email || "",
+        fullSync: body.fullSync === true,
+        summary: integrationDoc.lastSyncSummary
+      },
+      maxAttempts: 2
+    });
+
+    if (queuedJob?._id) {
+      integrationDoc.lastSyncJobId = String(queuedJob._id || "");
+      await integrationDoc.save();
+    }
+
+    const integration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const event = await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider: integration.provider,
+      product: integration.product,
+      direction: "internal",
+      eventType: "integration_sync_queued",
+      entityType: "integration",
+      entityId: integration.id,
+      status: "queued",
+      summary:
+        truncarTextoPrompt(cleanText(body.summary || ""), 220) ||
+        `Se encolo un sync para ${integration.label || integration.productLabel || "la integracion"}.`,
+      payload: {
+        syncStatus: integration.syncStatus,
+        queuedJobId: integration.lastSyncJobId || "",
+        fullSync: body.fullSync === true
+      },
+      occurredAt
+    });
+
+    res.json({
+      integration,
+      queuedJobId: integration.lastSyncJobId || "",
+      event
+    });
+  } catch (error) {
+    console.error("Error encolando sync de integracion del Coach:", error.message);
+    responderCoachError(res, 500, "No pude encolar el sync de la integracion.");
   }
 });
 

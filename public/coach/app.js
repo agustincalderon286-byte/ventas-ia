@@ -9870,6 +9870,16 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const healthForm = document.querySelector("[data-marketing-health-form]");
   const healthSaveButton = document.querySelector("[data-marketing-health-save]");
   const healthFeedback = document.querySelector("[data-marketing-health-feedback]");
+  const authForm = document.querySelector("[data-marketing-auth-form]");
+  const authPrepareButton = document.querySelector("[data-marketing-auth-prepare]");
+  const tokenSaveButton = document.querySelector("[data-marketing-token-save]");
+  const syncQueueButton = document.querySelector("[data-marketing-sync-queue]");
+  const authFeedback = document.querySelector("[data-marketing-auth-feedback]");
+  const authSummaryCopy = document.querySelector("[data-marketing-auth-summary-copy]");
+  const authSessionStatusNode = document.querySelector("[data-marketing-auth-session-status]");
+  const tokenStatusNode = document.querySelector("[data-marketing-token-status]");
+  const syncStatusNode = document.querySelector("[data-marketing-sync-status]");
+  const syncJobNode = document.querySelector("[data-marketing-sync-job]");
 
   if (
     !bootstrapButton ||
@@ -9913,7 +9923,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !connectorForm ||
     !connectorSelect ||
     !connectorChipList ||
-    !healthForm
+    !healthForm ||
+    !authForm
   ) {
     return;
   }
@@ -9994,6 +10005,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const connectorAccountTypeSelect = connectorForm.querySelector("[data-marketing-connector-account-type-select]");
   const healthStatusSelect = healthForm.querySelector("[data-marketing-health-status-select]");
   const healthConnectionSelect = healthForm.querySelector("[data-marketing-health-connection-select]");
+  const tokenStatusSelect = authForm.querySelector("[data-marketing-token-status-select]");
+  const tokenExpiryInput = authForm.querySelector("[data-marketing-token-expiry-input]");
+  const tokenRefreshCheckbox = authForm.querySelector("[data-marketing-token-refresh-checkbox]");
+  const syncFullCheckbox = authForm.querySelector("[data-marketing-sync-full-checkbox]");
 
   const state = {
     module: marketingModule || {},
@@ -10948,6 +10963,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     buildChoiceSelectOptions(connectorAccountTypeSelect, state.catalog?.accountTypes || [], "Tipo de cuenta");
     buildChoiceSelectOptions(healthStatusSelect, state.catalog?.statuses?.health || [], "Resultado del check");
     buildChoiceSelectOptions(healthConnectionSelect, state.catalog?.statuses?.connection || [], "Conexion despues del check");
+    buildChoiceSelectOptions(tokenStatusSelect, state.catalog?.statuses?.token || [], "Estado del token");
 
     if (intakeSelect) {
       intakeSelect.value = state.selectedIntakeSourceId || "";
@@ -10972,6 +10988,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     if (!integration) {
       connectorForm.reset();
       healthForm.reset();
+      authForm.reset();
       setSummaryValue(summaryNodes.connectorScopeTotal, 0);
       setSummaryValue(summaryNodes.connectorScopeGranted, 0);
       setSummaryValue(summaryNodes.connectorScopeMissing, 0);
@@ -10987,6 +11004,17 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       if (healthSaveButton) {
         healthSaveButton.disabled = true;
       }
+      if (authPrepareButton) authPrepareButton.disabled = true;
+      if (tokenSaveButton) tokenSaveButton.disabled = true;
+      if (syncQueueButton) syncQueueButton.disabled = true;
+      if (authSessionStatusNode) authSessionStatusNode.textContent = "Sin preparar";
+      if (tokenStatusNode) tokenStatusNode.textContent = "Faltante";
+      if (syncStatusNode) syncStatusNode.textContent = "Idle";
+      if (syncJobNode) syncJobNode.textContent = "Sin job";
+      if (authSummaryCopy) {
+        authSummaryCopy.textContent =
+          "Aqui preparas la sesion OAuth, registras el estado del token y encolas el sync interno base.";
+      }
       return;
     }
 
@@ -10997,6 +11025,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     if (healthSaveButton) {
       healthSaveButton.disabled = false;
     }
+    if (authPrepareButton) authPrepareButton.disabled = false;
+    if (tokenSaveButton) tokenSaveButton.disabled = false;
+    if (syncQueueButton) syncQueueButton.disabled = false;
 
     connectorForm.elements.integrationId.value = integration.id || "";
     connectorForm.elements.label.value = integration.label || "";
@@ -11030,6 +11061,19 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     }
     healthForm.elements.missingScopes.value = stringifyListInput(integration.missingScopes || []);
     healthForm.elements.summary.value = "";
+    if (tokenStatusSelect) {
+      tokenStatusSelect.value = integration.tokenStatus || "missing";
+    }
+    if (tokenExpiryInput) {
+      tokenExpiryInput.value = formatDateTimeLocalValue(integration.accessTokenExpiresAt || "");
+    }
+    if (tokenRefreshCheckbox) {
+      tokenRefreshCheckbox.checked = integration.refreshTokenAvailable === true;
+    }
+    if (syncFullCheckbox) {
+      syncFullCheckbox.checked = false;
+    }
+    authForm.elements.summary.value = "";
 
     setSummaryValue(summaryNodes.connectorScopeTotal, integration.expectedScopeTotal || 0);
     setSummaryValue(summaryNodes.connectorScopeGranted, integration.grantedScopeTotal || 0);
@@ -11088,6 +11132,31 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         `
       )
       .join("");
+
+    if (authSessionStatusNode) {
+      authSessionStatusNode.textContent = integration.authSessionStatusLabel || "Sin preparar";
+    }
+    if (tokenStatusNode) {
+      tokenStatusNode.textContent = integration.tokenStatusLabel || "Faltante";
+    }
+    if (syncStatusNode) {
+      syncStatusNode.textContent = integration.syncStatusLabel || "Idle";
+    }
+    if (syncJobNode) {
+      syncJobNode.textContent = integration.lastSyncJobId || "Sin job";
+    }
+    if (authSummaryCopy) {
+      authSummaryCopy.textContent = [
+        integration.authStartPath ? `Inicio ${integration.authStartPath}` : "Sin sesion auth preparada",
+        integration.authCallbackPath ? `Callback ${integration.authCallbackPath}` : "",
+        integration.accessTokenExpiresAt
+          ? `Token ${formatDateTimeShort(integration.accessTokenExpiresAt)}`
+          : "Token aun no registrado",
+        integration.lastSyncSummary || ""
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
   };
 
   const renderIntegrations = () => {
@@ -11115,6 +11184,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
             <div class="team-seat-metrics">
               <span>Estado: <strong>${escapeHtml(item.statusLabel || "Borrador")}</strong></span>
               <span>Auth: <strong>${escapeHtml(item.authModeLabel || "Manual")}</strong></span>
+              <span>Sesion: <strong>${escapeHtml(item.authSessionStatusLabel || "Sin preparar")}</strong></span>
+              <span>Token: <strong>${escapeHtml(item.tokenStatusLabel || "Faltante")}</strong></span>
+              <span>Sync: <strong>${escapeHtml(item.syncStatusLabel || "Idle")}</strong></span>
               <span>Cuenta: <strong>${escapeHtml(item.accountTypeLabel || "Custom")}</strong></span>
               <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
               <span>Capacidades: <strong>${Number(item.capabilities?.length || 0)}</strong></span>
@@ -11999,6 +12071,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   connectorSelect?.addEventListener("change", () => {
     clearMessage(connectorFeedback);
     clearMessage(healthFeedback);
+    clearMessage(authFeedback);
     syncSelectedIntegration(connectorSelect.value || "");
     renderConnectorPrep();
     renderIntegrations();
@@ -12013,6 +12086,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     clearMessage(connectorFeedback);
     clearMessage(healthFeedback);
+    clearMessage(authFeedback);
     syncSelectedIntegration(button.dataset.marketingSelectIntegration || "");
     renderConnectorPrep();
     renderIntegrations();
@@ -12361,6 +12435,101 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(healthFeedback, error.message || "No pude registrar el health check.", "error");
     } finally {
       setButtonLoading(healthSaveButton, false);
+    }
+  });
+
+  authPrepareButton?.addEventListener("click", async () => {
+    clearMessage(authFeedback);
+    const integration = getSelectedIntegration();
+
+    if (!integration?.id) {
+      setMessage(authFeedback, "Primero selecciona una integracion.", "error");
+      return;
+    }
+
+    setButtonLoading(authPrepareButton, true, "Preparando...");
+
+    try {
+      const formData = new FormData(authForm);
+      const data = await apiRequest(`/api/coach/marketing/integrations/${integration.id}/connection-session`, {
+        method: "POST",
+        body: {
+          summary: formData.get("summary")
+        }
+      });
+
+      state.selectedIntegrationId = data?.integration?.id || integration.id;
+      await loadWorkspace();
+      setMessage(authFeedback, "Sesion de conexion preparada dentro del Coach.", "success");
+    } catch (error) {
+      setMessage(authFeedback, error.message || "No pude preparar la sesion de conexion.", "error");
+    } finally {
+      setButtonLoading(authPrepareButton, false);
+    }
+  });
+
+  tokenSaveButton?.addEventListener("click", async () => {
+    clearMessage(authFeedback);
+    const integration = getSelectedIntegration();
+
+    if (!integration?.id) {
+      setMessage(authFeedback, "Primero selecciona una integracion.", "error");
+      return;
+    }
+
+    setButtonLoading(tokenSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(authForm);
+      const expiresAtRaw = formData.get("accessTokenExpiresAt");
+      const data = await apiRequest(`/api/coach/marketing/integrations/${integration.id}/token-state`, {
+        method: "POST",
+        body: {
+          tokenStatus: formData.get("tokenStatus"),
+          accessTokenExpiresAt: expiresAtRaw ? new Date(String(expiresAtRaw)).toISOString() : "",
+          refreshTokenAvailable: authForm.querySelector('[name="refreshTokenAvailable"]')?.checked === true,
+          summary: formData.get("summary")
+        }
+      });
+
+      state.selectedIntegrationId = data?.integration?.id || integration.id;
+      await loadWorkspace();
+      setMessage(authFeedback, "Estado del token guardado.", "success");
+    } catch (error) {
+      setMessage(authFeedback, error.message || "No pude guardar el estado del token.", "error");
+    } finally {
+      setButtonLoading(tokenSaveButton, false);
+    }
+  });
+
+  syncQueueButton?.addEventListener("click", async () => {
+    clearMessage(authFeedback);
+    const integration = getSelectedIntegration();
+
+    if (!integration?.id) {
+      setMessage(authFeedback, "Primero selecciona una integracion.", "error");
+      return;
+    }
+
+    setButtonLoading(syncQueueButton, true, "Encolando...");
+
+    try {
+      const formData = new FormData(authForm);
+      const data = await apiRequest(`/api/coach/marketing/integrations/${integration.id}/queue-sync`, {
+        method: "POST",
+        body: {
+          fullSync: authForm.querySelector('[name="fullSync"]')?.checked === true,
+          summary: formData.get("summary")
+        }
+      });
+
+      state.selectedIntegrationId = data?.integration?.id || integration.id;
+      await loadWorkspace();
+      setMessage(authFeedback, "Sync base encolado dentro del Coach.", "success");
+    } catch (error) {
+      setMessage(authFeedback, error.message || "No pude encolar el sync.", "error");
+    } finally {
+      setButtonLoading(syncQueueButton, false);
     }
   });
 

@@ -3081,6 +3081,64 @@
                   </div>
                   <div class="form-result" data-marketing-health-feedback></div>
                 </form>
+
+                <form class="coach-form marketing-health-form" data-marketing-auth-form>
+                  <h4>Conexion real</h4>
+                  <p class="mini-note" data-marketing-auth-summary-copy>
+                    Aqui preparas la sesion OAuth, registras el estado del token y encolas el sync interno base.
+                  </p>
+
+                  <div class="marketing-diagnostic-grid">
+                    <div class="mini-stat">
+                      <strong data-marketing-auth-session-status>Sin preparar</strong>
+                      <span>Sesion auth</span>
+                    </div>
+                    <div class="mini-stat">
+                      <strong data-marketing-token-status>Faltante</strong>
+                      <span>Token</span>
+                    </div>
+                    <div class="mini-stat">
+                      <strong data-marketing-sync-status>Idle</strong>
+                      <span>Sync</span>
+                    </div>
+                    <div class="mini-stat">
+                      <strong data-marketing-sync-job>Sin job</strong>
+                      <span>Ultimo job</span>
+                    </div>
+                  </div>
+
+                  <label>
+                    Estado del token
+                    <select name="tokenStatus" data-marketing-token-status-select></select>
+                  </label>
+                  <label>
+                    Expira el access token
+                    <input type="datetime-local" name="accessTokenExpiresAt" data-marketing-token-expiry-input />
+                  </label>
+                  <label class="inline-checkbox">
+                    <input type="checkbox" name="refreshTokenAvailable" data-marketing-token-refresh-checkbox />
+                    <span>Hay refresh token disponible</span>
+                  </label>
+                  <label class="inline-checkbox">
+                    <input type="checkbox" name="fullSync" data-marketing-sync-full-checkbox />
+                    <span>Forzar sync completo</span>
+                  </label>
+                  <label class="marketing-field-full">
+                    Resumen operativo
+                    <textarea
+                      name="summary"
+                      rows="4"
+                      maxlength="220"
+                      placeholder="Ej. Lista para OAuth, token por vencer o sync base para traer cuentas y permisos"
+                    ></textarea>
+                  </label>
+                  <div class="dashboard-actions">
+                    <button type="button" class="nav-button" data-marketing-auth-prepare>Preparar auth</button>
+                    <button type="button" class="nav-button" data-marketing-token-save>Registrar token</button>
+                    <button type="button" class="primary-button" data-marketing-sync-queue>Encolar sync</button>
+                  </div>
+                  <div class="form-result" data-marketing-auth-feedback></div>
+                </form>
               </div>
             </div>
 
