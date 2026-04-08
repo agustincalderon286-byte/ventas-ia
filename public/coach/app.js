@@ -2669,6 +2669,35 @@ function initProgram414DestinationSettings(initialDestination = null) {
   });
 }
 
+function initRecruitmentDestinationSettings(initialDestination = null) {
+  initCoachDestinationSettings({
+    selectors: {
+      form: "[data-recruitment-destination-form]",
+      type: "[data-recruitment-destination-type]",
+      label: "[data-recruitment-destination-label]",
+      email: "[data-recruitment-destination-email]",
+      url: "[data-recruitment-destination-url]",
+      extra: "[data-recruitment-destination-extra]",
+      emailField: "[data-recruitment-destination-email-field]",
+      urlField: "[data-recruitment-destination-url-field]",
+      current: "[data-recruitment-destination-current]",
+      feedback: "[data-recruitment-destination-feedback]",
+      save: "[data-recruitment-destination-save]"
+    },
+    endpoint: "/api/coach/recruitment-destination",
+    initialDestination,
+    successMessage: "Destino de reclutamiento guardado. Ahora tus aplicaciones salen por separado.",
+    baseSummary: "Las aplicaciones de trabajo siguen internas en Coach hasta que elijas otro destino.",
+    emailSummaryMissing: "Tu destino de reclutamiento es correo personal, pero aun falta capturarlo.",
+    emailSummary: email => `Tus aplicaciones de trabajo tambien se mandan a ${email}.`,
+    pendingUrlSummary: label => `${label} esta seleccionado para reclutamiento, pero aun falta la URL.`,
+    readySummary: label => `Tus aplicaciones de trabajo tambien se mandan a ${label}.`,
+    googleSheetsPlaceholder: "Ej. Mi hoja de reclutamiento",
+    emailPlaceholder: "Ej. Correo del reclutador",
+    webhookPlaceholder: "Ej. Mi HighLevel Reclutamiento"
+  });
+}
+
 function initCoachHighLevelSalesTrackingSettings(initialTracking = null) {
   const form = document.querySelector("[data-coach-hl-sales-form]");
   const enabledSelect = document.querySelector("[data-coach-hl-sales-enabled-input]");
@@ -10779,6 +10808,7 @@ async function initCoachAppPage() {
   if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
     initProgram414DestinationSettings(me.profile?.program414Destination || null);
+    initRecruitmentDestinationSettings(me.profile?.recruitmentDestination || null);
     initCoachHighLevelSalesTrackingSettings(me.profile?.highLevelSalesTracking || null);
   }
 

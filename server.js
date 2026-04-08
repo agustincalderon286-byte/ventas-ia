@@ -355,6 +355,11 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   program414DestinationUrl: String,
   program414DestinationEmail: String,
   program414DestinationUpdatedAt: Date,
+  recruitmentDestinationType: { type: String, default: "carpeta_privada" },
+  recruitmentDestinationLabel: String,
+  recruitmentDestinationUrl: String,
+  recruitmentDestinationEmail: String,
+  recruitmentDestinationUpdatedAt: Date,
   highLevelSalesTrackingEnabled: { type: Boolean, default: false },
   highLevelSalesWonStageName: String,
   highLevelSalesWebhookToken: { type: String, index: true },
@@ -3958,6 +3963,7 @@ function limpiarCoachProfile(profileDoc = null, analyticsDoc = null) {
     },
     leadDestination: limpiarCoachLeadDestination(profileDoc),
     program414Destination: limpiarCoachProgram414Destination(profileDoc),
+    recruitmentDestination: limpiarCoachRecruitmentDestination(profileDoc),
     highLevelSalesTracking: limpiarCoachHighLevelSalesTracking(profileDoc),
     preferredCloseStyle: profileDoc?.preferredCloseStyle || "",
     lastInteractionAt: profileDoc?.lastInteractionAt || analyticsDoc?.lastInteractionAt || null,
@@ -4019,6 +4025,16 @@ function limpiarCoachProgram414Destination(profileDoc = null) {
     email: profileDoc?.program414DestinationEmail || "",
     label: profileDoc?.program414DestinationLabel || "",
     updatedAt: profileDoc?.program414DestinationUpdatedAt || null
+  });
+}
+
+function limpiarCoachRecruitmentDestination(profileDoc = null) {
+  return construirCoachDestinationSnapshot({
+    type: profileDoc?.recruitmentDestinationType || "carpeta_privada",
+    url: profileDoc?.recruitmentDestinationUrl || "",
+    email: profileDoc?.recruitmentDestinationEmail || "",
+    label: profileDoc?.recruitmentDestinationLabel || "",
+    updatedAt: profileDoc?.recruitmentDestinationUpdatedAt || null
   });
 }
 
@@ -7882,7 +7898,7 @@ async function enviarCoachLeadAAjusteDestino(userDoc = null, destination = null,
 }
 
 async function enviarCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
-  const destination = limpiarCoachLeadDestination(profileDoc);
+  const destination = limpiarCoachRecruitmentDestination(profileDoc);
 
   if (!destination.enabled || !application) {
     return {
@@ -8518,7 +8534,7 @@ async function programarEnvioCoachProgramLeadADestino(userDoc = null, profileDoc
 }
 
 async function programarEnvioCoachRecruitmentApplicationADestino(userDoc = null, profileDoc = null, application = null) {
-  const destination = limpiarCoachLeadDestination(profileDoc);
+  const destination = limpiarCoachRecruitmentDestination(profileDoc);
 
   if (!destination.enabled || !application) {
     return {
@@ -20773,6 +20789,47 @@ app.put("/api/coach/program-414-destination", async (req, res) => {
   } catch (error) {
     console.error("Error guardando destino 4 en 14 del Coach:", error.message);
     responderCoachError(res, 500, "No pude guardar el destino de 4 en 14.");
+  }
+});
+
+app.put("/api/coach/recruitment-destination", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
+  const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
+  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  const nextEmail = normalizarEmail(req.body?.email || "");
+
+  if (nextType === "correo_personal" && !nextEmail) {
+    return responderCoachError(res, 400, "Pon el correo donde quieres recibir tus aplicaciones.");
+  }
+
+  if (["google_sheets", "webhook_crm"].includes(nextType) && !nextUrl) {
+    return responderCoachError(res, 400, "Pon la URL de tu destino para guardar esta conexion de reclutamiento.");
+  }
+
+  try {
+    const now = new Date();
+    const profileDoc = await asegurarCoachDistributorProfile(auth.user);
+    profileDoc.recruitmentDestinationType = nextType;
+    profileDoc.recruitmentDestinationLabel = nextLabel;
+    profileDoc.recruitmentDestinationUrl = ["google_sheets", "webhook_crm"].includes(nextType) ? nextUrl : "";
+    profileDoc.recruitmentDestinationEmail = nextType === "correo_personal" ? nextEmail : "";
+    profileDoc.recruitmentDestinationUpdatedAt = now;
+    profileDoc.updatedAt = now;
+    await profileDoc.save();
+
+    res.json({
+      destination: limpiarCoachRecruitmentDestination(profileDoc),
+      profile: await construirCoachProfilePayload(profileDoc, null, auth.user._id)
+    });
+  } catch (error) {
+    console.error("Error guardando destino de reclutamiento del Coach:", error.message);
+    responderCoachError(res, 500, "No pude guardar el destino de reclutamiento.");
   }
 });
 

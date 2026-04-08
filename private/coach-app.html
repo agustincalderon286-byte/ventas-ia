@@ -2165,6 +2165,81 @@
             data-team-manager-only
             hidden
           >
+            <div class="eyebrow">Destino de reclutamiento</div>
+            <h3>Separa las aplicaciones de trabajo del resto</h3>
+            <p>
+              Usa otro webhook, correo o CRM para que las solicitudes de empleo no se mezclen con
+              leads normales ni con 4 en 14.
+            </p>
+
+            <div class="lead-destination-status" data-recruitment-destination-current>
+              Las aplicaciones de trabajo siguen internas en Coach hasta que elijas otro destino.
+            </div>
+
+            <form class="lead-destination-form" data-recruitment-destination-form>
+              <label class="native-lead-field">
+                <span>Donde quieres recibir tus aplicaciones tambien</span>
+                <select name="type" data-recruitment-destination-type>
+                  <option value="carpeta_privada">Solo mi carpeta privada</option>
+                  <option value="correo_personal">Mandarme copia a mi correo</option>
+                  <option value="google_sheets">Google Sheets / Apps Script</option>
+                  <option value="webhook_crm">Webhook / CRM</option>
+                </select>
+              </label>
+
+              <div class="lead-destination-extra" data-recruitment-destination-extra hidden>
+                <label class="native-lead-field">
+                  <span>Nombre de tu destino</span>
+                  <input
+                    type="text"
+                    name="label"
+                    maxlength="80"
+                    placeholder="Ej. Mi HighLevel Reclutamiento"
+                    data-recruitment-destination-label
+                  />
+                </label>
+
+                <label class="native-lead-field" data-recruitment-destination-email-field hidden>
+                  <span>Correo donde quieres recibirlas</span>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="tucorreo@gmail.com"
+                    data-recruitment-destination-email
+                  />
+                </label>
+
+                <label class="native-lead-field" data-recruitment-destination-url-field>
+                  <span>URL del destino</span>
+                  <input
+                    type="url"
+                    name="url"
+                    placeholder="https://..."
+                    data-recruitment-destination-url
+                  />
+                </label>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="submit" class="primary-button" data-recruitment-destination-save>
+                  Guardar destino de reclutamiento
+                </button>
+              </div>
+
+              <div class="form-result" data-recruitment-destination-feedback></div>
+            </form>
+
+            <p class="mini-note">
+              Si aqui pones otro webhook, las aplicaciones salen separadas y ya no comparten el flujo de leads.
+            </p>
+          </article>
+
+          <article
+            class="dashboard-card lead-destination-card"
+            data-coach-workspace-section="prospeccion"
+            data-team-manager-only
+            hidden
+          >
             <div class="eyebrow">Tracking de ventas HighLevel</div>
             <h3>Mide cuantas ventas salen de Agustin 2.0</h3>
             <p>
