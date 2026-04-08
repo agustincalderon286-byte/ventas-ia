@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 6;
+const COACH_MARKETING_FOUNDATION_VERSION = 7;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -323,6 +323,7 @@ const COACH_MARKETING_OBJECTIVE_OPTIONS = Object.freeze([
 const COACH_MARKETING_CAMPAIGN_STATUS_OPTIONS = Object.freeze([
   { value: "draft", label: "Borrador" },
   { value: "ready", label: "Lista" },
+  { value: "queued", label: "En cola" },
   { value: "scheduled", label: "Programada" },
   { value: "active", label: "Activa" },
   { value: "paused", label: "Pausada" },
@@ -1585,10 +1586,20 @@ const coachMarketingCampaignSchema = new mongoose.Schema({
   audienceSummary: String,
   geoSummary: String,
   languageSummary: String,
+  callToAction: String,
+  adGroupCount: { type: Number, default: 0 },
+  adVariantCount: { type: Number, default: 0 },
+  placementSummary: String,
   trackingTemplate: { type: mongoose.Schema.Types.Mixed, default: null },
   notes: String,
+  launchNotes: String,
   startAt: Date,
   endAt: Date,
+  queuedAt: Date,
+  launchedAt: Date,
+  pausedAt: Date,
+  lastWorkflowScore: { type: Number, default: 0 },
+  lastWorkflowAt: Date,
   externalCampaignId: String,
   lastSyncAt: Date,
   updatedAt: Date,
@@ -5165,6 +5176,11 @@ function limpiarCoachMarketingMoney(value = 0) {
   return Math.round(parsed * 100) / 100;
 }
 
+function limpiarCoachMarketingCount(value = 0, max = 999) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  return Math.max(0, Math.min(Number.isFinite(parsed) ? parsed : 0, Math.max(1, max)));
+}
+
 function normalizarCoachOptionalDate(value = null) {
   if (!value) {
     return null;
@@ -5916,10 +5932,20 @@ function limpiarCoachMarketingCampaign(doc = null) {
     audienceSummary: truncarTextoPrompt(cleanText(doc.audienceSummary || ""), 220),
     geoSummary: truncarTextoPrompt(cleanText(doc.geoSummary || ""), 180),
     languageSummary: truncarTextoPrompt(cleanText(doc.languageSummary || ""), 120),
+    callToAction: cleanText(doc.callToAction || "").slice(0, 80),
+    adGroupCount: limpiarCoachMarketingCount(doc.adGroupCount || 0, 999),
+    adVariantCount: limpiarCoachMarketingCount(doc.adVariantCount || 0, 9999),
+    placementSummary: truncarTextoPrompt(cleanText(doc.placementSummary || ""), 180),
     trackingTemplate: limpiarCoachMarketingConfig(doc.trackingTemplate),
     notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
+    launchNotes: truncarTextoPrompt(cleanText(doc.launchNotes || ""), 220),
     startAt: doc.startAt || null,
     endAt: doc.endAt || null,
+    queuedAt: doc.queuedAt || null,
+    launchedAt: doc.launchedAt || null,
+    pausedAt: doc.pausedAt || null,
+    lastWorkflowScore: limpiarCoachMarketingCount(doc.lastWorkflowScore || 0, 100),
+    lastWorkflowAt: doc.lastWorkflowAt || null,
     externalCampaignId: cleanText(doc.externalCampaignId || "").slice(0, 120),
     lastSyncAt: doc.lastSyncAt || null
   };
@@ -6620,6 +6646,314 @@ function construirCoachMarketingPublicationCapabilityList(publicationDoc = null,
   limpiarCoachMarketingStringArray(productDefinition?.capabilities || [], 20, 50).forEach(item => capabilities.add(item));
 
   return Array.from(capabilities.values());
+}
+
+async function obtenerCoachMarketingCampaignSupportStats(userDoc = null, campaignId = "") {
+  const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
+
+  if (!safeCampaignId || !userDoc?._id) {
+    return {
+      creativesTotal: 0,
+      creativesReady: 0,
+      publicationsTotal: 0,
+      publicationsReady: 0
+    };
+  }
+
+  const creativeQuery = construirCoachWorkspaceQuery(userDoc, { campaignId: safeCampaignId });
+  const readyCreativeQuery = construirCoachWorkspaceQuery(userDoc, {
+    campaignId: safeCampaignId,
+    status: { $in: ["ready", "approved"] }
+  });
+  const publicationQuery = construirCoachWorkspaceQuery(userDoc, { campaignId: safeCampaignId });
+  const readyPublicationQuery = construirCoachWorkspaceQuery(userDoc, {
+    campaignId: safeCampaignId,
+    status: { $in: ["queued", "scheduled", "published"] }
+  });
+
+  const [creativesTotal, creativesReady, publicationsTotal, publicationsReady] = await Promise.all([
+    CoachMarketingCreative.countDocuments(creativeQuery),
+    CoachMarketingCreative.countDocuments(readyCreativeQuery),
+    CoachMarketingPublication.countDocuments(publicationQuery),
+    CoachMarketingPublication.countDocuments(readyPublicationQuery)
+  ]);
+
+  return {
+    creativesTotal: Number(creativesTotal || 0),
+    creativesReady: Number(creativesReady || 0),
+    publicationsTotal: Number(publicationsTotal || 0),
+    publicationsReady: Number(publicationsReady || 0)
+  };
+}
+
+async function registrarCoachMarketingCampaignWorkflowState(campaignId = "", workflow = null) {
+  const safeCampaignId = normalizarCoachCrmObjectId(campaignId);
+
+  if (!safeCampaignId || !workflow || typeof workflow !== "object") {
+    return;
+  }
+
+  try {
+    await CoachMarketingCampaign.updateOne(
+      { _id: safeCampaignId },
+      {
+        $set: {
+          lastWorkflowScore: limpiarCoachMarketingCount(workflow.readinessScore || 0, 100),
+          lastWorkflowAt: new Date()
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Error guardando workflow de campana del Coach:", error.message);
+  }
+}
+
+function construirCoachMarketingCampaignWorkflow(campaignDoc = null, refs = {}, supportStats = {}) {
+  const campaign = limpiarCoachMarketingCampaign(campaignDoc);
+
+  if (!campaign) {
+    return null;
+  }
+
+  const integration = limpiarCoachMarketingIntegration(refs?.integrationDoc || null);
+  const channel = limpiarCoachMarketingChannel(refs?.channelDoc || null);
+  const creativesTotal = Number(supportStats?.creativesTotal || 0);
+  const creativesReady = Number(supportStats?.creativesReady || 0);
+  const publicationsTotal = Number(supportStats?.publicationsTotal || 0);
+  const publicationsReady = Number(supportStats?.publicationsReady || 0);
+  const capabilities = Array.isArray(integration?.capabilities) ? integration.capabilities : [];
+  const startAt = normalizarCoachOptionalDate(campaign.startAt || null);
+  const endAt = normalizarCoachOptionalDate(campaign.endAt || null);
+  const now = new Date();
+  const isOrganicOnly = campaign.campaignType === "organic";
+  const needsPaidStructure = campaign.campaignType === "paid" || campaign.campaignType === "hybrid";
+  const hasBudget = isOrganicOnly ? true : Number(campaign.budgetAmount || 0) > 0;
+  const hasLanding = Boolean(campaign.landingPageUrl);
+  const hasAudience = Boolean(campaign.audienceSummary);
+  const hasGeo = Boolean(campaign.geoSummary);
+  const hasLanguage = Boolean(campaign.languageSummary);
+  const hasGoal = Boolean(campaign.primaryGoal || campaign.callToAction);
+  const hasTracking = campaign.trackingTemplate && Object.keys(campaign.trackingTemplate || {}).length > 0;
+  const hasStructure = !needsPaidStructure || (campaign.adGroupCount > 0 && campaign.adVariantCount > 0);
+  const hasCreativeCoverage = creativesReady > 0 || campaign.adVariantCount > 0;
+  const dateWindowValid = !startAt || !endAt || endAt.getTime() >= startAt.getTime();
+  const startsInFuture = Boolean(startAt && startAt.getTime() > now.getTime());
+  const launchDue = Boolean(startAt && startAt.getTime() <= now.getTime());
+  const reviewReady = campaign.reviewStatus === "approved";
+  const hasCampaignCapability = isOrganicOnly
+    ? capabilities.includes("organic_publishing") || capabilities.includes("campaigns")
+    : capabilities.includes("campaigns");
+
+  const checks = [
+    {
+      key: "base",
+      label: "Base operativa",
+      state: integration?.id || channel?.id ? "ok" : "error",
+      message: integration?.id || channel?.id
+        ? "La campana ya esta ligada a una integracion o canal base dentro del Coach."
+        : "Liga la campana a una integracion o al menos a un canal principal."
+    },
+    {
+      key: "capability",
+      label: "Capacidad declarada",
+      state: integration?.id ? (hasCampaignCapability ? "ok" : "attention") : channel?.id ? "attention" : "error",
+      message: integration?.id
+        ? hasCampaignCapability
+          ? `${integration.productLabel || integration.label || "La integracion"} declara soporte para operar campanas.`
+          : "La integracion existe, pero todavia no declara capacidad suficiente para este tipo de campana."
+        : channel?.id
+          ? "Todavia no hay integracion ligada; la campana se puede preparar, pero aun no se podra lanzar nativamente."
+          : "Necesitas al menos un punto de salida para esta campana."
+    },
+    {
+      key: "landing",
+      label: "Landing y destino",
+      state: hasLanding ? "ok" : "error",
+      message: hasLanding
+        ? "La campana ya tiene landing page lista para recibir trafico o leads."
+        : "Agrega la URL final antes de mandarla a cola."
+    },
+    {
+      key: "budget",
+      label: "Presupuesto",
+      state: hasBudget ? "ok" : "error",
+      message: hasBudget
+        ? isOrganicOnly
+          ? "La campana organica no necesita presupuesto obligatorio."
+          : `Ya existe presupuesto base de ${campaign.currency || "USD"} ${Number(campaign.budgetAmount || 0).toFixed(2)}.`
+        : "Define un presupuesto antes de lanzarla como campana pagada."
+    },
+    {
+      key: "goal",
+      label: "Meta y CTA",
+      state: hasGoal ? "ok" : "attention",
+      message: hasGoal
+        ? "Ya existe meta principal o CTA para esta campana."
+        : "Define la meta principal o el CTA para cerrar mejor la operacion."
+    },
+    {
+      key: "targeting",
+      label: "Audiencia",
+      state: hasAudience ? "ok" : "error",
+      message: hasAudience
+        ? "La campana ya tiene una audiencia resumida dentro del brief."
+        : "Agrega a quien quieres impactar antes de operarla."
+    },
+    {
+      key: "geo",
+      label: "Geo",
+      state: hasGeo ? "ok" : "attention",
+      message: hasGeo
+        ? "La geografia ya esta descrita para esta campana."
+        : "Todavia falta definir la zona o mercado objetivo."
+    },
+    {
+      key: "language",
+      label: "Idioma",
+      state: hasLanguage ? "ok" : "attention",
+      message: hasLanguage
+        ? "El idioma ya quedo especificado."
+        : "Define idioma(s) objetivo para no dejarlo ambiguo."
+    },
+    {
+      key: "structure",
+      label: "Estructura",
+      state: hasStructure ? "ok" : "error",
+      message: hasStructure
+        ? isOrganicOnly
+          ? "La campana organica no depende de ad groups para quedar preparada."
+          : `Ya existe estructura base con ${campaign.adGroupCount || 0} grupo(s) y ${campaign.adVariantCount || 0} variante(s).`
+        : "Define al menos un grupo y una variante para dejar lista la estructura pagada."
+    },
+    {
+      key: "creatives",
+      label: "Cobertura creativa",
+      state: hasCreativeCoverage ? "ok" : creativesTotal > 0 ? "attention" : "error",
+      message: hasCreativeCoverage
+        ? `Hay ${creativesReady}/${creativesTotal || creativesReady} creativo(s) listos para esta campana.`
+        : creativesTotal > 0
+          ? "Ya existen creativos ligados, pero ninguno esta marcado como listo."
+          : "Prepara al menos un creativo ligado a la campana."
+    },
+    {
+      key: "tracking",
+      label: "Tracking",
+      state: hasTracking ? "ok" : "attention",
+      message: hasTracking
+        ? "La plantilla de tracking ya esta documentada."
+        : "Todavia falta definir UTMs o tracking template."
+    },
+    {
+      key: "review",
+      label: "Revision interna",
+      state: reviewReady ? "ok" : campaign.reviewStatus === "blocked" ? "error" : "attention",
+      message: reviewReady
+        ? "La campana ya esta aprobada internamente."
+        : campaign.reviewStatus === "blocked"
+          ? "La campana sigue bloqueada y no debe entrar a cola."
+          : "Todavia falta aprobar esta campana antes de lanzarla."
+    },
+    {
+      key: "timeline",
+      label: "Calendario",
+      state: dateWindowValid ? (startsInFuture || launchDue || !startAt ? "ok" : "attention") : "error",
+      message: !dateWindowValid
+        ? "La fecha final no puede quedar antes de la fecha de inicio."
+        : startsInFuture
+          ? `La campana ya tiene fecha futura para iniciar el ${startAt?.toLocaleString?.("es-US") || "inicio"}.`
+          : launchDue
+            ? "La fecha de inicio ya llego o ya paso; puede marcarse live cuando quieras."
+            : "La campana puede salir inmediata o puedes programarla despues."
+    },
+    {
+      key: "distribution",
+      label: "Piezas y salidas",
+      state: publicationsTotal > 0 || isOrganicOnly ? "ok" : "attention",
+      message: publicationsTotal > 0
+        ? `Ya hay ${publicationsReady}/${publicationsTotal} publicacion(es) ligadas a esta campana.`
+        : isOrganicOnly
+          ? "La campana organica puede seguir solo con piezas y canales preparados."
+          : "Todavia no hay publicaciones o salidas ligadas; esto se puede cerrar despues."
+    }
+  ];
+
+  const errors = checks.filter(item => item.state === "error");
+  const attentions = checks.filter(item => item.state === "attention");
+  const okCount = checks.filter(item => item.state === "ok").length;
+  const readinessScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        ((okCount * 100) + attentions.length * 55 + (checks.length - okCount - attentions.length) * 0) /
+          Math.max(checks.length, 1)
+      )
+    )
+  );
+  const readyForQueue = errors.length === 0 && reviewReady;
+  const readyForLaunch = readyForQueue && (!startAt || launchDue) && campaign.status !== "active";
+  const canPause = ["queued", "scheduled", "active", "ready"].includes(campaign.status);
+  const summary = campaign.status === "active"
+    ? "Esta campana ya esta marcada como live dentro del Coach."
+    : campaign.status === "paused"
+      ? "La campana esta pausada y lista para retomarse cuando haga falta."
+      : readyForLaunch
+        ? "La campana ya puede entrar a cola o marcarse live cuando conectes la plataforma."
+        : readyForQueue
+          ? startsInFuture
+            ? "La campana ya esta lista para quedar programada."
+            : "La campana ya esta lista para entrar a cola interna."
+          : errors.length
+            ? `Faltan ${errors.length} punto(s) criticos antes de operarla.`
+            : "Todavia hay detalles por cerrar antes de mandarla a cola.";
+
+  return {
+    campaignId: campaign.id,
+    readyForQueue,
+    readyForLaunch,
+    canPause,
+    readinessScore,
+    okCount,
+    attentionCount: attentions.length,
+    errorCount: errors.length,
+    summary,
+    checks,
+    schedule: {
+      startAt: startAt || null,
+      endAt: endAt || null,
+      startsInFuture,
+      launchDue,
+      queuedAt: campaign.queuedAt || null,
+      launchedAt: campaign.launchedAt || null,
+      pausedAt: campaign.pausedAt || null,
+      status: campaign.status,
+      statusLabel: campaign.statusLabel || "Borrador"
+    },
+    support: {
+      creativesTotal,
+      creativesReady,
+      publicationsTotal,
+      publicationsReady,
+      adGroupCount: campaign.adGroupCount || 0,
+      adVariantCount: campaign.adVariantCount || 0
+    },
+    preview: {
+      campaignName: campaign.name || "Campana",
+      objectiveLabel: campaign.objectiveLabel || "Objetivo",
+      campaignTypeLabel: campaign.campaignTypeLabel || "Tipo",
+      integrationLabel: integration?.label || integration?.productLabel || "Sin integracion",
+      channelLabel: channel?.label || channel?.channelTypeLabel || "Sin canal",
+      landingPageUrl: campaign.landingPageUrl || "",
+      primaryGoal: campaign.primaryGoal || "",
+      callToAction: campaign.callToAction || "",
+      budgetLabel: `${campaign.currency || "USD"} ${Number(campaign.budgetAmount || 0).toFixed(2)} ${campaign.budgetType || "daily"}`,
+      audienceSummary: campaign.audienceSummary || "",
+      geoSummary: campaign.geoSummary || "",
+      languageSummary: campaign.languageSummary || "",
+      placementSummary: campaign.placementSummary || "",
+      trackingKeys: campaign.trackingTemplate ? Object.keys(campaign.trackingTemplate || {}) : []
+    }
+  };
 }
 
 function construirCoachMarketingPublicationWorkflow(publicationDoc = null, refs = {}) {
@@ -23408,6 +23742,291 @@ app.get("/api/coach/marketing/campaigns", async (req, res) => {
   }
 });
 
+app.get("/api/coach/marketing/campaigns/:campaignId/workflow", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres revisar.");
+  }
+
+  try {
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    ).lean();
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId,
+      integrationId: campaignDoc.integrationId || "",
+      channelId: campaignDoc.primaryChannelId || ""
+    });
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const workflow = construirCoachMarketingCampaignWorkflow(campaignDoc, refs, supportStats);
+    await registrarCoachMarketingCampaignWorkflowState(campaignId, workflow);
+
+    res.json({
+      campaign: limpiarCoachMarketingCampaign(campaignDoc),
+      workflow
+    });
+  } catch (error) {
+    console.error("Error cargando workflow de campana del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar el workflow de la campana.");
+  }
+});
+
+app.put("/api/coach/marketing/campaigns/:campaignId", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres actualizar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    );
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId,
+      integrationId: hasField("integrationId") ? body.integrationId || "" : campaignDoc.integrationId || "",
+      channelId: hasField("primaryChannelId") ? body.primaryChannelId || "" : campaignDoc.primaryChannelId || ""
+    });
+
+    if (hasField("integrationId") && body.integrationId && !refs.integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion elegida para esta campana.");
+    }
+
+    if (hasField("primaryChannelId") && body.primaryChannelId && !refs.channelDoc) {
+      return responderCoachError(res, 404, "No encontre el canal principal de esta campana.");
+    }
+
+    const previousCampaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+    const provider = resolverCoachMarketingProviderDesdeRefs(
+      hasField("provider") ? body.provider || "" : campaignDoc.provider || "",
+      refs
+    );
+    const product = resolverCoachMarketingProductDesdeRefs(
+      hasField("product") ? body.product || "" : campaignDoc.product || "",
+      refs
+    );
+
+    campaignDoc.provider = provider;
+    campaignDoc.product = product;
+
+    if (hasField("integrationId")) {
+      campaignDoc.integrationId = refs.integrationDoc?._id || null;
+    }
+
+    if (hasField("primaryChannelId")) {
+      campaignDoc.primaryChannelId = refs.channelDoc?._id || null;
+    }
+
+    if (hasField("campaignType")) {
+      campaignDoc.campaignType = normalizarCoachMarketingCampaignType(body.campaignType || "paid");
+    }
+
+    if (hasField("objective")) {
+      campaignDoc.objective = normalizarCoachMarketingObjective(body.objective || "leads");
+    }
+
+    if (hasField("name")) {
+      campaignDoc.name = cleanText(body.name || "").slice(0, 140);
+    }
+
+    if (hasField("status")) {
+      campaignDoc.status = normalizarCoachMarketingCampaignStatus(body.status || "draft");
+    }
+
+    if (hasField("reviewStatus")) {
+      campaignDoc.reviewStatus = normalizarCoachMarketingReviewStatus(body.reviewStatus || "draft");
+    }
+
+    if (hasField("budgetType")) {
+      campaignDoc.budgetType = cleanText(body.budgetType || "daily").slice(0, 20) || "daily";
+    }
+
+    if (hasField("budgetAmount")) {
+      campaignDoc.budgetAmount = limpiarCoachMarketingMoney(body.budgetAmount || 0);
+    }
+
+    if (hasField("currency")) {
+      campaignDoc.currency =
+        cleanText(body.currency || "USD")
+          .toUpperCase()
+          .slice(0, 8) || "USD";
+    }
+
+    if (hasField("landingPageUrl")) {
+      campaignDoc.landingPageUrl = limpiarUrlExterna(body.landingPageUrl || "");
+    }
+
+    if (hasField("primaryGoal")) {
+      campaignDoc.primaryGoal = cleanText(body.primaryGoal || "").slice(0, 120);
+    }
+
+    if (hasField("audienceSummary")) {
+      campaignDoc.audienceSummary = truncarTextoPrompt(cleanText(body.audienceSummary || ""), 220);
+    }
+
+    if (hasField("geoSummary")) {
+      campaignDoc.geoSummary = truncarTextoPrompt(cleanText(body.geoSummary || ""), 180);
+    }
+
+    if (hasField("languageSummary")) {
+      campaignDoc.languageSummary = truncarTextoPrompt(cleanText(body.languageSummary || ""), 120);
+    }
+
+    if (hasField("callToAction")) {
+      campaignDoc.callToAction = cleanText(body.callToAction || "").slice(0, 80);
+    }
+
+    if (hasField("adGroupCount")) {
+      campaignDoc.adGroupCount = limpiarCoachMarketingCount(body.adGroupCount || 0, 999);
+    }
+
+    if (hasField("adVariantCount")) {
+      campaignDoc.adVariantCount = limpiarCoachMarketingCount(body.adVariantCount || 0, 9999);
+    }
+
+    if (hasField("placementSummary")) {
+      campaignDoc.placementSummary = truncarTextoPrompt(cleanText(body.placementSummary || ""), 180);
+    }
+
+    if (hasField("trackingTemplate")) {
+      campaignDoc.trackingTemplate = limpiarCoachMarketingConfig(body.trackingTemplate || null);
+    }
+
+    if (hasField("notes")) {
+      campaignDoc.notes = truncarTextoPrompt(cleanText(body.notes || ""), 220);
+    }
+
+    if (hasField("launchNotes")) {
+      campaignDoc.launchNotes = truncarTextoPrompt(cleanText(body.launchNotes || ""), 220);
+    }
+
+    if (hasField("startAt")) {
+      campaignDoc.startAt = normalizarCoachOptionalDate(body.startAt || null);
+    }
+
+    if (hasField("endAt")) {
+      campaignDoc.endAt = normalizarCoachOptionalDate(body.endAt || null);
+    }
+
+    if (hasField("queuedAt")) {
+      campaignDoc.queuedAt = normalizarCoachOptionalDate(body.queuedAt || null);
+    }
+
+    if (hasField("launchedAt")) {
+      campaignDoc.launchedAt = normalizarCoachOptionalDate(body.launchedAt || null);
+    }
+
+    if (hasField("pausedAt")) {
+      campaignDoc.pausedAt = normalizarCoachOptionalDate(body.pausedAt || null);
+    }
+
+    if (hasField("externalCampaignId")) {
+      campaignDoc.externalCampaignId = cleanText(body.externalCampaignId || "").slice(0, 120);
+    }
+
+    if (hasField("lastSyncAt")) {
+      campaignDoc.lastSyncAt = normalizarCoachOptionalDate(body.lastSyncAt || null);
+    }
+
+    campaignDoc.updatedAt = new Date();
+
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const workflow = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+    campaignDoc.lastWorkflowScore = limpiarCoachMarketingCount(workflow?.readinessScore || 0, 100);
+    campaignDoc.lastWorkflowAt = new Date();
+    await campaignDoc.save();
+
+    const campaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+    const updatedFields = [
+      previousCampaign?.integrationId !== campaign.integrationId ? "integrationId" : "",
+      previousCampaign?.primaryChannelId !== campaign.primaryChannelId ? "primaryChannelId" : "",
+      previousCampaign?.campaignType !== campaign.campaignType ? "campaignType" : "",
+      previousCampaign?.objective !== campaign.objective ? "objective" : "",
+      previousCampaign?.name !== campaign.name ? "name" : "",
+      previousCampaign?.status !== campaign.status ? "status" : "",
+      previousCampaign?.reviewStatus !== campaign.reviewStatus ? "reviewStatus" : "",
+      previousCampaign?.budgetType !== campaign.budgetType ? "budgetType" : "",
+      previousCampaign?.budgetAmount !== campaign.budgetAmount ? "budgetAmount" : "",
+      previousCampaign?.landingPageUrl !== campaign.landingPageUrl ? "landingPageUrl" : "",
+      previousCampaign?.primaryGoal !== campaign.primaryGoal ? "primaryGoal" : "",
+      previousCampaign?.audienceSummary !== campaign.audienceSummary ? "audienceSummary" : "",
+      previousCampaign?.geoSummary !== campaign.geoSummary ? "geoSummary" : "",
+      previousCampaign?.languageSummary !== campaign.languageSummary ? "languageSummary" : "",
+      previousCampaign?.callToAction !== campaign.callToAction ? "callToAction" : "",
+      previousCampaign?.adGroupCount !== campaign.adGroupCount ? "adGroupCount" : "",
+      previousCampaign?.adVariantCount !== campaign.adVariantCount ? "adVariantCount" : "",
+      previousCampaign?.placementSummary !== campaign.placementSummary ? "placementSummary" : "",
+      JSON.stringify(previousCampaign?.trackingTemplate || null) !== JSON.stringify(campaign?.trackingTemplate || null)
+        ? "trackingTemplate"
+        : "",
+      previousCampaign?.notes !== campaign.notes ? "notes" : "",
+      previousCampaign?.launchNotes !== campaign.launchNotes ? "launchNotes" : "",
+      previousCampaign?.startAt !== campaign.startAt ? "startAt" : "",
+      previousCampaign?.endAt !== campaign.endAt ? "endAt" : "",
+      previousCampaign?.externalCampaignId !== campaign.externalCampaignId ? "externalCampaignId" : ""
+    ].filter(Boolean);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: campaignDoc._id,
+      provider: campaign.provider,
+      product: campaign.product,
+      direction: "internal",
+      eventType: "campaign_updated",
+      entityType: "campaign",
+      entityId: campaign.id,
+      status: "processed",
+      summary: `Se actualizo la campana ${campaign.name || "de marketing"}.`,
+      payload: {
+        updatedFields,
+        readinessScore: workflow?.readinessScore || 0,
+        status: campaign.status
+      }
+    });
+
+    res.json({
+      campaign,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error actualizando campana de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar la campana de marketing.");
+  }
+});
+
 app.post("/api/coach/marketing/campaigns", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -23466,15 +24085,39 @@ app.post("/api/coach/marketing/campaigns", async (req, res) => {
       audienceSummary: truncarTextoPrompt(cleanText(req.body?.audienceSummary || ""), 220),
       geoSummary: truncarTextoPrompt(cleanText(req.body?.geoSummary || ""), 180),
       languageSummary: truncarTextoPrompt(cleanText(req.body?.languageSummary || ""), 120),
+      callToAction: cleanText(req.body?.callToAction || "").slice(0, 80),
+      adGroupCount: limpiarCoachMarketingCount(req.body?.adGroupCount || 0, 999),
+      adVariantCount: limpiarCoachMarketingCount(req.body?.adVariantCount || 0, 9999),
+      placementSummary: truncarTextoPrompt(cleanText(req.body?.placementSummary || ""), 180),
       trackingTemplate: limpiarCoachMarketingConfig(req.body?.trackingTemplate || null),
       notes: truncarTextoPrompt(cleanText(req.body?.notes || ""), 220),
+      launchNotes: truncarTextoPrompt(cleanText(req.body?.launchNotes || ""), 220),
       startAt: normalizarCoachOptionalDate(req.body?.startAt || null),
       endAt: normalizarCoachOptionalDate(req.body?.endAt || null),
+      queuedAt: normalizarCoachOptionalDate(req.body?.queuedAt || null),
+      launchedAt: normalizarCoachOptionalDate(req.body?.launchedAt || null),
+      pausedAt: normalizarCoachOptionalDate(req.body?.pausedAt || null),
+      lastWorkflowScore: 0,
+      lastWorkflowAt: null,
       externalCampaignId: cleanText(req.body?.externalCampaignId || "").slice(0, 120),
       lastSyncAt: normalizarCoachOptionalDate(req.body?.lastSyncAt || null),
       updatedAt: now,
       createdAt: now
     });
+
+    const workflow = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      {
+        creativesTotal: 0,
+        creativesReady: 0,
+        publicationsTotal: 0,
+        publicationsReady: 0
+      }
+    );
+    campaignDoc.lastWorkflowScore = limpiarCoachMarketingCount(workflow?.readinessScore || 0, 100);
+    campaignDoc.lastWorkflowAt = new Date();
+    await campaignDoc.save();
 
     await registrarCoachMarketingEvent({
       userDoc: auth.user,
@@ -23492,16 +24135,362 @@ app.post("/api/coach/marketing/campaigns", async (req, res) => {
       summary: `Se preparo la campana ${campaignDoc.name || "sin nombre"}.`,
       payload: {
         objective: campaignDoc.objective,
-        campaignType: campaignDoc.campaignType
+        campaignType: campaignDoc.campaignType,
+        readinessScore: workflow?.readinessScore || 0
       }
     });
 
     res.json({
-      campaign: limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc)
+      campaign: limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc),
+      workflow
     });
   } catch (error) {
     console.error("Error creando campana de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude crear la campana de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/campaigns/:campaignId/queue", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres preparar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    );
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "reviewStatus")) {
+      campaignDoc.reviewStatus = normalizarCoachMarketingReviewStatus(req.body?.reviewStatus || "draft");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "budgetType")) {
+      campaignDoc.budgetType = cleanText(req.body?.budgetType || "daily").slice(0, 20) || "daily";
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "budgetAmount")) {
+      campaignDoc.budgetAmount = limpiarCoachMarketingMoney(req.body?.budgetAmount || 0);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "landingPageUrl")) {
+      campaignDoc.landingPageUrl = limpiarUrlExterna(req.body?.landingPageUrl || "");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "primaryGoal")) {
+      campaignDoc.primaryGoal = cleanText(req.body?.primaryGoal || "").slice(0, 120);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "callToAction")) {
+      campaignDoc.callToAction = cleanText(req.body?.callToAction || "").slice(0, 80);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "audienceSummary")) {
+      campaignDoc.audienceSummary = truncarTextoPrompt(cleanText(req.body?.audienceSummary || ""), 220);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "geoSummary")) {
+      campaignDoc.geoSummary = truncarTextoPrompt(cleanText(req.body?.geoSummary || ""), 180);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "languageSummary")) {
+      campaignDoc.languageSummary = truncarTextoPrompt(cleanText(req.body?.languageSummary || ""), 120);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "adGroupCount")) {
+      campaignDoc.adGroupCount = limpiarCoachMarketingCount(req.body?.adGroupCount || 0, 999);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "adVariantCount")) {
+      campaignDoc.adVariantCount = limpiarCoachMarketingCount(req.body?.adVariantCount || 0, 9999);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "placementSummary")) {
+      campaignDoc.placementSummary = truncarTextoPrompt(cleanText(req.body?.placementSummary || ""), 180);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "trackingTemplate")) {
+      campaignDoc.trackingTemplate = limpiarCoachMarketingConfig(req.body?.trackingTemplate || null);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "launchNotes")) {
+      campaignDoc.launchNotes = truncarTextoPrompt(cleanText(req.body?.launchNotes || ""), 220);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "startAt")) {
+      campaignDoc.startAt = normalizarCoachOptionalDate(req.body?.startAt || null);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "endAt")) {
+      campaignDoc.endAt = normalizarCoachOptionalDate(req.body?.endAt || null);
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId,
+      integrationId: campaignDoc.integrationId || "",
+      channelId: campaignDoc.primaryChannelId || ""
+    });
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const workflowBeforeQueue = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+
+    if (!workflowBeforeQueue?.readyForQueue) {
+      return responderCoachError(
+        res,
+        400,
+        workflowBeforeQueue?.summary || "La campana todavia no esta lista para entrar a cola."
+      );
+    }
+
+    const now = new Date();
+    const startAt = normalizarCoachOptionalDate(campaignDoc.startAt || null);
+    campaignDoc.status = startAt && startAt.getTime() > now.getTime() ? "scheduled" : "queued";
+    campaignDoc.queuedAt = now;
+    campaignDoc.pausedAt = null;
+    campaignDoc.lastWorkflowScore = limpiarCoachMarketingCount(workflowBeforeQueue.readinessScore || 0, 100);
+    campaignDoc.lastWorkflowAt = now;
+    campaignDoc.updatedAt = now;
+    await campaignDoc.save();
+
+    const campaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+    const workflow = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: campaignDoc._id,
+      provider: campaign.provider,
+      product: campaign.product,
+      direction: "internal",
+      eventType: campaign.status === "scheduled" ? "campaign_scheduled" : "campaign_queued",
+      entityType: "campaign",
+      entityId: campaign.id,
+      status: "processed",
+      summary:
+        truncarTextoPrompt(cleanText(req.body?.summary || ""), 220) ||
+        (campaign.status === "scheduled"
+          ? `Se programo la campana ${campaign.name || "de marketing"}.`
+          : `La campana ${campaign.name || "de marketing"} entro a cola interna.`),
+      payload: {
+        status: campaign.status,
+        reviewStatus: campaign.reviewStatus,
+        readinessScore: workflow?.readinessScore || 0,
+        startAt: campaign.startAt || null
+      }
+    });
+
+    res.json({
+      campaign,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error mandando campana de marketing a cola:", error.message);
+    responderCoachError(res, 500, "No pude mandar la campana a cola.");
+  }
+});
+
+app.post("/api/coach/marketing/campaigns/:campaignId/mark-live", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres activar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    );
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "reviewStatus")) {
+      campaignDoc.reviewStatus = normalizarCoachMarketingReviewStatus(
+        req.body?.reviewStatus || campaignDoc.reviewStatus || "approved"
+      );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "externalCampaignId")) {
+      campaignDoc.externalCampaignId = cleanText(
+        req.body?.externalCampaignId || campaignDoc.externalCampaignId || ""
+      ).slice(0, 120);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "startAt")) {
+      campaignDoc.startAt = normalizarCoachOptionalDate(req.body?.startAt || null);
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId,
+      integrationId: campaignDoc.integrationId || "",
+      channelId: campaignDoc.primaryChannelId || ""
+    });
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const workflowBeforeLaunch = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+
+    if (!workflowBeforeLaunch?.readyForLaunch) {
+      return responderCoachError(
+        res,
+        400,
+        workflowBeforeLaunch?.summary || "La campana todavia no esta lista para marcarse live."
+      );
+    }
+
+    const now = new Date();
+    campaignDoc.status = "active";
+    campaignDoc.launchedAt = normalizarCoachOptionalDate(req.body?.launchedAt || null) || now;
+    campaignDoc.pausedAt = null;
+    campaignDoc.lastSyncAt = now;
+    campaignDoc.lastWorkflowScore = limpiarCoachMarketingCount(workflowBeforeLaunch.readinessScore || 0, 100);
+    campaignDoc.lastWorkflowAt = now;
+    campaignDoc.updatedAt = now;
+    await campaignDoc.save();
+
+    const campaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+    const workflow = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: campaignDoc._id,
+      provider: campaign.provider,
+      product: campaign.product,
+      direction: "internal",
+      eventType: "campaign_marked_live",
+      entityType: "campaign",
+      entityId: campaign.id,
+      status: "processed",
+      summary: `La campana ${campaign.name || "de marketing"} quedo marcada como live.`,
+      payload: {
+        launchedAt: campaign.launchedAt || null,
+        externalCampaignId: campaign.externalCampaignId || "",
+        readinessScore: workflow?.readinessScore || 0
+      }
+    });
+
+    res.json({
+      campaign,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error marcando campana de marketing como live:", error.message);
+    responderCoachError(res, 500, "No pude marcar la campana como live.");
+  }
+});
+
+app.post("/api/coach/marketing/campaigns/:campaignId/pause", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const campaignId = normalizarCoachCrmObjectId(req.params?.campaignId || "");
+
+  if (!campaignId) {
+    return responderCoachError(res, 400, "No encontre la campana que quieres pausar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const campaignDoc = await CoachMarketingCampaign.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: campaignId })
+    );
+
+    if (!campaignDoc) {
+      return responderCoachError(res, 404, "No encontre la campana de marketing.");
+    }
+
+    const refs = await cargarCoachMarketingWorkspaceRefs(auth.user, {
+      campaignId,
+      integrationId: campaignDoc.integrationId || "",
+      channelId: campaignDoc.primaryChannelId || ""
+    });
+    const supportStats = await obtenerCoachMarketingCampaignSupportStats(auth.user, campaignId);
+    const now = new Date();
+    campaignDoc.status = "paused";
+    campaignDoc.pausedAt = normalizarCoachOptionalDate(req.body?.pausedAt || null) || now;
+    campaignDoc.lastWorkflowAt = now;
+    campaignDoc.updatedAt = now;
+    await campaignDoc.save();
+
+    const workflow = construirCoachMarketingCampaignWorkflow(
+      campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc,
+      refs,
+      supportStats
+    );
+    campaignDoc.lastWorkflowScore = limpiarCoachMarketingCount(workflow?.readinessScore || 0, 100);
+    await campaignDoc.save();
+    const campaign = limpiarCoachMarketingCampaign(campaignDoc?.toObject ? campaignDoc.toObject() : campaignDoc);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: refs.integrationDoc?._id || null,
+      channelId: refs.channelDoc?._id || null,
+      campaignId: campaignDoc._id,
+      provider: campaign.provider,
+      product: campaign.product,
+      direction: "internal",
+      eventType: "campaign_paused",
+      entityType: "campaign",
+      entityId: campaign.id,
+      status: "processed",
+      summary:
+        truncarTextoPrompt(cleanText(req.body?.summary || ""), 220) ||
+        `La campana ${campaign.name || "de marketing"} quedo pausada.`,
+      payload: {
+        pausedAt: campaign.pausedAt || null,
+        status: campaign.status
+      }
+    });
+
+    res.json({
+      campaign,
+      workflow
+    });
+  } catch (error) {
+    console.error("Error pausando campana de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude pausar la campana.");
   }
 });
 

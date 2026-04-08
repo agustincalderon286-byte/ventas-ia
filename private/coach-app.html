@@ -3015,6 +3015,156 @@
             <div class="team-seat-list" data-marketing-campaign-list>
               <div class="team-seat-empty">Todavia no hay campanas preparadas en esta cuenta.</div>
             </div>
+
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <form class="coach-form marketing-form-card" data-marketing-campaign-ops-form>
+                <h4>Operacion de campana</h4>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-campaign-ops-select>
+                    <option value="">Selecciona una campana</option>
+                  </select>
+                </label>
+                <label>
+                  Revision
+                  <select name="reviewStatus" data-marketing-campaign-review-select></select>
+                </label>
+                <label>
+                  Tipo de budget
+                  <select name="budgetType">
+                    <option value="daily">Diario</option>
+                    <option value="lifetime">Total</option>
+                    <option value="monthly">Mensual</option>
+                  </select>
+                </label>
+                <label>
+                  Budget
+                  <input type="number" name="budgetAmount" min="0" step="0.01" placeholder="20.00" />
+                </label>
+                <label>
+                  Inicio
+                  <input type="datetime-local" name="startAt" />
+                </label>
+                <label>
+                  Fin
+                  <input type="datetime-local" name="endAt" />
+                </label>
+                <label>
+                  Landing
+                  <input type="url" name="landingPageUrl" maxlength="240" placeholder="https://..." />
+                </label>
+                <label>
+                  Meta principal
+                  <input type="text" name="primaryGoal" maxlength="120" placeholder="Ej. 20 leads calificados" />
+                </label>
+                <label>
+                  CTA
+                  <input type="text" name="callToAction" maxlength="80" placeholder="Ej. Aplica hoy" />
+                </label>
+                <label>
+                  Grupos / ad sets
+                  <input type="number" name="adGroupCount" min="0" step="1" placeholder="1" />
+                </label>
+                <label>
+                  Variantes / ads
+                  <input type="number" name="adVariantCount" min="0" step="1" placeholder="3" />
+                </label>
+                <label class="marketing-field-full">
+                  Audiencia
+                  <textarea name="audienceSummary" rows="3" maxlength="220" placeholder="Quien debe ver esta campana?"></textarea>
+                </label>
+                <label>
+                  Geo
+                  <textarea name="geoSummary" rows="3" maxlength="180" placeholder="Ej. Chicago, Aurora, Oak Brook"></textarea>
+                </label>
+                <label>
+                  Idioma
+                  <textarea name="languageSummary" rows="3" maxlength="120" placeholder="Ej. Espanol e ingles"></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Placements / salida
+                  <textarea
+                    name="placementSummary"
+                    rows="3"
+                    maxlength="180"
+                    placeholder="Ej. Search mobile, Meta feed, IG stories"
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Tracking template
+                  <textarea
+                    name="trackingTemplate"
+                    rows="4"
+                    maxlength="600"
+                    placeholder='{"utm_source":"google","utm_campaign":"jobs_chicago","utm_medium":"cpc"}'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Notas de lanzamiento
+                  <textarea
+                    name="launchNotes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Bloqueos, aprobaciones o contexto operativo"
+                  ></textarea>
+                </label>
+                <label>
+                  ID externo
+                  <input type="text" name="externalCampaignId" maxlength="120" placeholder="campaign_123" />
+                </label>
+                <label class="marketing-field-full">
+                  Resumen interno
+                  <textarea
+                    name="summary"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Ej. Lista para salir cuando conectemos Google o Meta"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="nav-button" data-marketing-campaign-ops-save>Guardar</button>
+                  <button type="button" class="nav-button" data-marketing-campaign-validate>Validar</button>
+                  <button type="button" class="primary-button" data-marketing-campaign-queue>Mandar a cola</button>
+                  <button type="button" class="nav-button" data-marketing-campaign-live>Marcar live</button>
+                  <button type="button" class="nav-button" data-marketing-campaign-pause>Pausar</button>
+                </div>
+                <div class="form-result" data-marketing-campaign-ops-feedback></div>
+              </form>
+
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Checklist de campana</h4>
+                <p class="mini-note" data-marketing-campaign-workflow-copy>
+                  Selecciona una campana para revisar si ya esta lista para cola, live o pausa controlada.
+                </p>
+
+                <div class="marketing-diagnostic-grid">
+                  <div class="mini-stat">
+                    <strong data-marketing-campaign-score>0%</strong>
+                    <span>Readiness</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-campaign-ok>0</strong>
+                    <span>Checks ok</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-campaign-attention>0</strong>
+                    <span>Atencion</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-campaign-errors>0</strong>
+                    <span>Bloqueos</span>
+                  </div>
+                </div>
+
+                <div class="team-seat-list compact-list" data-marketing-campaign-check-list>
+                  <div class="team-seat-empty">El checklist de campana aparecera aqui.</div>
+                </div>
+
+                <div class="territory-inline-list" data-marketing-campaign-preview-list>
+                  <div class="team-seat-empty">La vista previa de estructura aparecera aqui.</div>
+                </div>
+              </div>
+            </div>
           </article>
 
           <article

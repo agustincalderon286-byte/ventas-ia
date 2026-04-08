@@ -9787,6 +9787,17 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const campaignSaveButton = document.querySelector("[data-marketing-campaign-save]");
   const campaignFeedback = document.querySelector("[data-marketing-campaign-feedback]");
   const campaignList = document.querySelector("[data-marketing-campaign-list]");
+  const campaignOpsForm = document.querySelector("[data-marketing-campaign-ops-form]");
+  const campaignOpsSelect = document.querySelector("[data-marketing-campaign-ops-select]");
+  const campaignOpsSaveButton = document.querySelector("[data-marketing-campaign-ops-save]");
+  const campaignValidateButton = document.querySelector("[data-marketing-campaign-validate]");
+  const campaignQueueButton = document.querySelector("[data-marketing-campaign-queue]");
+  const campaignLiveButton = document.querySelector("[data-marketing-campaign-live]");
+  const campaignPauseButton = document.querySelector("[data-marketing-campaign-pause]");
+  const campaignOpsFeedback = document.querySelector("[data-marketing-campaign-ops-feedback]");
+  const campaignWorkflowCopy = document.querySelector("[data-marketing-campaign-workflow-copy]");
+  const campaignCheckList = document.querySelector("[data-marketing-campaign-check-list]");
+  const campaignPreviewList = document.querySelector("[data-marketing-campaign-preview-list]");
   const creativeForm = document.querySelector("[data-marketing-creative-form]");
   const creativeSaveButton = document.querySelector("[data-marketing-creative-save]");
   const creativeFeedback = document.querySelector("[data-marketing-creative-feedback]");
@@ -9841,6 +9852,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !channelList ||
     !campaignForm ||
     !campaignList ||
+    !campaignOpsForm ||
+    !campaignOpsSelect ||
+    !campaignCheckList ||
+    !campaignPreviewList ||
     !creativeForm ||
     !creativeList ||
     !publicationForm ||
@@ -9888,6 +9903,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     captureAttributed: document.querySelector("[data-marketing-capture-attributed]"),
     captureCampaigns: document.querySelector("[data-marketing-capture-campaigns]"),
     captureMediums: document.querySelector("[data-marketing-capture-mediums]"),
+    campaignScore: document.querySelector("[data-marketing-campaign-score]"),
+    campaignOk: document.querySelector("[data-marketing-campaign-ok]"),
+    campaignAttention: document.querySelector("[data-marketing-campaign-attention]"),
+    campaignErrors: document.querySelector("[data-marketing-campaign-errors]"),
     publicationScore: document.querySelector("[data-marketing-publication-score]"),
     publicationOk: document.querySelector("[data-marketing-publication-ok]"),
     publicationAttention: document.querySelector("[data-marketing-publication-attention]"),
@@ -9902,6 +9921,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const channelIntegrationSelect = channelForm.querySelector("[data-marketing-channel-integration-select]");
   const campaignIntegrationSelect = campaignForm.querySelector("[data-marketing-campaign-integration-select]");
   const campaignChannelSelect = campaignForm.querySelector("[data-marketing-campaign-channel-select]");
+  const campaignReviewSelect = campaignOpsForm.querySelector("[data-marketing-campaign-review-select]");
   const creativeCampaignSelect = creativeForm.querySelector("[data-marketing-creative-campaign-select]");
   const publicationChannelSelect = publicationForm.querySelector("[data-marketing-publication-channel-select]");
   const publicationCampaignSelect = publicationForm.querySelector("[data-marketing-publication-campaign-select]");
@@ -9938,8 +9958,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     intakeSources: [],
     events: [],
     selectedIntegrationId: "",
+    selectedCampaignId: "",
     selectedPublicationId: "",
     selectedIntakeSourceId: "",
+    campaignWorkflow: null,
     publicationWorkflow: null,
     intakePreview: null
   };
@@ -10110,6 +10132,29 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     state.selectedIntegrationId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
     return getSelectedIntegration();
+  };
+
+  const getSelectedCampaign = () =>
+    state.campaigns.find(entry => String(entry?.id || "") === String(state.selectedCampaignId || "")) || null;
+
+  const syncSelectedCampaign = preferredId => {
+    const candidateId = String(preferredId || state.selectedCampaignId || "").trim();
+    const availableIds = state.campaigns.map(item => String(item?.id || "")).filter(Boolean);
+
+    if (!availableIds.length) {
+      state.selectedCampaignId = "";
+      state.campaignWorkflow = null;
+      return null;
+    }
+
+    const nextId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
+
+    if (String(state.selectedCampaignId || "") !== String(nextId)) {
+      state.campaignWorkflow = null;
+    }
+
+    state.selectedCampaignId = nextId;
+    return getSelectedCampaign();
   };
 
   const getSelectedPublication = () =>
@@ -10538,6 +10583,15 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     });
 
     buildSelectOptions({
+      target: campaignOpsSelect,
+      items: state.campaigns,
+      placeholder: "Selecciona una campana",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildChoiceSelectOptions(campaignReviewSelect, state.catalog?.statuses?.review || [], "Revision");
+
+    buildSelectOptions({
       target: creativeCampaignSelect,
       items: state.campaigns,
       placeholder: "Sin campana ligada",
@@ -10647,6 +10701,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     if (intakeSelect) {
       intakeSelect.value = state.selectedIntakeSourceId || "";
+    }
+
+    if (campaignOpsSelect) {
+      campaignOpsSelect.value = state.selectedCampaignId || "";
     }
   };
 
@@ -10900,21 +10958,232 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
               <span>Canal: <strong>${escapeHtml(getChannelLabel(item.primaryChannelId))}</strong></span>
               <span>Budget: <strong>${escapeHtml(formatMoney(item.budgetAmount || 0))}</strong></span>
               <span>Revision: <strong>${escapeHtml(item.reviewStatusLabel || "Borrador")}</strong></span>
+              <span>Checklist: <strong>${escapeHtml(`${Number(item.lastWorkflowScore || 0)}%`)}</strong></span>
+              <span>Estructura: <strong>${escapeHtml(
+                `${Number(item.adGroupCount || 0)} grupo(s) · ${Number(item.adVariantCount || 0)} variante(s)`
+              )}</strong></span>
             </div>
 
             <p class="mini-note team-seat-note">
               ${escapeHtml(
-                item.primaryGoal ||
+                item.launchNotes ||
+                  item.primaryGoal ||
                   item.audienceSummary ||
                   item.landingPageUrl ||
                   item.notes ||
                   "Campana lista para recibir audiencias, presupuesto y configuracion por plataforma."
               )}
             </p>
+
+            <div class="dashboard-actions">
+              <button
+                type="button"
+                class="nav-button"
+                data-marketing-select-campaign="${escapeHtml(item.id || "")}"
+              >
+                ${String(item.id || "") === String(state.selectedCampaignId || "") ? "Operando" : "Operar"}
+              </button>
+            </div>
           </article>
         `
       )
       .join("");
+  };
+
+  const renderCampaignWorkflow = () => {
+    const campaign = syncSelectedCampaign();
+    const workflow =
+      state.campaignWorkflow && String(state.campaignWorkflow.campaignId || "") === String(campaign?.id || "")
+        ? state.campaignWorkflow
+        : null;
+
+    if (campaignOpsSelect) {
+      campaignOpsSelect.value = state.selectedCampaignId || "";
+    }
+
+    if (!campaign) {
+      campaignOpsForm.reset();
+      setSummaryValue(summaryNodes.campaignScore, "0%");
+      setSummaryValue(summaryNodes.campaignOk, 0);
+      setSummaryValue(summaryNodes.campaignAttention, 0);
+      setSummaryValue(summaryNodes.campaignErrors, 0);
+      if (campaignWorkflowCopy) {
+        campaignWorkflowCopy.textContent =
+          "Selecciona una campana para revisar si ya esta lista para cola, live o pausa controlada.";
+      }
+      renderEmptyState(campaignCheckList, "El checklist de campana aparecera aqui.");
+      renderEmptyState(campaignPreviewList, "La vista previa de estructura aparecera aqui.");
+      if (campaignOpsSaveButton) campaignOpsSaveButton.disabled = true;
+      if (campaignValidateButton) campaignValidateButton.disabled = true;
+      if (campaignQueueButton) campaignQueueButton.disabled = true;
+      if (campaignLiveButton) campaignLiveButton.disabled = true;
+      if (campaignPauseButton) campaignPauseButton.disabled = true;
+      return;
+    }
+
+    if (campaignOpsSaveButton) campaignOpsSaveButton.disabled = false;
+    if (campaignValidateButton) campaignValidateButton.disabled = false;
+
+    campaignOpsForm.elements.campaignId.value = campaign.id || "";
+    if (campaignReviewSelect) {
+      campaignReviewSelect.value = campaign.reviewStatus || "draft";
+    }
+    campaignOpsForm.elements.budgetType.value = campaign.budgetType || "daily";
+    campaignOpsForm.elements.budgetAmount.value = campaign.budgetAmount || "";
+    campaignOpsForm.elements.startAt.value = formatDateTimeLocalValue(campaign.startAt || "");
+    campaignOpsForm.elements.endAt.value = formatDateTimeLocalValue(campaign.endAt || "");
+    campaignOpsForm.elements.landingPageUrl.value = campaign.landingPageUrl || "";
+    campaignOpsForm.elements.primaryGoal.value = campaign.primaryGoal || "";
+    campaignOpsForm.elements.callToAction.value = campaign.callToAction || "";
+    campaignOpsForm.elements.adGroupCount.value = campaign.adGroupCount || "";
+    campaignOpsForm.elements.adVariantCount.value = campaign.adVariantCount || "";
+    campaignOpsForm.elements.audienceSummary.value = campaign.audienceSummary || "";
+    campaignOpsForm.elements.geoSummary.value = campaign.geoSummary || "";
+    campaignOpsForm.elements.languageSummary.value = campaign.languageSummary || "";
+    campaignOpsForm.elements.placementSummary.value = campaign.placementSummary || "";
+    campaignOpsForm.elements.trackingTemplate.value = stringifyConfigInput(campaign.trackingTemplate || null);
+    campaignOpsForm.elements.launchNotes.value = campaign.launchNotes || "";
+    campaignOpsForm.elements.externalCampaignId.value = campaign.externalCampaignId || "";
+    campaignOpsForm.elements.summary.value = "";
+
+    if (!workflow) {
+      setSummaryValue(summaryNodes.campaignScore, `${Number(campaign.lastWorkflowScore || 0)}%`);
+      setSummaryValue(summaryNodes.campaignOk, 0);
+      setSummaryValue(summaryNodes.campaignAttention, 0);
+      setSummaryValue(summaryNodes.campaignErrors, 0);
+      if (campaignWorkflowCopy) {
+        campaignWorkflowCopy.textContent =
+          "Valida esta campana para revisar bloqueos, readiness y que ya esta listo para operar despues.";
+      }
+      renderEmptyState(campaignCheckList, "Todavia no cargamos el checklist de esta campana.");
+      renderEmptyState(campaignPreviewList, "La vista previa de estructura aparecera aqui.");
+      if (campaignQueueButton) campaignQueueButton.disabled = false;
+      if (campaignLiveButton) campaignLiveButton.disabled = false;
+      if (campaignPauseButton) campaignPauseButton.disabled = false;
+      return;
+    }
+
+    setSummaryValue(summaryNodes.campaignScore, `${Number(workflow.readinessScore || 0)}%`);
+    setSummaryValue(summaryNodes.campaignOk, workflow.okCount || 0);
+    setSummaryValue(summaryNodes.campaignAttention, workflow.attentionCount || 0);
+    setSummaryValue(summaryNodes.campaignErrors, workflow.errorCount || 0);
+
+    if (campaignWorkflowCopy) {
+      campaignWorkflowCopy.textContent =
+        workflow.summary || "La campana ya tiene workflow cargado dentro del modulo operativo.";
+    }
+
+    campaignCheckList.innerHTML = Array.isArray(workflow.checks) && workflow.checks.length
+      ? workflow.checks
+          .map(
+            item => `
+              <article class="territory-result-card">
+                <strong>${escapeHtml(item.label || "Check")}</strong>
+                <span>${escapeHtml(
+                  [
+                    item.state === "ok" ? "Ok" : item.state === "attention" ? "Atencion" : "Bloqueo",
+                    campaign.statusLabel || "Borrador"
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+                <p>${escapeHtml(item.message || "Sin detalle")}</p>
+              </article>
+            `
+          )
+          .join("")
+      : `<div class="team-seat-empty">No hay checks disponibles para esta campana.</div>`;
+
+    campaignPreviewList.innerHTML = [
+      {
+        label: "Integracion",
+        value: workflow.preview?.integrationLabel || "Sin integracion"
+      },
+      {
+        label: "Canal",
+        value: workflow.preview?.channelLabel || "Sin canal"
+      },
+      {
+        label: "Objetivo",
+        value: workflow.preview?.objectiveLabel || "Sin objetivo"
+      },
+      {
+        label: "Budget",
+        value: workflow.preview?.budgetLabel || "Sin presupuesto"
+      },
+      {
+        label: "Landing",
+        value: workflow.preview?.landingPageUrl || "Sin landing"
+      },
+      {
+        label: "CTA",
+        value: workflow.preview?.callToAction || workflow.preview?.primaryGoal || "Sin CTA"
+      },
+      {
+        label: "Estructura",
+        value: `${Number(workflow.support?.adGroupCount || 0)} grupo(s) · ${Number(workflow.support?.adVariantCount || 0)} variante(s)`
+      },
+      {
+        label: "Creativos",
+        value: `${Number(workflow.support?.creativesReady || 0)}/${Number(workflow.support?.creativesTotal || 0)}`
+      },
+      {
+        label: "Publicaciones",
+        value: `${Number(workflow.support?.publicationsReady || 0)}/${Number(workflow.support?.publicationsTotal || 0)}`
+      },
+      {
+        label: "Tracking",
+        value: Array.isArray(workflow.preview?.trackingKeys) && workflow.preview.trackingKeys.length
+          ? workflow.preview.trackingKeys.join(", ")
+          : "Sin tracking"
+      }
+    ]
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Dato")}</strong>
+            <span>${escapeHtml(item.value || "Pendiente")}</span>
+          </div>
+        `
+      )
+      .join("");
+
+    if (campaignQueueButton) {
+      campaignQueueButton.disabled = workflow.errorCount > 0 || campaign.status === "active";
+    }
+
+    if (campaignLiveButton) {
+      campaignLiveButton.disabled = !workflow.readyForLaunch;
+    }
+
+    if (campaignPauseButton) {
+      campaignPauseButton.disabled = !workflow.canPause || campaign.status === "paused";
+    }
+  };
+
+  const loadCampaignWorkflow = async (preferredId = "", { silent = false } = {}) => {
+    const campaign = syncSelectedCampaign(preferredId);
+
+    if (!campaign?.id) {
+      state.campaignWorkflow = null;
+      renderCampaignWorkflow();
+      return null;
+    }
+
+    try {
+      const data = await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}/workflow`);
+      state.selectedCampaignId = data?.campaign?.id || campaign.id;
+      state.campaignWorkflow = data?.workflow || null;
+      renderCampaignWorkflow();
+      return data;
+    } catch (error) {
+      state.campaignWorkflow = null;
+      renderCampaignWorkflow();
+      if (!silent) {
+        setMessage(campaignOpsFeedback, error.message || "No pude cargar el workflow de la campana.", "error");
+      }
+      throw error;
+    }
   };
 
   const renderCreatives = () => {
@@ -11201,8 +11470,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     renderRecentCaptures();
     syncMarketingSelects();
     syncSelectedIntegration();
+    syncSelectedCampaign();
     syncSelectedPublication();
     syncSelectedIntakeSource();
+    renderCampaignWorkflow();
     renderPublicationWorkflow();
     renderIntakePrep();
     renderConnectorPrep();
@@ -11249,9 +11520,18 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.intakeSources = Array.isArray(intakeSourcesData?.items) ? intakeSourcesData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
     syncSelectedIntegration();
+    syncSelectedCampaign();
     syncSelectedPublication();
     syncSelectedIntakeSource();
     renderAll();
+
+    if (state.selectedCampaignId) {
+      try {
+        await loadCampaignWorkflow(state.selectedCampaignId, { silent: true });
+      } catch (error) {
+        // The campaign card already renders a graceful empty state when workflow fails.
+      }
+    }
 
     if (state.selectedPublicationId) {
       try {
@@ -11294,6 +11574,26 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedIntegration(button.dataset.marketingSelectIntegration || "");
     renderConnectorPrep();
     renderIntegrations();
+  });
+
+  campaignOpsSelect?.addEventListener("change", () => {
+    clearMessage(campaignOpsFeedback);
+    syncSelectedCampaign(campaignOpsSelect.value || "");
+    renderCampaigns();
+    loadCampaignWorkflow(state.selectedCampaignId).catch(() => {});
+  });
+
+  campaignList.addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-select-campaign]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(campaignOpsFeedback);
+    syncSelectedCampaign(button.dataset.marketingSelectCampaign || "");
+    renderCampaigns();
+    loadCampaignWorkflow(state.selectedCampaignId).catch(() => {});
   });
 
   publicationOpsSelect?.addEventListener("change", () => {
@@ -11649,7 +11949,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     try {
       const formData = new FormData(campaignForm);
-      await apiRequest("/api/coach/marketing/campaigns", {
+      const data = await apiRequest("/api/coach/marketing/campaigns", {
         method: "POST",
         body: {
           name: formData.get("name"),
@@ -11665,6 +11965,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         }
       });
 
+      state.selectedCampaignId = data?.campaign?.id || state.selectedCampaignId;
+      state.campaignWorkflow = data?.workflow || null;
       campaignForm.reset();
       await loadWorkspace();
       setMessage(campaignFeedback, "Campana guardada dentro del workspace de marketing.", "success");
@@ -11672,6 +11974,174 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(campaignFeedback, error.message || "No pude guardar la campana.", "error");
     } finally {
       setButtonLoading(campaignSaveButton, false);
+    }
+  });
+
+  campaignOpsForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(campaignOpsFeedback);
+
+    const campaign = getSelectedCampaign();
+
+    if (!campaign?.id) {
+      setMessage(campaignOpsFeedback, "Primero selecciona una campana para operarla.", "error");
+      return;
+    }
+
+    setButtonLoading(campaignOpsSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(campaignOpsForm);
+      const data = await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}`, {
+        method: "PUT",
+        body: {
+          reviewStatus: formData.get("reviewStatus"),
+          budgetType: formData.get("budgetType"),
+          budgetAmount: formData.get("budgetAmount"),
+          startAt: formData.get("startAt") ? new Date(formData.get("startAt")).toISOString() : "",
+          endAt: formData.get("endAt") ? new Date(formData.get("endAt")).toISOString() : "",
+          landingPageUrl: formData.get("landingPageUrl"),
+          primaryGoal: formData.get("primaryGoal"),
+          callToAction: formData.get("callToAction"),
+          adGroupCount: formData.get("adGroupCount"),
+          adVariantCount: formData.get("adVariantCount"),
+          audienceSummary: formData.get("audienceSummary"),
+          geoSummary: formData.get("geoSummary"),
+          languageSummary: formData.get("languageSummary"),
+          placementSummary: formData.get("placementSummary"),
+          trackingTemplate: parseConfigInput(formData.get("trackingTemplate")),
+          launchNotes: formData.get("launchNotes"),
+          externalCampaignId: formData.get("externalCampaignId")
+        }
+      });
+
+      state.selectedCampaignId = data?.campaign?.id || campaign.id;
+      state.campaignWorkflow = data?.workflow || null;
+      await loadWorkspace();
+      setMessage(campaignOpsFeedback, "La operacion de campana quedo guardada dentro del Coach.", "success");
+    } catch (error) {
+      setMessage(campaignOpsFeedback, error.message || "No pude guardar la operacion de la campana.", "error");
+    } finally {
+      setButtonLoading(campaignOpsSaveButton, false);
+    }
+  });
+
+  campaignValidateButton?.addEventListener("click", async () => {
+    clearMessage(campaignOpsFeedback);
+    setButtonLoading(campaignValidateButton, true, "Validando...");
+
+    try {
+      await loadCampaignWorkflow(state.selectedCampaignId);
+      setMessage(campaignOpsFeedback, "Checklist de campana actualizado.", "success");
+    } catch (error) {
+      setMessage(campaignOpsFeedback, error.message || "No pude validar la campana.", "error");
+    } finally {
+      setButtonLoading(campaignValidateButton, false);
+    }
+  });
+
+  campaignQueueButton?.addEventListener("click", async () => {
+    clearMessage(campaignOpsFeedback);
+    const campaign = getSelectedCampaign();
+
+    if (!campaign?.id) {
+      setMessage(campaignOpsFeedback, "Primero selecciona una campana.", "error");
+      return;
+    }
+
+    setButtonLoading(campaignQueueButton, true, "Mandando...");
+
+    try {
+      const formData = new FormData(campaignOpsForm);
+      await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}/queue`, {
+        method: "POST",
+        body: {
+          reviewStatus: formData.get("reviewStatus"),
+          budgetType: formData.get("budgetType"),
+          budgetAmount: formData.get("budgetAmount"),
+          startAt: formData.get("startAt") ? new Date(formData.get("startAt")).toISOString() : "",
+          endAt: formData.get("endAt") ? new Date(formData.get("endAt")).toISOString() : "",
+          landingPageUrl: formData.get("landingPageUrl"),
+          primaryGoal: formData.get("primaryGoal"),
+          callToAction: formData.get("callToAction"),
+          adGroupCount: formData.get("adGroupCount"),
+          adVariantCount: formData.get("adVariantCount"),
+          audienceSummary: formData.get("audienceSummary"),
+          geoSummary: formData.get("geoSummary"),
+          languageSummary: formData.get("languageSummary"),
+          placementSummary: formData.get("placementSummary"),
+          trackingTemplate: parseConfigInput(formData.get("trackingTemplate")),
+          launchNotes: formData.get("launchNotes"),
+          summary: formData.get("summary")
+        }
+      });
+
+      await loadWorkspace();
+      setMessage(campaignOpsFeedback, "La campana ya entro a cola interna del Coach.", "success");
+    } catch (error) {
+      setMessage(campaignOpsFeedback, error.message || "No pude mandar la campana a cola.", "error");
+    } finally {
+      setButtonLoading(campaignQueueButton, false);
+    }
+  });
+
+  campaignLiveButton?.addEventListener("click", async () => {
+    clearMessage(campaignOpsFeedback);
+    const campaign = getSelectedCampaign();
+
+    if (!campaign?.id) {
+      setMessage(campaignOpsFeedback, "Primero selecciona una campana.", "error");
+      return;
+    }
+
+    setButtonLoading(campaignLiveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(campaignOpsForm);
+      await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}/mark-live`, {
+        method: "POST",
+        body: {
+          reviewStatus: formData.get("reviewStatus"),
+          startAt: formData.get("startAt") ? new Date(formData.get("startAt")).toISOString() : "",
+          externalCampaignId: formData.get("externalCampaignId")
+        }
+      });
+
+      await loadWorkspace();
+      setMessage(campaignOpsFeedback, "La campana quedo marcada como live.", "success");
+    } catch (error) {
+      setMessage(campaignOpsFeedback, error.message || "No pude marcar la campana como live.", "error");
+    } finally {
+      setButtonLoading(campaignLiveButton, false);
+    }
+  });
+
+  campaignPauseButton?.addEventListener("click", async () => {
+    clearMessage(campaignOpsFeedback);
+    const campaign = getSelectedCampaign();
+
+    if (!campaign?.id) {
+      setMessage(campaignOpsFeedback, "Primero selecciona una campana.", "error");
+      return;
+    }
+
+    setButtonLoading(campaignPauseButton, true, "Pausando...");
+
+    try {
+      const formData = new FormData(campaignOpsForm);
+      await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}/pause`, {
+        method: "POST",
+        body: {
+          summary: formData.get("summary")
+        }
+      });
+
+      await loadWorkspace();
+      setMessage(campaignOpsFeedback, "La campana quedo pausada dentro del Coach.", "success");
+    } catch (error) {
+      setMessage(campaignOpsFeedback, error.message || "No pude pausar la campana.", "error");
+    } finally {
+      setButtonLoading(campaignPauseButton, false);
     }
   });
 
