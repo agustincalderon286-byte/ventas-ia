@@ -9800,6 +9800,15 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const attributionSourceList = document.querySelector("[data-marketing-attribution-source-list]");
   const attributionCampaignList = document.querySelector("[data-marketing-attribution-campaign-list]");
   const attributionCaptureList = document.querySelector("[data-marketing-attribution-capture-list]");
+  const connectorForm = document.querySelector("[data-marketing-connector-form]");
+  const connectorSaveButton = document.querySelector("[data-marketing-connector-save]");
+  const connectorFeedback = document.querySelector("[data-marketing-connector-feedback]");
+  const connectorSelect = document.querySelector("[data-marketing-connector-select]");
+  const connectorSummaryCopy = document.querySelector("[data-marketing-connector-summary-copy]");
+  const connectorChipList = document.querySelector("[data-marketing-connector-chip-list]");
+  const healthForm = document.querySelector("[data-marketing-health-form]");
+  const healthSaveButton = document.querySelector("[data-marketing-health-save]");
+  const healthFeedback = document.querySelector("[data-marketing-health-feedback]");
 
   if (
     !bootstrapButton ||
@@ -9818,7 +9827,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !eventList ||
     !attributionSourceList ||
     !attributionCampaignList ||
-    !attributionCaptureList
+    !attributionCaptureList ||
+    !connectorForm ||
+    !connectorSelect ||
+    !connectorChipList ||
+    !healthForm
   ) {
     return;
   }
@@ -9842,7 +9855,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     captureRecruitment: document.querySelector("[data-marketing-capture-recruitment]"),
     captureAttributed: document.querySelector("[data-marketing-capture-attributed]"),
     captureCampaigns: document.querySelector("[data-marketing-capture-campaigns]"),
-    captureMediums: document.querySelector("[data-marketing-capture-mediums]")
+    captureMediums: document.querySelector("[data-marketing-capture-mediums]"),
+    connectorScopeTotal: document.querySelector("[data-marketing-connector-scope-total]"),
+    connectorScopeGranted: document.querySelector("[data-marketing-connector-scope-granted]"),
+    connectorScopeMissing: document.querySelector("[data-marketing-connector-scope-missing]"),
+    connectorConfigTotal: document.querySelector("[data-marketing-connector-config-total]")
   };
 
   const templateSelect = integrationForm.querySelector("[data-marketing-template-select]");
@@ -9853,6 +9870,12 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const publicationChannelSelect = publicationForm.querySelector("[data-marketing-publication-channel-select]");
   const publicationCampaignSelect = publicationForm.querySelector("[data-marketing-publication-campaign-select]");
   const publicationCreativeSelect = publicationForm.querySelector("[data-marketing-publication-creative-select]");
+  const connectorStatusSelect = connectorForm.querySelector("[data-marketing-connector-status-select]");
+  const connectorConnectionSelect = connectorForm.querySelector("[data-marketing-connector-connection-select]");
+  const connectorAuthSelect = connectorForm.querySelector("[data-marketing-connector-auth-select]");
+  const connectorAccountTypeSelect = connectorForm.querySelector("[data-marketing-connector-account-type-select]");
+  const healthStatusSelect = healthForm.querySelector("[data-marketing-health-status-select]");
+  const healthConnectionSelect = healthForm.querySelector("[data-marketing-health-connection-select]");
 
   const state = {
     module: marketingModule || {},
@@ -9863,7 +9886,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     campaigns: [],
     creatives: [],
     publications: [],
-    events: []
+    events: [],
+    selectedIntegrationId: ""
   };
 
   const renderEmptyState = (target, message) => {
@@ -9878,6 +9902,62 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     if (node) {
       node.textContent = String(value || 0);
     }
+  };
+
+  const parseListInput = value =>
+    String(value || "")
+      .split(/\n|,/)
+      .map(item => item.trim())
+      .filter(Boolean);
+
+  const stringifyListInput = value => (Array.isArray(value) ? value.join("\n") : "");
+
+  const parseConfigInput = value => {
+    const raw = String(value || "").trim();
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+    } catch (error) {
+      const lines = raw.split("\n").map(item => item.trim()).filter(Boolean);
+      const config = {};
+
+      lines.forEach(line => {
+        const separatorIndex = line.indexOf(":");
+
+        if (separatorIndex <= 0) {
+          return;
+        }
+
+        const key = line.slice(0, separatorIndex).trim();
+        const valueText = line.slice(separatorIndex + 1).trim();
+
+        if (!key || !valueText) {
+          return;
+        }
+
+        config[key] = valueText.includes(",")
+          ? valueText
+              .split(",")
+              .map(item => item.trim())
+              .filter(Boolean)
+          : valueText;
+      });
+
+      return Object.keys(config).length ? config : null;
+    }
+  };
+
+  const stringifyConfigInput = value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return "";
+    }
+
+    return JSON.stringify(value, null, 2);
   };
 
   const getOverviewSnapshot = () => {
@@ -9947,6 +10027,33 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     });
 
     target.value = hasPreviousValue ? previousValue : String(placeholderValue);
+  };
+
+  const buildChoiceSelectOptions = (target, items = [], placeholder = "Selecciona una opcion", allowEmpty = false) => {
+    buildSelectOptions({
+      target,
+      items,
+      placeholder,
+      placeholderValue: allowEmpty ? "" : "",
+      valueKey: "value",
+      labelBuilder: item => item?.label || item?.value || "Sin opcion"
+    });
+  };
+
+  const getSelectedIntegration = () =>
+    state.integrations.find(entry => String(entry?.id || "") === String(state.selectedIntegrationId || "")) || null;
+
+  const syncSelectedIntegration = preferredId => {
+    const candidateId = String(preferredId || state.selectedIntegrationId || "").trim();
+    const availableIds = state.integrations.map(item => String(item?.id || "")).filter(Boolean);
+
+    if (!availableIds.length) {
+      state.selectedIntegrationId = "";
+      return null;
+    }
+
+    state.selectedIntegrationId = availableIds.includes(candidateId) ? candidateId : availableIds[0];
+    return getSelectedIntegration();
   };
 
   const getIntegrationLabel = integrationId => {
@@ -10152,6 +10259,148 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       placeholder: "Sin creativo ligado",
       labelBuilder: item => item?.name || "Creativo"
     });
+
+    buildSelectOptions({
+      target: connectorSelect,
+      items: state.integrations,
+      placeholder: "Selecciona una integracion preparada",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildChoiceSelectOptions(connectorStatusSelect, state.catalog?.statuses?.integrations || [], "Estado");
+    buildChoiceSelectOptions(connectorConnectionSelect, state.catalog?.statuses?.connection || [], "Conexion");
+    buildChoiceSelectOptions(connectorAuthSelect, state.catalog?.authModes || [], "Auth");
+    buildChoiceSelectOptions(connectorAccountTypeSelect, state.catalog?.accountTypes || [], "Tipo de cuenta");
+    buildChoiceSelectOptions(healthStatusSelect, state.catalog?.statuses?.health || [], "Resultado del check");
+    buildChoiceSelectOptions(healthConnectionSelect, state.catalog?.statuses?.connection || [], "Conexion despues del check");
+  };
+
+  const renderConnectorPrep = () => {
+    const integration = syncSelectedIntegration();
+
+    if (connectorSelect) {
+      connectorSelect.value = state.selectedIntegrationId || "";
+    }
+
+    if (!integration) {
+      connectorForm.reset();
+      healthForm.reset();
+      setSummaryValue(summaryNodes.connectorScopeTotal, 0);
+      setSummaryValue(summaryNodes.connectorScopeGranted, 0);
+      setSummaryValue(summaryNodes.connectorScopeMissing, 0);
+      setSummaryValue(summaryNodes.connectorConfigTotal, 0);
+      if (connectorSummaryCopy) {
+        connectorSummaryCopy.textContent =
+          "Selecciona una integracion para revisar su salud, permisos y placeholders.";
+      }
+      renderEmptyState(connectorChipList, "El resumen de la integracion aparecera aqui.");
+      if (connectorSaveButton) {
+        connectorSaveButton.disabled = true;
+      }
+      if (healthSaveButton) {
+        healthSaveButton.disabled = true;
+      }
+      return;
+    }
+
+    if (connectorSaveButton) {
+      connectorSaveButton.disabled = false;
+    }
+
+    if (healthSaveButton) {
+      healthSaveButton.disabled = false;
+    }
+
+    connectorForm.elements.integrationId.value = integration.id || "";
+    connectorForm.elements.label.value = integration.label || "";
+    connectorForm.elements.accountLabel.value = integration.accountLabel || "";
+    connectorForm.elements.externalBusinessId.value = integration.externalBusinessId || "";
+    connectorForm.elements.externalAccountId.value = integration.externalAccountId || "";
+    connectorForm.elements.externalAccountName.value = integration.externalAccountName || "";
+    connectorForm.elements.expectedScopes.value = stringifyListInput(integration.expectedScopes || []);
+    connectorForm.elements.grantedScopes.value = stringifyListInput(integration.grantedScopes || []);
+    connectorForm.elements.capabilities.value = stringifyListInput(integration.capabilities || []);
+    connectorForm.elements.configText.value = stringifyConfigInput(integration.config || null);
+    connectorForm.elements.notes.value = integration.notes || "";
+    if (connectorStatusSelect) {
+      connectorStatusSelect.value = integration.status || "";
+    }
+    if (connectorConnectionSelect) {
+      connectorConnectionSelect.value = integration.connectionStatus || "";
+    }
+    if (connectorAuthSelect) {
+      connectorAuthSelect.value = integration.authMode || "";
+    }
+    if (connectorAccountTypeSelect) {
+      connectorAccountTypeSelect.value = integration.accountType || "";
+    }
+
+    if (healthStatusSelect) {
+      healthStatusSelect.value = integration.lastHealthStatus || "pending";
+    }
+    if (healthConnectionSelect) {
+      healthConnectionSelect.value = integration.connectionStatus || "not_connected";
+    }
+    healthForm.elements.missingScopes.value = stringifyListInput(integration.missingScopes || []);
+    healthForm.elements.summary.value = "";
+
+    setSummaryValue(summaryNodes.connectorScopeTotal, integration.expectedScopeTotal || 0);
+    setSummaryValue(summaryNodes.connectorScopeGranted, integration.grantedScopeTotal || 0);
+    setSummaryValue(summaryNodes.connectorScopeMissing, integration.missingScopeTotal || 0);
+    setSummaryValue(summaryNodes.connectorConfigTotal, Array.isArray(integration.configKeys) ? integration.configKeys.length : 0);
+
+    if (connectorSummaryCopy) {
+      connectorSummaryCopy.textContent = [
+        integration.productLabel || "Integracion",
+        integration.providerLabel || "Proveedor",
+        integration.accountLabel || integration.externalAccountName || "Sin cuenta externa ligada",
+        integration.lastHealthCheckAt
+          ? `Ultimo check ${formatDateTimeShort(integration.lastHealthCheckAt)}`
+          : "Sin health check todavia"
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+
+    connectorChipList.innerHTML = [
+      {
+        label: "Cobertura de scopes",
+        value: `${Number(integration.scopeCoveragePercent || 0)}% lista`
+      },
+      {
+        label: "Conexion",
+        value: integration.connectionStatusLabel || "Sin conectar"
+      },
+      {
+        label: "Salud",
+        value: integration.lastHealthStatusLabel || "Pendiente"
+      },
+      {
+        label: "Cuenta preparada",
+        value: integration.externalAccountName || integration.externalAccountId || integration.accountLabel || "Pendiente"
+      },
+      {
+        label: "Scopes faltantes",
+        value: Array.isArray(integration.missingScopes) && integration.missingScopes.length
+          ? integration.missingScopes.join(", ")
+          : "Ninguno detectado"
+      },
+      {
+        label: "Claves tecnicas",
+        value: Array.isArray(integration.configKeys) && integration.configKeys.length
+          ? integration.configKeys.join(", ")
+          : "Sin placeholders"
+      }
+    ]
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Dato")}</strong>
+            <span>${escapeHtml(item.value || "Pendiente")}</span>
+          </div>
+        `
+      )
+      .join("");
   };
 
   const renderIntegrations = () => {
@@ -10181,13 +10430,31 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
               <span>Auth: <strong>${escapeHtml(item.authModeLabel || "Manual")}</strong></span>
               <span>Cuenta: <strong>${escapeHtml(item.accountTypeLabel || "Custom")}</strong></span>
               <span>Capacidades: <strong>${Number(item.capabilities?.length || 0)}</strong></span>
+              <span>Scopes: <strong>${escapeHtml(
+                `${Number(item.grantedScopeTotal || 0)}/${Number(item.expectedScopeTotal || 0)}`
+              )}</strong></span>
+              <span>Health: <strong>${escapeHtml(item.lastHealthStatusLabel || "Pendiente")}</strong></span>
             </div>
 
             <p class="mini-note team-seat-note">
               ${escapeHtml(
-                item.description || item.notes || "Integracion lista para recibir cuentas, permisos y futuros sync jobs."
+                item.accountLabel ||
+                  item.externalAccountName ||
+                  item.description ||
+                  item.notes ||
+                  "Integracion lista para recibir cuentas, permisos y futuros sync jobs."
               )}
             </p>
+
+            <div class="dashboard-actions">
+              <button
+                type="button"
+                class="nav-button"
+                data-marketing-select-integration="${escapeHtml(item.id || "")}"
+              >
+                ${String(item.id || "") === String(state.selectedIntegrationId || "") ? "Editando" : "Preparar"}
+              </button>
+            </div>
           </article>
         `
       )
@@ -10384,6 +10651,8 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     renderAttributionCampaigns();
     renderRecentCaptures();
     syncMarketingSelects();
+    syncSelectedIntegration();
+    renderConnectorPrep();
     renderIntegrations();
     renderChannels();
     renderCampaigns();
@@ -10413,6 +10682,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.creatives = Array.isArray(creativesData?.items) ? creativesData.items : [];
     state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
+    syncSelectedIntegration();
     renderAll();
   };
 
@@ -10426,6 +10696,28 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     if (blueprint && labelInput && !String(labelInput.value || "").trim()) {
       labelInput.value = blueprint.label || blueprint.productLabel || "";
     }
+  });
+
+  connectorSelect?.addEventListener("change", () => {
+    clearMessage(connectorFeedback);
+    clearMessage(healthFeedback);
+    syncSelectedIntegration(connectorSelect.value || "");
+    renderConnectorPrep();
+    renderIntegrations();
+  });
+
+  integrationList.addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-select-integration]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(connectorFeedback);
+    clearMessage(healthFeedback);
+    syncSelectedIntegration(button.dataset.marketingSelectIntegration || "");
+    renderConnectorPrep();
+    renderIntegrations();
   });
 
   refreshButton.addEventListener("click", async () => {
@@ -10484,6 +10776,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         }
       });
 
+      state.selectedIntegrationId = data?.integration?.id || state.selectedIntegrationId;
       integrationForm.reset();
       await loadWorkspace();
       setMessage(
@@ -10497,6 +10790,86 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(integrationFeedback, error.message || "No pude guardar la integracion.", "error");
     } finally {
       setButtonLoading(integrationSaveButton, false);
+    }
+  });
+
+  connectorForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(connectorFeedback);
+
+    const integration = getSelectedIntegration();
+
+    if (!integration?.id) {
+      setMessage(connectorFeedback, "Primero selecciona una integracion para prepararla.", "error");
+      return;
+    }
+
+    setButtonLoading(connectorSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(connectorForm);
+      const data = await apiRequest(`/api/coach/marketing/integrations/${integration.id}`, {
+        method: "PUT",
+        body: {
+          label: formData.get("label"),
+          status: formData.get("status"),
+          connectionStatus: formData.get("connectionStatus"),
+          authMode: formData.get("authMode"),
+          accountType: formData.get("accountType"),
+          accountLabel: formData.get("accountLabel"),
+          externalBusinessId: formData.get("externalBusinessId"),
+          externalAccountId: formData.get("externalAccountId"),
+          externalAccountName: formData.get("externalAccountName"),
+          expectedScopes: parseListInput(formData.get("expectedScopes")),
+          grantedScopes: parseListInput(formData.get("grantedScopes")),
+          capabilities: parseListInput(formData.get("capabilities")),
+          config: parseConfigInput(formData.get("configText")),
+          notes: formData.get("notes")
+        }
+      });
+
+      state.selectedIntegrationId = data?.integration?.id || integration.id;
+      await loadWorkspace();
+      setMessage(connectorFeedback, "Conector preparado dentro del workspace de marketing.", "success");
+    } catch (error) {
+      setMessage(connectorFeedback, error.message || "No pude guardar la preparacion del conector.", "error");
+    } finally {
+      setButtonLoading(connectorSaveButton, false);
+    }
+  });
+
+  healthForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(healthFeedback);
+
+    const integration = getSelectedIntegration();
+
+    if (!integration?.id) {
+      setMessage(healthFeedback, "Primero selecciona una integracion para registrar el check.", "error");
+      return;
+    }
+
+    setButtonLoading(healthSaveButton, true, "Registrando...");
+
+    try {
+      const formData = new FormData(healthForm);
+      const data = await apiRequest(`/api/coach/marketing/integrations/${integration.id}/health-check`, {
+        method: "POST",
+        body: {
+          healthStatus: formData.get("healthStatus"),
+          connectionStatus: formData.get("connectionStatus"),
+          missingScopes: parseListInput(formData.get("missingScopes")),
+          summary: formData.get("summary")
+        }
+      });
+
+      state.selectedIntegrationId = data?.integration?.id || integration.id;
+      await loadWorkspace();
+      setMessage(healthFeedback, "Health check registrado dentro del event log.", "success");
+    } catch (error) {
+      setMessage(healthFeedback, error.message || "No pude registrar el health check.", "error");
+    } finally {
+      setButtonLoading(healthSaveButton, false);
     }
   });
 

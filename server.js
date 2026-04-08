@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 3;
+const COACH_MARKETING_FOUNDATION_VERSION = 4;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -417,6 +417,31 @@ const COACH_MARKETING_INTEGRATION_BLUEPRINTS = Object.freeze(
     capabilities: item.capabilities
   }))
 );
+const COACH_MARKETING_SCOPE_BLUEPRINTS = Object.freeze({
+  meta_ads: ["ads_management", "ads_read", "leads_retrieval", "pages_show_list", "business_management"],
+  facebook_page: [
+    "pages_show_list",
+    "pages_manage_posts",
+    "pages_read_engagement",
+    "pages_manage_metadata",
+    "pages_messaging"
+  ],
+  instagram_business: [
+    "instagram_basic",
+    "instagram_content_publish",
+    "instagram_manage_comments",
+    "pages_show_list",
+    "business_management"
+  ],
+  google_ads: ["google_ads", "offline_conversion_tracking", "campaign_management", "customer_management"],
+  google_analytics: ["analytics.readonly", "analytics.edit", "tagmanager.readonly", "tagmanager.edit"],
+  tiktok_business: ["video.publish", "video.list", "comment.list", "comment.manage", "user.info.basic"],
+  tiktok_ads: ["ads.management", "reporting.read", "leadgen.read", "business.center.read"],
+  youtube_channel: ["youtube.upload", "youtube.readonly", "youtube.force-ssl", "yt-analytics.readonly"],
+  linkedin_page: ["w_organization_social", "r_organization_social", "rw_organization_admin"],
+  custom_webhook: ["lead_ingestion", "event_push", "event_pull"],
+  custom: []
+});
 
 const conversationEntrySchema = new mongoose.Schema(
   {
@@ -4808,6 +4833,25 @@ function normalizarCoachMarketingConnectionStatus(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_CONNECTION_STATUS_OPTIONS, "not_connected");
 }
 
+function inferirCoachMarketingConnectionStatusDesdeHealth(healthStatus = "", currentStatus = "not_connected") {
+  const safeHealth = normalizarCoachMarketingHealthStatus(healthStatus || "");
+  const safeCurrent = normalizarCoachMarketingConnectionStatus(currentStatus || "");
+
+  if (safeHealth === "ok") {
+    return "connected";
+  }
+
+  if (safeHealth === "error") {
+    return "error";
+  }
+
+  if (safeHealth === "attention") {
+    return safeCurrent === "connected" ? "connected" : "pending";
+  }
+
+  return safeCurrent;
+}
+
 function normalizarCoachMarketingChannelType(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_CHANNEL_TYPE_OPTIONS, "custom");
 }
@@ -4873,6 +4917,22 @@ function obtenerCoachMarketingBlueprint(templateKey = "") {
   return COACH_MARKETING_INTEGRATION_BLUEPRINTS.find(item => item.templateKey === safeKey) || null;
 }
 
+function obtenerCoachMarketingExpectedScopes(product = "", provider = "") {
+  const safeProduct = normalizarCoachMarketingProduct(product || "");
+  const safeProvider = normalizarCoachMarketingProvider(provider || "");
+  const directScopes = COACH_MARKETING_SCOPE_BLUEPRINTS[safeProduct];
+
+  if (Array.isArray(directScopes) && directScopes.length) {
+    return limpiarCoachMarketingStringArray(directScopes, 20, 60);
+  }
+
+  if (safeProvider === "webhook") {
+    return limpiarCoachMarketingStringArray(COACH_MARKETING_SCOPE_BLUEPRINTS.custom_webhook || [], 20, 60);
+  }
+
+  return [];
+}
+
 function limpiarCoachMarketingStringArray(values = [], maxItems = 12, maxLength = 80) {
   const safeValues = Array.isArray(values) ? values : [values];
   const unique = new Set();
@@ -4894,6 +4954,37 @@ function limpiarCoachMarketingStringArray(values = [], maxItems = 12, maxLength 
   }
 
   return cleaned;
+}
+
+function resolverCoachMarketingExpectedScopes({ product = "", provider = "", explicitScopes = [] } = {}) {
+  const cleaned = limpiarCoachMarketingStringArray(explicitScopes || [], 20, 60);
+  return cleaned.length ? cleaned : obtenerCoachMarketingExpectedScopes(product, provider);
+}
+
+function resolverCoachMarketingMissingScopes({
+  expectedScopes = [],
+  grantedScopes = [],
+  explicitMissingScopes = []
+} = {}) {
+  const cleanedMissing = limpiarCoachMarketingStringArray(explicitMissingScopes || [], 20, 60);
+
+  if (cleanedMissing.length) {
+    return cleanedMissing;
+  }
+
+  const expected = limpiarCoachMarketingStringArray(expectedScopes || [], 20, 60);
+
+  if (!expected.length) {
+    return [];
+  }
+
+  const grantedSet = new Set(
+    limpiarCoachMarketingStringArray(grantedScopes || [], 20, 60)
+      .map(item => item.toLowerCase())
+      .filter(Boolean)
+  );
+
+  return expected.filter(item => !grantedSet.has(String(item || "").toLowerCase()));
 }
 
 function limpiarCoachMarketingConfig(config = null) {
@@ -5514,6 +5605,7 @@ function construirCoachMarketingCatalog() {
       authModeLabel: formatearCoachMarketingChoiceLabel(product.authMode || "", COACH_MARKETING_AUTH_MODE_OPTIONS),
       accountType: normalizarCoachMarketingAccountType(product.accountType || ""),
       accountTypeLabel: formatearCoachMarketingChoiceLabel(product.accountType || "", COACH_MARKETING_ACCOUNT_TYPE_OPTIONS),
+      expectedScopes: obtenerCoachMarketingExpectedScopes(product.value, product.provider),
       capabilities: limpiarCoachMarketingStringArray(product.capabilities || [], 16, 40),
       bootstrap: product.bootstrap !== false
     });
@@ -5535,6 +5627,7 @@ function construirCoachMarketingCatalog() {
       authModeLabel: formatearCoachMarketingChoiceLabel(item.authMode, COACH_MARKETING_AUTH_MODE_OPTIONS),
       accountType: item.accountType,
       accountTypeLabel: formatearCoachMarketingChoiceLabel(item.accountType, COACH_MARKETING_ACCOUNT_TYPE_OPTIONS),
+      expectedScopes: obtenerCoachMarketingExpectedScopes(item.product, item.provider),
       capabilities: limpiarCoachMarketingStringArray(item.capabilities || [], 16, 40)
     })),
     statuses: {
@@ -5590,6 +5683,24 @@ function limpiarCoachMarketingIntegration(doc = null) {
   const authMode = normalizarCoachMarketingAuthMode(doc.authMode || productDefinition?.authMode || "");
   const accountType = normalizarCoachMarketingAccountType(doc.accountType || productDefinition?.accountType || "");
   const healthStatus = normalizarCoachMarketingHealthStatus(doc.lastHealthStatus || "");
+  const expectedScopes = resolverCoachMarketingExpectedScopes({
+    product,
+    provider,
+    explicitScopes: doc.expectedScopes || []
+  });
+  const grantedScopes = limpiarCoachMarketingStringArray(doc.grantedScopes || [], 20, 60);
+  const missingScopes = resolverCoachMarketingMissingScopes({
+    expectedScopes,
+    grantedScopes,
+    explicitMissingScopes: doc.missingScopes || []
+  });
+  const capabilities = limpiarCoachMarketingStringArray(doc.capabilities || productDefinition?.capabilities || [], 20, 50);
+  const config = limpiarCoachMarketingConfig(doc.config);
+  const expectedTotal = expectedScopes.length;
+  const grantedTotal = grantedScopes.length;
+  const missingTotal = missingScopes.length;
+  const coveredScopes = Math.max(0, expectedTotal - missingTotal);
+  const scopeCoveragePercent = expectedTotal ? Math.round((coveredScopes / expectedTotal) * 100) : grantedTotal ? 100 : 0;
 
   return {
     ...limpiarCoachMarketingBaseDoc(doc),
@@ -5617,15 +5728,16 @@ function limpiarCoachMarketingIntegration(doc = null) {
     externalBusinessId: cleanText(doc.externalBusinessId || "").slice(0, 120),
     externalAccountId: cleanText(doc.externalAccountId || "").slice(0, 120),
     externalAccountName: cleanText(doc.externalAccountName || "").slice(0, 120),
-    expectedScopes: limpiarCoachMarketingStringArray(doc.expectedScopes || [], 20, 60),
-    grantedScopes: limpiarCoachMarketingStringArray(doc.grantedScopes || [], 20, 60),
-    missingScopes: limpiarCoachMarketingStringArray(doc.missingScopes || [], 20, 60),
-    capabilities: limpiarCoachMarketingStringArray(
-      doc.capabilities || productDefinition?.capabilities || [],
-      20,
-      50
-    ),
-    config: limpiarCoachMarketingConfig(doc.config),
+    expectedScopes,
+    grantedScopes,
+    missingScopes,
+    expectedScopeTotal: expectedTotal,
+    grantedScopeTotal: grantedTotal,
+    missingScopeTotal: missingTotal,
+    scopeCoveragePercent,
+    capabilities,
+    config,
+    configKeys: config ? Object.keys(config) : [],
     notes: truncarTextoPrompt(cleanText(doc.notes || ""), 220),
     lastHealthStatus: healthStatus,
     lastHealthStatusLabel: formatearCoachMarketingChoiceLabel(healthStatus, COACH_MARKETING_HEALTH_STATUS_OPTIONS),
@@ -5979,27 +6091,36 @@ async function asegurarCoachMarketingWorkspaceBase(userDoc = null) {
   const now = new Date();
   const docsToCreate = COACH_MARKETING_INTEGRATION_BLUEPRINTS.filter(
     blueprint => !existingKeys.has(blueprint.templateKey)
-  ).map(blueprint => ({
-    ownerUserId: workspaceSnapshot.ownerUserId,
-    ownerEmail: workspaceSnapshot.ownerEmail || "",
-    ownerName: workspaceSnapshot.ownerName || "",
-    generatedByUserId: workspaceSnapshot.generatedByUserId || null,
-    generatedByName: workspaceSnapshot.generatedByName || "",
-    generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
-    provider: normalizarCoachMarketingProvider(blueprint.provider || ""),
-    product: normalizarCoachMarketingProduct(blueprint.product || ""),
-    templateKey: blueprint.templateKey,
-    label: blueprint.label,
-    description: blueprint.description,
-    status: "draft",
-    connectionStatus: "not_connected",
-    authMode: normalizarCoachMarketingAuthMode(blueprint.authMode || ""),
-    accountType: normalizarCoachMarketingAccountType(blueprint.accountType || ""),
-    capabilities: limpiarCoachMarketingStringArray(blueprint.capabilities || [], 16, 40),
-    lastHealthStatus: "pending",
-    updatedAt: now,
-    createdAt: now
-  }));
+  ).map(blueprint => {
+    const expectedScopes = resolverCoachMarketingExpectedScopes({
+      product: blueprint.product,
+      provider: blueprint.provider
+    });
+
+    return {
+      ownerUserId: workspaceSnapshot.ownerUserId,
+      ownerEmail: workspaceSnapshot.ownerEmail || "",
+      ownerName: workspaceSnapshot.ownerName || "",
+      generatedByUserId: workspaceSnapshot.generatedByUserId || null,
+      generatedByName: workspaceSnapshot.generatedByName || "",
+      generatedByAccountType: workspaceSnapshot.generatedByAccountType || "owner",
+      provider: normalizarCoachMarketingProvider(blueprint.provider || ""),
+      product: normalizarCoachMarketingProduct(blueprint.product || ""),
+      templateKey: blueprint.templateKey,
+      label: blueprint.label,
+      description: blueprint.description,
+      status: "draft",
+      connectionStatus: "not_connected",
+      authMode: normalizarCoachMarketingAuthMode(blueprint.authMode || ""),
+      accountType: normalizarCoachMarketingAccountType(blueprint.accountType || ""),
+      expectedScopes,
+      missingScopes: expectedScopes,
+      capabilities: limpiarCoachMarketingStringArray(blueprint.capabilities || [], 16, 40),
+      lastHealthStatus: "pending",
+      updatedAt: now,
+      createdAt: now
+    };
+  });
 
   const createdDocs = docsToCreate.length ? await CoachMarketingIntegration.insertMany(docsToCreate) : [];
 
@@ -21936,6 +22057,17 @@ app.post("/api/coach/marketing/integrations", async (req, res) => {
       req.body?.provider || blueprint?.provider || productDefinition?.provider || ""
     );
     const product = normalizarCoachMarketingProduct(req.body?.product || blueprint?.product || "");
+    const expectedScopes = resolverCoachMarketingExpectedScopes({
+      product,
+      provider,
+      explicitScopes: req.body?.expectedScopes || []
+    });
+    const grantedScopes = limpiarCoachMarketingStringArray(req.body?.grantedScopes || [], 20, 60);
+    const missingScopes = resolverCoachMarketingMissingScopes({
+      expectedScopes,
+      grantedScopes,
+      explicitMissingScopes: req.body?.missingScopes || []
+    });
     const now = new Date();
     const integrationDoc = await CoachMarketingIntegration.create({
       ownerUserId: workspaceSnapshot.ownerUserId,
@@ -21965,9 +22097,9 @@ app.post("/api/coach/marketing/integrations", async (req, res) => {
       externalBusinessId: cleanText(req.body?.externalBusinessId || "").slice(0, 120),
       externalAccountId: cleanText(req.body?.externalAccountId || "").slice(0, 120),
       externalAccountName: cleanText(req.body?.externalAccountName || "").slice(0, 120),
-      expectedScopes: limpiarCoachMarketingStringArray(req.body?.expectedScopes || [], 20, 60),
-      grantedScopes: limpiarCoachMarketingStringArray(req.body?.grantedScopes || [], 20, 60),
-      missingScopes: limpiarCoachMarketingStringArray(req.body?.missingScopes || [], 20, 60),
+      expectedScopes,
+      grantedScopes,
+      missingScopes,
       capabilities: limpiarCoachMarketingStringArray(
         req.body?.capabilities || blueprint?.capabilities || productDefinition?.capabilities || [],
         20,
@@ -22007,6 +22139,293 @@ app.post("/api/coach/marketing/integrations", async (req, res) => {
   } catch (error) {
     console.error("Error creando integracion de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude crear la integracion de marketing.");
+  }
+});
+
+app.put("/api/coach/marketing/integrations/:integrationId", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const integrationId = normalizarCoachCrmObjectId(req.params?.integrationId || "");
+
+  if (!integrationId) {
+    return responderCoachError(res, 400, "No encontre la integracion que quieres actualizar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const integrationDoc = await CoachMarketingIntegration.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: integrationId })
+    );
+
+    if (!integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing.");
+    }
+
+    const previousIntegration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
+    const provider = normalizarCoachMarketingProvider(
+      hasField("provider") ? body.provider || "" : integrationDoc.provider || ""
+    );
+    const product = normalizarCoachMarketingProduct(
+      hasField("product") ? body.product || "" : integrationDoc.product || ""
+    );
+    const nextExpectedScopes = resolverCoachMarketingExpectedScopes({
+      product,
+      provider,
+      explicitScopes: hasField("expectedScopes") ? body.expectedScopes || [] : integrationDoc.expectedScopes || []
+    });
+    const nextGrantedScopes = limpiarCoachMarketingStringArray(
+      hasField("grantedScopes") ? body.grantedScopes || [] : integrationDoc.grantedScopes || [],
+      20,
+      60
+    );
+    const nextMissingScopes = resolverCoachMarketingMissingScopes({
+      expectedScopes: nextExpectedScopes,
+      grantedScopes: nextGrantedScopes,
+      explicitMissingScopes: hasField("missingScopes") ? body.missingScopes || [] : integrationDoc.missingScopes || []
+    });
+
+    integrationDoc.provider = provider;
+    integrationDoc.product = product;
+
+    if (hasField("templateKey")) {
+      integrationDoc.templateKey = cleanText(body.templateKey || "").slice(0, 80).toLowerCase();
+    }
+
+    if (hasField("label")) {
+      integrationDoc.label = cleanText(body.label || "").slice(0, 120);
+    }
+
+    if (hasField("description")) {
+      integrationDoc.description = truncarTextoPrompt(cleanText(body.description || ""), 220);
+    }
+
+    if (hasField("status")) {
+      integrationDoc.status = normalizarCoachMarketingIntegrationStatus(body.status || "draft");
+    }
+
+    if (hasField("connectionStatus")) {
+      integrationDoc.connectionStatus = normalizarCoachMarketingConnectionStatus(body.connectionStatus || "not_connected");
+    }
+
+    if (hasField("authMode")) {
+      integrationDoc.authMode = normalizarCoachMarketingAuthMode(body.authMode || "manual_placeholder");
+    }
+
+    if (hasField("accountType")) {
+      integrationDoc.accountType = normalizarCoachMarketingAccountType(body.accountType || "custom");
+    }
+
+    if (hasField("accountLabel")) {
+      integrationDoc.accountLabel = cleanText(body.accountLabel || "").slice(0, 120);
+    }
+
+    if (hasField("externalBusinessId")) {
+      integrationDoc.externalBusinessId = cleanText(body.externalBusinessId || "").slice(0, 120);
+    }
+
+    if (hasField("externalAccountId")) {
+      integrationDoc.externalAccountId = cleanText(body.externalAccountId || "").slice(0, 120);
+    }
+
+    if (hasField("externalAccountName")) {
+      integrationDoc.externalAccountName = cleanText(body.externalAccountName || "").slice(0, 120);
+    }
+
+    integrationDoc.expectedScopes = nextExpectedScopes;
+    integrationDoc.grantedScopes = nextGrantedScopes;
+    integrationDoc.missingScopes = nextMissingScopes;
+
+    if (hasField("capabilities")) {
+      integrationDoc.capabilities = limpiarCoachMarketingStringArray(body.capabilities || [], 20, 50);
+    }
+
+    if (hasField("config")) {
+      integrationDoc.config = limpiarCoachMarketingConfig(body.config || null);
+    }
+
+    if (hasField("notes")) {
+      integrationDoc.notes = truncarTextoPrompt(cleanText(body.notes || ""), 220);
+    }
+
+    if (hasField("lastHealthStatus")) {
+      integrationDoc.lastHealthStatus = normalizarCoachMarketingHealthStatus(body.lastHealthStatus || "pending");
+    }
+
+    if (hasField("lastHealthCheckAt")) {
+      integrationDoc.lastHealthCheckAt = normalizarCoachOptionalDate(body.lastHealthCheckAt || null);
+    }
+
+    if (hasField("lastSyncAt")) {
+      integrationDoc.lastSyncAt = normalizarCoachOptionalDate(body.lastSyncAt || null);
+    }
+
+    integrationDoc.updatedAt = new Date();
+    await integrationDoc.save();
+
+    const integration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const updatedFields = [
+      previousIntegration?.label !== integration?.label ? "label" : "",
+      previousIntegration?.status !== integration?.status ? "status" : "",
+      previousIntegration?.connectionStatus !== integration?.connectionStatus ? "connection" : "",
+      previousIntegration?.authMode !== integration?.authMode ? "auth" : "",
+      previousIntegration?.accountType !== integration?.accountType ? "accountType" : "",
+      previousIntegration?.accountLabel !== integration?.accountLabel ? "accountLabel" : "",
+      previousIntegration?.externalBusinessId !== integration?.externalBusinessId ? "businessId" : "",
+      previousIntegration?.externalAccountId !== integration?.externalAccountId ? "accountId" : "",
+      previousIntegration?.externalAccountName !== integration?.externalAccountName ? "accountName" : "",
+      JSON.stringify(previousIntegration?.expectedScopes || []) !== JSON.stringify(integration?.expectedScopes || [])
+        ? "expectedScopes"
+        : "",
+      JSON.stringify(previousIntegration?.grantedScopes || []) !== JSON.stringify(integration?.grantedScopes || [])
+        ? "grantedScopes"
+        : "",
+      JSON.stringify(previousIntegration?.missingScopes || []) !== JSON.stringify(integration?.missingScopes || [])
+        ? "missingScopes"
+        : "",
+      JSON.stringify(previousIntegration?.capabilities || []) !== JSON.stringify(integration?.capabilities || [])
+        ? "capabilities"
+        : "",
+      JSON.stringify(previousIntegration?.config || null) !== JSON.stringify(integration?.config || null) ? "config" : "",
+      previousIntegration?.notes !== integration?.notes ? "notes" : ""
+    ].filter(Boolean);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider: integration.provider,
+      product: integration.product,
+      direction: "internal",
+      eventType: "integration_updated",
+      entityType: "integration",
+      entityId: integration.id,
+      status: "processed",
+      summary: `Se actualizo la integracion ${integration.label || integration.productLabel || "sin nombre"}.`,
+      payload: {
+        updatedFields,
+        connectionStatus: integration.connectionStatus,
+        healthStatus: integration.lastHealthStatus,
+        missingScopes: integration.missingScopes
+      }
+    });
+
+    res.json({
+      integration,
+      updatedFields
+    });
+  } catch (error) {
+    console.error("Error actualizando integracion de marketing del Coach:", error.message);
+    responderCoachError(res, 500, "No pude actualizar la integracion de marketing.");
+  }
+});
+
+app.post("/api/coach/marketing/integrations/:integrationId/health-check", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const integrationId = normalizarCoachCrmObjectId(req.params?.integrationId || "");
+
+  if (!integrationId) {
+    return responderCoachError(res, 400, "No encontre la integracion que quieres revisar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const integrationDoc = await CoachMarketingIntegration.findOne(
+      construirCoachWorkspaceQuery(auth.user, { _id: integrationId })
+    );
+
+    if (!integrationDoc) {
+      return responderCoachError(res, 404, "No encontre la integracion de marketing.");
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const hasField = field => Object.prototype.hasOwnProperty.call(body, field);
+    const nextHealthStatus = normalizarCoachMarketingHealthStatus(
+      body.healthStatus || body.lastHealthStatus || integrationDoc.lastHealthStatus || "pending"
+    );
+    const nextExpectedScopes = resolverCoachMarketingExpectedScopes({
+      product: integrationDoc.product || "",
+      provider: integrationDoc.provider || "",
+      explicitScopes: hasField("expectedScopes") ? body.expectedScopes || [] : integrationDoc.expectedScopes || []
+    });
+    const nextGrantedScopes = limpiarCoachMarketingStringArray(
+      hasField("grantedScopes") ? body.grantedScopes || [] : integrationDoc.grantedScopes || [],
+      20,
+      60
+    );
+    const nextMissingScopes = resolverCoachMarketingMissingScopes({
+      expectedScopes: nextExpectedScopes,
+      grantedScopes: nextGrantedScopes,
+      explicitMissingScopes: hasField("missingScopes") ? body.missingScopes || [] : integrationDoc.missingScopes || []
+    });
+    const nextConnectionStatus = hasField("connectionStatus")
+      ? normalizarCoachMarketingConnectionStatus(body.connectionStatus || "not_connected")
+      : inferirCoachMarketingConnectionStatusDesdeHealth(nextHealthStatus, integrationDoc.connectionStatus || "");
+    const occurredAt = new Date();
+    const summary =
+      truncarTextoPrompt(cleanText(body.summary || ""), 220) ||
+      `Se registro un health check para ${cleanText(integrationDoc.label || "").slice(0, 120) || "la integracion"}.`;
+    const lastError =
+      nextHealthStatus === "error"
+        ? truncarTextoPrompt(cleanText(body.lastError || body.summary || ""), 200)
+        : truncarTextoPrompt(cleanText(body.lastError || ""), 200);
+
+    integrationDoc.expectedScopes = nextExpectedScopes;
+    integrationDoc.grantedScopes = nextGrantedScopes;
+    integrationDoc.missingScopes = nextMissingScopes;
+    integrationDoc.connectionStatus = nextConnectionStatus;
+    integrationDoc.lastHealthStatus = nextHealthStatus;
+    integrationDoc.lastHealthCheckAt = occurredAt;
+    integrationDoc.updatedAt = occurredAt;
+    await integrationDoc.save();
+
+    const integration = limpiarCoachMarketingIntegration(
+      integrationDoc?.toObject ? integrationDoc.toObject() : integrationDoc
+    );
+    const event = await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: integrationDoc._id,
+      provider: integration.provider,
+      product: integration.product,
+      direction: "internal",
+      eventType: "integration_health_checked",
+      entityType: "integration",
+      entityId: integration.id,
+      status: nextHealthStatus === "error" ? "failed" : "processed",
+      summary,
+      payload: {
+        healthStatus: integration.lastHealthStatus,
+        connectionStatus: integration.connectionStatus,
+        expectedScopes: integration.expectedScopes,
+        grantedScopes: integration.grantedScopes,
+        missingScopes: integration.missingScopes
+      },
+      occurredAt,
+      lastError
+    });
+
+    res.json({
+      integration,
+      event
+    });
+  } catch (error) {
+    console.error("Error registrando health check de integracion del Coach:", error.message);
+    responderCoachError(res, 500, "No pude registrar el health check de la integracion.");
   }
 });
 
