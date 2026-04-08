@@ -9849,6 +9849,14 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const attributionSourceList = document.querySelector("[data-marketing-attribution-source-list]");
   const attributionCampaignList = document.querySelector("[data-marketing-attribution-campaign-list]");
   const attributionCaptureList = document.querySelector("[data-marketing-attribution-capture-list]");
+  const automationForm = document.querySelector("[data-marketing-automation-form]");
+  const automationSaveButton = document.querySelector("[data-marketing-automation-save]");
+  const automationPreviewButton = document.querySelector("[data-marketing-automation-preview]");
+  const automationFeedback = document.querySelector("[data-marketing-automation-feedback]");
+  const automationSelect = document.querySelector("[data-marketing-automation-select]");
+  const automationPreviewCopy = document.querySelector("[data-marketing-automation-preview-copy]");
+  const automationPreviewList = document.querySelector("[data-marketing-automation-preview-list]");
+  const automationList = document.querySelector("[data-marketing-automation-list]");
   const intakeCreateForm = document.querySelector("[data-marketing-intake-create-form]");
   const intakeCreateSaveButton = document.querySelector("[data-marketing-intake-create-save]");
   const intakeCreateFeedback = document.querySelector("[data-marketing-intake-create-feedback]");
@@ -9915,6 +9923,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !attributionSourceList ||
     !attributionCampaignList ||
     !attributionCaptureList ||
+    !automationForm ||
+    !automationSelect ||
+    !automationPreviewList ||
+    !automationList ||
     !intakeCreateForm ||
     !intakeConfigForm ||
     !intakeSelect ||
@@ -9940,6 +9952,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     creatives: document.querySelector("[data-marketing-summary-creatives]"),
     publications: document.querySelector("[data-marketing-summary-publications]"),
     intakeSources: document.querySelector("[data-marketing-summary-intakes]"),
+    automations: document.querySelector("[data-marketing-summary-automations]"),
     events: document.querySelector("[data-marketing-summary-events]"),
     permissionMode: document.querySelector("[data-marketing-permission-mode]"),
     permissionScope: document.querySelector("[data-marketing-permission-scope]"),
@@ -9947,6 +9960,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     teamMembers: document.querySelector("[data-marketing-team-members]"),
     connected: document.querySelector("[data-marketing-health-connected]"),
     activeIntakeSources: document.querySelector("[data-marketing-health-active-intakes]"),
+    activeAutomations: document.querySelector("[data-marketing-health-active-automations]"),
     failedPublications: document.querySelector("[data-marketing-health-failed-publications]"),
     failedEvents: document.querySelector("[data-marketing-health-failed-events]"),
     captureTotal: document.querySelector("[data-marketing-capture-total]"),
@@ -9993,6 +10007,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const intakeCreateCaptureSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-capture-select]");
   const intakeCreateTypeSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-type-select]");
   const intakeCreateStatusSelect = intakeCreateForm.querySelector("[data-marketing-intake-create-status-select]");
+  const automationStatusSelect = automationForm.querySelector("[data-marketing-automation-status-select]");
+  const automationTriggerSelect = automationForm.querySelector("[data-marketing-automation-trigger-select]");
+  const automationActionSelect = automationForm.querySelector("[data-marketing-automation-action-select]");
+  const automationIntegrationSelect = automationForm.querySelector("[data-marketing-automation-integration-select]");
+  const automationCampaignSelect = automationForm.querySelector("[data-marketing-automation-campaign-select]");
+  const automationPublicationSelect = automationForm.querySelector("[data-marketing-automation-publication-select]");
+  const automationIntakeSelect = automationForm.querySelector("[data-marketing-automation-intake-select]");
   const intakeIntegrationSelect = intakeConfigForm.querySelector("[data-marketing-intake-integration-select]");
   const intakeChannelSelect = intakeConfigForm.querySelector("[data-marketing-intake-channel-select]");
   const intakeCampaignSelect = intakeConfigForm.querySelector("[data-marketing-intake-campaign-select]");
@@ -10019,14 +10040,17 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     campaigns: [],
     creatives: [],
     publications: [],
+    automations: [],
     intakeSources: [],
     events: [],
     selectedIntegrationId: "",
     selectedCampaignId: "",
     selectedPublicationId: "",
+    selectedAutomationId: "",
     selectedIntakeSourceId: "",
     campaignWorkflow: null,
     publicationWorkflow: null,
+    automationPreview: null,
     intakePreview: null,
     filters: {
       scope: marketingModule?.permissions?.scope || "team",
@@ -10122,11 +10146,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         creatives: Number(baseCounts.creatives || 0),
         publications: Number(baseCounts.publications || 0),
         intakeSources: Number(baseCounts.intakeSources || state.module?.intakeSourcesCount || 0),
+        automations: Number(baseCounts.automations || state.module?.automationsCount || 0),
         events: Number(baseCounts.events || 0)
       },
       health: {
         connectedIntegrations: Number(state.overview?.health?.connectedIntegrations || 0),
         activeIntakeSources: Number(state.overview?.health?.activeIntakeSources || 0),
+        activeAutomations: Number(state.overview?.health?.activeAutomations || 0),
         failedPublications: Number(state.overview?.health?.failedPublications || 0),
         failedEvents: Number(state.overview?.health?.failedEvents || 0)
       },
@@ -10317,6 +10343,35 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     return getSelectedPublication();
   };
 
+  const getSelectedAutomation = () =>
+    state.automations.find(entry => String(entry?.id || "") === String(state.selectedAutomationId || "")) || null;
+
+  const syncSelectedAutomation = preferredId => {
+    const candidateId = String(preferredId !== undefined ? preferredId : state.selectedAutomationId || "").trim();
+    const availableIds = state.automations.map(item => String(item?.id || "")).filter(Boolean);
+
+    if (!availableIds.length) {
+      state.selectedAutomationId = "";
+      state.automationPreview = null;
+      return null;
+    }
+
+    if (!candidateId) {
+      state.selectedAutomationId = "";
+      state.automationPreview = null;
+      return null;
+    }
+
+    const nextId = availableIds.includes(candidateId) ? candidateId : "";
+
+    if (String(state.selectedAutomationId || "") !== String(nextId)) {
+      state.automationPreview = null;
+    }
+
+    state.selectedAutomationId = nextId;
+    return getSelectedAutomation();
+  };
+
   const getSelectedIntakeSource = () =>
     state.intakeSources.find(entry => String(entry?.id || "") === String(state.selectedIntakeSourceId || "")) || null;
 
@@ -10360,6 +10415,16 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     return item?.name || "Sin creativo";
   };
 
+  const getPublicationLabel = publicationId => {
+    const item = state.publications.find(entry => String(entry?.id || "") === String(publicationId || ""));
+    return item?.label || "Sin publicacion";
+  };
+
+  const getIntakeSourceLabel = intakeSourceId => {
+    const item = state.intakeSources.find(entry => String(entry?.id || "") === String(intakeSourceId || ""));
+    return item?.label || "Sin fuente";
+  };
+
   const getMarketingActorLabel = item => {
     if (!item || typeof item !== "object") {
       return "Sin responsable";
@@ -10379,9 +10444,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     setSummaryValue(summaryNodes.creatives, overview.counts.creatives);
     setSummaryValue(summaryNodes.publications, overview.counts.publications);
     setSummaryValue(summaryNodes.intakeSources, overview.counts.intakeSources);
+    setSummaryValue(summaryNodes.automations, overview.counts.automations);
     setSummaryValue(summaryNodes.events, overview.counts.events);
     setSummaryValue(summaryNodes.connected, overview.health.connectedIntegrations);
     setSummaryValue(summaryNodes.activeIntakeSources, overview.health.activeIntakeSources);
+    setSummaryValue(summaryNodes.activeAutomations, overview.health.activeAutomations);
     setSummaryValue(summaryNodes.failedPublications, overview.health.failedPublications);
     setSummaryValue(summaryNodes.failedEvents, overview.health.failedEvents);
     setSummaryValue(summaryNodes.captureTotal, overview.capture.totalCaptures);
@@ -10603,6 +10670,226 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
                 item.attribution?.recordSourceLabel ||
                 "Captura reciente del Coach."
             )}</p>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderAutomationPrep = () => {
+    const automation = syncSelectedAutomation();
+    const preview =
+      state.automationPreview && String(state.automationPreview?.automationId || "") === String(automation?.id || "")
+        ? state.automationPreview
+        : null;
+
+    if (automationSelect) {
+      automationSelect.value = state.selectedAutomationId || "";
+    }
+
+    if (!automation) {
+      automationForm.reset();
+      if (automationStatusSelect) {
+        automationStatusSelect.value = state.catalog?.statuses?.automation?.[0]?.value || "draft";
+      }
+      if (automationTriggerSelect) {
+        automationTriggerSelect.value = state.catalog?.automationTriggers?.[0]?.value || "lead_captured";
+      }
+      if (automationActionSelect) {
+        automationActionSelect.value = state.catalog?.automationActions?.[0]?.value || "notify_owner";
+      }
+      if (automationIntegrationSelect) automationIntegrationSelect.value = "";
+      if (automationCampaignSelect) automationCampaignSelect.value = "";
+      if (automationPublicationSelect) automationPublicationSelect.value = "";
+      if (automationIntakeSelect) automationIntakeSelect.value = "";
+      if (automationPreviewCopy) {
+        automationPreviewCopy.textContent =
+          "Selecciona una automatizacion para ver sus filtros, su alcance y si ya encontro eventos recientes.";
+      }
+      renderEmptyState(automationPreviewList, "El diagnostico de la automatizacion aparecera aqui.");
+      if (automationSaveButton) automationSaveButton.disabled = false;
+      if (automationPreviewButton) automationPreviewButton.disabled = true;
+      return;
+    }
+
+    if (automationSaveButton) automationSaveButton.disabled = false;
+    if (automationPreviewButton) automationPreviewButton.disabled = false;
+
+    automationForm.elements.automationId.value = automation.id || "";
+    automationForm.elements.label.value = automation.label || "";
+    automationForm.elements.filters.value = stringifyConfigInput(automation.filters || null);
+    automationForm.elements.actionConfig.value = stringifyConfigInput(automation.actionConfig || null);
+    automationForm.elements.notes.value = automation.notes || "";
+    if (automationStatusSelect) automationStatusSelect.value = automation.status || "draft";
+    if (automationTriggerSelect) automationTriggerSelect.value = automation.triggerEventType || "lead_captured";
+    if (automationActionSelect) automationActionSelect.value = automation.actionType || "notify_owner";
+    if (automationIntegrationSelect) automationIntegrationSelect.value = automation.integrationId || "";
+    if (automationCampaignSelect) automationCampaignSelect.value = automation.campaignId || "";
+    if (automationPublicationSelect) automationPublicationSelect.value = automation.publicationId || "";
+    if (automationIntakeSelect) automationIntakeSelect.value = automation.intakeSourceId || "";
+
+    if (automationPreviewCopy) {
+      automationPreviewCopy.textContent = preview
+        ? preview.summary || "La automatizacion ya se probo con eventos recientes."
+        : [
+            automation.label || "Automatizacion",
+            automation.triggerEventTypeLabel || "Sin disparador",
+            automation.actionTypeLabel || "Sin accion",
+            automation.lastMatchedAt
+              ? `Ultimo match ${formatDateTimeShort(automation.lastMatchedAt)}`
+              : "Sin coincidencias todavia"
+          ]
+            .filter(Boolean)
+            .join(" · ");
+    }
+
+    const diagnostics = [
+      {
+        label: "Estado",
+        value: automation.statusLabel || "Borrador",
+        detail: automation.providerLabel || "Sistema"
+      },
+      {
+        label: "Disparador",
+        value: automation.triggerEventTypeLabel || "Sin disparador",
+        detail: automation.productLabel || "Producto"
+      },
+      {
+        label: "Accion",
+        value: automation.actionTypeLabel || "Sin accion",
+        detail: automation.notes || "Sin notas"
+      },
+      {
+        label: "Integracion",
+        value: getIntegrationLabel(automation.integrationId),
+        detail: getCampaignLabel(automation.campaignId)
+      },
+      {
+        label: "Publicacion",
+        value: getPublicationLabel(automation.publicationId),
+        detail: getIntakeSourceLabel(automation.intakeSourceId)
+      },
+      {
+        label: "Filtros",
+        value: Array.isArray(automation.filterKeys) && automation.filterKeys.length
+          ? automation.filterKeys.join(", ")
+          : "Sin filtros"
+      },
+      {
+        label: "Accion config",
+        value: Array.isArray(automation.actionConfigKeys) && automation.actionConfigKeys.length
+          ? automation.actionConfigKeys.join(", ")
+          : "Sin configuracion"
+      },
+      {
+        label: "Actividad",
+        value: automation.lastMatchedAt
+          ? `Ultimo match ${formatDateTimeShort(automation.lastMatchedAt)}`
+          : "Sin coincidencias",
+        detail: automation.lastRunSummary || "Todavia no se ha probado esta regla."
+      },
+      {
+        label: "Corridas",
+        value: String(Number(automation.runCount || 0)),
+        detail: automation.lastTriggeredAt
+          ? `Ultima ejecucion ${formatDateTimeShort(automation.lastTriggeredAt)}`
+          : "Sin ejecuciones registradas"
+      }
+    ];
+
+    if (preview) {
+      diagnostics.push({
+        label: "Preview",
+        value: preview.ready ? "Lista para operar" : "Ajusta la regla antes de operarla",
+        detail: `${Number(preview.matchedCount || 0)} coincidencia(s) reciente(s)`
+      });
+    }
+
+    const recentMatches = Array.isArray(preview?.recentMatches) ? preview.recentMatches : [];
+
+    automationPreviewList.innerHTML = [
+      ...diagnostics.map(
+        item => `
+          <article class="territory-result-card">
+            <strong>${escapeHtml(item.label || "Dato")}</strong>
+            <span>${escapeHtml(item.value || "Pendiente")}</span>
+            <p>${escapeHtml(item.detail || "Sin detalle")}</p>
+          </article>
+        `
+      ),
+      ...recentMatches.map(
+        item => `
+          <article class="territory-result-card">
+            <strong>${escapeHtml(item.summary || item.eventTypeLabel || item.eventType || "Evento reciente")}</strong>
+            <span>${escapeHtml(
+              [
+                item.statusLabel || "Sin estado",
+                item.providerLabel || "Sistema",
+                formatDateTimeShort(item.occurredAt)
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            )}</span>
+            <p>${escapeHtml(
+              [item.entityType || "", item.entityId ? `ID ${item.entityId}` : "", item.lastError || ""]
+                .filter(Boolean)
+                .join(" · ") || "Evento reciente del modulo de marketing."
+            )}</p>
+          </article>
+        `
+      )
+    ].join("");
+  };
+
+  const renderAutomations = () => {
+    if (!state.automations.length) {
+      renderEmptyState(automationList, "Todavia no hay automatizaciones preparadas en esta cuenta.");
+      return;
+    }
+
+    automationList.innerHTML = state.automations
+      .map(
+        item => `
+          <article class="team-seat-card">
+            <div class="team-seat-head">
+              <div>
+                <strong>${escapeHtml(item.label || "Automatizacion")}</strong>
+                <span>${escapeHtml(
+                  [item.triggerEventTypeLabel || "Sin trigger", item.actionTypeLabel || "Sin accion", getCampaignLabel(item.campaignId)]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+              </div>
+              <span class="team-seat-status" data-state="${escapeHtml(resolveCoachMarketingBadgeState(item.status))}">
+                ${escapeHtml(item.statusLabel || "Borrador")}
+              </span>
+            </div>
+
+            <div class="team-seat-metrics">
+              <span>Integracion: <strong>${escapeHtml(getIntegrationLabel(item.integrationId))}</strong></span>
+              <span>Publicacion: <strong>${escapeHtml(getPublicationLabel(item.publicationId))}</strong></span>
+              <span>Fuente: <strong>${escapeHtml(getIntakeSourceLabel(item.intakeSourceId))}</strong></span>
+              <span>Responsable: <strong>${escapeHtml(getMarketingActorLabel(item))}</strong></span>
+              <span>Corridas: <strong>${Number(item.runCount || 0)}</strong></span>
+            </div>
+
+            <p class="mini-note team-seat-note">
+              ${escapeHtml(
+                item.lastRunSummary ||
+                  item.notes ||
+                  "Automatizacion lista para reaccionar a eventos internos cuando conectemos la capa ejecutora."
+              )}
+            </p>
+
+            <div class="dashboard-actions">
+              <button
+                type="button"
+                class="nav-button"
+                data-marketing-select-automation="${escapeHtml(item.id || "")}"
+              >
+                ${String(item.id || "") === String(state.selectedAutomationId || "") ? "Editando" : "Preparar"}
+              </button>
+            </div>
           </article>
         `
       )
@@ -10894,6 +11181,45 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     buildChoiceSelectOptions(publicationReviewSelect, state.catalog?.statuses?.review || [], "Revision");
 
     buildSelectOptions({
+      target: automationSelect,
+      items: state.automations,
+      placeholder: "Nueva automatizacion",
+      labelBuilder: item => item?.label || "Automatizacion"
+    });
+
+    buildChoiceSelectOptions(automationStatusSelect, state.catalog?.statuses?.automation || [], "Estado");
+    buildChoiceSelectOptions(automationTriggerSelect, state.catalog?.automationTriggers || [], "Disparador");
+    buildChoiceSelectOptions(automationActionSelect, state.catalog?.automationActions || [], "Accion");
+
+    buildSelectOptions({
+      target: automationIntegrationSelect,
+      items: state.integrations,
+      placeholder: "Cualquier integracion",
+      labelBuilder: item => item?.label || item?.productLabel || "Integracion"
+    });
+
+    buildSelectOptions({
+      target: automationCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Cualquier campana",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildSelectOptions({
+      target: automationPublicationSelect,
+      items: state.publications,
+      placeholder: "Cualquier publicacion",
+      labelBuilder: item => item?.label || "Publicacion"
+    });
+
+    buildSelectOptions({
+      target: automationIntakeSelect,
+      items: state.intakeSources,
+      placeholder: "Cualquier fuente",
+      labelBuilder: item => item?.label || "Fuente de captura"
+    });
+
+    buildSelectOptions({
       target: intakeCreateIntegrationSelect,
       items: state.integrations,
       placeholder: "Sin integracion ligada",
@@ -10975,6 +11301,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     if (reportingCampaignSelect) {
       reportingCampaignSelect.value = state.selectedCampaignId || "";
+    }
+
+    if (automationSelect) {
+      automationSelect.value = state.selectedAutomationId || "";
     }
   };
 
@@ -11949,10 +12279,12 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedIntegration();
     syncSelectedCampaign();
     syncSelectedPublication();
+    syncSelectedAutomation();
     syncSelectedIntakeSource();
     renderCampaignWorkflow();
     renderReportingPanel();
     renderPublicationWorkflow();
+    renderAutomationPrep();
     renderIntakePrep();
     renderConnectorPrep();
     renderIntegrations();
@@ -11960,6 +12292,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     renderCampaigns();
     renderCreatives();
     renderPublications();
+    renderAutomations();
     renderIntakeSources();
     renderEvents();
   };
@@ -11974,6 +12307,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       campaignsData,
       creativesData,
       publicationsData,
+      automationsData,
       intakeSourcesData,
       eventsData
     ] =
@@ -11985,6 +12319,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         apiRequest(`/api/coach/marketing/campaigns${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/creatives${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/publications${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/automations${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/intake-sources${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/events${buildMarketingQueryString({ limit: 16 })}`)
       ]);
@@ -11998,11 +12333,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.campaigns = Array.isArray(campaignsData?.items) ? campaignsData.items : [];
     state.creatives = Array.isArray(creativesData?.items) ? creativesData.items : [];
     state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
+    state.automations = Array.isArray(automationsData?.items) ? automationsData.items : [];
     state.intakeSources = Array.isArray(intakeSourcesData?.items) ? intakeSourcesData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
     syncSelectedIntegration();
     syncSelectedCampaign();
     syncSelectedPublication();
+    syncSelectedAutomation();
     syncSelectedIntakeSource();
     renderAll();
 
@@ -12142,6 +12479,26 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     loadPublicationWorkflow(state.selectedPublicationId).catch(() => {});
   });
 
+  automationSelect?.addEventListener("change", () => {
+    clearMessage(automationFeedback);
+    syncSelectedAutomation(automationSelect.value || "");
+    renderAutomationPrep();
+    renderAutomations();
+  });
+
+  automationList.addEventListener("click", event => {
+    const button = event.target.closest("[data-marketing-select-automation]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(automationFeedback);
+    syncSelectedAutomation(button.dataset.marketingSelectAutomation || "");
+    renderAutomationPrep();
+    renderAutomations();
+  });
+
   intakeSelect?.addEventListener("change", () => {
     clearMessage(intakeFeedback);
     syncSelectedIntakeSource(intakeSelect.value || "");
@@ -12232,6 +12589,90 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(integrationFeedback, error.message || "No pude guardar la integracion.", "error");
     } finally {
       setButtonLoading(integrationSaveButton, false);
+    }
+  });
+
+  automationForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(automationFeedback);
+    setButtonLoading(automationSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(automationForm);
+      const automation = getSelectedAutomation();
+      const automationId = String(formData.get("automationId") || automation?.id || "").trim();
+      const isUpdate = Boolean(automationId);
+      const data = await apiRequest(
+        isUpdate ? `/api/coach/marketing/automations/${automationId}` : "/api/coach/marketing/automations",
+        {
+          method: isUpdate ? "PUT" : "POST",
+          body: {
+            label: formData.get("label"),
+            status: formData.get("status"),
+            triggerEventType: formData.get("triggerEventType"),
+            actionType: formData.get("actionType"),
+            integrationId: formData.get("integrationId"),
+            campaignId: formData.get("campaignId"),
+            publicationId: formData.get("publicationId"),
+            intakeSourceId: formData.get("intakeSourceId"),
+            filters: parseConfigInput(formData.get("filters")),
+            actionConfig: parseConfigInput(formData.get("actionConfig")),
+            notes: formData.get("notes")
+          }
+        }
+      );
+
+      state.selectedAutomationId = data?.automation?.id || automationId || "";
+      state.automationPreview = null;
+      await loadWorkspace();
+      setMessage(
+        automationFeedback,
+        isUpdate
+          ? "La automatizacion quedo actualizada dentro del Coach."
+          : "Automatizacion guardada dentro del workspace de marketing.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(automationFeedback, error.message || "No pude guardar la automatizacion.", "error");
+    } finally {
+      setButtonLoading(automationSaveButton, false);
+    }
+  });
+
+  automationPreviewButton?.addEventListener("click", async () => {
+    clearMessage(automationFeedback);
+    const automation = getSelectedAutomation();
+
+    if (!automation?.id) {
+      setMessage(automationFeedback, "Primero guarda o selecciona una automatizacion para probarla.", "error");
+      return;
+    }
+
+    setButtonLoading(automationPreviewButton, true, "Probando...");
+
+    try {
+      const data = await apiRequest(`/api/coach/marketing/automations/${automation.id}/preview`, {
+        method: "POST"
+      });
+
+      state.selectedAutomationId = data?.automation?.id || automation.id;
+      state.automationPreview = {
+        automationId: data?.automation?.id || automation.id,
+        ...(data?.preview || {})
+      };
+      await loadWorkspace();
+      renderAutomationPrep();
+      setMessage(
+        automationFeedback,
+        data?.preview?.matchedCount
+          ? "La regla encontro eventos recientes dentro del modulo."
+          : "La regla se guardo bien, pero todavia no encontro eventos recientes.",
+        data?.preview?.matchedCount ? "success" : "error"
+      );
+    } catch (error) {
+      setMessage(automationFeedback, error.message || "No pude probar la automatizacion.", "error");
+    } finally {
+      setButtonLoading(automationPreviewButton, false);
     }
   });
 

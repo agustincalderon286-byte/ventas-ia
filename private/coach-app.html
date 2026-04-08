@@ -2374,6 +2374,10 @@
                 <span>Fuentes de captura</span>
               </div>
               <div class="mini-stat">
+                <strong data-marketing-summary-automations>0</strong>
+                <span>Automatizaciones</span>
+              </div>
+              <div class="mini-stat">
                 <strong data-marketing-summary-events>0</strong>
                 <span>Eventos</span>
               </div>
@@ -2391,6 +2395,10 @@
               <div class="mini-stat">
                 <strong data-marketing-health-active-intakes>0</strong>
                 <span>Fuentes activas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-health-active-automations>0</strong>
+                <span>Automatizaciones activas</span>
               </div>
               <div class="mini-stat">
                 <strong data-marketing-health-failed-events>0</strong>
@@ -2639,6 +2647,121 @@
                 <div class="territory-result-list" data-marketing-reporting-top-list>
                   <div class="team-seat-empty">Las campanas con resultados apareceran aqui.</div>
                 </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
+            <div class="eyebrow">Automatizaciones nativas</div>
+            <h3>Prepara reglas internas antes de enchufar APIs reales</h3>
+            <p>
+              Aqui dejas listas las reglas que despues podran reaccionar a leads, capturas, publicaciones, campanas o
+              syncs sin mezclar equipos ni cuentas.
+            </p>
+
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <form class="coach-form marketing-form-card" data-marketing-automation-form>
+                <h4>Preparar automatizacion</h4>
+                <label>
+                  Automatizacion
+                  <select name="automationId" data-marketing-automation-select>
+                    <option value="">Nueva automatizacion</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre visible
+                  <input type="text" name="label" maxlength="140" placeholder="Ej. Avisar al owner cuando entre un lead" />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" data-marketing-automation-status-select></select>
+                </label>
+                <label>
+                  Disparador
+                  <select name="triggerEventType" data-marketing-automation-trigger-select></select>
+                </label>
+                <label>
+                  Accion
+                  <select name="actionType" data-marketing-automation-action-select></select>
+                </label>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-automation-integration-select>
+                    <option value="">Cualquier integracion</option>
+                  </select>
+                </label>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-automation-campaign-select>
+                    <option value="">Cualquier campana</option>
+                  </select>
+                </label>
+                <label>
+                  Publicacion
+                  <select name="publicationId" data-marketing-automation-publication-select>
+                    <option value="">Cualquier publicacion</option>
+                  </select>
+                </label>
+                <label>
+                  Fuente de captura
+                  <select name="intakeSourceId" data-marketing-automation-intake-select>
+                    <option value="">Cualquier fuente</option>
+                  </select>
+                </label>
+                <label class="marketing-field-full">
+                  Filtros
+                  <textarea
+                    name="filters"
+                    rows="4"
+                    maxlength="900"
+                    placeholder='{"eventStatus":"processed","entityType":"lead"}'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Configuracion de accion
+                  <textarea
+                    name="actionConfig"
+                    rows="4"
+                    maxlength="900"
+                    placeholder='{"destination":"owner","tag":"lead_nuevo"}'
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Notas
+                  <textarea
+                    name="notes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que debe pasar cuando esta regla se active?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-automation-save>Guardar automatizacion</button>
+                  <button type="button" class="nav-button" data-marketing-automation-preview>Probar regla</button>
+                </div>
+                <div class="form-result" data-marketing-automation-feedback></div>
+              </form>
+
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Diagnostico de automatizacion</h4>
+                <p class="mini-note" data-marketing-automation-preview-copy>
+                  Selecciona una automatizacion para ver sus filtros, su alcance y si ya encontro eventos recientes.
+                </p>
+
+                <div class="territory-result-list" data-marketing-automation-preview-list>
+                  <div class="team-seat-empty">El diagnostico de la automatizacion aparecera aqui.</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="eyebrow">Automatizaciones guardadas</div>
+              <div class="team-seat-list" data-marketing-automation-list>
+                <div class="team-seat-empty">Todavia no hay automatizaciones preparadas en esta cuenta.</div>
               </div>
             </div>
           </article>
