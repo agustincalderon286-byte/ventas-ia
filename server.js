@@ -609,8 +609,24 @@ const coachRecruitmentApplicationSchema = new mongoose.Schema({
   hasCar: String,
   customerServiceExperience: String,
   workPreference: String,
+  positionApplied: String,
+  city: String,
+  zipCode: String,
   salesExperience: String,
   about: String,
+  source: String,
+  sourceDetail: String,
+  landingPageUrl: String,
+  referrerUrl: String,
+  pageTitle: String,
+  utmSource: String,
+  utmMedium: String,
+  utmCampaign: String,
+  utmTerm: String,
+  utmContent: String,
+  gclid: String,
+  fbclid: String,
+  ttclid: String,
   summary: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
@@ -3324,6 +3340,48 @@ async function resolverCoachContactShareContextPorCode(shareCode = "") {
   if (!(await coachTieneAccesoOperativo(userDoc))) {
     return null;
   }
+
+  const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
+  const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
+
+  if (accountType === "seat" && seatStatus !== "active") {
+    return null;
+  }
+
+  const ownerProfileDoc = await obtenerCoachOwnerProfile(userDoc);
+  const ownership = await construirCoachOwnershipSnapshot(userDoc);
+
+  return {
+    shareCode: safeCode,
+    userDoc,
+    profileDoc,
+    ownerProfileDoc: ownerProfileDoc || profileDoc,
+    ownership
+  };
+}
+
+async function resolverCoachRecruitmentShareContextPorCode(shareCode = "") {
+  const safeCode = normalizarCoachShareCodeSegment(shareCode, 24);
+
+  if (!safeCode) {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({
+    chefShareCode: safeCode
+  });
+
+  if (!profileDoc?.userId) {
+    return null;
+  }
+
+  let userDoc = await CoachUser.findById(profileDoc.userId);
+
+  if (!userDoc) {
+    return null;
+  }
+
+  userDoc = await asegurarCoachUserBase(userDoc);
 
   const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
   const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
@@ -7499,6 +7557,9 @@ function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, app
       fullName: application?.fullName || "",
       phone: application?.phone || "",
       email: application?.email || "",
+      positionApplied: application?.positionApplied || "",
+      city: application?.city || "",
+      zipCode: application?.zipCode || "",
       drives: application?.drives || "",
       hasCar: application?.hasCar || "",
       customerServiceExperience: application?.customerServiceExperience || "",
@@ -7508,6 +7569,21 @@ function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, app
       summary: application?.summary || "",
       createdAt: application?.createdAt || null,
       updatedAt: application?.updatedAt || null
+    },
+    tracking: {
+      source: application?.source || "",
+      sourceDetail: application?.sourceDetail || "",
+      landingPageUrl: application?.landingPageUrl || "",
+      referrerUrl: application?.referrerUrl || "",
+      pageTitle: application?.pageTitle || "",
+      utmSource: application?.utmSource || "",
+      utmMedium: application?.utmMedium || "",
+      utmCampaign: application?.utmCampaign || "",
+      utmTerm: application?.utmTerm || "",
+      utmContent: application?.utmContent || "",
+      gclid: application?.gclid || "",
+      fbclid: application?.fbclid || "",
+      ttclid: application?.ttclid || ""
     }
   };
 }
@@ -7524,11 +7600,14 @@ function construirCorreoCoachRecruitmentApplication(userDoc = null, application 
     `Nombre: ${application?.fullName || "Sin nombre"}`,
     `Telefono: ${application?.phone || "Sin telefono"}`,
     `Correo: ${application?.email || "Sin correo"}`,
+    `Vacante: ${application?.positionApplied || application?.workPreference || "Sin dato"}`,
+    `Zona: ${[application?.city || "", application?.zipCode ? `ZIP ${application.zipCode}` : ""].filter(Boolean).join(" · ") || "Sin dato"}`,
     `Maneja: ${application?.drives || "Sin dato"}`,
     `Auto propio: ${application?.hasCar || "Sin dato"}`,
     `Atencion al cliente: ${application?.customerServiceExperience || "Sin dato"}`,
     `Busca: ${application?.workPreference || "Sin dato"}`,
     `Experiencia en ventas: ${application?.salesExperience || "Sin dato"}`,
+    `Fuente: ${[application?.source || "", application?.utmCampaign || ""].filter(Boolean).join(" · ") || "Sin dato"}`,
     "",
     `Resumen: ${application?.summary || "Sin resumen"}`,
     "",
@@ -7545,11 +7624,14 @@ function construirCorreoCoachRecruitmentApplication(userDoc = null, application 
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Nombre</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.fullName || "Sin nombre")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.phone || "Sin telefono")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Correo</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.email || "Sin correo")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Vacante</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.positionApplied || application?.workPreference || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Zona</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml([application?.city || "", application?.zipCode ? `ZIP ${application.zipCode}` : ""].filter(Boolean).join(" · ") || "Sin dato")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Maneja</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.drives || "Sin dato")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Auto propio</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.hasCar || "Sin dato")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Atencion al cliente</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.customerServiceExperience || "Sin dato")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Busca</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.workPreference || "Sin dato")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Experiencia en ventas</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.salesExperience || "Sin dato")}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Fuente</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml([application?.source || "", application?.utmCampaign || ""].filter(Boolean).join(" · ") || "Sin dato")}</td></tr>
       </table>
       <p style="margin:18px 0 0"><strong>Resumen:</strong> ${escapeXml(application?.summary || "Sin resumen")}</p>
       <p style="margin:10px 0 0"><strong>Sobre la persona:</strong> ${escapeXml(application?.about || "Sin texto")}</p>
@@ -9155,13 +9237,13 @@ function construirCoachCrmRecruitmentSeedOperation(applicationDoc = null, defaul
           leadName: applicationDoc.fullName || "",
           phone: applicationDoc.phone || "",
           email: applicationDoc.email || "",
-          interest: applicationDoc.workPreference || "Reclutamiento",
+          interest: applicationDoc.positionApplied || applicationDoc.workPreference || "Reclutamiento",
           briefHistory: truncarCoachCrmText(
             applicationDoc.summary || construirCoachRecruitmentApplicationSummary(applicationDoc),
             320
           ),
-          privateNotes: truncarCoachCrmText(applicationDoc.about || "", 1200),
-          lastNote: truncarCoachCrmText(applicationDoc.about || "", 240),
+          privateNotes: truncarCoachCrmText(construirCoachRecruitmentApplicationNotes(applicationDoc), 1200),
+          lastNote: truncarCoachCrmText(applicationDoc.about || applicationDoc.summary || "", 240),
           sourceUpdatedAt: applicationDoc.updatedAt || applicationDoc.createdAt || null,
           updatedAt: new Date()
         },
@@ -11249,6 +11331,137 @@ async function guardarCoachInboxLead({
   };
 }
 
+async function guardarCoachRecruitmentApplication({
+  userDoc = null,
+  profileDoc = null,
+  payload = {},
+  sendDestination = true,
+  ownershipOverride = null
+} = {}) {
+  const baseOwnership = await construirCoachOwnershipSnapshot(userDoc);
+  const ownership = ownershipOverride?.ownerUserId
+    ? {
+        ...baseOwnership,
+        ...ownershipOverride,
+        ownerUserId: ownershipOverride.ownerUserId,
+        ownerName: ownershipOverride.ownerName || baseOwnership.ownerName || "",
+        ownerEmail: ownershipOverride.ownerEmail || baseOwnership.ownerEmail || "",
+        generatedByUserId: ownershipOverride.generatedByUserId || baseOwnership.generatedByUserId || null,
+        generatedByName: ownershipOverride.generatedByName || baseOwnership.generatedByName || "",
+        generatedByAccountType:
+          ownershipOverride.generatedByAccountType || baseOwnership.generatedByAccountType || "owner"
+      }
+    : baseOwnership;
+  const rawName = String(payload?.fullName || payload?.name || "").trim();
+  const fullName = seleccionarNombreConfiable(rawName) || limpiarCoachHealthText(rawName, 120);
+  const phone = normalizePhone(payload?.phone || "");
+  const email = normalizarEmail(payload?.email || "");
+  const drives = limpiarCoachHealthYesNo(payload?.drives || "");
+  const hasCar = limpiarCoachHealthYesNo(payload?.hasCar || "");
+  const customerServiceExperience = limpiarCoachHealthYesNo(payload?.customerServiceExperience || "");
+  const workPreference = limpiarCoachHealthText(payload?.workPreference || "", 80);
+  const positionApplied = limpiarCoachHealthText(
+    payload?.positionApplied || payload?.role || payload?.vacancy || workPreference || "",
+    120
+  );
+  const city = limpiarCoachHealthText(payload?.city || payload?.zone || "", 80);
+  const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || "");
+  const salesExperience = limpiarCoachHealthYesNo(payload?.salesExperience || "");
+  const about = limpiarCoachHealthText(payload?.about || payload?.notes || payload?.experience || "", 700);
+  const source = cleanText(payload?.source || "").slice(0, 80);
+  const sourceDetail = cleanText(payload?.sourceDetail || "").slice(0, 180);
+  const landingPageUrl = limpiarUrlExterna(payload?.landingPageUrl || payload?.pageUrl || "");
+  const referrerUrl = limpiarUrlExterna(payload?.referrerUrl || payload?.referrer || "");
+  const pageTitle = cleanText(payload?.pageTitle || "").slice(0, 160);
+  const utmSource = cleanText(payload?.utmSource || payload?.utm_source || "").slice(0, 120);
+  const utmMedium = cleanText(payload?.utmMedium || payload?.utm_medium || "").slice(0, 120);
+  const utmCampaign = cleanText(payload?.utmCampaign || payload?.utm_campaign || "").slice(0, 160);
+  const utmTerm = cleanText(payload?.utmTerm || payload?.utm_term || "").slice(0, 160);
+  const utmContent = cleanText(payload?.utmContent || payload?.utm_content || "").slice(0, 160);
+  const gclid = cleanText(payload?.gclid || "").slice(0, 200);
+  const fbclid = cleanText(payload?.fbclid || "").slice(0, 200);
+  const ttclid = cleanText(payload?.ttclid || "").slice(0, 200);
+
+  if (!fullName) {
+    const error = new Error("El nombre es requerido.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!phone && !email) {
+    const error = new Error("Necesitas telefono o correo para guardar la aplicacion.");
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date();
+  const effectiveProfileDoc = profileDoc || (userDoc?._id ? await obtenerCoachOwnerProfile(userDoc, { lean: true }) : null);
+  const applicationPayload = {
+    ownerUserId: ownership.ownerUserId,
+    ownerEmail: ownership.ownerEmail || "",
+    ownerName: ownership.ownerName || "",
+    generatedByUserId: ownership.generatedByUserId,
+    generatedByName: ownership.generatedByName || "",
+    generatedByAccountType: ownership.generatedByAccountType,
+    fullName,
+    phone,
+    email,
+    drives,
+    hasCar,
+    customerServiceExperience,
+    workPreference,
+    positionApplied,
+    city,
+    zipCode,
+    salesExperience,
+    about,
+    source,
+    sourceDetail,
+    landingPageUrl,
+    referrerUrl,
+    pageTitle,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    utmTerm,
+    utmContent,
+    gclid,
+    fbclid,
+    ttclid,
+    updatedAt: now
+  };
+
+  applicationPayload.summary = construirCoachRecruitmentApplicationSummary(applicationPayload);
+
+  const applicationDoc = await CoachRecruitmentApplication.create({
+    ...applicationPayload,
+    createdAt: now
+  });
+
+  const cleanedApplication = limpiarCoachRecruitmentApplication(applicationDoc.toObject());
+
+  try {
+    await sincronizarCoachRecruitmentApplicationACrmRecord(userDoc, applicationDoc);
+  } catch (error) {
+    console.error("Error sincronizando aplicacion de reclutamiento al CRM:", error.message);
+  }
+
+  const delivery = await (sendDestination
+    ? programarEnvioCoachRecruitmentApplicationADestino(userDoc, effectiveProfileDoc, cleanedApplication)
+    : Promise.resolve({
+        attempted: false,
+        queued: false,
+        destination: limpiarCoachLeadDestination(effectiveProfileDoc)
+      }));
+
+  return {
+    created: true,
+    applicationDoc,
+    application: cleanedApplication,
+    delivery
+  };
+}
+
 function construirCoachLeadSummary(leadDoc = null) {
   if (!leadDoc) {
     return "";
@@ -12539,8 +12752,20 @@ function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
 
   const parts = [];
 
-  if (applicationDoc.workPreference) {
+  if (applicationDoc.positionApplied) {
+    parts.push(`Vacante: ${applicationDoc.positionApplied}.`);
+  } else if (applicationDoc.workPreference) {
     parts.push(`Busca ${String(applicationDoc.workPreference).toLowerCase()}.`);
+  }
+
+  if (applicationDoc.city || applicationDoc.zipCode) {
+    const zone = [applicationDoc.city || "", applicationDoc.zipCode ? `ZIP ${applicationDoc.zipCode}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+
+    if (zone) {
+      parts.push(`Zona: ${zone}.`);
+    }
   }
 
   if (applicationDoc.drives) {
@@ -12559,11 +12784,70 @@ function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
     parts.push(`Ventas: ${applicationDoc.salesExperience}.`);
   }
 
+  if (applicationDoc.source || applicationDoc.utmCampaign) {
+    const sourceSummary = [applicationDoc.source || "", applicationDoc.utmCampaign || ""].filter(Boolean).join(" · ");
+
+    if (sourceSummary) {
+      parts.push(`Origen: ${sourceSummary}.`);
+    }
+  }
+
   if (applicationDoc.about) {
     parts.push(`Perfil: ${truncarTextoPrompt(applicationDoc.about, 150)}.`);
   }
 
   return parts.join(" ").trim();
+}
+
+function construirCoachRecruitmentApplicationNotes(applicationDoc = null) {
+  if (!applicationDoc) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (applicationDoc.about) {
+    parts.push(applicationDoc.about);
+  }
+
+  const zone = [applicationDoc.city || "", applicationDoc.zipCode ? `ZIP ${applicationDoc.zipCode}` : ""]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (zone) {
+    parts.push(`Zona: ${zone}`);
+  }
+
+  const attribution = [
+    applicationDoc.source || "",
+    applicationDoc.utmSource || "",
+    applicationDoc.utmMedium || "",
+    applicationDoc.utmCampaign || ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (attribution) {
+    parts.push(`Captacion: ${attribution}`);
+  }
+
+  const clickIds = [
+    applicationDoc.gclid ? `gclid ${applicationDoc.gclid}` : "",
+    applicationDoc.fbclid ? `fbclid ${applicationDoc.fbclid}` : "",
+    applicationDoc.ttclid ? `ttclid ${applicationDoc.ttclid}` : ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (clickIds) {
+    parts.push(`Tracking: ${clickIds}`);
+  }
+
+  if (applicationDoc.landingPageUrl) {
+    parts.push(`Landing: ${applicationDoc.landingPageUrl}`);
+  }
+
+  return parts.join("\n\n").trim();
 }
 
 function limpiarCoachRecruitmentApplication(applicationDoc = null) {
@@ -12586,8 +12870,24 @@ function limpiarCoachRecruitmentApplication(applicationDoc = null) {
     hasCar: applicationDoc.hasCar || "",
     customerServiceExperience: applicationDoc.customerServiceExperience || "",
     workPreference: applicationDoc.workPreference || "",
+    positionApplied: applicationDoc.positionApplied || "",
+    city: applicationDoc.city || "",
+    zipCode: applicationDoc.zipCode || "",
     salesExperience: applicationDoc.salesExperience || "",
     about: applicationDoc.about || "",
+    source: applicationDoc.source || "",
+    sourceDetail: applicationDoc.sourceDetail || "",
+    landingPageUrl: applicationDoc.landingPageUrl || "",
+    referrerUrl: applicationDoc.referrerUrl || "",
+    pageTitle: applicationDoc.pageTitle || "",
+    utmSource: applicationDoc.utmSource || "",
+    utmMedium: applicationDoc.utmMedium || "",
+    utmCampaign: applicationDoc.utmCampaign || "",
+    utmTerm: applicationDoc.utmTerm || "",
+    utmContent: applicationDoc.utmContent || "",
+    gclid: applicationDoc.gclid || "",
+    fbclid: applicationDoc.fbclid || "",
+    ttclid: applicationDoc.ttclid || "",
     summary: applicationDoc.summary || "",
     updatedAt: applicationDoc.updatedAt || null,
     createdAt: applicationDoc.createdAt || null
@@ -20722,15 +21022,34 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
   const hasCar = limpiarCoachHealthYesNo(req.body?.hasCar || "");
   const customerServiceExperience = limpiarCoachHealthYesNo(req.body?.customerServiceExperience || "");
   const workPreference = limpiarCoachHealthText(req.body?.workPreference || "", 80);
+  const positionApplied = limpiarCoachHealthText(
+    req.body?.positionApplied || req.body?.role || req.body?.vacancy || workPreference || "",
+    120
+  );
+  const city = limpiarCoachHealthText(req.body?.city || req.body?.zone || "", 80);
+  const zipCode = normalizarZipCode(req.body?.zipCode || req.body?.zip || "");
   const salesExperience = limpiarCoachHealthYesNo(req.body?.salesExperience || "");
   const about = limpiarCoachHealthText(req.body?.about || "", 700);
+  const source = cleanText(req.body?.source || "").slice(0, 80);
+  const sourceDetail = cleanText(req.body?.sourceDetail || "").slice(0, 180);
+  const landingPageUrl = limpiarUrlExterna(req.body?.landingPageUrl || req.body?.pageUrl || "");
+  const referrerUrl = limpiarUrlExterna(req.body?.referrerUrl || req.body?.referrer || "");
+  const pageTitle = cleanText(req.body?.pageTitle || "").slice(0, 160);
+  const utmSource = cleanText(req.body?.utmSource || req.body?.utm_source || "").slice(0, 120);
+  const utmMedium = cleanText(req.body?.utmMedium || req.body?.utm_medium || "").slice(0, 120);
+  const utmCampaign = cleanText(req.body?.utmCampaign || req.body?.utm_campaign || "").slice(0, 160);
+  const utmTerm = cleanText(req.body?.utmTerm || req.body?.utm_term || "").slice(0, 160);
+  const utmContent = cleanText(req.body?.utmContent || req.body?.utm_content || "").slice(0, 160);
+  const gclid = cleanText(req.body?.gclid || "").slice(0, 200);
+  const fbclid = cleanText(req.body?.fbclid || "").slice(0, 200);
+  const ttclid = cleanText(req.body?.ttclid || "").slice(0, 200);
 
   if (!fullName) {
     return responderCoachError(res, 400, "El nombre es requerido.");
   }
 
-  if (!phone) {
-    return responderCoachError(res, 400, "El telefono es requerido.");
+  if (!phone && !email) {
+    return responderCoachError(res, 400, "Necesitas telefono o correo para guardar la aplicacion.");
   }
 
   if (applicationId && !mongoose.Types.ObjectId.isValid(applicationId)) {
@@ -20738,8 +21057,23 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
   }
 
   try {
+    if (!applicationId) {
+      const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
+      const result = await guardarCoachRecruitmentApplication({
+        userDoc: auth.user,
+        profileDoc,
+        payload: req.body || {},
+        sendDestination: true
+      });
+
+      return res.json({
+        created: result.created,
+        application: result.application,
+        delivery: result.delivery
+      });
+    }
+
     const now = new Date();
-    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
     const applicationPayload = {
       ownerUserId: ownership.ownerUserId,
@@ -20755,34 +21089,39 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
       hasCar,
       customerServiceExperience,
       workPreference,
+      positionApplied,
+      city,
+      zipCode,
       salesExperience,
       about,
+      source,
+      sourceDetail,
+      landingPageUrl,
+      referrerUrl,
+      pageTitle,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmTerm,
+      utmContent,
+      gclid,
+      fbclid,
+      ttclid,
       updatedAt: now
     };
 
     applicationPayload.summary = construirCoachRecruitmentApplicationSummary(applicationPayload);
 
     let applicationDoc = null;
-    let created = false;
+    const created = false;
+    applicationDoc = await CoachRecruitmentApplication.findOne(construirCoachWorkspaceQuery(auth.user, { _id: applicationId }));
 
-    if (applicationId) {
-      applicationDoc = await CoachRecruitmentApplication.findOne(
-        construirCoachWorkspaceQuery(auth.user, { _id: applicationId })
-      );
-
-      if (!applicationDoc) {
-        return responderCoachError(res, 404, "No encontre esa aplicacion.");
-      }
-
-      Object.assign(applicationDoc, applicationPayload);
-      await applicationDoc.save();
-    } else {
-      created = true;
-      applicationDoc = await CoachRecruitmentApplication.create({
-        ...applicationPayload,
-        createdAt: now
-      });
+    if (!applicationDoc) {
+      return responderCoachError(res, 404, "No encontre esa aplicacion.");
     }
+
+    Object.assign(applicationDoc, applicationPayload);
+    await applicationDoc.save();
 
     const cleanedApplication = limpiarCoachRecruitmentApplication(applicationDoc.toObject());
     try {
@@ -20790,6 +21129,7 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
     } catch (error) {
       console.error("Error sincronizando aplicacion de reclutamiento al CRM:", error.message);
     }
+    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const delivery = await programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
 
     res.json({
@@ -22457,6 +22797,75 @@ app.get("/api/public/contact-share/:shareCode", async (req, res) => {
   } catch (error) {
     console.error("Error cargando metadata de contacto compartido:", error.message);
     res.status(500).json({ error: "No pude abrir esta pagina en este momento." });
+  }
+});
+
+app.get("/api/public/recruitment-share/:shareCode", async (req, res) => {
+  try {
+    const shareCode = normalizarCoachShareCodeSegment(req.params?.shareCode || "", 24);
+    const shareContext = await resolverCoachRecruitmentShareContextPorCode(shareCode);
+
+    if (!shareContext) {
+      return res.status(404).json({ error: "Ese acceso ya no esta disponible." });
+    }
+
+    res.json({
+      ok: true,
+      shareCode,
+      recipientName:
+        shareContext.profileDoc?.seatLabel ||
+        shareContext.profileDoc?.name ||
+        shareContext.userDoc?.name ||
+        "Distribuidor",
+      ownerName: shareContext.ownership.ownerName || "",
+      ownerEmail: shareContext.ownership.ownerEmail || "",
+      teamRole: shareContext.profileDoc?.teamRole || "",
+      sharePath: construirCoachContactSharePath(shareCode)
+    });
+  } catch (error) {
+    console.error("Error cargando metadata de reclutamiento compartido:", error.message);
+    res.status(500).json({ error: "No pude abrir esta pagina en este momento." });
+  }
+});
+
+app.post("/api/public/recruitment-share/:shareCode/applications", async (req, res) => {
+  try {
+    const shareCode = normalizarCoachShareCodeSegment(req.params?.shareCode || "", 24);
+    const shareContext = await resolverCoachRecruitmentShareContextPorCode(shareCode);
+    const honeypot = cleanText(req.body?.website || req.body?.company || "").slice(0, 120);
+
+    if (!shareContext) {
+      return res.status(404).json({ error: "Ese acceso ya no esta disponible." });
+    }
+
+    if (honeypot) {
+      return res.status(200).json({ ok: true, ignored: true });
+    }
+
+    const result = await guardarCoachRecruitmentApplication({
+      userDoc: shareContext.userDoc,
+      profileDoc: shareContext.ownerProfileDoc || shareContext.profileDoc,
+      payload: req.body || {},
+      ownershipOverride: shareContext.ownership,
+      sendDestination: true
+    });
+
+    res.status(201).json({
+      ok: true,
+      created: result.created,
+      application: result.application,
+      delivery: result.delivery,
+      recipientName:
+        shareContext.profileDoc?.seatLabel ||
+        shareContext.profileDoc?.name ||
+        shareContext.userDoc?.name ||
+        "Distribuidor"
+    });
+  } catch (error) {
+    console.error("Error guardando aplicacion publica de reclutamiento:", error.message);
+    res.status(error.status || 500).json({
+      error: error.message || "No pude guardar tu aplicacion en este momento."
+    });
   }
 });
 
