@@ -9857,6 +9857,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const automationPreviewCopy = document.querySelector("[data-marketing-automation-preview-copy]");
   const automationPreviewList = document.querySelector("[data-marketing-automation-preview-list]");
   const automationList = document.querySelector("[data-marketing-automation-list]");
+  const automationRunFeedback = document.querySelector("[data-marketing-automation-run-feedback]");
+  const automationRunCopy = document.querySelector("[data-marketing-automation-run-copy]");
+  const automationRunList = document.querySelector("[data-marketing-automation-run-list]");
   const intakeCreateForm = document.querySelector("[data-marketing-intake-create-form]");
   const intakeCreateSaveButton = document.querySelector("[data-marketing-intake-create-save]");
   const intakeCreateFeedback = document.querySelector("[data-marketing-intake-create-feedback]");
@@ -9927,6 +9930,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !automationSelect ||
     !automationPreviewList ||
     !automationList ||
+    !automationRunList ||
     !intakeCreateForm ||
     !intakeConfigForm ||
     !intakeSelect ||
@@ -9985,6 +9989,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     publicationOk: document.querySelector("[data-marketing-publication-ok]"),
     publicationAttention: document.querySelector("[data-marketing-publication-attention]"),
     publicationErrors: document.querySelector("[data-marketing-publication-errors]"),
+    automationRunTotal: document.querySelector("[data-marketing-automation-run-total]"),
+    automationRunQueued: document.querySelector("[data-marketing-automation-run-queued]"),
+    automationRunCompleted: document.querySelector("[data-marketing-automation-run-completed]"),
+    automationRunFailed: document.querySelector("[data-marketing-automation-run-failed]"),
     connectorScopeTotal: document.querySelector("[data-marketing-connector-scope-total]"),
     connectorScopeGranted: document.querySelector("[data-marketing-connector-scope-granted]"),
     connectorScopeMissing: document.querySelector("[data-marketing-connector-scope-missing]"),
@@ -10041,6 +10049,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     creatives: [],
     publications: [],
     automations: [],
+    automationRuns: [],
     intakeSources: [],
     events: [],
     selectedIntegrationId: "",
@@ -10147,12 +10156,15 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         publications: Number(baseCounts.publications || 0),
         intakeSources: Number(baseCounts.intakeSources || state.module?.intakeSourcesCount || 0),
         automations: Number(baseCounts.automations || state.module?.automationsCount || 0),
+        automationRuns: Number(baseCounts.automationRuns || state.module?.automationRunsCount || 0),
         events: Number(baseCounts.events || 0)
       },
       health: {
         connectedIntegrations: Number(state.overview?.health?.connectedIntegrations || 0),
         activeIntakeSources: Number(state.overview?.health?.activeIntakeSources || 0),
         activeAutomations: Number(state.overview?.health?.activeAutomations || 0),
+        queuedAutomationRuns: Number(state.overview?.health?.queuedAutomationRuns || 0),
+        failedAutomationRuns: Number(state.overview?.health?.failedAutomationRuns || 0),
         failedPublications: Number(state.overview?.health?.failedPublications || 0),
         failedEvents: Number(state.overview?.health?.failedEvents || 0)
       },
@@ -10413,6 +10425,11 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const getCreativeLabel = creativeId => {
     const item = state.creatives.find(entry => String(entry?.id || "") === String(creativeId || ""));
     return item?.name || "Sin creativo";
+  };
+
+  const getAutomationLabel = automationId => {
+    const item = state.automations.find(entry => String(entry?.id || "") === String(automationId || ""));
+    return item?.label || "Sin automatizacion";
   };
 
   const getPublicationLabel = publicationId => {
@@ -10889,6 +10906,81 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
               >
                 ${String(item.id || "") === String(state.selectedAutomationId || "") ? "Editando" : "Preparar"}
               </button>
+            </div>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  const renderAutomationRuns = () => {
+    const runs = Array.isArray(state.automationRuns) ? state.automationRuns : [];
+    const queued = runs.filter(item => item.status === "queued" || item.status === "processing").length;
+    const completed = runs.filter(item => item.status === "completed" || item.status === "ignored").length;
+    const failed = runs.filter(item => item.status === "failed").length;
+
+    setSummaryValue(summaryNodes.automationRunTotal, runs.length);
+    setSummaryValue(summaryNodes.automationRunQueued, queued);
+    setSummaryValue(summaryNodes.automationRunCompleted, completed);
+    setSummaryValue(summaryNodes.automationRunFailed, failed);
+
+    if (automationRunCopy) {
+      automationRunCopy.textContent = runs.length
+        ? [
+            `${runs.length} corrida(s) recientes`,
+            queued ? `${queued} en cola` : "",
+            failed ? `${failed} fallida(s)` : "",
+            completed ? `${completed} completada(s)` : ""
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "Cuando una automatizacion se ejecute desde un evento interno, aqui vas a ver su corrida y su resultado.";
+    }
+
+    if (!runs.length) {
+      renderEmptyState(automationRunList, "Todavia no hay corridas de automatizacion en esta cuenta.");
+      return;
+    }
+
+    automationRunList.innerHTML = runs
+      .map(
+        item => `
+          <article class="territory-result-card">
+            <strong>${escapeHtml(item.summary || getAutomationLabel(item.automationId))}</strong>
+            <span>${escapeHtml(
+              [
+                getAutomationLabel(item.automationId),
+                item.statusLabel || "Estado",
+                item.actionTypeLabel || "Accion",
+                formatDateTimeShort(item.updatedAt || item.createdAt)
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            )}</span>
+            <p>${escapeHtml(
+              [
+                item.actionSummary || "",
+                item.lastError || "",
+                item.providerLabel || "",
+                getMarketingActorLabel(item)
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Corrida interna del motor de automatizaciones."
+            )}</p>
+            <div class="dashboard-actions">
+              ${
+                item.status === "failed"
+                  ? `
+                    <button
+                      type="button"
+                      class="nav-button"
+                      data-marketing-retry-automation-run="${escapeHtml(item.id || "")}"
+                    >
+                      Reintentar
+                    </button>
+                  `
+                  : ""
+              }
             </div>
           </article>
         `
@@ -12293,6 +12385,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     renderCreatives();
     renderPublications();
     renderAutomations();
+    renderAutomationRuns();
     renderIntakeSources();
     renderEvents();
   };
@@ -12308,6 +12401,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       creativesData,
       publicationsData,
       automationsData,
+      automationRunsData,
       intakeSourcesData,
       eventsData
     ] =
@@ -12320,6 +12414,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         apiRequest(`/api/coach/marketing/creatives${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/publications${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/automations${buildMarketingQueryString({ limit: 24 })}`),
+        apiRequest(`/api/coach/marketing/automation-runs${buildMarketingQueryString({ limit: 20 })}`),
         apiRequest(`/api/coach/marketing/intake-sources${buildMarketingQueryString({ limit: 24 })}`),
         apiRequest(`/api/coach/marketing/events${buildMarketingQueryString({ limit: 16 })}`)
       ]);
@@ -12334,6 +12429,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     state.creatives = Array.isArray(creativesData?.items) ? creativesData.items : [];
     state.publications = Array.isArray(publicationsData?.items) ? publicationsData.items : [];
     state.automations = Array.isArray(automationsData?.items) ? automationsData.items : [];
+    state.automationRuns = Array.isArray(automationRunsData?.items) ? automationRunsData.items : [];
     state.intakeSources = Array.isArray(intakeSourcesData?.items) ? intakeSourcesData.items : [];
     state.events = Array.isArray(eventsData?.items) ? eventsData.items : [];
     syncSelectedIntegration();
@@ -12497,6 +12593,36 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedAutomation(button.dataset.marketingSelectAutomation || "");
     renderAutomationPrep();
     renderAutomations();
+  });
+
+  automationRunList.addEventListener("click", async event => {
+    const button = event.target.closest("[data-marketing-retry-automation-run]");
+
+    if (!button) {
+      return;
+    }
+
+    clearMessage(automationRunFeedback);
+    const runId = String(button.dataset.marketingRetryAutomationRun || "").trim();
+
+    if (!runId) {
+      setMessage(automationRunFeedback, "No encontre la corrida que quieres reintentar.", "error");
+      return;
+    }
+
+    setButtonLoading(button, true, "Reintentando...");
+
+    try {
+      await apiRequest(`/api/coach/marketing/automation-runs/${runId}/retry`, {
+        method: "POST"
+      });
+      await loadWorkspace();
+      setMessage(automationRunFeedback, "La corrida ya quedo reencolada dentro del motor.", "success");
+    } catch (error) {
+      setMessage(automationRunFeedback, error.message || "No pude reintentar esa corrida.", "error");
+    } finally {
+      setButtonLoading(button, false);
+    }
   });
 
   intakeSelect?.addEventListener("change", () => {

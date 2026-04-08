@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 11;
+const COACH_MARKETING_FOUNDATION_VERSION = 12;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -437,6 +437,13 @@ const COACH_MARKETING_AUTOMATION_ACTION_OPTIONS = Object.freeze([
   { value: "copy_to_destination", label: "Copiar a destino" },
   { value: "tag_record", label: "Etiquetar registro" },
   { value: "webhook", label: "Webhook interno" }
+]);
+const COACH_MARKETING_AUTOMATION_RUN_STATUS_OPTIONS = Object.freeze([
+  { value: "queued", label: "En cola" },
+  { value: "processing", label: "Procesando" },
+  { value: "completed", label: "Completada" },
+  { value: "ignored", label: "Ignorada" },
+  { value: "failed", label: "Fallida" }
 ]);
 const COACH_MARKETING_CAPTURE_TYPE_OPTIONS = Object.freeze([
   { value: "lead", label: "Lead" },
@@ -1964,6 +1971,82 @@ const coachMarketingAutomationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachMarketingAutomationRunSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  generatedByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    index: true,
+    default: null
+  },
+  generatedByName: String,
+  generatedByAccountType: String,
+  automationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingAutomation",
+    required: true,
+    index: true
+  },
+  eventId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingEvent",
+    required: true,
+    index: true
+  },
+  integrationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntegration",
+    default: null,
+    index: true
+  },
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingCampaign",
+    default: null,
+    index: true
+  },
+  publicationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingPublication",
+    default: null,
+    index: true
+  },
+  intakeSourceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachMarketingIntakeSource",
+    default: null,
+    index: true
+  },
+  provider: { type: String, default: "custom", index: true },
+  product: { type: String, default: "custom", index: true },
+  triggerEventType: { type: String, default: "lead_captured", index: true },
+  actionType: { type: String, default: "notify_owner", index: true },
+  status: { type: String, default: "queued", index: true },
+  queuedJobId: String,
+  summary: String,
+  actionSummary: String,
+  filters: { type: mongoose.Schema.Types.Mixed, default: null },
+  actionConfig: { type: mongoose.Schema.Types.Mixed, default: null },
+  result: { type: mongoose.Schema.Types.Mixed, default: null },
+  lastError: String,
+  matchedAt: Date,
+  queuedAt: Date,
+  startedAt: Date,
+  completedAt: Date,
+  failedAt: Date,
+  lastAttemptAt: Date,
+  attempts: { type: Number, default: 0 },
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
 leadSchema.index({ email: 1 });
 leadSchema.index({ phone: 1 });
 leadSchema.index({ sessionIds: 1 });
@@ -2066,6 +2149,12 @@ coachMarketingAutomationSchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachMarketingAutomationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachMarketingAutomationSchema.index({ ownerUserId: 1, status: 1, updatedAt: -1 });
 coachMarketingAutomationSchema.index({ ownerUserId: 1, triggerEventType: 1, status: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ ownerUserId: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ ownerUserId: 1, automationId: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ ownerUserId: 1, status: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ ownerUserId: 1, eventId: 1, updatedAt: -1 });
+coachMarketingAutomationRunSchema.index({ automationId: 1, eventId: 1 }, { unique: true });
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 const Profile = mongoose.models.Profile || mongoose.model("Profile", profileSchema);
@@ -2134,6 +2223,9 @@ const CoachMarketingIntakeSource =
 const CoachMarketingAutomation =
   mongoose.models.CoachMarketingAutomation ||
   mongoose.model("CoachMarketingAutomation", coachMarketingAutomationSchema);
+const CoachMarketingAutomationRun =
+  mongoose.models.CoachMarketingAutomationRun ||
+  mongoose.model("CoachMarketingAutomationRun", coachMarketingAutomationRunSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
@@ -5345,6 +5437,10 @@ function normalizarCoachMarketingAutomationAction(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_AUTOMATION_ACTION_OPTIONS, "notify_owner");
 }
 
+function normalizarCoachMarketingAutomationRunStatus(value = "") {
+  return normalizarCoachMarketingChoice(value, COACH_MARKETING_AUTOMATION_RUN_STATUS_OPTIONS, "queued");
+}
+
 function normalizarCoachMarketingIntakeType(value = "") {
   return normalizarCoachMarketingChoice(value, COACH_MARKETING_INTAKE_TYPE_OPTIONS, "webhook");
 }
@@ -6060,6 +6156,8 @@ function construirCoachMarketingRoutes() {
     integrationQueueSync: "/api/coach/marketing/integrations/:integrationId/queue-sync",
     automations: "/api/coach/marketing/automations",
     automationPreview: "/api/coach/marketing/automations/:automationId/preview",
+    automationRuns: "/api/coach/marketing/automation-runs",
+    automationRunRetry: "/api/coach/marketing/automation-runs/:runId/retry",
     channels: "/api/coach/marketing/channels",
     campaigns: "/api/coach/marketing/campaigns",
     campaignWorkflow: "/api/coach/marketing/campaigns/:campaignId/workflow",
@@ -6138,7 +6236,8 @@ function construirCoachMarketingCatalog() {
       authSession: COACH_MARKETING_AUTH_SESSION_STATUS_OPTIONS,
       token: COACH_MARKETING_TOKEN_STATUS_OPTIONS,
       sync: COACH_MARKETING_SYNC_STATUS_OPTIONS,
-      automation: COACH_MARKETING_AUTOMATION_STATUS_OPTIONS
+      automation: COACH_MARKETING_AUTOMATION_STATUS_OPTIONS,
+      automationRuns: COACH_MARKETING_AUTOMATION_RUN_STATUS_OPTIONS
     },
     authModes: COACH_MARKETING_AUTH_MODE_OPTIONS,
     accountTypes: COACH_MARKETING_ACCOUNT_TYPE_OPTIONS,
@@ -6612,6 +6711,14 @@ function coachMarketingAutomationMatchesEvent(automation = null, event = null) {
     return false;
   }
 
+  if (
+    automation.generatedByAccountType === "seat" &&
+    automation.generatedByUserId &&
+    automation.generatedByUserId !== event.generatedByUserId
+  ) {
+    return false;
+  }
+
   if (automation.triggerEventType && automation.triggerEventType !== event.eventType) {
     return false;
   }
@@ -6671,6 +6778,458 @@ function construirCoachMarketingAutomationPreview(automationDoc = null, eventDoc
         ? `La automatizacion encontro ${matchedEvents.length} evento(s) reciente(s) con este disparador.`
         : "Todavia no encontro eventos recientes con esa combinacion."
   };
+}
+
+function limpiarCoachMarketingAutomationRun(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const provider = normalizarCoachMarketingProvider(doc.provider || "");
+  const product = normalizarCoachMarketingProduct(doc.product || "");
+  const triggerEventType = normalizarCoachMarketingAutomationTrigger(doc.triggerEventType || "");
+  const actionType = normalizarCoachMarketingAutomationAction(doc.actionType || "");
+  const status = normalizarCoachMarketingAutomationRunStatus(doc.status || "");
+
+  return {
+    ...limpiarCoachMarketingBaseDoc(doc),
+    automationId: doc?.automationId ? String(doc.automationId) : "",
+    eventId: doc?.eventId ? String(doc.eventId) : "",
+    integrationId: doc?.integrationId ? String(doc.integrationId) : "",
+    campaignId: doc?.campaignId ? String(doc.campaignId) : "",
+    publicationId: doc?.publicationId ? String(doc.publicationId) : "",
+    intakeSourceId: doc?.intakeSourceId ? String(doc.intakeSourceId) : "",
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    triggerEventType,
+    triggerEventTypeLabel: formatearCoachMarketingChoiceLabel(
+      triggerEventType,
+      COACH_MARKETING_AUTOMATION_TRIGGER_OPTIONS
+    ),
+    actionType,
+    actionTypeLabel: formatearCoachMarketingChoiceLabel(actionType, COACH_MARKETING_AUTOMATION_ACTION_OPTIONS),
+    status,
+    statusLabel: formatearCoachMarketingChoiceLabel(status, COACH_MARKETING_AUTOMATION_RUN_STATUS_OPTIONS),
+    queuedJobId: cleanText(doc.queuedJobId || "").slice(0, 120),
+    summary: truncarTextoPrompt(cleanText(doc.summary || ""), 220),
+    actionSummary: truncarTextoPrompt(cleanText(doc.actionSummary || ""), 220),
+    filters: limpiarCoachMarketingConfig(doc.filters || null),
+    actionConfig: limpiarCoachMarketingConfig(doc.actionConfig || null),
+    result: limpiarCoachMarketingConfig(doc.result || null),
+    lastError: truncarTextoPrompt(cleanText(doc.lastError || ""), 200),
+    matchedAt: doc.matchedAt || null,
+    queuedAt: doc.queuedAt || null,
+    startedAt: doc.startedAt || null,
+    completedAt: doc.completedAt || null,
+    failedAt: doc.failedAt || null,
+    lastAttemptAt: doc.lastAttemptAt || null,
+    attempts: limpiarCoachMarketingCount(doc.attempts || 0, 999999999)
+  };
+}
+
+function construirCoachMarketingAutomationRunSummary(automation = null, event = null) {
+  const automationLabel = cleanText(automation?.label || "").slice(0, 140) || "Automatizacion";
+  const eventSummary =
+    cleanText(event?.summary || "").slice(0, 180) ||
+    cleanText(event?.eventTypeLabel || event?.eventType || "").slice(0, 120) ||
+    "evento del workspace";
+  return truncarTextoPrompt(`${automationLabel} reacciono a ${eventSummary}.`, 220);
+}
+
+function construirCoachMarketingAutomationActionSummary(automation = null, event = null) {
+  const actionLabel =
+    formatearCoachMarketingChoiceLabel(
+      automation?.actionType || "",
+      COACH_MARKETING_AUTOMATION_ACTION_OPTIONS,
+      automation?.actionType || "accion"
+    ) || "accion";
+  const eventLabel =
+    cleanText(event?.eventTypeLabel || event?.eventType || "").slice(0, 120) || "evento";
+  return truncarTextoPrompt(`${actionLabel} preparado para ${eventLabel}.`, 220);
+}
+
+function construirCoachMarketingAutomationDueAt(actionConfig = null, now = new Date()) {
+  const config = actionConfig && typeof actionConfig === "object" ? actionConfig : {};
+  const explicitDate = normalizarCoachOptionalDate(config.dueAt || config.nextActionAt || null);
+
+  if (explicitDate) {
+    return explicitDate;
+  }
+
+  const explicitHours = Number(config.dueInHours ?? config.followupHours ?? config.delayHours);
+  const safeHours = Number.isFinite(explicitHours) && explicitHours > 0 ? explicitHours : 24;
+  return new Date(now.getTime() + safeHours * 60 * 60 * 1000);
+}
+
+function extraerCoachMarketingAutomationTags(actionConfig = null, automation = null) {
+  const config = actionConfig && typeof actionConfig === "object" ? actionConfig : {};
+  const rawTags = Array.isArray(config.tags)
+    ? config.tags
+    : Array.isArray(config.tag)
+      ? config.tag
+      : [config.tag || config.label || automation?.label || "automatizacion"];
+
+  return Array.from(
+    new Set(
+      rawTags
+        .map(item => cleanText(item || "").trim().slice(0, 40))
+        .filter(Boolean)
+    )
+  ).slice(0, 8);
+}
+
+async function resolverCoachMarketingAutomationCrmRecord(ownerUserId = "", event = null) {
+  const safeOwnerUserId = normalizarCoachCrmObjectId(ownerUserId);
+
+  if (!safeOwnerUserId || !event?.entityId) {
+    return null;
+  }
+
+  let sourceType = "";
+
+  if (event.eventType === "lead_captured" || event.entityType === "lead_capture") {
+    sourceType = "lead";
+  } else if (event.eventType === "recruitment_captured" || event.entityType === "recruitment_capture") {
+    sourceType = "reclutamiento";
+  }
+
+  if (!sourceType) {
+    return null;
+  }
+
+  return CoachCrmRecord.findOne({
+    ownerUserId: safeOwnerUserId,
+    sourceType,
+    sourceRecordId: String(event.entityId || "").trim()
+  });
+}
+
+async function ejecutarCoachMarketingAutomationAction({
+  userDoc = null,
+  automation = null,
+  event = null,
+  crmRecordDoc = null
+} = {}) {
+  const now = new Date();
+  const actionType = normalizarCoachMarketingAutomationAction(automation?.actionType || "");
+  const actionConfig = automation?.actionConfig && typeof automation.actionConfig === "object" ? automation.actionConfig : {};
+  const summary = construirCoachMarketingAutomationActionSummary(automation, event);
+  const actorName = userDoc?.name || userDoc?.email || automation?.generatedByName || "Coach";
+
+  if (actionType === "notify_owner") {
+    const activityBody = `Automatizacion: ${summary}`;
+
+    if (crmRecordDoc?._id) {
+      await registrarCoachCrmActivity(crmRecordDoc, userDoc, "note", activityBody, {
+        source: "marketing_automation",
+        automationId: automation?.id || "",
+        eventId: event?.id || ""
+      });
+      await invalidarCoachWorkspaceCaches(userDoc, crmRecordDoc.ownerUserId);
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      effectType: crmRecordDoc?._id ? "crm_note" : "internal_notice",
+      summary: crmRecordDoc?._id
+        ? "Se registro una nota interna en el CRM vinculada al evento."
+        : "La notificacion interna al owner quedo registrada en la corrida."
+    };
+  }
+
+  if (actionType === "notify_team") {
+    const audienceOwner = await resolverCoachAudienceOwner(userDoc);
+    const announcementDoc = audienceOwner?._id
+      ? await CoachAnnouncement.create({
+          authorUserId: userDoc?._id || audienceOwner._id,
+          authorName: actorName,
+          scopeType: "team",
+          territoryId: null,
+          territoryName: "",
+          teamOwnerUserId: audienceOwner._id,
+          teamOwnerName: audienceOwner.name || audienceOwner.email || "Equipo",
+          title: cleanText(actionConfig.title || automation?.label || "Automatizacion del Coach").slice(0, 120),
+          body: limpiarCoachAnnouncementBody(
+            actionConfig.body ||
+              `${summary} ${event?.summary ? `Detalle: ${event.summary}` : ""}`.trim()
+          ),
+          priority: normalizarCoachAnnouncementPriority(actionConfig.priority || "normal"),
+          status: "active",
+          updatedAt: now,
+          createdAt: now
+        })
+      : null;
+
+    return {
+      attempted: true,
+      delivered: true,
+      effectType: "team_announcement",
+      announcementId: announcementDoc?._id ? String(announcementDoc._id) : "",
+      summary: announcementDoc?._id
+        ? "Se creo un boletin interno para el equipo del Coach."
+        : "La automatizacion quedo lista para avisar al equipo cuando exista audiencia disponible."
+    };
+  }
+
+  if (actionType === "create_task") {
+    const dueAt = construirCoachMarketingAutomationDueAt(actionConfig, now);
+    const body =
+      cleanText(actionConfig.taskBody || actionConfig.body || "").slice(0, 220) ||
+      `${summary} Seguimiento sugerido para ${dueAt.toLocaleString("en-US")}.`;
+
+    if (crmRecordDoc?._id) {
+      await registrarCoachCrmActivity(crmRecordDoc, userDoc, "task", body, {
+        source: "marketing_automation",
+        automationId: automation?.id || "",
+        eventId: event?.id || "",
+        dueAt
+      });
+      await invalidarCoachWorkspaceCaches(userDoc, crmRecordDoc.ownerUserId);
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      effectType: crmRecordDoc?._id ? "crm_task" : "internal_task_stub",
+      dueAt,
+      summary: crmRecordDoc?._id
+        ? "Se registro una tarea interna en el CRM para dar seguimiento."
+        : "La tarea quedo documentada en la corrida; falta ligar este evento a un registro CRM."
+    };
+  }
+
+  if (actionType === "queue_followup") {
+    const dueAt = construirCoachMarketingAutomationDueAt(actionConfig, now);
+    const nextAction = cleanText(actionConfig.nextAction || "seguimiento_automatico").slice(0, 80) || "seguimiento_automatico";
+
+    if (crmRecordDoc?._id) {
+      crmRecordDoc.nextAction = nextAction;
+      crmRecordDoc.nextActionAt = dueAt;
+      crmRecordDoc.updatedAt = now;
+      await crmRecordDoc.save();
+      await registrarCoachCrmActivity(
+        crmRecordDoc,
+        userDoc,
+        "task",
+        `Seguimiento automatizado programado para ${dueAt.toLocaleString("en-US")}.`,
+        {
+          source: "marketing_automation",
+          automationId: automation?.id || "",
+          eventId: event?.id || "",
+          dueAt,
+          nextAction
+        }
+      );
+      await invalidarCoachWorkspaceCaches(userDoc, crmRecordDoc.ownerUserId);
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      effectType: crmRecordDoc?._id ? "crm_followup" : "followup_stub",
+      dueAt,
+      nextAction,
+      summary: crmRecordDoc?._id
+        ? "Se encolo un seguimiento dentro del CRM del Coach."
+        : "El seguimiento quedo documentado en la corrida; falta un registro CRM ligado."
+    };
+  }
+
+  if (actionType === "tag_record") {
+    const tags = extraerCoachMarketingAutomationTags(actionConfig, automation);
+
+    if (crmRecordDoc?.linkedLeadId && tags.length) {
+      await CoachLeadInbox.updateOne(
+        {
+          _id: crmRecordDoc.linkedLeadId,
+          ownerUserId: crmRecordDoc.ownerUserId
+        },
+        {
+          $addToSet: {
+            tags: {
+              $each: tags
+            }
+          },
+          $set: {
+            updatedAt: now
+          }
+        }
+      );
+    }
+
+    if (crmRecordDoc?._id) {
+      await registrarCoachCrmActivity(
+        crmRecordDoc,
+        userDoc,
+        "note",
+        `Etiquetas automaticas: ${tags.length ? tags.join(", ") : "sin tags"}.`,
+        {
+          source: "marketing_automation",
+          automationId: automation?.id || "",
+          eventId: event?.id || "",
+          tags
+        }
+      );
+      await invalidarCoachWorkspaceCaches(userDoc, crmRecordDoc.ownerUserId);
+    }
+
+    return {
+      attempted: true,
+      delivered: true,
+      effectType: crmRecordDoc?.linkedLeadId ? "lead_tagged" : "record_tagged",
+      tags,
+      summary: tags.length
+        ? `Se aplicaron ${tags.length} etiqueta(s) a este flujo automatizado.`
+        : "La accion de tags quedo registrada sin etiquetas especificas."
+    };
+  }
+
+  if (actionType === "copy_to_destination" || actionType === "webhook") {
+    return {
+      attempted: true,
+      delivered: true,
+      stubbed: true,
+      effectType: actionType,
+      summary: "La salida externa quedo preparada en la corrida. Se conectara en la siguiente capa."
+    };
+  }
+
+  return {
+    attempted: false,
+    error: `No reconozco la accion ${actionType || "sin tipo"}.`
+  };
+}
+
+async function encolarCoachMarketingAutomationRuns({
+  userDoc = null,
+  workspaceSnapshot = null,
+  event = null
+} = {}) {
+  const snapshot = workspaceSnapshot || (await construirCoachWorkspaceActorSnapshot(userDoc));
+  const cleanEvent = event && typeof event === "object" ? event : null;
+  const ownerUserId = normalizarCoachCrmObjectId(cleanEvent?.ownerUserId || snapshot?.ownerUserId || "");
+
+  if (!ownerUserId || !cleanEvent?.id || !cleanEvent?.eventType) {
+    return [];
+  }
+
+  const automationDocs = await CoachMarketingAutomation.find({
+    ownerUserId,
+    status: "active",
+    triggerEventType: cleanEvent.eventType
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(40)
+    .lean();
+
+  const matchedAutomations = automationDocs
+    .map(doc => limpiarCoachMarketingAutomation(doc))
+    .filter(item => coachMarketingAutomationMatchesEvent(item, cleanEvent));
+
+  if (!matchedAutomations.length) {
+    return [];
+  }
+
+  const safeUserDoc =
+    userDoc?._id || snapshot?.ownerUserId
+      ? {
+          _id: normalizarCoachCrmObjectId(userDoc?._id || snapshot?.ownerUserId),
+          accountType: "owner",
+          name: snapshot?.ownerName || userDoc?.name || "",
+          email: snapshot?.ownerEmail || userDoc?.email || ""
+        }
+      : null;
+  const now = new Date();
+  const runs = [];
+
+  for (const automation of matchedAutomations) {
+    const existingRun = await CoachMarketingAutomationRun.findOne({
+      automationId: normalizarCoachCrmObjectId(automation.id),
+      eventId: normalizarCoachCrmObjectId(cleanEvent.id)
+    })
+      .select("_id")
+      .lean();
+
+    if (existingRun?._id) {
+      continue;
+    }
+
+    const runDoc = await CoachMarketingAutomationRun.create({
+      ownerUserId,
+      ownerEmail: snapshot?.ownerEmail || cleanEvent.ownerEmail || "",
+      ownerName: snapshot?.ownerName || cleanEvent.ownerName || "",
+      generatedByUserId: normalizarCoachCrmObjectId(automation.generatedByUserId || null),
+      generatedByName: automation.generatedByName || "",
+      generatedByAccountType: automation.generatedByAccountType || "owner",
+      automationId: normalizarCoachCrmObjectId(automation.id),
+      eventId: normalizarCoachCrmObjectId(cleanEvent.id),
+      integrationId: normalizarCoachCrmObjectId(automation.integrationId || cleanEvent.integrationId || null),
+      campaignId: normalizarCoachCrmObjectId(automation.campaignId || cleanEvent.campaignId || null),
+      publicationId: normalizarCoachCrmObjectId(automation.publicationId || cleanEvent.publicationId || null),
+      intakeSourceId: normalizarCoachCrmObjectId(automation.intakeSourceId || null),
+      provider: automation.provider || cleanEvent.provider || "custom",
+      product: automation.product || cleanEvent.product || "custom",
+      triggerEventType: automation.triggerEventType || cleanEvent.eventType || "lead_captured",
+      actionType: automation.actionType || "notify_owner",
+      status: "queued",
+      summary: construirCoachMarketingAutomationRunSummary(automation, cleanEvent),
+      actionSummary: construirCoachMarketingAutomationActionSummary(automation, cleanEvent),
+      filters: automation.filters || null,
+      actionConfig: automation.actionConfig || null,
+      matchedAt: normalizarCoachOptionalDate(cleanEvent.occurredAt || null) || now,
+      queuedAt: now,
+      attempts: 0,
+      updatedAt: now,
+      createdAt: now
+    });
+
+    const queuedJob = await encolarCoachAsyncJob({
+      jobType: "marketing_automation_run",
+      userDoc: safeUserDoc,
+      payload: {
+        runId: String(runDoc._id || ""),
+        automationId: automation.id || "",
+        eventId: cleanEvent.id || ""
+      },
+      maxAttempts: 4
+    });
+
+    if (queuedJob?._id) {
+      runDoc.queuedJobId = String(queuedJob._id || "");
+      runDoc.updatedAt = new Date();
+      await runDoc.save();
+    }
+
+    const cleanedRun = limpiarCoachMarketingAutomationRun(runDoc?.toObject ? runDoc.toObject() : runDoc);
+    runs.push(cleanedRun);
+
+    await registrarCoachMarketingEvent({
+      userDoc: safeUserDoc,
+      workspaceSnapshot: snapshot,
+      integrationId: runDoc.integrationId || null,
+      campaignId: runDoc.campaignId || null,
+      publicationId: runDoc.publicationId || null,
+      provider: cleanedRun?.provider || automation.provider || cleanEvent.provider || "custom",
+      product: cleanedRun?.product || automation.product || cleanEvent.product || "custom",
+      direction: "internal",
+      eventType: "automation_run_queued",
+      entityType: "automation_run",
+      entityId: cleanedRun?.id || "",
+      status: "queued",
+      summary: `Se encolo la automatizacion ${automation.label || "de marketing"}.`,
+      payload: {
+        automationId: automation.id || "",
+        sourceEventId: cleanEvent.id || "",
+        actionType: automation.actionType || ""
+      },
+      occurredAt: now
+    });
+  }
+
+  return runs;
 }
 
 const COACH_MARKETING_INTAKE_DIRECT_FIELDS = Object.freeze([
@@ -7742,8 +8301,27 @@ async function registrarCoachMarketingEvent({
       lastError: truncarTextoPrompt(cleanText(lastError || ""), 200),
       updatedAt: occurredAt
     });
+    const cleanedEvent = limpiarCoachMarketingEvent(eventDoc?.toObject ? eventDoc.toObject() : eventDoc);
 
-    return limpiarCoachMarketingEvent(eventDoc?.toObject ? eventDoc.toObject() : eventDoc);
+    try {
+      await encolarCoachMarketingAutomationRuns({
+        userDoc:
+          userDoc?._id || snapshot?.ownerUserId
+            ? {
+                _id: normalizarCoachCrmObjectId(userDoc?._id || snapshot?.ownerUserId),
+                accountType: "owner",
+                name: userDoc?.name || snapshot?.ownerName || "",
+                email: userDoc?.email || snapshot?.ownerEmail || ""
+              }
+            : null,
+        workspaceSnapshot: snapshot,
+        event: cleanedEvent
+      });
+    } catch (automationError) {
+      console.error("Error encolando automatizaciones de marketing:", automationError.message);
+    }
+
+    return cleanedEvent;
   } catch (error) {
     console.error("Error registrando evento de marketing del Coach:", error.message);
     return null;
@@ -7839,10 +8417,11 @@ async function obtenerCoachMarketingModuleSnapshot(userDoc = null, options = {})
       ? options.access
       : await construirCoachMarketingAccessContext(userDoc, options);
   const query = construirCoachMarketingVisibilityQuery(access);
-  const [integrationsCount, intakeSourcesCount, automationsCount] = await Promise.all([
+  const [integrationsCount, intakeSourcesCount, automationsCount, automationRunsCount] = await Promise.all([
     CoachMarketingIntegration.countDocuments(query),
     CoachMarketingIntakeSource.countDocuments(query),
-    CoachMarketingAutomation.countDocuments(query)
+    CoachMarketingAutomation.countDocuments(query),
+    CoachMarketingAutomationRun.countDocuments(query)
   ]);
 
   return {
@@ -7852,6 +8431,7 @@ async function obtenerCoachMarketingModuleSnapshot(userDoc = null, options = {})
     integrationsCount,
     intakeSourcesCount,
     automationsCount,
+    automationRunsCount,
     permissions: {
       viewerMode: access.viewerMode || "seat",
       accountType: access.accountType || "owner",
@@ -8348,10 +8928,13 @@ async function obtenerCoachMarketingOverview(userDoc = null, options = {}) {
     publicationsCount,
     intakeSourcesCount,
     automationsCount,
+    automationRunsCount,
     eventsCount,
     connectedIntegrations,
     activeIntakeSources,
     activeAutomations,
+    queuedAutomationRuns,
+    failedAutomationRuns,
     failedPublications,
     failedEvents,
     providerSummary,
@@ -8369,6 +8952,7 @@ async function obtenerCoachMarketingOverview(userDoc = null, options = {}) {
     CoachMarketingPublication.countDocuments(query),
     CoachMarketingIntakeSource.countDocuments(query),
     CoachMarketingAutomation.countDocuments(query),
+    CoachMarketingAutomationRun.countDocuments(query),
     CoachMarketingEvent.countDocuments(query),
     CoachMarketingIntegration.countDocuments({
       ...query,
@@ -8381,6 +8965,14 @@ async function obtenerCoachMarketingOverview(userDoc = null, options = {}) {
     CoachMarketingAutomation.countDocuments({
       ...query,
       status: "active"
+    }),
+    CoachMarketingAutomationRun.countDocuments({
+      ...query,
+      status: "queued"
+    }),
+    CoachMarketingAutomationRun.countDocuments({
+      ...query,
+      status: "failed"
     }),
     CoachMarketingPublication.countDocuments({
       ...query,
@@ -8436,12 +9028,15 @@ async function obtenerCoachMarketingOverview(userDoc = null, options = {}) {
       publications: publicationsCount,
       intakeSources: intakeSourcesCount,
       automations: automationsCount,
+      automationRuns: automationRunsCount,
       events: eventsCount
     },
     health: {
       connectedIntegrations,
       activeIntakeSources,
       activeAutomations,
+      queuedAutomationRuns,
+      failedAutomationRuns,
       failedPublications,
       failedEvents
     },
@@ -12633,6 +13228,8 @@ function construirCoachAsyncJobDedupeKey(jobType = "", userDoc = null, payload =
     sourceId = String(payload?.leadId || payload?.lead?.id || payload?.lead?._id || "").trim();
   } else if (jobType === "marketing_integration_sync") {
     sourceId = String(payload?.integrationId || payload?.integration?.id || payload?.integration?._id || "").trim();
+  } else if (jobType === "marketing_automation_run") {
+    sourceId = String(payload?.runId || payload?.automationRunId || "").trim();
   }
 
   if (!sourceId) {
@@ -12839,6 +13436,155 @@ async function ejecutarCoachAsyncJob(jobDoc = null) {
       integrationId: String(integrationDoc._id || ""),
       summary: integrationDoc.lastSyncSummary || ""
     };
+  }
+
+  if (jobDoc.jobType === "marketing_automation_run") {
+    const runId = normalizarCoachCrmObjectId(jobDoc.payload?.runId || jobDoc.payload?.automationRunId || "");
+
+    if (!runId) {
+      return {
+        attempted: false,
+        error: "No encontre la corrida de automatizacion."
+      };
+    }
+
+    const runDoc = await CoachMarketingAutomationRun.findOne({
+      _id: runId,
+      ownerUserId: resolverCoachOwnerUserId(userDoc)
+    });
+
+    if (!runDoc?._id) {
+      return {
+        attempted: false,
+        error: "No encontre la corrida de automatizacion a ejecutar."
+      };
+    }
+
+    const automationDoc = await CoachMarketingAutomation.findOne({
+      _id: runDoc.automationId,
+      ownerUserId: resolverCoachOwnerUserId(userDoc)
+    });
+    const eventDoc = await CoachMarketingEvent.findOne({
+      _id: runDoc.eventId,
+      ownerUserId: resolverCoachOwnerUserId(userDoc)
+    });
+
+    if (!automationDoc?._id || !eventDoc?._id) {
+      runDoc.status = "failed";
+      runDoc.lastError = !automationDoc?._id ? "No encontre la automatizacion." : "No encontre el evento origen.";
+      runDoc.failedAt = new Date();
+      runDoc.lastAttemptAt = new Date();
+      runDoc.updatedAt = new Date();
+      await runDoc.save();
+
+      return {
+        attempted: false,
+        error: runDoc.lastError
+      };
+    }
+
+    const automation = limpiarCoachMarketingAutomation(automationDoc?.toObject ? automationDoc.toObject() : automationDoc);
+    const event = limpiarCoachMarketingEvent(eventDoc?.toObject ? eventDoc.toObject() : eventDoc);
+
+    runDoc.status = "processing";
+    runDoc.startedAt = runDoc.startedAt || new Date();
+    runDoc.lastAttemptAt = new Date();
+    runDoc.attempts = Number(runDoc.attempts || 0) + 1;
+    runDoc.updatedAt = new Date();
+    await runDoc.save();
+
+    try {
+      const crmRecordDoc = await resolverCoachMarketingAutomationCrmRecord(runDoc.ownerUserId, event);
+      const actionResult = await ejecutarCoachMarketingAutomationAction({
+        userDoc,
+        automation,
+        event,
+        crmRecordDoc
+      });
+      const resultSummary =
+        truncarTextoPrompt(cleanText(actionResult?.summary || ""), 220) ||
+        construirCoachMarketingAutomationActionSummary(automation, event);
+      const now = new Date();
+
+      runDoc.status = actionResult?.delivered === true ? "completed" : "ignored";
+      runDoc.actionSummary = resultSummary;
+      runDoc.result = limpiarCoachMarketingConfig(actionResult || null);
+      runDoc.lastError = "";
+      runDoc.completedAt = now;
+      runDoc.failedAt = null;
+      runDoc.updatedAt = now;
+      await runDoc.save();
+
+      automationDoc.lastTriggeredAt = now;
+      automationDoc.lastMatchedAt = runDoc.matchedAt || event.occurredAt || now;
+      automationDoc.lastRunSummary = resultSummary;
+      automationDoc.runCount = Number(automationDoc.runCount || 0) + 1;
+      automationDoc.updatedAt = now;
+      await automationDoc.save();
+
+      await registrarCoachMarketingEvent({
+        userDoc,
+        integrationId: runDoc.integrationId || null,
+        campaignId: runDoc.campaignId || null,
+        publicationId: runDoc.publicationId || null,
+        provider: runDoc.provider || automation.provider || "custom",
+        product: runDoc.product || automation.product || "custom",
+        direction: "internal",
+        eventType: "automation_run_completed",
+        entityType: "automation_run",
+        entityId: String(runDoc._id || ""),
+        status: actionResult?.delivered === true ? "processed" : "ignored",
+        summary: resultSummary,
+        payload: {
+          automationId: automation.id || "",
+          sourceEventId: event.id || "",
+          actionType: automation.actionType || "",
+          effectType: actionResult?.effectType || "",
+          stubbed: actionResult?.stubbed === true
+        },
+        occurredAt: now
+      });
+
+      return {
+        attempted: true,
+        delivered: true,
+        runId: String(runDoc._id || ""),
+        summary: resultSummary,
+        effectType: actionResult?.effectType || "",
+        actionResult
+      };
+    } catch (automationRunError) {
+      const now = new Date();
+      runDoc.status = "failed";
+      runDoc.lastError = truncarTextoPrompt(cleanText(automationRunError?.message || ""), 200) || "La corrida fallo.";
+      runDoc.failedAt = now;
+      runDoc.updatedAt = now;
+      await runDoc.save();
+
+      await registrarCoachMarketingEvent({
+        userDoc,
+        integrationId: runDoc.integrationId || null,
+        campaignId: runDoc.campaignId || null,
+        publicationId: runDoc.publicationId || null,
+        provider: runDoc.provider || "custom",
+        product: runDoc.product || "custom",
+        direction: "internal",
+        eventType: "automation_run_failed",
+        entityType: "automation_run",
+        entityId: String(runDoc._id || ""),
+        status: "failed",
+        summary: `La automatizacion ${automation.label || "de marketing"} fallo al ejecutarse.`,
+        payload: {
+          automationId: automation.id || "",
+          sourceEventId: event.id || "",
+          actionType: automation.actionType || ""
+        },
+        lastError: runDoc.lastError,
+        occurredAt: now
+      });
+
+      throw automationRunError;
+    }
   }
 
   return {
@@ -25250,6 +25996,136 @@ app.post("/api/coach/marketing/automations/:automationId/preview", async (req, r
   } catch (error) {
     console.error("Error probando automatizacion de marketing del Coach:", error.message);
     responderCoachError(res, 500, "No pude probar la automatizacion.");
+  }
+});
+
+app.get("/api/coach/marketing/automation-runs", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const query = construirCoachMarketingVisibilityQuery(req.coachMarketingAccess);
+    const statusFilter = String(req.query?.status || "").trim();
+    const automationId = normalizarCoachCrmObjectId(req.query?.automationId || "");
+    const limit = resolverCoachMarketingListLimit(req.query?.limit, 24, 120);
+
+    if (statusFilter) {
+      query.status = normalizarCoachMarketingAutomationRunStatus(statusFilter);
+    }
+
+    if (automationId) {
+      query.automationId = automationId;
+    }
+
+    const [items, total] = await Promise.all([
+      CoachMarketingAutomationRun.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(limit).lean(),
+      CoachMarketingAutomationRun.countDocuments(query)
+    ]);
+
+    res.json({
+      total,
+      items: items.map(doc => limpiarCoachMarketingAutomationRun(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error listando corridas de automatizacion del Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar las corridas de automatizacion.");
+  }
+});
+
+app.post("/api/coach/marketing/automation-runs/:runId/retry", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const runId = normalizarCoachCrmObjectId(req.params?.runId || "");
+
+  if (!runId) {
+    return responderCoachError(res, 400, "No encontre la corrida que quieres reintentar.");
+  }
+
+  try {
+    const workspaceSnapshot = await construirCoachWorkspaceActorSnapshot(auth.user);
+    const runDoc = await CoachMarketingAutomationRun.findOne(
+      construirCoachMarketingVisibilityQuery(req.coachMarketingAccess, { _id: runId })
+    );
+
+    if (!runDoc) {
+      return responderCoachError(res, 404, "No encontre esa corrida de automatizacion.");
+    }
+
+    const automationDoc = await CoachMarketingAutomation.findOne({
+      _id: runDoc.automationId,
+      ownerUserId: runDoc.ownerUserId
+    }).lean();
+    const now = new Date();
+
+    runDoc.status = "queued";
+    runDoc.queuedAt = now;
+    runDoc.startedAt = null;
+    runDoc.completedAt = null;
+    runDoc.failedAt = null;
+    runDoc.lastError = "";
+    runDoc.result = null;
+    runDoc.actionSummary =
+      construirCoachMarketingAutomationActionSummary(limpiarCoachMarketingAutomation(automationDoc), null) ||
+      runDoc.actionSummary ||
+      "";
+    runDoc.updatedAt = now;
+    await runDoc.save();
+
+    const queuedJob = await encolarCoachAsyncJob({
+      jobType: "marketing_automation_run",
+      userDoc: auth.user,
+      payload: {
+        runId: String(runDoc._id || ""),
+        automationId: String(runDoc.automationId || ""),
+        eventId: String(runDoc.eventId || "")
+      },
+      maxAttempts: 4
+    });
+
+    if (queuedJob?._id) {
+      runDoc.queuedJobId = String(queuedJob._id || "");
+      runDoc.updatedAt = new Date();
+      await runDoc.save();
+    }
+
+    const run = limpiarCoachMarketingAutomationRun(runDoc?.toObject ? runDoc.toObject() : runDoc);
+    const event = await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot,
+      integrationId: runDoc.integrationId || null,
+      campaignId: runDoc.campaignId || null,
+      publicationId: runDoc.publicationId || null,
+      provider: run.provider || "custom",
+      product: run.product || "custom",
+      direction: "internal",
+      eventType: "automation_run_retried",
+      entityType: "automation_run",
+      entityId: run.id,
+      status: "queued",
+      summary: `Se reencolo la corrida ${run.summary || "de automatizacion"}.`,
+      payload: {
+        automationId: run.automationId || "",
+        sourceEventId: run.eventId || "",
+        queuedJobId: run.queuedJobId || ""
+      },
+      occurredAt: now
+    });
+
+    res.json({
+      run,
+      event,
+      queuedJobId: run.queuedJobId || ""
+    });
+  } catch (error) {
+    console.error("Error reintentando corrida de automatizacion:", error.message);
+    responderCoachError(res, 500, "No pude reintentar esa corrida.");
   }
 });
 
