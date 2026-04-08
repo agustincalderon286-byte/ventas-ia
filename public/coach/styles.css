@@ -1192,6 +1192,10 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   margin-top: 22px;
 }
 
+.marketing-two-column-diagnostics {
+  align-items: start;
+}
+
 .marketing-form-card {
   margin-top: 0;
   padding: 18px;
@@ -1233,6 +1237,26 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 
 .marketing-checkbox span {
   line-height: 1.55;
+}
+
+.marketing-diagnostic-card {
+  display: grid;
+  gap: 16px;
+}
+
+.marketing-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.marketing-health-form {
+  margin-top: 0;
+}
+
+.marketing-chip-stack {
+  display: grid;
+  gap: 12px;
 }
 
 .territory-list,

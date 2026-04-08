@@ -2561,6 +2561,166 @@
               </form>
             </div>
 
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <form class="coach-form marketing-form-card" data-marketing-connector-form>
+                <h4>Preparar conector</h4>
+                <label>
+                  Integracion
+                  <select name="integrationId" data-marketing-connector-select>
+                    <option value="">Selecciona una integracion preparada</option>
+                  </select>
+                </label>
+                <label>
+                  Nombre visible
+                  <input type="text" name="label" maxlength="120" placeholder="Ej. Meta Ads principal" />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" data-marketing-connector-status-select></select>
+                </label>
+                <label>
+                  Conexion
+                  <select name="connectionStatus" data-marketing-connector-connection-select></select>
+                </label>
+                <label>
+                  Auth
+                  <select name="authMode" data-marketing-connector-auth-select></select>
+                </label>
+                <label>
+                  Tipo de cuenta
+                  <select name="accountType" data-marketing-connector-account-type-select></select>
+                </label>
+                <label>
+                  Cuenta visible
+                  <input type="text" name="accountLabel" maxlength="120" placeholder="Ej. BM Coach Agustin" />
+                </label>
+                <label>
+                  Business / workspace ID
+                  <input type="text" name="externalBusinessId" maxlength="120" placeholder="bm_123 o business-abc" />
+                </label>
+                <label>
+                  Cuenta / propiedad ID
+                  <input type="text" name="externalAccountId" maxlength="120" placeholder="act_123, GA4-123 o page_456" />
+                </label>
+                <label>
+                  Nombre externo
+                  <input type="text" name="externalAccountName" maxlength="120" placeholder="Nombre que aparece en la plataforma" />
+                </label>
+                <label class="marketing-field-full">
+                  Scopes esperados
+                  <textarea
+                    name="expectedScopes"
+                    rows="4"
+                    maxlength="420"
+                    placeholder="Uno por linea o separados por coma"
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Scopes concedidos
+                  <textarea
+                    name="grantedScopes"
+                    rows="4"
+                    maxlength="420"
+                    placeholder="Lo que ya te dio la plataforma"
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Capacidades activas
+                  <textarea
+                    name="capabilities"
+                    rows="3"
+                    maxlength="320"
+                    placeholder="campaigns, lead_forms, insights..."
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Placeholders tecnicos
+                  <textarea
+                    name="configText"
+                    rows="5"
+                    maxlength="600"
+                    placeholder="credential_slot: meta-app-principal&#10;default_domain: coachagustin.com&#10;webhook_slug: leads-meta"
+                  ></textarea>
+                </label>
+                <label class="marketing-field-full">
+                  Notas
+                  <textarea
+                    name="notes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que falta para que esta integracion quede lista para conectar?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-connector-save>Guardar preparacion</button>
+                </div>
+                <div class="form-result" data-marketing-connector-feedback></div>
+              </form>
+
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Diagnostico del conector</h4>
+                <p class="mini-note" data-marketing-connector-summary-copy>
+                  Selecciona una integracion para revisar su salud, permisos y placeholders.
+                </p>
+
+                <div class="marketing-diagnostic-grid">
+                  <div class="mini-stat">
+                    <strong data-marketing-connector-scope-total>0</strong>
+                    <span>Scopes esperados</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-connector-scope-granted>0</strong>
+                    <span>Scopes concedidos</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-connector-scope-missing>0</strong>
+                    <span>Scopes faltantes</span>
+                  </div>
+                  <div class="mini-stat">
+                    <strong data-marketing-connector-config-total>0</strong>
+                    <span>Claves preparadas</span>
+                  </div>
+                </div>
+
+                <div class="territory-inline-list" data-marketing-connector-chip-list>
+                  <div class="team-seat-empty">El resumen de la integracion aparecera aqui.</div>
+                </div>
+
+                <form class="coach-form marketing-health-form" data-marketing-health-form>
+                  <label>
+                    Resultado del check
+                    <select name="healthStatus" data-marketing-health-status-select></select>
+                  </label>
+                  <label>
+                    Conexion despues del check
+                    <select name="connectionStatus" data-marketing-health-connection-select></select>
+                  </label>
+                  <label class="marketing-field-full">
+                    Scopes faltantes
+                    <textarea
+                      name="missingScopes"
+                      rows="3"
+                      maxlength="320"
+                      placeholder="Solo si quieres forzar el faltante detectado"
+                    ></textarea>
+                  </label>
+                  <label class="marketing-field-full">
+                    Resumen del check
+                    <textarea
+                      name="summary"
+                      rows="4"
+                      maxlength="220"
+                      placeholder="Ej. Falta aprobar leads_retrieval y conectar la ad account final"
+                    ></textarea>
+                  </label>
+                  <div class="dashboard-actions">
+                    <button type="submit" class="nav-button" data-marketing-health-save>Registrar health check</button>
+                  </div>
+                  <div class="form-result" data-marketing-health-feedback></div>
+                </form>
+              </div>
+            </div>
+
             <div class="marketing-three-column">
               <div>
                 <div class="eyebrow">Integraciones</div>
