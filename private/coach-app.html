@@ -2477,6 +2477,126 @@
             data-coach-workspace-section="marketing"
             hidden
           >
+            <div class="eyebrow">Resultados y reporting</div>
+            <h3>Mide rendimiento sin depender todavia de APIs reales</h3>
+            <p>
+              Esta capa deja listo el tablero para capturas, spend, conversiones, ventas y revenue por campana aunque
+              los resultados todavia entren manuales o por integraciones parciales.
+            </p>
+
+            <div class="insight-grid marketing-summary-grid marketing-summary-grid-secondary">
+              <div class="mini-stat">
+                <strong data-marketing-reporting-active>0</strong>
+                <span>Campanas activas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-spend>$0.00</strong>
+                <span>Spend reportado</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-leads>0</strong>
+                <span>Leads capturados</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-cpl>$0.00</strong>
+                <span>Costo por lead</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-conversions>0</strong>
+                <span>Conversiones</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-sales>0</strong>
+                <span>Ventas efectivas</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-revenue>$0.00</strong>
+                <span>Revenue atribuido</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-marketing-reporting-roas>0.00x</strong>
+                <span>ROAS</span>
+              </div>
+            </div>
+
+            <div class="marketing-two-column marketing-two-column-diagnostics">
+              <form class="coach-form marketing-form-card" data-marketing-reporting-form>
+                <h4>Actualizar resultados</h4>
+                <label>
+                  Campana
+                  <select name="campaignId" data-marketing-reporting-campaign-select>
+                    <option value="">Selecciona una campana</option>
+                  </select>
+                </label>
+                <label>
+                  Impresiones
+                  <input type="number" name="reportedImpressions" min="0" step="1" placeholder="1200" />
+                </label>
+                <label>
+                  Clicks
+                  <input type="number" name="reportedClicks" min="0" step="1" placeholder="85" />
+                </label>
+                <label>
+                  Spend
+                  <input type="number" name="reportedSpendAmount" min="0" step="0.01" placeholder="45.00" />
+                </label>
+                <label>
+                  Conversiones
+                  <input type="number" name="reportedConversionCount" min="0" step="1" placeholder="10" />
+                </label>
+                <label>
+                  Leads calificados
+                  <input type="number" name="reportedQualifiedLeadCount" min="0" step="1" placeholder="6" />
+                </label>
+                <label>
+                  Citas
+                  <input type="number" name="reportedAppointmentCount" min="0" step="1" placeholder="3" />
+                </label>
+                <label>
+                  Ventas
+                  <input type="number" name="reportedWonSalesCount" min="0" step="1" placeholder="1" />
+                </label>
+                <label>
+                  Revenue
+                  <input type="number" name="reportedRevenueAmount" min="0" step="0.01" placeholder="1200.00" />
+                </label>
+                <label class="marketing-field-full">
+                  Notas de resultado
+                  <textarea
+                    name="reportingNotes"
+                    rows="3"
+                    maxlength="220"
+                    placeholder="Que aprendiste, que cambio o de donde salieron estos numeros?"
+                  ></textarea>
+                </label>
+                <div class="dashboard-actions">
+                  <button type="submit" class="primary-button" data-marketing-reporting-save>Guardar resultados</button>
+                </div>
+                <div class="form-result" data-marketing-reporting-feedback></div>
+              </form>
+
+              <div class="marketing-form-card marketing-diagnostic-card">
+                <h4>Resumen de performance</h4>
+                <p class="mini-note" data-marketing-reporting-copy>
+                  Selecciona una campana para revisar sus resultados, capturas y retorno reportado.
+                </p>
+
+                <div class="territory-inline-list" data-marketing-reporting-preview-list>
+                  <div class="team-seat-empty">El resumen de resultados aparecera aqui.</div>
+                </div>
+
+                <div class="territory-result-list" data-marketing-reporting-top-list>
+                  <div class="team-seat-empty">Las campanas con resultados apareceran aqui.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="dashboard-card"
+            data-coach-workspace-section="marketing"
+            hidden
+          >
             <div class="eyebrow">Fuentes de captura</div>
             <h3>Prepara endpoints publicos antes de conectar las APIs</h3>
             <p>

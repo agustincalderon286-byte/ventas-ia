@@ -9798,6 +9798,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const campaignWorkflowCopy = document.querySelector("[data-marketing-campaign-workflow-copy]");
   const campaignCheckList = document.querySelector("[data-marketing-campaign-check-list]");
   const campaignPreviewList = document.querySelector("[data-marketing-campaign-preview-list]");
+  const reportingForm = document.querySelector("[data-marketing-reporting-form]");
+  const reportingSaveButton = document.querySelector("[data-marketing-reporting-save]");
+  const reportingFeedback = document.querySelector("[data-marketing-reporting-feedback]");
+  const reportingCampaignSelect = document.querySelector("[data-marketing-reporting-campaign-select]");
+  const reportingCopy = document.querySelector("[data-marketing-reporting-copy]");
+  const reportingPreviewList = document.querySelector("[data-marketing-reporting-preview-list]");
+  const reportingTopList = document.querySelector("[data-marketing-reporting-top-list]");
   const creativeForm = document.querySelector("[data-marketing-creative-form]");
   const creativeSaveButton = document.querySelector("[data-marketing-creative-save]");
   const creativeFeedback = document.querySelector("[data-marketing-creative-feedback]");
@@ -9856,6 +9863,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !campaignOpsSelect ||
     !campaignCheckList ||
     !campaignPreviewList ||
+    !reportingForm ||
+    !reportingCampaignSelect ||
+    !reportingPreviewList ||
+    !reportingTopList ||
     !creativeForm ||
     !creativeList ||
     !publicationForm ||
@@ -9907,6 +9918,14 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     campaignOk: document.querySelector("[data-marketing-campaign-ok]"),
     campaignAttention: document.querySelector("[data-marketing-campaign-attention]"),
     campaignErrors: document.querySelector("[data-marketing-campaign-errors]"),
+    reportingActive: document.querySelector("[data-marketing-reporting-active]"),
+    reportingSpend: document.querySelector("[data-marketing-reporting-spend]"),
+    reportingLeads: document.querySelector("[data-marketing-reporting-leads]"),
+    reportingCpl: document.querySelector("[data-marketing-reporting-cpl]"),
+    reportingConversions: document.querySelector("[data-marketing-reporting-conversions]"),
+    reportingSales: document.querySelector("[data-marketing-reporting-sales]"),
+    reportingRevenue: document.querySelector("[data-marketing-reporting-revenue]"),
+    reportingRoas: document.querySelector("[data-marketing-reporting-roas]"),
     publicationScore: document.querySelector("[data-marketing-publication-score]"),
     publicationOk: document.querySelector("[data-marketing-publication-ok]"),
     publicationAttention: document.querySelector("[data-marketing-publication-attention]"),
@@ -10071,6 +10090,30 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         topCampaigns: Array.isArray(state.overview?.capture?.topCampaigns) ? state.overview.capture.topCampaigns : [],
         recentCaptures: Array.isArray(state.overview?.capture?.recentCaptures)
           ? state.overview.capture.recentCaptures
+          : []
+      },
+      reporting: {
+        activeCampaigns: Number(state.overview?.reporting?.activeCampaigns || 0),
+        liveCampaigns: Number(state.overview?.reporting?.liveCampaigns || 0),
+        campaignsWithSpend: Number(state.overview?.reporting?.campaignsWithSpend || 0),
+        budgetAmount: Number(state.overview?.reporting?.budgetAmount || 0),
+        reportedImpressions: Number(state.overview?.reporting?.reportedImpressions || 0),
+        reportedClicks: Number(state.overview?.reporting?.reportedClicks || 0),
+        reportedSpendAmount: Number(state.overview?.reporting?.reportedSpendAmount || 0),
+        reportedConversions: Number(state.overview?.reporting?.reportedConversions || 0),
+        reportedQualifiedLeads: Number(state.overview?.reporting?.reportedQualifiedLeads || 0),
+        reportedAppointments: Number(state.overview?.reporting?.reportedAppointments || 0),
+        effectiveWonSales: Number(state.overview?.reporting?.effectiveWonSales || 0),
+        effectiveRevenueAmount: Number(state.overview?.reporting?.effectiveRevenueAmount || 0),
+        capturedLeads: Number(state.overview?.reporting?.capturedLeads || 0),
+        capturedRecruitment: Number(state.overview?.reporting?.capturedRecruitment || 0),
+        ctrPercent: Number(state.overview?.reporting?.ctrPercent || 0),
+        costPerClick: Number(state.overview?.reporting?.costPerClick || 0),
+        costPerLead: Number(state.overview?.reporting?.costPerLead || 0),
+        returnOnAdSpend: Number(state.overview?.reporting?.returnOnAdSpend || 0),
+        topCampaigns: Array.isArray(state.overview?.reporting?.topCampaigns) ? state.overview.reporting.topCampaigns : [],
+        recentCampaigns: Array.isArray(state.overview?.reporting?.recentCampaigns)
+          ? state.overview.reporting.recentCampaigns
           : []
       }
     };
@@ -10243,6 +10286,14 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     setSummaryValue(summaryNodes.captureAttributed, overview.capture.attributedCaptures);
     setSummaryValue(summaryNodes.captureCampaigns, overview.capture.campaignsDetected);
     setSummaryValue(summaryNodes.captureMediums, overview.capture.mediumsDetected);
+    setSummaryValue(summaryNodes.reportingActive, overview.reporting.activeCampaigns);
+    setSummaryValue(summaryNodes.reportingSpend, formatMoney(overview.reporting.reportedSpendAmount || 0));
+    setSummaryValue(summaryNodes.reportingLeads, overview.reporting.capturedLeads);
+    setSummaryValue(summaryNodes.reportingCpl, formatMoney(overview.reporting.costPerLead || 0));
+    setSummaryValue(summaryNodes.reportingConversions, overview.reporting.reportedConversions);
+    setSummaryValue(summaryNodes.reportingSales, overview.reporting.effectiveWonSales);
+    setSummaryValue(summaryNodes.reportingRevenue, formatMoney(overview.reporting.effectiveRevenueAmount || 0));
+    setSummaryValue(summaryNodes.reportingRoas, `${Number(overview.reporting.returnOnAdSpend || 0).toFixed(2)}x`);
 
     bootstrapButton.textContent = overview.bootstrapped ? "Verificar base" : "Preparar base";
 
@@ -10592,6 +10643,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     buildChoiceSelectOptions(campaignReviewSelect, state.catalog?.statuses?.review || [], "Revision");
 
     buildSelectOptions({
+      target: reportingCampaignSelect,
+      items: state.campaigns,
+      placeholder: "Selecciona una campana",
+      labelBuilder: item => item?.name || "Campana"
+    });
+
+    buildSelectOptions({
       target: creativeCampaignSelect,
       items: state.campaigns,
       placeholder: "Sin campana ligada",
@@ -10705,6 +10763,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
 
     if (campaignOpsSelect) {
       campaignOpsSelect.value = state.selectedCampaignId || "";
+    }
+
+    if (reportingCampaignSelect) {
+      reportingCampaignSelect.value = state.selectedCampaignId || "";
     }
   };
 
@@ -11186,6 +11248,146 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     }
   };
 
+  const renderReportingPanel = () => {
+    const campaign = syncSelectedCampaign();
+    const reporting = getOverviewSnapshot().reporting;
+    const selectedReport =
+      reporting.topCampaigns.find(item => String(item?.id || "") === String(campaign?.id || "")) ||
+      reporting.recentCampaigns.find(item => String(item?.id || "") === String(campaign?.id || "")) ||
+      null;
+
+    if (reportingCampaignSelect) {
+      reportingCampaignSelect.value = state.selectedCampaignId || "";
+    }
+
+    if (!campaign) {
+      reportingForm.reset();
+      if (reportingCopy) {
+        reportingCopy.textContent =
+          "Selecciona una campana para revisar sus resultados, capturas y retorno reportado.";
+      }
+      renderEmptyState(reportingPreviewList, "El resumen de resultados aparecera aqui.");
+      renderEmptyState(reportingTopList, "Las campanas con resultados apareceran aqui.");
+      if (reportingSaveButton) reportingSaveButton.disabled = true;
+      return;
+    }
+
+    if (reportingSaveButton) reportingSaveButton.disabled = false;
+
+    reportingForm.elements.campaignId.value = campaign.id || "";
+    reportingForm.elements.reportedImpressions.value = campaign.reportedImpressions || "";
+    reportingForm.elements.reportedClicks.value = campaign.reportedClicks || "";
+    reportingForm.elements.reportedSpendAmount.value = campaign.reportedSpendAmount || "";
+    reportingForm.elements.reportedConversionCount.value = campaign.reportedConversionCount || "";
+    reportingForm.elements.reportedQualifiedLeadCount.value = campaign.reportedQualifiedLeadCount || "";
+    reportingForm.elements.reportedAppointmentCount.value = campaign.reportedAppointmentCount || "";
+    reportingForm.elements.reportedWonSalesCount.value = campaign.reportedWonSalesCount || "";
+    reportingForm.elements.reportedRevenueAmount.value = campaign.reportedRevenueAmount || "";
+    reportingForm.elements.reportingNotes.value = campaign.reportingNotes || "";
+
+    if (reportingCopy) {
+      reportingCopy.textContent = selectedReport
+        ? [
+            selectedReport.name || "Campana",
+            `${selectedReport.capturedLeads || 0} lead(s)`,
+            `${selectedReport.effectiveWonSales || 0} venta(s)`,
+            selectedReport.resultsUpdatedAt
+              ? `Actualizada ${formatDateTimeShort(selectedReport.resultsUpdatedAt)}`
+              : "Sin reporte todavia"
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "Selecciona una campana para revisar sus resultados, capturas y retorno reportado.";
+    }
+
+    const previewItems = selectedReport
+      ? [
+          {
+            label: "Spend",
+            value: formatMoney(selectedReport.reportedSpendAmount || 0)
+          },
+          {
+            label: "Impresiones",
+            value: String(Number(selectedReport.reportedImpressions || 0))
+          },
+          {
+            label: "Clicks",
+            value: String(Number(selectedReport.reportedClicks || 0))
+          },
+          {
+            label: "CTR",
+            value: `${Number(selectedReport.reportedCtrPercent || 0).toFixed(2)}%`
+          },
+          {
+            label: "Leads capturados",
+            value: String(Number(selectedReport.capturedLeads || 0))
+          },
+          {
+            label: "Reclutamiento",
+            value: String(Number(selectedReport.capturedRecruitment || 0))
+          },
+          {
+            label: "CPL",
+            value: formatMoney(selectedReport.costPerLead || 0)
+          },
+          {
+            label: "ROAS",
+            value: `${Number(selectedReport.returnOnAdSpend || 0).toFixed(2)}x`
+          },
+          {
+            label: "Ventas efectivas",
+            value: String(Number(selectedReport.effectiveWonSales || 0))
+          },
+          {
+            label: "Revenue",
+            value: formatMoney(selectedReport.effectiveRevenueAmount || 0)
+          }
+        ]
+      : [];
+
+    reportingPreviewList.innerHTML = previewItems.length
+      ? previewItems
+          .map(
+            item => `
+              <div class="territory-inline-chip">
+                <strong>${escapeHtml(item.label || "Dato")}</strong>
+                <span>${escapeHtml(item.value || "Pendiente")}</span>
+              </div>
+            `
+          )
+          .join("")
+      : `<div class="team-seat-empty">El resumen de resultados aparecera aqui.</div>`;
+
+    const listItems = Array.isArray(reporting.topCampaigns) ? reporting.topCampaigns : [];
+    reportingTopList.innerHTML = listItems.length
+      ? listItems
+          .map(
+            item => `
+              <article class="territory-result-card">
+                <strong>${escapeHtml(item.name || "Campana")}</strong>
+                <span>${escapeHtml(
+                  [
+                    item.statusLabel || "Estado",
+                    `${Number(item.capturedLeads || 0)} lead(s)`,
+                    `${Number(item.effectiveWonSales || 0)} venta(s)`
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                )}</span>
+                <p>${escapeHtml(
+                  [
+                    `Spend ${formatMoney(item.reportedSpendAmount || 0)}`,
+                    `Revenue ${formatMoney(item.effectiveRevenueAmount || 0)}`,
+                    `ROAS ${Number(item.returnOnAdSpend || 0).toFixed(2)}x`
+                  ].join(" · ")
+                )}</p>
+              </article>
+            `
+          )
+          .join("")
+      : `<div class="team-seat-empty">Las campanas con resultados apareceran aqui.</div>`;
+  };
+
   const renderCreatives = () => {
     if (!state.creatives.length) {
       renderEmptyState(creativeList, "Todavia no hay creativos preparados en esta cuenta.");
@@ -11474,6 +11676,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     syncSelectedPublication();
     syncSelectedIntakeSource();
     renderCampaignWorkflow();
+    renderReportingPanel();
     renderPublicationWorkflow();
     renderIntakePrep();
     renderConnectorPrep();
@@ -11580,6 +11783,7 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     clearMessage(campaignOpsFeedback);
     syncSelectedCampaign(campaignOpsSelect.value || "");
     renderCampaigns();
+    renderReportingPanel();
     loadCampaignWorkflow(state.selectedCampaignId).catch(() => {});
   });
 
@@ -11593,7 +11797,16 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     clearMessage(campaignOpsFeedback);
     syncSelectedCampaign(button.dataset.marketingSelectCampaign || "");
     renderCampaigns();
+    renderReportingPanel();
     loadCampaignWorkflow(state.selectedCampaignId).catch(() => {});
+  });
+
+  reportingCampaignSelect?.addEventListener("change", () => {
+    clearMessage(reportingFeedback);
+    syncSelectedCampaign(reportingCampaignSelect.value || "");
+    renderCampaigns();
+    renderReportingPanel();
+    loadCampaignWorkflow(state.selectedCampaignId, { silent: true }).catch(() => {});
   });
 
   publicationOpsSelect?.addEventListener("change", () => {
@@ -12142,6 +12355,47 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
       setMessage(campaignOpsFeedback, error.message || "No pude pausar la campana.", "error");
     } finally {
       setButtonLoading(campaignPauseButton, false);
+    }
+  });
+
+  reportingForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage(reportingFeedback);
+
+    const campaign = getSelectedCampaign();
+
+    if (!campaign?.id) {
+      setMessage(reportingFeedback, "Primero selecciona una campana para actualizar resultados.", "error");
+      return;
+    }
+
+    setButtonLoading(reportingSaveButton, true, "Guardando...");
+
+    try {
+      const formData = new FormData(reportingForm);
+      const data = await apiRequest(`/api/coach/marketing/campaigns/${campaign.id}/reporting`, {
+        method: "POST",
+        body: {
+          reportedImpressions: formData.get("reportedImpressions"),
+          reportedClicks: formData.get("reportedClicks"),
+          reportedSpendAmount: formData.get("reportedSpendAmount"),
+          reportedConversionCount: formData.get("reportedConversionCount"),
+          reportedQualifiedLeadCount: formData.get("reportedQualifiedLeadCount"),
+          reportedAppointmentCount: formData.get("reportedAppointmentCount"),
+          reportedWonSalesCount: formData.get("reportedWonSalesCount"),
+          reportedRevenueAmount: formData.get("reportedRevenueAmount"),
+          reportingNotes: formData.get("reportingNotes")
+        }
+      });
+
+      state.overview = data?.overview || state.overview;
+      state.selectedCampaignId = data?.campaign?.id || campaign.id;
+      await loadWorkspace();
+      setMessage(reportingFeedback, "Resultados guardados dentro del tablero de marketing.", "success");
+    } catch (error) {
+      setMessage(reportingFeedback, error.message || "No pude guardar los resultados de la campana.", "error");
+    } finally {
+      setButtonLoading(reportingSaveButton, false);
     }
   });
 
