@@ -132,7 +132,7 @@ const actividadSesiones = {};
 const RIFA_PROFILE_COLLECTION = "agustin_rifa_lead_profiles";
 const RIFA_STATE_COLLECTION = "agustin_rifa_lead_contact_state";
 const RIFA_INSIGHTS_COLLECTION = "agustin_rifa_lead_insights";
-const COACH_MARKETING_FOUNDATION_VERSION = 1;
+const COACH_MARKETING_FOUNDATION_VERSION = 3;
 const COACH_MARKETING_PROVIDER_OPTIONS = Object.freeze([
   { value: "meta", label: "Meta" },
   { value: "facebook", label: "Facebook" },
@@ -386,6 +386,25 @@ const COACH_MARKETING_HEALTH_STATUS_OPTIONS = Object.freeze([
   { value: "attention", label: "Atencion" },
   { value: "error", label: "Error" }
 ]);
+const COACH_MARKETING_CAPTURE_TYPE_OPTIONS = Object.freeze([
+  { value: "lead", label: "Lead" },
+  { value: "recruitment", label: "Reclutamiento" },
+  { value: "program_4_en_14", label: "4 en 14" },
+  { value: "custom", label: "Otra captura" }
+]);
+const COACH_LEAD_SOURCE_OPTIONS = Object.freeze([
+  { value: "captura_manual", label: "Captura manual" },
+  { value: "campana_digital", label: "Campana digital" },
+  { value: "rifa_digital", label: "Rifa digital" },
+  { value: "programa_4_en_14", label: "Programa 4 en 14" },
+  { value: "contactos_compartidos", label: "Contactos compartidos" },
+  { value: "chef_personal", label: "Chef personal" },
+  { value: "llamada", label: "Llamada" },
+  { value: "demo", label: "Demo" },
+  { value: "referencia", label: "Referencia" },
+  { value: "evento", label: "Evento" },
+  { value: "otro", label: "Otro" }
+]);
 const COACH_MARKETING_INTEGRATION_BLUEPRINTS = Object.freeze(
   COACH_MARKETING_PRODUCT_OPTIONS.filter(item => item.bootstrap !== false).map(item => ({
     templateKey: item.value,
@@ -542,6 +561,46 @@ const coachMarketingMediaSlotSchema = new mongoose.Schema(
     sourceUrl: String,
     fileName: String,
     notes: String
+  },
+  { _id: false }
+);
+
+const coachAttributionSchema = new mongoose.Schema(
+  {
+    captureType: { type: String, default: "lead" },
+    recordSource: String,
+    source: String,
+    sourceDetail: String,
+    medium: String,
+    campaign: String,
+    campaignId: String,
+    adset: String,
+    adsetId: String,
+    ad: String,
+    adId: String,
+    provider: String,
+    product: String,
+    channelId: String,
+    channelLabel: String,
+    creativeId: String,
+    creativeLabel: String,
+    publicationId: String,
+    publicationLabel: String,
+    landingPageUrl: String,
+    referrerUrl: String,
+    pageTitle: String,
+    utmSource: String,
+    utmMedium: String,
+    utmCampaign: String,
+    utmTerm: String,
+    utmContent: String,
+    gclid: String,
+    fbclid: String,
+    ttclid: String,
+    destinationType: String,
+    destinationLabel: String,
+    destinationUrl: String,
+    capturedAt: Date
   },
   { _id: false }
 );
@@ -720,6 +779,24 @@ const coachLeadInboxSchema = new mongoose.Schema({
   areaNotes: String,
   interest: String,
   source: { type: String, default: "captura_manual" },
+  sourceDetail: String,
+  landingPageUrl: String,
+  referrerUrl: String,
+  pageTitle: String,
+  utmSource: String,
+  utmMedium: String,
+  utmCampaign: String,
+  utmTerm: String,
+  utmContent: String,
+  gclid: String,
+  fbclid: String,
+  ttclid: String,
+  campaignName: String,
+  adsetName: String,
+  adName: String,
+  marketingProvider: String,
+  marketingProduct: String,
+  attribution: { type: coachAttributionSchema, default: null },
   notes: String,
   consentGiven: { type: Boolean, default: false },
   status: { type: String, default: "nuevo" },
@@ -911,6 +988,12 @@ const coachRecruitmentApplicationSchema = new mongoose.Schema({
   gclid: String,
   fbclid: String,
   ttclid: String,
+  campaignName: String,
+  adsetName: String,
+  adName: String,
+  marketingProvider: String,
+  marketingProduct: String,
+  attribution: { type: coachAttributionSchema, default: null },
   summary: String,
   updatedAt: Date,
   createdAt: { type: Date, default: Date.now }
@@ -1667,6 +1750,8 @@ coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, "attribution.source": 1, updatedAt: -1 });
+coachLeadInboxSchema.index({ ownerUserId: 1, "attribution.campaign": 1, updatedAt: -1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, updatedAt: -1 });
@@ -1676,6 +1761,8 @@ coachRecruitmentApplicationSchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, "attribution.source": 1, updatedAt: -1 });
+coachRecruitmentApplicationSchema.index({ ownerUserId: 1, "attribution.campaign": 1, updatedAt: -1 });
 coachPrivateResourceSchema.index({ ownerUserId: 1, slotType: 1 }, { unique: true });
 coachDemoOutcomeSchema.index({ ownerUserId: 1, createdAt: -1 });
 coachDemoOutcomeSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
@@ -4903,6 +4990,423 @@ function normalizarCoachOptionalDate(value = null) {
   return Number.isFinite(date?.getTime?.()) ? date : null;
 }
 
+function normalizarCoachLeadSourceBase(source = "") {
+  const value = String(source || "").trim().toLowerCase();
+  const validSources = COACH_LEAD_SOURCE_OPTIONS.map(item => item.value);
+  return validSources.includes(value) ? value : "captura_manual";
+}
+
+function normalizarCoachMarketingCaptureType(value = "") {
+  const safeValue = String(value || "").trim().toLowerCase();
+  const validTypes = COACH_MARKETING_CAPTURE_TYPE_OPTIONS.map(item => item.value);
+  return validTypes.includes(safeValue) ? safeValue : "lead";
+}
+
+function leerCoachAttributionRawValue(payload = {}, keys = []) {
+  const safePayload = payload && typeof payload === "object" ? payload : {};
+  const nested =
+    safePayload.attribution && typeof safePayload.attribution === "object" && !Array.isArray(safePayload.attribution)
+      ? safePayload.attribution
+      : {};
+
+  for (const key of Array.isArray(keys) ? keys : [keys]) {
+    if (!key) {
+      continue;
+    }
+
+    const nestedValue = nested[key];
+
+    if (nestedValue === 0 || (nestedValue !== null && nestedValue !== undefined && String(nestedValue).trim() !== "")) {
+      return nestedValue;
+    }
+
+    const payloadValue = safePayload[key];
+
+    if (payloadValue === 0 || (payloadValue !== null && payloadValue !== undefined && String(payloadValue).trim() !== "")) {
+      return payloadValue;
+    }
+  }
+
+  return "";
+}
+
+function inferirCoachLeadSourceDigital(payload = {}) {
+  const gclid = cleanText(leerCoachAttributionRawValue(payload, ["gclid"])).slice(0, 200);
+  const fbclid = cleanText(leerCoachAttributionRawValue(payload, ["fbclid"])).slice(0, 200);
+  const ttclid = cleanText(leerCoachAttributionRawValue(payload, ["ttclid"])).slice(0, 200);
+  const sourceText = [
+    leerCoachAttributionRawValue(payload, ["source", "utmSource", "utm_source", "platform", "network"]),
+    leerCoachAttributionRawValue(payload, ["medium", "utmMedium", "utm_medium"]),
+    leerCoachAttributionRawValue(payload, ["campaign", "campaignName", "utmCampaign", "utm_campaign"]),
+    leerCoachAttributionRawValue(payload, ["adset", "adsetName", "adGroupName", "adgroupName"]),
+    leerCoachAttributionRawValue(payload, ["ad", "adName", "creativeName"]),
+    leerCoachAttributionRawValue(payload, ["provider", "product"])
+  ]
+    .map(value => cleanText(value || "").toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (gclid || fbclid || ttclid) {
+    return "campana_digital";
+  }
+
+  if (
+    /\b(google|facebook|instagram|meta|tiktok|linkedin|youtube)\b/.test(sourceText) &&
+    /\b(cpc|ppc|paid|ads|campaign|campana|lead\s*form|instant\s*form|search|display|performance)\b/.test(sourceText)
+  ) {
+    return "campana_digital";
+  }
+
+  if (/\b(cpc|ppc|paid|social_paid|search_paid|display)\b/.test(sourceText)) {
+    return "campana_digital";
+  }
+
+  if (cleanText(leerCoachAttributionRawValue(payload, ["utmCampaign", "utm_campaign", "campaignName", "campaign"]))) {
+    return "campana_digital";
+  }
+
+  return "";
+}
+
+function inferirCoachMarketingProviderDesdeAttributionPayload(payload = {}) {
+  const explicitRaw = cleanText(
+    leerCoachAttributionRawValue(payload, ["provider", "sourceProvider", "network", "platform"])
+  )
+    .toLowerCase()
+    .trim();
+  const explicitProvider = normalizarCoachMarketingProvider(explicitRaw || "");
+
+  if (explicitRaw && explicitProvider !== "custom") {
+    return explicitProvider;
+  }
+
+  const sourceText = [
+    leerCoachAttributionRawValue(payload, ["utmSource", "utm_source", "source", "platform", "network"]),
+    leerCoachAttributionRawValue(payload, ["sourceDetail"]),
+    leerCoachAttributionRawValue(payload, ["medium", "utmMedium", "utm_medium"]),
+    leerCoachAttributionRawValue(payload, ["campaign", "campaignName", "utmCampaign", "utm_campaign"])
+  ]
+    .map(value => cleanText(value || "").toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (cleanText(leerCoachAttributionRawValue(payload, ["gclid"]))) {
+    return "google";
+  }
+
+  if (cleanText(leerCoachAttributionRawValue(payload, ["fbclid"]))) {
+    if (/instagram/.test(sourceText)) {
+      return "instagram";
+    }
+
+    if (/facebook/.test(sourceText)) {
+      return "facebook";
+    }
+
+    return "meta";
+  }
+
+  if (cleanText(leerCoachAttributionRawValue(payload, ["ttclid"]))) {
+    return "tiktok";
+  }
+
+  if (/instagram/.test(sourceText)) {
+    return "instagram";
+  }
+
+  if (/facebook/.test(sourceText)) {
+    return "facebook";
+  }
+
+  if (/meta/.test(sourceText)) {
+    return "meta";
+  }
+
+  if (/youtube/.test(sourceText)) {
+    return "youtube";
+  }
+
+  if (/google/.test(sourceText)) {
+    return "google";
+  }
+
+  if (/tiktok/.test(sourceText)) {
+    return "tiktok";
+  }
+
+  if (/linkedin/.test(sourceText)) {
+    return "linkedin";
+  }
+
+  if (/webhook/.test(sourceText)) {
+    return "webhook";
+  }
+
+  return "custom";
+}
+
+function inferirCoachMarketingProductDesdeAttributionPayload(payload = {}, provider = "custom") {
+  const explicitRaw = cleanText(
+    leerCoachAttributionRawValue(payload, ["product", "sourceProduct", "integrationProduct"])
+  )
+    .toLowerCase()
+    .trim();
+  const explicitProduct = normalizarCoachMarketingProduct(explicitRaw || "");
+
+  if (explicitRaw && explicitProduct !== "custom") {
+    return explicitProduct;
+  }
+
+  const sourceText = [
+    leerCoachAttributionRawValue(payload, ["source", "utmSource", "utm_source", "platform", "network"]),
+    leerCoachAttributionRawValue(payload, ["medium", "utmMedium", "utm_medium"]),
+    leerCoachAttributionRawValue(payload, ["campaign", "campaignName", "utmCampaign", "utm_campaign"]),
+    leerCoachAttributionRawValue(payload, ["adset", "adsetName", "adGroupName", "adgroupName"]),
+    leerCoachAttributionRawValue(payload, ["ad", "adName", "creativeName"])
+  ]
+    .map(value => cleanText(value || "").toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+  const hasPaidSignals = Boolean(
+    cleanText(leerCoachAttributionRawValue(payload, ["gclid", "fbclid", "ttclid"])) ||
+      cleanText(leerCoachAttributionRawValue(payload, ["campaign", "campaignName", "utmCampaign", "utm_campaign"])) ||
+      cleanText(leerCoachAttributionRawValue(payload, ["adset", "adsetName", "adGroupName", "adgroupName"])) ||
+      cleanText(leerCoachAttributionRawValue(payload, ["ad", "adName", "creativeName"])) ||
+      /\b(cpc|ppc|paid|ads|lead\s*form|instant\s*form|search|display|performance)\b/.test(sourceText)
+  );
+
+  switch (provider) {
+    case "google":
+      return hasPaidSignals ? "google_ads" : "google_analytics";
+    case "meta":
+      return "meta_ads";
+    case "facebook":
+      return hasPaidSignals ? "meta_ads" : "facebook_page";
+    case "instagram":
+      return hasPaidSignals ? "meta_ads" : "instagram_business";
+    case "tiktok":
+      return hasPaidSignals ? "tiktok_ads" : "tiktok_business";
+    case "youtube":
+      return "youtube_channel";
+    case "linkedin":
+      return "linkedin_page";
+    case "webhook":
+      return "custom_webhook";
+    default:
+      return "custom";
+  }
+}
+
+function construirCoachAttributionSnapshot(payload = {}, options = {}) {
+  const capturedAt = normalizarCoachOptionalDate(
+    options.capturedAt || leerCoachAttributionRawValue(payload, ["capturedAt", "createdAt", "occurredAt"])
+  );
+  const explicitRecordSource = cleanText(options.recordSource || leerCoachAttributionRawValue(payload, ["recordSource"])).slice(
+    0,
+    80
+  );
+  const inferredRecordSource = inferirCoachLeadSourceDigital(payload);
+  const recordSource = normalizarCoachLeadSourceBase(explicitRecordSource || inferredRecordSource || "captura_manual");
+  const sourceCandidate = cleanText(
+    leerCoachAttributionRawValue(payload, ["utmSource", "utm_source", "sourcePlatform", "platform", "network"])
+  ).slice(0, 120);
+  const fallbackSource = cleanText(leerCoachAttributionRawValue(payload, ["source"])).slice(0, 120);
+  const source = sourceCandidate || (fallbackSource && fallbackSource !== recordSource ? fallbackSource : "");
+  const medium = cleanText(leerCoachAttributionRawValue(payload, ["medium", "utmMedium", "utm_medium"])).slice(0, 120);
+  const campaign = cleanText(
+    leerCoachAttributionRawValue(payload, ["campaign", "campaignName", "utmCampaign", "utm_campaign"])
+  ).slice(0, 160);
+  const campaignId = cleanText(leerCoachAttributionRawValue(payload, ["campaignId"])).slice(0, 120);
+  const adset = cleanText(
+    leerCoachAttributionRawValue(payload, ["adset", "adsetName", "adGroupName", "adgroupName"])
+  ).slice(0, 160);
+  const adsetId = cleanText(leerCoachAttributionRawValue(payload, ["adsetId", "adGroupId", "adgroupId"])).slice(0, 120);
+  const ad = cleanText(leerCoachAttributionRawValue(payload, ["ad", "adName", "creativeName"])).slice(0, 160);
+  const adId = cleanText(leerCoachAttributionRawValue(payload, ["adId", "creativeId"])).slice(0, 120);
+  const sourceDetail = cleanText(leerCoachAttributionRawValue(payload, ["sourceDetail"])).slice(0, 180);
+  const landingPageUrl = limpiarUrlExterna(
+    leerCoachAttributionRawValue(payload, ["landingPageUrl", "pageUrl", "destinationUrl"])
+  );
+  const referrerUrl = limpiarUrlExterna(leerCoachAttributionRawValue(payload, ["referrerUrl", "referrer"]));
+  const pageTitle = cleanText(leerCoachAttributionRawValue(payload, ["pageTitle"])).slice(0, 160);
+  const utmSource = cleanText(leerCoachAttributionRawValue(payload, ["utmSource", "utm_source"])).slice(0, 120);
+  const utmMedium = cleanText(leerCoachAttributionRawValue(payload, ["utmMedium", "utm_medium"])).slice(0, 120);
+  const utmCampaign = cleanText(leerCoachAttributionRawValue(payload, ["utmCampaign", "utm_campaign"])).slice(0, 160);
+  const utmTerm = cleanText(leerCoachAttributionRawValue(payload, ["utmTerm", "utm_term"])).slice(0, 160);
+  const utmContent = cleanText(leerCoachAttributionRawValue(payload, ["utmContent", "utm_content"])).slice(0, 160);
+  const gclid = cleanText(leerCoachAttributionRawValue(payload, ["gclid"])).slice(0, 200);
+  const fbclid = cleanText(leerCoachAttributionRawValue(payload, ["fbclid"])).slice(0, 200);
+  const ttclid = cleanText(leerCoachAttributionRawValue(payload, ["ttclid"])).slice(0, 200);
+  const provider = inferirCoachMarketingProviderDesdeAttributionPayload({
+    ...payload,
+    source,
+    sourceDetail,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    gclid,
+    fbclid,
+    ttclid
+  });
+  const product = inferirCoachMarketingProductDesdeAttributionPayload(
+    {
+      ...payload,
+      source,
+      medium,
+      campaign,
+      adset,
+      ad,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      gclid,
+      fbclid,
+      ttclid
+    },
+    provider
+  );
+  const destination = options.destination && typeof options.destination === "object" ? options.destination : {};
+
+  const snapshot = {
+    captureType: normalizarCoachMarketingCaptureType(options.captureType || leerCoachAttributionRawValue(payload, ["captureType"])),
+    captureTypeLabel: formatearCoachMarketingChoiceLabel(
+      options.captureType || leerCoachAttributionRawValue(payload, ["captureType"]) || "lead",
+      COACH_MARKETING_CAPTURE_TYPE_OPTIONS
+    ),
+    recordSource,
+    recordSourceLabel: formatearCoachMarketingChoiceLabel(recordSource, COACH_LEAD_SOURCE_OPTIONS),
+    source,
+    sourceDetail,
+    medium: medium || utmMedium,
+    campaign: campaign || utmCampaign,
+    campaignId,
+    adset,
+    adsetId,
+    ad,
+    adId,
+    provider,
+    providerLabel: formatearCoachMarketingChoiceLabel(provider, COACH_MARKETING_PROVIDER_OPTIONS),
+    product,
+    productLabel: formatearCoachMarketingChoiceLabel(product, COACH_MARKETING_PRODUCT_OPTIONS),
+    channelId: cleanText(leerCoachAttributionRawValue(payload, ["channelId"])).slice(0, 120),
+    channelLabel: cleanText(leerCoachAttributionRawValue(payload, ["channelLabel"])).slice(0, 120),
+    creativeId: cleanText(leerCoachAttributionRawValue(payload, ["creativeId"])).slice(0, 120),
+    creativeLabel: cleanText(leerCoachAttributionRawValue(payload, ["creativeLabel", "creativeName"])).slice(0, 120),
+    publicationId: cleanText(leerCoachAttributionRawValue(payload, ["publicationId"])).slice(0, 120),
+    publicationLabel: cleanText(leerCoachAttributionRawValue(payload, ["publicationLabel"])).slice(0, 120),
+    landingPageUrl,
+    referrerUrl,
+    pageTitle,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    utmTerm,
+    utmContent,
+    gclid,
+    fbclid,
+    ttclid,
+    destinationType: cleanText(destination?.type || leerCoachAttributionRawValue(payload, ["destinationType"])).slice(0, 40),
+    destinationLabel: cleanText(destination?.label || leerCoachAttributionRawValue(payload, ["destinationLabel"])).slice(0, 120),
+    destinationUrl: limpiarUrlExterna(destination?.url || leerCoachAttributionRawValue(payload, ["destinationUrl"])),
+    capturedAt: capturedAt || new Date()
+  };
+
+  return snapshot;
+}
+
+function limpiarCoachAttributionSnapshot(attribution = null, options = {}) {
+  if (!attribution || typeof attribution !== "object") {
+    return null;
+  }
+
+  const snapshot = construirCoachAttributionSnapshot(attribution, options);
+  const hasSignal = Boolean(
+    snapshot.source ||
+      snapshot.medium ||
+      snapshot.campaign ||
+      snapshot.adset ||
+      snapshot.ad ||
+      snapshot.gclid ||
+      snapshot.fbclid ||
+      snapshot.ttclid ||
+      snapshot.landingPageUrl ||
+      snapshot.referrerUrl
+  );
+
+  return {
+    ...snapshot,
+    hasSignal
+  };
+}
+
+function resolverCoachAttributionDesdeDocumento(doc = null, options = {}) {
+  if (!doc || typeof doc !== "object") {
+    return null;
+  }
+
+  const basePayload = {
+    ...doc,
+    ...(doc.attribution && typeof doc.attribution === "object" ? doc.attribution : {}),
+    captureType: options.captureType || doc?.attribution?.captureType || "",
+    recordSource: options.recordSource || doc?.attribution?.recordSource || doc?.source || "",
+    source:
+      doc?.attribution?.source ||
+      doc?.utmSource ||
+      doc?.sourceDetail ||
+      (doc?.source && doc?.source !== options.recordSource ? doc.source : ""),
+    medium: doc?.attribution?.medium || doc?.utmMedium || "",
+    campaign: doc?.attribution?.campaign || doc?.campaignName || doc?.utmCampaign || "",
+    campaignId: doc?.attribution?.campaignId || doc?.campaignId || "",
+    adset: doc?.attribution?.adset || doc?.adsetName || "",
+    adsetId: doc?.attribution?.adsetId || doc?.adsetId || "",
+    ad: doc?.attribution?.ad || doc?.adName || "",
+    adId: doc?.attribution?.adId || doc?.adId || "",
+    provider: doc?.attribution?.provider || doc?.marketingProvider || "",
+    product: doc?.attribution?.product || doc?.marketingProduct || "",
+    landingPageUrl: doc?.attribution?.landingPageUrl || doc?.landingPageUrl || "",
+    referrerUrl: doc?.attribution?.referrerUrl || doc?.referrerUrl || "",
+    pageTitle: doc?.attribution?.pageTitle || doc?.pageTitle || "",
+    utmSource: doc?.attribution?.utmSource || doc?.utmSource || "",
+    utmMedium: doc?.attribution?.utmMedium || doc?.utmMedium || "",
+    utmCampaign: doc?.attribution?.utmCampaign || doc?.utmCampaign || "",
+    utmTerm: doc?.attribution?.utmTerm || doc?.utmTerm || "",
+    utmContent: doc?.attribution?.utmContent || doc?.utmContent || "",
+    gclid: doc?.attribution?.gclid || doc?.gclid || "",
+    fbclid: doc?.attribution?.fbclid || doc?.fbclid || "",
+    ttclid: doc?.attribution?.ttclid || doc?.ttclid || "",
+    destinationType: doc?.attribution?.destinationType || options.destination?.type || "",
+    destinationLabel: doc?.attribution?.destinationLabel || options.destination?.label || "",
+    destinationUrl: doc?.attribution?.destinationUrl || options.destination?.url || "",
+    capturedAt: doc?.attribution?.capturedAt || doc?.updatedAt || doc?.createdAt || null
+  };
+
+  return limpiarCoachAttributionSnapshot(basePayload, {
+    captureType: options.captureType || doc?.attribution?.captureType || "lead",
+    recordSource: options.recordSource || doc?.attribution?.recordSource || doc?.source || "captura_manual",
+    destination: options.destination || null,
+    capturedAt: basePayload.capturedAt
+  });
+}
+
+function construirCoachAttributionResumen(attribution = null) {
+  const safeAttribution = limpiarCoachAttributionSnapshot(attribution);
+
+  if (!safeAttribution) {
+    return "";
+  }
+
+  return [
+    safeAttribution.recordSourceLabel || "",
+    safeAttribution.source || "",
+    safeAttribution.medium || "",
+    safeAttribution.campaign || "",
+    safeAttribution.adset || "",
+    safeAttribution.ad || ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function limpiarCoachMarketingMediaSlots(slots = []) {
   const safeSlots = Array.isArray(slots) ? slots : [];
 
@@ -5051,7 +5555,8 @@ function construirCoachMarketingCatalog() {
     objectives: COACH_MARKETING_OBJECTIVE_OPTIONS,
     creativeTypes: COACH_MARKETING_CREATIVE_TYPE_OPTIONS,
     publicationModes: COACH_MARKETING_PUBLICATION_MODE_OPTIONS,
-    eventDirections: COACH_MARKETING_EVENT_DIRECTION_OPTIONS
+    eventDirections: COACH_MARKETING_EVENT_DIRECTION_OPTIONS,
+    captureTypes: COACH_MARKETING_CAPTURE_TYPE_OPTIONS
   };
 }
 
@@ -5540,6 +6045,179 @@ async function obtenerCoachMarketingModuleSnapshot(userDoc = null) {
   };
 }
 
+async function obtenerCoachMarketingAttributionOverview(userDoc = null) {
+  const query = construirCoachWorkspaceQuery(userDoc);
+  const [leadTotal, applicationTotal, leadDocs, applicationDocs] = await Promise.all([
+    CoachLeadInbox.countDocuments(query),
+    CoachRecruitmentApplication.countDocuments(query),
+    CoachLeadInbox.find(query)
+      .select(
+        [
+          "fullName",
+          "source",
+          "sourceDetail",
+          "landingPageUrl",
+          "referrerUrl",
+          "pageTitle",
+          "utmSource",
+          "utmMedium",
+          "utmCampaign",
+          "utmTerm",
+          "utmContent",
+          "gclid",
+          "fbclid",
+          "ttclid",
+          "campaignName",
+          "adsetName",
+          "adName",
+          "marketingProvider",
+          "marketingProduct",
+          "updatedAt",
+          "createdAt",
+          "attribution"
+        ].join(" ")
+      )
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(180)
+      .lean(),
+    CoachRecruitmentApplication.find(query)
+      .select(
+        [
+          "fullName",
+          "source",
+          "sourceDetail",
+          "landingPageUrl",
+          "referrerUrl",
+          "pageTitle",
+          "utmSource",
+          "utmMedium",
+          "utmCampaign",
+          "utmTerm",
+          "utmContent",
+          "gclid",
+          "fbclid",
+          "ttclid",
+          "campaignName",
+          "adsetName",
+          "adName",
+          "marketingProvider",
+          "marketingProduct",
+          "updatedAt",
+          "createdAt",
+          "attribution"
+        ].join(" ")
+      )
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(180)
+      .lean()
+  ]);
+
+  const captureItems = [
+    ...(Array.isArray(leadDocs) ? leadDocs : []).map(doc => ({
+      id: String(doc?._id || ""),
+      fullName: cleanText(doc?.fullName || "").slice(0, 120),
+      attribution: resolverCoachAttributionDesdeDocumento(doc, {
+        captureType: "lead",
+        recordSource: doc?.source || "captura_manual"
+      }),
+      captureType: "lead",
+      captureTypeLabel: formatearCoachMarketingChoiceLabel("lead", COACH_MARKETING_CAPTURE_TYPE_OPTIONS),
+      createdAt: doc?.createdAt || null,
+      updatedAt: doc?.updatedAt || null
+    })),
+    ...(Array.isArray(applicationDocs) ? applicationDocs : []).map(doc => ({
+      id: String(doc?._id || ""),
+      fullName: cleanText(doc?.fullName || "").slice(0, 120),
+      attribution: resolverCoachAttributionDesdeDocumento(doc, {
+        captureType: "recruitment",
+        recordSource: doc?.source || "captura_manual"
+      }),
+      captureType: "recruitment",
+      captureTypeLabel: formatearCoachMarketingChoiceLabel("recruitment", COACH_MARKETING_CAPTURE_TYPE_OPTIONS),
+      createdAt: doc?.createdAt || null,
+      updatedAt: doc?.updatedAt || null
+    }))
+  ]
+    .filter(item => item.id && item.attribution)
+    .sort((left, right) => {
+      const leftTime = new Date(left.updatedAt || left.createdAt || 0).getTime();
+      const rightTime = new Date(right.updatedAt || right.createdAt || 0).getTime();
+      return rightTime - leftTime;
+    })
+    .map(item => ({
+      ...item,
+      summary:
+        construirCoachAttributionResumen(item.attribution) ||
+        item.attribution?.campaign ||
+        item.attribution?.source ||
+        item.attribution?.recordSourceLabel ||
+        "Captura lista"
+    }));
+
+  const sourceMap = new Map();
+  const campaignMap = new Map();
+  const mediumMap = new Map();
+  let attributedCaptures = 0;
+
+  captureItems.forEach(item => {
+    if (item.attribution?.hasSignal) {
+      attributedCaptures += 1;
+    }
+
+    const sourceKey = String(item.attribution?.source || item.attribution?.recordSource || "").trim().toLowerCase();
+    const sourceLabel = item.attribution?.source || item.attribution?.recordSourceLabel || "Sin fuente";
+
+    if (sourceKey) {
+      const current = sourceMap.get(sourceKey) || { key: sourceKey, label: sourceLabel, total: 0 };
+      current.total += 1;
+      sourceMap.set(sourceKey, current);
+    }
+
+    const campaignKey = String(item.attribution?.campaign || "").trim().toLowerCase();
+
+    if (campaignKey) {
+      const current = campaignMap.get(campaignKey) || {
+        key: campaignKey,
+        label: item.attribution?.campaign || "Sin campana",
+        total: 0
+      };
+      current.total += 1;
+      campaignMap.set(campaignKey, current);
+    }
+
+    const mediumKey = String(item.attribution?.medium || "").trim().toLowerCase();
+
+    if (mediumKey) {
+      const current = mediumMap.get(mediumKey) || {
+        key: mediumKey,
+        label: item.attribution?.medium || "Sin medio",
+        total: 0
+      };
+      current.total += 1;
+      mediumMap.set(mediumKey, current);
+    }
+  });
+
+  return {
+    totalCaptures: Number(leadTotal || 0) + Number(applicationTotal || 0),
+    leads: Number(leadTotal || 0),
+    recruitment: Number(applicationTotal || 0),
+    attributedCaptures,
+    campaignsDetected: campaignMap.size,
+    mediumsDetected: mediumMap.size,
+    topSources: Array.from(sourceMap.values())
+      .sort((left, right) => right.total - left.total || left.label.localeCompare(right.label))
+      .slice(0, 6),
+    topCampaigns: Array.from(campaignMap.values())
+      .sort((left, right) => right.total - left.total || left.label.localeCompare(right.label))
+      .slice(0, 6),
+    topMediums: Array.from(mediumMap.values())
+      .sort((left, right) => right.total - left.total || left.label.localeCompare(right.label))
+      .slice(0, 6),
+    recentCaptures: captureItems.slice(0, 10)
+  };
+}
+
 async function obtenerCoachMarketingOverview(userDoc = null) {
   const query = construirCoachWorkspaceQuery(userDoc);
 
@@ -5557,7 +6235,8 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     recentIntegrationDocs,
     recentCampaignDocs,
     recentPublicationDocs,
-    recentEventDocs
+    recentEventDocs,
+    attributionOverview
   ] = await Promise.all([
     CoachMarketingIntegration.countDocuments(query),
     CoachMarketingChannel.countDocuments(query),
@@ -5595,7 +6274,8 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
     CoachMarketingIntegration.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingCampaign.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
     CoachMarketingPublication.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(6).lean(),
-    CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(10).lean()
+    CoachMarketingEvent.find(query).sort({ occurredAt: -1, createdAt: -1 }).limit(10).lean(),
+    obtenerCoachMarketingAttributionOverview(userDoc)
   ]);
 
   return {
@@ -5614,6 +6294,18 @@ async function obtenerCoachMarketingOverview(userDoc = null) {
       connectedIntegrations,
       failedPublications,
       failedEvents
+    },
+    capture: attributionOverview || {
+      totalCaptures: 0,
+      leads: 0,
+      recruitment: 0,
+      attributedCaptures: 0,
+      campaignsDetected: 0,
+      mediumsDetected: 0,
+      topSources: [],
+      topCampaigns: [],
+      topMediums: [],
+      recentCaptures: []
     },
     providers: Array.isArray(providerSummary)
       ? providerSummary.map(item => {
@@ -9043,6 +9735,12 @@ function construirMapaCoachPrivateResources(resourceDocs = []) {
 }
 
 function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destination = null) {
+  const attribution = resolverCoachAttributionDesdeDocumento(lead, {
+    captureType: "lead",
+    recordSource: lead?.source || "captura_manual",
+    destination
+  });
+
   return {
     app: "Agustin 2.0 Coach",
     kind: "lead",
@@ -9072,6 +9770,24 @@ function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destinat
       summary: lead?.summary || "",
       createdAt: lead?.createdAt || null,
       updatedAt: lead?.updatedAt || null
+    },
+    tracking: {
+      source: attribution?.source || "",
+      recordSource: attribution?.recordSource || lead?.source || "",
+      medium: attribution?.medium || "",
+      campaign: attribution?.campaign || "",
+      adset: attribution?.adset || "",
+      ad: attribution?.ad || "",
+      landingPageUrl: attribution?.landingPageUrl || lead?.landingPageUrl || "",
+      referrerUrl: attribution?.referrerUrl || lead?.referrerUrl || "",
+      utmSource: attribution?.utmSource || lead?.utmSource || "",
+      utmMedium: attribution?.utmMedium || lead?.utmMedium || "",
+      utmCampaign: attribution?.utmCampaign || lead?.utmCampaign || "",
+      utmTerm: attribution?.utmTerm || lead?.utmTerm || "",
+      utmContent: attribution?.utmContent || lead?.utmContent || "",
+      gclid: attribution?.gclid || lead?.gclid || "",
+      fbclid: attribution?.fbclid || lead?.fbclid || "",
+      ttclid: attribution?.ttclid || lead?.ttclid || ""
     }
   };
 }
@@ -9136,6 +9852,12 @@ function construirCorreoLeadCoach(userDoc = null, lead = null, destination = nul
 }
 
 function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, application = null, destination = null) {
+  const attribution = resolverCoachAttributionDesdeDocumento(application, {
+    captureType: "recruitment",
+    recordSource: application?.source || "captura_manual",
+    destination
+  });
+
   return {
     app: "Agustin 2.0 Coach",
     kind: "reclutamiento",
@@ -9167,20 +9889,25 @@ function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, app
       createdAt: application?.createdAt || null,
       updatedAt: application?.updatedAt || null
     },
+    attribution,
     tracking: {
-      source: application?.source || "",
-      sourceDetail: application?.sourceDetail || "",
-      landingPageUrl: application?.landingPageUrl || "",
-      referrerUrl: application?.referrerUrl || "",
-      pageTitle: application?.pageTitle || "",
-      utmSource: application?.utmSource || "",
-      utmMedium: application?.utmMedium || "",
-      utmCampaign: application?.utmCampaign || "",
-      utmTerm: application?.utmTerm || "",
-      utmContent: application?.utmContent || "",
-      gclid: application?.gclid || "",
-      fbclid: application?.fbclid || "",
-      ttclid: application?.ttclid || ""
+      source: attribution?.source || application?.source || "",
+      sourceDetail: attribution?.sourceDetail || application?.sourceDetail || "",
+      medium: attribution?.medium || "",
+      campaign: attribution?.campaign || application?.campaignName || "",
+      adset: attribution?.adset || application?.adsetName || "",
+      ad: attribution?.ad || application?.adName || "",
+      landingPageUrl: attribution?.landingPageUrl || application?.landingPageUrl || "",
+      referrerUrl: attribution?.referrerUrl || application?.referrerUrl || "",
+      pageTitle: attribution?.pageTitle || application?.pageTitle || "",
+      utmSource: attribution?.utmSource || application?.utmSource || "",
+      utmMedium: attribution?.utmMedium || application?.utmMedium || "",
+      utmCampaign: attribution?.utmCampaign || application?.utmCampaign || "",
+      utmTerm: attribution?.utmTerm || application?.utmTerm || "",
+      utmContent: attribution?.utmContent || application?.utmContent || "",
+      gclid: attribution?.gclid || application?.gclid || "",
+      fbclid: attribution?.fbclid || application?.fbclid || "",
+      ttclid: attribution?.ttclid || application?.ttclid || ""
     }
   };
 }
@@ -10198,20 +10925,7 @@ function normalizarCoachLeadStatus(status = "") {
 }
 
 function normalizarCoachLeadSource(source = "") {
-  const value = String(source || "").trim().toLowerCase();
-  const validSources = [
-    "rifa_digital",
-    "programa_4_en_14",
-    "contactos_compartidos",
-    "chef_personal",
-    "llamada",
-    "demo",
-    "referencia",
-    "evento",
-    "captura_manual",
-    "otro"
-  ];
-  return validSources.includes(value) ? value : "captura_manual";
+  return normalizarCoachLeadSourceBase(source);
 }
 
 function normalizarCoachLeadNextAction(action = "") {
@@ -12729,6 +13443,18 @@ async function guardarCoachInboxLead({
   const fullName = seleccionarNombreConfiable(rawName) || rawName;
   const phone = normalizePhone(payload?.phone || "");
   const email = normalizarEmail(payload?.email || "");
+  const effectiveProfileDoc = profileDoc || (userDoc?._id ? await obtenerCoachOwnerProfile(userDoc, { lean: true }) : null);
+  const effectiveDestination = limpiarCoachLeadDestination(effectiveProfileDoc);
+  const marketingWorkspaceSnapshot = ownership?.ownerUserId
+    ? {
+        ownerUserId: ownership.ownerUserId,
+        ownerName: ownership.ownerName || "",
+        ownerEmail: ownership.ownerEmail || "",
+        generatedByUserId: ownership.generatedByUserId || null,
+        generatedByName: ownership.generatedByName || "",
+        generatedByAccountType: ownership.generatedByAccountType || "owner"
+      }
+    : await construirCoachWorkspaceActorSnapshot(userDoc);
   const address = cleanText(payload?.address || "")
     .replace(/\s+/g, " ")
     .trim()
@@ -12740,7 +13466,7 @@ async function guardarCoachInboxLead({
   const childrenCount = normalizarCoachChildrenCount(payload?.childrenCount);
   const areaNotes = truncarCoachCrmText(payload?.areaNotes || payload?.locationNotes || "", 240);
   const interest = String(payload?.interest || "").trim().slice(0, 120);
-  const source = normalizarCoachLeadSource(payload?.source || "captura_manual");
+  const source = normalizarCoachLeadSource(payload?.source || inferirCoachLeadSourceDigital(payload) || "captura_manual");
   const notes = String(payload?.notes || "").trim().slice(0, 1200);
   const consentGiven = Boolean(payload?.consentGiven);
   const nextAction = normalizarCoachLeadNextAction(payload?.nextAction || "");
@@ -12749,6 +13475,11 @@ async function guardarCoachInboxLead({
   const nextStatus = rawStatus ? normalizarCoachLeadStatus(rawStatus) : "";
   const summaryOverride = String(payload?.summary || "").trim().slice(0, 600);
   const replaceNotes = payload?.replaceNotes === true;
+  const leadAttribution = construirCoachAttributionSnapshot(payload, {
+    captureType: "lead",
+    recordSource: source,
+    destination: effectiveDestination
+  });
 
   if (!fullName) {
     const error = new Error("El nombre es requerido.");
@@ -12783,6 +13514,22 @@ async function guardarCoachInboxLead({
   }
 
   if (leadDoc) {
+    const mergedAttribution = construirCoachAttributionSnapshot(
+      {
+        ...(resolverCoachAttributionDesdeDocumento(leadDoc?.toObject ? leadDoc.toObject() : leadDoc, {
+          captureType: "lead",
+          recordSource: leadDoc?.source || source || "captura_manual",
+          destination: effectiveDestination
+        }) || {}),
+        ...(payload || {})
+      },
+      {
+        captureType: "lead",
+        recordSource: source || leadDoc?.source || "captura_manual",
+        destination: effectiveDestination,
+        capturedAt: leadDoc?.attribution?.capturedAt || leadAttribution?.capturedAt || now
+      }
+    );
     const currentStatus = normalizarCoachLeadStatus(leadDoc.status || "nuevo");
     const statusRank = {
       nuevo: 0,
@@ -12808,6 +13555,24 @@ async function guardarCoachInboxLead({
     }
     leadDoc.interest = interest || leadDoc.interest || "";
     leadDoc.source = source || leadDoc.source || "captura_manual";
+    leadDoc.sourceDetail = mergedAttribution.sourceDetail || leadDoc.sourceDetail || "";
+    leadDoc.landingPageUrl = mergedAttribution.landingPageUrl || leadDoc.landingPageUrl || "";
+    leadDoc.referrerUrl = mergedAttribution.referrerUrl || leadDoc.referrerUrl || "";
+    leadDoc.pageTitle = mergedAttribution.pageTitle || leadDoc.pageTitle || "";
+    leadDoc.utmSource = mergedAttribution.utmSource || leadDoc.utmSource || "";
+    leadDoc.utmMedium = mergedAttribution.utmMedium || leadDoc.utmMedium || "";
+    leadDoc.utmCampaign = mergedAttribution.utmCampaign || leadDoc.utmCampaign || "";
+    leadDoc.utmTerm = mergedAttribution.utmTerm || leadDoc.utmTerm || "";
+    leadDoc.utmContent = mergedAttribution.utmContent || leadDoc.utmContent || "";
+    leadDoc.gclid = mergedAttribution.gclid || leadDoc.gclid || "";
+    leadDoc.fbclid = mergedAttribution.fbclid || leadDoc.fbclid || "";
+    leadDoc.ttclid = mergedAttribution.ttclid || leadDoc.ttclid || "";
+    leadDoc.campaignName = mergedAttribution.campaign || leadDoc.campaignName || "";
+    leadDoc.adsetName = mergedAttribution.adset || leadDoc.adsetName || "";
+    leadDoc.adName = mergedAttribution.ad || leadDoc.adName || "";
+    leadDoc.marketingProvider = mergedAttribution.provider || leadDoc.marketingProvider || "";
+    leadDoc.marketingProduct = mergedAttribution.product || leadDoc.marketingProduct || "";
+    leadDoc.attribution = mergedAttribution;
     leadDoc.consentGiven = consentGiven || leadDoc.consentGiven;
     leadDoc.nextAction = nextAction || leadDoc.nextAction || "";
     if (!leadDoc.generatedByUserId && ownership.generatedByUserId) {
@@ -12855,14 +13620,35 @@ async function guardarCoachInboxLead({
     const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
     const [delivery, highLevel] = await Promise.all([
       sendDestination
-        ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead)
+        ? programarEnvioCoachLeadADestino(userDoc, effectiveProfileDoc, cleanedLead)
         : Promise.resolve({
             attempted: false,
             queued: false,
-            destination: limpiarCoachLeadDestination(profileDoc)
+            destination: effectiveDestination
           }),
       programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject())
     ]);
+
+    await registrarCoachMarketingEvent({
+      userDoc,
+      workspaceSnapshot: marketingWorkspaceSnapshot,
+      provider: cleanedLead?.attribution?.provider || mergedAttribution.provider || "",
+      product: cleanedLead?.attribution?.product || mergedAttribution.product || "",
+      direction: "inbound",
+      eventType: "lead_updated",
+      entityType: "lead_capture",
+      entityId: String(leadDoc._id || ""),
+      status: "processed",
+      fingerprint: `lead_updated:${String(leadDoc._id || "")}:${String(leadDoc.updatedAt?.getTime?.() || now.getTime())}`,
+      summary: `Lead actualizado: ${construirCoachAttributionResumen(cleanedLead?.attribution || mergedAttribution) || fullName}.`,
+      payload: {
+        fullName,
+        duplicate: true,
+        attribution: cleanedLead?.attribution || mergedAttribution,
+        deliveryType: delivery?.destination?.type || effectiveDestination?.type || ""
+      },
+      occurredAt: now
+    });
 
     return {
       leadDoc,
@@ -12891,12 +13677,40 @@ async function guardarCoachInboxLead({
     areaNotes,
     interest,
     source,
+    sourceDetail: leadAttribution.sourceDetail,
+    landingPageUrl: leadAttribution.landingPageUrl,
+    referrerUrl: leadAttribution.referrerUrl,
+    pageTitle: leadAttribution.pageTitle,
+    utmSource: leadAttribution.utmSource,
+    utmMedium: leadAttribution.utmMedium,
+    utmCampaign: leadAttribution.utmCampaign,
+    utmTerm: leadAttribution.utmTerm,
+    utmContent: leadAttribution.utmContent,
+    gclid: leadAttribution.gclid,
+    fbclid: leadAttribution.fbclid,
+    ttclid: leadAttribution.ttclid,
+    campaignName: leadAttribution.campaign,
+    adsetName: leadAttribution.adset,
+    adName: leadAttribution.ad,
+    marketingProvider: leadAttribution.provider,
+    marketingProduct: leadAttribution.product,
+    attribution: leadAttribution,
     notes,
     consentGiven,
     status: nextStatus || "nuevo",
     nextAction,
     nextActionAt,
-    summary: summaryOverride || construirCoachLeadSummary({ interest, city, zipCode, source, nextAction, notes }),
+    summary:
+      summaryOverride ||
+      construirCoachLeadSummary({
+        interest,
+        city,
+        zipCode,
+        source,
+        nextAction,
+        notes,
+        attribution: leadAttribution
+      }),
     lastStatusChangeAt: now,
     updatedAt: now
   });
@@ -12910,14 +13724,35 @@ async function guardarCoachInboxLead({
   const cleanedLead = limpiarCoachInboxLead(leadDoc.toObject());
   const [delivery, highLevel] = await Promise.all([
     sendDestination
-      ? programarEnvioCoachLeadADestino(userDoc, profileDoc, cleanedLead)
+      ? programarEnvioCoachLeadADestino(userDoc, effectiveProfileDoc, cleanedLead)
       : Promise.resolve({
           attempted: false,
           queued: false,
-          destination: limpiarCoachLeadDestination(profileDoc)
+          destination: effectiveDestination
         }),
     programarSincronizacionCoachLeadAHighLevel(userDoc, profileDoc, leadDoc.toObject())
   ]);
+
+  await registrarCoachMarketingEvent({
+    userDoc,
+    workspaceSnapshot: marketingWorkspaceSnapshot,
+    provider: cleanedLead?.attribution?.provider || leadAttribution.provider || "",
+    product: cleanedLead?.attribution?.product || leadAttribution.product || "",
+    direction: "inbound",
+    eventType: "lead_captured",
+    entityType: "lead_capture",
+    entityId: String(leadDoc._id || ""),
+    status: "processed",
+    fingerprint: `lead_captured:${String(leadDoc._id || "")}`,
+    summary: `Lead capturado: ${construirCoachAttributionResumen(cleanedLead?.attribution || leadAttribution) || fullName}.`,
+    payload: {
+      fullName,
+      duplicate: false,
+      attribution: cleanedLead?.attribution || leadAttribution,
+      deliveryType: delivery?.destination?.type || effectiveDestination?.type || ""
+    },
+    occurredAt: now
+  });
 
   return {
     leadDoc,
@@ -12965,19 +13800,26 @@ async function guardarCoachRecruitmentApplication({
   const zipCode = normalizarZipCode(payload?.zipCode || payload?.zip || "");
   const salesExperience = limpiarCoachHealthYesNo(payload?.salesExperience || "");
   const about = limpiarCoachHealthText(payload?.about || payload?.notes || payload?.experience || "", 700);
-  const source = cleanText(payload?.source || "").slice(0, 80);
-  const sourceDetail = cleanText(payload?.sourceDetail || "").slice(0, 180);
-  const landingPageUrl = limpiarUrlExterna(payload?.landingPageUrl || payload?.pageUrl || "");
-  const referrerUrl = limpiarUrlExterna(payload?.referrerUrl || payload?.referrer || "");
-  const pageTitle = cleanText(payload?.pageTitle || "").slice(0, 160);
-  const utmSource = cleanText(payload?.utmSource || payload?.utm_source || "").slice(0, 120);
-  const utmMedium = cleanText(payload?.utmMedium || payload?.utm_medium || "").slice(0, 120);
-  const utmCampaign = cleanText(payload?.utmCampaign || payload?.utm_campaign || "").slice(0, 160);
-  const utmTerm = cleanText(payload?.utmTerm || payload?.utm_term || "").slice(0, 160);
-  const utmContent = cleanText(payload?.utmContent || payload?.utm_content || "").slice(0, 160);
-  const gclid = cleanText(payload?.gclid || "").slice(0, 200);
-  const fbclid = cleanText(payload?.fbclid || "").slice(0, 200);
-  const ttclid = cleanText(payload?.ttclid || "").slice(0, 200);
+  const now = new Date();
+  const effectiveProfileDoc = profileDoc || (userDoc?._id ? await obtenerCoachOwnerProfile(userDoc, { lean: true }) : null);
+  const effectiveDestination = limpiarCoachRecruitmentDestination(effectiveProfileDoc);
+  const marketingWorkspaceSnapshot = ownership?.ownerUserId
+    ? {
+        ownerUserId: ownership.ownerUserId,
+        ownerName: ownership.ownerName || "",
+        ownerEmail: ownership.ownerEmail || "",
+        generatedByUserId: ownership.generatedByUserId || null,
+        generatedByName: ownership.generatedByName || "",
+        generatedByAccountType: ownership.generatedByAccountType || "owner"
+      }
+    : await construirCoachWorkspaceActorSnapshot(userDoc);
+  const source = cleanText(payload?.source || inferirCoachLeadSourceDigital(payload) || "").slice(0, 80);
+  const applicationAttribution = construirCoachAttributionSnapshot(payload, {
+    captureType: "recruitment",
+    recordSource: source || "captura_manual",
+    destination: effectiveDestination,
+    capturedAt: now
+  });
 
   if (!fullName) {
     const error = new Error("El nombre es requerido.");
@@ -12990,9 +13832,6 @@ async function guardarCoachRecruitmentApplication({
     error.status = 400;
     throw error;
   }
-
-  const now = new Date();
-  const effectiveProfileDoc = profileDoc || (userDoc?._id ? await obtenerCoachOwnerProfile(userDoc, { lean: true }) : null);
   const applicationPayload = {
     ownerUserId: ownership.ownerUserId,
     ownerEmail: ownership.ownerEmail || "",
@@ -13013,18 +13852,24 @@ async function guardarCoachRecruitmentApplication({
     salesExperience,
     about,
     source,
-    sourceDetail,
-    landingPageUrl,
-    referrerUrl,
-    pageTitle,
-    utmSource,
-    utmMedium,
-    utmCampaign,
-    utmTerm,
-    utmContent,
-    gclid,
-    fbclid,
-    ttclid,
+    sourceDetail: applicationAttribution.sourceDetail,
+    landingPageUrl: applicationAttribution.landingPageUrl,
+    referrerUrl: applicationAttribution.referrerUrl,
+    pageTitle: applicationAttribution.pageTitle,
+    utmSource: applicationAttribution.utmSource,
+    utmMedium: applicationAttribution.utmMedium,
+    utmCampaign: applicationAttribution.utmCampaign,
+    utmTerm: applicationAttribution.utmTerm,
+    utmContent: applicationAttribution.utmContent,
+    gclid: applicationAttribution.gclid,
+    fbclid: applicationAttribution.fbclid,
+    ttclid: applicationAttribution.ttclid,
+    campaignName: applicationAttribution.campaign,
+    adsetName: applicationAttribution.adset,
+    adName: applicationAttribution.ad,
+    marketingProvider: applicationAttribution.provider,
+    marketingProduct: applicationAttribution.product,
+    attribution: applicationAttribution,
     updatedAt: now
   };
 
@@ -13048,8 +13893,32 @@ async function guardarCoachRecruitmentApplication({
     : Promise.resolve({
         attempted: false,
         queued: false,
-        destination: limpiarCoachLeadDestination(effectiveProfileDoc)
+        destination: effectiveDestination
       }));
+
+  await registrarCoachMarketingEvent({
+    userDoc,
+    workspaceSnapshot: marketingWorkspaceSnapshot,
+    provider: cleanedApplication?.attribution?.provider || applicationAttribution.provider || "",
+    product: cleanedApplication?.attribution?.product || applicationAttribution.product || "",
+    direction: "inbound",
+    eventType: "recruitment_captured",
+    entityType: "recruitment_capture",
+    entityId: String(applicationDoc._id || ""),
+    status: "processed",
+    fingerprint: `recruitment_captured:${String(applicationDoc._id || "")}`,
+    summary:
+      `Aplicacion capturada: ${
+        construirCoachAttributionResumen(cleanedApplication?.attribution || applicationAttribution) || fullName
+      }.`,
+    payload: {
+      fullName,
+      positionApplied,
+      attribution: cleanedApplication?.attribution || applicationAttribution,
+      deliveryType: delivery?.destination?.type || effectiveDestination?.type || ""
+    },
+    occurredAt: now
+  });
 
   return {
     created: true,
@@ -13065,6 +13934,11 @@ function construirCoachLeadSummary(leadDoc = null) {
   }
 
   const parts = [];
+  const attribution = resolverCoachAttributionDesdeDocumento(leadDoc, {
+    captureType: "lead",
+    recordSource: leadDoc?.source || "captura_manual"
+  });
+  const attributionSummary = construirCoachAttributionResumen(attribution);
 
   if (leadDoc.interest) {
     parts.push(`Interes principal: ${truncarTextoPrompt(leadDoc.interest, 80)}.`);
@@ -13077,7 +13951,9 @@ function construirCoachLeadSummary(leadDoc = null) {
     }
   }
 
-  if (leadDoc.source) {
+  if (attributionSummary) {
+    parts.push(`Captacion: ${truncarTextoPrompt(attributionSummary, 120)}.`);
+  } else if (leadDoc.source) {
     parts.push(`Fuente: ${String(leadDoc.source).replace(/_/g, " ")}.`);
   }
 
@@ -13268,6 +14144,11 @@ function limpiarCoachInboxLead(leadDoc = null) {
     return null;
   }
 
+  const attribution = resolverCoachAttributionDesdeDocumento(leadDoc, {
+    captureType: "lead",
+    recordSource: leadDoc?.source || "captura_manual"
+  });
+
   return {
     id: String(leadDoc._id),
     ownerUserId: leadDoc.ownerUserId ? String(leadDoc.ownerUserId) : "",
@@ -13290,6 +14171,24 @@ function limpiarCoachInboxLead(leadDoc = null) {
     areaNotes: leadDoc.areaNotes || "",
     interest: leadDoc.interest || "",
     source: leadDoc.source || "captura_manual",
+    sourceDetail: leadDoc.sourceDetail || attribution?.sourceDetail || "",
+    landingPageUrl: leadDoc.landingPageUrl || attribution?.landingPageUrl || "",
+    referrerUrl: leadDoc.referrerUrl || attribution?.referrerUrl || "",
+    pageTitle: leadDoc.pageTitle || attribution?.pageTitle || "",
+    utmSource: leadDoc.utmSource || attribution?.utmSource || "",
+    utmMedium: leadDoc.utmMedium || attribution?.utmMedium || "",
+    utmCampaign: leadDoc.utmCampaign || attribution?.utmCampaign || "",
+    utmTerm: leadDoc.utmTerm || attribution?.utmTerm || "",
+    utmContent: leadDoc.utmContent || attribution?.utmContent || "",
+    gclid: leadDoc.gclid || attribution?.gclid || "",
+    fbclid: leadDoc.fbclid || attribution?.fbclid || "",
+    ttclid: leadDoc.ttclid || attribution?.ttclid || "",
+    campaignName: leadDoc.campaignName || attribution?.campaign || "",
+    adsetName: leadDoc.adsetName || attribution?.adset || "",
+    adName: leadDoc.adName || attribution?.ad || "",
+    marketingProvider: leadDoc.marketingProvider || attribution?.provider || "",
+    marketingProduct: leadDoc.marketingProduct || attribution?.product || "",
+    attribution,
     notes: leadDoc.notes || "",
     consentGiven: Boolean(leadDoc.consentGiven),
     status: normalizarCoachLeadStatus(leadDoc.status),
@@ -14348,6 +15247,11 @@ function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
   }
 
   const parts = [];
+  const attribution = resolverCoachAttributionDesdeDocumento(applicationDoc, {
+    captureType: "recruitment",
+    recordSource: applicationDoc?.source || "captura_manual"
+  });
+  const attributionSummary = construirCoachAttributionResumen(attribution);
 
   if (applicationDoc.positionApplied) {
     parts.push(`Vacante: ${applicationDoc.positionApplied}.`);
@@ -14381,12 +15285,8 @@ function construirCoachRecruitmentApplicationSummary(applicationDoc = null) {
     parts.push(`Ventas: ${applicationDoc.salesExperience}.`);
   }
 
-  if (applicationDoc.source || applicationDoc.utmCampaign) {
-    const sourceSummary = [applicationDoc.source || "", applicationDoc.utmCampaign || ""].filter(Boolean).join(" · ");
-
-    if (sourceSummary) {
-      parts.push(`Origen: ${sourceSummary}.`);
-    }
+  if (attributionSummary) {
+    parts.push(`Origen: ${attributionSummary}.`);
   }
 
   if (applicationDoc.about) {
@@ -14402,6 +15302,11 @@ function construirCoachRecruitmentApplicationNotes(applicationDoc = null) {
   }
 
   const parts = [];
+  const attribution = resolverCoachAttributionDesdeDocumento(applicationDoc, {
+    captureType: "recruitment",
+    recordSource: applicationDoc?.source || "captura_manual"
+  });
+  const attributionSummary = construirCoachAttributionResumen(attribution);
 
   if (applicationDoc.about) {
     parts.push(applicationDoc.about);
@@ -14415,23 +15320,14 @@ function construirCoachRecruitmentApplicationNotes(applicationDoc = null) {
     parts.push(`Zona: ${zone}`);
   }
 
-  const attribution = [
-    applicationDoc.source || "",
-    applicationDoc.utmSource || "",
-    applicationDoc.utmMedium || "",
-    applicationDoc.utmCampaign || ""
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  if (attribution) {
-    parts.push(`Captacion: ${attribution}`);
+  if (attributionSummary) {
+    parts.push(`Captacion: ${attributionSummary}`);
   }
 
   const clickIds = [
-    applicationDoc.gclid ? `gclid ${applicationDoc.gclid}` : "",
-    applicationDoc.fbclid ? `fbclid ${applicationDoc.fbclid}` : "",
-    applicationDoc.ttclid ? `ttclid ${applicationDoc.ttclid}` : ""
+    attribution?.gclid ? `gclid ${attribution.gclid}` : "",
+    attribution?.fbclid ? `fbclid ${attribution.fbclid}` : "",
+    attribution?.ttclid ? `ttclid ${attribution.ttclid}` : ""
   ]
     .filter(Boolean)
     .join(" · ");
@@ -14440,8 +15336,8 @@ function construirCoachRecruitmentApplicationNotes(applicationDoc = null) {
     parts.push(`Tracking: ${clickIds}`);
   }
 
-  if (applicationDoc.landingPageUrl) {
-    parts.push(`Landing: ${applicationDoc.landingPageUrl}`);
+  if (attribution?.landingPageUrl) {
+    parts.push(`Landing: ${attribution.landingPageUrl}`);
   }
 
   return parts.join("\n\n").trim();
@@ -14451,6 +15347,11 @@ function limpiarCoachRecruitmentApplication(applicationDoc = null) {
   if (!applicationDoc) {
     return null;
   }
+
+  const attribution = resolverCoachAttributionDesdeDocumento(applicationDoc, {
+    captureType: "recruitment",
+    recordSource: applicationDoc?.source || "captura_manual"
+  });
 
   return {
     id: String(applicationDoc._id),
@@ -14473,18 +15374,24 @@ function limpiarCoachRecruitmentApplication(applicationDoc = null) {
     salesExperience: applicationDoc.salesExperience || "",
     about: applicationDoc.about || "",
     source: applicationDoc.source || "",
-    sourceDetail: applicationDoc.sourceDetail || "",
-    landingPageUrl: applicationDoc.landingPageUrl || "",
-    referrerUrl: applicationDoc.referrerUrl || "",
-    pageTitle: applicationDoc.pageTitle || "",
-    utmSource: applicationDoc.utmSource || "",
-    utmMedium: applicationDoc.utmMedium || "",
-    utmCampaign: applicationDoc.utmCampaign || "",
-    utmTerm: applicationDoc.utmTerm || "",
-    utmContent: applicationDoc.utmContent || "",
-    gclid: applicationDoc.gclid || "",
-    fbclid: applicationDoc.fbclid || "",
-    ttclid: applicationDoc.ttclid || "",
+    sourceDetail: applicationDoc.sourceDetail || attribution?.sourceDetail || "",
+    landingPageUrl: applicationDoc.landingPageUrl || attribution?.landingPageUrl || "",
+    referrerUrl: applicationDoc.referrerUrl || attribution?.referrerUrl || "",
+    pageTitle: applicationDoc.pageTitle || attribution?.pageTitle || "",
+    utmSource: applicationDoc.utmSource || attribution?.utmSource || "",
+    utmMedium: applicationDoc.utmMedium || attribution?.utmMedium || "",
+    utmCampaign: applicationDoc.utmCampaign || attribution?.utmCampaign || "",
+    utmTerm: applicationDoc.utmTerm || attribution?.utmTerm || "",
+    utmContent: applicationDoc.utmContent || attribution?.utmContent || "",
+    gclid: applicationDoc.gclid || attribution?.gclid || "",
+    fbclid: applicationDoc.fbclid || attribution?.fbclid || "",
+    ttclid: applicationDoc.ttclid || attribution?.ttclid || "",
+    campaignName: applicationDoc.campaignName || attribution?.campaign || "",
+    adsetName: applicationDoc.adsetName || attribution?.adset || "",
+    adName: applicationDoc.adName || attribution?.ad || "",
+    marketingProvider: applicationDoc.marketingProvider || attribution?.provider || "",
+    marketingProduct: applicationDoc.marketingProduct || attribution?.product || "",
+    attribution,
     summary: applicationDoc.summary || "",
     updatedAt: applicationDoc.updatedAt || null,
     createdAt: applicationDoc.createdAt || null
@@ -23460,19 +24367,7 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
   const zipCode = normalizarZipCode(req.body?.zipCode || req.body?.zip || "");
   const salesExperience = limpiarCoachHealthYesNo(req.body?.salesExperience || "");
   const about = limpiarCoachHealthText(req.body?.about || "", 700);
-  const source = cleanText(req.body?.source || "").slice(0, 80);
-  const sourceDetail = cleanText(req.body?.sourceDetail || "").slice(0, 180);
-  const landingPageUrl = limpiarUrlExterna(req.body?.landingPageUrl || req.body?.pageUrl || "");
-  const referrerUrl = limpiarUrlExterna(req.body?.referrerUrl || req.body?.referrer || "");
-  const pageTitle = cleanText(req.body?.pageTitle || "").slice(0, 160);
-  const utmSource = cleanText(req.body?.utmSource || req.body?.utm_source || "").slice(0, 120);
-  const utmMedium = cleanText(req.body?.utmMedium || req.body?.utm_medium || "").slice(0, 120);
-  const utmCampaign = cleanText(req.body?.utmCampaign || req.body?.utm_campaign || "").slice(0, 160);
-  const utmTerm = cleanText(req.body?.utmTerm || req.body?.utm_term || "").slice(0, 160);
-  const utmContent = cleanText(req.body?.utmContent || req.body?.utm_content || "").slice(0, 160);
-  const gclid = cleanText(req.body?.gclid || "").slice(0, 200);
-  const fbclid = cleanText(req.body?.fbclid || "").slice(0, 200);
-  const ttclid = cleanText(req.body?.ttclid || "").slice(0, 200);
+  const source = cleanText(req.body?.source || inferirCoachLeadSourceDigital(req.body) || "").slice(0, 80);
 
   if (!fullName) {
     return responderCoachError(res, 400, "El nombre es requerido.");
@@ -23505,6 +24400,40 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
 
     const now = new Date();
     const ownership = await construirCoachOwnershipSnapshot(auth.user);
+    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
+    const effectiveDestination = limpiarCoachRecruitmentDestination(profileDoc);
+    const marketingWorkspaceSnapshot = {
+      ownerUserId: ownership.ownerUserId,
+      ownerName: ownership.ownerName || "",
+      ownerEmail: ownership.ownerEmail || "",
+      generatedByUserId: ownership.generatedByUserId || null,
+      generatedByName: ownership.generatedByName || "",
+      generatedByAccountType: ownership.generatedByAccountType || "owner"
+    };
+    let applicationDoc = null;
+    const created = false;
+    applicationDoc = await CoachRecruitmentApplication.findOne(construirCoachWorkspaceQuery(auth.user, { _id: applicationId }));
+
+    if (!applicationDoc) {
+      return responderCoachError(res, 404, "No encontre esa aplicacion.");
+    }
+
+    const mergedAttribution = construirCoachAttributionSnapshot(
+      {
+        ...(resolverCoachAttributionDesdeDocumento(applicationDoc?.toObject ? applicationDoc.toObject() : applicationDoc, {
+          captureType: "recruitment",
+          recordSource: applicationDoc?.source || "captura_manual",
+          destination: effectiveDestination
+        }) || {}),
+        ...(req.body || {})
+      },
+      {
+        captureType: "recruitment",
+        recordSource: source || applicationDoc.source || "captura_manual",
+        destination: effectiveDestination,
+        capturedAt: applicationDoc?.attribution?.capturedAt || now
+      }
+    );
     const applicationPayload = {
       ownerUserId: ownership.ownerUserId,
       ownerEmail: ownership.ownerEmail || "",
@@ -23524,31 +24453,29 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
       zipCode,
       salesExperience,
       about,
-      source,
-      sourceDetail,
-      landingPageUrl,
-      referrerUrl,
-      pageTitle,
-      utmSource,
-      utmMedium,
-      utmCampaign,
-      utmTerm,
-      utmContent,
-      gclid,
-      fbclid,
-      ttclid,
+      source: source || applicationDoc.source || mergedAttribution.recordSource || "",
+      sourceDetail: mergedAttribution.sourceDetail,
+      landingPageUrl: mergedAttribution.landingPageUrl,
+      referrerUrl: mergedAttribution.referrerUrl,
+      pageTitle: mergedAttribution.pageTitle,
+      utmSource: mergedAttribution.utmSource,
+      utmMedium: mergedAttribution.utmMedium,
+      utmCampaign: mergedAttribution.utmCampaign,
+      utmTerm: mergedAttribution.utmTerm,
+      utmContent: mergedAttribution.utmContent,
+      gclid: mergedAttribution.gclid,
+      fbclid: mergedAttribution.fbclid,
+      ttclid: mergedAttribution.ttclid,
+      campaignName: mergedAttribution.campaign,
+      adsetName: mergedAttribution.adset,
+      adName: mergedAttribution.ad,
+      marketingProvider: mergedAttribution.provider,
+      marketingProduct: mergedAttribution.product,
+      attribution: mergedAttribution,
       updatedAt: now
     };
 
     applicationPayload.summary = construirCoachRecruitmentApplicationSummary(applicationPayload);
-
-    let applicationDoc = null;
-    const created = false;
-    applicationDoc = await CoachRecruitmentApplication.findOne(construirCoachWorkspaceQuery(auth.user, { _id: applicationId }));
-
-    if (!applicationDoc) {
-      return responderCoachError(res, 404, "No encontre esa aplicacion.");
-    }
 
     Object.assign(applicationDoc, applicationPayload);
     await applicationDoc.save();
@@ -23559,8 +24486,31 @@ app.post("/api/coach/recruitment-applications", async (req, res) => {
     } catch (error) {
       console.error("Error sincronizando aplicacion de reclutamiento al CRM:", error.message);
     }
-    const profileDoc = await obtenerCoachOwnerProfile(auth.user, { lean: true });
     const delivery = await programarEnvioCoachRecruitmentApplicationADestino(auth.user, profileDoc, cleanedApplication);
+
+    await registrarCoachMarketingEvent({
+      userDoc: auth.user,
+      workspaceSnapshot: marketingWorkspaceSnapshot,
+      provider: cleanedApplication?.attribution?.provider || mergedAttribution.provider || "",
+      product: cleanedApplication?.attribution?.product || mergedAttribution.product || "",
+      direction: "inbound",
+      eventType: "recruitment_updated",
+      entityType: "recruitment_capture",
+      entityId: String(applicationDoc._id || ""),
+      status: "processed",
+      fingerprint: `recruitment_updated:${String(applicationDoc._id || "")}:${String(now.getTime())}`,
+      summary:
+        `Aplicacion actualizada: ${
+          construirCoachAttributionResumen(cleanedApplication?.attribution || mergedAttribution) || fullName
+        }.`,
+      payload: {
+        fullName,
+        positionApplied,
+        attribution: cleanedApplication?.attribution || mergedAttribution,
+        deliveryType: delivery?.destination?.type || effectiveDestination?.type || ""
+      },
+      occurredAt: now
+    });
 
     res.json({
       created,
