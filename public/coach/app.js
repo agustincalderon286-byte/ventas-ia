@@ -121,6 +121,7 @@ const COACH_LEAD_STATUS_OPTIONS = [
 ];
 const COACH_LEAD_SOURCE_LABELS = {
   captura_manual: "Captura manual",
+  campana_digital: "Campana digital",
   rifa_digital: "Rifa digital",
   programa_4_en_14: "Programa 4 en 14",
   contactos_compartidos: "Contactos compartidos",
@@ -9796,6 +9797,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const publicationList = document.querySelector("[data-marketing-publication-list]");
   const eventList = document.querySelector("[data-marketing-event-list]");
   const overviewCopy = document.querySelector("[data-marketing-overview-copy]");
+  const attributionSourceList = document.querySelector("[data-marketing-attribution-source-list]");
+  const attributionCampaignList = document.querySelector("[data-marketing-attribution-campaign-list]");
+  const attributionCaptureList = document.querySelector("[data-marketing-attribution-capture-list]");
 
   if (
     !bootstrapButton ||
@@ -9811,7 +9815,10 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     !creativeList ||
     !publicationForm ||
     !publicationList ||
-    !eventList
+    !eventList ||
+    !attributionSourceList ||
+    !attributionCampaignList ||
+    !attributionCaptureList
   ) {
     return;
   }
@@ -9829,7 +9836,13 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     events: document.querySelector("[data-marketing-summary-events]"),
     connected: document.querySelector("[data-marketing-health-connected]"),
     failedPublications: document.querySelector("[data-marketing-health-failed-publications]"),
-    failedEvents: document.querySelector("[data-marketing-health-failed-events]")
+    failedEvents: document.querySelector("[data-marketing-health-failed-events]"),
+    captureTotal: document.querySelector("[data-marketing-capture-total]"),
+    captureLeads: document.querySelector("[data-marketing-capture-leads]"),
+    captureRecruitment: document.querySelector("[data-marketing-capture-recruitment]"),
+    captureAttributed: document.querySelector("[data-marketing-capture-attributed]"),
+    captureCampaigns: document.querySelector("[data-marketing-capture-campaigns]"),
+    captureMediums: document.querySelector("[data-marketing-capture-mediums]")
   };
 
   const templateSelect = integrationForm.querySelector("[data-marketing-template-select]");
@@ -9888,6 +9901,19 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
         connectedIntegrations: Number(state.overview?.health?.connectedIntegrations || 0),
         failedPublications: Number(state.overview?.health?.failedPublications || 0),
         failedEvents: Number(state.overview?.health?.failedEvents || 0)
+      },
+      capture: {
+        totalCaptures: Number(state.overview?.capture?.totalCaptures || 0),
+        leads: Number(state.overview?.capture?.leads || 0),
+        recruitment: Number(state.overview?.capture?.recruitment || 0),
+        attributedCaptures: Number(state.overview?.capture?.attributedCaptures || 0),
+        campaignsDetected: Number(state.overview?.capture?.campaignsDetected || 0),
+        mediumsDetected: Number(state.overview?.capture?.mediumsDetected || 0),
+        topSources: Array.isArray(state.overview?.capture?.topSources) ? state.overview.capture.topSources : [],
+        topCampaigns: Array.isArray(state.overview?.capture?.topCampaigns) ? state.overview.capture.topCampaigns : [],
+        recentCaptures: Array.isArray(state.overview?.capture?.recentCaptures)
+          ? state.overview.capture.recentCaptures
+          : []
       }
     };
   };
@@ -9955,6 +9981,12 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
     setSummaryValue(summaryNodes.connected, overview.health.connectedIntegrations);
     setSummaryValue(summaryNodes.failedPublications, overview.health.failedPublications);
     setSummaryValue(summaryNodes.failedEvents, overview.health.failedEvents);
+    setSummaryValue(summaryNodes.captureTotal, overview.capture.totalCaptures);
+    setSummaryValue(summaryNodes.captureLeads, overview.capture.leads);
+    setSummaryValue(summaryNodes.captureRecruitment, overview.capture.recruitment);
+    setSummaryValue(summaryNodes.captureAttributed, overview.capture.attributedCaptures);
+    setSummaryValue(summaryNodes.captureCampaigns, overview.capture.campaignsDetected);
+    setSummaryValue(summaryNodes.captureMediums, overview.capture.mediumsDetected);
 
     bootstrapButton.textContent = overview.bootstrapped ? "Verificar base" : "Preparar base";
 
@@ -9990,6 +10022,77 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
           </div>
         `;
       })
+      .join("");
+  };
+
+  const renderAttributionSources = () => {
+    const items = getOverviewSnapshot().capture.topSources;
+
+    if (!items.length) {
+      renderEmptyState(attributionSourceList, "Las fuentes detectadas apareceran aqui.");
+      return;
+    }
+
+    attributionSourceList.innerHTML = items
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Fuente")}</strong>
+            <span>${escapeHtml(`${Number(item.total || 0)} capturas`)}</span>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  const renderAttributionCampaigns = () => {
+    const items = getOverviewSnapshot().capture.topCampaigns;
+
+    if (!items.length) {
+      renderEmptyState(attributionCampaignList, "Las campanas detectadas apareceran aqui.");
+      return;
+    }
+
+    attributionCampaignList.innerHTML = items
+      .map(
+        item => `
+          <div class="territory-inline-chip">
+            <strong>${escapeHtml(item.label || "Campana")}</strong>
+            <span>${escapeHtml(`${Number(item.total || 0)} capturas`)}</span>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  const renderRecentCaptures = () => {
+    const items = getOverviewSnapshot().capture.recentCaptures;
+
+    if (!items.length) {
+      renderEmptyState(attributionCaptureList, "Las capturas recientes apareceran aqui.");
+      return;
+    }
+
+    attributionCaptureList.innerHTML = items
+      .map(
+        item => `
+          <article class="territory-result-card">
+            <strong>${escapeHtml(item.fullName || item.captureTypeLabel || "Captura")}</strong>
+            <span>${escapeHtml(
+              [item.captureTypeLabel || "", item.attribution?.providerLabel || "", formatDateTimeShort(item.updatedAt || item.createdAt)]
+                .filter(Boolean)
+                .join(" · ")
+            )}</span>
+            <p>${escapeHtml(
+              item.summary ||
+                item.attribution?.campaign ||
+                item.attribution?.source ||
+                item.attribution?.recordSourceLabel ||
+                "Captura reciente del Coach."
+            )}</p>
+          </article>
+        `
+      )
       .join("");
   };
 
@@ -10277,6 +10380,9 @@ function initCoachMarketingWorkspace(user = null, marketingModule = null) {
   const renderAll = () => {
     renderOverview();
     renderProviderList();
+    renderAttributionSources();
+    renderAttributionCampaigns();
+    renderRecentCaptures();
     syncMarketingSelects();
     renderIntegrations();
     renderChannels();
