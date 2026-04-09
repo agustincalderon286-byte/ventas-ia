@@ -799,6 +799,10 @@ body::after {
   border-color: rgba(255, 106, 137, 0.14);
 }
 
+.panel-card-marketing {
+  border-color: rgba(143, 142, 255, 0.18);
+}
+
 .panel-header {
   display: flex;
   align-items: start;

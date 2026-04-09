@@ -18528,6 +18528,7 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     coachSummary,
     sponsorOverview,
     trackedAccounts,
+    marketingOverview,
     whatsappTodayIds,
     whatsapp7DayIds,
     recentWhatsAppReplies,
@@ -18545,6 +18546,7 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     obtenerCoachNetworkSummary(),
     obtenerCoachSponsorOverview(viewerUserDoc),
     obtenerControlTowerTrackedAccounts(viewerUserDoc),
+    obtenerCoachMarketingOverview(viewerUserDoc),
     Message.distinct("visitorId", {
       ...whatsappBaseQuery,
       createdAt: { $gte: inicioHoy }
@@ -18682,6 +18684,12 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     }
   }
 
+  const marketingHealth = marketingOverview?.health || {};
+  const marketingCapture = marketingOverview?.capture || {};
+  const marketingReporting = marketingOverview?.reporting || {};
+  const marketingTopCampaigns = Array.isArray(marketingReporting.topCampaigns) ? marketingReporting.topCampaigns : [];
+  const marketingTopSources = Array.isArray(marketingCapture.topSources) ? marketingCapture.topSources : [];
+
   return {
     updatedAt: ahora.toISOString(),
     overview: {
@@ -18697,6 +18705,50 @@ async function obtenerControlTowerStats(viewerUserDoc = null) {
     coach: coachSummary,
     sponsor: sponsorOverview,
     tracked: trackedAccounts,
+    marketing: {
+      foundationVersion: Number(marketingOverview?.foundationVersion || 0),
+      connectedIntegrations: Number(marketingHealth.connectedIntegrations || 0),
+      activeIntakeSources: Number(marketingHealth.activeIntakeSources || 0),
+      activeAutomations: Number(marketingHealth.activeAutomations || 0),
+      queuedAutomationRuns: Number(marketingHealth.queuedAutomationRuns || 0),
+      failedAutomationRuns: Number(marketingHealth.failedAutomationRuns || 0),
+      failedPublications: Number(marketingHealth.failedPublications || 0),
+      failedEvents: Number(marketingHealth.failedEvents || 0),
+      activeCampaigns: Number(marketingReporting.activeCampaigns || 0),
+      liveCampaigns: Number(marketingReporting.liveCampaigns || 0),
+      campaignsWithSpend: Number(marketingReporting.campaignsWithSpend || 0),
+      budgetAmount: limpiarCoachMarketingMoney(marketingReporting.budgetAmount || 0),
+      reportedSpendAmount: limpiarCoachMarketingMoney(marketingReporting.reportedSpendAmount || 0),
+      capturedLeads: Number(marketingReporting.capturedLeads || 0),
+      capturedRecruitment: Number(marketingReporting.capturedRecruitment || 0),
+      attributedCaptures: Number(marketingCapture.attributedCaptures || 0),
+      totalCaptures: Number(marketingCapture.totalCaptures || 0),
+      campaignsDetected: Number(marketingCapture.campaignsDetected || 0),
+      mediumsDetected: Number(marketingCapture.mediumsDetected || 0),
+      costPerLead: limpiarCoachMarketingMoney(marketingReporting.costPerLead || 0),
+      returnOnAdSpend: Number(marketingReporting.returnOnAdSpend || 0),
+      topSources: marketingTopSources
+        .map(item => ({
+          label: cleanText(item?.label || "").slice(0, 80),
+          total: Number(item?.total || 0)
+        }))
+        .filter(item => item.label),
+      topCampaigns: marketingTopCampaigns
+        .map(item => ({
+          id: String(item?.id || ""),
+          name: cleanText(item?.name || "").slice(0, 120) || "Campana",
+          status: item?.status || "",
+          statusLabel: item?.statusLabel || "Borrador",
+          providerLabel: item?.providerLabel || "Proveedor",
+          capturedLeads: Number(item?.capturedLeads || 0),
+          capturedRecruitment: Number(item?.capturedRecruitment || 0),
+          reportedSpendAmount: limpiarCoachMarketingMoney(item?.reportedSpendAmount || 0),
+          returnOnAdSpend: Number(item?.returnOnAdSpend || 0),
+          costPerLead: limpiarCoachMarketingMoney(item?.costPerLead || 0)
+        }))
+        .filter(item => item.name)
+        .slice(0, 6)
+    },
     whatsapp: {
       repliesToday: whatsappTodayIds.length,
       replies7Days: whatsapp7DayIds.length,
