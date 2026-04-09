@@ -4,8 +4,11 @@ const SYSTEM_CODE_LINES = [
   "lead.score = warm",
   "chef.intent = recipe_support",
   "coach.route = follow_up",
+  "marketing.signal = attributed",
+  "campaign.status = monitored",
   "territory.signal = active",
   "wa.reply_window = monitoring",
+  "automation.runs = queued",
   "handoff.status = synchronized",
   "call.queue = optimizing",
   "notes.summary = refreshed",
@@ -17,8 +20,9 @@ const SYSTEM_CODE_LINES = [
 const SYSTEM_STATUS_LINES = [
   "Prospectando y generando clientes en tiempo real",
   "Analizando conversaciones y detectando interes comercial",
-  "Sincronizando Chef, Coach y handoff operativo",
-  "Moviendo oportunidades activas dentro del territorio"
+  "Sincronizando Chef, Coach, Marketing y handoff operativo",
+  "Moviendo oportunidades activas dentro del territorio",
+  "Midiendo campanas y automatizaciones con senales privadas"
 ];
 
 function escapeHtml(value = "") {
@@ -51,6 +55,10 @@ function formatDateTime(value = "") {
 
 function formatMoney(value = 0) {
   return `$${(Number(value) || 0).toFixed(2)}`;
+}
+
+function formatRatio(value = 0) {
+  return `${(Number(value) || 0).toFixed(2)}x`;
 }
 
 function formatTrackedStatusLabel(status = "") {
@@ -393,6 +401,88 @@ function hydrateDashboard(data) {
             item.campaignSignals ? ` · Camp ${item.campaignSignals}` : ""
           }`
         )}</td>
+      </tr>
+    `
+  );
+
+  const marketingFailures =
+    Number(data.marketing?.failedAutomationRuns || 0) +
+    Number(data.marketing?.failedPublications || 0) +
+    Number(data.marketing?.failedEvents || 0);
+  const marketingAlerts = [];
+
+  if (Number(data.marketing?.queuedAutomationRuns || 0) > 0) {
+    marketingAlerts.push(`${data.marketing.queuedAutomationRuns} corridas en cola`);
+  }
+
+  if (Number(data.marketing?.failedAutomationRuns || 0) > 0) {
+    marketingAlerts.push(`${data.marketing.failedAutomationRuns} automatizaciones fallidas`);
+  }
+
+  if (Number(data.marketing?.failedPublications || 0) > 0) {
+    marketingAlerts.push(`${data.marketing.failedPublications} publicaciones fallidas`);
+  }
+
+  if (Number(data.marketing?.failedEvents || 0) > 0) {
+    marketingAlerts.push(`${data.marketing.failedEvents} eventos fallidos`);
+  }
+
+  if (!marketingAlerts.length) {
+    marketingAlerts.push("Stack estable");
+  }
+
+  const marketingSummaryCopy = (() => {
+    const liveCampaigns = Number(data.marketing?.liveCampaigns || 0);
+    const attributedCaptures = Number(data.marketing?.attributedCaptures || 0);
+    const connectedIntegrations = Number(data.marketing?.connectedIntegrations || 0);
+
+    if (marketingFailures > 0) {
+      return `Hay ${marketingFailures} alerta(s) en Marketing y conviene revisar la cola antes de empujar mas trafico.`;
+    }
+
+    if (liveCampaigns > 0 || attributedCaptures > 0) {
+      return `Marketing ya esta vivo: ${liveCampaigns} campana(s) live, ${attributedCaptures} captura(s) atribuidas y ${connectedIntegrations} integracion(es) conectadas.`;
+    }
+
+    if (connectedIntegrations > 0) {
+      return `La base de Marketing ya esta encendida con ${connectedIntegrations} integracion(es) conectadas; falta meterle mas trafico real para leer senal fuerte.`;
+    }
+
+    return "La base de Marketing ya existe, pero todavia le falta mas senal operativa para que la Torre la lea como capa principal.";
+  })();
+
+  setText("[data-marketing-connected]", String(data.marketing?.connectedIntegrations || 0));
+  setText("[data-marketing-live]", String(data.marketing?.liveCampaigns || 0));
+  setText("[data-marketing-captures]", String(data.marketing?.attributedCaptures || 0));
+  setText("[data-marketing-automations]", String(data.marketing?.activeAutomations || 0));
+  setText("[data-marketing-queued]", String(data.marketing?.queuedAutomationRuns || 0));
+  setText("[data-marketing-failures]", String(marketingFailures));
+  setText("[data-marketing-spend]", formatMoney(data.marketing?.reportedSpendAmount || 0));
+  setText("[data-marketing-roas]", formatRatio(data.marketing?.returnOnAdSpend || 0));
+  setText("[data-marketing-summary-copy]", marketingSummaryCopy);
+
+  renderTags(
+    document.querySelector("[data-marketing-sources]"),
+    data.marketing?.topSources || [],
+    item => `${item.label} (${item.total})`
+  );
+  renderTags(document.querySelector("[data-marketing-alerts]"), marketingAlerts);
+
+  const marketingCampaignsTable = document.querySelector("[data-marketing-campaigns-table]");
+  if (marketingCampaignsTable) {
+    marketingCampaignsTable.dataset.cols = "6";
+  }
+  renderTableRows(
+    marketingCampaignsTable,
+    data.marketing?.topCampaigns || [],
+    item => `
+      <tr>
+        <td>${escapeHtml(item.name || "Campana")}</td>
+        <td>${escapeHtml(item.statusLabel || "Borrador")}</td>
+        <td>${escapeHtml(`${Number(item.capturedLeads || 0)} lead(s) · ${Number(item.capturedRecruitment || 0)} recluta`)}</td>
+        <td>${escapeHtml(formatMoney(item.reportedSpendAmount || 0))}</td>
+        <td>${escapeHtml(formatRatio(item.returnOnAdSpend || 0))}</td>
+        <td>${escapeHtml(formatMoney(item.costPerLead || 0))}</td>
       </tr>
     `
   );
