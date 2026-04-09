@@ -1318,6 +1318,50 @@ function buildAssistantZonedDate(
   return new Date(initialUtc - (zonedUtc - initialUtc));
 }
 
+function formatAssistantCalendarDayKey(value = "", timeZone = METALWORKS_CALLBACK_TIME_ZONE) {
+  if (!value) {
+    return "";
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = getAssistantZonedParts(date, timeZone);
+
+  if (!parts.year || !parts.month || !parts.day) {
+    return "";
+  }
+
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function parseAssistantCalendarDayKey(value = "") {
+  const safeValue = cleanText(value || "", 40);
+
+  if (!safeValue) {
+    return null;
+  }
+
+  const match = safeValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1] || 0);
+  const month = Number(match[2] || 0);
+  const day = Number(match[3] || 0);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
 function resolveAssistantTimeParts(label = "") {
   const normalized = normalizeAssistantSearchText(label || "");
 
@@ -1379,6 +1423,11 @@ function resolveAssistantDayParts(
   timeZone = METALWORKS_CALLBACK_TIME_ZONE,
 ) {
   const normalized = normalizeAssistantSearchText(bestContactDay || "");
+  const explicitDayParts = parseAssistantCalendarDayKey(bestContactDay);
+
+  if (explicitDayParts) {
+    return explicitDayParts;
+  }
 
   if (!normalized) {
     return null;
@@ -1548,6 +1597,14 @@ function buildAssistantConversationSignals({
   const photoFileCount = Array.isArray(lead?.photoFileNames)
     ? lead.photoFileNames.filter(Boolean).length
     : 0;
+  const storedNextActionAt =
+    lead?.nextActionAt instanceof Date
+      ? lead.nextActionAt
+      : lead?.nextActionAt
+        ? new Date(lead.nextActionAt)
+        : null;
+  const hasStoredNextActionAt =
+    storedNextActionAt instanceof Date && !Number.isNaN(storedNextActionAt.getTime());
   let previousAssistantMessage = "";
 
   items.forEach((entry) => {
@@ -1609,14 +1666,29 @@ function buildAssistantConversationSignals({
     }
   });
 
+  const latestBestContactDay = extractAssistantPreferredDay(latestUserMessage);
+  const latestBestContactTime = extractAssistantPreferredTime(latestUserMessage);
+  const storedCalendarDayKey = hasStoredNextActionAt
+    ? formatAssistantCalendarDayKey(storedNextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+    : "";
+  const bestContactDayForResolution =
+    latestBestContactDay || !storedCalendarDayKey ? bestContactDay : storedCalendarDayKey;
+
   if (!projectType && /metal-porch-repair|porch/i.test(pagePath || "")) {
     projectType = "Metal porch repair / restoration";
   }
 
-  const nextActionAt = buildAssistantNextActionAt(bestContactDay, bestContactTime);
+  const nextActionAt =
+    hasStoredNextActionAt && !latestBestContactDay && !latestBestContactTime
+      ? storedNextActionAt
+      : buildAssistantNextActionAt(bestContactDayForResolution, bestContactTime);
+  const normalizedBestContactDay =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
+      ? formatAssistantCalendarDayKey(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+      : bestContactDay;
   const callbackLabel = formatAssistantCallbackLabel({
     nextActionAt,
-    bestContactDay,
+    bestContactDay: normalizedBestContactDay,
     bestContactTime,
   });
   const callbackMissingFields =
@@ -1624,7 +1696,7 @@ function buildAssistantConversationSignals({
       ? [
           !name ? "name" : "",
           !phone && !email ? "phone or email" : "",
-          !bestContactDay ? "best day to call" : "",
+          !normalizedBestContactDay ? "best day to call" : "",
           !bestContactTime ? "best time to call" : "",
         ].filter(Boolean)
       : [];
@@ -1665,7 +1737,7 @@ function buildAssistantConversationSignals({
     phoneDisplay,
     projectType,
     location,
-    bestContactDay,
+    bestContactDay: normalizedBestContactDay,
     bestContactTime,
     callbackIntent: callbackIntent === "no" ? "no" : callbackIntent === "yes" ? "yes" : "",
     callbackMissingFields,
