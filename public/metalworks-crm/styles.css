@@ -67,6 +67,25 @@ body[data-crm-skin="intel-ops"] {
     linear-gradient(180deg, #020805 0%, #07110c 42%, #0a1911 100%);
 }
 
+body[data-crm-skin="prospector-premium"] {
+  --crm-bg: #e8dfd3;
+  --crm-panel: rgba(255, 251, 244, 0.9);
+  --crm-line: rgba(31, 23, 18, 0.12);
+  --crm-ink: #171310;
+  --crm-muted: #6b625a;
+  --crm-red: #b32722;
+  --crm-red-deep: #771510;
+  --crm-charcoal: #15110e;
+  --crm-gold: #a68556;
+  --crm-green: #2f6147;
+  --crm-blue: #384f73;
+  --crm-shadow: 0 24px 60px rgba(44, 29, 19, 0.12);
+  background:
+    radial-gradient(circle at 8% 14%, rgba(179, 39, 34, 0.14), transparent 20%),
+    radial-gradient(circle at 88% 18%, rgba(166, 133, 86, 0.18), transparent 18%),
+    linear-gradient(180deg, #f6f0e7 0%, #e8dfd3 54%, #e2d6c9 100%);
+}
+
 body[data-crm-skin="goku-blue"]::before,
 body[data-crm-skin="goku-blue"]::after {
   content: "";
@@ -126,6 +145,33 @@ body[data-crm-skin="intel-ops"]::after {
     );
   opacity: 0.5;
   filter: blur(10px);
+}
+
+body[data-crm-skin="prospector-premium"]::before,
+body[data-crm-skin="prospector-premium"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body[data-crm-skin="prospector-premium"]::before {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0%, transparent 22%, transparent 78%, rgba(255, 255, 255, 0.22) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(124, 99, 65, 0.045) 0 1px,
+      transparent 1px 14px
+    );
+  opacity: 0.85;
+}
+
+body[data-crm-skin="prospector-premium"]::after {
+  background:
+    radial-gradient(circle at 18% 80%, rgba(179, 39, 34, 0.1), transparent 18%),
+    radial-gradient(circle at 80% 72%, rgba(43, 35, 29, 0.08), transparent 22%);
+  filter: blur(18px);
 }
 
 button,
@@ -263,6 +309,23 @@ body[data-crm-skin="intel-ops"] .crm-prospector-form textarea {
   box-shadow: inset 0 0 0 1px rgba(143, 255, 196, 0.04);
 }
 
+body[data-crm-skin="prospector-premium"] .crm-login-form input,
+body[data-crm-skin="prospector-premium"] .crm-toolbar input,
+body[data-crm-skin="prospector-premium"] .crm-toolbar select,
+body[data-crm-skin="prospector-premium"] .crm-detail-form input,
+body[data-crm-skin="prospector-premium"] .crm-detail-form select,
+body[data-crm-skin="prospector-premium"] .crm-detail-form textarea,
+body[data-crm-skin="prospector-premium"] .crm-prospector-form input,
+body[data-crm-skin="prospector-premium"] .crm-prospector-form select,
+body[data-crm-skin="prospector-premium"] .crm-prospector-form textarea {
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--crm-ink);
+  border-color: rgba(31, 23, 18, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 18px rgba(44, 29, 19, 0.05);
+}
+
 .crm-primary-button,
 .crm-secondary-button {
   min-height: 50px;
@@ -307,6 +370,18 @@ body[data-crm-skin="intel-ops"] .crm-login-alias {
   color: var(--crm-ink);
 }
 
+body[data-crm-skin="prospector-premium"] .crm-secondary-button,
+body[data-crm-skin="prospector-premium"] .crm-card-action,
+body[data-crm-skin="prospector-premium"] .crm-action-link,
+body[data-crm-skin="prospector-premium"] .crm-chip,
+body[data-crm-skin="prospector-premium"] .crm-user-chip,
+body[data-crm-skin="prospector-premium"] .crm-theme-badge,
+body[data-crm-skin="prospector-premium"] .crm-login-alias {
+  background: rgba(21, 17, 14, 0.06);
+  border: 1px solid rgba(31, 23, 18, 0.1);
+  color: var(--crm-charcoal);
+}
+
 body[data-crm-skin="goku-blue"] .crm-primary-button {
   background: linear-gradient(135deg, #1be8ff 0%, #6a5cff 48%, #ff4bd9 100%);
   box-shadow:
@@ -322,6 +397,14 @@ body[data-crm-skin="intel-ops"] .crm-primary-button {
     0 0 0 1px rgba(255, 255, 255, 0.06),
     0 12px 30px rgba(49, 163, 102, 0.28),
     0 0 34px rgba(142, 255, 193, 0.18);
+}
+
+body[data-crm-skin="prospector-premium"] .crm-primary-button {
+  background: linear-gradient(135deg, #14110f 0%, #3b2418 38%, #b32722 100%);
+  color: #fff8f1;
+  box-shadow:
+    0 16px 32px rgba(92, 32, 25, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 body[data-crm-skin="goku-blue"] .crm-login-card,
@@ -354,6 +437,20 @@ body[data-crm-skin="intel-ops"] .crm-activity-card {
   backdrop-filter: blur(14px);
 }
 
+body[data-crm-skin="prospector-premium"] .crm-login-card,
+body[data-crm-skin="prospector-premium"] .crm-panel,
+body[data-crm-skin="prospector-premium"] .crm-summary-card,
+body[data-crm-skin="prospector-premium"] .crm-lead-card,
+body[data-crm-skin="prospector-premium"] .crm-activity-card {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92) 0%, rgba(249, 243, 235, 0.9) 100%);
+  border-color: rgba(31, 23, 18, 0.1);
+  box-shadow:
+    0 24px 50px rgba(44, 29, 19, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+}
+
 body[data-crm-skin="goku-blue"] .crm-header h1,
 body[data-crm-skin="goku-blue"] .crm-login-card h1 {
   color: #fafdff;
@@ -368,6 +465,12 @@ body[data-crm-skin="intel-ops"] .crm-login-card h1 {
   text-shadow: 0 0 12px rgba(111, 255, 170, 0.18);
 }
 
+body[data-crm-skin="prospector-premium"] .crm-header h1,
+body[data-crm-skin="prospector-premium"] .crm-login-card h1 {
+  color: #171310;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
 body[data-crm-skin="goku-blue"] .crm-eyebrow {
   color: #7ae9ff;
   text-shadow: 0 0 16px rgba(82, 215, 255, 0.35);
@@ -378,12 +481,21 @@ body[data-crm-skin="intel-ops"] .crm-eyebrow {
   text-shadow: 0 0 12px rgba(111, 255, 170, 0.2);
 }
 
+body[data-crm-skin="prospector-premium"] .crm-eyebrow {
+  color: #9b2c25;
+  text-shadow: none;
+}
+
 body[data-crm-skin="goku-blue"] .crm-summary-card strong {
   text-shadow: 0 0 18px rgba(77, 230, 255, 0.18);
 }
 
 body[data-crm-skin="intel-ops"] .crm-summary-card strong {
   text-shadow: 0 0 14px rgba(111, 255, 170, 0.12);
+}
+
+body[data-crm-skin="prospector-premium"] .crm-summary-card strong {
+  text-shadow: none;
 }
 
 body[data-crm-skin="goku-blue"] .crm-lead-card:hover,
@@ -400,6 +512,14 @@ body[data-crm-skin="intel-ops"] .crm-lead-card.is-active {
   box-shadow:
     0 0 0 1px rgba(111, 255, 170, 0.08),
     0 0 24px rgba(111, 255, 170, 0.08);
+}
+
+body[data-crm-skin="prospector-premium"] .crm-lead-card:hover,
+body[data-crm-skin="prospector-premium"] .crm-lead-card.is-active {
+  border-color: rgba(179, 39, 34, 0.24);
+  box-shadow:
+    0 0 0 1px rgba(179, 39, 34, 0.08),
+    0 18px 28px rgba(68, 33, 22, 0.08);
 }
 
 .crm-form-result[data-tone="error"] {
@@ -465,6 +585,11 @@ body[data-crm-skin="goku-blue"] .crm-system-status {
 body[data-crm-skin="intel-ops"] .crm-system-status {
   background: rgba(111, 255, 170, 0.08);
   border-color: rgba(111, 255, 170, 0.16);
+}
+
+body[data-crm-skin="prospector-premium"] .crm-system-status {
+  background: rgba(255, 251, 245, 0.72);
+  border-color: rgba(31, 23, 18, 0.12);
 }
 
 .crm-user-chip {
@@ -1109,6 +1234,79 @@ body[data-crm-skin="intel-ops"] .crm-note-list p,
 body[data-crm-skin="intel-ops"] .crm-capture-photo-card {
   background: rgba(111, 255, 170, 0.06);
   border-color: rgba(111, 255, 170, 0.12);
+}
+
+body[data-crm-skin="prospector-premium"] .crm-upload-panel,
+body[data-crm-skin="prospector-premium"] .crm-intake-card,
+body[data-crm-skin="prospector-premium"] .crm-metric-card,
+body[data-crm-skin="prospector-premium"] .crm-mini-lead-card,
+body[data-crm-skin="prospector-premium"] .crm-prospector-empty,
+body[data-crm-skin="prospector-premium"] .crm-note-list p,
+body[data-crm-skin="prospector-premium"] .crm-capture-photo-card {
+  background: rgba(255, 250, 244, 0.72);
+  border-color: rgba(31, 23, 18, 0.09);
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-shell,
+body.crm-prospector-login-page[data-crm-skin="prospector-premium"] .crm-login-shell {
+  position: relative;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-header,
+body.crm-prospector-login-page[data-crm-skin="prospector-premium"] .crm-login-card {
+  position: relative;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-header::after,
+body.crm-prospector-login-page[data-crm-skin="prospector-premium"] .crm-login-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, #15110f 0%, #b32722 50%, #b18d5f 100%);
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-panel,
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-header,
+body.crm-prospector-login-page[data-crm-skin="prospector-premium"] .crm-login-card {
+  overflow: hidden;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-header {
+  padding: 26px 28px;
+  border: 1px solid rgba(31, 23, 18, 0.1);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 251, 244, 0.92) 0%, rgba(245, 236, 225, 0.9) 100%);
+  box-shadow:
+    0 24px 50px rgba(44, 29, 19, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-panel-head h2,
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-upload-panel-head strong,
+body.crm-prospector-login-page[data-crm-skin="prospector-premium"] .crm-login-card h1 {
+  letter-spacing: -0.02em;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-metric-card strong {
+  color: #1e1713;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-note-list p {
+  border-left: 3px solid rgba(179, 39, 34, 0.72);
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-prospector-layout {
+  gap: 22px;
+}
+
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-photo-remove,
+body.crm-prospector-page[data-crm-skin="prospector-premium"] .crm-secondary-button {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 @media (min-width: 1081px) {
