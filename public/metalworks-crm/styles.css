@@ -742,6 +742,11 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
+.crm-action-feedback {
+  margin: 8px 0 0;
+  min-height: 1.4rem;
+}
+
 .crm-action-link,
 .crm-card-action {
   display: inline-flex;

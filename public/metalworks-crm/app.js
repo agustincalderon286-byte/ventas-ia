@@ -186,6 +186,7 @@ const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
 const detailPanel = document.querySelector(".crm-detail-panel");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
+const actionFeedback = document.querySelector("[data-crm-action-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
 const globalActivityList = document.querySelector("[data-crm-global-activity]");
 const globalActivitySummary = document.querySelector("[data-crm-global-activity-summary]");
@@ -313,12 +314,14 @@ function toDateInputValue(value = "") {
 }
 
 function setDetailFeedback(message = "", tone = "") {
-  if (!detailFeedback) {
-    return;
-  }
+  [detailFeedback, actionFeedback].forEach((element) => {
+    if (!element) {
+      return;
+    }
 
-  detailFeedback.textContent = message;
-  detailFeedback.dataset.tone = tone;
+    element.textContent = message;
+    element.dataset.tone = tone;
+  });
 }
 
 function setSystemStatus(message = "", tone = "") {
@@ -582,6 +585,12 @@ function buildEstimateSubject(snapshot) {
   return `Estimate from Chicago Metal Works & Fencing - ${projectLabel}`;
 }
 
+function buildEstimateMailto(snapshot) {
+  return `mailto:${encodeURIComponent(snapshot.email)}?subject=${encodeURIComponent(
+    buildEstimateSubject(snapshot),
+  )}&body=${encodeURIComponent(buildEstimateBody(snapshot))}`;
+}
+
 function buildEstimateBody(snapshot) {
   const lines = [
     `Hi ${snapshot.firstName},`,
@@ -616,17 +625,61 @@ function openEmailDraft({ silent = false } = {}) {
     return false;
   }
 
-  const mailto = `mailto:${encodeURIComponent(snapshot.email)}?subject=${encodeURIComponent(
-    buildEstimateSubject(snapshot),
-  )}&body=${encodeURIComponent(buildEstimateBody(snapshot))}`;
-
-  window.location.href = mailto;
+  const mailto = buildEstimateMailto(snapshot);
+  const link = document.createElement("a");
+  link.href = mailto;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 
   if (!silent) {
     setDetailFeedback("Draft abierto en tu correo.", "muted");
   }
 
   return true;
+}
+
+async function copyTextWithFallback(text = "") {
+  const safeText = String(text || "");
+
+  if (!safeText) {
+    return false;
+  }
+
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(safeText);
+      return true;
+    } catch {}
+  }
+
+  const helper = document.createElement("textarea");
+  helper.value = safeText;
+  helper.setAttribute("readonly", "true");
+  helper.style.position = "fixed";
+  helper.style.opacity = "0";
+  helper.style.pointerEvents = "none";
+  document.body.appendChild(helper);
+  helper.focus();
+  helper.select();
+
+  let copied = false;
+
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  helper.remove();
+
+  if (copied) {
+    return true;
+  }
+
+  window.prompt("Copy this estimate text:", safeText);
+  return false;
 }
 
 async function copyEstimateText() {
@@ -638,11 +691,59 @@ async function copyEstimateText() {
   }
 
   try {
-    await navigator.clipboard.writeText(buildEstimateBody(snapshot));
-    setDetailFeedback("Estimate copiado.", "success");
+    const copied = await copyTextWithFallback(buildEstimateBody(snapshot));
+    setDetailFeedback(
+      copied
+        ? "Estimate copiado."
+        : "No pude copiarlo automatico. Te deje el texto listo para copiar manualmente.",
+      copied ? "success" : "muted",
+    );
   } catch (error) {
     setDetailFeedback("No pude copiarlo automaticamente.", "error");
   }
+}
+
+function focusEstimateComposer() {
+  setDetailTab("profile");
+
+  const estimateTitleInput =
+    detailForm?.elements?.estimateTitle || detailForm?.elements?.estimateAmount;
+
+  if (!estimateTitleInput) {
+    return;
+  }
+
+  estimateTitleInput.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+
+  window.setTimeout(() => {
+    estimateTitleInput.focus();
+    if (typeof estimateTitleInput.select === "function") {
+      estimateTitleInput.select();
+    }
+  }, 140);
+}
+
+async function openQuoteComposer(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return;
+  }
+
+  if (state.selectedLeadId !== safeLeadId) {
+    rememberSelectedLead(safeLeadId);
+    if (state.dashboard?.leads) {
+      renderLeadList(state.dashboard.leads || []);
+    }
+    await loadLeadDetail(safeLeadId);
+  }
+
+  scrollDetailIntoView();
+  focusEstimateComposer();
+  setDetailFeedback("Estimate listo para editar o enviar.", "muted");
 }
 
 function scrollDetailIntoView() {
@@ -841,11 +942,7 @@ function renderLeadList(leads = []) {
       if (!leadId) {
         return;
       }
-
-      rememberSelectedLead(leadId);
-      renderLeadList(leads);
-      await loadLeadDetail(leadId);
-      scrollDetailIntoView();
+      await openQuoteComposer(leadId);
     });
   });
 
@@ -1355,9 +1452,11 @@ async function handleSendEstimate() {
       return;
     }
 
-    openEmailDraft({ silent: true });
+    const draftOpened = openEmailDraft({ silent: true });
     setDetailFeedback(
-      result.message || "No pude enviarlo desde el sistema. Te abri un draft para mandarlo rapido.",
+      draftOpened
+        ? result.message || "No pude enviarlo desde el sistema. Te abri un draft prellenado para mandarlo rapido."
+        : result.message || "No pude enviarlo desde el sistema. Usa Open Email Draft para mandarlo rapido.",
       "muted",
     );
     await loadDashboard();
