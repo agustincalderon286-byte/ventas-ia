@@ -1,6 +1,99 @@
+const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
+const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
+const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
+const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
+const CRM_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function createApiError(message = "", status = 0, retryable = false) {
+  const error = new Error(message || "No pude completar esa accion.");
+  error.status = status;
+  error.retryable = retryable;
+  return error;
+}
+
+function readStoredJson(key, fallback = null) {
+  try {
+    const raw = window.localStorage.getItem(key);
+
+    if (!raw) {
+      return fallback;
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    if (value == null) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function getCacheEntry(key, maxAgeMs = CRM_CACHE_MAX_AGE_MS) {
+  const entry = readStoredJson(key, null);
+
+  if (!entry || typeof entry !== "object" || !entry.savedAt || !entry.data) {
+    return null;
+  }
+
+  if (Date.now() - Number(entry.savedAt || 0) > maxAgeMs) {
+    return null;
+  }
+
+  return entry;
+}
+
+function setCacheEntry(key, data) {
+  if (!data) {
+    writeStoredJson(key, null);
+    return;
+  }
+
+  writeStoredJson(key, {
+    savedAt: Date.now(),
+    data,
+  });
+}
+
+function formatCacheAge(savedAt = 0) {
+  const ageMs = Math.max(0, Date.now() - Number(savedAt || 0));
+  const minutes = Math.max(1, Math.round(ageMs / 60000));
+
+  if (minutes < 60) {
+    return `hace ${minutes} min`;
+  }
+
+  const hours = Math.max(1, Math.round(minutes / 60));
+  return `hace ${hours} h`;
+}
+
 async function apiRequest(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const retryDelays =
+    Array.isArray(options.retryDelays) && options.retryDelays.length
+      ? options.retryDelays
+      : method === "GET"
+        ? GET_RETRY_DELAYS_MS
+        : [];
+
   const config = {
-    method: options.method || "GET",
+    method,
     credentials: "same-origin",
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
@@ -12,14 +105,47 @@ async function apiRequest(url, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(url, config);
-  const data = await response.json().catch(() => ({}));
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    try {
+      const response = await fetch(url, config);
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      const data = contentType.includes("application/json")
+        ? await response.json().catch(() => ({}))
+        : {};
 
-  if (!response.ok) {
-    throw new Error(data.error || "No pude completar esa accion.");
+      if (!response.ok) {
+        throw createApiError(
+          data.error ||
+            (response.status === 401
+              ? "Necesitas iniciar sesion."
+              : "No pude completar esa accion."),
+          response.status,
+          TRANSIENT_STATUS_CODES.has(response.status),
+        );
+      }
+
+      return data;
+    } catch (error) {
+      const status = Number(error?.status || 0);
+      const retryable =
+        Boolean(error?.retryable) ||
+        TRANSIENT_STATUS_CODES.has(status) ||
+        error instanceof TypeError;
+
+      if (attempt < retryDelays.length && retryable) {
+        await wait(retryDelays[attempt]);
+        continue;
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw createApiError("No pude completar esa accion.", status, retryable);
+    }
   }
 
-  return data;
+  throw createApiError("No pude completar esa accion.");
 }
 
 const METALWORKS_CONTACT = {
@@ -39,7 +165,7 @@ const ESTIMATE_COST_FIELDS = [
 const state = {
   dashboard: null,
   leadDetail: null,
-  selectedLeadId: "",
+  selectedLeadId: String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
   detailTab: "profile",
   filters: {
     search: "",
@@ -47,6 +173,7 @@ const state = {
     projectType: "",
   },
   searchTimer: null,
+  bindingsReady: false,
 };
 
 const summaryWrap = document.querySelector("[data-crm-summary]");
@@ -71,6 +198,7 @@ const refreshButton = document.querySelector("[data-crm-refresh]");
 const logoutButton = document.querySelector("[data-crm-logout]");
 const statusInput = document.querySelector("[data-crm-detail-status-input]");
 const themeBadge = document.querySelector("[data-crm-theme-badge]");
+const systemStatus = document.querySelector("[data-crm-system-status]");
 const callLink = document.querySelector("[data-crm-call-link]");
 const textLink = document.querySelector("[data-crm-text-link]");
 const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
@@ -193,6 +321,80 @@ function setDetailFeedback(message = "", tone = "") {
   detailFeedback.dataset.tone = tone;
 }
 
+function setSystemStatus(message = "", tone = "") {
+  if (!systemStatus) {
+    return;
+  }
+
+  systemStatus.hidden = !message;
+  systemStatus.textContent = message;
+  systemStatus.dataset.tone = tone;
+}
+
+function persistThemeProfile(profile = {}, email = "") {
+  setCacheEntry(CRM_THEME_STORAGE_KEY, {
+    email: String(email || "").trim(),
+    profile: profile && typeof profile === "object" ? profile : {},
+  });
+}
+
+function applyCachedTheme() {
+  const entry = getCacheEntry(CRM_THEME_STORAGE_KEY, 365 * 24 * 60 * 60 * 1000);
+  const cached = entry?.data;
+
+  if (!cached?.profile) {
+    return false;
+  }
+
+  applyProfileTheme(cached.profile, cached.email || "");
+  return true;
+}
+
+function rememberSelectedLead(leadId = "") {
+  state.selectedLeadId = String(leadId || "").trim();
+  writeStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, state.selectedLeadId || "");
+}
+
+function getLeadDetailCache() {
+  const cache = readStoredJson(CRM_LEAD_DETAIL_CACHE_KEY, {});
+  return cache && typeof cache === "object" ? cache : {};
+}
+
+function persistLeadDetail(detail = null) {
+  const leadId = String(detail?.lead?.id || "").trim();
+
+  if (!leadId) {
+    return;
+  }
+
+  const cache = getLeadDetailCache();
+  cache[leadId] = {
+    savedAt: Date.now(),
+    data: detail,
+  };
+  writeStoredJson(CRM_LEAD_DETAIL_CACHE_KEY, cache);
+}
+
+function readCachedLeadDetail(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return null;
+  }
+
+  const entry = getLeadDetailCache()[safeLeadId];
+
+  if (!entry?.savedAt || !entry?.data) {
+    return null;
+  }
+
+  if (Date.now() - Number(entry.savedAt || 0) > CRM_CACHE_MAX_AGE_MS) {
+    return null;
+  }
+
+  return entry;
+}
+
 function applyProfileTheme(profile = {}, fallbackEmail = "") {
   const skin = String(profile.skin || "classic").trim() || "classic";
   const displayName = String(profile.displayName || fallbackEmail || "Admin").trim();
@@ -207,6 +409,27 @@ function applyProfileTheme(profile = {}, fallbackEmail = "") {
     themeBadge.hidden = !label;
     themeBadge.textContent = label || "";
   }
+}
+
+function handleCrmError(error, { fallbackMessage = "", allowRedirect = true } = {}) {
+  console.error(error);
+
+  if (Number(error?.status || 0) === 401 && allowRedirect) {
+    window.location.href = "/metalworks-crm/login/";
+    return;
+  }
+
+  const tone =
+    TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) || error instanceof TypeError
+      ? "warning"
+      : "error";
+  const message =
+    fallbackMessage ||
+    (tone === "warning"
+      ? "La conexion del CRM esta inestable. Conservando el ultimo snapshot mientras vuelve."
+      : error?.message || "No pude completar esa accion.");
+
+  setSystemStatus(message, tone);
 }
 
 function buildQueryString(filters = {}) {
@@ -619,7 +842,7 @@ function renderLeadList(leads = []) {
         return;
       }
 
-      state.selectedLeadId = leadId;
+      rememberSelectedLead(leadId);
       renderLeadList(leads);
       await loadLeadDetail(leadId);
       scrollDetailIntoView();
@@ -633,7 +856,7 @@ function renderLeadList(leads = []) {
         return;
       }
 
-      state.selectedLeadId = leadId;
+      rememberSelectedLead(leadId);
       renderLeadList(leads);
       await loadLeadDetail(leadId);
       scrollDetailIntoView();
@@ -792,6 +1015,7 @@ function renderLeadDetail(detail = null) {
   }
 
   const lead = detail.lead;
+  persistLeadDetail(detail);
   detailWrap.hidden = false;
   detailEmpty.hidden = true;
   detailStatus.textContent = `${lead.statusLabel} · ${lead.projectType || "Sin servicio"}`;
@@ -959,18 +1183,14 @@ async function saveLeadChanges(
   return detail;
 }
 
-async function loadDashboard() {
-  const query = buildQueryString(state.filters);
-  const url = query
-    ? `/api/metalworks-crm/dashboard?${query}`
-    : "/api/metalworks-crm/dashboard";
-
-  const dashboard = await apiRequest(url);
+async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt = 0 } = {}) {
   state.dashboard = dashboard;
+  const query = buildQueryString(state.filters);
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
   renderFilters(dashboard);
   renderLeadList(dashboard.leads || []);
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
+
   if (globalActivitySummary) {
     const totalEvents = Array.isArray(dashboard.recentActivity) ? dashboard.recentActivity.length : 0;
     globalActivitySummary.textContent = `${totalEvents} evento${totalEvents === 1 ? "" : "s"}`;
@@ -980,13 +1200,70 @@ async function loadDashboard() {
     const selectedStillVisible = dashboard.leads.some(
       (lead) => lead.id === state.selectedLeadId,
     );
+
     if (!selectedStillVisible) {
-      state.selectedLeadId = dashboard.leads[0].id;
+      rememberSelectedLead(dashboard.leads[0].id);
     }
-    await loadLeadDetail(state.selectedLeadId);
+
+    if (fromCache) {
+      const cachedDetail = readCachedLeadDetail(state.selectedLeadId);
+
+      if (cachedDetail?.data) {
+        renderLeadDetail(cachedDetail.data);
+      } else {
+        renderLeadDetail(null);
+      }
+    } else {
+      await loadLeadDetail(state.selectedLeadId);
+    }
   } else {
-    state.selectedLeadId = "";
+    rememberSelectedLead("");
     renderLeadDetail(null);
+  }
+
+  if (fromCache) {
+    setSystemStatus(
+      `Conexion inestable. Mostrando snapshot guardado ${formatCacheAge(savedAt)}.`,
+      "warning",
+    );
+  } else if (query || state.dashboard) {
+    setSystemStatus("", "");
+  }
+}
+
+function renderCachedDashboard() {
+  const entry = getCacheEntry(CRM_DASHBOARD_CACHE_KEY);
+
+  if (!entry?.data) {
+    return false;
+  }
+
+  renderDashboardSnapshot(entry.data, {
+    fromCache: true,
+    savedAt: entry.savedAt,
+  }).catch((error) => {
+    console.error(error);
+  });
+  return true;
+}
+
+async function loadDashboard() {
+  const query = buildQueryString(state.filters);
+  const url = query
+    ? `/api/metalworks-crm/dashboard?${query}`
+    : "/api/metalworks-crm/dashboard";
+
+  try {
+    const dashboard = await apiRequest(url);
+    setCacheEntry(CRM_DASHBOARD_CACHE_KEY, dashboard);
+    await renderDashboardSnapshot(dashboard);
+    return dashboard;
+  } catch (error) {
+    if (renderCachedDashboard()) {
+      return state.dashboard;
+    }
+
+    throw error;
   }
 }
 
@@ -996,8 +1273,24 @@ async function loadLeadDetail(leadId) {
     return;
   }
 
-  const detail = await apiRequest(`/api/metalworks-crm/leads/${encodeURIComponent(leadId)}`);
-  renderLeadDetail(detail);
+  try {
+    const detail = await apiRequest(`/api/metalworks-crm/leads/${encodeURIComponent(leadId)}`);
+    renderLeadDetail(detail);
+    return detail;
+  } catch (error) {
+    const cachedDetail = readCachedLeadDetail(leadId);
+
+    if (cachedDetail?.data) {
+      renderLeadDetail(cachedDetail.data);
+      setSystemStatus(
+        `Conexion inestable. Mostrando detalle guardado ${formatCacheAge(cachedDetail.savedAt)}.`,
+        "warning",
+      );
+      return cachedDetail.data;
+    }
+
+    throw error;
+  }
 }
 
 async function handleSaveLead(event) {
@@ -1089,19 +1382,19 @@ async function handleLogout() {
 function bindFilters() {
   statusFilter?.addEventListener("change", async () => {
     state.filters.status = String(statusFilter.value || "").trim();
-    await loadDashboard();
+    await refreshDashboardSafely();
   });
 
   serviceFilter?.addEventListener("change", async () => {
     state.filters.projectType = String(serviceFilter.value || "").trim();
-    await loadDashboard();
+    await refreshDashboardSafely();
   });
 
   searchInput?.addEventListener("input", () => {
     window.clearTimeout(state.searchTimer);
     state.searchTimer = window.setTimeout(async () => {
       state.filters.search = String(searchInput.value || "").trim();
-      await loadDashboard();
+      await refreshDashboardSafely();
     }, 220);
   });
 }
@@ -1131,8 +1424,48 @@ function bindDetailActions() {
   });
 }
 
+async function refreshDashboardSafely() {
+  try {
+    await loadDashboard();
+  } catch (error) {
+    handleCrmError(error, {
+      fallbackMessage: state.dashboard
+        ? "La conexion del CRM esta inestable. Conservando el ultimo snapshot mientras vuelve."
+        : "El CRM se esta despertando o la conexion esta inestable. Intenta otra vez en unos segundos.",
+    });
+  }
+}
+
+function bindAppShell() {
+  if (state.bindingsReady) {
+    return;
+  }
+
+  bindFilters();
+  bindDetailActions();
+  refreshButton?.addEventListener("click", refreshDashboardSafely);
+  logoutButton?.addEventListener("click", handleLogout);
+  state.bindingsReady = true;
+}
+
 async function init() {
-  const me = await apiRequest("/api/metalworks-crm/me");
+  bindAppShell();
+  applyCachedTheme();
+  renderCachedDashboard();
+
+  let me;
+
+  try {
+    me = await apiRequest("/api/metalworks-crm/me");
+  } catch (error) {
+    handleCrmError(error, {
+      fallbackMessage: state.dashboard
+        ? "La conexion del CRM esta inestable. Mostrando el ultimo snapshot mientras vuelve."
+        : "El CRM se esta despertando o la conexion esta inestable. Intenta otra vez en unos segundos.",
+      allowRedirect: false,
+    });
+    return;
+  }
 
   if (!me.authenticated) {
     window.location.href = "/metalworks-crm/login/";
@@ -1140,16 +1473,15 @@ async function init() {
   }
 
   applyProfileTheme(me.profile || {}, me.email || "");
-
-  bindFilters();
-  bindDetailActions();
-  refreshButton?.addEventListener("click", loadDashboard);
-  logoutButton?.addEventListener("click", handleLogout);
-
-  await loadDashboard();
+  persistThemeProfile(me.profile || {}, me.email || "");
+  setSystemStatus("", "");
+  await refreshDashboardSafely();
 }
 
 init().catch((error) => {
-  console.error(error);
-  window.location.href = "/metalworks-crm/login/";
+  handleCrmError(error, {
+    fallbackMessage: state.dashboard
+      ? "La conexion del CRM esta inestable. Mostrando el ultimo snapshot mientras vuelve."
+      : "El CRM se esta despertando o la conexion esta inestable. Intenta otra vez en unos segundos.",
+  });
 });

@@ -423,6 +423,38 @@ body[data-crm-skin="intel-ops"] .crm-lead-card.is-active {
   align-items: center;
 }
 
+.crm-system-status {
+  margin: -4px 0 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--crm-line);
+  border-radius: 16px;
+  background: rgba(16, 20, 23, 0.04);
+  color: var(--crm-muted);
+  font-weight: 700;
+}
+
+.crm-system-status[data-tone="warning"] {
+  color: var(--crm-gold);
+}
+
+.crm-system-status[data-tone="error"] {
+  color: var(--crm-red);
+}
+
+.crm-system-status[data-tone="success"] {
+  color: var(--crm-green);
+}
+
+body[data-crm-skin="goku-blue"] .crm-system-status {
+  background: rgba(97, 214, 255, 0.08);
+  border-color: rgba(97, 214, 255, 0.18);
+}
+
+body[data-crm-skin="intel-ops"] .crm-system-status {
+  background: rgba(111, 255, 170, 0.08);
+  border-color: rgba(111, 255, 170, 0.16);
+}
+
 .crm-user-chip {
   padding: 10px 14px;
   border-radius: 999px;
