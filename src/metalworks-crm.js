@@ -2789,6 +2789,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         auth.email || getAllowedEmails()[0] || METALWORKS_CRM_DEFAULT_EMAIL;
       res.json({
         authenticated: Boolean(auth.email),
+  app.use("/api/metalworks-crm", (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
         configured: metalworksCrmConfigured(),
         email: auth.email || "",
         allowedEmail: fallbackEmail,
@@ -3157,6 +3161,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         }
         leadDoc.estimateNotes = estimateNotes;
       }
+      res.set("Cache-Control", "no-store");
 
       if (estimateMoneyChanged || estimateAmount !== null) {
         const nextEstimateAmount = estimateMoneyChanged
@@ -3169,6 +3174,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             )
           : normalizeMoney(estimateAmount || 0);
 
+    res.set("Cache-Control", "no-store");
         if (normalizeMoney(leadDoc.estimateAmount || 0) !== nextEstimateAmount) {
           estimateChanged = true;
         }
