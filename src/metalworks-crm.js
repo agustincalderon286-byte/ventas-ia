@@ -6,6 +6,9 @@ const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
+const METALWORKS_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
+const METALWORKS_DEFAULT_CLIENT_WARRANTY =
+  "Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and any exclusions follow the written agreement for this job.";
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
@@ -228,6 +231,12 @@ function getMetalworksCrmProfile(email = "") {
 function normalizeStatus(value = "") {
   const status = cleanText(value).toLowerCase();
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
+}
+
+function normalizeClientDocumentType(value = "") {
+  return cleanText(value || "", 24).toLowerCase() === "invoice"
+    ? "invoice"
+    : "estimate";
 }
 
 function normalizeMoney(value = 0) {
@@ -453,72 +462,117 @@ function buildThumbtackOauthCallbackPage({
 </html>`;
 }
 
-function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
+function buildMetalworksClientDocumentSnapshot(lead = null) {
   const fullName = cleanText(lead?.fullName || "", 120);
   const firstName = fullName.split(/\s+/).filter(Boolean)[0] || "there";
-  const projectLabel =
-    cleanText(lead?.estimateTitle || "", 160) ||
-    cleanText(lead?.projectType || "", 120) ||
-    "metal repair project";
-  const total = formatMoneyLabel(lead?.estimateAmount || 0);
+  const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
+  const documentLabel = documentType === "invoice" ? "Invoice" : "Estimate";
+  const projectLabel = cleanText(lead?.projectType || "", 120) || "metalwork project";
+  const description =
+    cleanText(lead?.clientDocumentDescription || "", 3200) ||
+    cleanText(lead?.details || "", 2400);
+  const workDate = formatDateLabel(lead?.clientDocumentWorkDate || "");
   const validUntil = formatDateLabel(lead?.estimateValidUntil || "");
+  const warranty =
+    cleanText(lead?.clientDocumentWarranty || "", 2400) || METALWORKS_DEFAULT_CLIENT_WARRANTY;
+  const totalAmount = normalizeMoney(lead?.estimateAmount || 0);
+  const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
   const location = cleanText(lead?.location || "", 160);
-  const scope = cleanText(lead?.estimateScope || lead?.details || "", 2400);
-  const notes = cleanText(lead?.estimateNotes || "", 2400);
-  const subject = `Estimate from Chicago Metal Works & Fencing - ${projectLabel}`;
+  const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
+  const email = normalizeEmail(lead?.email || "");
+
+  return {
+    fullName,
+    firstName,
+    documentType,
+    documentLabel,
+    projectLabel,
+    description,
+    workDate,
+    validUntil,
+    warranty,
+    totalAmount,
+    total,
+    location,
+    phone,
+    email,
+  };
+}
+
+function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
+  const snapshot = buildMetalworksClientDocumentSnapshot(lead);
+  const subject = `${snapshot.documentLabel} from Chicago Metal Works & Fencing - ${snapshot.projectLabel}`;
   const textLines = [
-    `Hi ${firstName},`,
+    `Hi ${snapshot.firstName},`,
     "",
     "Thank you for contacting Chicago Metal Works & Fencing.",
     "",
-    `Project: ${projectLabel}`,
-    `Estimated total: ${total}`,
-    validUntil ? `Valid until: ${validUntil}` : "",
-    location ? `Location: ${location}` : "",
+    `${snapshot.documentLabel}: ${snapshot.projectLabel}`,
+    `Customer: ${snapshot.fullName || "Not provided"}`,
+    snapshot.location ? `Job location: ${snapshot.location}` : "",
+    snapshot.phone ? `Phone: ${snapshot.phone}` : "",
+    snapshot.email ? `Email: ${snapshot.email}` : "",
+    snapshot.workDate ? `Work date: ${snapshot.workDate}` : "",
+    snapshot.documentType === "estimate" && snapshot.validUntil
+      ? `Valid until: ${snapshot.validUntil}`
+      : "",
+    snapshot.total ? `Total: ${snapshot.total}` : "",
     "",
-    scope ? `Scope of work:\n${scope}` : "",
-    notes ? `Notes / exclusions:\n${notes}` : "",
+    snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
+    snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
     "",
     `To move forward, reply to this email or call/text ${METALWORKS_CONTACT_PHONE_DISPLAY}.`,
     "",
     "Chicago Metal Works & Fencing",
     METALWORKS_CONTACT_PHONE_DISPLAY,
     METALWORKS_CONTACT_EMAIL,
+    METALWORKS_WEBSITE_URL,
   ].filter(Boolean);
 
   const html = `
     <div style="font-family:Arial,sans-serif;background:#f8f5ef;padding:24px;color:#1e2428">
       <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd0;border-radius:18px;padding:28px">
-        <p style="margin:0 0 16px">Hi ${escapeHtmlMarkup(firstName)},</p>
+        <p style="margin:0 0 16px">Hi ${escapeHtmlMarkup(snapshot.firstName)},</p>
         <p style="margin:0 0 16px">Thank you for contacting <strong>Chicago Metal Works &amp; Fencing</strong>.</p>
         <div style="border:1px solid #eadfcd;border-radius:16px;padding:18px;margin:0 0 18px;background:#fffaf2">
-          <p style="margin:0 0 10px"><strong>Project:</strong> ${escapeHtmlMarkup(projectLabel)}</p>
-          <p style="margin:0 0 10px"><strong>Estimated total:</strong> ${escapeHtmlMarkup(total)}</p>
-          ${validUntil ? `<p style="margin:0 0 10px"><strong>Valid until:</strong> ${escapeHtmlMarkup(validUntil)}</p>` : ""}
-          ${location ? `<p style="margin:0"><strong>Location:</strong> ${escapeHtmlMarkup(location)}</p>` : ""}
+          <p style="margin:0 0 10px"><strong>${escapeHtmlMarkup(snapshot.documentLabel)}:</strong> ${escapeHtmlMarkup(snapshot.projectLabel)}</p>
+          <p style="margin:0 0 10px"><strong>Customer:</strong> ${escapeHtmlMarkup(snapshot.fullName || "Not provided")}</p>
+          ${snapshot.location ? `<p style="margin:0 0 10px"><strong>Job location:</strong> ${escapeHtmlMarkup(snapshot.location)}</p>` : ""}
+          ${snapshot.workDate ? `<p style="margin:0 0 10px"><strong>Work date:</strong> ${escapeHtmlMarkup(snapshot.workDate)}</p>` : ""}
+          ${
+            snapshot.documentType === "estimate" && snapshot.validUntil
+              ? `<p style="margin:0 0 10px"><strong>Valid until:</strong> ${escapeHtmlMarkup(snapshot.validUntil)}</p>`
+              : ""
+          }
+          ${
+            snapshot.total
+              ? `<p style="margin:0"><strong>Total:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+              : ""
+          }
         </div>
         ${
-          scope
-            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Scope of work</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(scope)}</p></div>`
+          snapshot.description
+            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Work to be performed</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(snapshot.description)}</p></div>`
             : ""
         }
         ${
-          notes
-            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Notes / exclusions</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(notes)}</p></div>`
+          snapshot.warranty
+            ? `<div style="margin:0 0 18px"><p style="margin:0 0 8px"><strong>Warranty / terms</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(snapshot.warranty)}</p></div>`
             : ""
         }
         <p style="margin:0 0 18px">To move forward, reply to this email or call/text <strong>${escapeHtmlMarkup(METALWORKS_CONTACT_PHONE_DISPLAY)}</strong>.</p>
         <p style="margin:0;color:#66717a">
           Chicago Metal Works &amp; Fencing<br />
           ${escapeHtmlMarkup(METALWORKS_CONTACT_PHONE_DISPLAY)}<br />
-          ${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}
+          ${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}<br />
+          <a href="${escapeHtmlMarkup(METALWORKS_WEBSITE_URL)}" style="color:#66717a">${escapeHtmlMarkup(METALWORKS_WEBSITE_URL)}</a>
         </p>
       </div>
     </div>
   `;
 
   return {
-    to: normalizeEmail(lead?.email || ""),
+    to: snapshot.email,
     subject,
     text: textLines.join("\n"),
     html,
@@ -2063,6 +2117,10 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     estimateAmount: Number(doc.estimateAmount || 0) || 0,
     estimateValidUntil: doc.estimateValidUntil ? new Date(doc.estimateValidUntil).toISOString() : "",
     estimateNotes: doc.estimateNotes || "",
+    clientDocumentType: normalizeClientDocumentType(doc.clientDocumentType || ""),
+    clientDocumentDescription: doc.clientDocumentDescription || "",
+    clientDocumentWorkDate: doc.clientDocumentWorkDate ? new Date(doc.clientDocumentWorkDate).toISOString() : "",
+    clientDocumentWarranty: doc.clientDocumentWarranty || "",
     estimateSentAt: doc.estimateSentAt ? new Date(doc.estimateSentAt).toISOString() : "",
     estimateSentTo: doc.estimateSentTo || "",
     pageTitle: doc.pageTitle || "",
@@ -2272,6 +2330,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     estimateAmount: { type: Number, default: 0 },
     estimateValidUntil: Date,
     estimateNotes: String,
+    clientDocumentType: { type: String, default: "estimate" },
+    clientDocumentDescription: String,
+    clientDocumentWorkDate: Date,
+    clientDocumentWarranty: String,
     estimateSentAt: Date,
     estimateSentTo: String,
     sourceType: { type: String, default: "website_form", index: true },
@@ -3014,9 +3076,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const estimateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateNotes")
         ? cleanText(req.body?.estimateNotes || "", 2400)
         : null;
+      const clientDocumentType = Object.prototype.hasOwnProperty.call(req.body || {}, "clientDocumentType")
+        ? normalizeClientDocumentType(req.body?.clientDocumentType || "estimate")
+        : null;
+      const clientDocumentDescription = Object.prototype.hasOwnProperty.call(req.body || {}, "clientDocumentDescription")
+        ? cleanText(req.body?.clientDocumentDescription || "", 3200)
+        : null;
+      const clientDocumentWorkDateRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "clientDocumentWorkDate")
+        ? String(req.body?.clientDocumentWorkDate || "").trim()
+        : null;
+      const clientDocumentWorkDate = clientDocumentWorkDateRaw === null
+        ? null
+        : clientDocumentWorkDateRaw
+          ? parseDateOnly(clientDocumentWorkDateRaw)
+          : null;
+      const clientDocumentWarranty = Object.prototype.hasOwnProperty.call(req.body || {}, "clientDocumentWarranty")
+        ? cleanText(req.body?.clientDocumentWarranty || "", 2400)
+        : null;
       const note = cleanText(req.body?.note || "", 600);
       let estimateChanged = false;
       let estimateMoneyChanged = false;
+      let clientDocumentChanged = false;
       let profileChanged = false;
 
       if (fullName !== null) {
@@ -3164,7 +3244,34 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         }
         leadDoc.estimateNotes = estimateNotes;
       }
-      res.set("Cache-Control", "no-store");
+
+      if (clientDocumentType !== null) {
+        if (normalizeClientDocumentType(leadDoc.clientDocumentType || "") !== clientDocumentType) {
+          clientDocumentChanged = true;
+        }
+        leadDoc.clientDocumentType = clientDocumentType;
+      }
+
+      if (clientDocumentDescription !== null) {
+        if (leadDoc.clientDocumentDescription !== clientDocumentDescription) {
+          clientDocumentChanged = true;
+        }
+        leadDoc.clientDocumentDescription = clientDocumentDescription;
+      }
+
+      if (clientDocumentWorkDateRaw !== null) {
+        if (String(leadDoc.clientDocumentWorkDate || "") !== String(clientDocumentWorkDate || "")) {
+          clientDocumentChanged = true;
+        }
+        leadDoc.clientDocumentWorkDate = clientDocumentWorkDate;
+      }
+
+      if (clientDocumentWarranty !== null) {
+        if (leadDoc.clientDocumentWarranty !== clientDocumentWarranty) {
+          clientDocumentChanged = true;
+        }
+        leadDoc.clientDocumentWarranty = clientDocumentWarranty;
+      }
 
       if (estimateMoneyChanged || estimateAmount !== null) {
         const nextEstimateAmount = estimateMoneyChanged
@@ -3176,8 +3283,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
                 (estimateDiscount !== null ? estimateDiscount : leadDoc.estimateDiscount || 0),
             )
           : normalizeMoney(estimateAmount || 0);
-
-    res.set("Cache-Control", "no-store");
         if (normalizeMoney(leadDoc.estimateAmount || 0) !== nextEstimateAmount) {
           estimateChanged = true;
         }
@@ -3187,6 +3292,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       if (estimateChanged) {
         changes.push(`Estimate: ${formatMoneyLabel(leadDoc.estimateAmount || 0)}`);
+      }
+
+      if (clientDocumentChanged) {
+        changes.push("Documento para cliente actualizado");
       }
 
       if (profileChanged) {
@@ -3304,16 +3413,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 404, "No encontre ese lead.");
       }
 
+      const clientDocument = buildMetalworksClientDocumentSnapshot(leadDoc);
+
       if (!normalizeEmail(leadDoc.email || "")) {
         return respondError(res, 400, "Este lead no tiene correo todavia.");
       }
 
       if (
-        !cleanText(leadDoc.estimateTitle || "", 160) &&
-        !cleanText(leadDoc.estimateScope || "", 2400) &&
+        !cleanText(clientDocument.description || "", 3200) &&
         !normalizeMoney(leadDoc.estimateAmount || 0)
       ) {
-        return respondError(res, 400, "Primero guarda un estimate para poder enviarlo.");
+        return respondError(
+          res,
+          400,
+          `Primero guarda la descripcion o el total del ${clientDocument.documentType === "invoice" ? "invoice" : "estimate"} para poder enviarlo.`,
+        );
       }
 
       const delivery = await sendMetalworksEstimateEmail(leadDoc, auth.email);
@@ -3323,6 +3437,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         const sentAt = new Date();
         const statusBefore = normalizeStatus(leadDoc.status || "new");
         let statusLine = "";
+        const documentLabel = clientDocument.documentLabel;
 
         leadDoc.estimateSentAt = sentAt;
         leadDoc.estimateSentTo = normalizeEmail(leadDoc.email || "");
@@ -3339,11 +3454,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         await appendActivity({
           leadId: leadDoc._id,
           activityType: "estimate_sent",
-          title: "Estimate sent",
-          body: `Estimate sent to ${leadDoc.estimateSentTo}.${statusLine}`.trim(),
+          title: `${documentLabel} sent`,
+          body: `${documentLabel} sent to ${leadDoc.estimateSentTo}.${statusLine}`.trim(),
           meta: {
             adminEmail: auth.email,
             sentTo: leadDoc.estimateSentTo,
+            documentType: clientDocument.documentType,
           },
           req,
         });
@@ -3361,7 +3477,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         delivered: Boolean(delivery.delivered),
         fallbackUsed: !delivery.delivered,
         message: delivery.delivered
-          ? "Estimate sent to the client."
+          ? `${clientDocument.documentLabel} sent to the client.`
           : delivery.error || "I could not send it from the system.",
         lead: cleanLead(updatedLead, { includeConversation: true }),
         assets,
@@ -3369,7 +3485,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error sending Metal Works estimate:", error.message);
-      respondError(res, 500, "No pude enviar ese estimate.");
+      respondError(res, 500, "No pude enviar ese documento.");
     }
   });
 

@@ -104,10 +104,10 @@
                   Send Estimate
                 </button>
                 <button type="button" class="crm-secondary-button" data-crm-open-email-draft>
-                  Open Email Draft
+                  Open Estimate Draft
                 </button>
                 <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
-                  Copy Estimate
+                  Copy Estimate Text
                 </button>
               </div>
               <p class="crm-form-result crm-action-feedback" data-crm-action-feedback></p>
@@ -185,8 +185,30 @@
                   ></textarea>
                 </label>
 
+                <div class="crm-field-full crm-composer-card">
+                  <div class="crm-composer-head">
+                    <div>
+                      <strong>Client Estimate / Invoice</strong>
+                      <p>Esto es lo que ve el cliente por email o para copy/paste. El breakdown interno no se manda.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <label>
-                  <span>Estimate total</span>
+                  <span>Document type</span>
+                  <select name="clientDocumentType">
+                    <option value="estimate">Estimate</option>
+                    <option value="invoice">Invoice</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Work date</span>
+                  <input type="date" name="clientDocumentWorkDate" />
+                </label>
+
+                <label>
+                  <span>Client total</span>
                   <input
                     type="number"
                     name="estimateAmount"
@@ -197,7 +219,7 @@
                 </label>
 
                 <label class="crm-field-full">
-                  <span>Estimate title</span>
+                  <span>Internal reference title</span>
                   <input
                     type="text"
                     name="estimateTitle"
@@ -207,13 +229,40 @@
                 </label>
 
                 <label class="crm-field-full">
-                  <span>Estimate scope</span>
+                  <span>Work description for client</span>
+                  <textarea
+                    name="clientDocumentDescription"
+                    rows="5"
+                    placeholder="Describe claramente lo que se va a hacer, sin desglose interno. Ej. We will repair and reweld the damaged front gate, align the frame, grind rough welds, prep the repaired area, and leave it ready for safe daily use."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Warranty / guarantee for client</span>
+                  <textarea
+                    name="clientDocumentWarranty"
+                    rows="4"
+                    placeholder="Ej. Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and exclusions follow the written agreement for this job."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Internal scope notes</span>
                   <textarea
                     name="estimateScope"
                     rows="4"
-                    placeholder="Describe el trabajo: rust removal, handrail repair, prep, primer, top coat, welding, etc."
+                    placeholder="Notas internas para ti: rust removal, handrail repair, prep, primer, top coat, welding, etc."
                   ></textarea>
                 </label>
+
+                <div class="crm-field-full crm-composer-card crm-composer-card-subtle">
+                  <div class="crm-composer-head">
+                    <div>
+                      <strong>Internal Cost Breakdown</strong>
+                      <p>Solo para uso interno. Esto no se incluye en el estimate/invoice del cliente.</p>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="crm-field-full crm-estimate-grid">
                   <label>
@@ -243,11 +292,11 @@
                 </div>
 
                 <label class="crm-field-full">
-                  <span>Estimate notes / exclusions</span>
+                  <span>Internal notes / exclusions</span>
                   <textarea
                     name="estimateNotes"
                     rows="4"
-                    placeholder="Ej. Price does not include permit fees, hidden structural damage, or concrete work."
+                    placeholder="Notas internas: permit fees, hidden structural damage, concrete work, exclusions, reminders, etc."
                   ></textarea>
                 </label>
 

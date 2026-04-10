@@ -149,10 +149,14 @@ async function apiRequest(url, options = {}) {
 }
 
 const METALWORKS_CONTACT = {
+  companyName: "Chicago Metal Works & Fencing",
   phoneDisplay: "773 798 4107",
   phoneDigits: "7737984107",
   email: "agustincalderon286@gmail.com",
+  website: "https://www.chicagometalworksandfencing.com/",
 };
+const DEFAULT_CLIENT_DOCUMENT_WARRANTY =
+  "Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and any exclusions follow the written agreement for this job.";
 
 const ESTIMATE_COST_FIELDS = [
   "estimateMaterialsCost",
@@ -448,6 +452,16 @@ function buildQueryString(filters = {}) {
   return params.toString();
 }
 
+function normalizeClientDocumentType(value = "") {
+  return String(value || "").trim().toLowerCase() === "invoice"
+    ? "invoice"
+    : "estimate";
+}
+
+function getClientDocumentLabel(value = "") {
+  return normalizeClientDocumentType(value) === "invoice" ? "Invoice" : "Estimate";
+}
+
 function normalizePhoneDigits(value = "") {
   const digits = String(value || "").replace(/\D/g, "");
 
@@ -540,23 +554,47 @@ function buildEstimateSnapshot() {
   const lead = state.leadDetail?.lead || {};
   const form = detailForm?.elements;
   const breakdownMode = hasBreakdownValues();
+  const documentType = normalizeClientDocumentType(
+    form?.clientDocumentType?.value || lead.clientDocumentType || "estimate",
+  );
   const total = breakdownMode
     ? calculateEstimateTotal(lead)
     : Number(form?.estimateAmount?.value || lead.estimateAmount || 0) || 0;
 
   return {
+    documentType,
+    documentLabel: getClientDocumentLabel(documentType),
     fullName: String(form?.fullName?.value || lead.fullName || "").trim(),
     firstName:
       String(form?.fullName?.value || lead.fullName || "")
         .trim()
         .split(/\s+/)
         .filter(Boolean)[0] || "there",
+    phoneDisplay: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
     email: String(form?.email?.value || lead.email || "").trim(),
     projectType: String(form?.projectType?.value || lead.projectType || "").trim(),
+    projectLabel: String(form?.projectType?.value || lead.projectType || "").trim() || "metal work project",
     location: String(form?.location?.value || lead.location || "").trim(),
-    title: String(form?.estimateTitle?.value || lead.estimateTitle || "").trim(),
-    scope: String(form?.estimateScope?.value || lead.estimateScope || "").trim(),
-    notes: String(form?.estimateNotes?.value || lead.estimateNotes || "").trim(),
+    internalTitle: String(form?.estimateTitle?.value || lead.estimateTitle || "").trim(),
+    internalScope: String(form?.estimateScope?.value || lead.estimateScope || "").trim(),
+    internalNotes: String(form?.estimateNotes?.value || lead.estimateNotes || "").trim(),
+    description:
+      String(
+        form?.clientDocumentDescription?.value ||
+          lead.clientDocumentDescription ||
+          form?.details?.value ||
+          lead.details ||
+          "",
+      ).trim(),
+    warranty:
+      String(
+        form?.clientDocumentWarranty?.value ||
+          lead.clientDocumentWarranty ||
+          DEFAULT_CLIENT_DOCUMENT_WARRANTY,
+      ).trim(),
+    workDate:
+      String(form?.clientDocumentWorkDate?.value || "").trim() ||
+      toDateInputValue(lead.clientDocumentWorkDate || lead.nextActionAt || ""),
     validUntil:
       String(form?.estimateValidUntil?.value || "").trim() ||
       toDateInputValue(lead.estimateValidUntil || ""),
@@ -581,8 +619,7 @@ function setDetailTab(tab = "profile") {
 }
 
 function buildEstimateSubject(snapshot) {
-  const projectLabel = snapshot.title || snapshot.projectType || "metal repair estimate";
-  return `Estimate from Chicago Metal Works & Fencing - ${projectLabel}`;
+  return `${snapshot.documentLabel} from Chicago Metal Works & Fencing - ${snapshot.projectLabel}`;
 }
 
 function buildEstimateMailto(snapshot) {
@@ -595,23 +632,46 @@ function buildEstimateBody(snapshot) {
   const lines = [
     `Hi ${snapshot.firstName},`,
     "",
-    "Thank you for contacting Chicago Metal Works & Fencing.",
+    `Thank you for working with ${METALWORKS_CONTACT.companyName}.`,
     "",
-    `Project: ${snapshot.title || snapshot.projectType || "Metal repair"}`,
-    `Estimated total: ${formatCurrency(snapshot.total)}`,
-    snapshot.validUntil
+    `${snapshot.documentLabel}: ${snapshot.projectLabel}`,
+    `Client: ${snapshot.fullName || "Not provided"}`,
+    snapshot.location ? `Job location: ${snapshot.location}` : "",
+    snapshot.phoneDisplay ? `Phone: ${snapshot.phoneDisplay}` : "",
+    snapshot.email ? `Email: ${snapshot.email}` : "",
+    snapshot.workDate ? `Work date: ${formatDateOnly(snapshot.workDate)}` : "",
+    snapshot.documentType === "estimate" && snapshot.validUntil
       ? `Valid until: ${formatDateOnly(snapshot.validUntil)}`
       : "",
-    snapshot.location ? `Location: ${snapshot.location}` : "",
+    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
     "",
-    snapshot.scope ? `Scope of work:\n${snapshot.scope}` : "",
-    snapshot.notes ? `Notes / exclusions:\n${snapshot.notes}` : "",
+    snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
+    snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
     "",
     `To move forward, reply to this email or call/text ${METALWORKS_CONTACT.phoneDisplay}.`,
     "",
-    "Chicago Metal Works & Fencing",
+    METALWORKS_CONTACT.companyName,
     METALWORKS_CONTACT.phoneDisplay,
     METALWORKS_CONTACT.email,
+    METALWORKS_CONTACT.website,
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function buildEstimateTextMessage(snapshot) {
+  const lines = [
+    `${snapshot.documentLabel} - ${METALWORKS_CONTACT.companyName}`,
+    snapshot.projectLabel ? `Project: ${snapshot.projectLabel}` : "",
+    snapshot.fullName ? `Client: ${snapshot.fullName}` : "",
+    snapshot.location ? `Location: ${snapshot.location}` : "",
+    snapshot.workDate ? `Work date: ${formatDateOnly(snapshot.workDate)}` : "",
+    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
+    "",
+    snapshot.description ? `Work: ${snapshot.description}` : "",
+    snapshot.warranty ? `Warranty: ${snapshot.warranty}` : "",
+    "",
+    `Call/Text: ${METALWORKS_CONTACT.phoneDisplay}`,
   ].filter(Boolean);
 
   return lines.join("\n");
@@ -685,17 +745,20 @@ async function copyTextWithFallback(text = "") {
 async function copyEstimateText() {
   const snapshot = buildEstimateSnapshot();
 
-  if (!snapshot.title && !snapshot.scope && !snapshot.total) {
-    setDetailFeedback("Primero arma el estimate para poder copiarlo.", "error");
+  if (!snapshot.description && !snapshot.total) {
+    setDetailFeedback(
+      `Primero arma la descripcion o el total del ${snapshot.documentType === "invoice" ? "invoice" : "estimate"} para poder copiarlo.`,
+      "error",
+    );
     return;
   }
 
   try {
-    const copied = await copyTextWithFallback(buildEstimateBody(snapshot));
+    const copied = await copyTextWithFallback(buildEstimateTextMessage(snapshot));
     setDetailFeedback(
       copied
-        ? "Estimate copiado."
-        : "No pude copiarlo automatico. Te deje el texto listo para copiar manualmente.",
+        ? `${snapshot.documentLabel} text copiado.`
+        : `No pude copiarlo automatico. Te deje el ${snapshot.documentType === "invoice" ? "invoice" : "estimate"} listo para copiar manualmente.`,
       copied ? "success" : "muted",
     );
   } catch (error) {
@@ -707,7 +770,9 @@ function focusEstimateComposer() {
   setDetailTab("profile");
 
   const estimateTitleInput =
-    detailForm?.elements?.estimateTitle || detailForm?.elements?.estimateAmount;
+    detailForm?.elements?.clientDocumentDescription ||
+    detailForm?.elements?.estimateAmount ||
+    detailForm?.elements?.estimateTitle;
 
   if (!estimateTitleInput) {
     return;
@@ -743,7 +808,24 @@ async function openQuoteComposer(leadId = "") {
 
   scrollDetailIntoView();
   focusEstimateComposer();
-  setDetailFeedback("Estimate listo para editar o enviar.", "muted");
+  const snapshot = buildEstimateSnapshot();
+  setDetailFeedback(`${snapshot.documentLabel} listo para editar o enviar.`, "muted");
+}
+
+function buildDetailActionPreview() {
+  const lead = state.leadDetail?.lead || {};
+  const form = detailForm?.elements;
+
+  return {
+    ...lead,
+    id: state.selectedLeadId || lead.id || "",
+    phoneDisplay: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
+    phone: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
+    email: String(form?.email?.value || lead.email || "").trim(),
+    clientDocumentType: normalizeClientDocumentType(
+      form?.clientDocumentType?.value || lead.clientDocumentType || "estimate",
+    ),
+  };
 }
 
 function scrollDetailIntoView() {
@@ -872,6 +954,7 @@ function renderLeadList(leads = []) {
     .map((lead) => {
       const isActive = lead.id === state.selectedLeadId;
       const phoneDigits = getLeadPhoneDigits(lead);
+      const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
 
       return `
         <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
@@ -907,7 +990,7 @@ function renderLeadList(leads = []) {
             }
             ${
               lead.estimateSentAt
-                ? `<span><strong>Estimate sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+                ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
                 : ""
             }
           </div>
@@ -922,7 +1005,7 @@ function renderLeadList(leads = []) {
                 ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
                 : ""
             }
-            <button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Quote</button>
+            <button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Open ${escapeHtml(documentLabel)}</button>
           </div>
         </article>
       `;
@@ -1067,6 +1150,8 @@ function syncDetailQuickActions(lead = null) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const hasPhone = Boolean(phoneDigits);
   const hasEmail = Boolean(lead?.email);
+  const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
+  const documentLabel = getClientDocumentLabel(documentType);
 
   if (callLink) {
     callLink.hidden = !hasPhone;
@@ -1084,14 +1169,17 @@ function syncDetailQuickActions(lead = null) {
 
   if (sendEstimateButton) {
     sendEstimateButton.disabled = !lead?.id || !hasEmail;
+    sendEstimateButton.textContent = `Send ${documentLabel}`;
   }
 
   if (openEmailDraftButton) {
     openEmailDraftButton.disabled = !lead?.id || !hasEmail;
+    openEmailDraftButton.textContent = `Open ${documentLabel} Draft`;
   }
 
   if (copyEstimateButton) {
     copyEstimateButton.disabled = !lead?.id;
+    copyEstimateButton.textContent = `Copy ${documentLabel} Text`;
   }
 }
 
@@ -1144,7 +1232,7 @@ function renderLeadDetail(detail = null) {
       }
       ${
         lead.estimateSentAt
-          ? `<span><strong>Estimate sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+          ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
           : ""
       }
       ${
@@ -1184,8 +1272,18 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
     detailForm.elements.details.value = lead.details || "";
+    detailForm.elements.clientDocumentType.value = normalizeClientDocumentType(
+      lead.clientDocumentType || "estimate",
+    );
+    detailForm.elements.clientDocumentWorkDate.value = toDateInputValue(
+      lead.clientDocumentWorkDate || lead.nextActionAt,
+    );
     detailForm.elements.estimateAmount.value = lead.estimateAmount || "";
     detailForm.elements.estimateTitle.value = lead.estimateTitle || "";
+    detailForm.elements.clientDocumentDescription.value =
+      lead.clientDocumentDescription || lead.details || "";
+    detailForm.elements.clientDocumentWarranty.value =
+      lead.clientDocumentWarranty || DEFAULT_CLIENT_DOCUMENT_WARRANTY;
     detailForm.elements.estimateScope.value = lead.estimateScope || "";
     detailForm.elements.estimateMaterialsCost.value = lead.estimateMaterialsCost || "";
     detailForm.elements.estimateLaborCost.value = lead.estimateLaborCost || "";
@@ -1222,10 +1320,14 @@ function buildLeadPayloadFromForm() {
     nextAction: String(formData.get("nextAction") || "").trim(),
     nextActionAt: String(formData.get("nextActionAt") || "").trim(),
     details: String(formData.get("details") || "").trim(),
+    clientDocumentType: String(formData.get("clientDocumentType") || "estimate").trim(),
+    clientDocumentWorkDate: String(formData.get("clientDocumentWorkDate") || "").trim(),
     estimateAmount: breakdownMode
       ? String(calculateEstimateTotal(lead))
       : String(formData.get("estimateAmount") || "").trim(),
     estimateTitle: String(formData.get("estimateTitle") || "").trim(),
+    clientDocumentDescription: String(formData.get("clientDocumentDescription") || "").trim(),
+    clientDocumentWarranty: String(formData.get("clientDocumentWarranty") || "").trim(),
     estimateScope: String(formData.get("estimateScope") || "").trim(),
     estimateValidUntil: String(formData.get("estimateValidUntil") || "").trim(),
     estimateNotes: String(formData.get("estimateNotes") || "").trim(),
@@ -1418,21 +1520,22 @@ async function handleMarkQuoted() {
 
 async function handleSendEstimate() {
   const snapshot = buildEstimateSnapshot();
+  const documentWord = snapshot.documentType === "invoice" ? "invoice" : "estimate";
 
   if (!snapshot.email) {
     setDetailFeedback("Este lead no tiene correo todavia.", "error");
     return;
   }
 
-  if (!snapshot.title && !snapshot.scope && !snapshot.total) {
-    setDetailFeedback("Primero arma el estimate para poder enviarlo.", "error");
+  if (!snapshot.description && !snapshot.total) {
+    setDetailFeedback(`Primero arma la descripcion o el total del ${documentWord} para poder enviarlo.`, "error");
     return;
   }
 
   try {
-    setDetailFeedback("Guardando estimate...", "muted");
+    setDetailFeedback(`Guardando ${documentWord}...`, "muted");
     await saveLeadChanges({}, { refreshDashboard: false, showFeedback: false });
-    setDetailFeedback("Enviando estimate...", "muted");
+    setDetailFeedback(`Enviando ${documentWord}...`, "muted");
 
     const result = await apiRequest(
       `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/send-estimate`,
@@ -1447,7 +1550,7 @@ async function handleSendEstimate() {
     });
 
     if (result.delivered) {
-      setDetailFeedback(result.message || "Estimate enviado al cliente.", "success");
+      setDetailFeedback(result.message || `${snapshot.documentLabel} enviado al cliente.`, "success");
       await loadDashboard();
       return;
     }
@@ -1455,8 +1558,8 @@ async function handleSendEstimate() {
     const draftOpened = openEmailDraft({ silent: true });
     setDetailFeedback(
       draftOpened
-        ? result.message || "No pude enviarlo desde el sistema. Te abri un draft prellenado para mandarlo rapido."
-        : result.message || "No pude enviarlo desde el sistema. Usa Open Email Draft para mandarlo rapido.",
+        ? result.message || `No pude enviar el ${documentWord} desde el sistema. Te abri un draft prellenado para mandarlo rapido.`
+        : result.message || `No pude enviar el ${documentWord} desde el sistema. Usa Open Email Draft para mandarlo rapido.`,
       "muted",
     );
     await loadDashboard();
@@ -1464,7 +1567,7 @@ async function handleSendEstimate() {
     const draftOpened = openEmailDraft({ silent: true });
     setDetailFeedback(
       draftOpened
-        ? "No pude enviarlo desde el sistema. Te abri un draft para terminarlo rapido."
+        ? `No pude enviar el ${documentWord} desde el sistema. Te abri un draft para terminarlo rapido.`
         : error.message,
       draftOpened ? "muted" : "error",
     );
@@ -1507,14 +1610,27 @@ function bindDetailActions() {
   });
   copyEstimateButton?.addEventListener("click", copyEstimateText);
 
-  detailForm?.addEventListener("input", (event) => {
+  const syncDetailFormActions = (event) => {
     const fieldName = event.target?.name || "";
-    if (!ESTIMATE_COST_FIELDS.includes(fieldName)) {
-      return;
+
+    if (ESTIMATE_COST_FIELDS.includes(fieldName)) {
+      syncEstimateTotalFromForm();
     }
 
-    syncEstimateTotalFromForm();
-  });
+    if (
+      [
+        "phoneDisplay",
+        "email",
+        "clientDocumentType",
+        ...ESTIMATE_COST_FIELDS,
+      ].includes(fieldName)
+    ) {
+      syncDetailQuickActions(buildDetailActionPreview());
+    }
+  };
+
+  detailForm?.addEventListener("input", syncDetailFormActions);
+  detailForm?.addEventListener("change", syncDetailFormActions);
 
   detailTabButtons.forEach((button) => {
     button.addEventListener("click", () => {
