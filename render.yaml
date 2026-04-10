@@ -4,7 +4,7 @@ services:
     runtime: node
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /api/metalworks-crm/me
+    healthCheckPath: /api/healthz
     autoDeploy: true
     plan: free
     envVars:

@@ -16,6 +16,15 @@ import {
 
 const app = express();
 app.use(cors());
+app.get("/api/healthz", (req, res) => {
+  res.json({
+    ok: true,
+    service: "cmwf-crm-api",
+    uptimeSeconds: Math.round(process.uptime()),
+    mongoReadyState: mongoose.connection.readyState,
+    timestamp: new Date().toISOString()
+  });
+});
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const PRIVATE_DIR = path.join(process.cwd(), "private");
 const PRIVATE_COACH_RESOURCES_DIR = path.join(PRIVATE_DIR, "resources");
