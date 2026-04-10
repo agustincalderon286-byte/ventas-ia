@@ -10,7 +10,7 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "No pude completar esa accion.");
+  const error = new Error(message || "I could not complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
@@ -76,8 +76,8 @@ async function apiRequest(url, options = {}) {
         throw createApiError(
           data.error ||
             (response.status === 401
-              ? "Necesitas iniciar sesion."
-              : "No pude completar esa accion."),
+              ? "You need to sign in."
+              : "I could not complete that action."),
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -100,11 +100,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("No pude completar esa accion.", status, retryable);
+      throw createApiError("I could not complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("No pude completar esa accion.");
+  throw createApiError("I could not complete that action.");
 }
 
 function escapeHtml(value = "") {
@@ -203,8 +203,8 @@ function setSubmitting(isSubmitting) {
   if (submitButton) {
     submitButton.disabled = state.submitting;
     submitButton.textContent = state.submitting
-      ? "Guardando..."
-      : "Guardar lead premium";
+      ? "Saving..."
+      : "Save premium lead";
   }
 }
 
@@ -214,11 +214,11 @@ function setUserChip(auth = null) {
   }
 
   if (!auth?.email) {
-    userChip.textContent = "Sin sesion";
+    userChip.textContent = "No session";
     return;
   }
 
-  userChip.textContent = `${auth.name || "Prospectador"} · ${auth.email}`;
+  userChip.textContent = `${auth.name || "Prospector"} · ${auth.email}`;
 }
 
 function renderSummary(summary = {}) {
@@ -230,27 +230,27 @@ function renderSummary(summary = {}) {
     {
       label: "Total",
       value: Number(summary.totalLeads || 0),
-      note: "Leads enviados",
+      note: "Leads submitted",
     },
     {
-      label: "Nuevos",
+      label: "New",
       value: Number(summary.newLeads || 0),
-      note: "Aun sin trabajar",
+      note: "Still untouched",
     },
     {
-      label: "Contactados",
+      label: "Contacted",
       value: Number(summary.contactedLeads || 0),
-      note: "Ventas ya hablo",
+      note: "Sales has reached out",
     },
     {
-      label: "Cotizados",
+      label: "Quoted",
       value: Number(summary.quotedLeads || 0),
-      note: "Ya recibieron precio",
+      note: "Quote already sent",
     },
     {
-      label: "Ganados",
+      label: "Won",
       value: Number(summary.wonLeads || 0),
-      note: "Trabajos cerrados",
+      note: "Jobs won",
     },
   ];
 
@@ -275,7 +275,7 @@ function renderRecentLeads(leads = []) {
   if (!Array.isArray(leads) || !leads.length) {
     recentLeadsWrap.innerHTML = `
       <div class="crm-prospector-empty">
-        Aun no hay leads enviados desde esta cuenta.
+        No leads have been submitted from this account yet.
       </div>
     `;
     return;
@@ -289,11 +289,11 @@ function renderRecentLeads(leads = []) {
         <article class="crm-mini-lead-card">
           <div class="crm-lead-card-head">
             <div>
-              <h3>${escapeHtml(lead.fullName || "Lead sin nombre")}</h3>
+              <h3>${escapeHtml(lead.fullName || "Unnamed lead")}</h3>
               <div class="crm-lead-card-meta">
-                <span>${escapeHtml(lead.projectType || "Sin servicio")}</span>
-                <span>${escapeHtml(lead.addressLine || lead.location || "Sin direccion")}</span>
-                <span>${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
+                <span>${escapeHtml(lead.projectType || "No service selected")}</span>
+                <span>${escapeHtml(lead.addressLine || lead.location || "No address")}</span>
+                <span>${escapeHtml(formatDate(lead.createdAt) || "No date")}</span>
               </div>
             </div>
             <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
@@ -317,7 +317,7 @@ function renderDashboard(snapshot = null) {
   renderRecentLeads(snapshot?.recentLeads || []);
 
   if (lastSyncNode) {
-    lastSyncNode.textContent = `Actualizado ${formatDate(new Date().toISOString())}`;
+    lastSyncNode.textContent = `Updated ${formatDate(new Date().toISOString())}`;
   }
 }
 
@@ -375,7 +375,7 @@ function restoreDraft() {
   });
 
   if (restored) {
-    setStatus("Restauramos tu borrador local en este dispositivo.", "muted");
+    setStatus("We restored your local draft on this device.", "muted");
   }
 }
 
@@ -401,7 +401,7 @@ function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("No pude leer una foto."));
+    reader.onerror = () => reject(new Error("I could not read one of the photos."));
     reader.readAsDataURL(file);
   });
 }
@@ -410,7 +410,7 @@ function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("No pude procesar una foto."));
+    image.onerror = () => reject(new Error("I could not process one of the photos."));
     image.src = dataUrl;
   });
 }
@@ -478,7 +478,7 @@ function renderCapturePhotoPreview() {
   if (!Array.isArray(state.photos) || !state.photos.length) {
     photoPreview.innerHTML = `
       <div class="crm-prospector-empty">
-        Agrega fotos del proyecto para que ventas tenga contexto visual real.
+        Add project photos so the sales team has real visual context.
       </div>
     `;
     return;
@@ -490,16 +490,16 @@ function renderCapturePhotoPreview() {
         <figure class="crm-capture-photo-card">
           <img
             src="${photo.dataUrl}"
-            alt="${escapeHtml(photo.fileName || "Foto del proyecto")}"
+            alt="${escapeHtml(photo.fileName || "Project photo")}"
             loading="lazy"
           />
-          <figcaption>${escapeHtml(photo.fileName || "Foto del proyecto")}</figcaption>
+          <figcaption>${escapeHtml(photo.fileName || "Project photo")}</figcaption>
           <button
             type="button"
             class="crm-secondary-button crm-photo-remove"
             data-remove-capture-photo="${index}"
           >
-            Quitar
+            Remove
           </button>
         </figure>
       `,
@@ -513,13 +513,13 @@ async function handlePhotoSelection(fileList) {
     const nextPhotos = mergePreparedPhotos(state.photos, incomingPhotos);
 
     if (incomingPhotos.length + state.photos.length > nextPhotos.length) {
-      setFeedback("Solo se guardaron las primeras 8 fotos.", "muted");
+      setFeedback("Only the first 8 photos were kept.", "muted");
     }
 
     state.photos = nextPhotos;
     renderCapturePhotoPreview();
   } catch (error) {
-    setFeedback(error.message || "No pude preparar esas fotos.", "error");
+    setFeedback(error.message || "I could not prepare those photos.", "error");
   } finally {
     if (cameraInput) {
       cameraInput.value = "";
@@ -602,7 +602,7 @@ async function init() {
 
     setStatus(
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-        ? "El portal se esta despertando. Espera unos segundos y vuelve a intentar."
+        ? "The portal is waking up. Wait a few seconds and try again."
         : error.message,
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "warning" : "error",
     );
@@ -617,7 +617,7 @@ if (form) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     setSubmitting(true);
-    setFeedback("Guardando lead...", "muted");
+    setFeedback("Saving lead...", "muted");
 
     try {
       const result = await apiRequest("/api/metalworks-crm/prospector/leads", {
@@ -629,13 +629,13 @@ if (form) {
       resetFormAfterSubmit();
       setFeedback(
         result.duplicate
-          ? "Este lead ya existia y se actualizo en el CRM."
+          ? "This lead already existed and was updated in the CRM."
           : result.notified
-            ? "Lead guardado y equipo alertado."
-            : "Lead guardado directo en el CRM.",
+            ? "Lead saved and team alerted."
+            : "Lead saved directly to the CRM.",
         "success",
       );
-      setStatus("El lead ya esta disponible para el equipo de ventas.", "success");
+      setStatus("The lead is now available to the sales team.", "success");
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
         window.location.href = "/metalworks-crm/prospector/login/";
@@ -651,11 +651,11 @@ if (form) {
 
 if (refreshButton) {
   refreshButton.addEventListener("click", async () => {
-    setStatus("Recargando portal...", "muted");
+    setStatus("Refreshing portal...", "muted");
 
     try {
       await loadDashboard();
-      setStatus("Panel actualizado.", "success");
+      setStatus("Dashboard updated.", "success");
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
         window.location.href = "/metalworks-crm/prospector/login/";

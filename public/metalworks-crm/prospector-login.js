@@ -9,7 +9,7 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "No pude completar esa accion.");
+  const error = new Error(message || "I could not complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
@@ -70,7 +70,7 @@ async function apiRequest(url, options = {}) {
 
       if (!response.ok) {
         throw createApiError(
-          data.error || "No pude completar esa accion.",
+          data.error || "I could not complete that action.",
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -93,11 +93,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("No pude completar esa accion.", status, retryable);
+      throw createApiError("I could not complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("No pude completar esa accion.");
+  throw createApiError("I could not complete that action.");
 }
 
 const loginForm = document.querySelector("[data-prospector-login-form]");
@@ -145,14 +145,14 @@ async function init() {
 
     if (!me.configured) {
       setFeedback(
-        "Primero configura METALWORKS_PROSPECTOR_PASSWORD en el backend para abrir este portal.",
+        "Configure METALWORKS_PROSPECTOR_PASSWORD on the backend before opening this portal.",
         "error",
       );
     }
   } catch (error) {
     setFeedback(
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-        ? "El portal se esta despertando. Espera unos segundos y vuelve a intentar."
+        ? "The portal is waking up. Wait a few seconds and try again."
         : error.message,
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "muted" : "error",
     );
@@ -162,7 +162,7 @@ async function init() {
 if (loginForm) {
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setFeedback("Entrando...", "muted");
+    setFeedback("Signing in...", "muted");
 
     const formData = new FormData(loginForm);
     const payload = {
