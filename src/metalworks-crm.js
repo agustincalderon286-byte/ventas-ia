@@ -2759,9 +2759,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     },
   );
 
+  app.use("/api/metalworks-crm", (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
+
   app.get(
     ["/metalworks-crm/login", "/metalworks-crm/login/"],
     async (req, res) => {
+      res.set("Cache-Control", "no-store");
       const auth = await getAuth(req, { touch: false });
 
       if (auth.email) {
@@ -2773,6 +2779,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   );
 
   app.get(["/metalworks-crm", "/metalworks-crm/"], async (req, res) => {
+    res.set("Cache-Control", "no-store");
     const auth = await getAuth(req, { touch: false });
 
     if (!auth.email) {
@@ -2789,10 +2796,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         auth.email || getAllowedEmails()[0] || METALWORKS_CRM_DEFAULT_EMAIL;
       res.json({
         authenticated: Boolean(auth.email),
-  app.use("/api/metalworks-crm", (req, res, next) => {
-    res.set("Cache-Control", "no-store");
-    next();
-  });
         configured: metalworksCrmConfigured(),
         email: auth.email || "",
         allowedEmail: fallbackEmail,
