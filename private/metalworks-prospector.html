@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works Prospector Portal</title>
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+  </head>
+  <body class="crm-app-page crm-prospector-page" data-crm-skin="intel-ops">
+    <div class="crm-shell">
+      <header class="crm-header">
+        <div>
+          <p class="crm-eyebrow">Field Team Intake</p>
+          <h1>Prospector Portal</h1>
+          <p class="crm-subtitle">
+            Captura leads en campo con fotos y mandalos directo al CRM para que
+            ventas los trabaje sin reescribir nada.
+          </p>
+        </div>
+        <div class="crm-header-actions">
+          <div class="crm-user-chip" data-prospector-user-chip></div>
+          <button class="crm-secondary-button" type="button" data-prospector-refresh>
+            Recargar
+          </button>
+          <button class="crm-secondary-button" type="button" data-prospector-logout>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      <p class="crm-system-status" data-prospector-status hidden></p>
+
+      <main class="crm-prospector-layout">
+        <section class="crm-panel">
+          <div class="crm-panel-head">
+            <div>
+              <h2>Nuevo lead</h2>
+              <p>
+                Toda esta informacion entra al CRM de Chicago Metal Works con el
+                nombre del prospectador y las fotos del proyecto.
+              </p>
+            </div>
+          </div>
+
+          <form class="crm-prospector-form" data-prospector-form>
+            <label>
+              <span>Nombre del cliente</span>
+              <input
+                type="text"
+                name="fullName"
+                maxlength="120"
+                placeholder="Juan Rivera"
+                autocomplete="name"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Telefono</span>
+              <input
+                type="tel"
+                name="phone"
+                maxlength="40"
+                placeholder="773 555 0101"
+                autocomplete="tel"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Email del cliente</span>
+              <input
+                type="email"
+                name="email"
+                maxlength="160"
+                placeholder="cliente@email.com"
+                autocomplete="email"
+              />
+            </label>
+
+            <label>
+              <span>Servicio</span>
+              <input
+                list="crm-prospector-service-options"
+                name="projectType"
+                maxlength="120"
+                placeholder="Gate repair, railings, welding..."
+                required
+              />
+              <datalist id="crm-prospector-service-options">
+                <option value="Gate repair"></option>
+                <option value="Gate installation"></option>
+                <option value="Fence repair"></option>
+                <option value="Fence installation"></option>
+                <option value="Railings"></option>
+                <option value="Handrails"></option>
+                <option value="Stairs / balconies"></option>
+                <option value="Custom metal fabrication"></option>
+                <option value="Mobile welding"></option>
+                <option value="Structural repair"></option>
+              </datalist>
+            </label>
+
+            <label class="crm-field-full">
+              <span>Direccion</span>
+              <input
+                type="text"
+                name="addressLine"
+                maxlength="160"
+                placeholder="1542 W 47th St"
+                autocomplete="street-address"
+                required
+              />
+            </label>
+
+            <label>
+              <span>ZIP Code</span>
+              <input
+                type="text"
+                name="zipCode"
+                maxlength="20"
+                placeholder="60632"
+                autocomplete="postal-code"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Ciudad</span>
+              <input
+                type="text"
+                name="city"
+                maxlength="120"
+                placeholder="Chicago"
+                value="Chicago"
+                autocomplete="address-level2"
+              />
+            </label>
+
+            <label>
+              <span>Tipo de propiedad</span>
+              <select name="propertyType">
+                <option value="">Selecciona</option>
+                <option>Residential</option>
+                <option>Commercial</option>
+                <option>Multi-unit</option>
+                <option>HOA / Association</option>
+                <option>Industrial</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Tamano aprox</span>
+              <input
+                type="text"
+                name="projectSize"
+                maxlength="120"
+                placeholder="12 ft gate / 40 linear ft / 2 landings"
+              />
+            </label>
+
+            <label>
+              <span>Timeline</span>
+              <select name="timeline" required>
+                <option value="">Selecciona</option>
+                <option>ASAP</option>
+                <option>Within 30 days</option>
+                <option>Within 90 days</option>
+                <option>Just comparing</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Owner / decision maker</span>
+              <select name="ownershipStatus" required>
+                <option value="">Selecciona</option>
+                <option>Owner</option>
+                <option>Property manager</option>
+                <option>Tenant</option>
+                <option>Family decision</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Budget range</span>
+              <select name="budgetRange">
+                <option value="">Selecciona</option>
+                <option>Under $1k</option>
+                <option>$1k - $5k</option>
+                <option>$5k - $15k</option>
+                <option>$15k+</option>
+                <option>Not discussed</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Urgencia</span>
+              <select name="urgency">
+                <option value="high">Alta</option>
+                <option value="medium" selected>Media</option>
+                <option value="low">Baja</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Mejor hora para contactar</span>
+              <input
+                type="text"
+                name="bestContactWindow"
+                maxlength="120"
+                placeholder="Hoy 4pm-6pm"
+              />
+            </label>
+
+            <label>
+              <span>Idioma</span>
+              <select name="preferredLanguage">
+                <option>English</option>
+                <option>Spanish</option>
+                <option selected>Bilingual</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Tier del lead</span>
+              <select name="qualificationTier" required>
+                <option value="">Selecciona</option>
+                <option>A</option>
+                <option>B</option>
+                <option>C</option>
+              </select>
+            </label>
+
+            <label class="crm-field-full">
+              <span>Notas del proyecto</span>
+              <textarea
+                name="notes"
+                rows="5"
+                placeholder="Que necesita el cliente, dano visible, medidas aproximadas, si pidio llamada o estimado hoy."
+                required
+              ></textarea>
+            </label>
+
+            <label class="crm-field-full">
+              <span>Nota de calificacion</span>
+              <textarea
+                name="qualificationNotes"
+                rows="4"
+                placeholder="Por que este lead vale la pena: owner presente, presupuesto real, urgencia, fotos buenas, etc."
+                required
+              ></textarea>
+            </label>
+
+            <div class="crm-field-full crm-upload-panel">
+              <div class="crm-upload-panel-head">
+                <div>
+                  <strong>Fotos del proyecto</strong>
+                  <p>Puedes tomar fotos o subir varias desde la galeria. Maximo 8.</p>
+                </div>
+                <div class="crm-photo-actions">
+                  <button
+                    type="button"
+                    class="crm-secondary-button"
+                    data-open-camera-input
+                  >
+                    Abrir camara
+                  </button>
+                  <button
+                    type="button"
+                    class="crm-secondary-button"
+                    data-open-gallery-input
+                  >
+                    Elegir de galeria
+                  </button>
+                </div>
+              </div>
+
+              <input
+                type="file"
+                name="photoCamera"
+                accept="image/*"
+                capture="environment"
+                data-capture-photo-input
+                hidden
+              />
+              <input
+                type="file"
+                name="photoGallery"
+                accept="image/*"
+                multiple
+                data-gallery-photo-input
+                hidden
+              />
+
+              <p class="crm-photo-help">
+                Las fotos se guardan dentro del mismo lead en el CRM para que el
+                vendedor las vea de inmediato.
+              </p>
+              <div class="crm-capture-photo-preview" data-capture-photo-preview></div>
+            </div>
+
+            <div class="crm-form-actions">
+              <button type="submit" class="crm-primary-button" data-prospector-submit>
+                Guardar lead premium
+              </button>
+              <p class="crm-form-result" data-prospector-feedback></p>
+            </div>
+          </form>
+        </section>
+
+        <aside class="crm-prospector-side">
+          <section class="crm-panel">
+            <div class="crm-panel-head">
+              <div>
+                <h2>Tu produccion</h2>
+                <p>Resumen de los leads enviados desde tu cuenta.</p>
+              </div>
+              <p data-prospector-last-sync></p>
+            </div>
+            <div class="crm-metric-grid" data-prospector-summary></div>
+          </section>
+
+          <section class="crm-panel">
+            <div class="crm-panel-head">
+              <div>
+                <h2>Leads recientes</h2>
+                <p>Lo ultimo que ya recibio el CRM.</p>
+              </div>
+            </div>
+            <div class="crm-mini-lead-list" data-prospector-recent-leads></div>
+          </section>
+
+          <section class="crm-panel crm-prospector-note-panel">
+            <div class="crm-panel-head">
+              <div>
+                <h2>Tips de captura</h2>
+                <p>Mientras mejor entre el lead, mas facil se vende.</p>
+              </div>
+            </div>
+            <div class="crm-note-list">
+              <p>Confirma si la persona es owner o decision maker antes de salir.</p>
+              <p>Guarda fotos de cerca y una foto abierta para que se vea el contexto.</p>
+              <p>Pon una nota corta explicando urgencia, presupuesto y mejor hora para llamar.</p>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="/metalworks-crm/prospector-app.js"></script>
+  </body>
+</html>
