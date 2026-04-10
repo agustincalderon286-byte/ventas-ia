@@ -278,6 +278,8 @@ function formatLeadSource(value = "") {
     website_form: "Website form",
     assistant_chat: "Assistant chat",
     assistant_booking: "Assistant callback",
+    field_prospector: "Field prospector",
+    lead_distribution_prospector: "Prospector intake",
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
@@ -1258,6 +1260,42 @@ function renderLeadDetail(detail = null) {
           : ""
       }
     </div>
+    ${
+      lead.sourceType === "field_prospector" || lead.sourceProspectorName || lead.qualificationTier
+        ? `
+          <section class="crm-intake-card">
+            <div class="crm-panel-head tight">
+              <h3>Field Intake</h3>
+              <p>Info capturada por prospectador en campo</p>
+            </div>
+            <div class="crm-intake-grid">
+              ${
+                lead.sourceProspectorName
+                  ? `<span><strong>Prospectador:</strong> ${escapeHtml(lead.sourceProspectorName)}${lead.sourceProspectorEmail ? ` · ${escapeHtml(lead.sourceProspectorEmail)}` : ""}</span>`
+                  : ""
+              }
+              ${lead.addressLine ? `<span><strong>Direccion:</strong> ${escapeHtml(lead.addressLine)}</span>` : ""}
+              ${lead.zipCode ? `<span><strong>ZIP:</strong> ${escapeHtml(lead.zipCode)}</span>` : ""}
+              ${lead.city ? `<span><strong>Ciudad:</strong> ${escapeHtml(lead.city)}</span>` : ""}
+              ${lead.propertyType ? `<span><strong>Propiedad:</strong> ${escapeHtml(lead.propertyType)}</span>` : ""}
+              ${lead.projectSize ? `<span><strong>Tamano:</strong> ${escapeHtml(lead.projectSize)}</span>` : ""}
+              ${lead.timeline ? `<span><strong>Timeline:</strong> ${escapeHtml(lead.timeline)}</span>` : ""}
+              ${lead.ownershipStatus ? `<span><strong>Decision maker:</strong> ${escapeHtml(lead.ownershipStatus)}</span>` : ""}
+              ${lead.budgetRange ? `<span><strong>Budget:</strong> ${escapeHtml(lead.budgetRange)}</span>` : ""}
+              ${lead.urgency ? `<span><strong>Urgencia:</strong> ${escapeHtml(lead.urgency)}</span>` : ""}
+              ${lead.bestContactWindow ? `<span><strong>Best time:</strong> ${escapeHtml(lead.bestContactWindow)}</span>` : ""}
+              ${lead.preferredLanguage ? `<span><strong>Idioma:</strong> ${escapeHtml(lead.preferredLanguage)}</span>` : ""}
+              ${lead.qualificationTier ? `<span><strong>Tier:</strong> ${escapeHtml(lead.qualificationTier)}</span>` : ""}
+            </div>
+            ${
+              lead.qualificationNotes
+                ? `<p class="crm-intake-note"><strong>Nota de calificacion:</strong> ${escapeHtml(lead.qualificationNotes)}</p>`
+                : ""
+            }
+          </section>
+        `
+        : ""
+    }
   `;
 
   if (detailForm) {

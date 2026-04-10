@@ -1,8 +1,11 @@
 import crypto from "node:crypto";
+import http2 from "node:http2";
 import path from "node:path";
 
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
+const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
+const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
@@ -37,6 +40,10 @@ const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
 const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
+const METALWORKS_EXTERNAL_SYNC_TOKEN = String(
+  process.env.METALWORKS_EXTERNAL_SYNC_TOKEN || "",
+).trim();
+const METALWORKS_IOS_APP_BUNDLE_ID = "com.agustincalderon.agustin2";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
   "contacted",
@@ -54,6 +61,16 @@ const METALWORKS_CRM_PUBLIC_EVENT_TYPES = new Set([
   "assistant_open",
   "assistant_cta_click",
 ]);
+const METALWORKS_PUSH_INVALID_REASONS = new Set([
+  "BadDeviceToken",
+  "DeviceTokenNotForTopic",
+  "Unregistered",
+]);
+const METALWORKS_APNS_JWT_CACHE = {
+  token: "",
+  expiresAt: 0,
+  cacheKey: "",
+};
 const METALWORKS_ASSISTANT_SYSTEM_PROMPT = `
 You are Agustin 2.0 for Chicago Metal Works & Fencing.
 
@@ -198,6 +215,16 @@ function getClientIp(req) {
   return forwarded || req.ip || req.socket?.remoteAddress || "";
 }
 
+function getExternalSyncToken(req) {
+  const authHeader = String(req.headers.authorization || "").trim();
+
+  if (/^Bearer\s+/i.test(authHeader)) {
+    return authHeader.replace(/^Bearer\s+/i, "").trim();
+  }
+
+  return cleanText(req.headers["x-metalworks-sync-token"] || "", 240);
+}
+
 function getAllowedEmails() {
   return Array.from(
     new Set([
@@ -212,8 +239,16 @@ function getMetalworksPassword() {
   return String(process.env.METALWORKS_CRM_PASSWORD || "").trim();
 }
 
+function getMetalworksProspectorPassword() {
+  return String(process.env.METALWORKS_PROSPECTOR_PASSWORD || "").trim();
+}
+
 function metalworksCrmConfigured() {
   return Boolean(getAllowedEmails().length && getMetalworksPassword());
+}
+
+function metalworksProspectorConfigured() {
+  return Boolean(getMetalworksProspectorPassword());
 }
 
 function getMetalworksCrmProfile(email = "") {
@@ -322,6 +357,47 @@ function formatDateTimeLabel(value = "", timeZone = "") {
   }
 
   return date.toLocaleString("en-US", options);
+}
+
+function buildMetalworksClientDocumentSnapshot(lead = null) {
+  const fullName =
+    sanitizeAssistantStoredName(cleanText(lead?.fullName || "", 120)) ||
+    cleanText(lead?.fullName || "", 120);
+  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || "there";
+  const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
+  const documentLabel = documentType === "invoice" ? "Invoice" : "Estimate";
+  const projectLabel =
+    cleanText(lead?.projectType || "", 120) ||
+    "metalwork project";
+  const description =
+    cleanText(lead?.clientDocumentDescription || "", 3200) ||
+    cleanText(lead?.details || "", 2400);
+  const workDate = formatDateLabel(lead?.clientDocumentWorkDate || "");
+  const validUntil = formatDateLabel(lead?.estimateValidUntil || "");
+  const warranty =
+    cleanText(lead?.clientDocumentWarranty || "", 2400) || METALWORKS_DEFAULT_CLIENT_WARRANTY;
+  const totalAmount = normalizeMoney(lead?.estimateAmount || 0);
+  const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
+  const location = cleanText(lead?.location || "", 160);
+  const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
+  const email = normalizeEmail(lead?.email || "");
+
+  return {
+    fullName,
+    firstName,
+    documentType,
+    documentLabel,
+    projectLabel,
+    description,
+    workDate,
+    validUntil,
+    warranty,
+    totalAmount,
+    total,
+    location,
+    phone,
+    email,
+  };
 }
 
 function escapeHtmlMarkup(value = "") {
@@ -460,43 +536,6 @@ function buildThumbtackOauthCallbackPage({
     </article>
   </body>
 </html>`;
-}
-
-function buildMetalworksClientDocumentSnapshot(lead = null) {
-  const fullName = cleanText(lead?.fullName || "", 120);
-  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || "there";
-  const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
-  const documentLabel = documentType === "invoice" ? "Invoice" : "Estimate";
-  const projectLabel = cleanText(lead?.projectType || "", 120) || "metalwork project";
-  const description =
-    cleanText(lead?.clientDocumentDescription || "", 3200) ||
-    cleanText(lead?.details || "", 2400);
-  const workDate = formatDateLabel(lead?.clientDocumentWorkDate || "");
-  const validUntil = formatDateLabel(lead?.estimateValidUntil || "");
-  const warranty =
-    cleanText(lead?.clientDocumentWarranty || "", 2400) || METALWORKS_DEFAULT_CLIENT_WARRANTY;
-  const totalAmount = normalizeMoney(lead?.estimateAmount || 0);
-  const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
-  const location = cleanText(lead?.location || "", 160);
-  const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
-  const email = normalizeEmail(lead?.email || "");
-
-  return {
-    fullName,
-    firstName,
-    documentType,
-    documentLabel,
-    projectLabel,
-    description,
-    workDate,
-    validUntil,
-    warranty,
-    totalAmount,
-    total,
-    location,
-    phone,
-    email,
-  };
 }
 
 function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
@@ -647,7 +686,10 @@ function buildMetalworksLeadAlertEmail({
   pageUrl = "",
   conversationDigest = "",
 } = {}) {
-  const fullName = cleanText(lead?.fullName || "", 120) || "Lead";
+  const fullName =
+    sanitizeAssistantStoredName(cleanText(lead?.fullName || "", 120)) ||
+    cleanText(lead?.fullName || "", 120) ||
+    "Lead";
   const projectLabel =
     cleanText(lead?.projectType || "", 120) ||
     cleanText(lead?.estimateTitle || "", 160) ||
@@ -780,6 +822,273 @@ async function sendMetalworksLeadAlertEmail(options = {}) {
   };
 }
 
+function normalizePushEnvironment(value = "") {
+  return cleanText(value || "", 40).toLowerCase() === "production"
+    ? "production"
+    : "sandbox";
+}
+
+function normalizePushDeviceToken(value = "") {
+  return String(value || "")
+    .replace(/[^0-9a-f]/gi, "")
+    .toLowerCase()
+    .slice(0, 400);
+}
+
+function decodeEnvPrivateKey(value = "") {
+  return String(value || "")
+    .replace(/\r/g, "")
+    .replace(/\\n/g, "\n")
+    .trim();
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function getMetalworksApnsConfig() {
+  const teamId = cleanText(process.env.METALWORKS_APNS_TEAM_ID || "", 80);
+  const keyId = cleanText(process.env.METALWORKS_APNS_KEY_ID || "", 80);
+  const privateKey = decodeEnvPrivateKey(process.env.METALWORKS_APNS_PRIVATE_KEY || "");
+  const topic =
+    cleanText(process.env.METALWORKS_APNS_TOPIC || "", 160) || METALWORKS_IOS_APP_BUNDLE_ID;
+
+  return {
+    teamId,
+    keyId,
+    privateKey,
+    topic,
+    configured: Boolean(teamId && keyId && privateKey && topic),
+  };
+}
+
+function metalworksApnsConfigured() {
+  return getMetalworksApnsConfig().configured;
+}
+
+function getMetalworksApnsJwt() {
+  const config = getMetalworksApnsConfig();
+
+  if (!config.configured) {
+    throw new Error("Apple push credentials are not configured yet.");
+  }
+
+  const cacheKey = `${config.teamId}:${config.keyId}:${hashToken(config.privateKey)}`;
+
+  if (
+    METALWORKS_APNS_JWT_CACHE.token &&
+    METALWORKS_APNS_JWT_CACHE.cacheKey === cacheKey &&
+    METALWORKS_APNS_JWT_CACHE.expiresAt > Date.now() + 60 * 1000
+  ) {
+    return METALWORKS_APNS_JWT_CACHE.token;
+  }
+
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const header = base64UrlEncode(JSON.stringify({ alg: "ES256", kid: config.keyId }));
+  const payload = base64UrlEncode(JSON.stringify({ iss: config.teamId, iat: issuedAt }));
+  const unsignedToken = `${header}.${payload}`;
+  const signer = crypto.createSign("SHA256");
+  signer.update(unsignedToken);
+  signer.end();
+
+  const signature = base64UrlEncode(signer.sign(config.privateKey));
+  const token = `${unsignedToken}.${signature}`;
+
+  METALWORKS_APNS_JWT_CACHE.token = token;
+  METALWORKS_APNS_JWT_CACHE.cacheKey = cacheKey;
+  METALWORKS_APNS_JWT_CACHE.expiresAt = Date.now() + 50 * 60 * 1000;
+
+  return token;
+}
+
+function trimPushCopy(value = "", maxLength = 140) {
+  return cleanText(value || "", maxLength);
+}
+
+function buildMetalworksPushCopy({
+  lead = null,
+  alertType = "assistant_lead",
+  requestedAtLabel = "",
+} = {}) {
+  const fullName =
+    trimPushCopy(sanitizeAssistantStoredName(lead?.fullName || ""), 60) ||
+    trimPushCopy(lead?.fullName || "", 60) ||
+    "New lead";
+  const projectType =
+    trimPushCopy(lead?.projectType || "", 54) ||
+    trimPushCopy(lead?.estimateTitle || "", 54) ||
+    trimPushCopy(lead?.location || "", 54) ||
+    "metalwork request";
+  const callbackLabel = trimPushCopy(requestedAtLabel || "", 64);
+
+  if (alertType === "assistant_callback" || alertType === "callback_request") {
+    return {
+      title: "Callback requested",
+      body: callbackLabel
+        ? `${fullName} asked for ${callbackLabel}.`
+        : `${fullName} asked for a callback about ${projectType}.`,
+    };
+  }
+
+  if (alertType === "crm_test") {
+    return {
+      title: "Agustin 2.0 CRM",
+      body: "Test alert delivered to this iPhone from Chicago Metal Works & Fencing.",
+    };
+  }
+
+  return {
+    title: "New lead",
+    body: `${fullName} • ${projectType}`,
+  };
+}
+
+async function sendMetalworksApnsNotification({
+  deviceToken = "",
+  alertType = "assistant_lead",
+  title = "",
+  body = "",
+  leadId = "",
+  appEnvironment = "sandbox",
+} = {}) {
+  const config = getMetalworksApnsConfig();
+
+  if (!config.configured) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Apple push credentials are not configured yet.",
+      reason: "",
+    };
+  }
+
+  const safeToken = normalizePushDeviceToken(deviceToken);
+
+  if (!safeToken) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "The device token is missing.",
+      reason: "MissingDeviceToken",
+    };
+  }
+
+  const host =
+    normalizePushEnvironment(appEnvironment) === "production"
+      ? "api.push.apple.com"
+      : "api.sandbox.push.apple.com";
+  const jwt = getMetalworksApnsJwt();
+
+  return await new Promise((resolve) => {
+    const client = http2.connect(`https://${host}`);
+    let settled = false;
+
+    const finalize = (result) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      client.close();
+      resolve(result);
+    };
+
+    client.on("error", (error) => {
+      finalize({
+        attempted: true,
+        delivered: false,
+        error: error.message || "Apple push connection failed.",
+        reason: "",
+      });
+    });
+
+    const request = client.request({
+      ":method": "POST",
+      ":path": `/3/device/${safeToken}`,
+      authorization: `bearer ${jwt}`,
+      "apns-topic": config.topic,
+      "apns-priority": "10",
+      "apns-push-type": "alert",
+      "content-type": "application/json",
+    });
+
+    let statusCode = 0;
+    let responseBody = "";
+
+    request.setEncoding("utf8");
+    request.on("response", (headers) => {
+      statusCode = Number(headers[":status"] || 0);
+    });
+    request.on("data", (chunk) => {
+      responseBody += chunk;
+    });
+    request.on("end", () => {
+      let reason = "";
+
+      if (responseBody) {
+        try {
+          reason = cleanText(JSON.parse(responseBody)?.reason || "", 120);
+        } catch {}
+      }
+
+      finalize({
+        attempted: true,
+        delivered: statusCode >= 200 && statusCode < 300,
+        status: statusCode,
+        error:
+          statusCode >= 200 && statusCode < 300
+            ? ""
+            : reason || `Apple push returned status ${statusCode || "unknown"}.`,
+        reason,
+      });
+    });
+    request.on("error", (error) => {
+      finalize({
+        attempted: true,
+        delivered: false,
+        error: error.message || "Apple push request failed.",
+        reason: "",
+      });
+    });
+
+    request.end(
+      JSON.stringify({
+        aps: {
+          alert: {
+            title: trimPushCopy(title || "", 60),
+            body: trimPushCopy(body || "", 140),
+          },
+          sound: "default",
+        },
+        leadId: cleanText(leadId || "", 80),
+        alertType: cleanText(alertType || "", 60),
+      }),
+    );
+  });
+}
+
+function cleanPushDevice(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    deviceName: doc.deviceName || "",
+    bundleId: doc.bundleId || "",
+    appEnvironment: normalizePushEnvironment(doc.appEnvironment || "sandbox"),
+    notificationsEnabled: Boolean(doc.notificationsEnabled),
+    isActive: Boolean(doc.isActive),
+    lastSeenAt: doc.lastSeenAt ? new Date(doc.lastSeenAt).toISOString() : "",
+    lastPushAt: doc.lastPushAt ? new Date(doc.lastPushAt).toISOString() : "",
+    lastPushError: doc.lastPushError || "",
+  };
+}
+
 function buildTrackingPayload(payload = {}) {
   return {
     gclid: cleanText(payload?.gclid || "", 120),
@@ -819,6 +1128,7 @@ function formatActivityTitle(type = "") {
     lead_created: "Lead creado",
     lead_updated: "Lead actualizado",
     note_added: "Nota agregada",
+    prospector_lead_submitted: "Lead de prospectador",
     estimate_sent: "Estimate enviado",
     assistant_open: "Assistant abierto",
     assistant_cta_click: "Assistant CTA",
@@ -2074,14 +2384,32 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     return null;
   }
 
+  const safeFullName =
+    sanitizeAssistantStoredName(doc.fullName || "") || cleanText(doc.fullName || "", 120);
+
   return {
     id: String(doc._id || ""),
-    fullName: doc.fullName || "",
+    fullName: safeFullName,
     phone: doc.phone || "",
     phoneDisplay: doc.phoneDisplay || "",
     email: doc.email || "",
     projectType: doc.projectType || "",
     location: doc.location || "",
+    addressLine: doc.addressLine || "",
+    zipCode: doc.zipCode || "",
+    city: doc.city || "",
+    propertyType: doc.propertyType || "",
+    projectSize: doc.projectSize || "",
+    timeline: doc.timeline || "",
+    ownershipStatus: doc.ownershipStatus || "",
+    budgetRange: doc.budgetRange || "",
+    urgency: doc.urgency || "",
+    bestContactWindow: doc.bestContactWindow || "",
+    preferredLanguage: doc.preferredLanguage || "",
+    qualificationTier: doc.qualificationTier || "",
+    qualificationNotes: doc.qualificationNotes || "",
+    sourceProspectorName: doc.sourceProspectorName || "",
+    sourceProspectorEmail: doc.sourceProspectorEmail || "",
     details: doc.details || "",
     photoFileNames: Array.isArray(doc.photoFileNames) ? doc.photoFileNames : [],
     status: normalizeStatus(doc.status || "new"),
@@ -2128,6 +2456,8 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     pageUrl: doc.pageUrl || "",
     referrer: doc.referrer || "",
     sourceType: doc.sourceType || "website_form",
+    sourceExternalId: doc.sourceExternalId || "",
+    sourceExternalSystem: doc.sourceExternalSystem || "",
     tracking: doc.tracking || {},
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
     updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
@@ -2175,8 +2505,13 @@ function buildLeadQuery(filters = {}) {
       { phone: pattern },
       { email: pattern },
       { location: pattern },
+      { addressLine: pattern },
+      { zipCode: pattern },
+      { city: pattern },
       { details: pattern },
       { projectType: pattern },
+      { qualificationNotes: pattern },
+      { sourceProspectorName: pattern },
       { estimateTitle: pattern },
       { estimateScope: pattern },
     ];
@@ -2281,6 +2616,51 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
   };
 }
 
+async function buildProspectorDashboardSnapshot(MetalworksLead, prospectorEmail = "") {
+  const safeEmail = normalizeEmail(prospectorEmail || "");
+
+  if (!safeEmail) {
+    return {
+      summary: {
+        totalLeads: 0,
+        newLeads: 0,
+        contactedLeads: 0,
+        quotedLeads: 0,
+        wonLeads: 0,
+      },
+      recentLeads: [],
+    };
+  }
+
+  const baseQuery = {
+    sourceProspectorEmail: safeEmail,
+  };
+
+  const [recentLeads, totalLeads, newLeads, contactedLeads, quotedLeads, wonLeads] =
+    await Promise.all([
+      MetalworksLead.find(baseQuery)
+        .sort({ createdAt: -1, updatedAt: -1 })
+        .limit(18)
+        .lean(),
+      MetalworksLead.countDocuments(baseQuery),
+      MetalworksLead.countDocuments({ ...baseQuery, status: "new" }),
+      MetalworksLead.countDocuments({ ...baseQuery, status: "contacted" }),
+      MetalworksLead.countDocuments({ ...baseQuery, status: "quoted" }),
+      MetalworksLead.countDocuments({ ...baseQuery, status: "won" }),
+    ]);
+
+  return {
+    summary: {
+      totalLeads,
+      newLeads,
+      contactedLeads,
+      quotedLeads,
+      wonLeads,
+    },
+    recentLeads: recentLeads.map(cleanLead).filter(Boolean),
+  };
+}
+
 export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) {
   const trackingSchema = new mongoose.Schema(
     {
@@ -2314,6 +2694,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     email: { type: String, index: true },
     projectType: String,
     location: String,
+    addressLine: String,
+    zipCode: String,
+    city: String,
+    propertyType: String,
+    projectSize: String,
+    timeline: String,
+    ownershipStatus: String,
+    budgetRange: String,
+    urgency: String,
+    bestContactWindow: String,
+    preferredLanguage: String,
+    qualificationTier: String,
+    qualificationNotes: String,
+    sourceProspectorName: String,
+    sourceProspectorEmail: String,
     details: String,
     photoFileNames: [String],
     status: { type: String, default: "new", index: true },
@@ -2337,6 +2732,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     estimateSentAt: Date,
     estimateSentTo: String,
     sourceType: { type: String, default: "website_form", index: true },
+    sourceExternalId: { type: String, index: true },
+    sourceExternalSystem: String,
     pageTitle: String,
     pagePath: String,
     pageUrl: String,
@@ -2406,6 +2803,34 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     lastSeenAt: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
   });
+  const metalworksProspectorSessionSchema = new mongoose.Schema({
+    prospectorName: { type: String, required: true },
+    prospectorEmail: { type: String, required: true, index: true },
+    tokenHash: { type: String, required: true, unique: true, index: true },
+    ipAddress: String,
+    userAgent: String,
+    expiresAt: { type: Date, required: true },
+    lastSeenAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now },
+  });
+  const metalworksCrmPushDeviceSchema = new mongoose.Schema({
+    adminEmail: { type: String, required: true, index: true },
+    deviceToken: { type: String, required: true, unique: true, index: true },
+    platform: { type: String, default: "ios" },
+    bundleId: { type: String, default: METALWORKS_IOS_APP_BUNDLE_ID },
+    appEnvironment: { type: String, default: "sandbox" },
+    deviceName: String,
+    appVersion: String,
+    buildNumber: String,
+    authorizationStatus: String,
+    notificationsEnabled: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true, index: true },
+    lastSeenAt: { type: Date, default: Date.now, index: true },
+    lastPushAt: Date,
+    lastPushError: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
@@ -2418,6 +2843,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
   metalworksCrmSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  metalworksProspectorSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  metalworksProspectorSessionSchema.index({ prospectorEmail: 1, lastSeenAt: -1 });
+  metalworksCrmPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
+  metalworksCrmPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
@@ -2431,6 +2860,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmSession =
     mongoose.models.MetalworksCrmSession ||
     mongoose.model("MetalworksCrmSession", metalworksCrmSessionSchema);
+  const MetalworksProspectorSession =
+    mongoose.models.MetalworksProspectorSession ||
+    mongoose.model("MetalworksProspectorSession", metalworksProspectorSessionSchema);
+  const MetalworksCrmPushDevice =
+    mongoose.models.MetalworksCrmPushDevice ||
+    mongoose.model("MetalworksCrmPushDevice", metalworksCrmPushDeviceSchema);
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -2444,6 +2879,25 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   function clearSessionCookie(res, req) {
     res.clearCookie(METALWORKS_CRM_SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: requestIsSecure(req),
+      path: "/",
+    });
+  }
+
+  function setProspectorSessionCookie(res, req, token) {
+    res.cookie(METALWORKS_PROSPECTOR_SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: requestIsSecure(req),
+      path: "/",
+      maxAge: METALWORKS_PROSPECTOR_SESSION_DAYS * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  function clearProspectorSessionCookie(res, req) {
+    res.clearCookie(METALWORKS_PROSPECTOR_SESSION_COOKIE, {
       httpOnly: true,
       sameSite: "lax",
       secure: requestIsSecure(req),
@@ -2527,6 +2981,80 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     setSessionCookie(res, req, token);
   }
 
+  async function getProspectorAuth(req, { touch = true } = {}) {
+    const cookies = parseCookies(req.headers.cookie || "");
+    const token = String(cookies[METALWORKS_PROSPECTOR_SESSION_COOKIE] || "").trim();
+
+    if (!token) {
+      return { session: null, name: "", email: "" };
+    }
+
+    const session = await MetalworksProspectorSession.findOne({
+      tokenHash: hashToken(token),
+      expiresAt: { $gt: new Date() },
+    }).lean();
+
+    if (!session?.prospectorEmail || !session?.prospectorName) {
+      return { session: null, name: "", email: "" };
+    }
+
+    if (touch) {
+      await MetalworksProspectorSession.updateOne(
+        { _id: session._id },
+        {
+          $set: {
+            lastSeenAt: new Date(),
+          },
+        },
+      );
+    }
+
+    return {
+      session,
+      name: cleanText(session.prospectorName || "", 120),
+      email: normalizeEmail(session.prospectorEmail || ""),
+    };
+  }
+
+  async function requireProspectorAuth(req, res) {
+    if (!metalworksProspectorConfigured()) {
+      respondError(
+        res,
+        503,
+        "El portal de prospectadores todavia no tiene password configurado.",
+      );
+      return null;
+    }
+
+    const auth = await getProspectorAuth(req);
+
+    if (!auth.email || !auth.name) {
+      respondError(res, 401, "Necesitas iniciar sesion como prospectador.");
+      return null;
+    }
+
+    return auth;
+  }
+
+  async function createProspectorSession(req, res, { name = "", email = "" } = {}) {
+    const token = generateToken();
+    const expiresAt = new Date(
+      Date.now() + METALWORKS_PROSPECTOR_SESSION_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    await MetalworksProspectorSession.create({
+      prospectorName: cleanText(name || "", 120),
+      prospectorEmail: normalizeEmail(email || ""),
+      tokenHash: hashToken(token),
+      ipAddress: getClientIp(req),
+      userAgent: cleanText(req.headers["user-agent"] || "", 400),
+      expiresAt,
+      lastSeenAt: new Date(),
+    });
+
+    setProspectorSessionCookie(res, req, token);
+  }
+
   async function destroySession(req, res) {
     const cookies = parseCookies(req.headers.cookie || "");
     const token = String(cookies[METALWORKS_CRM_SESSION_COOKIE] || "").trim();
@@ -2538,6 +3066,103 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     clearSessionCookie(res, req);
+  }
+
+  async function destroyProspectorSession(req, res) {
+    const cookies = parseCookies(req.headers.cookie || "");
+    const token = String(cookies[METALWORKS_PROSPECTOR_SESSION_COOKIE] || "").trim();
+
+    if (token) {
+      await MetalworksProspectorSession.deleteOne({
+        tokenHash: hashToken(token),
+      });
+    }
+
+    clearProspectorSessionCookie(res, req);
+  }
+
+  app.use("/api/metalworks-crm", (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
+
+  async function sendMetalworksPushAlert({
+    lead = null,
+    alertType = "assistant_lead",
+    requestedAtLabel = "",
+    adminEmail = "",
+  } = {}) {
+    const query = {
+      isActive: true,
+      notificationsEnabled: true,
+    };
+
+    if (adminEmail) {
+      query.adminEmail = normalizeEmail(adminEmail);
+    }
+
+    const deviceDocs = await MetalworksCrmPushDevice.find(query)
+      .sort({ lastSeenAt: -1, updatedAt: -1 })
+      .limit(adminEmail ? 8 : 24)
+      .lean();
+
+    if (!deviceDocs.length) {
+      return {
+        attempted: false,
+        delivered: false,
+        deliveredCount: 0,
+        deviceCount: 0,
+        error: "No iPhone devices are registered for push alerts yet.",
+      };
+    }
+
+    const copy = buildMetalworksPushCopy({
+      lead,
+      alertType,
+      requestedAtLabel,
+    });
+    const results = await Promise.all(
+      deviceDocs.map(async (device) => {
+        const result = await sendMetalworksApnsNotification({
+          deviceToken: device.deviceToken,
+          alertType,
+          title: copy.title,
+          body: copy.body,
+          leadId: lead?._id ? String(lead._id) : "",
+          appEnvironment: device.appEnvironment || "sandbox",
+        });
+        const update = {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          lastPushAt: result.delivered ? new Date() : device.lastPushAt || null,
+          lastPushError: result.delivered ? "" : cleanText(result.error || "", 240),
+        };
+
+        if (METALWORKS_PUSH_INVALID_REASONS.has(result.reason || "")) {
+          update.isActive = false;
+          update.notificationsEnabled = false;
+        }
+
+        await MetalworksCrmPushDevice.updateOne(
+          { _id: device._id },
+          {
+            $set: update,
+          },
+        );
+
+        return result;
+      }),
+    );
+    const deliveredCount = results.filter((item) => item.delivered).length;
+    const firstError = results.find((item) => item.error)?.error || "";
+
+    return {
+      attempted: true,
+      delivered: deliveredCount > 0,
+      deliveredCount,
+      deviceCount: deviceDocs.length,
+      error: firstError,
+    };
   }
 
   async function appendActivity({
@@ -2827,6 +3452,392 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   });
 
   app.get(
+    ["/metalworks-crm/prospector/login", "/metalworks-crm/prospector/login/"],
+    async (req, res) => {
+      res.set("Cache-Control", "no-store");
+      const auth = await getProspectorAuth(req, { touch: false });
+
+      if (auth.email) {
+        return res.redirect("/metalworks-crm/prospector/");
+      }
+
+      res.sendFile(path.join(publicDir, "metalworks-crm", "prospector-login.html"));
+    },
+  );
+
+  app.get(["/metalworks-crm/prospector", "/metalworks-crm/prospector/"], async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    const auth = await getProspectorAuth(req, { touch: false });
+
+    if (!auth.email) {
+      return res.redirect("/metalworks-crm/prospector/login/");
+    }
+
+    res.sendFile(path.join(privateDir, "metalworks-prospector.html"));
+  });
+
+  app.get("/api/metalworks-crm/prospector/me", async (req, res) => {
+    try {
+      const auth = await getProspectorAuth(req, { touch: true });
+      res.json({
+        authenticated: Boolean(auth.email),
+        configured: metalworksProspectorConfigured(),
+        name: auth.name || "",
+        email: auth.email || "",
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works prospector auth:", error.message);
+      respondError(res, 500, "No pude revisar la sesion del prospectador.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/prospector/login", async (req, res) => {
+    const name = cleanText(req.body?.name || "", 120);
+    const email = normalizeEmail(req.body?.email || "");
+    const password = String(req.body?.password || "");
+    const expectedPassword = getMetalworksProspectorPassword();
+
+    if (!metalworksProspectorConfigured()) {
+      return respondError(
+        res,
+        503,
+        "Primero configura METALWORKS_PROSPECTOR_PASSWORD en el backend.",
+      );
+    }
+
+    if (!name || !email || !password) {
+      return respondError(res, 400, "Nombre, correo y password son requeridos.");
+    }
+
+    if (!compareSecrets(password, expectedPassword)) {
+      return respondError(res, 401, "Password incorrecto.");
+    }
+
+    try {
+      await createProspectorSession(req, res, { name, email });
+      res.json({ ok: true, name, email });
+    } catch (error) {
+      console.error("Error logging into Metal Works prospector portal:", error.message);
+      respondError(res, 500, "No pude iniciar sesion en el portal del prospectador.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/prospector/logout", async (req, res) => {
+    try {
+      await destroyProspectorSession(req, res);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Error logging out of Metal Works prospector portal:", error.message);
+      respondError(res, 500, "No pude cerrar la sesion del prospectador.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/prospector/dashboard", async (req, res) => {
+    const auth = await requireProspectorAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const snapshot = await buildProspectorDashboardSnapshot(
+        MetalworksLead,
+        auth.email,
+      );
+      res.json({
+        ...snapshot,
+        prospector: {
+          name: auth.name,
+          email: auth.email,
+        },
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works prospector dashboard:", error.message);
+      respondError(res, 500, "No pude cargar el panel del prospectador.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/prospector/leads", async (req, res) => {
+    const auth = await requireProspectorAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const fullName = cleanText(req.body?.fullName || "", 120);
+      const phoneDisplay = cleanText(req.body?.phone || "", 40);
+      const phone = normalizePhone(phoneDisplay);
+      const email = normalizeEmail(req.body?.email || "");
+      const projectType = cleanText(req.body?.projectType || "", 120);
+      const addressLine = cleanText(req.body?.addressLine || "", 160);
+      const zipCode = cleanText(req.body?.zipCode || "", 20);
+      const city = cleanText(req.body?.city || "", 120);
+      const propertyType = cleanText(req.body?.propertyType || "", 80);
+      const projectSize = cleanText(req.body?.projectSize || "", 120);
+      const timeline = cleanText(req.body?.timeline || "", 80);
+      const ownershipStatus = cleanText(req.body?.ownershipStatus || "", 80);
+      const budgetRange = cleanText(req.body?.budgetRange || "", 80);
+      const urgency = cleanText(req.body?.urgency || "", 40);
+      const bestContactWindow = cleanText(req.body?.bestContactWindow || "", 120);
+      const preferredLanguage = cleanText(req.body?.preferredLanguage || "", 80);
+      const qualificationTier = cleanText(req.body?.qualificationTier || "", 12).toUpperCase();
+      const qualificationNotes = cleanText(req.body?.qualificationNotes || "", 1200);
+      const details = cleanText(req.body?.details || req.body?.notes || "", 3000);
+      const location = cleanText(
+        [addressLine, city, zipCode].filter(Boolean).join(", "),
+        160,
+      );
+      const parsedFiles = Array.isArray(req.body?.photos)
+        ? req.body.photos
+            .map((item) => parseAssistantLeadAssetUpload(item))
+            .filter(Boolean)
+            .slice(0, 8)
+        : [];
+      const totalSizeBytes = parsedFiles.reduce(
+        (sum, item) => sum + Number(item?.sizeBytes || 0),
+        0,
+      );
+      const photoFileNames = mergeAssistantUniqueValues(
+        ...(Array.isArray(req.body?.photoFileNames)
+          ? req.body.photoFileNames
+              .map((item) => cleanText(item, 120))
+              .filter(Boolean)
+          : []),
+        ...parsedFiles.map((item) => item.fileName || ""),
+      ).slice(0, 20);
+
+      if (
+        !fullName ||
+        !phone ||
+        !projectType ||
+        !addressLine ||
+        !zipCode ||
+        !timeline ||
+        !ownershipStatus ||
+        !details
+      ) {
+        return respondError(
+          res,
+          400,
+          "Llena nombre, telefono, servicio, direccion, ZIP, timeline, owner y notas.",
+        );
+      }
+
+      if (!qualificationTier || !qualificationNotes) {
+        return respondError(res, 400, "Pon tier del lead y nota corta de calificacion.");
+      }
+
+      if (parsedFiles.length > 8) {
+        return respondError(res, 400, "Puedes subir hasta 8 fotos por lead.");
+      }
+
+      if (totalSizeBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(
+          res,
+          400,
+          "El total de fotos es demasiado grande. Comprime o manda menos archivos.",
+        );
+      }
+
+      const now = new Date();
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      let leadDoc = await MetalworksLead.findOne({
+        createdAt: { $gte: fourteenDaysAgo },
+        phone,
+        zipCode,
+      }).sort({ createdAt: -1 });
+      const duplicate = Boolean(leadDoc);
+
+      if (leadDoc) {
+        leadDoc.fullName = fullName;
+        leadDoc.phone = phone;
+        leadDoc.phoneDisplay = phoneDisplay;
+        leadDoc.email = email;
+        leadDoc.projectType = projectType;
+        leadDoc.location = location;
+        leadDoc.addressLine = addressLine;
+        leadDoc.zipCode = zipCode;
+        leadDoc.city = city;
+        leadDoc.propertyType = propertyType;
+        leadDoc.projectSize = projectSize;
+        leadDoc.timeline = timeline;
+        leadDoc.ownershipStatus = ownershipStatus;
+        leadDoc.budgetRange = budgetRange;
+        leadDoc.urgency = urgency;
+        leadDoc.bestContactWindow = bestContactWindow;
+        leadDoc.preferredLanguage = preferredLanguage;
+        leadDoc.qualificationTier = qualificationTier;
+        leadDoc.qualificationNotes = qualificationNotes;
+        leadDoc.sourceProspectorName = auth.name;
+        leadDoc.sourceProspectorEmail = auth.email;
+        leadDoc.details = details;
+        leadDoc.photoFileNames = photoFileNames;
+        leadDoc.sourceType = "field_prospector";
+        leadDoc.pageTitle = "Metal Works Prospector Intake";
+        leadDoc.pagePath = "/metalworks-crm/prospector/";
+        leadDoc.pageUrl = `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`;
+        leadDoc.referrer = leadDoc.pageUrl;
+        leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+        leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      } else {
+        leadDoc = await MetalworksLead.create({
+          fullName,
+          phone,
+          phoneDisplay,
+          email,
+          projectType,
+          location,
+          addressLine,
+          zipCode,
+          city,
+          propertyType,
+          projectSize,
+          timeline,
+          ownershipStatus,
+          budgetRange,
+          urgency,
+          bestContactWindow,
+          preferredLanguage,
+          qualificationTier,
+          qualificationNotes,
+          sourceProspectorName: auth.name,
+          sourceProspectorEmail: auth.email,
+          details,
+          photoFileNames,
+          status: "new",
+          sourceType: "field_prospector",
+          pageTitle: "Metal Works Prospector Intake",
+          pagePath: "/metalworks-crm/prospector/",
+          pageUrl: `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`,
+          referrer: `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`,
+          ipAddress: cleanText(getClientIp(req), 120),
+          userAgent: cleanText(req.headers["user-agent"] || "", 400),
+          updatedAt: now,
+          createdAt: now,
+        });
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body: `${fullName} fue capturado por ${auth.name} desde el portal de prospectadores.`,
+          meta: {
+            prospectorName: auth.name,
+            prospectorEmail: auth.email,
+            projectType,
+            location,
+          },
+          req,
+          pagePath: "/metalworks-crm/prospector/",
+          pageUrl: `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`,
+        });
+      }
+
+      let syncedAssetCount = 0;
+
+      if (leadDoc?._id && parsedFiles.length) {
+        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+          .select("fileName sizeBytes")
+          .lean();
+        const existingKeys = new Set(
+          existingAssets.map(
+            (item) =>
+              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+          ),
+        );
+        const newFiles = parsedFiles.filter((item) => {
+          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+            item.sizeBytes || 0,
+          )}`;
+
+          if (existingKeys.has(key)) {
+            return false;
+          }
+
+          existingKeys.add(key);
+          return true;
+        });
+
+        if (newFiles.length) {
+          await Promise.all(
+            newFiles.map((item) =>
+              MetalworksLeadAsset.create({
+                leadId: leadDoc._id,
+                sourceType: "field_prospector",
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                fileData: item.fileData,
+                uploadedAt: now,
+                updatedAt: now,
+                createdAt: now,
+              }),
+            ),
+          );
+          syncedAssetCount = newFiles.length;
+          leadDoc.photoFileNames = mergeAssistantUniqueValues(
+            leadDoc.photoFileNames || [],
+            ...newFiles.map((item) => item.fileName || ""),
+          ).slice(0, 20);
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+        }
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "prospector_lead_submitted",
+        title: duplicate ? "Lead de prospectador actualizado" : "Lead de prospectador guardado",
+        body: duplicate
+          ? `${auth.name} actualizo este lead desde campo.`
+          : `${auth.name} envio este lead desde el portal de prospectadores.`,
+        meta: {
+          duplicate,
+          prospectorName: auth.name,
+          prospectorEmail: auth.email,
+          qualificationTier,
+          syncedAssetCount,
+        },
+        req,
+        pagePath: "/metalworks-crm/prospector/",
+        pageUrl: `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`,
+      });
+
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (!duplicate) {
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType: "website_lead",
+          });
+        } catch (error) {
+          console.error("Error sending Metal Works prospector push:", error.message);
+        }
+      }
+
+      const snapshot = await buildProspectorDashboardSnapshot(MetalworksLead, auth.email);
+
+      res.json({
+        ok: true,
+        duplicate,
+        notified: Boolean(pushDelivery.delivered),
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+        dashboard: snapshot,
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works prospector lead:", error.message);
+      respondError(res, 500, "No pude guardar este lead del prospectador.");
+    }
+  });
+
+  app.get(
     ["/metalworks-crm/login", "/metalworks-crm/login/"],
     async (req, res) => {
       res.set("Cache-Control", "no-store");
@@ -2911,6 +3922,101 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error logging out of Metal Works CRM:", error.message);
       respondError(res, 500, "No pude cerrar la sesion.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/push/register", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const deviceToken = normalizePushDeviceToken(req.body?.deviceToken || "");
+    const bundleId =
+      cleanText(req.body?.bundleId || "", 160) || METALWORKS_IOS_APP_BUNDLE_ID;
+    const appEnvironment = normalizePushEnvironment(req.body?.appEnvironment || "sandbox");
+    const deviceName = cleanText(req.body?.deviceName || "", 120);
+    const appVersion = cleanText(req.body?.appVersion || "", 40);
+    const buildNumber = cleanText(req.body?.buildNumber || "", 40);
+    const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
+    const notificationsEnabled =
+      req.body?.notificationsEnabled === false ? false : Boolean(deviceToken);
+
+    if (!deviceToken) {
+      return respondError(res, 400, "El device token de Apple es requerido.");
+    }
+
+    try {
+      const now = new Date();
+      const doc = await MetalworksCrmPushDevice.findOneAndUpdate(
+        { deviceToken },
+        {
+          $set: {
+            adminEmail: auth.email,
+            bundleId,
+            appEnvironment,
+            deviceName,
+            appVersion,
+            buildNumber,
+            authorizationStatus,
+            notificationsEnabled,
+            isActive: notificationsEnabled,
+            lastSeenAt: now,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            platform: "ios",
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        },
+      );
+
+      res.json({
+        ok: true,
+        apnsConfigured: metalworksApnsConfigured(),
+        message: metalworksApnsConfigured()
+          ? "This iPhone is ready for live lead alerts."
+          : "This iPhone is linked, but Apple push keys still need setup on the server.",
+        device: cleanPushDevice(doc),
+      });
+    } catch (error) {
+      console.error("Error registering Metal Works push device:", error.message);
+      respondError(res, 500, "No pude registrar este iPhone para alerts.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/push/test", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const delivery = await sendMetalworksPushAlert({
+        alertType: "crm_test",
+        adminEmail: auth.email,
+      });
+
+      res.json({
+        ok: delivery.delivered,
+        apnsConfigured: metalworksApnsConfigured(),
+        delivered: delivery.delivered,
+        deliveredCount: delivery.deliveredCount || 0,
+        deviceCount: delivery.deviceCount || 0,
+        message: delivery.delivered
+          ? "Test push sent to this iPhone."
+          : delivery.error || "I could not send the test push yet.",
+      });
+    } catch (error) {
+      console.error("Error sending Metal Works test push:", error.message);
+      respondError(res, 500, "No pude mandar el test push.");
     }
   });
 
@@ -3617,14 +4723,265 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         tracking,
       });
 
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (!duplicate) {
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType: "website_lead",
+          });
+        } catch (error) {
+          console.error("Error sending Metal Works website lead push:", error.message);
+        }
+      }
+
       res.json({
         ok: true,
         duplicate,
+        notified: Boolean(pushDelivery.delivered),
         lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
       });
     } catch (error) {
       console.error("Error saving public Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar tu quote en este momento.");
+    }
+  });
+
+  app.post("/api/public/metalworks/external-leads", async (req, res) => {
+    try {
+      if (!METALWORKS_EXTERNAL_SYNC_TOKEN) {
+        return respondError(
+          res,
+          503,
+          "Metal Works external sync token is not configured yet.",
+        );
+      }
+
+      const syncToken = getExternalSyncToken(req);
+
+      if (!compareSecrets(syncToken, METALWORKS_EXTERNAL_SYNC_TOKEN)) {
+        return respondError(res, 401, "Unauthorized external sync request.");
+      }
+
+      const externalLeadId = cleanText(req.body?.externalLeadId || "", 120);
+      const externalSystem = cleanText(req.body?.externalSystem || "", 80) || "external_sync";
+      const fullName = cleanText(req.body?.fullName || req.body?.name || "", 120);
+      const phoneDisplay = cleanText(req.body?.phoneDisplay || req.body?.phone || "", 40);
+      const phone = normalizePhone(phoneDisplay || req.body?.phone || "");
+      const email = normalizeEmail(req.body?.email || "");
+      const projectType = cleanText(req.body?.projectType || "", 120);
+      const location = cleanText(req.body?.location || "", 160);
+      const details = cleanText(req.body?.details || "", 3000);
+      const sourceType = cleanText(req.body?.sourceType || "", 80) || externalSystem;
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const parsedFiles = Array.isArray(req.body?.photos)
+        ? req.body.photos
+            .map((item) => parseAssistantLeadAssetUpload(item))
+            .filter(Boolean)
+            .slice(0, METALWORKS_LEAD_ASSET_MAX_FILES)
+        : [];
+      const rawPhotoFileNames = Array.isArray(req.body?.photoFileNames)
+        ? req.body.photoFileNames
+            .map((item) => cleanText(item, 120))
+            .filter(Boolean)
+            .slice(0, 20)
+        : [];
+      const photoFileNames = mergeAssistantUniqueValues(
+        rawPhotoFileNames,
+        ...parsedFiles.map((item) => item.fileName || ""),
+      ).slice(0, 20);
+
+      if (!externalLeadId) {
+        return respondError(res, 400, "Missing external lead id.");
+      }
+
+      if (!fullName) {
+        return respondError(res, 400, "The full name is required.");
+      }
+
+      if (!phone) {
+        return respondError(res, 400, "The phone number is required.");
+      }
+
+      if (!details) {
+        return respondError(res, 400, "The lead details are required.");
+      }
+
+      const now = new Date();
+      let leadDoc = await MetalworksLead.findOne({
+        sourceExternalId: externalLeadId,
+      }).sort({ updatedAt: -1, createdAt: -1 });
+      const duplicate = Boolean(leadDoc);
+
+      if (leadDoc) {
+        leadDoc.fullName = fullName;
+        leadDoc.phone = phone;
+        leadDoc.phoneDisplay = phoneDisplay || phone;
+        leadDoc.email = email;
+        leadDoc.projectType = projectType;
+        leadDoc.location = location;
+        leadDoc.details = details;
+        leadDoc.photoFileNames = photoFileNames;
+        leadDoc.sourceType = sourceType;
+        leadDoc.sourceExternalId = externalLeadId;
+        leadDoc.sourceExternalSystem = externalSystem;
+        leadDoc.pageTitle = pageTitle;
+        leadDoc.pagePath = pagePath;
+        leadDoc.pageUrl = pageUrl;
+        leadDoc.referrer = referrer;
+        leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+        leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+        leadDoc.tracking = tracking;
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      } else {
+        leadDoc = await MetalworksLead.create({
+          fullName,
+          phone,
+          phoneDisplay: phoneDisplay || phone,
+          email,
+          projectType,
+          location,
+          details,
+          photoFileNames,
+          status: "new",
+          sourceType,
+          sourceExternalId: externalLeadId,
+          sourceExternalSystem: externalSystem,
+          pageTitle,
+          pagePath,
+          pageUrl,
+          referrer,
+          ipAddress: cleanText(getClientIp(req), 120),
+          userAgent: cleanText(req.headers["user-agent"] || "", 400),
+          tracking,
+          updatedAt: now,
+          createdAt: now,
+        });
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body: `${fullName} entro desde ${externalSystem}.`,
+          meta: {
+            externalLeadId,
+            externalSystem,
+            projectType,
+            location,
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
+      let syncedAssetCount = 0;
+
+      if (leadDoc?._id && parsedFiles.length) {
+        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+          .select("fileName sizeBytes")
+          .lean();
+        const existingKeys = new Set(
+          existingAssets.map(
+            (item) =>
+              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+          ),
+        );
+        const newFiles = parsedFiles.filter((item) => {
+          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+            item.sizeBytes || 0,
+          )}`;
+
+          if (existingKeys.has(key)) {
+            return false;
+          }
+
+          existingKeys.add(key);
+          return true;
+        });
+
+        if (newFiles.length) {
+          await Promise.all(
+            newFiles.map((item) =>
+              MetalworksLeadAsset.create({
+                leadId: leadDoc._id,
+                sourceType,
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                fileData: item.fileData,
+                uploadedAt: now,
+                updatedAt: now,
+                createdAt: now,
+              }),
+            ),
+          );
+          syncedAssetCount = newFiles.length;
+          leadDoc.photoFileNames = mergeAssistantUniqueValues(
+            leadDoc.photoFileNames || [],
+            ...newFiles.map((item) => item.fileName || ""),
+          ).slice(0, 20);
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+        }
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "external_sync",
+        title: duplicate ? "Lead externo actualizado" : "Lead externo sincronizado",
+        body: duplicate
+          ? `El lead externo ${externalLeadId} se actualizo desde ${externalSystem}.`
+          : `El lead externo ${externalLeadId} se guardo desde ${externalSystem}.`,
+        meta: {
+          duplicate,
+          externalLeadId,
+          externalSystem,
+          syncedAssetCount,
+          photoFileCount: photoFileNames.length,
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (!duplicate) {
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType: "website_lead",
+          });
+        } catch (error) {
+          console.error("Error sending Metal Works external sync push:", error.message);
+        }
+      }
+
+      res.json({
+        ok: true,
+        duplicate,
+        syncedAssetCount,
+        notified: Boolean(pushDelivery.delivered),
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+      });
+    } catch (error) {
+      console.error("Error saving external Metal Works lead:", error.message);
+      respondError(res, 500, "No pude sincronizar este lead externo.");
     }
   });
 
@@ -3783,6 +5140,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         attempted: false,
         delivered: false,
       };
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
 
       try {
         alertDelivery = await sendMetalworksLeadAlertEmail({
@@ -3799,6 +5160,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         console.error("Error sending Metal Works callback alert:", error.message);
       }
 
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "assistant_callback",
+          requestedAtLabel,
+        });
+      } catch (error) {
+        console.error("Error sending Metal Works callback push:", error.message);
+      }
+
       await syncLeadAssetsToLead({
         leadId: leadDoc._id,
         visitorIds: [visitorId],
@@ -3808,7 +5179,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       res.json({
         ok: true,
         duplicate,
-        notified: Boolean(alertDelivery.delivered),
+        notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
         requestedAtLabel,
         lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
       });
@@ -4158,6 +5529,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         attempted: false,
         delivered: false,
       };
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
 
       if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
         try {
@@ -4180,6 +5555,23 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           }
         } catch (error) {
           console.error("Error sending Metal Works assistant alert:", error.message);
+        }
+
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType:
+              finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
+            requestedAtLabel: finalState.callbackLabel,
+          });
+
+          if (pushDelivery.delivered && !leadDoc.callbackAlertedAt) {
+            leadDoc.callbackAlertedAt = new Date();
+            leadDoc.updatedAt = new Date();
+            await leadDoc.save();
+          }
+        } catch (error) {
+          console.error("Error sending Metal Works assistant push:", error.message);
         }
       }
 
@@ -4209,7 +5601,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           leadDoc?._id && finalState.callbackIntent === "yes" && finalState.nextActionAt,
         ),
         callbackLabel: finalState.callbackLabel || "",
-        notified: Boolean(alertDelivery.delivered),
+        notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
         remainingToday: visitorId
           ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
           : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,

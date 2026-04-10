@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works Prospector Portal</title>
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+  </head>
+  <body class="crm-login-page" data-crm-skin="intel-ops">
+    <main class="crm-login-shell">
+      <section class="crm-login-card crm-login-card--prospector">
+        <p class="crm-eyebrow">Field Team Portal</p>
+        <h1>Chicago Metal Works &amp; Fencing</h1>
+        <p class="crm-login-copy">
+          Entra al portal de prospectadores para mandar leads con fotos directo al
+          CRM del equipo de ventas.
+        </p>
+
+        <form class="crm-login-form" data-prospector-login-form>
+          <label>
+            <span>Tu nombre</span>
+            <input
+              type="text"
+              name="name"
+              placeholder="Rigo Calderon"
+              autocomplete="name"
+              required
+            />
+          </label>
+
+          <label>
+            <span>Correo</span>
+            <input
+              type="email"
+              name="email"
+              placeholder="equipo@chicagometalworksandfencing.com"
+              autocomplete="username"
+              required
+            />
+          </label>
+
+          <label>
+            <span>Password del equipo</span>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password del portal"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+
+          <button type="submit" class="crm-primary-button">
+            Entrar al portal
+          </button>
+          <p class="crm-form-result" data-prospector-login-feedback></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="/metalworks-crm/prospector-login.js"></script>
+  </body>
+</html>
