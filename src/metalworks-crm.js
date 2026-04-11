@@ -1161,16 +1161,16 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
       const missingLabel = callbackMissingFields.join(", ");
 
       return inSpanish
-        ? `Claro. Para dejar la llamada bien pedida mandame solo esto: ${missingLabel}.`
-        : `Absolutely. To save the callback request, send just these details: ${missingLabel}.`;
+        ? `Claro. Para dejar la llamada o cita bien pedida mandame solo esto: ${missingLabel}.`
+        : `Absolutely. To save the callback or appointment request, send just these details: ${missingLabel}.`;
     }
 
     const callbackLabel =
       cleanText(conversationState?.callbackLabel || "", 120) || "your requested time";
 
     return inSpanish
-      ? `Perfecto. Ya tengo tu solicitud de llamada para ${callbackLabel}. Si puedes, manda fotos y tu ZIP code para preparar mejor el seguimiento.`
-      : `Perfect. I have your callback request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
+      ? `Perfecto. Ya tengo tu solicitud para ${callbackLabel}. Si puedes, manda fotos y tu ZIP code para preparar mejor el seguimiento.`
+      : `Perfect. I have your request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
   }
 
   if (
@@ -1515,7 +1515,7 @@ function extractAssistantLocation(text = "") {
 function detectAssistantCallbackIntent(text = "") {
   const normalized = normalizeAssistantSearchText(text);
 
-  return /(?:call me|give me a call|can you call|can someone call|talk by phone|talk on the phone|phone call|schedule a call|set up a call|reach me|follow up by phone|llamame|llamarme|me pueden llamar|quiero una llamada|quiero llamada|agendar llamada|agendar una llamada|hablar por telefono|marcame)/.test(
+  return /(?:call me|give me a call|can you call|can someone call|talk by phone|talk on the phone|phone call|schedule a call|set up a call|set up an appointment|schedule an appointment|set up a visit|schedule a visit|come by|come out|site visit|estimate visit|quote visit|in person estimate|reach me|follow up by phone|llamame|llamarme|me pueden llamar|quiero una llamada|quiero llamada|agendar llamada|agendar una llamada|agendar cita|agendar una cita|agendar visita|agendar una visita|pueden venir|pueden pasar|visita para estimate|visita para cotizacion|hablar por telefono|marcame)/.test(
     normalized,
   );
 }
@@ -1596,6 +1596,7 @@ function extractAssistantPreferredTime(text = "") {
   }
 
   const timePatterns = [
+    /\b(?:at|a las|alas|sobre las|por ahi de las)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
     /\b((?:after|before|despues|antes)\s+(?:the\s+)?(?:las\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
     /\b((?:around|about|como|tipo)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i,
     /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i,
@@ -2060,8 +2061,8 @@ function buildAssistantConversationSignals({
       ? [
           !name ? "name" : "",
           !phone && !email ? "phone or email" : "",
-          !normalizedBestContactDay ? "best day to call" : "",
-          !bestContactTime ? "best time to call" : "",
+          !normalizedBestContactDay ? "best day" : "",
+          !bestContactTime ? "best time" : "",
         ].filter(Boolean)
       : [];
   const serviceSummarySource =
@@ -2080,8 +2081,8 @@ function buildAssistantConversationSignals({
     projectType ? `Service: ${projectType}.` : "",
     location ? `Location: ${location}.` : "",
     serviceSummarySource ? `Request: ${cleanText(serviceSummarySource, 320)}.` : "",
-    callbackIntent === "yes" ? "Visitor asked for a callback." : "",
-    callbackLabel ? `Best callback window: ${callbackLabel}.` : "",
+    callbackIntent === "yes" ? "Visitor asked for a call or appointment." : "",
+    callbackLabel ? `Best requested time: ${callbackLabel}.` : "",
   ]
     .filter(Boolean)
     .join(" ")
@@ -2119,9 +2120,11 @@ function buildAssistantStatePrompt(state = {}) {
   const callbackIntent = state?.callbackIntent === "yes" ? "yes" : state?.callbackIntent === "no" ? "no" : "unknown";
   const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
   const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
+  const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
 
   return `
 CALL CAPTURE STATE:
+- response_channel: ${responseChannel}
 - callback_intent: ${callbackIntent}
 - visitor_name: ${state?.name || "pending"}
 - phone: ${state?.phoneDisplay || state?.phone || "pending"}
@@ -2129,16 +2132,17 @@ CALL CAPTURE STATE:
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
 - uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
-- best_day_to_call: ${state?.bestContactDay || "pending"}
-- best_time_to_call: ${state?.bestContactTime || "pending"}
+- best_day: ${state?.bestContactDay || "pending"}
+- best_time: ${state?.bestContactTime || "pending"}
 - callback_window: ${callbackLabel}
 - missing_callback_fields: ${missingFields || "none"}
 
 INSTRUCTIONS:
+- If response_channel is whatsapp, keep replies extra short and text-message friendly.
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
-- If callback_intent is yes and contact details are already present, confirm the callback request and ask for photos or ZIP code only if still useful.
+- If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
-- Do not say the callback is booked unless the visitor actually gave a specific day and time.
+- Do not say the appointment is booked unless the visitor actually gave a specific day and time.
 - Keep replies practical, short, and contractor-like.
 `;
 }
@@ -2155,14 +2159,17 @@ function stripAssistantNotesBlock(value = "") {
 }
 
 function buildAssistantPrivateNotes(state = {}) {
+  const sourceLabel =
+    cleanText(state?.sourceLabel || "", 120) || "Agustin 2.0 website assistant";
+
   return [
-    "Source: Agustin 2.0 website assistant.",
+    `Source: ${sourceLabel}.`,
     state?.projectType ? `Project type: ${state.projectType}.` : "",
     state?.location ? `Location: ${state.location}.` : "",
     state?.photoFileCount ? `Uploaded photos: ${state.photoFileCount}.` : "",
-    state?.callbackIntent === "yes" ? "Callback requested: yes." : "",
+    state?.callbackIntent === "yes" ? "Call or appointment requested: yes." : "",
     state?.callbackIntent === "no" ? "Callback requested: no." : "",
-    state?.callbackLabel ? `Best callback window: ${state.callbackLabel}.` : "",
+    state?.callbackLabel ? `Best requested time: ${state.callbackLabel}.` : "",
     state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
   ]
     .filter(Boolean)
@@ -3329,6 +3336,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     tracking = {},
     req = null,
     assistantReply = "",
+    sourceType = "",
   } = {}) {
     if (!state?.shouldCreateLead && !currentLead?._id) {
       return null;
@@ -3370,12 +3378,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     leadDoc.status = resolveAssistantLeadStatus(currentLead, state);
     leadDoc.nextAction =
       state?.callbackIntent === "yes"
-        ? "call back from assistant chat"
+        ? "scheduled follow-up from assistant chat"
         : currentLead?.nextAction || "";
     leadDoc.nextActionAt = state?.nextActionAt || currentLead?.nextActionAt || null;
     leadDoc.privateNotes = mergeAssistantPrivateNotes(currentLead?.privateNotes || "", state);
     leadDoc.sourceType =
-      cleanText(currentLead?.sourceType || "", 80) || "assistant_chat";
+      cleanText(sourceType || currentLead?.sourceType || "", 80) || "assistant_chat";
     leadDoc.pageTitle = cleanText(pageTitle || currentLead?.pageTitle || "", 160);
     leadDoc.pagePath = cleanText(pagePath || currentLead?.pagePath || "", 240);
     leadDoc.pageUrl = cleanText(pageUrl || currentLead?.pageUrl || "", 500);
@@ -3422,6 +3430,415 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     });
     return leadDoc;
   }
+
+  function buildAssistantHintSeedLead(
+    lead = null,
+    { nameHint = "", phoneHint = "", phoneDisplayHint = "" } = {},
+  ) {
+    const baseLead =
+      lead && typeof lead.toObject === "function"
+        ? lead.toObject()
+        : lead
+          ? { ...lead }
+          : {};
+    const safeName = sanitizeAssistantStoredName(nameHint || "");
+    const safePhone = normalizePhone(phoneHint || "");
+    const safePhoneDisplay =
+      cleanText(phoneDisplayHint || phoneHint || "", 40) || safePhone;
+    const existingName = sanitizeAssistantStoredName(baseLead.fullName || "");
+    const existingPhone = normalizePhone(baseLead.phone || "");
+
+    if (
+      safeName &&
+      (!existingName || existingName === METALWORKS_ASSISTANT_PLACEHOLDER_NAME)
+    ) {
+      baseLead.fullName = safeName;
+    }
+
+    if (safePhone && !existingPhone) {
+      baseLead.phone = safePhone;
+    }
+
+    if (safePhoneDisplay && (!cleanText(baseLead.phoneDisplay || "", 40) || !existingPhone)) {
+      baseLead.phoneDisplay = safePhoneDisplay;
+    }
+
+    return baseLead;
+  }
+
+  async function buildAssistantConversationContext({
+    history = [],
+    message = "",
+    pagePath = "",
+    visitorId = "",
+    sessionId = "",
+    nameHint = "",
+    phoneHint = "",
+    phoneDisplayHint = "",
+  } = {}) {
+    let currentLead = await resolveConversationLead({
+      visitorId,
+      sessionId,
+      phone: normalizePhone(phoneHint || ""),
+    });
+    let seededLead = buildAssistantHintSeedLead(currentLead, {
+      nameHint,
+      phoneHint,
+      phoneDisplayHint,
+    });
+    let mergedHistory = mergeConversationHistory(
+      currentLead?.conversationHistory || [],
+      normalizeAssistantHistory(history),
+    );
+    let userConversationItems = buildAssistantConversationItems({
+      history: mergedHistory,
+      message,
+    });
+    let conversationState = buildAssistantConversationSignals({
+      history: userConversationItems,
+      lead: seededLead,
+      pagePath,
+    });
+    const resolvedLead = await resolveConversationLead({
+      visitorId,
+      sessionId,
+      email: conversationState.email,
+      phone: conversationState.phone || normalizePhone(phoneHint || ""),
+    });
+
+    if (
+      resolvedLead?._id &&
+      String(resolvedLead._id) !== String(currentLead?._id || "")
+    ) {
+      currentLead = resolvedLead;
+      seededLead = buildAssistantHintSeedLead(currentLead, {
+        nameHint,
+        phoneHint,
+        phoneDisplayHint,
+      });
+      mergedHistory = mergeConversationHistory(
+        currentLead?.conversationHistory || [],
+        normalizeAssistantHistory(history),
+      );
+      userConversationItems = buildAssistantConversationItems({
+        history: mergedHistory,
+        message,
+      });
+      conversationState = buildAssistantConversationSignals({
+        history: userConversationItems,
+        lead: seededLead,
+        pagePath,
+      });
+    } else if (resolvedLead?._id) {
+      currentLead = resolvedLead;
+    }
+
+    return {
+      currentLead,
+      userConversationItems,
+      conversationState,
+    };
+  }
+
+  async function processMetalworksAssistantMessage({
+    message = "",
+    visitorId = "",
+    sessionId = "",
+    pageTitle = "",
+    pagePath = "",
+    pageUrl = "",
+    referrer = "",
+    tracking = {},
+    history = [],
+    req = null,
+    nameHint = "",
+    phoneHint = "",
+    phoneDisplayHint = "",
+    sourceType = "assistant_chat",
+    sourceChannel = "web",
+    sourceLabel = "Agustin 2.0 website assistant",
+  } = {}) {
+    const safeMessage = cleanText(message || "", 500);
+    const safeVisitorId = cleanText(visitorId || "", 120);
+    const safeSessionId = cleanText(sessionId || "", 120);
+    const safePageTitle = cleanText(pageTitle || "", 160);
+    const safePagePath = cleanText(pagePath || "", 240);
+    const safePageUrl = cleanText(pageUrl || "", 500);
+    const safeReferrer = cleanText(referrer || "", 500);
+    const safeTracking = buildTrackingPayload(tracking || {});
+
+    if (!safeMessage) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Message is required.",
+      };
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const usedToday = safeVisitorId
+      ? await MetalworksLeadActivity.countDocuments({
+          activityType: "assistant_user_message",
+          createdAt: { $gte: startOfDay },
+          "meta.visitorId": safeVisitorId,
+        })
+      : 0;
+
+    if (safeVisitorId && usedToday >= METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY) {
+      return {
+        ok: false,
+        status: 429,
+        error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 773 798 4107 or try again tomorrow.`,
+      };
+    }
+
+    const {
+      currentLead,
+      userConversationItems,
+      conversationState: initialConversationState,
+    } = await buildAssistantConversationContext({
+      history,
+      message: safeMessage,
+      pagePath: safePagePath,
+      visitorId: safeVisitorId,
+      sessionId: safeSessionId,
+      nameHint,
+      phoneHint,
+      phoneDisplayHint,
+    });
+
+    let conversationState = {
+      ...initialConversationState,
+      visitorId: safeVisitorId,
+      sessionId: safeSessionId,
+      sourceChannel: cleanText(sourceChannel || "web", 40) || "web",
+      sourceLabel: cleanText(sourceLabel || "", 120) || "Agustin 2.0 website assistant",
+    };
+
+    const leadExistedBeforeMessage = Boolean(currentLead?._id);
+    const previousLeadStatus = normalizeStatus(currentLead?.status || "new");
+    const previousLeadNextActionAt = currentLead?.nextActionAt
+      ? new Date(currentLead.nextActionAt).toISOString()
+      : "";
+    let leadDoc = await upsertConversationLead({
+      currentLead,
+      state: conversationState,
+      pageTitle: safePageTitle,
+      pagePath: safePagePath,
+      pageUrl: safePageUrl,
+      referrer: safeReferrer,
+      tracking: safeTracking,
+      req,
+      sourceType,
+    });
+
+    if (!leadExistedBeforeMessage && leadDoc?._id) {
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "lead_created",
+        title: "Lead creado",
+        body:
+          conversationState.callbackIntent === "yes"
+            ? "Agustin 2.0 creo un lead conversacional para seguimiento de llamada."
+            : "Agustin 2.0 creo un lead conversacional desde el chat del sitio.",
+        meta: {
+          sourceType,
+          sourceChannel: conversationState.sourceChannel,
+          projectType: leadDoc.projectType || "",
+          location: leadDoc.location || "",
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          pageTitle: safePageTitle,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+    }
+
+    await appendActivity({
+      leadId: leadDoc?._id || currentLead?._id || null,
+      activityType: "assistant_user_message",
+      title: "Mensaje al assistant",
+      body: safeMessage,
+      meta: {
+        visitorId: safeVisitorId,
+        sessionId: safeSessionId,
+        pageTitle: safePageTitle,
+        sourceType,
+        sourceChannel: conversationState.sourceChannel,
+      },
+      req,
+      pagePath: safePagePath,
+      pageUrl: safePageUrl,
+      tracking: safeTracking,
+    });
+
+    const result = await generateAssistantReply({
+      message: safeMessage,
+      history: userConversationItems,
+      pagePath: safePagePath,
+      conversationState,
+    });
+
+    const conversationItemsWithReply = buildAssistantConversationItems({
+      history: userConversationItems,
+      reply: result.reply,
+    });
+    const finalState = {
+      ...buildAssistantConversationSignals({
+        history: conversationItemsWithReply,
+        lead: buildAssistantHintSeedLead(leadDoc || currentLead, {
+          nameHint,
+          phoneHint,
+          phoneDisplayHint,
+        }),
+        pagePath: safePagePath,
+      }),
+      visitorId: safeVisitorId,
+      sessionId: safeSessionId,
+      sourceChannel: conversationState.sourceChannel,
+      sourceLabel: conversationState.sourceLabel,
+    };
+
+    leadDoc = await upsertConversationLead({
+      currentLead: leadDoc || currentLead,
+      state: finalState,
+      pageTitle: safePageTitle,
+      pagePath: safePagePath,
+      pageUrl: safePageUrl,
+      referrer: safeReferrer,
+      tracking: safeTracking,
+      req,
+      assistantReply: result.reply,
+      sourceType,
+    });
+
+    const currentLeadNextActionAt = leadDoc?.nextActionAt
+      ? new Date(leadDoc.nextActionAt).toISOString()
+      : "";
+
+    if (
+      leadDoc?._id &&
+      finalState.callbackIntent === "yes" &&
+      finalState.nextActionAt &&
+      (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt)
+    ) {
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "assistant_booking_requested",
+        title: leadExistedBeforeMessage
+          ? "Cita del assistant actualizada"
+          : "Cita del assistant guardada",
+        body: finalState.callbackLabel
+          ? `Agustin 2.0 detecto una llamada pedida para ${finalState.callbackLabel}.`
+          : "Agustin 2.0 detecto una llamada pedida desde la conversacion.",
+        meta: {
+          duplicate: leadExistedBeforeMessage,
+          requestedAt: finalState.nextActionAt.toISOString(),
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          pageTitle: safePageTitle,
+          sourceType,
+          sourceChannel: finalState.sourceChannel,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+    }
+
+    let alertDelivery = {
+      attempted: false,
+      delivered: false,
+    };
+    let pushDelivery = {
+      attempted: false,
+      delivered: false,
+    };
+
+    if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
+      try {
+        alertDelivery = await sendMetalworksLeadAlertEmail({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType:
+            finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
+          requestedAt: finalState.nextActionAt,
+          requestedAtLabel: finalState.callbackLabel,
+          timeZone: METALWORKS_CALLBACK_TIME_ZONE,
+          pagePath: safePagePath,
+          pageUrl: safePageUrl,
+          conversationDigest: finalState.conversationDigest,
+        });
+
+        if (alertDelivery.delivered) {
+          leadDoc.callbackAlertedAt = new Date();
+          leadDoc.updatedAt = new Date();
+          await leadDoc.save();
+        }
+      } catch (error) {
+        console.error("Error sending Metal Works assistant alert:", error.message);
+      }
+
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType:
+            finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
+          requestedAtLabel: finalState.callbackLabel,
+        });
+
+        if (pushDelivery.delivered && !leadDoc.callbackAlertedAt) {
+          leadDoc.callbackAlertedAt = new Date();
+          leadDoc.updatedAt = new Date();
+          await leadDoc.save();
+        }
+      } catch (error) {
+        console.error("Error sending Metal Works assistant push:", error.message);
+      }
+    }
+
+    await appendActivity({
+      leadId: leadDoc?._id || currentLead?._id || null,
+      activityType: result.usedFallback ? "assistant_fallback" : "assistant_ai_reply",
+      title: result.usedFallback ? "Fallback del assistant" : "Respuesta del assistant",
+      body: result.reply,
+      meta: {
+        visitorId: safeVisitorId,
+        sessionId: safeSessionId,
+        reason: result.reason || "",
+        sourceType,
+        sourceChannel: finalState.sourceChannel,
+      },
+      req,
+      pagePath: safePagePath,
+      pageUrl: safePageUrl,
+      tracking: safeTracking,
+    });
+
+    return {
+      ok: true,
+      status: 200,
+      respuesta: result.reply,
+      usedFallback: result.usedFallback,
+      leadCaptured: Boolean(leadDoc?._id),
+      leadId: leadDoc?._id ? String(leadDoc._id) : "",
+      callbackCaptured: Boolean(
+        leadDoc?._id && finalState.callbackIntent === "yes" && finalState.nextActionAt,
+      ),
+      callbackLabel: finalState.callbackLabel || "",
+      notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
+      remainingToday: safeVisitorId
+        ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
+        : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+    };
+  }
+
+  app.locals.processMetalworksAssistantMessage = processMetalworksAssistantMessage;
 
   app.get(
     [
@@ -5343,268 +5760,36 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   app.post("/api/public/metalworks/assistant", async (req, res) => {
     try {
-      const message = cleanText(req.body?.message || "", 500);
-      const visitorId = cleanText(req.body?.visitorId || "", 120);
-      const sessionId = cleanText(req.body?.sessionId || "", 120);
-      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
-      const pagePath = cleanText(req.body?.pagePath || "", 240);
-      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
-      const referrer = cleanText(req.body?.referrer || "", 500);
-      const tracking = buildTrackingPayload(req.body?.tracking || {});
-      const history = normalizeAssistantHistory(req.body?.history || []);
-
-      if (!message) {
-        return respondError(res, 400, "Message is required.");
-      }
-
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const usedToday = visitorId
-        ? await MetalworksLeadActivity.countDocuments({
-            activityType: "assistant_user_message",
-            createdAt: { $gte: startOfDay },
-            "meta.visitorId": visitorId,
-          })
-        : 0;
-
-      if (visitorId && usedToday >= METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY) {
-        return res.status(429).json({
-          error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 773 798 4107 or try again tomorrow.`,
-        });
-      }
-
-      const userConversationItems = buildAssistantConversationItems({
-        history,
-        message,
-      });
-      let conversationState = buildAssistantConversationSignals({
-        history: userConversationItems,
-        pagePath,
-      });
-      let currentLead = await resolveConversationLead({
-        visitorId,
-        sessionId,
-        email: conversationState.email,
-        phone: conversationState.phone,
-      });
-
-      if (currentLead) {
-        conversationState = buildAssistantConversationSignals({
-          history: userConversationItems,
-          lead: currentLead,
-          pagePath,
-        });
-      }
-
-      conversationState = {
-        ...conversationState,
-        visitorId,
-        sessionId,
-      };
-
-      const leadExistedBeforeMessage = Boolean(currentLead?._id);
-      const previousLeadStatus = normalizeStatus(currentLead?.status || "new");
-      const previousLeadNextActionAt = currentLead?.nextActionAt
-        ? new Date(currentLead.nextActionAt).toISOString()
-        : "";
-      let leadDoc = await upsertConversationLead({
-        currentLead,
-        state: conversationState,
-        pageTitle,
-        pagePath,
-        pageUrl,
-        referrer,
-        tracking,
+      const result = await processMetalworksAssistantMessage({
+        message: req.body?.message || "",
+        visitorId: req.body?.visitorId || "",
+        sessionId: req.body?.sessionId || "",
+        pageTitle: req.body?.pageTitle || "",
+        pagePath: req.body?.pagePath || "",
+        pageUrl: req.body?.pageUrl || "",
+        referrer: req.body?.referrer || "",
+        tracking: req.body?.tracking || {},
+        history: req.body?.history || [],
         req,
+        sourceType: "assistant_chat",
+        sourceChannel: "web",
+        sourceLabel: "Agustin 2.0 website assistant",
       });
 
-      if (!leadExistedBeforeMessage && leadDoc?._id) {
-        await appendActivity({
-          leadId: leadDoc._id,
-          activityType: "lead_created",
-          title: "Lead creado",
-          body:
-            conversationState.callbackIntent === "yes"
-              ? "Agustin 2.0 creo un lead conversacional para seguimiento de llamada."
-              : "Agustin 2.0 creo un lead conversacional desde el chat del sitio.",
-          meta: {
-            sourceType: "assistant_chat",
-            projectType: leadDoc.projectType || "",
-            location: leadDoc.location || "",
-            visitorId,
-            sessionId,
-            pageTitle,
-          },
-          req,
-          pagePath,
-          pageUrl,
-          tracking,
-        });
+      if (!result.ok) {
+        return respondError(res, result.status || 500, result.error || "I could not answer right now.");
       }
-
-      await appendActivity({
-        leadId: leadDoc?._id || currentLead?._id || null,
-        activityType: "assistant_user_message",
-        title: "Mensaje al assistant",
-        body: message,
-        meta: {
-          visitorId,
-          sessionId,
-          pageTitle,
-        },
-        req,
-        pagePath,
-        pageUrl,
-        tracking,
-      });
-
-      const result = await generateAssistantReply({
-        message,
-        history: userConversationItems,
-        pagePath,
-        conversationState,
-      });
-
-      const conversationItemsWithReply = buildAssistantConversationItems({
-        history: userConversationItems,
-        reply: result.reply,
-      });
-      const finalState = {
-        ...buildAssistantConversationSignals({
-          history: conversationItemsWithReply,
-          lead: leadDoc || currentLead,
-          pagePath,
-        }),
-        visitorId,
-        sessionId,
-      };
-
-      leadDoc = await upsertConversationLead({
-        currentLead: leadDoc || currentLead,
-        state: finalState,
-        pageTitle,
-        pagePath,
-        pageUrl,
-        referrer,
-        tracking,
-        req,
-        assistantReply: result.reply,
-      });
-
-      const currentLeadNextActionAt = leadDoc?.nextActionAt
-        ? new Date(leadDoc.nextActionAt).toISOString()
-        : "";
-
-      if (
-        leadDoc?._id &&
-        finalState.callbackIntent === "yes" &&
-        finalState.nextActionAt &&
-        (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt)
-      ) {
-        await appendActivity({
-          leadId: leadDoc._id,
-          activityType: "assistant_booking_requested",
-          title: leadExistedBeforeMessage
-            ? "Cita del assistant actualizada"
-            : "Cita del assistant guardada",
-          body: finalState.callbackLabel
-            ? `Agustin 2.0 detecto una llamada pedida para ${finalState.callbackLabel}.`
-            : "Agustin 2.0 detecto una llamada pedida desde la conversacion.",
-          meta: {
-            duplicate: leadExistedBeforeMessage,
-            requestedAt: finalState.nextActionAt.toISOString(),
-            visitorId,
-            sessionId,
-            pageTitle,
-          },
-          req,
-          pagePath,
-          pageUrl,
-          tracking,
-        });
-      }
-
-      let alertDelivery = {
-        attempted: false,
-        delivered: false,
-      };
-      let pushDelivery = {
-        attempted: false,
-        delivered: false,
-      };
-
-      if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
-        try {
-          alertDelivery = await sendMetalworksLeadAlertEmail({
-            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
-            alertType:
-              finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
-            requestedAt: finalState.nextActionAt,
-            requestedAtLabel: finalState.callbackLabel,
-            timeZone: METALWORKS_CALLBACK_TIME_ZONE,
-            pagePath,
-            pageUrl,
-            conversationDigest: finalState.conversationDigest,
-          });
-
-          if (alertDelivery.delivered) {
-            leadDoc.callbackAlertedAt = new Date();
-            leadDoc.updatedAt = new Date();
-            await leadDoc.save();
-          }
-        } catch (error) {
-          console.error("Error sending Metal Works assistant alert:", error.message);
-        }
-
-        try {
-          pushDelivery = await sendMetalworksPushAlert({
-            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
-            alertType:
-              finalState.callbackIntent === "yes" ? "assistant_callback" : "assistant_lead",
-            requestedAtLabel: finalState.callbackLabel,
-          });
-
-          if (pushDelivery.delivered && !leadDoc.callbackAlertedAt) {
-            leadDoc.callbackAlertedAt = new Date();
-            leadDoc.updatedAt = new Date();
-            await leadDoc.save();
-          }
-        } catch (error) {
-          console.error("Error sending Metal Works assistant push:", error.message);
-        }
-      }
-
-      await appendActivity({
-        leadId: leadDoc?._id || currentLead?._id || null,
-        activityType: result.usedFallback ? "assistant_fallback" : "assistant_ai_reply",
-        title: result.usedFallback ? "Fallback del assistant" : "Respuesta del assistant",
-        body: result.reply,
-        meta: {
-          visitorId,
-          sessionId,
-          reason: result.reason || "",
-        },
-        req,
-        pagePath,
-        pageUrl,
-        tracking,
-      });
 
       res.json({
         ok: true,
-        respuesta: result.reply,
+        respuesta: result.respuesta,
         usedFallback: result.usedFallback,
-        leadCaptured: Boolean(leadDoc?._id),
-        leadId: leadDoc?._id ? String(leadDoc._id) : "",
-        callbackCaptured: Boolean(
-          leadDoc?._id && finalState.callbackIntent === "yes" && finalState.nextActionAt,
-        ),
-        callbackLabel: finalState.callbackLabel || "",
-        notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
-        remainingToday: visitorId
-          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
-          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+        leadCaptured: result.leadCaptured,
+        leadId: result.leadId,
+        callbackCaptured: result.callbackCaptured,
+        callbackLabel: result.callbackLabel,
+        notified: result.notified,
+        remainingToday: result.remainingToday,
       });
     } catch (error) {
       console.error("Error in Metal Works assistant:", error.message);

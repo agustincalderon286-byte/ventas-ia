@@ -55,6 +55,11 @@ const TWILIO_ACCOUNT_SID = String(process.env.TWILIO_ACCOUNT_SID || "").trim();
 const TWILIO_AUTH_TOKEN = String(process.env.TWILIO_AUTH_TOKEN || "").trim();
 const TWILIO_WHATSAPP_ENABLED = String(process.env.TWILIO_WHATSAPP_ENABLED || "").toLowerCase() === "true";
 const TWILIO_WHATSAPP_WEBHOOK_TOKEN = String(process.env.TWILIO_WHATSAPP_WEBHOOK_TOKEN || "").trim();
+const TWILIO_WHATSAPP_MODE = ["chef", "metalworks"].includes(
+  String(process.env.TWILIO_WHATSAPP_MODE || "metalworks").trim().toLowerCase(),
+)
+  ? String(process.env.TWILIO_WHATSAPP_MODE || "metalworks").trim().toLowerCase()
+  : "metalworks";
 const TWILIO_SMS_ENABLED = String(process.env.TWILIO_SMS_ENABLED || "").toLowerCase() === "true";
 const TWILIO_SMS_WEBHOOK_TOKEN = String(process.env.TWILIO_SMS_WEBHOOK_TOKEN || "").trim();
 const TWILIO_SMS_AI_REPLY_ENABLED = String(process.env.TWILIO_SMS_AI_REPLY_ENABLED || "").toLowerCase() === "true";
@@ -31623,7 +31628,7 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
 app.get("/webhooks/twilio/whatsapp", (req, res) => {
   res.json({
     ok: true,
-    mode: "chef",
+    mode: TWILIO_WHATSAPP_MODE,
     sandboxEnabled: TWILIO_WHATSAPP_ENABLED,
     webhookPath: "/webhooks/twilio/whatsapp",
     tokenRequired: Boolean(TWILIO_WHATSAPP_WEBHOOK_TOKEN)
@@ -31647,6 +31652,65 @@ app.post("/webhooks/twilio/whatsapp", express.urlencoded({ extended: false }), a
   const fromRaw = cleanText(req.body?.From || "");
   const phone = normalizePhone(req.body?.WaId || fromRaw);
   const profileName = cleanText(req.body?.ProfileName || "");
+
+  if (TWILIO_WHATSAPP_MODE === "metalworks") {
+    if (!body) {
+      return res
+        .type("text/xml")
+        .send(construirTwilioMessageResponse("I received a blank message. Send a short note about the job or the callback you need."));
+    }
+
+    if (!phone) {
+      return res
+        .type("text/xml")
+        .send(construirTwilioMessageResponse("I could not identify your WhatsApp number. Please send your message again."));
+    }
+
+    try {
+      const ownerScope = "metalworks";
+      const sessionId = construirCanalSessionId("whatsapp", phone, ownerScope);
+      const visitorId = construirCanalVisitorId("whatsapp", phone, ownerScope);
+      const processMetalworksAssistantMessage = app.locals.processMetalworksAssistantMessage;
+
+      if (typeof processMetalworksAssistantMessage !== "function") {
+        throw new Error("Metal Works WhatsApp processor unavailable.");
+      }
+
+      const resultado = await processMetalworksAssistantMessage({
+        message: body,
+        visitorId,
+        sessionId,
+        pageTitle: "Twilio WhatsApp inbound",
+        pagePath: "/whatsapp",
+        pageUrl: "whatsapp://twilio/inbound",
+        referrer: "",
+        tracking: {
+          source: "whatsapp",
+          medium: "twilio",
+        },
+        history: [],
+        req,
+        nameHint: profileName,
+        phoneHint: phone,
+        phoneDisplayHint: phone,
+        sourceType: "assistant_whatsapp",
+        sourceChannel: "whatsapp",
+        sourceLabel: "Agustin 2.0 WhatsApp assistant",
+      });
+
+      const mensaje = resultado.ok
+        ? resultado.respuesta
+        : resultado.error || "I could not respond right now.";
+
+      return res.type("text/xml").send(construirTwilioMessageResponse(mensaje));
+    } catch (error) {
+      console.error("Error resolviendo contexto de WhatsApp Metal Works:", error.message);
+      return res
+        .type("text/xml")
+        .send(construirTwilioMessageResponse("I could not respond right now. Please call 773 798 4107."));
+    }
+  }
+
   let matchedLead = null;
   let leadChefContext = null;
   let ownerUserId = "";
