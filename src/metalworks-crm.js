@@ -1198,6 +1198,16 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
       : "If the metalwork is loose, unsafe, or urgent, call 773 798 4107 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
   }
 
+  const hotLeadReply = buildAssistantHotLeadReply({
+    bucket: serviceBucket,
+    state: conversationState,
+    inSpanish,
+  });
+
+  if (hotLeadReply) {
+    return hotLeadReply;
+  }
+
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
     const quoteReply = buildAssistantServiceQuoteReply({
       bucket: serviceBucket,
@@ -1271,6 +1281,60 @@ function buildAssistantServiceQuoteReply({
   }
 
   return "";
+}
+
+function buildAssistantHotLeadReply({
+  bucket = "",
+  state = null,
+  inSpanish = false,
+} = {}) {
+  if (cleanText(state?.leadTemperature || "", 20) !== "hot") {
+    return "";
+  }
+
+  if (state?.callbackIntent === "yes" || state?.callbackIntent === "no") {
+    return "";
+  }
+
+  const hasLocation = Boolean(cleanText(state?.location || "", 160));
+  const hasDetail = assistantServiceHasSpecificDetail(
+    bucket,
+    [state?.detailsSummary || "", state?.latestUserMessage || ""].join(" "),
+  );
+
+  if (!hasLocation) {
+    return inSpanish
+      ? "Perfecto. Te ayudo a moverlo rapido. Que ZIP code o area es el trabajo?"
+      : "Perfect. I can help move this fast. What ZIP code or area is the job in?";
+  }
+
+  if (bucket === "gate" && !hasDetail) {
+    return inSpanish
+      ? "Perfecto. Cual es el problema principal del porton para mover esto rapido?"
+      : "Perfect. What is the main gate issue so we can move this faster?";
+  }
+
+  if (bucket === "railing" && !hasDetail) {
+    return inSpanish
+      ? "Perfecto. Es para porch, stairs, balcony, o otra area?"
+      : "Perfect. Is it for porch steps, stairs, a balcony, or another area?";
+  }
+
+  if (bucket === "fence" && !hasDetail) {
+    return inSpanish
+      ? "Perfecto. Es una sola seccion dañada o una corrida mas grande?"
+      : "Perfect. Is it one damaged section or a larger run?";
+  }
+
+  if (bucket === "welding" && !hasDetail) {
+    return inSpanish
+      ? "Perfecto. Que pieza ocupa soldadura y sigue instalada o esta suelta?"
+      : "Perfect. What piece needs welding, and is it still installed or already loose?";
+  }
+
+  return inSpanish
+    ? "Perfecto. Podemos mover esto rapido. Prefieres llamada o visita para estimate?"
+    : "Perfect. We can move this fast. Would you like a callback or a site visit?";
 }
 
 function buildAssistantServiceIntakeReply({
@@ -1584,6 +1648,48 @@ function assistantServiceHasSpecificDetail(bucket = "", value = "") {
   return false;
 }
 
+function detectAssistantBuyingIntent(text = "") {
+  const normalized = normalizeAssistantSearchText(text);
+
+  if (!normalized) {
+    return false;
+  }
+
+  return /(?:ready to move forward|ready to start|ready to book|want to book|want to schedule|need to schedule|want this fixed|need this fixed|need this done|need someone out|need somebody out|can you come|can someone come|can somebody come|when can you come|when can someone come|when are you available|availability|are you available|stop by|send someone|come tomorrow|come this week|next week works|this week works|want a site visit|need a site visit|in person estimate|i want to hire|quiero avanzar|listo para avanzar|listo para empezar|quiero agendar|quiero visita|necesito que vengan|pueden venir|cuando pueden venir|cuando estan disponibles|manden a alguien|quiero contratar)/.test(
+    normalized,
+  );
+}
+
+function resolveAssistantLeadTemperature({
+  callbackIntent = "",
+  buyingIntent = false,
+  serviceBucket = "",
+  location = "",
+  detailsSummary = "",
+  latestUserMessage = "",
+  photoFileCount = 0,
+} = {}) {
+  const hasLocation = Boolean(cleanText(location || "", 160));
+  const combinedDetails = [detailsSummary, latestUserMessage].filter(Boolean).join(" ");
+  const hasServiceDetail =
+    assistantServiceHasSpecificDetail(serviceBucket, combinedDetails) ||
+    Boolean(cleanText(detailsSummary || "", 120));
+
+  if (callbackIntent === "yes") {
+    return "hot";
+  }
+
+  if (buyingIntent && (hasLocation || hasServiceDetail || Number(photoFileCount || 0) > 0)) {
+    return "hot";
+  }
+
+  if (buyingIntent || (serviceBucket && (hasLocation || hasServiceDetail || Number(photoFileCount || 0) > 0))) {
+    return "warm";
+  }
+
+  return "cold";
+}
+
 function selectAssistantText(...values) {
   for (const value of values) {
     const safeValue = cleanText(value || "", 160);
@@ -1780,7 +1886,7 @@ function extractAssistantLocation(text = "") {
 function detectAssistantCallbackIntent(text = "") {
   const normalized = normalizeAssistantSearchText(text);
 
-  return /(?:call me|give me a call|can you call|can someone call|talk by phone|talk on the phone|phone call|schedule a call|set up a call|set up an appointment|schedule an appointment|set up a visit|schedule a visit|come by|come out|site visit|estimate visit|quote visit|in person estimate|reach me|follow up by phone|llamame|llamarme|me pueden llamar|quiero una llamada|quiero llamada|agendar llamada|agendar una llamada|agendar cita|agendar una cita|agendar visita|agendar una visita|pueden venir|pueden pasar|visita para estimate|visita para cotizacion|hablar por telefono|marcame)/.test(
+  return /(?:call me|give me a call|can you call|can someone call|talk by phone|talk on the phone|phone call|schedule a call|set up a call|set up an appointment|schedule an appointment|set up a visit|schedule a visit|come by|come out|when can you come|when are you available|availability|stop by|send someone|site visit|estimate visit|quote visit|in person estimate|reach me|follow up by phone|llamame|llamarme|me pueden llamar|quiero una llamada|quiero llamada|agendar llamada|agendar una llamada|agendar cita|agendar una cita|agendar visita|agendar una visita|pueden venir|pueden pasar|cuando pueden venir|cuando estan disponibles|manden a alguien|visita para estimate|visita para cotizacion|hablar por telefono|marcame)/.test(
     normalized,
   );
 }
@@ -2353,6 +2459,25 @@ function buildAssistantConversationSignals({
     .join(" ")
     .trim()
     .slice(0, 1500);
+  const serviceBucket = inferAssistantServiceBucket({
+    message: combinedUserText || latestUserMessage,
+    state: {
+      projectType,
+      detailsSummary,
+      latestUserMessage,
+    },
+    pagePath,
+  });
+  const buyingIntent = detectAssistantBuyingIntent(combinedUserText || latestUserMessage);
+  const leadTemperature = resolveAssistantLeadTemperature({
+    callbackIntent,
+    buyingIntent,
+    serviceBucket,
+    location,
+    detailsSummary,
+    latestUserMessage,
+    photoFileCount,
+  });
   const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
 
   return {
@@ -2373,6 +2498,9 @@ function buildAssistantConversationSignals({
     callbackMissingFields,
     nextActionAt,
     callbackLabel,
+    serviceBucket,
+    buyingIntent,
+    leadTemperature,
     detailsSummary,
     photoFileCount,
     shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
@@ -2386,10 +2514,16 @@ function buildAssistantStatePrompt(state = {}) {
   const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
   const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
   const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
+  const leadTemperature = cleanText(state?.leadTemperature || "cold", 20) || "cold";
+  const serviceBucket = cleanText(state?.serviceBucket || "general", 40) || "general";
+  const buyingIntent = state?.buyingIntent ? "yes" : "no";
 
   return `
 CALL CAPTURE STATE:
 - response_channel: ${responseChannel}
+- lead_temperature: ${leadTemperature}
+- buying_intent: ${buyingIntent}
+- service_bucket: ${serviceBucket}
 - callback_intent: ${callbackIntent}
 - visitor_name: ${state?.name || "pending"}
 - phone: ${state?.phoneDisplay || state?.phone || "pending"}
@@ -2404,6 +2538,8 @@ CALL CAPTURE STATE:
 
 INSTRUCTIONS:
 - If response_channel is whatsapp, keep replies extra short and text-message friendly.
+- If lead_temperature is hot, stop educating and move directly toward a callback or site visit.
+- If lead_temperature is hot and callback_intent is still unknown, ask for the next booking step instead of giving a long explanation.
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
@@ -2429,6 +2565,8 @@ function buildAssistantPrivateNotes(state = {}) {
 
   return [
     `Source: ${sourceLabel}.`,
+    state?.leadTemperature ? `Lead temperature: ${state.leadTemperature}.` : "",
+    state?.buyingIntent ? "Buying intent detected: yes." : "",
     state?.projectType ? `Project type: ${state.projectType}.` : "",
     state?.location ? `Location: ${state.location}.` : "",
     state?.photoFileCount ? `Uploaded photos: ${state.photoFileCount}.` : "",
