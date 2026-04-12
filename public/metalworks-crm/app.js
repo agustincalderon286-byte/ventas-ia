@@ -879,7 +879,7 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
     {
       label: "Leads totales",
       value: summary.totalLeads || 0,
-      note: `${summary.newLeads || 0} nuevos`,
+      note: `${summary.newLeads || 0} nuevos · ${summary.newApplicants || 0} candidatos`,
     },
     {
       label: "Seguimiento activo",
@@ -894,7 +894,7 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
     {
       label: "Ganados",
       value: summary.wonLeads || 0,
-      note: `${summary.lostLeads || 0} perdidos`,
+      note: `${summary.lostLeads || 0} perdidos · ${summary.totalApplicants || 0} candidatos`,
     },
   ];
 
