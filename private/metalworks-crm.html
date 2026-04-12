@@ -34,7 +34,7 @@
 
       <section class="crm-toolbar">
         <label class="crm-search">
-          <span>Buscar</span>
+          <span data-crm-search-label>Buscar</span>
           <input
             type="search"
             placeholder="Nombre, telefono, servicio o direccion"
@@ -43,14 +43,14 @@
         </label>
 
         <label>
-          <span>Status</span>
+          <span data-crm-status-label>Status</span>
           <select data-crm-status-filter>
             <option value="">Todos</option>
           </select>
         </label>
 
         <label>
-          <span>Servicio</span>
+          <span data-crm-service-label>Servicio</span>
           <select data-crm-service-filter>
             <option value="">Todos</option>
           </select>
@@ -59,9 +59,29 @@
 
       <main class="crm-main-grid">
         <section class="crm-panel crm-leads-panel">
-          <div class="crm-panel-head">
-            <h2>Leads</h2>
-            <p data-crm-leads-count>0 leads</p>
+          <div class="crm-panel-head crm-panel-head-stack">
+            <div>
+              <h2 data-crm-collection-title>Leads</h2>
+              <p data-crm-collection-count>0 leads</p>
+            </div>
+            <div class="crm-view-toggle" data-crm-view-toggle>
+              <button
+                type="button"
+                class="crm-tab-button is-active"
+                data-crm-view-button="leads"
+                aria-pressed="true"
+              >
+                Leads
+              </button>
+              <button
+                type="button"
+                class="crm-tab-button"
+                data-crm-view-button="applicants"
+                aria-pressed="false"
+              >
+                Applicants
+              </button>
+            </div>
           </div>
           <div class="crm-lead-list" data-crm-lead-list></div>
           <p class="crm-empty-state" data-crm-empty-state hidden>
@@ -71,7 +91,7 @@
 
         <section class="crm-panel crm-detail-panel">
           <div class="crm-panel-head">
-            <h2>Detalle del lead</h2>
+            <h2 data-crm-detail-title>Detalle del lead</h2>
             <p data-crm-detail-status>Selecciona un lead</p>
           </div>
 
@@ -104,10 +124,10 @@
                   Send Estimate
                 </button>
                 <button type="button" class="crm-secondary-button" data-crm-open-email-draft>
-                  Open Email Draft
+                  Open Estimate Draft
                 </button>
                 <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
-                  Copy Estimate
+                  Copy Estimate Text
                 </button>
               </div>
               <p class="crm-form-result crm-action-feedback" data-crm-action-feedback></p>
@@ -185,8 +205,30 @@
                   ></textarea>
                 </label>
 
+                <div class="crm-field-full crm-composer-card">
+                  <div class="crm-composer-head">
+                    <div>
+                      <strong>Client Estimate / Invoice</strong>
+                      <p>Esto es lo que ve el cliente por email o para copy/paste. El breakdown interno no se manda.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <label>
-                  <span>Estimate total</span>
+                  <span>Document type</span>
+                  <select name="clientDocumentType">
+                    <option value="estimate">Estimate</option>
+                    <option value="invoice">Invoice</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Work date</span>
+                  <input type="date" name="clientDocumentWorkDate" />
+                </label>
+
+                <label>
+                  <span>Client total</span>
                   <input
                     type="number"
                     name="estimateAmount"
@@ -197,7 +239,7 @@
                 </label>
 
                 <label class="crm-field-full">
-                  <span>Estimate title</span>
+                  <span>Internal reference title</span>
                   <input
                     type="text"
                     name="estimateTitle"
@@ -207,13 +249,40 @@
                 </label>
 
                 <label class="crm-field-full">
-                  <span>Estimate scope</span>
+                  <span>Work description for client</span>
+                  <textarea
+                    name="clientDocumentDescription"
+                    rows="5"
+                    placeholder="Describe claramente lo que se va a hacer, sin desglose interno. Ej. We will repair and reweld the damaged front gate, align the frame, grind rough welds, prep the repaired area, and leave it ready for safe daily use."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Warranty / guarantee for client</span>
+                  <textarea
+                    name="clientDocumentWarranty"
+                    rows="4"
+                    placeholder="Ej. Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and exclusions follow the written agreement for this job."
+                  ></textarea>
+                </label>
+
+                <label class="crm-field-full">
+                  <span>Internal scope notes</span>
                   <textarea
                     name="estimateScope"
                     rows="4"
-                    placeholder="Describe el trabajo: rust removal, handrail repair, prep, primer, top coat, welding, etc."
+                    placeholder="Notas internas para ti: rust removal, handrail repair, prep, primer, top coat, welding, etc."
                   ></textarea>
                 </label>
+
+                <div class="crm-field-full crm-composer-card crm-composer-card-subtle">
+                  <div class="crm-composer-head">
+                    <div>
+                      <strong>Internal Cost Breakdown</strong>
+                      <p>Solo para uso interno. Esto no se incluye en el estimate/invoice del cliente.</p>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="crm-field-full crm-estimate-grid">
                   <label>
@@ -243,11 +312,11 @@
                 </div>
 
                 <label class="crm-field-full">
-                  <span>Estimate notes / exclusions</span>
+                  <span>Internal notes / exclusions</span>
                   <textarea
                     name="estimateNotes"
                     rows="4"
-                    placeholder="Ej. Price does not include permit fees, hidden structural damage, or concrete work."
+                    placeholder="Notas internas: permit fees, hidden structural damage, concrete work, exclusions, reminders, etc."
                   ></textarea>
                 </label>
 
@@ -292,6 +361,52 @@
                 <p>Timeline de este cliente</p>
               </div>
               <div class="crm-activity-list" data-crm-activity-list></div>
+            </section>
+          </div>
+
+          <div class="crm-detail-wrap" data-crm-applicant-detail-wrap hidden>
+            <div class="crm-detail-tabs" data-crm-applicant-detail-tabs>
+              <button type="button" class="crm-tab-button is-active" data-crm-applicant-detail-tab="profile">
+                Perfil
+              </button>
+              <button type="button" class="crm-tab-button" data-crm-applicant-detail-tab="conversation">
+                Conversacion
+              </button>
+              <button type="button" class="crm-tab-button" data-crm-applicant-detail-tab="timeline">
+                Timeline
+              </button>
+            </div>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="profile">
+              <div class="crm-detail-meta" data-crm-applicant-meta></div>
+              <div class="crm-quick-actions">
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-call-link hidden>
+                  Call
+                </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-text-link hidden>
+                  Text
+                </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-email-link hidden>
+                  Email
+                </a>
+              </div>
+              <section class="crm-intake-card" data-crm-applicant-profile-card></section>
+            </section>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="conversation" hidden>
+              <div class="crm-panel-head tight">
+                <h3>Conversacion completa</h3>
+                <p data-crm-applicant-conversation-summary>Sin transcript guardado.</p>
+              </div>
+              <div class="crm-conversation-thread" data-crm-applicant-conversation-thread></div>
+            </section>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="timeline" hidden>
+              <div class="crm-panel-head tight">
+                <h3>Actividad reciente</h3>
+                <p>Timeline de este candidato</p>
+              </div>
+              <div class="crm-activity-list" data-crm-applicant-activity-list></div>
             </section>
           </div>
 
