@@ -91,6 +91,12 @@ const METALWORKS_CRM_STATUS_OPTIONS = [
   "lost",
   "archived",
 ];
+const METALWORKS_APPLICANT_STATUS_OPTIONS = [
+  "new",
+  "interview_requested",
+  "interview_scheduled",
+  "archived",
+];
 const METALWORKS_CRM_PUBLIC_EVENT_TYPES = new Set([
   "phone_click",
   "email_click",
@@ -339,6 +345,11 @@ function getMetalworksCrmProfile(email = "") {
 function normalizeStatus(value = "") {
   const status = cleanText(value).toLowerCase();
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
+}
+
+function normalizeApplicantStatus(value = "") {
+  const status = cleanText(value || "", 40).toLowerCase();
+  return METALWORKS_APPLICANT_STATUS_OPTIONS.includes(status) ? status : "new";
 }
 
 function normalizeClientDocumentType(value = "") {
@@ -1355,7 +1366,7 @@ function labelStatus(status = "") {
 }
 
 function labelApplicantStatus(status = "") {
-  const normalized = cleanText(status || "", 40).toLowerCase();
+  const normalized = normalizeApplicantStatus(status);
   const labels = {
     new: "Nuevo candidato",
     interview_requested: "Entrevista pedida",
@@ -3104,6 +3115,32 @@ function mergeApplicantPrivateNotes(existingNotes = "", state = {}) {
     .slice(0, 4000);
 }
 
+function buildApplicantPrivateNotesSeed(applicant = null) {
+  if (!applicant) {
+    return {};
+  }
+
+  const interviewLabel = [
+    cleanText(applicant.bestInterviewDay || "", 80),
+    cleanText(applicant.bestInterviewTime || "", 80),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return {
+    sourceLabel: cleanText(applicant.sourceLabel || "", 120),
+    positionApplied: cleanText(applicant.positionApplied || "", 120),
+    languages: cleanText(applicant.languages || "", 160),
+    yearsExperience: cleanText(applicant.yearsExperience || "", 80),
+    experienceSummary: cleanText(applicant.experienceSummary || "", 1600),
+    hasTools: cleanText(applicant.hasTools || "", 40),
+    hasTransportation: cleanText(applicant.hasTransportation || "", 40),
+    fieldReady: cleanText(applicant.fieldReady || "", 40),
+    interviewLabel,
+    detailsSummary: cleanText(applicant.detailsSummary || "", 800),
+  };
+}
+
 function sanitizeLeadAssetFileName(value = "", fallbackName = "project-photo.jpg") {
   const rawName = String(value || "").trim();
   const sanitized = rawName
@@ -3631,7 +3668,9 @@ function cleanApplicant(doc = null, { includeConversation = false } = {}) {
     hasTransportation: doc.hasTransportation || "",
     fieldReady: doc.fieldReady || "",
     location: doc.location || "",
-    status: cleanText(doc.status || "new", 40).toLowerCase() || "new",
+    bestInterviewDay: doc.bestInterviewDay || "",
+    bestInterviewTime: doc.bestInterviewTime || "",
+    status: normalizeApplicantStatus(doc.status || "new"),
     statusLabel: labelApplicantStatus(doc.status || "new"),
     nextAction: doc.nextAction || "",
     nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
@@ -7393,6 +7432,282 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error loading Metal Works applicant detail:", error.message);
       respondError(res, 500, "No pude cargar ese candidato.");
+    }
+  });
+
+  app.patch("/api/metalworks-crm/applicants/:applicantId", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const applicantId = String(req.params?.applicantId || "").trim();
+
+    if (!applicantId || !mongoose.Types.ObjectId.isValid(applicantId)) {
+      return respondError(res, 400, "Candidato invalido.");
+    }
+
+    try {
+      const applicantDoc = await MetalworksApplicant.findById(applicantId);
+
+      if (!applicantDoc) {
+        return respondError(res, 404, "No encontre ese candidato.");
+      }
+
+      const changes = [];
+      const fullName = Object.prototype.hasOwnProperty.call(req.body || {}, "fullName")
+        ? cleanText(req.body?.fullName || "", 120)
+        : null;
+      const phoneDisplayRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "phoneDisplay")
+        ? cleanText(req.body?.phoneDisplay || "", 40)
+        : null;
+      const phone = phoneDisplayRaw !== null ? normalizePhone(phoneDisplayRaw) : null;
+      const email = Object.prototype.hasOwnProperty.call(req.body || {}, "email")
+        ? normalizeEmail(req.body?.email || "")
+        : null;
+      const positionApplied = Object.prototype.hasOwnProperty.call(req.body || {}, "positionApplied")
+        ? cleanText(req.body?.positionApplied || "", 120)
+        : null;
+      const languages = Object.prototype.hasOwnProperty.call(req.body || {}, "languages")
+        ? cleanText(req.body?.languages || "", 160)
+        : null;
+      const yearsExperience = Object.prototype.hasOwnProperty.call(req.body || {}, "yearsExperience")
+        ? cleanText(req.body?.yearsExperience || "", 80)
+        : null;
+      const experienceSummary = Object.prototype.hasOwnProperty.call(req.body || {}, "experienceSummary")
+        ? cleanText(req.body?.experienceSummary || "", 2400)
+        : null;
+      const hasTools = Object.prototype.hasOwnProperty.call(req.body || {}, "hasTools")
+        ? normalizeApplicantYesNo(req.body?.hasTools || "") || cleanText(req.body?.hasTools || "", 40)
+        : null;
+      const hasTransportation = Object.prototype.hasOwnProperty.call(req.body || {}, "hasTransportation")
+        ? normalizeApplicantYesNo(req.body?.hasTransportation || "") ||
+          cleanText(req.body?.hasTransportation || "", 40)
+        : null;
+      const fieldReady = Object.prototype.hasOwnProperty.call(req.body || {}, "fieldReady")
+        ? normalizeApplicantYesNo(req.body?.fieldReady || "") || cleanText(req.body?.fieldReady || "", 40)
+        : null;
+      const location = Object.prototype.hasOwnProperty.call(req.body || {}, "location")
+        ? cleanText(req.body?.location || "", 160)
+        : null;
+      const bestInterviewDay = Object.prototype.hasOwnProperty.call(req.body || {}, "bestInterviewDay")
+        ? cleanText(req.body?.bestInterviewDay || "", 80)
+        : null;
+      const bestInterviewTime = Object.prototype.hasOwnProperty.call(req.body || {}, "bestInterviewTime")
+        ? cleanText(req.body?.bestInterviewTime || "", 80)
+        : null;
+      const nextStatus = Object.prototype.hasOwnProperty.call(req.body || {}, "status")
+        ? normalizeApplicantStatus(req.body?.status || "new")
+        : null;
+      const nextAction = Object.prototype.hasOwnProperty.call(req.body || {}, "nextAction")
+        ? cleanText(req.body?.nextAction || "", 160)
+        : null;
+      const nextActionAtRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "nextActionAt")
+        ? String(req.body?.nextActionAt || "").trim()
+        : null;
+      const nextActionAt = nextActionAtRaw
+        ? new Date(nextActionAtRaw)
+        : nextActionAtRaw === ""
+          ? null
+          : undefined;
+      const privateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "privateNotes")
+        ? cleanText(stripApplicantNotesBlock(req.body?.privateNotes || ""), 4000)
+        : null;
+      const note = cleanText(req.body?.note || "", 600);
+      let profileChanged = false;
+      let notesChanged = false;
+      let privateNotesSeedChanged = false;
+
+      if (fullName !== null) {
+        const nextFullName =
+          fullName ||
+          sanitizeAssistantStoredName(applicantDoc.fullName || "") ||
+          METALWORKS_APPLICANT_PLACEHOLDER_NAME;
+
+        if (applicantDoc.fullName !== nextFullName) {
+          applicantDoc.fullName = nextFullName;
+          profileChanged = true;
+        }
+      }
+
+      if (phoneDisplayRaw !== null) {
+        const nextPhoneDisplay = phoneDisplayRaw || "";
+
+        if (applicantDoc.phone !== phone || applicantDoc.phoneDisplay !== nextPhoneDisplay) {
+          applicantDoc.phone = phone || "";
+          applicantDoc.phoneDisplay = nextPhoneDisplay;
+          profileChanged = true;
+        }
+      }
+
+      if (email !== null && applicantDoc.email !== email) {
+        applicantDoc.email = email;
+        profileChanged = true;
+      }
+
+      if (positionApplied !== null && applicantDoc.positionApplied !== positionApplied) {
+        applicantDoc.positionApplied = positionApplied;
+        const inferredRoleTrack = inferApplicantRoleTrack(positionApplied);
+        if (inferredRoleTrack && applicantDoc.roleTrack !== inferredRoleTrack) {
+          applicantDoc.roleTrack = inferredRoleTrack;
+        }
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (languages !== null && applicantDoc.languages !== languages) {
+        applicantDoc.languages = languages;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (yearsExperience !== null && applicantDoc.yearsExperience !== yearsExperience) {
+        applicantDoc.yearsExperience = yearsExperience;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (experienceSummary !== null && applicantDoc.experienceSummary !== experienceSummary) {
+        applicantDoc.experienceSummary = experienceSummary;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (hasTools !== null && applicantDoc.hasTools !== hasTools) {
+        applicantDoc.hasTools = hasTools;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (hasTransportation !== null && applicantDoc.hasTransportation !== hasTransportation) {
+        applicantDoc.hasTransportation = hasTransportation;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (fieldReady !== null && applicantDoc.fieldReady !== fieldReady) {
+        applicantDoc.fieldReady = fieldReady;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (location !== null && applicantDoc.location !== location) {
+        applicantDoc.location = location;
+        profileChanged = true;
+      }
+
+      if (bestInterviewDay !== null && applicantDoc.bestInterviewDay !== bestInterviewDay) {
+        applicantDoc.bestInterviewDay = bestInterviewDay;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      if (bestInterviewTime !== null && applicantDoc.bestInterviewTime !== bestInterviewTime) {
+        applicantDoc.bestInterviewTime = bestInterviewTime;
+        profileChanged = true;
+        privateNotesSeedChanged = true;
+      }
+
+      const currentStatus = normalizeApplicantStatus(applicantDoc.status || "new");
+      if (nextStatus && currentStatus !== nextStatus) {
+        changes.push(
+          `Estado: ${labelApplicantStatus(currentStatus)} -> ${labelApplicantStatus(nextStatus)}`,
+        );
+        applicantDoc.status = nextStatus;
+      }
+
+      if (nextAction !== null && applicantDoc.nextAction !== nextAction) {
+        changes.push(`Proxima accion: ${nextAction || "Sin accion"}`);
+        applicantDoc.nextAction = nextAction;
+      }
+
+      if (nextActionAt !== undefined && String(applicantDoc.nextActionAt || "") !== String(nextActionAt || "")) {
+        changes.push(
+          `Seguimiento: ${
+            nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
+              ? nextActionAt.toLocaleString("en-US")
+              : "Sin fecha"
+          }`,
+        );
+        applicantDoc.nextActionAt =
+          nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
+            ? nextActionAt
+            : null;
+      }
+
+      if (privateNotes !== null || privateNotesSeedChanged) {
+        const manualNotes =
+          privateNotes !== null
+            ? privateNotes
+            : stripApplicantNotesBlock(applicantDoc.privateNotes || "");
+        const mergedPrivateNotes = mergeApplicantPrivateNotes(
+          manualNotes,
+          buildApplicantPrivateNotesSeed(applicantDoc),
+        );
+
+        if (applicantDoc.privateNotes !== mergedPrivateNotes) {
+          applicantDoc.privateNotes = mergedPrivateNotes;
+          notesChanged = true;
+        }
+      }
+
+      if (profileChanged) {
+        changes.push("Perfil del candidato actualizado");
+      }
+
+      if (notesChanged) {
+        changes.push("Notas privadas actualizadas");
+      }
+
+      if (changes.length || note) {
+        applicantDoc.lastContactAt = new Date();
+      }
+
+      applicantDoc.updatedAt = new Date();
+      await applicantDoc.save();
+
+      if (changes.length) {
+        await appendActivity({
+          applicantId: applicantDoc._id,
+          activityType: "job_applicant_updated",
+          title: "Candidato actualizado",
+          body: changes.join(". "),
+          meta: {
+            adminEmail: auth.email,
+          },
+          req,
+        });
+      }
+
+      if (note) {
+        await appendActivity({
+          applicantId: applicantDoc._id,
+          activityType: "note_added",
+          title: "Nota privada del candidato",
+          body: note,
+          meta: {
+            adminEmail: auth.email,
+          },
+          req,
+        });
+      }
+
+      const [updatedApplicant, activityDocs] = await Promise.all([
+        MetalworksApplicant.findById(applicantId).lean(),
+        MetalworksLeadActivity.find({ applicantId })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+      ]);
+
+      res.json({
+        applicant: cleanApplicant(updatedApplicant, { includeConversation: true }),
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error updating Metal Works applicant:", error.message);
+      respondError(res, 500, "No pude guardar ese candidato.");
     }
   });
 
