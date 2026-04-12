@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07110c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CMW Operator" />
+    <title>CMW Operator Mobile</title>
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+    <link rel="stylesheet" href="/metalworks-crm/operator-mobile.css" />
+  </head>
+  <body class="crm-app-page operator-page" data-crm-skin="intel-ops">
+    <main class="operator-shell">
+      <header class="operator-header">
+        <div>
+          <p class="crm-eyebrow">Mobile Operator</p>
+          <h1>Chicago Metal Works &amp; Fencing</h1>
+          <p class="operator-subtitle">
+            Fast queue, live lead actions, and an internal copilot built for phone
+            and tablet.
+          </p>
+        </div>
+
+        <div class="operator-header-actions">
+          <div class="crm-theme-badge" data-operator-theme-badge hidden></div>
+          <div class="crm-user-chip" data-operator-user-chip></div>
+          <button type="button" class="crm-secondary-button" data-operator-open-crm>
+            Full CRM
+          </button>
+          <button type="button" class="crm-secondary-button" data-operator-refresh>
+            Refresh
+          </button>
+          <button type="button" class="crm-secondary-button" data-operator-logout>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <p class="crm-system-status" data-operator-status hidden></p>
+
+      <section class="operator-summary-grid" data-operator-summary></section>
+
+      <section class="operator-grid">
+        <section class="crm-panel operator-panel">
+          <div class="operator-panel-head">
+            <div>
+              <h2>Focus Queue</h2>
+              <p>Who needs your attention first right now.</p>
+            </div>
+            <span class="crm-chip" data-operator-focus-count>0 leads</span>
+          </div>
+          <div class="operator-card-list" data-operator-focus-list></div>
+        </section>
+
+        <section class="crm-panel operator-panel">
+          <div class="operator-panel-head">
+            <div>
+              <h2>Agenda</h2>
+              <p>Upcoming callbacks, site visits, and follow-ups.</p>
+            </div>
+            <span class="crm-chip" data-operator-agenda-count>0 scheduled</span>
+          </div>
+          <div class="operator-card-list" data-operator-agenda-list></div>
+        </section>
+      </section>
+
+      <section class="operator-grid operator-grid-detail">
+        <section class="crm-panel operator-panel operator-detail-panel">
+          <div class="operator-panel-head">
+            <div>
+              <h2>Lead Workspace</h2>
+              <p data-operator-detail-heading>Select a lead to work it from your phone.</p>
+            </div>
+            <span class="crm-chip" data-operator-selected-status>No lead selected</span>
+          </div>
+
+          <div class="operator-detail-empty" data-operator-detail-empty>
+            Tap any lead from Focus Queue or Agenda to load quick actions here.
+          </div>
+
+          <div class="operator-detail-wrap" data-operator-detail-wrap hidden>
+            <div class="operator-detail-actions">
+              <a href="#" class="crm-secondary-button crm-action-link" data-operator-call hidden>
+                Call
+              </a>
+              <a href="#" class="crm-secondary-button crm-action-link" data-operator-text hidden>
+                Text
+              </a>
+              <button type="button" class="crm-secondary-button" data-operator-open-selected-crm>
+                Open Full Lead
+              </button>
+            </div>
+
+            <form class="operator-detail-form" data-operator-detail-form>
+              <label>
+                <span>Name</span>
+                <input type="text" name="fullName" maxlength="120" placeholder="Client name" />
+              </label>
+
+              <label>
+                <span>Phone</span>
+                <input type="tel" name="phoneDisplay" maxlength="40" placeholder="773 555 1212" />
+              </label>
+
+              <label>
+                <span>Email</span>
+                <input type="email" name="email" maxlength="160" placeholder="client@email.com" />
+              </label>
+
+              <label>
+                <span>Status</span>
+                <select name="status" data-operator-status-input></select>
+              </label>
+
+              <label>
+                <span>Service</span>
+                <input type="text" name="projectType" maxlength="120" placeholder="Gate repair, railings, welding..." />
+              </label>
+
+              <label>
+                <span>Location / ZIP</span>
+                <input type="text" name="location" maxlength="160" placeholder="Chicago or ZIP" />
+              </label>
+
+              <label class="operator-field-wide">
+                <span>Next action</span>
+                <input type="text" name="nextAction" maxlength="160" placeholder="Call after 5 pm, send estimate, set site visit..." />
+              </label>
+
+              <label class="operator-field-wide">
+                <span>Follow-up date</span>
+                <input type="datetime-local" name="nextActionAt" />
+              </label>
+
+              <label class="operator-field-wide">
+                <span>Project summary</span>
+                <textarea name="details" rows="4" placeholder="Short clean summary of the job, damage, scope, and urgency."></textarea>
+              </label>
+
+              <label class="operator-field-wide">
+                <span>Add private note</span>
+                <textarea name="note" rows="3" placeholder="Example: client asked for a call tomorrow after 4 pm."></textarea>
+              </label>
+
+              <div class="operator-form-actions">
+                <button type="submit" class="crm-primary-button">Save Lead</button>
+                <p class="crm-form-result" data-operator-detail-feedback></p>
+              </div>
+            </form>
+
+            <section class="operator-detail-context">
+              <div class="operator-context-block">
+                <strong>Recent conversation</strong>
+                <p data-operator-conversation-preview>No conversation saved yet.</p>
+              </div>
+              <div class="operator-context-block">
+                <strong>Recent activity</strong>
+                <div class="operator-mini-feed" data-operator-activity-preview></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="crm-panel operator-panel operator-chat-panel">
+          <div class="operator-panel-head">
+            <div>
+              <h2>Agustin Operator</h2>
+              <p>Ask for queue priorities, quick summaries, or a follow-up draft.</p>
+            </div>
+            <span class="crm-chip">Private</span>
+          </div>
+
+          <div class="operator-suggestion-row">
+            <button type="button" class="crm-secondary-button" data-operator-prompt="Who should I call first right now?">
+              Who first?
+            </button>
+            <button type="button" class="crm-secondary-button" data-operator-prompt="Summarize the selected lead and tell me the next best step.">
+              Summarize lead
+            </button>
+            <button type="button" class="crm-secondary-button" data-operator-prompt="Draft a short text follow-up for the selected lead.">
+              Draft text
+            </button>
+          </div>
+
+          <div class="operator-chat-thread" data-operator-chat-thread></div>
+
+          <form class="operator-chat-form" data-operator-chat-form>
+            <textarea
+              name="message"
+              rows="3"
+              placeholder="Ask about priorities, callbacks, quotes, or the selected lead..."
+              data-operator-chat-input
+            ></textarea>
+            <div class="operator-form-actions">
+              <button type="submit" class="crm-primary-button" data-operator-chat-send>
+                Ask Agustin
+              </button>
+              <p class="crm-form-result" data-operator-chat-feedback></p>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <section class="crm-panel operator-panel">
+        <div class="operator-panel-head">
+          <div>
+            <h2>Recent Activity</h2>
+            <p>Compact feed from the CRM and website.</p>
+          </div>
+        </div>
+        <div class="operator-activity-list" data-operator-global-activity></div>
+      </section>
+    </main>
+
+    <script src="/metalworks-crm/operator-mobile.js"></script>
+  </body>
+</html>

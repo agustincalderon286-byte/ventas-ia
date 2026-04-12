@@ -71,6 +71,31 @@ function setCacheEntry(key, data) {
   });
 }
 
+function readSelectedLeadFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    return String(params.get("lead") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function syncSelectedLeadUrl(leadId = "") {
+  try {
+    const url = new URL(window.location.href);
+    const safeLeadId = String(leadId || "").trim();
+
+    if (safeLeadId) {
+      url.searchParams.set("lead", safeLeadId);
+    } else {
+      url.searchParams.delete("lead");
+    }
+
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  } catch {}
+}
+
 function formatCacheAge(savedAt = 0) {
   const ageMs = Math.max(0, Date.now() - Number(savedAt || 0));
   const minutes = Math.max(1, Math.round(ageMs / 60000));
@@ -169,7 +194,8 @@ const ESTIMATE_COST_FIELDS = [
 const state = {
   dashboard: null,
   leadDetail: null,
-  selectedLeadId: String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
+  selectedLeadId:
+    readSelectedLeadFromQuery() || String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
   detailTab: "profile",
   filters: {
     search: "",
@@ -362,6 +388,7 @@ function applyCachedTheme() {
 function rememberSelectedLead(leadId = "") {
   state.selectedLeadId = String(leadId || "").trim();
   writeStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, state.selectedLeadId || "");
+  syncSelectedLeadUrl(state.selectedLeadId);
 }
 
 function getLeadDetailCache() {
