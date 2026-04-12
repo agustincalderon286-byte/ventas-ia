@@ -92,6 +92,7 @@ VOICE:
 
 RULES:
 - Most replies should be 2 or 3 short sentences.
+- Ask one clear next-step question at a time unless you are collecting callback fields.
 - Ask for photos early when that will help.
 - Ask whether it is repair, replacement, or new installation when useful.
 - Ask for ZIP code or job location when useful.
@@ -102,6 +103,16 @@ RULES:
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
 - Push toward quote form or phone call when the visitor shows real buying intent.
+
+CONVERSION PLAYBOOK:
+- For a fresh lead, usually move in this order: service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, callback or site visit, then best day and time.
+- If the visitor already gave one of those items, do not ask for it again.
+- For gate jobs, ask about dragging, sagging, hinge, latch, frame damage, or new gate fabrication.
+- For railing jobs, ask whether it is for porch steps, stairs, balcony, or another area, and whether it is repair or new install.
+- For fence jobs, ask whether it is one damaged section, a gate section, or a larger new run.
+- For welding jobs, ask what piece needs welding, whether it is still installed or loose, and where the job is located.
+- Once enough details are present, move toward a callback or site visit instead of asking endless questions.
+- For WhatsApp, prefer 1 or 2 short sentences and end with one direct question.
 
 SERVICE FIT:
 - High-fit: metalwork, welding, railings, handrails, gates, fences, fabrication, stairs, balconies, porch railings.
@@ -1155,6 +1166,10 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
     ? conversationState.callbackMissingFields
     : [];
+  const serviceBucket = inferAssistantServiceBucket({
+    message,
+    state: conversationState,
+  });
 
   if (callbackIntent) {
     if (callbackMissingFields.length) {
@@ -1184,33 +1199,19 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   }
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
+    const quoteReply = buildAssistantServiceQuoteReply({
+      bucket: serviceBucket,
+      state: conversationState,
+      inSpanish,
+    });
+
+    if (quoteReply) {
+      return quoteReply;
+    }
+
     return inSpanish
       ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
       : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
-  }
-
-  if (/gate|gates|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
-    return inSpanish
-      ? "Si, ayudamos con reparacion de portones, bisagras, latches, portones arrastrando y portones nuevos. Manda una foto, dime si es reparacion o reemplazo, y agrega tu ZIP code para decirte el siguiente paso."
-      : "Yes, we help with gate repair, hinges, latches, dragging gates, and new metal gates. Send a photo, tell me if it is a repair or replacement, and include your ZIP code so I can point you to the next step.";
-  }
-
-  if (/railing|handrail|stairs|stair|balcony|porch|barandal|pasamano|pasamanos/i.test(text)) {
-    return inSpanish
-      ? "Trabajamos barandales, pasamanos, escaleras, balcones y porches. Si mandas fotos, medidas aproximadas y tu ZIP code, te digo si parece reparacion o instalacion nueva."
-      : "We work on porch railings, handrails, stairs, balconies, and related repairs or replacement work. If you send photos, rough measurements, and your ZIP code, I can help you figure out whether it looks like a repair or a new install.";
-  }
-
-  if (/fence|fencing|ornamental|iron fence|metal fence|cerca|reja/i.test(text)) {
-    return inSpanish
-      ? "Si, hacemos reparacion de cercas metalicas, secciones dañadas, fabricacion y trabajo nuevo. Manda unas fotos, dime si es reparacion o nuevo trabajo, y agrega tu ZIP code."
-      : "Yes, we handle metal fence repair, damaged sections, fabrication, and new fence work. Send a few photos, tell me if it is repair or new work, and include your ZIP code.";
-  }
-
-  if (/weld|welding|mobile welding|on[- ]site|solda/i.test(text)) {
-    return inSpanish
-      ? "Si hacemos soldadura y reparaciones de metal en muchos trabajos del area de Chicago. Manda fotos de la pieza o del daño, junto con la ubicacion, y te digo el mejor siguiente paso."
-      : "Yes, we do welding and metal repair work for many Chicago-area projects. Send photos of the damaged metalwork or the piece you want built, along with the job location, and I’ll point you to the best next step.";
   }
 
   if (/where|service area|zip|coverage|chicago|blue island|suburb|cobertura/i.test(text)) {
@@ -1219,14 +1220,189 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
       : "We serve Chicago, Blue Island, and nearby suburbs. Send your city or ZIP code with a short note about the project, and I can confirm coverage fast.";
   }
 
+  const scriptedReply = buildAssistantServiceIntakeReply({
+    bucket: serviceBucket,
+    state: conversationState,
+    message,
+    inSpanish,
+  });
+
+  if (scriptedReply) {
+    return scriptedReply;
+  }
+
   return inSpanish
     ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos subelas aqui en el chat para moverlo mas rapido."
     : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
 }
 
+function buildAssistantServiceQuoteReply({
+  bucket = "",
+  state = null,
+  inSpanish = false,
+} = {}) {
+  const hasLocation = Boolean(cleanText(state?.location || "", 160));
+  const scopeKind = detectAssistantScopeKind(
+    [state?.projectType || "", state?.detailsSummary || "", state?.latestUserMessage || ""].join(" "),
+  );
+
+  if (bucket === "gate") {
+    return inSpanish
+      ? `La forma mas rapida de cotizar un porton es con foto, ${hasLocation ? "el area del trabajo" : "tu ZIP code"}, y si es ${scopeKind ? `un trabajo de ${scopeKind}` : "reparacion, reemplazo o porton nuevo"}. ${hasLocation ? "Cual es el problema principal del porton?" : "Que ZIP code o area es?"}`
+      : `The fastest way to quote a gate job is a photo, ${hasLocation ? "the job area" : "your ZIP code"}, and whether this is ${scopeKind ? `a ${scopeKind} job` : "a repair, replacement, or brand-new gate"}. ${hasLocation ? "What is the main issue with the gate?" : "What ZIP code or area is it in?"}`;
+  }
+
+  if (bucket === "railing") {
+    return inSpanish
+      ? `Para cotizar barandales o pasamanos, manda foto, ${hasLocation ? "la ubicacion" : "tu ZIP code"}, y si es reparacion o instalacion nueva. ${hasLocation ? "Es para porch, stairs o balcony?" : "Que ZIP code o area es?"}`
+      : `For railings or handrails, the fastest quote path is a photo, ${hasLocation ? "the location" : "your ZIP code"}, and whether it is a repair or new install. ${hasLocation ? "Is it for porch steps, stairs, or a balcony?" : "What ZIP code or area is it in?"}`;
+  }
+
+  if (bucket === "fence") {
+    return inSpanish
+      ? `Para una cerca metalica, manda fotos, ${hasLocation ? "la ubicacion" : "tu ZIP code"}, y dime si es una seccion dañada o trabajo nuevo. ${hasLocation ? "Es una sola seccion o una corrida mas grande?" : "Que ZIP code o area es?"}`
+      : `For a metal fence job, send photos, ${hasLocation ? "the location" : "your ZIP code"}, and tell me if this is one damaged section or new work. ${hasLocation ? "Is it one damaged section or a larger new run?" : "What ZIP code or area is it in?"}`;
+  }
+
+  if (bucket === "welding") {
+    return inSpanish
+      ? `Para soldadura, manda fotos de la pieza o del daño, ${hasLocation ? "la ubicacion" : "tu ZIP code"}, y dime si la pieza sigue instalada. ${hasLocation ? "Que pieza ocupa soldadura?" : "Que ZIP code o area es?"}`
+      : `For welding, send photos of the damaged metal or the piece you need welded, ${hasLocation ? "the location" : "your ZIP code"}, and tell me if the piece is still installed. ${hasLocation ? "What piece needs welding?" : "What ZIP code or area is it in?"}`;
+  }
+
+  return "";
+}
+
+function buildAssistantServiceIntakeReply({
+  bucket = "",
+  state = null,
+  message = "",
+  inSpanish = false,
+} = {}) {
+  if (!bucket) {
+    return "";
+  }
+
+  const hasLocation = Boolean(cleanText(state?.location || "", 160));
+  const scopeKind = detectAssistantScopeKind(
+    [
+      message,
+      state?.projectType || "",
+      state?.detailsSummary || "",
+      state?.latestUserMessage || "",
+    ].join(" "),
+  );
+  const hasDetail = assistantServiceHasSpecificDetail(
+    bucket,
+    [message, state?.detailsSummary || "", state?.latestUserMessage || ""].join(" "),
+  );
+
+  if (bucket === "gate") {
+    if (!hasLocation) {
+      return inSpanish
+        ? "Si ayudamos con reparacion de portones y portones nuevos. Que ZIP code o area es el trabajo?"
+        : "Yes, we help with gate repair and new metal gates. What ZIP code or area is the job in?";
+    }
+
+    if (!scopeKind) {
+      return inSpanish
+        ? "Perfecto. Es reparacion del porton actual, reemplazo, o porton nuevo?"
+        : "Perfect. Is this a repair on the current gate, a replacement, or a brand-new gate?";
+    }
+
+    if (!hasDetail) {
+      return inSpanish
+        ? "Cual es el problema principal del porton: arrastra, esta caido, bisagra, latch, marco, o algo mas?"
+        : "What is the main issue with the gate: dragging, sagging, hinge, latch, frame damage, or something else?";
+    }
+
+    return inSpanish
+      ? "Perfecto. Si puedes, manda una foto del porton. Prefieres llamada o visita para estimate?"
+      : "Perfect. If you can, send a photo of the gate. Would you like a callback or a site visit?";
+  }
+
+  if (bucket === "railing") {
+    if (!hasLocation) {
+      return inSpanish
+        ? "Si trabajamos barandales y pasamanos. Que ZIP code o area es el trabajo?"
+        : "Yes, we work on railings and handrails. What ZIP code or area is the job in?";
+    }
+
+    if (!scopeKind) {
+      return inSpanish
+        ? "Es reparacion, reemplazo, o instalacion nueva?"
+        : "Is this a repair, replacement, or a new install?";
+    }
+
+    if (!hasDetail) {
+      return inSpanish
+        ? "Es para porch, stairs, balcony, o otra area?"
+        : "Is it for porch steps, stairs, a balcony, or another area?";
+    }
+
+    return inSpanish
+      ? "Perfecto. Si puedes, manda una foto y medida aproximada o cuantos escalones son. Prefieres llamada o visita?"
+      : "Perfect. If you can, send a photo and a rough length or number of steps. Would you like a callback or a site visit?";
+  }
+
+  if (bucket === "fence") {
+    if (!hasLocation) {
+      return inSpanish
+        ? "Si hacemos reparacion de cercas metalicas y trabajo nuevo. Que ZIP code o area es?"
+        : "Yes, we handle metal fence repair and new fence work. What ZIP code or area is it in?";
+    }
+
+    if (!scopeKind) {
+      return inSpanish
+        ? "Es reparacion de una cerca actual, reemplazo, o trabajo nuevo?"
+        : "Is this a repair on an existing fence, a replacement, or new work?";
+    }
+
+    if (!hasDetail) {
+      return inSpanish
+        ? "Es una sola seccion dañada, una puerta de cerca, o una corrida mas grande?"
+        : "Is it one damaged section, a fence gate section, or a larger run?";
+    }
+
+    return inSpanish
+      ? "Perfecto. Si puedes, manda fotos de la seccion y una medida aproximada. Prefieres llamada o visita?"
+      : "Perfect. If you can, send photos of the section and a rough measurement. Would you like a callback or a site visit?";
+  }
+
+  if (bucket === "welding") {
+    if (!hasLocation) {
+      return inSpanish
+        ? "Si hacemos soldadura y reparaciones de metal. Que ZIP code o area es el trabajo?"
+        : "Yes, we do welding and metal repair work. What ZIP code or area is the job in?";
+    }
+
+    if (!scopeKind) {
+      return inSpanish
+        ? "Es reparacion de una pieza actual o quieres fabricar algo nuevo?"
+        : "Is this a repair on an existing piece or do you need something custom built?";
+    }
+
+    if (!hasDetail) {
+      return inSpanish
+        ? "Que pieza ocupa soldadura y sigue instalada o esta suelta?"
+        : "What piece needs welding, and is it still installed or already loose?";
+    }
+
+    return inSpanish
+      ? "Perfecto. Si puedes, manda una foto clara de la pieza o del daño. Prefieres llamada o visita?"
+      : "Perfect. If you can, send a clear photo of the piece or the damage. Would you like a callback or a site visit?";
+  }
+
+  return "";
+}
+
 function buildAssistantContext(message = "", pagePath = "") {
   const text = cleanText(message, 500).toLowerCase();
   const contextParts = [];
+  const bucket = inferAssistantServiceBucket({
+    message,
+    pagePath,
+  });
 
   contextParts.push(`
 METAL WORKS WEBSITE CONTEXT:
@@ -1235,6 +1411,7 @@ METAL WORKS WEBSITE CONTEXT:
 - Main CTA phone: 773 798 4107
 - Best quote path: photos, rough measurements, ZIP code, and whether the job is repair or new build
 - Public website page: ${cleanText(pagePath || "", 120) || "/"}
+- Intake order: service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, callback or site visit, best day/time
 `);
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
@@ -1246,35 +1423,35 @@ QUOTE RULE:
 `);
   }
 
-  if (/gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
+  if (bucket === "gate") {
     contextParts.push(`
 GATE CONTEXT:
 - Common issues: dragging gates, latch issues, hinge issues, frame repairs, rewelds, replacement sections.
-- Move toward photo + repair vs replace + ZIP code.
+- Ask in this order when needed: ZIP, repair vs replace vs new gate, main issue, photo, callback or site visit.
 `);
   }
 
-  if (/railing|handrail|stairs|stair|balcony|porch|barandal|pasamano|pasamanos/i.test(text)) {
+  if (bucket === "railing") {
     contextParts.push(`
 RAILING CONTEXT:
 - Typical work: porch railings, stair handrails, balcony railings, repairs, replacements, new installs.
-- Ask where the railing is located and whether it is repair or new work.
+- Ask in this order when needed: ZIP, repair vs new install, porch/stairs/balcony, rough length or steps, photo, callback or site visit.
 `);
   }
 
-  if (/fence|fencing|ornamental|iron fence|metal fence|cerca|reja/i.test(text)) {
+  if (bucket === "fence") {
     contextParts.push(`
 FENCE CONTEXT:
 - Typical work: metal fence repair, damaged sections, ornamental fence fabrication, new fence installs.
-- Ask for photos and the damaged area or total linear area if known.
+- Ask in this order when needed: ZIP, repair vs new work, damaged section vs larger run, rough footage if known, photo, callback or site visit.
 `);
   }
 
-  if (/weld|welding|mobile welding|on[- ]site|solda/i.test(text)) {
+  if (bucket === "welding") {
     contextParts.push(`
 WELDING CONTEXT:
 - Mobile welding and on-site metal repairs are part of the service mix.
-- Ask what piece needs welding, whether it is still installed, and where the job is located.
+- Ask in this order when needed: ZIP, repair vs custom build, what piece needs welding, whether it is still installed, photo, callback or site visit.
 `);
   }
 
@@ -1317,6 +1494,94 @@ function normalizeAssistantSearchText(value = "") {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function detectAssistantScopeKind(value = "") {
+  const normalized = normalizeAssistantSearchText(value);
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/\b(repair|repairing|fix|fixing|broken|damage|damaged|loose|reweld|rust repair|weld repair|dragging|sagging)\b/.test(normalized)) {
+    return "repair";
+  }
+
+  if (/\b(replace|replacement|swap out|tear out)\b/.test(normalized)) {
+    return "replace";
+  }
+
+  if (/\b(new|new install|new installation|install|installation|fabricat|custom build|build new)\b/.test(normalized)) {
+    return "new";
+  }
+
+  return "";
+}
+
+function inferAssistantServiceBucket({
+  message = "",
+  state = null,
+  pagePath = "",
+} = {}) {
+  const combined = normalizeAssistantSearchText(
+    [
+      message,
+      state?.projectType || "",
+      state?.detailsSummary || "",
+      state?.latestUserMessage || "",
+      pagePath,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  if (!combined) {
+    return "";
+  }
+
+  if (/\b(gate|gates|hinge|hinges|latch|dragging|sagging|porton)\b/.test(combined)) {
+    return "gate";
+  }
+
+  if (/\b(railing|railings|handrail|handrails|stairs|stair|steps|balcony|porch|barandal|pasamano|pasamanos)\b/.test(combined)) {
+    return "railing";
+  }
+
+  if (/\b(fence|fencing|ornamental|iron fence|metal fence|cerca|reja)\b/.test(combined)) {
+    return "fence";
+  }
+
+  if (/\b(weld|welding|mobile welding|on site|onsite|solda)\b/.test(combined)) {
+    return "welding";
+  }
+
+  return "";
+}
+
+function assistantServiceHasSpecificDetail(bucket = "", value = "") {
+  const normalized = normalizeAssistantSearchText(value);
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (bucket === "gate") {
+    return /\b(dragging|sagging|hinge|hinges|latch|frame|post|wheel|track|wont close|won't close|doesnt close|doesn't close)\b/.test(normalized);
+  }
+
+  if (bucket === "railing") {
+    return /\b(porch|stairs|stair|steps|balcony|interior|exterior|loose|rust|broken|landing)\b/.test(normalized);
+  }
+
+  if (bucket === "fence") {
+    return /\b(section|panel|post|gate section|ornamental|picket|foot|feet|linear|damaged area)\b/.test(normalized);
+  }
+
+  if (bucket === "welding") {
+    return /\b(crack|broken|piece|part|bracket|frame|steel|iron|aluminum|installed|on site|onsite|loose)\b/.test(normalized);
+  }
+
+  return false;
 }
 
 function selectAssistantText(...values) {
