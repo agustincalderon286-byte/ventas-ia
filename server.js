@@ -64,6 +64,7 @@ const TWILIO_SMS_ENABLED = String(process.env.TWILIO_SMS_ENABLED || "").toLowerC
 const TWILIO_SMS_WEBHOOK_TOKEN = String(process.env.TWILIO_SMS_WEBHOOK_TOKEN || "").trim();
 const TWILIO_SMS_AI_REPLY_ENABLED = String(process.env.TWILIO_SMS_AI_REPLY_ENABLED || "").toLowerCase() === "true";
 const TWILIO_SMS_FROM = String(process.env.TWILIO_SMS_FROM || "").trim();
+const TWILIO_WHATSAPP_FROM = String(process.env.TWILIO_WHATSAPP_FROM || "").trim();
 const TWILIO_MESSAGING_SERVICE_SID = String(process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
 const WHATSAPP_CHEF_NUMBER = String(process.env.WHATSAPP_CHEF_NUMBER || "").trim();
 const WHATSAPP_CHEF_TEXT = String(process.env.WHATSAPP_CHEF_TEXT || "Hola, quiero ayuda con Agustin 2.0 Chef.").trim();
@@ -22705,6 +22706,29 @@ function twilioSmsEstaConfigurado() {
   );
 }
 
+function resolverTwilioWhatsAppFrom() {
+  const preferredFrom = String(TWILIO_WHATSAPP_FROM || "").trim();
+
+  if (/^whatsapp:/i.test(preferredFrom)) {
+    return preferredFrom;
+  }
+
+  const fallbackPhone = formatearTelefonoE164(
+    preferredFrom || (/^whatsapp:/i.test(TWILIO_SMS_FROM) ? TWILIO_SMS_FROM.replace(/^whatsapp:/i, "") : "")
+  );
+
+  return fallbackPhone ? `whatsapp:${fallbackPhone}` : "";
+}
+
+function twilioWhatsappEstaConfigurado() {
+  return Boolean(
+    TWILIO_WHATSAPP_ENABLED &&
+      TWILIO_ACCOUNT_SID &&
+      TWILIO_AUTH_TOKEN &&
+      resolverTwilioWhatsAppFrom()
+  );
+}
+
 function formatearTelefonoE164(value = "") {
   const raw = String(value || "").trim();
 
@@ -22732,6 +22756,11 @@ function formatearTelefonoE164(value = "") {
   }
 
   return digits.length >= 8 ? `+${digits}` : "";
+}
+
+function formatearTelefonoTwilioWhatsapp(value = "") {
+  const phone = formatearTelefonoE164(value);
+  return phone ? `whatsapp:${phone}` : "";
 }
 
 function escapeXml(value = "") {
@@ -22825,6 +22854,83 @@ async function enviarTwilioSms({ to = "", body = "", statusCallbackUrl = "" } = 
       error: error.message || "No pude enviar el SMS."
     };
   }
+}
+
+async function enviarTwilioWhatsapp({ to = "", body = "", statusCallbackUrl = "" } = {}) {
+  const message = cleanText(String(body || "")).slice(0, 1600);
+  const toPhone = formatearTelefonoTwilioWhatsapp(to);
+  const fromPhone = resolverTwilioWhatsAppFrom();
+
+  if (!twilioWhatsappEstaConfigurado()) {
+    return {
+      ok: false,
+      error: "Twilio WhatsApp todavia no esta configurado."
+    };
+  }
+
+  if (!toPhone) {
+    return {
+      ok: false,
+      error: "No encontre un numero valido para enviar WhatsApp."
+    };
+  }
+
+  if (!message) {
+    return {
+      ok: false,
+      error: "El mensaje de WhatsApp viene vacio."
+    };
+  }
+
+  const params = new URLSearchParams();
+  params.set("To", toPhone);
+  params.set("From", fromPhone);
+  params.set("Body", message);
+
+  if (statusCallbackUrl) {
+    params.set("StatusCallback", statusCallbackUrl);
+  }
+
+  try {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: construirTwilioSmsApiAuthHeader(),
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data?.message || `Twilio respondio ${response.status}`
+      };
+    }
+
+    return {
+      ok: true,
+      status: response.status,
+      sid: data?.sid || "",
+      to: data?.to || toPhone,
+      from: data?.from || fromPhone,
+      raw: data
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error.message || "No pude enviar el mensaje por WhatsApp."
+    };
+  }
+}
+
+app.locals.sendMetalworksWhatsAppMessage = enviarTwilioWhatsapp;
+
+if (typeof app.locals.startMetalworksWhatsAppFollowupWorker === "function") {
+  app.locals.startMetalworksWhatsAppFollowupWorker();
 }
 
 async function sembrarLeadYPerfilCanal({
