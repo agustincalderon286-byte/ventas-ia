@@ -102,6 +102,10 @@ final class CRMStore: ObservableObject {
     me?.profile.themeLabel ?? ""
   }
 
+  var resourceSections: [CRMResourceSection] {
+    me?.resourceSections ?? []
+  }
+
   var isConfigured: Bool {
     me?.configured ?? true
   }

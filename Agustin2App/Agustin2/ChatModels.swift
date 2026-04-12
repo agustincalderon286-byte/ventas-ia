@@ -19,25 +19,86 @@ struct CRMProfile: Decodable {
   }
 }
 
+struct CRMResourceLink: Decodable, Identifiable, Hashable {
+  let id: String
+  let label: String
+  let description: String
+  let url: String
+  let symbol: String
+
+  init(
+    id: String = "",
+    label: String = "",
+    description: String = "",
+    url: String = "",
+    symbol: String = ""
+  ) {
+    self.id = id
+    self.label = label
+    self.description = description
+    self.url = url
+    self.symbol = symbol
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: JSONCodingKey.self)
+    id = container.decodeString("id")
+    label = container.decodeString("label")
+    description = container.decodeString("description")
+    url = container.decodeString("url")
+    symbol = container.decodeString("symbol")
+  }
+}
+
+struct CRMResourceSection: Decodable, Identifiable, Hashable {
+  let id: String
+  let title: String
+  let description: String
+  let items: [CRMResourceLink]
+
+  init(
+    id: String = "",
+    title: String = "",
+    description: String = "",
+    items: [CRMResourceLink] = []
+  ) {
+    self.id = id
+    self.title = title
+    self.description = description
+    self.items = items
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: JSONCodingKey.self)
+    id = container.decodeString("id")
+    title = container.decodeString("title")
+    description = container.decodeString("description")
+    items = container.decodeArray(CRMResourceLink.self, forKey: "items")
+  }
+}
+
 struct CRMMeResponse: Decodable {
   let authenticated: Bool
   let configured: Bool
   let email: String
   let allowedEmail: String
   let profile: CRMProfile
+  let resourceSections: [CRMResourceSection]
 
   init(
     authenticated: Bool = false,
     configured: Bool = true,
     email: String = "",
     allowedEmail: String = "",
-    profile: CRMProfile = CRMProfile()
+    profile: CRMProfile = CRMProfile(),
+    resourceSections: [CRMResourceSection] = []
   ) {
     self.authenticated = authenticated
     self.configured = configured
     self.email = email
     self.allowedEmail = allowedEmail
     self.profile = profile
+    self.resourceSections = resourceSections
   }
 
   init(from decoder: Decoder) throws {
@@ -47,6 +108,7 @@ struct CRMMeResponse: Decodable {
     email = container.decodeString("email")
     allowedEmail = container.decodeString("allowedEmail")
     profile = container.decodeModel(CRMProfile.self, forKey: "profile", defaultValue: CRMProfile())
+    resourceSections = container.decodeArray(CRMResourceSection.self, forKey: "resourceSections")
   }
 }
 

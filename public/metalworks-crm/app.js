@@ -205,6 +205,7 @@ function normalizeCrmView(value = "") {
 }
 
 const state = {
+  me: null,
   dashboard: null,
   applicants: [],
   leadDetail: null,
@@ -230,6 +231,9 @@ const state = {
 };
 
 const summaryWrap = document.querySelector("[data-crm-summary]");
+const resourceHub = document.querySelector("[data-crm-resource-hub]");
+const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
+const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
 const leadList = document.querySelector("[data-crm-lead-list]");
 const emptyState = document.querySelector("[data-crm-empty-state]");
 const collectionTitle = document.querySelector("[data-crm-collection-title]");
@@ -1031,6 +1035,109 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
       `,
     )
     .join("");
+}
+
+function setResourceFeedback(message = "", tone = "muted") {
+  if (!resourcesFeedback) {
+    return;
+  }
+
+  resourcesFeedback.textContent = message;
+  resourcesFeedback.dataset.tone = tone;
+  resourcesFeedback.hidden = !message;
+}
+
+function renderResourceHub(resourceSections = []) {
+  if (!resourceHub || !resourcesWrap) {
+    return;
+  }
+
+  const sections = (Array.isArray(resourceSections) ? resourceSections : [])
+    .map((section) => ({
+      ...section,
+      items: (Array.isArray(section?.items) ? section.items : []).filter(
+        (item) => String(item?.label || "").trim() && String(item?.url || "").trim(),
+      ),
+    }))
+    .filter((section) => section.items.length);
+
+  if (!sections.length) {
+    resourceHub.hidden = true;
+    resourcesWrap.innerHTML = "";
+    setResourceFeedback("", "muted");
+    return;
+  }
+
+  resourceHub.hidden = false;
+  setResourceFeedback("", "muted");
+
+  resourcesWrap.innerHTML = sections
+    .map(
+      (section) => `
+        <article class="crm-resource-section">
+          <div class="crm-panel-head tight crm-resource-section-head">
+            <div>
+              <h3>${escapeHtml(section.title || "Links")}</h3>
+              <p>${escapeHtml(section.description || "")}</p>
+            </div>
+          </div>
+          <div class="crm-resource-list">
+            ${section.items
+              .map(
+                (item) => `
+                  <article class="crm-resource-item">
+                    <div class="crm-resource-copy">
+                      <strong>${escapeHtml(item.label || "Link")}</strong>
+                      <p>${escapeHtml(item.description || "")}</p>
+                      <span class="crm-resource-url">${escapeHtml(item.url || "")}</span>
+                    </div>
+                    <div class="crm-resource-actions">
+                      <a
+                        class="crm-card-action"
+                        href="${escapeHtml(item.url || "#")}"
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        Open
+                      </a>
+                      <button
+                        type="button"
+                        class="crm-card-action"
+                        data-resource-copy="${escapeHtml(item.url || "")}"
+                        data-resource-label="${escapeHtml(item.label || "Link")}"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </article>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  resourcesWrap.querySelectorAll("[data-resource-copy]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const url = String(button.dataset.resourceCopy || "").trim();
+      const label = String(button.dataset.resourceLabel || "Link").trim();
+
+      if (!url) {
+        setResourceFeedback("Ese link no esta disponible ahorita.", "error");
+        return;
+      }
+
+      const copied = await copyTextWithFallback(url);
+      setResourceFeedback(
+        copied
+          ? `${label} copiado al portapapeles.`
+          : `No pude copiar ${label} automatico, pero ya te deje el link listo para copiar.`,
+        copied ? "success" : "muted",
+      );
+    });
+  });
 }
 
 function syncViewButtons() {
@@ -2439,8 +2546,10 @@ async function init() {
     return;
   }
 
+  state.me = me;
   applyProfileTheme(me.profile || {}, me.email || "");
   persistThemeProfile(me.profile || {}, me.email || "");
+  renderResourceHub(me.resourceSections || []);
   setSystemStatus("", "");
   await refreshDashboardSafely();
 }

@@ -3813,6 +3813,146 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
   };
 }
 
+function buildMetalworksDirectWhatsAppUrl() {
+  const safePhone = String(process.env.WHATSAPP_CHEF_NUMBER || "12603087201").replace(/\D+/g, "");
+  const safeText = cleanText(
+    process.env.WHATSAPP_CHEF_TEXT ||
+      "Hi, I need a quote for a metal project in Chicago. I can send photos here.",
+    240,
+  );
+
+  if (!safePhone) {
+    return "";
+  }
+
+  return safeText
+    ? `https://wa.me/${safePhone}?text=${encodeURIComponent(safeText)}`
+    : `https://wa.me/${safePhone}`;
+}
+
+function buildMetalworksCrmResourceSections() {
+  const websiteBase = METALWORKS_WEBSITE_URL.replace(/\/$/, "");
+  const directWhatsAppUrl = buildMetalworksDirectWhatsAppUrl();
+  const thumbtackProfileUrl =
+    "https://www.thumbtack.com/il/blue-island/metal-fabricators/chicago-metal-works-fencing/service/456785560962318359";
+  const sections = [
+    {
+      id: "public-links",
+      title: "Public Links",
+      description: "Pages you share with customers, leads, and prospects.",
+      items: [
+        {
+          id: "website-home",
+          label: "Main Website",
+          description: "Homepage with quote form and service overview.",
+          url: `${websiteBase}/`,
+          symbol: "house.fill",
+        },
+        {
+          id: "projects-page",
+          label: "Projects Page",
+          description: "Portfolio page you can send when someone asks for examples.",
+          url: `${websiteBase}/projects.html`,
+          symbol: "photo.on.rectangle.angled",
+        },
+        {
+          id: "whatsapp-landing",
+          label: "WhatsApp Quote Page",
+          description: "Landing page built for ads, Facebook, and fast photo-first leads.",
+          url: `${websiteBase}/whatsapp-quote-chicago.html`,
+          symbol: "message.fill",
+        },
+        {
+          id: "whatsapp-direct",
+          label: "Direct WhatsApp Chat",
+          description: "Opens the live WhatsApp conversation with the starter message ready.",
+          url: directWhatsAppUrl,
+          symbol: "message.circle.fill",
+        },
+      ],
+    },
+    {
+      id: "crm-links",
+      title: "CRM Links",
+      description: "Internal tools for office, operator, and field teams.",
+      items: [
+        {
+          id: "crm-main",
+          label: "Main CRM",
+          description: "Lead inbox and applicant pipeline.",
+          url: `${websiteBase}/metalworks-crm/`,
+          symbol: "rectangle.stack.fill",
+        },
+        {
+          id: "crm-operator",
+          label: "Operator CRM",
+          description: "Mobile operator workspace for fast follow-up.",
+          url: `${websiteBase}/metalworks-crm/operator/`,
+          symbol: "iphone.gen3",
+        },
+        {
+          id: "prospector-login",
+          label: "Prospector Login",
+          description: "Field team login page for prospectors.",
+          url: `${websiteBase}/metalworks-crm/prospector/login/`,
+          symbol: "person.badge.key.fill",
+        },
+        {
+          id: "prospector-portal",
+          label: "Prospector Portal",
+          description: "Direct prospecting intake page once the rep is logged in.",
+          url: `${websiteBase}/metalworks-crm/prospector/`,
+          symbol: "person.2.badge.gearshape.fill",
+        },
+        {
+          id: "lead-distribution",
+          label: "Lead Distribution",
+          description: "Dedicated lead distribution project page.",
+          url: `${websiteBase}/lead-distribution/`,
+          symbol: "arrow.triangle.branch",
+        },
+      ],
+    },
+    {
+      id: "trust-links",
+      title: "Trust & Business",
+      description: "Useful profile and business links for approvals and sharing.",
+      items: [
+        {
+          id: "thumbtack-profile",
+          label: "Thumbtack Profile",
+          description: "Public Thumbtack profile and reviews.",
+          url: thumbtackProfileUrl,
+          symbol: "star.fill",
+        },
+        {
+          id: "privacy-policy",
+          label: "Privacy Policy",
+          description: "Public privacy page used for integrations and trust.",
+          url: `${websiteBase}/privacy.html`,
+          symbol: "lock.shield.fill",
+        },
+        {
+          id: "terms-page",
+          label: "Terms of Service",
+          description: "Public terms page used for approvals and client trust.",
+          url: `${websiteBase}/terms.html`,
+          symbol: "doc.text.fill",
+        },
+      ],
+    },
+  ];
+
+  return sections
+    .map((section) => ({
+      ...section,
+      items: (Array.isArray(section.items) ? section.items : []).filter(
+        (item) => cleanText(item?.url || "", 600),
+      ),
+    }))
+    .filter((section) => section.items.length);
+}
+
 function buildMetalworksOperatorFallbackReply({
   message = "",
   operatorSnapshot = null,
@@ -6211,6 +6351,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         email: auth.email || "",
         allowedEmail: fallbackEmail,
         profile: getMetalworksCrmProfile(fallbackEmail),
+        resourceSections: buildMetalworksCrmResourceSections(),
       });
     } catch (error) {
       console.error("Error loading Metal Works auth:", error.message);
