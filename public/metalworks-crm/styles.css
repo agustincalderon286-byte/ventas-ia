@@ -545,6 +545,10 @@ body[data-crm-skin="intel-ops"] .crm-system-status {
   margin-bottom: 16px;
 }
 
+.crm-panel-head-stack {
+  align-items: flex-start;
+}
+
 .crm-panel-head.tight {
   margin-bottom: 12px;
 }
@@ -622,8 +626,18 @@ body[data-crm-skin="intel-ops"] .crm-system-status {
   color: #7e5c21;
 }
 
+.crm-status-badge[data-status="interview_requested"] {
+  background: rgba(199, 164, 96, 0.2);
+  color: #7e5c21;
+}
+
 .crm-status-badge[data-status="booked"],
 .crm-status-badge[data-status="won"] {
+  background: rgba(34, 102, 71, 0.14);
+  color: var(--crm-green);
+}
+
+.crm-status-badge[data-status="interview_scheduled"] {
   background: rgba(34, 102, 71, 0.14);
   color: var(--crm-green);
 }
@@ -645,8 +659,18 @@ body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="quoted"] {
   color: #ffb5ef;
 }
 
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="interview_requested"] {
+  background: rgba(255, 83, 222, 0.18);
+  color: #ffb5ef;
+}
+
 body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="booked"],
 body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="won"] {
+  background: rgba(119, 255, 211, 0.14);
+  color: #b6ffe8;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="interview_scheduled"] {
   background: rgba(119, 255, 211, 0.14);
   color: #b6ffe8;
 }
@@ -662,8 +686,18 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="quoted"] {
   color: #ffd783;
 }
 
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="interview_requested"] {
+  background: rgba(255, 207, 110, 0.14);
+  color: #ffd783;
+}
+
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="booked"],
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
+  background: rgba(111, 255, 170, 0.16);
+  color: #b9ffda;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="interview_scheduled"] {
   background: rgba(111, 255, 170, 0.16);
   color: #b9ffda;
 }
@@ -702,6 +736,13 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   background: linear-gradient(135deg, var(--crm-red) 0%, var(--crm-red-deep) 100%);
   color: #fff;
   border-color: transparent;
+}
+
+.crm-view-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .crm-detail-view {
@@ -871,6 +912,10 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
   margin-top: 10px;
   color: var(--crm-muted);
   font-size: 0.9rem;
+}
+
+.crm-applicant-card .crm-lead-card-summary span {
+  line-height: 1.55;
 }
 
 .crm-micro-list {
@@ -1157,6 +1202,15 @@ body[data-crm-skin="intel-ops"] .crm-capture-photo-card {
   .crm-detail-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .crm-view-toggle {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .crm-view-toggle .crm-tab-button {
+    flex: 1 1 0;
   }
 
   .crm-lead-card-head {

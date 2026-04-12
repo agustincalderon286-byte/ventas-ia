@@ -4,6 +4,8 @@ const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
 const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
 const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
+const CRM_SELECTED_APPLICANT_STORAGE_KEY = "cmwf_crm_selected_applicant_v1";
+const CRM_SELECTED_VIEW_STORAGE_KEY = "cmwf_crm_selected_view_v1";
 const CRM_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
 function wait(ms) {
@@ -190,17 +192,38 @@ const ESTIMATE_COST_FIELDS = [
   "estimateMiscCost",
   "estimateDiscount",
 ];
+const APPLICANT_STATUS_OPTIONS = [
+  { value: "new", label: "Nuevo candidato" },
+  { value: "interview_requested", label: "Entrevista pedida" },
+  { value: "interview_scheduled", label: "Entrevista agendada" },
+  { value: "archived", label: "Archivado" },
+];
+const APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
+
+function normalizeCrmView(value = "") {
+  return String(value || "").trim().toLowerCase() === "applicants" ? "applicants" : "leads";
+}
 
 const state = {
   dashboard: null,
+  applicants: [],
   leadDetail: null,
+  applicantDetail: null,
+  view: normalizeCrmView(readStoredJson(CRM_SELECTED_VIEW_STORAGE_KEY, "leads") || "leads"),
   selectedLeadId:
     readSelectedLeadFromQuery() || String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
+  selectedApplicantId: String(readStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, "") || ""),
   detailTab: "profile",
+  applicantDetailTab: "profile",
   filters: {
     search: "",
     status: "",
     projectType: "",
+  },
+  applicantFilters: {
+    search: "",
+    status: "",
+    role: "",
   },
   searchTimer: null,
   bindingsReady: false,
@@ -209,8 +232,16 @@ const state = {
 const summaryWrap = document.querySelector("[data-crm-summary]");
 const leadList = document.querySelector("[data-crm-lead-list]");
 const emptyState = document.querySelector("[data-crm-empty-state]");
+const collectionTitle = document.querySelector("[data-crm-collection-title]");
+const collectionCount = document.querySelector("[data-crm-collection-count]");
+const searchLabel = document.querySelector("[data-crm-search-label]");
+const statusLabel = document.querySelector("[data-crm-status-label]");
+const serviceLabel = document.querySelector("[data-crm-service-label]");
+const viewButtons = Array.from(document.querySelectorAll("[data-crm-view-button]"));
 const detailWrap = document.querySelector("[data-crm-detail-wrap]");
+const applicantDetailWrap = document.querySelector("[data-crm-applicant-detail-wrap]");
 const detailEmpty = document.querySelector("[data-crm-detail-empty]");
+const detailTitle = document.querySelector("[data-crm-detail-title]");
 const detailMeta = document.querySelector("[data-crm-detail-meta]");
 const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
@@ -220,7 +251,6 @@ const actionFeedback = document.querySelector("[data-crm-action-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
 const globalActivityList = document.querySelector("[data-crm-global-activity]");
 const globalActivitySummary = document.querySelector("[data-crm-global-activity-summary]");
-const leadsCount = document.querySelector("[data-crm-leads-count]");
 const statusFilter = document.querySelector("[data-crm-status-filter]");
 const serviceFilter = document.querySelector("[data-crm-service-filter]");
 const searchInput = document.querySelector("[data-crm-search]");
@@ -240,6 +270,24 @@ const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-
 const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
 const conversationThread = document.querySelector("[data-crm-conversation-thread]");
 const conversationSummary = document.querySelector("[data-crm-conversation-summary]");
+const applicantDetailTabButtons = Array.from(
+  document.querySelectorAll("[data-crm-applicant-detail-tab]"),
+);
+const applicantDetailViews = Array.from(
+  document.querySelectorAll("[data-crm-applicant-detail-view]"),
+);
+const applicantMeta = document.querySelector("[data-crm-applicant-meta]");
+const applicantProfileCard = document.querySelector("[data-crm-applicant-profile-card]");
+const applicantConversationThread = document.querySelector(
+  "[data-crm-applicant-conversation-thread]",
+);
+const applicantConversationSummary = document.querySelector(
+  "[data-crm-applicant-conversation-summary]",
+);
+const applicantActivityList = document.querySelector("[data-crm-applicant-activity-list]");
+const applicantCallLink = document.querySelector("[data-crm-applicant-call-link]");
+const applicantTextLink = document.querySelector("[data-crm-applicant-text-link]");
+const applicantEmailLink = document.querySelector("[data-crm-applicant-email-link]");
 const photoSection = document.querySelector("[data-crm-photo-section]");
 const photoGrid = document.querySelector("[data-crm-photo-grid]");
 const photoSummary = document.querySelector("[data-crm-photo-summary]");
@@ -309,6 +357,62 @@ function formatLeadSource(value = "") {
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
+}
+
+function formatApplicantSource(applicant = null) {
+  const sourceLabel = String(applicant?.sourceLabel || "").trim();
+
+  if (sourceLabel) {
+    return sourceLabel;
+  }
+
+  const source = String(applicant?.sourceType || "").trim();
+  const labels = {
+    assistant_chat_job: "Website hiring assistant",
+    assistant_whatsapp_job: "WhatsApp hiring assistant",
+    whatsapp_job: "WhatsApp hiring",
+  };
+
+  return labels[source] || source.replace(/_/g, " ").trim() || "Hiring assistant";
+}
+
+function formatApplicantAnswer(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (!normalized) {
+    return "Pending";
+  }
+
+  if (normalized === "yes") {
+    return "Yes";
+  }
+
+  if (normalized === "no") {
+    return "No";
+  }
+
+  return String(value || "").trim();
+}
+
+function stripGeneratedApplicantNotes(value = "") {
+  const source = String(value || "");
+  const markerIndex = source.indexOf(APPLICANT_NOTES_MARKER);
+
+  if (markerIndex === -1) {
+    return source.trim();
+  }
+
+  return source.slice(0, markerIndex).trim();
+}
+
+function truncateText(value = "", maxLength = 180) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue || safeValue.length <= maxLength) {
+    return safeValue;
+  }
+
+  return `${safeValue.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
 }
 
 function toDatetimeLocalValue(value = "") {
@@ -385,10 +489,23 @@ function applyCachedTheme() {
   return true;
 }
 
+function rememberSelectedView(view = "leads") {
+  state.view = normalizeCrmView(view);
+  writeStoredJson(CRM_SELECTED_VIEW_STORAGE_KEY, state.view);
+  syncSelectedLeadUrl(state.view === "leads" ? state.selectedLeadId : "");
+}
+
 function rememberSelectedLead(leadId = "") {
   state.selectedLeadId = String(leadId || "").trim();
   writeStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, state.selectedLeadId || "");
-  syncSelectedLeadUrl(state.selectedLeadId);
+  if (state.view === "leads") {
+    syncSelectedLeadUrl(state.selectedLeadId);
+  }
+}
+
+function rememberSelectedApplicant(applicantId = "") {
+  state.selectedApplicantId = String(applicantId || "").trim();
+  writeStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, state.selectedApplicantId || "");
 }
 
 function getLeadDetailCache() {
@@ -916,7 +1033,54 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
     .join("");
 }
 
-function renderFilters(dashboard) {
+function syncViewButtons() {
+  viewButtons.forEach((button) => {
+    const viewName = normalizeCrmView(button.dataset.crmViewButton || "leads");
+    const isActive = viewName === state.view;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function syncCollectionChrome() {
+  const applicantsView = state.view === "applicants";
+
+  if (collectionTitle) {
+    collectionTitle.textContent = applicantsView ? "Applicants" : "Leads";
+  }
+
+  if (detailTitle) {
+    detailTitle.textContent = applicantsView ? "Detalle del candidato" : "Detalle del lead";
+  }
+
+  if (detailEmpty) {
+    detailEmpty.textContent = applicantsView
+      ? "Selecciona un candidato para ver su perfil, conversacion y timeline."
+      : "Selecciona un lead para ver su informacion y trabajar seguimiento.";
+  }
+
+  if (searchLabel) {
+    searchLabel.textContent = "Buscar";
+  }
+
+  if (statusLabel) {
+    statusLabel.textContent = "Status";
+  }
+
+  if (serviceLabel) {
+    serviceLabel.textContent = applicantsView ? "Puesto" : "Servicio";
+  }
+
+  if (searchInput) {
+    searchInput.placeholder = applicantsView
+      ? "Nombre, puesto, telefono, email o idioma"
+      : "Nombre, telefono, servicio o direccion";
+  }
+
+  syncViewButtons();
+}
+
+function renderLeadFilters(dashboard) {
   if (!dashboard) {
     return;
   }
@@ -965,12 +1129,97 @@ function renderFilters(dashboard) {
   }
 }
 
+function renderApplicantFilters(applicants = []) {
+  const roles = [...new Set(
+    (Array.isArray(applicants) ? applicants : [])
+      .map((item) => String(item?.positionApplied || item?.roleTrack || "").trim())
+      .filter(Boolean),
+  )].sort((left, right) => left.localeCompare(right));
+
+  if (statusFilter) {
+    statusFilter.innerHTML = ['<option value="">Todos</option>']
+      .concat(
+        APPLICANT_STATUS_OPTIONS.map(
+          (item) =>
+            `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`,
+        ),
+      )
+      .join("");
+    statusFilter.value = state.applicantFilters.status;
+  }
+
+  if (serviceFilter) {
+    serviceFilter.innerHTML = ['<option value="">Todos</option>']
+      .concat(
+        roles.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`),
+      )
+      .join("");
+    serviceFilter.value = state.applicantFilters.role;
+  }
+
+  if (searchInput) {
+    searchInput.value = state.applicantFilters.search;
+  }
+}
+
+function renderFilters(dashboard) {
+  syncCollectionChrome();
+
+  if (state.view === "applicants") {
+    renderApplicantFilters(state.applicants);
+    return;
+  }
+
+  renderLeadFilters(dashboard);
+}
+
+function getFilteredApplicants(applicants = []) {
+  const filters = state.applicantFilters;
+  const safeApplicants = Array.isArray(applicants) ? applicants : [];
+  const searchNeedle = String(filters.search || "").trim().toLowerCase();
+
+  return safeApplicants.filter((applicant) => {
+    if (filters.status && applicant.status !== filters.status) {
+      return false;
+    }
+
+    const roleValue = String(applicant.positionApplied || applicant.roleTrack || "").trim();
+    if (filters.role && roleValue !== filters.role) {
+      return false;
+    }
+
+    if (!searchNeedle) {
+      return true;
+    }
+
+    const haystack = [
+      applicant.fullName,
+      applicant.phoneDisplay,
+      applicant.email,
+      applicant.positionApplied,
+      applicant.roleTrack,
+      applicant.languages,
+      applicant.yearsExperience,
+      applicant.experienceSummary,
+      applicant.location,
+      applicant.detailsSummary,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(searchNeedle);
+  });
+}
+
 function renderLeadList(leads = []) {
   if (!leadList) {
     return;
   }
 
-  leadsCount.textContent = `${leads.length} lead${leads.length === 1 ? "" : "s"}`;
+  if (collectionCount) {
+    collectionCount.textContent = `${leads.length} lead${leads.length === 1 ? "" : "s"}`;
+  }
 
   if (!leads.length) {
     leadList.innerHTML = "";
@@ -1073,6 +1322,121 @@ function renderLeadList(leads = []) {
   });
 }
 
+function renderApplicantList(applicants = []) {
+  if (!leadList) {
+    return;
+  }
+
+  if (collectionCount) {
+    collectionCount.textContent = `${applicants.length} applicant${applicants.length === 1 ? "" : "s"}`;
+  }
+
+  if (!applicants.length) {
+    leadList.innerHTML = "";
+    emptyState.hidden = false;
+    return;
+  }
+
+  emptyState.hidden = true;
+  leadList.innerHTML = applicants
+    .map((applicant) => {
+      const isActive = applicant.id === state.selectedApplicantId;
+      const phoneDigits = normalizePhoneDigits(applicant.phone || applicant.phoneDisplay || "");
+      const roleLabel = applicant.positionApplied || applicant.roleTrack || "Role pending";
+      const interviewChip = applicant.nextActionAt
+        ? `Interview: ${formatDate(applicant.nextActionAt)}`
+        : applicant.nextAction
+          ? `Next: ${applicant.nextAction}`
+          : "";
+      const summaryText =
+        truncateText(applicant.detailsSummary || applicant.experienceSummary || "", 160) ||
+        "No summary captured yet.";
+
+      return `
+        <article class="crm-lead-card crm-applicant-card ${isActive ? "is-active" : ""}" data-applicant-id="${escapeHtml(applicant.id)}">
+          <div class="crm-lead-card-head">
+            <div>
+              <h3>${escapeHtml(applicant.fullName || "Sin nombre")}</h3>
+              <div class="crm-lead-card-meta">
+                <span>${escapeHtml(roleLabel)}</span>
+                <span>${escapeHtml(applicant.phoneDisplay || applicant.email || "Sin contacto")}</span>
+                <span>${escapeHtml(applicant.location || applicant.languages || "")}</span>
+              </div>
+            </div>
+            <span class="crm-status-badge" data-status="${escapeHtml(applicant.status)}">
+              ${escapeHtml(applicant.statusLabel)}
+            </span>
+          </div>
+          <div class="crm-micro-list">
+            <span class="crm-chip">${escapeHtml(formatDate(applicant.createdAt) || "Sin fecha")}</span>
+            ${applicant.languages ? `<span class="crm-chip">${escapeHtml(applicant.languages)}</span>` : ""}
+            ${applicant.yearsExperience ? `<span class="crm-chip">${escapeHtml(applicant.yearsExperience)} yrs</span>` : ""}
+            ${interviewChip ? `<span class="crm-chip">${escapeHtml(interviewChip)}</span>` : ""}
+            <span class="crm-chip">${escapeHtml(formatApplicantSource(applicant))}</span>
+          </div>
+          <div class="crm-lead-card-summary">
+            <span>${escapeHtml(summaryText)}</span>
+          </div>
+          <div class="crm-card-actions">
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
+                : ""
+            }
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
+                : ""
+            }
+            ${
+              applicant.email
+                ? `<a href="mailto:${escapeHtml(applicant.email)}" class="crm-card-action" data-prevent-select>Email</a>`
+                : `<button type="button" class="crm-card-action" data-card-open-applicant="${escapeHtml(applicant.id)}">Open profile</button>`
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  leadList.querySelectorAll("[data-prevent-select]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  leadList.querySelectorAll("[data-card-open-applicant]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const applicantId = String(button.getAttribute("data-card-open-applicant") || "").trim();
+
+      if (!applicantId) {
+        return;
+      }
+
+      rememberSelectedApplicant(applicantId);
+      renderApplicantList(applicants);
+      await loadApplicantDetail(applicantId);
+      scrollDetailIntoView();
+    });
+  });
+
+  leadList.querySelectorAll("[data-applicant-id]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      const applicantId = String(card.getAttribute("data-applicant-id") || "").trim();
+
+      if (!applicantId) {
+        return;
+      }
+
+      rememberSelectedApplicant(applicantId);
+      renderApplicantList(applicants);
+      await loadApplicantDetail(applicantId);
+      scrollDetailIntoView();
+    });
+  });
+}
+
 function renderActivityCards(target, activities = [], options = {}) {
   if (!target) {
     return;
@@ -1105,25 +1469,34 @@ function renderActivityCards(target, activities = [], options = {}) {
     .join("");
 }
 
-function renderConversationThread(messages = []) {
-  if (!conversationThread || !conversationSummary) {
+function renderConversationThread(
+  target,
+  summaryTarget,
+  messages = [],
+  {
+    assistantLabel = "Agustin 2.0",
+    userLabel = "Cliente",
+    emptySummary = "Sin transcript guardado.",
+    emptyBody = "Todavia no hay conversacion guardada para este registro.",
+  } = {},
+) {
+  if (!target || !summaryTarget) {
     return;
   }
 
   const safeMessages = Array.isArray(messages) ? messages.filter((item) => item?.content) : [];
 
   if (!safeMessages.length) {
-    conversationSummary.textContent = "Sin transcript guardado.";
-    conversationThread.innerHTML =
-      '<p class="crm-empty-state">Todavia no hay conversacion guardada para este lead.</p>';
+    summaryTarget.textContent = emptySummary;
+    target.innerHTML = `<p class="crm-empty-state">${escapeHtml(emptyBody)}</p>`;
     return;
   }
 
-  conversationSummary.textContent = `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
-  conversationThread.innerHTML = safeMessages
+  summaryTarget.textContent = `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
+  target.innerHTML = safeMessages
     .map((item) => {
       const role = item.role === "assistant" ? "assistant" : "user";
-      const roleLabel = role === "assistant" ? "Agustin 2.0" : "Cliente";
+      const roleLabel = role === "assistant" ? assistantLabel : userLabel;
 
       return `
         <article class="crm-conversation-card" data-role="${escapeHtml(role)}">
@@ -1212,16 +1585,185 @@ function syncDetailQuickActions(lead = null) {
   }
 }
 
+function syncApplicantQuickActions(applicant = null) {
+  const phoneDigits = normalizePhoneDigits(applicant?.phone || applicant?.phoneDisplay || "");
+  const hasPhone = Boolean(phoneDigits);
+  const hasEmail = Boolean(applicant?.email);
+
+  if (applicantCallLink) {
+    applicantCallLink.hidden = !hasPhone;
+    applicantCallLink.href = hasPhone ? buildTelHref(phoneDigits) : "#";
+  }
+
+  if (applicantTextLink) {
+    applicantTextLink.hidden = !hasPhone;
+    applicantTextLink.href = hasPhone ? buildSmsHref(phoneDigits) : "#";
+  }
+
+  if (applicantEmailLink) {
+    applicantEmailLink.hidden = !hasEmail;
+    applicantEmailLink.href = hasEmail ? `mailto:${applicant.email}` : "#";
+  }
+}
+
+function setApplicantDetailTab(tab = "profile") {
+  const nextTab = String(tab || "profile").trim() || "profile";
+  state.applicantDetailTab = nextTab;
+
+  applicantDetailTabButtons.forEach((button) => {
+    const isActive = String(button.dataset.crmApplicantDetailTab || "") === nextTab;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  applicantDetailViews.forEach((view) => {
+    const viewName = String(view.dataset.crmApplicantDetailView || "").trim();
+    view.hidden = viewName !== nextTab;
+  });
+}
+
+function renderApplicantDetail(detail = null) {
+  state.applicantDetail = detail;
+
+  if (!detail?.applicant) {
+    applicantDetailWrap.hidden = true;
+    if (state.view === "applicants") {
+      detailWrap.hidden = true;
+      detailEmpty.hidden = false;
+      detailStatus.textContent = "Selecciona un candidato";
+    }
+    if (applicantMeta) {
+      applicantMeta.innerHTML = "";
+    }
+    if (applicantProfileCard) {
+      applicantProfileCard.innerHTML =
+        '<p class="crm-empty-state">Aun no hay informacion detallada para este candidato.</p>';
+    }
+    renderConversationThread(
+      applicantConversationThread,
+      applicantConversationSummary,
+      [],
+      {
+        assistantLabel: "Agustin Hiring",
+        userLabel: "Candidato",
+        emptyBody: "Todavia no hay conversacion guardada para este candidato.",
+      },
+    );
+    renderActivityCards(applicantActivityList, []);
+    syncApplicantQuickActions(null);
+    setApplicantDetailTab("profile");
+    return;
+  }
+
+  const applicant = detail.applicant;
+  const manualNotes = stripGeneratedApplicantNotes(applicant.privateNotes || "");
+  const roleLabel = applicant.positionApplied || applicant.roleTrack || "Role pending";
+
+  detailWrap.hidden = true;
+  applicantDetailWrap.hidden = false;
+  detailEmpty.hidden = true;
+  detailStatus.textContent = `${applicant.statusLabel} · ${roleLabel}`;
+
+  if (applicantMeta) {
+    applicantMeta.innerHTML = `
+      <div class="crm-micro-list">
+        ${applicant.phoneDisplay ? `<span class="crm-chip">${escapeHtml(applicant.phoneDisplay)}</span>` : ""}
+        ${applicant.email ? `<span class="crm-chip">${escapeHtml(applicant.email)}</span>` : ""}
+        ${applicant.location ? `<span class="crm-chip">${escapeHtml(applicant.location)}</span>` : ""}
+        <span class="crm-chip">${escapeHtml(formatApplicantSource(applicant))}</span>
+      </div>
+      <div class="crm-detail-meta">
+        <span><strong>Creado:</strong> ${escapeHtml(formatDate(applicant.createdAt) || "Sin fecha")}</span>
+        <span><strong>Actualizado:</strong> ${escapeHtml(formatDate(applicant.updatedAt) || "Sin registrar")}</span>
+        ${
+          applicant.lastContactAt
+            ? `<span><strong>Ultimo contacto:</strong> ${escapeHtml(formatDate(applicant.lastContactAt))}</span>`
+            : ""
+        }
+        ${
+          applicant.interviewRequestedAt
+            ? `<span><strong>Interview requested:</strong> ${escapeHtml(formatDate(applicant.interviewRequestedAt))}</span>`
+            : ""
+        }
+        ${
+          applicant.nextActionAt
+            ? `<span><strong>Next action:</strong> ${escapeHtml(formatDate(applicant.nextActionAt))}</span>`
+            : ""
+        }
+        <span><strong>Pagina:</strong> ${escapeHtml(applicant.pagePath || applicant.pageUrl || "Sin dato")}</span>
+      </div>
+    `;
+  }
+
+  if (applicantProfileCard) {
+    applicantProfileCard.innerHTML = `
+      <div class="crm-panel-head tight">
+        <div>
+          <h3>Hiring Profile</h3>
+          <p>Calificacion capturada por Agustin 2.0</p>
+        </div>
+      </div>
+      <div class="crm-intake-grid">
+        <span><strong>Position:</strong> ${escapeHtml(roleLabel)}</span>
+        <span><strong>Languages:</strong> ${escapeHtml(applicant.languages || "Pending")}</span>
+        <span><strong>Years experience:</strong> ${escapeHtml(applicant.yearsExperience || "Pending")}</span>
+        <span><strong>Own tools:</strong> ${escapeHtml(formatApplicantAnswer(applicant.hasTools))}</span>
+        <span><strong>Transportation:</strong> ${escapeHtml(formatApplicantAnswer(applicant.hasTransportation))}</span>
+        <span><strong>Field ready:</strong> ${escapeHtml(formatApplicantAnswer(applicant.fieldReady))}</span>
+        <span><strong>Best day:</strong> ${escapeHtml(applicant.nextAction || "Pending")}</span>
+        <span><strong>Interview time:</strong> ${escapeHtml(applicant.nextActionAt ? formatDate(applicant.nextActionAt) : "Pending")}</span>
+      </div>
+      ${
+        applicant.experienceSummary
+          ? `<p class="crm-intake-note"><strong>Background:</strong> ${escapeHtml(applicant.experienceSummary)}</p>`
+          : ""
+      }
+      ${
+        applicant.detailsSummary
+          ? `<p class="crm-intake-note"><strong>Summary:</strong> ${escapeHtml(applicant.detailsSummary)}</p>`
+          : ""
+      }
+      ${
+        manualNotes
+          ? `<p class="crm-intake-note"><strong>Manual notes:</strong> ${escapeHtml(manualNotes)}</p>`
+          : ""
+      }
+      ${
+        applicant.lastUserMessage
+          ? `<p class="crm-intake-note"><strong>Last candidate message:</strong> ${escapeHtml(applicant.lastUserMessage)}</p>`
+          : ""
+      }
+    `;
+  }
+
+  syncApplicantQuickActions(applicant);
+  renderConversationThread(
+    applicantConversationThread,
+    applicantConversationSummary,
+    applicant.conversationHistory || [],
+    {
+      assistantLabel: "Agustin Hiring",
+      userLabel: "Candidato",
+      emptyBody: "Todavia no hay conversacion guardada para este candidato.",
+    },
+  );
+  renderActivityCards(applicantActivityList, detail.activity || []);
+  setApplicantDetailTab(state.applicantDetailTab || "profile");
+}
+
 function renderLeadDetail(detail = null) {
   state.leadDetail = detail;
 
   if (!detail?.lead) {
     detailWrap.hidden = true;
-    detailEmpty.hidden = false;
-    detailStatus.textContent = "Selecciona un lead";
+    if (state.view === "leads") {
+      applicantDetailWrap.hidden = true;
+      detailEmpty.hidden = false;
+      detailStatus.textContent = "Selecciona un lead";
+    }
     detailMeta.innerHTML = "";
     activityList.innerHTML = "";
-    renderConversationThread([]);
+    renderConversationThread(conversationThread, conversationSummary, []);
     renderLeadAssets([]);
     syncDetailQuickActions(null);
     setDetailTab("profile");
@@ -1231,6 +1773,7 @@ function renderLeadDetail(detail = null) {
   const lead = detail.lead;
   persistLeadDetail(detail);
   detailWrap.hidden = false;
+  applicantDetailWrap.hidden = true;
   detailEmpty.hidden = true;
   detailStatus.textContent = `${lead.statusLabel} · ${lead.projectType || "Sin servicio"}`;
   detailMeta.innerHTML = `
@@ -1364,7 +1907,7 @@ function renderLeadDetail(detail = null) {
   syncEstimateTotalFromForm();
   syncDetailQuickActions(lead);
   renderLeadAssets(detail.assets || []);
-  renderConversationThread(lead.conversationHistory || []);
+  renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || []);
   renderActivityCards(activityList, detail.activity || []);
   setDetailTab(state.detailTab || "profile");
 }
@@ -1447,18 +1990,9 @@ async function saveLeadChanges(
   return detail;
 }
 
-async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt = 0 } = {}) {
-  state.dashboard = dashboard;
-  const query = buildQueryString(state.filters);
-  renderSummary(dashboard.summary, dashboard.serviceBreakdown);
+async function renderLeadSnapshot(dashboard, { fromCache = false } = {}) {
   renderFilters(dashboard);
   renderLeadList(dashboard.leads || []);
-  renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
-
-  if (globalActivitySummary) {
-    const totalEvents = Array.isArray(dashboard.recentActivity) ? dashboard.recentActivity.length : 0;
-    globalActivitySummary.textContent = `${totalEvents} evento${totalEvents === 1 ? "" : "s"}`;
-  }
 
   if (dashboard.leads?.length) {
     const selectedStillVisible = dashboard.leads.some(
@@ -1483,6 +2017,77 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
   } else {
     rememberSelectedLead("");
     renderLeadDetail(null);
+  }
+}
+
+async function renderApplicantCollection() {
+  renderFilters(state.dashboard);
+  const filteredApplicants = getFilteredApplicants(state.applicants);
+  renderApplicantList(filteredApplicants);
+
+  if (!filteredApplicants.length) {
+    rememberSelectedApplicant("");
+    renderApplicantDetail(null);
+    return;
+  }
+
+  const selectedStillVisible = filteredApplicants.some(
+    (applicant) => applicant.id === state.selectedApplicantId,
+  );
+
+  if (!selectedStillVisible) {
+    rememberSelectedApplicant(filteredApplicants[0].id);
+  }
+
+  if (state.applicantDetail?.applicant?.id === state.selectedApplicantId) {
+    renderApplicantDetail(state.applicantDetail);
+    return;
+  }
+
+  try {
+    await loadApplicantDetail(state.selectedApplicantId);
+  } catch (error) {
+    handleCrmError(error, {
+      fallbackMessage:
+        "No pude cargar el detalle de este candidato. La lista sigue disponible mientras vuelve la conexion.",
+    });
+    renderApplicantDetail(null);
+  }
+}
+
+async function loadApplicants() {
+  const result = await apiRequest("/api/metalworks-crm/applicants");
+  state.applicants = Array.isArray(result.applicants) ? result.applicants : [];
+  await renderApplicantCollection();
+  return state.applicants;
+}
+
+async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt = 0 } = {}) {
+  state.dashboard = dashboard;
+  const query = buildQueryString(state.filters);
+  renderSummary(dashboard.summary, dashboard.serviceBreakdown);
+  renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
+
+  if (globalActivitySummary) {
+    const totalEvents = Array.isArray(dashboard.recentActivity) ? dashboard.recentActivity.length : 0;
+    globalActivitySummary.textContent = `${totalEvents} evento${totalEvents === 1 ? "" : "s"}`;
+  }
+
+  if (state.view === "applicants") {
+    renderFilters(dashboard);
+
+    if (fromCache) {
+      if (state.applicants.length) {
+        await renderApplicantCollection();
+      } else {
+        renderApplicantList([]);
+        renderApplicantDetail(null);
+      }
+    } else {
+      await loadApplicants();
+    }
+  } else {
+    await renderLeadSnapshot(dashboard, { fromCache });
   }
 
   if (fromCache) {
@@ -1555,6 +2160,19 @@ async function loadLeadDetail(leadId) {
 
     throw error;
   }
+}
+
+async function loadApplicantDetail(applicantId) {
+  if (!applicantId) {
+    renderApplicantDetail(null);
+    return;
+  }
+
+  const detail = await apiRequest(
+    `/api/metalworks-crm/applicants/${encodeURIComponent(applicantId)}`,
+  );
+  renderApplicantDetail(detail);
+  return detail;
 }
 
 async function handleSaveLead(event) {
@@ -1639,6 +2257,32 @@ async function handleSendEstimate() {
   }
 }
 
+async function setCrmView(view = "leads") {
+  const nextView = normalizeCrmView(view);
+  rememberSelectedView(nextView);
+  renderFilters(state.dashboard);
+
+  if (!state.dashboard) {
+    await refreshDashboardSafely();
+    return;
+  }
+
+  if (nextView === "applicants") {
+    await refreshApplicantsSafely();
+    return;
+  }
+
+  try {
+    await renderLeadSnapshot(state.dashboard);
+    setSystemStatus("", "");
+  } catch (error) {
+    handleCrmError(error, {
+      fallbackMessage:
+        "No pude cargar el detalle del lead en este momento. La lista sigue disponible mientras vuelve la conexion.",
+    });
+  }
+}
+
 async function handleLogout() {
   await apiRequest("/api/metalworks-crm/logout", {
     method: "POST",
@@ -1648,11 +2292,23 @@ async function handleLogout() {
 
 function bindFilters() {
   statusFilter?.addEventListener("change", async () => {
+    if (state.view === "applicants") {
+      state.applicantFilters.status = String(statusFilter.value || "").trim();
+      await renderApplicantCollection();
+      return;
+    }
+
     state.filters.status = String(statusFilter.value || "").trim();
     await refreshDashboardSafely();
   });
 
   serviceFilter?.addEventListener("change", async () => {
+    if (state.view === "applicants") {
+      state.applicantFilters.role = String(serviceFilter.value || "").trim();
+      await renderApplicantCollection();
+      return;
+    }
+
     state.filters.projectType = String(serviceFilter.value || "").trim();
     await refreshDashboardSafely();
   });
@@ -1660,6 +2316,12 @@ function bindFilters() {
   searchInput?.addEventListener("input", () => {
     window.clearTimeout(state.searchTimer);
     state.searchTimer = window.setTimeout(async () => {
+      if (state.view === "applicants") {
+        state.applicantFilters.search = String(searchInput.value || "").trim();
+        await renderApplicantCollection();
+        return;
+      }
+
       state.filters.search = String(searchInput.value || "").trim();
       await refreshDashboardSafely();
     }, 220);
@@ -1702,6 +2364,12 @@ function bindDetailActions() {
       setDetailTab(button.dataset.crmDetailTab || "profile");
     });
   });
+
+  applicantDetailTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setApplicantDetailTab(button.dataset.crmApplicantDetailTab || "profile");
+    });
+  });
 }
 
 async function refreshDashboardSafely() {
@@ -1716,6 +2384,19 @@ async function refreshDashboardSafely() {
   }
 }
 
+async function refreshApplicantsSafely() {
+  try {
+    await loadApplicants();
+    setSystemStatus("", "");
+  } catch (error) {
+    handleCrmError(error, {
+      fallbackMessage: state.applicants.length
+        ? "No pude refrescar candidatos en este momento. Conservando la ultima vista cargada."
+        : "No pude cargar los candidatos del hiring assistant. Intenta otra vez en unos segundos.",
+    });
+  }
+}
+
 function bindAppShell() {
   if (state.bindingsReady) {
     return;
@@ -1725,6 +2406,12 @@ function bindAppShell() {
   bindDetailActions();
   refreshButton?.addEventListener("click", refreshDashboardSafely);
   logoutButton?.addEventListener("click", handleLogout);
+  viewButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      const nextView = button.dataset.crmViewButton || "leads";
+      await setCrmView(nextView);
+    });
+  });
   state.bindingsReady = true;
 }
 
