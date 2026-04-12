@@ -40,6 +40,42 @@ const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
 const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
+const METALWORKS_WHATSAPP_WINDOW_MS = 24 * 60 * 60 * 1000;
+const METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS = Math.max(
+  15 * 1000,
+  Number(process.env.METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS || 60 * 1000),
+);
+const METALWORKS_WHATSAPP_FOLLOWUP_LOCK_MS = 2 * 60 * 1000;
+const METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE = Math.max(
+  1,
+  Number(process.env.METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE || 4),
+);
+const METALWORKS_WHATSAPP_FOLLOWUP_STEPS = Object.freeze([
+  {
+    step: "nudge_10m",
+    delayMs: 10 * 60 * 1000,
+    maxLagMs: 90 * 60 * 1000,
+    label: "10-minute follow-up",
+  },
+  {
+    step: "nudge_6h",
+    delayMs: 6 * 60 * 60 * 1000,
+    maxLagMs: 4 * 60 * 60 * 1000,
+    label: "6-hour follow-up",
+  },
+  {
+    step: "last_chance_23h",
+    delayMs: 23 * 60 * 60 * 1000,
+    maxLagMs: 45 * 60 * 1000,
+    label: "final 24-hour follow-up",
+  },
+]);
+const METALWORKS_WHATSAPP_CLOSED_LEAD_STATUSES = new Set([
+  "booked",
+  "won",
+  "lost",
+  "archived",
+]);
 const METALWORKS_EXTERNAL_SYNC_TOKEN = String(
   process.env.METALWORKS_EXTERNAL_SYNC_TOKEN || "",
 ).trim();
@@ -1137,6 +1173,9 @@ function formatActivityTitle(type = "") {
     assistant_fallback: "Fallback del assistant",
     assistant_booking_requested: "Cita pedida desde assistant",
     assistant_photo_uploaded: "Fotos subidas desde assistant",
+    assistant_whatsapp_followups_scheduled: "Follow-ups de WhatsApp programados",
+    assistant_whatsapp_followup_sent: "Follow-up de WhatsApp enviado",
+    assistant_whatsapp_followup_skipped: "Follow-up de WhatsApp omitido",
   };
 
   return labels[type] || "Actividad";
@@ -2386,6 +2425,214 @@ async function generateAssistantReply({
   }
 }
 
+function getMetalworksWhatsAppFollowupStepConfig(step = "") {
+  return (
+    METALWORKS_WHATSAPP_FOLLOWUP_STEPS.find((item) => item.step === cleanText(step || "", 40)) ||
+    null
+  );
+}
+
+function metalworksWhatsAppFollowupsEnabled() {
+  return String(process.env.METALWORKS_WHATSAPP_FOLLOWUPS_ENABLED || "").toLowerCase() === "true";
+}
+
+function buildAssistantFollowupFallbackReply({
+  step = "",
+  conversationState = null,
+} = {}) {
+  const stepConfig = getMetalworksWhatsAppFollowupStepConfig(step);
+  const inSpanish = Boolean(conversationState?.inSpanish);
+  const missingFields = Array.isArray(conversationState?.callbackMissingFields)
+    ? conversationState.callbackMissingFields
+    : [];
+  const serviceBucket = cleanText(conversationState?.serviceBucket || "", 40);
+  const callbackLabel =
+    cleanText(conversationState?.callbackLabel || "", 120) || "your requested time";
+
+  if (conversationState?.callbackIntent === "yes" && missingFields.length) {
+    const missingLabel = missingFields.join(", ");
+    return inSpanish
+      ? `Solo me faltan estos datos para dejar la llamada o visita lista: ${missingLabel}.`
+      : `I just need these details to line up the callback or site visit: ${missingLabel}.`;
+  }
+
+  if (stepConfig?.step === "nudge_10m" && cleanText(conversationState?.leadTemperature || "", 20) === "hot") {
+    return inSpanish
+      ? "Sigo aqui para mover esto rapido. Prefieres llamada o visita para estimate?"
+      : "I’m still here to move this fast. Would you like a callback or a site visit?";
+  }
+
+  if (stepConfig?.step === "nudge_10m") {
+    if (serviceBucket === "gate") {
+      return inSpanish
+        ? "Si gustas, manda una foto del porton y tu ZIP code y te ayudo con el siguiente paso."
+        : "If you want, send a photo of the gate and your ZIP code and I’ll help with the next step.";
+    }
+
+    if (serviceBucket === "railing") {
+      return inSpanish
+        ? "Si gustas, manda una foto del barandal o pasamanos y tu ZIP code y seguimos de alli."
+        : "If you want, send a photo of the railing or handrail and your ZIP code and we can keep moving.";
+    }
+
+    if (serviceBucket === "fence") {
+      return inSpanish
+        ? "Si gustas, manda fotos de la cerca y tu ZIP code y te ayudo a mover la cotizacion."
+        : "If you want, send photos of the fence and your ZIP code and I’ll help move the quote forward.";
+    }
+
+    if (serviceBucket === "welding") {
+      return inSpanish
+        ? "Si gustas, manda una foto de la pieza o del daño y tu ZIP code y seguimos de alli."
+        : "If you want, send a photo of the piece or the damage and your ZIP code and we can keep moving.";
+    }
+  }
+
+  if (stepConfig?.step === "nudge_6h") {
+    return inSpanish
+      ? "Si todavia ocupas ayuda con este trabajo, responde aqui y tambien puedes mandar fotos para avanzar mas rapido."
+      : "If you still need help with this job, reply here and you can also send photos to move it faster.";
+  }
+
+  if (conversationState?.callbackIntent === "yes" && !missingFields.length) {
+    return inSpanish
+      ? `Sigo teniendo tu solicitud para ${callbackLabel}. Si quieres agregar fotos o detalles, responde aqui.`
+      : `I still have your request for ${callbackLabel}. If you want to add photos or details, reply here.`;
+  }
+
+  return inSpanish
+    ? "Todavia te puedo ayudar por aqui. Si quieres llamada, visita o mandar fotos, responde a este mensaje."
+    : "I can still help here. If you want a callback, site visit, or to send photos, just reply to this message.";
+}
+
+function buildAssistantFollowupSystemPrompt({
+  step = "",
+  conversationState = null,
+} = {}) {
+  const stepConfig = getMetalworksWhatsAppFollowupStepConfig(step);
+
+  return `
+WHATSAPP FOLLOW-UP TASK:
+- You are sending an outbound follow-up inside an active customer-service WhatsApp window.
+- The visitor has not replied since the last assistant message.
+- Keep the follow-up under 240 characters.
+- Sound human, practical, helpful, and low-pressure.
+- Do not use a long greeting.
+- Ask at most one direct question.
+- Do not mention policies, the 24-hour window, automation, or templates.
+- If lead_temperature is hot, move directly toward callback or site visit.
+- If callback_intent is yes and fields are still missing, ask only for the missing fields.
+- If photos would help, you may mention sending photos.
+- Step right now: ${stepConfig?.label || cleanText(step || "", 80) || "follow-up"}.
+`;
+}
+
+async function generateAssistantFollowupReply({
+  step = "",
+  history = [],
+  pagePath = "",
+  conversationState = null,
+} = {}) {
+  const fallbackReply = buildAssistantFollowupFallbackReply({
+    step,
+    conversationState,
+  });
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+
+  if (!apiKey) {
+    return {
+      reply: fallbackReply,
+      usedFallback: true,
+      reason: "OPENAI_API_KEY missing",
+    };
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        max_output_tokens: 160,
+        reasoning: {
+          effort: "low",
+        },
+        text: {
+          verbosity: "low",
+          format: {
+            type: "text",
+          },
+        },
+        input: [
+          {
+            role: "system",
+            content: METALWORKS_ASSISTANT_SYSTEM_PROMPT,
+          },
+          {
+            role: "system",
+            content: buildAssistantContext(
+              cleanText(
+                conversationState?.latestUserMessage ||
+                  conversationState?.detailsSummary ||
+                  conversationState?.projectType ||
+                  "",
+                500,
+              ),
+              pagePath,
+            ),
+          },
+          {
+            role: "system",
+            content: buildAssistantStatePrompt(conversationState || {}),
+          },
+          {
+            role: "system",
+            content: buildAssistantFollowupSystemPrompt({
+              step,
+              conversationState,
+            }),
+          },
+          ...normalizeAssistantHistory(history),
+          {
+            role: "user",
+            content: `Create the ${cleanText(step || "follow-up", 40)} WhatsApp follow-up now.`,
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json().catch(() => null);
+    const reply = extractAssistantResponseText(data);
+
+    if (!response.ok || !reply) {
+      return {
+        reply: fallbackReply,
+        usedFallback: true,
+        reason:
+          cleanText(
+            data?.error?.message || data?.message || `OpenAI error ${response.status}`,
+            240,
+          ) || "OpenAI error",
+      };
+    }
+
+    return {
+      reply,
+      usedFallback: false,
+      reason: "",
+    };
+  } catch (error) {
+    return {
+      reply: fallbackReply,
+      usedFallback: true,
+      reason: cleanText(error?.message || "Assistant error", 240),
+    };
+  }
+}
+
 function cleanLead(doc = null, { includeConversation = false } = {}) {
   if (!doc) {
     return null;
@@ -3158,6 +3405,35 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
+  const metalworksWhatsAppFollowupSchema = new mongoose.Schema({
+    leadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    phone: { type: String, index: true },
+    phoneDisplay: String,
+    visitorId: { type: String, index: true },
+    sessionId: { type: String, index: true },
+    step: { type: String, required: true, index: true },
+    status: { type: String, default: "queued", index: true },
+    dueAt: { type: Date, required: true, index: true },
+    windowExpiresAt: { type: Date, required: true, index: true },
+    lastInboundAt: { type: Date, required: true, index: true },
+    serviceBucket: String,
+    leadTemperature: String,
+    language: String,
+    messageBody: String,
+    attempts: { type: Number, default: 0 },
+    lockedAt: Date,
+    sentAt: Date,
+    canceledAt: Date,
+    cancelReason: String,
+    error: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
@@ -3174,6 +3450,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksProspectorSessionSchema.index({ prospectorEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksWhatsAppFollowupSchema.index({ status: 1, dueAt: 1, createdAt: 1 });
+  metalworksWhatsAppFollowupSchema.index({ leadId: 1, status: 1, dueAt: 1 });
+  metalworksWhatsAppFollowupSchema.index({ leadId: 1, step: 1, lastInboundAt: 1 });
 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
@@ -3193,6 +3472,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmPushDevice =
     mongoose.models.MetalworksCrmPushDevice ||
     mongoose.model("MetalworksCrmPushDevice", metalworksCrmPushDeviceSchema);
+  const MetalworksWhatsAppFollowup =
+    mongoose.models.MetalworksWhatsAppFollowup ||
+    mongoose.model("MetalworksWhatsAppFollowup", metalworksWhatsAppFollowupSchema);
+  let metalworksWhatsAppFollowupWorkerRunning = false;
+  let metalworksWhatsAppFollowupWorkerInterval = null;
+  let metalworksWhatsAppFollowupWakeTimer = null;
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -3502,6 +3787,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     pageUrl = "",
     req = null,
     tracking = {},
+    createdAt = null,
   } = {}) {
     await MetalworksLeadActivity.create({
       leadId,
@@ -3514,7 +3800,610 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       ipAddress: req ? cleanText(getClientIp(req), 120) : "",
       userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
       tracking: buildTrackingPayload(tracking),
+      createdAt:
+        createdAt instanceof Date && !Number.isNaN(createdAt.getTime()) ? createdAt : new Date(),
     });
+  }
+
+  function isMetalworksWhatsAppFollowupFinalLeadStatus(status = "") {
+    return METALWORKS_WHATSAPP_CLOSED_LEAD_STATUSES.has(normalizeStatus(status || "new"));
+  }
+
+  function buildMetalworksWhatsAppConversationState(leadDoc = null) {
+    if (!leadDoc) {
+      return null;
+    }
+
+    const lead =
+      leadDoc && typeof leadDoc.toObject === "function"
+        ? leadDoc.toObject()
+        : { ...(leadDoc || {}) };
+
+    return {
+      ...buildAssistantConversationSignals({
+        history: Array.isArray(lead?.conversationHistory) ? lead.conversationHistory : [],
+        lead,
+        pagePath: cleanText(lead?.pagePath || "", 240) || "/whatsapp",
+      }),
+      sourceChannel: "whatsapp",
+      sourceLabel: "Agustin 2.0 WhatsApp assistant",
+    };
+  }
+
+  function shouldSkipMetalworksWhatsAppFollowups(leadDoc = null, conversationState = null) {
+    if (!leadDoc?._id) {
+      return {
+        skip: true,
+        reason: "missing_lead",
+      };
+    }
+
+    if (isMetalworksWhatsAppFollowupFinalLeadStatus(leadDoc.status)) {
+      return {
+        skip: true,
+        reason: `lead_${normalizeStatus(leadDoc.status || "new")}`,
+      };
+    }
+
+    const state = conversationState || buildMetalworksWhatsAppConversationState(leadDoc);
+    const phone = normalizePhone(leadDoc?.phone || state?.phone || "");
+    const hasScheduledCallback =
+      state?.nextActionAt instanceof Date &&
+      !Number.isNaN(state.nextActionAt.getTime()) &&
+      state?.callbackIntent === "yes" &&
+      (!Array.isArray(state?.callbackMissingFields) || !state.callbackMissingFields.length);
+
+    if (!phone) {
+      return {
+        skip: true,
+        reason: "missing_phone",
+      };
+    }
+
+    if (hasScheduledCallback) {
+      return {
+        skip: true,
+        reason: "callback_already_booked",
+      };
+    }
+
+    return {
+      skip: false,
+      reason: "",
+    };
+  }
+
+  async function cancelMetalworksWhatsAppFollowupsForLead({
+    leadId = null,
+    reason = "",
+    lastInboundAt = null,
+    excludeFollowupId = null,
+  } = {}) {
+    if (!leadId) {
+      return 0;
+    }
+
+    const query = {
+      leadId,
+      status: { $in: ["queued", "retrying"] },
+    };
+
+    if (lastInboundAt instanceof Date && !Number.isNaN(lastInboundAt.getTime())) {
+      query.lastInboundAt = lastInboundAt;
+    }
+
+    if (excludeFollowupId) {
+      query._id = { $ne: excludeFollowupId };
+    }
+
+    const result = await MetalworksWhatsAppFollowup.updateMany(query, {
+      $set: {
+        status: "canceled",
+        cancelReason: cleanText(reason || "", 160),
+        canceledAt: new Date(),
+        lockedAt: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    return Number(result?.modifiedCount || 0) || 0;
+  }
+
+  async function scheduleMetalworksWhatsAppFollowups({
+    leadDoc = null,
+    inboundAt = null,
+    sourceChannel = "",
+    tracking = {},
+  } = {}) {
+    if (!leadDoc?._id || cleanText(sourceChannel || "", 40) !== "whatsapp") {
+      return {
+        scheduled: 0,
+        skipped: true,
+        reason: "not_whatsapp",
+      };
+    }
+
+    const safeInboundAt =
+      inboundAt instanceof Date && !Number.isNaN(inboundAt.getTime()) ? inboundAt : new Date();
+    const conversationState = buildMetalworksWhatsAppConversationState(leadDoc);
+    const skipState = shouldSkipMetalworksWhatsAppFollowups(leadDoc, conversationState);
+
+    await cancelMetalworksWhatsAppFollowupsForLead({
+      leadId: leadDoc._id,
+      reason: skipState.skip ? skipState.reason : "reset_by_new_inbound",
+    });
+
+    if (!metalworksWhatsAppFollowupsEnabled()) {
+      return {
+        scheduled: 0,
+        skipped: true,
+        reason: "disabled",
+      };
+    }
+
+    if (skipState.skip) {
+      return {
+        scheduled: 0,
+        skipped: true,
+        reason: skipState.reason,
+      };
+    }
+
+    const phone = normalizePhone(leadDoc.phone || conversationState?.phone || "");
+
+    if (!phone) {
+      return {
+        scheduled: 0,
+        skipped: true,
+        reason: "missing_phone",
+      };
+    }
+
+    const phoneDisplay = cleanText(
+      leadDoc.phoneDisplay || conversationState?.phoneDisplay || phone,
+      40,
+    );
+    const windowExpiresAt = new Date(safeInboundAt.getTime() + METALWORKS_WHATSAPP_WINDOW_MS);
+    const docs = METALWORKS_WHATSAPP_FOLLOWUP_STEPS.map((stepConfig) => ({
+      leadId: leadDoc._id,
+      phone,
+      phoneDisplay,
+      visitorId: cleanText(
+        (Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds[0] : "") ||
+          conversationState?.visitorId ||
+          "",
+        120,
+      ),
+      sessionId: cleanText(
+        (Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds[0] : "") ||
+          conversationState?.sessionId ||
+          "",
+        120,
+      ),
+      step: stepConfig.step,
+      status: "queued",
+      dueAt: new Date(safeInboundAt.getTime() + stepConfig.delayMs),
+      windowExpiresAt,
+      lastInboundAt: safeInboundAt,
+      serviceBucket: cleanText(conversationState?.serviceBucket || "", 40),
+      leadTemperature: cleanText(conversationState?.leadTemperature || "", 20),
+      language: conversationState?.inSpanish ? "es" : "en",
+      attempts: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    if (!docs.length) {
+      return {
+        scheduled: 0,
+        skipped: true,
+        reason: "no_steps",
+      };
+    }
+
+    await MetalworksWhatsAppFollowup.insertMany(docs, { ordered: true });
+    await appendActivity({
+      leadId: leadDoc._id,
+      activityType: "assistant_whatsapp_followups_scheduled",
+      body: `Queued ${docs.length} WhatsApp follow-ups inside the active reply window.`,
+      meta: {
+        count: docs.length,
+        steps: docs.map((item) => item.step),
+        lastInboundAt: safeInboundAt.toISOString(),
+        windowExpiresAt: windowExpiresAt.toISOString(),
+        sourceChannel: "whatsapp",
+      },
+      pagePath: cleanText(leadDoc.pagePath || "", 240) || "/whatsapp",
+      pageUrl: cleanText(leadDoc.pageUrl || "", 500) || "whatsapp://twilio/inbound",
+      tracking,
+    });
+
+    despertarMetalworksWhatsAppFollowupWorker(500);
+
+    return {
+      scheduled: docs.length,
+      skipped: false,
+      reason: "",
+      windowExpiresAt,
+    };
+  }
+
+  async function hasNewerWhatsAppInboundSince({ leadId = null, lastInboundAt = null } = {}) {
+    if (!leadId || !(lastInboundAt instanceof Date) || Number.isNaN(lastInboundAt.getTime())) {
+      return false;
+    }
+
+    const match = await MetalworksLeadActivity.exists({
+      leadId,
+      activityType: "assistant_user_message",
+      createdAt: { $gt: lastInboundAt },
+      "meta.sourceChannel": "whatsapp",
+    });
+
+    return Boolean(match);
+  }
+
+  async function tomarMetalworksWhatsAppFollowupPendiente() {
+    const now = new Date();
+    const staleLockAt = new Date(now.getTime() - METALWORKS_WHATSAPP_FOLLOWUP_LOCK_MS);
+
+    return MetalworksWhatsAppFollowup.findOneAndUpdate(
+      {
+        $or: [
+          {
+            status: "queued",
+            dueAt: { $lte: now },
+          },
+          {
+            status: "retrying",
+            dueAt: { $lte: now },
+          },
+          {
+            status: "processing",
+            lockedAt: { $lte: staleLockAt },
+          },
+        ],
+      },
+      {
+        $set: {
+          status: "processing",
+          lockedAt: now,
+          updatedAt: now,
+        },
+        $inc: {
+          attempts: 1,
+        },
+      },
+      {
+        sort: {
+          dueAt: 1,
+          createdAt: 1,
+        },
+        new: true,
+      },
+    );
+  }
+
+  async function markMetalworksWhatsAppFollowupSent(
+    followupDoc = null,
+    { messageBody = "", error = "" } = {},
+  ) {
+    if (!followupDoc?._id) {
+      return;
+    }
+
+    const now = new Date();
+    await MetalworksWhatsAppFollowup.updateOne(
+      { _id: followupDoc._id },
+      {
+        $set: {
+          status: "sent",
+          messageBody: cleanText(messageBody || "", 1500),
+          error: cleanText(error || "", 240),
+          sentAt: now,
+          lockedAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+  }
+
+  async function markMetalworksWhatsAppFollowupSkipped(
+    followupDoc = null,
+    reason = "",
+  ) {
+    if (!followupDoc?._id) {
+      return;
+    }
+
+    const now = new Date();
+    await MetalworksWhatsAppFollowup.updateOne(
+      { _id: followupDoc._id },
+      {
+        $set: {
+          status: "skipped",
+          cancelReason: cleanText(reason || "", 160),
+          canceledAt: now,
+          lockedAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+  }
+
+  async function markMetalworksWhatsAppFollowupFailed(
+    followupDoc = null,
+    error = "",
+  ) {
+    if (!followupDoc?._id) {
+      return;
+    }
+
+    const now = new Date();
+    const safeError = cleanText(error || "Unknown follow-up error", 240);
+    const windowExpiresAt =
+      followupDoc.windowExpiresAt instanceof Date &&
+      !Number.isNaN(followupDoc.windowExpiresAt.getTime())
+        ? followupDoc.windowExpiresAt
+        : followupDoc.windowExpiresAt
+          ? new Date(followupDoc.windowExpiresAt)
+          : null;
+    const retryAt = new Date(
+      now.getTime() + Math.min(Math.max(Number(followupDoc.attempts || 1), 1), 3) * 5 * 60 * 1000,
+    );
+    const canRetry =
+      Number(followupDoc.attempts || 0) < 3 &&
+      windowExpiresAt instanceof Date &&
+      !Number.isNaN(windowExpiresAt.getTime()) &&
+      retryAt.getTime() < windowExpiresAt.getTime();
+
+    await MetalworksWhatsAppFollowup.updateOne(
+      { _id: followupDoc._id },
+      {
+        $set: {
+          status: canRetry ? "retrying" : "failed",
+          dueAt: canRetry ? retryAt : followupDoc.dueAt,
+          error: safeError,
+          lockedAt: null,
+          updatedAt: now,
+        },
+      },
+    );
+  }
+
+  function shouldLogMetalworksWhatsAppFollowupSkip(reason = "") {
+    return !["newer_inbound_message", "stale_followup"].includes(cleanText(reason || "", 80));
+  }
+
+  async function procesarMetalworksWhatsAppFollowups() {
+    if (
+      metalworksWhatsAppFollowupWorkerRunning ||
+      mongoose.connection.readyState !== 1 ||
+      !metalworksWhatsAppFollowupsEnabled()
+    ) {
+      return;
+    }
+
+    if (typeof app.locals.sendMetalworksWhatsAppMessage !== "function") {
+      return;
+    }
+
+    metalworksWhatsAppFollowupWorkerRunning = true;
+
+    try {
+      for (let index = 0; index < METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE; index += 1) {
+        const followupDoc = await tomarMetalworksWhatsAppFollowupPendiente();
+
+        if (!followupDoc?._id) {
+          break;
+        }
+
+        try {
+          const leadDoc = followupDoc.leadId
+            ? await MetalworksLead.findById(followupDoc.leadId)
+            : await resolveConversationLead({
+                visitorId: followupDoc.visitorId,
+                sessionId: followupDoc.sessionId,
+                phone: followupDoc.phone,
+              });
+          const pagePath = cleanText(leadDoc?.pagePath || "", 240) || "/whatsapp";
+          const pageUrl = cleanText(leadDoc?.pageUrl || "", 500) || "whatsapp://twilio/followup";
+          const tracking = buildTrackingPayload(leadDoc?.tracking || {});
+
+          if (!leadDoc?._id) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "missing_lead");
+            continue;
+          }
+
+          const stepConfig = getMetalworksWhatsAppFollowupStepConfig(followupDoc.step);
+
+          if (!stepConfig) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "invalid_step");
+            continue;
+          }
+
+          const conversationState = buildMetalworksWhatsAppConversationState(leadDoc);
+          const skipState = shouldSkipMetalworksWhatsAppFollowups(leadDoc, conversationState);
+
+          if (skipState.skip) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, skipState.reason);
+            await cancelMetalworksWhatsAppFollowupsForLead({
+              leadId: leadDoc._id,
+              reason: skipState.reason,
+            });
+
+            if (shouldLogMetalworksWhatsAppFollowupSkip(skipState.reason)) {
+              await appendActivity({
+                leadId: leadDoc._id,
+                activityType: "assistant_whatsapp_followup_skipped",
+                body: `Skipped WhatsApp follow-up (${followupDoc.step}) because ${skipState.reason}.`,
+                meta: {
+                  reason: skipState.reason,
+                  step: followupDoc.step,
+                  sourceChannel: "whatsapp",
+                },
+                pagePath,
+                pageUrl,
+                tracking,
+              });
+            }
+
+            continue;
+          }
+
+          const now = new Date();
+          const windowExpiresAt =
+            followupDoc.windowExpiresAt instanceof Date &&
+            !Number.isNaN(followupDoc.windowExpiresAt.getTime())
+              ? followupDoc.windowExpiresAt
+              : new Date(followupDoc.windowExpiresAt);
+          const lastInboundAt =
+            followupDoc.lastInboundAt instanceof Date &&
+            !Number.isNaN(followupDoc.lastInboundAt.getTime())
+              ? followupDoc.lastInboundAt
+              : new Date(followupDoc.lastInboundAt);
+          const dueAt =
+            followupDoc.dueAt instanceof Date && !Number.isNaN(followupDoc.dueAt.getTime())
+              ? followupDoc.dueAt
+              : new Date(followupDoc.dueAt);
+
+          if (!(windowExpiresAt instanceof Date) || Number.isNaN(windowExpiresAt.getTime())) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "missing_window");
+            continue;
+          }
+
+          if (now.getTime() >= windowExpiresAt.getTime()) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "window_expired");
+            continue;
+          }
+
+          if (
+            dueAt instanceof Date &&
+            !Number.isNaN(dueAt.getTime()) &&
+            stepConfig.maxLagMs > 0 &&
+            now.getTime() - dueAt.getTime() > stepConfig.maxLagMs
+          ) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "stale_followup");
+            continue;
+          }
+
+          if (await hasNewerWhatsAppInboundSince({ leadId: leadDoc._id, lastInboundAt })) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "newer_inbound_message");
+            await cancelMetalworksWhatsAppFollowupsForLead({
+              leadId: leadDoc._id,
+              reason: "newer_inbound_message",
+              lastInboundAt,
+              excludeFollowupId: followupDoc._id,
+            });
+            continue;
+          }
+
+          const followupResult = await generateAssistantFollowupReply({
+            step: followupDoc.step,
+            history: Array.isArray(leadDoc.conversationHistory) ? leadDoc.conversationHistory : [],
+            pagePath,
+            conversationState,
+          });
+          const reply = cleanText(followupResult?.reply || "", 1500);
+
+          if (!reply) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "blank_reply");
+            continue;
+          }
+
+          if (await hasNewerWhatsAppInboundSince({ leadId: leadDoc._id, lastInboundAt })) {
+            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "newer_inbound_message");
+            await cancelMetalworksWhatsAppFollowupsForLead({
+              leadId: leadDoc._id,
+              reason: "newer_inbound_message",
+              lastInboundAt,
+              excludeFollowupId: followupDoc._id,
+            });
+            continue;
+          }
+
+          const sendResult = await app.locals.sendMetalworksWhatsAppMessage({
+            to: leadDoc.phone || followupDoc.phone,
+            body: reply,
+          });
+
+          if (!sendResult?.ok) {
+            throw new Error(sendResult?.error || "Twilio WhatsApp send failed.");
+          }
+
+          const sentAt = new Date();
+          leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
+            {
+              role: "assistant",
+              content: reply,
+              createdAt: sentAt,
+            },
+          ]);
+          leadDoc.lastAssistantMessage = reply;
+          leadDoc.lastContactAt = sentAt;
+          leadDoc.updatedAt = sentAt;
+          await leadDoc.save();
+          await markMetalworksWhatsAppFollowupSent(followupDoc, {
+            messageBody: reply,
+          });
+          await appendActivity({
+            leadId: leadDoc._id,
+            activityType: "assistant_whatsapp_followup_sent",
+            body: reply,
+            meta: {
+              step: followupDoc.step,
+              twilioSid: cleanText(sendResult?.sid || "", 120),
+              usedFallback: Boolean(followupResult?.usedFallback),
+              reason: cleanText(followupResult?.reason || "", 240),
+              sourceChannel: "whatsapp",
+            },
+            pagePath,
+            pageUrl,
+            tracking,
+            createdAt: sentAt,
+          });
+        } catch (error) {
+          console.error(
+            "Error sending Metal Works WhatsApp follow-up:",
+            followupDoc?.step,
+            error.message,
+          );
+          await markMetalworksWhatsAppFollowupFailed(
+            followupDoc,
+            error?.message || "WhatsApp follow-up failed.",
+          );
+        }
+      }
+    } finally {
+      metalworksWhatsAppFollowupWorkerRunning = false;
+    }
+  }
+
+  function despertarMetalworksWhatsAppFollowupWorker(delayMs = 200) {
+    if (metalworksWhatsAppFollowupWakeTimer) {
+      return;
+    }
+
+    metalworksWhatsAppFollowupWakeTimer = setTimeout(() => {
+      metalworksWhatsAppFollowupWakeTimer = null;
+      procesarMetalworksWhatsAppFollowups().catch((error) => {
+        console.error("Error waking Metal Works WhatsApp follow-up worker:", error.message);
+      });
+    }, delayMs);
+  }
+
+  function iniciarMetalworksWhatsAppFollowupWorker() {
+    if (metalworksWhatsAppFollowupWorkerInterval) {
+      return;
+    }
+
+    metalworksWhatsAppFollowupWorkerInterval = setInterval(() => {
+      procesarMetalworksWhatsAppFollowups().catch((error) => {
+        console.error("Error in Metal Works WhatsApp follow-up worker:", error.message);
+      });
+    }, METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS);
+
+    despertarMetalworksWhatsAppFollowupWorker(500);
   }
 
   async function syncLeadAssetsToLead({
@@ -3886,6 +4775,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const safePageUrl = cleanText(pageUrl || "", 500);
     const safeReferrer = cleanText(referrer || "", 500);
     const safeTracking = buildTrackingPayload(tracking || {});
+    const inboundReceivedAt = new Date();
 
     if (!safeMessage) {
       return {
@@ -3995,6 +4885,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       pagePath: safePagePath,
       pageUrl: safePageUrl,
       tracking: safeTracking,
+      createdAt: inboundReceivedAt,
     });
 
     const result = await generateAssistantReply({
@@ -4140,6 +5031,19 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       tracking: safeTracking,
     });
 
+    if (leadDoc?._id && finalState.sourceChannel === "whatsapp") {
+      try {
+        await scheduleMetalworksWhatsAppFollowups({
+          leadDoc,
+          inboundAt: inboundReceivedAt,
+          sourceChannel: finalState.sourceChannel,
+          tracking: safeTracking,
+        });
+      } catch (error) {
+        console.error("Error scheduling Metal Works WhatsApp follow-ups:", error.message);
+      }
+    }
+
     return {
       ok: true,
       status: 200,
@@ -4159,6 +5063,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   }
 
   app.locals.processMetalworksAssistantMessage = processMetalworksAssistantMessage;
+  app.locals.startMetalworksWhatsAppFollowupWorker = iniciarMetalworksWhatsAppFollowupWorker;
 
   app.get(
     [
