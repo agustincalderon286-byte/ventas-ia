@@ -61,6 +61,7 @@ private struct CRMWorkspaceView: View {
   private enum WorkspaceTab {
     case crm
     case applicants
+    case links
     case agenda
   }
 
@@ -77,6 +78,12 @@ private struct CRMWorkspaceView: View {
           Label("Applicants", systemImage: "person.3.fill")
         }
         .tag(WorkspaceTab.applicants)
+
+      CRMResourcesView(store: store)
+        .tabItem {
+          Label("Links", systemImage: "link.circle.fill")
+        }
+        .tag(WorkspaceTab.links)
 
       CRMAgendaView(store: store)
         .tabItem {
@@ -1112,6 +1119,122 @@ private struct CRMAgendaView: View {
   }
 }
 
+private struct CRMResourcesView: View {
+  @ObservedObject var store: CRMStore
+  @State private var resourceFeedback = ""
+
+  var body: some View {
+    NavigationStack {
+      ZStack {
+        crmBackground
+
+        ScrollView {
+          VStack(alignment: .leading, spacing: 18) {
+            resourcesHeader
+
+            if !resourceFeedback.isEmpty {
+              infoBanner(title: "Links hub", body: resourceFeedback, tone: .success)
+            }
+
+            if store.resourceSections.isEmpty {
+              CRMLoadingCard(
+                title: "Loading links...",
+                message: "Pulling the website, WhatsApp, CRM, and sharing links you use most."
+              )
+            } else {
+              ForEach(store.resourceSections) { section in
+                resourceSection(section)
+              }
+            }
+          }
+          .padding(.horizontal, 18)
+          .padding(.top, 18)
+          .padding(.bottom, 34)
+        }
+        .refreshable {
+          await store.refreshSession()
+        }
+      }
+      .navigationBarHidden(true)
+    }
+  }
+
+  private var resourcesHeader: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 5) {
+          Text("Links")
+            .font(.system(size: 34, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+
+          Text("Open or copy the main business links without hunting for them again.")
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(.white.opacity(0.72))
+        }
+
+        Spacer()
+
+        Button {
+          Task {
+            await store.refreshSession()
+          }
+        } label: {
+          Label("Refresh", systemImage: "arrow.clockwise")
+            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+        }
+      }
+
+      Text("Use this as your central hub for website, WhatsApp, CRM, prospectors, and trust links.")
+        .font(.system(size: 13, weight: .medium, design: .rounded))
+        .foregroundStyle(.white.opacity(0.7))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func resourceSection(_ section: CRMResourceSection) -> some View {
+    VStack(alignment: .leading, spacing: 14) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(section.title)
+          .font(.system(size: 19, weight: .bold, design: .rounded))
+          .foregroundStyle(.white)
+
+        if !section.description.isEmpty {
+          Text(section.description)
+            .font(.system(size: 13, weight: .medium, design: .rounded))
+            .foregroundStyle(.white.opacity(0.72))
+        }
+      }
+
+      VStack(spacing: 12) {
+        ForEach(section.items) { item in
+          ResourceLinkCard(item: item) {
+            copyResource(item)
+          }
+        }
+      }
+    }
+  }
+
+  private func copyResource(_ item: CRMResourceLink) {
+    let safeURL = item.url.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !safeURL.isEmpty else {
+      return
+    }
+
+    UIPasteboard.general.string = safeURL
+    let message = "\(item.label) copied."
+    resourceFeedback = message
+
+    Task {
+      try? await Task.sleep(for: .seconds(2.2))
+      if resourceFeedback == message {
+        resourceFeedback = ""
+      }
+    }
+  }
+}
+
 private struct CRMLeadDetailView: View {
   @ObservedObject var store: CRMStore
   let leadID: String
@@ -1702,6 +1825,64 @@ private struct CRMLeadDetailView: View {
         }
       }
     }
+  }
+}
+
+private struct ResourceLinkCard: View {
+  let item: CRMResourceLink
+  let onCopy: () -> Void
+
+  private var destinationURL: URL? {
+    URL(string: item.url)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(alignment: .top, spacing: 12) {
+        Image(systemName: item.symbol.isEmpty ? "link" : item.symbol)
+          .font(.system(size: 18, weight: .bold))
+          .foregroundStyle(.black)
+          .frame(width: 42, height: 42)
+          .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+        VStack(alignment: .leading, spacing: 6) {
+          Text(item.label)
+            .font(.system(size: 17, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+
+          if !item.description.isEmpty {
+            Text(item.description)
+              .font(.system(size: 13, weight: .medium, design: .rounded))
+              .foregroundStyle(.white.opacity(0.74))
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+
+        Spacer()
+      }
+
+      if !item.url.isEmpty {
+        Text(item.url)
+          .font(.system(size: 12, weight: .semibold, design: .rounded))
+          .foregroundStyle(.white.opacity(0.62))
+          .textSelection(.enabled)
+      }
+
+      HStack(spacing: 10) {
+        if let destinationURL {
+          Link(destination: destinationURL) {
+            ContactActionButton(title: "Open", systemImage: "arrow.up.right.square.fill")
+          }
+        }
+
+        Button(action: onCopy) {
+          ContactActionButton(title: "Copy", systemImage: "doc.on.doc.fill")
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(18)
+    .background(crmGlassCard)
   }
 }
 
