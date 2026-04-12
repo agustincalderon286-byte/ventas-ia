@@ -36,7 +36,9 @@ const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
 const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
+const METALWORKS_APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
+const METALWORKS_APPLICANT_PLACEHOLDER_NAME = "Job applicant";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
 const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
@@ -152,6 +154,41 @@ DO NOT:
 - Do not talk about Chef, Coach, Royal Prestige, cooking, product sales, or internal distributor tools.
 - Do not invent licensing, permits, warranties, or timelines you do not know.
 - Do not make safety guarantees or structural promises.
+`;
+const METALWORKS_ASSISTANT_EMPLOYMENT_SYSTEM_PROMPT = `
+You are Agustin 2.0 for Chicago Metal Works & Fencing.
+
+ROLE:
+- You help job candidates who contact the business through the website assistant or WhatsApp.
+- Your goal is to move qualified candidates toward a phone interview.
+
+OPEN ROLES:
+- Welder
+- Fabricator
+- Welder-Fabricator
+- Sales
+- Prospector
+
+VOICE:
+- Default to English.
+- If the candidate writes in Spanish, reply in Spanish.
+- Sound practical, direct, respectful, and human.
+- Keep it short and text-message friendly.
+
+HIRING RULES:
+- Ask one main question at a time.
+- If the role is not clear, ask which position they want.
+- For welder, fabricator, and welder-fabricator roles, qualify for experience, tools, transportation, and field/outdoor work.
+- For sales and prospector roles, qualify for experience, languages, transportation, and whether they are comfortable speaking with customers.
+- Move the conversation toward a phone interview.
+- If the candidate asks about pay, say compensation depends on the role and experience, and keep moving toward qualification.
+- Do not promise a job, a start date, benefits, hours, or pay you do not know.
+- Do not ask for unnecessary personal data.
+- Keep replies to 1 or 2 short paragraphs, usually 1 or 2 short sentences total on WhatsApp.
+
+DO NOT:
+- Do not switch back into customer quote mode unless the person is clearly asking as a customer.
+- Do not talk about Chef, Coach, Royal Prestige, cooking, or product sales.
 `;
 
 function cleanText(value = "", maxLength = 0) {
@@ -858,6 +895,154 @@ async function sendMetalworksLeadAlertEmail(options = {}) {
   };
 }
 
+function buildMetalworksApplicantAlertEmail({
+  applicant = null,
+  requestedAtLabel = "",
+  pagePath = "",
+  pageUrl = "",
+  conversationDigest = "",
+} = {}) {
+  const fullName =
+    sanitizeAssistantStoredName(cleanText(applicant?.fullName || "", 120)) ||
+    cleanText(applicant?.fullName || "", 120) ||
+    "Job applicant";
+  const positionApplied = cleanText(applicant?.positionApplied || "", 120) || "Open role";
+  const phone = cleanText(applicant?.phoneDisplay || applicant?.phone || "", 40) || "Not provided";
+  const email = normalizeEmail(applicant?.email || "") || "Not provided";
+  const languages = cleanText(applicant?.languages || "", 60) || "Not provided";
+  const yearsExperience = cleanText(applicant?.yearsExperience || "", 60) || "Not provided";
+  const experienceSummary = cleanText(applicant?.experienceSummary || "", 240) || "Not provided";
+  const hasTools = cleanText(applicant?.hasTools || "", 20) || "Not provided";
+  const hasTransportation = cleanText(applicant?.hasTransportation || "", 20) || "Not provided";
+  const fieldReady = cleanText(applicant?.fieldReady || "", 20) || "Not provided";
+  const interviewLabel = cleanText(requestedAtLabel || applicant?.bestInterviewDay || "", 120) || "Not provided";
+  const notifyTo = getMetalworksNotificationEmails();
+  const subject = `New job applicant - ${fullName}`;
+  const intro =
+    "A new hiring conversation was captured by Agustin 2.0 for Chicago Metal Works & Fencing.";
+  const textLines = [
+    intro,
+    "",
+    `Name: ${fullName}`,
+    `Role: ${positionApplied}`,
+    `Phone: ${phone}`,
+    `Email: ${email}`,
+    `Languages: ${languages}`,
+    `Years of experience: ${yearsExperience}`,
+    `Background: ${experienceSummary}`,
+    `Own tools: ${hasTools}`,
+    `Transportation: ${hasTransportation}`,
+    `Field ready: ${fieldReady}`,
+    `Phone interview window: ${interviewLabel}`,
+    pagePath ? `Page: ${pagePath}` : "",
+    pageUrl ? `URL: ${pageUrl}` : "",
+    "",
+    "Applicant summary:",
+    cleanText(applicant?.detailsSummary || "", 1200) || "No summary provided.",
+    conversationDigest ? "Recent conversation:" : "",
+    conversationDigest || "",
+  ].filter(Boolean);
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f8f5ef;padding:24px;color:#1e2428">
+      <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd0;border-radius:18px;padding:28px">
+        <p style="margin:0 0 16px">${escapeHtmlMarkup(intro)}</p>
+        <div style="border:1px solid #eadfcd;border-radius:16px;padding:18px;margin:0 0 18px;background:#fffaf2">
+          <p style="margin:0 0 10px"><strong>Name:</strong> ${escapeHtmlMarkup(fullName)}</p>
+          <p style="margin:0 0 10px"><strong>Role:</strong> ${escapeHtmlMarkup(positionApplied)}</p>
+          <p style="margin:0 0 10px"><strong>Phone:</strong> ${escapeHtmlMarkup(phone)}</p>
+          <p style="margin:0 0 10px"><strong>Email:</strong> ${escapeHtmlMarkup(email)}</p>
+          <p style="margin:0 0 10px"><strong>Languages:</strong> ${escapeHtmlMarkup(languages)}</p>
+          <p style="margin:0 0 10px"><strong>Years of experience:</strong> ${escapeHtmlMarkup(yearsExperience)}</p>
+          <p style="margin:0 0 10px"><strong>Own tools:</strong> ${escapeHtmlMarkup(hasTools)}</p>
+          <p style="margin:0 0 10px"><strong>Transportation:</strong> ${escapeHtmlMarkup(hasTransportation)}</p>
+          <p style="margin:0 0 10px"><strong>Field ready:</strong> ${escapeHtmlMarkup(fieldReady)}</p>
+          <p style="margin:0 0 10px"><strong>Phone interview window:</strong> ${escapeHtmlMarkup(interviewLabel)}</p>
+          ${pagePath ? `<p style="margin:0 0 10px"><strong>Page:</strong> ${escapeHtmlMarkup(pagePath)}</p>` : ""}
+          ${pageUrl ? `<p style="margin:0"><strong>URL:</strong> ${escapeHtmlMarkup(pageUrl)}</p>` : ""}
+        </div>
+        <div style="margin:0 0 18px">
+          <p style="margin:0 0 8px"><strong>Background</strong></p>
+          <p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(experienceSummary)}</p>
+        </div>
+        <div style="margin:0 0 18px">
+          <p style="margin:0 0 8px"><strong>Applicant summary</strong></p>
+          <p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(
+            cleanText(applicant?.detailsSummary || "", 1200) || "No summary provided.",
+          )}</p>
+        </div>
+        ${
+          conversationDigest
+            ? `<div style="margin:0"><p style="margin:0 0 8px"><strong>Recent conversation</strong></p><p style="margin:0;white-space:pre-wrap">${formatMultilineHtml(conversationDigest)}</p></div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+
+  return {
+    to: notifyTo,
+    subject,
+    text: textLines.join("\n"),
+    html,
+    replyTo: normalizeEmail(applicant?.email || "") || METALWORKS_CONTACT_EMAIL,
+  };
+}
+
+async function sendMetalworksApplicantAlertEmail(options = {}) {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const fromEmail = String(process.env.RESEND_FROM_EMAIL || "").trim();
+
+  if (!apiKey || !fromEmail) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Email sending is not configured yet.",
+    };
+  }
+
+  const payload = buildMetalworksApplicantAlertEmail(options);
+
+  if (!payload.to.length) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "No destination email is configured for Metal Works hiring alerts.",
+    };
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
+      reply_to: payload.replyTo,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      delivered: false,
+      status: response.status,
+      error: errorData?.message || `Email service responded ${response.status}.`,
+    };
+  }
+
+  return {
+    attempted: true,
+    delivered: true,
+    status: response.status,
+  };
+}
+
 function normalizePushEnvironment(value = "") {
   return cleanText(value || "", 40).toLowerCase() === "production"
     ? "production"
@@ -947,17 +1132,22 @@ function trimPushCopy(value = "", maxLength = 140) {
 
 function buildMetalworksPushCopy({
   lead = null,
+  applicant = null,
   alertType = "assistant_lead",
   requestedAtLabel = "",
 } = {}) {
   const fullName =
-    trimPushCopy(sanitizeAssistantStoredName(lead?.fullName || ""), 60) ||
-    trimPushCopy(lead?.fullName || "", 60) ||
+    trimPushCopy(
+      sanitizeAssistantStoredName(applicant?.fullName || lead?.fullName || ""),
+      60,
+    ) ||
+    trimPushCopy(applicant?.fullName || lead?.fullName || "", 60) ||
     "New lead";
   const projectType =
+    trimPushCopy(applicant?.positionApplied || "", 54) ||
     trimPushCopy(lead?.projectType || "", 54) ||
     trimPushCopy(lead?.estimateTitle || "", 54) ||
-    trimPushCopy(lead?.location || "", 54) ||
+    trimPushCopy(applicant?.location || lead?.location || "", 54) ||
     "metalwork request";
   const callbackLabel = trimPushCopy(requestedAtLabel || "", 64);
 
@@ -974,6 +1164,15 @@ function buildMetalworksPushCopy({
     return {
       title: "Agustin 2.0 CRM",
       body: "Test alert delivered to this iPhone from Chicago Metal Works & Fencing.",
+    };
+  }
+
+  if (alertType === "job_applicant") {
+    return {
+      title: "New applicant",
+      body: callbackLabel
+        ? `${fullName} • ${projectType} • ${callbackLabel}`
+        : `${fullName} • ${projectType}`,
     };
   }
 
@@ -1155,6 +1354,18 @@ function labelStatus(status = "") {
   return labels[normalizeStatus(status)] || "Nuevo";
 }
 
+function labelApplicantStatus(status = "") {
+  const normalized = cleanText(status || "", 40).toLowerCase();
+  const labels = {
+    new: "Nuevo candidato",
+    interview_requested: "Entrevista pedida",
+    interview_scheduled: "Entrevista agendada",
+    archived: "Archivado",
+  };
+
+  return labels[normalized] || "Nuevo candidato";
+}
+
 function formatActivityTitle(type = "") {
   const labels = {
     quote_submit: "Quote enviado",
@@ -1176,6 +1387,12 @@ function formatActivityTitle(type = "") {
     assistant_whatsapp_followups_scheduled: "Follow-ups de WhatsApp programados",
     assistant_whatsapp_followup_sent: "Follow-up de WhatsApp enviado",
     assistant_whatsapp_followup_skipped: "Follow-up de WhatsApp omitido",
+    job_applicant_created: "Candidato nuevo",
+    job_applicant_updated: "Candidato actualizado",
+    job_applicant_interview_requested: "Entrevista de candidato",
+    applicant_user_message: "Mensaje del candidato",
+    applicant_ai_reply: "Respuesta para candidato",
+    applicant_fallback: "Fallback candidato",
   };
 
   return labels[type] || "Actividad";
@@ -1185,6 +1402,239 @@ function detectSpanish(value = "") {
   return /[¿¡]|\b(hola|precio|cotiza|reparacion|reparación|porton|portón|barandal|soldadura|cerca|reja|gracias|necesito|quiero|ayuda)\b/i.test(
     String(value || ""),
   );
+}
+
+function detectAffirmative(value = "") {
+  return /\b(yes|yeah|yep|si|sí|claro|correct|correcto|of course|sure|i do|tengo|cuento con|available|disponible)\b/i.test(
+    String(value || ""),
+  );
+}
+
+function detectNegative(value = "") {
+  return /\b(no|nope|nah|not really|para nada|ninguno|ninguna|dont|don't|do not|sin)\b/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeApplicantYesNo(value = "") {
+  if (detectAffirmative(value) && !detectNegative(value)) {
+    return "yes";
+  }
+
+  if (detectNegative(value)) {
+    return "no";
+  }
+
+  return "";
+}
+
+function looksLikeStandaloneApplicantRole(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  return [
+    "welder",
+    "fabricator",
+    "welder fabricator",
+    "welder-fabricator",
+    "soldador",
+    "fabricador",
+    "soldador fabricador",
+    "soldador-fabricador",
+    "sales",
+    "ventas",
+    "prospector",
+    "prospectador",
+  ].includes(normalized);
+}
+
+function detectEmploymentIntent(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (
+    /\b(job|jobs|employment|hiring|hire me|apply|application|position|opening|opening up|vacante|vacantes|empleo|trabajo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|trabajar con ustedes|work for you|work with you|are you hiring)\b/.test(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+
+  return looksLikeStandaloneApplicantRole(normalized);
+}
+
+function inferApplicantRole(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (
+    /\b(welder[- ]fabricator|welder fabricator|fabricator welder|soldador[- ]fabricador|soldador fabricador|fabricador soldador)\b/.test(
+      normalized,
+    )
+  ) {
+    return "Welder-Fabricator";
+  }
+
+  if (/\b(welder|soldador)\b/.test(normalized)) {
+    return "Welder";
+  }
+
+  if (/\b(fabricator|fabricador)\b/.test(normalized)) {
+    return "Fabricator";
+  }
+
+  if (/\b(sales|ventas|sales rep|salesperson)\b/.test(normalized)) {
+    return "Sales";
+  }
+
+  if (/\b(prospector|prospectador|door to door|door-knocking|door knocking)\b/.test(normalized)) {
+    return "Prospector";
+  }
+
+  return "";
+}
+
+function inferApplicantRoleTrack(value = "") {
+  const role = cleanText(value || "", 80);
+
+  if (!role) {
+    return "";
+  }
+
+  if (["Welder", "Fabricator", "Welder-Fabricator"].includes(role)) {
+    return "trade";
+  }
+
+  if (role === "Sales") {
+    return "sales";
+  }
+
+  if (role === "Prospector") {
+    return "prospector";
+  }
+
+  return "";
+}
+
+function extractApplicantLanguages(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (
+    /\b(bilingual|both|english and spanish|spanish and english|ingles y espanol|espanol e ingles|bilingue)\b/.test(
+      normalized,
+    )
+  ) {
+    return "Bilingual";
+  }
+
+  if (/\b(english only|english|ingles)\b/.test(normalized) && !/\b(spanish|espanol)\b/.test(normalized)) {
+    return "English";
+  }
+
+  if (/\b(spanish only|spanish|espanol)\b/.test(normalized) && !/\b(english|ingles)\b/.test(normalized)) {
+    return "Spanish";
+  }
+
+  return "";
+}
+
+function extractApplicantYearsExperience(value = "") {
+  const source = String(value || "");
+  const normalized = normalizeAssistantSearchText(source);
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/\b(no experience|sin experiencia)\b/.test(normalized)) {
+    return "0 years";
+  }
+
+  const match = source.match(/(\d{1,2})(?:\+)?\s*(?:years?|yrs?|anos?|años?)/i);
+
+  if (!match?.[1]) {
+    return "";
+  }
+
+  const amount = Number(match[1] || 0);
+
+  if (!amount && amount !== 0) {
+    return "";
+  }
+
+  return `${amount} year${amount === 1 ? "" : "s"}`;
+}
+
+function extractApplicantExperienceSummary(value = "") {
+  const safeValue = cleanText(value || "", 180);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (detectEmploymentIntent(safeValue) && safeValue.split(/\s+/).length <= 4) {
+    return "";
+  }
+
+  return safeValue;
+}
+
+function getApplicantMissingFieldQuestion(field = "", inSpanish = false, roleTrack = "") {
+  const questions = {
+    positionApplied: inSpanish
+      ? "¿Que puesto te interesa: soldador, fabricador, soldador-fabricador, ventas o prospectador?"
+      : "Which position are you interested in: welder, fabricator, welder-fabricator, sales, or prospector?",
+    fullName: inSpanish
+      ? "¿Cual es tu nombre completo?"
+      : "What is your full name?",
+    phoneOrEmail: inSpanish
+      ? "¿Cual es tu mejor numero de telefono o correo para contactarte?"
+      : "What is the best phone number or email to reach you?",
+    yearsExperience: inSpanish
+      ? "¿Cuantos anos de experiencia tienes?"
+      : "How many years of experience do you have?",
+    experienceSummary:
+      roleTrack === "sales"
+        ? inSpanish
+          ? "¿Tienes experiencia en ventas, seguimiento de leads o atencion al cliente?"
+          : "Do you have experience in sales, lead follow-up, or customer service?"
+        : roleTrack === "prospector"
+          ? inSpanish
+            ? "¿Tienes experiencia prospectando, tocando puertas o generando leads?"
+            : "Do you have experience prospecting, door knocking, or generating leads?"
+          : inSpanish
+            ? "¿En que tipo de trabajo tienes mas experiencia?"
+            : "What type of work do you have the most experience in?",
+    hasTools: inSpanish
+      ? "¿Tienes tus propias herramientas?"
+      : "Do you have your own tools?",
+    hasTransportation: inSpanish
+      ? "¿Tienes transporte propio?"
+      : "Do you have your own transportation?",
+    fieldReady: inSpanish
+      ? "¿Estas comodo trabajando afuera en el campo?"
+      : "Are you comfortable working outside in the field?",
+    languages: inSpanish
+      ? "¿Hablas ingles, espanol o bilingue?"
+      : "Do you speak English, Spanish, or both?",
+    bestInterviewDay: inSpanish
+      ? "¿Que dia te queda mejor para una entrevista por telefono?"
+      : "What day works best for a phone interview?",
+    bestInterviewTime: inSpanish
+      ? "¿Y que hora te queda mejor para esa llamada?"
+      : "What time works best for that call?",
+  };
+
+  return questions[field] || (inSpanish ? "Mandame un poco mas de informacion." : "Send me a little more information.");
 }
 
 function buildAssistantFallbackReply(message = "", conversationState = null) {
@@ -1263,6 +1713,46 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
 }
 
+function buildEmploymentFallbackReply(message = "", conversationState = null) {
+  const inSpanish = detectSpanish(message) || conversationState?.inSpanish;
+  const roleTrack = cleanText(conversationState?.roleTrack || "", 40);
+  const missingFields = Array.isArray(conversationState?.applicantMissingFields)
+    ? conversationState.applicantMissingFields
+    : [];
+  const nextField = missingFields[0] || "";
+  const interviewLabel =
+    cleanText(conversationState?.interviewLabel || "", 120) || "your phone interview window";
+  const text = normalizeAssistantSearchText(message);
+
+  if (!conversationState?.positionApplied) {
+    return inSpanish
+      ? "Claro. Estamos hablando con candidatos para soldador, fabricador, soldador-fabricador, ventas y prospectador. ¿Que puesto te interesa?"
+      : "Sure. We are speaking with candidates for welder, fabricator, welder-fabricator, sales, and prospector roles. Which position interests you?";
+  }
+
+  if (/\b(pay|paid|salary|wage|compensation|benefits|cuanto pagan|paga|sueldo|salario)\b/.test(text)) {
+    return inSpanish
+      ? "La paga depende del puesto y de la experiencia. Primero quiero dejar tu perfil bien guardado para moverte a entrevista por telefono. " +
+          getApplicantMissingFieldQuestion(nextField || "phoneOrEmail", true, roleTrack)
+      : "Pay depends on the role and your experience. First I want to save your profile correctly and move you to a phone interview. " +
+          getApplicantMissingFieldQuestion(nextField || "phoneOrEmail", false, roleTrack);
+  }
+
+  if (nextField) {
+    return getApplicantMissingFieldQuestion(nextField, inSpanish, roleTrack);
+  }
+
+  if (conversationState?.nextActionAt || conversationState?.bestInterviewDay || conversationState?.bestInterviewTime) {
+    return inSpanish
+      ? `Perfecto. Ya deje tu informacion lista para entrevista por telefono en ${interviewLabel}. Si cambia tu horario, me lo puedes escribir aqui.`
+      : `Perfect. I saved your information for a phone interview around ${interviewLabel}. If your availability changes, you can message me here.`;
+  }
+
+  return inSpanish
+    ? "Gracias. Ya guarde tu informacion para el equipo de contratacion. Si puedes, mandame tu mejor horario para una entrevista por telefono."
+    : "Thanks. I saved your information for the hiring team. If you can, send the best time for a phone interview.";
+}
+
 function buildAssistantContext(message = "", pagePath = "") {
   const text = cleanText(message, 500).toLowerCase();
   const contextParts = [];
@@ -1326,6 +1816,45 @@ WELDING CONTEXT:
 FIT FILTER:
 - The company mainly focuses on metalwork, welding, gates, fences, railings, stairs, and fabrication.
 - If the request is not really metal-related, say so politely and do not oversell.
+`);
+  }
+
+  return contextParts.join("\n");
+}
+
+function buildEmploymentContext(message = "", pagePath = "") {
+  const text = cleanText(message, 500).toLowerCase();
+  const contextParts = [];
+
+  contextParts.push(`
+METAL WORKS HIRING CONTEXT:
+- Business: Chicago Metal Works & Fencing
+- Main hiring follow-up path: phone interview
+- Priority roles: welder, fabricator, welder-fabricator, sales, prospector
+- Public website page: ${cleanText(pagePath || "", 120) || "/"}
+`);
+
+  if (/\b(welder|fabricator|soldador|fabricador)\b/.test(text)) {
+    contextParts.push(`
+SKILLED TRADE FIT:
+- Qualify for years of experience, type of work done, tools, transportation, and comfort with field/outdoor work.
+- Typical trade work includes railings, gates, fences, stairs, repairs, and fabrication.
+`);
+  }
+
+  if (/\b(sales|ventas)\b/.test(text)) {
+    contextParts.push(`
+SALES FIT:
+- Qualify for sales, estimates, customer service, and lead follow-up experience.
+- Confirm languages and transportation.
+`);
+  }
+
+  if (/\b(prospector|prospectador|door)\b/.test(text)) {
+    contextParts.push(`
+PROSPECTOR FIT:
+- Qualify for door knocking, field prospecting, lead generation, transportation, and comfort working outside.
+- Confirm languages early.
 `);
   }
 
@@ -1980,6 +2509,267 @@ function buildAssistantConversationItems({
   return items.slice(-METALWORKS_ASSISTANT_HISTORY_LIMIT);
 }
 
+function buildApplicantConversationSignals({
+  history = [],
+  applicant = null,
+} = {}) {
+  const items = normalizeAssistantHistory(history);
+  const userMessages = items.filter((item) => item.role === "user").map((item) => item.content);
+  const combinedUserText = userMessages.join("\n");
+  const latestUserMessage = userMessages[userMessages.length - 1] || "";
+  let fullName = sanitizeAssistantStoredName(applicant?.fullName || "");
+  let email = normalizeEmail(applicant?.email || "");
+  let phone = normalizePhone(applicant?.phone || "");
+  let phoneDisplay = cleanText(applicant?.phoneDisplay || "", 40);
+  let positionApplied = cleanText(applicant?.positionApplied || "", 80);
+  let roleTrack = cleanText(applicant?.roleTrack || "", 40) || inferApplicantRoleTrack(positionApplied);
+  let languages = cleanText(applicant?.languages || "", 40);
+  let yearsExperience = cleanText(applicant?.yearsExperience || "", 40);
+  let experienceSummary = cleanText(applicant?.experienceSummary || "", 180);
+  let hasTools = cleanText(applicant?.hasTools || "", 12);
+  let hasTransportation = cleanText(applicant?.hasTransportation || "", 12);
+  let fieldReady = cleanText(applicant?.fieldReady || "", 12);
+  let location = cleanText(applicant?.location || "", 160);
+  let bestInterviewDay = cleanText(applicant?.bestInterviewDay || "", 80);
+  let bestInterviewTime = cleanText(applicant?.bestInterviewTime || "", 80);
+  const storedNextActionAt =
+    applicant?.nextActionAt instanceof Date
+      ? applicant.nextActionAt
+      : applicant?.nextActionAt
+        ? new Date(applicant.nextActionAt)
+        : null;
+  const hasStoredNextActionAt =
+    storedNextActionAt instanceof Date && !Number.isNaN(storedNextActionAt.getTime());
+  let previousAssistantMessage = "";
+
+  items.forEach((entry) => {
+    if (entry.role === "assistant") {
+      previousAssistantMessage = entry.content || "";
+      return;
+    }
+
+    const entryText = entry.content || "";
+    const cleanedEntry = cleanText(entryText, 180).replace(/[.,;!?]+$/, "");
+    const normalizedPreviousAssistant = normalizeAssistantSearchText(previousAssistantMessage);
+    const contactInfo = extractAssistantContactInfo(entryText);
+    const entryName = extractAssistantName(entryText);
+    const entryRole = inferApplicantRole(entryText);
+    const entryLanguages = extractApplicantLanguages(entryText);
+    const entryYearsExperience = extractApplicantYearsExperience(entryText);
+    const entryLocation = extractAssistantLocation(entryText);
+    const entryBestDay = extractAssistantPreferredDay(entryText);
+    const entryBestTime = extractAssistantPreferredTime(entryText);
+    const entryYesNo = normalizeApplicantYesNo(entryText);
+    const entryExperienceSummary = extractApplicantExperienceSummary(entryText);
+
+    const askedForName =
+      /\b(name|nombre)\b/.test(normalizedPreviousAssistant) &&
+      !/\b(company|empresa|job site|project|service)\b/.test(normalizedPreviousAssistant);
+    const askedForRole =
+      /\b(position|puesto|role|vacante|applying for|applying as|interested in)\b/.test(
+        normalizedPreviousAssistant,
+      );
+    const askedForYearsExperience =
+      /\b(years of experience|experience do you have|cuantos anos|cuanta experiencia)\b/.test(
+        normalizedPreviousAssistant,
+      );
+    const askedForLanguages =
+      /\b(english|spanish|bilingual|ingles|espanol|bilingue)\b/.test(
+        normalizedPreviousAssistant,
+      );
+    const askedForTools = /\b(own tools|herramientas)\b/.test(normalizedPreviousAssistant);
+    const askedForTransportation =
+      /\b(transportation|car|vehicle|truck|transporte|carro|troca|auto propio)\b/.test(
+        normalizedPreviousAssistant,
+      );
+    const askedForFieldReady =
+      /\b(outside|field|outdoors|afuera|campo)\b/.test(normalizedPreviousAssistant);
+    const askedForExperienceSummary =
+      /\b(type of work|sales|customer service|lead follow-up|prospecting|door knocking|tipo de trabajo|ventas|atencion al cliente|seguimiento de leads|prospectando)\b/.test(
+        normalizedPreviousAssistant,
+      );
+
+    if (entryName) {
+      fullName = entryName;
+    } else if (!fullName && askedForName && assistantNameLooksReliable(cleanedEntry)) {
+      fullName = cleanedEntry;
+    }
+
+    if (contactInfo.email) {
+      email = contactInfo.email;
+    }
+
+    if (contactInfo.phone) {
+      phone = contactInfo.phone;
+      phoneDisplay = contactInfo.phoneDisplay || phoneDisplay || contactInfo.phone;
+    }
+
+    if (entryRole) {
+      positionApplied = entryRole;
+      roleTrack = inferApplicantRoleTrack(entryRole);
+    } else if (!positionApplied && askedForRole && cleanedEntry) {
+      positionApplied = cleanText(cleanedEntry, 80);
+      roleTrack = inferApplicantRoleTrack(positionApplied);
+    }
+
+    if (entryLanguages) {
+      languages = entryLanguages;
+    } else if (!languages && askedForLanguages && cleanedEntry) {
+      languages = cleanText(cleanedEntry, 40);
+    }
+
+    if (entryYearsExperience) {
+      yearsExperience = entryYearsExperience;
+    } else if (!yearsExperience && askedForYearsExperience && cleanedEntry) {
+      yearsExperience = cleanText(cleanedEntry, 40);
+    }
+
+    if (entryLocation) {
+      location = entryLocation;
+    }
+
+    if (entryBestDay) {
+      bestInterviewDay = entryBestDay;
+    }
+
+    if (entryBestTime) {
+      bestInterviewTime = entryBestTime;
+    }
+
+    if (
+      entryExperienceSummary &&
+      (!experienceSummary ||
+        askedForExperienceSummary ||
+        entryExperienceSummary.length > experienceSummary.length)
+    ) {
+      experienceSummary = entryExperienceSummary;
+    }
+
+    if (askedForTools && entryYesNo) {
+      hasTools = entryYesNo;
+    }
+
+    if (askedForTransportation && entryYesNo) {
+      hasTransportation = entryYesNo;
+    }
+
+    if (askedForFieldReady && entryYesNo) {
+      fieldReady = entryYesNo;
+    }
+  });
+
+  if (!positionApplied) {
+    positionApplied = inferApplicantRole(combinedUserText) || "";
+    roleTrack = inferApplicantRoleTrack(positionApplied);
+  }
+
+  if (!languages) {
+    languages = extractApplicantLanguages(combinedUserText);
+  }
+
+  const latestBestInterviewDay = extractAssistantPreferredDay(latestUserMessage);
+  const latestBestInterviewTime = extractAssistantPreferredTime(latestUserMessage);
+  const storedCalendarDayKey = hasStoredNextActionAt
+    ? formatAssistantCalendarDayKey(storedNextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+    : "";
+  const bestInterviewDayForResolution =
+    latestBestInterviewDay || !storedCalendarDayKey ? bestInterviewDay : storedCalendarDayKey;
+  const nextActionAt =
+    hasStoredNextActionAt && !latestBestInterviewDay && !latestBestInterviewTime
+      ? storedNextActionAt
+      : buildAssistantNextActionAt(bestInterviewDayForResolution, bestInterviewTime);
+  const normalizedBestInterviewDay =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
+      ? formatAssistantCalendarDayKey(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+      : bestInterviewDay;
+  const interviewLabel = formatAssistantCallbackLabel({
+    nextActionAt,
+    bestContactDay: normalizedBestInterviewDay,
+    bestContactTime: bestInterviewTime,
+  });
+  const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
+  const baseMissingFields = [
+    !positionApplied ? "positionApplied" : "",
+    !fullName ? "fullName" : "",
+    !phone && !email ? "phoneOrEmail" : "",
+  ];
+  const trackSpecificMissingFields =
+    roleTrack === "trade"
+      ? [
+          !yearsExperience ? "yearsExperience" : "",
+          !experienceSummary ? "experienceSummary" : "",
+          !hasTools ? "hasTools" : "",
+          !hasTransportation ? "hasTransportation" : "",
+          !fieldReady ? "fieldReady" : "",
+        ]
+      : roleTrack === "sales"
+        ? [
+            !experienceSummary ? "experienceSummary" : "",
+            !hasTransportation ? "hasTransportation" : "",
+          ]
+        : roleTrack === "prospector"
+          ? [
+              !experienceSummary ? "experienceSummary" : "",
+              !hasTransportation ? "hasTransportation" : "",
+              !fieldReady ? "fieldReady" : "",
+            ]
+          : [];
+  const commonMissingFields = [
+    !languages ? "languages" : "",
+    !normalizedBestInterviewDay ? "bestInterviewDay" : "",
+    !bestInterviewTime ? "bestInterviewTime" : "",
+  ];
+  const applicantMissingFields = [
+    ...baseMissingFields,
+    ...trackSpecificMissingFields,
+    ...commonMissingFields,
+  ].filter(Boolean);
+  const detailsSummary = [
+    positionApplied ? `Role: ${positionApplied}.` : "",
+    yearsExperience ? `Experience: ${yearsExperience}.` : "",
+    experienceSummary ? `Background: ${experienceSummary}.` : "",
+    languages ? `Languages: ${languages}.` : "",
+    hasTools ? `Own tools: ${hasTools}.` : "",
+    hasTransportation ? `Transportation: ${hasTransportation}.` : "",
+    fieldReady ? `Field ready: ${fieldReady}.` : "",
+    interviewLabel ? `Interview window: ${interviewLabel}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .slice(0, 1500);
+
+  return {
+    items,
+    userMessages,
+    combinedUserText,
+    latestUserMessage,
+    inSpanish,
+    positionApplied,
+    roleTrack,
+    fullName,
+    email,
+    phone,
+    phoneDisplay,
+    languages,
+    yearsExperience,
+    experienceSummary,
+    hasTools,
+    hasTransportation,
+    fieldReady,
+    location,
+    bestInterviewDay: normalizedBestInterviewDay,
+    bestInterviewTime,
+    nextActionAt,
+    interviewLabel,
+    applicantMissingFields,
+    detailsSummary,
+    shouldCreateApplicant: Boolean(applicant?._id || phone || email || positionApplied || userMessages.length > 1),
+    shouldAlert: Boolean(phone || email) && Boolean(positionApplied || yearsExperience || experienceSummary || languages),
+    conversationDigest: buildAssistantHistoryDigest(items),
+  };
+}
+
 function buildAssistantConversationSignals({
   history = [],
   lead = null,
@@ -2186,6 +2976,42 @@ INSTRUCTIONS:
 `;
 }
 
+function buildApplicantStatePrompt(state = {}) {
+  const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
+  const missingFields = Array.isArray(state?.applicantMissingFields)
+    ? state.applicantMissingFields.join(", ")
+    : "";
+
+  return `
+JOB APPLICANT STATE:
+- response_channel: ${responseChannel}
+- position_applied: ${state?.positionApplied || "pending"}
+- role_track: ${state?.roleTrack || "pending"}
+- candidate_name: ${state?.fullName || "pending"}
+- phone: ${state?.phoneDisplay || state?.phone || "pending"}
+- email: ${state?.email || "pending"}
+- languages: ${state?.languages || "pending"}
+- years_experience: ${state?.yearsExperience || "pending"}
+- experience_summary: ${state?.experienceSummary || "pending"}
+- has_tools: ${state?.hasTools || "pending"}
+- has_transportation: ${state?.hasTransportation || "pending"}
+- field_ready: ${state?.fieldReady || "pending"}
+- location: ${state?.location || "pending"}
+- best_interview_day: ${state?.bestInterviewDay || "pending"}
+- best_interview_time: ${state?.bestInterviewTime || "pending"}
+- interview_window: ${state?.interviewLabel || "pending"}
+- missing_fields: ${missingFields || "none"}
+
+INSTRUCTIONS:
+- If response_channel is whatsapp, keep replies extra short and text-message friendly.
+- Ask only the next highest-priority missing field unless two tiny fields naturally fit together.
+- If position_applied is pending, list the available roles and ask which one they want.
+- If the candidate asks about pay, say pay depends on the role and experience, then continue qualification.
+- If best_interview_day and best_interview_time are both present, confirm the phone interview window and keep the tone concise.
+- Do not promise hiring or a start date.
+`;
+}
+
 function stripAssistantNotesBlock(value = "") {
   const source = String(value || "");
   const markerIndex = source.indexOf(METALWORKS_ASSISTANT_NOTES_MARKER);
@@ -2225,6 +3051,53 @@ function mergeAssistantPrivateNotes(existingNotes = "", state = {}) {
   }
 
   return [manualNotes, `${METALWORKS_ASSISTANT_NOTES_MARKER}\n${generatedNotes}`]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim()
+    .slice(0, 4000);
+}
+
+function stripApplicantNotesBlock(value = "") {
+  const source = String(value || "");
+  const markerIndex = source.indexOf(METALWORKS_APPLICANT_NOTES_MARKER);
+
+  if (markerIndex === -1) {
+    return source.trim();
+  }
+
+  return source.slice(0, markerIndex).trim();
+}
+
+function buildApplicantPrivateNotes(state = {}) {
+  const sourceLabel =
+    cleanText(state?.sourceLabel || "", 120) || "Agustin 2.0 hiring assistant";
+
+  return [
+    `Source: ${sourceLabel}.`,
+    state?.positionApplied ? `Role: ${state.positionApplied}.` : "",
+    state?.languages ? `Languages: ${state.languages}.` : "",
+    state?.yearsExperience ? `Years experience: ${state.yearsExperience}.` : "",
+    state?.experienceSummary ? `Background: ${state.experienceSummary}.` : "",
+    state?.hasTools ? `Own tools: ${state.hasTools}.` : "",
+    state?.hasTransportation ? `Transportation: ${state.hasTransportation}.` : "",
+    state?.fieldReady ? `Field/outdoor ready: ${state.fieldReady}.` : "",
+    state?.interviewLabel ? `Interview window: ${state.interviewLabel}.` : "",
+    state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 2600);
+}
+
+function mergeApplicantPrivateNotes(existingNotes = "", state = {}) {
+  const manualNotes = stripApplicantNotesBlock(existingNotes);
+  const generatedNotes = buildApplicantPrivateNotes(state);
+
+  if (!generatedNotes) {
+    return manualNotes;
+  }
+
+  return [manualNotes, `${METALWORKS_APPLICANT_NOTES_MARKER}\n${generatedNotes}`]
     .filter(Boolean)
     .join("\n\n")
     .trim()
@@ -2334,8 +3207,15 @@ async function generateAssistantReply({
   history = [],
   pagePath = "",
   conversationState = null,
+  mode = "customer",
 } = {}) {
-  const fallbackReply = buildAssistantFallbackReply(message, conversationState);
+  const assistantMode = cleanText(mode || "", 40).toLowerCase() === "employment"
+    ? "employment"
+    : "customer";
+  const fallbackReply =
+    assistantMode === "employment"
+      ? buildEmploymentFallbackReply(message, conversationState)
+      : buildAssistantFallbackReply(message, conversationState);
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
 
   if (!apiKey) {
@@ -2369,15 +3249,24 @@ async function generateAssistantReply({
         input: [
           {
             role: "system",
-            content: METALWORKS_ASSISTANT_SYSTEM_PROMPT,
+            content:
+              assistantMode === "employment"
+                ? METALWORKS_ASSISTANT_EMPLOYMENT_SYSTEM_PROMPT
+                : METALWORKS_ASSISTANT_SYSTEM_PROMPT,
           },
           {
             role: "system",
-            content: buildAssistantContext(message, pagePath),
+            content:
+              assistantMode === "employment"
+                ? buildEmploymentContext(message, pagePath)
+                : buildAssistantContext(message, pagePath),
           },
           {
             role: "system",
-            content: buildAssistantStatePrompt(conversationState || {}),
+            content:
+              assistantMode === "employment"
+                ? buildApplicantStatePrompt(conversationState || {})
+                : buildAssistantStatePrompt(conversationState || {}),
           },
           ...normalizeAssistantHistory(history),
           {
@@ -2719,6 +3608,64 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
   };
 }
 
+function cleanApplicant(doc = null, { includeConversation = false } = {}) {
+  if (!doc) {
+    return null;
+  }
+
+  const safeFullName =
+    sanitizeAssistantStoredName(doc.fullName || "") || cleanText(doc.fullName || "", 120);
+
+  return {
+    id: String(doc._id || ""),
+    fullName: safeFullName || METALWORKS_APPLICANT_PLACEHOLDER_NAME,
+    phone: doc.phone || "",
+    phoneDisplay: doc.phoneDisplay || doc.phone || "",
+    email: doc.email || "",
+    positionApplied: doc.positionApplied || "",
+    roleTrack: doc.roleTrack || "",
+    languages: doc.languages || "",
+    yearsExperience: doc.yearsExperience || "",
+    experienceSummary: doc.experienceSummary || "",
+    hasTools: doc.hasTools || "",
+    hasTransportation: doc.hasTransportation || "",
+    fieldReady: doc.fieldReady || "",
+    location: doc.location || "",
+    status: cleanText(doc.status || "new", 40).toLowerCase() || "new",
+    statusLabel: labelApplicantStatus(doc.status || "new"),
+    nextAction: doc.nextAction || "",
+    nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
+    interviewRequestedAt: doc.interviewRequestedAt
+      ? new Date(doc.interviewRequestedAt).toISOString()
+      : "",
+    alertSentAt: doc.alertSentAt ? new Date(doc.alertSentAt).toISOString() : "",
+    privateNotes: doc.privateNotes || "",
+    detailsSummary: doc.detailsSummary || "",
+    sourceType: doc.sourceType || "assistant_chat_job",
+    sourceChannel: doc.sourceChannel || "",
+    sourceLabel: doc.sourceLabel || "",
+    pageTitle: doc.pageTitle || "",
+    pagePath: doc.pagePath || "",
+    pageUrl: doc.pageUrl || "",
+    referrer: doc.referrer || "",
+    tracking: doc.tracking || {},
+    lastUserMessage: doc.lastUserMessage || "",
+    lastAssistantMessage: doc.lastAssistantMessage || "",
+    conversationHistory: includeConversation
+      ? (Array.isArray(doc.conversationHistory) ? doc.conversationHistory : [])
+          .map((entry) => ({
+            role: entry?.role === "assistant" ? "assistant" : "user",
+            content: cleanText(entry?.content || "", 1500),
+            createdAt: entry?.createdAt ? new Date(entry.createdAt).toISOString() : "",
+          }))
+          .filter((entry) => entry.content)
+      : [],
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+    lastContactAt: doc.lastContactAt ? new Date(doc.lastContactAt).toISOString() : "",
+  };
+}
+
 function cleanActivity(doc = null) {
   if (!doc) {
     return null;
@@ -2727,6 +3674,7 @@ function cleanActivity(doc = null) {
   return {
     id: String(doc._id || ""),
     leadId: doc.leadId ? String(doc.leadId) : "",
+    applicantId: doc.applicantId ? String(doc.applicantId) : "",
     activityType: doc.activityType || "",
     title: doc.title || formatActivityTitle(doc.activityType || ""),
     body: doc.body || "",
@@ -2774,9 +3722,15 @@ function buildLeadQuery(filters = {}) {
   return query;
 }
 
-async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, filters = {}) {
+async function buildDashboardSnapshot(
+  MetalworksLead,
+  MetalworksLeadActivity,
+  MetalworksApplicant = null,
+  filters = {},
+) {
   const query = buildLeadQuery(filters);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const applicantModelAvailable = Boolean(MetalworksApplicant?.find);
 
   const [
     leads,
@@ -2793,11 +3747,22 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
     emailClicks30d,
     quoteSubmits30d,
     serviceBreakdown,
+    totalApplicants,
+    newApplicants,
+    interviewApplicants,
+    recentApplicants,
   ] = await Promise.all([
     MetalworksLead.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
     MetalworksLeadActivity.find({
       activityType: {
-        $nin: ["assistant_user_message", "assistant_ai_reply", "assistant_fallback"],
+        $nin: [
+          "assistant_user_message",
+          "assistant_ai_reply",
+          "assistant_fallback",
+          "applicant_user_message",
+          "applicant_ai_reply",
+          "applicant_fallback",
+        ],
       },
     })
       .sort({ createdAt: -1 })
@@ -2834,6 +3799,19 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
       { $sort: { count: -1, _id: 1 } },
       { $limit: 8 },
     ]),
+    applicantModelAvailable ? MetalworksApplicant.countDocuments({}) : 0,
+    applicantModelAvailable ? MetalworksApplicant.countDocuments({ status: "new" }) : 0,
+    applicantModelAvailable
+      ? MetalworksApplicant.countDocuments({
+          status: { $in: ["interview_requested", "interview_scheduled"] },
+        })
+      : 0,
+    applicantModelAvailable
+      ? MetalworksApplicant.find({})
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(12)
+          .lean()
+      : [],
   ]);
 
   return {
@@ -2849,6 +3827,9 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
       phoneClicks30d,
       emailClicks30d,
       quoteSubmits30d,
+      totalApplicants: Number(totalApplicants || 0) || 0,
+      newApplicants: Number(newApplicants || 0) || 0,
+      interviewApplicants: Number(interviewApplicants || 0) || 0,
     },
     filters: {
       status: query.status || "",
@@ -2862,6 +3843,9 @@ async function buildDashboardSnapshot(MetalworksLead, MetalworksLeadActivity, fi
       }))
       .filter((item) => item.count > 0),
     leads: leads.map(cleanLead).filter(Boolean),
+    recentApplicants: (Array.isArray(recentApplicants) ? recentApplicants : [])
+      .map((item) => cleanApplicant(item))
+      .filter(Boolean),
     recentActivity: recentActivity.map(cleanActivity).filter(Boolean),
     statusOptions: METALWORKS_CRM_STATUS_OPTIONS.map((status) => ({
       value: status,
@@ -3018,6 +4002,9 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     summary: {
       totalLeads: Number(dashboard?.summary?.totalLeads || 0) || 0,
       newLeads: Number(dashboard?.summary?.newLeads || 0) || 0,
+      totalApplicants: Number(dashboard?.summary?.totalApplicants || 0) || 0,
+      newApplicants: Number(dashboard?.summary?.newApplicants || 0) || 0,
+      interviewApplicants: Number(dashboard?.summary?.interviewApplicants || 0) || 0,
       activeFollowups:
         (Number(dashboard?.summary?.contactedLeads || 0) || 0) +
         (Number(dashboard?.summary?.quotedLeads || 0) || 0),
@@ -3330,10 +4317,59 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
   });
 
+  const metalworksApplicantSchema = new mongoose.Schema({
+    fullName: { type: String, required: true, trim: true, index: true },
+    phone: { type: String, index: true },
+    phoneDisplay: String,
+    email: { type: String, index: true },
+    positionApplied: String,
+    roleTrack: String,
+    languages: String,
+    yearsExperience: String,
+    experienceSummary: String,
+    hasTools: String,
+    hasTransportation: String,
+    fieldReady: String,
+    location: String,
+    bestInterviewDay: String,
+    bestInterviewTime: String,
+    status: { type: String, default: "new", index: true },
+    nextAction: String,
+    nextActionAt: Date,
+    interviewRequestedAt: Date,
+    alertSentAt: Date,
+    privateNotes: String,
+    detailsSummary: String,
+    sourceType: { type: String, default: "assistant_chat_job", index: true },
+    sourceChannel: String,
+    sourceLabel: String,
+    pageTitle: String,
+    pagePath: String,
+    pageUrl: String,
+    referrer: String,
+    ipAddress: String,
+    userAgent: String,
+    tracking: trackingSchema,
+    visitorIds: [String],
+    sessionIds: [String],
+    conversationHistory: [conversationEntrySchema],
+    lastUserMessage: String,
+    lastAssistantMessage: String,
+    lastContactAt: Date,
+    updatedAt: Date,
+    createdAt: { type: Date, default: Date.now },
+  });
+
   const metalworksLeadActivitySchema = new mongoose.Schema({
     leadId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    applicantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksApplicant",
       default: null,
       index: true,
     },
@@ -3440,7 +4476,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadSchema.index({ status: 1, updatedAt: -1 });
   metalworksLeadSchema.index({ visitorIds: 1 });
   metalworksLeadSchema.index({ sessionIds: 1 });
+  metalworksApplicantSchema.index({ createdAt: -1 });
+  metalworksApplicantSchema.index({ updatedAt: -1 });
+  metalworksApplicantSchema.index({ status: 1, updatedAt: -1 });
+  metalworksApplicantSchema.index({ visitorIds: 1 });
+  metalworksApplicantSchema.index({ sessionIds: 1 });
   metalworksLeadActivitySchema.index({ leadId: 1, createdAt: -1 });
+  metalworksLeadActivitySchema.index({ applicantId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
   metalworksLeadAssetSchema.index({ leadId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
@@ -3457,6 +4499,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
     mongoose.model("MetalworksLead", metalworksLeadSchema);
+  const MetalworksApplicant =
+    mongoose.models.MetalworksApplicant ||
+    mongoose.model("MetalworksApplicant", metalworksApplicantSchema);
   const MetalworksLeadActivity =
     mongoose.models.MetalworksLeadActivity ||
     mongoose.model("MetalworksLeadActivity", metalworksLeadActivitySchema);
@@ -3700,6 +4745,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   async function sendMetalworksPushAlert({
     lead = null,
+    applicant = null,
     alertType = "assistant_lead",
     requestedAtLabel = "",
     adminEmail = "",
@@ -3730,6 +4776,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     const copy = buildMetalworksPushCopy({
       lead,
+      applicant,
       alertType,
       requestedAtLabel,
     });
@@ -3779,6 +4826,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   async function appendActivity({
     leadId = null,
+    applicantId = null,
     activityType = "",
     title = "",
     body = "",
@@ -3791,6 +4839,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   } = {}) {
     await MetalworksLeadActivity.create({
       leadId,
+      applicantId,
       activityType,
       title: title || formatActivityTitle(activityType),
       body: cleanText(body || "", 1200),
@@ -4486,6 +5535,37 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return MetalworksLead.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
   }
 
+  async function resolveConversationApplicant({
+    visitorId = "",
+    sessionId = "",
+    email = "",
+    phone = "",
+  } = {}) {
+    const conditions = [];
+
+    if (phone) {
+      conditions.push({ phone });
+    }
+
+    if (email) {
+      conditions.push({ email });
+    }
+
+    if (visitorId) {
+      conditions.push({ visitorIds: visitorId });
+    }
+
+    if (sessionId) {
+      conditions.push({ sessionIds: sessionId });
+    }
+
+    if (!conditions.length) {
+      return null;
+    }
+
+    return MetalworksApplicant.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
   function resolveAssistantLeadStatus(currentLead = null, state = {}) {
     const currentStatus = normalizeStatus(currentLead?.status || "new");
 
@@ -4499,6 +5579,20 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     if (state?.callbackIntent === "yes" || state?.phone || state?.email) {
       return "contacted";
+    }
+
+    return currentStatus || "new";
+  }
+
+  function resolveApplicantStatus(currentApplicant = null, state = {}) {
+    const currentStatus = cleanText(currentApplicant?.status || "new", 40).toLowerCase();
+
+    if (currentStatus === "archived") {
+      return currentStatus;
+    }
+
+    if (state?.nextActionAt) {
+      return "interview_requested";
     }
 
     return currentStatus || "new";
@@ -4640,6 +5734,151 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return leadDoc;
   }
 
+  async function upsertConversationApplicant({
+    currentApplicant = null,
+    state = {},
+    pageTitle = "",
+    pagePath = "",
+    pageUrl = "",
+    referrer = "",
+    tracking = {},
+    req = null,
+    assistantReply = "",
+    sourceType = "",
+  } = {}) {
+    if (!state?.shouldCreateApplicant && !currentApplicant?._id) {
+      return null;
+    }
+
+    const now = new Date();
+    const applicantDoc = currentApplicant || new MetalworksApplicant();
+    const existingConversationHistory = currentApplicant?.conversationHistory || [];
+    const mergedHistory = mergeConversationHistory(existingConversationHistory, state.items || []);
+    const effectiveName =
+      selectAssistantText(
+        sanitizeAssistantStoredName(state?.fullName || ""),
+        sanitizeAssistantStoredName(currentApplicant?.fullName || ""),
+      ) || METALWORKS_APPLICANT_PLACEHOLDER_NAME;
+    const effectivePhone = normalizePhone(state?.phone || currentApplicant?.phone || "");
+    const effectivePhoneDisplay =
+      cleanText(state?.phoneDisplay || currentApplicant?.phoneDisplay || "", 40) || effectivePhone;
+    const effectiveEmail = normalizeEmail(state?.email || currentApplicant?.email || "");
+    const effectiveRole = selectAssistantText(
+      state?.positionApplied || "",
+      currentApplicant?.positionApplied || "",
+    );
+    const effectiveRoleTrack = selectAssistantText(
+      state?.roleTrack || "",
+      currentApplicant?.roleTrack || "",
+      inferApplicantRoleTrack(effectiveRole),
+    );
+    const effectiveLanguages = selectAssistantText(
+      state?.languages || "",
+      currentApplicant?.languages || "",
+    );
+    const effectiveYearsExperience = selectAssistantText(
+      state?.yearsExperience || "",
+      currentApplicant?.yearsExperience || "",
+    );
+    const effectiveExperienceSummary = selectAssistantLongestText(
+      state?.experienceSummary || "",
+      currentApplicant?.experienceSummary || "",
+    );
+    const effectiveLocation = selectAssistantLongestText(
+      state?.location || "",
+      currentApplicant?.location || "",
+    );
+
+    applicantDoc.fullName = effectiveName;
+    applicantDoc.phone = effectivePhone;
+    applicantDoc.phoneDisplay = effectivePhoneDisplay;
+    applicantDoc.email = effectiveEmail;
+    applicantDoc.positionApplied = effectiveRole;
+    applicantDoc.roleTrack = effectiveRoleTrack;
+    applicantDoc.languages = effectiveLanguages;
+    applicantDoc.yearsExperience = effectiveYearsExperience;
+    applicantDoc.experienceSummary = effectiveExperienceSummary;
+    applicantDoc.hasTools = selectAssistantText(state?.hasTools || "", currentApplicant?.hasTools || "");
+    applicantDoc.hasTransportation = selectAssistantText(
+      state?.hasTransportation || "",
+      currentApplicant?.hasTransportation || "",
+    );
+    applicantDoc.fieldReady = selectAssistantText(state?.fieldReady || "", currentApplicant?.fieldReady || "");
+    applicantDoc.location = effectiveLocation;
+    applicantDoc.bestInterviewDay = cleanText(
+      state?.bestInterviewDay || currentApplicant?.bestInterviewDay || "",
+      80,
+    );
+    applicantDoc.bestInterviewTime = cleanText(
+      state?.bestInterviewTime || currentApplicant?.bestInterviewTime || "",
+      80,
+    );
+    applicantDoc.status = resolveApplicantStatus(currentApplicant, state);
+    applicantDoc.nextAction =
+      state?.nextActionAt ? "phone interview follow-up" : currentApplicant?.nextAction || "";
+    applicantDoc.nextActionAt = state?.nextActionAt || currentApplicant?.nextActionAt || null;
+    applicantDoc.privateNotes = mergeApplicantPrivateNotes(currentApplicant?.privateNotes || "", state);
+    applicantDoc.detailsSummary = selectAssistantLongestText(
+      state?.detailsSummary || "",
+      currentApplicant?.detailsSummary || "",
+    );
+    applicantDoc.sourceType =
+      cleanText(sourceType || currentApplicant?.sourceType || "", 80) || "assistant_chat_job";
+    applicantDoc.sourceChannel = cleanText(
+      state?.sourceChannel || currentApplicant?.sourceChannel || "",
+      40,
+    );
+    applicantDoc.sourceLabel = cleanText(
+      state?.sourceLabel || currentApplicant?.sourceLabel || "",
+      120,
+    );
+    applicantDoc.pageTitle = cleanText(pageTitle || currentApplicant?.pageTitle || "", 160);
+    applicantDoc.pagePath = cleanText(pagePath || currentApplicant?.pagePath || "", 240);
+    applicantDoc.pageUrl = cleanText(pageUrl || currentApplicant?.pageUrl || "", 500);
+    applicantDoc.referrer = cleanText(referrer || currentApplicant?.referrer || "", 500);
+    applicantDoc.ipAddress = req
+      ? cleanText(getClientIp(req), 120)
+      : cleanText(currentApplicant?.ipAddress || "", 120);
+    applicantDoc.userAgent = req
+      ? cleanText(req.headers["user-agent"] || "", 400)
+      : cleanText(currentApplicant?.userAgent || "", 400);
+    applicantDoc.tracking = buildTrackingPayload(tracking || currentApplicant?.tracking || {});
+    applicantDoc.visitorIds = mergeAssistantUniqueValues(
+      currentApplicant?.visitorIds || [],
+      state?.visitorId || "",
+    );
+    applicantDoc.sessionIds = mergeAssistantUniqueValues(
+      currentApplicant?.sessionIds || [],
+      state?.sessionId || "",
+    );
+    applicantDoc.conversationHistory = mergedHistory;
+    applicantDoc.lastUserMessage = cleanText(
+      state?.latestUserMessage || currentApplicant?.lastUserMessage || "",
+      500,
+    );
+    applicantDoc.lastAssistantMessage = cleanText(
+      assistantReply || currentApplicant?.lastAssistantMessage || "",
+      1500,
+    );
+
+    if (state?.nextActionAt && !applicantDoc.interviewRequestedAt) {
+      applicantDoc.interviewRequestedAt = now;
+    }
+
+    if (state?.phone || state?.email || state?.positionApplied) {
+      applicantDoc.lastContactAt = now;
+    }
+
+    applicantDoc.updatedAt = now;
+
+    if (!applicantDoc.createdAt) {
+      applicantDoc.createdAt = now;
+    }
+
+    await applicantDoc.save();
+    return applicantDoc;
+  }
+
   function buildAssistantHintSeedLead(
     lead = null,
     { nameHint = "", phoneHint = "", phoneDisplayHint = "" } = {},
@@ -4675,6 +5914,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return baseLead;
   }
 
+  function buildAssistantHintSeedApplicant(
+    applicant = null,
+    { nameHint = "", phoneHint = "", phoneDisplayHint = "" } = {},
+  ) {
+    const baseApplicant =
+      applicant && typeof applicant.toObject === "function"
+        ? applicant.toObject()
+        : applicant
+          ? { ...applicant }
+          : {};
+    const safeName = sanitizeAssistantStoredName(nameHint || "");
+    const safePhone = normalizePhone(phoneHint || "");
+    const safePhoneDisplay =
+      cleanText(phoneDisplayHint || phoneHint || "", 40) || safePhone;
+    const existingName = sanitizeAssistantStoredName(baseApplicant.fullName || "");
+    const existingPhone = normalizePhone(baseApplicant.phone || "");
+
+    if (
+      safeName &&
+      (!existingName || existingName === METALWORKS_APPLICANT_PLACEHOLDER_NAME)
+    ) {
+      baseApplicant.fullName = safeName;
+    }
+
+    if (safePhone && !existingPhone) {
+      baseApplicant.phone = safePhone;
+    }
+
+    if (safePhoneDisplay && (!cleanText(baseApplicant.phoneDisplay || "", 40) || !existingPhone)) {
+      baseApplicant.phoneDisplay = safePhoneDisplay;
+    }
+
+    return baseApplicant;
+  }
+
   async function buildAssistantConversationContext({
     history = [],
     message = "",
@@ -4685,67 +5959,122 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     phoneHint = "",
     phoneDisplayHint = "",
   } = {}) {
+    const normalizedPhoneHint = normalizePhone(phoneHint || "");
+    const initialEmploymentHint = detectEmploymentIntent(
+      [message, ...normalizeAssistantHistory(history).map((item) => item.content || "")]
+        .filter(Boolean)
+        .join("\n"),
+    );
     let currentLead = await resolveConversationLead({
       visitorId,
       sessionId,
-      phone: normalizePhone(phoneHint || ""),
+      phone: normalizedPhoneHint,
+    });
+    let currentApplicant = await resolveConversationApplicant({
+      visitorId,
+      sessionId,
+      phone: normalizedPhoneHint,
     });
     let seededLead = buildAssistantHintSeedLead(currentLead, {
       nameHint,
       phoneHint,
       phoneDisplayHint,
     });
+    let seededApplicant = buildAssistantHintSeedApplicant(currentApplicant, {
+      nameHint,
+      phoneHint,
+      phoneDisplayHint,
+    });
     let mergedHistory = mergeConversationHistory(
-      currentLead?.conversationHistory || [],
+      currentApplicant?.conversationHistory ||
+        (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
       normalizeAssistantHistory(history),
     );
     let userConversationItems = buildAssistantConversationItems({
       history: mergedHistory,
       message,
     });
-    let conversationState = buildAssistantConversationSignals({
+    let leadConversationState = buildAssistantConversationSignals({
       history: userConversationItems,
       lead: seededLead,
       pagePath,
     });
+    let applicantConversationState = buildApplicantConversationSignals({
+      history: userConversationItems,
+      applicant: seededApplicant,
+    });
     const resolvedLead = await resolveConversationLead({
       visitorId,
       sessionId,
-      email: conversationState.email,
-      phone: conversationState.phone || normalizePhone(phoneHint || ""),
+      email: leadConversationState.email,
+      phone: leadConversationState.phone || normalizedPhoneHint,
+    });
+    const resolvedApplicant = await resolveConversationApplicant({
+      visitorId,
+      sessionId,
+      email: applicantConversationState.email,
+      phone: applicantConversationState.phone || normalizedPhoneHint,
     });
 
     if (
-      resolvedLead?._id &&
-      String(resolvedLead._id) !== String(currentLead?._id || "")
+      (resolvedLead?._id && String(resolvedLead._id) !== String(currentLead?._id || "")) ||
+      (resolvedApplicant?._id &&
+        String(resolvedApplicant._id) !== String(currentApplicant?._id || ""))
     ) {
-      currentLead = resolvedLead;
+      currentLead = resolvedLead || currentLead;
+      currentApplicant = resolvedApplicant || currentApplicant;
       seededLead = buildAssistantHintSeedLead(currentLead, {
         nameHint,
         phoneHint,
         phoneDisplayHint,
       });
+      seededApplicant = buildAssistantHintSeedApplicant(currentApplicant, {
+        nameHint,
+        phoneHint,
+        phoneDisplayHint,
+      });
       mergedHistory = mergeConversationHistory(
-        currentLead?.conversationHistory || [],
+        currentApplicant?.conversationHistory ||
+          (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
         normalizeAssistantHistory(history),
       );
       userConversationItems = buildAssistantConversationItems({
         history: mergedHistory,
         message,
       });
-      conversationState = buildAssistantConversationSignals({
+      leadConversationState = buildAssistantConversationSignals({
         history: userConversationItems,
         lead: seededLead,
         pagePath,
       });
-    } else if (resolvedLead?._id) {
-      currentLead = resolvedLead;
+      applicantConversationState = buildApplicantConversationSignals({
+        history: userConversationItems,
+        applicant: seededApplicant,
+      });
+    } else {
+      currentLead = resolvedLead || currentLead;
+      currentApplicant = resolvedApplicant || currentApplicant;
     }
+
+    const intentType =
+      currentApplicant?._id ||
+      detectEmploymentIntent(
+        applicantConversationState.combinedUserText ||
+          applicantConversationState.latestUserMessage ||
+          message,
+      )
+        ? "employment"
+        : "customer";
 
     return {
       currentLead,
+      currentApplicant,
       userConversationItems,
-      conversationState,
+      conversationState:
+        intentType === "employment" ? applicantConversationState : leadConversationState,
+      leadConversationState,
+      applicantConversationState,
+      intentType,
     };
   }
 
@@ -4790,7 +6119,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     const usedToday = safeVisitorId
       ? await MetalworksLeadActivity.countDocuments({
-          activityType: "assistant_user_message",
+          activityType: { $in: ["assistant_user_message", "applicant_user_message"] },
           createdAt: { $gte: startOfDay },
           "meta.visitorId": safeVisitorId,
         })
@@ -4806,8 +6135,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     const {
       currentLead,
+      currentApplicant,
       userConversationItems,
       conversationState: initialConversationState,
+      intentType,
     } = await buildAssistantConversationContext({
       history,
       message: safeMessage,
@@ -4826,6 +6157,228 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       sourceChannel: cleanText(sourceChannel || "web", 40) || "web",
       sourceLabel: cleanText(sourceLabel || "", 120) || "Agustin 2.0 website assistant",
     };
+
+    if (intentType === "employment") {
+      const safeApplicantSourceType = cleanText(sourceType || "", 80).endsWith("_job")
+        ? cleanText(sourceType || "", 80)
+        : `${cleanText(sourceType || "assistant_chat", 60) || "assistant_chat"}_job`;
+      const applicantExistedBeforeMessage = Boolean(currentApplicant?._id);
+      const previousApplicantStatus = cleanText(currentApplicant?.status || "new", 40).toLowerCase();
+      const previousApplicantNextActionAt = currentApplicant?.nextActionAt
+        ? new Date(currentApplicant.nextActionAt).toISOString()
+        : "";
+      let applicantDoc = await upsertConversationApplicant({
+        currentApplicant,
+        state: conversationState,
+        pageTitle: safePageTitle,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        referrer: safeReferrer,
+        tracking: safeTracking,
+        req,
+        sourceType: safeApplicantSourceType,
+      });
+
+      if (!applicantExistedBeforeMessage && applicantDoc?._id) {
+        await appendActivity({
+          applicantId: applicantDoc._id,
+          activityType: "job_applicant_created",
+          title: applicantDoc.positionApplied
+            ? `${applicantDoc.fullName || "Candidato"} · ${applicantDoc.positionApplied}`
+            : applicantDoc.fullName || "Candidato nuevo",
+          body: conversationState.positionApplied
+            ? `Agustin 2.0 guardo un candidato para ${conversationState.positionApplied}.`
+            : "Agustin 2.0 abrio un nuevo expediente de candidato.",
+          meta: {
+            sourceType: safeApplicantSourceType,
+            sourceChannel: conversationState.sourceChannel,
+            positionApplied: applicantDoc.positionApplied || "",
+            visitorId: safeVisitorId,
+            sessionId: safeSessionId,
+            pageTitle: safePageTitle,
+          },
+          req,
+          pagePath: safePagePath,
+          pageUrl: safePageUrl,
+          tracking: safeTracking,
+        });
+      }
+
+      await appendActivity({
+        applicantId: applicantDoc?._id || currentApplicant?._id || null,
+        activityType: "applicant_user_message",
+        title: "Mensaje del candidato",
+        body: safeMessage,
+        meta: {
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          pageTitle: safePageTitle,
+          sourceType: safeApplicantSourceType,
+          sourceChannel: conversationState.sourceChannel,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+
+      const result = await generateAssistantReply({
+        message: safeMessage,
+        history: userConversationItems,
+        pagePath: safePagePath,
+        conversationState,
+        mode: "employment",
+      });
+
+      const conversationItemsWithReply = buildAssistantConversationItems({
+        history: userConversationItems,
+        reply: result.reply,
+      });
+      const finalState = {
+        ...buildApplicantConversationSignals({
+          history: conversationItemsWithReply,
+          applicant: buildAssistantHintSeedApplicant(applicantDoc || currentApplicant, {
+            nameHint,
+            phoneHint,
+            phoneDisplayHint,
+          }),
+        }),
+        visitorId: safeVisitorId,
+        sessionId: safeSessionId,
+        sourceChannel: conversationState.sourceChannel,
+        sourceLabel: conversationState.sourceLabel,
+      };
+
+      applicantDoc = await upsertConversationApplicant({
+        currentApplicant: applicantDoc || currentApplicant,
+        state: finalState,
+        pageTitle: safePageTitle,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        referrer: safeReferrer,
+        tracking: safeTracking,
+        req,
+        assistantReply: result.reply,
+        sourceType: safeApplicantSourceType,
+      });
+
+      const currentApplicantNextActionAt = applicantDoc?.nextActionAt
+        ? new Date(applicantDoc.nextActionAt).toISOString()
+        : "";
+
+      if (
+        applicantDoc?._id &&
+        finalState.nextActionAt &&
+        (previousApplicantStatus !== "interview_requested" ||
+          previousApplicantNextActionAt !== currentApplicantNextActionAt)
+      ) {
+        await appendActivity({
+          applicantId: applicantDoc._id,
+          activityType: "job_applicant_interview_requested",
+          title: applicantDoc.fullName
+            ? `${applicantDoc.fullName} · entrevista`
+            : applicantExistedBeforeMessage
+              ? "Entrevista de candidato actualizada"
+              : "Entrevista de candidato guardada",
+          body: finalState.interviewLabel
+            ? `Agustin 2.0 dejo entrevista por telefono para ${finalState.interviewLabel}.`
+            : "Agustin 2.0 pidio seguimiento de entrevista por telefono.",
+          meta: {
+            duplicate: applicantExistedBeforeMessage,
+            requestedAt: finalState.nextActionAt.toISOString(),
+            visitorId: safeVisitorId,
+            sessionId: safeSessionId,
+            pageTitle: safePageTitle,
+            sourceType: safeApplicantSourceType,
+            sourceChannel: finalState.sourceChannel,
+          },
+          req,
+          pagePath: safePagePath,
+          pageUrl: safePageUrl,
+          tracking: safeTracking,
+        });
+      }
+
+      let alertDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (applicantDoc?._id && finalState.shouldAlert && !applicantDoc.alertSentAt) {
+        try {
+          alertDelivery = await sendMetalworksApplicantAlertEmail({
+            applicant: applicantDoc.toObject ? applicantDoc.toObject() : applicantDoc,
+            requestedAtLabel: finalState.interviewLabel,
+            pagePath: safePagePath,
+            pageUrl: safePageUrl,
+            conversationDigest: finalState.conversationDigest,
+          });
+
+          if (alertDelivery.delivered) {
+            applicantDoc.alertSentAt = new Date();
+            applicantDoc.updatedAt = new Date();
+            await applicantDoc.save();
+          }
+        } catch (error) {
+          console.error("Error sending Metal Works applicant alert:", error.message);
+        }
+
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            applicant: applicantDoc.toObject ? applicantDoc.toObject() : applicantDoc,
+            alertType: "job_applicant",
+            requestedAtLabel: finalState.interviewLabel,
+          });
+
+          if (pushDelivery.delivered && !applicantDoc.alertSentAt) {
+            applicantDoc.alertSentAt = new Date();
+            applicantDoc.updatedAt = new Date();
+            await applicantDoc.save();
+          }
+        } catch (error) {
+          console.error("Error sending Metal Works applicant push:", error.message);
+        }
+      }
+
+      await appendActivity({
+        applicantId: applicantDoc?._id || currentApplicant?._id || null,
+        activityType: result.usedFallback ? "applicant_fallback" : "applicant_ai_reply",
+        title: result.usedFallback ? "Fallback candidato" : "Respuesta para candidato",
+        body: result.reply,
+        meta: {
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          reason: result.reason || "",
+          sourceType: safeApplicantSourceType,
+          sourceChannel: finalState.sourceChannel,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+
+      return {
+        ok: true,
+        status: 200,
+        respuesta: result.reply,
+        usedFallback: result.usedFallback,
+        leadCaptured: false,
+        leadId: "",
+        applicantCaptured: Boolean(applicantDoc?._id),
+        applicantId: applicantDoc?._id ? String(applicantDoc._id) : "",
+        callbackCaptured: false,
+        callbackLabel: "",
+        notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
+        remainingToday: safeVisitorId
+          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - (usedToday + 1), 0)
+          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+      };
+    }
 
     const leadExistedBeforeMessage = Boolean(currentLead?._id);
     const previousLeadStatus = normalizeStatus(currentLead?.status || "new");
@@ -5542,6 +7095,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const dashboard = await buildDashboardSnapshot(
         MetalworksLead,
         MetalworksLeadActivity,
+        MetalworksApplicant,
         {},
       );
       const snapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -5575,6 +7129,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const dashboard = await buildDashboardSnapshot(
         MetalworksLead,
         MetalworksLeadActivity,
+        MetalworksApplicant,
         {},
       );
       const operatorSnapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -5768,6 +7323,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const snapshot = await buildDashboardSnapshot(
         MetalworksLead,
         MetalworksLeadActivity,
+        MetalworksApplicant,
         {
           status: req.query?.status || "",
           search: req.query?.search || "",
@@ -5779,6 +7335,64 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);
       respondError(res, 500, "No pude cargar el dashboard del CRM.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/applicants", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const applicantDocs = await MetalworksApplicant.find({})
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(120)
+        .lean();
+
+      res.json({
+        applicants: applicantDocs.map((doc) => cleanApplicant(doc)).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works applicants:", error.message);
+      respondError(res, 500, "No pude cargar los candidatos.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/applicants/:applicantId", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const applicantId = String(req.params?.applicantId || "").trim();
+
+    if (!applicantId || !mongoose.Types.ObjectId.isValid(applicantId)) {
+      return respondError(res, 400, "Candidato invalido.");
+    }
+
+    try {
+      const [applicantDoc, activityDocs] = await Promise.all([
+        MetalworksApplicant.findById(applicantId).lean(),
+        MetalworksLeadActivity.find({ applicantId })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+      ]);
+
+      if (!applicantDoc) {
+        return respondError(res, 404, "No encontre ese candidato.");
+      }
+
+      res.json({
+        applicant: cleanApplicant(applicantDoc, { includeConversation: true }),
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works applicant detail:", error.message);
+      respondError(res, 500, "No pude cargar ese candidato.");
     }
   });
 
@@ -7107,6 +8721,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         usedFallback: result.usedFallback,
         leadCaptured: result.leadCaptured,
         leadId: result.leadId,
+        applicantCaptured: result.applicantCaptured,
+        applicantId: result.applicantId,
         callbackCaptured: result.callbackCaptured,
         callbackLabel: result.callbackLabel,
         notified: result.notified,

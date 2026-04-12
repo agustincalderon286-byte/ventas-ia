@@ -412,7 +412,7 @@ function renderSummary(summary = {}) {
     {
       label: "New Leads",
       value: summary.newLeads || 0,
-      note: `${summary.totalLeads || 0} total in CRM`,
+      note: `${summary.totalLeads || 0} total leads · ${summary.newApplicants || 0} new applicants`,
     },
     {
       label: "Active Follow-ups",
@@ -427,7 +427,7 @@ function renderSummary(summary = {}) {
     {
       label: "Won",
       value: summary.wonLeads || 0,
-      note: `${summary.phoneClicks30d || 0} phone clicks in 30 days`,
+      note: `${summary.phoneClicks30d || 0} phone clicks · ${summary.totalApplicants || 0} applicants`,
     },
   ];
 
