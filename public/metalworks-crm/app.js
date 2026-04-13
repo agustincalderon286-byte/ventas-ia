@@ -208,6 +208,13 @@ const state = {
   me: null,
   dashboard: null,
   applicants: [],
+  prospectorAdmin: {
+    summary: null,
+    prospectors: [],
+    loginUrl: "",
+    portalUrl: "",
+    latestCredentials: null,
+  },
   leadDetail: null,
   applicantDetail: null,
   view: normalizeCrmView(readStoredJson(CRM_SELECTED_VIEW_STORAGE_KEY, "leads") || "leads"),
@@ -234,6 +241,24 @@ const summaryWrap = document.querySelector("[data-crm-summary]");
 const resourceHub = document.querySelector("[data-crm-resource-hub]");
 const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
 const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
+const prospectorAdminWrap = document.querySelector("[data-crm-prospector-admin]");
+const prospectorSummary = document.querySelector("[data-crm-prospector-summary]");
+const prospectorForm = document.querySelector("[data-crm-prospector-form]");
+const prospectorSaveButton = document.querySelector("[data-crm-prospector-save]");
+const prospectorList = document.querySelector("[data-crm-prospector-list]");
+const prospectorFeedback = document.querySelector("[data-crm-prospector-feedback]");
+const prospectorCredentialsCard = document.querySelector("[data-crm-prospector-credentials]");
+const prospectorCredentialsTitle = document.querySelector(
+  "[data-crm-prospector-credentials-title]",
+);
+const prospectorCredentialsList = document.querySelector(
+  "[data-crm-prospector-credentials-list]",
+);
+const prospectorCopyEmailButton = document.querySelector("[data-crm-prospector-copy-email]");
+const prospectorCopyPasswordButton = document.querySelector(
+  "[data-crm-prospector-copy-password]",
+);
+const prospectorCopyLoginButton = document.querySelector("[data-crm-prospector-copy-login]");
 const leadList = document.querySelector("[data-crm-lead-list]");
 const emptyState = document.querySelector("[data-crm-empty-state]");
 const collectionTitle = document.querySelector("[data-crm-collection-title]");
@@ -1138,6 +1163,125 @@ function renderResourceHub(resourceSections = []) {
       );
     });
   });
+}
+
+function setProspectorFeedback(message = "", tone = "muted") {
+  if (!prospectorFeedback) {
+    return;
+  }
+
+  prospectorFeedback.textContent = message;
+  prospectorFeedback.dataset.tone = tone;
+}
+
+function renderProspectorCredentials() {
+  if (!prospectorCredentialsCard || !prospectorCredentialsList) {
+    return;
+  }
+
+  const latest = state.prospectorAdmin?.latestCredentials;
+
+  if (!latest?.email || !latest?.temporaryPassword) {
+    prospectorCredentialsCard.hidden = true;
+    prospectorCredentialsList.innerHTML = "";
+    if (prospectorCredentialsTitle) {
+      prospectorCredentialsTitle.textContent = "New account ready";
+    }
+    return;
+  }
+
+  prospectorCredentialsCard.hidden = false;
+
+  if (prospectorCredentialsTitle) {
+    prospectorCredentialsTitle.textContent = latest.title || "New account ready";
+  }
+
+  prospectorCredentialsList.innerHTML = `
+    <p><strong>Email:</strong> ${escapeHtml(latest.email)}</p>
+    <p><strong>Temporary password:</strong> ${escapeHtml(latest.temporaryPassword)}</p>
+    ${
+      latest.loginUrl
+        ? `<p><strong>Login page:</strong> ${escapeHtml(latest.loginUrl)}</p>`
+        : ""
+    }
+  `;
+}
+
+function renderProspectorAdmin(snapshot = {}) {
+  if (!prospectorAdminWrap || !prospectorList || !prospectorSummary) {
+    return;
+  }
+
+  const summary = snapshot?.summary || {};
+  const prospectors = Array.isArray(snapshot?.prospectors) ? snapshot.prospectors : [];
+  state.prospectorAdmin = {
+    ...state.prospectorAdmin,
+    ...snapshot,
+    summary,
+    prospectors,
+  };
+
+  prospectorSummary.innerHTML = [
+    `<span class="crm-chip">Total: ${Number(summary.totalProspectors || 0)}</span>`,
+    `<span class="crm-chip">Active: ${Number(summary.activeProspectors || 0)}</span>`,
+    `<span class="crm-chip">Paused: ${Number(summary.pausedProspectors || 0)}</span>`,
+    `<span class="crm-chip">Leads: ${Number(summary.totalLeads || 0)}</span>`,
+  ].join("");
+
+  if (!prospectors.length) {
+    prospectorList.innerHTML =
+      '<div class="crm-prospector-empty">No prospector accounts yet. Create the first one here and send them the login credentials.</div>';
+    renderProspectorCredentials();
+    return;
+  }
+
+  prospectorList.innerHTML = prospectors
+    .map(
+      (prospector) => `
+        <article class="crm-prospector-user-card" data-prospector-id="${escapeHtml(prospector.id || "")}">
+          <div class="crm-lead-card-head">
+            <div>
+              <h3>${escapeHtml(prospector.name || "Prospector")}</h3>
+              <div class="crm-lead-card-meta">
+                <span>${escapeHtml(prospector.email || "No email")}</span>
+                <span>${escapeHtml(prospector.createdAt ? formatDate(prospector.createdAt) : "No date")}</span>
+              </div>
+            </div>
+            <span class="crm-status-badge" data-status="${escapeHtml(prospector.status || "active")}">
+              ${escapeHtml(prospector.statusLabel || "Active")}
+            </span>
+          </div>
+          <div class="crm-micro-list">
+            <span class="crm-chip">Leads: ${Number(prospector.counts?.totalLeads || 0)}</span>
+            <span class="crm-chip">New: ${Number(prospector.counts?.newLeads || 0)}</span>
+            <span class="crm-chip">Quoted: ${Number(prospector.counts?.quotedLeads || 0)}</span>
+            <span class="crm-chip">Won: ${Number(prospector.counts?.wonLeads || 0)}</span>
+          </div>
+          <div class="crm-lead-card-summary">
+            <span><strong>Last login:</strong> ${escapeHtml(prospector.lastLoginAt ? formatDate(prospector.lastLoginAt) : "Never")}</span>
+            <span><strong>Last lead sent:</strong> ${escapeHtml(prospector.lastLeadSubmittedAt ? formatDate(prospector.lastLeadSubmittedAt) : "No leads yet")}</span>
+          </div>
+          <div class="crm-card-actions">
+            <button type="button" class="crm-card-action" data-prospector-copy-email="${escapeHtml(prospector.email || "")}">
+              Copy Email
+            </button>
+            <button type="button" class="crm-card-action" data-prospector-reset-password>
+              Reset Password
+            </button>
+            <button
+              type="button"
+              class="crm-card-action"
+              data-prospector-toggle-status="${escapeHtml(prospector.status === "active" ? "paused" : "active")}"
+            >
+              ${prospector.status === "active" ? "Pause Access" : "Reactivate"}
+            </button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  renderProspectorCredentials();
 }
 
 function syncViewButtons() {
@@ -2169,6 +2313,12 @@ async function loadApplicants() {
   return state.applicants;
 }
 
+async function loadProspectorAdmin() {
+  const snapshot = await apiRequest("/api/metalworks-crm/prospectors");
+  renderProspectorAdmin(snapshot);
+  return snapshot;
+}
+
 async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt = 0 } = {}) {
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
@@ -2499,9 +2649,205 @@ async function refreshApplicantsSafely() {
     handleCrmError(error, {
       fallbackMessage: state.applicants.length
         ? "No pude refrescar candidatos en este momento. Conservando la ultima vista cargada."
-        : "No pude cargar los candidatos del hiring assistant. Intenta otra vez en unos segundos.",
+      : "No pude cargar los candidatos del hiring assistant. Intenta otra vez en unos segundos.",
     });
   }
+}
+
+async function refreshProspectorsSafely() {
+  try {
+    await loadProspectorAdmin();
+    if (!state.prospectorAdmin?.latestCredentials?.email) {
+      setProspectorFeedback("", "muted");
+    }
+  } catch (error) {
+    setProspectorFeedback(
+      TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
+        ? "The prospector accounts panel is waking up. Try again in a few seconds."
+        : error.message || "No pude cargar las cuentas de prospectadores.",
+      TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "muted" : "error",
+    );
+  }
+}
+
+async function refreshWorkspaceSafely() {
+  await Promise.all([refreshDashboardSafely(), refreshProspectorsSafely()]);
+}
+
+function bindProspectorAdmin() {
+  if (!prospectorForm || !prospectorList) {
+    return;
+  }
+
+  prospectorForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setProspectorFeedback("Creating account...", "muted");
+
+    if (prospectorSaveButton) {
+      prospectorSaveButton.disabled = true;
+    }
+
+    const formData = new FormData(prospectorForm);
+    const payload = {
+      name: String(formData.get("name") || "").trim(),
+      email: String(formData.get("email") || "").trim(),
+    };
+
+    try {
+      const result = await apiRequest("/api/metalworks-crm/prospectors", {
+        method: "POST",
+        body: payload,
+      });
+
+      state.prospectorAdmin.latestCredentials = {
+        ...(result.credentials || {}),
+        loginUrl:
+          state.prospectorAdmin?.loginUrl ||
+          "https://www.chicagometalworksandfencing.com/metalworks-crm/prospector/login/",
+        title: payload.name
+          ? `${payload.name} account ready`
+          : "New account ready",
+      };
+      renderProspectorCredentials();
+      setProspectorFeedback("Prospector account created.", "success");
+      prospectorForm.reset();
+      await loadProspectorAdmin();
+    } catch (error) {
+      setProspectorFeedback(error.message, "error");
+    } finally {
+      if (prospectorSaveButton) {
+        prospectorSaveButton.disabled = false;
+      }
+    }
+  });
+
+  prospectorList.addEventListener("click", async (event) => {
+    const copyEmailButton = event.target.closest("[data-prospector-copy-email]");
+    const resetPasswordButton = event.target.closest("[data-prospector-reset-password]");
+    const toggleStatusButton = event.target.closest("[data-prospector-toggle-status]");
+    const card = event.target.closest("[data-prospector-id]");
+    const prospectorId = String(card?.dataset.prospectorId || "").trim();
+
+    if (copyEmailButton) {
+      const email = String(copyEmailButton.dataset.prospectorCopyEmail || "").trim();
+      const copied = await copyTextWithFallback(email);
+      setProspectorFeedback(
+        copied ? "Email copied." : "No pude copiar el email automaticamente.",
+        copied ? "success" : "muted",
+      );
+      return;
+    }
+
+    if (resetPasswordButton) {
+      if (!prospectorId) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "This will generate a new temporary password and sign the prospector out of active sessions.",
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        setProspectorFeedback("Resetting password...", "muted");
+        const result = await apiRequest(
+          `/api/metalworks-crm/prospectors/${encodeURIComponent(prospectorId)}/reset-password`,
+          {
+            method: "POST",
+          },
+        );
+
+        state.prospectorAdmin.latestCredentials = {
+          ...(result.credentials || {}),
+          loginUrl:
+            state.prospectorAdmin?.loginUrl ||
+            "https://www.chicagometalworksandfencing.com/metalworks-crm/prospector/login/",
+          title: result.prospector?.name
+            ? `${result.prospector.name} password reset`
+            : "Temporary password ready",
+        };
+        renderProspectorCredentials();
+        setProspectorFeedback("Temporary password created.", "success");
+        await loadProspectorAdmin();
+      } catch (error) {
+        setProspectorFeedback(error.message, "error");
+      }
+
+      return;
+    }
+
+    if (toggleStatusButton) {
+      if (!prospectorId) {
+        return;
+      }
+
+      const nextStatus = String(toggleStatusButton.dataset.prospectorToggleStatus || "").trim();
+
+      if (!nextStatus) {
+        return;
+      }
+
+      try {
+        setProspectorFeedback(
+          nextStatus === "paused" ? "Pausing access..." : "Reactivating access...",
+          "muted",
+        );
+        const result = await apiRequest(
+          `/api/metalworks-crm/prospectors/${encodeURIComponent(prospectorId)}`,
+          {
+            method: "PATCH",
+            body: {
+              status: nextStatus,
+            },
+          },
+        );
+        setProspectorFeedback(
+          result.forcedSignOut
+            ? "Access updated and active sessions were signed out."
+            : "Prospector access updated.",
+          "success",
+        );
+        await loadProspectorAdmin();
+      } catch (error) {
+        setProspectorFeedback(error.message, "error");
+      }
+    }
+  });
+
+  prospectorCopyEmailButton?.addEventListener("click", async () => {
+    const copied = await copyTextWithFallback(
+      state.prospectorAdmin?.latestCredentials?.email || "",
+    );
+    setProspectorFeedback(
+      copied ? "Email copied." : "No pude copiar el email automaticamente.",
+      copied ? "success" : "muted",
+    );
+  });
+
+  prospectorCopyPasswordButton?.addEventListener("click", async () => {
+    const copied = await copyTextWithFallback(
+      state.prospectorAdmin?.latestCredentials?.temporaryPassword || "",
+    );
+    setProspectorFeedback(
+      copied ? "Temporary password copied." : "No pude copiar el password automaticamente.",
+      copied ? "success" : "muted",
+    );
+  });
+
+  prospectorCopyLoginButton?.addEventListener("click", async () => {
+    const copied = await copyTextWithFallback(
+      state.prospectorAdmin?.latestCredentials?.loginUrl ||
+        state.prospectorAdmin?.loginUrl ||
+        "",
+    );
+    setProspectorFeedback(
+      copied ? "Login link copied." : "No pude copiar el link automaticamente.",
+      copied ? "success" : "muted",
+    );
+  });
 }
 
 function bindAppShell() {
@@ -2511,7 +2857,8 @@ function bindAppShell() {
 
   bindFilters();
   bindDetailActions();
-  refreshButton?.addEventListener("click", refreshDashboardSafely);
+  bindProspectorAdmin();
+  refreshButton?.addEventListener("click", refreshWorkspaceSafely);
   logoutButton?.addEventListener("click", handleLogout);
   viewButtons.forEach((button) => {
     button.addEventListener("click", async () => {
@@ -2550,8 +2897,9 @@ async function init() {
   applyProfileTheme(me.profile || {}, me.email || "");
   persistThemeProfile(me.profile || {}, me.email || "");
   renderResourceHub(me.resourceSections || []);
+  renderProspectorCredentials();
   setSystemStatus("", "");
-  await refreshDashboardSafely();
+  await Promise.all([refreshDashboardSafely(), refreshProspectorsSafely()]);
 }
 
 init().catch((error) => {

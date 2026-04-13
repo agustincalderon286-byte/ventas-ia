@@ -1,6 +1,5 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const PROSPECTOR_IDENTITY_STORAGE_KEY = "cmwf_prospector_identity_v1";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -13,32 +12,6 @@ function createApiError(message = "", status = 0, retryable = false) {
   error.status = status;
   error.retryable = retryable;
   return error;
-}
-
-function readStoredJson(key, fallback = null) {
-  try {
-    const raw = window.localStorage.getItem(key);
-
-    if (!raw) {
-      return fallback;
-    }
-
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStoredJson(key, value) {
-  try {
-    if (value == null) {
-      window.localStorage.removeItem(key);
-      return;
-    }
-
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
 }
 
 async function apiRequest(url, options = {}) {
@@ -55,10 +28,7 @@ async function apiRequest(url, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
-  const retryDelays =
-    config.method === "GET"
-      ? GET_RETRY_DELAYS_MS
-      : [];
+  const retryDelays = config.method === "GET" ? GET_RETRY_DELAYS_MS : [];
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
     try {
@@ -112,29 +82,7 @@ function setFeedback(message = "", tone = "") {
   feedback.dataset.tone = tone;
 }
 
-function hydrateStoredIdentity() {
-  if (!loginForm) {
-    return;
-  }
-
-  const stored = readStoredJson(PROSPECTOR_IDENTITY_STORAGE_KEY, null);
-
-  if (!stored?.name && !stored?.email) {
-    return;
-  }
-
-  if (loginForm.elements.name && stored.name) {
-    loginForm.elements.name.value = stored.name;
-  }
-
-  if (loginForm.elements.email && stored.email) {
-    loginForm.elements.email.value = stored.email;
-  }
-}
-
 async function init() {
-  hydrateStoredIdentity();
-
   try {
     const me = await apiRequest("/api/metalworks-crm/prospector/me");
 
@@ -145,14 +93,14 @@ async function init() {
 
     if (!me.configured) {
       setFeedback(
-        "Primero configura METALWORKS_PROSPECTOR_PASSWORD en el backend para abrir este portal.",
+        "Ask your admin to create your prospector account before signing in here.",
         "error",
       );
     }
   } catch (error) {
     setFeedback(
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-        ? "El portal se esta despertando. Espera unos segundos y vuelve a intentar."
+        ? "The portal is waking up. Give it a few seconds and try again."
         : error.message,
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "muted" : "error",
     );
@@ -162,24 +110,18 @@ async function init() {
 if (loginForm) {
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setFeedback("Entrando...", "muted");
+    setFeedback("Signing in...", "muted");
 
     const formData = new FormData(loginForm);
     const payload = {
-      name: String(formData.get("name") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       password: String(formData.get("password") || ""),
     };
 
     try {
-      const result = await apiRequest("/api/metalworks-crm/prospector/login", {
+      await apiRequest("/api/metalworks-crm/prospector/login", {
         method: "POST",
         body: payload,
-      });
-
-      writeStoredJson(PROSPECTOR_IDENTITY_STORAGE_KEY, {
-        name: result.name || payload.name,
-        email: result.email || payload.email,
       });
 
       window.location.href = "/metalworks-crm/prospector/";

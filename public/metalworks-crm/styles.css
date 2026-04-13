@@ -196,7 +196,8 @@ textarea {
 
 .crm-login-form,
 .crm-detail-form,
-.crm-prospector-form {
+.crm-prospector-form,
+.crm-prospector-admin-form {
   display: grid;
   gap: 16px;
   margin-top: 24px;
@@ -205,7 +206,8 @@ textarea {
 .crm-login-form label,
 .crm-toolbar label,
 .crm-detail-form label,
-.crm-prospector-form label {
+.crm-prospector-form label,
+.crm-prospector-admin-form label {
   display: grid;
   gap: 8px;
   font-weight: 700;
@@ -219,7 +221,8 @@ textarea {
 .crm-detail-form textarea,
 .crm-prospector-form input,
 .crm-prospector-form select,
-.crm-prospector-form textarea {
+.crm-prospector-form textarea,
+.crm-prospector-admin-form input {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid rgba(30, 36, 40, 0.14);
@@ -241,7 +244,8 @@ body[data-crm-skin="goku-blue"] .crm-detail-form select,
 body[data-crm-skin="goku-blue"] .crm-detail-form textarea,
 body[data-crm-skin="goku-blue"] .crm-prospector-form input,
 body[data-crm-skin="goku-blue"] .crm-prospector-form select,
-body[data-crm-skin="goku-blue"] .crm-prospector-form textarea {
+body[data-crm-skin="goku-blue"] .crm-prospector-form textarea,
+body[data-crm-skin="goku-blue"] .crm-prospector-admin-form input {
   background: rgba(8, 15, 30, 0.95);
   color: var(--crm-ink);
   border-color: rgba(97, 214, 255, 0.16);
@@ -256,7 +260,8 @@ body[data-crm-skin="intel-ops"] .crm-detail-form select,
 body[data-crm-skin="intel-ops"] .crm-detail-form textarea,
 body[data-crm-skin="intel-ops"] .crm-prospector-form input,
 body[data-crm-skin="intel-ops"] .crm-prospector-form select,
-body[data-crm-skin="intel-ops"] .crm-prospector-form textarea {
+body[data-crm-skin="intel-ops"] .crm-prospector-form textarea,
+body[data-crm-skin="intel-ops"] .crm-prospector-admin-form input {
   background: rgba(5, 16, 12, 0.96);
   color: var(--crm-ink);
   border-color: rgba(111, 255, 170, 0.18);
@@ -354,6 +359,18 @@ body[data-crm-skin="intel-ops"] .crm-activity-card {
     0 22px 48px rgba(2, 8, 5, 0.48),
     inset 0 0 0 1px rgba(255, 207, 110, 0.04);
   backdrop-filter: blur(14px);
+}
+
+body[data-crm-skin="goku-blue"] .crm-prospector-admin-form,
+body[data-crm-skin="goku-blue"] .crm-prospector-user-card {
+  background: rgba(97, 214, 255, 0.07);
+  border-color: rgba(97, 214, 255, 0.14);
+}
+
+body[data-crm-skin="intel-ops"] .crm-prospector-admin-form,
+body[data-crm-skin="intel-ops"] .crm-prospector-user-card {
+  background: rgba(111, 255, 170, 0.06);
+  border-color: rgba(111, 255, 170, 0.12);
 }
 
 body[data-crm-skin="goku-blue"] .crm-header h1,
@@ -575,6 +592,58 @@ body[data-crm-skin="intel-ops"] .crm-resource-item {
   margin: 0;
 }
 
+.crm-prospector-admin {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.crm-prospector-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.crm-prospector-admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  border-radius: 20px;
+  background: rgba(16, 20, 23, 0.04);
+}
+
+.crm-prospector-admin-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.crm-prospector-admin-form input {
+  width: 100%;
+}
+
+.crm-prospector-admin-side,
+.crm-prospector-user-list {
+  display: grid;
+  gap: 14px;
+}
+
+.crm-prospector-credentials .crm-note-list p {
+  word-break: break-word;
+}
+
+.crm-prospector-user-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  border-radius: 20px;
+  background: rgba(16, 20, 23, 0.04);
+}
+
 .crm-summary-card {
   padding: 18px;
 }
@@ -756,6 +825,16 @@ body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="interview_schedul
   color: #b6ffe8;
 }
 
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="active"] {
+  background: rgba(119, 255, 211, 0.14);
+  color: #b6ffe8;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="paused"] {
+  background: rgba(255, 255, 255, 0.1);
+  color: #d7e1ff;
+}
+
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="new"] {
   background: rgba(111, 255, 170, 0.12);
   color: #a7ffcf;
@@ -781,6 +860,26 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="won"] {
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="interview_scheduled"] {
   background: rgba(111, 255, 170, 0.16);
   color: #b9ffda;
+}
+
+.crm-status-badge[data-status="active"] {
+  background: rgba(34, 102, 71, 0.14);
+  color: var(--crm-green);
+}
+
+.crm-status-badge[data-status="paused"] {
+  background: rgba(16, 20, 23, 0.08);
+  color: var(--crm-charcoal);
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="active"] {
+  background: rgba(111, 255, 170, 0.16);
+  color: #b9ffda;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="paused"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d6efe1;
 }
 
 .crm-lead-card-meta,
@@ -1248,9 +1347,11 @@ body[data-crm-skin="intel-ops"] .crm-capture-photo-card {
 @media (max-width: 1080px) {
   .crm-summary-grid,
   .crm-resource-grid,
+  .crm-prospector-admin-grid,
   .crm-toolbar,
   .crm-main-grid,
   .crm-prospector-layout,
+  .crm-prospector-admin-form,
   .crm-detail-form,
   .crm-estimate-grid,
   .crm-prospector-form,
