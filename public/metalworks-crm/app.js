@@ -110,6 +110,33 @@ function formatCacheAge(savedAt = 0) {
   return `hace ${hours} h`;
 }
 
+function buildAbsoluteAppUrl(pathOrUrl = "") {
+  const safeValue = String(pathOrUrl || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(safeValue)) {
+    return safeValue;
+  }
+
+  const normalizedPath = safeValue.startsWith("/") ? safeValue : `/${safeValue}`;
+  return `${window.location.origin}${normalizedPath}`;
+}
+
+function buildResourceQrImageUrl(pathOrUrl = "") {
+  const absoluteUrl = buildAbsoluteAppUrl(pathOrUrl);
+
+  if (!absoluteUrl) {
+    return "";
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+    absoluteUrl,
+  )}`;
+}
+
 async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const retryDelays =
@@ -1100,7 +1127,7 @@ function renderResourceHub(resourceSections = []) {
 
   resourcesWrap.innerHTML = sections
     .map(
-      (section) => `
+      (section, sectionIndex) => `
         <article class="crm-resource-section">
           <div class="crm-panel-head tight crm-resource-section-head">
             <div>
@@ -1111,7 +1138,12 @@ function renderResourceHub(resourceSections = []) {
           <div class="crm-resource-list">
             ${section.items
               .map(
-                (item) => `
+                (item, itemIndex) => {
+                  const resourceId =
+                    String(item.id || "").trim() || `resource-${sectionIndex}-${itemIndex}`;
+                  const qrImageUrl = buildResourceQrImageUrl(item.url || "");
+
+                  return `
                   <article class="crm-resource-item">
                     <div class="crm-resource-copy">
                       <strong>${escapeHtml(item.label || "Link")}</strong>
@@ -1135,9 +1167,39 @@ function renderResourceHub(resourceSections = []) {
                       >
                         Copy
                       </button>
+                      <button
+                        type="button"
+                        class="crm-card-action"
+                        data-resource-qr-toggle="${escapeHtml(resourceId)}"
+                        aria-expanded="false"
+                      >
+                        QR
+                      </button>
+                    </div>
+                    <div
+                      class="crm-resource-qr"
+                      data-resource-qr-panel="${escapeHtml(resourceId)}"
+                      hidden
+                    >
+                      <div class="crm-resource-qr-card">
+                        <img
+                          class="crm-resource-qr-image"
+                          src="${escapeHtml(qrImageUrl)}"
+                          alt="${escapeHtml(`QR code for ${item.label || "Link"}`)}"
+                          loading="lazy"
+                        />
+                        <div class="crm-resource-qr-copy">
+                          <strong>${escapeHtml(item.label || "Link")}</strong>
+                          <p>Escanea este QR para abrir la pagina directo en otro telefono.</p>
+                          <span class="crm-resource-url">${escapeHtml(
+                            buildAbsoluteAppUrl(item.url || ""),
+                          )}</span>
+                        </div>
+                      </div>
                     </div>
                   </article>
-                `,
+                `;
+                },
               )
               .join("")}
           </div>
@@ -1163,6 +1225,40 @@ function renderResourceHub(resourceSections = []) {
           : `No pude copiar ${label} automatico, pero ya te deje el link listo para copiar.`,
         copied ? "success" : "muted",
       );
+    });
+  });
+
+  resourcesWrap.querySelectorAll("[data-resource-qr-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const resourceId = String(button.dataset.resourceQrToggle || "").trim();
+
+      if (!resourceId) {
+        return;
+      }
+
+      const panel = Array.from(resourcesWrap.querySelectorAll("[data-resource-qr-panel]")).find(
+        (node) => String(node.dataset.resourceQrPanel || "").trim() === resourceId,
+      );
+
+      if (!panel) {
+        return;
+      }
+
+      const shouldOpen = panel.hidden;
+
+      resourcesWrap.querySelectorAll("[data-resource-qr-panel]").forEach((node) => {
+        node.hidden = true;
+      });
+      resourcesWrap.querySelectorAll("[data-resource-qr-toggle]").forEach((node) => {
+        node.setAttribute("aria-expanded", "false");
+        node.textContent = "QR";
+      });
+
+      if (shouldOpen) {
+        panel.hidden = false;
+        button.setAttribute("aria-expanded", "true");
+        button.textContent = "Ocultar QR";
+      }
     });
   });
 }

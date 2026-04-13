@@ -668,6 +668,24 @@ body[data-crm-skin="executive-steel"] .crm-resource-item {
   border-color: rgba(20, 38, 61, 0.08);
 }
 
+body[data-crm-skin="goku-blue"] .crm-resource-qr-card {
+  background: rgba(7, 16, 33, 0.74);
+  border-color: rgba(97, 214, 255, 0.14);
+}
+
+body[data-crm-skin="intel-ops"] .crm-resource-qr-card {
+  background: rgba(5, 14, 10, 0.74);
+  border-color: rgba(111, 255, 170, 0.12);
+}
+
+body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0.98) 0%, rgba(239, 244, 248, 0.94) 100%);
+  border-color: rgba(20, 38, 61, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 16px 30px rgba(20, 38, 61, 0.04);
+}
+
 .crm-user-chip {
   padding: 10px 14px;
   border-radius: 999px;
@@ -756,12 +774,59 @@ body[data-crm-skin="executive-steel"] .crm-resource-item {
 
 .crm-resource-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 .crm-resource-feedback {
   margin: 0;
+}
+
+.crm-resource-qr {
+  margin-top: 2px;
+}
+
+.crm-resource-qr-card {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  border-radius: 18px;
+  background: rgba(16, 20, 23, 0.03);
+}
+
+.crm-resource-qr-image {
+  width: 100%;
+  max-width: 132px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(16, 20, 23, 0.08);
+  padding: 8px;
+}
+
+.crm-resource-qr-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-resource-qr-copy strong {
+  font-size: 1rem;
+}
+
+.crm-resource-qr-copy p {
+  margin: 0;
+  color: var(--crm-muted);
+  line-height: 1.55;
+}
+
+.crm-card-action[aria-expanded="true"] {
+  background: linear-gradient(135deg, var(--crm-red) 0%, var(--crm-red-deep) 100%);
+  color: #fff;
+  border-color: transparent;
 }
 
 .crm-prospector-admin {
@@ -1667,6 +1732,12 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-resource-actions {
     grid-template-columns: 1fr;
+  }
+
+  .crm-resource-qr-card {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
   }
 
   .crm-quick-actions,
