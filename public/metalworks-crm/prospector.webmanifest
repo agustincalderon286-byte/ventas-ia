@@ -1,12 +1,12 @@
 {
   "name": "Chicago Metal Works Prospector",
-  "short_name": "CMWF Prospect",
-  "description": "Portal de prospectadores con captura local de leads y sincronizacion al CRM cuando regresa la senal.",
+  "short_name": "CMW Field",
+  "description": "Field prospector portal with offline lead capture and automatic CRM sync when signal returns.",
   "start_url": "/metalworks-crm/prospector/",
   "scope": "/metalworks-crm/",
   "display": "standalone",
-  "background_color": "#07110c",
-  "theme_color": "#07110c",
+  "background_color": "#edf2f7",
+  "theme_color": "#14263d",
   "icons": [
     {
       "src": "/metalworks-crm/prospector-icon.svg",

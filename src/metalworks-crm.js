@@ -1378,7 +1378,7 @@ function formatActivityTitle(type = "") {
     lead_created: "Lead creado",
     lead_updated: "Lead actualizado",
     note_added: "Nota agregada",
-    prospector_lead_submitted: "Lead de prospectador",
+    prospector_lead_submitted: "Prospector lead",
     estimate_sent: "Estimate enviado",
     assistant_open: "Assistant abierto",
     assistant_cta_click: "Assistant CTA",
@@ -4963,7 +4963,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const auth = await getProspectorAuth(req);
 
     if (!auth.email || !auth.name) {
-      respondError(res, 401, "Necesitas iniciar sesion como prospectador.");
+      respondError(res, 401, "You need to sign in as a prospector.");
       return null;
     }
 
@@ -6360,7 +6360,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error loading Metal Works prospector auth:", error.message);
-      respondError(res, 500, "No pude revisar la sesion del prospectador.");
+      respondError(res, 500, "I couldn't check the prospector session.");
     }
   });
 
@@ -6369,7 +6369,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const password = String(req.body?.password || "");
 
     if (!email || !password) {
-      return respondError(res, 400, "Correo y password son requeridos.");
+      return respondError(res, 400, "Email and password are required.");
     }
 
     try {
@@ -6379,21 +6379,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(
           res,
           503,
-          "Primero crea una cuenta de prospectador desde el CRM de Metal Works.",
+          "Ask an admin to create your prospector account in the Metal Works CRM first.",
         );
       }
 
       const prospectorUser = await MetalworksProspectorUser.findOne({ email });
 
       if (!prospectorUser) {
-        return respondError(res, 401, "No encontre una cuenta con ese correo.");
+        return respondError(res, 401, "No account was found with that email.");
       }
 
       if (normalizeProspectorStatus(prospectorUser.status || "active") !== "active") {
         return respondError(
           res,
           403,
-          "Esta cuenta esta pausada. Pidele al administrador que la reactive.",
+          "This account is paused. Ask an admin to reactivate it.",
         );
       }
 
@@ -6404,7 +6404,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           prospectorUser.passwordHash,
         )
       ) {
-        return respondError(res, 401, "Password incorrecto.");
+        return respondError(res, 401, "Incorrect password.");
       }
 
       prospectorUser.lastLoginAt = new Date();
@@ -6421,7 +6421,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error logging into Metal Works prospector portal:", error.message);
-      respondError(res, 500, "No pude iniciar sesion en el portal del prospectador.");
+      respondError(res, 500, "I couldn't sign you into the prospector portal.");
     }
   });
 
@@ -6431,7 +6431,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       res.json({ ok: true });
     } catch (error) {
       console.error("Error logging out of Metal Works prospector portal:", error.message);
-      respondError(res, 500, "No pude cerrar la sesion del prospectador.");
+      respondError(res, 500, "I couldn't sign you out of the prospector portal.");
     }
   });
 
@@ -6458,7 +6458,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error loading Metal Works prospector dashboard:", error.message);
-      respondError(res, 500, "No pude cargar el panel del prospectador.");
+      respondError(res, 500, "I couldn't load the prospector dashboard.");
     }
   });
 
@@ -6526,23 +6526,23 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(
           res,
           400,
-          "Llena nombre, telefono, servicio, direccion, ZIP, timeline, owner y notas.",
+          "Fill in client name, phone, service, address, ZIP, timeline, owner status, and notes.",
         );
       }
 
       if (!qualificationTier || !qualificationNotes) {
-        return respondError(res, 400, "Pon tier del lead y nota corta de calificacion.");
+        return respondError(res, 400, "Add the lead tier and a short qualification note.");
       }
 
       if (parsedFiles.length > 8) {
-        return respondError(res, 400, "Puedes subir hasta 8 fotos por lead.");
+        return respondError(res, 400, "You can upload up to 8 photos per lead.");
       }
 
       if (totalSizeBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
         return respondError(
           res,
           400,
-          "El total de fotos es demasiado grande. Comprime o manda menos archivos.",
+          "The total photo size is too large. Compress or send fewer files.",
         );
       }
 
@@ -6640,8 +6640,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         await appendActivity({
           leadId: leadDoc._id,
           activityType: "lead_created",
-          title: "Lead creado",
-          body: `${fullName} fue capturado por ${auth.name} desde el portal de prospectadores.`,
+          title: "Lead created",
+          body: `${fullName} was captured by ${auth.name} from the prospector portal.`,
           meta: {
             prospectorName: auth.name,
             prospectorEmail: auth.email,
@@ -6708,10 +6708,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       await appendActivity({
         leadId: leadDoc._id,
         activityType: "prospector_lead_submitted",
-        title: duplicate ? "Lead de prospectador actualizado" : "Lead de prospectador guardado",
+        title: duplicate ? "Prospector lead updated" : "Prospector lead saved",
         body: duplicate
-          ? `${auth.name} actualizo este lead desde campo.`
-          : `${auth.name} envio este lead desde el portal de prospectadores.`,
+          ? `${auth.name} updated this lead from the field.`
+          : `${auth.name} submitted this lead from the prospector portal.`,
         meta: {
           duplicate,
           prospectorName: auth.name,
@@ -6763,7 +6763,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error saving Metal Works prospector lead:", error.message);
-      respondError(res, 500, "No pude guardar este lead del prospectador.");
+      respondError(res, 500, "I couldn't save this prospector lead.");
     }
   });
 

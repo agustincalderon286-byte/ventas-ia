@@ -9,7 +9,7 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "No pude completar esa accion.");
+  const error = new Error(message || "I couldn't complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
@@ -41,7 +41,7 @@ async function apiRequest(url, options = {}) {
 
       if (!response.ok) {
         throw createApiError(
-          data.error || "No pude completar esa accion.",
+          data.error || "I couldn't complete that action.",
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -64,11 +64,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("No pude completar esa accion.", status, retryable);
+      throw createApiError("I couldn't complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("No pude completar esa accion.");
+  throw createApiError("I couldn't complete that action.");
 }
 
 const loginForm = document.querySelector("[data-prospector-login-form]");

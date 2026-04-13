@@ -30,7 +30,7 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "No pude completar esa accion.");
+  const error = new Error(message || "I couldn't complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
@@ -196,8 +196,8 @@ async function apiRequest(url, options = {}) {
         throw createApiError(
           data.error ||
             (response.status === 401
-              ? "Necesitas iniciar sesion."
-              : "No pude completar esa accion."),
+              ? "You need to sign in."
+              : "I couldn't complete that action."),
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -220,11 +220,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("No pude completar esa accion.", status, retryable);
+      throw createApiError("I couldn't complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("No pude completar esa accion.");
+  throw createApiError("I couldn't complete that action.");
 }
 
 function escapeHtml(value = "") {
@@ -291,7 +291,7 @@ function estimateDataUrlBytes(dataUrl = "") {
 
 function openQueueDb() {
   if (!supportsQueueStorage()) {
-    return Promise.reject(new Error("Este dispositivo no soporta respaldo local."));
+    return Promise.reject(new Error("This device does not support local backup."));
   }
 
   if (!queueDbPromise) {
@@ -312,7 +312,7 @@ function openQueueDb() {
       };
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error("No pude abrir el respaldo local."));
+      request.onerror = () => reject(request.error || new Error("I couldn't open local backup."));
     });
   }
 
@@ -328,7 +328,7 @@ async function listQueuedLeadsFromDb() {
     const request = store.getAll();
 
     request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-    request.onerror = () => reject(request.error || new Error("No pude leer el respaldo local."));
+    request.onerror = () => reject(request.error || new Error("I couldn't read local backup."));
   });
 }
 
@@ -341,7 +341,7 @@ async function putQueuedLeadInDb(item) {
     const request = store.put(item);
 
     request.onsuccess = () => resolve(item);
-    request.onerror = () => reject(request.error || new Error("No pude guardar el lead local."));
+    request.onerror = () => reject(request.error || new Error("I couldn't save the lead locally."));
   });
 }
 
@@ -354,7 +354,7 @@ async function deleteQueuedLeadFromDb(localId = "") {
     const request = store.delete(localId);
 
     request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error || new Error("No pude limpiar el lead sincronizado."));
+    request.onerror = () => reject(request.error || new Error("I couldn't clear the synced lead."));
   });
 }
 
@@ -449,8 +449,8 @@ function setSubmitting(isSubmitting) {
   if (submitButton) {
     submitButton.disabled = state.submitting;
     submitButton.textContent = state.submitting
-      ? "Guardando..."
-      : "Guardar lead premium";
+      ? "Saving..."
+      : "Save lead";
   }
 }
 
@@ -460,11 +460,11 @@ function setUserChip(auth = null) {
   }
 
   if (!auth?.email) {
-    userChip.textContent = navigator.onLine ? "Sin sesion" : "Modo local";
+    userChip.textContent = navigator.onLine ? "No session" : "Offline mode";
     return;
   }
 
-  userChip.textContent = `${auth.name || "Prospectador"} · ${auth.email}`;
+  userChip.textContent = `${auth.name || "Prospector"} · ${auth.email}`;
 }
 
 function renderSummary(summary = {}) {
@@ -476,27 +476,27 @@ function renderSummary(summary = {}) {
     {
       label: "Total",
       value: Number(summary.totalLeads || 0),
-      note: "Leads enviados",
+      note: "Leads submitted",
     },
     {
-      label: "Nuevos",
+      label: "New",
       value: Number(summary.newLeads || 0),
-      note: "Aun sin trabajar",
+      note: "Still untouched",
     },
     {
-      label: "Contactados",
+      label: "Contacted",
       value: Number(summary.contactedLeads || 0),
-      note: "Ventas ya hablo",
+      note: "Sales already reached out",
     },
     {
-      label: "Cotizados",
+      label: "Quoted",
       value: Number(summary.quotedLeads || 0),
-      note: "Ya recibieron precio",
+      note: "Pricing already sent",
     },
     {
-      label: "Ganados",
+      label: "Won",
       value: Number(summary.wonLeads || 0),
-      note: "Trabajos cerrados",
+      note: "Closed jobs",
     },
   ];
 
@@ -521,7 +521,7 @@ function renderRecentLeads(leads = []) {
   if (!Array.isArray(leads) || !leads.length) {
     recentLeadsWrap.innerHTML = `
       <div class="crm-prospector-empty">
-        Aun no hay leads enviados desde esta cuenta.
+        No leads have been submitted from this account yet.
       </div>
     `;
     return;
@@ -535,11 +535,11 @@ function renderRecentLeads(leads = []) {
         <article class="crm-mini-lead-card">
           <div class="crm-lead-card-head">
             <div>
-              <h3>${escapeHtml(lead.fullName || "Lead sin nombre")}</h3>
+              <h3>${escapeHtml(lead.fullName || "Unnamed lead")}</h3>
               <div class="crm-lead-card-meta">
-                <span>${escapeHtml(lead.projectType || "Sin servicio")}</span>
-                <span>${escapeHtml(lead.addressLine || lead.location || "Sin direccion")}</span>
-                <span>${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
+                <span>${escapeHtml(lead.projectType || "No service")}</span>
+                <span>${escapeHtml(lead.addressLine || lead.location || "No address")}</span>
+                <span>${escapeHtml(formatDate(lead.createdAt) || "No date")}</span>
               </div>
             </div>
             <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
@@ -563,7 +563,7 @@ function renderDashboard(snapshot = null) {
   renderRecentLeads(snapshot?.recentLeads || []);
 
   if (lastSyncNode) {
-    lastSyncNode.textContent = `Actualizado ${formatDate(new Date().toISOString())}`;
+    lastSyncNode.textContent = `Updated ${formatDate(new Date().toISOString())}`;
   }
 }
 
@@ -621,7 +621,7 @@ function restoreDraft() {
   });
 
   if (restored) {
-    setStatus("Restauramos tu borrador local en este dispositivo.", "muted");
+    setStatus("We restored your local draft on this device.", "muted");
   }
 }
 
@@ -647,7 +647,7 @@ function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("No pude leer una foto."));
+    reader.onerror = () => reject(new Error("I couldn't read one of the photos."));
     reader.readAsDataURL(file);
   });
 }
@@ -656,7 +656,7 @@ function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("No pude procesar una foto."));
+    image.onerror = () => reject(new Error("I couldn't process one of the photos."));
     image.src = dataUrl;
   });
 }
@@ -724,7 +724,7 @@ function renderCapturePhotoPreview() {
   if (!Array.isArray(state.photos) || !state.photos.length) {
     photoPreview.innerHTML = `
       <div class="crm-prospector-empty">
-        Agrega fotos del proyecto para que ventas tenga contexto visual real.
+        Add project photos so sales has real visual context.
       </div>
     `;
     return;
@@ -736,16 +736,16 @@ function renderCapturePhotoPreview() {
         <figure class="crm-capture-photo-card">
           <img
             src="${photo.dataUrl}"
-            alt="${escapeHtml(photo.fileName || "Foto del proyecto")}"
+            alt="${escapeHtml(photo.fileName || "Project photo")}"
             loading="lazy"
           />
-          <figcaption>${escapeHtml(photo.fileName || "Foto del proyecto")}</figcaption>
+          <figcaption>${escapeHtml(photo.fileName || "Project photo")}</figcaption>
           <button
             type="button"
             class="crm-secondary-button crm-photo-remove"
             data-remove-capture-photo="${index}"
           >
-            Quitar
+            Remove
           </button>
         </figure>
       `,
@@ -759,13 +759,13 @@ async function handlePhotoSelection(fileList) {
     const nextPhotos = mergePreparedPhotos(state.photos, incomingPhotos);
 
     if (incomingPhotos.length + state.photos.length > nextPhotos.length) {
-      setFeedback("Solo se guardaron las primeras 8 fotos.", "muted");
+      setFeedback("Only the first 8 photos were kept.", "muted");
     }
 
     state.photos = nextPhotos;
     renderCapturePhotoPreview();
   } catch (error) {
-    setFeedback(error.message || "No pude preparar esas fotos.", "error");
+    setFeedback(error.message || "I couldn't prepare those photos.", "error");
   } finally {
     if (cameraInput) {
       cameraInput.value = "";
@@ -825,17 +825,17 @@ function validatePayload(payload = {}) {
     !payload.ownershipStatus ||
     !payload.details
   ) {
-    return "Llena nombre, telefono, servicio, direccion, ZIP, timeline, owner y notas.";
+    return "Fill in client name, phone, service, address, ZIP, timeline, owner status, and notes.";
   }
 
   if (!payload.qualificationTier || !payload.qualificationNotes) {
-    return "Pon tier del lead y nota corta de calificacion.";
+    return "Add the lead tier and a short qualification note.";
   }
 
   const photos = Array.isArray(payload.photos) ? payload.photos : [];
 
   if (photos.length > MAX_LEAD_PHOTOS) {
-    return "Puedes subir hasta 8 fotos por lead.";
+    return "You can upload up to 8 photos per lead.";
   }
 
   const totalSizeBytes = photos.reduce((sum, item) => sum + estimateDataUrlBytes(item?.dataUrl || ""), 0);
@@ -843,11 +843,11 @@ function validatePayload(payload = {}) {
   if (
     photos.some((item) => estimateDataUrlBytes(item?.dataUrl || "") > MAX_LEAD_PHOTO_BYTES)
   ) {
-    return "Cada foto debe pesar 2 MB o menos despues de comprimirse.";
+    return "Each photo must be 2 MB or less after compression.";
   }
 
   if (totalSizeBytes > MAX_LEAD_PHOTO_TOTAL_BYTES) {
-    return "El total de fotos es demasiado grande. Comprime o manda menos archivos.";
+    return "The total photo payload is too large. Compress them or send fewer files.";
   }
 
   return "";
@@ -926,8 +926,8 @@ function getQueueStatusMeta(item = {}) {
   if (item.status === "syncing") {
     return {
       badgeStatus: "syncing",
-      label: "Enviando",
-      note: "Mandando al CRM ahora mismo.",
+      label: "Syncing",
+      note: "Sending to the CRM right now.",
     };
   }
 
@@ -935,22 +935,22 @@ function getQueueStatusMeta(item = {}) {
     return {
       badgeStatus: "blocked",
       label: "Login",
-      note: item.lastError || "Inicia sesion otra vez para mandarlo.",
+      note: item.lastError || "Sign in again to send it.",
     };
   }
 
   if (item.status === "blocked") {
     return {
       badgeStatus: "blocked",
-      label: "Revisar",
-      note: item.lastError || "Este lead necesita revision antes de sincronizarse.",
+      label: "Review",
+      note: item.lastError || "This lead needs review before it can sync.",
     };
   }
 
   return {
     badgeStatus: "pending",
-    label: "Pendiente",
-    note: item.lastError || "Guardado en este dispositivo y listo para enviarse.",
+    label: "Pending",
+    note: item.lastError || "Saved on this device and ready to send.",
   };
 }
 
@@ -965,12 +965,12 @@ function renderOfflineQueue() {
 
   if (!supportsQueueStorage()) {
     offlineSummaryWrap.innerHTML = `
-      <span class="crm-chip">Sin respaldo local</span>
-      <span class="crm-chip">Prueba otro navegador</span>
+      <span class="crm-chip">No local backup</span>
+      <span class="crm-chip">Try another browser</span>
     `;
     offlineListWrap.innerHTML = `
       <div class="crm-prospector-empty">
-        Este dispositivo no soporta la cola offline. Si se va la senal, intenta no cerrar esta pagina hasta que el lead quede enviado.
+        This device does not support the offline queue. If signal drops, try not to close this page until the lead has been sent.
       </div>
     `;
 
@@ -983,11 +983,11 @@ function renderOfflineQueue() {
 
   if (!state.queueReady) {
     offlineSummaryWrap.innerHTML = `
-      <span class="crm-chip">Abriendo respaldo local...</span>
+      <span class="crm-chip">Opening local backup...</span>
     `;
     offlineListWrap.innerHTML = `
       <div class="crm-prospector-empty">
-        Estamos preparando el respaldo local en este dispositivo.
+        Preparing local backup on this device.
       </div>
     `;
 
@@ -1004,23 +1004,23 @@ function renderOfflineQueue() {
   const totalPhotos = queuedLeads.reduce((sum, item) => sum + Number(item.photoCount || 0), 0);
 
   offlineSummaryWrap.innerHTML = [
-    `<span class="crm-chip">${queuedLeads.length} pendiente${queuedLeads.length === 1 ? "" : "s"}</span>`,
-    `<span class="crm-chip">${totalPhotos} foto${totalPhotos === 1 ? "" : "s"}</span>`,
-    `<span class="crm-chip">${navigator.onLine ? "Con senal" : "Sin senal"}</span>`,
-    blockedCount ? `<span class="crm-chip">${blockedCount} con revision</span>` : "",
+    `<span class="crm-chip">${queuedLeads.length} pending</span>`,
+    `<span class="crm-chip">${totalPhotos} photo${totalPhotos === 1 ? "" : "s"}</span>`,
+    `<span class="crm-chip">${navigator.onLine ? "Online" : "Offline"}</span>`,
+    blockedCount ? `<span class="crm-chip">${blockedCount} needs review</span>` : "",
   ]
     .filter(Boolean)
     .join("");
 
   if (syncNowButton) {
     syncNowButton.disabled = state.queueSyncInFlight || !syncableCount || !navigator.onLine;
-    syncNowButton.textContent = state.queueSyncInFlight ? "Sincronizando..." : "Sincronizar ahora";
+    syncNowButton.textContent = state.queueSyncInFlight ? "Syncing..." : "Sync now";
   }
 
   if (!queuedLeads.length) {
     offlineListWrap.innerHTML = `
       <div class="crm-prospector-empty">
-        Todo lo que mandes con mala senal aparecera aqui hasta que el CRM lo reciba.
+        Anything saved with poor signal will appear here until the CRM receives it.
       </div>
     `;
     return;
@@ -1031,17 +1031,17 @@ function renderOfflineQueue() {
       const meta = getQueueStatusMeta(item);
       const ownerLabel = item.prospectorEmail
         ? `Prospector ${escapeHtml(item.prospectorEmail)}`
-        : "Prospector del dispositivo";
+        : "Device prospector";
 
       return `
         <article class="crm-mini-lead-card">
           <div class="crm-lead-card-head">
             <div>
-              <h3>${escapeHtml(item.fullName || "Lead pendiente")}</h3>
+              <h3>${escapeHtml(item.fullName || "Pending lead")}</h3>
               <div class="crm-lead-card-meta">
-                <span>${escapeHtml(item.projectType || "Sin servicio")}</span>
-                <span>${escapeHtml(item.addressLine || "Sin direccion")}</span>
-                <span>${escapeHtml(formatDate(item.createdAt) || "Sin fecha")}</span>
+                <span>${escapeHtml(item.projectType || "No service")}</span>
+                <span>${escapeHtml(item.addressLine || "No address")}</span>
+                <span>${escapeHtml(formatDate(item.createdAt) || "No date")}</span>
               </div>
             </div>
             <span class="crm-status-badge" data-status="${escapeHtml(meta.badgeStatus)}">
@@ -1133,7 +1133,7 @@ async function syncQueuedLeads(options = {}) {
   renderOfflineQueue();
 
   if (announce) {
-    setStatus("La senal regreso. Estamos sincronizando los leads pendientes.", "muted");
+    setStatus("Signal is back. Syncing pending leads now.", "muted");
   }
 
   try {
@@ -1148,7 +1148,7 @@ async function syncQueuedLeads(options = {}) {
         await markQueueItem(item, {
           status: "blocked",
           blockedReason: "login",
-          lastError: `Este lead fue guardado por ${item.prospectorEmail}. Entra con esa cuenta para sincronizarlo.`,
+          lastError: `This lead was saved by ${item.prospectorEmail}. Sign in with that account to sync it.`,
           lastAttemptAt: new Date().toISOString(),
         });
         blockedByLogin = true;
@@ -1179,13 +1179,13 @@ async function syncQueuedLeads(options = {}) {
         await deleteQueuedLeadFromDb(item.localId);
         removeQueueStateItem(item.localId);
       } catch (error) {
-        const safeMessage = error?.message || "No pude sincronizar este lead todavia.";
+        const safeMessage = error?.message || "I couldn't sync this lead yet.";
 
         if (Number(error?.status || 0) === 401) {
           await markQueueItem(item, {
             status: "blocked",
             blockedReason: "login",
-            lastError: "Tu sesion expiro. Vuelve a iniciar sesion para mandar este lead.",
+            lastError: "Your session expired. Sign in again to send this lead.",
             lastAttemptAt: new Date().toISOString(),
           });
           blockedByLogin = true;
@@ -1229,17 +1229,17 @@ async function syncQueuedLeads(options = {}) {
 function buildQueuedLeadFeedback(result = null) {
   if (!result) {
     return {
-      message: "Lead guardado en este dispositivo. Se mandara al CRM cuando vuelva la senal.",
+      message: "Lead saved on this device. It will be sent to the CRM when signal returns.",
       tone: "warning",
     };
   }
 
   return {
     message: result.duplicate
-      ? "Este lead ya existia y se actualizo en el CRM."
+      ? "This lead already existed and was updated in the CRM."
       : result.notified
-        ? "Lead guardado y equipo alertado."
-        : "Lead guardado directo en el CRM.",
+        ? "Lead saved and the team was alerted."
+        : "Lead saved directly in the CRM.",
     tone: "success",
   };
 }
@@ -1248,10 +1248,10 @@ function updateConnectivityStatus() {
   if (!navigator.onLine) {
     const pendingCount = Array.isArray(state.queue) ? state.queue.length : 0;
     const pendingText = pendingCount
-      ? ` Ya hay ${pendingCount} lead${pendingCount === 1 ? "" : "s"} guardado${pendingCount === 1 ? "" : "s"} en este dispositivo.`
+      ? ` There ${pendingCount === 1 ? "is" : "are"} already ${pendingCount} lead${pendingCount === 1 ? "" : "s"} saved on this device.`
       : "";
     setStatus(
-      `Sin senal. Puedes seguir capturando y el respaldo local enviara todo cuando vuelva el internet.${pendingText}`,
+      `Offline. You can keep capturing leads and local backup will send everything when internet returns.${pendingText}`,
       "warning",
     );
     return;
@@ -1262,7 +1262,7 @@ function updateConnectivityStatus() {
   }
 
   setStatus(
-    `Con senal otra vez. Hay ${state.queue.length} lead${state.queue.length === 1 ? "" : "s"} pendiente${state.queue.length === 1 ? "" : "s"} por sincronizar.`,
+    `Back online. ${state.queue.length} pending lead${state.queue.length === 1 ? "" : "s"} still need syncing.`,
     "muted",
   );
 }
@@ -1279,8 +1279,8 @@ function restoreCachedDashboardSnapshot() {
 
   if (lastSyncNode) {
     lastSyncNode.textContent = entry?.savedAt
-      ? `Ultimo panel guardado ${formatDate(entry.savedAt)}`
-      : "Ultimo panel guardado en este dispositivo";
+      ? `Last saved panel ${formatDate(entry.savedAt)}`
+      : "Last panel saved on this device";
   }
 
   return true;
@@ -1302,11 +1302,11 @@ async function handleQueuedSubmit() {
   } catch (error) {
     if (!navigator.onLine) {
       setFeedback(
-        "No pude guardar el respaldo local en este dispositivo. Necesitas senal o un navegador compatible.",
+        "I couldn't save the local backup on this device. You need signal or a compatible browser.",
         "error",
       );
       setStatus(
-        "El respaldo local fallo en este dispositivo. Usa otro navegador o recupera la senal antes de cerrar la pagina.",
+        "Local backup failed on this device. Use another browser or recover signal before closing the page.",
         "error",
       );
       return;
@@ -1328,7 +1328,7 @@ async function handleQueuedSubmit() {
     resetFormAfterSubmit();
     const feedbackState = buildQueuedLeadFeedback(directResult);
     setFeedback(feedbackState.message, feedbackState.tone);
-    setStatus("El lead ya esta disponible para el equipo de ventas.", "success");
+    setStatus("The lead is already available for the sales team.", "success");
     return;
   }
 
@@ -1336,14 +1336,14 @@ async function handleQueuedSubmit() {
 
   if (!navigator.onLine) {
     setFeedback(
-      "Lead guardado en este dispositivo. Se mandara al CRM cuando vuelva la senal.",
+      "Lead saved on this device. It will be sent to the CRM when signal returns.",
       "warning",
     );
     updateConnectivityStatus();
     return;
   }
 
-  setFeedback("Lead guardado localmente. Intentando mandarlo al CRM...", "muted");
+  setFeedback("Lead saved locally. Trying to send it to the CRM...", "muted");
 
   const syncResult = await syncQueuedLeads({
     preferredLocalId: queuedItem.localId,
@@ -1355,17 +1355,17 @@ async function handleQueuedSubmit() {
   if (leadResult) {
     const feedbackState = buildQueuedLeadFeedback(leadResult);
     setFeedback(feedbackState.message, feedbackState.tone);
-    setStatus("El lead ya esta disponible para el equipo de ventas.", "success");
+    setStatus("The lead is already available for the sales team.", "success");
     return;
   }
 
   if (syncResult.blockedByLogin) {
     setFeedback(
-      "Lead guardado en este dispositivo. Vuelve a iniciar sesion para enviarlo al CRM.",
+      "Lead saved on this device. Sign in again to send it to the CRM.",
       "warning",
     );
     setStatus(
-      "Tu lead quedo protegido en este dispositivo, pero hace falta iniciar sesion otra vez para sincronizarlo.",
+      "Your lead is protected on this device, but it needs a fresh sign-in before it can sync.",
       "warning",
     );
     return;
@@ -1373,22 +1373,22 @@ async function handleQueuedSubmit() {
 
   if (queuedState?.status === "blocked" && queuedState.blockedReason === "validation") {
     setFeedback(
-      queuedState.lastError || "Lead guardado localmente, pero hay que revisar los datos antes de sincronizarlo.",
+      queuedState.lastError || "Lead saved locally, but the data needs review before it can sync.",
       "error",
     );
     setStatus(
-      "El lead quedo guardado en este dispositivo, pero necesita revision antes de enviarse al CRM.",
+      "The lead is saved on this device, but it needs review before it can be sent to the CRM.",
       "warning",
     );
     return;
   }
 
   setFeedback(
-    "Lead guardado en este dispositivo. Se enviara al CRM en cuanto la senal vuelva estable.",
+    "Lead saved on this device. It will be sent to the CRM as soon as the connection is stable again.",
     "warning",
   );
   setStatus(
-    "El respaldo local ya quedo listo. El portal reintentara la sincronizacion automaticamente.",
+    "Local backup is ready. The portal will retry syncing automatically.",
     "warning",
   );
 }
@@ -1435,8 +1435,8 @@ async function init() {
     if (!navigator.onLine && cachedAuth?.email) {
       setStatus(
         restoredCachedDashboard
-          ? "Sin senal. Abrimos el ultimo portal guardado en este dispositivo."
-          : "Sin senal. Puedes seguir capturando y el CRM se actualizara cuando vuelva el internet.",
+          ? "Offline. Opened the last portal saved on this device."
+          : "Offline. You can keep capturing leads and the CRM will update once internet returns.",
         "warning",
       );
     } else {
@@ -1456,10 +1456,10 @@ async function init() {
     setStatus(
       !navigator.onLine
         ? restoredCachedDashboard
-          ? "Sin senal. Mostrando el ultimo panel guardado en este dispositivo."
-          : "Sin senal. Puedes seguir capturando y todo quedara guardado localmente."
+          ? "Offline. Showing the last panel saved on this device."
+          : "Offline. You can keep capturing leads and everything will stay backed up locally."
         : TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-          ? "El portal se esta despertando. Espera unos segundos y vuelve a intentar."
+          ? "The portal is waking up. Give it a few seconds and try again."
           : error.message,
       !navigator.onLine || TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
         ? "warning"
@@ -1483,32 +1483,32 @@ if (form) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     setSubmitting(true);
-    setFeedback("Guardando lead...", "muted");
+    setFeedback("Saving lead...", "muted");
 
     try {
       await handleQueuedSubmit();
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
         if (error?.leadQueuedLocally === false) {
-          setFeedback("Tu sesion expiro. Inicia sesion otra vez para guardar este lead.", "error");
+          setFeedback("Your session expired. Sign in again to save this lead.", "error");
           setStatus(
-            "No pudimos enviarlo al CRM porque la sesion expiro antes de guardar el respaldo local.",
+            "We couldn't send it to the CRM because the session expired before local backup could be saved.",
             "error",
           );
         } else {
           setFeedback(
-            "Lead guardado localmente, pero tu sesion expiro. Inicia sesion otra vez para sincronizarlo.",
+            "Lead saved locally, but your session expired. Sign in again to sync it.",
             "warning",
           );
           setStatus(
-            "Tu lead no se perdio. Vuelve a iniciar sesion para que el CRM lo reciba.",
+            "Your lead was not lost. Sign in again so the CRM can receive it.",
             "warning",
           );
         }
         return;
       }
 
-      setFeedback(error.message || "No pude guardar este lead.", "error");
+      setFeedback(error.message || "I couldn't save this lead.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -1522,14 +1522,14 @@ if (refreshButton) {
       return;
     }
 
-    setStatus("Recargando portal...", "muted");
+    setStatus("Refreshing portal...", "muted");
 
     try {
       await loadDashboard();
       await syncQueuedLeads({
         refreshDashboard: true,
       });
-      setStatus("Panel actualizado.", "success");
+      setStatus("Portal updated.", "success");
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
         clearProspectorCachedState();
@@ -1572,16 +1572,16 @@ if (syncNowButton) {
 
       if (result.syncedIds.length) {
         setStatus(
-          `Sincronizamos ${result.syncedIds.length} lead${result.syncedIds.length === 1 ? "" : "s"} al CRM.`,
+          `Synced ${result.syncedIds.length} lead${result.syncedIds.length === 1 ? "" : "s"} to the CRM.`,
           "success",
         );
       } else if (result.blockedByLogin) {
-        setStatus("Hay leads guardados localmente, pero hace falta iniciar sesion para mandarlos.", "warning");
+        setStatus("There are leads saved locally, but a fresh sign-in is required before they can be sent.", "warning");
       } else {
-        setStatus("No habia leads pendientes por sincronizar.", "muted");
+        setStatus("There were no pending leads to sync.", "muted");
       }
     } catch (error) {
-      setStatus(error.message || "No pude sincronizar los leads pendientes.", "error");
+      setStatus(error.message || "I couldn't sync the pending leads.", "error");
     }
   });
 }
