@@ -7,6 +7,7 @@ const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
 const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
 const METALWORKS_PROSPECTOR_STATUS_OPTIONS = ["active", "paused"];
+const METALWORKS_PROSPECTOR_PASSWORD_MIN = 8;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
@@ -171,6 +172,11 @@ function normalizeEmail(value = "") {
   return cleanText(value).toLowerCase();
 }
 
+function normalizePasswordInput(value = "", maxLength = 120) {
+  const safeValue = String(value || "").trim();
+  return maxLength > 0 ? safeValue.slice(0, maxLength) : safeValue;
+}
+
 function normalizePhone(value = "") {
   const digits = String(value || "").replace(/\D/g, "");
 
@@ -320,6 +326,10 @@ function verifySecurePasswordHash(password = "", salt = "", storedHash = "") {
 
 function generateProspectorTemporaryPassword() {
   return crypto.randomBytes(10).toString("base64url");
+}
+
+function prospectorPasswordIsValid(password = "") {
+  return normalizePasswordInput(password).length >= METALWORKS_PROSPECTOR_PASSWORD_MIN;
 }
 
 function getMetalworksCrmProfile(email = "") {
@@ -6853,6 +6863,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     const name = cleanText(req.body?.name || "", 120);
     const email = normalizeEmail(req.body?.email || "");
+    const customPassword = normalizePasswordInput(req.body?.password || "");
 
     if (!name) {
       return respondError(res, 400, "El nombre del prospectador es requerido.");
@@ -6862,6 +6873,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return respondError(res, 400, "El correo del prospectador es requerido.");
     }
 
+    if (customPassword && !prospectorPasswordIsValid(customPassword)) {
+      return respondError(
+        res,
+        400,
+        `El password debe tener al menos ${METALWORKS_PROSPECTOR_PASSWORD_MIN} caracteres.`,
+      );
+    }
+
     try {
       const existingUser = await MetalworksProspectorUser.findOne({ email }).select("_id");
 
@@ -6869,8 +6888,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 409, "Ese correo ya tiene una cuenta creada.");
       }
 
-      const temporaryPassword = generateProspectorTemporaryPassword();
-      const securePassword = createSecurePasswordHash(temporaryPassword);
+      const passwordToSave = customPassword || generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(passwordToSave);
       const now = new Date();
       const prospectorUser = await MetalworksProspectorUser.create({
         name,
@@ -6887,7 +6906,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         prospector: cleanProspectorUser(prospectorUser.toObject ? prospectorUser.toObject() : prospectorUser),
         credentials: {
           email,
-          temporaryPassword,
+          temporaryPassword: passwordToSave,
+          passwordLabel: customPassword ? "Password" : "Temporary password",
+          passwordMode: customPassword ? "custom" : "generated",
         },
       });
     } catch (error) {
@@ -6980,9 +7001,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     const prospectorId = String(req.params?.prospectorId || "").trim();
+    const customPassword = normalizePasswordInput(req.body?.password || "");
 
     if (!prospectorId || !mongoose.Types.ObjectId.isValid(prospectorId)) {
       return respondError(res, 400, "Prospectador invalido.");
+    }
+
+    if (customPassword && !prospectorPasswordIsValid(customPassword)) {
+      return respondError(
+        res,
+        400,
+        `El password debe tener al menos ${METALWORKS_PROSPECTOR_PASSWORD_MIN} caracteres.`,
+      );
     }
 
     try {
@@ -6992,8 +7022,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 404, "No encontre ese prospectador.");
       }
 
-      const temporaryPassword = generateProspectorTemporaryPassword();
-      const securePassword = createSecurePasswordHash(temporaryPassword);
+      const passwordToSave = customPassword || generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(passwordToSave);
 
       prospectorUser.passwordHash = securePassword.hash;
       prospectorUser.passwordSalt = securePassword.salt;
@@ -7019,7 +7049,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         prospector: cleanProspector,
         credentials: {
           email: normalizeEmail(prospectorUser.email || ""),
-          temporaryPassword,
+          temporaryPassword: passwordToSave,
+          passwordLabel: customPassword ? "Password" : "Temporary password",
+          passwordMode: customPassword ? "custom" : "generated",
         },
         forcedSignOut: true,
       });

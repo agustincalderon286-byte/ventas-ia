@@ -9,6 +9,7 @@ const CRM_SELECTED_VIEW_STORAGE_KEY = "cmwf_crm_selected_view_v1";
 const CRM_MOBILE_PANE_STORAGE_KEY = "cmwf_crm_mobile_pane_v1";
 const CRM_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 const CRM_MOBILE_BREAKPOINT_PX = 1080;
+const PROSPECTOR_PASSWORD_MIN_LENGTH = 8;
 const crmMobileMediaQuery =
   typeof window.matchMedia === "function"
     ? window.matchMedia(`(max-width: ${CRM_MOBILE_BREAKPOINT_PX}px)`)
@@ -1478,7 +1479,7 @@ function renderProspectorCredentials() {
 
   prospectorCredentialsList.innerHTML = `
     <p><strong>Email:</strong> ${escapeHtml(latest.email)}</p>
-    <p><strong>Temporary password:</strong> ${escapeHtml(latest.temporaryPassword)}</p>
+    <p><strong>${escapeHtml(latest.passwordLabel || "Password")}:</strong> ${escapeHtml(latest.temporaryPassword)}</p>
     ${
       latest.loginUrl
         ? `<p><strong>Login page:</strong> ${escapeHtml(latest.loginUrl)}</p>`
@@ -2982,10 +2983,23 @@ function bindProspectorAdmin() {
     }
 
     const formData = new FormData(prospectorForm);
+    const customPassword = String(formData.get("password") || "").trim();
     const payload = {
       name: String(formData.get("name") || "").trim(),
       email: String(formData.get("email") || "").trim(),
+      password: customPassword,
     };
+
+    if (customPassword && customPassword.length < PROSPECTOR_PASSWORD_MIN_LENGTH) {
+      setProspectorFeedback(
+        `Password must be at least ${PROSPECTOR_PASSWORD_MIN_LENGTH} characters.`,
+        "error",
+      );
+      if (prospectorSaveButton) {
+        prospectorSaveButton.disabled = false;
+      }
+      return;
+    }
 
     try {
       const result = await apiRequest("/api/metalworks-crm/prospectors", {
@@ -3003,7 +3017,12 @@ function bindProspectorAdmin() {
           : "New account ready",
       };
       renderProspectorCredentials();
-      setProspectorFeedback("Prospector account created.", "success");
+      setProspectorFeedback(
+        result.credentials?.passwordMode === "custom"
+          ? "Prospector account created with your custom password."
+          : "Prospector account created.",
+        "success",
+      );
       prospectorForm.reset();
       await loadProspectorAdmin();
     } catch (error) {
@@ -3037,20 +3056,35 @@ function bindProspectorAdmin() {
         return;
       }
 
-      const confirmed = window.confirm(
-        "This will generate a new temporary password and sign the prospector out of active sessions.",
+      const promptedPassword = window.prompt(
+        "Enter a new password for this prospector. Leave it blank to auto-generate one and sign them out of active sessions.",
+        "",
       );
 
-      if (!confirmed) {
+      if (promptedPassword === null) {
+        return;
+      }
+
+      const customPassword = String(promptedPassword || "").trim();
+
+      if (customPassword && customPassword.length < PROSPECTOR_PASSWORD_MIN_LENGTH) {
+        setProspectorFeedback(
+          `Password must be at least ${PROSPECTOR_PASSWORD_MIN_LENGTH} characters.`,
+          "error",
+        );
         return;
       }
 
       try {
-        setProspectorFeedback("Resetting password...", "muted");
+        setProspectorFeedback(
+          customPassword ? "Updating password..." : "Resetting password...",
+          "muted",
+        );
         const result = await apiRequest(
           `/api/metalworks-crm/prospectors/${encodeURIComponent(prospectorId)}/reset-password`,
           {
             method: "POST",
+            body: customPassword ? { password: customPassword } : {},
           },
         );
 
@@ -3064,7 +3098,12 @@ function bindProspectorAdmin() {
             : "Temporary password ready",
         };
         renderProspectorCredentials();
-        setProspectorFeedback("Temporary password created.", "success");
+        setProspectorFeedback(
+          result.credentials?.passwordMode === "custom"
+            ? "Password updated."
+            : "Temporary password created.",
+          "success",
+        );
         await loadProspectorAdmin();
       } catch (error) {
         setProspectorFeedback(error.message, "error");
@@ -3126,7 +3165,7 @@ function bindProspectorAdmin() {
       state.prospectorAdmin?.latestCredentials?.temporaryPassword || "",
     );
     setProspectorFeedback(
-      copied ? "Temporary password copied." : "No pude copiar el password automaticamente.",
+      copied ? "Password copied." : "No pude copiar el password automaticamente.",
       copied ? "success" : "muted",
     );
   });
