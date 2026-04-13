@@ -1878,6 +1878,140 @@ function buildAssistantHistoryDigest(history = []) {
     .slice(0, 1800);
 }
 
+function normalizeAssistantSummaryHistory(history = []) {
+  return (Array.isArray(history) ? history : [])
+    .map((item) => ({
+      role: item?.role === "assistant" ? "assistant" : "user",
+      content: cleanText(item?.content || "", 320),
+    }))
+    .filter((item) => item.content)
+    .slice(-24);
+}
+
+function dedupeAssistantSummaryHistory(history = []) {
+  const deduped = [];
+  const seen = new Set();
+
+  normalizeAssistantSummaryHistory(history).forEach((item) => {
+    const key = `${item.role}:${normalizeAssistantSearchText(item.content)}`;
+
+    if (!key || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    deduped.push(item);
+  });
+
+  return deduped;
+}
+
+function isLowSignalAssistantConversationMessage(value = "") {
+  const normalized = normalizeAssistantSearchText(value);
+
+  if (!normalized) {
+    return true;
+  }
+
+  return [
+    "hi",
+    "hello",
+    "hola",
+    "ho",
+    "hey",
+    "ok",
+    "okay",
+    "si",
+    "sí",
+    "yes",
+    "sr",
+    "senor",
+    "señor",
+    "perfecto",
+    "gracias",
+    "thanks",
+    "thank you",
+  ].includes(normalized);
+}
+
+function extractAssistantRequestSummary(value = "") {
+  const safeValue = cleanText(value || "", 500);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const requestMatch = safeValue.match(
+    /Request:\s*(.+?)(?:(?:\.\s*)(?:Best callback window|Visitor asked for a call or appointment|Best requested time)|$)/i,
+  );
+
+  if (requestMatch?.[1]) {
+    return cleanText(requestMatch[1], 220);
+  }
+
+  const summaryMatch = safeValue.match(/Summary:\s*(.+)$/i);
+
+  if (summaryMatch?.[1]) {
+    return cleanText(summaryMatch[1], 220);
+  }
+
+  return cleanText(safeValue, 220);
+}
+
+function buildAssistantConversationSummary({
+  history = [],
+  detailsSummary = "",
+  lastUserMessage = "",
+  lastAssistantMessage = "",
+} = {}) {
+  const dedupedHistory = dedupeAssistantSummaryHistory(history);
+  const userMessages = dedupedHistory
+    .filter((item) => item.role === "user")
+    .map((item) => cleanText(item.content || "", 220))
+    .filter(Boolean);
+  const meaningfulUserMessages = userMessages.filter(
+    (item) => !isLowSignalAssistantConversationMessage(item) && item.split(/\s+/).length >= 4,
+  );
+  const requestSummary = extractAssistantRequestSummary(detailsSummary) || meaningfulUserMessages[0] || "";
+  const latestVisitorMessage =
+    cleanText(lastUserMessage || "", 220) || meaningfulUserMessages[meaningfulUserMessages.length - 1] || "";
+  const latestAssistantStep =
+    cleanText(lastAssistantMessage || "", 260) ||
+    dedupedHistory
+      .filter((item) => item.role === "assistant")
+      .map((item) => item.content)
+      .filter(Boolean)
+      .slice(-1)[0] ||
+    "";
+  const seenMessages = new Set(
+    [requestSummary, latestVisitorMessage]
+      .map((item) => normalizeAssistantSearchText(item))
+      .filter(Boolean),
+  );
+  const keyPoints = [];
+
+  meaningfulUserMessages.forEach((item) => {
+    const normalized = normalizeAssistantSearchText(item);
+
+    if (!normalized || seenMessages.has(normalized)) {
+      return;
+    }
+
+    seenMessages.add(normalized);
+    keyPoints.push(item);
+  });
+
+  return [
+    requestSummary ? `Visitor goal: ${requestSummary}` : "",
+    keyPoints.length ? `Key points: ${keyPoints.slice(0, 2).join(" / ")}` : "",
+    latestVisitorMessage ? `Latest visitor message: ${latestVisitorMessage}` : "",
+    latestAssistantStep ? `Latest assistant step: ${latestAssistantStep}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 1400);
+}
+
 function normalizeAssistantSearchText(value = "") {
   return String(value || "")
     .normalize("NFD")
@@ -3023,9 +3157,78 @@ function stripAssistantNotesBlock(value = "") {
   return source.slice(0, markerIndex).trim();
 }
 
-function buildAssistantPrivateNotes(state = {}) {
+function isAssistantLeadSourceType(value = "") {
+  return cleanText(value || "", 80).startsWith("assistant_");
+}
+
+function getAssistantLeadSourceLabel({ sourceType = "", sourceLabel = "" } = {}) {
+  const explicitLabel = cleanText(sourceLabel || "", 120);
+
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const safeSourceType = cleanText(sourceType || "", 80);
+  const sourceLabels = {
+    assistant_chat: "Agustin 2.0 website assistant",
+    assistant_chat_photo: "Agustin 2.0 website assistant",
+    assistant_whatsapp: "Agustin 2.0 WhatsApp assistant",
+    assistant_booking: "Agustin 2.0 callback assistant",
+  };
+
+  return sourceLabels[safeSourceType] || "Agustin 2.0 website assistant";
+}
+
+function buildAssistantNotesStateFromLead(lead = null) {
+  if (!lead) {
+    return {};
+  }
+
+  const nextActionAt =
+    lead?.nextActionAt instanceof Date
+      ? lead.nextActionAt
+      : lead?.nextActionAt
+        ? new Date(lead.nextActionAt)
+        : null;
+  const safeNextActionAt =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime()) ? nextActionAt : null;
+
+  return {
+    sourceType: cleanText(lead?.sourceType || "", 80),
+    sourceLabel: getAssistantLeadSourceLabel({
+      sourceType: lead?.sourceType || "",
+      sourceLabel: lead?.sourceLabel || "",
+    }),
+    projectType: cleanText(lead?.projectType || "", 120),
+    location: cleanText(lead?.location || "", 160),
+    photoFileCount: Array.isArray(lead?.photoFileNames)
+      ? lead.photoFileNames.filter(Boolean).length
+      : 0,
+    callbackIntent: cleanText(lead?.callbackIntent || "", 12),
+    callbackLabel: formatAssistantCallbackLabel({
+      nextActionAt: safeNextActionAt,
+      bestContactDay: cleanText(lead?.bestContactDay || "", 80),
+      bestContactTime: cleanText(lead?.bestContactTime || "", 80),
+    }),
+    detailsSummary: cleanText(lead?.details || "", 1500),
+    latestUserMessage: cleanText(lead?.lastUserMessage || "", 500),
+    lastAssistantMessage: cleanText(lead?.lastAssistantMessage || "", 1500),
+    items: Array.isArray(lead?.conversationHistory) ? lead.conversationHistory : [],
+  };
+}
+
+function buildAssistantPrivateNotes(state = {}, history = []) {
   const sourceLabel =
-    cleanText(state?.sourceLabel || "", 120) || "Agustin 2.0 website assistant";
+    getAssistantLeadSourceLabel({
+      sourceType: state?.sourceType || "",
+      sourceLabel: state?.sourceLabel || "",
+    });
+  const conversationSummary = buildAssistantConversationSummary({
+    history: Array.isArray(history) && history.length ? history : state?.items || [],
+    detailsSummary: state?.detailsSummary || state?.details || "",
+    lastUserMessage: state?.latestUserMessage || state?.lastUserMessage || "",
+    lastAssistantMessage: state?.lastAssistantMessage || "",
+  });
 
   return [
     `Source: ${sourceLabel}.`,
@@ -3036,15 +3239,16 @@ function buildAssistantPrivateNotes(state = {}) {
     state?.callbackIntent === "no" ? "Callback requested: no." : "",
     state?.callbackLabel ? `Best requested time: ${state.callbackLabel}.` : "",
     state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
+    conversationSummary ? `Conversation recap:\n${conversationSummary}` : "",
   ]
     .filter(Boolean)
     .join("\n")
     .slice(0, 2600);
 }
 
-function mergeAssistantPrivateNotes(existingNotes = "", state = {}) {
+function mergeAssistantPrivateNotes(existingNotes = "", state = {}, history = []) {
   const manualNotes = stripAssistantNotesBlock(existingNotes);
-  const generatedNotes = buildAssistantPrivateNotes(state);
+  const generatedNotes = buildAssistantPrivateNotes(state, history);
 
   if (!generatedNotes) {
     return manualNotes;
@@ -3347,6 +3551,23 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
 
   const safeFullName =
     sanitizeAssistantStoredName(doc.fullName || "") || cleanText(doc.fullName || "", 120);
+  const assistantNotesState =
+    includeConversation &&
+    (isAssistantLeadSourceType(doc.sourceType || "") ||
+      (Array.isArray(doc.conversationHistory) && doc.conversationHistory.length))
+      ? buildAssistantNotesStateFromLead(doc)
+      : null;
+  const composedAssistantNotes = assistantNotesState
+    ? mergeAssistantPrivateNotes(doc.privateNotes || "", assistantNotesState, assistantNotesState.items || [])
+    : doc.privateNotes || "";
+  const conversationSummary = assistantNotesState
+    ? buildAssistantConversationSummary({
+        history: assistantNotesState.items || [],
+        detailsSummary: assistantNotesState.detailsSummary || "",
+        lastUserMessage: assistantNotesState.latestUserMessage || "",
+        lastAssistantMessage: assistantNotesState.lastAssistantMessage || "",
+      })
+    : "";
 
   return {
     id: String(doc._id || ""),
@@ -3384,7 +3605,8 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
       ? new Date(doc.callbackRequestedAt).toISOString()
       : "",
     callbackAlertedAt: doc.callbackAlertedAt ? new Date(doc.callbackAlertedAt).toISOString() : "",
-    privateNotes: doc.privateNotes || "",
+    privateNotes: composedAssistantNotes,
+    conversationSummary,
     lastUserMessage: doc.lastUserMessage || "",
     lastAssistantMessage: doc.lastAssistantMessage || "",
     conversationHistory: includeConversation
@@ -5143,7 +5365,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? "scheduled follow-up from assistant chat"
         : currentLead?.nextAction || "";
     leadDoc.nextActionAt = state?.nextActionAt || currentLead?.nextActionAt || null;
-    leadDoc.privateNotes = mergeAssistantPrivateNotes(currentLead?.privateNotes || "", state);
+    leadDoc.privateNotes = mergeAssistantPrivateNotes(
+      currentLead?.privateNotes || "",
+      {
+        ...state,
+        sourceType: cleanText(sourceType || currentLead?.sourceType || "", 80) || "assistant_chat",
+        lastAssistantMessage: cleanText(assistantReply || currentLead?.lastAssistantMessage || "", 1500),
+      },
+      mergedHistory,
+    );
     leadDoc.sourceType =
       cleanText(sourceType || currentLead?.sourceType || "", 80) || "assistant_chat";
     leadDoc.pageTitle = cleanText(pageTitle || currentLead?.pageTitle || "", 160);

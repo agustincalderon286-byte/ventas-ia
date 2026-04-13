@@ -380,6 +380,8 @@ function formatLeadSource(value = "") {
   const labels = {
     website_form: "Website form",
     assistant_chat: "Assistant chat",
+    assistant_whatsapp: "WhatsApp assistant",
+    assistant_chat_photo: "Assistant photo upload",
     assistant_booking: "Assistant callback",
     field_prospector: "Field prospector",
     lead_distribution_prospector: "Prospector intake",
@@ -1729,6 +1731,7 @@ function renderConversationThread(
     userLabel = "Cliente",
     emptySummary = "Sin transcript guardado.",
     emptyBody = "Todavia no hay conversacion guardada para este registro.",
+    conversationSummary = "",
   } = {},
 ) {
   if (!target || !summaryTarget) {
@@ -1736,14 +1739,17 @@ function renderConversationThread(
   }
 
   const safeMessages = Array.isArray(messages) ? messages.filter((item) => item?.content) : [];
+  const safeConversationSummary = String(conversationSummary || "").trim();
 
   if (!safeMessages.length) {
-    summaryTarget.textContent = emptySummary;
+    summaryTarget.textContent = safeConversationSummary || emptySummary;
     target.innerHTML = `<p class="crm-empty-state">${escapeHtml(emptyBody)}</p>`;
     return;
   }
 
-  summaryTarget.textContent = `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
+  summaryTarget.textContent = safeConversationSummary
+    ? `${safeConversationSummary} · ${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`
+    : `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
   target.innerHTML = safeMessages
     .map((item) => {
       const role = item.role === "assistant" ? "assistant" : "user";
@@ -2158,7 +2164,9 @@ function renderLeadDetail(detail = null) {
   syncEstimateTotalFromForm();
   syncDetailQuickActions(lead);
   renderLeadAssets(detail.assets || []);
-  renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || []);
+  renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || [], {
+    conversationSummary: lead.conversationSummary || "",
+  });
   renderActivityCards(activityList, detail.activity || []);
   setDetailTab(state.detailTab || "profile");
 }
