@@ -616,6 +616,18 @@ body[data-crm-skin="executive-steel"] .crm-lead-card.is-active {
   align-items: center;
 }
 
+.crm-header-qr-wrap {
+  position: relative;
+}
+
+.crm-header-qr-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, calc(100vw - 28px));
+  z-index: 8;
+}
+
 .crm-system-status {
   margin: -4px 0 18px;
   padding: 12px 16px;
@@ -824,6 +836,12 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
 }
 
 .crm-card-action[aria-expanded="true"] {
+  background: linear-gradient(135deg, var(--crm-red) 0%, var(--crm-red-deep) 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.crm-secondary-button[aria-expanded="true"] {
   background: linear-gradient(135deg, var(--crm-red) 0%, var(--crm-red-deep) 100%);
   color: #fff;
   border-color: transparent;
@@ -1738,6 +1756,12 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
     grid-template-columns: 1fr;
     justify-items: center;
     text-align: center;
+  }
+
+  .crm-header-qr-popover {
+    position: static;
+    width: min(100%, 340px);
+    margin-top: 10px;
   }
 
   .crm-quick-actions,

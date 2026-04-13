@@ -20,6 +20,7 @@ const PROSPECTOR_SHELL_CACHE_URLS = [
 const MAX_LEAD_PHOTOS = 8;
 const MAX_LEAD_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_LEAD_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
+const PROSPECTOR_SHARE_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
 
 let queueDbPromise = null;
 
@@ -34,6 +35,18 @@ function createApiError(message = "", status = 0, retryable = false) {
   error.status = status;
   error.retryable = retryable;
   return error;
+}
+
+function buildQrImageUrl(url = "") {
+  const safeUrl = String(url || "").trim();
+
+  if (!safeUrl) {
+    return "";
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+    safeUrl,
+  )}`;
 }
 
 function readStoredJson(key, fallback = null) {
@@ -392,6 +405,9 @@ const summaryWrap = document.querySelector("[data-prospector-summary]");
 const recentLeadsWrap = document.querySelector("[data-prospector-recent-leads]");
 const lastSyncNode = document.querySelector("[data-prospector-last-sync]");
 const refreshButton = document.querySelector("[data-prospector-refresh]");
+const websiteQrToggleButton = document.querySelector("[data-prospector-site-qr-toggle]");
+const websiteQrPanel = document.querySelector("[data-prospector-site-qr-panel]");
+const websiteQrImage = document.querySelector("[data-prospector-site-qr-image]");
 const logoutButton = document.querySelector("[data-prospector-logout]");
 const submitButton = document.querySelector("[data-prospector-submit]");
 const cameraInput = document.querySelector("[data-capture-photo-input]");
@@ -465,6 +481,31 @@ function setUserChip(auth = null) {
   }
 
   userChip.textContent = `${auth.name || "Prospector"} · ${auth.email}`;
+}
+
+function closeWebsiteQrPanel() {
+  if (!websiteQrPanel || !websiteQrToggleButton) {
+    return;
+  }
+
+  websiteQrPanel.hidden = true;
+  websiteQrToggleButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleWebsiteQrPanel() {
+  if (!websiteQrPanel || !websiteQrToggleButton) {
+    return;
+  }
+
+  const shouldOpen = websiteQrPanel.hidden;
+
+  if (!shouldOpen) {
+    closeWebsiteQrPanel();
+    return;
+  }
+
+  websiteQrPanel.hidden = false;
+  websiteQrToggleButton.setAttribute("aria-expanded", "true");
 }
 
 function renderSummary(summary = {}) {
@@ -1542,6 +1583,23 @@ if (refreshButton) {
   });
 }
 
+if (websiteQrImage) {
+  websiteQrImage.src = buildQrImageUrl(PROSPECTOR_SHARE_WEBSITE_URL);
+}
+
+if (websiteQrToggleButton) {
+  websiteQrToggleButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleWebsiteQrPanel();
+  });
+}
+
+if (websiteQrPanel) {
+  websiteQrPanel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+}
+
 if (logoutButton) {
   logoutButton.addEventListener("click", async () => {
     clearProspectorCachedState();
@@ -1643,6 +1701,16 @@ window.addEventListener("online", async () => {
 
 window.addEventListener("offline", () => {
   updateConnectivityStatus();
+});
+
+document.addEventListener("click", () => {
+  closeWebsiteQrPanel();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeWebsiteQrPanel();
+  }
 });
 
 init();
