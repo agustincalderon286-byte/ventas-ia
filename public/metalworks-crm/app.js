@@ -6,7 +6,13 @@ const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
 const CRM_SELECTED_APPLICANT_STORAGE_KEY = "cmwf_crm_selected_applicant_v1";
 const CRM_SELECTED_VIEW_STORAGE_KEY = "cmwf_crm_selected_view_v1";
+const CRM_MOBILE_PANE_STORAGE_KEY = "cmwf_crm_mobile_pane_v1";
 const CRM_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+const CRM_MOBILE_BREAKPOINT_PX = 1080;
+const crmMobileMediaQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia(`(max-width: ${CRM_MOBILE_BREAKPOINT_PX}px)`)
+    : null;
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -231,6 +237,16 @@ function normalizeCrmView(value = "") {
   return String(value || "").trim().toLowerCase() === "applicants" ? "applicants" : "leads";
 }
 
+function normalizeCrmMobilePane(value = "") {
+  const safeValue = String(value || "").trim().toLowerCase();
+
+  if (safeValue === "workspace" || safeValue === "more") {
+    return safeValue;
+  }
+
+  return "inbox";
+}
+
 const state = {
   me: null,
   dashboard: null,
@@ -245,6 +261,9 @@ const state = {
   leadDetail: null,
   applicantDetail: null,
   view: normalizeCrmView(readStoredJson(CRM_SELECTED_VIEW_STORAGE_KEY, "leads") || "leads"),
+  mobilePane: normalizeCrmMobilePane(
+    readStoredJson(CRM_MOBILE_PANE_STORAGE_KEY, "inbox") || "inbox",
+  ),
   selectedLeadId:
     readSelectedLeadFromQuery() || String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
   selectedApplicantId: String(readStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, "") || ""),
@@ -268,6 +287,13 @@ const summaryWrap = document.querySelector("[data-crm-summary]");
 const resourceHub = document.querySelector("[data-crm-resource-hub]");
 const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
 const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
+const mobileShell = document.querySelector("[data-crm-mobile-shell]");
+const mobileShellTitle = document.querySelector("[data-crm-mobile-title]");
+const mobileShellCopy = document.querySelector("[data-crm-mobile-copy]");
+const mobilePaneButtons = Array.from(document.querySelectorAll("[data-crm-mobile-pane-button]"));
+const mobilePaneTargets = Array.from(document.querySelectorAll("[data-crm-mobile-pane-target]"));
+const mobileBackButton = document.querySelector("[data-crm-mobile-back]");
+const mobileCollapsibles = Array.from(document.querySelectorAll("[data-crm-mobile-collapsible]"));
 const prospectorAdminWrap = document.querySelector("[data-crm-prospector-admin]");
 const prospectorSummary = document.querySelector("[data-crm-prospector-summary]");
 const prospectorForm = document.querySelector("[data-crm-prospector-form]");
@@ -302,6 +328,7 @@ const detailMeta = document.querySelector("[data-crm-detail-meta]");
 const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
 const detailPanel = document.querySelector(".crm-detail-panel");
+const mainGrid = document.querySelector(".crm-main-grid");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
 const actionFeedback = document.querySelector("[data-crm-action-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
@@ -564,6 +591,160 @@ function rememberSelectedLead(leadId = "") {
 function rememberSelectedApplicant(applicantId = "") {
   state.selectedApplicantId = String(applicantId || "").trim();
   writeStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, state.selectedApplicantId || "");
+}
+
+function isMobileCrmLayout() {
+  if (crmMobileMediaQuery) {
+    return crmMobileMediaQuery.matches;
+  }
+
+  return window.innerWidth <= CRM_MOBILE_BREAKPOINT_PX;
+}
+
+function getWorkspaceEntity() {
+  return state.view === "applicants"
+    ? state.applicantDetail?.applicant || null
+    : state.leadDetail?.lead || null;
+}
+
+function hasWorkspaceSelection() {
+  if (getWorkspaceEntity()?.id) {
+    return true;
+  }
+
+  return state.view === "applicants"
+    ? Boolean(state.selectedApplicantId)
+    : Boolean(state.selectedLeadId);
+}
+
+function resolveMobilePane() {
+  const requestedPane = normalizeCrmMobilePane(state.mobilePane);
+
+  if (requestedPane === "workspace" && !hasWorkspaceSelection()) {
+    return "inbox";
+  }
+
+  return requestedPane;
+}
+
+function rememberMobilePane(pane = "inbox") {
+  state.mobilePane = normalizeCrmMobilePane(pane);
+  writeStoredJson(CRM_MOBILE_PANE_STORAGE_KEY, state.mobilePane);
+}
+
+function syncMobilePaneButtons(activePane = resolveMobilePane()) {
+  mobilePaneButtons.forEach((button) => {
+    const paneName = normalizeCrmMobilePane(button.dataset.crmMobilePaneButton || "inbox");
+    const isActive = paneName === activePane;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function syncMobileShellCopy(activePane = resolveMobilePane()) {
+  if (!mobileShellTitle || !mobileShellCopy) {
+    return;
+  }
+
+  const workspaceEntity = getWorkspaceEntity();
+  const entityLabel = state.view === "applicants" ? "candidate" : "lead";
+
+  if (activePane === "workspace") {
+    mobileShellTitle.textContent = workspaceEntity?.fullName
+      ? truncateText(workspaceEntity.fullName, 36)
+      : "Workspace";
+    mobileShellCopy.textContent = workspaceEntity?.fullName
+      ? `Manage this ${entityLabel}, review activity, and keep the conversation in one place.`
+      : `Open a ${entityLabel} from Inbox to work it here.`;
+    return;
+  }
+
+  if (activePane === "more") {
+    mobileShellTitle.textContent = "More";
+    mobileShellCopy.textContent =
+      "Metrics, quick links, prospector accounts, and the activity feed stay here.";
+    return;
+  }
+
+  mobileShellTitle.textContent = "Inbox";
+  mobileShellCopy.textContent =
+    state.view === "applicants"
+      ? "Review candidates first, then open one profile to work it."
+      : "Open a lead and work it like a contact on your phone.";
+}
+
+function setMobileCollapsibleDefaults({ reset = false } = {}) {
+  const mobileLayout = isMobileCrmLayout();
+
+  mobileCollapsibles.forEach((element) => {
+    if (!(element instanceof HTMLDetailsElement)) {
+      return;
+    }
+
+    if (!mobileLayout) {
+      element.open = true;
+      delete element.dataset.crmMobileInitialized;
+      return;
+    }
+
+    if (reset || !element.dataset.crmMobileInitialized) {
+      element.open = false;
+      element.dataset.crmMobileInitialized = "true";
+    }
+  });
+}
+
+function applyMobilePaneLayout() {
+  const mobileLayout = isMobileCrmLayout();
+
+  if (!mobileLayout) {
+    delete document.body.dataset.crmMobilePane;
+    delete document.body.dataset.crmMobileLayout;
+    mobilePaneTargets.forEach((element) => {
+      element.classList.remove("crm-mobile-pane-hidden");
+    });
+    mainGrid?.classList.remove("crm-mobile-main-hidden");
+    if (mobileBackButton) {
+      mobileBackButton.hidden = true;
+    }
+    setMobileCollapsibleDefaults({ reset: true });
+    syncMobilePaneButtons(resolveMobilePane());
+    syncMobileShellCopy(resolveMobilePane());
+    return;
+  }
+
+  const activePane = resolveMobilePane();
+
+  if (activePane !== state.mobilePane) {
+    rememberMobilePane(activePane);
+  }
+
+  document.body.dataset.crmMobilePane = activePane;
+  document.body.dataset.crmMobileLayout = "true";
+
+  mobilePaneTargets.forEach((element) => {
+    const targetPane = normalizeCrmMobilePane(element.dataset.crmMobilePaneTarget || "inbox");
+    element.classList.toggle("crm-mobile-pane-hidden", targetPane !== activePane);
+  });
+
+  mainGrid?.classList.toggle("crm-mobile-main-hidden", activePane === "more");
+
+  if (mobileBackButton) {
+    mobileBackButton.hidden = activePane !== "workspace";
+  }
+
+  setMobileCollapsibleDefaults();
+  syncMobilePaneButtons(activePane);
+  syncMobileShellCopy(activePane);
+}
+
+function openMobileWorkspacePane() {
+  if (!isMobileCrmLayout()) {
+    return;
+  }
+
+  rememberMobilePane("workspace");
+  applyMobilePaneLayout();
 }
 
 function getLeadDetailCache() {
@@ -1010,6 +1191,7 @@ async function openQuoteComposer(leadId = "") {
     await loadLeadDetail(safeLeadId);
   }
 
+  openMobileWorkspacePane();
   scrollDetailIntoView();
   focusEstimateComposer();
   const snapshot = buildEstimateSnapshot();
@@ -1033,7 +1215,7 @@ function buildDetailActionPreview() {
 }
 
 function scrollDetailIntoView() {
-  if (!detailPanel || window.innerWidth > 960) {
+  if (!detailPanel || window.innerWidth > 960 || isMobileCrmLayout()) {
     return;
   }
 
@@ -1427,6 +1609,7 @@ function syncCollectionChrome() {
   }
 
   syncViewButtons();
+  syncMobileShellCopy();
 }
 
 function renderLeadFilters(dashboard) {
@@ -1666,6 +1849,7 @@ function renderLeadList(leads = []) {
       rememberSelectedLead(leadId);
       renderLeadList(leads);
       await loadLeadDetail(leadId);
+      openMobileWorkspacePane();
       scrollDetailIntoView();
     });
   });
@@ -1766,6 +1950,7 @@ function renderApplicantList(applicants = []) {
       rememberSelectedApplicant(applicantId);
       renderApplicantList(applicants);
       await loadApplicantDetail(applicantId);
+      openMobileWorkspacePane();
       scrollDetailIntoView();
     });
   });
@@ -1781,6 +1966,7 @@ function renderApplicantList(applicants = []) {
       rememberSelectedApplicant(applicantId);
       renderApplicantList(applicants);
       await loadApplicantDetail(applicantId);
+      openMobileWorkspacePane();
       scrollDetailIntoView();
     });
   });
@@ -2005,6 +2191,7 @@ function renderApplicantDetail(detail = null) {
     renderActivityCards(applicantActivityList, []);
     syncApplicantQuickActions(null);
     setApplicantDetailTab("profile");
+    applyMobilePaneLayout();
     return;
   }
 
@@ -2102,6 +2289,7 @@ function renderApplicantDetail(detail = null) {
   );
   renderActivityCards(applicantActivityList, detail.activity || []);
   setApplicantDetailTab(state.applicantDetailTab || "profile");
+  applyMobilePaneLayout();
 }
 
 function renderLeadDetail(detail = null) {
@@ -2120,6 +2308,7 @@ function renderLeadDetail(detail = null) {
     renderLeadAssets([]);
     syncDetailQuickActions(null);
     setDetailTab("profile");
+    applyMobilePaneLayout();
     return;
   }
 
@@ -2265,6 +2454,7 @@ function renderLeadDetail(detail = null) {
   });
   renderActivityCards(activityList, detail.activity || []);
   setDetailTab(state.detailTab || "profile");
+  applyMobilePaneLayout();
 }
 
 function buildLeadPayloadFromForm() {
@@ -2964,6 +3154,27 @@ function bindAppShell() {
   bindProspectorAdmin();
   refreshButton?.addEventListener("click", refreshWorkspaceSafely);
   logoutButton?.addEventListener("click", handleLogout);
+  mobilePaneButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      rememberMobilePane(button.dataset.crmMobilePaneButton || "inbox");
+      applyMobilePaneLayout();
+    });
+  });
+  mobileBackButton?.addEventListener("click", () => {
+    rememberMobilePane("inbox");
+    applyMobilePaneLayout();
+  });
+  if (crmMobileMediaQuery) {
+    const handleMobileLayoutChange = () => {
+      applyMobilePaneLayout();
+    };
+
+    if (typeof crmMobileMediaQuery.addEventListener === "function") {
+      crmMobileMediaQuery.addEventListener("change", handleMobileLayoutChange);
+    } else if (typeof crmMobileMediaQuery.addListener === "function") {
+      crmMobileMediaQuery.addListener(handleMobileLayoutChange);
+    }
+  }
   viewButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const nextView = button.dataset.crmViewButton || "leads";
@@ -2976,6 +3187,7 @@ function bindAppShell() {
 async function init() {
   bindAppShell();
   applyCachedTheme();
+  applyMobilePaneLayout();
   renderCachedDashboard();
 
   let me;
@@ -3002,6 +3214,7 @@ async function init() {
   persistThemeProfile(me.profile || {}, me.email || "");
   renderResourceHub(me.resourceSections || []);
   renderProspectorCredentials();
+  applyMobilePaneLayout();
   setSystemStatus("", "");
   await Promise.all([refreshDashboardSafely(), refreshProspectorsSafely()]);
 }
