@@ -1,5 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
+const PROSPECTOR_AUTH_STORAGE_KEY = "cmwf_prospector_auth_v1";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -82,6 +83,24 @@ function setFeedback(message = "", tone = "") {
   feedback.dataset.tone = tone;
 }
 
+function writeCachedProspectorAuth(auth = null) {
+  try {
+    if (!auth?.email) {
+      window.localStorage.removeItem(PROSPECTOR_AUTH_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      PROSPECTOR_AUTH_STORAGE_KEY,
+      JSON.stringify({
+        name: String(auth.name || "").trim(),
+        email: String(auth.email || "").trim().toLowerCase(),
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {}
+}
+
 async function init() {
   try {
     const me = await apiRequest("/api/metalworks-crm/prospector/me");
@@ -119,10 +138,11 @@ if (loginForm) {
     };
 
     try {
-      await apiRequest("/api/metalworks-crm/prospector/login", {
+      const result = await apiRequest("/api/metalworks-crm/prospector/login", {
         method: "POST",
         body: payload,
       });
+      writeCachedProspectorAuth(result);
 
       window.location.href = "/metalworks-crm/prospector/";
     } catch (error) {

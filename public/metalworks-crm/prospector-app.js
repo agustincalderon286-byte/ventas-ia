@@ -1,9 +1,22 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const PROSPECTOR_DRAFT_STORAGE_KEY = "cmwf_prospector_draft_v1";
+const PROSPECTOR_AUTH_STORAGE_KEY = "cmwf_prospector_auth_v1";
+const PROSPECTOR_DASHBOARD_STORAGE_KEY = "cmwf_prospector_dashboard_v1";
 const PROSPECTOR_QUEUE_DB_NAME = "cmwf_prospector_queue_v1";
 const PROSPECTOR_QUEUE_STORE_NAME = "leadQueue";
 const PROSPECTOR_QUEUE_DB_VERSION = 1;
+const PROSPECTOR_SERVICE_WORKER_PATH = "/metalworks-crm/prospector-sw.js";
+const PROSPECTOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const PROSPECTOR_SHELL_CACHE_URLS = [
+  "/metalworks-crm/prospector/",
+  "/metalworks-crm/prospector/login/",
+  "/metalworks-crm/styles.css",
+  "/metalworks-crm/prospector-app.js",
+  "/metalworks-crm/prospector-login.js",
+  "/metalworks-crm/prospector.webmanifest",
+  "/metalworks-crm/prospector-icon.svg",
+];
 const MAX_LEAD_PHOTOS = 8;
 const MAX_LEAD_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_LEAD_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
@@ -46,6 +59,106 @@ function writeStoredJson(key, value) {
     }
 
     window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function readCachedProspectorAuth() {
+  const entry = readStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const email = normalizeEmailValue(entry.email || "");
+
+  if (!email) {
+    return null;
+  }
+
+  return {
+    name: String(entry.name || "").trim(),
+    email,
+  };
+}
+
+function writeCachedProspectorAuth(auth = null) {
+  if (!auth?.email) {
+    writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+    return;
+  }
+
+  writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, {
+    name: String(auth.name || "").trim(),
+    email: normalizeEmailValue(auth.email || ""),
+    savedAt: Date.now(),
+  });
+}
+
+function readCachedDashboardEntry() {
+  const entry = readStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+  return entry && typeof entry === "object" ? entry : null;
+}
+
+function writeCachedDashboard(snapshot = null) {
+  if (!snapshot || typeof snapshot !== "object") {
+    writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+    return;
+  }
+
+  writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, {
+    snapshot,
+    savedAt: Date.now(),
+  });
+}
+
+function clearProspectorCachedState() {
+  writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+  writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+}
+
+async function clearProspectorOfflineShellCache() {
+  if (!("caches" in window)) {
+    return;
+  }
+
+  try {
+    const cacheKeys = await window.caches.keys();
+    await Promise.all(
+      cacheKeys
+        .filter((key) => String(key || "").startsWith("cmwf-prospector-shell"))
+        .map((key) => window.caches.delete(key)),
+    );
+  } catch {}
+}
+
+async function requestProspectorShellCaching(urls = PROSPECTOR_SHELL_CACHE_URLS) {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    registration.active?.postMessage({
+      type: "CACHE_URLS",
+      urls,
+    });
+  } catch {}
+}
+
+async function registerProspectorServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register(
+      PROSPECTOR_SERVICE_WORKER_PATH,
+      {
+        scope: PROSPECTOR_SERVICE_WORKER_SCOPE,
+      },
+    );
+    registration.update().catch(() => {});
+    await requestProspectorShellCaching();
   } catch {}
 }
 
@@ -951,8 +1064,11 @@ async function loadDashboard() {
   const snapshot = await apiRequest("/api/metalworks-crm/prospector/dashboard");
 
   state.auth = snapshot?.prospector || state.auth;
+  writeCachedProspectorAuth(state.auth);
   setUserChip(state.auth);
   renderDashboard(snapshot);
+  writeCachedDashboard(snapshot);
+  requestProspectorShellCaching();
   return snapshot;
 }
 
@@ -1151,6 +1267,25 @@ function updateConnectivityStatus() {
   );
 }
 
+function restoreCachedDashboardSnapshot() {
+  const entry = readCachedDashboardEntry();
+  const snapshot = entry?.snapshot;
+
+  if (!snapshot || typeof snapshot !== "object") {
+    return false;
+  }
+
+  renderDashboard(snapshot);
+
+  if (lastSyncNode) {
+    lastSyncNode.textContent = entry?.savedAt
+      ? `Ultimo panel guardado ${formatDate(entry.savedAt)}`
+      : "Ultimo panel guardado en este dispositivo";
+  }
+
+  return true;
+}
+
 async function handleQueuedSubmit() {
   const payload = buildPayload();
   const validationMessage = validatePayload(payload);
@@ -1260,6 +1395,15 @@ async function handleQueuedSubmit() {
 
 async function init() {
   renderCapturePhotoPreview();
+  const cachedAuth = readCachedProspectorAuth();
+  const restoredCachedDashboard = restoreCachedDashboardSnapshot();
+
+  if (cachedAuth) {
+    state.auth = cachedAuth;
+    setUserChip(state.auth);
+  }
+
+  registerProspectorServiceWorker();
   restoreDraft();
   await refreshQueueState();
   updateConnectivityStatus();
@@ -1268,6 +1412,7 @@ async function init() {
     const me = await apiRequest("/api/metalworks-crm/prospector/me");
 
     if (!me.authenticated) {
+      clearProspectorCachedState();
       window.location.href = "/metalworks-crm/prospector/login/";
       return;
     }
@@ -1276,28 +1421,43 @@ async function init() {
       name: me.name || "",
       email: me.email || "",
     };
+    writeCachedProspectorAuth(state.auth);
     setUserChip(state.auth);
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
+      clearProspectorCachedState();
       window.location.href = "/metalworks-crm/prospector/login/";
       return;
     }
 
     setUserChip(state.auth);
-    updateConnectivityStatus();
+
+    if (!navigator.onLine && cachedAuth?.email) {
+      setStatus(
+        restoredCachedDashboard
+          ? "Sin senal. Abrimos el ultimo portal guardado en este dispositivo."
+          : "Sin senal. Puedes seguir capturando y el CRM se actualizara cuando vuelva el internet.",
+        "warning",
+      );
+    } else {
+      updateConnectivityStatus();
+    }
   }
 
   try {
     await loadDashboard();
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
+      clearProspectorCachedState();
       window.location.href = "/metalworks-crm/prospector/login/";
       return;
     }
 
     setStatus(
       !navigator.onLine
-        ? "Sin senal. Puedes seguir capturando y todo quedara guardado localmente."
+        ? restoredCachedDashboard
+          ? "Sin senal. Mostrando el ultimo panel guardado en este dispositivo."
+          : "Sin senal. Puedes seguir capturando y todo quedara guardado localmente."
         : TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
           ? "El portal se esta despertando. Espera unos segundos y vuelve a intentar."
           : error.message,
@@ -1372,6 +1532,7 @@ if (refreshButton) {
       setStatus("Panel actualizado.", "success");
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
+        clearProspectorCachedState();
         window.location.href = "/metalworks-crm/prospector/login/";
         return;
       }
@@ -1383,6 +1544,9 @@ if (refreshButton) {
 
 if (logoutButton) {
   logoutButton.addEventListener("click", async () => {
+    clearProspectorCachedState();
+    await clearProspectorOfflineShellCache();
+
     try {
       await apiRequest("/api/metalworks-crm/prospector/logout", {
         method: "POST",
@@ -1467,6 +1631,7 @@ if (photoPreview) {
 
 window.addEventListener("online", async () => {
   updateConnectivityStatus();
+  requestProspectorShellCaching();
 
   if (state.queue.some(canSyncQueuedLead)) {
     await syncQueuedLeads({
