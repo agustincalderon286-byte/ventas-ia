@@ -6,6 +6,7 @@ const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
 const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
+const METALWORKS_PROSPECTOR_STATUS_OPTIONS = ["active", "paused"];
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
@@ -282,16 +283,43 @@ function getMetalworksPassword() {
   return String(process.env.METALWORKS_CRM_PASSWORD || "").trim();
 }
 
-function getMetalworksProspectorPassword() {
-  return String(process.env.METALWORKS_PROSPECTOR_PASSWORD || "").trim();
-}
-
 function metalworksCrmConfigured() {
   return Boolean(getAllowedEmails().length && getMetalworksPassword());
 }
 
-function metalworksProspectorConfigured() {
-  return Boolean(getMetalworksProspectorPassword());
+function normalizeProspectorStatus(value = "") {
+  const status = cleanText(value || "", 24).toLowerCase();
+  return METALWORKS_PROSPECTOR_STATUS_OPTIONS.includes(status) ? status : "active";
+}
+
+function labelProspectorStatus(value = "") {
+  return normalizeProspectorStatus(value) === "paused" ? "Paused" : "Active";
+}
+
+function createSecurePasswordHash(password = "") {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(password || ""), salt, 64).toString("hex");
+
+  return { salt, hash };
+}
+
+function verifySecurePasswordHash(password = "", salt = "", storedHash = "") {
+  if (!password || !salt || !storedHash) {
+    return false;
+  }
+
+  const candidateHash = crypto.scryptSync(String(password || ""), String(salt || ""), 64);
+  const originalHash = Buffer.from(String(storedHash || ""), "hex");
+
+  if (candidateHash.length !== originalHash.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(candidateHash, originalHash);
+}
+
+function generateProspectorTemporaryPassword() {
+  return crypto.randomBytes(10).toString("base64url");
 }
 
 function getMetalworksCrmProfile(email = "") {
@@ -4154,6 +4182,103 @@ async function buildProspectorDashboardSnapshot(MetalworksLead, prospectorEmail 
   };
 }
 
+function cleanProspectorUser(doc = null, stats = {}) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    name: cleanText(doc.name || "", 120),
+    email: normalizeEmail(doc.email || ""),
+    status: normalizeProspectorStatus(doc.status || "active"),
+    statusLabel: labelProspectorStatus(doc.status || "active"),
+    lastLoginAt: doc.lastLoginAt ? new Date(doc.lastLoginAt).toISOString() : "",
+    lastLeadSubmittedAt: doc.lastLeadSubmittedAt
+      ? new Date(doc.lastLeadSubmittedAt).toISOString()
+      : "",
+    createdByAdminEmail: normalizeEmail(doc.createdByAdminEmail || ""),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+    counts: {
+      totalLeads: Number(stats?.totalLeads || 0) || 0,
+      newLeads: Number(stats?.newLeads || 0) || 0,
+      quotedLeads: Number(stats?.quotedLeads || 0) || 0,
+      bookedLeads: Number(stats?.bookedLeads || 0) || 0,
+      wonLeads: Number(stats?.wonLeads || 0) || 0,
+    },
+  };
+}
+
+async function buildProspectorAdminSnapshot(
+  MetalworksProspectorUser,
+  MetalworksLead,
+  { websiteBase = METALWORKS_WEBSITE_URL } = {},
+) {
+  const prospectorDocs = await MetalworksProspectorUser.find({})
+    .sort({ status: 1, name: 1, createdAt: -1 })
+    .lean();
+  const emails = prospectorDocs
+    .map((item) => normalizeEmail(item?.email || ""))
+    .filter(Boolean);
+  const statsDocs = emails.length
+    ? await MetalworksLead.aggregate([
+        {
+          $match: {
+            sourceProspectorEmail: { $in: emails },
+          },
+        },
+        {
+          $group: {
+            _id: "$sourceProspectorEmail",
+            totalLeads: { $sum: 1 },
+            newLeads: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "new"] }, 1, 0],
+              },
+            },
+            quotedLeads: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "quoted"] }, 1, 0],
+              },
+            },
+            bookedLeads: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "booked"] }, 1, 0],
+              },
+            },
+            wonLeads: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "won"] }, 1, 0],
+              },
+            },
+          },
+        },
+      ])
+    : [];
+  const statsMap = new Map(
+    statsDocs.map((item) => [normalizeEmail(item?._id || ""), item || {}]),
+  );
+  const prospectors = prospectorDocs
+    .map((doc) => cleanProspectorUser(doc, statsMap.get(normalizeEmail(doc?.email || "")) || {}))
+    .filter(Boolean);
+
+  return {
+    summary: {
+      totalProspectors: prospectors.length,
+      activeProspectors: prospectors.filter((item) => item.status === "active").length,
+      pausedProspectors: prospectors.filter((item) => item.status === "paused").length,
+      totalLeads: prospectors.reduce(
+        (sum, item) => sum + Number(item?.counts?.totalLeads || 0),
+        0,
+      ),
+    },
+    loginUrl: `${String(websiteBase || METALWORKS_WEBSITE_URL).replace(/\/$/, "")}/metalworks-crm/prospector/login/`,
+    portalUrl: `${String(websiteBase || METALWORKS_WEBSITE_URL).replace(/\/$/, "")}/metalworks-crm/prospector/`,
+    prospectors,
+  };
+}
+
 export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) {
   const trackingSchema = new mongoose.Schema(
     {
@@ -4345,7 +4470,25 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     lastSeenAt: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
   });
+  const metalworksProspectorUserSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true, index: true },
+    passwordHash: { type: String, required: true },
+    passwordSalt: { type: String, required: true },
+    status: { type: String, default: "active", index: true },
+    createdByAdminEmail: String,
+    lastLoginAt: Date,
+    lastLeadSubmittedAt: Date,
+    updatedAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now },
+  });
   const metalworksProspectorSessionSchema = new mongoose.Schema({
+    prospectorUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksProspectorUser",
+      required: true,
+      index: true,
+    },
     prospectorName: { type: String, required: true },
     prospectorEmail: { type: String, required: true, index: true },
     tokenHash: { type: String, required: true, unique: true, index: true },
@@ -4391,7 +4534,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
   metalworksCrmSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  metalworksProspectorUserSchema.index({ status: 1, name: 1 });
+  metalworksProspectorUserSchema.index({ createdAt: -1 });
   metalworksProspectorSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  metalworksProspectorSessionSchema.index({ prospectorUserId: 1, lastSeenAt: -1 });
   metalworksProspectorSessionSchema.index({ prospectorEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
@@ -4411,6 +4557,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmSession =
     mongoose.models.MetalworksCrmSession ||
     mongoose.model("MetalworksCrmSession", metalworksCrmSessionSchema);
+  const MetalworksProspectorUser =
+    mongoose.models.MetalworksProspectorUser ||
+    mongoose.model("MetalworksProspectorUser", metalworksProspectorUserSchema);
   const MetalworksProspectorSession =
     mongoose.models.MetalworksProspectorSession ||
     mongoose.model("MetalworksProspectorSession", metalworksProspectorSessionSchema);
@@ -4537,7 +4686,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const token = String(cookies[METALWORKS_PROSPECTOR_SESSION_COOKIE] || "").trim();
 
     if (!token) {
-      return { session: null, name: "", email: "" };
+      return { session: null, userId: "", name: "", email: "", status: "" };
     }
 
     const session = await MetalworksProspectorSession.findOne({
@@ -4545,8 +4694,26 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       expiresAt: { $gt: new Date() },
     }).lean();
 
-    if (!session?.prospectorEmail || !session?.prospectorName) {
-      return { session: null, name: "", email: "" };
+    if (!session?.prospectorEmail) {
+      return { session: null, userId: "", name: "", email: "", status: "" };
+    }
+
+    const prospectorUser =
+      (session?.prospectorUserId
+        ? await MetalworksProspectorUser.findById(session.prospectorUserId).lean()
+        : null) ||
+      (session?.prospectorEmail
+        ? await MetalworksProspectorUser.findOne({
+            email: normalizeEmail(session.prospectorEmail || ""),
+          }).lean()
+        : null);
+
+    if (
+      !prospectorUser?.email ||
+      normalizeProspectorStatus(prospectorUser.status || "active") !== "active"
+    ) {
+      await MetalworksProspectorSession.deleteOne({ _id: session._id }).catch(() => null);
+      return { session: null, userId: "", name: "", email: "", status: "" };
     }
 
     if (touch) {
@@ -4562,21 +4729,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     return {
       session,
-      name: cleanText(session.prospectorName || "", 120),
-      email: normalizeEmail(session.prospectorEmail || ""),
+      userId: String(prospectorUser._id || ""),
+      name: cleanText(prospectorUser.name || session.prospectorName || "", 120),
+      email: normalizeEmail(prospectorUser.email || session.prospectorEmail || ""),
+      status: normalizeProspectorStatus(prospectorUser.status || "active"),
     };
   }
 
   async function requireProspectorAuth(req, res) {
-    if (!metalworksProspectorConfigured()) {
-      respondError(
-        res,
-        503,
-        "El portal de prospectadores todavia no tiene password configurado.",
-      );
-      return null;
-    }
-
     const auth = await getProspectorAuth(req);
 
     if (!auth.email || !auth.name) {
@@ -4587,15 +4747,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return auth;
   }
 
-  async function createProspectorSession(req, res, { name = "", email = "" } = {}) {
+  async function createProspectorSession(req, res, { prospectorUser = null } = {}) {
+    const safeUserId = String(prospectorUser?._id || "").trim();
+    const safeName = cleanText(prospectorUser?.name || "", 120);
+    const safeEmail = normalizeEmail(prospectorUser?.email || "");
+
+    if (!safeUserId || !safeName || !safeEmail) {
+      throw new Error("Prospector account is incomplete.");
+    }
+
     const token = generateToken();
     const expiresAt = new Date(
       Date.now() + METALWORKS_PROSPECTOR_SESSION_DAYS * 24 * 60 * 60 * 1000,
     );
 
     await MetalworksProspectorSession.create({
-      prospectorName: cleanText(name || "", 120),
-      prospectorEmail: normalizeEmail(email || ""),
+      prospectorUserId: prospectorUser._id,
+      prospectorName: safeName,
+      prospectorEmail: safeEmail,
       tokenHash: hashToken(token),
       ipAddress: getClientIp(req),
       userAgent: cleanText(req.headers["user-agent"] || "", 400),
@@ -5942,12 +6111,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   app.get("/api/metalworks-crm/prospector/me", async (req, res) => {
     try {
-      const auth = await getProspectorAuth(req, { touch: true });
+      const [auth, totalAccounts, activeAccounts] = await Promise.all([
+        getProspectorAuth(req, { touch: true }),
+        MetalworksProspectorUser.countDocuments({}),
+        MetalworksProspectorUser.countDocuments({ status: "active" }),
+      ]);
+
       res.json({
         authenticated: Boolean(auth.email),
-        configured: metalworksProspectorConfigured(),
+        configured: totalAccounts > 0,
+        totalAccounts,
+        activeAccounts,
+        userId: auth.userId || "",
         name: auth.name || "",
         email: auth.email || "",
+        status: auth.status || "",
       });
     } catch (error) {
       console.error("Error loading Metal Works prospector auth:", error.message);
@@ -5956,30 +6134,60 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   });
 
   app.post("/api/metalworks-crm/prospector/login", async (req, res) => {
-    const name = cleanText(req.body?.name || "", 120);
     const email = normalizeEmail(req.body?.email || "");
     const password = String(req.body?.password || "");
-    const expectedPassword = getMetalworksProspectorPassword();
 
-    if (!metalworksProspectorConfigured()) {
-      return respondError(
-        res,
-        503,
-        "Primero configura METALWORKS_PROSPECTOR_PASSWORD en el backend.",
-      );
-    }
-
-    if (!name || !email || !password) {
-      return respondError(res, 400, "Nombre, correo y password son requeridos.");
-    }
-
-    if (!compareSecrets(password, expectedPassword)) {
-      return respondError(res, 401, "Password incorrecto.");
+    if (!email || !password) {
+      return respondError(res, 400, "Correo y password son requeridos.");
     }
 
     try {
-      await createProspectorSession(req, res, { name, email });
-      res.json({ ok: true, name, email });
+      const totalAccounts = await MetalworksProspectorUser.countDocuments({});
+
+      if (!totalAccounts) {
+        return respondError(
+          res,
+          503,
+          "Primero crea una cuenta de prospectador desde el CRM de Metal Works.",
+        );
+      }
+
+      const prospectorUser = await MetalworksProspectorUser.findOne({ email });
+
+      if (!prospectorUser) {
+        return respondError(res, 401, "No encontre una cuenta con ese correo.");
+      }
+
+      if (normalizeProspectorStatus(prospectorUser.status || "active") !== "active") {
+        return respondError(
+          res,
+          403,
+          "Esta cuenta esta pausada. Pidele al administrador que la reactive.",
+        );
+      }
+
+      if (
+        !verifySecurePasswordHash(
+          password,
+          prospectorUser.passwordSalt,
+          prospectorUser.passwordHash,
+        )
+      ) {
+        return respondError(res, 401, "Password incorrecto.");
+      }
+
+      prospectorUser.lastLoginAt = new Date();
+      prospectorUser.updatedAt = new Date();
+      await prospectorUser.save();
+
+      await createProspectorSession(req, res, { prospectorUser });
+      res.json({
+        ok: true,
+        userId: String(prospectorUser._id || ""),
+        name: cleanText(prospectorUser.name || "", 120),
+        email: normalizeEmail(prospectorUser.email || ""),
+        status: normalizeProspectorStatus(prospectorUser.status || "active"),
+      });
     } catch (error) {
       console.error("Error logging into Metal Works prospector portal:", error.message);
       respondError(res, 500, "No pude iniciar sesion en el portal del prospectador.");
@@ -6011,8 +6219,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       res.json({
         ...snapshot,
         prospector: {
+          id: auth.userId || "",
           name: auth.name,
           email: auth.email,
+          status: auth.status || "active",
         },
       });
     } catch (error) {
@@ -6270,6 +6480,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         pageUrl: `${METALWORKS_WEBSITE_URL.replace(/\/$/, "")}/metalworks-crm/prospector/`,
       });
 
+      if (auth.userId && mongoose.Types.ObjectId.isValid(auth.userId)) {
+        await MetalworksProspectorUser.updateOne(
+          { _id: auth.userId },
+          {
+            $set: {
+              lastLeadSubmittedAt: now,
+              updatedAt: now,
+            },
+          },
+        );
+      }
+
       let pushDelivery = {
         attempted: false,
         delivered: false,
@@ -6356,6 +6578,210 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error loading Metal Works auth:", error.message);
       respondError(res, 500, "No pude revisar la sesion del CRM.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/prospectors", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const snapshot = await buildProspectorAdminSnapshot(
+        MetalworksProspectorUser,
+        MetalworksLead,
+      );
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error loading Metal Works prospectors:", error.message);
+      respondError(res, 500, "No pude cargar las cuentas de prospectadores.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/prospectors", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const name = cleanText(req.body?.name || "", 120);
+    const email = normalizeEmail(req.body?.email || "");
+
+    if (!name) {
+      return respondError(res, 400, "El nombre del prospectador es requerido.");
+    }
+
+    if (!email) {
+      return respondError(res, 400, "El correo del prospectador es requerido.");
+    }
+
+    try {
+      const existingUser = await MetalworksProspectorUser.findOne({ email }).select("_id");
+
+      if (existingUser) {
+        return respondError(res, 409, "Ese correo ya tiene una cuenta creada.");
+      }
+
+      const temporaryPassword = generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(temporaryPassword);
+      const now = new Date();
+      const prospectorUser = await MetalworksProspectorUser.create({
+        name,
+        email,
+        passwordHash: securePassword.hash,
+        passwordSalt: securePassword.salt,
+        status: "active",
+        createdByAdminEmail: auth.email,
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      res.json({
+        prospector: cleanProspectorUser(prospectorUser.toObject ? prospectorUser.toObject() : prospectorUser),
+        credentials: {
+          email,
+          temporaryPassword,
+        },
+      });
+    } catch (error) {
+      console.error("Error creating Metal Works prospector account:", error.message);
+      respondError(res, 500, "No pude crear la cuenta del prospectador.");
+    }
+  });
+
+  app.patch("/api/metalworks-crm/prospectors/:prospectorId", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const prospectorId = String(req.params?.prospectorId || "").trim();
+
+    if (!prospectorId || !mongoose.Types.ObjectId.isValid(prospectorId)) {
+      return respondError(res, 400, "Prospectador invalido.");
+    }
+
+    const name = cleanText(req.body?.name || "", 120);
+    const rawStatus = cleanText(req.body?.status || "", 24).toLowerCase();
+    const requestedStatus = normalizeProspectorStatus(rawStatus);
+    const shouldUpdateName = Object.prototype.hasOwnProperty.call(req.body || {}, "name") && name;
+    const shouldUpdateStatus =
+      Object.prototype.hasOwnProperty.call(req.body || {}, "status") &&
+      METALWORKS_PROSPECTOR_STATUS_OPTIONS.includes(rawStatus);
+
+    if (!shouldUpdateName && !shouldUpdateStatus) {
+      return respondError(res, 400, "No recibi cambios para este prospectador.");
+    }
+
+    try {
+      const prospectorUser = await MetalworksProspectorUser.findById(prospectorId);
+
+      if (!prospectorUser) {
+        return respondError(res, 404, "No encontre ese prospectador.");
+      }
+
+      const previousStatus = normalizeProspectorStatus(prospectorUser.status || "active");
+      const nextStatus = shouldUpdateStatus ? requestedStatus : previousStatus;
+      const now = new Date();
+
+      if (shouldUpdateName) {
+        prospectorUser.name = name;
+      }
+
+      if (shouldUpdateStatus) {
+        prospectorUser.status = requestedStatus;
+      }
+
+      prospectorUser.updatedAt = now;
+      await prospectorUser.save();
+
+      const forcedSignOut = previousStatus === "active" && nextStatus !== "active";
+
+      if (forcedSignOut) {
+        await MetalworksProspectorSession.deleteMany({
+          $or: [
+            { prospectorUserId: prospectorUser._id },
+            { prospectorEmail: normalizeEmail(prospectorUser.email || "") },
+          ],
+        });
+      }
+
+      const statsSnapshot = await buildProspectorAdminSnapshot(
+        MetalworksProspectorUser,
+        MetalworksLead,
+      );
+      const cleanProspector =
+        statsSnapshot.prospectors.find((item) => item.id === String(prospectorUser._id || "")) ||
+        cleanProspectorUser(prospectorUser.toObject ? prospectorUser.toObject() : prospectorUser);
+
+      res.json({
+        prospector: cleanProspector,
+        forcedSignOut,
+      });
+    } catch (error) {
+      console.error("Error updating Metal Works prospector account:", error.message);
+      respondError(res, 500, "No pude actualizar la cuenta del prospectador.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/prospectors/:prospectorId/reset-password", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const prospectorId = String(req.params?.prospectorId || "").trim();
+
+    if (!prospectorId || !mongoose.Types.ObjectId.isValid(prospectorId)) {
+      return respondError(res, 400, "Prospectador invalido.");
+    }
+
+    try {
+      const prospectorUser = await MetalworksProspectorUser.findById(prospectorId);
+
+      if (!prospectorUser) {
+        return respondError(res, 404, "No encontre ese prospectador.");
+      }
+
+      const temporaryPassword = generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(temporaryPassword);
+
+      prospectorUser.passwordHash = securePassword.hash;
+      prospectorUser.passwordSalt = securePassword.salt;
+      prospectorUser.updatedAt = new Date();
+      await prospectorUser.save();
+
+      await MetalworksProspectorSession.deleteMany({
+        $or: [
+          { prospectorUserId: prospectorUser._id },
+          { prospectorEmail: normalizeEmail(prospectorUser.email || "") },
+        ],
+      });
+
+      const statsSnapshot = await buildProspectorAdminSnapshot(
+        MetalworksProspectorUser,
+        MetalworksLead,
+      );
+      const cleanProspector =
+        statsSnapshot.prospectors.find((item) => item.id === String(prospectorUser._id || "")) ||
+        cleanProspectorUser(prospectorUser.toObject ? prospectorUser.toObject() : prospectorUser);
+
+      res.json({
+        prospector: cleanProspector,
+        credentials: {
+          email: normalizeEmail(prospectorUser.email || ""),
+          temporaryPassword,
+        },
+        forcedSignOut: true,
+      });
+    } catch (error) {
+      console.error("Error resetting Metal Works prospector password:", error.message);
+      respondError(res, 500, "No pude resetear el password de este prospectador.");
     }
   });
 

@@ -44,6 +44,89 @@
         <p class="crm-form-result crm-resource-feedback" data-crm-resource-feedback hidden></p>
       </section>
 
+      <section class="crm-panel crm-prospector-admin" data-crm-prospector-admin>
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Field Team</p>
+            <h2>Prospector Accounts</h2>
+            <p>Create, pause, and reset field prospector access from one place.</p>
+          </div>
+          <div class="crm-micro-list" data-crm-prospector-summary></div>
+        </div>
+
+        <div class="crm-prospector-admin-grid">
+          <form class="crm-prospector-admin-form" data-crm-prospector-form>
+            <label>
+              <span>Prospector name</span>
+              <input
+                type="text"
+                name="name"
+                maxlength="120"
+                placeholder="Rigo Calderon"
+                autocomplete="name"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Email</span>
+              <input
+                type="email"
+                name="email"
+                maxlength="160"
+                placeholder="rigo@chicagometalworksandfencing.com"
+                autocomplete="email"
+                required
+              />
+            </label>
+
+            <div class="crm-form-actions crm-field-full">
+              <button type="submit" class="crm-primary-button" data-crm-prospector-save>
+                Create Prospector Account
+              </button>
+            </div>
+          </form>
+
+          <div class="crm-prospector-admin-side">
+            <section class="crm-upload-panel crm-prospector-credentials" data-crm-prospector-credentials hidden>
+              <div class="crm-upload-panel-head">
+                <div>
+                  <strong data-crm-prospector-credentials-title>New account ready</strong>
+                  <p>Copy these credentials and send them to the field rep.</p>
+                </div>
+              </div>
+              <div class="crm-note-list" data-crm-prospector-credentials-list></div>
+              <div class="crm-card-actions">
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-email>
+                  Copy Email
+                </button>
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-password>
+                  Copy Password
+                </button>
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-login>
+                  Copy Login Link
+                </button>
+              </div>
+            </section>
+
+            <section class="crm-upload-panel">
+              <div class="crm-upload-panel-head">
+                <div>
+                  <strong>Field team workflow</strong>
+                  <p>Each prospector gets their own email and password. New leads still arrive tagged with the right rep.</p>
+                </div>
+              </div>
+              <p class="crm-photo-help">
+                Use this section to onboard new prospectors, pause access when needed, and reset passwords without sharing one team-wide password.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <div class="crm-prospector-user-list" data-crm-prospector-list></div>
+        <p class="crm-form-result" data-crm-prospector-feedback></p>
+      </section>
+
       <section class="crm-toolbar">
         <label class="crm-search">
           <span data-crm-search-label>Buscar</span>
