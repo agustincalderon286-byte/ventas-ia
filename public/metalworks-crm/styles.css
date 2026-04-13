@@ -867,6 +867,21 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="interview_schedul
   color: var(--crm-green);
 }
 
+.crm-status-badge[data-status="pending"] {
+  background: rgba(199, 164, 96, 0.2);
+  color: #7e5c21;
+}
+
+.crm-status-badge[data-status="syncing"] {
+  background: rgba(29, 79, 145, 0.12);
+  color: var(--crm-blue);
+}
+
+.crm-status-badge[data-status="blocked"] {
+  background: rgba(179, 32, 37, 0.14);
+  color: var(--crm-red-deep);
+}
+
 .crm-status-badge[data-status="paused"] {
   background: rgba(16, 20, 23, 0.08);
   color: var(--crm-charcoal);
@@ -875,6 +890,36 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="interview_schedul
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="active"] {
   background: rgba(111, 255, 170, 0.16);
   color: #b9ffda;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="pending"] {
+  background: rgba(255, 83, 222, 0.18);
+  color: #ffb5ef;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="syncing"] {
+  background: rgba(97, 214, 255, 0.16);
+  color: #9be7ff;
+}
+
+body[data-crm-skin="goku-blue"] .crm-status-badge[data-status="blocked"] {
+  background: rgba(255, 90, 222, 0.12);
+  color: #ffd2f7;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="pending"] {
+  background: rgba(255, 207, 110, 0.14);
+  color: #ffd783;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="syncing"] {
+  background: rgba(111, 255, 170, 0.16);
+  color: #b9ffda;
+}
+
+body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="blocked"] {
+  background: rgba(255, 95, 95, 0.16);
+  color: #ffc3c3;
 }
 
 body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="paused"] {
@@ -1272,6 +1317,12 @@ body[data-crm-skin="intel-ops"] .crm-status-badge[data-status="paused"] {
 .crm-mini-lead-card h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.crm-queue-error {
+  margin: 10px 0 0;
+  color: var(--crm-muted);
+  line-height: 1.5;
 }
 
 .crm-prospector-empty {

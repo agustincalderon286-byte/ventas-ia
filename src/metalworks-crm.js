@@ -4549,6 +4549,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     qualificationNotes: String,
     sourceProspectorName: String,
     sourceProspectorEmail: String,
+    clientSubmissionId: { type: String, index: true },
     details: String,
     photoFileNames: [String],
     status: { type: String, default: "new", index: true },
@@ -6487,6 +6488,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const preferredLanguage = cleanText(req.body?.preferredLanguage || "", 80);
       const qualificationTier = cleanText(req.body?.qualificationTier || "", 12).toUpperCase();
       const qualificationNotes = cleanText(req.body?.qualificationNotes || "", 1200);
+      const clientSubmissionId = cleanText(req.body?.clientSubmissionId || "", 120);
       const details = cleanText(req.body?.details || req.body?.notes || "", 3000);
       const location = cleanText(
         [addressLine, city, zipCode].filter(Boolean).join(", "),
@@ -6546,11 +6548,19 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       const now = new Date();
       const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      let leadDoc = await MetalworksLead.findOne({
-        createdAt: { $gte: fourteenDaysAgo },
-        phone,
-        zipCode,
-      }).sort({ createdAt: -1 });
+
+      let leadDoc = clientSubmissionId
+        ? await MetalworksLead.findOne({ clientSubmissionId }).sort({ createdAt: -1 })
+        : null;
+
+      if (!leadDoc) {
+        leadDoc = await MetalworksLead.findOne({
+          createdAt: { $gte: fourteenDaysAgo },
+          phone,
+          zipCode,
+        }).sort({ createdAt: -1 });
+      }
+
       const duplicate = Boolean(leadDoc);
 
       if (leadDoc) {
@@ -6575,6 +6585,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.qualificationNotes = qualificationNotes;
         leadDoc.sourceProspectorName = auth.name;
         leadDoc.sourceProspectorEmail = auth.email;
+        if (!leadDoc.clientSubmissionId && clientSubmissionId) {
+          leadDoc.clientSubmissionId = clientSubmissionId;
+        }
         leadDoc.details = details;
         leadDoc.photoFileNames = photoFileNames;
         leadDoc.sourceType = "field_prospector";
@@ -6609,6 +6622,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           qualificationNotes,
           sourceProspectorName: auth.name,
           sourceProspectorEmail: auth.email,
+          clientSubmissionId,
           details,
           photoFileNames,
           status: "new",
