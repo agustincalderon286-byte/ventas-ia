@@ -616,6 +616,10 @@ body[data-crm-skin="executive-steel"] .crm-lead-card.is-active {
   backdrop-filter: blur(16px);
 }
 
+.crm-flyer-overlay[hidden] {
+  display: none !important;
+}
+
 .crm-flyer-dialog.crm-panel {
   position: relative;
   width: min(100vw, 100%);
