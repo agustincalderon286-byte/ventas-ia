@@ -23,7 +23,6 @@ const MAX_LEAD_PHOTOS = 8;
 const MAX_LEAD_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_LEAD_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
 const PROSPECTOR_SHARE_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
-const PROSPECTOR_PROJECT_GALLERY_URL = "https://www.chicagometalworksandfencing.com/projects.html";
 
 let queueDbPromise = null;
 
@@ -411,8 +410,6 @@ const refreshButton = document.querySelector("[data-prospector-refresh]");
 const flyerOpenButton = document.querySelector("[data-prospector-flyer-open]");
 const flyerOverlay = document.querySelector("[data-prospector-flyer-overlay]");
 const flyerImage = document.querySelector("[data-prospector-flyer-image]");
-const flyerPrintButton = document.querySelector("[data-prospector-flyer-print]");
-const flyerShareButton = document.querySelector("[data-prospector-flyer-share]");
 const flyerCloseButton = document.querySelector("[data-prospector-flyer-close]");
 const websiteQrToggleButton = document.querySelector("[data-prospector-site-qr-toggle]");
 const websiteQrPanel = document.querySelector("[data-prospector-site-qr-panel]");
@@ -427,6 +424,7 @@ const photoPreview = document.querySelector("[data-capture-photo-preview]");
 const offlineSummaryWrap = document.querySelector("[data-prospector-offline-summary]");
 const offlineListWrap = document.querySelector("[data-prospector-offline-list]");
 const syncNowButton = document.querySelector("[data-prospector-sync-now]");
+let lastFlyerTrigger = null;
 
 const DRAFT_FIELDS = [
   "fullName",
@@ -533,110 +531,29 @@ function closeFlyerOverlay() {
   flyerOverlay.hidden = true;
   flyerOverlay.setAttribute("aria-hidden", "true");
   delete document.body.dataset.prospectorFlyerOpen;
+
+  if (lastFlyerTrigger instanceof HTMLElement) {
+    lastFlyerTrigger.focus({ preventScroll: true });
+  }
 }
 
-function openFlyerOverlay() {
+function openFlyerOverlay(trigger = null) {
   if (!flyerOverlay) {
     return;
+  }
+
+  if (trigger instanceof HTMLElement) {
+    lastFlyerTrigger = trigger;
   }
 
   closeWebsiteQrPanel();
   flyerOverlay.hidden = false;
   flyerOverlay.setAttribute("aria-hidden", "false");
   document.body.dataset.prospectorFlyerOpen = "true";
-}
 
-function printFlyerFromPortal() {
-  const flyerUrl = getProspectorFlyerUrl();
-  const printWindow = window.open("", "_blank", "noopener,width=980,height=1320");
-
-  if (!printWindow) {
-    window.open(flyerUrl, "_blank", "noopener");
-    setStatus("Pop-up blocked. The flyer opened in a new tab so you can print it there.", "warning");
-    return;
+  if (flyerCloseButton) {
+    requestAnimationFrame(() => flyerCloseButton.focus({ preventScroll: true }));
   }
-
-  printWindow.document.open();
-  printWindow.document.write(`<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chicago Metal Works Flyer</title>
-    <style>
-      :root { color-scheme: light; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        background: #f3f4f7;
-        display: grid;
-        place-items: center;
-        min-height: 100vh;
-        padding: 20px;
-      }
-      img {
-        width: min(100%, 860px);
-        height: auto;
-        display: block;
-      }
-      @media print {
-        body {
-          background: #fff;
-          padding: 0;
-          min-height: auto;
-        }
-        img {
-          width: 100%;
-          max-width: none;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <img src="${escapeHtml(flyerUrl)}" alt="Chicago Metal Works flyer" />
-    <script>
-      const triggerPrint = () => {
-        window.focus();
-        window.print();
-      };
-      if (document.readyState === "complete") {
-        setTimeout(triggerPrint, 120);
-      } else {
-        window.addEventListener("load", () => setTimeout(triggerPrint, 120), { once: true });
-      }
-    </script>
-  </body>
-</html>`);
-  printWindow.document.close();
-}
-
-async function shareFlyerFromPortal() {
-  const flyerUrl = getProspectorFlyerUrl();
-  const shareText =
-    "Chicago Metal Works & Fencing flyer for broken railings, gates, welding, and fast quote capture.";
-
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: "Chicago Metal Works Flyer",
-        text: shareText,
-        url: flyerUrl,
-      });
-      setStatus("Flyer shared.", "success");
-      return;
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        return;
-      }
-    }
-  }
-
-  const subject = encodeURIComponent("Chicago Metal Works flyer to print");
-  const body = encodeURIComponent(
-    `Hi,\n\nPlease print this Chicago Metal Works & Fencing flyer.\n\nFlyer link:\n${flyerUrl}\n\nProject gallery:\n${PROSPECTOR_PROJECT_GALLERY_URL}\n`,
-  );
-  window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  setStatus("Email draft opened with the flyer link.", "muted");
 }
 
 function renderSummary(summary = {}) {
@@ -1725,21 +1642,7 @@ if (flyerImage) {
 if (flyerOpenButton) {
   flyerOpenButton.addEventListener("click", (event) => {
     event.stopPropagation();
-    openFlyerOverlay();
-  });
-}
-
-if (flyerPrintButton) {
-  flyerPrintButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    printFlyerFromPortal();
-  });
-}
-
-if (flyerShareButton) {
-  flyerShareButton.addEventListener("click", async (event) => {
-    event.stopPropagation();
-    await shareFlyerFromPortal();
+    openFlyerOverlay(event.currentTarget);
   });
 }
 

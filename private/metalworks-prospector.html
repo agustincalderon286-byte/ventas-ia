@@ -83,23 +83,14 @@
           aria-modal="true"
           aria-label="Chicago Metal Works prospector flyer"
         >
-          <div class="crm-flyer-toolbar">
-            <div>
-              <strong>Prospector Flyer</strong>
-              <p>Open it fast, show it full screen, print it, or share it without leaving the intake flow.</p>
-            </div>
-            <div class="crm-card-actions crm-flyer-actions">
-              <button type="button" class="crm-card-action" data-prospector-flyer-print>
-                Print Flyer
-              </button>
-              <button type="button" class="crm-card-action" data-prospector-flyer-share>
-                Email / Share
-              </button>
-              <button type="button" class="crm-card-action" data-prospector-flyer-close>
-                Back to Form
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            class="crm-flyer-close-button"
+            data-prospector-flyer-close
+            aria-label="Close flyer"
+          >
+            ×
+          </button>
           <div class="crm-flyer-stage">
             <img
               class="crm-flyer-image"
