@@ -8,6 +8,7 @@ const PROSPECTOR_QUEUE_STORE_NAME = "leadQueue";
 const PROSPECTOR_QUEUE_DB_VERSION = 1;
 const PROSPECTOR_SERVICE_WORKER_PATH = "/metalworks-crm/prospector-sw.js";
 const PROSPECTOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const PROSPECTOR_FLYER_PATH = "/metalworks-crm/assets/prospector-flyer-broken-railing.png";
 const PROSPECTOR_SHELL_CACHE_URLS = [
   "/metalworks-crm/prospector/",
   "/metalworks-crm/prospector/login/",
@@ -16,11 +17,13 @@ const PROSPECTOR_SHELL_CACHE_URLS = [
   "/metalworks-crm/prospector-login.js",
   "/metalworks-crm/prospector.webmanifest",
   "/metalworks-crm/prospector-icon.svg",
+  PROSPECTOR_FLYER_PATH,
 ];
 const MAX_LEAD_PHOTOS = 8;
 const MAX_LEAD_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_LEAD_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
 const PROSPECTOR_SHARE_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
+const PROSPECTOR_PROJECT_GALLERY_URL = "https://www.chicagometalworksandfencing.com/projects.html";
 
 let queueDbPromise = null;
 
@@ -405,6 +408,12 @@ const summaryWrap = document.querySelector("[data-prospector-summary]");
 const recentLeadsWrap = document.querySelector("[data-prospector-recent-leads]");
 const lastSyncNode = document.querySelector("[data-prospector-last-sync]");
 const refreshButton = document.querySelector("[data-prospector-refresh]");
+const flyerOpenButton = document.querySelector("[data-prospector-flyer-open]");
+const flyerOverlay = document.querySelector("[data-prospector-flyer-overlay]");
+const flyerImage = document.querySelector("[data-prospector-flyer-image]");
+const flyerPrintButton = document.querySelector("[data-prospector-flyer-print]");
+const flyerShareButton = document.querySelector("[data-prospector-flyer-share]");
+const flyerCloseButton = document.querySelector("[data-prospector-flyer-close]");
 const websiteQrToggleButton = document.querySelector("[data-prospector-site-qr-toggle]");
 const websiteQrPanel = document.querySelector("[data-prospector-site-qr-panel]");
 const websiteQrImage = document.querySelector("[data-prospector-site-qr-image]");
@@ -483,6 +492,14 @@ function setUserChip(auth = null) {
   userChip.textContent = `${auth.name || "Prospector"} · ${auth.email}`;
 }
 
+function getProspectorFlyerUrl() {
+  try {
+    return new URL(PROSPECTOR_FLYER_PATH, window.location.origin).toString();
+  } catch {
+    return PROSPECTOR_FLYER_PATH;
+  }
+}
+
 function closeWebsiteQrPanel() {
   if (!websiteQrPanel || !websiteQrToggleButton) {
     return;
@@ -506,6 +523,120 @@ function toggleWebsiteQrPanel() {
 
   websiteQrPanel.hidden = false;
   websiteQrToggleButton.setAttribute("aria-expanded", "true");
+}
+
+function closeFlyerOverlay() {
+  if (!flyerOverlay) {
+    return;
+  }
+
+  flyerOverlay.hidden = true;
+  flyerOverlay.setAttribute("aria-hidden", "true");
+  delete document.body.dataset.prospectorFlyerOpen;
+}
+
+function openFlyerOverlay() {
+  if (!flyerOverlay) {
+    return;
+  }
+
+  closeWebsiteQrPanel();
+  flyerOverlay.hidden = false;
+  flyerOverlay.setAttribute("aria-hidden", "false");
+  document.body.dataset.prospectorFlyerOpen = "true";
+}
+
+function printFlyerFromPortal() {
+  const flyerUrl = getProspectorFlyerUrl();
+  const printWindow = window.open("", "_blank", "noopener,width=980,height=1320");
+
+  if (!printWindow) {
+    window.open(flyerUrl, "_blank", "noopener");
+    setStatus("Pop-up blocked. The flyer opened in a new tab so you can print it there.", "warning");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works Flyer</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f3f4f7;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      img {
+        width: min(100%, 860px);
+        height: auto;
+        display: block;
+      }
+      @media print {
+        body {
+          background: #fff;
+          padding: 0;
+          min-height: auto;
+        }
+        img {
+          width: 100%;
+          max-width: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <img src="${escapeHtml(flyerUrl)}" alt="Chicago Metal Works flyer" />
+    <script>
+      const triggerPrint = () => {
+        window.focus();
+        window.print();
+      };
+      if (document.readyState === "complete") {
+        setTimeout(triggerPrint, 120);
+      } else {
+        window.addEventListener("load", () => setTimeout(triggerPrint, 120), { once: true });
+      }
+    </script>
+  </body>
+</html>`);
+  printWindow.document.close();
+}
+
+async function shareFlyerFromPortal() {
+  const flyerUrl = getProspectorFlyerUrl();
+  const shareText =
+    "Chicago Metal Works & Fencing flyer for broken railings, gates, welding, and fast quote capture.";
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Chicago Metal Works Flyer",
+        text: shareText,
+        url: flyerUrl,
+      });
+      setStatus("Flyer shared.", "success");
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  const subject = encodeURIComponent("Chicago Metal Works flyer to print");
+  const body = encodeURIComponent(
+    `Hi,\n\nPlease print this Chicago Metal Works & Fencing flyer.\n\nFlyer link:\n${flyerUrl}\n\nProject gallery:\n${PROSPECTOR_PROJECT_GALLERY_URL}\n`,
+  );
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  setStatus("Email draft opened with the flyer link.", "muted");
 }
 
 function renderSummary(summary = {}) {
@@ -1587,6 +1718,46 @@ if (websiteQrImage) {
   websiteQrImage.src = buildQrImageUrl(PROSPECTOR_SHARE_WEBSITE_URL);
 }
 
+if (flyerImage) {
+  flyerImage.src = getProspectorFlyerUrl();
+}
+
+if (flyerOpenButton) {
+  flyerOpenButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openFlyerOverlay();
+  });
+}
+
+if (flyerPrintButton) {
+  flyerPrintButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    printFlyerFromPortal();
+  });
+}
+
+if (flyerShareButton) {
+  flyerShareButton.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    await shareFlyerFromPortal();
+  });
+}
+
+if (flyerCloseButton) {
+  flyerCloseButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeFlyerOverlay();
+  });
+}
+
+if (flyerOverlay) {
+  flyerOverlay.addEventListener("click", (event) => {
+    if (event.target === flyerOverlay) {
+      closeFlyerOverlay();
+    }
+  });
+}
+
 if (websiteQrToggleButton) {
   websiteQrToggleButton.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1709,6 +1880,7 @@ document.addEventListener("click", () => {
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    closeFlyerOverlay();
     closeWebsiteQrPanel();
   }
 });

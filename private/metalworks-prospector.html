@@ -27,6 +27,9 @@
           <button class="crm-secondary-button" type="button" data-prospector-refresh>
             Refresh
           </button>
+          <button class="crm-secondary-button" type="button" data-prospector-flyer-open>
+            Flyer
+          </button>
           <a
             class="crm-secondary-button crm-action-link"
             href="https://www.chicagometalworksandfencing.com/projects.html"
@@ -67,6 +70,48 @@
       </header>
 
       <p class="crm-system-status" data-prospector-status hidden></p>
+
+      <section
+        class="crm-flyer-overlay"
+        data-prospector-flyer-overlay
+        aria-hidden="true"
+        hidden
+      >
+        <div
+          class="crm-flyer-dialog crm-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Chicago Metal Works prospector flyer"
+        >
+          <div class="crm-flyer-toolbar">
+            <div>
+              <strong>Prospector Flyer</strong>
+              <p>Open it fast, show it full screen, print it, or share it without leaving the intake flow.</p>
+            </div>
+            <div class="crm-card-actions crm-flyer-actions">
+              <button type="button" class="crm-card-action" data-prospector-flyer-print>
+                Print Flyer
+              </button>
+              <button type="button" class="crm-card-action" data-prospector-flyer-share>
+                Email / Share
+              </button>
+              <button type="button" class="crm-card-action" data-prospector-flyer-close>
+                Back to Form
+              </button>
+            </div>
+          </div>
+          <div class="crm-flyer-stage">
+            <img
+              class="crm-flyer-image"
+              data-prospector-flyer-image
+              src="/metalworks-crm/assets/prospector-flyer-broken-railing.png"
+              alt="Chicago Metal Works & Fencing flyer for broken railings and fast metal work"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
 
       <main class="crm-prospector-layout">
         <section class="crm-panel">

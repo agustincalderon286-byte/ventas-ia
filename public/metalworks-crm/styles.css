@@ -29,6 +29,10 @@ body {
     linear-gradient(180deg, #f8f5ef 0%, var(--crm-bg) 100%);
 }
 
+body[data-prospector-flyer-open="true"] {
+  overflow: hidden;
+}
+
 body[data-crm-skin="goku-blue"] {
   --crm-bg: #071223;
   --crm-panel: rgba(10, 18, 36, 0.9);
@@ -601,6 +605,72 @@ body[data-crm-skin="executive-steel"] .crm-lead-card.is-active {
   padding: 24px 0 40px;
 }
 
+.crm-flyer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(7, 14, 25, 0.74);
+  backdrop-filter: blur(16px);
+}
+
+.crm-flyer-dialog {
+  width: min(100%, 980px);
+  max-height: calc(100vh - 40px);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.crm-flyer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.crm-flyer-toolbar strong {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--crm-charcoal);
+}
+
+.crm-flyer-toolbar p {
+  margin: 6px 0 0;
+  color: var(--crm-muted);
+  line-height: 1.55;
+}
+
+.crm-flyer-actions {
+  width: auto;
+  align-items: stretch;
+}
+
+.crm-flyer-actions .crm-card-action {
+  width: auto;
+  min-width: 138px;
+}
+
+.crm-flyer-stage {
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--crm-line);
+  border-radius: 22px;
+  background: rgba(16, 20, 23, 0.04);
+}
+
+.crm-flyer-image {
+  display: block;
+  width: min(100%, 560px);
+  height: auto;
+  margin: 0 auto;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 50px rgba(16, 20, 23, 0.14);
+}
+
 .crm-header {
   display: flex;
   justify-content: space-between;
@@ -763,6 +833,21 @@ body[data-crm-skin="intel-ops"] .crm-system-status {
 body[data-crm-skin="executive-steel"] .crm-system-status {
   background: rgba(20, 38, 61, 0.04);
   border-color: rgba(20, 38, 61, 0.1);
+}
+
+body[data-crm-skin="goku-blue"] .crm-flyer-stage {
+  background: rgba(97, 214, 255, 0.07);
+  border-color: rgba(97, 214, 255, 0.14);
+}
+
+body[data-crm-skin="intel-ops"] .crm-flyer-stage {
+  background: rgba(111, 255, 170, 0.06);
+  border-color: rgba(111, 255, 170, 0.12);
+}
+
+body[data-crm-skin="executive-steel"] .crm-flyer-stage {
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0.98) 0%, rgba(239, 244, 248, 0.94) 100%);
+  border-color: rgba(20, 38, 61, 0.08);
 }
 
 body[data-crm-skin="goku-blue"] .crm-mobile-shell,
@@ -1852,6 +1937,27 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 }
 
 @media (max-width: 1080px) {
+  .crm-flyer-overlay {
+    padding: 14px;
+  }
+
+  .crm-flyer-dialog {
+    max-height: calc(100vh - 28px);
+    padding: 16px;
+  }
+
+  .crm-flyer-toolbar {
+    flex-direction: column;
+  }
+
+  .crm-flyer-actions {
+    width: 100%;
+  }
+
+  .crm-flyer-actions .crm-card-action {
+    width: 100%;
+  }
+
   .crm-mobile-shell {
     display: grid;
     position: sticky;
@@ -1927,6 +2033,16 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
     position: static;
     width: min(100%, 340px);
     margin-top: 10px;
+  }
+
+  .crm-flyer-stage {
+    padding: 8px;
+    border-radius: 18px;
+  }
+
+  .crm-flyer-image {
+    width: 100%;
+    border-radius: 14px;
   }
 
   .crm-quick-actions,
