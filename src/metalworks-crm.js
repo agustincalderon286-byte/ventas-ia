@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import http2 from "node:http2";
 import path from "node:path";
 
+import { buildThumbtackWebhookEvent } from "./thumbtack-webhook.js";
+
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
@@ -12,6 +14,8 @@ const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
+const METALWORKS_THUMBTACK_PROFILE_URL =
+  "https://www.thumbtack.com/il/blue-island/metal-fabricators/chicago-metal-works-fencing/service/456785560962318359";
 const METALWORKS_DEFAULT_CLIENT_WARRANTY =
   "Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and any exclusions follow the written agreement for this job.";
 const METALWORKS_CRM_USER_PROFILES = {
@@ -47,6 +51,10 @@ const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
 const METALWORKS_EXTERNAL_SYNC_TOKEN = String(
   process.env.METALWORKS_EXTERNAL_SYNC_TOKEN || "",
 ).trim();
+const THUMBTACK_WEBHOOK_USERNAME =
+  cleanText(process.env.THUMBTACK_WEBHOOK_USERNAME || "thumbtack", 120) || "thumbtack";
+const THUMBTACK_WEBHOOK_PASSWORD = String(process.env.THUMBTACK_WEBHOOK_PASSWORD || "").trim();
+const THUMBTACK_WEBHOOK_TOKEN = String(process.env.THUMBTACK_WEBHOOK_TOKEN || "").trim();
 const METALWORKS_IOS_APP_BUNDLE_ID = "com.agustincalderon.agustin2";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
@@ -256,6 +264,32 @@ function compareSecrets(input = "", expected = "") {
   return crypto.timingSafeEqual(left, right);
 }
 
+function parseBasicAuthorizationHeader(header = "") {
+  const value = String(header || "").trim();
+
+  if (!/^Basic\s+/i.test(value)) {
+    return { username: "", password: "" };
+  }
+
+  try {
+    const decoded = Buffer.from(value.replace(/^Basic\s+/i, "").trim(), "base64").toString(
+      "utf8",
+    );
+    const separatorIndex = decoded.indexOf(":");
+
+    if (separatorIndex === -1) {
+      return { username: "", password: "" };
+    }
+
+    return {
+      username: cleanText(decoded.slice(0, separatorIndex), 160),
+      password: decoded.slice(separatorIndex + 1).trim(),
+    };
+  } catch (error) {
+    return { username: "", password: "" };
+  }
+}
+
 function getClientIp(req) {
   const forwarded = String(req.headers["x-forwarded-for"] || "")
     .split(",")
@@ -273,6 +307,56 @@ function getExternalSyncToken(req) {
   }
 
   return cleanText(req.headers["x-metalworks-sync-token"] || "", 240);
+}
+
+function thumbtackWebhookConfigured() {
+  return Boolean(THUMBTACK_WEBHOOK_PASSWORD || THUMBTACK_WEBHOOK_TOKEN);
+}
+
+function requestHasThumbtackWebhookAccess(req) {
+  if (THUMBTACK_WEBHOOK_PASSWORD) {
+    const basicAuth = parseBasicAuthorizationHeader(req.headers.authorization || "");
+
+    if (
+      compareSecrets(basicAuth.username, THUMBTACK_WEBHOOK_USERNAME) &&
+      compareSecrets(basicAuth.password, THUMBTACK_WEBHOOK_PASSWORD)
+    ) {
+      return true;
+    }
+  }
+
+  if (THUMBTACK_WEBHOOK_TOKEN) {
+    const token = getExternalSyncToken(req);
+
+    if (compareSecrets(token, THUMBTACK_WEBHOOK_TOKEN)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function shouldApplyExternalLeadStatus(currentStatus = "", incomingStatus = "") {
+  const current = cleanText(currentStatus || "", 24).toLowerCase();
+  const next = cleanText(incomingStatus || "", 24).toLowerCase();
+
+  if (!next || next === current) {
+    return false;
+  }
+
+  if (!current || current === "new") {
+    return true;
+  }
+
+  if (next === "won" || next === "lost") {
+    return true;
+  }
+
+  if (current === "contacted" && next === "quoted") {
+    return true;
+  }
+
+  return false;
 }
 
 function getAllowedEmails() {
@@ -4093,8 +4177,6 @@ function buildMetalworksDirectWhatsAppUrl() {
 function buildMetalworksCrmResourceSections() {
   const websiteBase = METALWORKS_WEBSITE_URL.replace(/\/$/, "");
   const directWhatsAppUrl = buildMetalworksDirectWhatsAppUrl();
-  const thumbtackProfileUrl =
-    "https://www.thumbtack.com/il/blue-island/metal-fabricators/chicago-metal-works-fencing/service/456785560962318359";
   const sections = [
     {
       id: "public-links",
@@ -4182,7 +4264,7 @@ function buildMetalworksCrmResourceSections() {
           id: "thumbtack-profile",
           label: "Thumbtack Profile",
           description: "Public Thumbtack profile and reviews.",
-          url: thumbtackProfileUrl,
+          url: METALWORKS_THUMBTACK_PROFILE_URL,
           symbol: "star.fill",
         },
         {
@@ -5145,6 +5227,205 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
       tracking: buildTrackingPayload(tracking),
     });
+  }
+
+  function createRequestError(statusCode = 500, message = "Request error") {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+  }
+
+  async function upsertExternalLeadRecord({
+    externalLeadId = "",
+    externalSystem = "external_sync",
+    fullName = "",
+    phone = "",
+    phoneDisplay = "",
+    email = "",
+    projectType = "",
+    location = "",
+    details = "",
+    sourceType = "",
+    pageTitle = "",
+    pagePath = "",
+    pageUrl = "",
+    referrer = "",
+    tracking = {},
+    parsedFiles = [],
+    rawPhotoFileNames = [],
+    req = null,
+    crmStatus = "new",
+    requirePhone = true,
+  } = {}) {
+    const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+    const safeExternalSystem = cleanText(externalSystem || "", 80) || "external_sync";
+    const safeFullName = cleanText(fullName || "", 120);
+    const safePhoneDisplay = cleanText(phoneDisplay || phone || "", 40);
+    const safePhone = normalizePhone(phone || phoneDisplay || "");
+    const safeEmail = normalizeEmail(email || "");
+    const safeProjectType = cleanText(projectType || "", 120);
+    const safeLocation = cleanText(location || "", 160);
+    const safeDetails = cleanText(details || "", 3000);
+    const safeSourceType = cleanText(sourceType || "", 80) || safeExternalSystem;
+    const safePageTitle = cleanText(pageTitle || "", 160);
+    const safePagePath = cleanText(pagePath || "", 240);
+    const safePageUrl = cleanText(pageUrl || "", 500);
+    const safeReferrer = cleanText(referrer || "", 500);
+    const safeTracking = buildTrackingPayload(tracking || {});
+    const safeCrmStatus = METALWORKS_CRM_STATUS_OPTIONS.includes(cleanText(crmStatus || "", 24))
+      ? cleanText(crmStatus || "", 24)
+      : "new";
+    const safeParsedFiles = Array.isArray(parsedFiles)
+      ? parsedFiles.slice(0, METALWORKS_LEAD_ASSET_MAX_FILES)
+      : [];
+    const safeRawPhotoFileNames = Array.isArray(rawPhotoFileNames)
+      ? rawPhotoFileNames
+          .map((item) => cleanText(item, 120))
+          .filter(Boolean)
+          .slice(0, 20)
+      : [];
+    const photoFileNames = mergeAssistantUniqueValues(
+      safeRawPhotoFileNames,
+      ...safeParsedFiles.map((item) => item.fileName || ""),
+    ).slice(0, 20);
+
+    if (!safeExternalLeadId) {
+      throw createRequestError(400, "Missing external lead id.");
+    }
+
+    if (!safeFullName) {
+      throw createRequestError(400, "The full name is required.");
+    }
+
+    if (requirePhone && !safePhone) {
+      throw createRequestError(400, "The phone number is required.");
+    }
+
+    if (!safeDetails) {
+      throw createRequestError(400, "The lead details are required.");
+    }
+
+    const now = new Date();
+    let leadDoc = await MetalworksLead.findOne({
+      sourceExternalId: safeExternalLeadId,
+    }).sort({ updatedAt: -1, createdAt: -1 });
+    const duplicate = Boolean(leadDoc);
+
+    if (leadDoc) {
+      leadDoc.fullName = safeFullName || leadDoc.fullName;
+      leadDoc.phone = safePhone || leadDoc.phone || "";
+      leadDoc.phoneDisplay =
+        safePhoneDisplay || safePhone || leadDoc.phoneDisplay || leadDoc.phone || "";
+      leadDoc.email = safeEmail || leadDoc.email || "";
+      leadDoc.projectType = safeProjectType || leadDoc.projectType || "";
+      leadDoc.location = safeLocation || leadDoc.location || "";
+      leadDoc.details = safeDetails || leadDoc.details || "";
+      leadDoc.photoFileNames = photoFileNames.length
+        ? photoFileNames
+        : Array.isArray(leadDoc.photoFileNames)
+          ? leadDoc.photoFileNames
+          : [];
+      leadDoc.sourceType = safeSourceType;
+      leadDoc.sourceExternalId = safeExternalLeadId;
+      leadDoc.sourceExternalSystem = safeExternalSystem;
+      leadDoc.pageTitle = safePageTitle || leadDoc.pageTitle || "";
+      leadDoc.pagePath = safePagePath || leadDoc.pagePath || "";
+      leadDoc.pageUrl = safePageUrl || leadDoc.pageUrl || "";
+      leadDoc.referrer = safeReferrer || leadDoc.referrer || "";
+      leadDoc.ipAddress = req ? cleanText(getClientIp(req), 120) : leadDoc.ipAddress || "";
+      leadDoc.userAgent =
+        req ? cleanText(req.headers["user-agent"] || "", 400) : leadDoc.userAgent || "";
+      leadDoc.tracking = safeTracking;
+
+      if (shouldApplyExternalLeadStatus(leadDoc.status || "", safeCrmStatus)) {
+        leadDoc.status = safeCrmStatus;
+      }
+
+      leadDoc.updatedAt = now;
+      await leadDoc.save();
+    } else {
+      leadDoc = await MetalworksLead.create({
+        fullName: safeFullName,
+        phone: safePhone,
+        phoneDisplay: safePhoneDisplay || safePhone,
+        email: safeEmail,
+        projectType: safeProjectType,
+        location: safeLocation,
+        details: safeDetails,
+        photoFileNames,
+        status: safeCrmStatus,
+        sourceType: safeSourceType,
+        sourceExternalId: safeExternalLeadId,
+        sourceExternalSystem: safeExternalSystem,
+        pageTitle: safePageTitle,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        referrer: safeReferrer,
+        ipAddress: req ? cleanText(getClientIp(req), 120) : "",
+        userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
+        tracking: safeTracking,
+        updatedAt: now,
+        createdAt: now,
+      });
+    }
+
+    let syncedAssetCount = 0;
+
+    if (leadDoc?._id && safeParsedFiles.length) {
+      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+        .select("fileName sizeBytes")
+        .lean();
+      const existingKeys = new Set(
+        existingAssets.map(
+          (item) =>
+            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+        ),
+      );
+      const newFiles = safeParsedFiles.filter((item) => {
+        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+          item.sizeBytes || 0,
+        )}`;
+
+        if (existingKeys.has(key)) {
+          return false;
+        }
+
+        existingKeys.add(key);
+        return true;
+      });
+
+      if (newFiles.length) {
+        await Promise.all(
+          newFiles.map((item) =>
+            MetalworksLeadAsset.create({
+              leadId: leadDoc._id,
+              sourceType: safeSourceType,
+              fileName: item.fileName,
+              mimeType: item.mimeType,
+              sizeBytes: item.sizeBytes,
+              fileData: item.fileData,
+              uploadedAt: now,
+              updatedAt: now,
+              createdAt: now,
+            }),
+          ),
+        );
+        syncedAssetCount = newFiles.length;
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          ...newFiles.map((item) => item.fileName || ""),
+        ).slice(0, 20);
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      }
+    }
+
+    return {
+      duplicate,
+      syncedAssetCount,
+      photoFileNames,
+      leadDoc,
+    };
   }
 
   async function syncLeadAssetsToLead({
@@ -8399,79 +8680,31 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             .filter(Boolean)
             .slice(0, 20)
         : [];
-      const photoFileNames = mergeAssistantUniqueValues(
-        rawPhotoFileNames,
-        ...parsedFiles.map((item) => item.fileName || ""),
-      ).slice(0, 20);
-
-      if (!externalLeadId) {
-        return respondError(res, 400, "Missing external lead id.");
-      }
-
-      if (!fullName) {
-        return respondError(res, 400, "The full name is required.");
-      }
-
-      if (!phone) {
-        return respondError(res, 400, "The phone number is required.");
-      }
-
-      if (!details) {
-        return respondError(res, 400, "The lead details are required.");
-      }
-
-      const now = new Date();
-      let leadDoc = await MetalworksLead.findOne({
-        sourceExternalId: externalLeadId,
-      }).sort({ updatedAt: -1, createdAt: -1 });
-      const duplicate = Boolean(leadDoc);
-
-      if (leadDoc) {
-        leadDoc.fullName = fullName;
-        leadDoc.phone = phone;
-        leadDoc.phoneDisplay = phoneDisplay || phone;
-        leadDoc.email = email;
-        leadDoc.projectType = projectType;
-        leadDoc.location = location;
-        leadDoc.details = details;
-        leadDoc.photoFileNames = photoFileNames;
-        leadDoc.sourceType = sourceType;
-        leadDoc.sourceExternalId = externalLeadId;
-        leadDoc.sourceExternalSystem = externalSystem;
-        leadDoc.pageTitle = pageTitle;
-        leadDoc.pagePath = pagePath;
-        leadDoc.pageUrl = pageUrl;
-        leadDoc.referrer = referrer;
-        leadDoc.ipAddress = cleanText(getClientIp(req), 120);
-        leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
-        leadDoc.tracking = tracking;
-        leadDoc.updatedAt = now;
-        await leadDoc.save();
-      } else {
-        leadDoc = await MetalworksLead.create({
+      const { duplicate, syncedAssetCount, photoFileNames, leadDoc } =
+        await upsertExternalLeadRecord({
+          externalLeadId,
+          externalSystem,
           fullName,
           phone,
-          phoneDisplay: phoneDisplay || phone,
+          phoneDisplay,
           email,
           projectType,
           location,
           details,
-          photoFileNames,
-          status: "new",
           sourceType,
-          sourceExternalId: externalLeadId,
-          sourceExternalSystem: externalSystem,
           pageTitle,
           pagePath,
           pageUrl,
           referrer,
-          ipAddress: cleanText(getClientIp(req), 120),
-          userAgent: cleanText(req.headers["user-agent"] || "", 400),
           tracking,
-          updatedAt: now,
-          createdAt: now,
+          parsedFiles,
+          rawPhotoFileNames,
+          req,
+          crmStatus: "new",
+          requirePhone: true,
         });
 
+      if (!duplicate) {
         await appendActivity({
           leadId: leadDoc._id,
           activityType: "lead_created",
@@ -8488,57 +8721,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           pageUrl,
           tracking,
         });
-      }
-
-      let syncedAssetCount = 0;
-
-      if (leadDoc?._id && parsedFiles.length) {
-        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
-          .select("fileName sizeBytes")
-          .lean();
-        const existingKeys = new Set(
-          existingAssets.map(
-            (item) =>
-              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
-          ),
-        );
-        const newFiles = parsedFiles.filter((item) => {
-          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
-            item.sizeBytes || 0,
-          )}`;
-
-          if (existingKeys.has(key)) {
-            return false;
-          }
-
-          existingKeys.add(key);
-          return true;
-        });
-
-        if (newFiles.length) {
-          await Promise.all(
-            newFiles.map((item) =>
-              MetalworksLeadAsset.create({
-                leadId: leadDoc._id,
-                sourceType,
-                fileName: item.fileName,
-                mimeType: item.mimeType,
-                sizeBytes: item.sizeBytes,
-                fileData: item.fileData,
-                uploadedAt: now,
-                updatedAt: now,
-                createdAt: now,
-              }),
-            ),
-          );
-          syncedAssetCount = newFiles.length;
-          leadDoc.photoFileNames = mergeAssistantUniqueValues(
-            leadDoc.photoFileNames || [],
-            ...newFiles.map((item) => item.fileName || ""),
-          ).slice(0, 20);
-          leadDoc.updatedAt = now;
-          await leadDoc.save();
-        }
       }
 
       await appendActivity({
@@ -8586,9 +8768,143 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error saving external Metal Works lead:", error.message);
-      respondError(res, 500, "No pude sincronizar este lead externo.");
+      respondError(
+        res,
+        error?.statusCode || 500,
+        error?.statusCode ? error.message : "No pude sincronizar este lead externo.",
+      );
     }
   });
+
+  app.post(
+    ["/integrations/thumbtack/webhook", "/api/integrations/thumbtack/webhook"],
+    async (req, res) => {
+      try {
+        if (!thumbtackWebhookConfigured()) {
+          return respondError(
+            res,
+            503,
+            "Thumbtack webhook auth is not configured yet.",
+          );
+        }
+
+        if (!requestHasThumbtackWebhookAccess(req)) {
+          res.setHeader("WWW-Authenticate", 'Basic realm="Thumbtack Webhook"');
+          return respondError(res, 401, "Unauthorized Thumbtack webhook request.");
+        }
+
+        const parsedEvent = buildThumbtackWebhookEvent(req.body || {});
+        const tracking = buildTrackingPayload({
+          utmSource: "thumbtack",
+          utmMedium: "webhook",
+          utmCampaign: parsedEvent.eventType || "",
+        });
+        const pagePath = "/integrations/thumbtack/webhook";
+        const pageUrl = METALWORKS_THUMBTACK_PROFILE_URL;
+        let leadDoc = null;
+        let duplicate = false;
+        let syncedAssetCount = 0;
+
+        if (parsedEvent.leadCandidate) {
+          const syncResult = await upsertExternalLeadRecord({
+            externalLeadId: parsedEvent.leadCandidate.externalLeadId,
+            externalSystem: parsedEvent.leadCandidate.externalSystem,
+            fullName: parsedEvent.leadCandidate.fullName,
+            phone: parsedEvent.leadCandidate.phone,
+            phoneDisplay: parsedEvent.leadCandidate.phoneDisplay,
+            email: parsedEvent.leadCandidate.email,
+            projectType: parsedEvent.leadCandidate.projectType,
+            location: parsedEvent.leadCandidate.location,
+            details: parsedEvent.leadCandidate.details,
+            sourceType: parsedEvent.leadCandidate.sourceType,
+            pageTitle: "Thumbtack",
+            pagePath,
+            pageUrl,
+            referrer: pageUrl,
+            tracking,
+            parsedFiles: [],
+            rawPhotoFileNames: [],
+            req,
+            crmStatus: parsedEvent.leadCandidate.crmStatus || "new",
+            requirePhone: false,
+          });
+
+          leadDoc = syncResult.leadDoc;
+          duplicate = syncResult.duplicate;
+          syncedAssetCount = syncResult.syncedAssetCount;
+
+          if (!duplicate) {
+            await appendActivity({
+              leadId: leadDoc._id,
+              activityType: "lead_created",
+              title: "Lead creado",
+              body: `${parsedEvent.leadCandidate.fullName} entro desde Thumbtack.`,
+              meta: {
+                externalLeadId: parsedEvent.leadCandidate.externalLeadId,
+                externalSystem: "thumbtack",
+                eventType: parsedEvent.eventType,
+                entityType: parsedEvent.entityType,
+              },
+              req,
+              pagePath,
+              pageUrl,
+              tracking,
+            });
+          }
+        }
+
+        await appendActivity({
+          leadId: leadDoc?._id || null,
+          activityType: parsedEvent.activity.activityType,
+          title: parsedEvent.activity.title,
+          body: parsedEvent.activity.body,
+          meta: {
+            ...(parsedEvent.activity.meta || {}),
+            duplicate,
+            syncedAssetCount,
+            webhookPayload: req.body || {},
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+
+        let pushDelivery = {
+          attempted: false,
+          delivered: false,
+        };
+
+        if (leadDoc && !duplicate) {
+          try {
+            pushDelivery = await sendMetalworksPushAlert({
+              lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+              alertType: "website_lead",
+            });
+          } catch (error) {
+            console.error("Error sending Thumbtack webhook push:", error.message);
+          }
+        }
+
+        res.json({
+          ok: true,
+          eventType: parsedEvent.eventType || "",
+          entityType: parsedEvent.entityType || "unknown",
+          duplicate,
+          syncedAssetCount,
+          notified: Boolean(pushDelivery.delivered),
+          lead: leadDoc ? cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc) : null,
+        });
+      } catch (error) {
+        console.error("Error handling Thumbtack webhook:", error.message);
+        respondError(
+          res,
+          error?.statusCode || 500,
+          error?.statusCode ? error.message : "No pude procesar el webhook de Thumbtack.",
+        );
+      }
+    },
+  );
 
   app.post("/api/public/metalworks/appointments", async (req, res) => {
     try {
