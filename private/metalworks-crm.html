@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07110c" />
+    <meta name="theme-color" content="#17314d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="CMW CRM" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>Chicago Metal Works CRM</title>
     <link rel="manifest" href="/metalworks-crm/crm.webmanifest" />
-    <link rel="icon" href="/metalworks-crm/operator-icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/metalworks-crm/operator-icon.svg" />
+    <link rel="icon" href="/metalworks-crm/crm-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/crm-icon-180.png" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
   </head>
-  <body class="crm-app-page" data-crm-skin="intel-ops">
+  <body class="crm-app-page" data-crm-skin="executive-steel">
     <div class="crm-shell">
       <header class="crm-header">
         <div>
@@ -80,6 +80,18 @@
       </section>
 
       <section class="crm-summary-grid" data-crm-summary data-crm-mobile-pane-target="more"></section>
+
+      <section class="crm-panel crm-agenda-panel" data-crm-agenda-panel data-crm-mobile-pane-target="more" hidden>
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Agenda</p>
+            <h2>Follow-Up Queue</h2>
+            <p>Callbacks, visits, and scheduled touches that already have a time on the calendar.</p>
+          </div>
+          <span class="crm-chip" data-crm-agenda-count>0 scheduled</span>
+        </div>
+        <div class="crm-agenda-list" data-crm-agenda-list></div>
+      </section>
 
       <section class="crm-panel crm-resource-hub" data-crm-resource-hub data-crm-mobile-pane-target="more" hidden>
         <div class="crm-panel-head crm-panel-head-stack">

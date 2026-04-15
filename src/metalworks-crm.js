@@ -23,18 +23,18 @@ const METALWORKS_DEFAULT_CLIENT_WARRANTY =
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "Clear Day Mode",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "Clear Day Mode",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "goku-blue",
-    themeLabel: "Rigo // Goku Blue Mode",
+    skin: "executive-steel",
+    themeLabel: "Clear Day Mode",
   },
 };
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
@@ -436,7 +436,7 @@ function getMetalworksCrmProfile(email = "") {
   return {
     email: safeEmail,
     displayName: preset.displayName || (safeEmail ? safeEmail.split("@")[0] : "CMWF Admin"),
-    skin: preset.skin || "classic",
+    skin: preset.skin || "executive-steel",
     themeLabel: preset.themeLabel || "",
   };
 }
@@ -7919,19 +7919,50 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return;
     }
 
-    try {
-      const snapshot = await buildDashboardSnapshot(
-        MetalworksLead,
-        MetalworksLeadActivity,
-        MetalworksApplicant,
-        {
-          status: req.query?.status || "",
-          search: req.query?.search || "",
-          projectType: req.query?.projectType || "",
-        },
-      );
+    const filters = {
+      status: req.query?.status || "",
+      search: req.query?.search || "",
+      projectType: req.query?.projectType || "",
+    };
+    const hasFilters = Boolean(
+      cleanText(filters.status || "", 40) ||
+        cleanText(filters.search || "", 120) ||
+        cleanText(filters.projectType || "", 80),
+    );
 
-      res.json(snapshot);
+    try {
+      const [snapshot, agendaSource] = hasFilters
+        ? await Promise.all([
+            buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              filters,
+            ),
+            buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              {},
+            ),
+          ])
+        : [
+            await buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              filters,
+            ),
+            null,
+          ];
+      const agendaSnapshot = buildMetalworksOperatorSnapshot(agendaSource || snapshot);
+
+      res.json({
+        ...snapshot,
+        agendaLeads: Array.isArray(agendaSnapshot?.agendaLeads)
+          ? agendaSnapshot.agendaLeads.slice(0, 8)
+          : [],
+      });
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);
       respondError(res, 500, "No pude cargar el dashboard del CRM.");

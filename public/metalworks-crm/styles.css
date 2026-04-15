@@ -89,6 +89,8 @@ body[data-crm-skin="executive-steel"] {
     radial-gradient(circle at 86% 18%, rgba(39, 76, 119, 0.12), transparent 20%),
     linear-gradient(180deg, #f7f3ed 0%, #eef3f8 48%, #e7edf4 100%);
   font-feature-settings: "liga" 1, "kern" 1;
+  font-size: 17px;
+  line-height: 1.55;
 }
 
 body[data-crm-skin="goku-blue"]::before,
@@ -526,6 +528,7 @@ body[data-crm-skin="executive-steel"] .crm-login-card h1 {
   color: #15273d;
   text-shadow: none;
   letter-spacing: -0.04em;
+  font-size: 2.2rem;
 }
 
 body[data-crm-skin="executive-steel"] .crm-panel-head h2,
@@ -534,6 +537,66 @@ body[data-crm-skin="executive-steel"] .crm-upload-panel-head strong {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   letter-spacing: -0.02em;
   color: #15273d;
+}
+
+body[data-crm-skin="executive-steel"] .crm-subtitle,
+body[data-crm-skin="executive-steel"] .crm-panel-head p,
+body[data-crm-skin="executive-steel"] .crm-empty-state,
+body[data-crm-skin="executive-steel"] .crm-form-result,
+body[data-crm-skin="executive-steel"] .crm-detail-meta,
+body[data-crm-skin="executive-steel"] .crm-lead-card-meta,
+body[data-crm-skin="executive-steel"] .crm-activity-meta,
+body[data-crm-skin="executive-steel"] .crm-lead-card-summary,
+body[data-crm-skin="executive-steel"] .crm-resource-url,
+body[data-crm-skin="executive-steel"] .crm-resource-copy p,
+body[data-crm-skin="executive-steel"] .crm-agenda-card-head p {
+  font-size: 1rem;
+}
+
+body[data-crm-skin="executive-steel"] .crm-login-form label,
+body[data-crm-skin="executive-steel"] .crm-toolbar label,
+body[data-crm-skin="executive-steel"] .crm-detail-form label,
+body[data-crm-skin="executive-steel"] .crm-prospector-form label,
+body[data-crm-skin="executive-steel"] .crm-prospector-admin-form label {
+  font-size: 1rem;
+}
+
+body[data-crm-skin="executive-steel"] .crm-login-form input,
+body[data-crm-skin="executive-steel"] .crm-toolbar input,
+body[data-crm-skin="executive-steel"] .crm-toolbar select,
+body[data-crm-skin="executive-steel"] .crm-detail-form input,
+body[data-crm-skin="executive-steel"] .crm-detail-form select,
+body[data-crm-skin="executive-steel"] .crm-detail-form textarea,
+body[data-crm-skin="executive-steel"] .crm-prospector-form input,
+body[data-crm-skin="executive-steel"] .crm-prospector-form select,
+body[data-crm-skin="executive-steel"] .crm-prospector-form textarea,
+body[data-crm-skin="executive-steel"] .crm-prospector-admin-form input {
+  font-size: 1rem;
+  padding: 15px 17px;
+}
+
+body[data-crm-skin="executive-steel"] .crm-user-chip,
+body[data-crm-skin="executive-steel"] .crm-theme-badge,
+body[data-crm-skin="executive-steel"] .crm-login-alias,
+body[data-crm-skin="executive-steel"] .crm-chip,
+body[data-crm-skin="executive-steel"] .crm-card-action,
+body[data-crm-skin="executive-steel"] .crm-secondary-button {
+  font-size: 0.98rem;
+}
+
+body[data-crm-skin="executive-steel"] .crm-summary-card strong {
+  font-size: 2.2rem;
+}
+
+body[data-crm-skin="executive-steel"] .crm-summary-card span,
+body[data-crm-skin="executive-steel"] .crm-photo-card span {
+  font-size: 0.98rem;
+}
+
+body[data-crm-skin="executive-steel"] .crm-lead-card h3,
+body[data-crm-skin="executive-steel"] .crm-activity-card h3,
+body[data-crm-skin="executive-steel"] .crm-agenda-card h3 {
+  font-size: 1.08rem;
 }
 
 body[data-crm-skin="goku-blue"] .crm-eyebrow {
@@ -952,6 +1015,40 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
+}
+
+.crm-agenda-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.crm-agenda-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.crm-agenda-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(20, 38, 61, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  cursor: pointer;
+}
+
+.crm-agenda-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.crm-agenda-card-head p {
+  margin: 6px 0 0;
+  color: var(--crm-muted);
 }
 
 .crm-resource-hub {
@@ -1972,6 +2069,7 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
   }
 
   .crm-summary-grid,
+  .crm-agenda-list,
   .crm-resource-grid,
   .crm-prospector-admin-grid,
   .crm-toolbar,

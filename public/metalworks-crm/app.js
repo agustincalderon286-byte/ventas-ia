@@ -291,6 +291,9 @@ const state = {
 };
 
 const summaryWrap = document.querySelector("[data-crm-summary]");
+const agendaPanel = document.querySelector("[data-crm-agenda-panel]");
+const agendaList = document.querySelector("[data-crm-agenda-list]");
+const agendaCount = document.querySelector("[data-crm-agenda-count]");
 const resourceHub = document.querySelector("[data-crm-resource-hub]");
 const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
 const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
@@ -1555,6 +1558,107 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
       `,
     )
     .join("");
+}
+
+async function openAgendaLead(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return;
+  }
+
+  if (state.view !== "leads") {
+    await setCrmView("leads");
+  }
+
+  rememberSelectedLead(safeLeadId);
+
+  if (state.dashboard?.leads) {
+    renderLeadList(state.dashboard.leads || []);
+  }
+
+  await loadLeadDetail(safeLeadId);
+  openMobileWorkspacePane();
+  scrollDetailIntoView();
+}
+
+function renderAgenda(leads = []) {
+  if (!agendaPanel || !agendaList || !agendaCount) {
+    return;
+  }
+
+  const safeLeads = Array.isArray(leads) ? leads.filter((lead) => lead?.id) : [];
+
+  agendaPanel.hidden = !safeLeads.length;
+  agendaCount.textContent = `${safeLeads.length} scheduled`;
+
+  if (!safeLeads.length) {
+    agendaList.innerHTML = "";
+    return;
+  }
+
+  agendaList.innerHTML = safeLeads
+    .map((lead) => {
+      const phoneDigits = getLeadPhoneDigits(lead);
+      const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
+
+      return `
+        <article class="crm-agenda-card" data-crm-agenda-lead-id="${escapeHtml(lead.id)}">
+          <div class="crm-agenda-card-head">
+            <div>
+              <h3>${escapeHtml(lead.fullName || "Unknown lead")}</h3>
+              <p>${escapeHtml(lead.projectType || "Service not set")} · ${escapeHtml(lead.location || lead.phoneDisplay || lead.email || "")}</p>
+            </div>
+            <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
+              ${escapeHtml(lead.statusLabel || "Open")}
+            </span>
+          </div>
+          <div class="crm-micro-list">
+            <span class="crm-chip">${escapeHtml(scheduleLabel)}</span>
+            ${lead.nextAction ? `<span class="crm-chip">${escapeHtml(lead.nextAction)}</span>` : ""}
+            ${lead.callbackIntent === "yes" ? '<span class="crm-chip">Callback</span>' : ""}
+          </div>
+          <div class="crm-lead-card-summary">
+            <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
+          </div>
+          <div class="crm-card-actions">
+            <button type="button" class="crm-card-action" data-crm-agenda-open="${escapeHtml(lead.id)}">
+              Open
+            </button>
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Call</a>`
+                : ""
+            }
+            ${
+              phoneDigits
+                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Text</a>`
+                : ""
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  agendaList.querySelectorAll("[data-crm-agenda-prevent]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  agendaList.querySelectorAll("[data-crm-agenda-open]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await openAgendaLead(button.getAttribute("data-crm-agenda-open") || "");
+    });
+  });
+
+  agendaList.querySelectorAll("[data-crm-agenda-lead-id]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      await openAgendaLead(card.getAttribute("data-crm-agenda-lead-id") || "");
+    });
+  });
 }
 
 function setResourceFeedback(message = "", tone = "muted") {
@@ -2901,6 +3005,7 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
+  renderAgenda(dashboard.agendaLeads || []);
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
 
   if (globalActivitySummary) {

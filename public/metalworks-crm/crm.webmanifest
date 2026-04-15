@@ -6,15 +6,27 @@
   "start_url": "/metalworks-crm/",
   "scope": "/metalworks-crm/",
   "display": "standalone",
-  "background_color": "#07110c",
-  "theme_color": "#07110c",
+  "background_color": "#eef3f8",
+  "theme_color": "#17314d",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/metalworks-crm/operator-icon.svg",
+      "src": "/metalworks-crm/crm-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/metalworks-crm/crm-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/metalworks-crm/crm-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

@@ -1,10 +1,14 @@
-const CACHE_NAME = "cmwf-operator-shell-v2";
+const CACHE_NAME = "cmwf-operator-shell-v3";
 const SHELL_URLS = [
   "/metalworks-crm/",
   "/metalworks-crm/operator/",
   "/metalworks-crm/app.js",
   "/metalworks-crm/styles.css",
   "/metalworks-crm/crm.webmanifest",
+  "/metalworks-crm/crm-icon.svg",
+  "/metalworks-crm/crm-icon-180.png",
+  "/metalworks-crm/crm-icon-192.png",
+  "/metalworks-crm/crm-icon-512.png",
   "/metalworks-crm/operator-mobile.css",
   "/metalworks-crm/operator-mobile.js",
   "/metalworks-crm/operator.webmanifest",
@@ -90,8 +94,8 @@ self.addEventListener("push", (event) => {
     Promise.all([
       self.registration.showNotification(title, {
         body,
-        icon: "/metalworks-crm/operator-icon.svg",
-        badge: "/metalworks-crm/operator-icon.svg",
+        icon: "/metalworks-crm/crm-icon-192.png",
+        badge: "/metalworks-crm/crm-icon-192.png",
         data: {
           url,
         },
