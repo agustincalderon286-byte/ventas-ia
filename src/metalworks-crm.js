@@ -219,6 +219,21 @@ function parseEmailList(value = "") {
     .filter(Boolean);
 }
 
+function parseJsonObject(value = "") {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function getMetalworksNotificationEmails() {
   return Array.from(
     new Set(
@@ -373,10 +388,13 @@ function shouldApplyExternalLeadStatus(currentStatus = "", incomingStatus = "") 
 }
 
 function getAllowedEmails() {
+  const passwordOverrides = Object.keys(getMetalworksUserPasswordOverrides());
+
   return Array.from(
     new Set([
       METALWORKS_CRM_DEFAULT_EMAIL,
       ...Object.keys(METALWORKS_CRM_USER_PROFILES),
+      ...passwordOverrides,
       ...parseEmailList(process.env.METALWORKS_CRM_ALLOWED_EMAILS || ""),
     ]),
   ).filter(Boolean);
@@ -386,8 +404,40 @@ function getMetalworksPassword() {
   return String(process.env.METALWORKS_CRM_PASSWORD || "").trim();
 }
 
+function getMetalworksUserPasswordOverrides() {
+  const source = parseJsonObject(process.env.METALWORKS_CRM_USER_PASSWORDS_JSON || "");
+  const normalized = {};
+
+  Object.entries(source).forEach(([email, password]) => {
+    const safeEmail = normalizeEmail(email || "");
+    const safePassword = normalizePasswordInput(password || "");
+
+    if (!safeEmail || !safePassword) {
+      return;
+    }
+
+    normalized[safeEmail] = safePassword;
+  });
+
+  return normalized;
+}
+
+function getMetalworksPasswordForEmail(email = "") {
+  const safeEmail = normalizeEmail(email || "");
+  const overrides = getMetalworksUserPasswordOverrides();
+
+  if (safeEmail && overrides[safeEmail]) {
+    return overrides[safeEmail];
+  }
+
+  return getMetalworksPassword();
+}
+
 function metalworksCrmConfigured() {
-  return Boolean(getAllowedEmails().length && getMetalworksPassword());
+  return Boolean(
+    getAllowedEmails().length &&
+      (getMetalworksPassword() || Object.keys(getMetalworksUserPasswordOverrides()).length),
+  );
 }
 
 function normalizeProspectorStatus(value = "") {
@@ -7665,13 +7715,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const email = normalizeEmail(req.body?.email || "");
     const password = String(req.body?.password || "");
     const allowedEmails = getAllowedEmails();
-    const expectedPassword = getMetalworksPassword();
+    const expectedPassword = getMetalworksPasswordForEmail(email);
 
     if (!metalworksCrmConfigured()) {
       return respondError(
         res,
         503,
-        "Primero configura METALWORKS_CRM_PASSWORD en el backend.",
+        "Primero configura METALWORKS_CRM_PASSWORD o METALWORKS_CRM_USER_PASSWORDS_JSON en el backend.",
       );
     }
 
@@ -7681,6 +7731,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     if (!allowedEmails.includes(email)) {
       return respondError(res, 403, "Ese correo no tiene acceso al CRM.");
+    }
+
+    if (!expectedPassword) {
+      return respondError(res, 403, "Ese correo no tiene password configurado para el CRM.");
     }
 
     if (!compareSecrets(password, expectedPassword)) {
