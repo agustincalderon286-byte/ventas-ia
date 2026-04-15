@@ -1,0 +1,20 @@
+{
+  "name": "CMW Operator",
+  "short_name": "CMW Operator",
+  "id": "/metalworks-crm/operator/",
+  "description": "Mobile operator workspace for Chicago Metal Works & Fencing lead follow-up.",
+  "start_url": "/metalworks-crm/operator/",
+  "scope": "/metalworks-crm/",
+  "display": "standalone",
+  "background_color": "#07110c",
+  "theme_color": "#07110c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/metalworks-crm/operator-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

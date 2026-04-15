@@ -3,6 +3,8 @@ const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
 const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
 const OPERATOR_CHAT_HISTORY_STORAGE_KEY = "cmwf_operator_chat_history_v1";
+const OPERATOR_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
+const OPERATOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
 const OPERATOR_STATUS_OPTIONS = [
   { value: "new", label: "Nuevo" },
   { value: "contacted", label: "Contacted" },
@@ -246,6 +248,9 @@ const themeBadge = document.querySelector("[data-operator-theme-badge]");
 const refreshButton = document.querySelector("[data-operator-refresh]");
 const logoutButton = document.querySelector("[data-operator-logout]");
 const openCrmButton = document.querySelector("[data-operator-open-crm]");
+const enablePushButton = document.querySelector("[data-operator-enable-push]");
+const testPushButton = document.querySelector("[data-operator-test-push]");
+const pushFeedback = document.querySelector("[data-operator-push-feedback]");
 const detailWrap = document.querySelector("[data-operator-detail-wrap]");
 const detailEmpty = document.querySelector("[data-operator-detail-empty]");
 const detailHeading = document.querySelector("[data-operator-detail-heading]");
@@ -274,6 +279,10 @@ const state = {
     ? readStoredJson(OPERATOR_CHAT_HISTORY_STORAGE_KEY, [])
     : [],
   loadingSnapshot: false,
+  pushConfig: null,
+  pushRegistration: null,
+  pushSubscription: null,
+  pushBusy: false,
 };
 
 function setStatus(message = "", tone = "") {
@@ -302,6 +311,154 @@ function setChatFeedback(message = "", tone = "") {
 
   chatFeedback.textContent = message;
   chatFeedback.dataset.tone = tone;
+}
+
+function setPushFeedback(message = "", tone = "") {
+  if (!pushFeedback) {
+    return;
+  }
+
+  pushFeedback.textContent = message;
+  pushFeedback.dataset.tone = tone;
+}
+
+function supportsWebPush() {
+  return Boolean(
+    window.isSecureContext &&
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window,
+  );
+}
+
+function isAppleMobileDevice() {
+  return /iphone|ipad|ipod/i.test(String(navigator.userAgent || ""));
+}
+
+function isStandaloneApp() {
+  try {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
+  } catch {
+    return window.navigator.standalone === true;
+  }
+}
+
+function needsHomeScreenInstallForPush() {
+  return isAppleMobileDevice() && !isStandaloneApp();
+}
+
+function supportsAppBadge() {
+  return Boolean("setAppBadge" in navigator || "clearAppBadge" in navigator);
+}
+
+async function clearOperatorBadge() {
+  if (!supportsAppBadge() || !("clearAppBadge" in navigator)) {
+    return;
+  }
+
+  try {
+    await navigator.clearAppBadge();
+  } catch {}
+}
+
+function urlBase64ToUint8Array(value = "") {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+}
+
+function detectBrowserName() {
+  const userAgent = String(navigator.userAgent || "");
+
+  if (/edg\//i.test(userAgent)) return "Edge";
+  if (/opr\//i.test(userAgent)) return "Opera";
+  if (/chrome\//i.test(userAgent) && !/edg\//i.test(userAgent)) return "Chrome";
+  if (/firefox\//i.test(userAgent)) return "Firefox";
+  if (/safari\//i.test(userAgent) && !/chrome\//i.test(userAgent)) return "Safari";
+  return "Browser";
+}
+
+function buildPushDeviceName() {
+  const platform = String(navigator.platform || "device").trim();
+  return `${detectBrowserName()} on ${platform}`.slice(0, 120);
+}
+
+function syncPushControls() {
+  const hasSupport = supportsWebPush();
+  const installRequired = needsHomeScreenInstallForPush();
+  const permission = hasSupport ? Notification.permission : "unsupported";
+  const pushConfigured = Boolean(state.pushConfig?.webPushConfigured);
+  const isEnabled = Boolean(state.pushSubscription && permission === "granted");
+
+  if (enablePushButton) {
+    enablePushButton.disabled =
+      state.pushBusy || !hasSupport || !pushConfigured || installRequired;
+    enablePushButton.textContent = isEnabled
+      ? "Alerts Enabled"
+      : installRequired
+        ? "Install App First"
+      : permission === "denied"
+        ? "Alerts Blocked"
+        : "Enable Alerts";
+  }
+
+  if (testPushButton) {
+    testPushButton.disabled = state.pushBusy || !isEnabled;
+  }
+}
+
+async function registerOperatorServiceWorker() {
+  if (!supportsWebPush()) {
+    return null;
+  }
+
+  if (state.pushRegistration) {
+    return state.pushRegistration;
+  }
+
+  const registration = await navigator.serviceWorker.register(OPERATOR_SERVICE_WORKER_PATH, {
+    scope: OPERATOR_SERVICE_WORKER_SCOPE,
+  });
+  state.pushRegistration = await navigator.serviceWorker.ready;
+  registration.update().catch(() => null);
+  return state.pushRegistration;
+}
+
+async function refreshExistingPushSubscription({ syncServer = false } = {}) {
+  if (!supportsWebPush()) {
+    state.pushSubscription = null;
+    syncPushControls();
+    return null;
+  }
+
+  const registration = await registerOperatorServiceWorker();
+  const subscription = await registration.pushManager.getSubscription();
+  state.pushSubscription = subscription;
+
+  if (
+    syncServer &&
+    subscription &&
+    Notification.permission === "granted" &&
+    state.pushConfig?.webPushConfigured
+  ) {
+    await apiRequest("/api/metalworks-crm/push/web/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        authorizationStatus: Notification.permission,
+        notificationsEnabled: true,
+      },
+    });
+  }
+
+  syncPushControls();
+  return subscription;
 }
 
 function persistSelectedLead(leadId = "") {
@@ -693,6 +850,133 @@ async function loadSnapshot({ silent = false } = {}) {
   }
 }
 
+async function loadPushConfig({ silent = false } = {}) {
+  if (needsHomeScreenInstallForPush()) {
+    setPushFeedback(
+      "On iPhone, add this CRM to your Home Screen first. Then open the installed app and tap Enable Alerts.",
+      "muted",
+    );
+    syncPushControls();
+    return null;
+  }
+
+  if (!supportsWebPush()) {
+    setPushFeedback("This browser does not support secure push notifications.", "muted");
+    syncPushControls();
+    return null;
+  }
+
+  try {
+    state.pushConfig = await apiRequest("/api/metalworks-crm/push/config");
+    await refreshExistingPushSubscription({ syncServer: true });
+
+    if (!state.pushConfig?.webPushConfigured && !silent) {
+      setPushFeedback("Web alerts still need VAPID keys on the server.", "warning");
+    } else if (!state.pushSubscription && Notification.permission === "default" && !silent) {
+      setPushFeedback("Enable alerts to get new lead notifications on this phone.", "muted");
+    } else if (Notification.permission === "denied" && !silent) {
+      setPushFeedback("Browser alerts are blocked for this device.", "warning");
+    } else if (state.pushSubscription && !silent) {
+      setPushFeedback("Lead alerts are active on this device.", "success");
+    }
+
+    syncPushControls();
+    return state.pushConfig;
+  } catch (error) {
+    if (!silent) {
+      setPushFeedback(error.message || "I could not load the alert settings.", "error");
+    }
+    syncPushControls();
+    return null;
+  }
+}
+
+async function handleEnablePush() {
+  if (!supportsWebPush()) {
+    setPushFeedback("This browser does not support secure push notifications.", "error");
+    return;
+  }
+
+  if (!state.pushConfig?.webPushConfigured || !state.pushConfig?.vapidPublicKey) {
+    setPushFeedback("Web alerts still need server keys before this can work.", "warning");
+    syncPushControls();
+    return;
+  }
+
+  state.pushBusy = true;
+  syncPushControls();
+  setPushFeedback("Enabling alerts...", "muted");
+
+  try {
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      setPushFeedback(
+        permission === "denied"
+          ? "Alerts were blocked for this browser."
+          : "Notification permission was not granted.",
+        "warning",
+      );
+      return;
+    }
+
+    const registration = await registerOperatorServiceWorker();
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(state.pushConfig.vapidPublicKey),
+      });
+    }
+
+    await apiRequest("/api/metalworks-crm/push/web/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        authorizationStatus: permission,
+        notificationsEnabled: true,
+      },
+    });
+
+    state.pushSubscription = subscription;
+    setPushFeedback("Lead alerts are active on this device.", "success");
+  } catch (error) {
+    setPushFeedback(error.message || "I could not enable alerts on this browser.", "error");
+  } finally {
+    state.pushBusy = false;
+    syncPushControls();
+  }
+}
+
+async function handleTestPush() {
+  if (!state.pushSubscription) {
+    setPushFeedback("Enable alerts first on this device.", "warning");
+    return;
+  }
+
+  state.pushBusy = true;
+  syncPushControls();
+  setPushFeedback("Sending test alert...", "muted");
+
+  try {
+    const result = await apiRequest("/api/metalworks-crm/push/test", {
+      method: "POST",
+    });
+    setPushFeedback(
+      result.message || "Test alert sent.",
+      result.ok ? "success" : "warning",
+    );
+  } catch (error) {
+    setPushFeedback(error.message || "I could not send the test alert.", "error");
+  } finally {
+    state.pushBusy = false;
+    syncPushControls();
+  }
+}
+
 function openFullCrm(leadId = "") {
   const safeLeadId = String(leadId || "").trim();
 
@@ -855,6 +1139,7 @@ function hydrateStatusOptions() {
 function bindApp() {
   hydrateStatusOptions();
   renderChatHistory();
+  syncPushControls();
   bindCardList(focusList);
   bindCardList(agendaList);
   detailForm?.addEventListener("submit", handleSaveLead);
@@ -867,14 +1152,18 @@ function bindApp() {
   logoutButton?.addEventListener("click", handleLogout);
   openCrmButton?.addEventListener("click", () => openFullCrm(state.selectedLeadId));
   openSelectedCrmButton?.addEventListener("click", () => openFullCrm(state.selectedLeadId));
+  enablePushButton?.addEventListener("click", handleEnablePush);
+  testPushButton?.addEventListener("click", handleTestPush);
   bindQuickPrompts();
 }
 
 async function init() {
   bindApp();
+  await clearOperatorBadge();
 
   try {
     await loadSnapshot();
+    await loadPushConfig();
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
       window.location.href = "/metalworks-crm/login/";

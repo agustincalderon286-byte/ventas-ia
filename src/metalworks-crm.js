@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import http2 from "node:http2";
 import path from "node:path";
 
+import webpush from "web-push";
+
 import { buildThumbtackWebhookEvent } from "./thumbtack-webhook.js";
 
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
@@ -55,6 +57,17 @@ const THUMBTACK_WEBHOOK_USERNAME =
   cleanText(process.env.THUMBTACK_WEBHOOK_USERNAME || "thumbtack", 120) || "thumbtack";
 const THUMBTACK_WEBHOOK_PASSWORD = String(process.env.THUMBTACK_WEBHOOK_PASSWORD || "").trim();
 const THUMBTACK_WEBHOOK_TOKEN = String(process.env.THUMBTACK_WEBHOOK_TOKEN || "").trim();
+const METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY = String(
+  process.env.METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY || "",
+).trim();
+const METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY = String(
+  process.env.METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY || "",
+).trim();
+const METALWORKS_WEB_PUSH_SUBJECT =
+  cleanText(
+    process.env.METALWORKS_WEB_PUSH_SUBJECT || `mailto:${METALWORKS_CONTACT_EMAIL}`,
+    200,
+  ) || `mailto:${METALWORKS_CONTACT_EMAIL}`;
 const METALWORKS_IOS_APP_BUNDLE_ID = "com.agustincalderon.agustin2";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
@@ -1188,6 +1201,53 @@ function metalworksApnsConfigured() {
   return getMetalworksApnsConfig().configured;
 }
 
+function getMetalworksWebPushConfig() {
+  return {
+    publicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+    privateKey: METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY,
+    subject: METALWORKS_WEB_PUSH_SUBJECT,
+    configured: Boolean(
+      METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY &&
+        METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY &&
+        METALWORKS_WEB_PUSH_SUBJECT,
+    ),
+  };
+}
+
+function metalworksWebPushConfigured() {
+  return getMetalworksWebPushConfig().configured;
+}
+
+function normalizeWebPushSubscription(input = null) {
+  const subscription = input && typeof input === "object" ? input : null;
+  const endpoint = cleanText(subscription?.endpoint || "", 1200);
+  const auth = cleanText(subscription?.keys?.auth || "", 400);
+  const p256dh = cleanText(subscription?.keys?.p256dh || "", 600);
+
+  if (!endpoint || !auth || !p256dh) {
+    return null;
+  }
+
+  return {
+    endpoint,
+    expirationTime:
+      subscription?.expirationTime === null || subscription?.expirationTime === undefined
+        ? null
+        : Number(subscription.expirationTime) || null,
+    keys: {
+      auth,
+      p256dh,
+    },
+  };
+}
+
+function buildMetalworksOperatorNotificationUrl(leadId = "") {
+  const safeLeadId = cleanText(leadId || "", 80);
+  return safeLeadId
+    ? `/metalworks-crm/operator/?lead=${encodeURIComponent(safeLeadId)}`
+    : "/metalworks-crm/operator/";
+}
+
 function getMetalworksApnsJwt() {
   const config = getMetalworksApnsConfig();
 
@@ -1260,7 +1320,7 @@ function buildMetalworksPushCopy({
   if (alertType === "crm_test") {
     return {
       title: "Agustin 2.0 CRM",
-      body: "Test alert delivered to this iPhone from Chicago Metal Works & Fencing.",
+      body: "Test alert delivered from Chicago Metal Works & Fencing.",
     };
   }
 
@@ -1401,6 +1461,72 @@ async function sendMetalworksApnsNotification({
       }),
     );
   });
+}
+
+async function sendMetalworksWebPushNotification({
+  subscription = null,
+  alertType = "assistant_lead",
+  title = "",
+  body = "",
+  leadId = "",
+} = {}) {
+  const config = getMetalworksWebPushConfig();
+
+  if (!config.configured) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Web push credentials are not configured yet.",
+      reason: "",
+      status: 0,
+    };
+  }
+
+  const safeSubscription = normalizeWebPushSubscription(subscription);
+
+  if (!safeSubscription) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "The web push subscription is missing.",
+      reason: "MissingWebPushSubscription",
+      status: 0,
+    };
+  }
+
+  try {
+    webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+    await webpush.sendNotification(
+      safeSubscription,
+      JSON.stringify({
+        title: trimPushCopy(title || "", 60),
+        body: trimPushCopy(body || "", 140),
+        alertType: cleanText(alertType || "", 60),
+        leadId: cleanText(leadId || "", 80),
+        url: buildMetalworksOperatorNotificationUrl(leadId),
+      }),
+      {
+        TTL: 90,
+        urgency: "high",
+      },
+    );
+
+    return {
+      attempted: true,
+      delivered: true,
+      error: "",
+      reason: "",
+      status: 201,
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      delivered: false,
+      error: cleanText(error?.body || error?.message || "Web push failed.", 240),
+      reason: cleanText(error?.name || error?.code || "", 120),
+      status: Number(error?.statusCode || 0) || 0,
+    };
+  }
 }
 
 function cleanPushDevice(doc = null) {
@@ -3821,6 +3947,28 @@ function cleanActivity(doc = null) {
   };
 }
 
+function cleanWebPushDevice(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    endpoint: cleanText(doc.endpoint || "", 240),
+    platform: cleanText(doc.platform || "web", 40) || "web",
+    deviceName: cleanText(doc.deviceName || "", 120),
+    browserName: cleanText(doc.browserName || "", 80),
+    authorizationStatus: cleanText(doc.authorizationStatus || "", 40),
+    notificationsEnabled: Boolean(doc.notificationsEnabled),
+    isActive: Boolean(doc.isActive),
+    lastSeenAt: doc.lastSeenAt ? new Date(doc.lastSeenAt).toISOString() : "",
+    lastPushAt: doc.lastPushAt ? new Date(doc.lastPushAt).toISOString() : "",
+    lastPushError: cleanText(doc.lastPushError || "", 240),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
 function buildLeadQuery(filters = {}) {
   const query = {};
   const status = normalizeStatus(filters?.status || "");
@@ -4831,6 +4979,25 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
+  const metalworksCrmWebPushDeviceSchema = new mongoose.Schema({
+    adminEmail: { type: String, required: true, index: true },
+    endpoint: { type: String, required: true, unique: true, index: true },
+    platform: { type: String, default: "web" },
+    browserName: String,
+    deviceName: String,
+    authorizationStatus: String,
+    subscription: { type: mongoose.Schema.Types.Mixed, required: true },
+    vapidPublicKey: String,
+    notificationsEnabled: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true, index: true },
+    lastSeenAt: { type: Date, default: Date.now, index: true },
+    lastPushAt: Date,
+    lastPushError: String,
+    ipAddress: String,
+    userAgent: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
@@ -4881,6 +5048,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmPushDevice =
     mongoose.models.MetalworksCrmPushDevice ||
     mongoose.model("MetalworksCrmPushDevice", metalworksCrmPushDeviceSchema);
+  const MetalworksCrmWebPushDevice =
+    mongoose.models.MetalworksCrmWebPushDevice ||
+    mongoose.model("MetalworksCrmWebPushDevice", metalworksCrmWebPushDeviceSchema);
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -5137,18 +5307,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       query.adminEmail = normalizeEmail(adminEmail);
     }
 
-    const deviceDocs = await MetalworksCrmPushDevice.find(query)
-      .sort({ lastSeenAt: -1, updatedAt: -1 })
-      .limit(adminEmail ? 8 : 24)
-      .lean();
+    const [deviceDocs, webDeviceDocs] = await Promise.all([
+      MetalworksCrmPushDevice.find(query)
+        .sort({ lastSeenAt: -1, updatedAt: -1 })
+        .limit(adminEmail ? 8 : 24)
+        .lean(),
+      MetalworksCrmWebPushDevice.find(query)
+        .sort({ lastSeenAt: -1, updatedAt: -1 })
+        .limit(adminEmail ? 8 : 24)
+        .lean(),
+    ]);
 
-    if (!deviceDocs.length) {
+    if (!deviceDocs.length && !webDeviceDocs.length) {
       return {
         attempted: false,
         delivered: false,
         deliveredCount: 0,
         deviceCount: 0,
-        error: "No iPhone devices are registered for push alerts yet.",
+        error: "No active push devices are registered for lead alerts yet.",
       };
     }
 
@@ -5158,7 +5334,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       alertType,
       requestedAtLabel,
     });
-    const results = await Promise.all(
+    const apnsResults = await Promise.all(
       deviceDocs.map(async (device) => {
         const result = await sendMetalworksApnsNotification({
           deviceToken: device.deviceToken,
@@ -5190,6 +5366,38 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return result;
       }),
     );
+    const webResults = await Promise.all(
+      webDeviceDocs.map(async (device) => {
+        const result = await sendMetalworksWebPushNotification({
+          subscription: device.subscription,
+          alertType,
+          title: copy.title,
+          body: copy.body,
+          leadId: lead?._id ? String(lead._id) : "",
+        });
+        const update = {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          lastPushAt: result.delivered ? new Date() : device.lastPushAt || null,
+          lastPushError: result.delivered ? "" : cleanText(result.error || "", 240),
+        };
+
+        if ([404, 410].includes(Number(result.status || 0))) {
+          update.isActive = false;
+          update.notificationsEnabled = false;
+        }
+
+        await MetalworksCrmWebPushDevice.updateOne(
+          { _id: device._id },
+          {
+            $set: update,
+          },
+        );
+
+        return result;
+      }),
+    );
+    const results = [...apnsResults, ...webResults];
     const deliveredCount = results.filter((item) => item.delivered).length;
     const firstError = results.find((item) => item.error)?.error || "";
 
@@ -5197,7 +5405,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       attempted: true,
       delivered: deliveredCount > 0,
       deliveredCount,
-      deviceCount: deviceDocs.length,
+      deviceCount: deviceDocs.length + webDeviceDocs.length,
       error: firstError,
     };
   }
@@ -7475,6 +7683,44 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.get("/api/metalworks-crm/push/config", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const [iosDeviceCount, webDeviceCount] = await Promise.all([
+        MetalworksCrmPushDevice.countDocuments({
+          adminEmail: auth.email,
+          isActive: true,
+          notificationsEnabled: true,
+        }),
+        MetalworksCrmWebPushDevice.countDocuments({
+          adminEmail: auth.email,
+          isActive: true,
+          notificationsEnabled: true,
+        }),
+      ]);
+
+      res.json({
+        ok: true,
+        apnsConfigured: metalworksApnsConfigured(),
+        webPushConfigured: metalworksWebPushConfigured(),
+        vapidPublicKey: metalworksWebPushConfigured()
+          ? METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY
+          : "",
+        subject: metalworksWebPushConfigured() ? METALWORKS_WEB_PUSH_SUBJECT : "",
+        iosDeviceCount,
+        webDeviceCount,
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works push config:", error.message);
+      respondError(res, 500, "No pude revisar la configuracion de alerts.");
+    }
+  });
+
   app.post("/api/metalworks-crm/push/register", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -7541,6 +7787,75 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.post("/api/metalworks-crm/push/web/register", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    if (!metalworksWebPushConfigured()) {
+      return respondError(
+        res,
+        503,
+        "Web push credentials are not configured yet.",
+      );
+    }
+
+    const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
+    const deviceName = cleanText(req.body?.deviceName || "", 120);
+    const browserName = cleanText(req.body?.browserName || "", 80);
+    const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
+    const notificationsEnabled =
+      req.body?.notificationsEnabled === false ? false : Boolean(subscription);
+
+    if (!subscription) {
+      return respondError(res, 400, "La suscripcion web es requerida.");
+    }
+
+    try {
+      const now = new Date();
+      const doc = await MetalworksCrmWebPushDevice.findOneAndUpdate(
+        { endpoint: subscription.endpoint },
+        {
+          $set: {
+            adminEmail: auth.email,
+            deviceName,
+            browserName,
+            authorizationStatus,
+            subscription,
+            vapidPublicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+            notificationsEnabled,
+            isActive: notificationsEnabled,
+            ipAddress: cleanText(getClientIp(req), 120),
+            userAgent: cleanText(req.headers["user-agent"] || "", 400),
+            lastSeenAt: now,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            platform: "web",
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        },
+      );
+
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        message: "This browser is ready for live lead alerts.",
+        device: cleanWebPushDevice(doc),
+      });
+    } catch (error) {
+      console.error("Error registering Metal Works web push device:", error.message);
+      respondError(res, 500, "No pude registrar este navegador para alerts.");
+    }
+  });
+
   app.post("/api/metalworks-crm/push/test", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -7561,7 +7876,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         deliveredCount: delivery.deliveredCount || 0,
         deviceCount: delivery.deviceCount || 0,
         message: delivery.delivered
-          ? "Test push sent to this iPhone."
+          ? "Test push sent to your active device."
           : delivery.error || "I could not send the test push yet.",
       });
     } catch (error) {

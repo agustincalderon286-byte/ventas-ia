@@ -7,7 +7,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="CMW Operator" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>CMW Operator Mobile</title>
+    <link rel="manifest" href="/metalworks-crm/operator.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/operator-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/operator-icon.svg" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
     <link rel="stylesheet" href="/metalworks-crm/operator-mobile.css" />
   </head>
@@ -26,6 +30,12 @@
         <div class="operator-header-actions">
           <div class="crm-theme-badge" data-operator-theme-badge hidden></div>
           <div class="crm-user-chip" data-operator-user-chip></div>
+          <button type="button" class="crm-secondary-button" data-operator-enable-push>
+            Enable Alerts
+          </button>
+          <button type="button" class="crm-secondary-button" data-operator-test-push>
+            Test Alert
+          </button>
           <button type="button" class="crm-secondary-button" data-operator-open-crm>
             Full CRM
           </button>
@@ -36,6 +46,7 @@
             Logout
           </button>
         </div>
+        <p class="crm-form-result operator-push-feedback" data-operator-push-feedback></p>
       </header>
 
       <p class="crm-system-status" data-operator-status hidden></p>
