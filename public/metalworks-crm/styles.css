@@ -821,6 +821,23 @@ body[data-crm-skin="executive-steel"] .crm-lead-card.is-active {
   gap: 6px;
 }
 
+.crm-mobile-shell-link {
+  justify-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--crm-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.crm-mobile-shell-link[aria-pressed="true"] {
+  color: var(--crm-charcoal);
+}
+
 .crm-mobile-shell-copy strong {
   font-size: 1rem;
 }

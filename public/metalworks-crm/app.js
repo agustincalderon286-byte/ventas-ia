@@ -243,7 +243,7 @@ function normalizeCrmView(value = "") {
 function normalizeCrmMobilePane(value = "") {
   const safeValue = String(value || "").trim().toLowerCase();
 
-  if (safeValue === "workspace" || safeValue === "more") {
+  if (safeValue === "workspace" || safeValue === "agenda" || safeValue === "more") {
     return safeValue;
   }
 
@@ -301,6 +301,9 @@ const mobileShell = document.querySelector("[data-crm-mobile-shell]");
 const mobileShellTitle = document.querySelector("[data-crm-mobile-title]");
 const mobileShellCopy = document.querySelector("[data-crm-mobile-copy]");
 const mobilePaneButtons = Array.from(document.querySelectorAll("[data-crm-mobile-pane-button]"));
+const mobileSecondaryMoreButton = document.querySelector(
+  "[data-crm-mobile-secondary-button=\"more\"]",
+);
 const mobilePaneTargets = Array.from(document.querySelectorAll("[data-crm-mobile-pane-target]"));
 const mobileBackButton = document.querySelector("[data-crm-mobile-back]");
 const mobileCollapsibles = Array.from(document.querySelectorAll("[data-crm-mobile-collapsible]"));
@@ -946,8 +949,15 @@ function syncMobileShellCopy(activePane = resolveMobilePane()) {
     return;
   }
 
+  if (activePane === "agenda") {
+    mobileShellTitle.textContent = "Agenda";
+    mobileShellCopy.textContent =
+      "See the leads that already have a callback, visit, or follow-up time scheduled.";
+    return;
+  }
+
   if (activePane === "more") {
-    mobileShellTitle.textContent = "More";
+    mobileShellTitle.textContent = "More Tools";
     mobileShellCopy.textContent =
       "Metrics, quick links, prospector accounts, and the activity feed stay here.";
     return;
@@ -958,6 +968,16 @@ function syncMobileShellCopy(activePane = resolveMobilePane()) {
     state.view === "applicants"
       ? "Review candidates first, then open one profile to work it."
       : "Open a lead and work it like a contact on your phone.";
+}
+
+function syncMobileSecondaryActions(activePane = resolveMobilePane()) {
+  if (!mobileSecondaryMoreButton) {
+    return;
+  }
+
+  mobileSecondaryMoreButton.textContent =
+    activePane === "more" ? "Back to Agenda" : "More Tools";
+  mobileSecondaryMoreButton.setAttribute("aria-pressed", activePane === "more" ? "true" : "false");
 }
 
 function setMobileCollapsibleDefaults({ reset = false } = {}) {
@@ -997,6 +1017,7 @@ function applyMobilePaneLayout() {
     setMobileCollapsibleDefaults({ reset: true });
     syncMobilePaneButtons(resolveMobilePane());
     syncMobileShellCopy(resolveMobilePane());
+    syncMobileSecondaryActions(resolveMobilePane());
     return;
   }
 
@@ -1014,7 +1035,10 @@ function applyMobilePaneLayout() {
     element.classList.toggle("crm-mobile-pane-hidden", targetPane !== activePane);
   });
 
-  mainGrid?.classList.toggle("crm-mobile-main-hidden", activePane === "more");
+  mainGrid?.classList.toggle(
+    "crm-mobile-main-hidden",
+    activePane === "more" || activePane === "agenda",
+  );
 
   if (mobileBackButton) {
     mobileBackButton.hidden = activePane !== "workspace";
@@ -1023,6 +1047,7 @@ function applyMobilePaneLayout() {
   setMobileCollapsibleDefaults();
   syncMobilePaneButtons(activePane);
   syncMobileShellCopy(activePane);
+  syncMobileSecondaryActions(activePane);
 }
 
 function openMobileWorkspacePane() {
@@ -1589,11 +1614,12 @@ function renderAgenda(leads = []) {
 
   const safeLeads = Array.isArray(leads) ? leads.filter((lead) => lead?.id) : [];
 
-  agendaPanel.hidden = !safeLeads.length;
+  agendaPanel.hidden = false;
   agendaCount.textContent = `${safeLeads.length} scheduled`;
 
   if (!safeLeads.length) {
-    agendaList.innerHTML = "";
+    agendaList.innerHTML =
+      '<p class="crm-empty-state">No scheduled leads yet. As soon as a callback or visit gets a time, it will show here.</p>';
     return;
   }
 
@@ -3589,6 +3615,10 @@ function bindAppShell() {
       rememberMobilePane(button.dataset.crmMobilePaneButton || "inbox");
       applyMobilePaneLayout();
     });
+  });
+  mobileSecondaryMoreButton?.addEventListener("click", () => {
+    rememberMobilePane(state.mobilePane === "more" ? "agenda" : "more");
+    applyMobilePaneLayout();
   });
   mobileBackButton?.addEventListener("click", () => {
     rememberMobilePane("inbox");
