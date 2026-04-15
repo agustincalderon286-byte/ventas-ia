@@ -1,7 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
-const MOBILE_OPERATOR_BREAKPOINT_PX = 900;
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -174,18 +173,8 @@ function applyCachedTheme() {
   return true;
 }
 
-function shouldPreferMobileOperator() {
-  try {
-    return window.matchMedia(`(max-width: ${MOBILE_OPERATOR_BREAKPOINT_PX}px)`).matches;
-  } catch {
-    return window.innerWidth <= MOBILE_OPERATOR_BREAKPOINT_PX;
-  }
-}
-
 function getPostLoginDestination() {
-  return shouldPreferMobileOperator()
-    ? "/metalworks-crm/operator/"
-    : "/metalworks-crm/";
+  return "/metalworks-crm/";
 }
 
 async function init() {

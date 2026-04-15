@@ -4433,7 +4433,7 @@ function buildMetalworksCrmResourceSections() {
     {
       id: "crm-links",
       title: "CRM Links",
-      description: "Internal tools for office, operator, and field teams.",
+      description: "Internal tools for office and field teams.",
       items: [
         {
           id: "crm-main",
@@ -4441,13 +4441,6 @@ function buildMetalworksCrmResourceSections() {
           description: "Lead inbox and applicant pipeline.",
           url: `${websiteBase}/metalworks-crm/`,
           symbol: "rectangle.stack.fill",
-        },
-        {
-          id: "crm-operator",
-          label: "Operator CRM",
-          description: "Mobile operator workspace for fast follow-up.",
-          url: `${websiteBase}/metalworks-crm/operator/`,
-          symbol: "iphone.gen3",
         },
         {
           id: "prospector-login",
@@ -7374,7 +7367,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return res.redirect("/metalworks-crm/login/");
       }
 
-      res.sendFile(path.join(privateDir, "metalworks-operator-mobile.html"));
+      return res.redirect("/metalworks-crm/");
     },
   );
 
