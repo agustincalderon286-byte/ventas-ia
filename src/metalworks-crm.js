@@ -1241,11 +1241,26 @@ function normalizeWebPushSubscription(input = null) {
   };
 }
 
-function buildMetalworksOperatorNotificationUrl(leadId = "") {
+function normalizeMetalworksNotificationPath(
+  value = "",
+  fallback = "/metalworks-crm/operator/",
+) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue.startsWith("/metalworks-crm")) {
+    return fallback;
+  }
+
+  const normalized = safeValue.endsWith("/") ? safeValue : `${safeValue}/`;
+  return cleanText(normalized, 240) || fallback;
+}
+
+function buildMetalworksNotificationUrl(leadId = "", basePath = "/metalworks-crm/operator/") {
   const safeLeadId = cleanText(leadId || "", 80);
+  const safeBasePath = normalizeMetalworksNotificationPath(basePath);
   return safeLeadId
-    ? `/metalworks-crm/operator/?lead=${encodeURIComponent(safeLeadId)}`
-    : "/metalworks-crm/operator/";
+    ? `${safeBasePath}?lead=${encodeURIComponent(safeLeadId)}`
+    : safeBasePath;
 }
 
 function getMetalworksApnsJwt() {
@@ -1469,6 +1484,7 @@ async function sendMetalworksWebPushNotification({
   title = "",
   body = "",
   leadId = "",
+  notificationPath = "/metalworks-crm/operator/",
 } = {}) {
   const config = getMetalworksWebPushConfig();
 
@@ -1503,7 +1519,7 @@ async function sendMetalworksWebPushNotification({
         body: trimPushCopy(body || "", 140),
         alertType: cleanText(alertType || "", 60),
         leadId: cleanText(leadId || "", 80),
-        url: buildMetalworksOperatorNotificationUrl(leadId),
+        url: buildMetalworksNotificationUrl(leadId, notificationPath),
       }),
       {
         TTL: 90,
@@ -3958,6 +3974,9 @@ function cleanWebPushDevice(doc = null) {
     platform: cleanText(doc.platform || "web", 40) || "web",
     deviceName: cleanText(doc.deviceName || "", 120),
     browserName: cleanText(doc.browserName || "", 80),
+    notificationPath: normalizeMetalworksNotificationPath(
+      doc.notificationPath || "/metalworks-crm/operator/",
+    ),
     authorizationStatus: cleanText(doc.authorizationStatus || "", 40),
     notificationsEnabled: Boolean(doc.notificationsEnabled),
     isActive: Boolean(doc.isActive),
@@ -4985,6 +5004,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     platform: { type: String, default: "web" },
     browserName: String,
     deviceName: String,
+    notificationPath: { type: String, default: "/metalworks-crm/operator/" },
     authorizationStatus: String,
     subscription: { type: mongoose.Schema.Types.Mixed, required: true },
     vapidPublicKey: String,
@@ -5374,6 +5394,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           title: copy.title,
           body: copy.body,
           leadId: lead?._id ? String(lead._id) : "",
+          notificationPath: normalizeMetalworksNotificationPath(
+            device.notificationPath || "/metalworks-crm/operator/",
+          ),
         });
         const update = {
           lastSeenAt: new Date(),
@@ -7805,6 +7828,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
     const deviceName = cleanText(req.body?.deviceName || "", 120);
     const browserName = cleanText(req.body?.browserName || "", 80);
+    const notificationPath = normalizeMetalworksNotificationPath(
+      req.body?.notificationPath || "/metalworks-crm/operator/",
+    );
     const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
     const notificationsEnabled =
       req.body?.notificationsEnabled === false ? false : Boolean(subscription);
@@ -7822,6 +7848,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             adminEmail: auth.email,
             deviceName,
             browserName,
+            notificationPath,
             authorizationStatus,
             subscription,
             vapidPublicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,

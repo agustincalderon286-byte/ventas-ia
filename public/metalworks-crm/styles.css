@@ -704,6 +704,11 @@ body[data-crm-skin="executive-steel"] .crm-lead-card.is-active {
   align-items: center;
 }
 
+.crm-push-feedback {
+  margin: -6px 0 14px;
+  max-width: 42rem;
+}
+
 .crm-header-qr-wrap {
   position: relative;
 }

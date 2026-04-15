@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07110c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CMW CRM" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Chicago Metal Works CRM</title>
+    <link rel="manifest" href="/metalworks-crm/crm.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/operator-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/operator-icon.svg" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
   </head>
   <body class="crm-app-page" data-crm-skin="intel-ops">
@@ -19,6 +27,12 @@
         <div class="crm-header-actions">
           <div class="crm-theme-badge" data-crm-theme-badge hidden></div>
           <div class="crm-user-chip" data-crm-user-chip></div>
+          <button class="crm-secondary-button" type="button" data-crm-enable-push>
+            Enable Alerts
+          </button>
+          <button class="crm-secondary-button" type="button" data-crm-test-push>
+            Test Alert
+          </button>
           <button class="crm-secondary-button" type="button" data-crm-refresh>
             Recargar
           </button>
@@ -27,6 +41,8 @@
           </button>
         </div>
       </header>
+
+      <p class="crm-form-result crm-push-feedback" data-crm-push-feedback></p>
 
       <p class="crm-system-status" data-crm-system-status hidden></p>
 

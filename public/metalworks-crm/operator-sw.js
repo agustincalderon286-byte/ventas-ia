@@ -1,7 +1,10 @@
-const CACHE_NAME = "cmwf-operator-shell-v1";
+const CACHE_NAME = "cmwf-operator-shell-v2";
 const SHELL_URLS = [
+  "/metalworks-crm/",
   "/metalworks-crm/operator/",
+  "/metalworks-crm/app.js",
   "/metalworks-crm/styles.css",
+  "/metalworks-crm/crm.webmanifest",
   "/metalworks-crm/operator-mobile.css",
   "/metalworks-crm/operator-mobile.js",
   "/metalworks-crm/operator.webmanifest",
@@ -39,15 +42,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (requestUrl.pathname === "/metalworks-crm/operator/" || requestUrl.pathname === "/metalworks-crm/operator") {
+  if (
+    requestUrl.pathname === "/metalworks-crm/" ||
+    requestUrl.pathname === "/metalworks-crm" ||
+    requestUrl.pathname === "/metalworks-crm/operator/" ||
+    requestUrl.pathname === "/metalworks-crm/operator"
+  ) {
+    const cacheKey =
+      requestUrl.pathname === "/metalworks-crm/" || requestUrl.pathname === "/metalworks-crm"
+        ? "/metalworks-crm/"
+        : "/metalworks-crm/operator/";
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/metalworks-crm/operator/", clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
           return response;
         })
-        .catch(() => caches.match("/metalworks-crm/operator/")),
+        .catch(() => caches.match(cacheKey)),
     );
     return;
   }
@@ -102,7 +114,7 @@ self.addEventListener("notificationclick", (event) => {
       "clearAppBadge" in self.navigator ? self.navigator.clearAppBadge().catch(() => null) : null,
       clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
         for (const client of clientList) {
-          if ("focus" in client && client.url.includes("/metalworks-crm/operator")) {
+          if ("focus" in client && client.url.includes("/metalworks-crm/")) {
             client.navigate(targetUrl).catch(() => null);
             return client.focus();
           }

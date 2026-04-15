@@ -1,0 +1,20 @@
+{
+  "name": "CMW CRM",
+  "short_name": "CMW CRM",
+  "id": "/metalworks-crm/",
+  "description": "Private CRM for Chicago Metal Works & Fencing lead follow-up.",
+  "start_url": "/metalworks-crm/",
+  "scope": "/metalworks-crm/",
+  "display": "standalone",
+  "background_color": "#07110c",
+  "theme_color": "#07110c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/metalworks-crm/operator-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
