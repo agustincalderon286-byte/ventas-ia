@@ -3468,6 +3468,15 @@ function isWebsiteLiveChatLeadSourceType(value = "") {
   return cleanText(value || "", 80) === METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
 }
 
+function isWebsiteLiveChatLead(doc = null) {
+  return Boolean(
+    doc &&
+      (isWebsiteLiveChatLeadSourceType(doc.sourceType || "") ||
+        cleanText(doc.sourceExternalSystem || "", 80) === "website_live_chat" ||
+        cleanText(doc.pagePath || "", 240).startsWith("/metalworks-chat")),
+  );
+}
+
 function buildWebsiteLiveChatPlaceholderName(visitorId = "") {
   const suffix = cleanText(visitorId || "", 120)
     .replace(/[^a-z0-9]/gi, "")
@@ -3960,9 +3969,8 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     referrer: doc.referrer || "",
     sourceType: doc.sourceType || "website_form",
     supportsLiveChatReply:
-      isWebsiteLiveChatLeadSourceType(doc.sourceType || "") &&
-      ((Array.isArray(doc.visitorIds) && doc.visitorIds.length > 0) ||
-        (Array.isArray(doc.sessionIds) && doc.sessionIds.length > 0)),
+      isWebsiteLiveChatLead(doc) &&
+      (Array.isArray(doc.conversationHistory) ? doc.conversationHistory.length > 0 : false),
     sourceExternalId: doc.sourceExternalId || "",
     sourceExternalSystem: doc.sourceExternalSystem || "",
     tracking: doc.tracking || {},
@@ -3973,7 +3981,7 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
 }
 
 function cleanPublicWebsiteLiveChatThread(doc = null) {
-  if (!doc || !isWebsiteLiveChatLeadSourceType(doc.sourceType || "")) {
+  if (!doc || !isWebsiteLiveChatLead(doc)) {
     return null;
   }
 
@@ -8881,7 +8889,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 404, "No encontre ese lead.");
       }
 
-      if (!isWebsiteLiveChatLeadSourceType(leadDoc.sourceType || "")) {
+      if (!isWebsiteLiveChatLead(leadDoc)) {
         return respondError(res, 400, "Este lead no usa el chat web conectado.");
       }
 

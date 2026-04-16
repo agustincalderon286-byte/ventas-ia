@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmwf-operator-shell-v3";
+const CACHE_NAME = "cmwf-operator-shell-v4";
 const SHELL_URLS = [
   "/metalworks-crm/",
   "/metalworks-crm/operator/",
@@ -64,6 +64,24 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => caches.match(cacheKey)),
+    );
+    return;
+  }
+
+  if (
+    requestUrl.pathname === "/metalworks-crm/app.js" ||
+    requestUrl.pathname === "/metalworks-crm/styles.css" ||
+    requestUrl.pathname === "/metalworks-crm/crm.webmanifest" ||
+    requestUrl.pathname === "/metalworks-crm/operator-sw.js"
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request)),
     );
     return;
   }
