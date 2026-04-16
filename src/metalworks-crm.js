@@ -8280,7 +8280,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       req.body?.notificationsEnabled === false ? false : Boolean(subscription);
 
     if (!subscription) {
-      return respondError(res, 400, "La suscripcion web es requerida.");
+      return respondError(res, 400, "Web push subscription is required.");
     }
 
     try {
@@ -10259,7 +10259,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error registering public chat web push device:", error.message);
-      respondError(res, 500, "No pude registrar este navegador para el chat.");
+      respondError(res, 500, "Could not register this browser for chat alerts.");
     }
   });
 

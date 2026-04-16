@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmwf-live-chat-shell-v1"
+const CACHE_NAME = "cmwf-live-chat-shell-v2"
 const SHELL_URLS = [
   "/metalworks-chat/",
   "/metalworks-chat/app.js",
