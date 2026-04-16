@@ -10,6 +10,8 @@ const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
 const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
+const METALWORKS_PUBLIC_CHAT_THREAD_COOKIE = "cmwf_live_chat_thread";
+const METALWORKS_PUBLIC_CHAT_THREAD_DAYS = 180;
 const METALWORKS_PROSPECTOR_STATUS_OPTIONS = ["active", "paused"];
 const METALWORKS_PROSPECTOR_PASSWORD_MIN = 8;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
@@ -282,6 +284,23 @@ function parseCookies(header = "") {
 
 function requestIsSecure(req) {
   return Boolean(req.secure || req.headers["x-forwarded-proto"] === "https");
+}
+
+function normalizePublicChatThreadKey(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 120);
+}
+
+function buildPublicChatThreadPath(threadKey = "") {
+  const safeThreadKey = normalizePublicChatThreadKey(threadKey);
+
+  if (!safeThreadKey) {
+    return "/metalworks-chat/";
+  }
+
+  return `/metalworks-chat/?thread=${encodeURIComponent(safeThreadKey)}`;
 }
 
 function compareSecrets(input = "", expected = "") {
@@ -3999,6 +4018,7 @@ function cleanPublicWebsiteLiveChatThread(doc = null) {
 
   return {
     leadId: String(doc._id || ""),
+    threadKey: normalizePublicChatThreadKey(doc.publicChatThreadKey || ""),
     fullName: safeFullName,
     phoneDisplay: doc.phoneDisplay || "",
     email: doc.email || "",
@@ -4989,6 +5009,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     sourceType: { type: String, default: "website_form", index: true },
     sourceExternalId: { type: String, index: true },
     sourceExternalSystem: String,
+    publicChatThreadKey: { type: String, index: true },
     pageTitle: String,
     pagePath: String,
     pageUrl: String,
@@ -5204,6 +5225,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
   metalworksLeadSchema.index({ status: 1, updatedAt: -1 });
+  metalworksLeadSchema.index({ publicChatThreadKey: 1 });
   metalworksLeadSchema.index({ visitorIds: 1 });
   metalworksLeadSchema.index({ sessionIds: 1 });
   metalworksApplicantSchema.index({ createdAt: -1 });
@@ -5299,6 +5321,52 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       secure: requestIsSecure(req),
       path: "/",
     });
+  }
+
+  function setPublicChatThreadCookie(res, req, threadKey) {
+    const safeThreadKey = normalizePublicChatThreadKey(threadKey);
+
+    if (!safeThreadKey) {
+      return;
+    }
+
+    res.cookie(METALWORKS_PUBLIC_CHAT_THREAD_COOKIE, safeThreadKey, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: requestIsSecure(req),
+      path: "/",
+      maxAge: METALWORKS_PUBLIC_CHAT_THREAD_DAYS * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  function getPublicChatThreadKey(req) {
+    const bodyThreadKey = normalizePublicChatThreadKey(
+      req.body?.threadKey || req.query?.thread || req.query?.t || "",
+    );
+
+    if (bodyThreadKey) {
+      return bodyThreadKey;
+    }
+
+    const cookies = parseCookies(req.headers.cookie || "");
+    return normalizePublicChatThreadKey(cookies[METALWORKS_PUBLIC_CHAT_THREAD_COOKIE] || "");
+  }
+
+  function ensureWebsiteLiveChatThreadKey(leadDoc = null, fallbackThreadKey = "") {
+    if (!leadDoc) {
+      return "";
+    }
+
+    const currentThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+
+    if (currentThreadKey) {
+      leadDoc.publicChatThreadKey = currentThreadKey;
+      return currentThreadKey;
+    }
+
+    const nextThreadKey = normalizePublicChatThreadKey(fallbackThreadKey || "") || generateToken();
+    leadDoc.publicChatThreadKey = nextThreadKey;
+    return nextThreadKey;
   }
 
   function respondError(res, statusCode, message) {
@@ -5930,8 +5998,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return MetalworksLead.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
   }
 
-  async function resolveWebsiteLiveChatLead({ visitorId = "", sessionId = "" } = {}) {
+  async function resolveWebsiteLiveChatLead({
+    visitorId = "",
+    sessionId = "",
+    threadKey = "",
+  } = {}) {
+    const safeThreadKey = normalizePublicChatThreadKey(threadKey);
     const conditions = [];
+
+    if (safeThreadKey) {
+      const threadMatch = await MetalworksLead.findOne({
+        sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        publicChatThreadKey: safeThreadKey,
+      }).sort({ updatedAt: -1, createdAt: -1 });
+
+      if (threadMatch) {
+        return threadMatch;
+      }
+    }
 
     if (visitorId) {
       conditions.push({ visitorIds: visitorId });
@@ -6033,6 +6117,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const body =
       trimPushCopy(message || "", 140) ||
       "Open your chat to see the latest update from Chicago Metal Works & Fencing.";
+    const targetUrl = buildPublicChatThreadPath(lead.publicChatThreadKey || "");
     const results = await Promise.all(
       deviceDocs.map(async (device) => {
         const result = await sendMetalworksWebPushNotification({
@@ -6042,7 +6127,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           body,
           leadId: String(lead._id || ""),
           notificationPath: "/metalworks-chat/",
-          targetUrl: "/metalworks-chat/",
+          targetUrl,
         });
         const update = {
           lastSeenAt: new Date(),
@@ -10067,6 +10152,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
     const visitorId = cleanText(req.body?.visitorId || "", 120);
     const sessionId = cleanText(req.body?.sessionId || "", 120);
+    const threadKey = getPublicChatThreadKey(req);
     const deviceName = cleanText(req.body?.deviceName || "", 120);
     const browserName = cleanText(req.body?.browserName || "", 80);
     const notificationPath = normalizeMetalworksNotificationPath(
@@ -10081,7 +10167,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return respondError(res, 400, "La suscripcion web es requerida.");
     }
 
-    if (!visitorId && !sessionId) {
+    if (!visitorId && !sessionId && !threadKey) {
       return respondError(res, 400, "Missing live chat visitor session.");
     }
 
@@ -10090,7 +10176,34 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const leadDoc = await resolveWebsiteLiveChatLead({
         visitorId,
         sessionId,
+        threadKey,
       });
+      let resolvedThreadKey = normalizePublicChatThreadKey(threadKey);
+
+      if (leadDoc?._id) {
+        const previousVisitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const previousSessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const previousThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+        resolvedThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+        leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+        leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+        const visitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const sessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const identityChanged =
+          visitorCount !== previousVisitorCount ||
+          sessionCount !== previousSessionCount ||
+          normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "") !== previousThreadKey;
+
+        if (identityChanged) {
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+          await syncPublicChatPushDevicesToLead(leadDoc);
+        }
+      }
+
+      if (resolvedThreadKey) {
+        setPublicChatThreadCookie(res, req, resolvedThreadKey);
+      }
       const doc = await MetalworksPublicChatWebPushDevice.findOneAndUpdate(
         { endpoint: subscription.endpoint },
         {
@@ -10139,15 +10252,40 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     try {
       const visitorId = cleanText(req.body?.visitorId || "", 120);
       const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
 
-      if (!visitorId && !sessionId) {
+      if (!visitorId && !sessionId && !threadKey) {
         return respondError(res, 400, "Missing live chat visitor session.");
       }
 
       const leadDoc = await resolveWebsiteLiveChatLead({
         visitorId,
         sessionId,
+        threadKey,
       });
+
+      if (leadDoc?._id) {
+        const previousVisitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const previousSessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const previousThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+        const resolvedThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+        leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+        leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+        const visitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const sessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const identityChanged =
+          visitorCount !== previousVisitorCount ||
+          sessionCount !== previousSessionCount ||
+          normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "") !== previousThreadKey;
+
+        if (identityChanged) {
+          leadDoc.updatedAt = new Date();
+          await leadDoc.save();
+          await syncPublicChatPushDevicesToLead(leadDoc);
+        }
+
+        setPublicChatThreadCookie(res, req, resolvedThreadKey);
+      }
 
       res.json({
         ok: true,
@@ -10163,6 +10301,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     try {
       const visitorId = cleanText(req.body?.visitorId || "", 120);
       const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
       const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
       const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
       const phone = normalizePhone(phoneDisplay);
@@ -10175,7 +10314,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const hasTracking = Object.values(tracking).some(Boolean);
       const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
 
-      if (!visitorId && !sessionId) {
+      if (!visitorId && !sessionId && !threadKey) {
         return respondError(res, 400, "Missing live chat visitor session.");
       }
 
@@ -10201,6 +10340,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       let leadDoc = await resolveWebsiteLiveChatLead({
         visitorId,
         sessionId,
+        threadKey,
       });
       const now = new Date();
 
@@ -10222,6 +10362,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       leadDoc.status = normalizeStatus(leadDoc.status || "new");
       leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
       leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.publicChatThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
       leadDoc.sourceExternalId =
         cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
       leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
@@ -10243,6 +10384,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       await leadDoc.save();
+      setPublicChatThreadCookie(res, req, leadDoc.publicChatThreadKey || "");
 
       const assetDocs = await Promise.all(
         parsedFiles.map((item) =>
@@ -10306,6 +10448,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const message = cleanText(req.body?.message || "", 500);
       const visitorId = cleanText(req.body?.visitorId || "", 120);
       const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
       const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
       const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
       const phone = normalizePhone(phoneDisplay);
@@ -10321,13 +10464,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 400, "Message is required.");
       }
 
-      if (!visitorId && !sessionId) {
+      if (!visitorId && !sessionId && !threadKey) {
         return respondError(res, 400, "Missing live chat visitor session.");
       }
 
       let leadDoc = await resolveWebsiteLiveChatLead({
         visitorId,
         sessionId,
+        threadKey,
       });
       const leadExistedBeforeMessage = Boolean(leadDoc?._id);
       const now = new Date();
@@ -10356,6 +10500,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ["won", "lost", "archived"].includes(currentStatus) ? currentStatus : currentStatus || "new";
       leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
       leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.publicChatThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
       leadDoc.sourceExternalId =
         cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
       leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
@@ -10385,6 +10530,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       await leadDoc.save();
+      setPublicChatThreadCookie(res, req, leadDoc.publicChatThreadKey || "");
       await syncPublicChatPushDevicesToLead(leadDoc);
 
       if (!leadExistedBeforeMessage && leadDoc?._id) {

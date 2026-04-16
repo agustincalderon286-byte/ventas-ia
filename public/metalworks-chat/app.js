@@ -31,6 +31,7 @@ const profileEmailInput = document.querySelector("[data-chat-profile-email]")
 const state = {
   visitorId: "",
   sessionId: "",
+  threadKey: "",
   leadId: "",
   messages: [],
   sending: false,
@@ -73,18 +74,59 @@ function createClientId(prefix = "cmw") {
   return `${prefix}_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`
 }
 
+function normalizeThreadKey(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 120)
+}
+
+function readThreadKeyFromUrl() {
+  const params = new URLSearchParams(window.location.search || "")
+  return normalizeThreadKey(params.get("thread") || params.get("t") || "")
+}
+
+function persistThreadIdentity() {
+  writeStoredJson(THREAD_STORAGE_KEY, {
+    visitorId: state.visitorId,
+    sessionId: state.sessionId,
+    threadKey: state.threadKey,
+  })
+}
+
+function syncThreadUrl() {
+  const safeThreadKey = normalizeThreadKey(state.threadKey)
+
+  if (!safeThreadKey || !window.history?.replaceState) {
+    return
+  }
+
+  const nextUrl = new URL(window.location.href)
+  const currentThreadKey = normalizeThreadKey(
+    nextUrl.searchParams.get("thread") || nextUrl.searchParams.get("t") || "",
+  )
+
+  if (currentThreadKey === safeThreadKey && !nextUrl.searchParams.has("t")) {
+    return
+  }
+
+  nextUrl.searchParams.set("thread", safeThreadKey)
+  nextUrl.searchParams.delete("t")
+  window.history.replaceState({}, "", nextUrl.toString())
+}
+
 function ensureThreadIdentity() {
   const stored = readStoredJson(THREAD_STORAGE_KEY, {}) || {}
+  const initialThreadKey = readThreadKeyFromUrl() || normalizeThreadKey(stored.threadKey || "")
   const visitorId = String(stored.visitorId || "").trim() || createClientId("visitor")
   const sessionId = String(stored.sessionId || "").trim() || createClientId("session")
 
   state.visitorId = visitorId
   state.sessionId = sessionId
+  state.threadKey = initialThreadKey
 
-  writeStoredJson(THREAD_STORAGE_KEY, {
-    visitorId,
-    sessionId,
-  })
+  persistThreadIdentity()
+  syncThreadUrl()
 }
 
 function getProfile() {
@@ -322,6 +364,7 @@ async function refreshPushSubscription({ syncServer = false } = {}) {
         subscription: subscription.toJSON(),
         visitorId: state.visitorId,
         sessionId: state.sessionId,
+        threadKey: state.threadKey,
         leadId: state.leadId,
         deviceName: buildPushDeviceName(),
         browserName: detectBrowserName(),
@@ -434,6 +477,7 @@ async function handleEnablePush() {
         subscription: subscription.toJSON(),
         visitorId: state.visitorId,
         sessionId: state.sessionId,
+        threadKey: state.threadKey,
         leadId: state.leadId,
         deviceName: buildPushDeviceName(),
         browserName: detectBrowserName(),
@@ -615,6 +659,21 @@ function syncComposerState() {
   syncPushButton()
 }
 
+function applyThread(nextThread = null) {
+  const safeThread = nextThread && typeof nextThread === "object" ? nextThread : null
+  const nextThreadKey = normalizeThreadKey(safeThread?.threadKey || state.threadKey || readThreadKeyFromUrl())
+
+  state.threadKey = nextThreadKey
+  state.leadId = String(safeThread?.leadId || "").trim()
+  state.messages = Array.isArray(safeThread?.messages) ? safeThread.messages : []
+  state.photoFileNames = Array.isArray(safeThread?.photoFileNames) ? safeThread.photoFileNames : []
+
+  persistThreadIdentity()
+  syncThreadUrl()
+  renderThread()
+  renderPhotoFiles()
+}
+
 async function loadThread({ silent = false } = {}) {
   try {
     const result = await apiRequest("/api/public/metalworks/live-chat/thread", {
@@ -622,15 +681,11 @@ async function loadThread({ silent = false } = {}) {
       body: {
         visitorId: state.visitorId,
         sessionId: state.sessionId,
+        threadKey: state.threadKey,
       },
     })
 
-    const nextThread = result.thread || null
-    state.leadId = String(nextThread?.leadId || "").trim()
-    state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : []
-    state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
-    renderThread()
-    renderPhotoFiles()
+    applyThread(result.thread || null)
     if (state.pushSubscription) {
       refreshPushSubscription({ syncServer: true }).catch(() => {})
     }
@@ -681,6 +736,7 @@ async function handleSendMessage(event) {
         message,
         visitorId: state.visitorId,
         sessionId: state.sessionId,
+        threadKey: state.threadKey,
         profile,
         pageTitle: document.title || "",
         pagePath: window.location.pathname || "",
@@ -690,12 +746,7 @@ async function handleSendMessage(event) {
       },
     })
 
-    const nextThread = result.thread || null
-    state.leadId = String(nextThread?.leadId || "").trim()
-    state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : []
-    state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
-    renderThread()
-    renderPhotoFiles()
+    applyThread(result.thread || null)
     if (state.pushSubscription) {
       refreshPushSubscription({ syncServer: true }).catch(() => {})
     }
@@ -769,6 +820,7 @@ async function handlePhotoSelection(event) {
       body: {
         visitorId: state.visitorId,
         sessionId: state.sessionId,
+        threadKey: state.threadKey,
         profile,
         files,
         pageTitle: document.title || "",
@@ -780,13 +832,14 @@ async function handlePhotoSelection(event) {
     })
 
     const nextThread = result.thread || null
-    state.leadId = String(nextThread?.leadId || state.leadId || "").trim()
-    state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : state.messages
-    state.photoFileNames = Array.isArray(nextThread?.photoFileNames)
-      ? nextThread.photoFileNames
-      : state.photoFileNames
-    renderThread()
-    renderPhotoFiles()
+    applyThread(
+      nextThread || {
+        leadId: state.leadId,
+        threadKey: state.threadKey,
+        messages: state.messages,
+        photoFileNames: state.photoFileNames,
+      },
+    )
     if (state.pushSubscription) {
       refreshPushSubscription({ syncServer: true }).catch(() => {})
     }
