@@ -1300,7 +1300,10 @@ function normalizeMetalworksNotificationPath(
 ) {
   const safeValue = String(value || "").trim();
 
-  if (!safeValue.startsWith("/metalworks-crm")) {
+  if (
+    !safeValue.startsWith("/metalworks-crm") &&
+    !safeValue.startsWith("/metalworks-chat")
+  ) {
     return fallback;
   }
 
@@ -1550,6 +1553,7 @@ async function sendMetalworksWebPushNotification({
   body = "",
   leadId = "",
   notificationPath = "/metalworks-crm/operator/",
+  targetUrl = "",
 } = {}) {
   const config = getMetalworksWebPushConfig();
 
@@ -1576,6 +1580,7 @@ async function sendMetalworksWebPushNotification({
   }
 
   try {
+    const safeTargetUrl = cleanText(targetUrl || "", 500);
     webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
     await webpush.sendNotification(
       safeSubscription,
@@ -1584,7 +1589,7 @@ async function sendMetalworksWebPushNotification({
         body: trimPushCopy(body || "", 140),
         alertType: cleanText(alertType || "", 60),
         leadId: cleanText(leadId || "", 80),
-        url: buildMetalworksNotificationUrl(leadId, notificationPath),
+        url: safeTargetUrl || buildMetalworksNotificationUrl(leadId, notificationPath),
       }),
       {
         TTL: 90,
@@ -4114,6 +4119,35 @@ function cleanWebPushDevice(doc = null) {
   };
 }
 
+function cleanPublicChatWebPushDevice(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    leadId: doc.leadId ? String(doc.leadId) : "",
+    visitorId: cleanText(doc.visitorId || "", 120),
+    sessionId: cleanText(doc.sessionId || "", 120),
+    endpoint: cleanText(doc.endpoint || "", 240),
+    platform: cleanText(doc.platform || "web", 40) || "web",
+    deviceName: cleanText(doc.deviceName || "", 120),
+    browserName: cleanText(doc.browserName || "", 80),
+    notificationPath: normalizeMetalworksNotificationPath(
+      doc.notificationPath || "/metalworks-chat/",
+      "/metalworks-chat/",
+    ),
+    authorizationStatus: cleanText(doc.authorizationStatus || "", 40),
+    notificationsEnabled: Boolean(doc.notificationsEnabled),
+    isActive: Boolean(doc.isActive),
+    lastSeenAt: doc.lastSeenAt ? new Date(doc.lastSeenAt).toISOString() : "",
+    lastPushAt: doc.lastPushAt ? new Date(doc.lastPushAt).toISOString() : "",
+    lastPushError: cleanText(doc.lastPushError || "", 240),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
 function buildLeadQuery(filters = {}) {
   const query = {};
   const status = normalizeStatus(filters?.status || "");
@@ -5139,6 +5173,33 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
+  const metalworksPublicChatWebPushDeviceSchema = new mongoose.Schema({
+    endpoint: { type: String, required: true, unique: true, index: true },
+    leadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    visitorId: { type: String, index: true },
+    sessionId: { type: String, index: true },
+    platform: { type: String, default: "web" },
+    browserName: String,
+    deviceName: String,
+    notificationPath: { type: String, default: "/metalworks-chat/" },
+    authorizationStatus: String,
+    subscription: { type: mongoose.Schema.Types.Mixed, required: true },
+    vapidPublicKey: String,
+    notificationsEnabled: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true, index: true },
+    lastSeenAt: { type: Date, default: Date.now, index: true },
+    lastPushAt: Date,
+    lastPushError: String,
+    ipAddress: String,
+    userAgent: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
@@ -5164,6 +5225,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksProspectorSessionSchema.index({ prospectorEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksCrmWebPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
+  metalworksCrmWebPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ leadId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ visitorId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ sessionId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
@@ -5192,6 +5259,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmWebPushDevice =
     mongoose.models.MetalworksCrmWebPushDevice ||
     mongoose.model("MetalworksCrmWebPushDevice", metalworksCrmWebPushDeviceSchema);
+  const MetalworksPublicChatWebPushDevice =
+    mongoose.models.MetalworksPublicChatWebPushDevice ||
+    mongoose.model("MetalworksPublicChatWebPushDevice", metalworksPublicChatWebPushDeviceSchema);
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -5879,6 +5949,137 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
       $or: conditions,
     }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
+  async function syncPublicChatPushDevicesToLead(leadDoc = null) {
+    if (!leadDoc?._id) {
+      return 0;
+    }
+
+    const conditions = [];
+    const visitorIds = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.filter(Boolean) : [];
+    const sessionIds = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.filter(Boolean) : [];
+
+    if (visitorIds.length) {
+      conditions.push({ visitorId: { $in: visitorIds } });
+    }
+
+    if (sessionIds.length) {
+      conditions.push({ sessionId: { $in: sessionIds } });
+    }
+
+    if (!conditions.length) {
+      return 0;
+    }
+
+    const result = await MetalworksPublicChatWebPushDevice.updateMany(
+      {
+        $or: conditions,
+      },
+      {
+        $set: {
+          leadId: leadDoc._id,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return Number(result?.modifiedCount || 0) || 0;
+  }
+
+  async function sendWebsiteLiveChatReplyPushAlert({ lead = null, message = "" } = {}) {
+    if (!lead?._id) {
+      return {
+        attempted: false,
+        delivered: false,
+        deliveredCount: 0,
+        deviceCount: 0,
+        error: "Lead is required for public chat push.",
+      };
+    }
+
+    const conditions = [{ leadId: lead._id }];
+    const visitorIds = Array.isArray(lead.visitorIds) ? lead.visitorIds.filter(Boolean) : [];
+    const sessionIds = Array.isArray(lead.sessionIds) ? lead.sessionIds.filter(Boolean) : [];
+
+    if (visitorIds.length) {
+      conditions.push({ visitorId: { $in: visitorIds } });
+    }
+
+    if (sessionIds.length) {
+      conditions.push({ sessionId: { $in: sessionIds } });
+    }
+
+    const deviceDocs = await MetalworksPublicChatWebPushDevice.find({
+      isActive: true,
+      notificationsEnabled: true,
+      $or: conditions,
+    })
+      .sort({ lastSeenAt: -1, updatedAt: -1 })
+      .limit(24)
+      .lean();
+
+    if (!deviceDocs.length) {
+      return {
+        attempted: false,
+        delivered: false,
+        deliveredCount: 0,
+        deviceCount: 0,
+        error: "No active public chat devices are registered for this lead.",
+      };
+    }
+
+    const title = "Chicago Metal Works replied";
+    const body =
+      trimPushCopy(message || "", 140) ||
+      "Open your chat to see the latest update from Chicago Metal Works & Fencing.";
+    const results = await Promise.all(
+      deviceDocs.map(async (device) => {
+        const result = await sendMetalworksWebPushNotification({
+          subscription: device.subscription,
+          alertType: "website_live_chat_reply",
+          title,
+          body,
+          leadId: String(lead._id || ""),
+          notificationPath: "/metalworks-chat/",
+          targetUrl: "/metalworks-chat/",
+        });
+        const update = {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          lastPushAt: result.delivered ? new Date() : device.lastPushAt || null,
+          lastPushError: result.delivered ? "" : cleanText(result.error || "", 240),
+        };
+
+        if (
+          METALWORKS_PUSH_INVALID_REASONS.has(result.reason || "") ||
+          Number(result.status || 0) === 410
+        ) {
+          update.isActive = false;
+          update.notificationsEnabled = false;
+        }
+
+        await MetalworksPublicChatWebPushDevice.updateOne(
+          { _id: device._id },
+          {
+            $set: update,
+          },
+        );
+
+        return result;
+      }),
+    );
+
+    return {
+      attempted: true,
+      delivered: results.some((item) => item.delivered),
+      deliveredCount: results.filter((item) => item.delivered).length,
+      deviceCount: deviceDocs.length,
+      results,
+      error: results.some((item) => item.delivered)
+        ? ""
+        : results[0]?.error || "No pude entregar alertas del chat publico.",
+    };
   }
 
   async function resolveConversationApplicant({
@@ -8928,6 +9129,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         req,
       });
 
+      try {
+        await sendWebsiteLiveChatReplyPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          message,
+        });
+      } catch (error) {
+        console.error("Error sending website live chat reply push:", error.message);
+      }
+
       const [activityDocs, assets] = await Promise.all([
         MetalworksLeadActivity.find({ leadId: leadDoc._id })
           .sort({ createdAt: -1 })
@@ -9833,6 +10043,98 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.get("/api/public/metalworks/live-chat/push/config", async (req, res) => {
+    try {
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        vapidPublicKey: metalworksWebPushConfigured()
+          ? METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY
+          : "",
+        subject: metalworksWebPushConfigured() ? METALWORKS_WEB_PUSH_SUBJECT : "",
+      });
+    } catch (error) {
+      console.error("Error loading public chat push config:", error.message);
+      respondError(res, 500, "I could not load push configuration.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/push/register", async (req, res) => {
+    if (!metalworksWebPushConfigured()) {
+      return respondError(res, 503, "Web push credentials are not configured yet.");
+    }
+
+    const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
+    const visitorId = cleanText(req.body?.visitorId || "", 120);
+    const sessionId = cleanText(req.body?.sessionId || "", 120);
+    const deviceName = cleanText(req.body?.deviceName || "", 120);
+    const browserName = cleanText(req.body?.browserName || "", 80);
+    const notificationPath = normalizeMetalworksNotificationPath(
+      req.body?.notificationPath || "/metalworks-chat/",
+      "/metalworks-chat/",
+    );
+    const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
+    const notificationsEnabled =
+      req.body?.notificationsEnabled === false ? false : Boolean(subscription);
+
+    if (!subscription) {
+      return respondError(res, 400, "La suscripcion web es requerida.");
+    }
+
+    if (!visitorId && !sessionId) {
+      return respondError(res, 400, "Missing live chat visitor session.");
+    }
+
+    try {
+      const now = new Date();
+      const leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+      });
+      const doc = await MetalworksPublicChatWebPushDevice.findOneAndUpdate(
+        { endpoint: subscription.endpoint },
+        {
+          $set: {
+            leadId: leadDoc?._id || null,
+            visitorId,
+            sessionId,
+            deviceName,
+            browserName,
+            notificationPath,
+            authorizationStatus,
+            subscription,
+            vapidPublicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+            notificationsEnabled,
+            isActive: notificationsEnabled,
+            ipAddress: cleanText(getClientIp(req), 120),
+            userAgent: cleanText(req.headers["user-agent"] || "", 400),
+            lastSeenAt: now,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            platform: "web",
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        },
+      );
+
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        message: "This chat is ready for live reply alerts.",
+        device: cleanPublicChatWebPushDevice(doc),
+      });
+    } catch (error) {
+      console.error("Error registering public chat web push device:", error.message);
+      respondError(res, 500, "No pude registrar este navegador para el chat.");
+    }
+  });
+
   app.post("/api/public/metalworks/live-chat/thread", async (req, res) => {
     try {
       const visitorId = cleanText(req.body?.visitorId || "", 120);
@@ -9966,6 +10268,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       );
       leadDoc.updatedAt = new Date();
       await leadDoc.save();
+      await syncPublicChatPushDevicesToLead(leadDoc);
 
       await appendActivity({
         leadId: leadDoc._id,
@@ -10082,6 +10385,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       await leadDoc.save();
+      await syncPublicChatPushDevicesToLead(leadDoc);
 
       if (!leadExistedBeforeMessage && leadDoc?._id) {
         await appendActivity({

@@ -1,0 +1,22 @@
+{
+  "name": "Chicago Metal Works Chat",
+  "short_name": "CMW Chat",
+  "description": "Direct chat with Chicago Metal Works & Fencing with live reply alerts.",
+  "start_url": "/metalworks-chat/",
+  "scope": "/metalworks-chat/",
+  "display": "standalone",
+  "background_color": "#edf3f8",
+  "theme_color": "#dbe7f3",
+  "icons": [
+    {
+      "src": "/metalworks-crm/crm-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/metalworks-crm/crm-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

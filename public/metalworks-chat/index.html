@@ -12,6 +12,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="CMW Messages" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/metalworks-chat/chat.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/crm-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/crm-icon-180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -31,8 +35,22 @@
               <h1>Chat directo</h1>
             </div>
           </div>
-          <span class="messages-status" data-chat-status>Listo para empezar</span>
+          <div class="messages-header-side">
+            <span class="messages-status" data-chat-status>Listo para empezar</span>
+            <div class="messages-header-buttons">
+              <button type="button" class="messages-header-button" data-chat-install>
+                Guardar app
+              </button>
+              <button type="button" class="messages-header-button" data-chat-enable-push>
+                Activar alertas
+              </button>
+            </div>
+          </div>
         </header>
+
+        <p class="messages-install-hint" data-chat-install-hint>
+          Guarda esta pagina como app para abrir tu chat mas rapido y recibir alertas cuando Chicago Metal Works te responda.
+        </p>
 
         <p class="messages-lede">
           Este chat manda tu mensaje directo al CRM. Si vuelves a abrirlo en este mismo dispositivo,

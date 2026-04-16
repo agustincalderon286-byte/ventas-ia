@@ -3,6 +3,8 @@ const PROFILE_STORAGE_KEY = "cmwf_live_chat_profile_v1"
 const POLL_INTERVAL_MS = 5000
 const MAX_CHAT_PHOTO_FILES = 4
 const MAX_CHAT_TOTAL_BYTES = 6 * 1024 * 1024
+const CHAT_PUSH_SW_PATH = "/metalworks-chat/chat-sw.js"
+const CHAT_PUSH_SW_SCOPE = "/metalworks-chat/"
 const INTRO_MESSAGE =
   "Hola, este chat va directo a Chicago Metal Works & Fencing. Cuentanos que necesitas y te respondemos desde el CRM."
 
@@ -17,6 +19,9 @@ const chatPhotoCount = document.querySelector("[data-chat-photo-count]")
 const chatPhotoList = document.querySelector("[data-chat-photo-list]")
 const chatFeedback = document.querySelector("[data-chat-feedback]")
 const chatStatus = document.querySelector("[data-chat-status]")
+const chatInstallButton = document.querySelector("[data-chat-install]")
+const chatEnablePushButton = document.querySelector("[data-chat-enable-push]")
+const chatInstallHint = document.querySelector("[data-chat-install-hint]")
 const profileDetails = document.querySelector("[data-chat-profile]")
 const profileSummary = document.querySelector("[data-chat-profile-summary]")
 const profileNameInput = document.querySelector("[data-chat-profile-name]")
@@ -31,6 +36,11 @@ const state = {
   sending: false,
   uploadingPhotos: false,
   photoFileNames: [],
+  pushConfig: null,
+  pushRegistration: null,
+  pushSubscription: null,
+  pushBusy: false,
+  installPrompt: null,
   pollHandle: null,
 }
 
@@ -166,6 +176,301 @@ function setStatus(message = "") {
   }
 
   chatStatus.textContent = message || "Listo para empezar"
+}
+
+function detectBrowserName() {
+  const userAgent = String(navigator.userAgent || "")
+
+  if (/edg\//i.test(userAgent)) return "Edge"
+  if (/opr\//i.test(userAgent)) return "Opera"
+  if (/chrome\//i.test(userAgent) && !/edg\//i.test(userAgent)) return "Chrome"
+  if (/firefox\//i.test(userAgent)) return "Firefox"
+  if (/safari\//i.test(userAgent) && !/chrome\//i.test(userAgent)) return "Safari"
+  return "Browser"
+}
+
+function isAppleMobileDevice() {
+  return /iphone|ipad|ipod/i.test(String(navigator.userAgent || ""))
+}
+
+function isStandaloneApp() {
+  try {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    )
+  } catch {
+    return window.navigator.standalone === true
+  }
+}
+
+function needsHomeScreenInstallForPush() {
+  return isAppleMobileDevice() && !isStandaloneApp()
+}
+
+function supportsWebPush() {
+  return Boolean(
+    window.isSecureContext &&
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window,
+  )
+}
+
+function urlBase64ToUint8Array(value = "") {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4)
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/")
+  const rawData = window.atob(base64)
+  return Uint8Array.from(rawData, (char) => char.charCodeAt(0))
+}
+
+function buildPushDeviceName() {
+  const platform = String(navigator.platform || "device").trim()
+  return `${detectBrowserName()} on ${platform}`.slice(0, 120)
+}
+
+function syncInstallUi() {
+  if (chatInstallButton) {
+    const canPrompt = Boolean(state.installPrompt)
+    const canGuide = isAppleMobileDevice() && !isStandaloneApp()
+    chatInstallButton.disabled = isStandaloneApp()
+    chatInstallButton.textContent =
+      canPrompt || canGuide
+        ? "Guardar app"
+        : isStandaloneApp()
+          ? "App instalada"
+          : "Como instalar"
+  }
+
+  if (chatInstallHint) {
+    if (needsHomeScreenInstallForPush()) {
+      chatInstallHint.textContent =
+        "En iPhone, toca Share y luego Add to Home Screen para guardarla como app y activar alertas."
+      return
+    }
+
+    if (state.installPrompt) {
+      chatInstallHint.textContent =
+        "Puedes guardar este chat como app y recibir alertas cuando Chicago Metal Works te responda."
+      return
+    }
+
+    chatInstallHint.textContent =
+      "Guarda esta pagina como app para abrir tu chat mas rapido y recibir alertas cuando Chicago Metal Works te responda."
+  }
+}
+
+function syncPushButton() {
+  if (!chatEnablePushButton) {
+    return
+  }
+
+  const permission = supportsWebPush() ? Notification.permission : "unsupported"
+  const configured = Boolean(state.pushConfig?.webPushConfigured)
+  const enabled = Boolean(state.pushSubscription && permission === "granted")
+  chatEnablePushButton.disabled =
+    state.pushBusy ||
+    !supportsWebPush() ||
+    !configured ||
+    needsHomeScreenInstallForPush()
+  chatEnablePushButton.textContent = enabled
+    ? "Alertas activas"
+    : needsHomeScreenInstallForPush()
+      ? "Instala la app"
+      : permission === "denied"
+        ? "Alertas bloqueadas"
+        : "Activar alertas"
+}
+
+async function registerChatServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return null
+  }
+
+  if (state.pushRegistration) {
+    return state.pushRegistration
+  }
+
+  const registration = await navigator.serviceWorker.register(CHAT_PUSH_SW_PATH, {
+    scope: CHAT_PUSH_SW_SCOPE,
+  })
+  state.pushRegistration = await navigator.serviceWorker.ready
+  registration.update().catch(() => null)
+  return state.pushRegistration
+}
+
+async function refreshPushSubscription({ syncServer = false } = {}) {
+  if (!supportsWebPush()) {
+    state.pushSubscription = null
+    syncPushButton()
+    return null
+  }
+
+  const registration = await registerChatServiceWorker()
+  const subscription = await registration.pushManager.getSubscription()
+  state.pushSubscription = subscription
+
+  if (
+    syncServer &&
+    subscription &&
+    Notification.permission === "granted" &&
+    state.pushConfig?.webPushConfigured
+  ) {
+    await apiRequest("/api/public/metalworks/live-chat/push/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        visitorId: state.visitorId,
+        sessionId: state.sessionId,
+        leadId: state.leadId,
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        notificationPath: "/metalworks-chat/",
+        authorizationStatus: Notification.permission,
+        notificationsEnabled: true,
+      },
+    })
+  }
+
+  syncPushButton()
+  return subscription
+}
+
+async function loadPushConfig({ silent = false } = {}) {
+  if (needsHomeScreenInstallForPush()) {
+    if (!silent) {
+      setFeedback(
+        "Instala esta app en tu Home Screen para que iPhone pueda mandarte alertas.",
+        "muted",
+      )
+    }
+    syncPushButton()
+    syncInstallUi()
+    return null
+  }
+
+  if (!supportsWebPush()) {
+    syncPushButton()
+    syncInstallUi()
+    return null
+  }
+
+  try {
+    state.pushConfig = await apiRequest("/api/public/metalworks/live-chat/push/config")
+    await refreshPushSubscription({ syncServer: true })
+
+    if (!silent) {
+      if (!state.pushConfig?.webPushConfigured) {
+        setFeedback("Las alertas todavia necesitan llaves VAPID en el servidor.", "warning")
+      } else if (state.pushSubscription && Notification.permission === "granted") {
+        setFeedback("Las alertas del chat estan activas en este dispositivo.", "success")
+      }
+    }
+
+    syncPushButton()
+    syncInstallUi()
+    return state.pushConfig
+  } catch (error) {
+    if (!silent) {
+      setFeedback(error.message || "No pude cargar las alertas del chat.", "error")
+    }
+    syncPushButton()
+    syncInstallUi()
+    return null
+  }
+}
+
+async function handleEnablePush() {
+  if (needsHomeScreenInstallForPush()) {
+    setFeedback(
+      "Instala primero la app en tu Home Screen para activar alertas en iPhone.",
+      "warning",
+    )
+    syncPushButton()
+    return
+  }
+
+  if (!supportsWebPush()) {
+    setFeedback("Este navegador no soporta alertas push seguras.", "error")
+    return
+  }
+
+  if (!state.pushConfig?.webPushConfigured || !state.pushConfig?.vapidPublicKey) {
+    setFeedback("Las alertas todavia no estan configuradas en el servidor.", "warning")
+    syncPushButton()
+    return
+  }
+
+  state.pushBusy = true
+  syncPushButton()
+  setFeedback("Activando alertas...", "muted")
+
+  try {
+    const permission = await Notification.requestPermission()
+
+    if (permission !== "granted") {
+      setFeedback(
+        permission === "denied"
+          ? "Las alertas fueron bloqueadas para este dispositivo."
+          : "No se concedio permiso para alertas.",
+        "warning",
+      )
+      return
+    }
+
+    const registration = await registerChatServiceWorker()
+    let subscription = await registration.pushManager.getSubscription()
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(state.pushConfig.vapidPublicKey),
+      })
+    }
+
+    await apiRequest("/api/public/metalworks/live-chat/push/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        visitorId: state.visitorId,
+        sessionId: state.sessionId,
+        leadId: state.leadId,
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        notificationPath: "/metalworks-chat/",
+        authorizationStatus: permission,
+        notificationsEnabled: true,
+      },
+    })
+
+    state.pushSubscription = subscription
+    setFeedback("Listo. Este dispositivo recibira tus respuestas en vivo.", "success")
+  } catch (error) {
+    setFeedback(error.message || "No pude activar alertas en este dispositivo.", "error")
+  } finally {
+    state.pushBusy = false
+    syncPushButton()
+  }
+}
+
+async function handleInstall() {
+  if (state.installPrompt) {
+    state.installPrompt.prompt()
+    await state.installPrompt.userChoice.catch(() => null)
+    state.installPrompt = null
+    syncInstallUi()
+    return
+  }
+
+  if (isAppleMobileDevice() && !isStandaloneApp()) {
+    setFeedback(
+      "En iPhone, toca Share y luego Add to Home Screen para guardarla como app.",
+      "muted",
+    )
+    return
+  }
+
+  setFeedback("Si tu navegador lo permite, usa su opcion de instalar o guardar app.", "muted")
 }
 
 function renderPhotoFiles() {
@@ -306,6 +611,8 @@ function syncComposerState() {
     chatPhotoButton.disabled = state.sending || state.uploadingPhotos
     chatPhotoButton.textContent = state.uploadingPhotos ? "Subiendo fotos..." : "Agregar fotos"
   }
+
+  syncPushButton()
 }
 
 async function loadThread({ silent = false } = {}) {
@@ -324,6 +631,9 @@ async function loadThread({ silent = false } = {}) {
     state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
     renderThread()
     renderPhotoFiles()
+    if (state.pushSubscription) {
+      refreshPushSubscription({ syncServer: true }).catch(() => {})
+    }
 
     if (state.leadId) {
       setStatus("Conversacion conectada al CRM")
@@ -386,6 +696,9 @@ async function handleSendMessage(event) {
     state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
     renderThread()
     renderPhotoFiles()
+    if (state.pushSubscription) {
+      refreshPushSubscription({ syncServer: true }).catch(() => {})
+    }
 
     chatInput.value = ""
     autoResizeTextarea()
@@ -474,6 +787,9 @@ async function handlePhotoSelection(event) {
       : state.photoFileNames
     renderThread()
     renderPhotoFiles()
+    if (state.pushSubscription) {
+      refreshPushSubscription({ syncServer: true }).catch(() => {})
+    }
     setFeedback("Tus fotos ya quedaron guardadas en el lead.", "success")
     setStatus("Fotos guardadas en el CRM")
   } catch (error) {
@@ -504,6 +820,8 @@ function startPolling() {
 
 function bindEvents() {
   chatForm?.addEventListener("submit", handleSendMessage)
+  chatInstallButton?.addEventListener("click", handleInstall)
+  chatEnablePushButton?.addEventListener("click", handleEnablePush)
   chatPhotoButton?.addEventListener("click", () => {
     chatPhotoInput?.click()
   })
@@ -527,16 +845,30 @@ function bindEvents() {
       loadThread({ silent: true }).catch(() => {})
     }
   })
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault()
+    state.installPrompt = event
+    syncInstallUi()
+  })
+
+  window.addEventListener("appinstalled", () => {
+    state.installPrompt = null
+    syncInstallUi()
+  })
 }
 
 async function init() {
   ensureThreadIdentity()
   hydrateProfileInputs()
   bindEvents()
+  syncInstallUi()
   autoResizeTextarea()
   renderThread()
   renderPhotoFiles()
   syncComposerState()
+  registerChatServiceWorker().catch(() => null)
+  await loadPushConfig({ silent: true })
   await loadThread({ silent: true })
   startPolling()
 }
