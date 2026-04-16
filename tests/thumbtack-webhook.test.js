@@ -45,6 +45,8 @@ test("normaliza un negotiation webhook de Thumbtack a lead del CRM", () => {
   assert.equal(lead.phone, "7735550199");
   assert.equal(lead.email, "olivia@example.com");
   assert.equal(lead.projectType, "Metal Fabricators / Handrail Installation");
+  assert.equal(lead.city, "Chicago");
+  assert.equal(lead.zipCode, "60632");
   assert.match(lead.location, /Chicago, IL, 60632/);
   assert.match(lead.details, /Negotiation ID: neg_123/);
   assert.match(lead.details, /Description: Need a new front stair railing/);
@@ -78,6 +80,52 @@ test("normaliza un customer message webhook con negotiation id", () => {
   assert.equal(event.leadCandidate.crmStatus, "contacted");
   assert.equal(event.leadCandidate.fullName, "Chris P.");
   assert.match(event.activity.body, /Can you come by tomorrow afternoon/);
+});
+
+test("normaliza campos alternos de customer y address para guardar nombre, telefono y zipcode", () => {
+  const payload = {
+    eventType: "NegotiationUpdatedV4",
+    data: {
+      negotiation: {
+        negotiationID: "neg_alt_001",
+        status: "active",
+        request: {
+          description: "Need fence repair after storm damage.",
+          category: {
+            name: "Fence and Gate Installation",
+          },
+          services: [{ label: "Fence Repair" }],
+          location: {
+            address1: "1234 W 47th St",
+            locality: "Chicago",
+            administrativeArea: "IL",
+            postalCode: "60609",
+          },
+        },
+        customer: {
+          firstName: "Maria",
+          lastName: "Lopez",
+          phoneNumber: {
+            formattedNumber: "+1 (312) 555-0188",
+          },
+          emailAddress: "maria@example.com",
+        },
+      },
+    },
+  };
+
+  const lead = buildThumbtackLeadCandidate(payload);
+
+  assert.ok(lead);
+  assert.equal(lead.externalLeadId, "neg_alt_001");
+  assert.equal(lead.fullName, "Maria Lopez");
+  assert.equal(lead.phone, "3125550188");
+  assert.equal(lead.phoneDisplay, "+1 (312) 555-0188");
+  assert.equal(lead.email, "maria@example.com");
+  assert.equal(lead.addressLine, "1234 W 47th St");
+  assert.equal(lead.city, "Chicago");
+  assert.equal(lead.zipCode, "60609");
+  assert.match(lead.location, /1234 W 47th St, Chicago, IL, 60609/);
 });
 
 test("ignora mensajes automáticos de Thumbtack para no crear leads basura", () => {

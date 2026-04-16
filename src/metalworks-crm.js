@@ -5734,6 +5734,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     email = "",
     projectType = "",
     location = "",
+    addressLine = "",
+    zipCode = "",
+    city = "",
     details = "",
     sourceType = "",
     pageTitle = "",
@@ -5755,6 +5758,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const safeEmail = normalizeEmail(email || "");
     const safeProjectType = cleanText(projectType || "", 120);
     const safeLocation = cleanText(location || "", 160);
+    const safeAddressLine = cleanText(addressLine || "", 160);
+    const safeZipCode = cleanText(zipCode || "", 20);
+    const safeCity = cleanText(city || "", 120);
     const safeDetails = cleanText(details || "", 3000);
     const safeSourceType = cleanText(sourceType || "", 80) || safeExternalSystem;
     const safePageTitle = cleanText(pageTitle || "", 160);
@@ -5809,6 +5815,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       leadDoc.email = safeEmail || leadDoc.email || "";
       leadDoc.projectType = safeProjectType || leadDoc.projectType || "";
       leadDoc.location = safeLocation || leadDoc.location || "";
+      leadDoc.addressLine = safeAddressLine || leadDoc.addressLine || "";
+      leadDoc.zipCode = safeZipCode || leadDoc.zipCode || "";
+      leadDoc.city = safeCity || leadDoc.city || "";
       leadDoc.details = safeDetails || leadDoc.details || "";
       leadDoc.photoFileNames = photoFileNames.length
         ? photoFileNames
@@ -5841,6 +5850,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         email: safeEmail,
         projectType: safeProjectType,
         location: safeLocation,
+        addressLine: safeAddressLine,
+        zipCode: safeZipCode,
+        city: safeCity,
         details: safeDetails,
         photoFileNames,
         status: safeCrmStatus,
@@ -9714,6 +9726,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             email: parsedEvent.leadCandidate.email,
             projectType: parsedEvent.leadCandidate.projectType,
             location: parsedEvent.leadCandidate.location,
+            addressLine: parsedEvent.leadCandidate.addressLine,
+            zipCode: parsedEvent.leadCandidate.zipCode,
+            city: parsedEvent.leadCandidate.city,
             details: parsedEvent.leadCandidate.details,
             sourceType: parsedEvent.leadCandidate.sourceType,
             pageTitle: "Thumbtack",

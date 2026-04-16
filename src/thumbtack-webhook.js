@@ -47,6 +47,10 @@ function pickFirst(target, paths = []) {
   return undefined;
 }
 
+function pickFirstText(target, paths = [], maxLength = 0) {
+  return cleanText(pickFirst(target, paths) || "", maxLength);
+}
+
 function pickFirstRecord(target, paths = [], predicate = () => true) {
   for (const path of paths) {
     const value = getPath(target, path);
@@ -67,6 +71,10 @@ function uniqueStrings(values = [], maxLength = 0) {
         .filter(Boolean),
     ),
   );
+}
+
+function joinNameParts(firstName = "", lastName = "", maxLength = 0) {
+  return cleanText([firstName, lastName].filter(Boolean).join(" "), maxLength);
 }
 
 function looksLikeNegotiation(value = null) {
@@ -164,6 +172,18 @@ function buildLocationLabel(...sources) {
       continue;
     }
 
+    const parts = [
+      source.addressLine || source.address1 || source.line1 || source.streetAddress || source.street1,
+      source.city || source.locality,
+      source.state || source.stateCode || source.administrativeArea || source.region,
+      source.zipCode || source.zip || source.postalCode || source.postcode,
+    ];
+    const joined = joinLabel(parts, 160);
+
+    if (joined) {
+      return joined;
+    }
+
     const direct = cleanText(
       source.fullAddress ||
         source.formattedAddress ||
@@ -176,21 +196,181 @@ function buildLocationLabel(...sources) {
     if (direct) {
       return direct;
     }
-
-    const parts = [
-      source.addressLine,
-      source.city,
-      source.state,
-      source.zipCode || source.zip,
-    ];
-    const joined = joinLabel(parts, 160);
-
-    if (joined) {
-      return joined;
-    }
   }
 
   return "";
+}
+
+function extractLocationParts(...sources) {
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+
+    if (typeof source === "string") {
+      const direct = cleanText(source, 160);
+
+      if (direct) {
+        return {
+          addressLine: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          location: direct,
+        };
+      }
+
+      continue;
+    }
+
+    if (!isRecord(source)) {
+      continue;
+    }
+
+    const addressLine = cleanText(
+      source.addressLine ||
+        source.address1 ||
+        source.line1 ||
+        source.streetAddress ||
+        source.street1 ||
+        "",
+      160,
+    );
+    const city = cleanText(source.city || source.locality || "", 120);
+    const state = cleanText(
+      source.state || source.stateCode || source.administrativeArea || source.region || "",
+      40,
+    );
+    const zipCode = cleanText(source.zipCode || source.zip || source.postalCode || source.postcode || "", 20);
+    const location = buildLocationLabel(source);
+
+    if (addressLine || city || state || zipCode || location) {
+      return {
+        addressLine,
+        city,
+        state,
+        zipCode,
+        location,
+      };
+    }
+  }
+
+  return {
+    addressLine: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    location: "",
+  };
+}
+
+function buildThumbtackCustomerName(customer = {}, negotiation = {}, message = {}, payload = {}, entityType = "") {
+  const directName = cleanText(
+    customer?.displayName ||
+      customer?.name ||
+      customer?.fullName ||
+      pickFirst(payload, [
+        ["customer", "displayName"],
+        ["customer", "name"],
+        ["customer", "fullName"],
+        ["negotiation", "customer", "displayName"],
+        ["negotiation", "customer", "name"],
+        ["negotiation", "customer", "fullName"],
+        ["data", "customer", "displayName"],
+        ["data", "customer", "name"],
+        ["data", "customer", "fullName"],
+      ]) ||
+      "",
+    120,
+  );
+
+  if (directName) {
+    return directName;
+  }
+
+  const composedName =
+    joinNameParts(customer?.firstName, customer?.lastName, 120) ||
+    joinNameParts(customer?.first_name, customer?.last_name, 120) ||
+    joinNameParts(
+      pickFirst(payload, [["customer", "firstName"], ["negotiation", "customer", "firstName"]]) || "",
+      pickFirst(payload, [["customer", "lastName"], ["negotiation", "customer", "lastName"]]) || "",
+      120,
+    ) ||
+    joinNameParts(
+      pickFirst(payload, [["customer", "first_name"], ["negotiation", "customer", "first_name"]]) || "",
+      pickFirst(payload, [["customer", "last_name"], ["negotiation", "customer", "last_name"]]) || "",
+      120,
+    );
+
+  if (composedName) {
+    return composedName;
+  }
+
+  return entityType === "message" ? "Thumbtack conversation" : "Thumbtack lead";
+}
+
+function buildThumbtackPhoneDisplay(customer = {}, negotiation = {}, message = {}, payload = {}) {
+  return cleanText(
+    customer?.phone ||
+      customer?.formattedPhone ||
+      customer?.formattedNumber ||
+      customer?.phoneNumber?.formattedNumber ||
+      customer?.phoneNumber?.nationalNumber ||
+      (typeof customer?.phoneNumber === "string" ? customer.phoneNumber : "") ||
+      pickFirst(payload, [
+        ["customer", "phone"],
+        ["customer", "phoneNumber"],
+        ["customer", "formattedPhone"],
+        ["customer", "formattedNumber"],
+        ["customer", "phoneNumber", "formattedNumber"],
+        ["customer", "phoneNumber", "nationalNumber"],
+        ["negotiation", "customer", "phone"],
+        ["negotiation", "customer", "phoneNumber"],
+        ["negotiation", "customer", "formattedPhone"],
+        ["negotiation", "customer", "formattedNumber"],
+        ["negotiation", "customer", "phoneNumber", "formattedNumber"],
+        ["negotiation", "customer", "phoneNumber", "nationalNumber"],
+        ["message", "customer", "phone"],
+        ["message", "customer", "phoneNumber"],
+        ["message", "customer", "formattedPhone"],
+        ["data", "customer", "phone"],
+        ["data", "customer", "phoneNumber"],
+        ["data", "customer", "formattedPhone"],
+        ["data", "customer", "formattedNumber"],
+        ["data", "customer", "phoneNumber", "formattedNumber"],
+        ["data", "customer", "phoneNumber", "nationalNumber"],
+        ["lead", "customer", "phone"],
+        ["lead", "customer", "phoneNumber"],
+        ["request", "customer", "phone"],
+        ["request", "customer", "phoneNumber"],
+        ["contact", "phone"],
+        ["contact", "phoneNumber"],
+      ]) ||
+      "",
+    40,
+  );
+}
+
+function buildThumbtackEmail(customer = {}, negotiation = {}, message = {}, payload = {}) {
+  return normalizeEmail(
+    customer?.email ||
+      customer?.emailAddress ||
+      pickFirst(payload, [
+        ["customer", "email"],
+        ["customer", "emailAddress"],
+        ["negotiation", "customer", "email"],
+        ["negotiation", "customer", "emailAddress"],
+        ["message", "customer", "email"],
+        ["message", "customer", "emailAddress"],
+        ["data", "customer", "email"],
+        ["data", "customer", "emailAddress"],
+        ["lead", "customer", "email"],
+        ["lead", "customer", "emailAddress"],
+        ["contact", "email"],
+        ["contact", "emailAddress"],
+      ]) ||
+      "",
+  );
 }
 
 function buildProjectType(negotiation = {}, payload = {}) {
@@ -466,35 +646,45 @@ export function buildThumbtackLeadCandidate(payload = {}) {
     return null;
   }
 
-  const phoneDisplay = cleanText(
-    customer?.phone ||
-      customer?.phoneNumber ||
-      customer?.formattedPhone ||
-      payload?.customer?.phone ||
-      "",
-    40,
-  );
-  const fullName = cleanText(
-    customer?.displayName ||
-      customer?.name ||
-      customer?.fullName ||
-      payload?.customer?.displayName ||
-      payload?.customer?.name ||
-      (entityType === "message" ? "Thumbtack conversation" : "Thumbtack lead"),
-    120,
-  );
-  const location = buildLocationLabel(
+  const phoneDisplay = buildThumbtackPhoneDisplay(customer, negotiation, message, payload);
+  const fullName = buildThumbtackCustomerName(customer, negotiation, message, payload, entityType);
+  const locationParts = extractLocationParts(
     negotiation?.location,
     negotiation?.request?.location,
+    negotiation?.request?.address,
     payload?.location,
     customer?.location,
+    payload?.customer?.location,
+    payload?.request?.location,
+    payload?.request?.address,
     {
-      addressLine: payload?.addressLine,
-      city: payload?.city,
-      state: payload?.state,
-      zipCode: payload?.zipCode,
+      addressLine:
+        pickFirstText(payload, [
+          ["addressLine"],
+          ["address1"],
+          ["line1"],
+          ["streetAddress"],
+          ["street1"],
+          ["request", "addressLine"],
+          ["request", "address1"],
+          ["request", "line1"],
+          ["request", "streetAddress"],
+          ["request", "street1"],
+        ], 160),
+      city: pickFirstText(payload, [["city"], ["locality"], ["request", "city"], ["request", "locality"]], 120),
+      state: pickFirstText(
+        payload,
+        [["state"], ["stateCode"], ["administrativeArea"], ["region"], ["request", "state"], ["request", "stateCode"]],
+        40,
+      ),
+      zipCode: pickFirstText(
+        payload,
+        [["zipCode"], ["zip"], ["postalCode"], ["postcode"], ["request", "zipCode"], ["request", "postalCode"]],
+        20,
+      ),
     },
   );
+  const location = cleanText(locationParts.location || "", 160);
   const projectType = buildProjectType(negotiation, payload);
   const statusLabel = cleanText(
     negotiation?.jobStatus || negotiation?.status || negotiation?.negotiationStatus || "",
@@ -526,11 +716,12 @@ export function buildThumbtackLeadCandidate(payload = {}) {
     fullName,
     phone: normalizePhone(phoneDisplay),
     phoneDisplay,
-    email: normalizeEmail(
-      customer?.email || customer?.emailAddress || payload?.customer?.email || "",
-    ),
+    email: buildThumbtackEmail(customer, negotiation, message, payload),
     projectType,
     location,
+    addressLine: cleanText(locationParts.addressLine || "", 160),
+    city: cleanText(locationParts.city || "", 120),
+    zipCode: cleanText(locationParts.zipCode || "", 20),
     details,
     meta: {
       customerId: cleanText(customer?.customerID || "", 120),
