@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicago Metal Works Chat</title>
+    <meta
+      name="description"
+      content="Habla directo con Chicago Metal Works & Fencing desde este chat y recibe respuestas en el mismo hilo."
+    />
+    <meta name="theme-color" content="#dbe7f3" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CMW Messages" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/metalworks-chat/styles.css" />
+  </head>
+  <body>
+    <main class="messages-page">
+      <section class="messages-shell">
+        <header class="messages-header">
+          <div class="messages-brand">
+            <span class="messages-badge">CMW</span>
+            <div>
+              <p class="messages-eyebrow">Chicago Metal Works &amp; Fencing</p>
+              <h1>Chat directo</h1>
+            </div>
+          </div>
+          <span class="messages-status" data-chat-status>Listo para empezar</span>
+        </header>
+
+        <p class="messages-lede">
+          Este chat manda tu mensaje directo al CRM. Si vuelves a abrirlo en este mismo dispositivo,
+          veras las respuestas aqui.
+        </p>
+
+        <details class="messages-profile" data-chat-profile>
+          <summary data-chat-profile-summary>
+            Agrega tu nombre o telefono para un seguimiento mas rapido
+          </summary>
+          <div class="messages-profile-grid">
+            <label>
+              <span>Nombre</span>
+              <input
+                type="text"
+                name="fullName"
+                maxlength="120"
+                placeholder="Tu nombre"
+                autocomplete="name"
+                data-chat-profile-name
+              />
+            </label>
+            <label>
+              <span>Telefono</span>
+              <input
+                type="tel"
+                name="phoneDisplay"
+                maxlength="40"
+                placeholder="773 555 1212"
+                autocomplete="tel"
+                data-chat-profile-phone
+              />
+            </label>
+            <label class="messages-profile-full">
+              <span>Email</span>
+              <input
+                type="email"
+                name="email"
+                maxlength="160"
+                placeholder="tu@email.com"
+                autocomplete="email"
+                data-chat-profile-email
+              />
+            </label>
+          </div>
+        </details>
+
+        <section class="messages-thread-wrap" aria-live="polite">
+          <div class="messages-thread" data-chat-thread></div>
+        </section>
+
+        <form class="messages-composer" data-chat-form>
+          <label class="messages-input-wrap">
+            <textarea
+              name="message"
+              rows="1"
+              maxlength="500"
+              placeholder="Cuentanos que necesitas reparar, fabricar, soldar o instalar..."
+              data-chat-input
+              required
+            ></textarea>
+          </label>
+          <div class="messages-actions">
+            <p class="messages-note">Las respuestas del equipo apareceran en este mismo hilo.</p>
+            <button type="submit" class="messages-send" data-chat-send>Enviar</button>
+          </div>
+          <p class="messages-feedback" data-chat-feedback></p>
+        </form>
+      </section>
+    </main>
+
+    <noscript>
+      <p class="messages-noscript">
+        Este chat necesita JavaScript para conectarse con Chicago Metal Works &amp; Fencing.
+      </p>
+    </noscript>
+
+    <script type="module" src="/metalworks-chat/app.js"></script>
+  </body>
+</html>

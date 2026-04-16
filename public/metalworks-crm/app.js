@@ -286,6 +286,7 @@ const state = {
   pushRegistration: null,
   pushSubscription: null,
   pushBusy: false,
+  liveChatReplyBusy: false,
   searchTimer: null,
   bindingsReady: false,
 };
@@ -369,6 +370,10 @@ const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-
 const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
 const conversationThread = document.querySelector("[data-crm-conversation-thread]");
 const conversationSummary = document.querySelector("[data-crm-conversation-summary]");
+const liveChatPanel = document.querySelector("[data-crm-live-chat-panel]");
+const liveChatForm = document.querySelector("[data-crm-live-chat-form]");
+const liveChatSendButton = document.querySelector("[data-crm-live-chat-send]");
+const liveChatFeedback = document.querySelector("[data-crm-live-chat-feedback]");
 const applicantDetailTabButtons = Array.from(
   document.querySelectorAll("[data-crm-applicant-detail-tab]"),
 );
@@ -449,6 +454,7 @@ function formatLeadSource(value = "") {
   const source = String(value || "").trim();
   const labels = {
     website_form: "Website form",
+    website_live_chat: "Website live chat",
     assistant_chat: "Assistant chat",
     assistant_whatsapp: "WhatsApp assistant",
     assistant_chat_photo: "Assistant photo upload",
@@ -516,6 +522,22 @@ function truncateText(value = "", maxLength = 180) {
   return `${safeValue.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
 }
 
+function buildLeadSummaryText(lead = null) {
+  if (!lead) {
+    return "";
+  }
+
+  if (lead.lastUserMessage) {
+    return `Latest message: ${truncateText(lead.lastUserMessage, 140)}`;
+  }
+
+  if (lead.details) {
+    return truncateText(lead.details, 140);
+  }
+
+  return "";
+}
+
 function toDatetimeLocalValue(value = "") {
   if (!value) {
     return "";
@@ -559,6 +581,15 @@ function setDetailFeedback(message = "", tone = "") {
     element.textContent = message;
     element.dataset.tone = tone;
   });
+}
+
+function setLiveChatFeedback(message = "", tone = "") {
+  if (!liveChatFeedback) {
+    return;
+  }
+
+  liveChatFeedback.textContent = message;
+  liveChatFeedback.dataset.tone = tone;
 }
 
 function setSystemStatus(message = "", tone = "") {
@@ -2179,6 +2210,7 @@ function renderLeadList(leads = []) {
       const isActive = lead.id === state.selectedLeadId;
       const phoneDigits = getLeadPhoneDigits(lead);
       const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
+      const summaryText = buildLeadSummaryText(lead);
 
       return `
         <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
@@ -2217,6 +2249,7 @@ function renderLeadList(leads = []) {
                 ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
                 : ""
             }
+            ${summaryText ? `<span>${escapeHtml(summaryText)}</span>` : ""}
           </div>
           <div class="crm-card-actions">
             ${
@@ -2538,6 +2571,26 @@ function syncDetailQuickActions(lead = null) {
   }
 }
 
+function syncLiveChatComposer(lead = null) {
+  const enabled = Boolean(lead?.id && lead?.supportsLiveChatReply);
+
+  if (liveChatPanel) {
+    liveChatPanel.hidden = !enabled;
+  }
+
+  if (liveChatForm && !enabled) {
+    liveChatForm.reset();
+  }
+
+  if (liveChatSendButton) {
+    liveChatSendButton.disabled = !enabled || state.liveChatReplyBusy;
+  }
+
+  if (!enabled) {
+    setLiveChatFeedback("", "");
+  }
+}
+
 function syncApplicantQuickActions(applicant = null) {
   const phoneDigits = normalizePhoneDigits(applicant?.phone || applicant?.phoneDisplay || "");
   const hasPhone = Boolean(phoneDigits);
@@ -2721,12 +2774,14 @@ function renderLeadDetail(detail = null) {
     renderConversationThread(conversationThread, conversationSummary, []);
     renderLeadAssets([]);
     syncDetailQuickActions(null);
+    syncLiveChatComposer(null);
     setDetailTab("profile");
     applyMobilePaneLayout();
     return;
   }
 
   const lead = detail.lead;
+  const isLiveChatThread = Boolean(lead.supportsLiveChatReply);
   persistLeadDetail(detail);
   detailWrap.hidden = false;
   applicantDetailWrap.hidden = true;
@@ -2777,6 +2832,11 @@ function renderLeadDetail(detail = null) {
       ${
         lead.tracking?.gclid
           ? `<span><strong>GCLID:</strong> ${escapeHtml(lead.tracking.gclid)}</span>`
+          : ""
+      }
+      ${
+        isLiveChatThread
+          ? "<span><strong>Canal:</strong> Chat web conectado al CRM</span>"
           : ""
       }
       <span><strong>Proyecto:</strong> ${escapeHtml(lead.details || "")}</span>
@@ -2862,8 +2922,11 @@ function renderLeadDetail(detail = null) {
 
   syncEstimateTotalFromForm();
   syncDetailQuickActions(lead);
+  syncLiveChatComposer(lead);
   renderLeadAssets(detail.assets || []);
   renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || [], {
+    assistantLabel: isLiveChatThread ? "Chicago Metal Works" : "Agustin 2.0",
+    userLabel: isLiveChatThread ? "Cliente web" : "Cliente",
     conversationSummary: lead.conversationSummary || "",
   });
   renderActivityCards(activityList, detail.activity || []);
@@ -3223,6 +3286,56 @@ async function handleSendEstimate() {
   }
 }
 
+async function handleSendLiveChatReply(event) {
+  event.preventDefault();
+
+  if (!state.selectedLeadId || !liveChatForm) {
+    return;
+  }
+
+  const lead = state.leadDetail?.lead || null;
+
+  if (!lead?.supportsLiveChatReply) {
+    setLiveChatFeedback("Este lead no tiene un chat web conectado.", "error");
+    return;
+  }
+
+  const formData = new FormData(liveChatForm);
+  const message = String(formData.get("message") || "").trim();
+
+  if (!message) {
+    setLiveChatFeedback("Escribe la respuesta primero.", "error");
+    return;
+  }
+
+  state.liveChatReplyBusy = true;
+  syncLiveChatComposer(lead);
+  setLiveChatFeedback("Mandando respuesta al chat...", "muted");
+
+  try {
+    const result = await apiRequest(
+      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/live-chat-reply`,
+      {
+        method: "POST",
+        body: {
+          message,
+        },
+      },
+    );
+
+    renderLeadDetail(result);
+    liveChatForm.reset();
+    setDetailTab("conversation");
+    setLiveChatFeedback("Respuesta enviada al hilo del cliente.", "success");
+    await refreshDashboardSafely();
+  } catch (error) {
+    setLiveChatFeedback(error.message || "No pude mandar la respuesta.", "error");
+  } finally {
+    state.liveChatReplyBusy = false;
+    syncLiveChatComposer(state.leadDetail?.lead || lead);
+  }
+}
+
 async function setCrmView(view = "leads") {
   const nextView = normalizeCrmView(view);
   rememberSelectedView(nextView);
@@ -3296,6 +3409,7 @@ function bindFilters() {
 
 function bindDetailActions() {
   detailForm?.addEventListener("submit", handleSaveLead);
+  liveChatForm?.addEventListener("submit", handleSendLiveChatReply);
   markQuotedButton?.addEventListener("click", handleMarkQuoted);
   sendEstimateButton?.addEventListener("click", handleSendEstimate);
   openEmailDraftButton?.addEventListener("click", () => {

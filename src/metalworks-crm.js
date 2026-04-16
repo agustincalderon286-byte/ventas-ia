@@ -47,6 +47,9 @@ const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_APPLICANT_PLACEHOLDER_NAME = "Job applicant";
+const METALWORKS_WEBSITE_CHAT_SOURCE_TYPE = "website_live_chat";
+const METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME = "Website chat visitor";
+const METALWORKS_WEBSITE_CHAT_PLACEHOLDER_PREFIX = "Website chat";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
 const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
@@ -1398,6 +1401,18 @@ function buildMetalworksPushCopy({
     };
   }
 
+  if (alertType === "website_live_chat") {
+    const lastMessage =
+      trimPushCopy(lead?.lastUserMessage || "", 78) ||
+      trimPushCopy(lead?.details || "", 78) ||
+      trimPushCopy(projectType || "", 78);
+
+    return {
+      title: "New website chat",
+      body: lastMessage ? `${fullName}: ${lastMessage}` : `${fullName} sent a website chat.`,
+    };
+  }
+
   return {
     title: "New lead",
     body: `${fullName} • ${projectType}`,
@@ -1673,6 +1688,8 @@ function formatActivityTitle(type = "") {
     assistant_fallback: "Fallback del assistant",
     assistant_booking_requested: "Cita pedida desde assistant",
     assistant_photo_uploaded: "Fotos subidas desde assistant",
+    website_live_chat_message: "Mensaje del chat web",
+    website_live_chat_reply: "Respuesta del CRM",
     job_applicant_created: "Candidato nuevo",
     job_applicant_updated: "Candidato actualizado",
     job_applicant_interview_requested: "Entrevista de candidato",
@@ -3447,6 +3464,23 @@ function isAssistantLeadSourceType(value = "") {
   return cleanText(value || "", 80).startsWith("assistant_");
 }
 
+function isWebsiteLiveChatLeadSourceType(value = "") {
+  return cleanText(value || "", 80) === METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+}
+
+function buildWebsiteLiveChatPlaceholderName(visitorId = "") {
+  const suffix = cleanText(visitorId || "", 120)
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(-4)
+    .toUpperCase();
+
+  if (!suffix) {
+    return METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME;
+  }
+
+  return `${METALWORKS_WEBSITE_CHAT_PLACEHOLDER_PREFIX} ${suffix}`;
+}
+
 function getAssistantLeadSourceLabel({ sourceType = "", sourceLabel = "" } = {}) {
   const explicitLabel = cleanText(sourceLabel || "", 120);
 
@@ -3925,12 +3959,43 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     pageUrl: doc.pageUrl || "",
     referrer: doc.referrer || "",
     sourceType: doc.sourceType || "website_form",
+    supportsLiveChatReply:
+      isWebsiteLiveChatLeadSourceType(doc.sourceType || "") &&
+      ((Array.isArray(doc.visitorIds) && doc.visitorIds.length > 0) ||
+        (Array.isArray(doc.sessionIds) && doc.sessionIds.length > 0)),
     sourceExternalId: doc.sourceExternalId || "",
     sourceExternalSystem: doc.sourceExternalSystem || "",
     tracking: doc.tracking || {},
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
     updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
     lastContactAt: doc.lastContactAt ? new Date(doc.lastContactAt).toISOString() : "",
+  };
+}
+
+function cleanPublicWebsiteLiveChatThread(doc = null) {
+  if (!doc || !isWebsiteLiveChatLeadSourceType(doc.sourceType || "")) {
+    return null;
+  }
+
+  const safeFullName =
+    sanitizeAssistantStoredName(doc.fullName || "") ||
+    cleanText(doc.fullName || "", 120) ||
+    METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME;
+
+  return {
+    leadId: String(doc._id || ""),
+    fullName: safeFullName,
+    phoneDisplay: doc.phoneDisplay || "",
+    email: doc.email || "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    messages: (Array.isArray(doc.conversationHistory) ? doc.conversationHistory : [])
+      .map((entry) => ({
+        role: entry?.role === "assistant" ? "assistant" : "user",
+        content: cleanText(entry?.content || "", 1500),
+        createdAt: entry?.createdAt ? new Date(entry.createdAt).toISOString() : "",
+      }))
+      .filter((entry) => entry.content),
   };
 }
 
@@ -4112,6 +4177,8 @@ async function buildDashboardSnapshot(
           "assistant_user_message",
           "assistant_ai_reply",
           "assistant_fallback",
+          "website_live_chat_message",
+          "website_live_chat_reply",
           "applicant_user_message",
           "applicant_ai_reply",
           "applicant_fallback",
@@ -5780,6 +5847,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     return MetalworksLead.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
+  async function resolveWebsiteLiveChatLead({ visitorId = "", sessionId = "" } = {}) {
+    const conditions = [];
+
+    if (visitorId) {
+      conditions.push({ visitorIds: visitorId });
+    }
+
+    if (sessionId) {
+      conditions.push({ sessionIds: sessionId });
+    }
+
+    if (!conditions.length) {
+      return null;
+    }
+
+    return MetalworksLead.findOne({
+      sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+      $or: conditions,
+    }).sort({ updatedAt: -1, createdAt: -1 });
   }
 
   async function resolveConversationApplicant({
@@ -8767,6 +8855,90 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.post("/api/metalworks-crm/leads/:leadId/live-chat-reply", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    const message = cleanText(req.body?.message || "", 500);
+
+    if (!message) {
+      return respondError(res, 400, "El mensaje es requerido.");
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId);
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      if (!isWebsiteLiveChatLeadSourceType(leadDoc.sourceType || "")) {
+        return respondError(res, 400, "Este lead no usa el chat web conectado.");
+      }
+
+      const now = new Date();
+      const currentStatus = normalizeStatus(leadDoc.status || "new");
+
+      leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
+        {
+          role: "assistant",
+          content: message,
+          createdAt: now,
+        },
+      ]);
+      leadDoc.lastAssistantMessage = message;
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (currentStatus === "new") {
+        leadDoc.status = "contacted";
+      }
+
+      await leadDoc.save();
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "website_live_chat_reply",
+        title: "Respuesta del CRM",
+        body: message,
+        meta: {
+          adminEmail: auth.email,
+          sourceType: leadDoc.sourceType || METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        },
+        req,
+      });
+
+      const [activityDocs, assets] = await Promise.all([
+        MetalworksLeadActivity.find({ leadId: leadDoc._id })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadDoc._id),
+      ]);
+
+      res.json({
+        ok: true,
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc, {
+          includeConversation: true,
+        }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error replying to Metal Works website chat:", error.message);
+      respondError(res, 500, "No pude mandar la respuesta al chat web.");
+    }
+  });
+
   app.get("/api/metalworks-crm/assets/:assetId/content", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -9088,6 +9260,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const pageUrl = cleanText(req.body?.pageUrl || "", 500);
       const referrer = cleanText(req.body?.referrer || "", 500);
       const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
       const parsedFiles = Array.isArray(req.body?.photos)
         ? req.body.photos
             .map((item) => parseAssistantLeadAssetUpload(item))
@@ -9646,6 +9819,176 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error saving Metal Works assistant photos:", error.message);
       respondError(res, 500, error?.message || "I could not save those photos.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/thread", async (req, res) => {
+    try {
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+
+      if (!visitorId && !sessionId) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      const leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+      });
+
+      res.json({
+        ok: true,
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works website chat thread:", error.message);
+      respondError(res, 500, "I could not load this conversation.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/messages", async (req, res) => {
+    try {
+      const message = cleanText(req.body?.message || "", 500);
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
+      const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
+      const phone = normalizePhone(phoneDisplay);
+      const email = normalizeEmail(req.body?.profile?.email || "");
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+
+      if (!message) {
+        return respondError(res, 400, "Message is required.");
+      }
+
+      if (!visitorId && !sessionId) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      let leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+      });
+      const leadExistedBeforeMessage = Boolean(leadDoc?._id);
+      const now = new Date();
+      const existingName = sanitizeAssistantStoredName(leadDoc?.fullName || "");
+      const existingDetails = cleanText(leadDoc?.details || "", 3000);
+      const previousLastUserMessage = cleanText(leadDoc?.lastUserMessage || "", 500);
+      const currentStatus = normalizeStatus(leadDoc?.status || "new");
+
+      if (!leadDoc) {
+        leadDoc = new MetalworksLead();
+      }
+
+      leadDoc.fullName =
+        fullName ||
+        existingName ||
+        buildWebsiteLiveChatPlaceholderName(visitorId || sessionId);
+      leadDoc.phone = phone || leadDoc.phone || "";
+      leadDoc.phoneDisplay = phoneDisplay || leadDoc.phoneDisplay || leadDoc.phone || "";
+      leadDoc.email = email || leadDoc.email || "";
+      leadDoc.projectType = cleanText(leadDoc.projectType || "", 120) || "Website chat";
+      leadDoc.details =
+        !existingDetails || existingDetails === previousLastUserMessage
+          ? selectAssistantLongestText(message, existingDetails)
+          : existingDetails;
+      leadDoc.status =
+        ["won", "lost", "archived"].includes(currentStatus) ? currentStatus : currentStatus || "new";
+      leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+      leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.sourceExternalId =
+        cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
+      leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
+      leadDoc.pagePath = cleanText(pagePath || leadDoc.pagePath || "", 240);
+      leadDoc.pageUrl = cleanText(pageUrl || leadDoc.pageUrl || "", 500);
+      leadDoc.referrer = cleanText(referrer || leadDoc.referrer || "", 500);
+      leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+      leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+      leadDoc.tracking = hasTracking
+        ? tracking
+        : buildTrackingPayload(leadDoc.tracking || {});
+      leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+      leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+      leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
+        {
+          role: "user",
+          content: message,
+          createdAt: now,
+        },
+      ]);
+      leadDoc.lastUserMessage = message;
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (!leadDoc.createdAt) {
+        leadDoc.createdAt = now;
+      }
+
+      await leadDoc.save();
+
+      if (!leadExistedBeforeMessage && leadDoc?._id) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body: "El chat web creo un lead nuevo desde la pagina de mensajes.",
+          meta: {
+            sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+            visitorId,
+            sessionId,
+            pageTitle,
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "website_live_chat_message",
+        title: "Mensaje del chat web",
+        body: message,
+        meta: {
+          visitorId,
+          sessionId,
+          pageTitle,
+          sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "website_live_chat",
+        });
+      } catch (error) {
+        console.error("Error sending website chat push:", error.message);
+      }
+
+      res.json({
+        ok: true,
+        duplicate: leadExistedBeforeMessage,
+        notified: Boolean(pushDelivery.delivered),
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works website chat message:", error.message);
+      respondError(res, 500, "I could not send this message right now.");
     }
   });
 

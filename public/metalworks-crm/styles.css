@@ -1317,6 +1317,16 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   gap: 12px;
 }
 
+.crm-live-chat-panel {
+  margin-bottom: 14px;
+}
+
+.crm-live-chat-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
 .crm-lead-card,
 .crm-activity-card,
 .crm-conversation-card {

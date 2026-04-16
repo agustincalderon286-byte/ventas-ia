@@ -559,6 +559,33 @@
                 <h3>Conversacion completa</h3>
                 <p data-crm-conversation-summary>Sin transcript guardado.</p>
               </div>
+              <section class="crm-composer-card crm-live-chat-panel" data-crm-live-chat-panel hidden>
+                <div class="crm-composer-head">
+                  <div>
+                    <strong>Responder en chat web</strong>
+                    <p>
+                      Tu respuesta aparece en la pagina de mensajes del cliente dentro de este mismo hilo.
+                    </p>
+                  </div>
+                </div>
+                <form class="crm-live-chat-form" data-crm-live-chat-form>
+                  <label class="crm-field-full">
+                    <span>Respuesta</span>
+                    <textarea
+                      name="message"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="Escribe la respuesta que debe ver el cliente..."
+                    ></textarea>
+                  </label>
+                  <div class="crm-form-actions">
+                    <button type="submit" class="crm-primary-button" data-crm-live-chat-send>
+                      Enviar al chat
+                    </button>
+                    <p class="crm-form-result" data-crm-live-chat-feedback></p>
+                  </div>
+                </form>
+              </section>
               <div class="crm-conversation-thread" data-crm-conversation-thread></div>
             </section>
 
