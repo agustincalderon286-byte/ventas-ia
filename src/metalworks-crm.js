@@ -9860,6 +9860,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const pageUrl = cleanText(req.body?.pageUrl || "", 500);
       const referrer = cleanText(req.body?.referrer || "", 500);
       const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
 
       if (!message) {
         return respondError(res, 400, "Message is required.");
