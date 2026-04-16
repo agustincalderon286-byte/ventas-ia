@@ -95,9 +95,25 @@
               required
             ></textarea>
           </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            data-chat-photo-input
+            hidden
+          />
           <div class="messages-actions">
-            <p class="messages-note">Las respuestas del equipo apareceran en este mismo hilo.</p>
+            <div class="messages-action-copy">
+              <p class="messages-note">Las respuestas del equipo apareceran en este mismo hilo.</p>
+              <button type="button" class="messages-upload" data-chat-photo-button>
+                Agregar fotos
+              </button>
+            </div>
             <button type="submit" class="messages-send" data-chat-send>Enviar</button>
+          </div>
+          <div class="messages-photo-strip" data-chat-photo-strip hidden>
+            <strong data-chat-photo-count>0 fotos guardadas</strong>
+            <div class="messages-photo-list" data-chat-photo-list></div>
           </div>
           <p class="messages-feedback" data-chat-feedback></p>
         </form>

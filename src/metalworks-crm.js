@@ -1689,6 +1689,7 @@ function formatActivityTitle(type = "") {
     assistant_booking_requested: "Cita pedida desde assistant",
     assistant_photo_uploaded: "Fotos subidas desde assistant",
     website_live_chat_message: "Mensaje del chat web",
+    website_live_chat_photo_uploaded: "Fotos subidas desde chat web",
     website_live_chat_reply: "Respuesta del CRM",
     job_applicant_created: "Candidato nuevo",
     job_applicant_updated: "Candidato actualizado",
@@ -3970,7 +3971,8 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     sourceType: doc.sourceType || "website_form",
     supportsLiveChatReply:
       isWebsiteLiveChatLead(doc) &&
-      (Array.isArray(doc.conversationHistory) ? doc.conversationHistory.length > 0 : false),
+      ((Array.isArray(doc.conversationHistory) ? doc.conversationHistory.length > 0 : false) ||
+        (Array.isArray(doc.photoFileNames) ? doc.photoFileNames.length > 0 : false)),
     sourceExternalId: doc.sourceExternalId || "",
     sourceExternalSystem: doc.sourceExternalSystem || "",
     tracking: doc.tracking || {},
@@ -3995,6 +3997,7 @@ function cleanPublicWebsiteLiveChatThread(doc = null) {
     fullName: safeFullName,
     phoneDisplay: doc.phoneDisplay || "",
     email: doc.email || "",
+    photoFileNames: Array.isArray(doc.photoFileNames) ? doc.photoFileNames : [],
     updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
     messages: (Array.isArray(doc.conversationHistory) ? doc.conversationHistory : [])
@@ -9851,6 +9854,147 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error loading Metal Works website chat thread:", error.message);
       respondError(res, 500, "I could not load this conversation.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/photos", async (req, res) => {
+    try {
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
+      const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
+      const phone = normalizePhone(phoneDisplay);
+      const email = normalizeEmail(req.body?.profile?.email || "");
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
+      const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
+
+      if (!visitorId && !sessionId) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      if (!filePayloads.length) {
+        return respondError(res, 400, "Add at least one image.");
+      }
+
+      if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+        return respondError(
+          res,
+          400,
+          `Upload up to ${METALWORKS_LEAD_ASSET_MAX_FILES} images at a time.`,
+        );
+      }
+
+      const parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      const totalBytes = parsedFiles.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+
+      if (totalBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Total image upload is too large.");
+      }
+
+      let leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+      });
+      const now = new Date();
+
+      if (!leadDoc) {
+        leadDoc = new MetalworksLead();
+      }
+
+      leadDoc.fullName =
+        fullName ||
+        sanitizeAssistantStoredName(leadDoc.fullName || "") ||
+        buildWebsiteLiveChatPlaceholderName(visitorId || sessionId);
+      leadDoc.phone = phone || leadDoc.phone || "";
+      leadDoc.phoneDisplay = phoneDisplay || leadDoc.phoneDisplay || leadDoc.phone || "";
+      leadDoc.email = email || leadDoc.email || "";
+      leadDoc.projectType = cleanText(leadDoc.projectType || "", 120) || "Website chat";
+      leadDoc.details =
+        cleanText(leadDoc.details || "", 3000) ||
+        "Visitor uploaded project photos from the website chat.";
+      leadDoc.status = normalizeStatus(leadDoc.status || "new");
+      leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+      leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.sourceExternalId =
+        cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
+      leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
+      leadDoc.pagePath = cleanText(pagePath || leadDoc.pagePath || "", 240);
+      leadDoc.pageUrl = cleanText(pageUrl || leadDoc.pageUrl || "", 500);
+      leadDoc.referrer = cleanText(referrer || leadDoc.referrer || "", 500);
+      leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+      leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+      leadDoc.tracking = hasTracking
+        ? tracking
+        : buildTrackingPayload(leadDoc.tracking || {});
+      leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+      leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (!leadDoc.createdAt) {
+        leadDoc.createdAt = now;
+      }
+
+      await leadDoc.save();
+
+      const assetDocs = await Promise.all(
+        parsedFiles.map((item) =>
+          MetalworksLeadAsset.create({
+            leadId: leadDoc._id,
+            visitorId,
+            sessionId,
+            sourceType: "website_live_chat_photo",
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            fileData: item.fileData,
+            uploadedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          }),
+        ),
+      );
+
+      leadDoc.photoFileNames = mergeAssistantUniqueValues(
+        leadDoc.photoFileNames || [],
+        parsedFiles.map((item) => item.fileName),
+      );
+      leadDoc.updatedAt = new Date();
+      await leadDoc.save();
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "website_live_chat_photo_uploaded",
+        title: "Fotos subidas desde chat web",
+        body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} desde el chat directo.`,
+        meta: {
+          visitorId,
+          sessionId,
+          pageTitle,
+          fileNames: parsedFiles.map((item) => item.fileName),
+          sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      res.json({
+        ok: true,
+        uploadedCount: assetDocs.length,
+        leadId: String(leadDoc._id),
+        assets: assetDocs.map(cleanLeadAsset).filter(Boolean),
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works website chat photos:", error.message);
+      respondError(res, 500, error?.message || "I could not save those photos.");
     }
   });
 

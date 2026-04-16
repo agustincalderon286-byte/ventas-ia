@@ -293,10 +293,33 @@ body {
   gap: 14px;
 }
 
+.messages-action-copy {
+  display: grid;
+  gap: 10px;
+}
+
 .messages-note {
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.messages-upload {
+  width: fit-content;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(16, 34, 54, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--messages-text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.messages-upload:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .messages-send {
@@ -316,6 +339,37 @@ body {
   cursor: not-allowed;
   opacity: 0.62;
   box-shadow: none;
+}
+
+.messages-photo-strip {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(16, 34, 54, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.messages-photo-strip strong {
+  font-size: 0.9rem;
+}
+
+.messages-photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.messages-photo-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(24, 128, 255, 0.1);
+  color: var(--messages-blue-deep);
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .messages-feedback {
@@ -385,6 +439,10 @@ body {
   }
 
   .messages-send {
+    width: 100%;
+  }
+
+  .messages-upload {
     width: 100%;
   }
 }

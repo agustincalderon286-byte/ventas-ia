@@ -1,6 +1,8 @@
 const THREAD_STORAGE_KEY = "cmwf_live_chat_thread_v1"
 const PROFILE_STORAGE_KEY = "cmwf_live_chat_profile_v1"
 const POLL_INTERVAL_MS = 5000
+const MAX_CHAT_PHOTO_FILES = 4
+const MAX_CHAT_TOTAL_BYTES = 6 * 1024 * 1024
 const INTRO_MESSAGE =
   "Hola, este chat va directo a Chicago Metal Works & Fencing. Cuentanos que necesitas y te respondemos desde el CRM."
 
@@ -8,6 +10,11 @@ const threadWrap = document.querySelector("[data-chat-thread]")
 const chatForm = document.querySelector("[data-chat-form]")
 const chatInput = document.querySelector("[data-chat-input]")
 const chatSendButton = document.querySelector("[data-chat-send]")
+const chatPhotoInput = document.querySelector("[data-chat-photo-input]")
+const chatPhotoButton = document.querySelector("[data-chat-photo-button]")
+const chatPhotoStrip = document.querySelector("[data-chat-photo-strip]")
+const chatPhotoCount = document.querySelector("[data-chat-photo-count]")
+const chatPhotoList = document.querySelector("[data-chat-photo-list]")
 const chatFeedback = document.querySelector("[data-chat-feedback]")
 const chatStatus = document.querySelector("[data-chat-status]")
 const profileDetails = document.querySelector("[data-chat-profile]")
@@ -22,6 +29,8 @@ const state = {
   leadId: "",
   messages: [],
   sending: false,
+  uploadingPhotos: false,
+  photoFileNames: [],
   pollHandle: null,
 }
 
@@ -159,6 +168,20 @@ function setStatus(message = "") {
   chatStatus.textContent = message || "Listo para empezar"
 }
 
+function renderPhotoFiles() {
+  if (!chatPhotoStrip || !chatPhotoList || !chatPhotoCount) {
+    return
+  }
+
+  const fileNames = Array.isArray(state.photoFileNames) ? state.photoFileNames.filter(Boolean) : []
+
+  chatPhotoStrip.hidden = fileNames.length === 0
+  chatPhotoCount.textContent = `${fileNames.length} foto${fileNames.length === 1 ? "" : "s"} guardada${fileNames.length === 1 ? "" : "s"}`
+  chatPhotoList.innerHTML = fileNames
+    .map((fileName) => `<span class="messages-photo-chip">${escapeHtml(fileName)}</span>`)
+    .join("")
+}
+
 function autoResizeTextarea() {
   if (!chatInput) {
     return
@@ -184,6 +207,22 @@ function buildTrackingPayload() {
     landingUrl: window.location.href || "",
     referrer: document.referrer || "",
   }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      resolve(String(reader.result || ""))
+    }
+
+    reader.onerror = () => {
+      reject(new Error(`No pude leer ${file?.name || "la imagen"}.`))
+    }
+
+    reader.readAsDataURL(file)
+  })
 }
 
 async function apiRequest(url, options = {}) {
@@ -259,8 +298,13 @@ function renderThread() {
 
 function syncComposerState() {
   if (chatSendButton) {
-    chatSendButton.disabled = state.sending
+    chatSendButton.disabled = state.sending || state.uploadingPhotos
     chatSendButton.textContent = state.sending ? "Enviando..." : "Enviar"
+  }
+
+  if (chatPhotoButton) {
+    chatPhotoButton.disabled = state.sending || state.uploadingPhotos
+    chatPhotoButton.textContent = state.uploadingPhotos ? "Subiendo fotos..." : "Agregar fotos"
   }
 }
 
@@ -277,7 +321,9 @@ async function loadThread({ silent = false } = {}) {
     const nextThread = result.thread || null
     state.leadId = String(nextThread?.leadId || "").trim()
     state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : []
+    state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
     renderThread()
+    renderPhotoFiles()
 
     if (state.leadId) {
       setStatus("Conversacion conectada al CRM")
@@ -337,7 +383,9 @@ async function handleSendMessage(event) {
     const nextThread = result.thread || null
     state.leadId = String(nextThread?.leadId || "").trim()
     state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : []
+    state.photoFileNames = Array.isArray(nextThread?.photoFileNames) ? nextThread.photoFileNames : []
     renderThread()
+    renderPhotoFiles()
 
     chatInput.value = ""
     autoResizeTextarea()
@@ -353,6 +401,90 @@ async function handleSendMessage(event) {
   } finally {
     state.sending = false
     syncComposerState()
+  }
+}
+
+async function handlePhotoSelection(event) {
+  const selectedFiles = Array.from(event.target?.files || [])
+
+  if (!selectedFiles.length) {
+    return
+  }
+
+  if (selectedFiles.length > MAX_CHAT_PHOTO_FILES) {
+    setFeedback(`Puedes subir hasta ${MAX_CHAT_PHOTO_FILES} fotos por envio.`, "error")
+    if (chatPhotoInput) {
+      chatPhotoInput.value = ""
+    }
+    return
+  }
+
+  if (selectedFiles.some((file) => !String(file?.type || "").startsWith("image/"))) {
+    setFeedback("Solo se permiten imagenes.", "error")
+    if (chatPhotoInput) {
+      chatPhotoInput.value = ""
+    }
+    return
+  }
+
+  const totalBytes = selectedFiles.reduce((sum, file) => sum + (Number(file?.size || 0) || 0), 0)
+
+  if (totalBytes > MAX_CHAT_TOTAL_BYTES) {
+    setFeedback("El total de imagenes es demasiado grande. Intenta con menos fotos.", "error")
+    if (chatPhotoInput) {
+      chatPhotoInput.value = ""
+    }
+    return
+  }
+
+  state.uploadingPhotos = true
+  syncComposerState()
+  setFeedback("Subiendo fotos al CRM...", "muted")
+  setStatus("Guardando fotos en el CRM")
+
+  try {
+    const profile = persistProfile()
+    const files = await Promise.all(
+      selectedFiles.map(async (file) => ({
+        fileName: file.name || "project-photo.jpg",
+        mimeType: file.type || "image/jpeg",
+        dataUrl: await readFileAsDataUrl(file),
+      })),
+    )
+    const result = await apiRequest("/api/public/metalworks/live-chat/photos", {
+      method: "POST",
+      body: {
+        visitorId: state.visitorId,
+        sessionId: state.sessionId,
+        profile,
+        files,
+        pageTitle: document.title || "",
+        pagePath: window.location.pathname || "",
+        pageUrl: window.location.href || "",
+        referrer: document.referrer || "",
+        tracking: buildTrackingPayload(),
+      },
+    })
+
+    const nextThread = result.thread || null
+    state.leadId = String(nextThread?.leadId || state.leadId || "").trim()
+    state.messages = Array.isArray(nextThread?.messages) ? nextThread.messages : state.messages
+    state.photoFileNames = Array.isArray(nextThread?.photoFileNames)
+      ? nextThread.photoFileNames
+      : state.photoFileNames
+    renderThread()
+    renderPhotoFiles()
+    setFeedback("Tus fotos ya quedaron guardadas en el lead.", "success")
+    setStatus("Fotos guardadas en el CRM")
+  } catch (error) {
+    setFeedback(error.message || "No pude subir las fotos.", "error")
+    setStatus("No se pudieron guardar las fotos")
+  } finally {
+    state.uploadingPhotos = false
+    syncComposerState()
+    if (chatPhotoInput) {
+      chatPhotoInput.value = ""
+    }
   }
 }
 
@@ -372,6 +504,10 @@ function startPolling() {
 
 function bindEvents() {
   chatForm?.addEventListener("submit", handleSendMessage)
+  chatPhotoButton?.addEventListener("click", () => {
+    chatPhotoInput?.click()
+  })
+  chatPhotoInput?.addEventListener("change", handlePhotoSelection)
   chatInput?.addEventListener("input", autoResizeTextarea)
   chatInput?.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -399,6 +535,7 @@ async function init() {
   bindEvents()
   autoResizeTextarea()
   renderThread()
+  renderPhotoFiles()
   syncComposerState()
   await loadThread({ silent: true })
   startPolling()
