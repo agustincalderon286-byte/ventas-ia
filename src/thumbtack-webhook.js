@@ -514,12 +514,166 @@ function buildReviewBody(review = {}, eventType = "") {
     .slice(0, 1200);
 }
 
+function normalizeThumbtackAttachmentUrl(value = "") {
+  const safeValue = cleanText(value || "", 1200);
+
+  if (!/^https?:\/\//i.test(safeValue)) {
+    return "";
+  }
+
+  return safeValue;
+}
+
+function buildThumbtackAttachmentFileName(attachment = {}, attachmentUrl = "") {
+  const explicitName = cleanText(
+    attachment?.fileName ||
+      attachment?.filename ||
+      attachment?.name ||
+      attachment?.title ||
+      attachment?.label ||
+      "",
+    120,
+  );
+
+  if (explicitName) {
+    return explicitName;
+  }
+
+  if (!attachmentUrl) {
+    return "";
+  }
+
+  try {
+    const url = new URL(attachmentUrl);
+    const lastSegment = decodeURIComponent(url.pathname.split("/").pop() || "");
+    return cleanText(lastSegment, 120);
+  } catch {
+    return "";
+  }
+}
+
+function normalizeThumbtackAttachment(entry = null) {
+  if (!entry) {
+    return null;
+  }
+
+  if (typeof entry === "string") {
+    const directUrl = normalizeThumbtackAttachmentUrl(entry);
+
+    return directUrl
+      ? {
+          url: directUrl,
+          fileName: buildThumbtackAttachmentFileName({}, directUrl),
+          mimeType: "",
+        }
+      : null;
+  }
+
+  if (!isRecord(entry)) {
+    return null;
+  }
+
+  const attachmentUrl = normalizeThumbtackAttachmentUrl(
+    entry?.url ||
+      entry?.href ||
+      entry?.downloadUrl ||
+      entry?.downloadURL ||
+      entry?.imageUrl ||
+      entry?.imageURL ||
+      entry?.mediaUrl ||
+      entry?.mediaURL ||
+      entry?.fileUrl ||
+      entry?.fileURL ||
+      entry?.originalUrl ||
+      entry?.originalURL ||
+      entry?.thumbnailUrl ||
+      entry?.thumbnailURL ||
+      entry?.previewUrl ||
+      entry?.previewURL ||
+      entry?.image?.url ||
+      entry?.image?.href ||
+      entry?.file?.url ||
+      entry?.file?.href ||
+      entry?.media?.url ||
+      entry?.media?.href ||
+      entry?.original?.url ||
+      entry?.original?.href ||
+      entry?.download?.url ||
+      entry?.download?.href ||
+      entry?.links?.download ||
+      entry?.links?.self ||
+      "",
+  );
+
+  if (!attachmentUrl) {
+    return null;
+  }
+
+  return {
+    url: attachmentUrl,
+    fileName: buildThumbtackAttachmentFileName(entry, attachmentUrl),
+    mimeType: cleanText(
+      entry?.mimeType || entry?.contentType || entry?.mediaType || entry?.type || "",
+      80,
+    ).toLowerCase(),
+  };
+}
+
+function buildThumbtackLeadAttachments(payload = {}, message = {}, negotiation = {}) {
+  const attachmentSources = [
+    message?.attachments,
+    message?.images,
+    message?.photos,
+    negotiation?.attachments,
+    negotiation?.images,
+    negotiation?.photos,
+    negotiation?.request?.attachments,
+    negotiation?.request?.images,
+    negotiation?.request?.photos,
+    payload?.attachments,
+    payload?.images,
+    payload?.photos,
+    payload?.data?.attachments,
+    payload?.data?.images,
+    payload?.data?.photos,
+    payload?.data?.message?.attachments,
+    payload?.data?.message?.images,
+    payload?.data?.message?.photos,
+    payload?.data?.negotiation?.attachments,
+    payload?.data?.negotiation?.images,
+    payload?.data?.negotiation?.photos,
+    payload?.data?.request?.attachments,
+    payload?.data?.request?.images,
+    payload?.data?.request?.photos,
+  ];
+
+  const normalized = attachmentSources
+    .flatMap((items) => (Array.isArray(items) ? items : []))
+    .map((entry) => normalizeThumbtackAttachment(entry))
+    .filter(Boolean);
+
+  const seenUrls = new Set();
+  const attachments = [];
+
+  for (const attachment of normalized) {
+    if (seenUrls.has(attachment.url)) {
+      continue;
+    }
+
+    seenUrls.add(attachment.url);
+    attachments.push(attachment);
+  }
+
+  return attachments.slice(0, 8);
+}
+
 export function getThumbtackEventType(payload = {}) {
   const directType = cleanText(
     pickFirst(payload, [
       ["eventType"],
       ["type"],
       ["event", "type"],
+      ["event", "eventType"],
       ["webhook", "eventType"],
       ["payload", "eventType"],
       ["data", "eventType"],
@@ -690,6 +844,7 @@ export function buildThumbtackLeadCandidate(payload = {}) {
     negotiation?.jobStatus || negotiation?.status || negotiation?.negotiationStatus || "",
     80,
   );
+  const attachments = buildThumbtackLeadAttachments(payload, message, negotiation);
   const details =
     entityType === "message"
       ? buildMessageDetails({
@@ -722,6 +877,7 @@ export function buildThumbtackLeadCandidate(payload = {}) {
     addressLine: cleanText(locationParts.addressLine || "", 160),
     city: cleanText(locationParts.city || "", 120),
     zipCode: cleanText(locationParts.zipCode || "", 20),
+    attachments,
     details,
     meta: {
       customerId: cleanText(customer?.customerID || "", 120),
@@ -731,6 +887,7 @@ export function buildThumbtackLeadCandidate(payload = {}) {
       ),
       messageId: cleanText(message?.messageID || "", 120),
       statusLabel,
+      attachmentCount: attachments.length,
     },
   };
 }
@@ -786,6 +943,7 @@ export function buildThumbtackWebhookEvent(payload = {}) {
         negotiationId: leadCandidate?.meta?.negotiationId || "",
         messageId: leadCandidate?.meta?.messageId || cleanText(message?.messageID || "", 120),
         reviewId: cleanText(review?.reviewID || "", 120),
+        attachmentCount: Number(leadCandidate?.meta?.attachmentCount || 0) || 0,
       },
     },
   };

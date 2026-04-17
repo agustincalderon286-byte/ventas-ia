@@ -82,6 +82,45 @@ test("normaliza un customer message webhook con negotiation id", () => {
   assert.match(event.activity.body, /Can you come by tomorrow afternoon/);
 });
 
+test("extrae attachments de mensajes de Thumbtack cuando el webhook trae URLs de fotos", () => {
+  const payload = {
+    event: {
+      eventType: "MessageCreatedV4",
+    },
+    data: {
+      messageID: "msg_attach_001",
+      negotiationID: "neg_attach_001",
+      from: "Customer",
+      text: "Here are the project photos.",
+      sentAt: "2026-04-17T04:00:00.000Z",
+      customer: {
+        customerID: "cust_attach_001",
+        displayName: "Photo Customer",
+      },
+      attachments: [
+        {
+          fileName: "gate-photo.png",
+          mimeType: "image/png",
+          url: "https://thumbtack.example.com/uploads/gate-photo.png",
+        },
+      ],
+    },
+  };
+
+  const event = buildThumbtackWebhookEvent(payload);
+
+  assert.ok(event.leadCandidate);
+  assert.equal(event.leadCandidate.externalLeadId, "neg_attach_001");
+  assert.equal(event.leadCandidate.attachments.length, 1);
+  assert.equal(
+    event.leadCandidate.attachments[0]?.url,
+    "https://thumbtack.example.com/uploads/gate-photo.png",
+  );
+  assert.equal(event.leadCandidate.attachments[0]?.fileName, "gate-photo.png");
+  assert.equal(event.leadCandidate.meta.attachmentCount, 1);
+  assert.equal(event.activity.meta.attachmentCount, 1);
+});
+
 test("normaliza campos alternos de customer y address para guardar nombre, telefono y zipcode", () => {
   const payload = {
     eventType: "NegotiationUpdatedV4",

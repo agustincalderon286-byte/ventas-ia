@@ -3708,6 +3708,170 @@ function normalizeLeadAssetMimeType(value = "") {
   return "";
 }
 
+function getLeadAssetExtensionForMimeType(mimeType = "") {
+  const normalized = normalizeLeadAssetMimeType(mimeType || "");
+
+  if (normalized === "image/png") {
+    return ".png";
+  }
+
+  if (normalized === "image/webp") {
+    return ".webp";
+  }
+
+  if (normalized === "image/gif") {
+    return ".gif";
+  }
+
+  if (normalized === "image/heic") {
+    return ".heic";
+  }
+
+  if (normalized === "image/heif") {
+    return ".heif";
+  }
+
+  if (normalized === "image/bmp") {
+    return ".bmp";
+  }
+
+  return ".jpg";
+}
+
+function buildLeadAssetFileNameFromUrl(url = "", mimeType = "", fallbackName = "project-photo") {
+  const safeFallbackName = cleanText(fallbackName || "", 80) || "project-photo";
+
+  try {
+    const parsedUrl = new URL(String(url || "").trim());
+    const candidateName = decodeURIComponent(parsedUrl.pathname.split("/").pop() || "").trim();
+
+    if (candidateName) {
+      return sanitizeLeadAssetFileName(candidateName);
+    }
+  } catch {}
+
+  return sanitizeLeadAssetFileName(
+    `${safeFallbackName}${getLeadAssetExtensionForMimeType(mimeType)}`,
+  );
+}
+
+async function fetchExternalLeadAssetUpload(
+  attachment = {},
+  { timeoutMs = 12000, fallbackName = "external-photo" } = {},
+) {
+  const safeUrl = cleanText(attachment?.url || "", 1200);
+
+  if (!/^https?:\/\//i.test(safeUrl)) {
+    throw new Error("Attachment URL is invalid.");
+  }
+
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(safeUrl, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        Accept: "image/*",
+        "User-Agent": "Chicago Metal Works CRM Thumbtack Import",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Attachment download failed with status ${response.status}.`);
+    }
+
+    const responseMimeType = cleanText(
+      String(response.headers.get("content-type") || "").split(";")[0] || "",
+      80,
+    );
+    const mimeType = normalizeLeadAssetMimeType(responseMimeType || attachment?.mimeType || "");
+
+    if (!mimeType) {
+      throw new Error("Attachment is not a supported image.");
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const fileData = Buffer.from(arrayBuffer);
+
+    if (!fileData.length) {
+      throw new Error("Attachment payload is empty.");
+    }
+
+    if (fileData.length > METALWORKS_LEAD_ASSET_MAX_BYTES) {
+      throw new Error("Attachment image is larger than 2 MB.");
+    }
+
+    return {
+      fileName: sanitizeLeadAssetFileName(
+        attachment?.fileName || buildLeadAssetFileNameFromUrl(safeUrl, mimeType, fallbackName),
+      ),
+      mimeType,
+      sizeBytes: fileData.length,
+      fileData,
+    };
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+async function fetchExternalLeadAssetUploads(
+  attachments = [],
+  { limit = METALWORKS_LEAD_ASSET_MAX_FILES, fallbackPrefix = "external-photo" } = {},
+) {
+  const safeAttachments = Array.isArray(attachments) ? attachments : [];
+  const deduped = [];
+  const seenUrls = new Set();
+
+  for (const attachment of safeAttachments) {
+    const safeUrl = cleanText(attachment?.url || "", 1200);
+
+    if (!safeUrl || seenUrls.has(safeUrl)) {
+      continue;
+    }
+
+    seenUrls.add(safeUrl);
+    deduped.push({
+      url: safeUrl,
+      fileName: cleanText(attachment?.fileName || "", 120),
+      mimeType: cleanText(attachment?.mimeType || "", 80),
+    });
+
+    if (deduped.length >= limit) {
+      break;
+    }
+  }
+
+  const parsedFiles = [];
+  const errors = [];
+
+  for (let index = 0; index < deduped.length; index += 1) {
+    const attachment = deduped[index];
+
+    try {
+      const file = await fetchExternalLeadAssetUpload(attachment, {
+        fallbackName: `${fallbackPrefix}-${index + 1}`,
+      });
+      parsedFiles.push(file);
+    } catch (error) {
+      errors.push({
+        url: attachment.url,
+        message: cleanText(error?.message || "Attachment import failed.", 240),
+      });
+    }
+  }
+
+  return {
+    parsedFiles,
+    importedCount: parsedFiles.length,
+    attemptedCount: deduped.length,
+    skippedCount: Math.max(deduped.length - parsedFiles.length, 0),
+    errors,
+  };
+}
+
 function parseAssistantLeadAssetUpload(payload = {}) {
   const explicitMimeType = normalizeLeadAssetMimeType(payload?.mimeType || "");
   const dataUrl = String(payload?.dataUrl || "").trim();
@@ -9715,8 +9879,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         let leadDoc = null;
         let duplicate = false;
         let syncedAssetCount = 0;
+        let attachmentImport = {
+          attemptedCount: 0,
+          importedCount: 0,
+          skippedCount: 0,
+          errors: [],
+        };
 
         if (parsedEvent.leadCandidate) {
+          if (Array.isArray(parsedEvent.leadCandidate.attachments) && parsedEvent.leadCandidate.attachments.length) {
+            try {
+              attachmentImport = await fetchExternalLeadAssetUploads(
+                parsedEvent.leadCandidate.attachments,
+                {
+                  fallbackPrefix: "thumbtack-photo",
+                },
+              );
+            } catch (error) {
+              attachmentImport = {
+                attemptedCount: Array.isArray(parsedEvent.leadCandidate.attachments)
+                  ? parsedEvent.leadCandidate.attachments.length
+                  : 0,
+                importedCount: 0,
+                skippedCount: Array.isArray(parsedEvent.leadCandidate.attachments)
+                  ? parsedEvent.leadCandidate.attachments.length
+                  : 0,
+                errors: [
+                  {
+                    url: "",
+                    message: cleanText(error?.message || "Thumbtack attachment import failed.", 240),
+                  },
+                ],
+              };
+            }
+          }
+
           const syncResult = await upsertExternalLeadRecord({
             externalLeadId: parsedEvent.leadCandidate.externalLeadId,
             externalSystem: parsedEvent.leadCandidate.externalSystem,
@@ -9736,7 +9933,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             pageUrl,
             referrer: pageUrl,
             tracking,
-            parsedFiles: [],
+            parsedFiles: attachmentImport.parsedFiles || [],
             rawPhotoFileNames: [],
             req,
             crmStatus: parsedEvent.leadCandidate.crmStatus || "new",
@@ -9758,6 +9955,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
                 externalSystem: "thumbtack",
                 eventType: parsedEvent.eventType,
                 entityType: parsedEvent.entityType,
+                attachmentAttemptedCount: attachmentImport.attemptedCount || 0,
+                attachmentImportedCount: attachmentImport.importedCount || 0,
               },
               req,
               pagePath,
@@ -9776,6 +9975,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             ...(parsedEvent.activity.meta || {}),
             duplicate,
             syncedAssetCount,
+            attachmentAttemptedCount: attachmentImport.attemptedCount || 0,
+            attachmentImportedCount: attachmentImport.importedCount || 0,
+            attachmentSkippedCount: attachmentImport.skippedCount || 0,
+            attachmentImportErrors: Array.isArray(attachmentImport.errors)
+              ? attachmentImport.errors
+              : [],
             webhookPayload: req.body || {},
           },
           req,
