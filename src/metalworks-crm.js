@@ -1775,15 +1775,50 @@ function looksLikeStandaloneApplicantRole(value = "") {
   ].includes(normalized);
 }
 
-function detectEmploymentIntent(value = "") {
+export function detectAssistantProjectLeadIntent(value = "") {
   const normalized = normalizeAssistantSearchText(value || "");
 
   if (!normalized) {
     return false;
   }
 
+  return /\b(project|quote|estimate|repair|replace|replacement|new install|new installation|install|installation|guardrail|guardrails|railing|railings|handrail|handrails|gate|gates|fence|fencing|weld|welding|fabricat|stairs|stair|balcony|porch|awning|opening|opening width|opening height|safety issue|unsafe)\b/.test(
+    normalized,
+  );
+}
+
+export function detectEmploymentCorrection(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    /\b(?:not|is not|isnt|isn't|no)\b[^.!?\n]{0,60}\b(?:hiring|employment|job|jobs|apply|application|position|interview)\b/.test(
+      normalized,
+    ) ||
+    /\b(?:this|it|its|it's)\b[^.!?\n]{0,40}\b(?:project|quote|estimate)\b/.test(normalized) ||
+    /\bfor (?:a|this) project\b/.test(normalized) ||
+    /\bnot (?:looking for|applying for)\b[^.!?\n]{0,30}\b(?:job|employment|position)\b/.test(
+      normalized,
+    )
+  );
+}
+
+export function detectEmploymentIntent(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (detectEmploymentCorrection(normalized)) {
+    return false;
+  }
+
   if (
-    /\b(job|jobs|employment|hiring|hire me|apply|application|position|opening|opening up|vacante|vacantes|empleo|trabajo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|trabajar con ustedes|work for you|work with you|are you hiring)\b/.test(
+    /\b(employment|hiring|hire me|apply|application|position|job opening|open position|position opening|vacante|vacantes|empleo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|work for you|work with you|are you hiring|looking for a job|need a job|busco trabajo|quiero trabajo|oportunidad de trabajo)\b/.test(
       normalized,
     )
   ) {
@@ -1825,6 +1860,24 @@ function inferApplicantRole(value = "") {
   }
 
   return "";
+}
+
+function applicantLooksLikeMisclassifiedCustomer(applicant = null) {
+  if (!applicant) {
+    return false;
+  }
+
+  return detectEmploymentCorrection(
+    [
+      applicant?.positionApplied || "",
+      applicant?.detailsSummary || "",
+      applicant?.experienceSummary || "",
+      applicant?.lastUserMessage || "",
+      applicant?.lastAssistantMessage || "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
 }
 
 function inferApplicantRoleTrack(value = "") {
@@ -3380,6 +3433,11 @@ function buildAssistantConversationSignals({
     .trim()
     .slice(0, 1500);
   const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
+  const strongProjectIntent =
+    detectAssistantProjectLeadIntent(combinedUserText) ||
+    detectAssistantProjectLeadIntent(serviceSummarySource) ||
+    detectAssistantProjectLeadIntent(projectType) ||
+    detectAssistantProjectLeadIntent(location);
 
   return {
     items,
@@ -3401,7 +3459,14 @@ function buildAssistantConversationSignals({
     callbackLabel,
     detailsSummary,
     photoFileCount,
-    shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
+    shouldCreateLead: Boolean(
+      lead?._id ||
+        phone ||
+        email ||
+        callbackIntent === "yes" ||
+        photoFileCount > 0 ||
+        strongProjectIntent,
+    ),
     shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
     conversationDigest: buildAssistantHistoryDigest(items),
   };
@@ -6776,11 +6841,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     phoneDisplayHint = "",
   } = {}) {
     const normalizedPhoneHint = normalizePhone(phoneHint || "");
-    const initialEmploymentHint = detectEmploymentIntent(
-      [message, ...normalizeAssistantHistory(history).map((item) => item.content || "")]
-        .filter(Boolean)
-        .join("\n"),
-    );
+    const incomingHistory = normalizeAssistantHistory(history);
+    const incomingConversationText = [message, ...incomingHistory.map((item) => item.content || "")]
+      .filter(Boolean)
+      .join("\n");
+    const initialEmploymentHint = detectEmploymentIntent(incomingConversationText);
     let currentLead = await resolveConversationLead({
       visitorId,
       sessionId,
@@ -6801,10 +6866,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       phoneHint,
       phoneDisplayHint,
     });
+    let forceCustomerIntent =
+      detectEmploymentCorrection(incomingConversationText) ||
+      applicantLooksLikeMisclassifiedCustomer(currentApplicant);
     let mergedHistory = mergeConversationHistory(
-      currentApplicant?.conversationHistory ||
-        (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
-      normalizeAssistantHistory(history),
+      forceCustomerIntent
+        ? currentLead?.conversationHistory || []
+        : currentApplicant?.conversationHistory ||
+            (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
+      incomingHistory,
     );
     let userConversationItems = buildAssistantConversationItems({
       history: mergedHistory,
@@ -6849,10 +6919,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         phoneHint,
         phoneDisplayHint,
       });
+      forceCustomerIntent =
+        detectEmploymentCorrection(incomingConversationText) ||
+        applicantLooksLikeMisclassifiedCustomer(currentApplicant);
       mergedHistory = mergeConversationHistory(
-        currentApplicant?.conversationHistory ||
-          (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
-        normalizeAssistantHistory(history),
+        forceCustomerIntent
+          ? currentLead?.conversationHistory || []
+          : currentApplicant?.conversationHistory ||
+              (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
+        incomingHistory,
       );
       userConversationItems = buildAssistantConversationItems({
         history: mergedHistory,
@@ -6873,12 +6948,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     const intentType =
-      currentApplicant?._id ||
-      detectEmploymentIntent(
-        applicantConversationState.combinedUserText ||
-          applicantConversationState.latestUserMessage ||
-          message,
-      )
+      !forceCustomerIntent &&
+      (currentApplicant?._id ||
+        detectEmploymentIntent(
+          applicantConversationState.combinedUserText ||
+            applicantConversationState.latestUserMessage ||
+            message,
+        ))
         ? "employment"
         : "customer";
 
@@ -10293,8 +10369,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       const now = new Date();
+      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+        .select("fileName sizeBytes")
+        .lean();
+      const existingKeys = new Set(
+        existingAssets.map(
+          (item) =>
+            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+        ),
+      );
+      const newFiles = parsedFiles.filter((item) => {
+        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+          item.sizeBytes || 0,
+        )}`;
+
+        if (existingKeys.has(key)) {
+          return false;
+        }
+
+        existingKeys.add(key);
+        return true;
+      });
       const assetDocs = await Promise.all(
-        parsedFiles.map((item) =>
+        newFiles.map((item) =>
           MetalworksLeadAsset.create({
             leadId: leadDoc._id,
             visitorId,
@@ -10311,30 +10408,32 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ),
       );
 
-      leadDoc.photoFileNames = mergeAssistantUniqueValues(
-        leadDoc.photoFileNames || [],
-        parsedFiles.map((item) => item.fileName),
-      );
-      leadDoc.lastContactAt = now;
-      leadDoc.updatedAt = now;
-      await leadDoc.save();
+      if (assetDocs.length) {
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          newFiles.map((item) => item.fileName),
+        );
+        leadDoc.lastContactAt = now;
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
 
-      await appendActivity({
-        leadId: leadDoc._id,
-        activityType: "assistant_photo_uploaded",
-        title: "Fotos subidas desde assistant",
-        body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} en el chat.`,
-        meta: {
-          visitorId,
-          sessionId,
-          pageTitle,
-          fileNames: parsedFiles.map((item) => item.fileName),
-        },
-        req,
-        pagePath,
-        pageUrl,
-        tracking,
-      });
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "assistant_photo_uploaded",
+          title: "Fotos subidas desde assistant",
+          body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} en el chat.`,
+          meta: {
+            visitorId,
+            sessionId,
+            pageTitle,
+            fileNames: newFiles.map((item) => item.fileName),
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
 
       res.json({
         ok: true,
