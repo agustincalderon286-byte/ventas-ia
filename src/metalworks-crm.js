@@ -102,6 +102,25 @@ const METALWORKS_PUSH_INVALID_REASONS = new Set([
   "DeviceTokenNotForTopic",
   "Unregistered",
 ]);
+const METALWORKS_LEAD_REMINDER_OPTIONS = [
+  { minutes: 60, label: "1 hour before" },
+  { minutes: 120, label: "2 hours before" },
+  { minutes: 1440, label: "1 day before" },
+  { minutes: 2880, label: "2 days before" },
+];
+const METALWORKS_LEAD_REMINDER_MINUTES = new Set(
+  METALWORKS_LEAD_REMINDER_OPTIONS.map((option) => option.minutes),
+);
+const METALWORKS_LEAD_REMINDER_POLL_MS = 60 * 1000;
+const METALWORKS_LEAD_REMINDER_GRACE_MS = 12 * 60 * 1000;
+const METALWORKS_LEAD_REMINDER_SCAN_WINDOW_MS =
+  Math.max(...METALWORKS_LEAD_REMINDER_OPTIONS.map((option) => option.minutes)) * 60 * 1000 +
+  METALWORKS_LEAD_REMINDER_GRACE_MS;
+const METALWORKS_LEAD_REMINDER_WORKER = {
+  started: false,
+  timer: null,
+  running: false,
+};
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
@@ -1465,6 +1484,18 @@ function buildMetalworksPushCopy({
     };
   }
 
+  if (alertType === "lead_followup_reminder") {
+    const actionLabel =
+      trimPushCopy(lead?.nextAction || "", 54) || trimPushCopy(projectType || "", 54);
+
+    return {
+      title: "Lead reminder",
+      body: callbackLabel
+        ? `${fullName} • ${actionLabel} • ${callbackLabel}`
+        : `${fullName} needs a follow-up soon.`,
+    };
+  }
+
   return {
     title: "New lead",
     body: `${fullName} • ${projectType}`,
@@ -1745,6 +1776,7 @@ function formatActivityTitle(type = "") {
     website_live_chat_message: "Mensaje del chat web",
     website_live_chat_photo_uploaded: "Fotos subidas desde chat web",
     website_live_chat_reply: "Respuesta del CRM",
+    lead_followup_reminder_sent: "Reminder enviado",
     job_applicant_created: "Candidato nuevo",
     job_applicant_updated: "Candidato actualizado",
     job_applicant_interview_requested: "Entrevista de candidato",
@@ -1754,6 +1786,122 @@ function formatActivityTitle(type = "") {
   };
 
   return labels[type] || "Actividad";
+}
+
+export function normalizeLeadReminderOffsets(values = []) {
+  const safeValues = Array.isArray(values) ? values : [values];
+  const unique = [];
+  const seen = new Set();
+
+  safeValues.forEach((value) => {
+    const minutes = Math.round(Number(value || 0));
+
+    if (!METALWORKS_LEAD_REMINDER_MINUTES.has(minutes) || seen.has(minutes)) {
+      return;
+    }
+
+    seen.add(minutes);
+    unique.push(minutes);
+  });
+
+  return unique.sort((left, right) => left - right);
+}
+
+export function formatLeadReminderOffsetLabel(value = 0) {
+  const minutes = Math.round(Number(value || 0));
+  return (
+    METALWORKS_LEAD_REMINDER_OPTIONS.find((option) => option.minutes === minutes)?.label || ""
+  );
+}
+
+function buildLeadReminderSentKey(nextActionAt = null, offsetMinutes = 0) {
+  const schedule =
+    nextActionAt instanceof Date
+      ? nextActionAt
+      : nextActionAt
+        ? new Date(nextActionAt)
+        : null;
+
+  if (!(schedule instanceof Date) || Number.isNaN(schedule.getTime())) {
+    return "";
+  }
+
+  const safeOffset = Math.round(Number(offsetMinutes || 0));
+
+  if (!METALWORKS_LEAD_REMINDER_MINUTES.has(safeOffset)) {
+    return "";
+  }
+
+  return `${schedule.toISOString()}|${safeOffset}`;
+}
+
+function pruneLeadReminderSentKeys(sentKeys = [], nextActionAt = null, reminderOffsets = []) {
+  const safeKeys = Array.isArray(sentKeys) ? sentKeys : [];
+  const allowedOffsets = normalizeLeadReminderOffsets(reminderOffsets);
+
+  if (!allowedOffsets.length) {
+    return [];
+  }
+
+  const allowedKeys = new Set(
+    allowedOffsets
+      .map((offsetMinutes) => buildLeadReminderSentKey(nextActionAt, offsetMinutes))
+      .filter(Boolean),
+  );
+
+  return safeKeys
+    .map((key) => cleanText(key || "", 120))
+    .filter((key) => key && allowedKeys.has(key));
+}
+
+export function collectDueLeadReminderOffsets({
+  nextActionAt = null,
+  reminderOffsets = [],
+  sentKeys = [],
+  now = new Date(),
+  graceMs = METALWORKS_LEAD_REMINDER_GRACE_MS,
+} = {}) {
+  const schedule =
+    nextActionAt instanceof Date
+      ? nextActionAt
+      : nextActionAt
+        ? new Date(nextActionAt)
+        : null;
+  const safeNow = now instanceof Date ? now : new Date(now);
+
+  if (
+    !(schedule instanceof Date) ||
+    Number.isNaN(schedule.getTime()) ||
+    !(safeNow instanceof Date) ||
+    Number.isNaN(safeNow.getTime())
+  ) {
+    return [];
+  }
+
+  const sentKeySet = new Set(
+    (Array.isArray(sentKeys) ? sentKeys : [])
+      .map((key) => cleanText(key || "", 120))
+      .filter(Boolean),
+  );
+
+  return normalizeLeadReminderOffsets(reminderOffsets)
+    .map((offsetMinutes) => {
+      const triggerAtMs = schedule.getTime() - offsetMinutes * 60 * 1000;
+      const diffMs = safeNow.getTime() - triggerAtMs;
+      const key = buildLeadReminderSentKey(schedule, offsetMinutes);
+
+      if (!key || diffMs < 0 || diffMs > graceMs || sentKeySet.has(key)) {
+        return null;
+      }
+
+      return {
+        offsetMinutes,
+        label: formatLeadReminderOffsetLabel(offsetMinutes),
+        key,
+        triggerAt: new Date(triggerAtMs),
+      };
+    })
+    .filter(Boolean);
 }
 
 function detectSpanish(value = "") {
@@ -4211,6 +4359,7 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     statusLabel: labelStatus(doc.status || "new"),
     nextAction: doc.nextAction || "",
     nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(doc.nextActionReminderOffsets || []),
     bestContactDay: doc.bestContactDay || "",
     bestContactTime: doc.bestContactTime || "",
     callbackIntent: doc.callbackIntent || "",
@@ -4700,6 +4849,7 @@ function summarizeLeadForOperator(lead = null) {
     statusLabel: lead.statusLabel || labelStatus(lead.status || "new"),
     nextAction: lead.nextAction || "",
     nextActionAt: lead.nextActionAt || "",
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(lead.nextActionReminderOffsets || []),
     callbackIntent: lead.callbackIntent || "",
     estimateAmount: Number(lead.estimateAmount || 0) || 0,
     sourceType: lead.sourceType || "",
@@ -5253,6 +5403,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     status: { type: String, default: "new", index: true },
     nextAction: String,
     nextActionAt: Date,
+    nextActionReminderOffsets: { type: [Number], default: [] },
+    nextActionReminderSentKeys: { type: [String], default: [] },
     privateNotes: String,
     estimateTitle: String,
     estimateScope: String,
@@ -5956,6 +6108,125 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       error: firstError,
     };
   }
+
+  async function processMetalworksLeadReminders() {
+    if (METALWORKS_LEAD_REMINDER_WORKER.running) {
+      return;
+    }
+
+    METALWORKS_LEAD_REMINDER_WORKER.running = true;
+
+    try {
+      const now = new Date();
+      const candidateLeads = await MetalworksLead.find({
+        status: { $nin: ["won", "lost", "archived"] },
+        nextActionAt: {
+          $gte: new Date(now.getTime() - METALWORKS_LEAD_REMINDER_GRACE_MS),
+          $lte: new Date(now.getTime() + METALWORKS_LEAD_REMINDER_SCAN_WINDOW_MS),
+        },
+        nextActionReminderOffsets: { $exists: true, $ne: [] },
+      })
+        .sort({ nextActionAt: 1, updatedAt: -1 })
+        .limit(80);
+
+      for (const leadDoc of candidateLeads) {
+        if (!isMetalworksOperatorOpenStatus(leadDoc.status || "new")) {
+          continue;
+        }
+
+        const dueReminders = collectDueLeadReminderOffsets({
+          nextActionAt: leadDoc.nextActionAt,
+          reminderOffsets: leadDoc.nextActionReminderOffsets || [],
+          sentKeys: leadDoc.nextActionReminderSentKeys || [],
+          now,
+        });
+
+        if (!dueReminders.length) {
+          continue;
+        }
+
+        const scheduleLabel = leadDoc.nextActionAt
+          ? formatDateTimeLabel(leadDoc.nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+          : "";
+        const deliveredReminderKeys = [];
+
+        for (const reminder of dueReminders) {
+          let delivery = null;
+
+          try {
+            delivery = await sendMetalworksPushAlert({
+              lead: leadDoc,
+              alertType: "lead_followup_reminder",
+              requestedAtLabel: [reminder.label, scheduleLabel].filter(Boolean).join(" • "),
+            });
+          } catch (error) {
+            console.error("Error sending Metal Works lead reminder push:", error.message);
+            continue;
+          }
+
+          if (!delivery?.delivered) {
+            continue;
+          }
+
+          deliveredReminderKeys.push(reminder.key);
+
+          await appendActivity({
+            leadId: leadDoc._id,
+            activityType: "lead_followup_reminder_sent",
+            title: "Reminder push sent",
+            body: [reminder.label, scheduleLabel].filter(Boolean).join(" • "),
+          }).catch(() => null);
+        }
+
+        if (!deliveredReminderKeys.length) {
+          continue;
+        }
+
+        leadDoc.nextActionReminderSentKeys = Array.from(
+          new Set([
+            ...pruneLeadReminderSentKeys(
+              leadDoc.nextActionReminderSentKeys || [],
+              leadDoc.nextActionAt,
+              leadDoc.nextActionReminderOffsets || [],
+            ),
+            ...deliveredReminderKeys,
+          ]),
+        );
+        leadDoc.updatedAt = new Date();
+        await leadDoc.save();
+      }
+    } finally {
+      METALWORKS_LEAD_REMINDER_WORKER.running = false;
+    }
+  }
+
+  function startMetalworksLeadReminderWorker() {
+    if (METALWORKS_LEAD_REMINDER_WORKER.started) {
+      return;
+    }
+
+    METALWORKS_LEAD_REMINDER_WORKER.started = true;
+    const tick = async () => {
+      try {
+        await processMetalworksLeadReminders();
+      } catch (error) {
+        console.error("Error processing Metal Works lead reminders:", error.message);
+      }
+    };
+
+    METALWORKS_LEAD_REMINDER_WORKER.timer = setInterval(
+      tick,
+      METALWORKS_LEAD_REMINDER_POLL_MS,
+    );
+
+    if (typeof METALWORKS_LEAD_REMINDER_WORKER.timer?.unref === "function") {
+      METALWORKS_LEAD_REMINDER_WORKER.timer.unref();
+    }
+
+    void tick();
+  }
+
+  startMetalworksLeadReminderWorker();
 
   async function appendActivity({
     leadId = null,
@@ -9195,6 +9466,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         : nextActionAtRaw === ""
           ? null
           : undefined;
+      const nextActionReminderOffsets = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "nextActionReminderOffsets",
+      )
+        ? normalizeLeadReminderOffsets(req.body?.nextActionReminderOffsets || [])
+        : null;
       const privateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "privateNotes")
         ? cleanText(req.body?.privateNotes || "", 4000)
         : null;
@@ -9332,6 +9609,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
             ? nextActionAt
             : null;
+      }
+
+      if (nextActionReminderOffsets !== null) {
+        const currentReminderOffsets = normalizeLeadReminderOffsets(
+          leadDoc.nextActionReminderOffsets || [],
+        );
+
+        if (
+          JSON.stringify(currentReminderOffsets) !== JSON.stringify(nextActionReminderOffsets)
+        ) {
+          changes.push(
+            nextActionReminderOffsets.length
+              ? `Reminders: ${nextActionReminderOffsets
+                  .map((value) => formatLeadReminderOffsetLabel(value))
+                  .filter(Boolean)
+                  .join(", ")}`
+              : "Reminders: Off",
+          );
+        }
+
+        leadDoc.nextActionReminderOffsets = nextActionReminderOffsets;
       }
 
       if (privateNotes !== null) {
@@ -9488,6 +9786,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       if (profileChanged) {
         changes.push("Perfil del cliente actualizado");
+      }
+
+      if (nextActionAt !== undefined || nextActionReminderOffsets !== null) {
+        leadDoc.nextActionReminderSentKeys = pruneLeadReminderSentKeys(
+          leadDoc.nextActionReminderSentKeys || [],
+          leadDoc.nextActionAt,
+          leadDoc.nextActionReminderOffsets || [],
+        );
       }
 
       if (changes.length || note) {

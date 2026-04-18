@@ -412,6 +412,12 @@ body[data-crm-skin="executive-steel"] .crm-login-alias {
   box-shadow: 0 10px 22px rgba(20, 38, 61, 0.05);
 }
 
+body[data-crm-skin="executive-steel"] .crm-reminder-option {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 245, 249, 0.98) 100%);
+  border-color: rgba(20, 38, 61, 0.1);
+  color: var(--crm-charcoal);
+}
+
 body[data-crm-skin="goku-blue"] .crm-primary-button {
   background: linear-gradient(135deg, #1be8ff 0%, #6a5cff 48%, #ff4bd9 100%);
   box-shadow:
@@ -1785,6 +1791,54 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   grid-column: 1 / -1;
 }
 
+.crm-field-hint {
+  margin: 0;
+  color: var(--crm-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.crm-reminder-field {
+  display: grid;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.crm-reminder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-detail-form .crm-reminder-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--crm-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.crm-detail-form .crm-reminder-option input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--crm-blue);
+}
+
+.crm-detail-form .crm-reminder-option span {
+  display: block;
+}
+
 .crm-composer-card {
   padding: 16px 18px;
   border: 1px solid var(--crm-line);
@@ -2200,6 +2254,10 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
   }
 
   .crm-mobile-collapsible-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-reminder-grid {
     grid-template-columns: 1fr;
   }
 }

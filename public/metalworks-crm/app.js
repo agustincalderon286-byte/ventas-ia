@@ -233,6 +233,15 @@ const ESTIMATE_COST_FIELDS = [
   "estimateMiscCost",
   "estimateDiscount",
 ];
+const CRM_LEAD_REMINDER_OPTIONS = [
+  { value: 60, label: "1 hour before" },
+  { value: 120, label: "2 hours before" },
+  { value: 1440, label: "1 day before" },
+  { value: 2880, label: "2 days before" },
+];
+const CRM_LEAD_REMINDER_OPTION_MAP = new Map(
+  CRM_LEAD_REMINDER_OPTIONS.map((option) => [option.value, option.label]),
+);
 const APPLICANT_STATUS_OPTIONS = [
   { value: "new", label: "Nuevo candidato" },
   { value: "interview_requested", label: "Entrevista pedida" },
@@ -518,6 +527,49 @@ function formatApplicantAnswer(value = "") {
   }
 
   return String(value || "").trim();
+}
+
+function normalizeLeadReminderOffsets(values = []) {
+  const safeValues = Array.isArray(values) ? values : [values];
+  const unique = [];
+  const seen = new Set();
+
+  safeValues.forEach((value) => {
+    const minutes = Math.round(Number(value || 0));
+
+    if (!CRM_LEAD_REMINDER_OPTION_MAP.has(minutes) || seen.has(minutes)) {
+      return;
+    }
+
+    seen.add(minutes);
+    unique.push(minutes);
+  });
+
+  return unique.sort((left, right) => left - right);
+}
+
+function formatLeadReminderLabel(value = 0) {
+  return CRM_LEAD_REMINDER_OPTION_MAP.get(Math.round(Number(value || 0))) || "";
+}
+
+function buildLeadReminderSummary(lead = null) {
+  const labels = normalizeLeadReminderOffsets(lead?.nextActionReminderOffsets || [])
+    .map((value) => formatLeadReminderLabel(value))
+    .filter(Boolean);
+
+  return labels.join(" · ");
+}
+
+function syncLeadReminderInputs(offsets = []) {
+  if (!detailForm) {
+    return;
+  }
+
+  const selectedValues = new Set(normalizeLeadReminderOffsets(offsets));
+
+  detailForm.querySelectorAll('input[name="nextActionReminderOffsets"]').forEach((input) => {
+    input.checked = selectedValues.has(Math.round(Number(input.value || 0)));
+  });
 }
 
 function stripGeneratedApplicantNotes(value = "") {
@@ -1974,6 +2026,7 @@ function renderAgenda(leads = []) {
     .map((lead) => {
       const phoneDigits = getLeadPhoneDigits(lead);
       const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
+      const reminderSummary = buildLeadReminderSummary(lead);
 
       return `
         <article class="crm-agenda-card" data-crm-agenda-lead-id="${escapeHtml(lead.id)}">
@@ -1989,6 +2042,7 @@ function renderAgenda(leads = []) {
           <div class="crm-micro-list">
             <span class="crm-chip">${escapeHtml(scheduleLabel)}</span>
             ${lead.nextAction ? `<span class="crm-chip">${escapeHtml(lead.nextAction)}</span>` : ""}
+            ${reminderSummary ? `<span class="crm-chip">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
             ${lead.callbackIntent === "yes" ? '<span class="crm-chip">Callback</span>' : ""}
           </div>
           <div class="crm-lead-card-summary">
@@ -3305,6 +3359,7 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.bestContactTime.value = lead.bestContactTime || "";
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
+    syncLeadReminderInputs(lead.nextActionReminderOffsets || []);
     detailForm.elements.details.value = lead.details || "";
     detailForm.elements.clientDocumentType.value = normalizeClientDocumentType(
       lead.clientDocumentType || "estimate",
@@ -3361,6 +3416,9 @@ function buildLeadPayloadFromForm() {
     bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
     nextActionAt: String(formData.get("nextActionAt") || "").trim(),
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(
+      formData.getAll("nextActionReminderOffsets"),
+    ),
     details: String(formData.get("details") || "").trim(),
     clientDocumentType: String(formData.get("clientDocumentType") || "estimate").trim(),
     clientDocumentWorkDate: String(formData.get("clientDocumentWorkDate") || "").trim(),

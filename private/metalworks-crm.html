@@ -469,6 +469,31 @@
                   <input type="datetime-local" name="nextActionAt" />
                 </label>
 
+                <div class="crm-field-full crm-reminder-field">
+                  <span>Reminder alerts</span>
+                  <div class="crm-reminder-grid">
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="60" />
+                      <span>1 hour before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="120" />
+                      <span>2 hours before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="1440" />
+                      <span>1 day before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="2880" />
+                      <span>2 days before</span>
+                    </label>
+                  </div>
+                  <p class="crm-field-hint">
+                    Send a push alert to the CRM before this scheduled action starts.
+                  </p>
+                </div>
+
                 <label class="crm-field-full">
                   <span>Resumen del proyecto</span>
                   <textarea
