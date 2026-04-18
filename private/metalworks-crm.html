@@ -302,6 +302,9 @@
                 <a href="#" class="crm-secondary-button crm-action-link" data-crm-text-link hidden>
                   Text
                 </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-map-link hidden>
+                  Maps
+                </a>
                 <button type="button" class="crm-secondary-button" data-crm-mark-quoted>
                   Mark Quoted
                 </button>
@@ -317,10 +320,31 @@
               </div>
               <p class="crm-form-result crm-action-feedback" data-crm-action-feedback></p>
 
-              <section class="crm-photo-section" data-crm-photo-section hidden>
+              <section class="crm-photo-section" data-crm-photo-section>
                 <div class="crm-panel-head tight">
                   <h3>Project Photos</h3>
                   <p data-crm-photo-summary>No photos yet.</p>
+                </div>
+                <div class="crm-upload-panel crm-photo-upload-panel">
+                  <div class="crm-upload-panel-head">
+                    <div>
+                      <strong>Add photos manually</strong>
+                      <p>Upload photos from your phone or computer and save them directly to this lead.</p>
+                    </div>
+                  </div>
+                  <div class="crm-photo-actions">
+                    <button type="button" class="crm-secondary-button" data-crm-photo-upload-trigger>
+                      Add Photos
+                    </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      data-crm-photo-upload-input
+                      hidden
+                    />
+                    <p class="crm-form-result crm-photo-upload-feedback" data-crm-photo-upload-feedback></p>
+                  </div>
                 </div>
                 <div class="crm-photo-grid" data-crm-photo-grid></div>
               </section>
@@ -421,10 +445,21 @@
                       </label>
 
                       <label>
-                        <span>Client total</span>
+                        <span>Total job amount</span>
                         <input
                           type="number"
                           name="estimateAmount"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </label>
+
+                      <label>
+                        <span>Deposit received</span>
+                        <input
+                          type="number"
+                          name="invoiceDepositAmount"
                           min="0"
                           step="0.01"
                           placeholder="0.00"

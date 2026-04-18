@@ -1640,10 +1640,23 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   gap: 12px;
 }
 
+.crm-photo-upload-panel {
+  display: grid;
+  gap: 12px;
+}
+
 .crm-photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 12px;
+}
+
+.crm-photo-empty {
+  padding: 16px 18px;
+  border: 1px dashed var(--crm-line);
+  border-radius: 18px;
+  color: var(--crm-muted);
+  background: rgba(16, 20, 23, 0.02);
 }
 
 .crm-photo-card {
@@ -1888,7 +1901,13 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
 .crm-photo-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+}
+
+.crm-photo-upload-feedback {
+  margin: 0;
+  min-height: 1.4rem;
 }
 
 .crm-photo-help {

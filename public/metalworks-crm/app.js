@@ -12,6 +12,11 @@ const CRM_MOBILE_BREAKPOINT_PX = 1080;
 const PROSPECTOR_PASSWORD_MIN_LENGTH = 8;
 const CRM_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
 const CRM_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const MAX_CRM_PHOTO_FILES = 4;
+const MAX_CRM_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_CRM_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
+const MIN_CRM_PHOTO_TARGET_BYTES = 320 * 1024;
+const MAX_CRM_PHOTO_DIMENSION = 1600;
 const crmMobileMediaQuery =
   typeof window.matchMedia === "function"
     ? window.matchMedia(`(max-width: ${CRM_MOBILE_BREAKPOINT_PX}px)`)
@@ -287,6 +292,7 @@ const state = {
   pushSubscription: null,
   pushBusy: false,
   liveChatReplyBusy: false,
+  manualPhotoUploadBusy: false,
   searchTimer: null,
   bindingsReady: false,
 };
@@ -362,6 +368,7 @@ const themeBadge = document.querySelector("[data-crm-theme-badge]");
 const systemStatus = document.querySelector("[data-crm-system-status]");
 const callLink = document.querySelector("[data-crm-call-link]");
 const textLink = document.querySelector("[data-crm-text-link]");
+const mapLink = document.querySelector("[data-crm-map-link]");
 const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
 const sendEstimateButton = document.querySelector("[data-crm-send-estimate]");
 const openEmailDraftButton = document.querySelector("[data-crm-open-email-draft]");
@@ -395,6 +402,9 @@ const applicantEmailLink = document.querySelector("[data-crm-applicant-email-lin
 const photoSection = document.querySelector("[data-crm-photo-section]");
 const photoGrid = document.querySelector("[data-crm-photo-grid]");
 const photoSummary = document.querySelector("[data-crm-photo-summary]");
+const photoUploadTrigger = document.querySelector("[data-crm-photo-upload-trigger]");
+const photoUploadInput = document.querySelector("[data-crm-photo-upload-input]");
+const photoUploadFeedback = document.querySelector("[data-crm-photo-upload-feedback]");
 
 function escapeHtml(value = "") {
   return String(value || "")
@@ -609,6 +619,15 @@ function setPushFeedback(message = "", tone = "") {
 
   pushFeedback.textContent = message;
   pushFeedback.dataset.tone = tone;
+}
+
+function setPhotoUploadFeedback(message = "", tone = "") {
+  if (!photoUploadFeedback) {
+    return;
+  }
+
+  photoUploadFeedback.textContent = message;
+  photoUploadFeedback.dataset.tone = tone;
 }
 
 function supportsWebPush() {
@@ -1224,6 +1243,224 @@ function buildSmsHref(phoneDigits = "") {
   return `sms:+1${phoneDigits}`;
 }
 
+function renameFileExtension(fileName = "", extension = ".jpg") {
+  const safeExtension = String(extension || ".jpg").startsWith(".")
+    ? String(extension || ".jpg")
+    : `.${String(extension || "jpg")}`;
+  const baseName = String(fileName || "project-photo")
+    .trim()
+    .replace(/\.[A-Za-z0-9]+$/, "");
+
+  return `${baseName || "project-photo"}${safeExtension}`;
+}
+
+function canvasToBlob(canvas, mimeType = "image/jpeg", quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Could not prepare this image for upload."));
+      },
+      mimeType,
+      quality,
+    );
+  });
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`Could not process ${file?.name || "this image"}.`));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+async function optimizeCrmPhotoFile(file, { targetBytes = MAX_CRM_PHOTO_BYTES } = {}) {
+  const safeTargetBytes = Math.max(
+    MIN_CRM_PHOTO_TARGET_BYTES,
+    Math.min(
+      MAX_CRM_PHOTO_BYTES,
+      Number(targetBytes || MAX_CRM_PHOTO_BYTES) || MAX_CRM_PHOTO_BYTES,
+    ),
+  );
+
+  if (!(file instanceof File)) {
+    throw new Error("Could not read this image file.");
+  }
+
+  if (!String(file.type || "").startsWith("image/")) {
+    throw new Error("Only image uploads are allowed.");
+  }
+
+  if (/^image\/gif$/i.test(String(file.type || ""))) {
+    if (file.size <= safeTargetBytes) {
+      return file;
+    }
+
+    throw new Error(`${file.name || "This image"} is too large. Please choose a smaller file.`);
+  }
+
+  if (
+    file.size <= safeTargetBytes &&
+    file.size <= MAX_CRM_PHOTO_BYTES &&
+    !/^image\/(?:heic|heif)$/i.test(String(file.type || ""))
+  ) {
+    return file;
+  }
+
+  const image = await loadImageFromFile(file);
+  const originalWidth = Number(image.naturalWidth || image.width || 0) || 1;
+  const originalHeight = Number(image.naturalHeight || image.height || 0) || 1;
+  const baseScale = Math.min(
+    1,
+    MAX_CRM_PHOTO_DIMENSION / Math.max(originalWidth, originalHeight),
+  );
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { alpha: false });
+
+  if (!context) {
+    throw new Error("This device could not prepare the image for upload.");
+  }
+
+  const dimensionScales = [1, 0.88, 0.76, 0.64, 0.52];
+  const qualitySteps = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
+  let bestBlob = null;
+
+  for (const dimensionScale of dimensionScales) {
+    const width = Math.max(1, Math.round(originalWidth * baseScale * dimensionScale));
+    const height = Math.max(1, Math.round(originalHeight * baseScale * dimensionScale));
+
+    canvas.width = width;
+    canvas.height = height;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+
+    for (const quality of qualitySteps) {
+      const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+
+      if (!bestBlob || blob.size < bestBlob.size) {
+        bestBlob = blob;
+      }
+
+      if (blob.size <= safeTargetBytes && blob.size <= MAX_CRM_PHOTO_BYTES) {
+        return new File([blob], renameFileExtension(file.name, ".jpg"), {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      }
+    }
+  }
+
+  if (bestBlob && bestBlob.size <= MAX_CRM_PHOTO_BYTES) {
+    return new File([bestBlob], renameFileExtension(file.name, ".jpg"), {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  }
+
+  throw new Error(
+    `${file.name || "This image"} is still too large after compression. Try cropping it before uploading.`,
+  );
+}
+
+async function prepareCrmPhotoFilesForUpload(selectedFiles = []) {
+  const perFileTarget = Math.max(
+    MIN_CRM_PHOTO_TARGET_BYTES,
+    Math.min(
+      MAX_CRM_PHOTO_BYTES,
+      Math.floor(MAX_CRM_PHOTO_TOTAL_BYTES / Math.max(selectedFiles.length, 1)),
+    ),
+  );
+
+  let optimizedFiles = await Promise.all(
+    selectedFiles.map((file) => optimizeCrmPhotoFile(file, { targetBytes: perFileTarget })),
+  );
+
+  let totalBytes = optimizedFiles.reduce((sum, file) => sum + (Number(file?.size || 0) || 0), 0);
+
+  if (totalBytes <= MAX_CRM_PHOTO_TOTAL_BYTES) {
+    return optimizedFiles;
+  }
+
+  const tighterTarget = Math.max(MIN_CRM_PHOTO_TARGET_BYTES, Math.floor(perFileTarget * 0.82));
+  optimizedFiles = await Promise.all(
+    optimizedFiles.map((file) => optimizeCrmPhotoFile(file, { targetBytes: tighterTarget })),
+  );
+  totalBytes = optimizedFiles.reduce((sum, file) => sum + (Number(file?.size || 0) || 0), 0);
+
+  if (totalBytes <= MAX_CRM_PHOTO_TOTAL_BYTES) {
+    return optimizedFiles;
+  }
+
+  throw new Error("These photos are still too large. Try fewer photos or crop them before uploading.");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("I could not read one of these photos."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function buildLeadLocationQuery(lead = null) {
+  const values = [lead?.addressLine, lead?.city, lead?.zipCode, lead?.location]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const uniqueValues = [];
+  const seen = new Set();
+
+  values.forEach((value) => {
+    const key = value.toLowerCase();
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    uniqueValues.push(value);
+  });
+
+  return uniqueValues.join(", ");
+}
+
+function buildMapsHref(lead = null) {
+  const query = buildLeadLocationQuery(lead);
+
+  if (!query) {
+    return "#";
+  }
+
+  const userAgent = String(navigator.userAgent || "");
+
+  if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
+  }
+
+  if (/android/i.test(userAgent)) {
+    return `geo:0,0?q=${encodeURIComponent(query)}`;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 function getNumberInputValue(input) {
   const raw = String(input?.value || "").trim();
   if (!raw) {
@@ -1278,6 +1515,20 @@ function syncEstimateTotalFromForm() {
   }
 }
 
+function getInvoiceValidationMessage(snapshot = null) {
+  const safeSnapshot = snapshot || buildEstimateSnapshot();
+
+  if (safeSnapshot.deposit > 0 && safeSnapshot.total <= 0) {
+    return "Add the total before recording a deposit.";
+  }
+
+  if (safeSnapshot.deposit > safeSnapshot.total) {
+    return "Deposit can't be higher than the total.";
+  }
+
+  return "";
+}
+
 function buildEstimateSnapshot() {
   const lead = state.leadDetail?.lead || {};
   const form = detailForm?.elements;
@@ -1288,6 +1539,13 @@ function buildEstimateSnapshot() {
   const total = breakdownMode
     ? calculateEstimateTotal(lead)
     : Number(form?.estimateAmount?.value || lead.estimateAmount || 0) || 0;
+  const deposit = Math.max(
+    0,
+    Math.round(
+      (Number(form?.invoiceDepositAmount?.value || lead.invoiceDepositAmount || 0) || 0) * 100,
+    ) / 100,
+  );
+  const balanceDue = Math.max(0, Math.round((total - deposit) * 100) / 100);
 
   return {
     documentType,
@@ -1327,6 +1585,8 @@ function buildEstimateSnapshot() {
       String(form?.estimateValidUntil?.value || "").trim() ||
       toDateInputValue(lead.estimateValidUntil || ""),
     total,
+    deposit,
+    balanceDue,
   };
 }
 
@@ -1371,7 +1631,17 @@ function buildEstimateBody(snapshot) {
     snapshot.documentType === "estimate" && snapshot.validUntil
       ? `Valid until: ${formatDateOnly(snapshot.validUntil)}`
       : "",
-    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Total project amount: ${formatCurrency(snapshot.total)}`
+      : snapshot.total > 0
+        ? `Total: ${formatCurrency(snapshot.total)}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit > 0
+      ? `Deposit received: ${formatCurrency(snapshot.deposit)}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Balance due: ${formatCurrency(snapshot.balanceDue)}`
+      : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
     snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
@@ -1394,7 +1664,17 @@ function buildEstimateTextMessage(snapshot) {
     snapshot.fullName ? `Client: ${snapshot.fullName}` : "",
     snapshot.location ? `Location: ${snapshot.location}` : "",
     snapshot.workDate ? `Work date: ${formatDateOnly(snapshot.workDate)}` : "",
-    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Total project amount: ${formatCurrency(snapshot.total)}`
+      : snapshot.total > 0
+        ? `Total: ${formatCurrency(snapshot.total)}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit > 0
+      ? `Deposit received: ${formatCurrency(snapshot.deposit)}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Balance due: ${formatCurrency(snapshot.balanceDue)}`
+      : "",
     "",
     snapshot.description ? `Work: ${snapshot.description}` : "",
     snapshot.warranty ? `Warranty: ${snapshot.warranty}` : "",
@@ -1407,6 +1687,14 @@ function buildEstimateTextMessage(snapshot) {
 
 function openEmailDraft({ silent = false } = {}) {
   const snapshot = buildEstimateSnapshot();
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    if (!silent) {
+      setDetailFeedback(validationMessage, "error");
+    }
+    return false;
+  }
 
   if (!snapshot.email) {
     setDetailFeedback("Este lead no tiene correo todavia.", "error");
@@ -1472,6 +1760,12 @@ async function copyTextWithFallback(text = "") {
 
 async function copyEstimateText() {
   const snapshot = buildEstimateSnapshot();
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    setDetailFeedback(validationMessage, "error");
+    return;
+  }
 
   if (!snapshot.description && !snapshot.total) {
     setDetailFeedback(
@@ -1551,6 +1845,10 @@ function buildDetailActionPreview() {
     phoneDisplay: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
     phone: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
     email: String(form?.email?.value || lead.email || "").trim(),
+    location: String(form?.location?.value || lead.location || "").trim(),
+    addressLine: String(lead.addressLine || "").trim(),
+    city: String(lead.city || "").trim(),
+    zipCode: String(lead.zipCode || "").trim(),
     clientDocumentType: normalizeClientDocumentType(
       form?.clientDocumentType?.value || lead.clientDocumentType || "estimate",
     ),
@@ -2503,15 +2801,18 @@ function renderLeadAssets(assets = []) {
   }
 
   const safeAssets = Array.isArray(assets) ? assets.filter((item) => item?.downloadUrl) : [];
+  photoSection.hidden = false;
 
   if (!safeAssets.length) {
-    photoSection.hidden = true;
     photoSummary.textContent = "No photos yet.";
-    photoGrid.innerHTML = "";
+    photoGrid.innerHTML = `
+      <div class="crm-photo-empty">
+        Upload site photos, inspiration shots, or follow-up pictures so the whole team can see them from this lead.
+      </div>
+    `;
     return;
   }
 
-  photoSection.hidden = false;
   photoSummary.textContent = `${safeAssets.length} photo${safeAssets.length === 1 ? "" : "s"} saved`;
   photoGrid.innerHTML = safeAssets
     .map(
@@ -2534,10 +2835,25 @@ function renderLeadAssets(assets = []) {
     .join("");
 }
 
+function syncManualPhotoUploadUi(lead = null) {
+  const enabled = Boolean(lead?.id) && !state.manualPhotoUploadBusy;
+
+  if (photoUploadTrigger) {
+    photoUploadTrigger.disabled = !enabled;
+    photoUploadTrigger.textContent = state.manualPhotoUploadBusy ? "Uploading..." : "Add Photos";
+  }
+
+  if (photoUploadInput) {
+    photoUploadInput.disabled = !enabled;
+  }
+}
+
 function syncDetailQuickActions(lead = null) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const hasPhone = Boolean(phoneDigits);
   const hasEmail = Boolean(lead?.email);
+  const mapsHref = buildMapsHref(lead);
+  const hasMap = mapsHref !== "#";
   const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
   const documentLabel = getClientDocumentLabel(documentType);
 
@@ -2549,6 +2865,11 @@ function syncDetailQuickActions(lead = null) {
   if (textLink) {
     textLink.hidden = !hasPhone;
     textLink.href = hasPhone ? buildSmsHref(phoneDigits) : "#";
+  }
+
+  if (mapLink) {
+    mapLink.hidden = !hasMap;
+    mapLink.href = hasMap ? mapsHref : "#";
   }
 
   if (markQuotedButton) {
@@ -2569,6 +2890,8 @@ function syncDetailQuickActions(lead = null) {
     copyEstimateButton.disabled = !lead?.id;
     copyEstimateButton.textContent = `Copy ${documentLabel} Text`;
   }
+
+  syncManualPhotoUploadUi(lead);
 }
 
 function syncLiveChatComposer(lead = null) {
@@ -2773,6 +3096,7 @@ function renderLeadDetail(detail = null) {
     activityList.innerHTML = "";
     renderConversationThread(conversationThread, conversationSummary, []);
     renderLeadAssets([]);
+    setPhotoUploadFeedback("", "");
     syncDetailQuickActions(null);
     syncLiveChatComposer(null);
     setDetailTab("profile");
@@ -2793,6 +3117,16 @@ function renderLeadDetail(detail = null) {
       ${lead.email ? `<span class="crm-chip">${escapeHtml(lead.email)}</span>` : ""}
       ${lead.location ? `<span class="crm-chip">${escapeHtml(lead.location)}</span>` : ""}
       ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+      ${
+        lead.invoiceDepositAmount
+          ? `<span class="crm-chip">Deposit ${escapeHtml(formatCurrency(lead.invoiceDepositAmount))}</span>`
+          : ""
+      }
+      ${
+        lead.invoiceBalanceDue && lead.clientDocumentType === "invoice"
+          ? `<span class="crm-chip">Balance ${escapeHtml(formatCurrency(lead.invoiceBalanceDue))}</span>`
+          : ""
+      }
       ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
       ${
         lead.callbackIntent === "yes" && lead.nextActionAt
@@ -2903,6 +3237,7 @@ function renderLeadDetail(detail = null) {
       lead.clientDocumentWorkDate || lead.nextActionAt,
     );
     detailForm.elements.estimateAmount.value = lead.estimateAmount || "";
+    detailForm.elements.invoiceDepositAmount.value = lead.invoiceDepositAmount || "";
     detailForm.elements.estimateTitle.value = lead.estimateTitle || "";
     detailForm.elements.clientDocumentDescription.value =
       lead.clientDocumentDescription || lead.details || "";
@@ -2921,6 +3256,7 @@ function renderLeadDetail(detail = null) {
   }
 
   syncEstimateTotalFromForm();
+  setPhotoUploadFeedback("", "");
   syncDetailQuickActions(lead);
   syncLiveChatComposer(lead);
   renderLeadAssets(detail.assets || []);
@@ -2955,6 +3291,7 @@ function buildLeadPayloadFromForm() {
     estimateAmount: breakdownMode
       ? String(calculateEstimateTotal(lead))
       : String(formData.get("estimateAmount") || "").trim(),
+    invoiceDepositAmount: String(formData.get("invoiceDepositAmount") || "").trim(),
     estimateTitle: String(formData.get("estimateTitle") || "").trim(),
     clientDocumentDescription: String(formData.get("clientDocumentDescription") || "").trim(),
     clientDocumentWarranty: String(formData.get("clientDocumentWarranty") || "").trim(),
@@ -2980,6 +3317,16 @@ async function saveLeadChanges(
 ) {
   if (!state.selectedLeadId || !detailForm) {
     return null;
+  }
+
+  const validationMessage = getInvoiceValidationMessage();
+
+  if (validationMessage) {
+    if (showFeedback) {
+      setDetailFeedback(validationMessage, "error");
+    }
+
+    throw createApiError(validationMessage, 400, false);
   }
 
   if (showFeedback) {
@@ -3233,6 +3580,12 @@ async function handleMarkQuoted() {
 async function handleSendEstimate() {
   const snapshot = buildEstimateSnapshot();
   const documentWord = snapshot.documentType === "invoice" ? "invoice" : "estimate";
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    setDetailFeedback(validationMessage, "error");
+    return;
+  }
 
   if (!snapshot.email) {
     setDetailFeedback("Este lead no tiene correo todavia.", "error");
@@ -3258,6 +3611,7 @@ async function handleSendEstimate() {
 
     renderLeadDetail({
       lead: result.lead,
+      assets: result.assets || [],
       activity: result.activity || [],
     });
 
@@ -3283,6 +3637,73 @@ async function handleSendEstimate() {
         : error.message,
       draftOpened ? "muted" : "error",
     );
+  }
+}
+
+function handlePhotoUploadTrigger() {
+  if (!state.selectedLeadId || !photoUploadInput || state.manualPhotoUploadBusy) {
+    return;
+  }
+
+  photoUploadInput.click();
+}
+
+async function handleManualPhotoUpload(event) {
+  const selectedFiles = Array.from(event.target?.files || []);
+
+  if (photoUploadInput) {
+    photoUploadInput.value = "";
+  }
+
+  if (!state.selectedLeadId || !selectedFiles.length) {
+    return;
+  }
+
+  if (selectedFiles.length > MAX_CRM_PHOTO_FILES) {
+    setPhotoUploadFeedback(`Upload up to ${MAX_CRM_PHOTO_FILES} photos at a time.`, "error");
+    return;
+  }
+
+  state.manualPhotoUploadBusy = true;
+  syncManualPhotoUploadUi(state.leadDetail?.lead || null);
+  setPhotoUploadFeedback("Preparing photos...", "muted");
+
+  try {
+    const preparedFiles = await prepareCrmPhotoFilesForUpload(selectedFiles);
+    const filePayloads = await Promise.all(
+      preparedFiles.map(async (file) => ({
+        fileName: file.name || "project-photo.jpg",
+        mimeType: file.type || "image/jpeg",
+        dataUrl: await readFileAsDataUrl(file),
+      })),
+    );
+
+    setPhotoUploadFeedback("Uploading photos...", "muted");
+
+    const result = await apiRequest(
+      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/assets`,
+      {
+        method: "POST",
+        body: {
+          files: filePayloads,
+        },
+      },
+    );
+
+    renderLeadDetail(result);
+    const uploadedCount = Number(result.uploadedCount || 0) || 0;
+    setPhotoUploadFeedback(
+      uploadedCount
+        ? `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} saved to this lead.`
+        : "Those photos were already saved on this lead.",
+      uploadedCount ? "success" : "muted",
+    );
+    await refreshDashboardSafely();
+  } catch (error) {
+    setPhotoUploadFeedback(error.message || "I could not save those photos.", "error");
+  } finally {
+    state.manualPhotoUploadBusy = false;
+    syncManualPhotoUploadUi(state.leadDetail?.lead || null);
   }
 }
 
@@ -3416,6 +3837,8 @@ function bindDetailActions() {
     openEmailDraft();
   });
   copyEstimateButton?.addEventListener("click", copyEstimateText);
+  photoUploadTrigger?.addEventListener("click", handlePhotoUploadTrigger);
+  photoUploadInput?.addEventListener("change", handleManualPhotoUpload);
 
   const syncDetailFormActions = (event) => {
     const fieldName = event.target?.name || "";
@@ -3428,6 +3851,7 @@ function bindDetailActions() {
       [
         "phoneDisplay",
         "email",
+        "location",
         "clientDocumentType",
         ...ESTIMATE_COST_FIELDS,
       ].includes(fieldName)

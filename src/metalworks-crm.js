@@ -614,7 +614,7 @@ function formatDateTimeLabel(value = "", timeZone = "") {
   return date.toLocaleString("en-US", options);
 }
 
-function buildMetalworksClientDocumentSnapshot(lead = null) {
+export function buildMetalworksClientDocumentSnapshot(lead = null) {
   const fullName =
     sanitizeAssistantStoredName(cleanText(lead?.fullName || "", 120)) ||
     cleanText(lead?.fullName || "", 120);
@@ -632,7 +632,11 @@ function buildMetalworksClientDocumentSnapshot(lead = null) {
   const warranty =
     cleanText(lead?.clientDocumentWarranty || "", 2400) || METALWORKS_DEFAULT_CLIENT_WARRANTY;
   const totalAmount = normalizeMoney(lead?.estimateAmount || 0);
+  const depositAmount = normalizeMoney(lead?.invoiceDepositAmount || 0);
+  const balanceDueAmount = Math.max(0, normalizeMoney(totalAmount - depositAmount));
   const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
+  const deposit = depositAmount > 0 ? formatMoneyLabel(depositAmount) : "";
+  const balanceDue = totalAmount > 0 ? formatMoneyLabel(balanceDueAmount) : "";
   const location = cleanText(lead?.location || "", 160);
   const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
   const email = normalizeEmail(lead?.email || "");
@@ -649,6 +653,10 @@ function buildMetalworksClientDocumentSnapshot(lead = null) {
     warranty,
     totalAmount,
     total,
+    depositAmount,
+    deposit,
+    balanceDueAmount,
+    balanceDue,
     location,
     phone,
     email,
@@ -793,7 +801,7 @@ function buildThumbtackOauthCallbackPage({
 </html>`;
 }
 
-function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
+export function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
   const snapshot = buildMetalworksClientDocumentSnapshot(lead);
   const subject = `${snapshot.documentLabel} from Chicago Metal Works & Fencing - ${snapshot.projectLabel}`;
   const textLines = [
@@ -810,7 +818,17 @@ function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
     snapshot.documentType === "estimate" && snapshot.validUntil
       ? `Valid until: ${snapshot.validUntil}`
       : "",
-    snapshot.total ? `Total: ${snapshot.total}` : "",
+    snapshot.documentType === "invoice" && snapshot.total
+      ? `Total project amount: ${snapshot.total}`
+      : snapshot.total
+        ? `Total: ${snapshot.total}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit
+      ? `Deposit received: ${snapshot.deposit}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.balanceDue
+      ? `Balance due: ${snapshot.balanceDue}`
+      : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
     snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
@@ -839,8 +857,20 @@ function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
               : ""
           }
           ${
-            snapshot.total
-              ? `<p style="margin:0"><strong>Total:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+            snapshot.documentType === "invoice" && snapshot.total
+              ? `<p style="margin:0 0 10px"><strong>Total project amount:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+              : snapshot.total
+                ? `<p style="margin:0"><strong>Total:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+                : ""
+          }
+          ${
+            snapshot.documentType === "invoice" && snapshot.deposit
+              ? `<p style="margin:0 0 10px"><strong>Deposit received:</strong> ${escapeHtmlMarkup(snapshot.deposit)}</p>`
+              : ""
+          }
+          ${
+            snapshot.documentType === "invoice" && snapshot.balanceDue
+              ? `<p style="margin:0"><strong>Balance due:</strong> ${escapeHtmlMarkup(snapshot.balanceDue)}</p>`
               : ""
           }
         </div>
@@ -4209,6 +4239,11 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     estimateMiscCost: normalizeMoney(doc.estimateMiscCost || 0),
     estimateDiscount: normalizeMoney(doc.estimateDiscount || 0),
     estimateAmount: Number(doc.estimateAmount || 0) || 0,
+    invoiceDepositAmount: normalizeMoney(doc.invoiceDepositAmount || 0),
+    invoiceBalanceDue: Math.max(
+      0,
+      normalizeMoney((doc.estimateAmount || 0) - (doc.invoiceDepositAmount || 0)),
+    ),
     estimateValidUntil: doc.estimateValidUntil ? new Date(doc.estimateValidUntil).toISOString() : "",
     estimateNotes: doc.estimateNotes || "",
     clientDocumentType: normalizeClientDocumentType(doc.clientDocumentType || ""),
@@ -5227,6 +5262,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     estimateMiscCost: { type: Number, default: 0 },
     estimateDiscount: { type: Number, default: 0 },
     estimateAmount: { type: Number, default: 0 },
+    invoiceDepositAmount: { type: Number, default: 0 },
     estimateValidUntil: Date,
     estimateNotes: String,
     clientDocumentType: { type: String, default: "estimate" },
@@ -9092,6 +9128,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const estimateAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateAmount")
         ? normalizeMoney(req.body?.estimateAmount || 0)
         : null;
+      const invoiceDepositAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "invoiceDepositAmount")
+        ? normalizeMoney(req.body?.invoiceDepositAmount || 0)
+        : null;
       const estimateTitle = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateTitle")
         ? cleanText(req.body?.estimateTitle || "", 160)
         : null;
@@ -9145,6 +9184,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       let estimateChanged = false;
       let estimateMoneyChanged = false;
       let clientDocumentChanged = false;
+      let invoiceDepositChanged = false;
       let profileChanged = false;
 
       if (fullName !== null) {
@@ -9339,8 +9379,34 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.estimateAmount = nextEstimateAmount;
       }
 
+      const nextInvoiceDepositAmount =
+        invoiceDepositAmount !== null
+          ? invoiceDepositAmount
+          : normalizeMoney(leadDoc.invoiceDepositAmount || 0);
+
+      if (nextInvoiceDepositAmount > 0 && normalizeMoney(leadDoc.estimateAmount || 0) <= 0) {
+        return respondError(res, 400, "Add the total before recording a deposit.");
+      }
+
+      if (nextInvoiceDepositAmount > normalizeMoney(leadDoc.estimateAmount || 0)) {
+        return respondError(res, 400, "Deposit can't be higher than the total.");
+      }
+
+      if (invoiceDepositAmount !== null) {
+        if (normalizeMoney(leadDoc.invoiceDepositAmount || 0) !== invoiceDepositAmount) {
+          clientDocumentChanged = true;
+          invoiceDepositChanged = true;
+        }
+
+        leadDoc.invoiceDepositAmount = invoiceDepositAmount;
+      }
+
       if (estimateChanged) {
         changes.push(`Estimate: ${formatMoneyLabel(leadDoc.estimateAmount || 0)}`);
+      }
+
+      if (invoiceDepositChanged) {
+        changes.push(`Invoice deposit: ${formatMoneyLabel(leadDoc.invoiceDepositAmount || 0)}`);
       }
 
       if (clientDocumentChanged) {
@@ -9401,6 +9467,128 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error updating Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar ese lead.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/leads/:leadId/assets", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
+
+    if (!filePayloads.length) {
+      return respondError(res, 400, "Add at least one image.");
+    }
+
+    if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+      return respondError(
+        res,
+        400,
+        `Upload up to ${METALWORKS_LEAD_ASSET_MAX_FILES} images at a time.`,
+      );
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId);
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      const parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      const totalBytes = parsedFiles.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+
+      if (totalBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Total image upload is too large.");
+      }
+
+      const now = new Date();
+      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+        .select("fileName sizeBytes")
+        .lean();
+      const existingKeys = new Set(
+        existingAssets.map(
+          (item) =>
+            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+        ),
+      );
+      const newFiles = parsedFiles.filter((item) => {
+        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+          item.sizeBytes || 0,
+        )}`;
+
+        if (existingKeys.has(key)) {
+          return false;
+        }
+
+        existingKeys.add(key);
+        return true;
+      });
+      const assetDocs = await Promise.all(
+        newFiles.map((item) =>
+          MetalworksLeadAsset.create({
+            leadId: leadDoc._id,
+            sourceType: "crm_manual_photo",
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            fileData: item.fileData,
+            uploadedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          }),
+        ),
+      );
+
+      if (assetDocs.length) {
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          newFiles.map((item) => item.fileName),
+        );
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "crm_photo_uploaded",
+          title: "Fotos agregadas manualmente",
+          body: `Se agregaron ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} desde el CRM.`,
+          meta: {
+            adminEmail: auth.email,
+            fileNames: newFiles.map((item) => item.fileName),
+          },
+          req,
+        });
+      }
+
+      const [updatedLead, activityDocs, assets] = await Promise.all([
+        MetalworksLead.findById(leadId).lean(),
+        MetalworksLeadActivity.find({ leadId })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadId),
+      ]);
+
+      res.json({
+        ok: true,
+        uploadedCount: assetDocs.length,
+        lead: cleanLead(updatedLead, { includeConversation: true }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error saving manual Metal Works photos:", error.message);
+      respondError(res, 500, error?.message || "No pude guardar esas fotos.");
     }
   });
 
