@@ -293,6 +293,7 @@ const state = {
   pushBusy: false,
   liveChatReplyBusy: false,
   manualPhotoUploadBusy: false,
+  manualLeadBusy: false,
   searchTimer: null,
   bindingsReady: false,
 };
@@ -304,6 +305,12 @@ const agendaCount = document.querySelector("[data-crm-agenda-count]");
 const resourceHub = document.querySelector("[data-crm-resource-hub]");
 const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
 const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
+const newLeadToggleButton = document.querySelector("[data-crm-new-lead-toggle]");
+const manualLeadPanel = document.querySelector("[data-crm-manual-lead-panel]");
+const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
+const manualLeadSaveButton = document.querySelector("[data-crm-manual-lead-save]");
+const manualLeadCancelButton = document.querySelector("[data-crm-manual-lead-cancel]");
+const manualLeadFeedback = document.querySelector("[data-crm-manual-lead-feedback]");
 const mobileShell = document.querySelector("[data-crm-mobile-shell]");
 const mobileShellTitle = document.querySelector("[data-crm-mobile-title]");
 const mobileShellCopy = document.querySelector("[data-crm-mobile-copy]");
@@ -373,6 +380,7 @@ const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
 const sendEstimateButton = document.querySelector("[data-crm-send-estimate]");
 const openEmailDraftButton = document.querySelector("[data-crm-open-email-draft]");
 const copyEstimateButton = document.querySelector("[data-crm-copy-estimate]");
+const deleteLeadButton = document.querySelector("[data-crm-delete-lead]");
 const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-tab]"));
 const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
 const conversationThread = document.querySelector("[data-crm-conversation-thread]");
@@ -471,6 +479,7 @@ function formatLeadSource(value = "") {
     assistant_booking: "Assistant callback",
     field_prospector: "Field prospector",
     lead_distribution_prospector: "Prospector intake",
+    manual_crm_entry: "Manual CRM lead",
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
@@ -628,6 +637,15 @@ function setPhotoUploadFeedback(message = "", tone = "") {
 
   photoUploadFeedback.textContent = message;
   photoUploadFeedback.dataset.tone = tone;
+}
+
+function setManualLeadFeedback(message = "", tone = "") {
+  if (!manualLeadFeedback) {
+    return;
+  }
+
+  manualLeadFeedback.textContent = message;
+  manualLeadFeedback.dataset.tone = tone;
 }
 
 function supportsWebPush() {
@@ -2316,6 +2334,59 @@ function syncViewButtons() {
   });
 }
 
+function syncManualLeadUi() {
+  const leadsView = state.view === "leads";
+
+  if (newLeadToggleButton) {
+    newLeadToggleButton.hidden = !leadsView;
+    newLeadToggleButton.disabled = state.manualLeadBusy;
+    newLeadToggleButton.textContent =
+      manualLeadPanel?.hidden === false ? "Hide Form" : "New Lead";
+  }
+
+  if (manualLeadPanel && !leadsView) {
+    manualLeadPanel.hidden = true;
+  }
+
+  if (manualLeadSaveButton) {
+    manualLeadSaveButton.disabled = state.manualLeadBusy;
+    manualLeadSaveButton.textContent = state.manualLeadBusy ? "Creating..." : "Create Lead";
+  }
+
+  if (manualLeadCancelButton) {
+    manualLeadCancelButton.disabled = state.manualLeadBusy;
+  }
+}
+
+function openManualLeadPanel() {
+  if (!manualLeadPanel || !manualLeadForm) {
+    return;
+  }
+
+  manualLeadPanel.hidden = false;
+  setManualLeadFeedback("", "");
+  syncManualLeadUi();
+
+  window.setTimeout(() => {
+    manualLeadForm.elements.fullName?.focus();
+  }, 60);
+}
+
+function closeManualLeadPanel({ resetForm = true } = {}) {
+  if (!manualLeadPanel) {
+    return;
+  }
+
+  manualLeadPanel.hidden = true;
+
+  if (resetForm) {
+    manualLeadForm?.reset();
+  }
+
+  setManualLeadFeedback("", "");
+  syncManualLeadUi();
+}
+
 function syncCollectionChrome() {
   const applicantsView = state.view === "applicants";
 
@@ -2352,6 +2423,7 @@ function syncCollectionChrome() {
   }
 
   syncViewButtons();
+  syncManualLeadUi();
   syncMobileShellCopy();
 }
 
@@ -2889,6 +2961,10 @@ function syncDetailQuickActions(lead = null) {
   if (copyEstimateButton) {
     copyEstimateButton.disabled = !lead?.id;
     copyEstimateButton.textContent = `Copy ${documentLabel} Text`;
+  }
+
+  if (deleteLeadButton) {
+    deleteLeadButton.disabled = !lead?.id;
   }
 
   syncManualPhotoUploadUi(lead);
@@ -3577,6 +3653,111 @@ async function handleMarkQuoted() {
   }
 }
 
+function handleManualLeadToggle() {
+  if (!manualLeadPanel) {
+    return;
+  }
+
+  if (manualLeadPanel.hidden) {
+    openManualLeadPanel();
+    return;
+  }
+
+  closeManualLeadPanel();
+}
+
+function handleManualLeadCancel() {
+  closeManualLeadPanel();
+}
+
+async function handleManualLeadCreate(event) {
+  event.preventDefault();
+
+  if (!manualLeadForm) {
+    return;
+  }
+
+  const formData = new FormData(manualLeadForm);
+  const body = {
+    fullName: String(formData.get("fullName") || "").trim(),
+    phoneDisplay: String(formData.get("phoneDisplay") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    projectType: String(formData.get("projectType") || "").trim(),
+    location: String(formData.get("location") || "").trim(),
+    status: String(formData.get("status") || "new").trim(),
+    details: String(formData.get("details") || "").trim(),
+  };
+
+  if (!body.fullName) {
+    setManualLeadFeedback("Add the customer's name first.", "error");
+    manualLeadForm.elements.fullName?.focus();
+    return;
+  }
+
+  state.manualLeadBusy = true;
+  syncManualLeadUi();
+  setManualLeadFeedback("Creating lead...", "muted");
+
+  try {
+    const detail = await apiRequest("/api/metalworks-crm/leads", {
+      method: "POST",
+      body,
+    });
+
+    if (detail?.lead?.id) {
+      rememberSelectedLead(detail.lead.id);
+    }
+
+    closeManualLeadPanel();
+    await loadDashboard();
+
+    if (detail?.lead?.id) {
+      rememberSelectedLead(detail.lead.id);
+      renderLeadDetail(detail);
+      openMobileWorkspacePane();
+      scrollDetailIntoView();
+    }
+
+    setSystemStatus("Manual lead created.", "success");
+  } catch (error) {
+    setManualLeadFeedback(error.message || "I could not create that lead.", "error");
+  } finally {
+    state.manualLeadBusy = false;
+    syncManualLeadUi();
+  }
+}
+
+async function handleDeleteLead() {
+  const lead = state.leadDetail?.lead || null;
+
+  if (!lead?.id) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete ${lead.fullName || "this lead"} and remove its photos and activity history? This cannot be undone.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setDetailFeedback("Deleting lead...", "muted");
+
+    await apiRequest(`/api/metalworks-crm/leads/${encodeURIComponent(lead.id)}`, {
+      method: "DELETE",
+    });
+
+    rememberSelectedLead("");
+    renderLeadDetail(null);
+    await loadDashboard();
+    setSystemStatus("Lead deleted.", "success");
+  } catch (error) {
+    setDetailFeedback(error.message || "I could not delete that lead.", "error");
+  }
+}
+
 async function handleSendEstimate() {
   const snapshot = buildEstimateSnapshot();
   const documentWord = snapshot.documentType === "invoice" ? "invoice" : "estimate";
@@ -3830,13 +4011,17 @@ function bindFilters() {
 
 function bindDetailActions() {
   detailForm?.addEventListener("submit", handleSaveLead);
+  manualLeadForm?.addEventListener("submit", handleManualLeadCreate);
   liveChatForm?.addEventListener("submit", handleSendLiveChatReply);
+  newLeadToggleButton?.addEventListener("click", handleManualLeadToggle);
+  manualLeadCancelButton?.addEventListener("click", handleManualLeadCancel);
   markQuotedButton?.addEventListener("click", handleMarkQuoted);
   sendEstimateButton?.addEventListener("click", handleSendEstimate);
   openEmailDraftButton?.addEventListener("click", () => {
     openEmailDraft();
   });
   copyEstimateButton?.addEventListener("click", copyEstimateText);
+  deleteLeadButton?.addEventListener("click", handleDeleteLead);
   photoUploadTrigger?.addEventListener("click", handlePhotoUploadTrigger);
   photoUploadInput?.addEventListener("change", handleManualPhotoUpload);
 

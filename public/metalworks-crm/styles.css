@@ -263,12 +263,21 @@ textarea {
   font-weight: 700;
 }
 
+.crm-manual-lead-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
 .crm-login-form input,
 .crm-toolbar input,
 .crm-toolbar select,
 .crm-detail-form input,
 .crm-detail-form select,
 .crm-detail-form textarea,
+.crm-manual-lead-form input,
+.crm-manual-lead-form select,
+.crm-manual-lead-form textarea,
 .crm-prospector-form input,
 .crm-prospector-form select,
 .crm-prospector-form textarea,
@@ -282,6 +291,7 @@ textarea {
 }
 
 .crm-detail-form textarea,
+.crm-manual-lead-form textarea,
 .crm-prospector-form textarea {
   resize: vertical;
 }
@@ -292,6 +302,9 @@ body[data-crm-skin="goku-blue"] .crm-toolbar select,
 body[data-crm-skin="goku-blue"] .crm-detail-form input,
 body[data-crm-skin="goku-blue"] .crm-detail-form select,
 body[data-crm-skin="goku-blue"] .crm-detail-form textarea,
+body[data-crm-skin="goku-blue"] .crm-manual-lead-form input,
+body[data-crm-skin="goku-blue"] .crm-manual-lead-form select,
+body[data-crm-skin="goku-blue"] .crm-manual-lead-form textarea,
 body[data-crm-skin="goku-blue"] .crm-prospector-form input,
 body[data-crm-skin="goku-blue"] .crm-prospector-form select,
 body[data-crm-skin="goku-blue"] .crm-prospector-form textarea,
@@ -308,6 +321,9 @@ body[data-crm-skin="intel-ops"] .crm-toolbar select,
 body[data-crm-skin="intel-ops"] .crm-detail-form input,
 body[data-crm-skin="intel-ops"] .crm-detail-form select,
 body[data-crm-skin="intel-ops"] .crm-detail-form textarea,
+body[data-crm-skin="intel-ops"] .crm-manual-lead-form input,
+body[data-crm-skin="intel-ops"] .crm-manual-lead-form select,
+body[data-crm-skin="intel-ops"] .crm-manual-lead-form textarea,
 body[data-crm-skin="intel-ops"] .crm-prospector-form input,
 body[data-crm-skin="intel-ops"] .crm-prospector-form select,
 body[data-crm-skin="intel-ops"] .crm-prospector-form textarea,
@@ -324,6 +340,9 @@ body[data-crm-skin="executive-steel"] .crm-toolbar select,
 body[data-crm-skin="executive-steel"] .crm-detail-form input,
 body[data-crm-skin="executive-steel"] .crm-detail-form select,
 body[data-crm-skin="executive-steel"] .crm-detail-form textarea,
+body[data-crm-skin="executive-steel"] .crm-manual-lead-form input,
+body[data-crm-skin="executive-steel"] .crm-manual-lead-form select,
+body[data-crm-skin="executive-steel"] .crm-manual-lead-form textarea,
 body[data-crm-skin="executive-steel"] .crm-prospector-form input,
 body[data-crm-skin="executive-steel"] .crm-prospector-form select,
 body[data-crm-skin="executive-steel"] .crm-prospector-form textarea,
@@ -1630,6 +1649,13 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   gap: 10px;
 }
 
+.crm-panel-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .crm-detail-view {
   display: grid;
   gap: 18px;
@@ -1724,10 +1750,31 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   background: rgba(179, 32, 37, 0.08);
 }
 
+.crm-danger-button {
+  background: rgba(179, 32, 37, 0.1);
+  color: var(--crm-red-deep);
+}
+
+.crm-danger-button:hover {
+  background: rgba(179, 32, 37, 0.18);
+}
+
 .crm-secondary-button:disabled,
 .crm-card-action:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.crm-manual-lead-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.crm-manual-lead-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .crm-detail-form {
@@ -2208,7 +2255,8 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-quick-actions,
   .crm-card-actions,
-  .crm-metric-grid {
+  .crm-metric-grid,
+  .crm-manual-lead-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2242,7 +2290,8 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 @media (max-width: 480px) {
   .crm-quick-actions,
   .crm-card-actions,
-  .crm-metric-grid {
+  .crm-metric-grid,
+  .crm-manual-lead-form {
     grid-template-columns: 1fr;
   }
 

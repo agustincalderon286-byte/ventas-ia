@@ -8689,6 +8689,79 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.post("/api/metalworks-crm/leads", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const fullName = cleanText(req.body?.fullName || "", 120);
+    const phoneDisplay = cleanText(req.body?.phoneDisplay || "", 40);
+    const phone = normalizePhone(phoneDisplay);
+    const email = normalizeEmail(req.body?.email || "");
+    const projectType = cleanText(req.body?.projectType || "", 120);
+    const location = cleanText(req.body?.location || "", 160);
+    const details = cleanText(req.body?.details || "", 3000);
+    const status = normalizeStatus(req.body?.status || "new");
+
+    if (!fullName) {
+      return respondError(res, 400, "El nombre es requerido.");
+    }
+
+    try {
+      const now = new Date();
+      const leadDoc = await MetalworksLead.create({
+        fullName,
+        phone,
+        phoneDisplay,
+        email,
+        projectType,
+        location,
+        details,
+        status,
+        sourceType: "manual_crm_entry",
+        sourceExternalSystem: "crm_manual",
+        lastContactAt: now,
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "lead_created",
+        title: "Lead creado manualmente",
+        body: `${fullName} se agrego manualmente al CRM.`,
+        meta: {
+          adminEmail: auth.email,
+          sourceType: "manual_crm_entry",
+          projectType,
+          location,
+        },
+        req,
+      });
+
+      const [activityDocs, assets] = await Promise.all([
+        MetalworksLeadActivity.find({ leadId: leadDoc._id })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadDoc._id),
+      ]);
+
+      res.status(201).json({
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc, {
+          includeConversation: true,
+        }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error creating manual Metal Works lead:", error.message);
+      respondError(res, 500, "No pude crear ese lead manual.");
+    }
+  });
+
   app.get("/api/metalworks-crm/applicants", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -9467,6 +9540,55 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error updating Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar ese lead.");
+    }
+  });
+
+  app.delete("/api/metalworks-crm/leads/:leadId", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId).select("fullName");
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      const now = new Date();
+
+      await Promise.all([
+        MetalworksLeadActivity.deleteMany({ leadId: leadDoc._id }),
+        MetalworksLeadAsset.deleteMany({ leadId: leadDoc._id }),
+        MetalworksPublicChatWebPushDevice.updateMany(
+          { leadId: leadDoc._id },
+          {
+            $set: {
+              leadId: null,
+              updatedAt: now,
+            },
+          },
+        ),
+        MetalworksLead.deleteOne({ _id: leadDoc._id }),
+      ]);
+
+      res.json({
+        ok: true,
+        deletedLeadId: leadId,
+        deletedLeadName: cleanText(leadDoc.fullName || "", 120),
+        deletedBy: auth.email,
+      });
+    } catch (error) {
+      console.error("Error deleting Metal Works lead:", error.message);
+      respondError(res, 500, "No pude borrar ese lead.");
     }
   });
 

@@ -240,25 +240,86 @@
               <h2 data-crm-collection-title>Leads</h2>
               <p data-crm-collection-count>0 leads</p>
             </div>
-            <div class="crm-view-toggle" data-crm-view-toggle>
-              <button
-                type="button"
-                class="crm-tab-button is-active"
-                data-crm-view-button="leads"
-                aria-pressed="true"
-              >
-                Leads
+            <div class="crm-panel-head-actions">
+              <button type="button" class="crm-secondary-button" data-crm-new-lead-toggle>
+                New Lead
               </button>
-              <button
-                type="button"
-                class="crm-tab-button"
-                data-crm-view-button="applicants"
-                aria-pressed="false"
-              >
-                Applicants
-              </button>
+              <div class="crm-view-toggle" data-crm-view-toggle>
+                <button
+                  type="button"
+                  class="crm-tab-button is-active"
+                  data-crm-view-button="leads"
+                  aria-pressed="true"
+                >
+                  Leads
+                </button>
+                <button
+                  type="button"
+                  class="crm-tab-button"
+                  data-crm-view-button="applicants"
+                  aria-pressed="false"
+                >
+                  Applicants
+                </button>
+              </div>
             </div>
           </div>
+          <section class="crm-upload-panel crm-manual-lead-panel" data-crm-manual-lead-panel hidden>
+            <div class="crm-upload-panel-head">
+              <div>
+                <strong>Add lead manually</strong>
+                <p>Use this when a lead comes in by phone, personal text, or anywhere outside the website.</p>
+              </div>
+            </div>
+            <form class="crm-manual-lead-form" data-crm-manual-lead-form>
+              <label>
+                <span>Name</span>
+                <input type="text" name="fullName" maxlength="120" placeholder="Customer name" required />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input type="tel" name="phoneDisplay" maxlength="40" placeholder="773 555 1212" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" name="email" maxlength="160" placeholder="customer@email.com" />
+              </label>
+              <label>
+                <span>Service</span>
+                <input type="text" name="projectType" maxlength="120" placeholder="Gate repair, railing, awning..." />
+              </label>
+              <label>
+                <span>Location / ZIP</span>
+                <input type="text" name="location" maxlength="160" placeholder="Chicago, IL 60632" />
+              </label>
+              <label>
+                <span>Status</span>
+                <select name="status">
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="quoted">Quoted</option>
+                  <option value="booked">Booked</option>
+                </select>
+              </label>
+              <label class="crm-field-full">
+                <span>Project summary</span>
+                <textarea
+                  name="details"
+                  rows="4"
+                  placeholder="Quick notes from the call, text, or walk-in lead."
+                ></textarea>
+              </label>
+              <div class="crm-form-actions crm-field-full">
+                <button type="submit" class="crm-primary-button" data-crm-manual-lead-save>
+                  Create Lead
+                </button>
+                <button type="button" class="crm-secondary-button" data-crm-manual-lead-cancel>
+                  Cancel
+                </button>
+                <p class="crm-form-result" data-crm-manual-lead-feedback></p>
+              </div>
+            </form>
+          </section>
           <div class="crm-lead-list" data-crm-lead-list></div>
           <p class="crm-empty-state" data-crm-empty-state hidden>
             Aun no hay leads que coincidan con este filtro.
@@ -316,6 +377,9 @@
                 </button>
                 <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
                   Copy Estimate Text
+                </button>
+                <button type="button" class="crm-secondary-button crm-danger-button" data-crm-delete-lead>
+                  Delete Lead
                 </button>
               </div>
               <p class="crm-form-result crm-action-feedback" data-crm-action-feedback></p>
