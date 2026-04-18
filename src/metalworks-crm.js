@@ -213,6 +213,16 @@ function cleanText(value = "", maxLength = 0) {
   return maxLength > 0 ? text.slice(0, maxLength) : text;
 }
 
+function cleanMultilineText(value = "", maxLength = 0) {
+  const text = String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return maxLength > 0 ? text.slice(0, maxLength).trim() : text;
+}
+
 function normalizeEmail(value = "") {
   return cleanText(value).toLowerCase();
 }
@@ -1776,6 +1786,7 @@ function formatActivityTitle(type = "") {
     website_live_chat_message: "Mensaje del chat web",
     website_live_chat_photo_uploaded: "Fotos subidas desde chat web",
     website_live_chat_reply: "Respuesta del CRM",
+    text_thread_imported: "Textos importados",
     lead_followup_reminder_sent: "Reminder enviado",
     job_applicant_created: "Candidato nuevo",
     job_applicant_updated: "Candidato actualizado",
@@ -1786,6 +1797,37 @@ function formatActivityTitle(type = "") {
   };
 
   return labels[type] || "Actividad";
+}
+
+export function mergeLeadTextImportIntoPrivateNotes(
+  existingNotes = "",
+  importedText = "",
+  {
+    sourceLabel = "",
+    importedAt = new Date(),
+    timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+    maxLength = 12000,
+  } = {},
+) {
+  const safeImportedText = cleanMultilineText(importedText || "", 8000);
+
+  if (!safeImportedText) {
+    return cleanMultilineText(existingNotes || "", maxLength);
+  }
+
+  const safeExistingNotes = cleanMultilineText(existingNotes || "", maxLength);
+  const safeSourceLabel = cleanText(sourceLabel || "", 60) || "Text thread";
+  const importedAtLabel =
+    formatDateTimeLabel(importedAt, timeZone) || formatDateTimeLabel(new Date(), timeZone);
+  const importBlock = cleanMultilineText(
+    [`[${safeSourceLabel} import • ${importedAtLabel}]`, safeImportedText].join("\n"),
+    maxLength,
+  );
+
+  return cleanMultilineText(
+    [importBlock, safeExistingNotes].filter(Boolean).join("\n\n"),
+    maxLength,
+  );
 }
 
 export function normalizeLeadReminderOffsets(values = []) {
@@ -9473,7 +9515,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? normalizeLeadReminderOffsets(req.body?.nextActionReminderOffsets || [])
         : null;
       const privateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "privateNotes")
-        ? cleanText(req.body?.privateNotes || "", 4000)
+        ? cleanMultilineText(req.body?.privateNotes || "", 12000)
+        : null;
+      const textThreadImportSource = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "textThreadImportSource",
+      )
+        ? cleanText(req.body?.textThreadImportSource || "", 60)
+        : "";
+      const textThreadImport = Object.prototype.hasOwnProperty.call(req.body || {}, "textThreadImport")
+        ? cleanMultilineText(req.body?.textThreadImport || "", 8000)
         : null;
       const estimateAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateAmount")
         ? normalizeMoney(req.body?.estimateAmount || 0)
@@ -9632,8 +9683,23 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.nextActionReminderOffsets = nextActionReminderOffsets;
       }
 
-      if (privateNotes !== null) {
-        leadDoc.privateNotes = privateNotes;
+      if (privateNotes !== null || textThreadImport) {
+        const nextPrivateNotesBase =
+          privateNotes !== null
+            ? privateNotes
+            : cleanMultilineText(leadDoc.privateNotes || "", 12000);
+        const nextPrivateNotes = textThreadImport
+          ? mergeLeadTextImportIntoPrivateNotes(nextPrivateNotesBase, textThreadImport, {
+              sourceLabel: textThreadImportSource || "Text thread",
+            })
+          : nextPrivateNotesBase;
+
+        if (leadDoc.privateNotes !== nextPrivateNotes) {
+          leadDoc.privateNotes = nextPrivateNotes;
+          changes.push(
+            textThreadImport ? "Text thread guardado en notas privadas" : "Notas privadas actualizadas",
+          );
+        }
       }
 
       if (estimateTitle !== null) {
@@ -9824,6 +9890,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           body: note,
           meta: {
             adminEmail: auth.email,
+          },
+          req,
+        });
+      }
+
+      if (textThreadImport) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "text_thread_imported",
+          title: "Text thread imported",
+          body: cleanText(
+            `${textThreadImportSource || "Text thread"} saved to private notes.`,
+            280,
+          ),
+          meta: {
+            adminEmail: auth.email,
+            source: textThreadImportSource || "Text thread",
+            charCount: textThreadImport.length,
           },
           req,
         });

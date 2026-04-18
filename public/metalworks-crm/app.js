@@ -3383,6 +3383,12 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.estimateValidUntil.value = toDateInputValue(lead.estimateValidUntil);
     detailForm.elements.estimateNotes.value = lead.estimateNotes || "";
     detailForm.elements.privateNotes.value = lead.privateNotes || "";
+    if (detailForm.elements.textThreadImportSource) {
+      detailForm.elements.textThreadImportSource.value = "";
+    }
+    if (detailForm.elements.textThreadImport) {
+      detailForm.elements.textThreadImport.value = "";
+    }
     detailForm.elements.note.value = "";
   }
 
@@ -3433,6 +3439,8 @@ function buildLeadPayloadFromForm() {
     estimateValidUntil: String(formData.get("estimateValidUntil") || "").trim(),
     estimateNotes: String(formData.get("estimateNotes") || "").trim(),
     privateNotes: String(formData.get("privateNotes") || "").trim(),
+    textThreadImportSource: String(formData.get("textThreadImportSource") || "").trim(),
+    textThreadImport: String(formData.get("textThreadImport") || "").trim(),
     note: String(formData.get("note") || "").trim(),
   };
 

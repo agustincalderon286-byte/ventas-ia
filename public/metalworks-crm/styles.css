@@ -1850,6 +1850,10 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   margin-top: 2px;
 }
 
+.crm-text-import-card textarea {
+  min-height: 148px;
+}
+
 .crm-composer-head strong {
   display: block;
   margin-bottom: 6px;

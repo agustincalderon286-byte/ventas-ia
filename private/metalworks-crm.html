@@ -648,6 +648,43 @@
                   <summary>Internal Notes</summary>
                   <div class="crm-mobile-collapsible-body">
                     <div class="crm-mobile-collapsible-grid">
+                      <div class="crm-field-full crm-composer-card crm-composer-card-subtle crm-text-import-card">
+                        <div class="crm-composer-head">
+                          <div>
+                            <strong>Paste text thread</strong>
+                            <p>
+                              Paste the text conversation from your phone here and it will be saved
+                              into this lead's private notes with a timestamp.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="crm-mobile-collapsible-grid">
+                          <label>
+                            <span>Source</span>
+                            <input
+                              type="text"
+                              name="textThreadImportSource"
+                              maxlength="60"
+                              placeholder="Text, iMessage, WhatsApp, personal phone..."
+                            />
+                          </label>
+
+                          <label class="crm-field-full">
+                            <span>Conversation to import</span>
+                            <textarea
+                              name="textThreadImport"
+                              rows="7"
+                              placeholder="Customer: Hi, I need a railing replacement...
+
+Me: I can help. What ZIP code is the job in?
+
+Customer: 60632..."
+                            ></textarea>
+                          </label>
+                        </div>
+                      </div>
+
                       <label class="crm-field-full">
                         <span>Notas privadas</span>
                         <textarea
