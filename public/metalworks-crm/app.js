@@ -467,6 +467,22 @@ function formatDateOnly(value = "") {
   });
 }
 
+function serializeDatetimeLocalValue(value = "") {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const date = new Date(safeValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return safeValue;
+  }
+
+  return date.toISOString();
+}
+
 function formatCurrency(value = 0) {
   const amount = Number(value || 0) || 0;
   return new Intl.NumberFormat("en-US", {
@@ -3421,7 +3437,7 @@ function buildLeadPayloadFromForm() {
     bestContactDay: String(formData.get("bestContactDay") || "").trim(),
     bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
-    nextActionAt: String(formData.get("nextActionAt") || "").trim(),
+    nextActionAt: serializeDatetimeLocalValue(String(formData.get("nextActionAt") || "").trim()),
     nextActionReminderOffsets: normalizeLeadReminderOffsets(
       formData.getAll("nextActionReminderOffsets"),
     ),

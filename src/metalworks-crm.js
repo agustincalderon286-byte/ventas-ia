@@ -121,6 +121,9 @@ const METALWORKS_LEAD_REMINDER_WORKER = {
   timer: null,
   running: false,
 };
+const METALWORKS_EXTERNAL_LOCK_TTL_MS = 45 * 1000;
+const METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS = 24;
+const METALWORKS_EXTERNAL_LOCK_RETRY_MS = 150;
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
@@ -290,6 +293,12 @@ function generateToken() {
 
 function hashToken(token = "") {
   return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function waitMs(ms = 0) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, Math.max(0, Number(ms || 0)));
+  });
 }
 
 function parseCookies(header = "") {
@@ -584,6 +593,85 @@ function parseDateOnly(value = "") {
     : safeValue;
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function parseCrmDatetimeInput(
+  value = "",
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(safeValue)) {
+    const parsed = new Date(safeValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const localMatch = safeValue.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+
+  if (localMatch) {
+    return buildAssistantZonedDate(
+      {
+        year: Number(localMatch[1] || 0),
+        month: Number(localMatch[2] || 0),
+        day: Number(localMatch[3] || 0),
+        hour: Number(localMatch[4] || 0),
+        minute: Number(localMatch[5] || 0),
+      },
+      timeZone,
+    );
+  }
+
+  const parsed = new Date(safeValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseLegacyCrmScheduleLabel(
+  value = "",
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const safeValue = cleanText(value || "", 80);
+
+  if (!safeValue) {
+    return null;
+  }
+
+  const match = safeValue.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[4] || 0);
+  const meridiem = String(match[7] || "").toUpperCase();
+
+  if (meridiem === "PM" && hour < 12) {
+    hour += 12;
+  } else if (meridiem === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return buildAssistantZonedDate(
+    {
+      month: Number(match[1] || 0),
+      day: Number(match[2] || 0),
+      year: Number(match[3] || 0),
+      hour,
+      minute: Number(match[5] || 0),
+    },
+    timeZone,
+  );
 }
 
 function formatMoneyLabel(value = 0) {
@@ -1797,6 +1885,45 @@ function formatActivityTitle(type = "") {
   };
 
   return labels[type] || "Actividad";
+}
+
+function buildExternalLeadLockKey(externalSystem = "", externalLeadId = "") {
+  const safeSystem = cleanText(externalSystem || "", 80);
+  const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+
+  if (!safeSystem || !safeExternalLeadId) {
+    return "";
+  }
+
+  return `${safeSystem}:${safeExternalLeadId}`;
+}
+
+export function buildThumbtackExternalEventKey(parsedEvent = {}) {
+  const eventType = cleanText(parsedEvent?.eventType || "", 80);
+  const entityType = cleanText(parsedEvent?.entityType || "", 40);
+  const externalLeadId = cleanText(parsedEvent?.leadCandidate?.externalLeadId || "", 120);
+  const negotiationId =
+    cleanText(parsedEvent?.activity?.meta?.negotiationId || "", 120) || externalLeadId;
+  const messageId = cleanText(parsedEvent?.activity?.meta?.messageId || "", 120);
+  const reviewId = cleanText(parsedEvent?.activity?.meta?.reviewId || "", 120);
+
+  if (entityType === "message" && negotiationId && messageId) {
+    return `thumbtack:${negotiationId}:message:${messageId}`;
+  }
+
+  if (entityType === "review" && reviewId) {
+    return `thumbtack:review:${reviewId}`;
+  }
+
+  if (entityType === "negotiation" && negotiationId && eventType) {
+    return `thumbtack:${negotiationId}:negotiation:${eventType}`;
+  }
+
+  if (externalLeadId && eventType) {
+    return `thumbtack:${externalLeadId}:${eventType}`;
+  }
+
+  return "";
 }
 
 export function mergeLeadTextImportIntoPrivateNotes(
@@ -5548,6 +5675,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       index: true,
     },
     activityType: { type: String, default: "lead_updated", index: true },
+    externalEventKey: { type: String, index: true },
     title: String,
     body: String,
     meta: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -5680,6 +5808,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
+  const metalworksExternalLeadLockSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true },
+    expiresAt: { type: Date, required: true, index: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
@@ -5695,6 +5829,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadActivitySchema.index({ leadId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ applicantId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
+  metalworksLeadActivitySchema.index({ externalEventKey: 1, createdAt: -1 });
   metalworksLeadAssetSchema.index({ leadId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
@@ -5712,6 +5847,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksPublicChatWebPushDeviceSchema.index({ visitorId: 1, lastSeenAt: -1 });
   metalworksPublicChatWebPushDeviceSchema.index({ sessionId: 1, lastSeenAt: -1 });
   metalworksPublicChatWebPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksExternalLeadLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
@@ -5743,6 +5879,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksPublicChatWebPushDevice =
     mongoose.models.MetalworksPublicChatWebPushDevice ||
     mongoose.model("MetalworksPublicChatWebPushDevice", metalworksPublicChatWebPushDeviceSchema);
+  const MetalworksExternalLeadLock =
+    mongoose.models.MetalworksExternalLeadLock ||
+    mongoose.model("MetalworksExternalLeadLock", metalworksExternalLeadLockSchema);
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -6269,11 +6408,310 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   }
 
   startMetalworksLeadReminderWorker();
+  void repairExistingExternalLeadDuplicates({ externalSystem: "thumbtack" });
+  void repairScheduledReminderDrift();
+
+  async function withExternalLeadLock(lockKey = "", task = async () => null) {
+    const safeLockKey = cleanText(lockKey || "", 200);
+
+    if (!safeLockKey) {
+      return await task();
+    }
+
+    let acquired = false;
+
+    try {
+      for (let attempt = 0; attempt < METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          await MetalworksExternalLeadLock.create({
+            key: safeLockKey,
+            expiresAt: new Date(Date.now() + METALWORKS_EXTERNAL_LOCK_TTL_MS),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          acquired = true;
+          break;
+        } catch (error) {
+          if (error?.code !== 11000) {
+            throw error;
+          }
+
+          await MetalworksExternalLeadLock.deleteMany({
+            key: safeLockKey,
+            expiresAt: { $lte: new Date() },
+          }).catch(() => null);
+          await waitMs(METALWORKS_EXTERNAL_LOCK_RETRY_MS + attempt * 30);
+        }
+      }
+
+      if (!acquired) {
+        throw createRequestError(503, "Timed out waiting for the external lead lock.");
+      }
+
+      return await task();
+    } finally {
+      if (acquired) {
+        await MetalworksExternalLeadLock.deleteOne({ key: safeLockKey }).catch(() => null);
+      }
+    }
+  }
+
+  async function mergeDuplicateExternalLeadsByKey({
+    externalSystem = "",
+    externalLeadId = "",
+  } = {}) {
+    const safeExternalSystem = cleanText(externalSystem || "", 80);
+    const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+
+    if (!safeExternalSystem || !safeExternalLeadId) {
+      return null;
+    }
+
+    const leadDocs = await MetalworksLead.find({
+      sourceExternalSystem: safeExternalSystem,
+      sourceExternalId: safeExternalLeadId,
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(20);
+
+    if (leadDocs.length <= 1) {
+      return leadDocs[0] || null;
+    }
+
+    const leadIds = leadDocs.map((doc) => doc._id);
+    const [activityCounts, assetCounts] = await Promise.all([
+      MetalworksLeadActivity.aggregate([
+        { $match: { leadId: { $in: leadIds } } },
+        { $group: { _id: "$leadId", count: { $sum: 1 } } },
+      ]),
+      MetalworksLeadAsset.aggregate([
+        { $match: { leadId: { $in: leadIds } } },
+        { $group: { _id: "$leadId", count: { $sum: 1 } } },
+      ]),
+    ]);
+    const activityCountMap = new Map(activityCounts.map((item) => [String(item._id || ""), Number(item.count || 0)]));
+    const assetCountMap = new Map(assetCounts.map((item) => [String(item._id || ""), Number(item.count || 0)]));
+    const statusRank = {
+      won: 7,
+      booked: 6,
+      quoted: 5,
+      contacted: 4,
+      new: 3,
+      lost: 2,
+      archived: 1,
+    };
+    const genericProjectTypes = new Set(["thumbtack lead", "thumbtack conversation"]);
+    const scoredLeads = leadDocs
+      .map((doc) => {
+        const docId = String(doc._id || "");
+        const activityCount = activityCountMap.get(docId) || 0;
+        const assetCount = assetCountMap.get(docId) || 0;
+        const status = normalizeStatus(doc.status || "new");
+        const projectType = cleanText(doc.projectType || "", 120).toLowerCase();
+        const projectTypeBonus =
+          projectType && !genericProjectTypes.has(projectType) ? 30 : 0;
+        const sourceBonus = String(doc.sourceType || "").includes("message") ? 40 : 0;
+        const score =
+          activityCount * 100 +
+          assetCount * 30 +
+          (statusRank[status] || 0) * 20 +
+          projectTypeBonus +
+          sourceBonus +
+          (doc.updatedAt ? new Date(doc.updatedAt).getTime() / 1e11 : 0);
+
+        return { doc, score };
+      })
+      .sort((left, right) => right.score - left.score);
+
+    const primaryDoc = scoredLeads[0]?.doc || leadDocs[0];
+    const duplicateDocs = leadDocs.filter((doc) => String(doc._id || "") !== String(primaryDoc._id || ""));
+
+    const pickBestText = (...values) =>
+      values
+        .map((value) => cleanText(value || "", 3000))
+        .filter(Boolean)
+        .sort((left, right) => right.length - left.length)[0] || "";
+    const pickBestProjectType = (...values) =>
+      values
+        .map((value) => cleanText(value || "", 120))
+        .filter(Boolean)
+        .sort((left, right) => {
+          const leftGeneric = genericProjectTypes.has(left.toLowerCase());
+          const rightGeneric = genericProjectTypes.has(right.toLowerCase());
+
+          if (leftGeneric !== rightGeneric) {
+            return leftGeneric ? 1 : -1;
+          }
+
+          return right.length - left.length;
+        })[0] || "";
+
+    primaryDoc.fullName = pickBestText(...leadDocs.map((doc) => doc.fullName || "")).slice(0, 120) || primaryDoc.fullName;
+    primaryDoc.phone =
+      leadDocs.map((doc) => normalizePhone(doc.phone || doc.phoneDisplay || "")).find(Boolean) ||
+      primaryDoc.phone ||
+      "";
+    primaryDoc.phoneDisplay =
+      leadDocs.map((doc) => cleanText(doc.phoneDisplay || doc.phone || "", 40)).find(Boolean) ||
+      primaryDoc.phoneDisplay ||
+      primaryDoc.phone ||
+      "";
+    primaryDoc.email =
+      leadDocs.map((doc) => normalizeEmail(doc.email || "")).find(Boolean) || primaryDoc.email || "";
+    primaryDoc.projectType =
+      pickBestProjectType(...leadDocs.map((doc) => doc.projectType || "")) || primaryDoc.projectType || "";
+    primaryDoc.location =
+      pickBestText(...leadDocs.map((doc) => doc.location || "")).slice(0, 160) || primaryDoc.location || "";
+    primaryDoc.addressLine =
+      pickBestText(...leadDocs.map((doc) => doc.addressLine || "")).slice(0, 160) ||
+      primaryDoc.addressLine ||
+      "";
+    primaryDoc.zipCode =
+      leadDocs.map((doc) => cleanText(doc.zipCode || "", 20)).find(Boolean) || primaryDoc.zipCode || "";
+    primaryDoc.city =
+      leadDocs.map((doc) => cleanText(doc.city || "", 120)).find(Boolean) || primaryDoc.city || "";
+    primaryDoc.details =
+      pickBestText(...leadDocs.map((doc) => doc.details || "")) || primaryDoc.details || "";
+    primaryDoc.photoFileNames = mergeAssistantUniqueValues(
+      ...leadDocs.map((doc) => (Array.isArray(doc.photoFileNames) ? doc.photoFileNames : [])),
+    ).slice(0, 20);
+    primaryDoc.lastUserMessage =
+      pickBestText(...leadDocs.map((doc) => doc.lastUserMessage || "")).slice(0, 500) ||
+      primaryDoc.lastUserMessage ||
+      "";
+    primaryDoc.lastAssistantMessage =
+      pickBestText(...leadDocs.map((doc) => doc.lastAssistantMessage || "")).slice(0, 1500) ||
+      primaryDoc.lastAssistantMessage ||
+      "";
+    primaryDoc.status = leadDocs
+      .map((doc) => normalizeStatus(doc.status || "new"))
+      .sort((left, right) => (statusRank[right] || 0) - (statusRank[left] || 0))[0] || primaryDoc.status;
+    primaryDoc.createdAt = leadDocs
+      .map((doc) => (doc.createdAt ? new Date(doc.createdAt) : null))
+      .filter(Boolean)
+      .sort((left, right) => left.getTime() - right.getTime())[0] || primaryDoc.createdAt;
+    primaryDoc.updatedAt = new Date();
+    await primaryDoc.save();
+
+    const duplicateIds = duplicateDocs.map((doc) => doc._id);
+
+    if (duplicateIds.length) {
+      await Promise.all([
+        MetalworksLeadActivity.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id } },
+        ),
+        MetalworksLeadAsset.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id, updatedAt: new Date() } },
+        ),
+        MetalworksPublicChatWebPushDevice.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id, updatedAt: new Date() } },
+        ),
+      ]);
+
+      await MetalworksLead.deleteMany({ _id: { $in: duplicateIds } });
+    }
+
+    return primaryDoc;
+  }
+
+  async function repairExistingExternalLeadDuplicates({ externalSystem = "" } = {}) {
+    const match = {
+      sourceExternalId: { $exists: true, $ne: "" },
+    };
+
+    if (externalSystem) {
+      match.sourceExternalSystem = cleanText(externalSystem || "", 80);
+    }
+
+    const groups = await MetalworksLead.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            sourceExternalSystem: "$sourceExternalSystem",
+            sourceExternalId: "$sourceExternalId",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $match: { count: { $gt: 1 } } },
+      { $limit: 50 },
+    ]);
+
+    for (const group of groups) {
+      await mergeDuplicateExternalLeadsByKey({
+        externalSystem: group?._id?.sourceExternalSystem || "",
+        externalLeadId: group?._id?.sourceExternalId || "",
+      }).catch((error) => {
+        console.error("Error repairing duplicate external lead:", error.message);
+      });
+    }
+  }
+
+  async function repairScheduledReminderDrift() {
+    const now = new Date();
+    const candidateLeads = await MetalworksLead.find({
+      status: { $nin: ["won", "lost", "archived"] },
+      nextActionAt: { $gte: new Date(now.getTime() - 12 * 60 * 60 * 1000) },
+      nextActionReminderOffsets: { $exists: true, $ne: [] },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(60);
+
+    for (const leadDoc of candidateLeads) {
+      if (Array.isArray(leadDoc.nextActionReminderSentKeys) && leadDoc.nextActionReminderSentKeys.length) {
+        continue;
+      }
+
+      const latestScheduleActivity = await MetalworksLeadActivity.findOne({
+        leadId: leadDoc._id,
+        activityType: "lead_updated",
+        body: /Seguimiento:/i,
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const scheduleLabelMatch = String(latestScheduleActivity?.body || "").match(
+        /Seguimiento:\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4},\s*[0-9]{1,2}:\d{2}(?::\d{2})?\s*[AP]M)/i,
+      );
+      const intendedDate = parseLegacyCrmScheduleLabel(scheduleLabelMatch?.[1] || "");
+      const currentDate =
+        leadDoc.nextActionAt instanceof Date
+          ? leadDoc.nextActionAt
+          : leadDoc.nextActionAt
+            ? new Date(leadDoc.nextActionAt)
+            : null;
+
+      if (
+        !(intendedDate instanceof Date) ||
+        Number.isNaN(intendedDate.getTime()) ||
+        !(currentDate instanceof Date) ||
+        Number.isNaN(currentDate.getTime())
+      ) {
+        continue;
+      }
+
+      const diffHours = Math.abs(intendedDate.getTime() - currentDate.getTime()) / (60 * 60 * 1000);
+
+      if (diffHours < 4 || diffHours > 6.5) {
+        continue;
+      }
+
+      leadDoc.nextActionAt = intendedDate;
+      leadDoc.nextActionReminderSentKeys = [];
+      leadDoc.updatedAt = new Date();
+      await leadDoc.save().catch(() => null);
+    }
+  }
 
   async function appendActivity({
     leadId = null,
     applicantId = null,
     activityType = "",
+    externalEventKey = "",
     title = "",
     body = "",
     meta = null,
@@ -6282,19 +6720,39 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     req = null,
     tracking = {},
   } = {}) {
-    await MetalworksLeadActivity.create({
-      leadId,
-      applicantId,
-      activityType,
-      title: title || formatActivityTitle(activityType),
-      body: cleanText(body || "", 1200),
-      meta,
-      pagePath: cleanText(pagePath || "", 240),
-      pageUrl: cleanText(pageUrl || "", 500),
-      ipAddress: req ? cleanText(getClientIp(req), 120) : "",
-      userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
-      tracking: buildTrackingPayload(tracking),
-    });
+    const safeExternalEventKey = cleanText(externalEventKey || "", 240);
+    const createActivity = async () => {
+      if (safeExternalEventKey) {
+        const existingActivity = await MetalworksLeadActivity.findOne({
+          externalEventKey: safeExternalEventKey,
+        }).lean();
+
+        if (existingActivity?._id) {
+          return existingActivity;
+        }
+      }
+
+      return await MetalworksLeadActivity.create({
+        leadId,
+        applicantId,
+        activityType,
+        externalEventKey: safeExternalEventKey,
+        title: title || formatActivityTitle(activityType),
+        body: cleanText(body || "", 1200),
+        meta,
+        pagePath: cleanText(pagePath || "", 240),
+        pageUrl: cleanText(pageUrl || "", 500),
+        ipAddress: req ? cleanText(getClientIp(req), 120) : "",
+        userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
+        tracking: buildTrackingPayload(tracking),
+      });
+    };
+
+    if (!safeExternalEventKey) {
+      return await createActivity();
+    }
+
+    return await withExternalLeadLock(`activity:${safeExternalEventKey}`, createActivity);
   }
 
   function createRequestError(statusCode = 500, message = "Request error") {
@@ -6379,133 +6837,146 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       throw createRequestError(400, "The lead details are required.");
     }
 
-    const now = new Date();
-    let leadDoc = await MetalworksLead.findOne({
-      sourceExternalId: safeExternalLeadId,
-    }).sort({ updatedAt: -1, createdAt: -1 });
-    const duplicate = Boolean(leadDoc);
+    const lockKey = buildExternalLeadLockKey(safeExternalSystem, safeExternalLeadId);
 
-    if (leadDoc) {
-      leadDoc.fullName = safeFullName || leadDoc.fullName;
-      leadDoc.phone = safePhone || leadDoc.phone || "";
-      leadDoc.phoneDisplay =
-        safePhoneDisplay || safePhone || leadDoc.phoneDisplay || leadDoc.phone || "";
-      leadDoc.email = safeEmail || leadDoc.email || "";
-      leadDoc.projectType = safeProjectType || leadDoc.projectType || "";
-      leadDoc.location = safeLocation || leadDoc.location || "";
-      leadDoc.addressLine = safeAddressLine || leadDoc.addressLine || "";
-      leadDoc.zipCode = safeZipCode || leadDoc.zipCode || "";
-      leadDoc.city = safeCity || leadDoc.city || "";
-      leadDoc.details = safeDetails || leadDoc.details || "";
-      leadDoc.photoFileNames = photoFileNames.length
-        ? photoFileNames
-        : Array.isArray(leadDoc.photoFileNames)
-          ? leadDoc.photoFileNames
-          : [];
-      leadDoc.sourceType = safeSourceType;
-      leadDoc.sourceExternalId = safeExternalLeadId;
-      leadDoc.sourceExternalSystem = safeExternalSystem;
-      leadDoc.pageTitle = safePageTitle || leadDoc.pageTitle || "";
-      leadDoc.pagePath = safePagePath || leadDoc.pagePath || "";
-      leadDoc.pageUrl = safePageUrl || leadDoc.pageUrl || "";
-      leadDoc.referrer = safeReferrer || leadDoc.referrer || "";
-      leadDoc.ipAddress = req ? cleanText(getClientIp(req), 120) : leadDoc.ipAddress || "";
-      leadDoc.userAgent =
-        req ? cleanText(req.headers["user-agent"] || "", 400) : leadDoc.userAgent || "";
-      leadDoc.tracking = safeTracking;
+    return await withExternalLeadLock(lockKey, async () => {
+      const now = new Date();
+      let leadDoc = await mergeDuplicateExternalLeadsByKey({
+        externalSystem: safeExternalSystem,
+        externalLeadId: safeExternalLeadId,
+      });
 
-      if (shouldApplyExternalLeadStatus(leadDoc.status || "", safeCrmStatus)) {
-        leadDoc.status = safeCrmStatus;
+      if (!leadDoc) {
+        leadDoc = await MetalworksLead.findOne({
+          sourceExternalSystem: safeExternalSystem,
+          sourceExternalId: safeExternalLeadId,
+        }).sort({ updatedAt: -1, createdAt: -1 });
       }
 
-      leadDoc.updatedAt = now;
-      await leadDoc.save();
-    } else {
-      leadDoc = await MetalworksLead.create({
-        fullName: safeFullName,
-        phone: safePhone,
-        phoneDisplay: safePhoneDisplay || safePhone,
-        email: safeEmail,
-        projectType: safeProjectType,
-        location: safeLocation,
-        addressLine: safeAddressLine,
-        zipCode: safeZipCode,
-        city: safeCity,
-        details: safeDetails,
-        photoFileNames,
-        status: safeCrmStatus,
-        sourceType: safeSourceType,
-        sourceExternalId: safeExternalLeadId,
-        sourceExternalSystem: safeExternalSystem,
-        pageTitle: safePageTitle,
-        pagePath: safePagePath,
-        pageUrl: safePageUrl,
-        referrer: safeReferrer,
-        ipAddress: req ? cleanText(getClientIp(req), 120) : "",
-        userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
-        tracking: safeTracking,
-        updatedAt: now,
-        createdAt: now,
-      });
-    }
+      const duplicate = Boolean(leadDoc);
 
-    let syncedAssetCount = 0;
+      if (leadDoc) {
+        leadDoc.fullName = safeFullName || leadDoc.fullName;
+        leadDoc.phone = safePhone || leadDoc.phone || "";
+        leadDoc.phoneDisplay =
+          safePhoneDisplay || safePhone || leadDoc.phoneDisplay || leadDoc.phone || "";
+        leadDoc.email = safeEmail || leadDoc.email || "";
+        leadDoc.projectType = safeProjectType || leadDoc.projectType || "";
+        leadDoc.location = safeLocation || leadDoc.location || "";
+        leadDoc.addressLine = safeAddressLine || leadDoc.addressLine || "";
+        leadDoc.zipCode = safeZipCode || leadDoc.zipCode || "";
+        leadDoc.city = safeCity || leadDoc.city || "";
+        leadDoc.details = safeDetails || leadDoc.details || "";
+        leadDoc.photoFileNames = photoFileNames.length
+          ? mergeAssistantUniqueValues(leadDoc.photoFileNames || [], photoFileNames).slice(0, 20)
+          : Array.isArray(leadDoc.photoFileNames)
+            ? leadDoc.photoFileNames
+            : [];
+        leadDoc.sourceType = safeSourceType;
+        leadDoc.sourceExternalId = safeExternalLeadId;
+        leadDoc.sourceExternalSystem = safeExternalSystem;
+        leadDoc.pageTitle = safePageTitle || leadDoc.pageTitle || "";
+        leadDoc.pagePath = safePagePath || leadDoc.pagePath || "";
+        leadDoc.pageUrl = safePageUrl || leadDoc.pageUrl || "";
+        leadDoc.referrer = safeReferrer || leadDoc.referrer || "";
+        leadDoc.ipAddress = req ? cleanText(getClientIp(req), 120) : leadDoc.ipAddress || "";
+        leadDoc.userAgent =
+          req ? cleanText(req.headers["user-agent"] || "", 400) : leadDoc.userAgent || "";
+        leadDoc.tracking = safeTracking;
 
-    if (leadDoc?._id && safeParsedFiles.length) {
-      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
-        .select("fileName sizeBytes")
-        .lean();
-      const existingKeys = new Set(
-        existingAssets.map(
-          (item) =>
-            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
-        ),
-      );
-      const newFiles = safeParsedFiles.filter((item) => {
-        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
-          item.sizeBytes || 0,
-        )}`;
-
-        if (existingKeys.has(key)) {
-          return false;
+        if (shouldApplyExternalLeadStatus(leadDoc.status || "", safeCrmStatus)) {
+          leadDoc.status = safeCrmStatus;
         }
 
-        existingKeys.add(key);
-        return true;
-      });
-
-      if (newFiles.length) {
-        await Promise.all(
-          newFiles.map((item) =>
-            MetalworksLeadAsset.create({
-              leadId: leadDoc._id,
-              sourceType: safeSourceType,
-              fileName: item.fileName,
-              mimeType: item.mimeType,
-              sizeBytes: item.sizeBytes,
-              fileData: item.fileData,
-              uploadedAt: now,
-              updatedAt: now,
-              createdAt: now,
-            }),
-          ),
-        );
-        syncedAssetCount = newFiles.length;
-        leadDoc.photoFileNames = mergeAssistantUniqueValues(
-          leadDoc.photoFileNames || [],
-          ...newFiles.map((item) => item.fileName || ""),
-        ).slice(0, 20);
         leadDoc.updatedAt = now;
         await leadDoc.save();
+      } else {
+        leadDoc = await MetalworksLead.create({
+          fullName: safeFullName,
+          phone: safePhone,
+          phoneDisplay: safePhoneDisplay || safePhone,
+          email: safeEmail,
+          projectType: safeProjectType,
+          location: safeLocation,
+          addressLine: safeAddressLine,
+          zipCode: safeZipCode,
+          city: safeCity,
+          details: safeDetails,
+          photoFileNames,
+          status: safeCrmStatus,
+          sourceType: safeSourceType,
+          sourceExternalId: safeExternalLeadId,
+          sourceExternalSystem: safeExternalSystem,
+          pageTitle: safePageTitle,
+          pagePath: safePagePath,
+          pageUrl: safePageUrl,
+          referrer: safeReferrer,
+          ipAddress: req ? cleanText(getClientIp(req), 120) : "",
+          userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
+          tracking: safeTracking,
+          updatedAt: now,
+          createdAt: now,
+        });
       }
-    }
 
-    return {
-      duplicate,
-      syncedAssetCount,
-      photoFileNames,
-      leadDoc,
-    };
+      let syncedAssetCount = 0;
+
+      if (leadDoc?._id && safeParsedFiles.length) {
+        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+          .select("fileName sizeBytes")
+          .lean();
+        const existingKeys = new Set(
+          existingAssets.map(
+            (item) =>
+              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+          ),
+        );
+        const newFiles = safeParsedFiles.filter((item) => {
+          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+            item.sizeBytes || 0,
+          )}`;
+
+          if (existingKeys.has(key)) {
+            return false;
+          }
+
+          existingKeys.add(key);
+          return true;
+        });
+
+        if (newFiles.length) {
+          await Promise.all(
+            newFiles.map((item) =>
+              MetalworksLeadAsset.create({
+                leadId: leadDoc._id,
+                sourceType: safeSourceType,
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                fileData: item.fileData,
+                uploadedAt: now,
+                updatedAt: now,
+                createdAt: now,
+              }),
+            ),
+          );
+          syncedAssetCount = newFiles.length;
+          leadDoc.photoFileNames = mergeAssistantUniqueValues(
+            leadDoc.photoFileNames || [],
+            ...newFiles.map((item) => item.fileName || ""),
+          ).slice(0, 20);
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+        }
+      }
+
+      return {
+        duplicate,
+        syncedAssetCount,
+        photoFileNames,
+        leadDoc,
+      };
+    });
   }
 
   async function syncLeadAssetsToLead({
@@ -9205,7 +9676,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? String(req.body?.nextActionAt || "").trim()
         : null;
       const nextActionAt = nextActionAtRaw
-        ? new Date(nextActionAtRaw)
+        ? parseCrmDatetimeInput(nextActionAtRaw)
         : nextActionAtRaw === ""
           ? null
           : undefined;
@@ -9504,7 +9975,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? String(req.body?.nextActionAt || "").trim()
         : null;
       const nextActionAt = nextActionAtRaw
-        ? new Date(nextActionAtRaw)
+        ? parseCrmDatetimeInput(nextActionAtRaw)
         : nextActionAtRaw === ""
           ? null
           : undefined;
@@ -10645,6 +11116,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         }
 
         const parsedEvent = buildThumbtackWebhookEvent(req.body || {});
+        const thumbtackEventKey = buildThumbtackExternalEventKey(parsedEvent);
         const tracking = buildTrackingPayload({
           utmSource: "thumbtack",
           utmMedium: "webhook",
@@ -10734,6 +11206,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
                 attachmentAttemptedCount: attachmentImport.attemptedCount || 0,
                 attachmentImportedCount: attachmentImport.importedCount || 0,
               },
+              externalEventKey: thumbtackEventKey ? `${thumbtackEventKey}:lead_created` : "",
               req,
               pagePath,
               pageUrl,
@@ -10759,6 +11232,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
               : [],
             webhookPayload: req.body || {},
           },
+          externalEventKey: thumbtackEventKey,
           req,
           pagePath,
           pageUrl,
