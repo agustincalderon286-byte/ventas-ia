@@ -6473,6 +6473,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   startMetalworksLeadReminderWorker();
   void repairExistingExternalLeadDuplicates({ externalSystem: "thumbtack" });
+  void repairUnlinkedThumbtackReviewActivities();
   void repairScheduledReminderDrift();
 
   async function withExternalLeadLock(lockKey = "", task = async () => null) {
@@ -6681,6 +6682,37 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return primaryDoc;
   }
 
+  async function findThumbtackLeadByNegotiationId(negotiationId = "") {
+    const safeNegotiationId = cleanText(negotiationId || "", 120);
+
+    if (!safeNegotiationId) {
+      return null;
+    }
+
+    return (
+      (await mergeDuplicateExternalLeadsByKey({
+        externalSystem: "thumbtack",
+        externalLeadId: safeNegotiationId,
+      })) ||
+      (await MetalworksLead.findOne({
+        sourceExternalSystem: "thumbtack",
+        sourceExternalId: safeNegotiationId,
+      }).sort({ updatedAt: -1, createdAt: -1 }))
+    );
+  }
+
+  function getThumbtackReviewNegotiationIdFromActivity(activityDoc = null) {
+    return cleanText(
+      activityDoc?.meta?.negotiationId ||
+        activityDoc?.meta?.webhookPayload?.data?.negotiationID ||
+        activityDoc?.meta?.webhookPayload?.data?.negotiationId ||
+        activityDoc?.meta?.webhookPayload?.review?.negotiationID ||
+        activityDoc?.meta?.webhookPayload?.review?.negotiationId ||
+        "",
+      120,
+    );
+  }
+
   async function repairExistingExternalLeadDuplicates({ externalSystem = "" } = {}) {
     const match = {
       sourceExternalId: { $exists: true, $ne: "" },
@@ -6712,6 +6744,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }).catch((error) => {
         console.error("Error repairing duplicate external lead:", error.message);
       });
+    }
+  }
+
+  async function repairUnlinkedThumbtackReviewActivities() {
+    const reviewActivities = await MetalworksLeadActivity.find({
+      activityType: "thumbtack_review",
+      $or: [{ leadId: null }, { leadId: { $exists: false } }],
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    for (const activityDoc of reviewActivities) {
+      try {
+        const negotiationId = getThumbtackReviewNegotiationIdFromActivity(activityDoc);
+
+        if (!negotiationId) {
+          continue;
+        }
+
+        const leadDoc = await findThumbtackLeadByNegotiationId(negotiationId);
+
+        if (!leadDoc?._id) {
+          continue;
+        }
+
+        activityDoc.leadId = leadDoc._id;
+        activityDoc.meta = {
+          ...(activityDoc.meta || {}),
+          negotiationId,
+        };
+        activityDoc.updatedAt = new Date();
+        await activityDoc.save();
+      } catch (error) {
+        console.error("Error repairing unlinked Thumbtack review:", error.message);
+      }
     }
   }
 
@@ -11283,6 +11350,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
               tracking,
             });
           }
+        }
+
+        if (!leadDoc && parsedEvent.entityType === "review") {
+          leadDoc = await findThumbtackLeadByNegotiationId(
+            parsedEvent.activity?.meta?.negotiationId || "",
+          );
         }
 
         await appendActivity({

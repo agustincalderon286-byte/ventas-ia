@@ -188,11 +188,12 @@ test("ignora mensajes automáticos de Thumbtack para no crear leads basura", () 
 test("clasifica reviews sin crear un lead nuevo", () => {
   const payload = {
     eventType: "ReviewCreatedV4",
-    review: {
+    data: {
       reviewID: "rev_101",
       reviewerName: "EB",
       rating: 5,
       reviewText: "Fast, clean work and great communication.",
+      negotiationID: "neg_review_101",
     },
   };
 
@@ -201,6 +202,7 @@ test("clasifica reviews sin crear un lead nuevo", () => {
   assert.equal(event.entityType, "review");
   assert.equal(event.leadCandidate, null);
   assert.equal(event.activity.activityType, "thumbtack_review");
+  assert.equal(event.activity.meta.negotiationId, "neg_review_101");
   assert.match(event.activity.body, /Rating: 5/);
   assert.match(event.activity.body, /Fast, clean work/);
 });

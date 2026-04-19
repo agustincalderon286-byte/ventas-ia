@@ -783,6 +783,21 @@ export function getThumbtackReview(payload = {}) {
   );
 }
 
+function getThumbtackReviewNegotiationId(review = {}, payload = {}) {
+  return cleanText(
+    review?.negotiationID ||
+      review?.negotiationId ||
+      payload?.negotiationID ||
+      payload?.negotiationId ||
+      payload?.data?.negotiationID ||
+      payload?.data?.negotiationId ||
+      payload?.event?.negotiationID ||
+      payload?.event?.negotiationId ||
+      "",
+    120,
+  );
+}
+
 export function buildThumbtackLeadCandidate(payload = {}) {
   const eventType = getThumbtackEventType(payload);
   const entityType = inferEntityType(eventType, payload);
@@ -910,6 +925,7 @@ export function buildThumbtackWebhookEvent(payload = {}) {
   const leadCandidate = buildThumbtackLeadCandidate(payload);
   const message = getThumbtackMessage(payload) || {};
   const review = getThumbtackReview(payload) || {};
+  const reviewNegotiationId = getThumbtackReviewNegotiationId(review, payload);
   const activityType =
     entityType === "negotiation"
       ? "thumbtack_negotiation"
@@ -952,7 +968,7 @@ export function buildThumbtackWebhookEvent(payload = {}) {
         eventType,
         entityType,
         externalLeadId: leadCandidate?.externalLeadId || "",
-        negotiationId: leadCandidate?.meta?.negotiationId || "",
+        negotiationId: leadCandidate?.meta?.negotiationId || reviewNegotiationId || "",
         messageId: leadCandidate?.meta?.messageId || cleanText(message?.messageID || "", 120),
         reviewId: cleanText(review?.reviewID || "", 120),
         attachmentCount: Number(leadCandidate?.meta?.attachmentCount || 0) || 0,
