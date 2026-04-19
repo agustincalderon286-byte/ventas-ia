@@ -447,6 +447,26 @@ function shouldApplyExternalLeadStatus(currentStatus = "", incomingStatus = "") 
   return false;
 }
 
+export function resolveExternalLeadCreateStatus(
+  incomingStatus = "",
+  externalSystem = "",
+  sourceType = "",
+) {
+  const normalizedStatus = normalizeStatus(incomingStatus || "new");
+  const normalizedSystem = cleanText(externalSystem || "", 80).toLowerCase();
+  const normalizedSource = cleanText(sourceType || "", 80).toLowerCase();
+
+  if (
+    normalizedStatus === "contacted" &&
+    normalizedSystem === "thumbtack" &&
+    normalizedSource.startsWith("thumbtack_")
+  ) {
+    return "new";
+  }
+
+  return normalizedStatus || "new";
+}
+
 function getAllowedEmails() {
   const passwordOverrides = Object.keys(getMetalworksUserPasswordOverrides());
 
@@ -4794,11 +4814,28 @@ async function buildDashboardSnapshot(
   filters = {},
 ) {
   const query = buildLeadQuery(filters);
+  const statusFilter = normalizeStatus(filters?.status || "");
+  const hasLeadStatusFilter = Boolean(
+    filters?.status && METALWORKS_CRM_STATUS_OPTIONS.includes(statusFilter),
+  );
+  const leadQuery = hasLeadStatusFilter
+    ? query
+    : {
+        ...query,
+        status: { $nin: ["won", "lost", "archived"] },
+      };
+  const completedLeadQuery = hasLeadStatusFilter
+    ? null
+    : {
+        ...query,
+        status: "won",
+      };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const applicantModelAvailable = Boolean(MetalworksApplicant?.find);
 
   const [
     leads,
+    completedLeads,
     recentActivity,
     totalLeads,
     newLeads,
@@ -4817,7 +4854,13 @@ async function buildDashboardSnapshot(
     interviewApplicants,
     recentApplicants,
   ] = await Promise.all([
-    MetalworksLead.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
+    MetalworksLead.find(leadQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
+    completedLeadQuery
+      ? MetalworksLead.find(completedLeadQuery)
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(60)
+          .lean()
+      : [],
     MetalworksLeadActivity.find({
       activityType: {
         $nin: [
@@ -4910,6 +4953,9 @@ async function buildDashboardSnapshot(
       }))
       .filter((item) => item.count > 0),
     leads: leads.map(cleanLead).filter(Boolean),
+    completedLeads: (Array.isArray(completedLeads) ? completedLeads : [])
+      .map((item) => cleanLead(item))
+      .filter(Boolean),
     recentApplicants: (Array.isArray(recentApplicants) ? recentApplicants : [])
       .map((item) => cleanApplicant(item))
       .filter(Boolean),
@@ -5033,6 +5079,7 @@ function summarizeLeadForOperator(lead = null) {
 
 function buildMetalworksOperatorSnapshot(dashboard = {}) {
   const now = new Date();
+  const nowTime = now.getTime();
   const leads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
   const recentActivity = Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [];
   const focusLeads = leads
@@ -5051,7 +5098,15 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     .slice(0, 10)
     .map((item) => item.lead);
   const agendaLeads = leads
-    .filter((lead) => isMetalworksOperatorOpenStatus(lead.status || "new") && lead.nextActionAt)
+    .filter((lead) => {
+      if (!isMetalworksOperatorOpenStatus(lead.status || "new") || !lead.nextActionAt) {
+        return false;
+      }
+
+      const nextActionAt = new Date(lead.nextActionAt);
+
+      return !Number.isNaN(nextActionAt.getTime()) && nextActionAt.getTime() >= nowTime;
+    })
     .sort((left, right) =>
       String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")),
     )
@@ -5059,10 +5114,19 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     .map(summarizeLeadForOperator)
     .filter(Boolean);
   const callbackCount = leads.filter(
-    (lead) =>
-      isMetalworksOperatorOpenStatus(lead.status || "new") &&
-      lead.callbackIntent === "yes" &&
-      lead.nextActionAt,
+    (lead) => {
+      if (
+        !isMetalworksOperatorOpenStatus(lead.status || "new") ||
+        lead.callbackIntent !== "yes" ||
+        !lead.nextActionAt
+      ) {
+        return false;
+      }
+
+      const nextActionAt = new Date(lead.nextActionAt);
+
+      return !Number.isNaN(nextActionAt.getTime()) && nextActionAt.getTime() >= nowTime;
+    },
   ).length;
 
   return {
@@ -6891,6 +6955,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.updatedAt = now;
         await leadDoc.save();
       } else {
+        const createStatus = resolveExternalLeadCreateStatus(
+          safeCrmStatus,
+          safeExternalSystem,
+          safeSourceType,
+        );
+
         leadDoc = await MetalworksLead.create({
           fullName: safeFullName,
           phone: safePhone,
@@ -6903,7 +6973,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           city: safeCity,
           details: safeDetails,
           photoFileNames,
-          status: safeCrmStatus,
+          status: createStatus,
           sourceType: safeSourceType,
           sourceExternalId: safeExternalLeadId,
           sourceExternalSystem: safeExternalSystem,

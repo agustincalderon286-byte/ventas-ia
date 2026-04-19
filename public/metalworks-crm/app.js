@@ -349,6 +349,10 @@ const prospectorCopyPasswordButton = document.querySelector(
 );
 const prospectorCopyLoginButton = document.querySelector("[data-crm-prospector-copy-login]");
 const leadList = document.querySelector("[data-crm-lead-list]");
+const completedPanel = document.querySelector("[data-crm-completed-panel]");
+const completedList = document.querySelector("[data-crm-completed-list]");
+const completedCount = document.querySelector("[data-crm-completed-count]");
+const completedEmptyState = document.querySelector("[data-crm-completed-empty]");
 const emptyState = document.querySelector("[data-crm-empty-state]");
 const collectionTitle = document.querySelector("[data-crm-collection-title]");
 const collectionCount = document.querySelector("[data-crm-collection-count]");
@@ -1908,8 +1912,8 @@ async function openQuoteComposer(leadId = "") {
 
   if (state.selectedLeadId !== safeLeadId) {
     rememberSelectedLead(safeLeadId);
-    if (state.dashboard?.leads) {
-      renderLeadList(state.dashboard.leads || []);
+    if (state.dashboard) {
+      renderLeadCollections(state.dashboard);
     }
     await loadLeadDetail(safeLeadId);
   }
@@ -2013,8 +2017,8 @@ async function openAgendaLead(leadId = "") {
 
   rememberSelectedLead(safeLeadId);
 
-  if (state.dashboard?.leads) {
-    renderLeadList(state.dashboard.leads || []);
+  if (state.dashboard) {
+    renderLeadCollections(state.dashboard);
   }
 
   await loadLeadDetail(safeLeadId);
@@ -2629,6 +2633,174 @@ function getFilteredApplicants(applicants = []) {
   });
 }
 
+function getLeadCollectionTitle(dashboard = {}) {
+  if (state.view === "applicants") {
+    return "Applicants";
+  }
+
+  const selectedStatus = String(state.filters.status || "").trim();
+
+  if (!selectedStatus) {
+    return "Active Leads";
+  }
+
+  const matchedOption = Array.isArray(dashboard.statusOptions)
+    ? dashboard.statusOptions.find((item) => item?.value === selectedStatus)
+    : null;
+
+  if (selectedStatus === "won") {
+    return matchedOption?.label || "Won Jobs";
+  }
+
+  return matchedOption?.label || "Leads";
+}
+
+function syncLeadCollectionCopy(dashboard = {}, activeLeads = [], completedLeads = []) {
+  if (collectionTitle) {
+    collectionTitle.textContent = getLeadCollectionTitle(dashboard);
+  }
+
+  if (emptyState) {
+    if (state.filters.status === "won") {
+      emptyState.textContent = "No won jobs match this filter yet.";
+    } else if (!state.filters.status && completedLeads.length) {
+      emptyState.textContent = "No active leads match this filter. Your completed jobs stay below.";
+    } else if (!state.filters.status) {
+      emptyState.textContent = "No active leads match this filter yet.";
+    } else {
+      emptyState.textContent = "No leads match this filter.";
+    }
+  }
+}
+
+function buildLeadCardMarkup(lead = {}, { action = "quote" } = {}) {
+  const isActive = lead.id === state.selectedLeadId;
+  const phoneDigits = getLeadPhoneDigits(lead);
+  const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
+  const summaryText = buildLeadSummaryText(lead);
+
+  return `
+    <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
+      <div class="crm-lead-card-head">
+        <div>
+          <h3>${escapeHtml(lead.fullName || "Sin nombre")}</h3>
+          <div class="crm-lead-card-meta">
+            <span>${escapeHtml(lead.projectType || "Servicio no definido")}</span>
+            <span>${escapeHtml(lead.phoneDisplay || lead.phone || "")}</span>
+            <span>${escapeHtml(lead.location || lead.email || "")}</span>
+          </div>
+        </div>
+        <span class="crm-status-badge" data-status="${escapeHtml(lead.status)}">
+          ${escapeHtml(lead.statusLabel)}
+        </span>
+      </div>
+      <div class="crm-micro-list">
+        <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
+        ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+        ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
+        ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
+        ${
+          lead.callbackIntent === "yes" && lead.nextActionAt
+            ? `<span class="crm-chip">Callback: ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+            : ""
+        }
+      </div>
+      <div class="crm-lead-card-summary">
+        ${
+          lead.lastContactAt
+            ? `<span><strong>Last contact:</strong> ${escapeHtml(formatDate(lead.lastContactAt))}</span>`
+            : ""
+        }
+        ${
+          lead.estimateSentAt
+            ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+            : ""
+        }
+        ${summaryText ? `<span>${escapeHtml(summaryText)}</span>` : ""}
+      </div>
+      <div class="crm-card-actions">
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
+            : ""
+        }
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
+            : ""
+        }
+        ${
+          action === "open"
+            ? `<button type="button" class="crm-card-action" data-card-open-lead="${escapeHtml(lead.id)}">Open Lead</button>`
+            : `<button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Open ${escapeHtml(documentLabel)}</button>`
+        }
+      </div>
+    </article>
+  `;
+}
+
+async function openLeadWorkspace(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return;
+  }
+
+  rememberSelectedLead(safeLeadId);
+  renderLeadCollections(state.dashboard || {});
+  await loadLeadDetail(safeLeadId);
+  openMobileWorkspacePane();
+  scrollDetailIntoView();
+}
+
+function bindLeadCollectionInteractions(target, leads = [], { action = "quote" } = {}) {
+  target.querySelectorAll("[data-prevent-select]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  if (action === "quote") {
+    target.querySelectorAll("[data-card-open-quote]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        const leadId = String(button.getAttribute("data-card-open-quote") || "").trim();
+
+        if (!leadId) {
+          return;
+        }
+
+        await openQuoteComposer(leadId);
+      });
+    });
+  } else {
+    target.querySelectorAll("[data-card-open-lead]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        const leadId = String(button.getAttribute("data-card-open-lead") || "").trim();
+
+        if (!leadId) {
+          return;
+        }
+
+        await openLeadWorkspace(leadId);
+      });
+    });
+  }
+
+  target.querySelectorAll("[data-lead-id]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      const leadId = String(card.getAttribute("data-lead-id") || "").trim();
+
+      if (!leadId) {
+        return;
+      }
+
+      await openLeadWorkspace(leadId);
+    });
+  });
+}
+
 function renderLeadList(leads = []) {
   if (!leadList) {
     return;
@@ -2645,106 +2817,57 @@ function renderLeadList(leads = []) {
   }
 
   emptyState.hidden = true;
-  leadList.innerHTML = leads
-    .map((lead) => {
-      const isActive = lead.id === state.selectedLeadId;
-      const phoneDigits = getLeadPhoneDigits(lead);
-      const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
-      const summaryText = buildLeadSummaryText(lead);
+  leadList.innerHTML = leads.map((lead) => buildLeadCardMarkup(lead, { action: "quote" })).join("");
+  bindLeadCollectionInteractions(leadList, leads, { action: "quote" });
+}
 
-      return `
-        <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
-          <div class="crm-lead-card-head">
-            <div>
-              <h3>${escapeHtml(lead.fullName || "Sin nombre")}</h3>
-              <div class="crm-lead-card-meta">
-                <span>${escapeHtml(lead.projectType || "Servicio no definido")}</span>
-                <span>${escapeHtml(lead.phoneDisplay || lead.phone || "")}</span>
-                <span>${escapeHtml(lead.location || lead.email || "")}</span>
-              </div>
-            </div>
-            <span class="crm-status-badge" data-status="${escapeHtml(lead.status)}">
-              ${escapeHtml(lead.statusLabel)}
-            </span>
-          </div>
-          <div class="crm-micro-list">
-            <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
-            ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
-            ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
-            ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
-            ${
-              lead.callbackIntent === "yes" && lead.nextActionAt
-                ? `<span class="crm-chip">Callback: ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
-                : ""
-            }
-          </div>
-          <div class="crm-lead-card-summary">
-            ${
-              lead.lastContactAt
-                ? `<span><strong>Last contact:</strong> ${escapeHtml(formatDate(lead.lastContactAt))}</span>`
-                : ""
-            }
-            ${
-              lead.estimateSentAt
-                ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
-                : ""
-            }
-            ${summaryText ? `<span>${escapeHtml(summaryText)}</span>` : ""}
-          </div>
-          <div class="crm-card-actions">
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
-                : ""
-            }
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
-                : ""
-            }
-            <button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Open ${escapeHtml(documentLabel)}</button>
-          </div>
-        </article>
-      `;
-    })
+function renderCompletedLeadList(leads = []) {
+  if (!completedPanel || !completedList || !completedCount || !completedEmptyState) {
+    return;
+  }
+
+  const safeLeads = Array.isArray(leads) ? leads.filter((lead) => lead?.id) : [];
+  const shouldShow = state.view === "leads" && !state.filters.status && safeLeads.length > 0;
+
+  completedPanel.hidden = !shouldShow;
+
+  if (!shouldShow) {
+    completedList.innerHTML = "";
+    completedEmptyState.hidden = true;
+    return;
+  }
+
+  completedCount.textContent = `${safeLeads.length} completed`;
+
+  if (!safeLeads.length) {
+    completedList.innerHTML = "";
+    completedEmptyState.hidden = false;
+    return;
+  }
+
+  completedEmptyState.hidden = true;
+  completedList.innerHTML = safeLeads
+    .map((lead) => buildLeadCardMarkup(lead, { action: "open" }))
     .join("");
+  bindLeadCollectionInteractions(completedList, safeLeads, { action: "open" });
+}
 
-  leadList.querySelectorAll("[data-prevent-select]").forEach((element) => {
-    element.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-  });
+function renderLeadCollections(dashboard = {}) {
+  const activeLeads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
+  const completedLeads = Array.isArray(dashboard?.completedLeads) ? dashboard.completedLeads : [];
 
-  leadList.querySelectorAll("[data-card-open-quote]").forEach((button) => {
-    button.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      const leadId = String(button.getAttribute("data-card-open-quote") || "").trim();
-      if (!leadId) {
-        return;
-      }
-      await openQuoteComposer(leadId);
-    });
-  });
-
-  leadList.querySelectorAll("[data-lead-id]").forEach((card) => {
-    card.addEventListener("click", async () => {
-      const leadId = String(card.getAttribute("data-lead-id") || "").trim();
-      if (!leadId) {
-        return;
-      }
-
-      rememberSelectedLead(leadId);
-      renderLeadList(leads);
-      await loadLeadDetail(leadId);
-      openMobileWorkspacePane();
-      scrollDetailIntoView();
-    });
-  });
+  syncLeadCollectionCopy(dashboard, activeLeads, completedLeads);
+  renderLeadList(activeLeads);
+  renderCompletedLeadList(completedLeads);
 }
 
 function renderApplicantList(applicants = []) {
   if (!leadList) {
     return;
+  }
+
+  if (completedPanel) {
+    completedPanel.hidden = true;
   }
 
   if (collectionCount) {
@@ -3519,15 +3642,17 @@ async function saveLeadChanges(
 
 async function renderLeadSnapshot(dashboard, { fromCache = false } = {}) {
   renderFilters(dashboard);
-  renderLeadList(dashboard.leads || []);
+  renderLeadCollections(dashboard);
 
-  if (dashboard.leads?.length) {
-    const selectedStillVisible = dashboard.leads.some(
-      (lead) => lead.id === state.selectedLeadId,
-    );
+  const visibleLeads = []
+    .concat(Array.isArray(dashboard.leads) ? dashboard.leads : [])
+    .concat(Array.isArray(dashboard.completedLeads) ? dashboard.completedLeads : []);
+
+  if (visibleLeads.length) {
+    const selectedStillVisible = visibleLeads.some((lead) => lead.id === state.selectedLeadId);
 
     if (!selectedStillVisible) {
-      rememberSelectedLead(dashboard.leads[0].id);
+      rememberSelectedLead(visibleLeads[0].id);
     }
 
     if (fromCache) {

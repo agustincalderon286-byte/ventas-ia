@@ -41,6 +41,7 @@ test("normaliza un negotiation webhook de Thumbtack a lead del CRM", () => {
   assert.equal(lead.externalLeadId, "neg_123");
   assert.equal(lead.externalSystem, "thumbtack");
   assert.equal(lead.sourceType, "thumbtack_negotiation");
+  assert.equal(lead.crmStatus, "new");
   assert.equal(lead.fullName, "Olivia Y.");
   assert.equal(lead.phone, "7735550199");
   assert.equal(lead.email, "olivia@example.com");

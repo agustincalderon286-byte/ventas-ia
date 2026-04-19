@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildThumbtackExternalEventKey,
   parseCrmDatetimeInput,
+  resolveExternalLeadCreateStatus,
 } from "../src/metalworks-crm.js";
 
 test("parseCrmDatetimeInput treats naive CRM datetimes as Chicago local time", () => {
@@ -36,4 +37,15 @@ test("buildThumbtackExternalEventKey uses negotiation and message ids", () => {
   });
 
   assert.equal(key, "thumbtack:577384912670040071:message:577401801191514123");
+});
+
+test("resolveExternalLeadCreateStatus keeps first Thumbtack message leads as new", () => {
+  assert.equal(
+    resolveExternalLeadCreateStatus("contacted", "thumbtack", "thumbtack_message"),
+    "new",
+  );
+  assert.equal(
+    resolveExternalLeadCreateStatus("quoted", "thumbtack", "thumbtack_negotiation"),
+    "quoted",
+  );
 });

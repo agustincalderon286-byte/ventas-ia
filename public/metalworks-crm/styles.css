@@ -1982,6 +1982,10 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   background: rgba(16, 20, 23, 0.03);
 }
 
+.crm-completed-jobs-panel {
+  margin-top: 14px;
+}
+
 .crm-upload-panel-head {
   display: flex;
   justify-content: space-between;

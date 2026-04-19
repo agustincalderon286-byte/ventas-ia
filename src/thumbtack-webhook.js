@@ -418,8 +418,20 @@ function mapThumbtackStatusToCrmStatus(status = "", entityType = "") {
     return "quoted";
   }
 
-  if (/(contacted|responded|replied|active|in_progress|in-progress)/.test(normalized)) {
-    return "contacted";
+  if (/(active|open|pending|new|in_progress|in-progress)/.test(normalized)) {
+    return "new";
+  }
+
+  if (/(contacted|responded|replied)/.test(normalized)) {
+    return entityType === "message" ? "contacted" : "new";
+  }
+
+  if (/(scheduled|appointment|visit)/.test(normalized)) {
+    return "booked";
+  }
+
+  if (/(paid|done|installed|finished)/.test(normalized)) {
+    return "won";
   }
 
   return entityType === "message" ? "contacted" : "new";
