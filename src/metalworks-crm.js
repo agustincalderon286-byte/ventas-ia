@@ -576,6 +576,31 @@ function normalizeStatus(value = "") {
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
 }
 
+const METALWORKS_LEAD_SOURCE_GROUP_OPTIONS = [
+  { value: "thumbtack", label: "Thumbtack" },
+  { value: "google_ads", label: "Google Ads" },
+  { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
+  { value: "prospector", label: "Prospector" },
+  { value: "website", label: "Website form/chat" },
+  { value: "manual", label: "Manual CRM" },
+  { value: "other", label: "Other / uncategorized" },
+];
+
+function normalizeLeadSourceGroup(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase();
+  return METALWORKS_LEAD_SOURCE_GROUP_OPTIONS.some((item) => item.value === safeValue)
+    ? safeValue
+    : "";
+}
+
+function labelLeadSourceGroup(value = "") {
+  const normalized = normalizeLeadSourceGroup(value);
+  return (
+    METALWORKS_LEAD_SOURCE_GROUP_OPTIONS.find((item) => item.value === normalized)?.label ||
+    "Other / uncategorized"
+  );
+}
+
 function normalizeApplicantStatus(value = "") {
   const status = cleanText(value || "", 40).toLowerCase();
   return METALWORKS_APPLICANT_STATUS_OPTIONS.includes(status) ? status : "new";
@@ -3944,6 +3969,69 @@ function isWebsiteLiveChatLeadSourceType(value = "") {
   return cleanText(value || "", 80) === METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
 }
 
+function leadHasGoogleAdsAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const utmSource = cleanText(tracking.utmSource || "", 80).toLowerCase();
+  const utmMedium = cleanText(tracking.utmMedium || "", 80).toLowerCase();
+
+  return Boolean(
+    cleanText(tracking.gclid || "", 120) ||
+      cleanText(tracking.gbraid || "", 120) ||
+      cleanText(tracking.wbraid || "", 120) ||
+      (utmSource.includes("google") && /(cpc|ppc|paid|paid_search|search)/i.test(utmMedium)),
+  );
+}
+
+function leadHasThumbtackAttribution(doc = null) {
+  const sourceType = cleanText(doc?.sourceType || "", 80).toLowerCase();
+  const sourceExternalSystem = cleanText(doc?.sourceExternalSystem || "", 80).toLowerCase();
+  const utmSource = cleanText(doc?.tracking?.utmSource || "", 80).toLowerCase();
+
+  return Boolean(
+    sourceType.includes("thumbtack") ||
+      sourceExternalSystem.includes("thumbtack") ||
+      utmSource.includes("thumbtack"),
+  );
+}
+
+function getLeadSourceGroup(doc = null) {
+  if (!doc) {
+    return "other";
+  }
+
+  const sourceType = cleanText(doc.sourceType || "", 80).toLowerCase();
+
+  if (leadHasThumbtackAttribution(doc)) {
+    return "thumbtack";
+  }
+
+  if (leadHasGoogleAdsAttribution(doc)) {
+    return "google_ads";
+  }
+
+  if (isAssistantLeadSourceType(sourceType)) {
+    return "assistant_organic";
+  }
+
+  if (sourceType === "field_prospector" || sourceType === "lead_distribution_prospector") {
+    return "prospector";
+  }
+
+  if (
+    sourceType === "website_form" ||
+    sourceType === "website_live_chat" ||
+    sourceType === "website_live_chat_photo"
+  ) {
+    return "website";
+  }
+
+  if (sourceType === "manual_crm_entry" || sourceType === "crm_manual_photo") {
+    return "manual";
+  }
+
+  return "other";
+}
+
 function isWebsiteLiveChatLead(doc = null) {
   return Boolean(
     doc &&
@@ -4614,6 +4702,8 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     pageUrl: doc.pageUrl || "",
     referrer: doc.referrer || "",
     sourceType: doc.sourceType || "website_form",
+    sourceGroup: getLeadSourceGroup(doc),
+    sourceGroupLabel: labelLeadSourceGroup(getLeadSourceGroup(doc)),
     supportsLiveChatReply:
       isWebsiteLiveChatLead(doc) &&
       ((Array.isArray(doc.conversationHistory) ? doc.conversationHistory.length > 0 : false) ||
@@ -4794,6 +4884,8 @@ function buildLeadQuery(filters = {}) {
   const status = normalizeStatus(filters?.status || "");
   const search = cleanText(filters?.search || "", 120);
   const projectType = cleanText(filters?.projectType || "", 80);
+  const sourceGroup = normalizeLeadSourceGroup(filters?.sourceGroup || "");
+  const andClauses = [];
 
   if (filters?.status && METALWORKS_CRM_STATUS_OPTIONS.includes(status)) {
     query.status = status;
@@ -4803,24 +4895,83 @@ function buildLeadQuery(filters = {}) {
     query.projectType = projectType;
   }
 
+  const googleAdsClause = {
+    $or: [
+      { "tracking.gclid": { $exists: true, $nin: ["", null] } },
+      { "tracking.gbraid": { $exists: true, $nin: ["", null] } },
+      { "tracking.wbraid": { $exists: true, $nin: ["", null] } },
+      {
+        "tracking.utmSource": /google/i,
+        "tracking.utmMedium": /(cpc|ppc|paid|paid_search|search)/i,
+      },
+    ],
+  };
+  const thumbtackClause = {
+    $or: [
+      { sourceType: /thumbtack/i },
+      { sourceExternalSystem: /thumbtack/i },
+      { "tracking.utmSource": /thumbtack/i },
+    ],
+  };
+  const assistantClause = { sourceType: /^assistant_/i };
+  const prospectorClause = {
+    sourceType: { $in: ["field_prospector", "lead_distribution_prospector"] },
+  };
+  const websiteClause = {
+    sourceType: { $in: ["website_form", "website_live_chat", "website_live_chat_photo"] },
+  };
+  const manualClause = { sourceType: { $in: ["manual_crm_entry", "crm_manual_photo"] } };
+  const knownSourceClauses = [
+    thumbtackClause,
+    googleAdsClause,
+    assistantClause,
+    prospectorClause,
+    websiteClause,
+    manualClause,
+  ];
+
+  if (sourceGroup === "thumbtack") {
+    andClauses.push(thumbtackClause);
+  } else if (sourceGroup === "google_ads") {
+    andClauses.push(googleAdsClause);
+  } else if (sourceGroup === "assistant_organic") {
+    andClauses.push({
+      $and: [assistantClause, { $nor: [thumbtackClause, googleAdsClause] }],
+    });
+  } else if (sourceGroup === "prospector") {
+    andClauses.push(prospectorClause);
+  } else if (sourceGroup === "website") {
+    andClauses.push(websiteClause);
+  } else if (sourceGroup === "manual") {
+    andClauses.push(manualClause);
+  } else if (sourceGroup === "other") {
+    andClauses.push({ $nor: knownSourceClauses });
+  }
+
   if (search) {
     const pattern = new RegExp(escapeRegex(search), "i");
-    query.$or = [
-      { fullName: pattern },
-      { phoneDisplay: pattern },
-      { phone: pattern },
-      { email: pattern },
-      { location: pattern },
-      { addressLine: pattern },
-      { zipCode: pattern },
-      { city: pattern },
-      { details: pattern },
-      { projectType: pattern },
-      { qualificationNotes: pattern },
-      { sourceProspectorName: pattern },
-      { estimateTitle: pattern },
-      { estimateScope: pattern },
-    ];
+    andClauses.push({
+      $or: [
+        { fullName: pattern },
+        { phoneDisplay: pattern },
+        { phone: pattern },
+        { email: pattern },
+        { location: pattern },
+        { addressLine: pattern },
+        { zipCode: pattern },
+        { city: pattern },
+        { details: pattern },
+        { projectType: pattern },
+        { qualificationNotes: pattern },
+        { sourceProspectorName: pattern },
+        { estimateTitle: pattern },
+        { estimateScope: pattern },
+      ],
+    });
+  }
+
+  if (andClauses.length) {
+    query.$and = andClauses;
   }
 
   return query;
@@ -4964,6 +5115,7 @@ async function buildDashboardSnapshot(
       status: query.status || "",
       search: cleanText(filters?.search || "", 120),
       projectType: cleanText(filters?.projectType || "", 80),
+      sourceGroup: normalizeLeadSourceGroup(filters?.sourceGroup || ""),
     },
     serviceBreakdown: serviceBreakdown
       .map((item) => ({
@@ -4983,6 +5135,7 @@ async function buildDashboardSnapshot(
       value: status,
       label: labelStatus(status),
     })),
+    sourceOptions: METALWORKS_LEAD_SOURCE_GROUP_OPTIONS,
   };
 }
 
@@ -9632,11 +9785,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       status: req.query?.status || "",
       search: req.query?.search || "",
       projectType: req.query?.projectType || "",
+      sourceGroup: req.query?.sourceGroup || "",
     };
     const hasFilters = Boolean(
       cleanText(filters.status || "", 40) ||
         cleanText(filters.search || "", 120) ||
-        cleanText(filters.projectType || "", 80),
+        cleanText(filters.projectType || "", 80) ||
+        normalizeLeadSourceGroup(filters.sourceGroup || ""),
     );
 
     try {

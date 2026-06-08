@@ -290,6 +290,7 @@ const state = {
     search: "",
     status: "",
     projectType: "",
+    sourceGroup: "",
   },
   applicantFilters: {
     search: "",
@@ -359,6 +360,8 @@ const collectionCount = document.querySelector("[data-crm-collection-count]");
 const searchLabel = document.querySelector("[data-crm-search-label]");
 const statusLabel = document.querySelector("[data-crm-status-label]");
 const serviceLabel = document.querySelector("[data-crm-service-label]");
+const sourceLabel = document.querySelector("[data-crm-source-label]");
+const sourceFilterWrap = document.querySelector("[data-crm-source-filter-wrap]");
 const viewButtons = Array.from(document.querySelectorAll("[data-crm-view-button]"));
 const detailWrap = document.querySelector("[data-crm-detail-wrap]");
 const applicantDetailWrap = document.querySelector("[data-crm-applicant-detail-wrap]");
@@ -376,6 +379,7 @@ const globalActivityList = document.querySelector("[data-crm-global-activity]");
 const globalActivitySummary = document.querySelector("[data-crm-global-activity-summary]");
 const statusFilter = document.querySelector("[data-crm-status-filter]");
 const serviceFilter = document.querySelector("[data-crm-service-filter]");
+const sourceFilter = document.querySelector("[data-crm-source-filter]");
 const searchInput = document.querySelector("[data-crm-search]");
 const userChip = document.querySelector("[data-crm-user-chip]");
 const refreshButton = document.querySelector("[data-crm-refresh]");
@@ -512,6 +516,10 @@ function formatLeadSource(value = "") {
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
+}
+
+function getLeadSourceLabel(lead = {}) {
+  return String(lead?.sourceGroupLabel || "").trim() || formatLeadSource(lead?.sourceType || "");
 }
 
 function formatApplicantSource(applicant = null) {
@@ -2490,6 +2498,18 @@ function syncCollectionChrome() {
     serviceLabel.textContent = applicantsView ? "Puesto" : "Servicio";
   }
 
+  if (sourceLabel) {
+    sourceLabel.textContent = "Fuente";
+  }
+
+  if (sourceFilterWrap) {
+    sourceFilterWrap.hidden = applicantsView;
+  }
+
+  if (sourceFilter) {
+    sourceFilter.disabled = applicantsView;
+  }
+
   if (searchInput) {
     searchInput.placeholder = applicantsView
       ? "Nombre, puesto, telefono, email o idioma"
@@ -2511,6 +2531,9 @@ function renderLeadFilters(dashboard) {
     : [];
   const services = Array.isArray(dashboard.serviceBreakdown)
     ? dashboard.serviceBreakdown.map((item) => item.label).filter(Boolean)
+    : [];
+  const sourceOptions = Array.isArray(dashboard.sourceOptions)
+    ? dashboard.sourceOptions
     : [];
 
   if (statusFilter) {
@@ -2545,6 +2568,18 @@ function renderLeadFilters(dashboard) {
     serviceFilter.value = state.filters.projectType;
   }
 
+  if (sourceFilter) {
+    sourceFilter.innerHTML = ['<option value="">Todas</option>']
+      .concat(
+        sourceOptions.map(
+          (item) =>
+            `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`,
+        ),
+      )
+      .join("");
+    sourceFilter.value = state.filters.sourceGroup;
+  }
+
   if (searchInput) {
     searchInput.value = state.filters.search;
   }
@@ -2576,6 +2611,11 @@ function renderApplicantFilters(applicants = []) {
       )
       .join("");
     serviceFilter.value = state.applicantFilters.role;
+  }
+
+  if (sourceFilter) {
+    sourceFilter.innerHTML = '<option value="">Todas</option>';
+    sourceFilter.value = "";
   }
 
   if (searchInput) {
@@ -2678,6 +2718,7 @@ function buildLeadCardMarkup(lead = {}, { action = "quote" } = {}) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
   const summaryText = buildLeadSummaryText(lead);
+  const sourceText = getLeadSourceLabel(lead);
 
   return `
     <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
@@ -2697,7 +2738,7 @@ function buildLeadCardMarkup(lead = {}, { action = "quote" } = {}) {
       <div class="crm-micro-list">
         <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
         ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
-        ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
+        ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
         ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
         ${
           lead.callbackIntent === "yes" && lead.nextActionAt
@@ -3375,6 +3416,7 @@ function renderLeadDetail(detail = null) {
 
   const lead = detail.lead;
   const isLiveChatThread = Boolean(lead.supportsLiveChatReply);
+  const sourceText = getLeadSourceLabel(lead);
   persistLeadDetail(detail);
   detailWrap.hidden = false;
   applicantDetailWrap.hidden = true;
@@ -3396,7 +3438,7 @@ function renderLeadDetail(detail = null) {
           ? `<span class="crm-chip">Balance ${escapeHtml(formatCurrency(lead.invoiceBalanceDue))}</span>`
           : ""
       }
-      ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
+      ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
       ${
         lead.callbackIntent === "yes" && lead.nextActionAt
           ? `<span class="crm-chip">Callback ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
@@ -4198,6 +4240,15 @@ function bindFilters() {
     }
 
     state.filters.projectType = String(serviceFilter.value || "").trim();
+    await refreshDashboardSafely();
+  });
+
+  sourceFilter?.addEventListener("change", async () => {
+    if (state.view === "applicants") {
+      return;
+    }
+
+    state.filters.sourceGroup = String(sourceFilter.value || "").trim();
     await refreshDashboardSafely();
   });
 
