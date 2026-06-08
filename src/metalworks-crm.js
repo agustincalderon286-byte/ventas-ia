@@ -1574,6 +1574,25 @@ function buildMetalworksPushCopy({
     };
   }
 
+  if (alertType === "assistant_photo_uploaded") {
+    return {
+      title: "New project photos",
+      body: `${fullName} uploaded photos for ${projectType}.`,
+    };
+  }
+
+  if (alertType === "assistant_lead") {
+    const lastMessage =
+      trimPushCopy(lead?.lastUserMessage || "", 78) ||
+      trimPushCopy(lead?.details || "", 78) ||
+      trimPushCopy(projectType || "", 78);
+
+    return {
+      title: "New Agustin 2.0 lead",
+      body: lastMessage ? `${fullName}: ${lastMessage}` : `${fullName} • ${projectType}`,
+    };
+  }
+
   if (alertType === "crm_test") {
     return {
       title: "Agustin 2.0 CRM",
@@ -8233,6 +8252,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const previousLeadNextActionAt = currentLead?.nextActionAt
       ? new Date(currentLead.nextActionAt).toISOString()
       : "";
+    let leadCreatedActivityRecorded = false;
     let leadDoc = await upsertConversationLead({
       currentLead,
       state: conversationState,
@@ -8268,6 +8288,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         pageUrl: safePageUrl,
         tracking: safeTracking,
       });
+      leadCreatedActivityRecorded = true;
     }
 
     await appendActivity({
@@ -8328,16 +8349,45 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       sourceType,
     });
 
+    const leadCreatedThisTurn = Boolean(!leadExistedBeforeMessage && leadDoc?._id);
+
+    if (leadCreatedThisTurn && !leadCreatedActivityRecorded) {
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "lead_created",
+        title: "Lead creado",
+        body:
+          finalState.callbackIntent === "yes"
+            ? "Agustin 2.0 creo un lead conversacional para seguimiento de llamada."
+            : "Agustin 2.0 creo un lead conversacional desde el chat del sitio.",
+        meta: {
+          sourceType,
+          sourceChannel: finalState.sourceChannel,
+          projectType: leadDoc.projectType || "",
+          location: leadDoc.location || "",
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          pageTitle: safePageTitle,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+      leadCreatedActivityRecorded = true;
+    }
+
     const currentLeadNextActionAt = leadDoc?.nextActionAt
       ? new Date(leadDoc.nextActionAt).toISOString()
       : "";
-
-    if (
+    const callbackCapturedThisTurn = Boolean(
       leadDoc?._id &&
-      finalState.callbackIntent === "yes" &&
-      finalState.nextActionAt &&
-      (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt)
-    ) {
+        finalState.callbackIntent === "yes" &&
+        finalState.nextActionAt &&
+        (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt),
+    );
+
+    if (callbackCapturedThisTurn) {
       await appendActivity({
         leadId: leadDoc._id,
         activityType: "assistant_booking_requested",
@@ -8372,7 +8422,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       delivered: false,
     };
 
-    if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
+    const shouldSendAssistantCallbackAlert = Boolean(
+      leadDoc?._id &&
+        (finalState.shouldAlert || callbackCapturedThisTurn) &&
+        (callbackCapturedThisTurn || !leadDoc.callbackAlertedAt),
+    );
+    const shouldSendAssistantLeadPush = Boolean(
+      leadDoc?._id && leadCreatedThisTurn && !shouldSendAssistantCallbackAlert,
+    );
+
+    if (shouldSendAssistantCallbackAlert) {
       try {
         alertDelivery = await sendMetalworksLeadAlertEmail({
           lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
@@ -8410,6 +8469,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         }
       } catch (error) {
         console.error("Error sending Metal Works assistant push:", error.message);
+      }
+    } else if (shouldSendAssistantLeadPush) {
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "assistant_lead",
+        });
+      } catch (error) {
+        console.error("Error sending Metal Works assistant lead push:", error.message);
       }
     }
 
@@ -11724,6 +11792,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           }),
         ),
       );
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
 
       if (assetDocs.length) {
         leadDoc.photoFileNames = mergeAssistantUniqueValues(
@@ -11750,12 +11822,22 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           pageUrl,
           tracking,
         });
+
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType: "assistant_photo_uploaded",
+          });
+        } catch (error) {
+          console.error("Error sending Metal Works assistant photo push:", error.message);
+        }
       }
 
       res.json({
         ok: true,
         uploadedCount: assetDocs.length,
         leadId: String(leadDoc._id),
+        notified: Boolean(pushDelivery.delivered),
         assets: assetDocs.map(cleanLeadAsset).filter(Boolean),
       });
     } catch (error) {
