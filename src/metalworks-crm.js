@@ -3452,7 +3452,23 @@ async function buildProspectorDashboardSnapshot(MetalworksLead, prospectorEmail 
   };
 }
 
-export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) {
+export function registerMetalworksCrm(
+  app,
+  {
+    mongoose,
+    publicDir,
+    privateDir,
+    redisGetJson = null,
+    redisSetJson = null,
+    redisDelete = null,
+    redisSessionTtlSeconds = 0,
+  },
+) {
+  const assistantFastCacheTtlSeconds = Math.max(
+    5 * 60,
+    Number(redisSessionTtlSeconds || 6 * 60 * 60) || 6 * 60 * 60,
+  );
+
   const trackingSchema = new mongoose.Schema(
     {
       gclid: String,
@@ -4677,7 +4693,23 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     return docs.map(cleanLeadAsset).filter(Boolean);
   }
 
-  async function resolveConversationLead({ visitorId = "", sessionId = "", email = "", phone = "" } = {}) {
+  async function resolveConversationLead({
+    visitorId = "",
+    sessionId = "",
+    email = "",
+    phone = "",
+    leadId = "",
+  } = {}) {
+    const safeLeadId = cleanText(leadId || "", 80);
+
+    if (safeLeadId) {
+      const leadById = await MetalworksLead.findById(safeLeadId);
+
+      if (leadById?._id) {
+        return leadById;
+      }
+    }
+
     const conditions = [];
 
     if (phone) {
@@ -4750,6 +4782,249 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     });
 
     return deduped.slice(-METALWORKS_ASSISTANT_HISTORY_LIMIT);
+  }
+
+  function buildAssistantFastCacheKeys({
+    visitorId = "",
+    sessionId = "",
+    sourceChannel = "web",
+  } = {}) {
+    const safeVisitorId = cleanText(visitorId || "", 120);
+    const safeSessionId = cleanText(sessionId || "", 120);
+    const safeSourceChannel =
+      cleanText(sourceChannel || "web", 40).trim().toLowerCase() || "web";
+    const keys = [];
+
+    if (safeSessionId) {
+      keys.push(`metalworks:assistant:session:${safeSourceChannel}:${safeSessionId}`);
+    }
+
+    if (safeVisitorId) {
+      keys.push(`metalworks:assistant:visitor:${safeSourceChannel}:${safeVisitorId}`);
+    }
+
+    return Array.from(new Set(keys));
+  }
+
+  function cleanAssistantFastCacheLeadSeed(value = null) {
+    const source =
+      value && typeof value.toObject === "function"
+        ? value.toObject()
+        : value
+          ? { ...value }
+          : {};
+    const fullName = sanitizeAssistantStoredName(
+      cleanText(source.fullName || source.name || "", 120),
+    );
+    const phone = normalizePhone(source.phone || "");
+    const phoneDisplay =
+      cleanText(source.phoneDisplay || source.phone || "", 40) || phone;
+    const email = normalizeEmail(source.email || "");
+    const projectType = cleanText(source.projectType || "", 120);
+    const location = cleanText(source.location || "", 160);
+    const details = cleanText(source.details || source.detailsSummary || "", 1500);
+    const bestContactDay = cleanText(source.bestContactDay || "", 80);
+    const bestContactTime = cleanText(source.bestContactTime || "", 80);
+    const callbackIntent = cleanText(source.callbackIntent || "", 12);
+    const lastUserMessage = cleanText(source.lastUserMessage || source.latestUserMessage || "", 500);
+    const lastAssistantMessage = cleanText(
+      source.lastAssistantMessage || source.latestAssistantMessage || "",
+      1500,
+    );
+    const photoFileNames = mergeAssistantUniqueValues(source.photoFileNames || []).slice(
+      -METALWORKS_ASSISTANT_HISTORY_LIMIT,
+    );
+    const nextActionAt =
+      source.nextActionAt instanceof Date
+        ? source.nextActionAt.toISOString()
+        : source.nextActionAt
+          ? new Date(source.nextActionAt).toISOString()
+          : "";
+
+    if (
+      !fullName &&
+      !phone &&
+      !email &&
+      !projectType &&
+      !location &&
+      !details &&
+      !bestContactDay &&
+      !bestContactTime &&
+      !callbackIntent &&
+      !photoFileNames.length &&
+      !lastUserMessage &&
+      !lastAssistantMessage &&
+      !nextActionAt
+    ) {
+      return null;
+    }
+
+    return {
+      fullName,
+      phone,
+      phoneDisplay,
+      email,
+      projectType,
+      location,
+      details,
+      bestContactDay,
+      bestContactTime,
+      callbackIntent,
+      photoFileNames,
+      lastUserMessage,
+      lastAssistantMessage,
+      nextActionAt,
+    };
+  }
+
+  function cleanAssistantFastCacheSnapshot(snapshot = null) {
+    if (!snapshot || typeof snapshot !== "object") {
+      return null;
+    }
+
+    const sourceChannel =
+      cleanText(snapshot.sourceChannel || "web", 40).trim().toLowerCase() || "web";
+    const sourceLabel = cleanText(snapshot.sourceLabel || "", 120);
+    const visitorId = cleanText(snapshot.visitorId || "", 120);
+    const sessionId = cleanText(snapshot.sessionId || "", 120);
+    const leadId = cleanText(snapshot.leadId || "", 80);
+    const history = normalizeStoredConversationHistory(snapshot.history || []);
+    const leadSeed = cleanAssistantFastCacheLeadSeed(snapshot.leadSeed || null);
+    const updatedAt =
+      snapshot.updatedAt instanceof Date
+        ? snapshot.updatedAt.toISOString()
+        : snapshot.updatedAt
+          ? new Date(snapshot.updatedAt).toISOString()
+          : new Date().toISOString();
+
+    if (!visitorId && !sessionId) {
+      return null;
+    }
+
+    if (!leadId && !leadSeed && !history.length) {
+      return null;
+    }
+
+    return {
+      sourceChannel,
+      sourceLabel,
+      visitorId,
+      sessionId,
+      leadId,
+      leadSeed,
+      history,
+      updatedAt,
+    };
+  }
+
+  async function readAssistantFastCacheSnapshot({
+    visitorId = "",
+    sessionId = "",
+    sourceChannel = "web",
+  } = {}) {
+    if (typeof redisGetJson !== "function") {
+      return null;
+    }
+
+    const keys = buildAssistantFastCacheKeys({
+      visitorId,
+      sessionId,
+      sourceChannel,
+    });
+
+    for (const key of keys) {
+      const payload = await redisGetJson(key);
+      const snapshot = cleanAssistantFastCacheSnapshot(payload);
+
+      if (snapshot) {
+        return snapshot;
+      }
+    }
+
+    return null;
+  }
+
+  async function writeAssistantFastCacheSnapshot(snapshot = null) {
+    if (typeof redisSetJson !== "function") {
+      return false;
+    }
+
+    const safeSnapshot = cleanAssistantFastCacheSnapshot(snapshot);
+
+    if (!safeSnapshot) {
+      return false;
+    }
+
+    const keys = buildAssistantFastCacheKeys(safeSnapshot);
+
+    if (!keys.length) {
+      return false;
+    }
+
+    const results = await Promise.all(
+      keys.map((key) =>
+        redisSetJson(key, safeSnapshot, assistantFastCacheTtlSeconds),
+      ),
+    );
+
+    return results.some(Boolean);
+  }
+
+  async function deleteAssistantFastCacheSnapshot({
+    visitorId = "",
+    sessionId = "",
+    sourceChannel = "web",
+  } = {}) {
+    if (typeof redisDelete !== "function") {
+      return false;
+    }
+
+    const keys = buildAssistantFastCacheKeys({
+      visitorId,
+      sessionId,
+      sourceChannel,
+    });
+
+    if (!keys.length) {
+      return false;
+    }
+
+    const results = await Promise.all(keys.map((key) => redisDelete(key)));
+    return results.some(Boolean);
+  }
+
+  async function persistAssistantFastCache({
+    visitorId = "",
+    sessionId = "",
+    sourceChannel = "web",
+    sourceLabel = "",
+    leadDoc = null,
+    state = null,
+    history = [],
+  } = {}) {
+    const leadId = leadDoc?._id ? String(leadDoc._id) : "";
+    const seedSource = {
+      ...(leadDoc && typeof leadDoc.toObject === "function"
+        ? leadDoc.toObject()
+        : leadDoc
+          ? { ...leadDoc }
+          : {}),
+      ...(state || {}),
+      photoFileNames: Array.isArray(leadDoc?.photoFileNames)
+        ? leadDoc.photoFileNames
+        : state?.photoFileNames || [],
+    };
+
+    return writeAssistantFastCacheSnapshot({
+      visitorId,
+      sessionId,
+      sourceChannel,
+      sourceLabel,
+      leadId,
+      leadSeed: seedSource,
+      history,
+      updatedAt: new Date(),
+    });
   }
 
   async function upsertConversationLead({
@@ -4902,19 +5177,28 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     phoneHint = "",
     phoneDisplayHint = "",
     allowEmployment = true,
+    sourceChannel = "web",
   } = {}) {
+    const cachedSnapshot = await readAssistantFastCacheSnapshot({
+      visitorId,
+      sessionId,
+      sourceChannel,
+    });
+    const cachedLeadSeed = cleanAssistantFastCacheLeadSeed(cachedSnapshot?.leadSeed || null);
+    const cachedHistory = normalizeStoredConversationHistory(cachedSnapshot?.history || []);
     let currentLead = await resolveConversationLead({
       visitorId,
       sessionId,
       phone: normalizePhone(phoneHint || ""),
+      leadId: cachedSnapshot?.leadId || "",
     });
-    let seededLead = buildAssistantHintSeedLead(currentLead, {
+    let seededLead = buildAssistantHintSeedLead(currentLead || cachedLeadSeed, {
       nameHint,
       phoneHint,
       phoneDisplayHint,
     });
     let mergedHistory = mergeConversationHistory(
-      currentLead?.conversationHistory || [],
+      currentLead?.conversationHistory || cachedHistory,
       normalizeAssistantHistory(history),
     );
     let userConversationItems = buildAssistantConversationItems({
@@ -4931,6 +5215,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       sessionId,
       email: conversationState.email,
       phone: conversationState.phone || normalizePhone(phoneHint || ""),
+      leadId: currentLead?._id ? String(currentLead._id) : cachedSnapshot?.leadId || "",
     });
 
     if (
@@ -4938,13 +5223,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       String(resolvedLead._id) !== String(currentLead?._id || "")
     ) {
       currentLead = resolvedLead;
-      seededLead = buildAssistantHintSeedLead(currentLead, {
+      seededLead = buildAssistantHintSeedLead(currentLead || cachedLeadSeed, {
         nameHint,
         phoneHint,
         phoneDisplayHint,
       });
       mergedHistory = mergeConversationHistory(
-        currentLead?.conversationHistory || [],
+        currentLead?.conversationHistory || cachedHistory,
         normalizeAssistantHistory(history),
       );
       userConversationItems = buildAssistantConversationItems({
@@ -5067,6 +5352,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       phoneHint,
       phoneDisplayHint,
       allowEmployment,
+      sourceChannel,
     });
 
     let conversationState = {
@@ -5176,6 +5462,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       req,
       assistantReply: result.reply,
       sourceType,
+    });
+
+    await persistAssistantFastCache({
+      visitorId: safeVisitorId,
+      sessionId: safeSessionId,
+      sourceChannel: finalState.sourceChannel,
+      sourceLabel: finalState.sourceLabel,
+      leadDoc,
+      state: finalState,
+      history: conversationItemsWithReply,
     });
 
     const currentLeadNextActionAt = leadDoc?.nextActionAt
@@ -7115,9 +7411,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 400, "Total image upload is too large.");
       }
 
+      const cachedSnapshot = await readAssistantFastCacheSnapshot({
+        visitorId,
+        sessionId,
+        sourceChannel: "web",
+      });
+
       let leadDoc = await resolveConversationLead({
         visitorId,
         sessionId,
+        leadId: cachedSnapshot?.leadId || "",
       });
 
       if (!leadDoc) {
@@ -7170,6 +7473,23 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       leadDoc.lastContactAt = now;
       leadDoc.updatedAt = now;
       await leadDoc.save();
+
+      const cachedHistory = normalizeStoredConversationHistory(cachedSnapshot?.history || []);
+      await persistAssistantFastCache({
+        visitorId,
+        sessionId,
+        sourceChannel: "web",
+        sourceLabel: "Agustin 2.0 website assistant",
+        leadDoc,
+        state: {
+          photoFileNames: leadDoc.photoFileNames || [],
+          photoFileCount: Array.isArray(leadDoc.photoFileNames)
+            ? leadDoc.photoFileNames.length
+            : 0,
+          latestUserMessage: cleanText(leadDoc.lastUserMessage || "", 500),
+        },
+        history: cachedHistory,
+      });
 
       await appendActivity({
         leadId: leadDoc._id,

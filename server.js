@@ -2247,7 +2247,11 @@ app.use(express.json({ limit: "15mb" }));
 registerMetalworksCrm(app, {
   mongoose,
   publicDir: PUBLIC_DIR,
-  privateDir: PRIVATE_DIR
+  privateDir: PRIVATE_DIR,
+  redisGetJson,
+  redisSetJson,
+  redisDelete,
+  redisSessionTtlSeconds: REDIS_SESSION_TTL_SECONDS
 });
 
 const COACH_ASYNC_JOB_POLL_MS = 4000;
