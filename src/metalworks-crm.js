@@ -2505,6 +2505,14 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
 }
 
+function buildAssistantHiringDisabledReply(message = "") {
+  const inSpanish = detectSpanish(message);
+
+  return inSpanish
+    ? "Este asistente del website solo ayuda con clientes, cotizaciones y trabajos de metal. Si necesitas ayuda con un proyecto, mandame una breve descripcion, tu ZIP code y fotos del trabajo."
+    : "This website assistant only helps with customer projects, quotes, and metalwork jobs. If you need help with a project, send a short description, your ZIP code, and photos of the work.";
+}
+
 function buildEmploymentFallbackReply(message = "", conversationState = null) {
   const inSpanish = detectSpanish(message) || conversationState?.inSpanish;
   const roleTrack = cleanText(conversationState?.roleTrack || "", 40);
@@ -7968,13 +7976,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     nameHint = "",
     phoneHint = "",
     phoneDisplayHint = "",
+    allowEmployment = true,
   } = {}) {
     const normalizedPhoneHint = normalizePhone(phoneHint || "");
     const incomingHistory = normalizeAssistantHistory(history);
     const incomingConversationText = [message, ...incomingHistory.map((item) => item.content || "")]
       .filter(Boolean)
       .join("\n");
-    const initialEmploymentHint = detectEmploymentIntent(incomingConversationText);
+    const initialEmploymentHint =
+      allowEmployment && detectEmploymentIntent(incomingConversationText);
     let currentLead = await resolveConversationLead({
       visitorId,
       sessionId,
@@ -8077,6 +8087,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     const intentType =
+      allowEmployment &&
       !forceCustomerIntent &&
       (currentApplicant?._id ||
         detectEmploymentIntent(
@@ -8116,6 +8127,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     sourceType = "assistant_chat",
     sourceChannel = "web",
     sourceLabel = "Agustin 2.0 website assistant",
+    allowEmployment = true,
   } = {}) {
     const safeMessage = cleanText(message || "", 500);
     const safeVisitorId = cleanText(visitorId || "", 120);
@@ -8153,6 +8165,36 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       };
     }
 
+    const combinedConversationText = [
+      safeMessage,
+      ...normalizeAssistantHistory(history).map((item) => item.content || ""),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (
+      !allowEmployment &&
+      !detectEmploymentCorrection(combinedConversationText) &&
+      detectEmploymentIntent(combinedConversationText)
+    ) {
+      return {
+        ok: true,
+        status: 200,
+        respuesta: buildAssistantHiringDisabledReply(safeMessage),
+        usedFallback: false,
+        leadCaptured: false,
+        leadId: "",
+        applicantCaptured: false,
+        applicantId: "",
+        callbackCaptured: false,
+        callbackLabel: "",
+        notified: false,
+        remainingToday: safeVisitorId
+          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - usedToday, 0)
+          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+      };
+    }
+
     const {
       currentLead,
       currentApplicant,
@@ -8168,6 +8210,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       nameHint,
       phoneHint,
       phoneDisplayHint,
+      allowEmployment,
     });
 
     let conversationState = {
@@ -12517,6 +12560,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         sourceType: "assistant_chat",
         sourceChannel: "web",
         sourceLabel: "Agustin 2.0 website assistant",
+        allowEmployment: false,
       });
 
       if (!result.ok) {
