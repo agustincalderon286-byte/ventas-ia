@@ -35,6 +35,10 @@ const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
 );
 const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
+const METALWORKS_ASSISTANT_VISION_MAX_IMAGES = Math.max(
+  0,
+  Number(process.env.METALWORKS_ASSISTANT_VISION_MAX_IMAGES || 2),
+);
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
@@ -136,10 +140,13 @@ RULES:
 - After name and phone are captured, move toward photos, ZIP code, and the job description needed for a text-back estimate.
 - If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
 - If the visitor has project photos, tell them they can upload them directly in the chat.
+- If recent project photos are attached, use them to identify the likely metalwork type and any clearly visible issues.
+- Only describe what is reasonably visible in the photos. If an image is blurry, partial, or not enough, say so and ask for a better angle or one more photo.
 - If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
 - When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
+- Do not claim exact measurements, hidden damage, or structural certainty from a photo alone.
 - Only ask for email, address, or appointment timing after the basic lead capture when it truly helps.
 
 CONVERSION PLAYBOOK:
@@ -2684,6 +2691,7 @@ function buildAssistantStatePrompt(state = {}) {
   const serviceBucket = cleanText(state?.serviceBucket || "general", 40) || "general";
   const buyingIntent = state?.buyingIntent ? "yes" : "no";
   const readyForTextEstimate = state?.readyForTextEstimate === true ? "yes" : "no";
+  const visionImageCount = Number(state?.visionImageCount || 0) || 0;
 
   return `
 TEXT QUOTE CAPTURE STATE:
@@ -2698,6 +2706,7 @@ TEXT QUOTE CAPTURE STATE:
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
 - uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
+- vision_images_attached: ${visionImageCount}
 - ready_for_text_estimate: ${readyForTextEstimate}
 - missing_contact_fields: ${missingContactFields || "none"}
 - missing_project_fields: ${missingProjectFields || "none"}
@@ -2715,6 +2724,7 @@ INSTRUCTIONS:
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
+- If vision_images_attached is greater than 0, use those images to identify the likely issue or job type when that is genuinely visible. If the photos are not enough, say what is unclear and ask for one more angle.
 - Do not say the appointment is booked unless the visitor actually gave a specific day and time.
 - Only ask for email, address, or scheduling details after the basic lead capture if that truly helps.
 - Keep replies practical, short, and contractor-like.
@@ -2838,6 +2848,108 @@ function cleanLeadAsset(doc = null) {
   };
 }
 
+function normalizeLeadAssetBuffer(value = null) {
+  if (!value) {
+    return Buffer.alloc(0);
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+
+  if (value?.buffer instanceof ArrayBuffer) {
+    return Buffer.from(value.buffer);
+  }
+
+  if (Array.isArray(value)) {
+    return Buffer.from(value);
+  }
+
+  if (typeof value === "object" && value?.type === "Buffer" && Array.isArray(value?.data)) {
+    return Buffer.from(value.data);
+  }
+
+  return Buffer.alloc(0);
+}
+
+async function loadRecentLeadAssetsForVision({
+  leadId = null,
+  limit = METALWORKS_ASSISTANT_VISION_MAX_IMAGES,
+} = {}) {
+  if (!leadId || limit < 1) {
+    return [];
+  }
+
+  const assetDocs = await MetalworksLeadAsset.find({ leadId })
+    .sort({ uploadedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .select("fileName mimeType fileData sizeBytes uploadedAt createdAt");
+
+  return assetDocs
+    .map((doc) => {
+      const mimeType = normalizeLeadAssetMimeType(doc?.mimeType || "");
+      const fileData = normalizeLeadAssetBuffer(doc?.fileData);
+
+      if (!mimeType || !fileData.length) {
+        return null;
+      }
+
+      return {
+        fileName: sanitizeLeadAssetFileName(doc?.fileName || ""),
+        mimeType,
+        sizeBytes: Number(doc?.sizeBytes || fileData.length) || fileData.length,
+        uploadedAt: doc?.uploadedAt || doc?.createdAt || null,
+        dataUrl: `data:${mimeType};base64,${fileData.toString("base64")}`,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildAssistantUserInputContent({
+  message = "",
+  visionAssets = [],
+} = {}) {
+  const safeMessage = cleanText(message || "", 500);
+  const assets = Array.isArray(visionAssets) ? visionAssets.filter(Boolean) : [];
+  const content = [];
+  const recentPhotoLabel = assets.length
+    ? `Recent uploaded project photos are attached below (${assets.length}, most recent first). Use them only as visual context for this project.`
+    : "";
+  const inputText = [safeMessage, recentPhotoLabel].filter(Boolean).join("\n\n").trim();
+
+  if (inputText) {
+    content.push({
+      type: "input_text",
+      text: inputText,
+    });
+  }
+
+  assets.forEach((asset) => {
+    if (!asset?.dataUrl) {
+      return;
+    }
+
+    content.push({
+      type: "input_image",
+      image_url: asset.dataUrl,
+      detail: "auto",
+    });
+  });
+
+  return content.length
+    ? content
+    : [
+        {
+          type: "input_text",
+          text: safeMessage,
+        },
+      ];
+}
+
 function extractAssistantResponseText(data = null) {
   const directText = cleanText(data?.output_text || "", 1500);
 
@@ -2871,6 +2983,7 @@ async function generateAssistantReply({
   history = [],
   pagePath = "",
   conversationState = null,
+  visionAssets = [],
 } = {}) {
   const fallbackReply = buildAssistantFallbackReply(message, conversationState);
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
@@ -2919,7 +3032,10 @@ async function generateAssistantReply({
           ...normalizeAssistantHistory(history),
           {
             role: "user",
-            content: cleanText(message, 500),
+            content: buildAssistantUserInputContent({
+              message,
+              visionAssets,
+            }),
           },
         ],
       }),
@@ -5424,11 +5540,27 @@ export function registerMetalworksCrm(
       createdAt: inboundReceivedAt,
     });
 
+    let visionAssets = [];
+
+    try {
+      visionAssets = await loadRecentLeadAssetsForVision({
+        leadId: leadDoc?._id || currentLead?._id || null,
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works assistant vision photos:", error.message);
+    }
+
+    const replyConversationState = {
+      ...conversationState,
+      visionImageCount: Array.isArray(visionAssets) ? visionAssets.length : 0,
+    };
+
     const result = await generateAssistantReply({
       message: safeMessage,
       history: userConversationItems,
       pagePath: safePagePath,
-      conversationState,
+      conversationState: replyConversationState,
+      visionAssets,
     });
 
     const conversationItemsWithReply = buildAssistantConversationItems({
