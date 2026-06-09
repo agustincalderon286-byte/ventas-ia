@@ -116,7 +116,7 @@ ROLE:
 
 GOAL:
 - Help the visitor quickly understand the next best step.
-- Increase conversions to quote request or phone call.
+- Increase conversions to a text-back estimate or quote follow-up.
 - Qualify the job without sounding pushy.
 
 VOICE:
@@ -129,25 +129,27 @@ VOICE:
 RULES:
 - Most replies should be 2 or 3 short sentences.
 - Ask one clear next-step question at a time unless you are collecting callback fields.
+- Ask for the visitor's name and best phone number early, ideally before deeper qualification, so the team can text back if the chat disconnects.
 - Ask for photos early when that will help.
 - Ask whether it is repair, replacement, or new installation when useful.
 - Ask for ZIP code or job location when useful.
-- Ask for the best phone number only when it helps move the quote forward.
+- After name and phone are captured, move toward photos, ZIP code, and the job description needed for a text-back estimate.
 - If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
 - If the visitor has project photos, tell them they can upload them directly in the chat.
 - If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
-- Push toward quote form or phone call when the visitor shows real buying intent.
+- When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
+- Only ask for email, address, or appointment timing after the basic lead capture when it truly helps.
 
 CONVERSION PLAYBOOK:
-- For a fresh lead, usually move in this order: service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, callback or site visit, then best day and time.
+- For a fresh lead, usually move in this order: name, best phone number, service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, then text-back estimate or one final follow-up question.
 - If the visitor already gave one of those items, do not ask for it again.
 - For gate jobs, ask about dragging, sagging, hinge, latch, frame damage, or new gate fabrication.
 - For railing jobs, ask whether it is for porch steps, stairs, balcony, or another area, and whether it is repair or new install.
 - For fence jobs, ask whether it is one damaged section, a gate section, or a larger new run.
 - For welding jobs, ask what piece needs welding, whether it is still installed or loose, and where the job is located.
-- Once enough details are present, move toward a callback or site visit instead of asking endless questions.
+- Once enough details are present, stop asking endless questions and tell the visitor the team will text back with an estimate or ask for one more detail if needed.
 - For WhatsApp, prefer 1 or 2 short sentences and end with one direct question.
 
 SERVICE FIT:
@@ -156,7 +158,7 @@ SERVICE FIT:
 - If the project is low-fit, politely say the business mainly focuses on metalwork and related repairs or fabrication.
 
 QUOTE GUIDANCE:
-- Fastest quote path: photos, rough measurements, ZIP code, and whether the project is repair or new build.
+- Fastest quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the project is repair or new build.
 - If the visitor asks price too early, ask for photos and measurements first.
 
 DO NOT:
@@ -1261,10 +1263,32 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
     ? conversationState.callbackMissingFields
     : [];
+  const leadContactMissingFields = Array.isArray(conversationState?.leadContactMissingFields)
+    ? conversationState.leadContactMissingFields
+    : [];
+  const readyForTextEstimate = conversationState?.readyForTextEstimate === true;
   const serviceBucket = inferAssistantServiceBucket({
     message,
     state: conversationState,
   });
+
+  if (!callbackIntent && leadContactMissingFields.length) {
+    if (leadContactMissingFields.includes("name") && leadContactMissingFields.includes("best phone number")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto y cual es el mejor numero para textearte por si se corta el chat?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with, and what is the best phone number to text you back in case the chat disconnects?";
+    }
+
+    if (leadContactMissingFields.includes("name")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with?";
+    }
+
+    return inSpanish
+      ? "Perfecto. ¿Cual es el mejor numero para textearte por si se corta el chat?"
+      : "Perfect. What is the best phone number to text you back in case the chat disconnects?";
+  }
 
   if (callbackIntent) {
     if (callbackMissingFields.length) {
@@ -1281,6 +1305,12 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     return inSpanish
       ? `Perfecto. Ya tengo tu solicitud para ${callbackLabel}. Si puedes, manda fotos y tu ZIP code para preparar mejor el seguimiento.`
       : `Perfect. I have your request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
+  }
+
+  if (readyForTextEstimate) {
+    return inSpanish
+      ? "Perfecto, ya tengo suficiente para pasarlo al equipo. Te vamos a textear a este numero con un estimado basado en esta informacion, o te pediremos un detalle mas si hace falta."
+      : "Perfect, I have enough to pass this to the team. We will text you back at this number with an estimate based on this information, or we will ask for one more detail if needed.";
   }
 
   if (
@@ -1436,8 +1466,8 @@ function buildAssistantHotLeadReply({
   }
 
   return inSpanish
-    ? "Perfecto. Podemos mover esto rapido. Prefieres llamada o visita para estimate?"
-    : "Perfect. We can move this fast. Would you like a callback or a site visit?";
+    ? "Perfecto. Ya casi lo tengo. Si puedes, manda fotos y con esto te texteamos con un estimado o con un detalle final si hace falta."
+    : "Perfect. We are almost there. If you can, send photos, and we will text you back with an estimate or one final detail if needed.";
 }
 
 function buildAssistantServiceIntakeReply({
@@ -1484,8 +1514,8 @@ function buildAssistantServiceIntakeReply({
     }
 
     return inSpanish
-      ? "Perfecto. Si puedes, manda una foto del porton. Prefieres llamada o visita para estimate?"
-      : "Perfect. If you can, send a photo of the gate. Would you like a callback or a site visit?";
+      ? "Perfecto. Si puedes, manda una foto del porton y con eso te texteamos con un estimado o con un detalle final si hace falta."
+      : "Perfect. If you can, send a photo of the gate, and we will text you back with an estimate or one final detail if needed.";
   }
 
   if (bucket === "railing") {
@@ -1508,8 +1538,8 @@ function buildAssistantServiceIntakeReply({
     }
 
     return inSpanish
-      ? "Perfecto. Si puedes, manda una foto y medida aproximada o cuantos escalones son. Prefieres llamada o visita?"
-      : "Perfect. If you can, send a photo and a rough length or number of steps. Would you like a callback or a site visit?";
+      ? "Perfecto. Si puedes, manda una foto y medida aproximada o cuantos escalones son, y con eso te texteamos con un estimado o con un detalle final si hace falta."
+      : "Perfect. If you can, send a photo and a rough length or number of steps, and we will text you back with an estimate or one final detail if needed.";
   }
 
   if (bucket === "fence") {
@@ -1532,8 +1562,8 @@ function buildAssistantServiceIntakeReply({
     }
 
     return inSpanish
-      ? "Perfecto. Si puedes, manda fotos de la seccion y una medida aproximada. Prefieres llamada o visita?"
-      : "Perfect. If you can, send photos of the section and a rough measurement. Would you like a callback or a site visit?";
+      ? "Perfecto. Si puedes, manda fotos de la seccion y una medida aproximada, y con eso te texteamos con un estimado o con un detalle final si hace falta."
+      : "Perfect. If you can, send photos of the section and a rough measurement, and we will text you back with an estimate or one final detail if needed.";
   }
 
   if (bucket === "welding") {
@@ -1556,8 +1586,8 @@ function buildAssistantServiceIntakeReply({
     }
 
     return inSpanish
-      ? "Perfecto. Si puedes, manda una foto clara de la pieza o del daño. Prefieres llamada o visita?"
-      : "Perfect. If you can, send a clear photo of the piece or the damage. Would you like a callback or a site visit?";
+      ? "Perfecto. Si puedes, manda una foto clara de la pieza o del daño, y con eso te texteamos con un estimado o con un detalle final si hace falta."
+      : "Perfect. If you can, send a clear photo of the piece or the damage, and we will text you back with an estimate or one final detail if needed.";
   }
 
   return "";
@@ -1576,9 +1606,9 @@ METAL WORKS WEBSITE CONTEXT:
 - Business: Chicago Metal Works & Fencing
 - Service area: Chicago, Blue Island, and nearby suburbs
 - Main CTA phone: 773 798 4107
-- Best quote path: photos, rough measurements, ZIP code, and whether the job is repair or new build
+- Best quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the job is repair or new build
 - Public website page: ${cleanText(pagePath || "", 120) || "/"}
-- Intake order: service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, callback or site visit, best day/time
+- Intake order: name, best phone number, service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, then text-back estimate
 `);
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
@@ -2582,6 +2612,26 @@ function buildAssistantConversationSignals({
     photoFileCount,
   });
   const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
+  const hasProjectRequest = Boolean(
+    projectType ||
+      serviceBucket ||
+      detectAssistantProjectLeadIntent(detailsSummary || latestUserMessage),
+  );
+  const leadContactMissingFields = [
+    !name ? "name" : "",
+    !phone ? "best phone number" : "",
+  ].filter(Boolean);
+  const leadProjectMissingFields = [
+    !hasProjectRequest ? "what needs to be repaired or built" : "",
+    !location ? "ZIP code" : "",
+    photoFileCount > 0 ? "" : "photos",
+  ].filter(Boolean);
+  const readyForTextEstimate = Boolean(
+    name &&
+      phone &&
+      hasProjectRequest &&
+      (location || photoFileCount > 0),
+  );
 
   return {
     items,
@@ -2595,6 +2645,9 @@ function buildAssistantConversationSignals({
     phoneDisplay,
     projectType,
     location,
+    leadContactMissingFields,
+    leadProjectMissingFields,
+    readyForTextEstimate,
     bestContactDay: normalizedBestContactDay,
     bestContactTime,
     callbackIntent: callbackIntent === "no" ? "no" : callbackIntent === "yes" ? "yes" : "",
@@ -2606,8 +2659,12 @@ function buildAssistantConversationSignals({
     leadTemperature,
     detailsSummary,
     photoFileCount,
-    shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
-    shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
+    shouldCreateLead: Boolean(
+      lead?._id || phone || email || callbackIntent === "yes" || photoFileCount > 0 || hasProjectRequest,
+    ),
+    shouldAlert:
+      ((callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email)) ||
+      readyForTextEstimate,
     conversationDigest: buildAssistantHistoryDigest(items),
   };
 }
@@ -2615,14 +2672,21 @@ function buildAssistantConversationSignals({
 function buildAssistantStatePrompt(state = {}) {
   const callbackIntent = state?.callbackIntent === "yes" ? "yes" : state?.callbackIntent === "no" ? "no" : "unknown";
   const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
+  const missingContactFields = Array.isArray(state?.leadContactMissingFields)
+    ? state.leadContactMissingFields.join(", ")
+    : "";
+  const missingProjectFields = Array.isArray(state?.leadProjectMissingFields)
+    ? state.leadProjectMissingFields.join(", ")
+    : "";
   const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
   const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
   const leadTemperature = cleanText(state?.leadTemperature || "cold", 20) || "cold";
   const serviceBucket = cleanText(state?.serviceBucket || "general", 40) || "general";
   const buyingIntent = state?.buyingIntent ? "yes" : "no";
+  const readyForTextEstimate = state?.readyForTextEstimate === true ? "yes" : "no";
 
   return `
-CALL CAPTURE STATE:
+TEXT QUOTE CAPTURE STATE:
 - response_channel: ${responseChannel}
 - lead_temperature: ${leadTemperature}
 - buying_intent: ${buyingIntent}
@@ -2634,6 +2698,9 @@ CALL CAPTURE STATE:
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
 - uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
+- ready_for_text_estimate: ${readyForTextEstimate}
+- missing_contact_fields: ${missingContactFields || "none"}
+- missing_project_fields: ${missingProjectFields || "none"}
 - best_day: ${state?.bestContactDay || "pending"}
 - best_time: ${state?.bestContactTime || "pending"}
 - callback_window: ${callbackLabel}
@@ -2641,12 +2708,15 @@ CALL CAPTURE STATE:
 
 INSTRUCTIONS:
 - If response_channel is whatsapp, keep replies extra short and text-message friendly.
-- If lead_temperature is hot, stop educating and move directly toward a callback or site visit.
-- If lead_temperature is hot and callback_intent is still unknown, ask for the next booking step instead of giving a long explanation.
+- If callback_intent is not yes and there are missing_contact_fields, ask only for the missing contact fields first in one short message. Explain it is so the team can text back if the chat disconnects.
+- After contact is captured, keep moving toward photos, ZIP code, and the job details needed for a text-back estimate.
+- If lead_temperature is hot, stop educating and move directly toward the next missing detail needed to text back an estimate.
+- If ready_for_text_estimate is yes and callback_intent is not yes, stop qualifying and close the conversation. Tell the visitor the team will text them back with an estimate based on this information, or ask for one more detail if needed.
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
 - Do not say the appointment is booked unless the visitor actually gave a specific day and time.
+- Only ask for email, address, or scheduling details after the basic lead capture if that truly helps.
 - Keep replies practical, short, and contractor-like.
 `;
 }
