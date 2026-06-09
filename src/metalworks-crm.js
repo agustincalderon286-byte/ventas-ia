@@ -1198,6 +1198,62 @@ function detectSpanish(value = "") {
   );
 }
 
+function looksLikeStandaloneApplicantRole(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  return [
+    "welder",
+    "fabricator",
+    "welder fabricator",
+    "welder-fabricator",
+    "soldador",
+    "fabricador",
+    "soldador fabricador",
+    "soldador-fabricador",
+    "sales",
+    "ventas",
+    "prospector",
+    "prospectador",
+  ].includes(normalized);
+}
+
+function detectEmploymentCorrection(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    /\b(?:not|is not|isnt|isn't|no)\b[^.!?\n]{0,60}\b(?:hiring|employment|job|jobs|apply|application|position|interview)\b/.test(
+      normalized,
+    ) ||
+    /\b(?:this|it|its|it's)\b[^.!?\n]{0,40}\b(?:project|quote|estimate)\b/.test(normalized) ||
+    /\bfor (?:a|this) project\b/.test(normalized) ||
+    /\bnot (?:looking for|applying for)\b[^.!?\n]{0,30}\b(?:job|employment|position)\b/.test(
+      normalized,
+    )
+  );
+}
+
+function detectEmploymentIntent(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized || detectEmploymentCorrection(normalized)) {
+    return false;
+  }
+
+  if (
+    /\b(employment|hiring|hire me|apply|application|position|job opening|open position|position opening|vacante|vacantes|empleo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|work for you|work with you|are you hiring|looking for a job|need a job|busco trabajo|quiero trabajo|oportunidad de trabajo)\b/.test(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+
+  return looksLikeStandaloneApplicantRole(normalized);
+}
+
 function buildAssistantFallbackReply(message = "", conversationState = null) {
   const text = cleanText(message, 500).toLowerCase();
   const inSpanish = detectSpanish(message);
@@ -1283,6 +1339,14 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   return inSpanish
     ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos subelas aqui en el chat para moverlo mas rapido."
     : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
+}
+
+function buildAssistantHiringDisabledReply(message = "") {
+  const inSpanish = detectSpanish(message);
+
+  return inSpanish
+    ? "Este asistente del website solo ayuda con clientes, cotizaciones y trabajos de metal. Si necesitas ayuda con un proyecto, mandame una breve descripcion, tu ZIP code y fotos del trabajo."
+    : "This website assistant only helps with customer projects, quotes, and metalwork jobs. If you need help with a project, send a short description, your ZIP code, and photos of the work.";
 }
 
 function buildAssistantServiceQuoteReply({
@@ -4767,6 +4831,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     nameHint = "",
     phoneHint = "",
     phoneDisplayHint = "",
+    allowEmployment = true,
   } = {}) {
     let currentLead = await resolveConversationLead({
       visitorId,
@@ -4849,6 +4914,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     sourceType = "assistant_chat",
     sourceChannel = "web",
     sourceLabel = "Agustin 2.0 website assistant",
+    allowEmployment = true,
   } = {}) {
     const safeMessage = cleanText(message || "", 500);
     const safeVisitorId = cleanText(visitorId || "", 120);
@@ -4887,6 +4953,36 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       };
     }
 
+    const combinedConversationText = [
+      safeMessage,
+      ...normalizeAssistantHistory(history).map((item) => item.content || ""),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (
+      !allowEmployment &&
+      !detectEmploymentCorrection(combinedConversationText) &&
+      detectEmploymentIntent(combinedConversationText)
+    ) {
+      return {
+        ok: true,
+        status: 200,
+        respuesta: buildAssistantHiringDisabledReply(safeMessage),
+        usedFallback: false,
+        leadCaptured: false,
+        leadId: "",
+        applicantCaptured: false,
+        applicantId: "",
+        callbackCaptured: false,
+        callbackLabel: "",
+        notified: false,
+        remainingToday: safeVisitorId
+          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - usedToday, 0)
+          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
+      };
+    }
+
     const {
       currentLead,
       userConversationItems,
@@ -4900,6 +4996,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       nameHint,
       phoneHint,
       phoneDisplayHint,
+      allowEmployment,
     });
 
     let conversationState = {
@@ -7082,6 +7179,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         sourceType: "assistant_chat",
         sourceChannel: "web",
         sourceLabel: "Agustin 2.0 website assistant",
+        allowEmployment: false,
       });
 
       if (!result.ok) {
