@@ -132,7 +132,6 @@ VOICE:
 
 RULES:
 - Most replies should be 2 or 3 short sentences.
-- Ask one clear next-step question at a time unless you are collecting callback fields.
 - Ask for the visitor's name and best phone number early, ideally before deeper qualification, so the team can text back if the chat disconnects.
 - Ask for photos early when that will help.
 - Ask whether it is repair, replacement, or new installation when useful.
@@ -148,6 +147,12 @@ RULES:
 - When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
 - Do not claim exact measurements, hidden damage, or structural certainty from a photo alone.
 - Only ask for email, address, or appointment timing after the basic lead capture when it truly helps.
+
+COMMON CUSTOMER WORDING TO UNDERSTAND:
+- Front steps: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too", "front steps repair", "repair or replace".
+- Gates: "it's not always closing", "latch added to the side gate", "the latch is on the outside", "prefer one on the inside", "dragging gate", "sagging gate".
+- Porch and railing structure: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- When a visitor uses this kind of wording, answer directly to the real problem first, then move into contact capture and photos.
 
 CONVERSION PLAYBOOK:
 - For a fresh lead, usually move in this order: name, best phone number, service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, then text-back estimate or one final follow-up question.
@@ -165,7 +170,7 @@ SERVICE FIT:
 - If the project is low-fit, politely say the business mainly focuses on metalwork and related repairs or fabrication.
 
 QUOTE GUIDANCE:
-- Fastest quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the project is repair or new build.
+- Fastest quote path: photos, rough measurements, ZIP code, and whether the project is repair or new build.
 - If the visitor asks price too early, ask for photos and measurements first.
 
 DO NOT:
@@ -1263,9 +1268,22 @@ function detectEmploymentIntent(value = "") {
   return looksLikeStandaloneApplicantRole(normalized);
 }
 
+export function detectAssistantProjectLeadIntent(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  return /\b(project|quote|estimate|repair|replace|replacement|new install|new installation|install|installation|guardrail|guardrails|railing|railings|handrail|handrails|gate|gates|fence|fencing|weld|welding|fabricat|stairs|stair|step|steps|balcony|porch|landing|tread|hinge|latch|dragging|sagging|rust|rusted|crack|cracked|post|posts|awning|opening|opening width|opening height|safety issue|unsafe)\b/.test(
+    normalized,
+  );
+}
+
 function buildAssistantFallbackReply(message = "", conversationState = null) {
   const text = cleanText(message, 500).toLowerCase();
   const inSpanish = detectSpanish(message);
+  const projectTypeText = normalizeAssistantSearchText(conversationState?.projectType || "");
   const callbackIntent = conversationState?.callbackIntent === "yes";
   const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
     ? conversationState.callbackMissingFields
@@ -1318,6 +1336,39 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     return inSpanish
       ? "Perfecto, ya tengo suficiente para pasarlo al equipo. Te vamos a textear a este numero con un estimado basado en esta informacion, o te pediremos un detalle mas si hace falta."
       : "Perfect, I have enough to pass this to the team. We will text you back at this number with an estimate based on this information, or we will ask for one more detail if needed.";
+  }
+
+  if (
+    (
+      /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) ||
+      /front steps repair/.test(projectTypeText)
+    ) &&
+    /\b(rust|rusted|underneath|crack|cracked|railing|railings|unsafe)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, trabajamos escalones frontales cuando el metal de abajo esta oxidado, la superficie esta cuarteada o el barandal tambien forma parte del problema. Manda una foto amplia, una foto cerrada del daño, tu ZIP code y el mejor numero para textearte con un estimado."
+      : "Yes, we handle front steps when the metal underneath is rusted, the stair surface is cracked, or the front railing is part of the problem. Send one wide photo, one close shot of the damage, your ZIP code, and the best number to text you back with a first estimate.";
+  }
+
+  if (
+    (/\b(gate|side gate|porton|portón)\b/.test(text) || /\bgate\b/.test(projectTypeText)) &&
+    /\b(not closing|wont close|won't close|latch|inside portion|outside|dragging|sagging)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, ayudamos cuando el porton no esta cerrando bien, necesita latch, arrastra o se ve caido. Manda una foto completa, una del lado de la bisagra, otra del latch, tu ZIP code y el mejor numero para textearte."
+      : "Yes, we help when a gate is not closing right, needs a latch, drags, or has started sagging. Send a full photo, one of the hinge side, one of the latch area, your ZIP code, and the best number to text you back.";
+  }
+
+  if (
+    (
+      /\b(post|posts|porch|concrete|base plate|mounting)\b/.test(text) ||
+      /metal porch repair/.test(projectTypeText)
+    ) &&
+    /\b(replaced|replace|secured|repair|rust|rusted|fractured)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, tambien revisamos postes de porch, anclajes a concreto y barandales que tal vez se reparan en sitio o se reemplazan por secciones. Si mandas fotos y tu ZIP code, te digo el siguiente paso mas rapido."
+      : "Yes, we also look at porch posts, base plates, concrete anchoring, and railings that may need repair in place or section replacement. If you send photos and your ZIP code, I can point you to the fastest next step.";
   }
 
   if (
@@ -1618,6 +1669,19 @@ METAL WORKS WEBSITE CONTEXT:
 - Intake order: name, best phone number, service type, ZIP or area, repair vs replacement vs new install, short scope details, photos, then text-back estimate
 `);
 
+  if (
+    /front-steps-repair/.test(pagePath || "") ||
+    (/\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) &&
+      /\b(rust|rusted|crack|cracked|railing|railings)\b/.test(text))
+  ) {
+    contextParts.push(`
+FRONT STEPS CONTEXT:
+- Common customer wording: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too".
+- Treat this as a high-intent front-step repair lead.
+- Ask for one wide photo, one close photo of the rust or crack, ZIP code, and whether the entry feels unsafe.
+`);
+  }
+
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
     contextParts.push(`
 QUOTE RULE:
@@ -1631,7 +1695,16 @@ QUOTE RULE:
     contextParts.push(`
 GATE CONTEXT:
 - Common issues: dragging gates, latch issues, hinge issues, frame repairs, rewelds, replacement sections.
-- Ask in this order when needed: ZIP, repair vs replace vs new gate, main issue, photo, callback or site visit.
+- Common customer wording: "it's not always closing", "latch added to the side gate", "latch on the outside", "prefer one on the inside".
+- Move toward photo + repair vs replace + ZIP code.
+`);
+  }
+
+  if (/post|posts|base plate|mounting|secured to concrete|concrete/i.test(text)) {
+    contextParts.push(`
+PORCH STRUCTURE CONTEXT:
+- Common customer wording: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- Explain the next step in practical terms and move toward photos + ZIP code.
 `);
   }
 
@@ -1952,11 +2025,29 @@ function inferAssistantProjectTypeFromText(text = "") {
     return "";
   }
 
-  if (/\b(porch|landing|rust|repaint|primer|top coat|paint failure)\b/.test(normalized)) {
+  if (
+    /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(normalized) &&
+    /\b(rust|rusted|crack|cracked|railing|railings|repair|replace|replacement|unsafe)\b/.test(
+      normalized,
+    )
+  ) {
+    return "Front steps repair / restoration";
+  }
+
+  if (
+    /\b(porch|porch post|porch posts|post|posts|landing)\b/.test(normalized) &&
+    /\b(rust|rusted|repaint|paint|primer|top coat|secured to concrete|concrete|base plate|mounting)\b/.test(
+      normalized,
+    )
+  ) {
     return "Metal porch repair / restoration";
   }
 
-  if (/\b(gate|hinge|latch|dragging|sagging|porton)\b/.test(normalized)) {
+  if (
+    /\b(gate|side gate|hinge|latch|dragging|sagging|porton|not closing|wont close|won't close)\b/.test(
+      normalized,
+    )
+  ) {
     return "Gate fabrication / gate repair";
   }
 
@@ -1983,6 +2074,40 @@ function inferAssistantProjectTypeFromText(text = "") {
   return "";
 }
 
+function inferAssistantProjectTypeFromPagePath(pagePath = "") {
+  const normalized = normalizeAssistantSearchText(pagePath || "");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.includes("front steps repair")) {
+    return "Front steps repair / restoration";
+  }
+
+  if (normalized.includes("metal porch repair")) {
+    return "Metal porch repair / restoration";
+  }
+
+  if (normalized.includes("gate repair")) {
+    return "Gate fabrication / gate repair";
+  }
+
+  if (normalized.includes("fence repair")) {
+    return "Fence fabrication / fence repair";
+  }
+
+  if (
+    normalized.includes("custom railings") ||
+    normalized.includes("handrails") ||
+    normalized.includes("railing rust repair")
+  ) {
+    return "Custom railings / handrails";
+  }
+
+  return "";
+}
+
 function extractAssistantLocation(text = "") {
   const safeText = String(text || "");
   const zipCode = extractAssistantZipCode(safeText);
@@ -2003,6 +2128,11 @@ function extractAssistantLocation(text = "") {
     "Alsip",
     "Crestwood",
     "Tinley Park",
+    "Bucktown",
+    "West Town",
+    "Wicker Park",
+    "Beverly",
+    "Morgan Park",
   ];
   const normalized = normalizeAssistantSearchText(safeText);
 
@@ -2550,8 +2680,8 @@ function buildAssistantConversationSignals({
   const bestContactDayForResolution =
     latestBestContactDay || !storedCalendarDayKey ? bestContactDay : storedCalendarDayKey;
 
-  if (!projectType && /metal-porch-repair|porch/i.test(pagePath || "")) {
-    projectType = "Metal porch repair / restoration";
+  if (!projectType) {
+    projectType = inferAssistantProjectTypeFromPagePath(pagePath || "");
   }
 
   const nextActionAt =
@@ -2619,11 +2749,12 @@ function buildAssistantConversationSignals({
     photoFileCount,
   });
   const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
-  const hasProjectRequest = Boolean(
-    projectType ||
-      serviceBucket ||
-      detectAssistantProjectLeadIntent(detailsSummary || latestUserMessage),
-  );
+  const strongProjectIntent =
+    detectAssistantProjectLeadIntent(combinedUserText) ||
+    detectAssistantProjectLeadIntent(serviceSummarySource) ||
+    detectAssistantProjectLeadIntent(projectType) ||
+    detectAssistantProjectLeadIntent(location);
+  const hasProjectRequest = Boolean(projectType || serviceBucket || strongProjectIntent);
   const leadContactMissingFields = [
     !name ? "name" : "",
     !phone ? "best phone number" : "",
@@ -2725,6 +2856,7 @@ INSTRUCTIONS:
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
 - If vision_images_attached is greater than 0, use those images to identify the likely issue or job type when that is genuinely visible. If the photos are not enough, say what is unclear and ask for one more angle.
+- If the visitor uses direct homeowner wording like "underneath the metal is rusted", "the stairs are cracked", "it's not always closing", or "I need a latch added", answer that issue directly instead of switching into generic chatbot language.
 - Do not say the appointment is booked unless the visitor actually gave a specific day and time.
 - Only ask for email, address, or scheduling details after the basic lead capture if that truly helps.
 - Keep replies practical, short, and contractor-like.
