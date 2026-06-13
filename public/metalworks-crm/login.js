@@ -1,6 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -105,18 +105,18 @@ const aliasBadge = document.querySelector("[data-crm-login-alias]");
 const CRM_THEME_PRESETS = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "goku-blue",
-    themeLabel: "Rigo // Goku Blue Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
 };
 
@@ -134,14 +134,14 @@ function resolveProfile(email = "") {
   const preset = CRM_THEME_PRESETS[safeEmail] || {};
   return {
     displayName: preset.displayName || "",
-    skin: preset.skin || "classic",
+    skin: preset.skin || "executive-steel",
     themeLabel: preset.themeLabel || "",
   };
 }
 
 function applyThemePreview(email = "") {
   const profile = resolveProfile(email);
-  document.body.dataset.crmSkin = profile.skin || "classic";
+  document.body.dataset.crmSkin = profile.skin || "executive-steel";
 
   if (!aliasBadge) {
     return;
@@ -159,7 +159,7 @@ function applyCachedTheme() {
   }
 
   const profile = cached.data.profile;
-  document.body.dataset.crmSkin = profile.skin || "classic";
+  document.body.dataset.crmSkin = profile.skin || "executive-steel";
 
   if (aliasBadge) {
     aliasBadge.hidden = !profile.themeLabel;

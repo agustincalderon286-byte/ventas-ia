@@ -72,25 +72,22 @@ body[data-crm-skin="intel-ops"] {
 }
 
 body[data-crm-skin="executive-steel"] {
-  --crm-bg: #edf2f7;
-  --crm-panel: rgba(255, 255, 255, 0.94);
-  --crm-line: rgba(21, 35, 54, 0.1);
-  --crm-ink: #182433;
-  --crm-muted: #627387;
-  --crm-red: #274c77;
-  --crm-red-deep: #14263d;
-  --crm-charcoal: #152334;
-  --crm-gold: #b48a52;
-  --crm-green: #2f6a5c;
-  --crm-blue: #2b5c8a;
-  --crm-shadow: 0 26px 60px rgba(20, 38, 61, 0.12);
-  background:
-    radial-gradient(circle at 14% 12%, rgba(180, 138, 82, 0.16), transparent 22%),
-    radial-gradient(circle at 86% 18%, rgba(39, 76, 119, 0.12), transparent 20%),
-    linear-gradient(180deg, #f7f3ed 0%, #eef3f8 48%, #e7edf4 100%);
-  font-feature-settings: "liga" 1, "kern" 1;
-  font-size: 17px;
-  line-height: 1.55;
+  --crm-bg: #f3f6fa;
+  --crm-panel: #ffffff;
+  --crm-line: rgba(29, 51, 74, 0.1);
+  --crm-ink: #1f2d3d;
+  --crm-muted: #6b7c8f;
+  --crm-red: #1f4e79;
+  --crm-red-deep: #173754;
+  --crm-charcoal: #1b2838;
+  --crm-gold: #7c93ad;
+  --crm-green: #2f6b57;
+  --crm-blue: #2f5f8f;
+  --crm-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+  font-feature-settings: normal;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 body[data-crm-skin="goku-blue"]::before,
@@ -156,7 +153,7 @@ body[data-crm-skin="intel-ops"]::after {
 
 body[data-crm-skin="executive-steel"]::before,
 body[data-crm-skin="executive-steel"]::after {
-  content: "";
+  content: none;
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -164,18 +161,14 @@ body[data-crm-skin="executive-steel"]::after {
 }
 
 body[data-crm-skin="executive-steel"]::before {
-  background:
-    linear-gradient(90deg, transparent 0 22%, rgba(20, 38, 61, 0.045) 22.2%, transparent 22.6%),
-    linear-gradient(180deg, transparent 0 65%, rgba(180, 138, 82, 0.06) 65.2%, transparent 65.8%);
-  opacity: 0.7;
+  background: none;
+  opacity: 0;
 }
 
 body[data-crm-skin="executive-steel"]::after {
-  background:
-    radial-gradient(circle at 18% 22%, rgba(180, 138, 82, 0.12), transparent 15%),
-    radial-gradient(circle at 84% 70%, rgba(39, 76, 119, 0.1), transparent 18%);
-  filter: blur(20px);
-  opacity: 0.8;
+  background: none;
+  filter: none;
+  opacity: 0;
 }
 
 button,

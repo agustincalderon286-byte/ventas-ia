@@ -1,6 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
 const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
 const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";

@@ -1,7 +1,7 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
 const OPERATOR_CHAT_HISTORY_STORAGE_KEY = "cmwf_operator_chat_history_v1";
 const OPERATOR_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
 const OPERATOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
