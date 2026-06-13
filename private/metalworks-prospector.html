@@ -4,17 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chicago Metal Works Prospector Portal</title>
+    <meta name="theme-color" content="#14263d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/metalworks-crm/prospector.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/prospector-icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
   </head>
-  <body class="crm-app-page crm-prospector-page" data-crm-skin="prospector-premium">
+  <body class="crm-app-page crm-prospector-page" data-crm-skin="executive-steel">
     <div class="crm-shell">
       <header class="crm-header">
         <div>
           <p class="crm-eyebrow">Field Team Intake</p>
           <h1>Prospector Portal</h1>
           <p class="crm-subtitle">
-            Capture field leads with photos and send them straight into the CRM so
-            sales can work them without retyping anything.
+            Capture field leads with photos and send them straight into the CRM
+            so sales can act without re-entering anything.
           </p>
         </div>
         <div class="crm-header-actions">
@@ -22,6 +27,42 @@
           <button class="crm-secondary-button" type="button" data-prospector-refresh>
             Refresh
           </button>
+          <button class="crm-secondary-button" type="button" data-prospector-flyer-open>
+            Flyer
+          </button>
+          <a
+            class="crm-secondary-button crm-action-link"
+            href="https://www.chicagometalworksandfencing.com/projects.html"
+            target="_blank"
+            rel="noopener"
+          >
+            Project Gallery
+          </a>
+          <div class="crm-header-qr-wrap">
+            <button
+              class="crm-secondary-button"
+              type="button"
+              data-prospector-site-qr-toggle
+              aria-expanded="false"
+            >
+              QR
+            </button>
+            <div class="crm-header-qr-popover" data-prospector-site-qr-panel hidden>
+              <div class="crm-resource-qr-card">
+                <img
+                  class="crm-resource-qr-image"
+                  data-prospector-site-qr-image
+                  alt="QR code for the Chicago Metal Works & Fencing website"
+                  loading="lazy"
+                />
+                <div class="crm-resource-qr-copy">
+                  <strong>Main Website</strong>
+                  <p>Scan this QR to open Chicago Metal Works & Fencing.</p>
+                  <span class="crm-resource-url">https://www.chicagometalworksandfencing.com/</span>
+                </div>
+              </div>
+            </div>
+          </div>
           <button class="crm-secondary-button" type="button" data-prospector-logout>
             Sign out
           </button>
@@ -30,26 +71,59 @@
 
       <p class="crm-system-status" data-prospector-status hidden></p>
 
+      <section
+        class="crm-flyer-overlay"
+        data-prospector-flyer-overlay
+        aria-hidden="true"
+        hidden
+      >
+        <div
+          class="crm-flyer-dialog crm-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Chicago Metal Works prospector flyer"
+        >
+          <button
+            type="button"
+            class="crm-flyer-close-button"
+            data-prospector-flyer-close
+            aria-label="Close flyer"
+          >
+            ×
+          </button>
+          <div class="crm-flyer-stage">
+            <img
+              class="crm-flyer-image"
+              data-prospector-flyer-image
+              src="/metalworks-crm/assets/prospector-flyer-broken-railing.png"
+              alt="Chicago Metal Works & Fencing flyer for broken railings and fast metal work"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
+
       <main class="crm-prospector-layout">
         <section class="crm-panel">
           <div class="crm-panel-head">
             <div>
               <h2>New lead</h2>
               <p>
-                Everything entered here goes into the Chicago Metal Works CRM with
-                the prospector name and project photos attached.
+                Everything entered here lands in the Chicago Metal Works CRM
+                with the prospector name and project photos attached.
               </p>
             </div>
           </div>
 
           <form class="crm-prospector-form" data-prospector-form>
             <label>
-              <span>Customer name</span>
+              <span>Client name</span>
               <input
                 type="text"
                 name="fullName"
                 maxlength="120"
-                placeholder="Juan Rivera"
+                placeholder="Jordan Rivera"
                 autocomplete="name"
                 required
               />
@@ -68,12 +142,12 @@
             </label>
 
             <label>
-              <span>Customer email</span>
+              <span>Client email</span>
               <input
                 type="email"
                 name="email"
                 maxlength="160"
-                placeholder="customer@email.com"
+                placeholder="client@email.com"
                 autocomplete="email"
               />
             </label>
@@ -213,7 +287,7 @@
             </label>
 
             <label>
-              <span>Preferred language</span>
+              <span>Language</span>
               <select name="preferredLanguage">
                 <option>English</option>
                 <option>Spanish</option>
@@ -236,7 +310,7 @@
               <textarea
                 name="notes"
                 rows="5"
-                placeholder="What the customer needs, visible damage, rough measurements, and whether they asked for a call or estimate today."
+                placeholder="What the client needs, visible damage, rough measurements, and whether they asked for a call or quote today."
                 required
               ></textarea>
             </label>
@@ -246,7 +320,7 @@
               <textarea
                 name="qualificationNotes"
                 rows="4"
-                placeholder="Why this lead is strong: owner present, real budget, urgency, strong photos, and so on."
+                placeholder="Why this lead is worth working: owner present, realistic budget, urgency, strong photos, and so on."
                 required
               ></textarea>
             </label>
@@ -255,7 +329,7 @@
               <div class="crm-upload-panel-head">
                 <div>
                   <strong>Project photos</strong>
-                  <p>You can take photos or upload several from the gallery. Maximum 8.</p>
+                  <p>Take photos on site or upload several from the gallery. Maximum 8.</p>
                 </div>
                 <div class="crm-photo-actions">
                   <button
@@ -293,15 +367,15 @@
               />
 
               <p class="crm-photo-help">
-                Photos are saved inside the same CRM lead so the sales team can see
-                them right away.
+                Photos are saved inside the same CRM lead so the sales team can
+                review them immediately.
               </p>
               <div class="crm-capture-photo-preview" data-capture-photo-preview></div>
             </div>
 
             <div class="crm-form-actions">
               <button type="submit" class="crm-primary-button" data-prospector-submit>
-                Save premium lead
+                Save lead
               </button>
               <p class="crm-form-result" data-prospector-feedback></p>
             </div>
@@ -312,8 +386,22 @@
           <section class="crm-panel">
             <div class="crm-panel-head">
               <div>
+                <h2>Offline backup</h2>
+                <p>If signal drops, pending leads stay saved on this device until they sync to the CRM.</p>
+              </div>
+              <button class="crm-secondary-button" type="button" data-prospector-sync-now>
+                Sync now
+              </button>
+            </div>
+            <div class="crm-micro-list" data-prospector-offline-summary></div>
+            <div class="crm-mini-lead-list" data-prospector-offline-list></div>
+          </section>
+
+          <section class="crm-panel">
+            <div class="crm-panel-head">
+              <div>
                 <h2>Your production</h2>
-                <p>Summary of the leads submitted from your account.</p>
+                <p>Lead activity summary for this prospector account.</p>
               </div>
               <p data-prospector-last-sync></p>
             </div>
@@ -334,13 +422,13 @@
             <div class="crm-panel-head">
               <div>
                 <h2>Capture tips</h2>
-                <p>The better the lead comes in, the easier it is to sell.</p>
+                <p>The cleaner the intake, the easier it is for sales to close.</p>
               </div>
             </div>
             <div class="crm-note-list">
-              <p>Confirm whether the customer is the owner or decision maker before you leave.</p>
-              <p>Take close-up photos and one wide photo so the full context is clear.</p>
-              <p>Add a short note covering urgency, budget, and the best time to call.</p>
+              <p>Confirm whether the person is the owner or a decision maker before you leave.</p>
+              <p>Capture at least one close-up and one wide shot so the team sees the full context.</p>
+              <p>Leave a short note covering urgency, budget, and the best callback window.</p>
             </div>
           </section>
         </aside>

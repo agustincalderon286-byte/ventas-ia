@@ -1,7 +1,30 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const PROSPECTOR_DRAFT_STORAGE_KEY = "cmwf_prospector_draft_v1";
+const PROSPECTOR_AUTH_STORAGE_KEY = "cmwf_prospector_auth_v1";
+const PROSPECTOR_DASHBOARD_STORAGE_KEY = "cmwf_prospector_dashboard_v1";
+const PROSPECTOR_QUEUE_DB_NAME = "cmwf_prospector_queue_v1";
+const PROSPECTOR_QUEUE_STORE_NAME = "leadQueue";
+const PROSPECTOR_QUEUE_DB_VERSION = 1;
+const PROSPECTOR_SERVICE_WORKER_PATH = "/metalworks-crm/prospector-sw.js";
+const PROSPECTOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const PROSPECTOR_FLYER_PATH = "/metalworks-crm/assets/prospector-flyer-broken-railing.png";
+const PROSPECTOR_SHELL_CACHE_URLS = [
+  "/metalworks-crm/prospector/",
+  "/metalworks-crm/prospector/login/",
+  "/metalworks-crm/styles.css",
+  "/metalworks-crm/prospector-app.js",
+  "/metalworks-crm/prospector-login.js",
+  "/metalworks-crm/prospector.webmanifest",
+  "/metalworks-crm/prospector-icon.svg",
+  PROSPECTOR_FLYER_PATH,
+];
 const MAX_LEAD_PHOTOS = 8;
+const MAX_LEAD_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_LEAD_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
+const PROSPECTOR_SHARE_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
+
+let queueDbPromise = null;
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -10,10 +33,22 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "I could not complete that action.");
+  const error = new Error(message || "I couldn't complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
+}
+
+function buildQrImageUrl(url = "") {
+  const safeUrl = String(url || "").trim();
+
+  if (!safeUrl) {
+    return "";
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+    safeUrl,
+  )}`;
 }
 
 function readStoredJson(key, fallback = null) {
@@ -39,6 +74,106 @@ function writeStoredJson(key, value) {
     }
 
     window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function readCachedProspectorAuth() {
+  const entry = readStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const email = normalizeEmailValue(entry.email || "");
+
+  if (!email) {
+    return null;
+  }
+
+  return {
+    name: String(entry.name || "").trim(),
+    email,
+  };
+}
+
+function writeCachedProspectorAuth(auth = null) {
+  if (!auth?.email) {
+    writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+    return;
+  }
+
+  writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, {
+    name: String(auth.name || "").trim(),
+    email: normalizeEmailValue(auth.email || ""),
+    savedAt: Date.now(),
+  });
+}
+
+function readCachedDashboardEntry() {
+  const entry = readStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+  return entry && typeof entry === "object" ? entry : null;
+}
+
+function writeCachedDashboard(snapshot = null) {
+  if (!snapshot || typeof snapshot !== "object") {
+    writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+    return;
+  }
+
+  writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, {
+    snapshot,
+    savedAt: Date.now(),
+  });
+}
+
+function clearProspectorCachedState() {
+  writeStoredJson(PROSPECTOR_AUTH_STORAGE_KEY, null);
+  writeStoredJson(PROSPECTOR_DASHBOARD_STORAGE_KEY, null);
+}
+
+async function clearProspectorOfflineShellCache() {
+  if (!("caches" in window)) {
+    return;
+  }
+
+  try {
+    const cacheKeys = await window.caches.keys();
+    await Promise.all(
+      cacheKeys
+        .filter((key) => String(key || "").startsWith("cmwf-prospector-shell"))
+        .map((key) => window.caches.delete(key)),
+    );
+  } catch {}
+}
+
+async function requestProspectorShellCaching(urls = PROSPECTOR_SHELL_CACHE_URLS) {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    registration.active?.postMessage({
+      type: "CACHE_URLS",
+      urls,
+    });
+  } catch {}
+}
+
+async function registerProspectorServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register(
+      PROSPECTOR_SERVICE_WORKER_PATH,
+      {
+        scope: PROSPECTOR_SERVICE_WORKER_SCOPE,
+      },
+    );
+    registration.update().catch(() => {});
+    await requestProspectorShellCaching();
   } catch {}
 }
 
@@ -77,7 +212,7 @@ async function apiRequest(url, options = {}) {
           data.error ||
             (response.status === 401
               ? "You need to sign in."
-              : "I could not complete that action."),
+              : "I couldn't complete that action."),
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -100,11 +235,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("I could not complete that action.", status, retryable);
+      throw createApiError("I couldn't complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("I could not complete that action.");
+  throw createApiError("I couldn't complete that action.");
 }
 
 function escapeHtml(value = "") {
@@ -134,11 +269,134 @@ function formatDate(value = "") {
   });
 }
 
+function normalizeEmailValue(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function supportsQueueStorage() {
+  return typeof window !== "undefined" && "indexedDB" in window;
+}
+
+function createClientSubmissionId() {
+  if (window.crypto?.randomUUID) {
+    return `prospector_${window.crypto.randomUUID()}`;
+  }
+
+  if (window.crypto?.getRandomValues) {
+    const bytes = window.crypto.getRandomValues(new Uint32Array(2));
+    return `prospector_${Date.now().toString(36)}_${Array.from(bytes)
+      .map((item) => item.toString(36))
+      .join("")}`;
+  }
+
+  return `prospector_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function estimateDataUrlBytes(dataUrl = "") {
+  const match = String(dataUrl || "").match(/^data:[^;]+;base64,([A-Za-z0-9+/=\s]+)$/i);
+
+  if (!match?.[1]) {
+    return 0;
+  }
+
+  const base64 = match[1].replace(/\s+/g, "");
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+}
+
+function openQueueDb() {
+  if (!supportsQueueStorage()) {
+    return Promise.reject(new Error("This device does not support local backup."));
+  }
+
+  if (!queueDbPromise) {
+    queueDbPromise = new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(
+        PROSPECTOR_QUEUE_DB_NAME,
+        PROSPECTOR_QUEUE_DB_VERSION,
+      );
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+
+        if (!db.objectStoreNames.contains(PROSPECTOR_QUEUE_STORE_NAME)) {
+          db.createObjectStore(PROSPECTOR_QUEUE_STORE_NAME, {
+            keyPath: "localId",
+          });
+        }
+      };
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("I couldn't open local backup."));
+    });
+  }
+
+  return queueDbPromise;
+}
+
+async function listQueuedLeadsFromDb() {
+  const db = await openQueueDb();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(PROSPECTOR_QUEUE_STORE_NAME, "readonly");
+    const store = transaction.objectStore(PROSPECTOR_QUEUE_STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+    request.onerror = () => reject(request.error || new Error("I couldn't read local backup."));
+  });
+}
+
+async function putQueuedLeadInDb(item) {
+  const db = await openQueueDb();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(PROSPECTOR_QUEUE_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(PROSPECTOR_QUEUE_STORE_NAME);
+    const request = store.put(item);
+
+    request.onsuccess = () => resolve(item);
+    request.onerror = () => reject(request.error || new Error("I couldn't save the lead locally."));
+  });
+}
+
+async function deleteQueuedLeadFromDb(localId = "") {
+  const db = await openQueueDb();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(PROSPECTOR_QUEUE_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(PROSPECTOR_QUEUE_STORE_NAME);
+    const request = store.delete(localId);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error("I couldn't clear the synced lead."));
+  });
+}
+
+function sortQueuedLeadsForRender(leads = []) {
+  return [...leads].sort((left, right) => {
+    const leftTime = Date.parse(left?.updatedAt || left?.createdAt || 0) || 0;
+    const rightTime = Date.parse(right?.updatedAt || right?.createdAt || 0) || 0;
+    return rightTime - leftTime;
+  });
+}
+
+function sortQueuedLeadsForSync(leads = []) {
+  return [...leads].sort((left, right) => {
+    const leftTime = Date.parse(left?.createdAt || left?.updatedAt || 0) || 0;
+    const rightTime = Date.parse(right?.createdAt || right?.updatedAt || 0) || 0;
+    return leftTime - rightTime;
+  });
+}
+
 const state = {
   auth: null,
   dashboard: null,
   photos: [],
   submitting: false,
+  queue: [],
+  queueReady: false,
+  queueSyncInFlight: false,
 };
 
 const form = document.querySelector("[data-prospector-form]");
@@ -149,6 +407,13 @@ const summaryWrap = document.querySelector("[data-prospector-summary]");
 const recentLeadsWrap = document.querySelector("[data-prospector-recent-leads]");
 const lastSyncNode = document.querySelector("[data-prospector-last-sync]");
 const refreshButton = document.querySelector("[data-prospector-refresh]");
+const flyerOpenButton = document.querySelector("[data-prospector-flyer-open]");
+const flyerOverlay = document.querySelector("[data-prospector-flyer-overlay]");
+const flyerImage = document.querySelector("[data-prospector-flyer-image]");
+const flyerCloseButton = document.querySelector("[data-prospector-flyer-close]");
+const websiteQrToggleButton = document.querySelector("[data-prospector-site-qr-toggle]");
+const websiteQrPanel = document.querySelector("[data-prospector-site-qr-panel]");
+const websiteQrImage = document.querySelector("[data-prospector-site-qr-image]");
 const logoutButton = document.querySelector("[data-prospector-logout]");
 const submitButton = document.querySelector("[data-prospector-submit]");
 const cameraInput = document.querySelector("[data-capture-photo-input]");
@@ -156,6 +421,10 @@ const galleryInput = document.querySelector("[data-gallery-photo-input]");
 const openCameraButton = document.querySelector("[data-open-camera-input]");
 const openGalleryButton = document.querySelector("[data-open-gallery-input]");
 const photoPreview = document.querySelector("[data-capture-photo-preview]");
+const offlineSummaryWrap = document.querySelector("[data-prospector-offline-summary]");
+const offlineListWrap = document.querySelector("[data-prospector-offline-list]");
+const syncNowButton = document.querySelector("[data-prospector-sync-now]");
+let lastFlyerTrigger = null;
 
 const DRAFT_FIELDS = [
   "fullName",
@@ -204,7 +473,7 @@ function setSubmitting(isSubmitting) {
     submitButton.disabled = state.submitting;
     submitButton.textContent = state.submitting
       ? "Saving..."
-      : "Save premium lead";
+      : "Save lead";
   }
 }
 
@@ -214,11 +483,77 @@ function setUserChip(auth = null) {
   }
 
   if (!auth?.email) {
-    userChip.textContent = "No session";
+    userChip.textContent = navigator.onLine ? "No session" : "Offline mode";
     return;
   }
 
   userChip.textContent = `${auth.name || "Prospector"} · ${auth.email}`;
+}
+
+function getProspectorFlyerUrl() {
+  try {
+    return new URL(PROSPECTOR_FLYER_PATH, window.location.origin).toString();
+  } catch {
+    return PROSPECTOR_FLYER_PATH;
+  }
+}
+
+function closeWebsiteQrPanel() {
+  if (!websiteQrPanel || !websiteQrToggleButton) {
+    return;
+  }
+
+  websiteQrPanel.hidden = true;
+  websiteQrToggleButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleWebsiteQrPanel() {
+  if (!websiteQrPanel || !websiteQrToggleButton) {
+    return;
+  }
+
+  const shouldOpen = websiteQrPanel.hidden;
+
+  if (!shouldOpen) {
+    closeWebsiteQrPanel();
+    return;
+  }
+
+  websiteQrPanel.hidden = false;
+  websiteQrToggleButton.setAttribute("aria-expanded", "true");
+}
+
+function closeFlyerOverlay() {
+  if (!flyerOverlay) {
+    return;
+  }
+
+  flyerOverlay.hidden = true;
+  flyerOverlay.setAttribute("aria-hidden", "true");
+  delete document.body.dataset.prospectorFlyerOpen;
+
+  if (lastFlyerTrigger instanceof HTMLElement) {
+    lastFlyerTrigger.focus({ preventScroll: true });
+  }
+}
+
+function openFlyerOverlay(trigger = null) {
+  if (!flyerOverlay) {
+    return;
+  }
+
+  if (trigger instanceof HTMLElement) {
+    lastFlyerTrigger = trigger;
+  }
+
+  closeWebsiteQrPanel();
+  flyerOverlay.hidden = false;
+  flyerOverlay.setAttribute("aria-hidden", "false");
+  document.body.dataset.prospectorFlyerOpen = "true";
+
+  if (flyerCloseButton) {
+    requestAnimationFrame(() => flyerCloseButton.focus({ preventScroll: true }));
+  }
 }
 
 function renderSummary(summary = {}) {
@@ -240,17 +575,17 @@ function renderSummary(summary = {}) {
     {
       label: "Contacted",
       value: Number(summary.contactedLeads || 0),
-      note: "Sales has reached out",
+      note: "Sales already reached out",
     },
     {
       label: "Quoted",
       value: Number(summary.quotedLeads || 0),
-      note: "Quote already sent",
+      note: "Pricing already sent",
     },
     {
       label: "Won",
       value: Number(summary.wonLeads || 0),
-      note: "Jobs won",
+      note: "Closed jobs",
     },
   ];
 
@@ -291,7 +626,7 @@ function renderRecentLeads(leads = []) {
             <div>
               <h3>${escapeHtml(lead.fullName || "Unnamed lead")}</h3>
               <div class="crm-lead-card-meta">
-                <span>${escapeHtml(lead.projectType || "No service selected")}</span>
+                <span>${escapeHtml(lead.projectType || "No service")}</span>
                 <span>${escapeHtml(lead.addressLine || lead.location || "No address")}</span>
                 <span>${escapeHtml(formatDate(lead.createdAt) || "No date")}</span>
               </div>
@@ -401,7 +736,7 @@ function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("I could not read one of the photos."));
+    reader.onerror = () => reject(new Error("I couldn't read one of the photos."));
     reader.readAsDataURL(file);
   });
 }
@@ -410,7 +745,7 @@ function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("I could not process one of the photos."));
+    image.onerror = () => reject(new Error("I couldn't process one of the photos."));
     image.src = dataUrl;
   });
 }
@@ -478,7 +813,7 @@ function renderCapturePhotoPreview() {
   if (!Array.isArray(state.photos) || !state.photos.length) {
     photoPreview.innerHTML = `
       <div class="crm-prospector-empty">
-        Add project photos so the sales team has real visual context.
+        Add project photos so sales has real visual context.
       </div>
     `;
     return;
@@ -519,7 +854,7 @@ async function handlePhotoSelection(fileList) {
     state.photos = nextPhotos;
     renderCapturePhotoPreview();
   } catch (error) {
-    setFeedback(error.message || "I could not prepare those photos.", "error");
+    setFeedback(error.message || "I couldn't prepare those photos.", "error");
   } finally {
     if (cameraInput) {
       cameraInput.value = "";
@@ -531,7 +866,7 @@ async function handlePhotoSelection(fileList) {
   }
 }
 
-function buildPayload() {
+function buildPayload(clientSubmissionId = "") {
   if (!form) {
     return {};
   }
@@ -540,6 +875,7 @@ function buildPayload() {
   const notes = String(formData.get("notes") || "").trim();
 
   return {
+    clientSubmissionId: clientSubmissionId || createClientSubmissionId(),
     fullName: String(formData.get("fullName") || "").trim(),
     phone: String(formData.get("phone") || "").trim(),
     email: String(formData.get("email") || "").trim(),
@@ -567,22 +903,605 @@ function buildPayload() {
   };
 }
 
+function validatePayload(payload = {}) {
+  if (
+    !payload.fullName ||
+    !payload.phone ||
+    !payload.projectType ||
+    !payload.addressLine ||
+    !payload.zipCode ||
+    !payload.timeline ||
+    !payload.ownershipStatus ||
+    !payload.details
+  ) {
+    return "Fill in client name, phone, service, address, ZIP, timeline, owner status, and notes.";
+  }
+
+  if (!payload.qualificationTier || !payload.qualificationNotes) {
+    return "Add the lead tier and a short qualification note.";
+  }
+
+  const photos = Array.isArray(payload.photos) ? payload.photos : [];
+
+  if (photos.length > MAX_LEAD_PHOTOS) {
+    return "You can upload up to 8 photos per lead.";
+  }
+
+  const totalSizeBytes = photos.reduce((sum, item) => sum + estimateDataUrlBytes(item?.dataUrl || ""), 0);
+
+  if (
+    photos.some((item) => estimateDataUrlBytes(item?.dataUrl || "") > MAX_LEAD_PHOTO_BYTES)
+  ) {
+    return "Each photo must be 2 MB or less after compression.";
+  }
+
+  if (totalSizeBytes > MAX_LEAD_PHOTO_TOTAL_BYTES) {
+    return "The total photo payload is too large. Compress them or send fewer files.";
+  }
+
+  return "";
+}
+
+function setQueueItems(items = []) {
+  state.queue = sortQueuedLeadsForRender(items);
+  renderOfflineQueue();
+}
+
+function upsertQueueStateItem(item) {
+  const remaining = state.queue.filter((entry) => entry.localId !== item.localId);
+  setQueueItems([...remaining, item]);
+}
+
+function removeQueueStateItem(localId = "") {
+  setQueueItems(state.queue.filter((item) => item.localId !== localId));
+}
+
+async function refreshQueueState() {
+  if (!supportsQueueStorage()) {
+    state.queueReady = false;
+    state.queue = [];
+    renderOfflineQueue();
+    return [];
+  }
+
+  try {
+    const queuedLeads = await listQueuedLeadsFromDb();
+    state.queueReady = true;
+    setQueueItems(queuedLeads);
+    return queuedLeads;
+  } catch (error) {
+    state.queueReady = false;
+    state.queue = [];
+    renderOfflineQueue();
+    return [];
+  }
+}
+
+function buildQueueItem(payload = {}) {
+  const now = new Date().toISOString();
+  const clientSubmissionId = String(payload.clientSubmissionId || createClientSubmissionId()).trim();
+
+  return {
+    localId: `local_${clientSubmissionId}`,
+    clientSubmissionId,
+    prospectorEmail: normalizeEmailValue(state.auth?.email || ""),
+    prospectorName: String(state.auth?.name || "").trim(),
+    fullName: payload.fullName || "",
+    projectType: payload.projectType || "",
+    addressLine: payload.addressLine || "",
+    zipCode: payload.zipCode || "",
+    photoCount: Array.isArray(payload.photos) ? payload.photos.length : 0,
+    payload: {
+      ...payload,
+      clientSubmissionId,
+    },
+    status: "pending",
+    blockedReason: "",
+    lastError: "",
+    createdAt: now,
+    updatedAt: now,
+    lastAttemptAt: "",
+  };
+}
+
+async function queueLeadPayload(payload = {}) {
+  const item = buildQueueItem(payload);
+  await putQueuedLeadInDb(item);
+  upsertQueueStateItem(item);
+  return item;
+}
+
+function getQueueStatusMeta(item = {}) {
+  if (item.status === "syncing") {
+    return {
+      badgeStatus: "syncing",
+      label: "Syncing",
+      note: "Sending to the CRM right now.",
+    };
+  }
+
+  if (item.status === "blocked" && item.blockedReason === "login") {
+    return {
+      badgeStatus: "blocked",
+      label: "Login",
+      note: item.lastError || "Sign in again to send it.",
+    };
+  }
+
+  if (item.status === "blocked") {
+    return {
+      badgeStatus: "blocked",
+      label: "Review",
+      note: item.lastError || "This lead needs review before it can sync.",
+    };
+  }
+
+  return {
+    badgeStatus: "pending",
+    label: "Pending",
+    note: item.lastError || "Saved on this device and ready to send.",
+  };
+}
+
+function canSyncQueuedLead(item = {}) {
+  return item.status !== "blocked" || item.blockedReason === "login";
+}
+
+function renderOfflineQueue() {
+  if (!offlineSummaryWrap || !offlineListWrap) {
+    return;
+  }
+
+  if (!supportsQueueStorage()) {
+    offlineSummaryWrap.innerHTML = `
+      <span class="crm-chip">No local backup</span>
+      <span class="crm-chip">Try another browser</span>
+    `;
+    offlineListWrap.innerHTML = `
+      <div class="crm-prospector-empty">
+        This device does not support the offline queue. If signal drops, try not to close this page until the lead has been sent.
+      </div>
+    `;
+
+    if (syncNowButton) {
+      syncNowButton.disabled = true;
+    }
+
+    return;
+  }
+
+  if (!state.queueReady) {
+    offlineSummaryWrap.innerHTML = `
+      <span class="crm-chip">Opening local backup...</span>
+    `;
+    offlineListWrap.innerHTML = `
+      <div class="crm-prospector-empty">
+        Preparing local backup on this device.
+      </div>
+    `;
+
+    if (syncNowButton) {
+      syncNowButton.disabled = true;
+    }
+
+    return;
+  }
+
+  const queuedLeads = Array.isArray(state.queue) ? state.queue : [];
+  const syncableCount = queuedLeads.filter(canSyncQueuedLead).length;
+  const blockedCount = queuedLeads.filter((item) => item.status === "blocked").length;
+  const totalPhotos = queuedLeads.reduce((sum, item) => sum + Number(item.photoCount || 0), 0);
+
+  offlineSummaryWrap.innerHTML = [
+    `<span class="crm-chip">${queuedLeads.length} pending</span>`,
+    `<span class="crm-chip">${totalPhotos} photo${totalPhotos === 1 ? "" : "s"}</span>`,
+    `<span class="crm-chip">${navigator.onLine ? "Online" : "Offline"}</span>`,
+    blockedCount ? `<span class="crm-chip">${blockedCount} needs review</span>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  if (syncNowButton) {
+    syncNowButton.disabled = state.queueSyncInFlight || !syncableCount || !navigator.onLine;
+    syncNowButton.textContent = state.queueSyncInFlight ? "Syncing..." : "Sync now";
+  }
+
+  if (!queuedLeads.length) {
+    offlineListWrap.innerHTML = `
+      <div class="crm-prospector-empty">
+        Anything saved with poor signal will appear here until the CRM receives it.
+      </div>
+    `;
+    return;
+  }
+
+  offlineListWrap.innerHTML = queuedLeads
+    .map((item) => {
+      const meta = getQueueStatusMeta(item);
+      const ownerLabel = item.prospectorEmail
+        ? `Prospector ${escapeHtml(item.prospectorEmail)}`
+        : "Device prospector";
+
+      return `
+        <article class="crm-mini-lead-card">
+          <div class="crm-lead-card-head">
+            <div>
+              <h3>${escapeHtml(item.fullName || "Pending lead")}</h3>
+              <div class="crm-lead-card-meta">
+                <span>${escapeHtml(item.projectType || "No service")}</span>
+                <span>${escapeHtml(item.addressLine || "No address")}</span>
+                <span>${escapeHtml(formatDate(item.createdAt) || "No date")}</span>
+              </div>
+            </div>
+            <span class="crm-status-badge" data-status="${escapeHtml(meta.badgeStatus)}">
+              ${escapeHtml(meta.label)}
+            </span>
+          </div>
+          <div class="crm-micro-list">
+            ${item.zipCode ? `<span class="crm-chip">${escapeHtml(item.zipCode)}</span>` : ""}
+            ${item.photoCount ? `<span class="crm-chip">${escapeHtml(String(item.photoCount))} photos</span>` : ""}
+            <span class="crm-chip">${ownerLabel}</span>
+          </div>
+          <p class="crm-queue-error">${escapeHtml(meta.note)}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 async function loadDashboard() {
   const snapshot = await apiRequest("/api/metalworks-crm/prospector/dashboard");
 
   state.auth = snapshot?.prospector || state.auth;
+  writeCachedProspectorAuth(state.auth);
   setUserChip(state.auth);
   renderDashboard(snapshot);
+  writeCachedDashboard(snapshot);
+  requestProspectorShellCaching();
   return snapshot;
+}
+
+async function markQueueItem(item, changes = {}) {
+  const nextItem = {
+    ...item,
+    ...changes,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putQueuedLeadInDb(nextItem);
+  upsertQueueStateItem(nextItem);
+  return nextItem;
+}
+
+function prioritizeQueuedLead(items = [], localId = "") {
+  if (!localId) {
+    return items;
+  }
+
+  const target = items.find((item) => item.localId === localId);
+
+  if (!target) {
+    return items;
+  }
+
+  return [target, ...items.filter((item) => item.localId !== localId)];
+}
+
+async function syncQueuedLeads(options = {}) {
+  if (!supportsQueueStorage() || state.queueSyncInFlight) {
+    return {
+      syncedIds: [],
+      resultsById: {},
+      blockedByLogin: false,
+    };
+  }
+
+  const preferredLocalId = String(options.preferredLocalId || "").trim();
+  const announce = Boolean(options.announce);
+  const refreshDashboardAfterSync = Boolean(options.refreshDashboard);
+  const resultsById = {};
+  const syncedIds = [];
+  let blockedByLogin = false;
+  let latestDashboard = null;
+
+  const queuedLeads = prioritizeQueuedLead(
+    sortQueuedLeadsForSync(state.queue.filter(canSyncQueuedLead)),
+    preferredLocalId,
+  );
+
+  if (!queuedLeads.length) {
+    renderOfflineQueue();
+    return {
+      syncedIds,
+      resultsById,
+      blockedByLogin,
+    };
+  }
+
+  state.queueSyncInFlight = true;
+  renderOfflineQueue();
+
+  if (announce) {
+    setStatus("Signal is back. Syncing pending leads now.", "muted");
+  }
+
+  try {
+    for (const item of queuedLeads) {
+      const currentUserEmail = normalizeEmailValue(state.auth?.email || "");
+
+      if (
+        item.prospectorEmail &&
+        currentUserEmail &&
+        item.prospectorEmail !== currentUserEmail
+      ) {
+        await markQueueItem(item, {
+          status: "blocked",
+          blockedReason: "login",
+          lastError: `This lead was saved by ${item.prospectorEmail}. Sign in with that account to sync it.`,
+          lastAttemptAt: new Date().toISOString(),
+        });
+        blockedByLogin = true;
+        continue;
+      }
+
+      const syncingItem = await markQueueItem(item, {
+        status: "syncing",
+        blockedReason: "",
+        lastError: "",
+        lastAttemptAt: new Date().toISOString(),
+      });
+
+      try {
+        const result = await apiRequest("/api/metalworks-crm/prospector/leads", {
+          method: "POST",
+          body: syncingItem.payload,
+        });
+
+        resultsById[item.localId] = result;
+        syncedIds.push(item.localId);
+
+        if (result?.dashboard) {
+          latestDashboard = result.dashboard;
+          renderDashboard(result.dashboard);
+        }
+
+        await deleteQueuedLeadFromDb(item.localId);
+        removeQueueStateItem(item.localId);
+      } catch (error) {
+        const safeMessage = error?.message || "I couldn't sync this lead yet.";
+
+        if (Number(error?.status || 0) === 401) {
+          await markQueueItem(item, {
+            status: "blocked",
+            blockedReason: "login",
+            lastError: "Your session expired. Sign in again to send this lead.",
+            lastAttemptAt: new Date().toISOString(),
+          });
+          blockedByLogin = true;
+          continue;
+        }
+
+        if (Number(error?.status || 0) >= 400 && Number(error?.status || 0) < 500) {
+          await markQueueItem(item, {
+            status: "blocked",
+            blockedReason: "validation",
+            lastError: safeMessage,
+            lastAttemptAt: new Date().toISOString(),
+          });
+          continue;
+        }
+
+        await markQueueItem(item, {
+          status: "pending",
+          blockedReason: "",
+          lastError: safeMessage,
+          lastAttemptAt: new Date().toISOString(),
+        });
+      }
+    }
+  } finally {
+    state.queueSyncInFlight = false;
+    renderOfflineQueue();
+  }
+
+  if (refreshDashboardAfterSync && latestDashboard) {
+    renderDashboard(latestDashboard);
+  }
+
+  return {
+    syncedIds,
+    resultsById,
+    blockedByLogin,
+  };
+}
+
+function buildQueuedLeadFeedback(result = null) {
+  if (!result) {
+    return {
+      message: "Lead saved on this device. It will be sent to the CRM when signal returns.",
+      tone: "warning",
+    };
+  }
+
+  return {
+    message: result.duplicate
+      ? "This lead already existed and was updated in the CRM."
+      : result.notified
+        ? "Lead saved and the team was alerted."
+        : "Lead saved directly in the CRM.",
+    tone: "success",
+  };
+}
+
+function updateConnectivityStatus() {
+  if (!navigator.onLine) {
+    const pendingCount = Array.isArray(state.queue) ? state.queue.length : 0;
+    const pendingText = pendingCount
+      ? ` There ${pendingCount === 1 ? "is" : "are"} already ${pendingCount} lead${pendingCount === 1 ? "" : "s"} saved on this device.`
+      : "";
+    setStatus(
+      `Offline. You can keep capturing leads and local backup will send everything when internet returns.${pendingText}`,
+      "warning",
+    );
+    return;
+  }
+
+  if (!state.queue.length) {
+    return;
+  }
+
+  setStatus(
+    `Back online. ${state.queue.length} pending lead${state.queue.length === 1 ? "" : "s"} still need syncing.`,
+    "muted",
+  );
+}
+
+function restoreCachedDashboardSnapshot() {
+  const entry = readCachedDashboardEntry();
+  const snapshot = entry?.snapshot;
+
+  if (!snapshot || typeof snapshot !== "object") {
+    return false;
+  }
+
+  renderDashboard(snapshot);
+
+  if (lastSyncNode) {
+    lastSyncNode.textContent = entry?.savedAt
+      ? `Last saved panel ${formatDate(entry.savedAt)}`
+      : "Last panel saved on this device";
+  }
+
+  return true;
+}
+
+async function handleQueuedSubmit() {
+  const payload = buildPayload();
+  const validationMessage = validatePayload(payload);
+
+  if (validationMessage) {
+    setFeedback(validationMessage, "error");
+    return;
+  }
+
+  let queuedItem = null;
+
+  try {
+    queuedItem = await queueLeadPayload(payload);
+  } catch (error) {
+    if (!navigator.onLine) {
+      setFeedback(
+        "I couldn't save the local backup on this device. You need signal or a compatible browser.",
+        "error",
+      );
+      setStatus(
+        "Local backup failed on this device. Use another browser or recover signal before closing the page.",
+        "error",
+      );
+      return;
+    }
+
+    let directResult = null;
+
+    try {
+      directResult = await apiRequest("/api/metalworks-crm/prospector/leads", {
+        method: "POST",
+        body: payload,
+      });
+    } catch (directError) {
+      directError.leadQueuedLocally = false;
+      throw directError;
+    }
+
+    renderDashboard(directResult.dashboard || null);
+    resetFormAfterSubmit();
+    const feedbackState = buildQueuedLeadFeedback(directResult);
+    setFeedback(feedbackState.message, feedbackState.tone);
+    setStatus("The lead is already available for the sales team.", "success");
+    return;
+  }
+
+  resetFormAfterSubmit();
+
+  if (!navigator.onLine) {
+    setFeedback(
+      "Lead saved on this device. It will be sent to the CRM when signal returns.",
+      "warning",
+    );
+    updateConnectivityStatus();
+    return;
+  }
+
+  setFeedback("Lead saved locally. Trying to send it to the CRM...", "muted");
+
+  const syncResult = await syncQueuedLeads({
+    preferredLocalId: queuedItem.localId,
+    refreshDashboard: true,
+  });
+  const leadResult = syncResult.resultsById[queuedItem.localId] || null;
+  const queuedState = state.queue.find((item) => item.localId === queuedItem.localId) || null;
+
+  if (leadResult) {
+    const feedbackState = buildQueuedLeadFeedback(leadResult);
+    setFeedback(feedbackState.message, feedbackState.tone);
+    setStatus("The lead is already available for the sales team.", "success");
+    return;
+  }
+
+  if (syncResult.blockedByLogin) {
+    setFeedback(
+      "Lead saved on this device. Sign in again to send it to the CRM.",
+      "warning",
+    );
+    setStatus(
+      "Your lead is protected on this device, but it needs a fresh sign-in before it can sync.",
+      "warning",
+    );
+    return;
+  }
+
+  if (queuedState?.status === "blocked" && queuedState.blockedReason === "validation") {
+    setFeedback(
+      queuedState.lastError || "Lead saved locally, but the data needs review before it can sync.",
+      "error",
+    );
+    setStatus(
+      "The lead is saved on this device, but it needs review before it can be sent to the CRM.",
+      "warning",
+    );
+    return;
+  }
+
+  setFeedback(
+    "Lead saved on this device. It will be sent to the CRM as soon as the connection is stable again.",
+    "warning",
+  );
+  setStatus(
+    "Local backup is ready. The portal will retry syncing automatically.",
+    "warning",
+  );
 }
 
 async function init() {
   renderCapturePhotoPreview();
+  const cachedAuth = readCachedProspectorAuth();
+  const restoredCachedDashboard = restoreCachedDashboardSnapshot();
+
+  if (cachedAuth) {
+    state.auth = cachedAuth;
+    setUserChip(state.auth);
+  }
+
+  registerProspectorServiceWorker();
+  restoreDraft();
+  await refreshQueueState();
+  updateConnectivityStatus();
 
   try {
     const me = await apiRequest("/api/metalworks-crm/prospector/me");
 
     if (!me.authenticated) {
+      clearProspectorCachedState();
       window.location.href = "/metalworks-crm/prospector/login/";
       return;
     }
@@ -591,21 +1510,57 @@ async function init() {
       name: me.name || "",
       email: me.email || "",
     };
+    writeCachedProspectorAuth(state.auth);
     setUserChip(state.auth);
-    restoreDraft();
+  } catch (error) {
+    if (Number(error?.status || 0) === 401) {
+      clearProspectorCachedState();
+      window.location.href = "/metalworks-crm/prospector/login/";
+      return;
+    }
+
+    setUserChip(state.auth);
+
+    if (!navigator.onLine && cachedAuth?.email) {
+      setStatus(
+        restoredCachedDashboard
+          ? "Offline. Opened the last portal saved on this device."
+          : "Offline. You can keep capturing leads and the CRM will update once internet returns.",
+        "warning",
+      );
+    } else {
+      updateConnectivityStatus();
+    }
+  }
+
+  try {
     await loadDashboard();
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
+      clearProspectorCachedState();
       window.location.href = "/metalworks-crm/prospector/login/";
       return;
     }
 
     setStatus(
-      TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-        ? "The portal is waking up. Wait a few seconds and try again."
-        : error.message,
-      TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "warning" : "error",
+      !navigator.onLine
+        ? restoredCachedDashboard
+          ? "Offline. Showing the last panel saved on this device."
+          : "Offline. You can keep capturing leads and everything will stay backed up locally."
+        : TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
+          ? "The portal is waking up. Give it a few seconds and try again."
+          : error.message,
+      !navigator.onLine || TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
+        ? "warning"
+        : "error",
     );
+  }
+
+  if (navigator.onLine && state.queue.some(canSyncQueuedLead)) {
+    await syncQueuedLeads({
+      announce: true,
+      refreshDashboard: true,
+    });
   }
 }
 
@@ -620,29 +1575,29 @@ if (form) {
     setFeedback("Saving lead...", "muted");
 
     try {
-      const result = await apiRequest("/api/metalworks-crm/prospector/leads", {
-        method: "POST",
-        body: buildPayload(),
-      });
-
-      renderDashboard(result.dashboard || null);
-      resetFormAfterSubmit();
-      setFeedback(
-        result.duplicate
-          ? "This lead already existed and was updated in the CRM."
-          : result.notified
-            ? "Lead saved and team alerted."
-            : "Lead saved directly to the CRM.",
-        "success",
-      );
-      setStatus("The lead is now available to the sales team.", "success");
+      await handleQueuedSubmit();
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
-        window.location.href = "/metalworks-crm/prospector/login/";
+        if (error?.leadQueuedLocally === false) {
+          setFeedback("Your session expired. Sign in again to save this lead.", "error");
+          setStatus(
+            "We couldn't send it to the CRM because the session expired before local backup could be saved.",
+            "error",
+          );
+        } else {
+          setFeedback(
+            "Lead saved locally, but your session expired. Sign in again to sync it.",
+            "warning",
+          );
+          setStatus(
+            "Your lead was not lost. Sign in again so the CRM can receive it.",
+            "warning",
+          );
+        }
         return;
       }
 
-      setFeedback(error.message, "error");
+      setFeedback(error.message || "I couldn't save this lead.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -651,13 +1606,22 @@ if (form) {
 
 if (refreshButton) {
   refreshButton.addEventListener("click", async () => {
+    if (!navigator.onLine) {
+      updateConnectivityStatus();
+      return;
+    }
+
     setStatus("Refreshing portal...", "muted");
 
     try {
       await loadDashboard();
-      setStatus("Dashboard updated.", "success");
+      await syncQueuedLeads({
+        refreshDashboard: true,
+      });
+      setStatus("Portal updated.", "success");
     } catch (error) {
       if (Number(error?.status || 0) === 401) {
+        clearProspectorCachedState();
         window.location.href = "/metalworks-crm/prospector/login/";
         return;
       }
@@ -667,8 +1631,54 @@ if (refreshButton) {
   });
 }
 
+if (websiteQrImage) {
+  websiteQrImage.src = buildQrImageUrl(PROSPECTOR_SHARE_WEBSITE_URL);
+}
+
+if (flyerImage) {
+  flyerImage.src = getProspectorFlyerUrl();
+}
+
+if (flyerOpenButton) {
+  flyerOpenButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openFlyerOverlay(event.currentTarget);
+  });
+}
+
+if (flyerCloseButton) {
+  flyerCloseButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeFlyerOverlay();
+  });
+}
+
+if (flyerOverlay) {
+  flyerOverlay.addEventListener("click", (event) => {
+    if (event.target === flyerOverlay) {
+      closeFlyerOverlay();
+    }
+  });
+}
+
+if (websiteQrToggleButton) {
+  websiteQrToggleButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleWebsiteQrPanel();
+  });
+}
+
+if (websiteQrPanel) {
+  websiteQrPanel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+}
+
 if (logoutButton) {
   logoutButton.addEventListener("click", async () => {
+    clearProspectorCachedState();
+    await clearProspectorOfflineShellCache();
+
     try {
       await apiRequest("/api/metalworks-crm/prospector/logout", {
         method: "POST",
@@ -676,6 +1686,35 @@ if (logoutButton) {
     } catch {}
 
     window.location.href = "/metalworks-crm/prospector/login/";
+  });
+}
+
+if (syncNowButton) {
+  syncNowButton.addEventListener("click", async () => {
+    if (!navigator.onLine) {
+      updateConnectivityStatus();
+      return;
+    }
+
+    try {
+      const result = await syncQueuedLeads({
+        announce: true,
+        refreshDashboard: true,
+      });
+
+      if (result.syncedIds.length) {
+        setStatus(
+          `Synced ${result.syncedIds.length} lead${result.syncedIds.length === 1 ? "" : "s"} to the CRM.`,
+          "success",
+        );
+      } else if (result.blockedByLogin) {
+        setStatus("There are leads saved locally, but a fresh sign-in is required before they can be sent.", "warning");
+      } else {
+        setStatus("There were no pending leads to sync.", "muted");
+      }
+    } catch (error) {
+      setStatus(error.message || "I couldn't sync the pending leads.", "error");
+    }
   });
 }
 
@@ -721,5 +1760,32 @@ if (photoPreview) {
     renderCapturePhotoPreview();
   });
 }
+
+window.addEventListener("online", async () => {
+  updateConnectivityStatus();
+  requestProspectorShellCaching();
+
+  if (state.queue.some(canSyncQueuedLead)) {
+    await syncQueuedLeads({
+      announce: true,
+      refreshDashboard: true,
+    });
+  }
+});
+
+window.addEventListener("offline", () => {
+  updateConnectivityStatus();
+});
+
+document.addEventListener("click", () => {
+  closeWebsiteQrPanel();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeFlyerOverlay();
+    closeWebsiteQrPanel();
+  }
+});
 
 init();

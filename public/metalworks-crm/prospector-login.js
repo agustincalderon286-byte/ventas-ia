@@ -1,6 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const PROSPECTOR_IDENTITY_STORAGE_KEY = "cmwf_prospector_identity_v1";
+const PROSPECTOR_AUTH_STORAGE_KEY = "cmwf_prospector_auth_v1";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -9,36 +9,10 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "I could not complete that action.");
+  const error = new Error(message || "I couldn't complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
-}
-
-function readStoredJson(key, fallback = null) {
-  try {
-    const raw = window.localStorage.getItem(key);
-
-    if (!raw) {
-      return fallback;
-    }
-
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStoredJson(key, value) {
-  try {
-    if (value == null) {
-      window.localStorage.removeItem(key);
-      return;
-    }
-
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
 }
 
 async function apiRequest(url, options = {}) {
@@ -55,10 +29,7 @@ async function apiRequest(url, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
-  const retryDelays =
-    config.method === "GET"
-      ? GET_RETRY_DELAYS_MS
-      : [];
+  const retryDelays = config.method === "GET" ? GET_RETRY_DELAYS_MS : [];
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
     try {
@@ -70,7 +41,7 @@ async function apiRequest(url, options = {}) {
 
       if (!response.ok) {
         throw createApiError(
-          data.error || "I could not complete that action.",
+          data.error || "I couldn't complete that action.",
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -93,11 +64,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("I could not complete that action.", status, retryable);
+      throw createApiError("I couldn't complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("I could not complete that action.");
+  throw createApiError("I couldn't complete that action.");
 }
 
 const loginForm = document.querySelector("[data-prospector-login-form]");
@@ -112,29 +83,25 @@ function setFeedback(message = "", tone = "") {
   feedback.dataset.tone = tone;
 }
 
-function hydrateStoredIdentity() {
-  if (!loginForm) {
-    return;
-  }
+function writeCachedProspectorAuth(auth = null) {
+  try {
+    if (!auth?.email) {
+      window.localStorage.removeItem(PROSPECTOR_AUTH_STORAGE_KEY);
+      return;
+    }
 
-  const stored = readStoredJson(PROSPECTOR_IDENTITY_STORAGE_KEY, null);
-
-  if (!stored?.name && !stored?.email) {
-    return;
-  }
-
-  if (loginForm.elements.name && stored.name) {
-    loginForm.elements.name.value = stored.name;
-  }
-
-  if (loginForm.elements.email && stored.email) {
-    loginForm.elements.email.value = stored.email;
-  }
+    window.localStorage.setItem(
+      PROSPECTOR_AUTH_STORAGE_KEY,
+      JSON.stringify({
+        name: String(auth.name || "").trim(),
+        email: String(auth.email || "").trim().toLowerCase(),
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {}
 }
 
 async function init() {
-  hydrateStoredIdentity();
-
   try {
     const me = await apiRequest("/api/metalworks-crm/prospector/me");
 
@@ -145,14 +112,14 @@ async function init() {
 
     if (!me.configured) {
       setFeedback(
-        "Configure METALWORKS_PROSPECTOR_PASSWORD on the backend before opening this portal.",
+        "Ask your admin to create your prospector account before signing in here.",
         "error",
       );
     }
   } catch (error) {
     setFeedback(
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0))
-        ? "The portal is waking up. Wait a few seconds and try again."
+        ? "The portal is waking up. Give it a few seconds and try again."
         : error.message,
       TRANSIENT_STATUS_CODES.has(Number(error?.status || 0)) ? "muted" : "error",
     );
@@ -166,7 +133,6 @@ if (loginForm) {
 
     const formData = new FormData(loginForm);
     const payload = {
-      name: String(formData.get("name") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       password: String(formData.get("password") || ""),
     };
@@ -176,11 +142,7 @@ if (loginForm) {
         method: "POST",
         body: payload,
       });
-
-      writeStoredJson(PROSPECTOR_IDENTITY_STORAGE_KEY, {
-        name: result.name || payload.name,
-        email: result.email || payload.email,
-      });
+      writeCachedProspectorAuth(result);
 
       window.location.href = "/metalworks-crm/prospector/";
     } catch (error) {

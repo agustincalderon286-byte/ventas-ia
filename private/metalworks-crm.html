@@ -3,10 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#17314d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CMW CRM" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Chicago Metal Works CRM</title>
+    <link rel="manifest" href="/metalworks-crm/crm.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/crm-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/crm-icon-180.png" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
   </head>
-  <body class="crm-app-page" data-crm-skin="intel-ops">
+  <body class="crm-app-page" data-crm-skin="executive-steel">
     <div class="crm-shell">
       <header class="crm-header">
         <div>
@@ -19,6 +27,15 @@
         <div class="crm-header-actions">
           <div class="crm-theme-badge" data-crm-theme-badge hidden></div>
           <div class="crm-user-chip" data-crm-user-chip></div>
+          <a class="crm-secondary-button crm-action-link" href="/metalworks-crm/operator/">
+            Operator
+          </a>
+          <button class="crm-secondary-button" type="button" data-crm-enable-push>
+            Enable Alerts
+          </button>
+          <button class="crm-secondary-button" type="button" data-crm-test-push>
+            Test Alert
+          </button>
           <button class="crm-secondary-button" type="button" data-crm-refresh>
             Recargar
           </button>
@@ -28,13 +45,175 @@
         </div>
       </header>
 
+      <p class="crm-form-result crm-push-feedback" data-crm-push-feedback></p>
+
       <p class="crm-system-status" data-crm-system-status hidden></p>
 
-      <section class="crm-summary-grid" data-crm-summary></section>
+      <section class="crm-mobile-shell" data-crm-mobile-shell>
+        <div class="crm-mobile-shell-copy">
+          <strong data-crm-mobile-title>Inbox</strong>
+          <p data-crm-mobile-copy>Open a lead and work it like a contact on your phone.</p>
+          <button
+            type="button"
+            class="crm-mobile-shell-link"
+            data-crm-mobile-secondary-button="more"
+          >
+            More Tools
+          </button>
+        </div>
+        <div class="crm-mobile-shell-tabs">
+          <button
+            type="button"
+            class="crm-tab-button is-active"
+            data-crm-mobile-pane-button="inbox"
+            aria-pressed="true"
+          >
+            Inbox
+          </button>
+          <button
+            type="button"
+            class="crm-tab-button"
+            data-crm-mobile-pane-button="workspace"
+            aria-pressed="false"
+          >
+            Workspace
+          </button>
+          <button
+            type="button"
+            class="crm-tab-button"
+            data-crm-mobile-pane-button="agenda"
+            aria-pressed="false"
+          >
+            Agenda
+          </button>
+        </div>
+      </section>
 
-      <section class="crm-toolbar">
+      <section class="crm-summary-grid" data-crm-summary data-crm-mobile-pane-target="more"></section>
+
+      <section class="crm-panel crm-agenda-panel" data-crm-agenda-panel data-crm-mobile-pane-target="agenda" hidden>
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Agenda</p>
+            <h2>Follow-Up Queue</h2>
+            <p>Callbacks, visits, and scheduled touches that already have a time on the calendar.</p>
+          </div>
+          <span class="crm-chip" data-crm-agenda-count>0 scheduled</span>
+        </div>
+        <div class="crm-agenda-list" data-crm-agenda-list></div>
+      </section>
+
+      <section class="crm-panel crm-resource-hub" data-crm-resource-hub data-crm-mobile-pane-target="more" hidden>
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Quick Links</p>
+            <h2>Resource Hub</h2>
+            <p>Todos tus links importantes del negocio en un solo lugar.</p>
+          </div>
+        </div>
+        <div class="crm-resource-grid" data-crm-resource-sections></div>
+        <p class="crm-form-result crm-resource-feedback" data-crm-resource-feedback hidden></p>
+      </section>
+
+      <section class="crm-panel crm-prospector-admin" data-crm-prospector-admin data-crm-mobile-pane-target="more">
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Field Team</p>
+            <h2>Prospector Accounts</h2>
+            <p>Create, pause, and reset field prospector access from one place.</p>
+          </div>
+          <div class="crm-micro-list" data-crm-prospector-summary></div>
+        </div>
+
+        <div class="crm-prospector-admin-grid">
+          <form class="crm-prospector-admin-form" data-crm-prospector-form>
+            <label>
+              <span>Prospector name</span>
+              <input
+                type="text"
+                name="name"
+                maxlength="120"
+                placeholder="Rigo Calderon"
+                autocomplete="name"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Email</span>
+              <input
+                type="email"
+                name="email"
+                maxlength="160"
+                placeholder="rigo@chicagometalworksandfencing.com"
+                autocomplete="email"
+                required
+              />
+            </label>
+
+            <label class="crm-field-full">
+              <span>Custom password (optional)</span>
+              <input
+                type="text"
+                name="password"
+                maxlength="120"
+                minlength="8"
+                placeholder="Leave blank to auto-generate one"
+                autocomplete="new-password"
+                spellcheck="false"
+              />
+            </label>
+
+            <div class="crm-form-actions crm-field-full">
+              <button type="submit" class="crm-primary-button" data-crm-prospector-save>
+                Create Prospector Account
+              </button>
+            </div>
+          </form>
+
+          <div class="crm-prospector-admin-side">
+            <section class="crm-upload-panel crm-prospector-credentials" data-crm-prospector-credentials hidden>
+              <div class="crm-upload-panel-head">
+                <div>
+                  <strong data-crm-prospector-credentials-title>New account ready</strong>
+                  <p>Copy these credentials and send them to the field rep.</p>
+                </div>
+              </div>
+              <div class="crm-note-list" data-crm-prospector-credentials-list></div>
+              <div class="crm-card-actions">
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-email>
+                  Copy Email
+                </button>
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-password>
+                  Copy Password
+                </button>
+                <button type="button" class="crm-card-action" data-crm-prospector-copy-login>
+                  Copy Login Link
+                </button>
+              </div>
+            </section>
+
+            <section class="crm-upload-panel">
+              <div class="crm-upload-panel-head">
+                <div>
+                  <strong>Field team workflow</strong>
+                  <p>Each prospector gets their own email and password. New leads still arrive tagged with the right rep.</p>
+                </div>
+              </div>
+              <p class="crm-photo-help">
+                Use this section to onboard new prospectors, pause access when needed, and reset passwords without sharing one team-wide password.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <div class="crm-prospector-user-list" data-crm-prospector-list></div>
+        <p class="crm-form-result" data-crm-prospector-feedback></p>
+      </section>
+
+      <section class="crm-toolbar" data-crm-mobile-pane-target="inbox">
         <label class="crm-search">
-          <span>Buscar</span>
+          <span data-crm-search-label>Buscar</span>
           <input
             type="search"
             placeholder="Nombre, telefono, servicio o direccion"
@@ -43,36 +222,146 @@
         </label>
 
         <label>
-          <span>Status</span>
+          <span data-crm-status-label>Status</span>
           <select data-crm-status-filter>
             <option value="">Todos</option>
           </select>
         </label>
 
         <label>
-          <span>Servicio</span>
+          <span data-crm-service-label>Servicio</span>
           <select data-crm-service-filter>
             <option value="">Todos</option>
+          </select>
+        </label>
+
+        <label data-crm-source-filter-wrap>
+          <span data-crm-source-label>Fuente</span>
+          <select data-crm-source-filter>
+            <option value="">Todas</option>
           </select>
         </label>
       </section>
 
       <main class="crm-main-grid">
-        <section class="crm-panel crm-leads-panel">
-          <div class="crm-panel-head">
-            <h2>Leads</h2>
-            <p data-crm-leads-count>0 leads</p>
+        <section class="crm-panel crm-leads-panel" data-crm-mobile-pane-target="inbox">
+          <div class="crm-panel-head crm-panel-head-stack">
+            <div>
+              <h2 data-crm-collection-title>Leads</h2>
+              <p data-crm-collection-count>0 leads</p>
+            </div>
+            <div class="crm-panel-head-actions">
+              <button type="button" class="crm-secondary-button" data-crm-new-lead-toggle>
+                New Lead
+              </button>
+              <div class="crm-view-toggle" data-crm-view-toggle>
+                <button
+                  type="button"
+                  class="crm-tab-button is-active"
+                  data-crm-view-button="leads"
+                  aria-pressed="true"
+                >
+                  Leads
+                </button>
+                <button
+                  type="button"
+                  class="crm-tab-button"
+                  data-crm-view-button="applicants"
+                  aria-pressed="false"
+                >
+                  Applicants
+                </button>
+              </div>
+            </div>
           </div>
+          <section class="crm-upload-panel crm-manual-lead-panel" data-crm-manual-lead-panel hidden>
+            <div class="crm-upload-panel-head">
+              <div>
+                <strong>Add lead manually</strong>
+                <p>Use this when a lead comes in by phone, personal text, or anywhere outside the website.</p>
+              </div>
+            </div>
+            <form class="crm-manual-lead-form" data-crm-manual-lead-form>
+              <label>
+                <span>Name</span>
+                <input type="text" name="fullName" maxlength="120" placeholder="Customer name" required />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input type="tel" name="phoneDisplay" maxlength="40" placeholder="773 555 1212" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" name="email" maxlength="160" placeholder="customer@email.com" />
+              </label>
+              <label>
+                <span>Service</span>
+                <input type="text" name="projectType" maxlength="120" placeholder="Gate repair, railing, awning..." />
+              </label>
+              <label>
+                <span>Location / ZIP</span>
+                <input type="text" name="location" maxlength="160" placeholder="Chicago, IL 60632" />
+              </label>
+              <label>
+                <span>Status</span>
+                <select name="status">
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="quoted">Quoted</option>
+                  <option value="booked">Booked</option>
+                </select>
+              </label>
+              <label class="crm-field-full">
+                <span>Project summary</span>
+                <textarea
+                  name="details"
+                  rows="4"
+                  placeholder="Quick notes from the call, text, or walk-in lead."
+                ></textarea>
+              </label>
+              <div class="crm-form-actions crm-field-full">
+                <button type="submit" class="crm-primary-button" data-crm-manual-lead-save>
+                  Create Lead
+                </button>
+                <button type="button" class="crm-secondary-button" data-crm-manual-lead-cancel>
+                  Cancel
+                </button>
+                <p class="crm-form-result" data-crm-manual-lead-feedback></p>
+              </div>
+            </form>
+          </section>
           <div class="crm-lead-list" data-crm-lead-list></div>
           <p class="crm-empty-state" data-crm-empty-state hidden>
             Aun no hay leads que coincidan con este filtro.
           </p>
+          <section class="crm-upload-panel crm-completed-jobs-panel" data-crm-completed-panel hidden>
+            <div class="crm-upload-panel-head">
+              <div>
+                <strong>Completed Jobs</strong>
+                <p>Won jobs move here after the install is done and the client is paid in full.</p>
+              </div>
+              <span class="crm-chip" data-crm-completed-count>0 completed</span>
+            </div>
+            <div class="crm-lead-list crm-completed-lead-list" data-crm-completed-list></div>
+            <p class="crm-empty-state" data-crm-completed-empty hidden>
+              No completed jobs yet.
+            </p>
+          </section>
         </section>
 
-        <section class="crm-panel crm-detail-panel">
+        <section class="crm-panel crm-detail-panel" data-crm-mobile-pane-target="workspace">
           <div class="crm-panel-head">
-            <h2>Detalle del lead</h2>
-            <p data-crm-detail-status>Selecciona un lead</p>
+            <div class="crm-detail-head-copy">
+              <h2 data-crm-detail-title>Detalle del lead</h2>
+              <p data-crm-detail-status>Selecciona un lead</p>
+            </div>
+            <button
+              type="button"
+              class="crm-secondary-button crm-mobile-back-button"
+              data-crm-mobile-back
+            >
+              Back to Inbox
+            </button>
           </div>
 
           <div class="crm-detail-wrap" data-crm-detail-wrap hidden>
@@ -97,6 +386,9 @@
                 <a href="#" class="crm-secondary-button crm-action-link" data-crm-text-link hidden>
                   Text
                 </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-map-link hidden>
+                  Maps
+                </a>
                 <button type="button" class="crm-secondary-button" data-crm-mark-quoted>
                   Mark Quoted
                 </button>
@@ -109,13 +401,37 @@
                 <button type="button" class="crm-secondary-button" data-crm-copy-estimate>
                   Copy Estimate Text
                 </button>
+                <button type="button" class="crm-secondary-button crm-danger-button" data-crm-delete-lead>
+                  Delete Lead
+                </button>
               </div>
               <p class="crm-form-result crm-action-feedback" data-crm-action-feedback></p>
 
-              <section class="crm-photo-section" data-crm-photo-section hidden>
+              <section class="crm-photo-section" data-crm-photo-section>
                 <div class="crm-panel-head tight">
                   <h3>Project Photos</h3>
                   <p data-crm-photo-summary>No photos yet.</p>
+                </div>
+                <div class="crm-upload-panel crm-photo-upload-panel">
+                  <div class="crm-upload-panel-head">
+                    <div>
+                      <strong>Add photos manually</strong>
+                      <p>Upload photos from your phone or computer and save them directly to this lead.</p>
+                    </div>
+                  </div>
+                  <div class="crm-photo-actions">
+                    <button type="button" class="crm-secondary-button" data-crm-photo-upload-trigger>
+                      Add Photos
+                    </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      data-crm-photo-upload-input
+                      hidden
+                    />
+                    <p class="crm-form-result crm-photo-upload-feedback" data-crm-photo-upload-feedback></p>
+                  </div>
                 </div>
                 <div class="crm-photo-grid" data-crm-photo-grid></div>
               </section>
@@ -176,6 +492,31 @@
                   <input type="datetime-local" name="nextActionAt" />
                 </label>
 
+                <div class="crm-field-full crm-reminder-field">
+                  <span>Reminder alerts</span>
+                  <div class="crm-reminder-grid">
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="60" />
+                      <span>1 hour before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="120" />
+                      <span>2 hours before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="1440" />
+                      <span>1 day before</span>
+                    </label>
+                    <label class="crm-reminder-option">
+                      <input type="checkbox" name="nextActionReminderOffsets" value="2880" />
+                      <span>2 days before</span>
+                    </label>
+                  </div>
+                  <p class="crm-field-hint">
+                    Send a push alert to the CRM before this scheduled action starts.
+                  </p>
+                </div>
+
                 <label class="crm-field-full">
                   <span>Resumen del proyecto</span>
                   <textarea
@@ -185,138 +526,208 @@
                   ></textarea>
                 </label>
 
-                <div class="crm-field-full crm-composer-card">
-                  <div class="crm-composer-head">
-                    <div>
-                      <strong>Client Estimate / Invoice</strong>
-                      <p>Esto es lo que ve el cliente por email o para copy/paste. El breakdown interno no se manda.</p>
+                <details
+                  class="crm-field-full crm-mobile-collapsible"
+                  data-crm-mobile-collapsible="estimate"
+                  open
+                >
+                  <summary>Estimate & Invoice Tools</summary>
+                  <div class="crm-mobile-collapsible-body">
+                    <div class="crm-composer-card">
+                      <div class="crm-composer-head">
+                        <div>
+                          <strong>Client Estimate / Invoice</strong>
+                          <p>Esto es lo que ve el cliente por email o para copy/paste. El breakdown interno no se manda.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="crm-mobile-collapsible-grid">
+                      <label>
+                        <span>Document type</span>
+                        <select name="clientDocumentType">
+                          <option value="estimate">Estimate</option>
+                          <option value="invoice">Invoice</option>
+                        </select>
+                      </label>
+
+                      <label>
+                        <span>Work date</span>
+                        <input type="date" name="clientDocumentWorkDate" />
+                      </label>
+
+                      <label>
+                        <span>Total job amount</span>
+                        <input
+                          type="number"
+                          name="estimateAmount"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </label>
+
+                      <label>
+                        <span>Deposit received</span>
+                        <input
+                          type="number"
+                          name="invoiceDepositAmount"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </label>
+
+                      <label class="crm-field-full">
+                        <span>Internal reference title</span>
+                        <input
+                          type="text"
+                          name="estimateTitle"
+                          maxlength="160"
+                          placeholder="Ej. Front porch landing repair and repaint"
+                        />
+                      </label>
+
+                      <label class="crm-field-full">
+                        <span>Work description for client</span>
+                        <textarea
+                          name="clientDocumentDescription"
+                          rows="5"
+                          placeholder="Describe claramente lo que se va a hacer, sin desglose interno. Ej. We will repair and reweld the damaged front gate, align the frame, grind rough welds, prep the repaired area, and leave it ready for safe daily use."
+                        ></textarea>
+                      </label>
+
+                      <label class="crm-field-full">
+                        <span>Warranty / guarantee for client</span>
+                        <textarea
+                          name="clientDocumentWarranty"
+                          rows="4"
+                          placeholder="Ej. Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and exclusions follow the written agreement for this job."
+                        ></textarea>
+                      </label>
+
+                      <label class="crm-field-full">
+                        <span>Internal scope notes</span>
+                        <textarea
+                          name="estimateScope"
+                          rows="4"
+                          placeholder="Notas internas para ti: rust removal, handrail repair, prep, primer, top coat, welding, etc."
+                        ></textarea>
+                      </label>
+
+                      <div class="crm-field-full crm-composer-card crm-composer-card-subtle">
+                        <div class="crm-composer-head">
+                          <div>
+                            <strong>Internal Cost Breakdown</strong>
+                            <p>Solo para uso interno. Esto no se incluye en el estimate/invoice del cliente.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="crm-field-full crm-estimate-grid">
+                        <label>
+                          <span>Materials</span>
+                          <input type="number" name="estimateMaterialsCost" min="0" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                          <span>Labor</span>
+                          <input type="number" name="estimateLaborCost" min="0" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                          <span>Primer / top coat</span>
+                          <input type="number" name="estimateCoatingCost" min="0" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                          <span>Misc / travel</span>
+                          <input type="number" name="estimateMiscCost" min="0" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                          <span>Discount</span>
+                          <input type="number" name="estimateDiscount" min="0" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                          <span>Valid until</span>
+                          <input type="date" name="estimateValidUntil" />
+                        </label>
+                      </div>
+
+                      <label class="crm-field-full">
+                        <span>Internal notes / exclusions</span>
+                        <textarea
+                          name="estimateNotes"
+                          rows="4"
+                          placeholder="Notas internas: permit fees, hidden structural damage, concrete work, exclusions, reminders, etc."
+                        ></textarea>
+                      </label>
                     </div>
                   </div>
-                </div>
+                </details>
 
-                <label>
-                  <span>Document type</span>
-                  <select name="clientDocumentType">
-                    <option value="estimate">Estimate</option>
-                    <option value="invoice">Invoice</option>
-                  </select>
-                </label>
+                <details
+                  class="crm-field-full crm-mobile-collapsible"
+                  data-crm-mobile-collapsible="notes"
+                  open
+                >
+                  <summary>Internal Notes</summary>
+                  <div class="crm-mobile-collapsible-body">
+                    <div class="crm-mobile-collapsible-grid">
+                      <div class="crm-field-full crm-composer-card crm-composer-card-subtle crm-text-import-card">
+                        <div class="crm-composer-head">
+                          <div>
+                            <strong>Paste text thread</strong>
+                            <p>
+                              Paste the text conversation from your phone here and it will be saved
+                              into this lead's private notes with a timestamp.
+                            </p>
+                          </div>
+                        </div>
 
-                <label>
-                  <span>Work date</span>
-                  <input type="date" name="clientDocumentWorkDate" />
-                </label>
+                        <div class="crm-mobile-collapsible-grid">
+                          <label>
+                            <span>Source</span>
+                            <input
+                              type="text"
+                              name="textThreadImportSource"
+                              maxlength="60"
+                              placeholder="Text, iMessage, WhatsApp, personal phone..."
+                            />
+                          </label>
 
-                <label>
-                  <span>Client total</span>
-                  <input
-                    type="number"
-                    name="estimateAmount"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </label>
+                          <label class="crm-field-full">
+                            <span>Conversation to import</span>
+                            <textarea
+                              name="textThreadImport"
+                              rows="7"
+                              placeholder="Customer: Hi, I need a railing replacement...
 
-                <label class="crm-field-full">
-                  <span>Internal reference title</span>
-                  <input
-                    type="text"
-                    name="estimateTitle"
-                    maxlength="160"
-                    placeholder="Ej. Front porch landing repair and repaint"
-                  />
-                </label>
+Me: I can help. What ZIP code is the job in?
 
-                <label class="crm-field-full">
-                  <span>Work description for client</span>
-                  <textarea
-                    name="clientDocumentDescription"
-                    rows="5"
-                    placeholder="Describe claramente lo que se va a hacer, sin desglose interno. Ej. We will repair and reweld the damaged front gate, align the frame, grind rough welds, prep the repaired area, and leave it ready for safe daily use."
-                  ></textarea>
-                </label>
+Customer: 60632..."
+                            ></textarea>
+                          </label>
+                        </div>
+                      </div>
 
-                <label class="crm-field-full">
-                  <span>Warranty / guarantee for client</span>
-                  <textarea
-                    name="clientDocumentWarranty"
-                    rows="4"
-                    placeholder="Ej. Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and exclusions follow the written agreement for this job."
-                  ></textarea>
-                </label>
+                      <label class="crm-field-full">
+                        <span>Notas privadas</span>
+                        <textarea
+                          name="privateNotes"
+                          rows="5"
+                          placeholder="Resumen del lead, objeciones, prioridad y notas internas."
+                        ></textarea>
+                      </label>
 
-                <label class="crm-field-full">
-                  <span>Internal scope notes</span>
-                  <textarea
-                    name="estimateScope"
-                    rows="4"
-                    placeholder="Notas internas para ti: rust removal, handrail repair, prep, primer, top coat, welding, etc."
-                  ></textarea>
-                </label>
-
-                <div class="crm-field-full crm-composer-card crm-composer-card-subtle">
-                  <div class="crm-composer-head">
-                    <div>
-                      <strong>Internal Cost Breakdown</strong>
-                      <p>Solo para uso interno. Esto no se incluye en el estimate/invoice del cliente.</p>
+                      <label class="crm-field-full">
+                        <span>Agregar nota al timeline</span>
+                        <textarea
+                          name="note"
+                          rows="3"
+                          placeholder="Ej. Se hablo con el cliente, pidio que le mande estimate manana."
+                        ></textarea>
+                      </label>
                     </div>
                   </div>
-                </div>
-
-                <div class="crm-field-full crm-estimate-grid">
-                  <label>
-                    <span>Materials</span>
-                    <input type="number" name="estimateMaterialsCost" min="0" step="0.01" placeholder="0.00" />
-                  </label>
-                  <label>
-                    <span>Labor</span>
-                    <input type="number" name="estimateLaborCost" min="0" step="0.01" placeholder="0.00" />
-                  </label>
-                  <label>
-                    <span>Primer / top coat</span>
-                    <input type="number" name="estimateCoatingCost" min="0" step="0.01" placeholder="0.00" />
-                  </label>
-                  <label>
-                    <span>Misc / travel</span>
-                    <input type="number" name="estimateMiscCost" min="0" step="0.01" placeholder="0.00" />
-                  </label>
-                  <label>
-                    <span>Discount</span>
-                    <input type="number" name="estimateDiscount" min="0" step="0.01" placeholder="0.00" />
-                  </label>
-                  <label>
-                    <span>Valid until</span>
-                    <input type="date" name="estimateValidUntil" />
-                  </label>
-                </div>
-
-                <label class="crm-field-full">
-                  <span>Internal notes / exclusions</span>
-                  <textarea
-                    name="estimateNotes"
-                    rows="4"
-                    placeholder="Notas internas: permit fees, hidden structural damage, concrete work, exclusions, reminders, etc."
-                  ></textarea>
-                </label>
-
-                <label class="crm-field-full">
-                  <span>Notas privadas</span>
-                  <textarea
-                    name="privateNotes"
-                    rows="5"
-                    placeholder="Resumen del lead, objeciones, prioridad y notas internas."
-                  ></textarea>
-                </label>
-
-                <label class="crm-field-full">
-                  <span>Agregar nota al timeline</span>
-                  <textarea
-                    name="note"
-                    rows="3"
-                    placeholder="Ej. Se hablo con el cliente, pidio que le mande estimate manana."
-                  ></textarea>
-                </label>
+                </details>
 
                 <div class="crm-form-actions">
                   <button type="submit" class="crm-primary-button">
@@ -332,6 +743,33 @@
                 <h3>Conversacion completa</h3>
                 <p data-crm-conversation-summary>Sin transcript guardado.</p>
               </div>
+              <section class="crm-composer-card crm-live-chat-panel" data-crm-live-chat-panel hidden>
+                <div class="crm-composer-head">
+                  <div>
+                    <strong>Responder en chat web</strong>
+                    <p>
+                      Tu respuesta aparece en la pagina de mensajes del cliente dentro de este mismo hilo.
+                    </p>
+                  </div>
+                </div>
+                <form class="crm-live-chat-form" data-crm-live-chat-form>
+                  <label class="crm-field-full">
+                    <span>Respuesta</span>
+                    <textarea
+                      name="message"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="Escribe la respuesta que debe ver el cliente..."
+                    ></textarea>
+                  </label>
+                  <div class="crm-form-actions">
+                    <button type="submit" class="crm-primary-button" data-crm-live-chat-send>
+                      Enviar al chat
+                    </button>
+                    <p class="crm-form-result" data-crm-live-chat-feedback></p>
+                  </div>
+                </form>
+              </section>
               <div class="crm-conversation-thread" data-crm-conversation-thread></div>
             </section>
 
@@ -344,13 +782,59 @@
             </section>
           </div>
 
+          <div class="crm-detail-wrap" data-crm-applicant-detail-wrap hidden>
+            <div class="crm-detail-tabs" data-crm-applicant-detail-tabs>
+              <button type="button" class="crm-tab-button is-active" data-crm-applicant-detail-tab="profile">
+                Perfil
+              </button>
+              <button type="button" class="crm-tab-button" data-crm-applicant-detail-tab="conversation">
+                Conversacion
+              </button>
+              <button type="button" class="crm-tab-button" data-crm-applicant-detail-tab="timeline">
+                Timeline
+              </button>
+            </div>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="profile">
+              <div class="crm-detail-meta" data-crm-applicant-meta></div>
+              <div class="crm-quick-actions">
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-call-link hidden>
+                  Call
+                </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-text-link hidden>
+                  Text
+                </a>
+                <a href="#" class="crm-secondary-button crm-action-link" data-crm-applicant-email-link hidden>
+                  Email
+                </a>
+              </div>
+              <section class="crm-intake-card" data-crm-applicant-profile-card></section>
+            </section>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="conversation" hidden>
+              <div class="crm-panel-head tight">
+                <h3>Conversacion completa</h3>
+                <p data-crm-applicant-conversation-summary>Sin transcript guardado.</p>
+              </div>
+              <div class="crm-conversation-thread" data-crm-applicant-conversation-thread></div>
+            </section>
+
+            <section class="crm-detail-view" data-crm-applicant-detail-view="timeline" hidden>
+              <div class="crm-panel-head tight">
+                <h3>Actividad reciente</h3>
+                <p>Timeline de este candidato</p>
+              </div>
+              <div class="crm-activity-list" data-crm-applicant-activity-list></div>
+            </section>
+          </div>
+
           <p class="crm-empty-state" data-crm-detail-empty>
             Selecciona un lead para ver su informacion y trabajar seguimiento.
           </p>
         </section>
       </main>
 
-      <details class="crm-panel crm-global-feed">
+      <details class="crm-panel crm-global-feed" data-crm-mobile-pane-target="more">
         <summary class="crm-panel-head crm-summary-toggle">
           <div>
             <h2>Feed operativo</h2>

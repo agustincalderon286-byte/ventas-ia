@@ -173,6 +173,10 @@ function applyCachedTheme() {
   return true;
 }
 
+function getPostLoginDestination() {
+  return "/metalworks-crm/";
+}
+
 async function init() {
   applyCachedTheme();
 
@@ -180,7 +184,7 @@ async function init() {
     const me = await apiRequest("/api/metalworks-crm/me");
 
     if (me.authenticated) {
-      window.location.href = "/metalworks-crm/";
+      window.location.href = getPostLoginDestination();
       return;
     }
 
@@ -235,7 +239,7 @@ if (loginForm) {
         },
       });
 
-      window.location.href = "/metalworks-crm/";
+      window.location.href = getPostLoginDestination();
     } catch (error) {
       setFeedback(error.message, "error");
     }

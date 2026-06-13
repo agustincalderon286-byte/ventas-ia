@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">CMW Operator Icon</title>
+  <desc id="desc">Chicago Metal Works operator app icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1812" />
+      <stop offset="100%" stop-color="#07110c" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#84ffc3" />
+      <stop offset="100%" stop-color="#4ac98c" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)" />
+  <rect x="34" y="34" width="188" height="188" rx="42" fill="none" stroke="rgba(255,255,255,0.12)" />
+  <path d="M72 92h112c18.778 0 34 15.222 34 34s-15.222 34-34 34h-24l-30 26v-26H72c-18.778 0-34-15.222-34-34s15.222-34 34-34Z" fill="url(#accent)" />
+  <circle cx="102" cy="126" r="9" fill="#07110c" />
+  <circle cx="128" cy="126" r="9" fill="#07110c" />
+  <circle cx="154" cy="126" r="9" fill="#07110c" />
+</svg>

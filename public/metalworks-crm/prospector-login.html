@@ -4,47 +4,41 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chicago Metal Works Prospector Portal</title>
+    <meta name="theme-color" content="#14263d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/metalworks-crm/prospector.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/prospector-icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/metalworks-crm/styles.css" />
   </head>
-  <body class="crm-login-page crm-prospector-login-page" data-crm-skin="prospector-premium">
+  <body class="crm-login-page" data-crm-skin="executive-steel">
     <main class="crm-login-shell">
       <section class="crm-login-card crm-login-card--prospector">
         <p class="crm-eyebrow">Field Team Portal</p>
         <h1>Chicago Metal Works &amp; Fencing</h1>
         <p class="crm-login-copy">
-          Sign in to the field team portal to send photo-rich leads directly into
-          the sales CRM.
+          Sign in with your field account to send leads and project photos straight
+          into the sales CRM.
         </p>
 
         <form class="crm-login-form" data-prospector-login-form>
           <label>
-            <span>Your name</span>
-            <input
-              type="text"
-              name="name"
-              placeholder="Rigo Calderon"
-              autocomplete="name"
-              required
-            />
-          </label>
-
-          <label>
-            <span>Email</span>
+            <span>Account email</span>
             <input
               type="email"
               name="email"
-              placeholder="team@chicagometalworksandfencing.com"
+              placeholder="field@chicagometalworksandfencing.com"
               autocomplete="username"
               required
             />
           </label>
 
           <label>
-            <span>Team password</span>
+            <span>Password</span>
             <input
               type="password"
               name="password"
-              placeholder="Portal password"
+              placeholder="Your account password"
               autocomplete="current-password"
               required
             />
