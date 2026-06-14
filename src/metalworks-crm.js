@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import http2 from "node:http2";
 import path from "node:path";
 
@@ -25,26 +26,97 @@ const METALWORKS_DEFAULT_CLIENT_WARRANTY =
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "executive-steel",
-    themeLabel: "Clear Day Mode",
+    skin: "intel-ops",
+    themeLabel: "Intel Ops Mode",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "executive-steel",
-    themeLabel: "Clear Day Mode",
+    skin: "intel-ops",
+    themeLabel: "Intel Ops Mode",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "executive-steel",
-    themeLabel: "Clear Day Mode",
+    skin: "goku-blue",
+    themeLabel: "Rigo // Goku Blue Mode",
   },
 };
+const METALWORKS_CRM_DASHBOARD_LEAD_SELECT = [
+  "fullName",
+  "phone",
+  "phoneDisplay",
+  "email",
+  "projectType",
+  "location",
+  "addressLine",
+  "zipCode",
+  "city",
+  "propertyType",
+  "projectSize",
+  "timeline",
+  "ownershipStatus",
+  "budgetRange",
+  "urgency",
+  "bestContactWindow",
+  "preferredLanguage",
+  "qualificationTier",
+  "qualificationNotes",
+  "sourceProspectorName",
+  "sourceProspectorEmail",
+  "details",
+  "photoFileNames",
+  "status",
+  "nextAction",
+  "nextActionAt",
+  "appointmentType",
+  "appointmentStatus",
+  "appointmentDurationMinutes",
+  "appointmentAssignedTo",
+  "nextActionReminderOffsets",
+  "bestContactDay",
+  "bestContactTime",
+  "callbackIntent",
+  "callbackRequestedAt",
+  "callbackAlertedAt",
+  "estimateTitle",
+  "estimateScope",
+  "estimateMaterialsCost",
+  "estimateLaborCost",
+  "estimateCoatingCost",
+  "estimateMiscCost",
+  "estimateDiscount",
+  "estimateAmount",
+  "invoiceDepositAmount",
+  "estimateValidUntil",
+  "estimateNotes",
+  "clientDocumentType",
+  "clientDocumentDescription",
+  "clientDocumentWorkDate",
+  "clientDocumentWarranty",
+  "estimateSentAt",
+  "estimateSentTo",
+  "pageTitle",
+  "pagePath",
+  "pageUrl",
+  "referrer",
+  "sourceType",
+  "sourceExternalId",
+  "sourceExternalSystem",
+  "createdAt",
+  "updatedAt",
+  "lastContactAt",
+  "lastUserMessage",
+  "lastAssistantMessage",
+].join(" ");
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
   1,
   Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
 );
 const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
+const METALWORKS_ASSISTANT_VISION_MAX_IMAGES = Math.max(
+  0,
+  Number(process.env.METALWORKS_ASSISTANT_VISION_MAX_IMAGES || 2),
+);
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
@@ -83,6 +155,20 @@ const METALWORKS_CRM_STATUS_OPTIONS = [
   "lost",
   "archived",
 ];
+const METALWORKS_APPOINTMENT_TYPE_OPTIONS = [
+  "job",
+  "estimate_visit",
+  "callback",
+  "followup",
+];
+const METALWORKS_APPOINTMENT_STATUS_OPTIONS = [
+  "scheduled",
+  "confirmed",
+  "en_route",
+  "completed",
+  "rescheduled",
+  "canceled",
+];
 const METALWORKS_APPLICANT_STATUS_OPTIONS = [
   "new",
   "interview_requested",
@@ -108,6 +194,7 @@ const METALWORKS_LEAD_REMINDER_OPTIONS = [
   { minutes: 1440, label: "1 day before" },
   { minutes: 2880, label: "2 days before" },
 ];
+const METALWORKS_BOOKED_REMINDER_PRIORITY = [1440, 120, 2880, 60];
 const METALWORKS_LEAD_REMINDER_MINUTES = new Set(
   METALWORKS_LEAD_REMINDER_OPTIONS.map((option) => option.minutes),
 );
@@ -124,6 +211,7 @@ const METALWORKS_LEAD_REMINDER_WORKER = {
 const METALWORKS_EXTERNAL_LOCK_TTL_MS = 45 * 1000;
 const METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS = 24;
 const METALWORKS_EXTERNAL_LOCK_RETRY_MS = 150;
+const METALWORKS_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
@@ -138,7 +226,7 @@ ROLE:
 
 GOAL:
 - Help the visitor quickly understand the next best step.
-- Increase conversions to quote request or phone call.
+- Increase conversions to a text-back estimate or quote follow-up.
 - Qualify the job without sounding pushy.
 
 VOICE:
@@ -150,16 +238,27 @@ VOICE:
 
 RULES:
 - Most replies should be 2 or 3 short sentences.
+- Ask for the visitor's name and best phone number early, ideally before deeper qualification, so the team can text back if the chat disconnects.
 - Ask for photos early when that will help.
 - Ask whether it is repair, replacement, or new installation when useful.
 - Ask for ZIP code or job location when useful.
-- Ask for the best phone number only when it helps move the quote forward.
+- After name and phone are captured, move toward photos, ZIP code, and the job description needed for a text-back estimate.
 - If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
 - If the visitor has project photos, tell them they can upload them directly in the chat.
+- If recent project photos are attached, use them to identify the likely metalwork type and any clearly visible issues.
+- Only describe what is reasonably visible in the photos. If an image is blurry, partial, or not enough, say so and ask for a better angle or one more photo.
 - If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
-- Push toward quote form or phone call when the visitor shows real buying intent.
+- When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
+- Do not claim exact measurements, hidden damage, or structural certainty from a photo alone.
+- Only ask for email, address, or appointment timing after the basic lead capture when it truly helps.
+
+COMMON CUSTOMER WORDING TO UNDERSTAND:
+- Front steps: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too", "front steps repair", "repair or replace".
+- Gates: "it's not always closing", "latch added to the side gate", "the latch is on the outside", "prefer one on the inside", "dragging gate", "sagging gate".
+- Porch and railing structure: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- When a visitor uses this kind of wording, answer directly to the real problem first, then move into contact capture and photos.
 
 SERVICE FIT:
 - High-fit: metalwork, welding, railings, handrails, gates, fences, fabrication, stairs, balconies, porch railings.
@@ -571,9 +670,122 @@ function getMetalworksCrmProfile(email = "") {
   };
 }
 
+function normalizeMetalworksCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue || "executive-steel";
+}
+
+async function sendMetalworksCrmShell(res, filePath, profile = {}) {
+  const safeSkin = normalizeMetalworksCrmSkin(profile?.skin || "executive-steel");
+  const template = await fs.readFile(filePath, "utf8");
+  const html = template.replace(/data-crm-skin="[^"]*"/, `data-crm-skin="${safeSkin}"`);
+  res.type("html").send(html);
+}
+
 function normalizeStatus(value = "") {
   const status = cleanText(value).toLowerCase();
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
+}
+
+function normalizeAppointmentType(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_APPOINTMENT_TYPE_OPTIONS.includes(safeValue) ? safeValue : "";
+}
+
+function normalizeAppointmentStatus(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_APPOINTMENT_STATUS_OPTIONS.includes(safeValue) ? safeValue : "";
+}
+
+function normalizeAppointmentDurationMinutes(value = 0) {
+  const safeValue = Math.round(Number(value || 0));
+  if (!Number.isFinite(safeValue) || safeValue <= 0) {
+    return 0;
+  }
+
+  return Math.min(safeValue, 24 * 60);
+}
+
+function inferLeadAppointmentType(lead = null) {
+  const explicitType = normalizeAppointmentType(lead?.appointmentType || "");
+
+  if (explicitType) {
+    return explicitType;
+  }
+
+  const nextActionText = cleanText(lead?.nextAction || "", 160).toLowerCase();
+  const leadStatus = normalizeStatus(lead?.status || "new");
+  const callbackIntent = cleanText(lead?.callbackIntent || "", 12).toLowerCase();
+
+  if (
+    callbackIntent === "yes" ||
+    /callback|call|phone|llamar|llamada|callback_requested/.test(nextActionText)
+  ) {
+    return "callback";
+  }
+
+  if (
+    /estimate|quote|site visit|visit|measure|measurement|cotizacion|medir|onsite/.test(
+      nextActionText,
+    )
+  ) {
+    return "estimate_visit";
+  }
+
+  if (leadStatus === "booked") {
+    return "job";
+  }
+
+  if (lead?.nextActionAt) {
+    return "followup";
+  }
+
+  return "";
+}
+
+function inferLeadAppointmentStatus(lead = null) {
+  const explicitStatus = normalizeAppointmentStatus(lead?.appointmentStatus || "");
+
+  if (explicitStatus) {
+    return explicitStatus;
+  }
+
+  if (!lead?.nextActionAt) {
+    return "";
+  }
+
+  const leadStatus = normalizeStatus(lead?.status || "new");
+
+  if (leadStatus === "won") {
+    return "completed";
+  }
+
+  if (["lost", "archived"].includes(leadStatus)) {
+    return "canceled";
+  }
+
+  return "scheduled";
+}
+
+function inferAppointmentDurationMinutes(type = "") {
+  const normalizedType = normalizeAppointmentType(type || "");
+  const defaults = {
+    job: 120,
+    estimate_visit: 60,
+    callback: 30,
+    followup: 15,
+  };
+
+  return defaults[normalizedType] || 0;
+}
+
+function isInactiveAppointmentStatus(status = "") {
+  const normalizedStatus = normalizeAppointmentStatus(status || "");
+  return normalizedStatus === "completed" || normalizedStatus === "canceled";
 }
 
 const METALWORKS_LEAD_SOURCE_GROUP_OPTIONS = [
@@ -1905,6 +2117,30 @@ function labelStatus(status = "") {
   return labels[normalizeStatus(status)] || "Nuevo";
 }
 
+function labelAppointmentType(type = "") {
+  const labels = {
+    job: "Job",
+    estimate_visit: "Estimate Visit",
+    callback: "Callback",
+    followup: "Follow-Up",
+  };
+
+  return labels[normalizeAppointmentType(type)] || "";
+}
+
+function labelAppointmentStatus(status = "") {
+  const labels = {
+    scheduled: "Scheduled",
+    confirmed: "Confirmed",
+    en_route: "En Route",
+    completed: "Completed",
+    rescheduled: "Rescheduled",
+    canceled: "Canceled",
+  };
+
+  return labels[normalizeAppointmentStatus(status)] || "";
+}
+
 function labelApplicantStatus(status = "") {
   const normalized = normalizeApplicantStatus(status);
   const labels = {
@@ -2045,6 +2281,107 @@ export function formatLeadReminderOffsetLabel(value = 0) {
   return (
     METALWORKS_LEAD_REMINDER_OPTIONS.find((option) => option.minutes === minutes)?.label || ""
   );
+}
+
+function startOfLocalDay(value = new Date()) {
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfLocalWeek(value = new Date()) {
+  const date = startOfLocalDay(value);
+  const dayOfWeek = date.getDay();
+  date.setDate(date.getDate() + (6 - dayOfWeek));
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function getMetalworksAgendaBucket(nextActionAt = null, now = new Date()) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return null;
+  }
+
+  if (scheduledAt.getTime() < now.getTime()) {
+    return {
+      key: "overdue",
+      label: "Overdue",
+      order: 0,
+    };
+  }
+
+  const todayStart = startOfLocalDay(now);
+  const tomorrowStart = new Date(todayStart.getTime());
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const dayAfterTomorrowStart = new Date(tomorrowStart.getTime());
+  dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
+  const weekEnd = endOfLocalWeek(now);
+
+  if (scheduledAt >= todayStart && scheduledAt < tomorrowStart) {
+    return {
+      key: "today",
+      label: "Today",
+      order: 1,
+    };
+  }
+
+  if (scheduledAt >= tomorrowStart && scheduledAt < dayAfterTomorrowStart) {
+    return {
+      key: "tomorrow",
+      label: "Tomorrow",
+      order: 2,
+    };
+  }
+
+  if (scheduledAt <= weekEnd) {
+    return {
+      key: "this_week",
+      label: "This Week",
+      order: 3,
+    };
+  }
+
+  return {
+    key: "upcoming",
+    label: "Later",
+    order: 4,
+  };
+}
+
+function buildDefaultBookedReminderOffsets(nextActionAt = null, now = new Date()) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return [];
+  }
+
+  return METALWORKS_BOOKED_REMINDER_PRIORITY.filter((minutes) => {
+    const reminderAt = scheduledAt.getTime() - minutes * 60 * 1000;
+    return reminderAt > now.getTime() + METALWORKS_LEAD_REMINDER_GRACE_MS;
+  });
+}
+
+function filterUsableLeadReminderOffsets(offsets = [], nextActionAt = null, now = new Date()) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return [];
+  }
+
+  return normalizeLeadReminderOffsets(offsets).filter((minutes) => {
+    const reminderAt = scheduledAt.getTime() - minutes * 60 * 1000;
+    return reminderAt > now.getTime() + METALWORKS_LEAD_REMINDER_GRACE_MS;
+  });
+}
+
+function resolveBookedReminderOffsets(offsets = [], nextActionAt = null, now = new Date()) {
+  const usableOffsets = filterUsableLeadReminderOffsets(offsets, nextActionAt, now);
+  return usableOffsets.length ? usableOffsets : buildDefaultBookedReminderOffsets(nextActionAt, now);
 }
 
 function buildLeadReminderSentKey(nextActionAt = null, offsetMinutes = 0) {
@@ -2193,7 +2530,7 @@ export function detectAssistantProjectLeadIntent(value = "") {
     return false;
   }
 
-  return /\b(project|quote|estimate|repair|replace|replacement|new install|new installation|install|installation|guardrail|guardrails|railing|railings|handrail|handrails|gate|gates|fence|fencing|weld|welding|fabricat|stairs|stair|balcony|porch|awning|opening|opening width|opening height|safety issue|unsafe)\b/.test(
+  return /\b(project|quote|estimate|repair|replace|replacement|new install|new installation|install|installation|guardrail|guardrails|railing|railings|handrail|handrails|gate|gates|fence|fencing|weld|welding|fabricat|stairs|stair|step|steps|balcony|porch|landing|tread|hinge|latch|dragging|sagging|rust|rusted|crack|cracked|post|posts|awning|opening|opening width|opening height|safety issue|unsafe)\b/.test(
     normalized,
   );
 }
@@ -2432,10 +2769,33 @@ function getApplicantMissingFieldQuestion(field = "", inSpanish = false, roleTra
 function buildAssistantFallbackReply(message = "", conversationState = null) {
   const text = cleanText(message, 500).toLowerCase();
   const inSpanish = detectSpanish(message);
+  const projectTypeText = normalizeAssistantSearchText(conversationState?.projectType || "");
   const callbackIntent = conversationState?.callbackIntent === "yes";
   const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
     ? conversationState.callbackMissingFields
     : [];
+  const leadContactMissingFields = Array.isArray(conversationState?.leadContactMissingFields)
+    ? conversationState.leadContactMissingFields
+    : [];
+  const readyForTextEstimate = conversationState?.readyForTextEstimate === true;
+
+  if (!callbackIntent && leadContactMissingFields.length) {
+    if (leadContactMissingFields.includes("name") && leadContactMissingFields.includes("best phone number")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto y cual es el mejor numero para textearte por si se corta el chat?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with, and what is the best phone number to text you back in case the chat disconnects?";
+    }
+
+    if (leadContactMissingFields.includes("name")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with?";
+    }
+
+    return inSpanish
+      ? "Perfecto. ¿Cual es el mejor numero para textearte por si se corta el chat?"
+      : "Perfect. What is the best phone number to text you back in case the chat disconnects?";
+  }
 
   if (callbackIntent) {
     if (callbackMissingFields.length) {
@@ -2452,6 +2812,45 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     return inSpanish
       ? `Perfecto. Ya tengo tu solicitud para ${callbackLabel}. Si puedes, manda fotos y tu ZIP code para preparar mejor el seguimiento.`
       : `Perfect. I have your request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
+  }
+
+  if (readyForTextEstimate) {
+    return inSpanish
+      ? "Perfecto, ya tengo suficiente para pasarlo al equipo. Te vamos a textear a este numero con un estimado basado en esta informacion, o te pediremos un detalle mas si hace falta."
+      : "Perfect, I have enough to pass this to the team. We will text you back at this number with an estimate based on this information, or we will ask for one more detail if needed.";
+  }
+
+  if (
+    (
+      /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) ||
+      /front steps repair/.test(projectTypeText)
+    ) &&
+    /\b(rust|rusted|underneath|crack|cracked|railing|railings|unsafe)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, trabajamos escalones frontales cuando el metal de abajo esta oxidado, la superficie esta cuarteada o el barandal tambien forma parte del problema. Manda una foto amplia, una foto cerrada del daño, tu ZIP code y el mejor numero para textearte con un estimado."
+      : "Yes, we handle front steps when the metal underneath is rusted, the stair surface is cracked, or the front railing is part of the problem. Send one wide photo, one close shot of the damage, your ZIP code, and the best number to text you back with a first estimate.";
+  }
+
+  if (
+    (/\b(gate|side gate|porton|portón)\b/.test(text) || /\bgate\b/.test(projectTypeText)) &&
+    /\b(not closing|wont close|won't close|latch|inside portion|outside|dragging|sagging)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, ayudamos cuando el porton no esta cerrando bien, necesita latch, arrastra o se ve caido. Manda una foto completa, una del lado de la bisagra, otra del latch, tu ZIP code y el mejor numero para textearte."
+      : "Yes, we help when a gate is not closing right, needs a latch, drags, or has started sagging. Send a full photo, one of the hinge side, one of the latch area, your ZIP code, and the best number to text you back.";
+  }
+
+  if (
+    (
+      /\b(post|posts|porch|concrete|base plate|mounting)\b/.test(text) ||
+      /metal porch repair/.test(projectTypeText)
+    ) &&
+    /\b(replaced|replace|secured|repair|rust|rusted|fractured)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, tambien revisamos postes de porch, anclajes a concreto y barandales que tal vez se reparan en sitio o se reemplazan por secciones. Si mandas fotos y tu ZIP code, te digo el siguiente paso mas rapido."
+      : "Yes, we also look at porch posts, base plates, concrete anchoring, and railings that may need repair in place or section replacement. If you send photos and your ZIP code, I can point you to the fastest next step.";
   }
 
   if (
@@ -2562,9 +2961,22 @@ METAL WORKS WEBSITE CONTEXT:
 - Business: Chicago Metal Works & Fencing
 - Service area: Chicago, Blue Island, and nearby suburbs
 - Main CTA phone: 773 798 4107
-- Best quote path: photos, rough measurements, ZIP code, and whether the job is repair or new build
+- Best quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the job is repair or new build
 - Public website page: ${cleanText(pagePath || "", 120) || "/"}
 `);
+
+  if (
+    /front-steps-repair/.test(pagePath || "") ||
+    (/\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) &&
+      /\b(rust|rusted|crack|cracked|railing|railings)\b/.test(text))
+  ) {
+    contextParts.push(`
+FRONT STEPS CONTEXT:
+- Common customer wording: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too".
+- Treat this as a high-intent front-step repair lead.
+- Ask for one wide photo, one close photo of the rust or crack, ZIP code, and whether the entry feels unsafe.
+`);
+  }
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
     contextParts.push(`
@@ -2575,11 +2987,20 @@ QUOTE RULE:
 `);
   }
 
-  if (/gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
+  if (/gate-repair/.test(pagePath || "") || /gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
     contextParts.push(`
 GATE CONTEXT:
 - Common issues: dragging gates, latch issues, hinge issues, frame repairs, rewelds, replacement sections.
+- Common customer wording: "it's not always closing", "latch added to the side gate", "latch on the outside", "prefer one on the inside".
 - Move toward photo + repair vs replace + ZIP code.
+`);
+  }
+
+  if (/post|posts|base plate|mounting|secured to concrete|concrete/i.test(text)) {
+    contextParts.push(`
+PORCH STRUCTURE CONTEXT:
+- Common customer wording: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- Explain the next step in practical terms and move toward photos + ZIP code.
 `);
   }
 
@@ -2943,11 +3364,29 @@ function inferAssistantProjectTypeFromText(text = "") {
     return "";
   }
 
-  if (/\b(porch|landing|rust|repaint|primer|top coat|paint failure)\b/.test(normalized)) {
+  if (
+    /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(normalized) &&
+    /\b(rust|rusted|crack|cracked|railing|railings|repair|replace|replacement|unsafe)\b/.test(
+      normalized,
+    )
+  ) {
+    return "Front steps repair / restoration";
+  }
+
+  if (
+    /\b(porch|porch post|porch posts|post|posts|landing)\b/.test(normalized) &&
+    /\b(rust|rusted|repaint|paint|primer|top coat|secured to concrete|concrete|base plate|mounting)\b/.test(
+      normalized,
+    )
+  ) {
     return "Metal porch repair / restoration";
   }
 
-  if (/\b(gate|hinge|latch|dragging|sagging|porton)\b/.test(normalized)) {
+  if (
+    /\b(gate|side gate|hinge|latch|dragging|sagging|porton|not closing|wont close|won't close)\b/.test(
+      normalized,
+    )
+  ) {
     return "Gate fabrication / gate repair";
   }
 
@@ -2974,6 +3413,40 @@ function inferAssistantProjectTypeFromText(text = "") {
   return "";
 }
 
+function inferAssistantProjectTypeFromPagePath(pagePath = "") {
+  const normalized = normalizeAssistantSearchText(pagePath || "");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.includes("front steps repair")) {
+    return "Front steps repair / restoration";
+  }
+
+  if (normalized.includes("metal porch repair")) {
+    return "Metal porch repair / restoration";
+  }
+
+  if (normalized.includes("gate repair")) {
+    return "Gate fabrication / gate repair";
+  }
+
+  if (normalized.includes("fence repair")) {
+    return "Fence fabrication / fence repair";
+  }
+
+  if (
+    normalized.includes("custom railings") ||
+    normalized.includes("handrails") ||
+    normalized.includes("railing rust repair")
+  ) {
+    return "Custom railings / handrails";
+  }
+
+  return "";
+}
+
 function extractAssistantLocation(text = "") {
   const safeText = String(text || "");
   const zipCode = extractAssistantZipCode(safeText);
@@ -2994,6 +3467,11 @@ function extractAssistantLocation(text = "") {
     "Alsip",
     "Crestwood",
     "Tinley Park",
+    "Bucktown",
+    "West Town",
+    "Wicker Park",
+    "Beverly",
+    "Morgan Park",
   ];
   const normalized = normalizeAssistantSearchText(safeText);
 
@@ -3802,8 +4280,8 @@ function buildAssistantConversationSignals({
   const bestContactDayForResolution =
     latestBestContactDay || !storedCalendarDayKey ? bestContactDay : storedCalendarDayKey;
 
-  if (!projectType && /metal-porch-repair|porch/i.test(pagePath || "")) {
-    projectType = "Metal porch repair / restoration";
+  if (!projectType) {
+    projectType = inferAssistantProjectTypeFromPagePath(pagePath || "");
   }
 
   const nextActionAt =
@@ -3857,6 +4335,21 @@ function buildAssistantConversationSignals({
     detectAssistantProjectLeadIntent(serviceSummarySource) ||
     detectAssistantProjectLeadIntent(projectType) ||
     detectAssistantProjectLeadIntent(location);
+  const leadContactMissingFields = [
+    !name ? "name" : "",
+    !phone ? "best phone number" : "",
+  ].filter(Boolean);
+  const leadProjectMissingFields = [
+    !projectType && !strongProjectIntent ? "what needs to be repaired or built" : "",
+    !location ? "ZIP code" : "",
+    photoFileCount > 0 ? "" : "photos",
+  ].filter(Boolean);
+  const readyForTextEstimate = Boolean(
+    name &&
+      phone &&
+      (projectType || strongProjectIntent) &&
+      (location || photoFileCount > 0),
+  );
 
   return {
     items,
@@ -3870,6 +4363,9 @@ function buildAssistantConversationSignals({
     phoneDisplay,
     projectType,
     location,
+    leadContactMissingFields,
+    leadProjectMissingFields,
+    readyForTextEstimate,
     bestContactDay: normalizedBestContactDay,
     bestContactTime,
     callbackIntent: callbackIntent === "no" ? "no" : callbackIntent === "yes" ? "yes" : "",
@@ -3886,7 +4382,9 @@ function buildAssistantConversationSignals({
         photoFileCount > 0 ||
         strongProjectIntent,
     ),
-    shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
+    shouldAlert:
+      ((callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email)) ||
+      readyForTextEstimate,
     conversationDigest: buildAssistantHistoryDigest(items),
   };
 }
@@ -3894,11 +4392,19 @@ function buildAssistantConversationSignals({
 function buildAssistantStatePrompt(state = {}) {
   const callbackIntent = state?.callbackIntent === "yes" ? "yes" : state?.callbackIntent === "no" ? "no" : "unknown";
   const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
+  const missingContactFields = Array.isArray(state?.leadContactMissingFields)
+    ? state.leadContactMissingFields.join(", ")
+    : "";
+  const missingProjectFields = Array.isArray(state?.leadProjectMissingFields)
+    ? state.leadProjectMissingFields.join(", ")
+    : "";
   const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
   const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
+  const readyForTextEstimate = state?.readyForTextEstimate === true ? "yes" : "no";
+  const visionImageCount = Number(state?.visionImageCount || 0) || 0;
 
   return `
-CALL CAPTURE STATE:
+TEXT QUOTE CAPTURE STATE:
 - response_channel: ${responseChannel}
 - callback_intent: ${callbackIntent}
 - visitor_name: ${state?.name || "pending"}
@@ -3907,6 +4413,10 @@ CALL CAPTURE STATE:
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
 - uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
+- vision_images_attached: ${visionImageCount}
+- ready_for_text_estimate: ${readyForTextEstimate}
+- missing_contact_fields: ${missingContactFields || "none"}
+- missing_project_fields: ${missingProjectFields || "none"}
 - best_day: ${state?.bestContactDay || "pending"}
 - best_time: ${state?.bestContactTime || "pending"}
 - callback_window: ${callbackLabel}
@@ -3914,10 +4424,16 @@ CALL CAPTURE STATE:
 
 INSTRUCTIONS:
 - If response_channel is whatsapp, keep replies extra short and text-message friendly.
+- If callback_intent is not yes and there are missing_contact_fields, ask only for the missing contact fields first in one short message. Explain it is so the team can text back if the chat disconnects.
+- After contact is captured, keep moving toward photos, ZIP code, and the job details needed for a text-back estimate.
+- If ready_for_text_estimate is yes and callback_intent is not yes, stop qualifying and close the conversation. Tell the visitor the team will text them back with an estimate based on this information, or ask for one more detail if needed.
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
+- If vision_images_attached is greater than 0, use those images to identify the likely issue or job type when that is genuinely visible. If the photos are not enough, say what is unclear and ask for one more angle.
+- If the visitor uses direct homeowner wording like "underneath the metal is rusted", "the stairs are cracked", "it's not always closing", or "I need a latch added", answer that issue directly instead of switching into generic chatbot language.
 - Do not say the appointment is booked unless the visitor actually gave a specific day and time.
+- Only ask for email, address, or scheduling details after the basic lead capture if that truly helps.
 - Keep replies practical, short, and contractor-like.
 `;
 }
@@ -4469,6 +4985,108 @@ function cleanLeadAsset(doc = null) {
   };
 }
 
+function normalizeLeadAssetBuffer(value = null) {
+  if (!value) {
+    return Buffer.alloc(0);
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+
+  if (value?.buffer instanceof ArrayBuffer) {
+    return Buffer.from(value.buffer);
+  }
+
+  if (Array.isArray(value)) {
+    return Buffer.from(value);
+  }
+
+  if (typeof value === "object" && value?.type === "Buffer" && Array.isArray(value?.data)) {
+    return Buffer.from(value.data);
+  }
+
+  return Buffer.alloc(0);
+}
+
+async function loadRecentLeadAssetsForVision({
+  leadId = null,
+  limit = METALWORKS_ASSISTANT_VISION_MAX_IMAGES,
+} = {}) {
+  if (!leadId || limit < 1) {
+    return [];
+  }
+
+  const assetDocs = await MetalworksLeadAsset.find({ leadId })
+    .sort({ uploadedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .select("fileName mimeType fileData sizeBytes uploadedAt createdAt");
+
+  return assetDocs
+    .map((doc) => {
+      const mimeType = normalizeLeadAssetMimeType(doc?.mimeType || "");
+      const fileData = normalizeLeadAssetBuffer(doc?.fileData);
+
+      if (!mimeType || !fileData.length) {
+        return null;
+      }
+
+      return {
+        fileName: sanitizeLeadAssetFileName(doc?.fileName || ""),
+        mimeType,
+        sizeBytes: Number(doc?.sizeBytes || fileData.length) || fileData.length,
+        uploadedAt: doc?.uploadedAt || doc?.createdAt || null,
+        dataUrl: `data:${mimeType};base64,${fileData.toString("base64")}`,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildAssistantUserInputContent({
+  message = "",
+  visionAssets = [],
+} = {}) {
+  const safeMessage = cleanText(message || "", 500);
+  const assets = Array.isArray(visionAssets) ? visionAssets.filter(Boolean) : [];
+  const content = [];
+  const recentPhotoLabel = assets.length
+    ? `Recent uploaded project photos are attached below (${assets.length}, most recent first). Use them only as visual context for this project.`
+    : "";
+  const inputText = [safeMessage, recentPhotoLabel].filter(Boolean).join("\n\n").trim();
+
+  if (inputText) {
+    content.push({
+      type: "input_text",
+      text: inputText,
+    });
+  }
+
+  assets.forEach((asset) => {
+    if (!asset?.dataUrl) {
+      return;
+    }
+
+    content.push({
+      type: "input_image",
+      image_url: asset.dataUrl,
+      detail: "auto",
+    });
+  });
+
+  return content.length
+    ? content
+    : [
+        {
+          type: "input_text",
+          text: safeMessage,
+        },
+      ];
+}
+
 function extractAssistantResponseText(data = null) {
   const directText = cleanText(data?.output_text || "", 1500);
 
@@ -4502,6 +5120,7 @@ async function generateAssistantReply({
   history = [],
   pagePath = "",
   conversationState = null,
+  visionAssets = [],
   mode = "customer",
 } = {}) {
   const assistantMode = cleanText(mode || "", 40).toLowerCase() === "employment"
@@ -4566,7 +5185,10 @@ async function generateAssistantReply({
           ...normalizeAssistantHistory(history),
           {
             role: "user",
-            content: cleanText(message, 500),
+            content: buildAssistantUserInputContent({
+              message,
+              visionAssets,
+            }),
           },
         ],
       }),
@@ -4633,6 +5255,19 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
         lastAssistantMessage: assistantNotesState.lastAssistantMessage || "",
       })
     : "";
+  const nextActionAt = doc.nextActionAt ? new Date(doc.nextActionAt) : null;
+  const safeNextActionAt =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime()) ? nextActionAt : null;
+  const appointmentType = inferLeadAppointmentType(doc);
+  const appointmentStatus = inferLeadAppointmentStatus(doc);
+  const appointmentDurationMinutes =
+    normalizeAppointmentDurationMinutes(doc.appointmentDurationMinutes || 0) ||
+    (safeNextActionAt ? inferAppointmentDurationMinutes(appointmentType) : 0);
+  const appointmentEndAt =
+    safeNextActionAt && appointmentDurationMinutes
+      ? new Date(safeNextActionAt.getTime() + appointmentDurationMinutes * 60 * 1000).toISOString()
+      : "";
+  const appointmentAssignedTo = cleanText(doc.appointmentAssignedTo || "", 80);
 
   return {
     id: String(doc._id || ""),
@@ -4662,7 +5297,14 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     status: normalizeStatus(doc.status || "new"),
     statusLabel: labelStatus(doc.status || "new"),
     nextAction: doc.nextAction || "",
-    nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
+    nextActionAt: safeNextActionAt ? safeNextActionAt.toISOString() : "",
+    appointmentType,
+    appointmentTypeLabel: labelAppointmentType(appointmentType),
+    appointmentStatus,
+    appointmentStatusLabel: labelAppointmentStatus(appointmentStatus),
+    appointmentDurationMinutes,
+    appointmentAssignedTo,
+    appointmentEndAt,
     nextActionReminderOffsets: normalizeLeadReminderOffsets(doc.nextActionReminderOffsets || []),
     bestContactDay: doc.bestContactDay || "",
     bestContactTime: doc.bestContactTime || "",
@@ -5032,9 +5674,14 @@ async function buildDashboardSnapshot(
     interviewApplicants,
     recentApplicants,
   ] = await Promise.all([
-    MetalworksLead.find(leadQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
+    MetalworksLead.find(leadQuery)
+      .select(METALWORKS_CRM_DASHBOARD_LEAD_SELECT)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(250)
+      .lean(),
     completedLeadQuery
       ? MetalworksLead.find(completedLeadQuery)
+          .select(METALWORKS_CRM_DASHBOARD_LEAD_SELECT)
           .sort({ updatedAt: -1, createdAt: -1 })
           .limit(60)
           .lean()
@@ -5157,6 +5804,7 @@ function scoreMetalworksOperatorLead(lead = null, now = new Date()) {
   }
 
   const status = normalizeStatus(lead.status || "new");
+  const appointmentStatus = inferLeadAppointmentStatus(lead);
 
   if (!isMetalworksOperatorOpenStatus(status)) {
     return -9999;
@@ -5210,7 +5858,11 @@ function scoreMetalworksOperatorLead(lead = null, now = new Date()) {
     }
   }
 
-  if (nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())) {
+  if (
+    nextActionAt instanceof Date &&
+    !Number.isNaN(nextActionAt.getTime()) &&
+    !isInactiveAppointmentStatus(appointmentStatus)
+  ) {
     const diffHours = (nextActionAt.getTime() - now.getTime()) / (60 * 60 * 1000);
 
     if (diffHours < 0) {
@@ -5244,6 +5896,16 @@ function summarizeLeadForOperator(lead = null) {
     statusLabel: lead.statusLabel || labelStatus(lead.status || "new"),
     nextAction: lead.nextAction || "",
     nextActionAt: lead.nextActionAt || "",
+    appointmentType: lead.appointmentType || "",
+    appointmentTypeLabel: lead.appointmentTypeLabel || labelAppointmentType(lead.appointmentType || ""),
+    appointmentStatus: lead.appointmentStatus || "",
+    appointmentStatusLabel:
+      lead.appointmentStatusLabel || labelAppointmentStatus(lead.appointmentStatus || ""),
+    appointmentDurationMinutes: normalizeAppointmentDurationMinutes(
+      lead.appointmentDurationMinutes || 0,
+    ),
+    appointmentAssignedTo: lead.appointmentAssignedTo || "",
+    appointmentEndAt: lead.appointmentEndAt || "",
     nextActionReminderOffsets: normalizeLeadReminderOffsets(lead.nextActionReminderOffsets || []),
     callbackIntent: lead.callbackIntent || "",
     estimateAmount: Number(lead.estimateAmount || 0) || 0,
@@ -5259,7 +5921,6 @@ function summarizeLeadForOperator(lead = null) {
 
 function buildMetalworksOperatorSnapshot(dashboard = {}) {
   const now = new Date();
-  const nowTime = now.getTime();
   const leads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
   const recentActivity = Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [];
   const focusLeads = leads
@@ -5278,34 +5939,77 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     .slice(0, 10)
     .map((item) => item.lead);
   const agendaLeads = leads
-    .filter((lead) => {
-      if (!isMetalworksOperatorOpenStatus(lead.status || "new") || !lead.nextActionAt) {
-        return false;
+    .map((lead) => {
+      if (
+        !isMetalworksOperatorOpenStatus(lead.status || "new") ||
+        !lead.nextActionAt ||
+        isInactiveAppointmentStatus(inferLeadAppointmentStatus(lead))
+      ) {
+        return null;
       }
 
       const nextActionAt = new Date(lead.nextActionAt);
 
-      return !Number.isNaN(nextActionAt.getTime()) && nextActionAt.getTime() >= nowTime;
+      if (Number.isNaN(nextActionAt.getTime())) {
+        return null;
+      }
+
+      const summary = summarizeLeadForOperator(lead);
+      const bucket = getMetalworksAgendaBucket(nextActionAt, now);
+
+      if (!summary || !bucket) {
+        return null;
+      }
+
+      return {
+        ...summary,
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+      };
     })
-    .sort((left, right) =>
-      String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")),
-    )
-    .slice(0, 8)
-    .map(summarizeLeadForOperator)
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((left, right) => {
+      if ((left.agendaBucketOrder || 0) !== (right.agendaBucketOrder || 0)) {
+        return (left.agendaBucketOrder || 0) - (right.agendaBucketOrder || 0);
+      }
+
+      return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
+    });
+  const agendaSummary = METALWORKS_AGENDA_BUCKET_ORDER.reduce(
+    (summary, bucketKey) => ({
+      ...summary,
+      [bucketKey]: 0,
+    }),
+    {
+      totalScheduled: agendaLeads.length,
+    },
+  );
+
+  agendaLeads.forEach((lead) => {
+    const bucketKey = String(lead.agendaBucket || "").trim();
+
+    if (!bucketKey || !Object.prototype.hasOwnProperty.call(agendaSummary, bucketKey)) {
+      return;
+    }
+
+    agendaSummary[bucketKey] += 1;
+  });
   const callbackCount = leads.filter(
     (lead) => {
       if (
         !isMetalworksOperatorOpenStatus(lead.status || "new") ||
         lead.callbackIntent !== "yes" ||
-        !lead.nextActionAt
+        !lead.nextActionAt ||
+        isInactiveAppointmentStatus(inferLeadAppointmentStatus(lead))
       ) {
         return false;
       }
 
       const nextActionAt = new Date(lead.nextActionAt);
 
-      return !Number.isNaN(nextActionAt.getTime()) && nextActionAt.getTime() >= nowTime;
+      return !Number.isNaN(nextActionAt.getTime());
     },
   ).length;
 
@@ -5328,6 +6032,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     },
     focusLeads,
     agendaLeads,
+    agendaSummary,
     recentActivity: recentActivity.slice(0, 12),
     fullCrmUrl: "/metalworks-crm/",
   };
@@ -5816,6 +6521,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     status: { type: String, default: "new", index: true },
     nextAction: String,
     nextActionAt: Date,
+    appointmentType: String,
+    appointmentStatus: String,
+    appointmentDurationMinutes: { type: Number, default: 0 },
+    appointmentAssignedTo: String,
     nextActionReminderOffsets: { type: [Number], default: [] },
     nextActionReminderSentKeys: { type: [String], default: [] },
     privateNotes: String,
@@ -6545,6 +7254,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const now = new Date();
       const candidateLeads = await MetalworksLead.find({
         status: { $nin: ["won", "lost", "archived"] },
+        appointmentStatus: { $nin: ["completed", "canceled"] },
         nextActionAt: {
           $gte: new Date(now.getTime() - METALWORKS_LEAD_REMINDER_GRACE_MS),
           $lte: new Date(now.getTime() + METALWORKS_LEAD_REMINDER_SCAN_WINDOW_MS),
@@ -6555,7 +7265,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         .limit(80);
 
       for (const leadDoc of candidateLeads) {
-        if (!isMetalworksOperatorOpenStatus(leadDoc.status || "new")) {
+        if (
+          !isMetalworksOperatorOpenStatus(leadDoc.status || "new") ||
+          isInactiveAppointmentStatus(inferLeadAppointmentStatus(leadDoc))
+        ) {
           continue;
         }
 
@@ -6966,6 +7679,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const now = new Date();
     const candidateLeads = await MetalworksLead.find({
       status: { $nin: ["won", "lost", "archived"] },
+      appointmentStatus: { $nin: ["completed", "canceled"] },
       nextActionAt: { $gte: new Date(now.getTime() - 12 * 60 * 60 * 1000) },
       nextActionReminderOffsets: { $exists: true, $ne: [] },
     })
@@ -8505,11 +9219,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       tracking: safeTracking,
     });
 
+    let visionAssets = [];
+
+    try {
+      visionAssets = await loadRecentLeadAssetsForVision({
+        leadId: leadDoc?._id || currentLead?._id || null,
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works assistant vision photos:", error.message);
+    }
+
+    const replyConversationState = {
+      ...conversationState,
+      visionImageCount: Array.isArray(visionAssets) ? visionAssets.length : 0,
+    };
+
     const result = await generateAssistantReply({
       message: safeMessage,
       history: userConversationItems,
       pagePath: safePagePath,
-      conversationState,
+      conversationState: replyConversationState,
+      visionAssets,
     });
 
     const conversationItemsWithReply = buildAssistantConversationItems({
@@ -9212,7 +9942,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return res.redirect("/metalworks-crm/login/");
     }
 
-    res.sendFile(path.join(privateDir, "metalworks-crm.html"));
+    try {
+      await sendMetalworksCrmShell(
+        res,
+        path.join(privateDir, "metalworks-crm.html"),
+        getMetalworksCrmProfile(auth.email),
+      );
+    } catch (error) {
+      console.error("Error loading Metal Works CRM shell:", error.message);
+      respondError(res, 500, "No pude abrir el shell del CRM.");
+    }
   });
 
   app.get(
@@ -9225,7 +9964,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return res.redirect("/metalworks-crm/login/");
       }
 
-      return res.redirect("/metalworks-crm/");
+      try {
+        await sendMetalworksCrmShell(
+          res,
+          path.join(privateDir, "metalworks-operator-mobile.html"),
+          getMetalworksCrmProfile(auth.email),
+        );
+      } catch (error) {
+        console.error("Error loading Metal Works operator shell:", error.message);
+        respondError(res, 500, "No pude abrir el operador movil.");
+      }
     },
   );
 
@@ -9866,9 +10614,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       res.json({
         ...snapshot,
-        agendaLeads: Array.isArray(agendaSnapshot?.agendaLeads)
-          ? agendaSnapshot.agendaLeads.slice(0, 8)
-          : [],
+        agendaLeads: Array.isArray(agendaSnapshot?.agendaLeads) ? agendaSnapshot.agendaLeads : [],
+        agendaSummary:
+          agendaSnapshot && typeof agendaSnapshot.agendaSummary === "object"
+            ? agendaSnapshot.agendaSummary
+            : {
+                totalScheduled: 0,
+                overdue: 0,
+                today: 0,
+                tomorrow: 0,
+                this_week: 0,
+                upcoming: 0,
+              },
       });
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);
@@ -10382,10 +11139,32 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         : nextActionAtRaw === ""
           ? null
           : undefined;
-      const nextActionReminderOffsets = Object.prototype.hasOwnProperty.call(
+      const appointmentType = Object.prototype.hasOwnProperty.call(req.body || {}, "appointmentType")
+        ? normalizeAppointmentType(req.body?.appointmentType || "")
+        : null;
+      const appointmentStatus = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentStatus",
+      )
+        ? normalizeAppointmentStatus(req.body?.appointmentStatus || "")
+        : null;
+      const appointmentDurationMinutes = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentDurationMinutes",
+      )
+        ? normalizeAppointmentDurationMinutes(req.body?.appointmentDurationMinutes || 0)
+        : null;
+      const appointmentAssignedTo = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentAssignedTo",
+      )
+        ? cleanText(req.body?.appointmentAssignedTo || "", 80)
+        : null;
+      const nextActionReminderOffsetsProvided = Object.prototype.hasOwnProperty.call(
         req.body || {},
         "nextActionReminderOffsets",
-      )
+      );
+      const nextActionReminderOffsets = nextActionReminderOffsetsProvided
         ? normalizeLeadReminderOffsets(req.body?.nextActionReminderOffsets || [])
         : null;
       const privateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "privateNotes")
@@ -10534,6 +11313,118 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
             ? nextActionAt
             : null;
+      }
+
+      if (appointmentType !== null) {
+        const currentAppointmentType = normalizeAppointmentType(leadDoc.appointmentType || "");
+
+        if (appointmentType && currentAppointmentType !== appointmentType) {
+          leadDoc.appointmentType = appointmentType;
+          changes.push(`Tipo de cita: ${labelAppointmentType(appointmentType) || "Sin tipo"}`);
+        } else if (!appointmentType && !leadDoc.nextActionAt && currentAppointmentType) {
+          leadDoc.appointmentType = "";
+          changes.push("Tipo de cita: Sin tipo");
+        }
+      }
+
+      if (appointmentStatus !== null) {
+        const currentAppointmentStatus = normalizeAppointmentStatus(leadDoc.appointmentStatus || "");
+
+        if (appointmentStatus && currentAppointmentStatus !== appointmentStatus) {
+          leadDoc.appointmentStatus = appointmentStatus;
+          changes.push(
+            `Estado de cita: ${labelAppointmentStatus(appointmentStatus) || "Sin estado"}`,
+          );
+        } else if (!appointmentStatus && !leadDoc.nextActionAt && currentAppointmentStatus) {
+          leadDoc.appointmentStatus = "";
+          changes.push("Estado de cita: Sin estado");
+        }
+      }
+
+      if (appointmentDurationMinutes !== null) {
+        const currentAppointmentDuration = normalizeAppointmentDurationMinutes(
+          leadDoc.appointmentDurationMinutes || 0,
+        );
+
+        if (appointmentDurationMinutes && currentAppointmentDuration !== appointmentDurationMinutes) {
+          leadDoc.appointmentDurationMinutes = appointmentDurationMinutes;
+          changes.push(`Duracion de cita: ${appointmentDurationMinutes} min`);
+        } else if (!appointmentDurationMinutes && !leadDoc.nextActionAt && currentAppointmentDuration) {
+          leadDoc.appointmentDurationMinutes = 0;
+          changes.push("Duracion de cita: Sin duracion");
+        }
+      }
+
+      if (
+        appointmentAssignedTo !== null &&
+        cleanText(leadDoc.appointmentAssignedTo || "", 80) !== appointmentAssignedTo
+      ) {
+        leadDoc.appointmentAssignedTo = appointmentAssignedTo;
+        changes.push(`Asignado a: ${appointmentAssignedTo || "Sin asignar"}`);
+      }
+
+      if (leadDoc.nextActionAt) {
+        const inferredAppointmentType =
+          normalizeAppointmentType(leadDoc.appointmentType || "") || inferLeadAppointmentType(leadDoc);
+
+        if (
+          inferredAppointmentType &&
+          normalizeAppointmentType(leadDoc.appointmentType || "") !== inferredAppointmentType
+        ) {
+          leadDoc.appointmentType = inferredAppointmentType;
+        }
+
+        const inferredAppointmentStatus =
+          normalizeAppointmentStatus(leadDoc.appointmentStatus || "") ||
+          inferLeadAppointmentStatus(leadDoc);
+
+        if (
+          inferredAppointmentStatus &&
+          normalizeAppointmentStatus(leadDoc.appointmentStatus || "") !== inferredAppointmentStatus
+        ) {
+          leadDoc.appointmentStatus = inferredAppointmentStatus;
+        }
+
+        const resolvedDurationMinutes =
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) ||
+          inferAppointmentDurationMinutes(leadDoc.appointmentType || "");
+
+        if (
+          resolvedDurationMinutes &&
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) !==
+            resolvedDurationMinutes
+        ) {
+          leadDoc.appointmentDurationMinutes = resolvedDurationMinutes;
+        }
+      }
+
+      if (
+        !nextActionReminderOffsetsProvided &&
+        nextActionAt !== undefined &&
+        leadDoc.nextActionAt &&
+        normalizeStatus(leadDoc.status || "new") === "booked"
+      ) {
+        const currentReminderOffsets = normalizeLeadReminderOffsets(
+          leadDoc.nextActionReminderOffsets || [],
+        );
+        const autoReminderOffsets = resolveBookedReminderOffsets(
+          currentReminderOffsets,
+          leadDoc.nextActionAt,
+          new Date(),
+        );
+
+        if (
+          JSON.stringify(currentReminderOffsets) !== JSON.stringify(autoReminderOffsets) &&
+          autoReminderOffsets.length
+        ) {
+          leadDoc.nextActionReminderOffsets = autoReminderOffsets;
+          changes.push(
+            `Reminders: ${autoReminderOffsets
+              .map((value) => formatLeadReminderOffsetLabel(value))
+              .filter(Boolean)
+              .join(", ")}`,
+          );
+        }
       }
 
       if (nextActionReminderOffsets !== null) {
@@ -11735,6 +12626,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         createdAt: -1,
       });
       const now = new Date();
+      const defaultReminderOffsets = buildDefaultBookedReminderOffsets(preferredDateTime, now);
       const duplicate = Boolean(leadDoc);
       const requestedAtLabel = formatDateTimeLabel(preferredDateTime, timeZone);
       const callbackNote = [
@@ -11756,6 +12648,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.status = "booked";
         leadDoc.nextAction = "callback_requested";
         leadDoc.nextActionAt = preferredDateTime;
+        leadDoc.appointmentType = "callback";
+        leadDoc.appointmentStatus = "scheduled";
+        leadDoc.appointmentDurationMinutes =
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) ||
+          inferAppointmentDurationMinutes("callback");
         leadDoc.sourceType = leadDoc.sourceType || "assistant_booking";
         leadDoc.pageTitle = pageTitle || leadDoc.pageTitle || "";
         leadDoc.pagePath = pagePath || leadDoc.pagePath || "";
@@ -11765,6 +12662,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
         leadDoc.tracking = tracking;
         leadDoc.lastContactAt = now;
+        leadDoc.nextActionReminderOffsets = resolveBookedReminderOffsets(
+          leadDoc.nextActionReminderOffsets || defaultReminderOffsets,
+          leadDoc.nextActionAt,
+          now,
+        );
+        leadDoc.nextActionReminderSentKeys = pruneLeadReminderSentKeys(
+          leadDoc.nextActionReminderSentKeys || [],
+          leadDoc.nextActionAt,
+          leadDoc.nextActionReminderOffsets || [],
+        );
         leadDoc.privateNotes = [String(leadDoc.privateNotes || "").trim(), callbackNote]
           .filter(Boolean)
           .join("\n\n")
@@ -11783,6 +12690,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           status: "booked",
           nextAction: "callback_requested",
           nextActionAt: preferredDateTime,
+          appointmentType: "callback",
+          appointmentStatus: "scheduled",
+          appointmentDurationMinutes: inferAppointmentDurationMinutes("callback"),
+          nextActionReminderOffsets: defaultReminderOffsets,
           privateNotes: callbackNote,
           sourceType: "assistant_booking",
           pageTitle,

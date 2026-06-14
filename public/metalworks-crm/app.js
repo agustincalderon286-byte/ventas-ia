@@ -12,6 +12,14 @@ const CRM_MOBILE_BREAKPOINT_PX = 1080;
 const PROSPECTOR_PASSWORD_MIN_LENGTH = 8;
 const CRM_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
 const CRM_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const CRM_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
+const CRM_AGENDA_BUCKET_LABELS = {
+  overdue: "Overdue",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  this_week: "This Week",
+  upcoming: "Later",
+};
 const MAX_CRM_PHOTO_FILES = 4;
 const MAX_CRM_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_CRM_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
@@ -473,6 +481,77 @@ function formatDateOnly(value = "") {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function startOfLocalDay(value = new Date()) {
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfLocalWeek(value = new Date()) {
+  const date = startOfLocalDay(value);
+  const dayOfWeek = date.getDay();
+  date.setDate(date.getDate() + (6 - dayOfWeek));
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function getAgendaBucketMeta(value = "", now = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return {
+      key: "upcoming",
+      label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+    };
+  }
+
+  if (date.getTime() < now.getTime()) {
+    return {
+      key: "overdue",
+      label: CRM_AGENDA_BUCKET_LABELS.overdue,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("overdue"),
+    };
+  }
+
+  const todayStart = startOfLocalDay(now);
+  const tomorrowStart = new Date(todayStart.getTime());
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const dayAfterTomorrowStart = new Date(tomorrowStart.getTime());
+  dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
+  const weekEnd = endOfLocalWeek(now);
+
+  if (date >= todayStart && date < tomorrowStart) {
+    return {
+      key: "today",
+      label: CRM_AGENDA_BUCKET_LABELS.today,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("today"),
+    };
+  }
+
+  if (date >= tomorrowStart && date < dayAfterTomorrowStart) {
+    return {
+      key: "tomorrow",
+      label: CRM_AGENDA_BUCKET_LABELS.tomorrow,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("tomorrow"),
+    };
+  }
+
+  if (date <= weekEnd) {
+    return {
+      key: "this_week",
+      label: CRM_AGENDA_BUCKET_LABELS.this_week,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("this_week"),
+    };
+  }
+
+  return {
+    key: "upcoming",
+    label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+    order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+  };
 }
 
 function serializeDatetimeLocalValue(value = "") {
@@ -2034,66 +2113,168 @@ async function openAgendaLead(leadId = "") {
   scrollDetailIntoView();
 }
 
-function renderAgenda(leads = []) {
+function buildAgendaCardMarkup(lead = null) {
+  if (!lead?.id) {
+    return "";
+  }
+
+  const phoneDigits = getLeadPhoneDigits(lead);
+  const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
+  const reminderSummary = buildLeadReminderSummary(lead);
+
+  return `
+    <article class="crm-agenda-card ${lead.agendaIsOverdue ? "is-overdue" : ""}" data-crm-agenda-lead-id="${escapeHtml(lead.id)}">
+      <div class="crm-agenda-card-head">
+        <div>
+          <h3>${escapeHtml(lead.fullName || "Unknown lead")}</h3>
+          <p>${escapeHtml(lead.projectType || "Service not set")} · ${escapeHtml(lead.location || lead.phoneDisplay || lead.email || "")}</p>
+        </div>
+        <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
+          ${escapeHtml(lead.statusLabel || "Open")}
+        </span>
+      </div>
+      <div class="crm-micro-list">
+        <span class="crm-chip">${escapeHtml(scheduleLabel)}</span>
+        ${lead.agendaIsOverdue ? '<span class="crm-chip crm-chip-alert">Overdue</span>' : ""}
+        ${lead.appointmentTypeLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
+        ${lead.appointmentStatusLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentStatusLabel)}</span>` : ""}
+        ${lead.appointmentAssignedTo ? `<span class="crm-chip">Assigned: ${escapeHtml(lead.appointmentAssignedTo)}</span>` : ""}
+        ${lead.appointmentDurationMinutes ? `<span class="crm-chip">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>` : ""}
+        ${lead.nextAction ? `<span class="crm-chip">${escapeHtml(lead.nextAction)}</span>` : ""}
+        ${reminderSummary ? `<span class="crm-chip">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
+        ${lead.callbackIntent === "yes" ? '<span class="crm-chip">Callback</span>' : ""}
+      </div>
+      <div class="crm-lead-card-summary">
+        <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
+      </div>
+      <div class="crm-card-actions">
+        <button type="button" class="crm-card-action" data-crm-agenda-open="${escapeHtml(lead.id)}">
+          Open
+        </button>
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Call</a>`
+            : ""
+        }
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Text</a>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function buildAgendaSummary(leads = []) {
+  const summary = {
+    totalScheduled: Array.isArray(leads) ? leads.length : 0,
+    overdue: 0,
+    today: 0,
+    tomorrow: 0,
+    this_week: 0,
+    upcoming: 0,
+  };
+
+  (Array.isArray(leads) ? leads : []).forEach((lead) => {
+    const bucketKey = String(lead?.agendaBucket || "").trim();
+
+    if (!bucketKey || !Object.prototype.hasOwnProperty.call(summary, bucketKey)) {
+      return;
+    }
+
+    summary[bucketKey] += 1;
+  });
+
+  return summary;
+}
+
+function renderAgenda(leads = [], agendaSummary = null) {
   if (!agendaPanel || !agendaList || !agendaCount) {
     return;
   }
 
-  const safeLeads = Array.isArray(leads) ? leads.filter((lead) => lead?.id) : [];
+  const now = new Date();
+  const safeLeads = (Array.isArray(leads) ? leads : [])
+    .filter((lead) => lead?.id)
+    .map((lead) => {
+      const bucketMeta = lead?.agendaBucket
+        ? {
+            key: String(lead.agendaBucket || "").trim() || "upcoming",
+            label:
+              String(lead.agendaBucketLabel || "").trim() ||
+              CRM_AGENDA_BUCKET_LABELS[String(lead.agendaBucket || "").trim()] ||
+              CRM_AGENDA_BUCKET_LABELS.upcoming,
+            order: Number.isFinite(Number(lead.agendaBucketOrder))
+              ? Number(lead.agendaBucketOrder)
+              : CRM_AGENDA_BUCKET_ORDER.indexOf(String(lead.agendaBucket || "").trim()),
+          }
+        : getAgendaBucketMeta(lead?.nextActionAt || "", now);
+
+      return {
+        ...lead,
+        agendaBucket: bucketMeta.key,
+        agendaBucketLabel: bucketMeta.label,
+        agendaBucketOrder: bucketMeta.order,
+        agendaIsOverdue:
+          typeof lead?.agendaIsOverdue === "boolean"
+            ? lead.agendaIsOverdue
+            : bucketMeta.key === "overdue",
+      };
+    })
+    .sort((left, right) => {
+      if ((left.agendaBucketOrder || 0) !== (right.agendaBucketOrder || 0)) {
+        return (left.agendaBucketOrder || 0) - (right.agendaBucketOrder || 0);
+      }
+
+      return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
+    });
+  const resolvedSummary =
+    agendaSummary && typeof agendaSummary === "object"
+      ? {
+          ...buildAgendaSummary(safeLeads),
+          ...agendaSummary,
+        }
+      : buildAgendaSummary(safeLeads);
+  const sectionMap = new Map(
+    CRM_AGENDA_BUCKET_ORDER.map((bucketKey, index) => [
+      bucketKey,
+      {
+        key: bucketKey,
+        label: CRM_AGENDA_BUCKET_LABELS[bucketKey] || "Upcoming",
+        order: index,
+        leads: [],
+      },
+    ]),
+  );
+
+  safeLeads.forEach((lead) => {
+    const bucketKey = sectionMap.has(lead.agendaBucket) ? lead.agendaBucket : "upcoming";
+    sectionMap.get(bucketKey).leads.push(lead);
+  });
+  const agendaSections = Array.from(sectionMap.values()).filter((section) => section.leads.length);
 
   agendaPanel.hidden = false;
-  agendaCount.textContent = `${safeLeads.length} scheduled`;
+  agendaCount.textContent = resolvedSummary.overdue
+    ? `${resolvedSummary.totalScheduled || safeLeads.length} in queue · ${resolvedSummary.overdue} overdue`
+    : `${resolvedSummary.totalScheduled || safeLeads.length} scheduled`;
 
   if (!safeLeads.length) {
     agendaList.innerHTML =
-      '<p class="crm-empty-state">No scheduled leads yet. As soon as a callback or visit gets a time, it will show here.</p>';
+      '<p class="crm-empty-state">No scheduled leads yet. As soon as a callback, booked job, or visit gets a time, it will show here.</p>';
     return;
   }
 
-  agendaList.innerHTML = safeLeads
-    .map((lead) => {
-      const phoneDigits = getLeadPhoneDigits(lead);
-      const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
-      const reminderSummary = buildLeadReminderSummary(lead);
-
-      return `
-        <article class="crm-agenda-card" data-crm-agenda-lead-id="${escapeHtml(lead.id)}">
-          <div class="crm-agenda-card-head">
-            <div>
-              <h3>${escapeHtml(lead.fullName || "Unknown lead")}</h3>
-              <p>${escapeHtml(lead.projectType || "Service not set")} · ${escapeHtml(lead.location || lead.phoneDisplay || lead.email || "")}</p>
-            </div>
-            <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
-              ${escapeHtml(lead.statusLabel || "Open")}
-            </span>
-          </div>
-          <div class="crm-micro-list">
-            <span class="crm-chip">${escapeHtml(scheduleLabel)}</span>
-            ${lead.nextAction ? `<span class="crm-chip">${escapeHtml(lead.nextAction)}</span>` : ""}
-            ${reminderSummary ? `<span class="crm-chip">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
-            ${lead.callbackIntent === "yes" ? '<span class="crm-chip">Callback</span>' : ""}
-          </div>
-          <div class="crm-lead-card-summary">
-            <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
-          </div>
-          <div class="crm-card-actions">
-            <button type="button" class="crm-card-action" data-crm-agenda-open="${escapeHtml(lead.id)}">
-              Open
-            </button>
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Call</a>`
-                : ""
-            }
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Text</a>`
-                : ""
-            }
-          </div>
-        </article>
-      `;
-    })
+  agendaList.innerHTML = agendaSections
+    .map(
+      (section) => `
+        <div class="crm-agenda-section-heading" data-agenda-bucket="${escapeHtml(section.key)}">
+          <h3>${escapeHtml(section.label)}</h3>
+          <span class="crm-chip">${section.leads.length}</span>
+        </div>
+        ${section.leads.map((lead) => buildAgendaCardMarkup(lead)).join("")}
+      `,
+    )
     .join("");
 
   agendaList.querySelectorAll("[data-crm-agenda-prevent]").forEach((element) => {
@@ -3439,6 +3620,18 @@ function renderLeadDetail(detail = null) {
           : ""
       }
       ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
+      ${lead.appointmentTypeLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
+      ${lead.appointmentStatusLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentStatusLabel)}</span>` : ""}
+      ${
+        lead.appointmentAssignedTo
+          ? `<span class="crm-chip">Assigned ${escapeHtml(lead.appointmentAssignedTo)}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentDurationMinutes
+          ? `<span class="crm-chip">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>`
+          : ""
+      }
       ${
         lead.callbackIntent === "yes" && lead.nextActionAt
           ? `<span class="crm-chip">Callback ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
@@ -3456,6 +3649,26 @@ function renderLeadDetail(detail = null) {
       ${
         lead.callbackAlertedAt
           ? `<span><strong>Callback alerted:</strong> ${escapeHtml(formatDate(lead.callbackAlertedAt))}</span>`
+          : ""
+      }
+      ${
+        lead.nextActionAt
+          ? `<span><strong>Agenda:</strong> ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentEndAt
+          ? `<span><strong>Ends:</strong> ${escapeHtml(formatDate(lead.appointmentEndAt))}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentStatusLabel
+          ? `<span><strong>Appointment status:</strong> ${escapeHtml(lead.appointmentStatusLabel)}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentAssignedTo
+          ? `<span><strong>Assigned to:</strong> ${escapeHtml(lead.appointmentAssignedTo)}</span>`
           : ""
       }
       ${
@@ -3540,6 +3753,10 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.bestContactTime.value = lead.bestContactTime || "";
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
+    detailForm.elements.appointmentType.value = lead.appointmentType || "";
+    detailForm.elements.appointmentStatus.value = lead.appointmentStatus || "";
+    detailForm.elements.appointmentAssignedTo.value = lead.appointmentAssignedTo || "";
+    detailForm.elements.appointmentDurationMinutes.value = lead.appointmentDurationMinutes || "";
     syncLeadReminderInputs(lead.nextActionReminderOffsets || []);
     detailForm.elements.details.value = lead.details || "";
     detailForm.elements.clientDocumentType.value = normalizeClientDocumentType(
@@ -3603,6 +3820,10 @@ function buildLeadPayloadFromForm() {
     bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
     nextActionAt: serializeDatetimeLocalValue(String(formData.get("nextActionAt") || "").trim()),
+    appointmentType: String(formData.get("appointmentType") || "").trim(),
+    appointmentStatus: String(formData.get("appointmentStatus") || "").trim(),
+    appointmentAssignedTo: String(formData.get("appointmentAssignedTo") || "").trim(),
+    appointmentDurationMinutes: String(formData.get("appointmentDurationMinutes") || "").trim(),
     nextActionReminderOffsets: normalizeLeadReminderOffsets(
       formData.getAll("nextActionReminderOffsets"),
     ),
@@ -3766,7 +3987,7 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
-  renderAgenda(dashboard.agendaLeads || []);
+  renderAgenda(dashboard.agendaLeads || [], dashboard.agendaSummary || null);
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
 
   if (globalActivitySummary) {

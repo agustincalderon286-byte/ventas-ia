@@ -27,6 +27,9 @@
         <div class="crm-header-actions">
           <div class="crm-theme-badge" data-crm-theme-badge hidden></div>
           <div class="crm-user-chip" data-crm-user-chip></div>
+          <a class="crm-secondary-button crm-action-link" href="/metalworks-crm/operator/">
+            Operator
+          </a>
           <button class="crm-secondary-button" type="button" data-crm-enable-push>
             Enable Alerts
           </button>
@@ -487,6 +490,40 @@
                 <label>
                   <span>Fecha de seguimiento</span>
                   <input type="datetime-local" name="nextActionAt" />
+                </label>
+
+                <label>
+                  <span>Tipo de cita</span>
+                  <select name="appointmentType">
+                    <option value="">Auto / no definido</option>
+                    <option value="job">Job</option>
+                    <option value="estimate_visit">Estimate Visit</option>
+                    <option value="callback">Callback</option>
+                    <option value="followup">Follow-Up</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Estado de cita</span>
+                  <select name="appointmentStatus">
+                    <option value="">Auto / no definido</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="en_route">En Route</option>
+                    <option value="completed">Completed</option>
+                    <option value="rescheduled">Rescheduled</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Asignado a</span>
+                  <input type="text" name="appointmentAssignedTo" maxlength="80" placeholder="Agustin, Rigo, crew..." />
+                </label>
+
+                <label>
+                  <span>Duracion (min)</span>
+                  <input type="number" name="appointmentDurationMinutes" min="0" max="1440" step="15" placeholder="60" />
                 </label>
 
                 <div class="crm-field-full crm-reminder-field">

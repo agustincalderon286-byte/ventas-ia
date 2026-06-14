@@ -1071,6 +1071,21 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   gap: 14px;
 }
 
+.crm-agenda-section-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.crm-agenda-section-heading h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: 0.01em;
+}
+
 .crm-agenda-card {
   display: grid;
   gap: 12px;
@@ -1079,6 +1094,11 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.76);
   cursor: pointer;
+}
+
+.crm-agenda-card.is-overdue {
+  border-color: rgba(177, 72, 36, 0.28);
+  background: rgba(255, 247, 242, 0.92);
 }
 
 .crm-agenda-card-head {
@@ -1091,6 +1111,11 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
 .crm-agenda-card-head p {
   margin: 6px 0 0;
   color: var(--crm-muted);
+}
+
+.crm-chip-alert {
+  background: rgba(177, 72, 36, 0.12);
+  color: #8a3a1b;
 }
 
 .crm-resource-hub {
@@ -2240,6 +2265,10 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-header {
     flex-direction: column;
+  }
+
+  .crm-agenda-section-heading {
+    align-items: flex-start;
   }
 
   .crm-mobile-shell-tabs .crm-tab-button {
