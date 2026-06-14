@@ -1,7 +1,8 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
+const CRM_DEFAULT_SKIN = "executive-steel";
 const OPERATOR_CHAT_HISTORY_STORAGE_KEY = "cmwf_operator_chat_history_v1";
 const OPERATOR_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
 const OPERATOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
@@ -471,11 +472,20 @@ function persistChatHistory() {
   writeStoredJson(OPERATOR_CHAT_HISTORY_STORAGE_KEY, state.chatHistory.slice(-18));
 }
 
+function normalizeCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue === CRM_DEFAULT_SKIN ? safeValue : CRM_DEFAULT_SKIN;
+}
+
 function applyProfileTheme(profile = {}, email = "") {
   const safeProfile = profile && typeof profile === "object" ? profile : {};
   const displayName = String(safeProfile.displayName || email || "Admin").trim();
-  const skin = String(safeProfile.skin || "classic").trim() || "classic";
-  const themeLabel = String(safeProfile.themeLabel || "").trim();
+  const skin = normalizeCrmSkin(safeProfile.skin || CRM_DEFAULT_SKIN);
+  const themeLabel = "";
 
   document.body.dataset.crmSkin = skin;
 
@@ -492,7 +502,11 @@ function applyProfileTheme(profile = {}, email = "") {
     savedAt: Date.now(),
     data: {
       email,
-      profile: safeProfile,
+      profile: {
+        ...safeProfile,
+        skin,
+        themeLabel: "",
+      },
     },
   });
 }

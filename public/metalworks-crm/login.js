@@ -1,6 +1,7 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
+const CRM_DEFAULT_SKIN = "executive-steel";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -105,20 +106,29 @@ const aliasBadge = document.querySelector("[data-crm-login-alias]");
 const CRM_THEME_PRESETS = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: CRM_DEFAULT_SKIN,
+    themeLabel: "",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: CRM_DEFAULT_SKIN,
+    themeLabel: "",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "goku-blue",
-    themeLabel: "Rigo // Goku Blue Mode",
+    skin: CRM_DEFAULT_SKIN,
+    themeLabel: "",
   },
 };
+
+function normalizeCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue === CRM_DEFAULT_SKIN ? safeValue : CRM_DEFAULT_SKIN;
+}
 
 function setFeedback(message = "", tone = "") {
   if (!feedback) {
@@ -134,14 +144,14 @@ function resolveProfile(email = "") {
   const preset = CRM_THEME_PRESETS[safeEmail] || {};
   return {
     displayName: preset.displayName || "",
-    skin: preset.skin || "classic",
+    skin: normalizeCrmSkin(preset.skin || CRM_DEFAULT_SKIN),
     themeLabel: preset.themeLabel || "",
   };
 }
 
 function applyThemePreview(email = "") {
   const profile = resolveProfile(email);
-  document.body.dataset.crmSkin = profile.skin || "classic";
+  document.body.dataset.crmSkin = normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN);
 
   if (!aliasBadge) {
     return;
@@ -159,7 +169,7 @@ function applyCachedTheme() {
   }
 
   const profile = cached.data.profile;
-  document.body.dataset.crmSkin = profile.skin || "classic";
+  document.body.dataset.crmSkin = normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN);
 
   if (aliasBadge) {
     aliasBadge.hidden = !profile.themeLabel;
@@ -235,7 +245,11 @@ if (loginForm) {
         savedAt: Date.now(),
         data: {
           email: result.email || String(formData.get("email") || "").trim(),
-          profile: result.profile || resolveProfile(formData.get("email") || ""),
+          profile: {
+            ...(result.profile || resolveProfile(formData.get("email") || "")),
+            skin: normalizeCrmSkin(result?.profile?.skin || CRM_DEFAULT_SKIN),
+            themeLabel: "",
+          },
         },
       });
 

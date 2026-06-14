@@ -26,18 +26,18 @@ const METALWORKS_DEFAULT_CLIENT_WARRANTY =
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "goku-blue",
-    themeLabel: "Rigo // Goku Blue Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
 };
 const METALWORKS_CRM_DASHBOARD_LEAD_SELECT = [
@@ -676,7 +676,7 @@ function normalizeMetalworksCrmSkin(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9_-]/g, "");
 
-  return safeValue || "executive-steel";
+  return safeValue === "executive-steel" ? safeValue : "executive-steel";
 }
 
 async function sendMetalworksCrmShell(res, filePath, profile = {}) {

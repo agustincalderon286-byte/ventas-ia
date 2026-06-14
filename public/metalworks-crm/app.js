@@ -1,6 +1,7 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
+const CRM_DEFAULT_SKIN = "executive-steel";
 const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
 const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
@@ -1075,7 +1076,14 @@ async function handleTestPush() {
 function persistThemeProfile(profile = {}, email = "") {
   setCacheEntry(CRM_THEME_STORAGE_KEY, {
     email: String(email || "").trim(),
-    profile: profile && typeof profile === "object" ? profile : {},
+    profile:
+      profile && typeof profile === "object"
+        ? {
+            ...profile,
+            skin: normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN),
+            themeLabel: "",
+          }
+        : {},
   });
 }
 
@@ -1108,6 +1116,15 @@ function rememberSelectedLead(leadId = "") {
 function rememberSelectedApplicant(applicantId = "") {
   state.selectedApplicantId = String(applicantId || "").trim();
   writeStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, state.selectedApplicantId || "");
+}
+
+function normalizeCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue === CRM_DEFAULT_SKIN ? safeValue : CRM_DEFAULT_SKIN;
 }
 
 function isMobileCrmLayout() {
@@ -1327,9 +1344,9 @@ function readCachedLeadDetail(leadId = "") {
 }
 
 function applyProfileTheme(profile = {}, fallbackEmail = "") {
-  const skin = String(profile.skin || "classic").trim() || "classic";
+  const skin = normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN);
   const displayName = String(profile.displayName || fallbackEmail || "Admin").trim();
-  const label = String(profile.themeLabel || "").trim();
+  const label = "";
   document.body.dataset.crmSkin = skin;
 
   if (userChip) {
