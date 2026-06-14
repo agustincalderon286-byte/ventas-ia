@@ -1077,13 +1077,65 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(20, 38, 61, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
 }
 
 .crm-agenda-section-heading h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   font-size: 0.96rem;
   letter-spacing: 0.01em;
+}
+
+.crm-agenda-section-heading h3::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--crm-agenda-accent, rgba(39, 76, 119, 0.38));
+  box-shadow: 0 0 0 6px var(--crm-agenda-accent-soft, rgba(39, 76, 119, 0.08));
+  flex: 0 0 auto;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="overdue"] {
+  --crm-agenda-accent: rgba(177, 72, 36, 0.92);
+  --crm-agenda-accent-soft: rgba(177, 72, 36, 0.12);
+  border-color: rgba(177, 72, 36, 0.14);
+  background: rgba(255, 247, 242, 0.92);
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="today"] {
+  --crm-agenda-accent: rgba(180, 138, 82, 0.92);
+  --crm-agenda-accent-soft: rgba(180, 138, 82, 0.12);
+  border-color: rgba(180, 138, 82, 0.12);
+  background: rgba(255, 251, 244, 0.92);
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="tomorrow"] {
+  --crm-agenda-accent: rgba(43, 92, 138, 0.9);
+  --crm-agenda-accent-soft: rgba(43, 92, 138, 0.12);
+  border-color: rgba(43, 92, 138, 0.12);
+  background: rgba(245, 249, 253, 0.92);
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="this_week"] {
+  --crm-agenda-accent: rgba(68, 102, 126, 0.82);
+  --crm-agenda-accent-soft: rgba(68, 102, 126, 0.1);
+  border-color: rgba(68, 102, 126, 0.12);
+  background: rgba(247, 250, 253, 0.92);
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="upcoming"] {
+  --crm-agenda-accent: rgba(98, 115, 135, 0.72);
+  --crm-agenda-accent-soft: rgba(98, 115, 135, 0.08);
+  border-color: rgba(98, 115, 135, 0.1);
+  background: rgba(249, 251, 253, 0.92);
 }
 
 .crm-agenda-card {
@@ -1091,14 +1143,48 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   gap: 12px;
   padding: 18px;
   border: 1px solid rgba(20, 38, 61, 0.08);
+  border-left-width: 5px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.76);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 250, 252, 0.96) 100%);
+  box-shadow: 0 18px 38px rgba(20, 38, 61, 0.07);
   cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
 .crm-agenda-card.is-overdue {
   border-color: rgba(177, 72, 36, 0.28);
-  background: rgba(255, 247, 242, 0.92);
+  background: linear-gradient(180deg, rgba(255, 248, 244, 0.98) 0%, rgba(255, 244, 238, 0.96) 100%);
+}
+
+.crm-agenda-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 44px rgba(20, 38, 61, 0.11);
+}
+
+.crm-agenda-card[data-agenda-bucket="overdue"] {
+  border-left-color: rgba(177, 72, 36, 0.88);
+}
+
+.crm-agenda-card[data-agenda-bucket="today"] {
+  border-left-color: rgba(180, 138, 82, 0.82);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.98) 0%, rgba(255, 248, 240, 0.96) 100%);
+}
+
+.crm-agenda-card[data-agenda-bucket="tomorrow"] {
+  border-left-color: rgba(43, 92, 138, 0.78);
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(242, 248, 253, 0.96) 100%);
+}
+
+.crm-agenda-card[data-agenda-bucket="this_week"] {
+  border-left-color: rgba(91, 113, 135, 0.56);
+}
+
+.crm-agenda-card[data-agenda-bucket="upcoming"] {
+  border-left-color: rgba(112, 124, 138, 0.3);
 }
 
 .crm-agenda-card-head {
@@ -1113,9 +1199,107 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   color: var(--crm-muted);
 }
 
-.crm-chip-alert {
+.crm-agenda-card .crm-chip {
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.crm-agenda-card .crm-chip-schedule {
+  background: rgba(39, 76, 119, 0.08);
+  border-color: rgba(39, 76, 119, 0.12);
+  color: #264c78;
+}
+
+.crm-agenda-card .crm-chip-appointment-type {
+  background: rgba(43, 92, 138, 0.08);
+  border-color: rgba(43, 92, 138, 0.12);
+  color: #264c78;
+}
+
+.crm-agenda-card .crm-chip-muted {
+  background: rgba(21, 35, 54, 0.05);
+  border-color: rgba(21, 35, 54, 0.08);
+  color: #556375;
+}
+
+.crm-agenda-card .crm-chip-alert {
   background: rgba(177, 72, 36, 0.12);
+  border-color: rgba(177, 72, 36, 0.16);
   color: #8a3a1b;
+}
+
+.crm-agenda-card .crm-chip-appointment-status {
+  background: rgba(21, 35, 54, 0.06);
+  border-color: rgba(21, 35, 54, 0.1);
+  color: #556375;
+}
+
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="scheduled"],
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="rescheduled"] {
+  background: rgba(180, 138, 82, 0.14);
+  border-color: rgba(180, 138, 82, 0.18);
+  color: #8a6532;
+}
+
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="confirmed"] {
+  background: rgba(47, 106, 92, 0.14);
+  border-color: rgba(47, 106, 92, 0.18);
+  color: #2f6a5c;
+}
+
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="en_route"] {
+  background: rgba(43, 92, 138, 0.14);
+  border-color: rgba(43, 92, 138, 0.18);
+  color: #264c78;
+}
+
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="completed"] {
+  background: rgba(34, 102, 71, 0.16);
+  border-color: rgba(34, 102, 71, 0.2);
+  color: #215d44;
+}
+
+.crm-agenda-card .crm-chip-appointment-status[data-appointment-status="canceled"] {
+  background: rgba(162, 63, 63, 0.12);
+  border-color: rgba(162, 63, 63, 0.14);
+  color: #8a3737;
+}
+
+.crm-agenda-section-heading .crm-chip-agenda-count {
+  min-width: 42px;
+  justify-content: center;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="overdue"] .crm-chip-agenda-count {
+  background: rgba(177, 72, 36, 0.12);
+  border-color: rgba(177, 72, 36, 0.14);
+  color: #8a3a1b;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="today"] .crm-chip-agenda-count {
+  background: rgba(180, 138, 82, 0.14);
+  border-color: rgba(180, 138, 82, 0.16);
+  color: #8a6532;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="tomorrow"] .crm-chip-agenda-count {
+  background: rgba(43, 92, 138, 0.12);
+  border-color: rgba(43, 92, 138, 0.14);
+  color: #264c78;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="this_week"] .crm-chip-agenda-count {
+  background: rgba(68, 102, 126, 0.1);
+  border-color: rgba(68, 102, 126, 0.14);
+  color: #44667e;
+}
+
+.crm-agenda-section-heading[data-agenda-bucket="upcoming"] .crm-chip-agenda-count {
+  background: rgba(98, 115, 135, 0.1);
+  border-color: rgba(98, 115, 135, 0.12);
+  color: #5b6b7c;
 }
 
 .crm-resource-hub {

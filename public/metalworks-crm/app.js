@@ -2138,9 +2138,16 @@ function buildAgendaCardMarkup(lead = null) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
   const reminderSummary = buildLeadReminderSummary(lead);
+  const agendaBucket = String(lead.agendaBucket || "").trim() || (lead.agendaIsOverdue ? "overdue" : "upcoming");
+  const appointmentStatus = String(lead.appointmentStatus || "").trim();
 
   return `
-    <article class="crm-agenda-card ${lead.agendaIsOverdue ? "is-overdue" : ""}" data-crm-agenda-lead-id="${escapeHtml(lead.id)}">
+    <article
+      class="crm-agenda-card ${lead.agendaIsOverdue ? "is-overdue" : ""}"
+      data-crm-agenda-lead-id="${escapeHtml(lead.id)}"
+      data-agenda-bucket="${escapeHtml(agendaBucket)}"
+      data-appointment-status="${escapeHtml(appointmentStatus)}"
+    >
       <div class="crm-agenda-card-head">
         <div>
           <h3>${escapeHtml(lead.fullName || "Unknown lead")}</h3>
@@ -2151,15 +2158,19 @@ function buildAgendaCardMarkup(lead = null) {
         </span>
       </div>
       <div class="crm-micro-list">
-        <span class="crm-chip">${escapeHtml(scheduleLabel)}</span>
+        <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
         ${lead.agendaIsOverdue ? '<span class="crm-chip crm-chip-alert">Overdue</span>' : ""}
-        ${lead.appointmentTypeLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
-        ${lead.appointmentStatusLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentStatusLabel)}</span>` : ""}
-        ${lead.appointmentAssignedTo ? `<span class="crm-chip">Assigned: ${escapeHtml(lead.appointmentAssignedTo)}</span>` : ""}
-        ${lead.appointmentDurationMinutes ? `<span class="crm-chip">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>` : ""}
-        ${lead.nextAction ? `<span class="crm-chip">${escapeHtml(lead.nextAction)}</span>` : ""}
-        ${reminderSummary ? `<span class="crm-chip">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
-        ${lead.callbackIntent === "yes" ? '<span class="crm-chip">Callback</span>' : ""}
+        ${lead.appointmentTypeLabel ? `<span class="crm-chip crm-chip-appointment-type">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
+        ${
+          lead.appointmentStatusLabel
+            ? `<span class="crm-chip crm-chip-appointment-status" data-appointment-status="${escapeHtml(appointmentStatus)}">${escapeHtml(lead.appointmentStatusLabel)}</span>`
+            : ""
+        }
+        ${lead.appointmentAssignedTo ? `<span class="crm-chip crm-chip-muted">Assigned: ${escapeHtml(lead.appointmentAssignedTo)}</span>` : ""}
+        ${lead.appointmentDurationMinutes ? `<span class="crm-chip crm-chip-muted">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>` : ""}
+        ${lead.nextAction ? `<span class="crm-chip crm-chip-muted">${escapeHtml(lead.nextAction)}</span>` : ""}
+        ${reminderSummary ? `<span class="crm-chip crm-chip-muted">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
+        ${lead.callbackIntent === "yes" ? '<span class="crm-chip crm-chip-muted">Callback</span>' : ""}
       </div>
       <div class="crm-lead-card-summary">
         <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
@@ -2287,7 +2298,7 @@ function renderAgenda(leads = [], agendaSummary = null) {
       (section) => `
         <div class="crm-agenda-section-heading" data-agenda-bucket="${escapeHtml(section.key)}">
           <h3>${escapeHtml(section.label)}</h3>
-          <span class="crm-chip">${section.leads.length}</span>
+          <span class="crm-chip crm-chip-agenda-count" data-agenda-bucket="${escapeHtml(section.key)}">${section.leads.length}</span>
         </div>
         ${section.leads.map((lead) => buildAgendaCardMarkup(lead)).join("")}
       `,
