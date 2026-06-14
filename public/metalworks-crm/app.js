@@ -2109,6 +2109,16 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
       value: summary.wonLeads || 0,
       note: `${summary.lostLeads || 0} perdidos · ${summary.totalApplicants || 0} candidatos`,
     },
+    {
+      label: "Ventas del mes",
+      value: formatCurrency(summary.soldMonthAmount || 0),
+      note: `${summary.soldMonthJobs || 0} trabajos ganados`,
+    },
+    {
+      label: "Ventas del año",
+      value: formatCurrency(summary.soldYearAmount || 0),
+      note: `${summary.soldYearJobs || 0} trabajos ganados`,
+    },
   ];
 
   const breakdown = serviceBreakdown

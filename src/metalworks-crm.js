@@ -94,6 +94,7 @@ const METALWORKS_CRM_DASHBOARD_LEAD_SELECT = [
   "clientDocumentWarranty",
   "estimateSentAt",
   "estimateSentTo",
+  "soldAt",
   "pageTitle",
   "pagePath",
   "pageUrl",
@@ -988,6 +989,106 @@ function formatDateTimeLabel(value = "", timeZone = "") {
   return date.toLocaleString("en-US", options);
 }
 
+function getMetalworksSalesWindowBoundaries(
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const nowParts = getAssistantZonedParts(now, timeZone);
+  const monthStart = buildAssistantZonedDate(
+    { year: nowParts.year, month: nowParts.month, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+  const nextMonthStart = buildAssistantZonedDate(
+    {
+      year: nowParts.month === 12 ? nowParts.year + 1 : nowParts.year,
+      month: nowParts.month === 12 ? 1 : nowParts.month + 1,
+      day: 1,
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
+  const yearStart = buildAssistantZonedDate(
+    { year: nowParts.year, month: 1, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+  const nextYearStart = buildAssistantZonedDate(
+    { year: nowParts.year + 1, month: 1, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+
+  return {
+    monthStart,
+    nextMonthStart,
+    yearStart,
+    nextYearStart,
+  };
+}
+
+function buildMetalworksEffectiveSoldAtExpression() {
+  return {
+    $ifNull: [
+      "$soldAt",
+      {
+        $ifNull: [
+          "$estimateSentAt",
+          {
+            $ifNull: [
+              "$updatedAt",
+              {
+                $ifNull: ["$clientDocumentWorkDate", "$createdAt"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+async function buildMetalworksSalesSummary(MetalworksLead, now = new Date()) {
+  const { monthStart, nextMonthStart, yearStart, nextYearStart } =
+    getMetalworksSalesWindowBoundaries(now);
+  const effectiveSoldAt = buildMetalworksEffectiveSoldAtExpression();
+
+  const [monthSummary, yearSummary] = await Promise.all([
+    MetalworksLead.aggregate([
+      { $match: { status: "won", estimateAmount: { $gt: 0 } } },
+      { $addFields: { effectiveSoldAt } },
+      { $match: { effectiveSoldAt: { $gte: monthStart, $lt: nextMonthStart } } },
+      {
+        $group: {
+          _id: null,
+          soldAmount: { $sum: "$estimateAmount" },
+          soldJobs: { $sum: 1 },
+        },
+      },
+    ]),
+    MetalworksLead.aggregate([
+      { $match: { status: "won", estimateAmount: { $gt: 0 } } },
+      { $addFields: { effectiveSoldAt } },
+      { $match: { effectiveSoldAt: { $gte: yearStart, $lt: nextYearStart } } },
+      {
+        $group: {
+          _id: null,
+          soldAmount: { $sum: "$estimateAmount" },
+          soldJobs: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const month = monthSummary?.[0] || {};
+  const year = yearSummary?.[0] || {};
+
+  return {
+    soldMonthAmount: normalizeMoney(month.soldAmount || 0),
+    soldMonthJobs: Number(month.soldJobs || 0) || 0,
+    soldYearAmount: normalizeMoney(year.soldAmount || 0),
+    soldYearJobs: Number(year.soldJobs || 0) || 0,
+  };
+}
+
 export function buildMetalworksClientDocumentSnapshot(lead = null) {
   const fullName =
     sanitizeAssistantStoredName(cleanText(lead?.fullName || "", 120)) ||
@@ -1011,6 +1112,7 @@ export function buildMetalworksClientDocumentSnapshot(lead = null) {
   const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
   const deposit = depositAmount > 0 ? formatMoneyLabel(depositAmount) : "";
   const balanceDue = totalAmount > 0 ? formatMoneyLabel(balanceDueAmount) : "";
+  const soldAt = lead?.soldAt ? new Date(lead.soldAt) : null;
   const location = cleanText(lead?.location || "", 160);
   const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
   const email = normalizeEmail(lead?.email || "");
@@ -1031,6 +1133,7 @@ export function buildMetalworksClientDocumentSnapshot(lead = null) {
     deposit,
     balanceDueAmount,
     balanceDue,
+    soldAt: soldAt instanceof Date && !Number.isNaN(soldAt.getTime()) ? soldAt.toISOString() : "",
     location,
     phone,
     email,
@@ -5347,6 +5450,7 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     clientDocumentWarranty: doc.clientDocumentWarranty || "",
     estimateSentAt: doc.estimateSentAt ? new Date(doc.estimateSentAt).toISOString() : "",
     estimateSentTo: doc.estimateSentTo || "",
+    soldAt: doc.soldAt ? new Date(doc.soldAt).toISOString() : "",
     pageTitle: doc.pageTitle || "",
     pagePath: doc.pagePath || "",
     pageUrl: doc.pageUrl || "",
@@ -5652,6 +5756,7 @@ async function buildDashboardSnapshot(
       };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const applicantModelAvailable = Boolean(MetalworksApplicant?.find);
+  const salesSummaryPromise = buildMetalworksSalesSummary(MetalworksLead);
 
   const [
     leads,
@@ -5673,6 +5778,7 @@ async function buildDashboardSnapshot(
     newApplicants,
     interviewApplicants,
     recentApplicants,
+    salesSummary,
   ] = await Promise.all([
     MetalworksLead.find(leadQuery)
       .select(METALWORKS_CRM_DASHBOARD_LEAD_SELECT)
@@ -5747,6 +5853,7 @@ async function buildDashboardSnapshot(
           .limit(12)
           .lean()
       : [],
+    salesSummaryPromise,
   ]);
 
   return {
@@ -5762,6 +5869,10 @@ async function buildDashboardSnapshot(
       phoneClicks30d,
       emailClicks30d,
       quoteSubmits30d,
+      soldMonthAmount: Number(salesSummary?.soldMonthAmount || 0) || 0,
+      soldMonthJobs: Number(salesSummary?.soldMonthJobs || 0) || 0,
+      soldYearAmount: Number(salesSummary?.soldYearAmount || 0) || 0,
+      soldYearJobs: Number(salesSummary?.soldYearJobs || 0) || 0,
       totalApplicants: Number(totalApplicants || 0) || 0,
       newApplicants: Number(newApplicants || 0) || 0,
       interviewApplicants: Number(interviewApplicants || 0) || 0,
@@ -6545,6 +6656,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     clientDocumentWarranty: String,
     estimateSentAt: Date,
     estimateSentTo: String,
+    soldAt: Date,
     sourceType: { type: String, default: "website_form", index: true },
     sourceExternalId: { type: String, index: true },
     sourceExternalSystem: String,
@@ -11294,6 +11406,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       if (nextStatus && leadDoc.status !== nextStatus) {
         changes.push(`Estado: ${labelStatus(leadDoc.status)} -> ${labelStatus(nextStatus)}`);
         leadDoc.status = nextStatus;
+
+        if (nextStatus === "won") {
+          leadDoc.soldAt = new Date();
+        }
       }
 
       if (nextAction !== null && leadDoc.nextAction !== nextAction) {
@@ -11629,6 +11745,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       if (changes.length || note) {
         leadDoc.lastContactAt = new Date();
+      }
+
+      if (normalizeStatus(leadDoc.status || "new") === "won" && !leadDoc.soldAt) {
+        leadDoc.soldAt = leadDoc.estimateSentAt || leadDoc.updatedAt || leadDoc.clientDocumentWorkDate || new Date();
       }
 
       leadDoc.updatedAt = new Date();
