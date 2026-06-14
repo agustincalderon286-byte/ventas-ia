@@ -133,6 +133,27 @@ function formatCacheAge(savedAt = 0) {
   return `hace ${hours} h`;
 }
 
+function formatAppointmentDuration(minutesValue = 0) {
+  const totalMinutes = Math.max(0, Math.round(Number(minutesValue || 0)));
+
+  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+    return "";
+  }
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (!minutes) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${minutes} min`;
+}
+
 function buildAbsoluteAppUrl(pathOrUrl = "") {
   const safeValue = String(pathOrUrl || "").trim();
 
@@ -2140,6 +2161,7 @@ function buildAgendaCardMarkup(lead = null) {
   const reminderSummary = buildLeadReminderSummary(lead);
   const agendaBucket = String(lead.agendaBucket || "").trim() || (lead.agendaIsOverdue ? "overdue" : "upcoming");
   const appointmentStatus = String(lead.appointmentStatus || "").trim();
+  const appointmentDurationLabel = formatAppointmentDuration(lead.appointmentDurationMinutes || 0);
 
   return `
     <article
@@ -2167,7 +2189,7 @@ function buildAgendaCardMarkup(lead = null) {
             : ""
         }
         ${lead.appointmentAssignedTo ? `<span class="crm-chip crm-chip-muted">Assigned: ${escapeHtml(lead.appointmentAssignedTo)}</span>` : ""}
-        ${lead.appointmentDurationMinutes ? `<span class="crm-chip crm-chip-muted">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>` : ""}
+        ${appointmentDurationLabel ? `<span class="crm-chip crm-chip-muted">${escapeHtml(appointmentDurationLabel)}</span>` : ""}
         ${lead.nextAction ? `<span class="crm-chip crm-chip-muted">${escapeHtml(lead.nextAction)}</span>` : ""}
         ${reminderSummary ? `<span class="crm-chip crm-chip-muted">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
         ${lead.callbackIntent === "yes" ? '<span class="crm-chip crm-chip-muted">Callback</span>' : ""}
@@ -3626,6 +3648,7 @@ function renderLeadDetail(detail = null) {
   const lead = detail.lead;
   const isLiveChatThread = Boolean(lead.supportsLiveChatReply);
   const sourceText = getLeadSourceLabel(lead);
+  const appointmentDurationLabel = formatAppointmentDuration(lead.appointmentDurationMinutes || 0);
   persistLeadDetail(detail);
   detailWrap.hidden = false;
   applicantDetailWrap.hidden = true;
@@ -3656,8 +3679,8 @@ function renderLeadDetail(detail = null) {
           : ""
       }
       ${
-        lead.appointmentDurationMinutes
-          ? `<span class="crm-chip">${escapeHtml(String(lead.appointmentDurationMinutes))} min</span>`
+        appointmentDurationLabel
+          ? `<span class="crm-chip">${escapeHtml(appointmentDurationLabel)}</span>`
           : ""
       }
       ${
