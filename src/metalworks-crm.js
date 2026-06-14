@@ -1198,10 +1198,10 @@ export function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
         ? `Total: ${snapshot.total}`
         : "",
     snapshot.documentType === "invoice" && snapshot.deposit
-      ? `Deposit received: ${snapshot.deposit}`
+      ? `Amount collected: ${snapshot.deposit}`
       : "",
     snapshot.documentType === "invoice" && snapshot.balanceDue
-      ? `Balance due: ${snapshot.balanceDue}`
+      ? `Balance remaining: ${snapshot.balanceDue}`
       : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
@@ -1239,12 +1239,12 @@ export function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
           }
           ${
             snapshot.documentType === "invoice" && snapshot.deposit
-              ? `<p style="margin:0 0 10px"><strong>Deposit received:</strong> ${escapeHtmlMarkup(snapshot.deposit)}</p>`
+              ? `<p style="margin:0 0 10px"><strong>Amount collected:</strong> ${escapeHtmlMarkup(snapshot.deposit)}</p>`
               : ""
           }
           ${
             snapshot.documentType === "invoice" && snapshot.balanceDue
-              ? `<p style="margin:0"><strong>Balance due:</strong> ${escapeHtmlMarkup(snapshot.balanceDue)}</p>`
+              ? `<p style="margin:0"><strong>Balance remaining:</strong> ${escapeHtmlMarkup(snapshot.balanceDue)}</p>`
               : ""
           }
         </div>
@@ -11587,11 +11587,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           : normalizeMoney(leadDoc.invoiceDepositAmount || 0);
 
       if (nextInvoiceDepositAmount > 0 && normalizeMoney(leadDoc.estimateAmount || 0) <= 0) {
-        return respondError(res, 400, "Add the total before recording a deposit.");
+        return respondError(res, 400, "Add the total before recording the amount collected.");
       }
 
       if (nextInvoiceDepositAmount > normalizeMoney(leadDoc.estimateAmount || 0)) {
-        return respondError(res, 400, "Deposit can't be higher than the total.");
+        return respondError(res, 400, "Amount collected can't be higher than the total.");
       }
 
       if (invoiceDepositAmount !== null) {
@@ -11608,7 +11608,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       if (invoiceDepositChanged) {
-        changes.push(`Invoice deposit: ${formatMoneyLabel(leadDoc.invoiceDepositAmount || 0)}`);
+        changes.push(`Amount collected: ${formatMoneyLabel(leadDoc.invoiceDepositAmount || 0)}`);
       }
 
       if (clientDocumentChanged) {

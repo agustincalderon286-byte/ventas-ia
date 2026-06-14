@@ -1734,11 +1734,11 @@ function getInvoiceValidationMessage(snapshot = null) {
   const safeSnapshot = snapshot || buildEstimateSnapshot();
 
   if (safeSnapshot.deposit > 0 && safeSnapshot.total <= 0) {
-    return "Add the total before recording a deposit.";
+    return "Add the total before recording the amount collected.";
   }
 
   if (safeSnapshot.deposit > safeSnapshot.total) {
-    return "Deposit can't be higher than the total.";
+    return "Amount collected can't be higher than the total.";
   }
 
   return "";
@@ -1852,10 +1852,10 @@ function buildEstimateBody(snapshot) {
         ? `Total: ${formatCurrency(snapshot.total)}`
         : "",
     snapshot.documentType === "invoice" && snapshot.deposit > 0
-      ? `Deposit received: ${formatCurrency(snapshot.deposit)}`
+      ? `Amount collected: ${formatCurrency(snapshot.deposit)}`
       : "",
     snapshot.documentType === "invoice" && snapshot.total > 0
-      ? `Balance due: ${formatCurrency(snapshot.balanceDue)}`
+      ? `Balance remaining: ${formatCurrency(snapshot.balanceDue)}`
       : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
@@ -1885,10 +1885,10 @@ function buildEstimateTextMessage(snapshot) {
         ? `Total: ${formatCurrency(snapshot.total)}`
         : "",
     snapshot.documentType === "invoice" && snapshot.deposit > 0
-      ? `Deposit received: ${formatCurrency(snapshot.deposit)}`
+      ? `Amount collected: ${formatCurrency(snapshot.deposit)}`
       : "",
     snapshot.documentType === "invoice" && snapshot.total > 0
-      ? `Balance due: ${formatCurrency(snapshot.balanceDue)}`
+      ? `Balance remaining: ${formatCurrency(snapshot.balanceDue)}`
       : "",
     "",
     snapshot.description ? `Work: ${snapshot.description}` : "",
@@ -3662,12 +3662,12 @@ function renderLeadDetail(detail = null) {
       ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
       ${
         lead.invoiceDepositAmount
-          ? `<span class="crm-chip">Deposit ${escapeHtml(formatCurrency(lead.invoiceDepositAmount))}</span>`
+          ? `<span class="crm-chip">Collected ${escapeHtml(formatCurrency(lead.invoiceDepositAmount))}</span>`
           : ""
       }
       ${
         lead.invoiceBalanceDue && lead.clientDocumentType === "invoice"
-          ? `<span class="crm-chip">Balance ${escapeHtml(formatCurrency(lead.invoiceBalanceDue))}</span>`
+          ? `<span class="crm-chip">Remaining ${escapeHtml(formatCurrency(lead.invoiceBalanceDue))}</span>`
           : ""
       }
       ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
