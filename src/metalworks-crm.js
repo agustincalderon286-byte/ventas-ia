@@ -2400,7 +2400,19 @@ function endOfLocalWeek(value = new Date()) {
   return date;
 }
 
-function getMetalworksAgendaBucket(nextActionAt = null, now = new Date()) {
+function formatCalendarDayPartsKey(parts = null) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return "";
+  }
+
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function getMetalworksAgendaBucket(
+  nextActionAt = null,
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
   const scheduledAt =
     nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
 
@@ -2416,14 +2428,27 @@ function getMetalworksAgendaBucket(nextActionAt = null, now = new Date()) {
     };
   }
 
-  const todayStart = startOfLocalDay(now);
-  const tomorrowStart = new Date(todayStart.getTime());
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const dayAfterTomorrowStart = new Date(tomorrowStart.getTime());
-  dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
-  const weekEnd = endOfLocalWeek(now);
+  const scheduledDayKey = formatAssistantCalendarDayKey(scheduledAt, timeZone);
+  const todayDayKey = formatAssistantCalendarDayKey(now, timeZone);
+  const todayParts = parseAssistantCalendarDayKey(todayDayKey);
 
-  if (scheduledAt >= todayStart && scheduledAt < tomorrowStart) {
+  if (!scheduledDayKey || !todayDayKey || !todayParts) {
+    return {
+      key: "upcoming",
+      label: "Later",
+      order: 4,
+    };
+  }
+
+  const todayIndex = new Date(
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day),
+  ).getUTCDay();
+  const tomorrowDayKey = formatCalendarDayPartsKey(addAssistantCalendarDays(todayParts, 1));
+  const weekEndDayKey = formatCalendarDayPartsKey(
+    addAssistantCalendarDays(todayParts, 6 - todayIndex),
+  );
+
+  if (scheduledDayKey === todayDayKey) {
     return {
       key: "today",
       label: "Today",
@@ -2431,7 +2456,7 @@ function getMetalworksAgendaBucket(nextActionAt = null, now = new Date()) {
     };
   }
 
-  if (scheduledAt >= tomorrowStart && scheduledAt < dayAfterTomorrowStart) {
+  if (scheduledDayKey === tomorrowDayKey) {
     return {
       key: "tomorrow",
       label: "Tomorrow",
@@ -2439,7 +2464,7 @@ function getMetalworksAgendaBucket(nextActionAt = null, now = new Date()) {
     };
   }
 
-  if (scheduledAt <= weekEnd) {
+  if (scheduledDayKey <= weekEndDayKey) {
     return {
       key: "this_week",
       label: "This Week",
@@ -11067,7 +11092,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push(
           `Seguimiento: ${
             nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
-              ? nextActionAt.toLocaleString("en-US")
+              ? formatDateTimeLabel(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
               : "Sin fecha"
           }`,
         );
@@ -11421,7 +11446,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push(
           `Seguimiento: ${
             nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
-              ? nextActionAt.toLocaleString("en-US")
+              ? formatDateTimeLabel(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
               : "Sin fecha"
           }`,
         );

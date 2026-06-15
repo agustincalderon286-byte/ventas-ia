@@ -21,6 +21,7 @@ const CRM_AGENDA_BUCKET_LABELS = {
   this_week: "This Week",
   upcoming: "Later",
 };
+const CRM_BUSINESS_TIME_ZONE = "America/Chicago";
 const MAX_CRM_PHOTO_FILES = 4;
 const MAX_CRM_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_CRM_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
@@ -485,6 +486,7 @@ function formatDate(value = "") {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: CRM_BUSINESS_TIME_ZONE,
   });
 }
 
@@ -502,21 +504,59 @@ function formatDateOnly(value = "") {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: CRM_BUSINESS_TIME_ZONE,
   });
 }
 
-function startOfLocalDay(value = new Date()) {
-  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
-  date.setHours(0, 0, 0, 0);
-  return date;
+function getBusinessDateTimeParts(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: CRM_BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(map.year || 0),
+    month: Number(map.month || 0),
+    day: Number(map.day || 0),
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0),
+  };
 }
 
-function endOfLocalWeek(value = new Date()) {
-  const date = startOfLocalDay(value);
-  const dayOfWeek = date.getDay();
-  date.setDate(date.getDate() + (6 - dayOfWeek));
-  date.setHours(23, 59, 59, 999);
-  return date;
+function formatBusinessDayKey(parts = null) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return "";
+  }
+
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function addBusinessCalendarDays(parts = null, dayOffset = 0) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return null;
+  }
+
+  const reference = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  reference.setUTCDate(reference.getUTCDate() + Number(dayOffset || 0));
+
+  return {
+    year: reference.getUTCFullYear(),
+    month: reference.getUTCMonth() + 1,
+    day: reference.getUTCDate(),
+  };
 }
 
 function getAgendaBucketMeta(value = "", now = new Date()) {
@@ -538,14 +578,26 @@ function getAgendaBucketMeta(value = "", now = new Date()) {
     };
   }
 
-  const todayStart = startOfLocalDay(now);
-  const tomorrowStart = new Date(todayStart.getTime());
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const dayAfterTomorrowStart = new Date(tomorrowStart.getTime());
-  dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
-  const weekEnd = endOfLocalWeek(now);
+  const todayParts = getBusinessDateTimeParts(now);
+  const scheduledParts = getBusinessDateTimeParts(date);
 
-  if (date >= todayStart && date < tomorrowStart) {
+  if (!todayParts || !scheduledParts) {
+    return {
+      key: "upcoming",
+      label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+    };
+  }
+
+  const todayKey = formatBusinessDayKey(todayParts);
+  const scheduledKey = formatBusinessDayKey(scheduledParts);
+  const tomorrowKey = formatBusinessDayKey(addBusinessCalendarDays(todayParts, 1));
+  const todayIndex = new Date(
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day),
+  ).getUTCDay();
+  const weekEndKey = formatBusinessDayKey(addBusinessCalendarDays(todayParts, 6 - todayIndex));
+
+  if (scheduledKey === todayKey) {
     return {
       key: "today",
       label: CRM_AGENDA_BUCKET_LABELS.today,
@@ -553,7 +605,7 @@ function getAgendaBucketMeta(value = "", now = new Date()) {
     };
   }
 
-  if (date >= tomorrowStart && date < dayAfterTomorrowStart) {
+  if (scheduledKey === tomorrowKey) {
     return {
       key: "tomorrow",
       label: CRM_AGENDA_BUCKET_LABELS.tomorrow,
@@ -561,7 +613,7 @@ function getAgendaBucketMeta(value = "", now = new Date()) {
     };
   }
 
-  if (date <= weekEnd) {
+  if (scheduledKey <= weekEndKey) {
     return {
       key: "this_week",
       label: CRM_AGENDA_BUCKET_LABELS.this_week,
@@ -583,13 +635,7 @@ function serializeDatetimeLocalValue(value = "") {
     return "";
   }
 
-  const date = new Date(safeValue);
-
-  if (Number.isNaN(date.getTime())) {
-    return safeValue;
-  }
-
-  return date.toISOString();
+  return safeValue;
 }
 
 function formatCurrency(value = 0) {
@@ -743,16 +789,16 @@ function toDatetimeLocalValue(value = "") {
     return "";
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const parts = getBusinessDateTimeParts(value);
+  if (!parts) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const year = String(parts.year).padStart(4, "0");
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
+  const hours = String(parts.hour).padStart(2, "0");
+  const minutes = String(parts.minute).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
@@ -761,14 +807,14 @@ function toDateInputValue(value = "") {
     return "";
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const parts = getBusinessDateTimeParts(value);
+  if (!parts) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(parts.year).padStart(4, "0");
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
