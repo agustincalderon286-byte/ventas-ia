@@ -213,6 +213,13 @@ const METALWORKS_EXTERNAL_LOCK_TTL_MS = 45 * 1000;
 const METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS = 24;
 const METALWORKS_EXTERNAL_LOCK_RETRY_MS = 150;
 const METALWORKS_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
+const METALWORKS_AGENDA_EVENT_TYPE_OPTIONS = [
+  "personal",
+  "client",
+  "interview",
+  "internal",
+];
+const METALWORKS_AGENDA_EVENT_STATUS_OPTIONS = ["scheduled", "completed", "canceled"];
 const METALWORKS_IMPORTANT_DATE_RULES = [
   "These are availability awareness notes, not hard schedule blocks.",
   "Do not reject scheduling only because an important date exists.",
@@ -716,6 +723,16 @@ function normalizeAppointmentType(value = "") {
 function normalizeAppointmentStatus(value = "") {
   const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
   return METALWORKS_APPOINTMENT_STATUS_OPTIONS.includes(safeValue) ? safeValue : "";
+}
+
+function normalizeAgendaEventType(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_AGENDA_EVENT_TYPE_OPTIONS.includes(safeValue) ? safeValue : "internal";
+}
+
+function normalizeAgendaEventStatus(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_AGENDA_EVENT_STATUS_OPTIONS.includes(safeValue) ? safeValue : "scheduled";
 }
 
 function normalizeAppointmentDurationMinutes(value = 0) {
@@ -2258,6 +2275,27 @@ function labelAppointmentStatus(status = "") {
   };
 
   return labels[normalizeAppointmentStatus(status)] || "";
+}
+
+function labelAgendaEventType(type = "") {
+  const labels = {
+    personal: "Personal",
+    client: "Client",
+    interview: "Interview",
+    internal: "Internal",
+  };
+
+  return labels[normalizeAgendaEventType(type)] || "Internal";
+}
+
+function labelAgendaEventStatus(status = "") {
+  const labels = {
+    scheduled: "Scheduled",
+    completed: "Completed",
+    canceled: "Canceled",
+  };
+
+  return labels[normalizeAgendaEventStatus(status)] || "Scheduled";
 }
 
 function labelApplicantStatus(status = "") {
@@ -3978,6 +4016,56 @@ function buildImportantDateAgendaEvents(importantDates = [], now = new Date()) {
     .sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
 }
 
+function buildStoredAgendaEvents(agendaEvents = [], now = new Date()) {
+  return (Array.isArray(agendaEvents) ? agendaEvents : [])
+    .map((item) => {
+      const startsAt = item?.startsAt ? new Date(item.startsAt) : null;
+
+      if (!(startsAt instanceof Date) || Number.isNaN(startsAt.getTime())) {
+        return null;
+      }
+
+      if (normalizeAgendaEventStatus(item.status || "scheduled") === "canceled") {
+        return null;
+      }
+
+      const bucket = getMetalworksAgendaBucket(startsAt, now);
+
+      if (!bucket) {
+        return null;
+      }
+
+      const eventType = normalizeAgendaEventType(item.eventType || "internal");
+      const owner = cleanText(item.owner || "", 80);
+
+      return {
+        ...item,
+        id: `agenda-event-${item.id || item._id || item.startsAt}`,
+        sourceAgendaEventId: item.id || "",
+        type: "agenda_event",
+        isAgendaEvent: true,
+        isImportantDate: false,
+        fullName: item.title || "Agenda event",
+        owner,
+        projectType: labelAgendaEventType(eventType),
+        location: owner ? `${owner} agenda` : "Internal agenda",
+        details: item.notes || "Internal agenda item.",
+        status: "agenda_event",
+        statusLabel: labelAgendaEventType(eventType),
+        nextAction: "Agenda event - not a lead",
+        nextActionAt: startsAt.toISOString(),
+        appointmentEndAt: item.endsAt || "",
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+        schedulingRule: "Internal agenda event. It is not a lead unless explicitly linked later.",
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+}
+
 function resolveAssistantTimeParts(label = "") {
   const normalized = normalizeAssistantSearchText(label || "");
 
@@ -4147,6 +4235,216 @@ function buildAssistantNextActionAt(
     },
     timeZone,
   );
+}
+
+function resolveAgendaEventDateTimeFromText(
+  value = "",
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const raw = cleanText(value || "", 600);
+  const normalized = normalizeAssistantSearchText(raw);
+  const timeParts = resolveAssistantTimeParts(normalized) || { hour: 9, minute: 0 };
+  const isoDateMatch = normalized.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+
+  if (isoDateMatch) {
+    return buildAssistantZonedDate(
+      {
+        year: Number(isoDateMatch[1] || 0),
+        month: Number(isoDateMatch[2] || 0),
+        day: Number(isoDateMatch[3] || 0),
+        hour: timeParts.hour,
+        minute: timeParts.minute,
+      },
+      timeZone,
+    );
+  }
+
+  const numericDateMatch = normalized.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](20\d{2}))?\b/);
+
+  if (numericDateMatch) {
+    const nowParts = getAssistantZonedParts(now, timeZone);
+    const firstNumber = Number(numericDateMatch[1] || 0);
+    const secondNumber = Number(numericDateMatch[2] || 0);
+    const month = firstNumber > 12 ? secondNumber : firstNumber;
+    const day = firstNumber > 12 ? firstNumber : secondNumber;
+    let year = Number(numericDateMatch[3] || nowParts.year || 0);
+    let candidate = buildAssistantZonedDate(
+      { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+      timeZone,
+    );
+
+    if (
+      candidate &&
+      !numericDateMatch[3] &&
+      formatAssistantCalendarDayKey(candidate, timeZone) < formatAssistantCalendarDayKey(now, timeZone)
+    ) {
+      year += 1;
+      candidate = buildAssistantZonedDate(
+        { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+        timeZone,
+      );
+    }
+
+    return candidate;
+  }
+
+  const monthMap = {
+    january: 1,
+    enero: 1,
+    february: 2,
+    febrero: 2,
+    march: 3,
+    marzo: 3,
+    april: 4,
+    abril: 4,
+    may: 5,
+    mayo: 5,
+    june: 6,
+    junio: 6,
+    july: 7,
+    julio: 7,
+    august: 8,
+    agosto: 8,
+    september: 9,
+    septiembre: 9,
+    sept: 9,
+    october: 10,
+    octubre: 10,
+    november: 11,
+    noviembre: 11,
+    december: 12,
+    diciembre: 12,
+  };
+  const monthLabels = Object.keys(monthMap).join("|");
+  const monthDayMatch =
+    normalized.match(new RegExp(`\\b(\\d{1,2})\\s*(?:de\\s*)?(${monthLabels})(?:\\s*(?:de\\s*)?(20\\d{2}))?\\b`)) ||
+    normalized.match(new RegExp(`\\b(${monthLabels})\\s*(\\d{1,2})(?:,?\\s*(20\\d{2}))?\\b`));
+
+  if (monthDayMatch) {
+    const first = monthDayMatch[1] || "";
+    const second = monthDayMatch[2] || "";
+    const day = /^\d+$/.test(first) ? Number(first) : Number(second);
+    const month = monthMap[/^\d+$/.test(first) ? second : first] || 0;
+    const nowParts = getAssistantZonedParts(now, timeZone);
+    let year = Number(monthDayMatch[3] || nowParts.year || 0);
+    let candidate = buildAssistantZonedDate(
+      { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+      timeZone,
+    );
+
+    if (
+      candidate &&
+      !monthDayMatch[3] &&
+      formatAssistantCalendarDayKey(candidate, timeZone) < formatAssistantCalendarDayKey(now, timeZone)
+    ) {
+      year += 1;
+      candidate = buildAssistantZonedDate(
+        { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+        timeZone,
+      );
+    }
+
+    return candidate;
+  }
+
+  const dayParts = resolveAssistantDayParts(normalized, timeParts, now, timeZone);
+
+  if (!dayParts) {
+    return null;
+  }
+
+  return buildAssistantZonedDate(
+    {
+      year: dayParts.year,
+      month: dayParts.month,
+      day: dayParts.day,
+      hour: timeParts.hour,
+      minute: timeParts.minute,
+    },
+    timeZone,
+  );
+}
+
+function inferAgendaEventTypeFromText(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (/\b(cliente|client|customer|estimate|estimado|quote|trabajo|job|visita)\b/.test(normalized)) {
+    return "client";
+  }
+
+  if (/\b(entrevista|interview|applicant|candidato|empleado|worker|trabajador)\b/.test(normalized)) {
+    return "interview";
+  }
+
+  if (/\b(cumple|cumpleanos|birthday|doctor|medico|familia|family|personal|escuela|school)\b/.test(normalized)) {
+    return "personal";
+  }
+
+  return "internal";
+}
+
+function inferAgendaEventTitleFromText(value = "", eventType = "internal") {
+  const raw = cleanText(value || "", 300);
+  const withoutPrefix = raw
+    .replace(/^\s*(atlas[,:\s]+)?/i, "")
+    .replace(/\b(agendame|agenda|programa|pon|crea|anota|recuerdame|recordame|schedule|add|create|set)\b/gi, "")
+    .replace(/\b(en la agenda|a la agenda|para la agenda|un evento|una tarjeta|recordatorio|reminder)\b/gi, "")
+    .replace(/\b(el|la|para|por|este|esta)\b\s*(\d{1,2}[\/-]\d{1,2}(?:[\/-]20\d{2})?|20\d{2}-\d{2}-\d{2})\b/gi, "")
+    .replace(/\b(a las?|at)\s+\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (withoutPrefix && withoutPrefix.length >= 3) {
+    return cleanText(withoutPrefix, 120);
+  }
+
+  if (eventType === "client") {
+    return "Client appointment";
+  }
+
+  if (eventType === "interview") {
+    return "Interview";
+  }
+
+  if (eventType === "personal") {
+    return "Personal event";
+  }
+
+  return "Internal agenda event";
+}
+
+function detectAgendaEventCreateRequest(message = "") {
+  const normalized = normalizeAssistantSearchText(message || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const asksToCreate = /\b(agend|agenda|programa|pon|crea|anota|recuerd|schedule|add|create|set)\b/.test(normalized);
+  const looksLikeAgendaEvent = /\b(cumple|cumpleanos|birthday|entrevista|interview|cita|appointment|evento|event|recordatorio|reminder|doctor|medico|personal|cliente|client)\b/.test(normalized);
+
+  if (!asksToCreate || !looksLikeAgendaEvent) {
+    return null;
+  }
+
+  const startsAt = resolveAgendaEventDateTimeFromText(message);
+
+  if (!startsAt) {
+    return {
+      missingDate: true,
+    };
+  }
+
+  const eventType = inferAgendaEventTypeFromText(message);
+
+  return {
+    title: inferAgendaEventTitleFromText(message, eventType),
+    eventType,
+    startsAt,
+    notes: cleanText(message || "", 600),
+    source: "atlas_chat",
+  };
 }
 
 function formatAssistantCallbackLabel({
@@ -5747,6 +6045,43 @@ function cleanActivity(doc = null) {
   };
 }
 
+function cleanAgendaEvent(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const startsAt = doc.startsAt ? new Date(doc.startsAt) : null;
+  const endsAt = doc.endsAt ? new Date(doc.endsAt) : null;
+  const eventType = normalizeAgendaEventType(doc.eventType || "internal");
+  const status = normalizeAgendaEventStatus(doc.status || "scheduled");
+
+  return {
+    id: String(doc._id || doc.id || ""),
+    type: "agenda_event",
+    isAgendaEvent: true,
+    isImportantDate: false,
+    eventType,
+    eventTypeLabel: labelAgendaEventType(eventType),
+    title: cleanText(doc.title || "", 120) || "Agenda event",
+    owner: cleanText(doc.owner || "", 80),
+    notes: cleanText(doc.notes || "", 1000),
+    status,
+    statusLabel: labelAgendaEventStatus(status),
+    startsAt:
+      startsAt instanceof Date && !Number.isNaN(startsAt.getTime())
+        ? startsAt.toISOString()
+        : "",
+    endsAt:
+      endsAt instanceof Date && !Number.isNaN(endsAt.getTime())
+        ? endsAt.toISOString()
+        : "",
+    source: cleanText(doc.source || "", 80),
+    createdByEmail: cleanText(doc.createdByEmail || "", 160),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
 function cleanWebPushDevice(doc = null) {
   if (!doc) {
     return null;
@@ -5903,6 +6238,7 @@ async function buildDashboardSnapshot(
   MetalworksLead,
   MetalworksLeadActivity,
   MetalworksApplicant = null,
+  MetalworksAgendaEvent = null,
   filters = {},
 ) {
   const query = buildLeadQuery(filters);
@@ -5924,6 +6260,7 @@ async function buildDashboardSnapshot(
       };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const applicantModelAvailable = Boolean(MetalworksApplicant?.find);
+  const agendaEventModelAvailable = Boolean(MetalworksAgendaEvent?.find);
   const salesSummaryPromise = buildMetalworksSalesSummary(MetalworksLead);
 
   const [
@@ -5946,6 +6283,7 @@ async function buildDashboardSnapshot(
     newApplicants,
     interviewApplicants,
     recentApplicants,
+    agendaEvents,
     salesSummary,
   ] = await Promise.all([
     MetalworksLead.find(leadQuery)
@@ -6021,6 +6359,15 @@ async function buildDashboardSnapshot(
           .limit(12)
           .lean()
       : [],
+    agendaEventModelAvailable
+      ? MetalworksAgendaEvent.find({
+          status: { $ne: "canceled" },
+          startsAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+        })
+          .sort({ startsAt: 1, updatedAt: -1 })
+          .limit(120)
+          .lean()
+      : [],
     salesSummaryPromise,
   ]);
 
@@ -6063,6 +6410,9 @@ async function buildDashboardSnapshot(
       .filter(Boolean),
     recentApplicants: (Array.isArray(recentApplicants) ? recentApplicants : [])
       .map((item) => cleanApplicant(item))
+      .filter(Boolean),
+    agendaEvents: (Array.isArray(agendaEvents) ? agendaEvents : [])
+      .map((item) => cleanAgendaEvent(item))
       .filter(Boolean),
     recentActivity: recentActivity.map(cleanActivity).filter(Boolean),
     statusOptions: METALWORKS_CRM_STATUS_OPTIONS.map((status) => ({
@@ -6203,6 +6553,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
   const leads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
   const recentActivity = Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [];
   const importantDates = buildMetalworksImportantDates(now);
+  const storedAgendaEvents = buildStoredAgendaEvents(dashboard?.agendaEvents || [], now);
   const focusLeads = leads
     .map((lead) => ({
       lead: summarizeLeadForOperator(lead),
@@ -6258,19 +6609,23 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
 
       return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
     });
-  const agendaEvents = buildImportantDateAgendaEvents(importantDates, now);
+  const agendaEvents = [
+    ...storedAgendaEvents,
+    ...buildImportantDateAgendaEvents(importantDates, now),
+  ].sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+  const agendaItems = [...agendaLeads, ...agendaEvents];
   const agendaSummary = METALWORKS_AGENDA_BUCKET_ORDER.reduce(
     (summary, bucketKey) => ({
       ...summary,
       [bucketKey]: 0,
     }),
     {
-      totalScheduled: agendaLeads.length,
+      totalScheduled: agendaItems.length,
     },
   );
 
-  agendaLeads.forEach((lead) => {
-    const bucketKey = String(lead.agendaBucket || "").trim();
+  agendaItems.forEach((item) => {
+    const bucketKey = String(item.agendaBucket || "").trim();
 
     if (!bucketKey || !Object.prototype.hasOwnProperty.call(agendaSummary, bucketKey)) {
       return;
@@ -6503,6 +6858,8 @@ RULES:
 - Important dates are personal/team availability warnings, not hard blocks. Jobs can still be scheduled on those dates when employee coverage or explicit confirmation makes sense.
 - When a scheduled lead falls on an important date, mention the awareness note and suggest confirming coverage rather than refusing the booking.
 - When the user asks what is on a date or whether a date is available, always check agendaEvents and importantDates in addition to agendaLeads. If an important date exists on that date, mention it even when there are also lead appointments.
+- Agenda events are internal/personal/client-scheduling cards that are not leads. Use them for birthdays, interviews, personal appointments, internal reminders, or client appointments that should appear on the agenda without creating a lead.
+- If a user asks to schedule a non-lead item and the system reports agenda_event_created, acknowledge that the card was created and do not say it became a customer lead.
 `;
 }
 
@@ -6938,6 +7295,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now, index: true },
   });
 
+  const metalworksAgendaEventSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true, index: true },
+    eventType: { type: String, default: "internal", index: true },
+    owner: String,
+    notes: String,
+    startsAt: { type: Date, required: true, index: true },
+    endsAt: Date,
+    status: { type: String, default: "scheduled", index: true },
+    source: { type: String, default: "manual", index: true },
+    relatedLeadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    createdByEmail: String,
+    updatedByEmail: String,
+    updatedAt: Date,
+    createdAt: { type: Date, default: Date.now, index: true },
+  });
+
   const metalworksLeadAssetSchema = new mongoose.Schema({
     leadId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -7081,6 +7459,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadActivitySchema.index({ applicantId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ externalEventKey: 1, createdAt: -1 });
+  metalworksAgendaEventSchema.index({ startsAt: 1, status: 1 });
+  metalworksAgendaEventSchema.index({ eventType: 1, startsAt: 1 });
+  metalworksAgendaEventSchema.index({ createdByEmail: 1, createdAt: -1 });
   metalworksLeadAssetSchema.index({ leadId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
@@ -7109,6 +7490,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksLeadActivity =
     mongoose.models.MetalworksLeadActivity ||
     mongoose.model("MetalworksLeadActivity", metalworksLeadActivitySchema);
+  const MetalworksAgendaEvent =
+    mongoose.models.MetalworksAgendaEvent ||
+    mongoose.model("MetalworksAgendaEvent", metalworksAgendaEventSchema);
   const MetalworksLeadAsset =
     mongoose.models.MetalworksLeadAsset ||
     mongoose.model("MetalworksLeadAsset", metalworksLeadAssetSchema);
@@ -10528,10 +10912,52 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     try {
+      const agendaRequest = detectAgendaEventCreateRequest(message);
+
+      if (agendaRequest?.missingDate) {
+        return res.json({
+          ok: true,
+          reply: "Sí puedo crear esa tarjeta de agenda, pero necesito la fecha y hora. Ejemplo: “Agenda entrevista con Juan el 22 de junio a las 3pm”.",
+          usedFallback: true,
+          reason: "agenda_event_missing_date",
+        });
+      }
+
+      if (agendaRequest?.startsAt) {
+        const now = new Date();
+        const eventDoc = await MetalworksAgendaEvent.create({
+          title: agendaRequest.title,
+          eventType:
+            leadId && mongoose.Types.ObjectId.isValid(leadId)
+              ? "client"
+              : agendaRequest.eventType,
+          owner: getMetalworksCrmProfile(auth.email)?.displayName || auth.email,
+          notes: agendaRequest.notes,
+          startsAt: agendaRequest.startsAt,
+          status: "scheduled",
+          source: "atlas_operator_chat",
+          relatedLeadId: leadId && mongoose.Types.ObjectId.isValid(leadId) ? leadId : null,
+          createdByEmail: auth.email,
+          updatedByEmail: auth.email,
+          updatedAt: now,
+          createdAt: now,
+        });
+        const event = cleanAgendaEvent(eventDoc.toObject ? eventDoc.toObject() : eventDoc);
+
+        return res.json({
+          ok: true,
+          reply: `Listo. Cree la tarjeta en la agenda: ${event.title} (${event.eventTypeLabel}) para ${formatDateTimeLabel(event.startsAt, METALWORKS_CALLBACK_TIME_ZONE)}. No la guarde como lead.`,
+          agendaEvent: event,
+          usedFallback: false,
+          reason: "agenda_event_created",
+        });
+      }
+
       const dashboard = await buildDashboardSnapshot(
         MetalworksLead,
         MetalworksLeadActivity,
         MetalworksApplicant,
+        MetalworksAgendaEvent,
         {},
       );
       const snapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -10566,6 +10992,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         MetalworksLead,
         MetalworksLeadActivity,
         MetalworksApplicant,
+        MetalworksAgendaEvent,
         {},
       );
       const operatorSnapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -10863,6 +11290,91 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.get("/api/metalworks-crm/agenda-events", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const docs = await MetalworksAgendaEvent.find({
+        status: { $ne: "canceled" },
+        startsAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+      })
+        .sort({ startsAt: 1, updatedAt: -1 })
+        .limit(160)
+        .lean();
+
+      res.json({
+        ok: true,
+        agendaEvents: docs.map(cleanAgendaEvent).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works agenda events:", error.message);
+      respondError(res, 500, "No pude cargar los eventos de agenda.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/agenda-events", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const title = cleanText(req.body?.title || "", 120);
+    const eventType = normalizeAgendaEventType(req.body?.eventType || "internal");
+    const owner = cleanText(req.body?.owner || getMetalworksCrmProfile(auth.email)?.displayName || "", 80);
+    const notes = cleanText(req.body?.notes || "", 1000);
+    const startsAt = parseCrmDatetimeInput(req.body?.startsAt || "");
+    const endsAt = req.body?.endsAt ? parseCrmDatetimeInput(req.body.endsAt) : null;
+    const relatedLeadId = String(req.body?.relatedLeadId || "").trim();
+
+    if (!title) {
+      return respondError(res, 400, "El titulo del evento es requerido.");
+    }
+
+    if (!(startsAt instanceof Date) || Number.isNaN(startsAt.getTime())) {
+      return respondError(res, 400, "La fecha/hora del evento es requerida.");
+    }
+
+    if (endsAt && endsAt.getTime() <= startsAt.getTime()) {
+      return respondError(res, 400, "La hora de fin debe ser despues de la hora de inicio.");
+    }
+
+    if (relatedLeadId && !mongoose.Types.ObjectId.isValid(relatedLeadId)) {
+      return respondError(res, 400, "Lead relacionado invalido.");
+    }
+
+    try {
+      const now = new Date();
+      const doc = await MetalworksAgendaEvent.create({
+        title,
+        eventType,
+        owner,
+        notes,
+        startsAt,
+        endsAt,
+        status: "scheduled",
+        source: cleanText(req.body?.source || "manual", 80),
+        relatedLeadId: relatedLeadId || null,
+        createdByEmail: auth.email,
+        updatedByEmail: auth.email,
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      res.status(201).json({
+        ok: true,
+        agendaEvent: cleanAgendaEvent(doc.toObject ? doc.toObject() : doc),
+      });
+    } catch (error) {
+      console.error("Error creating Metal Works agenda event:", error.message);
+      respondError(res, 500, "No pude crear el evento de agenda.");
+    }
+  });
+
   app.get("/api/metalworks-crm/dashboard", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -10890,12 +11402,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
               MetalworksLead,
               MetalworksLeadActivity,
               MetalworksApplicant,
+              MetalworksAgendaEvent,
               filters,
             ),
             buildDashboardSnapshot(
               MetalworksLead,
               MetalworksLeadActivity,
               MetalworksApplicant,
+              MetalworksAgendaEvent,
               {},
             ),
           ])
@@ -10904,6 +11418,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
               MetalworksLead,
               MetalworksLeadActivity,
               MetalworksApplicant,
+              MetalworksAgendaEvent,
               filters,
             ),
             null,

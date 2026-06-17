@@ -2212,6 +2212,35 @@ function buildAgendaCardMarkup(lead = null) {
     return "";
   }
 
+  if (lead.isAgendaEvent || lead.type === "agenda_event") {
+    const scheduleLabel = formatDate(lead.nextActionAt || lead.startsAt || "") || "Date";
+    const eventTypeLabel = lead.eventTypeLabel || lead.projectType || "Agenda event";
+
+    return `
+      <article
+        class="crm-agenda-card crm-agenda-internal-event-card"
+        data-agenda-bucket="${escapeHtml(lead.agendaBucket || "upcoming")}"
+        data-agenda-event-type="${escapeHtml(lead.eventType || "internal")}"
+      >
+        <div class="crm-agenda-card-head">
+          <div>
+            <h3>${escapeHtml(lead.title || lead.fullName || "Agenda event")}</h3>
+            <p>${escapeHtml(eventTypeLabel)} · Not a lead</p>
+          </div>
+          <span class="crm-status-badge" data-status="agenda_event">${escapeHtml(eventTypeLabel)}</span>
+        </div>
+        <div class="crm-micro-list">
+          <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
+          ${lead.owner ? `<span class="crm-chip crm-chip-muted">Owner: ${escapeHtml(lead.owner)}</span>` : ""}
+          <span class="crm-chip crm-chip-muted">Created for agenda</span>
+        </div>
+        <div class="crm-lead-card-summary">
+          <span>${escapeHtml(lead.details || lead.notes || "Internal agenda item.")}</span>
+        </div>
+      </article>
+    `;
+  }
+
   if (lead.isImportantDate || lead.type === "important_date") {
     const scheduleLabel = formatDate(lead.nextActionAt || lead.importantDate?.nextOccurrenceAt || "") || "Date";
     const importantDate = lead.importantDate || {};
