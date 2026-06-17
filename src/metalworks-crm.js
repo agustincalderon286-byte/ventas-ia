@@ -213,6 +213,22 @@ const METALWORKS_EXTERNAL_LOCK_TTL_MS = 45 * 1000;
 const METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS = 24;
 const METALWORKS_EXTERNAL_LOCK_RETRY_MS = 150;
 const METALWORKS_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
+const METALWORKS_IMPORTANT_DATE_RULES = [
+  "These are availability awareness notes, not hard schedule blocks.",
+  "Do not reject scheduling only because an important date exists.",
+  "If a job is scheduled on one of these dates, mention that Agustin or Rigo may be busy and suggest employee coverage or confirming coverage.",
+];
+const METALWORKS_IMPORTANT_DATES = [
+  {
+    id: "family-birthday-june-22",
+    monthDay: "06-22",
+    title: "Daughter birthday",
+    owner: "Agustin",
+    impact: "Awareness only - jobs can still be scheduled",
+    notes: "Family birthday. Agustin may be busy; schedule employee coverage if needed.",
+    recurring: true,
+  },
+];
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
@@ -3835,6 +3851,92 @@ function parseAssistantCalendarDayKey(value = "") {
   return { year, month, day };
 }
 
+function getNextImportantDateOccurrence(
+  monthDay = "",
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const match = cleanText(monthDay || "", 12).match(/^(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const month = Number(match[1] || 0);
+  const day = Number(match[2] || 0);
+  const todayKey = formatAssistantCalendarDayKey(now, timeZone);
+  const todayParts = parseAssistantCalendarDayKey(todayKey);
+
+  if (!month || !day || !todayParts?.year) {
+    return null;
+  }
+
+  let occurrence = buildAssistantZonedDate(
+    {
+      year: todayParts.year,
+      month,
+      day,
+      hour: 12,
+      minute: 0,
+    },
+    timeZone,
+  );
+
+  if (!occurrence || formatAssistantCalendarDayKey(occurrence, timeZone) < todayKey) {
+    occurrence = buildAssistantZonedDate(
+      {
+        year: todayParts.year + 1,
+        month,
+        day,
+        hour: 12,
+        minute: 0,
+      },
+      timeZone,
+    );
+  }
+
+  return occurrence;
+}
+
+function buildMetalworksImportantDates(now = new Date()) {
+  return METALWORKS_IMPORTANT_DATES.map((item) => {
+    const nextOccurrence = getNextImportantDateOccurrence(item.monthDay, now);
+    const dateKey = nextOccurrence
+      ? formatAssistantCalendarDayKey(nextOccurrence, METALWORKS_CALLBACK_TIME_ZONE)
+      : "";
+
+    return {
+      id: item.id,
+      title: item.title,
+      owner: item.owner,
+      impact: item.impact,
+      notes: item.notes,
+      recurring: Boolean(item.recurring),
+      monthDay: item.monthDay,
+      date: dateKey,
+      nextOccurrenceAt: nextOccurrence ? nextOccurrence.toISOString() : null,
+      schedulingRule: "Awareness only. Jobs can still be scheduled with employee coverage or confirmation.",
+    };
+  }).filter((item) => item.date);
+}
+
+function findImportantDatesForLead(lead = {}, importantDates = []) {
+  if (!lead?.nextActionAt || !Array.isArray(importantDates) || !importantDates.length) {
+    return [];
+  }
+
+  const leadDateKey = formatAssistantCalendarDayKey(
+    lead.nextActionAt,
+    METALWORKS_CALLBACK_TIME_ZONE,
+  );
+
+  if (!leadDateKey) {
+    return [];
+  }
+
+  return importantDates.filter((item) => item.date === leadDateKey);
+}
+
 function resolveAssistantTimeParts(label = "") {
   const normalized = normalizeAssistantSearchText(label || "");
 
@@ -6059,6 +6161,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
   const now = new Date();
   const leads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
   const recentActivity = Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [];
+  const importantDates = buildMetalworksImportantDates(now);
   const focusLeads = leads
     .map((lead) => ({
       lead: summarizeLeadForOperator(lead),
@@ -6103,6 +6206,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
         agendaBucketLabel: bucket.label,
         agendaBucketOrder: bucket.order,
         agendaIsOverdue: bucket.key === "overdue",
+        importantDates: findImportantDatesForLead(lead, importantDates),
       };
     })
     .filter(Boolean)
@@ -6169,6 +6273,8 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     focusLeads,
     agendaLeads,
     agendaSummary,
+    importantDates,
+    importantDateRules: METALWORKS_IMPORTANT_DATE_RULES,
     recentActivity: recentActivity.slice(0, 12),
     fullCrmUrl: "/metalworks-crm/",
   };
@@ -6351,6 +6457,8 @@ RULES:
 - Use only the CRM snapshot and selected lead context provided in the prompt.
 - If there is a selected lead, anchor the answer to that lead first.
 - If multiple leads matter, rank them clearly.
+- Important dates are personal/team availability warnings, not hard blocks. Jobs can still be scheduled on those dates when employee coverage or explicit confirmation makes sense.
+- When a scheduled lead falls on an important date, mention the awareness note and suggest confirming coverage rather than refusing the booking.
 `;
 }
 
@@ -6382,6 +6490,12 @@ async function generateMetalworksOperatorReply({
       : [],
     agendaLeads: Array.isArray(operatorSnapshot?.agendaLeads)
       ? operatorSnapshot.agendaLeads.slice(0, 6)
+      : [],
+    importantDates: Array.isArray(operatorSnapshot?.importantDates)
+      ? operatorSnapshot.importantDates.slice(0, 12)
+      : [],
+    importantDateRules: Array.isArray(operatorSnapshot?.importantDateRules)
+      ? operatorSnapshot.importantDateRules
       : [],
     selectedLead: selectedLead || null,
     selectedActivity: Array.isArray(selectedActivity)
@@ -10763,6 +10877,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
                 this_week: 0,
                 upcoming: 0,
               },
+        importantDates: Array.isArray(agendaSnapshot?.importantDates)
+          ? agendaSnapshot.importantDates
+          : [],
+        importantDateRules: Array.isArray(agendaSnapshot?.importantDateRules)
+          ? agendaSnapshot.importantDateRules
+          : [],
       });
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);

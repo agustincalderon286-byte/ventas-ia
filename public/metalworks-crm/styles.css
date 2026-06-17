@@ -1071,6 +1071,52 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   gap: 14px;
 }
 
+.crm-important-dates-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(180, 138, 82, 0.18);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(180, 138, 82, 0.14), rgba(255, 255, 255, 0.9)),
+    rgba(255, 251, 244, 0.94);
+  box-shadow: 0 18px 38px rgba(20, 38, 61, 0.07);
+}
+
+.crm-important-dates-strip h3,
+.crm-important-dates-strip p {
+  margin: 0;
+}
+
+.crm-important-dates-strip p {
+  color: var(--crm-muted);
+}
+
+.crm-important-date-list {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-important-date-pill {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 138, 82, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.crm-important-date-pill span,
+.crm-important-date-pill small {
+  color: var(--crm-muted);
+}
+
+.crm-important-date-pill span {
+  font-weight: 800;
+}
+
 .crm-agenda-section-heading {
   grid-column: 1 / -1;
   display: flex;
@@ -1226,6 +1272,12 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   background: rgba(177, 72, 36, 0.12);
   border-color: rgba(177, 72, 36, 0.16);
   color: #8a3a1b;
+}
+
+.crm-agenda-card .crm-chip-important-date {
+  background: rgba(180, 138, 82, 0.14);
+  border-color: rgba(180, 138, 82, 0.22);
+  color: #7a5325;
 }
 
 .crm-agenda-card .crm-chip-appointment-status {
@@ -2434,6 +2486,7 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-summary-grid,
   .crm-agenda-list,
+  .crm-important-dates-strip,
   .crm-resource-grid,
   .crm-prospector-admin-grid,
   .crm-toolbar,

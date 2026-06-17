@@ -2218,6 +2218,7 @@ function buildAgendaCardMarkup(lead = null) {
   const agendaBucket = String(lead.agendaBucket || "").trim() || (lead.agendaIsOverdue ? "overdue" : "upcoming");
   const appointmentStatus = String(lead.appointmentStatus || "").trim();
   const appointmentDurationLabel = formatAppointmentDuration(lead.appointmentDurationMinutes || 0);
+  const importantDates = Array.isArray(lead.importantDates) ? lead.importantDates : [];
 
   return `
     <article
@@ -2249,6 +2250,16 @@ function buildAgendaCardMarkup(lead = null) {
         ${lead.nextAction ? `<span class="crm-chip crm-chip-muted">${escapeHtml(lead.nextAction)}</span>` : ""}
         ${reminderSummary ? `<span class="crm-chip crm-chip-muted">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
         ${lead.callbackIntent === "yes" ? '<span class="crm-chip crm-chip-muted">Callback</span>' : ""}
+        ${
+          importantDates.length
+            ? importantDates
+                .map(
+                  (item) =>
+                    `<span class="crm-chip crm-chip-important-date">${escapeHtml(item.title || "Important date")}: ${escapeHtml(item.owner || "Team")} may be busy</span>`,
+                )
+                .join("")
+            : ""
+        }
       </div>
       <div class="crm-lead-card-summary">
         <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
@@ -2269,6 +2280,37 @@ function buildAgendaCardMarkup(lead = null) {
         }
       </div>
     </article>
+  `;
+}
+
+function buildImportantDateAgendaMarkup(importantDates = []) {
+  const safeDates = Array.isArray(importantDates) ? importantDates : [];
+
+  if (!safeDates.length) {
+    return "";
+  }
+
+  return `
+    <section class="crm-important-dates-strip" aria-label="Important availability dates">
+      <div>
+        <p class="crm-kicker">Important dates</p>
+        <h3>Personal availability notes, not job blocks.</h3>
+        <p>Jobs can still be scheduled. Use these as reminders to confirm coverage or send an employee.</p>
+      </div>
+      <div class="crm-important-date-list">
+        ${safeDates
+          .map(
+            (item) => `
+              <article class="crm-important-date-pill">
+                <strong>${escapeHtml(formatDate(item.nextOccurrenceAt || item.date || "") || item.date || item.monthDay || "Date")}</strong>
+                <span>${escapeHtml(item.title || "Important date")}</span>
+                <small>${escapeHtml(item.owner || "Team")} may be busy · ${escapeHtml(item.impact || "Awareness only")}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -2295,7 +2337,7 @@ function buildAgendaSummary(leads = []) {
   return summary;
 }
 
-function renderAgenda(leads = [], agendaSummary = null) {
+function renderAgenda(leads = [], agendaSummary = null, importantDates = []) {
   if (!agendaPanel || !agendaList || !agendaCount) {
     return;
   }
@@ -2359,6 +2401,7 @@ function renderAgenda(leads = [], agendaSummary = null) {
     sectionMap.get(bucketKey).leads.push(lead);
   });
   const agendaSections = Array.from(sectionMap.values()).filter((section) => section.leads.length);
+  const importantDateMarkup = buildImportantDateAgendaMarkup(importantDates);
 
   agendaPanel.hidden = false;
   agendaCount.textContent = resolvedSummary.overdue
@@ -2367,11 +2410,11 @@ function renderAgenda(leads = [], agendaSummary = null) {
 
   if (!safeLeads.length) {
     agendaList.innerHTML =
-      '<p class="crm-empty-state">No scheduled leads yet. As soon as a callback, booked job, or visit gets a time, it will show here.</p>';
+      `${importantDateMarkup}<p class="crm-empty-state">No scheduled leads yet. As soon as a callback, booked job, or visit gets a time, it will show here.</p>`;
     return;
   }
 
-  agendaList.innerHTML = agendaSections
+  agendaList.innerHTML = importantDateMarkup + agendaSections
     .map(
       (section) => `
         <div class="crm-agenda-section-heading" data-agenda-bucket="${escapeHtml(section.key)}">
@@ -4094,7 +4137,11 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
-  renderAgenda(dashboard.agendaLeads || [], dashboard.agendaSummary || null);
+  renderAgenda(
+    dashboard.agendaLeads || [],
+    dashboard.agendaSummary || null,
+    dashboard.importantDates || [],
+  );
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
 
   if (globalActivitySummary) {
