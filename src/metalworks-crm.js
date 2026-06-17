@@ -3937,6 +3937,47 @@ function findImportantDatesForLead(lead = {}, importantDates = []) {
   return importantDates.filter((item) => item.date === leadDateKey);
 }
 
+function buildImportantDateAgendaEvents(importantDates = [], now = new Date()) {
+  return (Array.isArray(importantDates) ? importantDates : [])
+    .map((item) => {
+      const nextActionAt = item?.nextOccurrenceAt ? new Date(item.nextOccurrenceAt) : null;
+
+      if (!(nextActionAt instanceof Date) || Number.isNaN(nextActionAt.getTime())) {
+        return null;
+      }
+
+      const bucket = getMetalworksAgendaBucket(nextActionAt, now);
+
+      if (!bucket) {
+        return null;
+      }
+
+      return {
+        id: `important-date-${item.id || item.date || item.monthDay}`,
+        type: "important_date",
+        isImportantDate: true,
+        title: item.title || "Important date",
+        fullName: item.title || "Important date",
+        owner: item.owner || "Team",
+        projectType: "Personal availability",
+        location: item.owner ? `${item.owner} awareness note` : "Team awareness note",
+        details: item.notes || item.impact || "Awareness only. Jobs can still be scheduled.",
+        status: "important_date",
+        statusLabel: "Important date",
+        nextAction: "Awareness note - not a lead",
+        nextActionAt: nextActionAt.toISOString(),
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+        importantDate: item,
+        schedulingRule: item.schedulingRule || "Awareness only. Jobs can still be scheduled.",
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+}
+
 function resolveAssistantTimeParts(label = "") {
   const normalized = normalizeAssistantSearchText(label || "");
 
@@ -6217,6 +6258,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
 
       return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
     });
+  const agendaEvents = buildImportantDateAgendaEvents(importantDates, now);
   const agendaSummary = METALWORKS_AGENDA_BUCKET_ORDER.reduce(
     (summary, bucketKey) => ({
       ...summary,
@@ -6272,6 +6314,7 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     },
     focusLeads,
     agendaLeads,
+    agendaEvents,
     agendaSummary,
     importantDates,
     importantDateRules: METALWORKS_IMPORTANT_DATE_RULES,
@@ -6459,6 +6502,7 @@ RULES:
 - If multiple leads matter, rank them clearly.
 - Important dates are personal/team availability warnings, not hard blocks. Jobs can still be scheduled on those dates when employee coverage or explicit confirmation makes sense.
 - When a scheduled lead falls on an important date, mention the awareness note and suggest confirming coverage rather than refusing the booking.
+- When the user asks what is on a date or whether a date is available, always check agendaEvents and importantDates in addition to agendaLeads. If an important date exists on that date, mention it even when there are also lead appointments.
 `;
 }
 
@@ -6490,6 +6534,9 @@ async function generateMetalworksOperatorReply({
       : [],
     agendaLeads: Array.isArray(operatorSnapshot?.agendaLeads)
       ? operatorSnapshot.agendaLeads.slice(0, 6)
+      : [],
+    agendaEvents: Array.isArray(operatorSnapshot?.agendaEvents)
+      ? operatorSnapshot.agendaEvents.slice(0, 12)
       : [],
     importantDates: Array.isArray(operatorSnapshot?.importantDates)
       ? operatorSnapshot.importantDates.slice(0, 12)
@@ -10866,6 +10913,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       res.json({
         ...snapshot,
         agendaLeads: Array.isArray(agendaSnapshot?.agendaLeads) ? agendaSnapshot.agendaLeads : [],
+        agendaEvents: Array.isArray(agendaSnapshot?.agendaEvents) ? agendaSnapshot.agendaEvents : [],
         agendaSummary:
           agendaSnapshot && typeof agendaSnapshot.agendaSummary === "object"
             ? agendaSnapshot.agendaSummary

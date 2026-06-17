@@ -2212,6 +2212,35 @@ function buildAgendaCardMarkup(lead = null) {
     return "";
   }
 
+  if (lead.isImportantDate || lead.type === "important_date") {
+    const scheduleLabel = formatDate(lead.nextActionAt || lead.importantDate?.nextOccurrenceAt || "") || "Date";
+    const importantDate = lead.importantDate || {};
+
+    return `
+      <article
+        class="crm-agenda-card crm-agenda-important-date-card"
+        data-agenda-bucket="${escapeHtml(lead.agendaBucket || "upcoming")}"
+        data-agenda-event-type="important_date"
+      >
+        <div class="crm-agenda-card-head">
+          <div>
+            <h3>${escapeHtml(lead.title || importantDate.title || "Important date")}</h3>
+            <p>${escapeHtml(lead.owner || importantDate.owner || "Team")} availability note · Not a lead</p>
+          </div>
+          <span class="crm-status-badge" data-status="important_date">Important</span>
+        </div>
+        <div class="crm-micro-list">
+          <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
+          <span class="crm-chip crm-chip-important-date">Awareness only</span>
+          <span class="crm-chip crm-chip-muted">Jobs can still be scheduled</span>
+        </div>
+        <div class="crm-lead-card-summary">
+          <span>${escapeHtml(lead.details || importantDate.notes || importantDate.impact || "Confirm coverage or send an employee if needed.")}</span>
+        </div>
+      </article>
+    `;
+  }
+
   const phoneDigits = getLeadPhoneDigits(lead);
   const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
   const reminderSummary = buildLeadReminderSummary(lead);
@@ -2337,14 +2366,47 @@ function buildAgendaSummary(leads = []) {
   return summary;
 }
 
-function renderAgenda(leads = [], agendaSummary = null, importantDates = []) {
+function buildImportantDateAgendaEvents(importantDates = [], now = new Date()) {
+  return (Array.isArray(importantDates) ? importantDates : [])
+    .map((item) => {
+      const nextActionAt = item?.nextOccurrenceAt || item?.date || "";
+      const bucketMeta = getAgendaBucketMeta(nextActionAt, now);
+
+      if (!nextActionAt || !bucketMeta) {
+        return null;
+      }
+
+      return {
+        id: `important-date-${item.id || item.date || item.monthDay || nextActionAt}`,
+        type: "important_date",
+        isImportantDate: true,
+        title: item.title || "Important date",
+        owner: item.owner || "Team",
+        details: item.notes || item.impact || "Awareness only. Jobs can still be scheduled.",
+        nextActionAt,
+        agendaBucket: bucketMeta.key,
+        agendaBucketLabel: bucketMeta.label,
+        agendaBucketOrder: bucketMeta.order,
+        agendaIsOverdue: bucketMeta.key === "overdue",
+        importantDate: item,
+      };
+    })
+    .filter(Boolean);
+}
+
+function renderAgenda(leads = [], agendaSummary = null, importantDates = [], agendaEvents = []) {
   if (!agendaPanel || !agendaList || !agendaCount) {
     return;
   }
 
   const now = new Date();
+  const safeEvents = (Array.isArray(agendaEvents) && agendaEvents.length
+    ? agendaEvents
+    : buildImportantDateAgendaEvents(importantDates, now)
+  ).filter((item) => item?.id);
   const safeLeads = (Array.isArray(leads) ? leads : [])
     .filter((lead) => lead?.id)
+    .concat(safeEvents)
     .map((lead) => {
       const bucketMeta = lead?.agendaBucket
         ? {
@@ -4141,6 +4203,7 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
     dashboard.agendaLeads || [],
     dashboard.agendaSummary || null,
     dashboard.importantDates || [],
+    dashboard.agendaEvents || [],
   );
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
 

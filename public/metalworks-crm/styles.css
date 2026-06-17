@@ -1280,6 +1280,18 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
   color: #7a5325;
 }
 
+.crm-agenda-important-date-card {
+  border-color: rgba(180, 138, 82, 0.24);
+  background:
+    linear-gradient(135deg, rgba(180, 138, 82, 0.16), rgba(255, 255, 255, 0.94)),
+    rgba(255, 251, 244, 0.96);
+}
+
+.crm-agenda-important-date-card .crm-status-badge {
+  background: rgba(180, 138, 82, 0.16);
+  color: #7a5325;
+}
+
 .crm-agenda-card .crm-chip-appointment-status {
   background: rgba(21, 35, 54, 0.06);
   border-color: rgba(21, 35, 54, 0.1);
