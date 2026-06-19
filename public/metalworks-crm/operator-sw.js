@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmwf-operator-shell-v4";
+const CACHE_NAME = "cmwf-operator-shell-v7";
 const SHELL_URLS = [
   "/metalworks-crm/",
   "/metalworks-crm/operator/",
@@ -103,6 +103,9 @@ self.addEventListener("push", (event) => {
   const title = String(payload.title || "New lead").trim() || "New lead";
   const body = String(payload.body || "Chicago Metal Works & Fencing sent an update.").trim();
   const url = String(payload.url || "/metalworks-crm/operator/").trim() || "/metalworks-crm/operator/";
+  const receivedAt = Date.now();
+  const stableTag = String(payload.leadId || payload.alertType || "cmwf-operator-alert").trim();
+  const notificationTag = `${stableTag || "cmwf-operator-alert"}:${receivedAt}`;
   const setBadgePromise =
     "setAppBadge" in self.navigator
       ? self.navigator.setAppBadge().catch(() => null)
@@ -116,9 +119,16 @@ self.addEventListener("push", (event) => {
         badge: "/metalworks-crm/crm-icon-192.png",
         data: {
           url,
+          receivedAt,
+          alertType: String(payload.alertType || "").trim(),
+          leadId: String(payload.leadId || "").trim(),
         },
-        tag: String(payload.leadId || payload.alertType || "cmwf-operator-alert").trim(),
+        tag: notificationTag,
         renotify: true,
+        silent: false,
+        timestamp: receivedAt,
+        requireInteraction: true,
+        vibrate: [250, 120, 250],
       }),
       setBadgePromise,
     ]),
