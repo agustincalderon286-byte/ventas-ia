@@ -225,17 +225,7 @@ const METALWORKS_IMPORTANT_DATE_RULES = [
   "Do not reject scheduling only because an important date exists.",
   "If a job is scheduled on one of these dates, mention that Agustin or Rigo may be busy and suggest employee coverage or confirming coverage.",
 ];
-const METALWORKS_IMPORTANT_DATES = [
-  {
-    id: "family-birthday-june-22",
-    monthDay: "06-22",
-    title: "Daughter birthday",
-    owner: "Agustin",
-    impact: "Awareness only - jobs can still be scheduled",
-    notes: "Family birthday. Agustin may be busy; schedule employee coverage if needed.",
-    recurring: true,
-  },
-];
+const METALWORKS_IMPORTANT_DATES = [];
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
