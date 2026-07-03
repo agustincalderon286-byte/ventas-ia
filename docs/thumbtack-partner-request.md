@@ -25,7 +25,7 @@ Use this with Thumbtack's request form:
 - Contact last name: `Calderon`
 - Contact job title: `Owner`
 - Contact email: `agustincalderon286@gmail.com`
-- Contact phone: `+1 773 798 4107`
+- Contact phone: `+1 708 731 6762`
 
 If you want the request attached to a different legal or technical contact, replace these before submitting.
 

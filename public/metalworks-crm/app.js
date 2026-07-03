@@ -259,8 +259,8 @@ async function apiRequest(url, options = {}) {
 
 const METALWORKS_CONTACT = {
   companyName: "Chicago Metal Works & Fencing",
-  phoneDisplay: "773 798 4107",
-  phoneDigits: "7737984107",
+  phoneDisplay: "708 731 6762",
+  phoneDigits: "7087316762",
   email: "agustincalderon286@gmail.com",
   website: "https://www.chicagometalworksandfencing.com/",
 };

@@ -16,7 +16,7 @@ const METALWORKS_PUBLIC_CHAT_THREAD_DAYS = 180;
 const METALWORKS_PROSPECTOR_STATUS_OPTIONS = ["active", "paused"];
 const METALWORKS_PROSPECTOR_PASSWORD_MIN = 8;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
-const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
+const METALWORKS_CONTACT_PHONE_DISPLAY = "708 731 6762";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
 const METALWORKS_THUMBTACK_PROFILE_URL =
@@ -261,7 +261,7 @@ RULES:
 - If the visitor has project photos, tell them they can upload them directly in the chat.
 - If recent project photos are attached, use them to identify the likely metalwork type and any clearly visible issues.
 - Only describe what is reasonably visible in the photos. If an image is blurry, partial, or not enough, say so and ask for a better angle or one more photo.
-- If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
+- If the job sounds unsafe or urgent, tell them to call 708 731 6762 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
 - When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
@@ -1385,7 +1385,7 @@ function buildThumbtackOauthCallbackPage({
         </ul>
       </div>
       <p>
-        Need help? Call <a href="tel:+17737984107">773 798 4107</a> or email
+        Need help? Call <a href="tel:+17087316762">708 731 6762</a> or email
         <a href="mailto:${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}">${escapeHtmlMarkup(
           METALWORKS_CONTACT_EMAIL,
         )}</a>.
@@ -3125,14 +3125,14 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
     )
   ) {
     return inSpanish
-      ? "Si la pieza esta floja, peligrosa o urgente, llama ahora al 773 798 4107. Si puedes, manda fotos y tu ZIP code para decirte mas rapido si parece reparacion o reemplazo."
-      : "If the metalwork is loose, unsafe, or urgent, call 773 798 4107 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
+      ? "Si la pieza esta floja, peligrosa o urgente, llama ahora al 708 731 6762. Si puedes, manda fotos y tu ZIP code para decirte mas rapido si parece reparacion o reemplazo."
+      : "If the metalwork is loose, unsafe, or urgent, call 708 731 6762 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
   }
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
     return inSpanish
-      ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
-      : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
+      ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 708 731 6762."
+      : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 708 731 6762.";
   }
 
   if (/gate|gates|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
@@ -3226,7 +3226,7 @@ function buildAssistantContext(message = "", pagePath = "") {
 METAL WORKS WEBSITE CONTEXT:
 - Business: Chicago Metal Works & Fencing
 - Service area: Chicago, Blue Island, and nearby suburbs
-- Main CTA phone: 773 798 4107
+- Main CTA phone: 708 731 6762
 - Best quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the job is repair or new build
 - Public website page: ${cleanText(pagePath || "", 120) || "/"}
 `);
@@ -9683,7 +9683,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return {
         ok: false,
         status: 429,
-        error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 773 798 4107 or try again tomorrow.`,
+        error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 708 731 6762 or try again tomorrow.`,
       };
     }
 
