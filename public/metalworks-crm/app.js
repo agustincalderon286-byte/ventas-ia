@@ -21,6 +21,16 @@ const CRM_AGENDA_BUCKET_LABELS = {
   this_week: "This Week",
   upcoming: "Later",
 };
+const CRM_LEAD_SOURCE_GROUP_FALLBACK_OPTIONS = [
+  { value: "thumbtack", label: "Thumbtack" },
+  { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
+  { value: "google_ads", label: "Google Ads" },
+  { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
+  { value: "prospector", label: "Prospector" },
+  { value: "website", label: "Website form/chat" },
+  { value: "manual", label: "Manual CRM" },
+  { value: "other", label: "Other / uncategorized" },
+];
 const CRM_BUSINESS_TIME_ZONE = "America/Chicago";
 const MAX_CRM_PHOTO_FILES = 4;
 const MAX_CRM_PHOTO_BYTES = 2 * 1024 * 1024;
@@ -352,6 +362,7 @@ const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
 const manualLeadSaveButton = document.querySelector("[data-crm-manual-lead-save]");
 const manualLeadCancelButton = document.querySelector("[data-crm-manual-lead-cancel]");
 const manualLeadFeedback = document.querySelector("[data-crm-manual-lead-feedback]");
+const manualLeadSourceInput = document.querySelector("[data-crm-manual-source-input]");
 const mobileShell = document.querySelector("[data-crm-mobile-shell]");
 const mobileShellTitle = document.querySelector("[data-crm-mobile-title]");
 const mobileShellCopy = document.querySelector("[data-crm-mobile-copy]");
@@ -401,6 +412,7 @@ const detailTitle = document.querySelector("[data-crm-detail-title]");
 const detailMeta = document.querySelector("[data-crm-detail-meta]");
 const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
+const detailSourceInput = document.querySelector("[data-crm-detail-source-input]");
 const detailPanel = document.querySelector(".crm-detail-panel");
 const mainGrid = document.querySelector(".crm-main-grid");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
@@ -660,6 +672,10 @@ function formatLeadSource(value = "") {
     field_prospector: "Field prospector",
     lead_distribution_prospector: "Prospector intake",
     manual_crm_entry: "Manual CRM lead",
+    search_kings_google_ads: "Search Kings Google Ads",
+    google_ads_manual: "Google Ads",
+    thumbtack_manual: "Thumbtack",
+    other_manual: "Other / uncategorized",
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
@@ -667,6 +683,44 @@ function formatLeadSource(value = "") {
 
 function getLeadSourceLabel(lead = {}) {
   return String(lead?.sourceGroupLabel || "").trim() || formatLeadSource(lead?.sourceType || "");
+}
+
+function getLeadSourceGroupOptions(options = null) {
+  const dashboardOptions = Array.isArray(options)
+    ? options
+    : Array.isArray(state.dashboard?.sourceOptions)
+      ? state.dashboard.sourceOptions
+      : [];
+  const safeOptions = dashboardOptions
+    .map((item) => ({
+      value: String(item?.value || "").trim(),
+      label: String(item?.label || "").trim(),
+    }))
+    .filter((item) => item.value && item.label);
+
+  return safeOptions.length ? safeOptions : CRM_LEAD_SOURCE_GROUP_FALLBACK_OPTIONS;
+}
+
+function syncSourceGroupSelect(select, selectedValue = "", { defaultValue = "" } = {}) {
+  if (!select) {
+    return;
+  }
+
+  const sourceOptions = getLeadSourceGroupOptions();
+  const optionValues = new Set(sourceOptions.map((item) => item.value));
+  const nextValue = optionValues.has(selectedValue)
+    ? selectedValue
+    : optionValues.has(defaultValue)
+      ? defaultValue
+      : sourceOptions[0]?.value || "";
+
+  select.innerHTML = sourceOptions
+    .map(
+      (item) =>
+        `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`,
+    )
+    .join("");
+  select.value = nextValue;
 }
 
 function formatApplicantSource(applicant = null) {
@@ -2867,6 +2921,9 @@ function openManualLeadPanel() {
   }
 
   manualLeadPanel.hidden = false;
+  syncSourceGroupSelect(manualLeadSourceInput, manualLeadSourceInput?.value || "manual", {
+    defaultValue: "manual",
+  });
   setManualLeadFeedback("", "");
   syncManualLeadUi();
 
@@ -2884,6 +2941,7 @@ function closeManualLeadPanel({ resetForm = true } = {}) {
 
   if (resetForm) {
     manualLeadForm?.reset();
+    syncSourceGroupSelect(manualLeadSourceInput, "manual", { defaultValue: "manual" });
   }
 
   setManualLeadFeedback("", "");
@@ -3000,6 +3058,13 @@ function renderLeadFilters(dashboard) {
       .join("");
     sourceFilter.value = state.filters.sourceGroup;
   }
+
+  syncSourceGroupSelect(manualLeadSourceInput, manualLeadSourceInput?.value || "manual", {
+    defaultValue: "manual",
+  });
+  syncSourceGroupSelect(detailSourceInput, state.leadDetail?.lead?.sourceGroup || detailSourceInput?.value || "", {
+    defaultValue: "manual",
+  });
 
   if (searchInput) {
     searchInput.value = state.filters.search;
@@ -3990,6 +4055,7 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.projectType.value = lead.projectType || "";
     detailForm.elements.location.value = lead.location || "";
     detailForm.elements.status.value = lead.status || "new";
+    syncSourceGroupSelect(detailSourceInput, lead.sourceGroup || "manual", { defaultValue: "manual" });
     detailForm.elements.bestContactDay.value = lead.bestContactDay || "";
     detailForm.elements.bestContactTime.value = lead.bestContactTime || "";
     detailForm.elements.nextAction.value = lead.nextAction || "";
@@ -4057,6 +4123,7 @@ function buildLeadPayloadFromForm() {
     projectType: String(formData.get("projectType") || "").trim(),
     location: String(formData.get("location") || "").trim(),
     status: String(formData.get("status") || "").trim(),
+    sourceGroup: String(formData.get("sourceGroup") || "").trim(),
     bestContactDay: String(formData.get("bestContactDay") || "").trim(),
     bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
@@ -4401,6 +4468,7 @@ async function handleManualLeadCreate(event) {
     projectType: String(formData.get("projectType") || "").trim(),
     location: String(formData.get("location") || "").trim(),
     status: String(formData.get("status") || "new").trim(),
+    sourceGroup: String(formData.get("sourceGroup") || "manual").trim(),
     details: String(formData.get("details") || "").trim(),
   };
 

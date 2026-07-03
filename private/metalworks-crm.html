@@ -311,6 +311,18 @@
                   <option value="booked">Booked</option>
                 </select>
               </label>
+              <label>
+                <span>Source</span>
+                <select name="sourceGroup" data-crm-manual-source-input>
+                  <option value="manual">Manual CRM</option>
+                  <option value="search_kings_google_ads">Search Kings Google Ads</option>
+                  <option value="google_ads">Google Ads</option>
+                  <option value="thumbtack">Thumbtack</option>
+                  <option value="website">Website form/chat</option>
+                  <option value="prospector">Prospector</option>
+                  <option value="other">Other / uncategorized</option>
+                </select>
+              </label>
               <label class="crm-field-full">
                 <span>Project summary</span>
                 <textarea
@@ -465,6 +477,11 @@
                 <label>
                   <span>Status</span>
                   <select name="status" data-crm-detail-status-input></select>
+                </label>
+
+                <label>
+                  <span>Fuente</span>
+                  <select name="sourceGroup" data-crm-detail-source-input></select>
                 </label>
 
                 <label>

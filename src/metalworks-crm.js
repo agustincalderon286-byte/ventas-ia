@@ -814,6 +814,7 @@ function isInactiveAppointmentStatus(status = "") {
 
 const METALWORKS_LEAD_SOURCE_GROUP_OPTIONS = [
   { value: "thumbtack", label: "Thumbtack" },
+  { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
   { value: "google_ads", label: "Google Ads" },
   { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
   { value: "prospector", label: "Prospector" },
@@ -835,6 +836,99 @@ function labelLeadSourceGroup(value = "") {
     METALWORKS_LEAD_SOURCE_GROUP_OPTIONS.find((item) => item.value === normalized)?.label ||
     "Other / uncategorized"
   );
+}
+
+function getPlainTracking(tracking = null) {
+  if (!tracking) {
+    return {};
+  }
+
+  if (typeof tracking.toObject === "function") {
+    return tracking.toObject();
+  }
+
+  return { ...tracking };
+}
+
+function getSourceGroupOverrideFields(sourceGroup = "", currentLead = null) {
+  const normalizedSourceGroup = normalizeLeadSourceGroup(sourceGroup || "");
+  const tracking = getPlainTracking(currentLead?.tracking || {});
+
+  if (!normalizedSourceGroup) {
+    return null;
+  }
+
+  if (normalizedSourceGroup === "search_kings_google_ads") {
+    return {
+      sourceType: "search_kings_google_ads",
+      sourceExternalSystem: "search_kings_google_ads",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "search_kings",
+        utmMedium: tracking.utmMedium || "google_ads",
+        utmCampaign: tracking.utmCampaign || "search_kings_google_ads",
+      },
+    };
+  }
+
+  if (normalizedSourceGroup === "google_ads") {
+    return {
+      sourceType: "google_ads_manual",
+      sourceExternalSystem: "google_ads",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "google",
+        utmMedium: tracking.utmMedium || "paid_search",
+        utmCampaign: tracking.utmCampaign || "manual_google_ads",
+      },
+    };
+  }
+
+  if (normalizedSourceGroup === "thumbtack") {
+    return {
+      sourceType: "thumbtack_manual",
+      sourceExternalSystem: "thumbtack",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "assistant_organic") {
+    return {
+      sourceType: "assistant_chat",
+      sourceExternalSystem: "agustin_2_0",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "prospector") {
+    return {
+      sourceType: "lead_distribution_prospector",
+      sourceExternalSystem: "field_prospector",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "website") {
+    return {
+      sourceType: "website_form",
+      sourceExternalSystem: "website",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "manual") {
+    return {
+      sourceType: "manual_crm_entry",
+      sourceExternalSystem: "crm_manual",
+      tracking,
+    };
+  }
+
+  return {
+    sourceType: "other_manual",
+    sourceExternalSystem: "",
+    tracking,
+  };
 }
 
 function normalizeApplicantStatus(value = "") {
@@ -5052,13 +5146,35 @@ function isWebsiteLiveChatLeadSourceType(value = "") {
   return cleanText(value || "", 80) === METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
 }
 
+function leadHasSearchKingsGoogleAdsAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const attributionText = [
+    doc?.sourceType,
+    doc?.sourceExternalSystem,
+    tracking.utmSource,
+    tracking.utmMedium,
+    tracking.utmCampaign,
+    tracking.utmContent,
+    tracking.utmTerm,
+  ]
+    .map((value) => cleanText(value || "", 160).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  return /search[\s_-]*kings|searchkings/.test(attributionText);
+}
+
 function leadHasGoogleAdsAttribution(doc = null) {
   const tracking = doc?.tracking || {};
+  const sourceType = cleanText(doc?.sourceType || "", 80).toLowerCase();
+  const sourceExternalSystem = cleanText(doc?.sourceExternalSystem || "", 80).toLowerCase();
   const utmSource = cleanText(tracking.utmSource || "", 80).toLowerCase();
   const utmMedium = cleanText(tracking.utmMedium || "", 80).toLowerCase();
 
   return Boolean(
-    cleanText(tracking.gclid || "", 120) ||
+    sourceType.includes("google_ads") ||
+      sourceExternalSystem.includes("google_ads") ||
+      cleanText(tracking.gclid || "", 120) ||
       cleanText(tracking.gbraid || "", 120) ||
       cleanText(tracking.wbraid || "", 120) ||
       (utmSource.includes("google") && /(cpc|ppc|paid|paid_search|search)/i.test(utmMedium)),
@@ -5086,6 +5202,10 @@ function getLeadSourceGroup(doc = null) {
 
   if (leadHasThumbtackAttribution(doc)) {
     return "thumbtack";
+  }
+
+  if (leadHasSearchKingsGoogleAdsAttribution(doc)) {
+    return "search_kings_google_ads";
   }
 
   if (leadHasGoogleAdsAttribution(doc)) {
@@ -6144,6 +6264,8 @@ function buildLeadQuery(filters = {}) {
 
   const googleAdsClause = {
     $or: [
+      { sourceType: /google_ads/i },
+      { sourceExternalSystem: /google_ads/i },
       { "tracking.gclid": { $exists: true, $nin: ["", null] } },
       { "tracking.gbraid": { $exists: true, $nin: ["", null] } },
       { "tracking.wbraid": { $exists: true, $nin: ["", null] } },
@@ -6153,6 +6275,17 @@ function buildLeadQuery(filters = {}) {
       },
     ],
   };
+  const searchKingsGoogleAdsClause = {
+    $or: [
+      { sourceType: /search[\s_-]*kings|searchkings/i },
+      { sourceExternalSystem: /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmSource": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmCampaign": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmContent": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmTerm": /search[\s_-]*kings|searchkings/i },
+    ],
+  };
+  const googleAdsOnlyClause = { $and: [googleAdsClause, { $nor: [searchKingsGoogleAdsClause] }] };
   const thumbtackClause = {
     $or: [
       { sourceType: /thumbtack/i },
@@ -6170,6 +6303,7 @@ function buildLeadQuery(filters = {}) {
   const manualClause = { sourceType: { $in: ["manual_crm_entry", "crm_manual_photo"] } };
   const knownSourceClauses = [
     thumbtackClause,
+    searchKingsGoogleAdsClause,
     googleAdsClause,
     assistantClause,
     prospectorClause,
@@ -6179,11 +6313,13 @@ function buildLeadQuery(filters = {}) {
 
   if (sourceGroup === "thumbtack") {
     andClauses.push(thumbtackClause);
+  } else if (sourceGroup === "search_kings_google_ads") {
+    andClauses.push(searchKingsGoogleAdsClause);
   } else if (sourceGroup === "google_ads") {
-    andClauses.push(googleAdsClause);
+    andClauses.push(googleAdsOnlyClause);
   } else if (sourceGroup === "assistant_organic") {
     andClauses.push({
-      $and: [assistantClause, { $nor: [thumbtackClause, googleAdsClause] }],
+      $and: [assistantClause, { $nor: [thumbtackClause, searchKingsGoogleAdsClause, googleAdsClause] }],
     });
   } else if (sourceGroup === "prospector") {
     andClauses.push(prospectorClause);
@@ -11458,6 +11594,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const location = cleanText(req.body?.location || "", 160);
     const details = cleanText(req.body?.details || "", 3000);
     const status = normalizeStatus(req.body?.status || "new");
+    const sourceGroup = normalizeLeadSourceGroup(req.body?.sourceGroup || "") || "manual";
+    const sourceFields =
+      getSourceGroupOverrideFields(sourceGroup) || getSourceGroupOverrideFields("manual");
 
     if (!fullName) {
       return respondError(res, 400, "El nombre es requerido.");
@@ -11474,8 +11613,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         location,
         details,
         status,
-        sourceType: "manual_crm_entry",
-        sourceExternalSystem: "crm_manual",
+        sourceType: sourceFields.sourceType,
+        sourceExternalSystem: sourceFields.sourceExternalSystem,
+        tracking: sourceFields.tracking,
         lastContactAt: now,
         updatedAt: now,
         createdAt: now,
@@ -11488,7 +11628,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         body: `${fullName} se agrego manualmente al CRM.`,
         meta: {
           adminEmail: auth.email,
-          sourceType: "manual_crm_entry",
+          sourceGroup,
+          sourceLabel: labelLeadSourceGroup(sourceGroup),
+          sourceType: sourceFields.sourceType,
           projectType,
           location,
         },
@@ -11926,6 +12068,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const location = Object.prototype.hasOwnProperty.call(req.body || {}, "location")
         ? cleanText(req.body?.location || "", 160)
         : null;
+      const sourceGroupRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "sourceGroup")
+        ? cleanText(req.body?.sourceGroup || "", 40)
+        : null;
+      const sourceGroup = sourceGroupRaw ? normalizeLeadSourceGroup(sourceGroupRaw) : null;
       const details = Object.prototype.hasOwnProperty.call(req.body || {}, "details")
         ? cleanText(req.body?.details || "", 3000)
         : null;
@@ -12084,6 +12230,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       if (location !== null && leadDoc.location !== location) {
         leadDoc.location = location;
         profileChanged = true;
+      }
+
+      if (sourceGroupRaw && !sourceGroup) {
+        return respondError(res, 400, "Fuente invalida.");
+      }
+
+      if (sourceGroup) {
+        const currentLeadSnapshot = leadDoc.toObject ? leadDoc.toObject() : leadDoc;
+        const currentSourceGroup = getLeadSourceGroup(currentLeadSnapshot);
+
+        if (currentSourceGroup !== sourceGroup) {
+          const sourceFields = getSourceGroupOverrideFields(sourceGroup, currentLeadSnapshot);
+
+          if (sourceFields) {
+            leadDoc.sourceType = sourceFields.sourceType;
+            leadDoc.sourceExternalSystem = sourceFields.sourceExternalSystem;
+            leadDoc.tracking = sourceFields.tracking;
+            changes.push(
+              `Fuente: ${labelLeadSourceGroup(currentSourceGroup)} -> ${labelLeadSourceGroup(sourceGroup)}`,
+            );
+            profileChanged = true;
+          }
+        }
       }
 
       if (details !== null && leadDoc.details !== details) {
