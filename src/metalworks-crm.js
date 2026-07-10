@@ -816,6 +816,7 @@ const METALWORKS_LEAD_SOURCE_GROUP_OPTIONS = [
   { value: "thumbtack", label: "Thumbtack" },
   { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
   { value: "google_ads", label: "Google Ads" },
+  { value: "atlas_commercial_outreach", label: "Atlas Commercial Outreach" },
   { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
   { value: "prospector", label: "Prospector" },
   { value: "website", label: "Website form/chat" },
@@ -889,6 +890,19 @@ function getSourceGroupOverrideFields(sourceGroup = "", currentLead = null) {
       sourceType: "thumbtack_manual",
       sourceExternalSystem: "thumbtack",
       tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "atlas_commercial_outreach") {
+    return {
+      sourceType: "atlas_commercial_outreach",
+      sourceExternalSystem: "atlas_outreach",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "atlas",
+        utmMedium: tracking.utmMedium || "email_outreach",
+        utmCampaign: tracking.utmCampaign || "commercial_property_management",
+      },
     };
   }
 
@@ -5193,6 +5207,60 @@ function leadHasThumbtackAttribution(doc = null) {
   );
 }
 
+function leadHasAtlasCommercialOutreachAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const attributionText = [
+    doc?.sourceType,
+    doc?.sourceExternalSystem,
+    tracking.utmSource,
+    tracking.utmMedium,
+    tracking.utmCampaign,
+    tracking.utmContent,
+    tracking.utmTerm,
+    doc?.projectType,
+    doc?.details,
+    doc?.nextAction,
+    doc?.privateNotes,
+  ]
+    .map((value) => cleanText(value || "", 3000).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  return /atlas[_\s-]*(commercial[_\s-]*)?outreach|commercial[_\s-]*outreach|property management outreach|vendor onboarding|intro email sent/.test(
+    attributionText,
+  );
+}
+
+function isColdAtlasCommercialOutreachLead(lead = null) {
+  if (!leadHasAtlasCommercialOutreachAttribution(lead)) {
+    return false;
+  }
+
+  const status = normalizeStatus(lead?.status || "new");
+  const appointmentType = inferLeadAppointmentType(lead);
+  const outreachText = [
+    lead?.projectType,
+    lead?.details,
+    lead?.nextAction,
+    lead?.privateNotes,
+  ]
+    .map((value) => cleanText(value || "", 3000).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (["quoted", "booked", "won"].includes(status)) {
+    return false;
+  }
+
+  if (["callback", "estimate_visit", "job"].includes(appointmentType)) {
+    return false;
+  }
+
+  return /property management outreach|commercial outreach|intro email sent|if no reply|wait for .*reply|vendor onboarding/.test(
+    outreachText,
+  );
+}
+
 function getLeadSourceGroup(doc = null) {
   if (!doc) {
     return "other";
@@ -5210,6 +5278,10 @@ function getLeadSourceGroup(doc = null) {
 
   if (leadHasGoogleAdsAttribution(doc)) {
     return "google_ads";
+  }
+
+  if (leadHasAtlasCommercialOutreachAttribution(doc)) {
+    return "atlas_commercial_outreach";
   }
 
   if (isAssistantLeadSourceType(sourceType)) {
@@ -6293,6 +6365,18 @@ function buildLeadQuery(filters = {}) {
       { "tracking.utmSource": /thumbtack/i },
     ],
   };
+  const atlasCommercialOutreachClause = {
+    $or: [
+      { sourceType: /atlas[_\s-]*(commercial[_\s-]*)?outreach|commercial[_\s-]*outreach/i },
+      { sourceExternalSystem: /atlas[_\s-]*outreach|commercial[_\s-]*outreach/i },
+      { "tracking.utmSource": /atlas/i },
+      { "tracking.utmMedium": /email[_\s-]*outreach/i },
+      { "tracking.utmCampaign": /commercial[_\s-]*property[_\s-]*management|property[_\s-]*management/i },
+      { projectType: /property management outreach|vendor onboarding/i },
+      { details: /property management outreach|commercial outreach|intro email sent|vendor onboarding/i },
+      { nextAction: /property management outreach|if no reply|vendor onboarding|wait for .*reply/i },
+    ],
+  };
   const assistantClause = { sourceType: /^assistant_/i };
   const prospectorClause = {
     sourceType: { $in: ["field_prospector", "lead_distribution_prospector"] },
@@ -6305,6 +6389,7 @@ function buildLeadQuery(filters = {}) {
     thumbtackClause,
     searchKingsGoogleAdsClause,
     googleAdsClause,
+    atlasCommercialOutreachClause,
     assistantClause,
     prospectorClause,
     websiteClause,
@@ -6317,6 +6402,8 @@ function buildLeadQuery(filters = {}) {
     andClauses.push(searchKingsGoogleAdsClause);
   } else if (sourceGroup === "google_ads") {
     andClauses.push(googleAdsOnlyClause);
+  } else if (sourceGroup === "atlas_commercial_outreach") {
+    andClauses.push(atlasCommercialOutreachClause);
   } else if (sourceGroup === "assistant_organic") {
     andClauses.push({
       $and: [assistantClause, { $nor: [thumbtackClause, searchKingsGoogleAdsClause, googleAdsClause] }],
@@ -6496,6 +6583,15 @@ async function buildDashboardSnapshot(
       : [],
     salesSummaryPromise,
   ]);
+  const hideColdAtlasOutreachFromDefaultInbox = Boolean(
+    !normalizeLeadSourceGroup(filters?.sourceGroup || "") &&
+      !cleanText(filters?.search || "", 120) &&
+      !cleanText(filters?.projectType || "", 80) &&
+      !hasLeadStatusFilter,
+  );
+  const visibleLeads = hideColdAtlasOutreachFromDefaultInbox
+    ? leads.filter((lead) => !isColdAtlasCommercialOutreachLead(lead))
+    : leads;
 
   return {
     summary: {
@@ -6530,7 +6626,7 @@ async function buildDashboardSnapshot(
         count: Number(item?.count || 0) || 0,
       }))
       .filter((item) => item.count > 0),
-    leads: leads.map(cleanLead).filter(Boolean),
+    leads: visibleLeads.map(cleanLead).filter(Boolean),
     completedLeads: (Array.isArray(completedLeads) ? completedLeads : [])
       .map((item) => cleanLead(item))
       .filter(Boolean),

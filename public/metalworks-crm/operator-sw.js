@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmwf-operator-shell-v7";
+const CACHE_NAME = "cmwf-operator-shell-v8";
 const SHELL_URLS = [
   "/metalworks-crm/",
   "/metalworks-crm/operator/",

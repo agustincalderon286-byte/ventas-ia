@@ -25,6 +25,7 @@ const CRM_LEAD_SOURCE_GROUP_FALLBACK_OPTIONS = [
   { value: "thumbtack", label: "Thumbtack" },
   { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
   { value: "google_ads", label: "Google Ads" },
+  { value: "atlas_commercial_outreach", label: "Atlas Commercial Outreach" },
   { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
   { value: "prospector", label: "Prospector" },
   { value: "website", label: "Website form/chat" },
@@ -423,6 +424,7 @@ const globalActivitySummary = document.querySelector("[data-crm-global-activity-
 const statusFilter = document.querySelector("[data-crm-status-filter]");
 const serviceFilter = document.querySelector("[data-crm-service-filter]");
 const sourceFilter = document.querySelector("[data-crm-source-filter]");
+const atlasOutreachFilterButton = document.querySelector("[data-crm-atlas-outreach-filter]");
 const searchInput = document.querySelector("[data-crm-search]");
 const userChip = document.querySelector("[data-crm-user-chip]");
 const refreshButton = document.querySelector("[data-crm-refresh]");
@@ -674,6 +676,7 @@ function formatLeadSource(value = "") {
     manual_crm_entry: "Manual CRM lead",
     search_kings_google_ads: "Search Kings Google Ads",
     google_ads_manual: "Google Ads",
+    atlas_commercial_outreach: "Atlas Commercial Outreach",
     thumbtack_manual: "Thumbtack",
     other_manual: "Other / uncategorized",
   };
@@ -3059,6 +3062,12 @@ function renderLeadFilters(dashboard) {
     sourceFilter.value = state.filters.sourceGroup;
   }
 
+  if (atlasOutreachFilterButton) {
+    const isAtlasOutreachActive = state.filters.sourceGroup === "atlas_commercial_outreach";
+    atlasOutreachFilterButton.classList.toggle("is-active", isAtlasOutreachActive);
+    atlasOutreachFilterButton.setAttribute("aria-pressed", isAtlasOutreachActive ? "true" : "false");
+  }
+
   syncSourceGroupSelect(manualLeadSourceInput, manualLeadSourceInput?.value || "manual", {
     defaultValue: "manual",
   });
@@ -3165,6 +3174,21 @@ function getLeadCollectionTitle(dashboard = {}) {
   }
 
   const selectedStatus = String(state.filters.status || "").trim();
+  const selectedSourceGroup = String(state.filters.sourceGroup || "").trim();
+
+  if (selectedSourceGroup) {
+    const matchedSource = getLeadSourceGroupOptions(dashboard.sourceOptions).find(
+      (item) => item.value === selectedSourceGroup,
+    );
+
+    if (selectedSourceGroup === "atlas_commercial_outreach") {
+      return matchedSource?.label || "Atlas Commercial Outreach";
+    }
+
+    if (!selectedStatus) {
+      return matchedSource?.label || "Filtered Leads";
+    }
+  }
 
   if (!selectedStatus) {
     return "Active Leads";
@@ -3189,6 +3213,8 @@ function syncLeadCollectionCopy(dashboard = {}, activeLeads = [], completedLeads
   if (emptyState) {
     if (state.filters.status === "won") {
       emptyState.textContent = "No won jobs match this filter yet.";
+    } else if (state.filters.sourceGroup === "atlas_commercial_outreach") {
+      emptyState.textContent = "No Atlas outreach leads match this filter yet.";
     } else if (!state.filters.status && completedLeads.length) {
       emptyState.textContent = "No active leads match this filter. Your completed jobs stay below.";
     } else if (!state.filters.status) {
@@ -4784,6 +4810,24 @@ function bindFilters() {
     }
 
     state.filters.sourceGroup = String(sourceFilter.value || "").trim();
+    await refreshDashboardSafely();
+  });
+
+  atlasOutreachFilterButton?.addEventListener("click", async () => {
+    if (state.view === "applicants") {
+      rememberSelectedView("leads");
+      syncViewButtons();
+    }
+
+    state.filters.sourceGroup =
+      state.filters.sourceGroup === "atlas_commercial_outreach"
+        ? ""
+        : "atlas_commercial_outreach";
+
+    if (sourceFilter) {
+      sourceFilter.value = state.filters.sourceGroup;
+    }
+
     await refreshDashboardSafely();
   });
 
