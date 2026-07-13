@@ -1,12 +1,47 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
-const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v1";
+const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
+const CRM_DEFAULT_SKIN = "executive-steel";
 const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
 const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
 const CRM_SELECTED_APPLICANT_STORAGE_KEY = "cmwf_crm_selected_applicant_v1";
 const CRM_SELECTED_VIEW_STORAGE_KEY = "cmwf_crm_selected_view_v1";
+const CRM_MOBILE_PANE_STORAGE_KEY = "cmwf_crm_mobile_pane_v1";
 const CRM_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+const CRM_MOBILE_BREAKPOINT_PX = 1080;
+const PROSPECTOR_PASSWORD_MIN_LENGTH = 8;
+const CRM_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
+const CRM_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const CRM_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
+const CRM_AGENDA_BUCKET_LABELS = {
+  overdue: "Overdue",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  this_week: "This Week",
+  upcoming: "Later",
+};
+const CRM_LEAD_SOURCE_GROUP_FALLBACK_OPTIONS = [
+  { value: "thumbtack", label: "Thumbtack" },
+  { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
+  { value: "google_ads", label: "Google Ads" },
+  { value: "atlas_commercial_outreach", label: "Atlas Commercial Outreach" },
+  { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
+  { value: "prospector", label: "Prospector" },
+  { value: "website", label: "Website form/chat" },
+  { value: "manual", label: "Manual CRM" },
+  { value: "other", label: "Other / uncategorized" },
+];
+const CRM_BUSINESS_TIME_ZONE = "America/Chicago";
+const MAX_CRM_PHOTO_FILES = 4;
+const MAX_CRM_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_CRM_PHOTO_TOTAL_BYTES = 6 * 1024 * 1024;
+const MIN_CRM_PHOTO_TARGET_BYTES = 320 * 1024;
+const MAX_CRM_PHOTO_DIMENSION = 1600;
+const crmMobileMediaQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia(`(max-width: ${CRM_MOBILE_BREAKPOINT_PX}px)`)
+    : null;
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -110,6 +145,54 @@ function formatCacheAge(savedAt = 0) {
   return `hace ${hours} h`;
 }
 
+function formatAppointmentDuration(minutesValue = 0) {
+  const totalMinutes = Math.max(0, Math.round(Number(minutesValue || 0)));
+
+  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+    return "";
+  }
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (!minutes) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${minutes} min`;
+}
+
+function buildAbsoluteAppUrl(pathOrUrl = "") {
+  const safeValue = String(pathOrUrl || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(safeValue)) {
+    return safeValue;
+  }
+
+  const normalizedPath = safeValue.startsWith("/") ? safeValue : `/${safeValue}`;
+  return `${window.location.origin}${normalizedPath}`;
+}
+
+function buildResourceQrImageUrl(pathOrUrl = "") {
+  const absoluteUrl = buildAbsoluteAppUrl(pathOrUrl);
+
+  if (!absoluteUrl) {
+    return "";
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+    absoluteUrl,
+  )}`;
+}
+
 async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const retryDelays =
@@ -177,8 +260,8 @@ async function apiRequest(url, options = {}) {
 
 const METALWORKS_CONTACT = {
   companyName: "Chicago Metal Works & Fencing",
-  phoneDisplay: "773 798 4107",
-  phoneDigits: "7737984107",
+  phoneDisplay: "708 731 6762",
+  phoneDigits: "7087316762",
   email: "agustincalderon286@gmail.com",
   website: "https://www.chicagometalworksandfencing.com/",
 };
@@ -192,6 +275,15 @@ const ESTIMATE_COST_FIELDS = [
   "estimateMiscCost",
   "estimateDiscount",
 ];
+const CRM_LEAD_REMINDER_OPTIONS = [
+  { value: 60, label: "1 hour before" },
+  { value: 120, label: "2 hours before" },
+  { value: 1440, label: "1 day before" },
+  { value: 2880, label: "2 days before" },
+];
+const CRM_LEAD_REMINDER_OPTION_MAP = new Map(
+  CRM_LEAD_REMINDER_OPTIONS.map((option) => [option.value, option.label]),
+);
 const APPLICANT_STATUS_OPTIONS = [
   { value: "new", label: "Nuevo candidato" },
   { value: "interview_requested", label: "Entrevista pedida" },
@@ -202,6 +294,16 @@ const APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
 
 function normalizeCrmView(value = "") {
   return String(value || "").trim().toLowerCase() === "applicants" ? "applicants" : "leads";
+}
+
+function normalizeCrmMobilePane(value = "") {
+  const safeValue = String(value || "").trim().toLowerCase();
+
+  if (safeValue === "workspace" || safeValue === "agenda" || safeValue === "more") {
+    return safeValue;
+  }
+
+  return "inbox";
 }
 
 const state = {
@@ -218,6 +320,9 @@ const state = {
   leadDetail: null,
   applicantDetail: null,
   view: normalizeCrmView(readStoredJson(CRM_SELECTED_VIEW_STORAGE_KEY, "leads") || "leads"),
+  mobilePane: normalizeCrmMobilePane(
+    readStoredJson(CRM_MOBILE_PANE_STORAGE_KEY, "inbox") || "inbox",
+  ),
   selectedLeadId:
     readSelectedLeadFromQuery() || String(readStoredJson(CRM_SELECTED_LEAD_STORAGE_KEY, "") || ""),
   selectedApplicantId: String(readStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, "") || ""),
@@ -227,20 +332,48 @@ const state = {
     search: "",
     status: "",
     projectType: "",
+    sourceGroup: "",
   },
   applicantFilters: {
     search: "",
     status: "",
     role: "",
   },
+  pushConfig: null,
+  pushRegistration: null,
+  pushSubscription: null,
+  pushBusy: false,
+  liveChatReplyBusy: false,
+  manualPhotoUploadBusy: false,
+  manualLeadBusy: false,
   searchTimer: null,
   bindingsReady: false,
 };
 
 const summaryWrap = document.querySelector("[data-crm-summary]");
+const agendaPanel = document.querySelector("[data-crm-agenda-panel]");
+const agendaList = document.querySelector("[data-crm-agenda-list]");
+const agendaCount = document.querySelector("[data-crm-agenda-count]");
 const resourceHub = document.querySelector("[data-crm-resource-hub]");
 const resourcesWrap = document.querySelector("[data-crm-resource-sections]");
 const resourcesFeedback = document.querySelector("[data-crm-resource-feedback]");
+const newLeadToggleButton = document.querySelector("[data-crm-new-lead-toggle]");
+const manualLeadPanel = document.querySelector("[data-crm-manual-lead-panel]");
+const manualLeadForm = document.querySelector("[data-crm-manual-lead-form]");
+const manualLeadSaveButton = document.querySelector("[data-crm-manual-lead-save]");
+const manualLeadCancelButton = document.querySelector("[data-crm-manual-lead-cancel]");
+const manualLeadFeedback = document.querySelector("[data-crm-manual-lead-feedback]");
+const manualLeadSourceInput = document.querySelector("[data-crm-manual-source-input]");
+const mobileShell = document.querySelector("[data-crm-mobile-shell]");
+const mobileShellTitle = document.querySelector("[data-crm-mobile-title]");
+const mobileShellCopy = document.querySelector("[data-crm-mobile-copy]");
+const mobilePaneButtons = Array.from(document.querySelectorAll("[data-crm-mobile-pane-button]"));
+const mobileSecondaryMoreButton = document.querySelector(
+  "[data-crm-mobile-secondary-button=\"more\"]",
+);
+const mobilePaneTargets = Array.from(document.querySelectorAll("[data-crm-mobile-pane-target]"));
+const mobileBackButton = document.querySelector("[data-crm-mobile-back]");
+const mobileCollapsibles = Array.from(document.querySelectorAll("[data-crm-mobile-collapsible]"));
 const prospectorAdminWrap = document.querySelector("[data-crm-prospector-admin]");
 const prospectorSummary = document.querySelector("[data-crm-prospector-summary]");
 const prospectorForm = document.querySelector("[data-crm-prospector-form]");
@@ -260,12 +393,18 @@ const prospectorCopyPasswordButton = document.querySelector(
 );
 const prospectorCopyLoginButton = document.querySelector("[data-crm-prospector-copy-login]");
 const leadList = document.querySelector("[data-crm-lead-list]");
+const completedPanel = document.querySelector("[data-crm-completed-panel]");
+const completedList = document.querySelector("[data-crm-completed-list]");
+const completedCount = document.querySelector("[data-crm-completed-count]");
+const completedEmptyState = document.querySelector("[data-crm-completed-empty]");
 const emptyState = document.querySelector("[data-crm-empty-state]");
 const collectionTitle = document.querySelector("[data-crm-collection-title]");
 const collectionCount = document.querySelector("[data-crm-collection-count]");
 const searchLabel = document.querySelector("[data-crm-search-label]");
 const statusLabel = document.querySelector("[data-crm-status-label]");
 const serviceLabel = document.querySelector("[data-crm-service-label]");
+const sourceLabel = document.querySelector("[data-crm-source-label]");
+const sourceFilterWrap = document.querySelector("[data-crm-source-filter-wrap]");
 const viewButtons = Array.from(document.querySelectorAll("[data-crm-view-button]"));
 const detailWrap = document.querySelector("[data-crm-detail-wrap]");
 const applicantDetailWrap = document.querySelector("[data-crm-applicant-detail-wrap]");
@@ -274,7 +413,9 @@ const detailTitle = document.querySelector("[data-crm-detail-title]");
 const detailMeta = document.querySelector("[data-crm-detail-meta]");
 const detailStatus = document.querySelector("[data-crm-detail-status]");
 const detailForm = document.querySelector("[data-crm-detail-form]");
+const detailSourceInput = document.querySelector("[data-crm-detail-source-input]");
 const detailPanel = document.querySelector(".crm-detail-panel");
+const mainGrid = document.querySelector(".crm-main-grid");
 const detailFeedback = document.querySelector("[data-crm-detail-feedback]");
 const actionFeedback = document.querySelector("[data-crm-action-feedback]");
 const activityList = document.querySelector("[data-crm-activity-list]");
@@ -282,23 +423,34 @@ const globalActivityList = document.querySelector("[data-crm-global-activity]");
 const globalActivitySummary = document.querySelector("[data-crm-global-activity-summary]");
 const statusFilter = document.querySelector("[data-crm-status-filter]");
 const serviceFilter = document.querySelector("[data-crm-service-filter]");
+const sourceFilter = document.querySelector("[data-crm-source-filter]");
+const atlasOutreachFilterButton = document.querySelector("[data-crm-atlas-outreach-filter]");
 const searchInput = document.querySelector("[data-crm-search]");
 const userChip = document.querySelector("[data-crm-user-chip]");
 const refreshButton = document.querySelector("[data-crm-refresh]");
 const logoutButton = document.querySelector("[data-crm-logout]");
+const enablePushButton = document.querySelector("[data-crm-enable-push]");
+const testPushButton = document.querySelector("[data-crm-test-push]");
+const pushFeedback = document.querySelector("[data-crm-push-feedback]");
 const statusInput = document.querySelector("[data-crm-detail-status-input]");
 const themeBadge = document.querySelector("[data-crm-theme-badge]");
 const systemStatus = document.querySelector("[data-crm-system-status]");
 const callLink = document.querySelector("[data-crm-call-link]");
 const textLink = document.querySelector("[data-crm-text-link]");
+const mapLink = document.querySelector("[data-crm-map-link]");
 const markQuotedButton = document.querySelector("[data-crm-mark-quoted]");
 const sendEstimateButton = document.querySelector("[data-crm-send-estimate]");
 const openEmailDraftButton = document.querySelector("[data-crm-open-email-draft]");
 const copyEstimateButton = document.querySelector("[data-crm-copy-estimate]");
+const deleteLeadButton = document.querySelector("[data-crm-delete-lead]");
 const detailTabButtons = Array.from(document.querySelectorAll("[data-crm-detail-tab]"));
 const detailViews = Array.from(document.querySelectorAll("[data-crm-detail-view]"));
 const conversationThread = document.querySelector("[data-crm-conversation-thread]");
 const conversationSummary = document.querySelector("[data-crm-conversation-summary]");
+const liveChatPanel = document.querySelector("[data-crm-live-chat-panel]");
+const liveChatForm = document.querySelector("[data-crm-live-chat-form]");
+const liveChatSendButton = document.querySelector("[data-crm-live-chat-send]");
+const liveChatFeedback = document.querySelector("[data-crm-live-chat-feedback]");
 const applicantDetailTabButtons = Array.from(
   document.querySelectorAll("[data-crm-applicant-detail-tab]"),
 );
@@ -320,6 +472,9 @@ const applicantEmailLink = document.querySelector("[data-crm-applicant-email-lin
 const photoSection = document.querySelector("[data-crm-photo-section]");
 const photoGrid = document.querySelector("[data-crm-photo-grid]");
 const photoSummary = document.querySelector("[data-crm-photo-summary]");
+const photoUploadTrigger = document.querySelector("[data-crm-photo-upload-trigger]");
+const photoUploadInput = document.querySelector("[data-crm-photo-upload-input]");
+const photoUploadFeedback = document.querySelector("[data-crm-photo-upload-feedback]");
 
 function escapeHtml(value = "") {
   return String(value || "")
@@ -327,6 +482,10 @@ function escapeHtml(value = "") {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function escapeAttribute(value = "") {
+  return escapeHtml(value).replace(/'/g, "&#39;");
 }
 
 function formatDate(value = "") {
@@ -345,6 +504,7 @@ function formatDate(value = "") {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: CRM_BUSINESS_TIME_ZONE,
   });
 }
 
@@ -362,7 +522,138 @@ function formatDateOnly(value = "") {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: CRM_BUSINESS_TIME_ZONE,
   });
+}
+
+function getBusinessDateTimeParts(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: CRM_BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(map.year || 0),
+    month: Number(map.month || 0),
+    day: Number(map.day || 0),
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0),
+  };
+}
+
+function formatBusinessDayKey(parts = null) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return "";
+  }
+
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function addBusinessCalendarDays(parts = null, dayOffset = 0) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return null;
+  }
+
+  const reference = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  reference.setUTCDate(reference.getUTCDate() + Number(dayOffset || 0));
+
+  return {
+    year: reference.getUTCFullYear(),
+    month: reference.getUTCMonth() + 1,
+    day: reference.getUTCDate(),
+  };
+}
+
+function getAgendaBucketMeta(value = "", now = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return {
+      key: "upcoming",
+      label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+    };
+  }
+
+  if (date.getTime() < now.getTime()) {
+    return {
+      key: "overdue",
+      label: CRM_AGENDA_BUCKET_LABELS.overdue,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("overdue"),
+    };
+  }
+
+  const todayParts = getBusinessDateTimeParts(now);
+  const scheduledParts = getBusinessDateTimeParts(date);
+
+  if (!todayParts || !scheduledParts) {
+    return {
+      key: "upcoming",
+      label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+    };
+  }
+
+  const todayKey = formatBusinessDayKey(todayParts);
+  const scheduledKey = formatBusinessDayKey(scheduledParts);
+  const tomorrowKey = formatBusinessDayKey(addBusinessCalendarDays(todayParts, 1));
+  const todayIndex = new Date(
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day),
+  ).getUTCDay();
+  const weekEndKey = formatBusinessDayKey(addBusinessCalendarDays(todayParts, 6 - todayIndex));
+
+  if (scheduledKey === todayKey) {
+    return {
+      key: "today",
+      label: CRM_AGENDA_BUCKET_LABELS.today,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("today"),
+    };
+  }
+
+  if (scheduledKey === tomorrowKey) {
+    return {
+      key: "tomorrow",
+      label: CRM_AGENDA_BUCKET_LABELS.tomorrow,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("tomorrow"),
+    };
+  }
+
+  if (scheduledKey <= weekEndKey) {
+    return {
+      key: "this_week",
+      label: CRM_AGENDA_BUCKET_LABELS.this_week,
+      order: CRM_AGENDA_BUCKET_ORDER.indexOf("this_week"),
+    };
+  }
+
+  return {
+    key: "upcoming",
+    label: CRM_AGENDA_BUCKET_LABELS.upcoming,
+    order: CRM_AGENDA_BUCKET_ORDER.indexOf("upcoming"),
+  };
+}
+
+function serializeDatetimeLocalValue(value = "") {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  return safeValue;
 }
 
 function formatCurrency(value = 0) {
@@ -379,13 +670,64 @@ function formatLeadSource(value = "") {
   const source = String(value || "").trim();
   const labels = {
     website_form: "Website form",
+    website_live_chat: "Website live chat",
     assistant_chat: "Assistant chat",
+    assistant_whatsapp: "WhatsApp assistant",
+    assistant_chat_photo: "Assistant photo upload",
     assistant_booking: "Assistant callback",
     field_prospector: "Field prospector",
     lead_distribution_prospector: "Prospector intake",
+    manual_crm_entry: "Manual CRM lead",
+    search_kings_google_ads: "Search Kings Google Ads",
+    google_ads_manual: "Google Ads",
+    atlas_commercial_outreach: "Atlas Commercial Outreach",
+    thumbtack_manual: "Thumbtack",
+    other_manual: "Other / uncategorized",
   };
 
   return labels[source] || source.replace(/_/g, " ").trim();
+}
+
+function getLeadSourceLabel(lead = {}) {
+  return String(lead?.sourceGroupLabel || "").trim() || formatLeadSource(lead?.sourceType || "");
+}
+
+function getLeadSourceGroupOptions(options = null) {
+  const dashboardOptions = Array.isArray(options)
+    ? options
+    : Array.isArray(state.dashboard?.sourceOptions)
+      ? state.dashboard.sourceOptions
+      : [];
+  const safeOptions = dashboardOptions
+    .map((item) => ({
+      value: String(item?.value || "").trim(),
+      label: String(item?.label || "").trim(),
+    }))
+    .filter((item) => item.value && item.label);
+
+  return safeOptions.length ? safeOptions : CRM_LEAD_SOURCE_GROUP_FALLBACK_OPTIONS;
+}
+
+function syncSourceGroupSelect(select, selectedValue = "", { defaultValue = "" } = {}) {
+  if (!select) {
+    return;
+  }
+
+  const sourceOptions = getLeadSourceGroupOptions();
+  const optionValues = new Set(sourceOptions.map((item) => item.value));
+  const nextValue = optionValues.has(selectedValue)
+    ? selectedValue
+    : optionValues.has(defaultValue)
+      ? defaultValue
+      : sourceOptions[0]?.value || "";
+
+  select.innerHTML = sourceOptions
+    .map(
+      (item) =>
+        `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`,
+    )
+    .join("");
+  select.value = nextValue;
 }
 
 function formatApplicantSource(applicant = null) {
@@ -423,6 +765,49 @@ function formatApplicantAnswer(value = "") {
   return String(value || "").trim();
 }
 
+function normalizeLeadReminderOffsets(values = []) {
+  const safeValues = Array.isArray(values) ? values : [values];
+  const unique = [];
+  const seen = new Set();
+
+  safeValues.forEach((value) => {
+    const minutes = Math.round(Number(value || 0));
+
+    if (!CRM_LEAD_REMINDER_OPTION_MAP.has(minutes) || seen.has(minutes)) {
+      return;
+    }
+
+    seen.add(minutes);
+    unique.push(minutes);
+  });
+
+  return unique.sort((left, right) => left - right);
+}
+
+function formatLeadReminderLabel(value = 0) {
+  return CRM_LEAD_REMINDER_OPTION_MAP.get(Math.round(Number(value || 0))) || "";
+}
+
+function buildLeadReminderSummary(lead = null) {
+  const labels = normalizeLeadReminderOffsets(lead?.nextActionReminderOffsets || [])
+    .map((value) => formatLeadReminderLabel(value))
+    .filter(Boolean);
+
+  return labels.join(" · ");
+}
+
+function syncLeadReminderInputs(offsets = []) {
+  if (!detailForm) {
+    return;
+  }
+
+  const selectedValues = new Set(normalizeLeadReminderOffsets(offsets));
+
+  detailForm.querySelectorAll('input[name="nextActionReminderOffsets"]').forEach((input) => {
+    input.checked = selectedValues.has(Math.round(Number(input.value || 0)));
+  });
+}
+
 function stripGeneratedApplicantNotes(value = "") {
   const source = String(value || "");
   const markerIndex = source.indexOf(APPLICANT_NOTES_MARKER);
@@ -444,21 +829,37 @@ function truncateText(value = "", maxLength = 180) {
   return `${safeValue.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
 }
 
+function buildLeadSummaryText(lead = null) {
+  if (!lead) {
+    return "";
+  }
+
+  if (lead.lastUserMessage) {
+    return `Latest message: ${truncateText(lead.lastUserMessage, 140)}`;
+  }
+
+  if (lead.details) {
+    return truncateText(lead.details, 140);
+  }
+
+  return "";
+}
+
 function toDatetimeLocalValue(value = "") {
   if (!value) {
     return "";
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const parts = getBusinessDateTimeParts(value);
+  if (!parts) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const year = String(parts.year).padStart(4, "0");
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
+  const hours = String(parts.hour).padStart(2, "0");
+  const minutes = String(parts.minute).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
@@ -467,14 +868,14 @@ function toDateInputValue(value = "") {
     return "";
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const parts = getBusinessDateTimeParts(value);
+  if (!parts) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(parts.year).padStart(4, "0");
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -489,6 +890,15 @@ function setDetailFeedback(message = "", tone = "") {
   });
 }
 
+function setLiveChatFeedback(message = "", tone = "") {
+  if (!liveChatFeedback) {
+    return;
+  }
+
+  liveChatFeedback.textContent = message;
+  liveChatFeedback.dataset.tone = tone;
+}
+
 function setSystemStatus(message = "", tone = "") {
   if (!systemStatus) {
     return;
@@ -499,10 +909,309 @@ function setSystemStatus(message = "", tone = "") {
   systemStatus.dataset.tone = tone;
 }
 
+function setPushFeedback(message = "", tone = "") {
+  if (!pushFeedback) {
+    return;
+  }
+
+  pushFeedback.textContent = message;
+  pushFeedback.dataset.tone = tone;
+}
+
+function setPhotoUploadFeedback(message = "", tone = "") {
+  if (!photoUploadFeedback) {
+    return;
+  }
+
+  photoUploadFeedback.textContent = message;
+  photoUploadFeedback.dataset.tone = tone;
+}
+
+function setManualLeadFeedback(message = "", tone = "") {
+  if (!manualLeadFeedback) {
+    return;
+  }
+
+  manualLeadFeedback.textContent = message;
+  manualLeadFeedback.dataset.tone = tone;
+}
+
+function supportsWebPush() {
+  return Boolean(
+    window.isSecureContext &&
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window,
+  );
+}
+
+function isAppleMobileDevice() {
+  return /iphone|ipad|ipod/i.test(String(navigator.userAgent || ""));
+}
+
+function isStandaloneApp() {
+  try {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
+  } catch {
+    return window.navigator.standalone === true;
+  }
+}
+
+function needsHomeScreenInstallForPush() {
+  return isAppleMobileDevice() && !isStandaloneApp();
+}
+
+function supportsAppBadge() {
+  return Boolean("setAppBadge" in navigator || "clearAppBadge" in navigator);
+}
+
+async function clearCrmBadge() {
+  if (!supportsAppBadge() || !("clearAppBadge" in navigator)) {
+    return;
+  }
+
+  try {
+    await navigator.clearAppBadge();
+  } catch {}
+}
+
+function urlBase64ToUint8Array(value = "") {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+}
+
+function detectBrowserName() {
+  const userAgent = String(navigator.userAgent || "");
+
+  if (/edg\//i.test(userAgent)) return "Edge";
+  if (/opr\//i.test(userAgent)) return "Opera";
+  if (/chrome\//i.test(userAgent) && !/edg\//i.test(userAgent)) return "Chrome";
+  if (/firefox\//i.test(userAgent)) return "Firefox";
+  if (/safari\//i.test(userAgent) && !/chrome\//i.test(userAgent)) return "Safari";
+  return "Browser";
+}
+
+function buildPushDeviceName() {
+  const platform = String(navigator.platform || "device").trim();
+  return `${detectBrowserName()} on ${platform}`.slice(0, 120);
+}
+
+function syncPushControls() {
+  const hasSupport = supportsWebPush();
+  const installRequired = needsHomeScreenInstallForPush();
+  const permission = hasSupport ? Notification.permission : "unsupported";
+  const pushConfigured = Boolean(state.pushConfig?.webPushConfigured);
+  const isEnabled = Boolean(state.pushSubscription && permission === "granted");
+
+  if (enablePushButton) {
+    enablePushButton.disabled =
+      state.pushBusy || !hasSupport || !pushConfigured || installRequired;
+    enablePushButton.textContent = isEnabled
+      ? "Alerts Enabled"
+      : installRequired
+        ? "Install App First"
+        : permission === "denied"
+          ? "Alerts Blocked"
+          : "Enable Alerts";
+  }
+
+  if (testPushButton) {
+    testPushButton.disabled = state.pushBusy || !isEnabled;
+  }
+}
+
+async function registerCrmServiceWorker() {
+  if (!supportsWebPush()) {
+    return null;
+  }
+
+  if (state.pushRegistration) {
+    return state.pushRegistration;
+  }
+
+  const registration = await navigator.serviceWorker.register(CRM_SERVICE_WORKER_PATH, {
+    scope: CRM_SERVICE_WORKER_SCOPE,
+  });
+  state.pushRegistration = await navigator.serviceWorker.ready;
+  registration.update().catch(() => null);
+  return state.pushRegistration;
+}
+
+async function refreshExistingPushSubscription({ syncServer = false } = {}) {
+  if (!supportsWebPush()) {
+    state.pushSubscription = null;
+    syncPushControls();
+    return null;
+  }
+
+  const registration = await registerCrmServiceWorker();
+  const subscription = await registration.pushManager.getSubscription();
+  state.pushSubscription = subscription;
+
+  if (
+    syncServer &&
+    subscription &&
+    Notification.permission === "granted" &&
+    state.pushConfig?.webPushConfigured
+  ) {
+    await apiRequest("/api/metalworks-crm/push/web/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        notificationPath: "/metalworks-crm/",
+        authorizationStatus: Notification.permission,
+        notificationsEnabled: true,
+      },
+    });
+  }
+
+  syncPushControls();
+  return subscription;
+}
+
+async function loadPushConfig({ silent = false } = {}) {
+  if (needsHomeScreenInstallForPush()) {
+    setPushFeedback(
+      "On iPhone, add this CRM to your Home Screen first. Then open the installed app and tap Enable Alerts.",
+      "muted",
+    );
+    syncPushControls();
+    return null;
+  }
+
+  if (!supportsWebPush()) {
+    setPushFeedback("This browser does not support secure push notifications.", "muted");
+    syncPushControls();
+    return null;
+  }
+
+  try {
+    state.pushConfig = await apiRequest("/api/metalworks-crm/push/config");
+    await refreshExistingPushSubscription({ syncServer: true });
+
+    if (!state.pushConfig?.webPushConfigured && !silent) {
+      setPushFeedback("Web alerts still need VAPID keys on the server.", "warning");
+    } else if (!state.pushSubscription && Notification.permission === "default" && !silent) {
+      setPushFeedback("Enable alerts to get new lead notifications on this device.", "muted");
+    } else if (Notification.permission === "denied" && !silent) {
+      setPushFeedback("Browser alerts are blocked for this device.", "warning");
+    } else if (state.pushSubscription && !silent) {
+      setPushFeedback("Lead alerts are active on this device.", "success");
+    }
+
+    syncPushControls();
+    return state.pushConfig;
+  } catch (error) {
+    if (!silent) {
+      setPushFeedback(error.message || "I could not load the alert settings.", "error");
+    }
+    syncPushControls();
+    return null;
+  }
+}
+
+async function handleEnablePush() {
+  if (!supportsWebPush()) {
+    setPushFeedback("This browser does not support secure push notifications.", "error");
+    return;
+  }
+
+  if (!state.pushConfig?.webPushConfigured || !state.pushConfig?.vapidPublicKey) {
+    setPushFeedback("Web alerts still need server keys before this can work.", "warning");
+    syncPushControls();
+    return;
+  }
+
+  state.pushBusy = true;
+  syncPushControls();
+  setPushFeedback("Enabling alerts...", "muted");
+
+  try {
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      setPushFeedback(
+        permission === "denied"
+          ? "Alerts were blocked for this browser."
+          : "Notification permission was not granted.",
+        "warning",
+      );
+      return;
+    }
+
+    const registration = await registerCrmServiceWorker();
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(state.pushConfig.vapidPublicKey),
+      });
+    }
+
+    await apiRequest("/api/metalworks-crm/push/web/register", {
+      method: "POST",
+      body: {
+        subscription: subscription.toJSON(),
+        deviceName: buildPushDeviceName(),
+        browserName: detectBrowserName(),
+        notificationPath: "/metalworks-crm/",
+        authorizationStatus: permission,
+        notificationsEnabled: true,
+      },
+    });
+
+    state.pushSubscription = subscription;
+    setPushFeedback("Lead alerts are active on this device.", "success");
+  } catch (error) {
+    setPushFeedback(error.message || "I could not enable alerts on this browser.", "error");
+  } finally {
+    state.pushBusy = false;
+    syncPushControls();
+  }
+}
+
+async function handleTestPush() {
+  if (!state.pushSubscription) {
+    setPushFeedback("Enable alerts first on this device.", "warning");
+    return;
+  }
+
+  state.pushBusy = true;
+  syncPushControls();
+  setPushFeedback("Sending test alert...", "muted");
+
+  try {
+    const result = await apiRequest("/api/metalworks-crm/push/test", {
+      method: "POST",
+    });
+    setPushFeedback(result.message || "Test alert sent.", result.ok ? "success" : "warning");
+  } catch (error) {
+    setPushFeedback(error.message || "I could not send the test alert.", "error");
+  } finally {
+    state.pushBusy = false;
+    syncPushControls();
+  }
+}
+
 function persistThemeProfile(profile = {}, email = "") {
   setCacheEntry(CRM_THEME_STORAGE_KEY, {
     email: String(email || "").trim(),
-    profile: profile && typeof profile === "object" ? profile : {},
+    profile:
+      profile && typeof profile === "object"
+        ? {
+            ...profile,
+            skin: normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN),
+            themeLabel: "",
+          }
+        : {},
   });
 }
 
@@ -535,6 +1244,191 @@ function rememberSelectedLead(leadId = "") {
 function rememberSelectedApplicant(applicantId = "") {
   state.selectedApplicantId = String(applicantId || "").trim();
   writeStoredJson(CRM_SELECTED_APPLICANT_STORAGE_KEY, state.selectedApplicantId || "");
+}
+
+function normalizeCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue === CRM_DEFAULT_SKIN ? safeValue : CRM_DEFAULT_SKIN;
+}
+
+function isMobileCrmLayout() {
+  if (crmMobileMediaQuery) {
+    return crmMobileMediaQuery.matches;
+  }
+
+  return window.innerWidth <= CRM_MOBILE_BREAKPOINT_PX;
+}
+
+function getWorkspaceEntity() {
+  return state.view === "applicants"
+    ? state.applicantDetail?.applicant || null
+    : state.leadDetail?.lead || null;
+}
+
+function hasWorkspaceSelection() {
+  if (getWorkspaceEntity()?.id) {
+    return true;
+  }
+
+  return state.view === "applicants"
+    ? Boolean(state.selectedApplicantId)
+    : Boolean(state.selectedLeadId);
+}
+
+function resolveMobilePane() {
+  const requestedPane = normalizeCrmMobilePane(state.mobilePane);
+
+  if (requestedPane === "workspace" && !hasWorkspaceSelection()) {
+    return "inbox";
+  }
+
+  return requestedPane;
+}
+
+function rememberMobilePane(pane = "inbox") {
+  state.mobilePane = normalizeCrmMobilePane(pane);
+  writeStoredJson(CRM_MOBILE_PANE_STORAGE_KEY, state.mobilePane);
+}
+
+function syncMobilePaneButtons(activePane = resolveMobilePane()) {
+  mobilePaneButtons.forEach((button) => {
+    const paneName = normalizeCrmMobilePane(button.dataset.crmMobilePaneButton || "inbox");
+    const isActive = paneName === activePane;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function syncMobileShellCopy(activePane = resolveMobilePane()) {
+  if (!mobileShellTitle || !mobileShellCopy) {
+    return;
+  }
+
+  const workspaceEntity = getWorkspaceEntity();
+  const entityLabel = state.view === "applicants" ? "candidate" : "lead";
+
+  if (activePane === "workspace") {
+    mobileShellTitle.textContent = workspaceEntity?.fullName
+      ? truncateText(workspaceEntity.fullName, 36)
+      : "Workspace";
+    mobileShellCopy.textContent = workspaceEntity?.fullName
+      ? `Manage this ${entityLabel}, review activity, and keep the conversation in one place.`
+      : `Open a ${entityLabel} from Inbox to work it here.`;
+    return;
+  }
+
+  if (activePane === "agenda") {
+    mobileShellTitle.textContent = "Agenda";
+    mobileShellCopy.textContent =
+      "See the leads that already have a callback, visit, or follow-up time scheduled.";
+    return;
+  }
+
+  if (activePane === "more") {
+    mobileShellTitle.textContent = "More Tools";
+    mobileShellCopy.textContent =
+      "Metrics, quick links, prospector accounts, and the activity feed stay here.";
+    return;
+  }
+
+  mobileShellTitle.textContent = "Inbox";
+  mobileShellCopy.textContent =
+    state.view === "applicants"
+      ? "Review candidates first, then open one profile to work it."
+      : "Open a lead and work it like a contact on your phone.";
+}
+
+function syncMobileSecondaryActions(activePane = resolveMobilePane()) {
+  if (!mobileSecondaryMoreButton) {
+    return;
+  }
+
+  mobileSecondaryMoreButton.textContent =
+    activePane === "more" ? "Back to Agenda" : "More Tools";
+  mobileSecondaryMoreButton.setAttribute("aria-pressed", activePane === "more" ? "true" : "false");
+}
+
+function setMobileCollapsibleDefaults({ reset = false } = {}) {
+  const mobileLayout = isMobileCrmLayout();
+
+  mobileCollapsibles.forEach((element) => {
+    if (!(element instanceof HTMLDetailsElement)) {
+      return;
+    }
+
+    if (!mobileLayout) {
+      element.open = true;
+      delete element.dataset.crmMobileInitialized;
+      return;
+    }
+
+    if (reset || !element.dataset.crmMobileInitialized) {
+      element.open = false;
+      element.dataset.crmMobileInitialized = "true";
+    }
+  });
+}
+
+function applyMobilePaneLayout() {
+  const mobileLayout = isMobileCrmLayout();
+
+  if (!mobileLayout) {
+    delete document.body.dataset.crmMobilePane;
+    delete document.body.dataset.crmMobileLayout;
+    mobilePaneTargets.forEach((element) => {
+      element.classList.remove("crm-mobile-pane-hidden");
+    });
+    mainGrid?.classList.remove("crm-mobile-main-hidden");
+    if (mobileBackButton) {
+      mobileBackButton.hidden = true;
+    }
+    setMobileCollapsibleDefaults({ reset: true });
+    syncMobilePaneButtons(resolveMobilePane());
+    syncMobileShellCopy(resolveMobilePane());
+    syncMobileSecondaryActions(resolveMobilePane());
+    return;
+  }
+
+  const activePane = resolveMobilePane();
+
+  if (activePane !== state.mobilePane) {
+    rememberMobilePane(activePane);
+  }
+
+  document.body.dataset.crmMobilePane = activePane;
+  document.body.dataset.crmMobileLayout = "true";
+
+  mobilePaneTargets.forEach((element) => {
+    const targetPane = normalizeCrmMobilePane(element.dataset.crmMobilePaneTarget || "inbox");
+    element.classList.toggle("crm-mobile-pane-hidden", targetPane !== activePane);
+  });
+
+  mainGrid?.classList.toggle(
+    "crm-mobile-main-hidden",
+    activePane === "more" || activePane === "agenda",
+  );
+
+  if (mobileBackButton) {
+    mobileBackButton.hidden = activePane !== "workspace";
+  }
+
+  setMobileCollapsibleDefaults();
+  syncMobilePaneButtons(activePane);
+  syncMobileShellCopy(activePane);
+  syncMobileSecondaryActions(activePane);
+}
+
+function openMobileWorkspacePane() {
+  if (!isMobileCrmLayout()) {
+    return;
+  }
+
+  rememberMobilePane("workspace");
+  applyMobilePaneLayout();
 }
 
 function getLeadDetailCache() {
@@ -578,9 +1472,9 @@ function readCachedLeadDetail(leadId = "") {
 }
 
 function applyProfileTheme(profile = {}, fallbackEmail = "") {
-  const skin = String(profile.skin || "classic").trim() || "classic";
+  const skin = normalizeCrmSkin(profile.skin || CRM_DEFAULT_SKIN);
   const displayName = String(profile.displayName || fallbackEmail || "Admin").trim();
-  const label = String(profile.themeLabel || "").trim();
+  const label = "";
   document.body.dataset.crmSkin = skin;
 
   if (userChip) {
@@ -671,6 +1565,224 @@ function buildSmsHref(phoneDigits = "") {
   return `sms:+1${phoneDigits}`;
 }
 
+function renameFileExtension(fileName = "", extension = ".jpg") {
+  const safeExtension = String(extension || ".jpg").startsWith(".")
+    ? String(extension || ".jpg")
+    : `.${String(extension || "jpg")}`;
+  const baseName = String(fileName || "project-photo")
+    .trim()
+    .replace(/\.[A-Za-z0-9]+$/, "");
+
+  return `${baseName || "project-photo"}${safeExtension}`;
+}
+
+function canvasToBlob(canvas, mimeType = "image/jpeg", quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Could not prepare this image for upload."));
+      },
+      mimeType,
+      quality,
+    );
+  });
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`Could not process ${file?.name || "this image"}.`));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+async function optimizeCrmPhotoFile(file, { targetBytes = MAX_CRM_PHOTO_BYTES } = {}) {
+  const safeTargetBytes = Math.max(
+    MIN_CRM_PHOTO_TARGET_BYTES,
+    Math.min(
+      MAX_CRM_PHOTO_BYTES,
+      Number(targetBytes || MAX_CRM_PHOTO_BYTES) || MAX_CRM_PHOTO_BYTES,
+    ),
+  );
+
+  if (!(file instanceof File)) {
+    throw new Error("Could not read this image file.");
+  }
+
+  if (!String(file.type || "").startsWith("image/")) {
+    throw new Error("Only image uploads are allowed.");
+  }
+
+  if (/^image\/gif$/i.test(String(file.type || ""))) {
+    if (file.size <= safeTargetBytes) {
+      return file;
+    }
+
+    throw new Error(`${file.name || "This image"} is too large. Please choose a smaller file.`);
+  }
+
+  if (
+    file.size <= safeTargetBytes &&
+    file.size <= MAX_CRM_PHOTO_BYTES &&
+    !/^image\/(?:heic|heif)$/i.test(String(file.type || ""))
+  ) {
+    return file;
+  }
+
+  const image = await loadImageFromFile(file);
+  const originalWidth = Number(image.naturalWidth || image.width || 0) || 1;
+  const originalHeight = Number(image.naturalHeight || image.height || 0) || 1;
+  const baseScale = Math.min(
+    1,
+    MAX_CRM_PHOTO_DIMENSION / Math.max(originalWidth, originalHeight),
+  );
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { alpha: false });
+
+  if (!context) {
+    throw new Error("This device could not prepare the image for upload.");
+  }
+
+  const dimensionScales = [1, 0.88, 0.76, 0.64, 0.52];
+  const qualitySteps = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
+  let bestBlob = null;
+
+  for (const dimensionScale of dimensionScales) {
+    const width = Math.max(1, Math.round(originalWidth * baseScale * dimensionScale));
+    const height = Math.max(1, Math.round(originalHeight * baseScale * dimensionScale));
+
+    canvas.width = width;
+    canvas.height = height;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+
+    for (const quality of qualitySteps) {
+      const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+
+      if (!bestBlob || blob.size < bestBlob.size) {
+        bestBlob = blob;
+      }
+
+      if (blob.size <= safeTargetBytes && blob.size <= MAX_CRM_PHOTO_BYTES) {
+        return new File([blob], renameFileExtension(file.name, ".jpg"), {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      }
+    }
+  }
+
+  if (bestBlob && bestBlob.size <= MAX_CRM_PHOTO_BYTES) {
+    return new File([bestBlob], renameFileExtension(file.name, ".jpg"), {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  }
+
+  throw new Error(
+    `${file.name || "This image"} is still too large after compression. Try cropping it before uploading.`,
+  );
+}
+
+async function prepareCrmPhotoFilesForUpload(selectedFiles = []) {
+  const perFileTarget = Math.max(
+    MIN_CRM_PHOTO_TARGET_BYTES,
+    Math.min(
+      MAX_CRM_PHOTO_BYTES,
+      Math.floor(MAX_CRM_PHOTO_TOTAL_BYTES / Math.max(selectedFiles.length, 1)),
+    ),
+  );
+
+  let optimizedFiles = await Promise.all(
+    selectedFiles.map((file) => optimizeCrmPhotoFile(file, { targetBytes: perFileTarget })),
+  );
+
+  let totalBytes = optimizedFiles.reduce((sum, file) => sum + (Number(file?.size || 0) || 0), 0);
+
+  if (totalBytes <= MAX_CRM_PHOTO_TOTAL_BYTES) {
+    return optimizedFiles;
+  }
+
+  const tighterTarget = Math.max(MIN_CRM_PHOTO_TARGET_BYTES, Math.floor(perFileTarget * 0.82));
+  optimizedFiles = await Promise.all(
+    optimizedFiles.map((file) => optimizeCrmPhotoFile(file, { targetBytes: tighterTarget })),
+  );
+  totalBytes = optimizedFiles.reduce((sum, file) => sum + (Number(file?.size || 0) || 0), 0);
+
+  if (totalBytes <= MAX_CRM_PHOTO_TOTAL_BYTES) {
+    return optimizedFiles;
+  }
+
+  throw new Error("These photos are still too large. Try fewer photos or crop them before uploading.");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("I could not read one of these photos."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function buildLeadLocationQuery(lead = null) {
+  const values = [lead?.addressLine, lead?.city, lead?.zipCode, lead?.location]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const uniqueValues = [];
+  const seen = new Set();
+
+  values.forEach((value) => {
+    const key = value.toLowerCase();
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    uniqueValues.push(value);
+  });
+
+  return uniqueValues.join(", ");
+}
+
+function buildMapsHref(lead = null) {
+  const query = buildLeadLocationQuery(lead);
+
+  if (!query) {
+    return "#";
+  }
+
+  const userAgent = String(navigator.userAgent || "");
+
+  if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
+  }
+
+  if (/android/i.test(userAgent)) {
+    return `geo:0,0?q=${encodeURIComponent(query)}`;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 function getNumberInputValue(input) {
   const raw = String(input?.value || "").trim();
   if (!raw) {
@@ -725,6 +1837,20 @@ function syncEstimateTotalFromForm() {
   }
 }
 
+function getInvoiceValidationMessage(snapshot = null) {
+  const safeSnapshot = snapshot || buildEstimateSnapshot();
+
+  if (safeSnapshot.deposit > 0 && safeSnapshot.total <= 0) {
+    return "Add the total before recording the amount collected.";
+  }
+
+  if (safeSnapshot.deposit > safeSnapshot.total) {
+    return "Amount collected can't be higher than the total.";
+  }
+
+  return "";
+}
+
 function buildEstimateSnapshot() {
   const lead = state.leadDetail?.lead || {};
   const form = detailForm?.elements;
@@ -735,6 +1861,13 @@ function buildEstimateSnapshot() {
   const total = breakdownMode
     ? calculateEstimateTotal(lead)
     : Number(form?.estimateAmount?.value || lead.estimateAmount || 0) || 0;
+  const deposit = Math.max(
+    0,
+    Math.round(
+      (Number(form?.invoiceDepositAmount?.value || lead.invoiceDepositAmount || 0) || 0) * 100,
+    ) / 100,
+  );
+  const balanceDue = Math.max(0, Math.round((total - deposit) * 100) / 100);
 
   return {
     documentType,
@@ -774,6 +1907,8 @@ function buildEstimateSnapshot() {
       String(form?.estimateValidUntil?.value || "").trim() ||
       toDateInputValue(lead.estimateValidUntil || ""),
     total,
+    deposit,
+    balanceDue,
   };
 }
 
@@ -818,7 +1953,17 @@ function buildEstimateBody(snapshot) {
     snapshot.documentType === "estimate" && snapshot.validUntil
       ? `Valid until: ${formatDateOnly(snapshot.validUntil)}`
       : "",
-    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Total project amount: ${formatCurrency(snapshot.total)}`
+      : snapshot.total > 0
+        ? `Total: ${formatCurrency(snapshot.total)}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit > 0
+      ? `Amount collected: ${formatCurrency(snapshot.deposit)}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Balance remaining: ${formatCurrency(snapshot.balanceDue)}`
+      : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
     snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
@@ -841,7 +1986,17 @@ function buildEstimateTextMessage(snapshot) {
     snapshot.fullName ? `Client: ${snapshot.fullName}` : "",
     snapshot.location ? `Location: ${snapshot.location}` : "",
     snapshot.workDate ? `Work date: ${formatDateOnly(snapshot.workDate)}` : "",
-    snapshot.total > 0 ? `Total: ${formatCurrency(snapshot.total)}` : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Total project amount: ${formatCurrency(snapshot.total)}`
+      : snapshot.total > 0
+        ? `Total: ${formatCurrency(snapshot.total)}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit > 0
+      ? `Amount collected: ${formatCurrency(snapshot.deposit)}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.total > 0
+      ? `Balance remaining: ${formatCurrency(snapshot.balanceDue)}`
+      : "",
     "",
     snapshot.description ? `Work: ${snapshot.description}` : "",
     snapshot.warranty ? `Warranty: ${snapshot.warranty}` : "",
@@ -854,6 +2009,14 @@ function buildEstimateTextMessage(snapshot) {
 
 function openEmailDraft({ silent = false } = {}) {
   const snapshot = buildEstimateSnapshot();
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    if (!silent) {
+      setDetailFeedback(validationMessage, "error");
+    }
+    return false;
+  }
 
   if (!snapshot.email) {
     setDetailFeedback("Este lead no tiene correo todavia.", "error");
@@ -919,6 +2082,12 @@ async function copyTextWithFallback(text = "") {
 
 async function copyEstimateText() {
   const snapshot = buildEstimateSnapshot();
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    setDetailFeedback(validationMessage, "error");
+    return;
+  }
 
   if (!snapshot.description && !snapshot.total) {
     setDetailFeedback(
@@ -975,12 +2144,13 @@ async function openQuoteComposer(leadId = "") {
 
   if (state.selectedLeadId !== safeLeadId) {
     rememberSelectedLead(safeLeadId);
-    if (state.dashboard?.leads) {
-      renderLeadList(state.dashboard.leads || []);
+    if (state.dashboard) {
+      renderLeadCollections(state.dashboard);
     }
     await loadLeadDetail(safeLeadId);
   }
 
+  openMobileWorkspacePane();
   scrollDetailIntoView();
   focusEstimateComposer();
   const snapshot = buildEstimateSnapshot();
@@ -997,6 +2167,10 @@ function buildDetailActionPreview() {
     phoneDisplay: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
     phone: String(form?.phoneDisplay?.value || lead.phoneDisplay || lead.phone || "").trim(),
     email: String(form?.email?.value || lead.email || "").trim(),
+    location: String(form?.location?.value || lead.location || "").trim(),
+    addressLine: String(lead.addressLine || "").trim(),
+    city: String(lead.city || "").trim(),
+    zipCode: String(lead.zipCode || "").trim(),
     clientDocumentType: normalizeClientDocumentType(
       form?.clientDocumentType?.value || lead.clientDocumentType || "estimate",
     ),
@@ -1004,7 +2178,7 @@ function buildDetailActionPreview() {
 }
 
 function scrollDetailIntoView() {
-  if (!detailPanel || window.innerWidth > 960) {
+  if (!detailPanel || window.innerWidth > 960 || isMobileCrmLayout()) {
     return;
   }
 
@@ -1042,6 +2216,16 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
       value: summary.wonLeads || 0,
       note: `${summary.lostLeads || 0} perdidos · ${summary.totalApplicants || 0} candidatos`,
     },
+    {
+      label: "Ventas del mes",
+      value: formatCurrency(summary.soldMonthAmount || 0),
+      note: `${summary.soldMonthJobs || 0} trabajos ganados`,
+    },
+    {
+      label: "Ventas del año",
+      value: formatCurrency(summary.soldYearAmount || 0),
+      note: `${summary.soldYearJobs || 0} trabajos ganados`,
+    },
   ];
 
   const breakdown = serviceBreakdown
@@ -1060,6 +2244,358 @@ function renderSummary(summary = {}, serviceBreakdown = []) {
       `,
     )
     .join("");
+}
+
+async function openAgendaLead(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return;
+  }
+
+  if (state.view !== "leads") {
+    await setCrmView("leads");
+  }
+
+  rememberSelectedLead(safeLeadId);
+
+  if (state.dashboard) {
+    renderLeadCollections(state.dashboard);
+  }
+
+  await loadLeadDetail(safeLeadId);
+  openMobileWorkspacePane();
+  scrollDetailIntoView();
+}
+
+function buildAgendaCardMarkup(lead = null) {
+  if (!lead?.id) {
+    return "";
+  }
+
+  if (lead.isAgendaEvent || lead.type === "agenda_event") {
+    const scheduleLabel = formatDate(lead.nextActionAt || lead.startsAt || "") || "Date";
+    const eventTypeLabel = lead.eventTypeLabel || lead.projectType || "Agenda event";
+
+    return `
+      <article
+        class="crm-agenda-card crm-agenda-internal-event-card"
+        data-agenda-bucket="${escapeHtml(lead.agendaBucket || "upcoming")}"
+        data-agenda-event-type="${escapeHtml(lead.eventType || "internal")}"
+      >
+        <div class="crm-agenda-card-head">
+          <div>
+            <h3>${escapeHtml(lead.title || lead.fullName || "Agenda event")}</h3>
+            <p>${escapeHtml(eventTypeLabel)} · Not a lead</p>
+          </div>
+          <span class="crm-status-badge" data-status="agenda_event">${escapeHtml(eventTypeLabel)}</span>
+        </div>
+        <div class="crm-micro-list">
+          <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
+          ${lead.owner ? `<span class="crm-chip crm-chip-muted">Owner: ${escapeHtml(lead.owner)}</span>` : ""}
+          <span class="crm-chip crm-chip-muted">Created for agenda</span>
+        </div>
+        <div class="crm-lead-card-summary">
+          <span>${escapeHtml(lead.details || lead.notes || "Internal agenda item.")}</span>
+        </div>
+      </article>
+    `;
+  }
+
+  if (lead.isImportantDate || lead.type === "important_date") {
+    const scheduleLabel = formatDate(lead.nextActionAt || lead.importantDate?.nextOccurrenceAt || "") || "Date";
+    const importantDate = lead.importantDate || {};
+
+    return `
+      <article
+        class="crm-agenda-card crm-agenda-important-date-card"
+        data-agenda-bucket="${escapeHtml(lead.agendaBucket || "upcoming")}"
+        data-agenda-event-type="important_date"
+      >
+        <div class="crm-agenda-card-head">
+          <div>
+            <h3>${escapeHtml(lead.title || importantDate.title || "Important date")}</h3>
+            <p>${escapeHtml(lead.owner || importantDate.owner || "Team")} availability note · Not a lead</p>
+          </div>
+          <span class="crm-status-badge" data-status="important_date">Important</span>
+        </div>
+        <div class="crm-micro-list">
+          <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
+          <span class="crm-chip crm-chip-important-date">Awareness only</span>
+          <span class="crm-chip crm-chip-muted">Jobs can still be scheduled</span>
+        </div>
+        <div class="crm-lead-card-summary">
+          <span>${escapeHtml(lead.details || importantDate.notes || importantDate.impact || "Confirm coverage or send an employee if needed.")}</span>
+        </div>
+      </article>
+    `;
+  }
+
+  const phoneDigits = getLeadPhoneDigits(lead);
+  const scheduleLabel = formatDate(lead.nextActionAt || "") || "No time set";
+  const reminderSummary = buildLeadReminderSummary(lead);
+  const agendaBucket = String(lead.agendaBucket || "").trim() || (lead.agendaIsOverdue ? "overdue" : "upcoming");
+  const appointmentStatus = String(lead.appointmentStatus || "").trim();
+  const appointmentDurationLabel = formatAppointmentDuration(lead.appointmentDurationMinutes || 0);
+  const importantDates = Array.isArray(lead.importantDates) ? lead.importantDates : [];
+
+  return `
+    <article
+      class="crm-agenda-card ${lead.agendaIsOverdue ? "is-overdue" : ""}"
+      data-crm-agenda-lead-id="${escapeHtml(lead.id)}"
+      data-agenda-bucket="${escapeHtml(agendaBucket)}"
+      data-appointment-status="${escapeHtml(appointmentStatus)}"
+    >
+      <div class="crm-agenda-card-head">
+        <div>
+          <h3>${escapeHtml(lead.fullName || "Unknown lead")}</h3>
+          <p>${escapeHtml(lead.projectType || "Service not set")} · ${escapeHtml(lead.location || lead.phoneDisplay || lead.email || "")}</p>
+        </div>
+        <span class="crm-status-badge" data-status="${escapeHtml(lead.status || "new")}">
+          ${escapeHtml(lead.statusLabel || "Open")}
+        </span>
+      </div>
+      <div class="crm-micro-list">
+        <span class="crm-chip crm-chip-schedule">${escapeHtml(scheduleLabel)}</span>
+        ${lead.agendaIsOverdue ? '<span class="crm-chip crm-chip-alert">Overdue</span>' : ""}
+        ${lead.appointmentTypeLabel ? `<span class="crm-chip crm-chip-appointment-type">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
+        ${
+          lead.appointmentStatusLabel
+            ? `<span class="crm-chip crm-chip-appointment-status" data-appointment-status="${escapeHtml(appointmentStatus)}">${escapeHtml(lead.appointmentStatusLabel)}</span>`
+            : ""
+        }
+        ${lead.appointmentAssignedTo ? `<span class="crm-chip crm-chip-muted">Assigned: ${escapeHtml(lead.appointmentAssignedTo)}</span>` : ""}
+        ${appointmentDurationLabel ? `<span class="crm-chip crm-chip-muted">${escapeHtml(appointmentDurationLabel)}</span>` : ""}
+        ${lead.nextAction ? `<span class="crm-chip crm-chip-muted">${escapeHtml(lead.nextAction)}</span>` : ""}
+        ${reminderSummary ? `<span class="crm-chip crm-chip-muted">Alerts: ${escapeHtml(reminderSummary)}</span>` : ""}
+        ${lead.callbackIntent === "yes" ? '<span class="crm-chip crm-chip-muted">Callback</span>' : ""}
+        ${
+          importantDates.length
+            ? importantDates
+                .map(
+                  (item) =>
+                    `<span class="crm-chip crm-chip-important-date">${escapeHtml(item.title || "Important date")}: ${escapeHtml(item.owner || "Team")} may be busy</span>`,
+                )
+                .join("")
+            : ""
+        }
+      </div>
+      <div class="crm-lead-card-summary">
+        <span>${escapeHtml(lead.details || lead.lastUserMessage || "Open this lead to continue the follow-up.")}</span>
+      </div>
+      <div class="crm-card-actions">
+        <button type="button" class="crm-card-action" data-crm-agenda-open="${escapeHtml(lead.id)}">
+          Open
+        </button>
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Call</a>`
+            : ""
+        }
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-crm-agenda-prevent>Text</a>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function buildImportantDateAgendaMarkup(importantDates = []) {
+  const safeDates = Array.isArray(importantDates) ? importantDates : [];
+
+  if (!safeDates.length) {
+    return "";
+  }
+
+  return `
+    <section class="crm-important-dates-strip" aria-label="Important availability dates">
+      <div>
+        <p class="crm-kicker">Important dates</p>
+        <h3>Personal availability notes, not job blocks.</h3>
+        <p>Jobs can still be scheduled. Use these as reminders to confirm coverage or send an employee.</p>
+      </div>
+      <div class="crm-important-date-list">
+        ${safeDates
+          .map(
+            (item) => `
+              <article class="crm-important-date-pill">
+                <strong>${escapeHtml(formatDate(item.nextOccurrenceAt || item.date || "") || item.date || item.monthDay || "Date")}</strong>
+                <span>${escapeHtml(item.title || "Important date")}</span>
+                <small>${escapeHtml(item.owner || "Team")} may be busy · ${escapeHtml(item.impact || "Awareness only")}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function buildAgendaSummary(leads = []) {
+  const summary = {
+    totalScheduled: Array.isArray(leads) ? leads.length : 0,
+    overdue: 0,
+    today: 0,
+    tomorrow: 0,
+    this_week: 0,
+    upcoming: 0,
+  };
+
+  (Array.isArray(leads) ? leads : []).forEach((lead) => {
+    const bucketKey = String(lead?.agendaBucket || "").trim();
+
+    if (!bucketKey || !Object.prototype.hasOwnProperty.call(summary, bucketKey)) {
+      return;
+    }
+
+    summary[bucketKey] += 1;
+  });
+
+  return summary;
+}
+
+function buildImportantDateAgendaEvents(importantDates = [], now = new Date()) {
+  return (Array.isArray(importantDates) ? importantDates : [])
+    .map((item) => {
+      const nextActionAt = item?.nextOccurrenceAt || item?.date || "";
+      const bucketMeta = getAgendaBucketMeta(nextActionAt, now);
+
+      if (!nextActionAt || !bucketMeta) {
+        return null;
+      }
+
+      return {
+        id: `important-date-${item.id || item.date || item.monthDay || nextActionAt}`,
+        type: "important_date",
+        isImportantDate: true,
+        title: item.title || "Important date",
+        owner: item.owner || "Team",
+        details: item.notes || item.impact || "Awareness only. Jobs can still be scheduled.",
+        nextActionAt,
+        agendaBucket: bucketMeta.key,
+        agendaBucketLabel: bucketMeta.label,
+        agendaBucketOrder: bucketMeta.order,
+        agendaIsOverdue: bucketMeta.key === "overdue",
+        importantDate: item,
+      };
+    })
+    .filter(Boolean);
+}
+
+function renderAgenda(leads = [], agendaSummary = null, importantDates = [], agendaEvents = []) {
+  if (!agendaPanel || !agendaList || !agendaCount) {
+    return;
+  }
+
+  const now = new Date();
+  const safeEvents = (Array.isArray(agendaEvents) && agendaEvents.length
+    ? agendaEvents
+    : buildImportantDateAgendaEvents(importantDates, now)
+  ).filter((item) => item?.id);
+  const safeLeads = (Array.isArray(leads) ? leads : [])
+    .filter((lead) => lead?.id)
+    .concat(safeEvents)
+    .map((lead) => {
+      const bucketMeta = lead?.agendaBucket
+        ? {
+            key: String(lead.agendaBucket || "").trim() || "upcoming",
+            label:
+              String(lead.agendaBucketLabel || "").trim() ||
+              CRM_AGENDA_BUCKET_LABELS[String(lead.agendaBucket || "").trim()] ||
+              CRM_AGENDA_BUCKET_LABELS.upcoming,
+            order: Number.isFinite(Number(lead.agendaBucketOrder))
+              ? Number(lead.agendaBucketOrder)
+              : CRM_AGENDA_BUCKET_ORDER.indexOf(String(lead.agendaBucket || "").trim()),
+          }
+        : getAgendaBucketMeta(lead?.nextActionAt || "", now);
+
+      return {
+        ...lead,
+        agendaBucket: bucketMeta.key,
+        agendaBucketLabel: bucketMeta.label,
+        agendaBucketOrder: bucketMeta.order,
+        agendaIsOverdue:
+          typeof lead?.agendaIsOverdue === "boolean"
+            ? lead.agendaIsOverdue
+            : bucketMeta.key === "overdue",
+      };
+    })
+    .sort((left, right) => {
+      if ((left.agendaBucketOrder || 0) !== (right.agendaBucketOrder || 0)) {
+        return (left.agendaBucketOrder || 0) - (right.agendaBucketOrder || 0);
+      }
+
+      return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
+    });
+  const resolvedSummary =
+    agendaSummary && typeof agendaSummary === "object"
+      ? {
+          ...buildAgendaSummary(safeLeads),
+          ...agendaSummary,
+        }
+      : buildAgendaSummary(safeLeads);
+  const sectionMap = new Map(
+    CRM_AGENDA_BUCKET_ORDER.map((bucketKey, index) => [
+      bucketKey,
+      {
+        key: bucketKey,
+        label: CRM_AGENDA_BUCKET_LABELS[bucketKey] || "Upcoming",
+        order: index,
+        leads: [],
+      },
+    ]),
+  );
+
+  safeLeads.forEach((lead) => {
+    const bucketKey = sectionMap.has(lead.agendaBucket) ? lead.agendaBucket : "upcoming";
+    sectionMap.get(bucketKey).leads.push(lead);
+  });
+  const agendaSections = Array.from(sectionMap.values()).filter((section) => section.leads.length);
+  const importantDateMarkup = buildImportantDateAgendaMarkup(importantDates);
+
+  agendaPanel.hidden = false;
+  agendaCount.textContent = resolvedSummary.overdue
+    ? `${resolvedSummary.totalScheduled || safeLeads.length} in queue · ${resolvedSummary.overdue} overdue`
+    : `${resolvedSummary.totalScheduled || safeLeads.length} scheduled`;
+
+  if (!safeLeads.length) {
+    agendaList.innerHTML =
+      `${importantDateMarkup}<p class="crm-empty-state">No scheduled leads yet. As soon as a callback, booked job, or visit gets a time, it will show here.</p>`;
+    return;
+  }
+
+  agendaList.innerHTML = importantDateMarkup + agendaSections
+    .map(
+      (section) => `
+        <div class="crm-agenda-section-heading" data-agenda-bucket="${escapeHtml(section.key)}">
+          <h3>${escapeHtml(section.label)}</h3>
+          <span class="crm-chip crm-chip-agenda-count" data-agenda-bucket="${escapeHtml(section.key)}">${section.leads.length}</span>
+        </div>
+        ${section.leads.map((lead) => buildAgendaCardMarkup(lead)).join("")}
+      `,
+    )
+    .join("");
+
+  agendaList.querySelectorAll("[data-crm-agenda-prevent]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  agendaList.querySelectorAll("[data-crm-agenda-open]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await openAgendaLead(button.getAttribute("data-crm-agenda-open") || "");
+    });
+  });
+
+  agendaList.querySelectorAll("[data-crm-agenda-lead-id]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      await openAgendaLead(card.getAttribute("data-crm-agenda-lead-id") || "");
+    });
+  });
 }
 
 function setResourceFeedback(message = "", tone = "muted") {
@@ -1098,7 +2634,7 @@ function renderResourceHub(resourceSections = []) {
 
   resourcesWrap.innerHTML = sections
     .map(
-      (section) => `
+      (section, sectionIndex) => `
         <article class="crm-resource-section">
           <div class="crm-panel-head tight crm-resource-section-head">
             <div>
@@ -1109,7 +2645,12 @@ function renderResourceHub(resourceSections = []) {
           <div class="crm-resource-list">
             ${section.items
               .map(
-                (item) => `
+                (item, itemIndex) => {
+                  const resourceId =
+                    String(item.id || "").trim() || `resource-${sectionIndex}-${itemIndex}`;
+                  const qrImageUrl = buildResourceQrImageUrl(item.url || "");
+
+                  return `
                   <article class="crm-resource-item">
                     <div class="crm-resource-copy">
                       <strong>${escapeHtml(item.label || "Link")}</strong>
@@ -1133,9 +2674,39 @@ function renderResourceHub(resourceSections = []) {
                       >
                         Copy
                       </button>
+                      <button
+                        type="button"
+                        class="crm-card-action"
+                        data-resource-qr-toggle="${escapeHtml(resourceId)}"
+                        aria-expanded="false"
+                      >
+                        QR
+                      </button>
+                    </div>
+                    <div
+                      class="crm-resource-qr"
+                      data-resource-qr-panel="${escapeHtml(resourceId)}"
+                      hidden
+                    >
+                      <div class="crm-resource-qr-card">
+                        <img
+                          class="crm-resource-qr-image"
+                          src="${escapeHtml(qrImageUrl)}"
+                          alt="${escapeHtml(`QR code for ${item.label || "Link"}`)}"
+                          loading="lazy"
+                        />
+                        <div class="crm-resource-qr-copy">
+                          <strong>${escapeHtml(item.label || "Link")}</strong>
+                          <p>Escanea este QR para abrir la pagina directo en otro telefono.</p>
+                          <span class="crm-resource-url">${escapeHtml(
+                            buildAbsoluteAppUrl(item.url || ""),
+                          )}</span>
+                        </div>
+                      </div>
                     </div>
                   </article>
-                `,
+                `;
+                },
               )
               .join("")}
           </div>
@@ -1161,6 +2732,40 @@ function renderResourceHub(resourceSections = []) {
           : `No pude copiar ${label} automatico, pero ya te deje el link listo para copiar.`,
         copied ? "success" : "muted",
       );
+    });
+  });
+
+  resourcesWrap.querySelectorAll("[data-resource-qr-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const resourceId = String(button.dataset.resourceQrToggle || "").trim();
+
+      if (!resourceId) {
+        return;
+      }
+
+      const panel = Array.from(resourcesWrap.querySelectorAll("[data-resource-qr-panel]")).find(
+        (node) => String(node.dataset.resourceQrPanel || "").trim() === resourceId,
+      );
+
+      if (!panel) {
+        return;
+      }
+
+      const shouldOpen = panel.hidden;
+
+      resourcesWrap.querySelectorAll("[data-resource-qr-panel]").forEach((node) => {
+        node.hidden = true;
+      });
+      resourcesWrap.querySelectorAll("[data-resource-qr-toggle]").forEach((node) => {
+        node.setAttribute("aria-expanded", "false");
+        node.textContent = "QR";
+      });
+
+      if (shouldOpen) {
+        panel.hidden = false;
+        button.setAttribute("aria-expanded", "true");
+        button.textContent = "Ocultar QR";
+      }
     });
   });
 }
@@ -1198,7 +2803,7 @@ function renderProspectorCredentials() {
 
   prospectorCredentialsList.innerHTML = `
     <p><strong>Email:</strong> ${escapeHtml(latest.email)}</p>
-    <p><strong>Temporary password:</strong> ${escapeHtml(latest.temporaryPassword)}</p>
+    <p><strong>${escapeHtml(latest.passwordLabel || "Password")}:</strong> ${escapeHtml(latest.temporaryPassword)}</p>
     ${
       latest.loginUrl
         ? `<p><strong>Login page:</strong> ${escapeHtml(latest.loginUrl)}</p>`
@@ -1293,6 +2898,63 @@ function syncViewButtons() {
   });
 }
 
+function syncManualLeadUi() {
+  const leadsView = state.view === "leads";
+
+  if (newLeadToggleButton) {
+    newLeadToggleButton.hidden = !leadsView;
+    newLeadToggleButton.disabled = state.manualLeadBusy;
+    newLeadToggleButton.textContent =
+      manualLeadPanel?.hidden === false ? "Hide Form" : "New Lead";
+  }
+
+  if (manualLeadPanel && !leadsView) {
+    manualLeadPanel.hidden = true;
+  }
+
+  if (manualLeadSaveButton) {
+    manualLeadSaveButton.disabled = state.manualLeadBusy;
+    manualLeadSaveButton.textContent = state.manualLeadBusy ? "Creating..." : "Create Lead";
+  }
+
+  if (manualLeadCancelButton) {
+    manualLeadCancelButton.disabled = state.manualLeadBusy;
+  }
+}
+
+function openManualLeadPanel() {
+  if (!manualLeadPanel || !manualLeadForm) {
+    return;
+  }
+
+  manualLeadPanel.hidden = false;
+  syncSourceGroupSelect(manualLeadSourceInput, manualLeadSourceInput?.value || "manual", {
+    defaultValue: "manual",
+  });
+  setManualLeadFeedback("", "");
+  syncManualLeadUi();
+
+  window.setTimeout(() => {
+    manualLeadForm.elements.fullName?.focus();
+  }, 60);
+}
+
+function closeManualLeadPanel({ resetForm = true } = {}) {
+  if (!manualLeadPanel) {
+    return;
+  }
+
+  manualLeadPanel.hidden = true;
+
+  if (resetForm) {
+    manualLeadForm?.reset();
+    syncSourceGroupSelect(manualLeadSourceInput, "manual", { defaultValue: "manual" });
+  }
+
+  setManualLeadFeedback("", "");
+  syncManualLeadUi();
+}
+
 function syncCollectionChrome() {
   const applicantsView = state.view === "applicants";
 
@@ -1322,6 +2984,18 @@ function syncCollectionChrome() {
     serviceLabel.textContent = applicantsView ? "Puesto" : "Servicio";
   }
 
+  if (sourceLabel) {
+    sourceLabel.textContent = "Fuente";
+  }
+
+  if (sourceFilterWrap) {
+    sourceFilterWrap.hidden = applicantsView;
+  }
+
+  if (sourceFilter) {
+    sourceFilter.disabled = applicantsView;
+  }
+
   if (searchInput) {
     searchInput.placeholder = applicantsView
       ? "Nombre, puesto, telefono, email o idioma"
@@ -1329,6 +3003,8 @@ function syncCollectionChrome() {
   }
 
   syncViewButtons();
+  syncManualLeadUi();
+  syncMobileShellCopy();
 }
 
 function renderLeadFilters(dashboard) {
@@ -1341,6 +3017,9 @@ function renderLeadFilters(dashboard) {
     : [];
   const services = Array.isArray(dashboard.serviceBreakdown)
     ? dashboard.serviceBreakdown.map((item) => item.label).filter(Boolean)
+    : [];
+  const sourceOptions = Array.isArray(dashboard.sourceOptions)
+    ? dashboard.sourceOptions
     : [];
 
   if (statusFilter) {
@@ -1375,6 +3054,31 @@ function renderLeadFilters(dashboard) {
     serviceFilter.value = state.filters.projectType;
   }
 
+  if (sourceFilter) {
+    sourceFilter.innerHTML = ['<option value="">Todas</option>']
+      .concat(
+        sourceOptions.map(
+          (item) =>
+            `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`,
+        ),
+      )
+      .join("");
+    sourceFilter.value = state.filters.sourceGroup;
+  }
+
+  if (atlasOutreachFilterButton) {
+    const isAtlasOutreachActive = state.filters.sourceGroup === "atlas_commercial_outreach";
+    atlasOutreachFilterButton.classList.toggle("is-active", isAtlasOutreachActive);
+    atlasOutreachFilterButton.setAttribute("aria-pressed", isAtlasOutreachActive ? "true" : "false");
+  }
+
+  syncSourceGroupSelect(manualLeadSourceInput, manualLeadSourceInput?.value || "manual", {
+    defaultValue: "manual",
+  });
+  syncSourceGroupSelect(detailSourceInput, state.leadDetail?.lead?.sourceGroup || detailSourceInput?.value || "", {
+    defaultValue: "manual",
+  });
+
   if (searchInput) {
     searchInput.value = state.filters.search;
   }
@@ -1406,6 +3110,11 @@ function renderApplicantFilters(applicants = []) {
       )
       .join("");
     serviceFilter.value = state.applicantFilters.role;
+  }
+
+  if (sourceFilter) {
+    sourceFilter.innerHTML = '<option value="">Todas</option>';
+    sourceFilter.value = "";
   }
 
   if (searchInput) {
@@ -1463,6 +3172,192 @@ function getFilteredApplicants(applicants = []) {
   });
 }
 
+function getLeadCollectionTitle(dashboard = {}) {
+  if (state.view === "applicants") {
+    return "Applicants";
+  }
+
+  const selectedStatus = String(state.filters.status || "").trim();
+  const selectedSourceGroup = String(state.filters.sourceGroup || "").trim();
+
+  if (selectedSourceGroup) {
+    const matchedSource = getLeadSourceGroupOptions(dashboard.sourceOptions).find(
+      (item) => item.value === selectedSourceGroup,
+    );
+
+    if (selectedSourceGroup === "atlas_commercial_outreach") {
+      return matchedSource?.label || "Atlas Commercial Outreach";
+    }
+
+    if (!selectedStatus) {
+      return matchedSource?.label || "Filtered Leads";
+    }
+  }
+
+  if (!selectedStatus) {
+    return "Active Leads";
+  }
+
+  const matchedOption = Array.isArray(dashboard.statusOptions)
+    ? dashboard.statusOptions.find((item) => item?.value === selectedStatus)
+    : null;
+
+  if (selectedStatus === "won") {
+    return matchedOption?.label || "Won Jobs";
+  }
+
+  return matchedOption?.label || "Leads";
+}
+
+function syncLeadCollectionCopy(dashboard = {}, activeLeads = [], completedLeads = []) {
+  if (collectionTitle) {
+    collectionTitle.textContent = getLeadCollectionTitle(dashboard);
+  }
+
+  if (emptyState) {
+    if (state.filters.status === "won") {
+      emptyState.textContent = "No won jobs match this filter yet.";
+    } else if (state.filters.sourceGroup === "atlas_commercial_outreach") {
+      emptyState.textContent = "No Atlas outreach leads match this filter yet.";
+    } else if (!state.filters.status && completedLeads.length) {
+      emptyState.textContent = "No active leads match this filter. Your completed jobs stay below.";
+    } else if (!state.filters.status) {
+      emptyState.textContent = "No active leads match this filter yet.";
+    } else {
+      emptyState.textContent = "No leads match this filter.";
+    }
+  }
+}
+
+function buildLeadCardMarkup(lead = {}, { action = "quote" } = {}) {
+  const isActive = lead.id === state.selectedLeadId;
+  const phoneDigits = getLeadPhoneDigits(lead);
+  const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
+  const summaryText = buildLeadSummaryText(lead);
+  const sourceText = getLeadSourceLabel(lead);
+
+  return `
+    <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
+      <div class="crm-lead-card-head">
+        <div>
+          <h3>${escapeHtml(lead.fullName || "Sin nombre")}</h3>
+          <div class="crm-lead-card-meta">
+            <span>${escapeHtml(lead.projectType || "Servicio no definido")}</span>
+            <span>${escapeHtml(lead.phoneDisplay || lead.phone || "")}</span>
+            <span>${escapeHtml(lead.location || lead.email || "")}</span>
+          </div>
+        </div>
+        <span class="crm-status-badge" data-status="${escapeHtml(lead.status)}">
+          ${escapeHtml(lead.statusLabel)}
+        </span>
+      </div>
+      <div class="crm-micro-list">
+        <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
+        ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
+        ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
+        ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
+        ${
+          lead.callbackIntent === "yes" && lead.nextActionAt
+            ? `<span class="crm-chip">Callback: ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+            : ""
+        }
+      </div>
+      <div class="crm-lead-card-summary">
+        ${
+          lead.lastContactAt
+            ? `<span><strong>Last contact:</strong> ${escapeHtml(formatDate(lead.lastContactAt))}</span>`
+            : ""
+        }
+        ${
+          lead.estimateSentAt
+            ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
+            : ""
+        }
+        ${summaryText ? `<span>${escapeHtml(summaryText)}</span>` : ""}
+      </div>
+      <div class="crm-card-actions">
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
+            : ""
+        }
+        ${
+          phoneDigits
+            ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
+            : ""
+        }
+        ${
+          action === "open"
+            ? `<button type="button" class="crm-card-action" data-card-open-lead="${escapeHtml(lead.id)}">Open Lead</button>`
+            : `<button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Open ${escapeHtml(documentLabel)}</button>`
+        }
+      </div>
+    </article>
+  `;
+}
+
+async function openLeadWorkspace(leadId = "") {
+  const safeLeadId = String(leadId || "").trim();
+
+  if (!safeLeadId) {
+    return;
+  }
+
+  rememberSelectedLead(safeLeadId);
+  renderLeadCollections(state.dashboard || {});
+  await loadLeadDetail(safeLeadId);
+  openMobileWorkspacePane();
+  scrollDetailIntoView();
+}
+
+function bindLeadCollectionInteractions(target, leads = [], { action = "quote" } = {}) {
+  target.querySelectorAll("[data-prevent-select]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  if (action === "quote") {
+    target.querySelectorAll("[data-card-open-quote]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        const leadId = String(button.getAttribute("data-card-open-quote") || "").trim();
+
+        if (!leadId) {
+          return;
+        }
+
+        await openQuoteComposer(leadId);
+      });
+    });
+  } else {
+    target.querySelectorAll("[data-card-open-lead]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        const leadId = String(button.getAttribute("data-card-open-lead") || "").trim();
+
+        if (!leadId) {
+          return;
+        }
+
+        await openLeadWorkspace(leadId);
+      });
+    });
+  }
+
+  target.querySelectorAll("[data-lead-id]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      const leadId = String(card.getAttribute("data-lead-id") || "").trim();
+
+      if (!leadId) {
+        return;
+      }
+
+      await openLeadWorkspace(leadId);
+    });
+  });
+}
+
 function renderLeadList(leads = []) {
   if (!leadList) {
     return;
@@ -1479,103 +3374,57 @@ function renderLeadList(leads = []) {
   }
 
   emptyState.hidden = true;
-  leadList.innerHTML = leads
-    .map((lead) => {
-      const isActive = lead.id === state.selectedLeadId;
-      const phoneDigits = getLeadPhoneDigits(lead);
-      const documentLabel = getClientDocumentLabel(lead.clientDocumentType || "");
+  leadList.innerHTML = leads.map((lead) => buildLeadCardMarkup(lead, { action: "quote" })).join("");
+  bindLeadCollectionInteractions(leadList, leads, { action: "quote" });
+}
 
-      return `
-        <article class="crm-lead-card ${isActive ? "is-active" : ""}" data-lead-id="${escapeHtml(lead.id)}">
-          <div class="crm-lead-card-head">
-            <div>
-              <h3>${escapeHtml(lead.fullName || "Sin nombre")}</h3>
-              <div class="crm-lead-card-meta">
-                <span>${escapeHtml(lead.projectType || "Servicio no definido")}</span>
-                <span>${escapeHtml(lead.phoneDisplay || lead.phone || "")}</span>
-                <span>${escapeHtml(lead.location || lead.email || "")}</span>
-              </div>
-            </div>
-            <span class="crm-status-badge" data-status="${escapeHtml(lead.status)}">
-              ${escapeHtml(lead.statusLabel)}
-            </span>
-          </div>
-          <div class="crm-micro-list">
-            <span class="crm-chip">${escapeHtml(formatDate(lead.createdAt) || "Sin fecha")}</span>
-            ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
-            ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
-            ${lead.nextAction ? `<span class="crm-chip">Next: ${escapeHtml(lead.nextAction)}</span>` : ""}
-            ${
-              lead.callbackIntent === "yes" && lead.nextActionAt
-                ? `<span class="crm-chip">Callback: ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
-                : ""
-            }
-          </div>
-          <div class="crm-lead-card-summary">
-            ${
-              lead.lastContactAt
-                ? `<span><strong>Last contact:</strong> ${escapeHtml(formatDate(lead.lastContactAt))}</span>`
-                : ""
-            }
-            ${
-              lead.estimateSentAt
-                ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
-                : ""
-            }
-          </div>
-          <div class="crm-card-actions">
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildTelHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Call</a>`
-                : ""
-            }
-            ${
-              phoneDigits
-                ? `<a href="${escapeHtml(buildSmsHref(phoneDigits))}" class="crm-card-action" data-prevent-select>Text</a>`
-                : ""
-            }
-            <button type="button" class="crm-card-action" data-card-open-quote="${escapeHtml(lead.id)}">Open ${escapeHtml(documentLabel)}</button>
-          </div>
-        </article>
-      `;
-    })
+function renderCompletedLeadList(leads = []) {
+  if (!completedPanel || !completedList || !completedCount || !completedEmptyState) {
+    return;
+  }
+
+  const safeLeads = Array.isArray(leads) ? leads.filter((lead) => lead?.id) : [];
+  const shouldShow = state.view === "leads" && !state.filters.status && safeLeads.length > 0;
+
+  completedPanel.hidden = !shouldShow;
+
+  if (!shouldShow) {
+    completedList.innerHTML = "";
+    completedEmptyState.hidden = true;
+    return;
+  }
+
+  completedCount.textContent = `${safeLeads.length} completed`;
+
+  if (!safeLeads.length) {
+    completedList.innerHTML = "";
+    completedEmptyState.hidden = false;
+    return;
+  }
+
+  completedEmptyState.hidden = true;
+  completedList.innerHTML = safeLeads
+    .map((lead) => buildLeadCardMarkup(lead, { action: "open" }))
     .join("");
+  bindLeadCollectionInteractions(completedList, safeLeads, { action: "open" });
+}
 
-  leadList.querySelectorAll("[data-prevent-select]").forEach((element) => {
-    element.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-  });
+function renderLeadCollections(dashboard = {}) {
+  const activeLeads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
+  const completedLeads = Array.isArray(dashboard?.completedLeads) ? dashboard.completedLeads : [];
 
-  leadList.querySelectorAll("[data-card-open-quote]").forEach((button) => {
-    button.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      const leadId = String(button.getAttribute("data-card-open-quote") || "").trim();
-      if (!leadId) {
-        return;
-      }
-      await openQuoteComposer(leadId);
-    });
-  });
-
-  leadList.querySelectorAll("[data-lead-id]").forEach((card) => {
-    card.addEventListener("click", async () => {
-      const leadId = String(card.getAttribute("data-lead-id") || "").trim();
-      if (!leadId) {
-        return;
-      }
-
-      rememberSelectedLead(leadId);
-      renderLeadList(leads);
-      await loadLeadDetail(leadId);
-      scrollDetailIntoView();
-    });
-  });
+  syncLeadCollectionCopy(dashboard, activeLeads, completedLeads);
+  renderLeadList(activeLeads);
+  renderCompletedLeadList(completedLeads);
 }
 
 function renderApplicantList(applicants = []) {
   if (!leadList) {
     return;
+  }
+
+  if (completedPanel) {
+    completedPanel.hidden = true;
   }
 
   if (collectionCount) {
@@ -1668,6 +3517,7 @@ function renderApplicantList(applicants = []) {
       rememberSelectedApplicant(applicantId);
       renderApplicantList(applicants);
       await loadApplicantDetail(applicantId);
+      openMobileWorkspacePane();
       scrollDetailIntoView();
     });
   });
@@ -1683,6 +3533,7 @@ function renderApplicantList(applicants = []) {
       rememberSelectedApplicant(applicantId);
       renderApplicantList(applicants);
       await loadApplicantDetail(applicantId);
+      openMobileWorkspacePane();
       scrollDetailIntoView();
     });
   });
@@ -1729,6 +3580,7 @@ function renderConversationThread(
     userLabel = "Cliente",
     emptySummary = "Sin transcript guardado.",
     emptyBody = "Todavia no hay conversacion guardada para este registro.",
+    conversationSummary = "",
   } = {},
 ) {
   if (!target || !summaryTarget) {
@@ -1736,14 +3588,17 @@ function renderConversationThread(
   }
 
   const safeMessages = Array.isArray(messages) ? messages.filter((item) => item?.content) : [];
+  const safeConversationSummary = String(conversationSummary || "").trim();
 
   if (!safeMessages.length) {
-    summaryTarget.textContent = emptySummary;
+    summaryTarget.textContent = safeConversationSummary || emptySummary;
     target.innerHTML = `<p class="crm-empty-state">${escapeHtml(emptyBody)}</p>`;
     return;
   }
 
-  summaryTarget.textContent = `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
+  summaryTarget.textContent = safeConversationSummary
+    ? `${safeConversationSummary} · ${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`
+    : `${safeMessages.length} mensaje${safeMessages.length === 1 ? "" : "s"} guardados`;
   target.innerHTML = safeMessages
     .map((item) => {
       const role = item.role === "assistant" ? "assistant" : "user";
@@ -1768,15 +3623,18 @@ function renderLeadAssets(assets = []) {
   }
 
   const safeAssets = Array.isArray(assets) ? assets.filter((item) => item?.downloadUrl) : [];
+  photoSection.hidden = false;
 
   if (!safeAssets.length) {
-    photoSection.hidden = true;
     photoSummary.textContent = "No photos yet.";
-    photoGrid.innerHTML = "";
+    photoGrid.innerHTML = `
+      <div class="crm-photo-empty">
+        Upload site photos, inspiration shots, or follow-up pictures so the whole team can see them from this lead.
+      </div>
+    `;
     return;
   }
 
-  photoSection.hidden = false;
   photoSummary.textContent = `${safeAssets.length} photo${safeAssets.length === 1 ? "" : "s"} saved`;
   photoGrid.innerHTML = safeAssets
     .map(
@@ -1799,10 +3657,25 @@ function renderLeadAssets(assets = []) {
     .join("");
 }
 
+function syncManualPhotoUploadUi(lead = null) {
+  const enabled = Boolean(lead?.id) && !state.manualPhotoUploadBusy;
+
+  if (photoUploadTrigger) {
+    photoUploadTrigger.disabled = !enabled;
+    photoUploadTrigger.textContent = state.manualPhotoUploadBusy ? "Uploading..." : "Add Photos";
+  }
+
+  if (photoUploadInput) {
+    photoUploadInput.disabled = !enabled;
+  }
+}
+
 function syncDetailQuickActions(lead = null) {
   const phoneDigits = getLeadPhoneDigits(lead);
   const hasPhone = Boolean(phoneDigits);
   const hasEmail = Boolean(lead?.email);
+  const mapsHref = buildMapsHref(lead);
+  const hasMap = mapsHref !== "#";
   const documentType = normalizeClientDocumentType(lead?.clientDocumentType || "");
   const documentLabel = getClientDocumentLabel(documentType);
 
@@ -1814,6 +3687,11 @@ function syncDetailQuickActions(lead = null) {
   if (textLink) {
     textLink.hidden = !hasPhone;
     textLink.href = hasPhone ? buildSmsHref(phoneDigits) : "#";
+  }
+
+  if (mapLink) {
+    mapLink.hidden = !hasMap;
+    mapLink.href = hasMap ? mapsHref : "#";
   }
 
   if (markQuotedButton) {
@@ -1833,6 +3711,32 @@ function syncDetailQuickActions(lead = null) {
   if (copyEstimateButton) {
     copyEstimateButton.disabled = !lead?.id;
     copyEstimateButton.textContent = `Copy ${documentLabel} Text`;
+  }
+
+  if (deleteLeadButton) {
+    deleteLeadButton.disabled = !lead?.id;
+  }
+
+  syncManualPhotoUploadUi(lead);
+}
+
+function syncLiveChatComposer(lead = null) {
+  const enabled = Boolean(lead?.id && lead?.supportsLiveChatReply);
+
+  if (liveChatPanel) {
+    liveChatPanel.hidden = !enabled;
+  }
+
+  if (liveChatForm && !enabled) {
+    liveChatForm.reset();
+  }
+
+  if (liveChatSendButton) {
+    liveChatSendButton.disabled = !enabled || state.liveChatReplyBusy;
+  }
+
+  if (!enabled) {
+    setLiveChatFeedback("", "");
   }
 }
 
@@ -1903,6 +3807,7 @@ function renderApplicantDetail(detail = null) {
     renderActivityCards(applicantActivityList, []);
     syncApplicantQuickActions(null);
     setApplicantDetailTab("profile");
+    applyMobilePaneLayout();
     return;
   }
 
@@ -2000,6 +3905,7 @@ function renderApplicantDetail(detail = null) {
   );
   renderActivityCards(applicantActivityList, detail.activity || []);
   setApplicantDetailTab(state.applicantDetailTab || "profile");
+  applyMobilePaneLayout();
 }
 
 function renderLeadDetail(detail = null) {
@@ -2016,12 +3922,18 @@ function renderLeadDetail(detail = null) {
     activityList.innerHTML = "";
     renderConversationThread(conversationThread, conversationSummary, []);
     renderLeadAssets([]);
+    setPhotoUploadFeedback("", "");
     syncDetailQuickActions(null);
+    syncLiveChatComposer(null);
     setDetailTab("profile");
+    applyMobilePaneLayout();
     return;
   }
 
   const lead = detail.lead;
+  const isLiveChatThread = Boolean(lead.supportsLiveChatReply);
+  const sourceText = getLeadSourceLabel(lead);
+  const appointmentDurationLabel = formatAppointmentDuration(lead.appointmentDurationMinutes || 0);
   persistLeadDetail(detail);
   detailWrap.hidden = false;
   applicantDetailWrap.hidden = true;
@@ -2033,7 +3945,34 @@ function renderLeadDetail(detail = null) {
       ${lead.email ? `<span class="crm-chip">${escapeHtml(lead.email)}</span>` : ""}
       ${lead.location ? `<span class="crm-chip">${escapeHtml(lead.location)}</span>` : ""}
       ${lead.estimateAmount ? `<span class="crm-chip">${escapeHtml(formatCurrency(lead.estimateAmount))}</span>` : ""}
-      ${lead.sourceType ? `<span class="crm-chip">${escapeHtml(formatLeadSource(lead.sourceType))}</span>` : ""}
+      ${
+        lead.invoiceDepositAmount
+          ? `<span class="crm-chip">Collected ${escapeHtml(formatCurrency(lead.invoiceDepositAmount))}</span>`
+          : ""
+      }
+      ${
+        lead.invoiceBalanceDue && lead.clientDocumentType === "invoice"
+          ? `<span class="crm-chip">Remaining ${escapeHtml(formatCurrency(lead.invoiceBalanceDue))}</span>`
+          : ""
+      }
+      ${sourceText ? `<span class="crm-chip">${escapeHtml(sourceText)}</span>` : ""}
+      ${lead.appointmentTypeLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentTypeLabel)}</span>` : ""}
+      ${lead.appointmentStatusLabel ? `<span class="crm-chip">${escapeHtml(lead.appointmentStatusLabel)}</span>` : ""}
+      ${
+        lead.appointmentAssignedTo
+          ? `<span class="crm-chip">Assigned ${escapeHtml(lead.appointmentAssignedTo)}</span>`
+          : ""
+      }
+      ${
+        appointmentDurationLabel
+          ? `<span class="crm-chip">${escapeHtml(appointmentDurationLabel)}</span>`
+          : ""
+      }
+      ${
+        lead.googleCalendarSyncStatus
+          ? `<span class="crm-chip">Google Calendar: ${escapeHtml(lead.googleCalendarSyncStatus)}</span>`
+          : ""
+      }
       ${
         lead.callbackIntent === "yes" && lead.nextActionAt
           ? `<span class="crm-chip">Callback ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
@@ -2054,6 +3993,35 @@ function renderLeadDetail(detail = null) {
           : ""
       }
       ${
+        lead.nextActionAt
+          ? `<span><strong>Agenda:</strong> ${escapeHtml(formatDate(lead.nextActionAt))}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentEndAt
+          ? `<span><strong>Ends:</strong> ${escapeHtml(formatDate(lead.appointmentEndAt))}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentStatusLabel
+          ? `<span><strong>Appointment status:</strong> ${escapeHtml(lead.appointmentStatusLabel)}</span>`
+          : ""
+      }
+      ${
+        lead.appointmentAssignedTo
+          ? `<span><strong>Assigned to:</strong> ${escapeHtml(lead.appointmentAssignedTo)}</span>`
+          : ""
+      }
+      ${
+        lead.googleCalendarEventHtmlLink
+          ? `<span><strong>Google Calendar:</strong> <a href="${escapeAttribute(lead.googleCalendarEventHtmlLink)}" target="_blank" rel="noreferrer">Open event</a></span>`
+          : lead.googleCalendarSyncStatus
+            ? `<span><strong>Google Calendar:</strong> ${escapeHtml(lead.googleCalendarSyncStatus)}${
+                lead.googleCalendarSyncError ? ` - ${escapeHtml(lead.googleCalendarSyncError)}` : ""
+              }</span>`
+            : ""
+      }
+      ${
         lead.estimateSentAt
           ? `<span><strong>Document sent:</strong> ${escapeHtml(formatDate(lead.estimateSentAt))}</span>`
           : ""
@@ -2072,6 +4040,11 @@ function renderLeadDetail(detail = null) {
       ${
         lead.tracking?.gclid
           ? `<span><strong>GCLID:</strong> ${escapeHtml(lead.tracking.gclid)}</span>`
+          : ""
+      }
+      ${
+        isLiveChatThread
+          ? "<span><strong>Canal:</strong> Chat web conectado al CRM</span>"
           : ""
       }
       <span><strong>Proyecto:</strong> ${escapeHtml(lead.details || "")}</span>
@@ -2126,10 +4099,16 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.projectType.value = lead.projectType || "";
     detailForm.elements.location.value = lead.location || "";
     detailForm.elements.status.value = lead.status || "new";
+    syncSourceGroupSelect(detailSourceInput, lead.sourceGroup || "manual", { defaultValue: "manual" });
     detailForm.elements.bestContactDay.value = lead.bestContactDay || "";
     detailForm.elements.bestContactTime.value = lead.bestContactTime || "";
     detailForm.elements.nextAction.value = lead.nextAction || "";
     detailForm.elements.nextActionAt.value = toDatetimeLocalValue(lead.nextActionAt);
+    detailForm.elements.appointmentType.value = lead.appointmentType || "";
+    detailForm.elements.appointmentStatus.value = lead.appointmentStatus || "";
+    detailForm.elements.appointmentAssignedTo.value = lead.appointmentAssignedTo || "";
+    detailForm.elements.appointmentDurationMinutes.value = lead.appointmentDurationMinutes || "";
+    syncLeadReminderInputs(lead.nextActionReminderOffsets || []);
     detailForm.elements.details.value = lead.details || "";
     detailForm.elements.clientDocumentType.value = normalizeClientDocumentType(
       lead.clientDocumentType || "estimate",
@@ -2138,6 +4117,7 @@ function renderLeadDetail(detail = null) {
       lead.clientDocumentWorkDate || lead.nextActionAt,
     );
     detailForm.elements.estimateAmount.value = lead.estimateAmount || "";
+    detailForm.elements.invoiceDepositAmount.value = lead.invoiceDepositAmount || "";
     detailForm.elements.estimateTitle.value = lead.estimateTitle || "";
     detailForm.elements.clientDocumentDescription.value =
       lead.clientDocumentDescription || lead.details || "";
@@ -2152,15 +4132,28 @@ function renderLeadDetail(detail = null) {
     detailForm.elements.estimateValidUntil.value = toDateInputValue(lead.estimateValidUntil);
     detailForm.elements.estimateNotes.value = lead.estimateNotes || "";
     detailForm.elements.privateNotes.value = lead.privateNotes || "";
+    if (detailForm.elements.textThreadImportSource) {
+      detailForm.elements.textThreadImportSource.value = "";
+    }
+    if (detailForm.elements.textThreadImport) {
+      detailForm.elements.textThreadImport.value = "";
+    }
     detailForm.elements.note.value = "";
   }
 
   syncEstimateTotalFromForm();
+  setPhotoUploadFeedback("", "");
   syncDetailQuickActions(lead);
+  syncLiveChatComposer(lead);
   renderLeadAssets(detail.assets || []);
-  renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || []);
+  renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || [], {
+    assistantLabel: isLiveChatThread ? "Chicago Metal Works" : "Agustin 2.0",
+    userLabel: isLiveChatThread ? "Cliente web" : "Cliente",
+    conversationSummary: lead.conversationSummary || "",
+  });
   renderActivityCards(activityList, detail.activity || []);
   setDetailTab(state.detailTab || "profile");
+  applyMobilePaneLayout();
 }
 
 function buildLeadPayloadFromForm() {
@@ -2174,16 +4167,25 @@ function buildLeadPayloadFromForm() {
     projectType: String(formData.get("projectType") || "").trim(),
     location: String(formData.get("location") || "").trim(),
     status: String(formData.get("status") || "").trim(),
+    sourceGroup: String(formData.get("sourceGroup") || "").trim(),
     bestContactDay: String(formData.get("bestContactDay") || "").trim(),
     bestContactTime: String(formData.get("bestContactTime") || "").trim(),
     nextAction: String(formData.get("nextAction") || "").trim(),
-    nextActionAt: String(formData.get("nextActionAt") || "").trim(),
+    nextActionAt: serializeDatetimeLocalValue(String(formData.get("nextActionAt") || "").trim()),
+    appointmentType: String(formData.get("appointmentType") || "").trim(),
+    appointmentStatus: String(formData.get("appointmentStatus") || "").trim(),
+    appointmentAssignedTo: String(formData.get("appointmentAssignedTo") || "").trim(),
+    appointmentDurationMinutes: String(formData.get("appointmentDurationMinutes") || "").trim(),
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(
+      formData.getAll("nextActionReminderOffsets"),
+    ),
     details: String(formData.get("details") || "").trim(),
     clientDocumentType: String(formData.get("clientDocumentType") || "estimate").trim(),
     clientDocumentWorkDate: String(formData.get("clientDocumentWorkDate") || "").trim(),
     estimateAmount: breakdownMode
       ? String(calculateEstimateTotal(lead))
       : String(formData.get("estimateAmount") || "").trim(),
+    invoiceDepositAmount: String(formData.get("invoiceDepositAmount") || "").trim(),
     estimateTitle: String(formData.get("estimateTitle") || "").trim(),
     clientDocumentDescription: String(formData.get("clientDocumentDescription") || "").trim(),
     clientDocumentWarranty: String(formData.get("clientDocumentWarranty") || "").trim(),
@@ -2191,6 +4193,8 @@ function buildLeadPayloadFromForm() {
     estimateValidUntil: String(formData.get("estimateValidUntil") || "").trim(),
     estimateNotes: String(formData.get("estimateNotes") || "").trim(),
     privateNotes: String(formData.get("privateNotes") || "").trim(),
+    textThreadImportSource: String(formData.get("textThreadImportSource") || "").trim(),
+    textThreadImport: String(formData.get("textThreadImport") || "").trim(),
     note: String(formData.get("note") || "").trim(),
   };
 
@@ -2209,6 +4213,16 @@ async function saveLeadChanges(
 ) {
   if (!state.selectedLeadId || !detailForm) {
     return null;
+  }
+
+  const validationMessage = getInvoiceValidationMessage();
+
+  if (validationMessage) {
+    if (showFeedback) {
+      setDetailFeedback(validationMessage, "error");
+    }
+
+    throw createApiError(validationMessage, 400, false);
   }
 
   if (showFeedback) {
@@ -2243,15 +4257,17 @@ async function saveLeadChanges(
 
 async function renderLeadSnapshot(dashboard, { fromCache = false } = {}) {
   renderFilters(dashboard);
-  renderLeadList(dashboard.leads || []);
+  renderLeadCollections(dashboard);
 
-  if (dashboard.leads?.length) {
-    const selectedStillVisible = dashboard.leads.some(
-      (lead) => lead.id === state.selectedLeadId,
-    );
+  const visibleLeads = []
+    .concat(Array.isArray(dashboard.leads) ? dashboard.leads : [])
+    .concat(Array.isArray(dashboard.completedLeads) ? dashboard.completedLeads : []);
+
+  if (visibleLeads.length) {
+    const selectedStillVisible = visibleLeads.some((lead) => lead.id === state.selectedLeadId);
 
     if (!selectedStillVisible) {
-      rememberSelectedLead(dashboard.leads[0].id);
+      rememberSelectedLead(visibleLeads[0].id);
     }
 
     if (fromCache) {
@@ -2323,6 +4339,12 @@ async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt =
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
   renderSummary(dashboard.summary, dashboard.serviceBreakdown);
+  renderAgenda(
+    dashboard.agendaLeads || [],
+    dashboard.agendaSummary || null,
+    dashboard.importantDates || [],
+    dashboard.agendaEvents || [],
+  );
   renderActivityCards(globalActivityList, dashboard.recentActivity || [], { hideBody: true });
 
   if (globalActivitySummary) {
@@ -2458,9 +4480,121 @@ async function handleMarkQuoted() {
   }
 }
 
+function handleManualLeadToggle() {
+  if (!manualLeadPanel) {
+    return;
+  }
+
+  if (manualLeadPanel.hidden) {
+    openManualLeadPanel();
+    return;
+  }
+
+  closeManualLeadPanel();
+}
+
+function handleManualLeadCancel() {
+  closeManualLeadPanel();
+}
+
+async function handleManualLeadCreate(event) {
+  event.preventDefault();
+
+  if (!manualLeadForm) {
+    return;
+  }
+
+  const formData = new FormData(manualLeadForm);
+  const body = {
+    fullName: String(formData.get("fullName") || "").trim(),
+    phoneDisplay: String(formData.get("phoneDisplay") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    projectType: String(formData.get("projectType") || "").trim(),
+    location: String(formData.get("location") || "").trim(),
+    status: String(formData.get("status") || "new").trim(),
+    sourceGroup: String(formData.get("sourceGroup") || "manual").trim(),
+    details: String(formData.get("details") || "").trim(),
+  };
+
+  if (!body.fullName) {
+    setManualLeadFeedback("Add the customer's name first.", "error");
+    manualLeadForm.elements.fullName?.focus();
+    return;
+  }
+
+  state.manualLeadBusy = true;
+  syncManualLeadUi();
+  setManualLeadFeedback("Creating lead...", "muted");
+
+  try {
+    const detail = await apiRequest("/api/metalworks-crm/leads", {
+      method: "POST",
+      body,
+    });
+
+    if (detail?.lead?.id) {
+      rememberSelectedLead(detail.lead.id);
+    }
+
+    closeManualLeadPanel();
+    await loadDashboard();
+
+    if (detail?.lead?.id) {
+      rememberSelectedLead(detail.lead.id);
+      renderLeadDetail(detail);
+      openMobileWorkspacePane();
+      scrollDetailIntoView();
+    }
+
+    setSystemStatus("Manual lead created.", "success");
+  } catch (error) {
+    setManualLeadFeedback(error.message || "I could not create that lead.", "error");
+  } finally {
+    state.manualLeadBusy = false;
+    syncManualLeadUi();
+  }
+}
+
+async function handleDeleteLead() {
+  const lead = state.leadDetail?.lead || null;
+
+  if (!lead?.id) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete ${lead.fullName || "this lead"} and remove its photos and activity history? This cannot be undone.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setDetailFeedback("Deleting lead...", "muted");
+
+    await apiRequest(`/api/metalworks-crm/leads/${encodeURIComponent(lead.id)}`, {
+      method: "DELETE",
+    });
+
+    rememberSelectedLead("");
+    renderLeadDetail(null);
+    await loadDashboard();
+    setSystemStatus("Lead deleted.", "success");
+  } catch (error) {
+    setDetailFeedback(error.message || "I could not delete that lead.", "error");
+  }
+}
+
 async function handleSendEstimate() {
   const snapshot = buildEstimateSnapshot();
   const documentWord = snapshot.documentType === "invoice" ? "invoice" : "estimate";
+  const validationMessage = getInvoiceValidationMessage(snapshot);
+
+  if (validationMessage) {
+    setDetailFeedback(validationMessage, "error");
+    return;
+  }
 
   if (!snapshot.email) {
     setDetailFeedback("Este lead no tiene correo todavia.", "error");
@@ -2486,6 +4620,7 @@ async function handleSendEstimate() {
 
     renderLeadDetail({
       lead: result.lead,
+      assets: result.assets || [],
       activity: result.activity || [],
     });
 
@@ -2511,6 +4646,123 @@ async function handleSendEstimate() {
         : error.message,
       draftOpened ? "muted" : "error",
     );
+  }
+}
+
+function handlePhotoUploadTrigger() {
+  if (!state.selectedLeadId || !photoUploadInput || state.manualPhotoUploadBusy) {
+    return;
+  }
+
+  photoUploadInput.click();
+}
+
+async function handleManualPhotoUpload(event) {
+  const selectedFiles = Array.from(event.target?.files || []);
+
+  if (photoUploadInput) {
+    photoUploadInput.value = "";
+  }
+
+  if (!state.selectedLeadId || !selectedFiles.length) {
+    return;
+  }
+
+  if (selectedFiles.length > MAX_CRM_PHOTO_FILES) {
+    setPhotoUploadFeedback(`Upload up to ${MAX_CRM_PHOTO_FILES} photos at a time.`, "error");
+    return;
+  }
+
+  state.manualPhotoUploadBusy = true;
+  syncManualPhotoUploadUi(state.leadDetail?.lead || null);
+  setPhotoUploadFeedback("Preparing photos...", "muted");
+
+  try {
+    const preparedFiles = await prepareCrmPhotoFilesForUpload(selectedFiles);
+    const filePayloads = await Promise.all(
+      preparedFiles.map(async (file) => ({
+        fileName: file.name || "project-photo.jpg",
+        mimeType: file.type || "image/jpeg",
+        dataUrl: await readFileAsDataUrl(file),
+      })),
+    );
+
+    setPhotoUploadFeedback("Uploading photos...", "muted");
+
+    const result = await apiRequest(
+      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/assets`,
+      {
+        method: "POST",
+        body: {
+          files: filePayloads,
+        },
+      },
+    );
+
+    renderLeadDetail(result);
+    const uploadedCount = Number(result.uploadedCount || 0) || 0;
+    setPhotoUploadFeedback(
+      uploadedCount
+        ? `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} saved to this lead.`
+        : "Those photos were already saved on this lead.",
+      uploadedCount ? "success" : "muted",
+    );
+    await refreshDashboardSafely();
+  } catch (error) {
+    setPhotoUploadFeedback(error.message || "I could not save those photos.", "error");
+  } finally {
+    state.manualPhotoUploadBusy = false;
+    syncManualPhotoUploadUi(state.leadDetail?.lead || null);
+  }
+}
+
+async function handleSendLiveChatReply(event) {
+  event.preventDefault();
+
+  if (!state.selectedLeadId || !liveChatForm) {
+    return;
+  }
+
+  const lead = state.leadDetail?.lead || null;
+
+  if (!lead?.supportsLiveChatReply) {
+    setLiveChatFeedback("Este lead no tiene un chat web conectado.", "error");
+    return;
+  }
+
+  const formData = new FormData(liveChatForm);
+  const message = String(formData.get("message") || "").trim();
+
+  if (!message) {
+    setLiveChatFeedback("Escribe la respuesta primero.", "error");
+    return;
+  }
+
+  state.liveChatReplyBusy = true;
+  syncLiveChatComposer(lead);
+  setLiveChatFeedback("Mandando respuesta al chat...", "muted");
+
+  try {
+    const result = await apiRequest(
+      `/api/metalworks-crm/leads/${encodeURIComponent(state.selectedLeadId)}/live-chat-reply`,
+      {
+        method: "POST",
+        body: {
+          message,
+        },
+      },
+    );
+
+    renderLeadDetail(result);
+    liveChatForm.reset();
+    setDetailTab("conversation");
+    setLiveChatFeedback("Respuesta enviada al hilo del cliente.", "success");
+    await refreshDashboardSafely();
+  } catch (error) {
+    setLiveChatFeedback(error.message || "No pude mandar la respuesta.", "error");
+  } finally {
+    state.liveChatReplyBusy = false;
+    syncLiveChatComposer(state.leadDetail?.lead || lead);
   }
 }
 
@@ -2570,6 +4822,33 @@ function bindFilters() {
     await refreshDashboardSafely();
   });
 
+  sourceFilter?.addEventListener("change", async () => {
+    if (state.view === "applicants") {
+      return;
+    }
+
+    state.filters.sourceGroup = String(sourceFilter.value || "").trim();
+    await refreshDashboardSafely();
+  });
+
+  atlasOutreachFilterButton?.addEventListener("click", async () => {
+    if (state.view === "applicants") {
+      rememberSelectedView("leads");
+      syncViewButtons();
+    }
+
+    state.filters.sourceGroup =
+      state.filters.sourceGroup === "atlas_commercial_outreach"
+        ? ""
+        : "atlas_commercial_outreach";
+
+    if (sourceFilter) {
+      sourceFilter.value = state.filters.sourceGroup;
+    }
+
+    await refreshDashboardSafely();
+  });
+
   searchInput?.addEventListener("input", () => {
     window.clearTimeout(state.searchTimer);
     state.searchTimer = window.setTimeout(async () => {
@@ -2587,12 +4866,19 @@ function bindFilters() {
 
 function bindDetailActions() {
   detailForm?.addEventListener("submit", handleSaveLead);
+  manualLeadForm?.addEventListener("submit", handleManualLeadCreate);
+  liveChatForm?.addEventListener("submit", handleSendLiveChatReply);
+  newLeadToggleButton?.addEventListener("click", handleManualLeadToggle);
+  manualLeadCancelButton?.addEventListener("click", handleManualLeadCancel);
   markQuotedButton?.addEventListener("click", handleMarkQuoted);
   sendEstimateButton?.addEventListener("click", handleSendEstimate);
   openEmailDraftButton?.addEventListener("click", () => {
     openEmailDraft();
   });
   copyEstimateButton?.addEventListener("click", copyEstimateText);
+  deleteLeadButton?.addEventListener("click", handleDeleteLead);
+  photoUploadTrigger?.addEventListener("click", handlePhotoUploadTrigger);
+  photoUploadInput?.addEventListener("change", handleManualPhotoUpload);
 
   const syncDetailFormActions = (event) => {
     const fieldName = event.target?.name || "";
@@ -2605,6 +4891,7 @@ function bindDetailActions() {
       [
         "phoneDisplay",
         "email",
+        "location",
         "clientDocumentType",
         ...ESTIMATE_COST_FIELDS,
       ].includes(fieldName)
@@ -2688,10 +4975,23 @@ function bindProspectorAdmin() {
     }
 
     const formData = new FormData(prospectorForm);
+    const customPassword = String(formData.get("password") || "").trim();
     const payload = {
       name: String(formData.get("name") || "").trim(),
       email: String(formData.get("email") || "").trim(),
+      password: customPassword,
     };
+
+    if (customPassword && customPassword.length < PROSPECTOR_PASSWORD_MIN_LENGTH) {
+      setProspectorFeedback(
+        `Password must be at least ${PROSPECTOR_PASSWORD_MIN_LENGTH} characters.`,
+        "error",
+      );
+      if (prospectorSaveButton) {
+        prospectorSaveButton.disabled = false;
+      }
+      return;
+    }
 
     try {
       const result = await apiRequest("/api/metalworks-crm/prospectors", {
@@ -2709,7 +5009,12 @@ function bindProspectorAdmin() {
           : "New account ready",
       };
       renderProspectorCredentials();
-      setProspectorFeedback("Prospector account created.", "success");
+      setProspectorFeedback(
+        result.credentials?.passwordMode === "custom"
+          ? "Prospector account created with your custom password."
+          : "Prospector account created.",
+        "success",
+      );
       prospectorForm.reset();
       await loadProspectorAdmin();
     } catch (error) {
@@ -2743,20 +5048,35 @@ function bindProspectorAdmin() {
         return;
       }
 
-      const confirmed = window.confirm(
-        "This will generate a new temporary password and sign the prospector out of active sessions.",
+      const promptedPassword = window.prompt(
+        "Enter a new password for this prospector. Leave it blank to auto-generate one and sign them out of active sessions.",
+        "",
       );
 
-      if (!confirmed) {
+      if (promptedPassword === null) {
+        return;
+      }
+
+      const customPassword = String(promptedPassword || "").trim();
+
+      if (customPassword && customPassword.length < PROSPECTOR_PASSWORD_MIN_LENGTH) {
+        setProspectorFeedback(
+          `Password must be at least ${PROSPECTOR_PASSWORD_MIN_LENGTH} characters.`,
+          "error",
+        );
         return;
       }
 
       try {
-        setProspectorFeedback("Resetting password...", "muted");
+        setProspectorFeedback(
+          customPassword ? "Updating password..." : "Resetting password...",
+          "muted",
+        );
         const result = await apiRequest(
           `/api/metalworks-crm/prospectors/${encodeURIComponent(prospectorId)}/reset-password`,
           {
             method: "POST",
+            body: customPassword ? { password: customPassword } : {},
           },
         );
 
@@ -2770,7 +5090,12 @@ function bindProspectorAdmin() {
             : "Temporary password ready",
         };
         renderProspectorCredentials();
-        setProspectorFeedback("Temporary password created.", "success");
+        setProspectorFeedback(
+          result.credentials?.passwordMode === "custom"
+            ? "Password updated."
+            : "Temporary password created.",
+          "success",
+        );
         await loadProspectorAdmin();
       } catch (error) {
         setProspectorFeedback(error.message, "error");
@@ -2832,7 +5157,7 @@ function bindProspectorAdmin() {
       state.prospectorAdmin?.latestCredentials?.temporaryPassword || "",
     );
     setProspectorFeedback(
-      copied ? "Temporary password copied." : "No pude copiar el password automaticamente.",
+      copied ? "Password copied." : "No pude copiar el password automaticamente.",
       copied ? "success" : "muted",
     );
   });
@@ -2855,11 +5180,39 @@ function bindAppShell() {
     return;
   }
 
+  syncPushControls();
   bindFilters();
   bindDetailActions();
   bindProspectorAdmin();
   refreshButton?.addEventListener("click", refreshWorkspaceSafely);
   logoutButton?.addEventListener("click", handleLogout);
+  enablePushButton?.addEventListener("click", handleEnablePush);
+  testPushButton?.addEventListener("click", handleTestPush);
+  mobilePaneButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      rememberMobilePane(button.dataset.crmMobilePaneButton || "inbox");
+      applyMobilePaneLayout();
+    });
+  });
+  mobileSecondaryMoreButton?.addEventListener("click", () => {
+    rememberMobilePane(state.mobilePane === "more" ? "agenda" : "more");
+    applyMobilePaneLayout();
+  });
+  mobileBackButton?.addEventListener("click", () => {
+    rememberMobilePane("inbox");
+    applyMobilePaneLayout();
+  });
+  if (crmMobileMediaQuery) {
+    const handleMobileLayoutChange = () => {
+      applyMobilePaneLayout();
+    };
+
+    if (typeof crmMobileMediaQuery.addEventListener === "function") {
+      crmMobileMediaQuery.addEventListener("change", handleMobileLayoutChange);
+    } else if (typeof crmMobileMediaQuery.addListener === "function") {
+      crmMobileMediaQuery.addListener(handleMobileLayoutChange);
+    }
+  }
   viewButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const nextView = button.dataset.crmViewButton || "leads";
@@ -2871,7 +5224,9 @@ function bindAppShell() {
 
 async function init() {
   bindAppShell();
+  await clearCrmBadge();
   applyCachedTheme();
+  applyMobilePaneLayout();
   renderCachedDashboard();
 
   let me;
@@ -2898,6 +5253,8 @@ async function init() {
   persistThemeProfile(me.profile || {}, me.email || "");
   renderResourceHub(me.resourceSections || []);
   renderProspectorCredentials();
+  await loadPushConfig();
+  applyMobilePaneLayout();
   setSystemStatus("", "");
   await Promise.all([refreshDashboardSafely(), refreshProspectorsSafely()]);
 }

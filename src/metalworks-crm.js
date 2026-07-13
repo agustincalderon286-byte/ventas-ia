@@ -1,87 +1,157 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import http2 from "node:http2";
 import path from "node:path";
+
+import webpush from "web-push";
+
+import { buildThumbtackWebhookEvent } from "./thumbtack-webhook.js";
 
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
 const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
+const METALWORKS_PUBLIC_CHAT_THREAD_COOKIE = "cmwf_live_chat_thread";
+const METALWORKS_PUBLIC_CHAT_THREAD_DAYS = 180;
 const METALWORKS_PROSPECTOR_STATUS_OPTIONS = ["active", "paused"];
+const METALWORKS_PROSPECTOR_PASSWORD_MIN = 8;
 const METALWORKS_CRM_DEFAULT_EMAIL = "agustincalderon286@gmail.com";
-const METALWORKS_CONTACT_PHONE_DISPLAY = "773 798 4107";
+const METALWORKS_CONTACT_PHONE_DISPLAY = "708 731 6762";
 const METALWORKS_CONTACT_EMAIL = "agustincalderon286@gmail.com";
 const METALWORKS_WEBSITE_URL = "https://www.chicagometalworksandfencing.com/";
+const METALWORKS_THUMBTACK_PROFILE_URL =
+  "https://www.thumbtack.com/il/blue-island/metal-fabricators/chicago-metal-works-fencing/service/456785560962318359";
 const METALWORKS_DEFAULT_CLIENT_WARRANTY =
   "Chicago Metal Works & Fencing stands behind the approved scope of work. Warranty coverage and any exclusions follow the written agreement for this job.";
 const METALWORKS_CRM_USER_PROFILES = {
   "agustincalderon286@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "agustincalderon423@gmail.com": {
     displayName: "Agustin",
-    skin: "intel-ops",
-    themeLabel: "Intel Ops Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
   "calderonrigoberto51@gmail.com": {
     displayName: "Rigo",
-    skin: "goku-blue",
-    themeLabel: "Rigo // Goku Blue Mode",
+    skin: "executive-steel",
+    themeLabel: "",
   },
 };
+const METALWORKS_CRM_DASHBOARD_LEAD_SELECT = [
+  "fullName",
+  "phone",
+  "phoneDisplay",
+  "email",
+  "projectType",
+  "location",
+  "addressLine",
+  "zipCode",
+  "city",
+  "propertyType",
+  "projectSize",
+  "timeline",
+  "ownershipStatus",
+  "budgetRange",
+  "urgency",
+  "bestContactWindow",
+  "preferredLanguage",
+  "qualificationTier",
+  "qualificationNotes",
+  "sourceProspectorName",
+  "sourceProspectorEmail",
+  "details",
+  "photoFileNames",
+  "status",
+  "nextAction",
+  "nextActionAt",
+  "appointmentType",
+  "appointmentStatus",
+  "appointmentDurationMinutes",
+  "appointmentAssignedTo",
+  "nextActionReminderOffsets",
+  "bestContactDay",
+  "bestContactTime",
+  "callbackIntent",
+  "callbackRequestedAt",
+  "callbackAlertedAt",
+  "estimateTitle",
+  "estimateScope",
+  "estimateMaterialsCost",
+  "estimateLaborCost",
+  "estimateCoatingCost",
+  "estimateMiscCost",
+  "estimateDiscount",
+  "estimateAmount",
+  "invoiceDepositAmount",
+  "estimateValidUntil",
+  "estimateNotes",
+  "clientDocumentType",
+  "clientDocumentDescription",
+  "clientDocumentWorkDate",
+  "clientDocumentWarranty",
+  "estimateSentAt",
+  "estimateSentTo",
+  "soldAt",
+  "pageTitle",
+  "pagePath",
+  "pageUrl",
+  "referrer",
+  "sourceType",
+  "sourceExternalId",
+  "sourceExternalSystem",
+  "createdAt",
+  "updatedAt",
+  "lastContactAt",
+  "lastUserMessage",
+  "lastAssistantMessage",
+].join(" ");
 const METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY = Math.max(
   1,
   Number(process.env.METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY || 20),
 );
 const METALWORKS_CALLBACK_TIME_ZONE = "America/Chicago";
+const METALWORKS_GOOGLE_CALENDAR_TIME_ZONE =
+  process.env.METALWORKS_GOOGLE_CALENDAR_TIME_ZONE || METALWORKS_CALLBACK_TIME_ZONE;
+const METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES = Math.max(
+  15,
+  Number(process.env.METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES || 120),
+);
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
+const METALWORKS_ASSISTANT_VISION_MAX_IMAGES = Math.max(
+  0,
+  Number(process.env.METALWORKS_ASSISTANT_VISION_MAX_IMAGES || 2),
+);
 const METALWORKS_ASSISTANT_NOTES_MARKER = "[Agustin Assistant Notes]";
 const METALWORKS_APPLICANT_NOTES_MARKER = "[Agustin Applicant Notes]";
 const METALWORKS_ASSISTANT_PLACEHOLDER_NAME = "Website chat lead";
 const METALWORKS_APPLICANT_PLACEHOLDER_NAME = "Job applicant";
+const METALWORKS_WEBSITE_CHAT_SOURCE_TYPE = "website_live_chat";
+const METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME = "Website chat visitor";
+const METALWORKS_WEBSITE_CHAT_PLACEHOLDER_PREFIX = "Website chat";
 const METALWORKS_LEAD_ASSET_MAX_FILES = 4;
 const METALWORKS_LEAD_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 const METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES = 6 * 1024 * 1024;
-const METALWORKS_WHATSAPP_WINDOW_MS = 24 * 60 * 60 * 1000;
-const METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS = Math.max(
-  15 * 1000,
-  Number(process.env.METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS || 60 * 1000),
-);
-const METALWORKS_WHATSAPP_FOLLOWUP_LOCK_MS = 2 * 60 * 1000;
-const METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE = Math.max(
-  1,
-  Number(process.env.METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE || 4),
-);
-const METALWORKS_WHATSAPP_FOLLOWUP_STEPS = Object.freeze([
-  {
-    step: "nudge_10m",
-    delayMs: 10 * 60 * 1000,
-    maxLagMs: 90 * 60 * 1000,
-    label: "10-minute follow-up",
-  },
-  {
-    step: "nudge_6h",
-    delayMs: 6 * 60 * 60 * 1000,
-    maxLagMs: 4 * 60 * 60 * 1000,
-    label: "6-hour follow-up",
-  },
-  {
-    step: "last_chance_23h",
-    delayMs: 23 * 60 * 60 * 1000,
-    maxLagMs: 45 * 60 * 1000,
-    label: "final 24-hour follow-up",
-  },
-]);
-const METALWORKS_WHATSAPP_CLOSED_LEAD_STATUSES = new Set([
-  "booked",
-  "won",
-  "lost",
-  "archived",
-]);
 const METALWORKS_EXTERNAL_SYNC_TOKEN = String(
   process.env.METALWORKS_EXTERNAL_SYNC_TOKEN || "",
 ).trim();
+const THUMBTACK_WEBHOOK_USERNAME =
+  cleanText(process.env.THUMBTACK_WEBHOOK_USERNAME || "thumbtack", 120) || "thumbtack";
+const THUMBTACK_WEBHOOK_PASSWORD = String(process.env.THUMBTACK_WEBHOOK_PASSWORD || "").trim();
+const THUMBTACK_WEBHOOK_TOKEN = String(process.env.THUMBTACK_WEBHOOK_TOKEN || "").trim();
+const METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY = String(
+  process.env.METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY || "",
+).trim();
+const METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY = String(
+  process.env.METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY || "",
+).trim();
+const METALWORKS_WEB_PUSH_SUBJECT =
+  cleanText(
+    process.env.METALWORKS_WEB_PUSH_SUBJECT || `mailto:${METALWORKS_CONTACT_EMAIL}`,
+    200,
+  ) || `mailto:${METALWORKS_CONTACT_EMAIL}`;
 const METALWORKS_IOS_APP_BUNDLE_ID = "com.agustincalderon.agustin2";
 const METALWORKS_CRM_STATUS_OPTIONS = [
   "new",
@@ -91,6 +161,20 @@ const METALWORKS_CRM_STATUS_OPTIONS = [
   "won",
   "lost",
   "archived",
+];
+const METALWORKS_APPOINTMENT_TYPE_OPTIONS = [
+  "job",
+  "estimate_visit",
+  "callback",
+  "followup",
+];
+const METALWORKS_APPOINTMENT_STATUS_OPTIONS = [
+  "scheduled",
+  "confirmed",
+  "en_route",
+  "completed",
+  "rescheduled",
+  "canceled",
 ];
 const METALWORKS_APPLICANT_STATUS_OPTIONS = [
   "new",
@@ -111,6 +195,43 @@ const METALWORKS_PUSH_INVALID_REASONS = new Set([
   "DeviceTokenNotForTopic",
   "Unregistered",
 ]);
+const METALWORKS_LEAD_REMINDER_OPTIONS = [
+  { minutes: 60, label: "1 hour before" },
+  { minutes: 120, label: "2 hours before" },
+  { minutes: 1440, label: "1 day before" },
+  { minutes: 2880, label: "2 days before" },
+];
+const METALWORKS_BOOKED_REMINDER_PRIORITY = [1440, 120, 2880, 60];
+const METALWORKS_LEAD_REMINDER_MINUTES = new Set(
+  METALWORKS_LEAD_REMINDER_OPTIONS.map((option) => option.minutes),
+);
+const METALWORKS_LEAD_REMINDER_POLL_MS = 60 * 1000;
+const METALWORKS_LEAD_REMINDER_GRACE_MS = 12 * 60 * 1000;
+const METALWORKS_LEAD_REMINDER_SCAN_WINDOW_MS =
+  Math.max(...METALWORKS_LEAD_REMINDER_OPTIONS.map((option) => option.minutes)) * 60 * 1000 +
+  METALWORKS_LEAD_REMINDER_GRACE_MS;
+const METALWORKS_LEAD_REMINDER_WORKER = {
+  started: false,
+  timer: null,
+  running: false,
+};
+const METALWORKS_EXTERNAL_LOCK_TTL_MS = 45 * 1000;
+const METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS = 24;
+const METALWORKS_EXTERNAL_LOCK_RETRY_MS = 150;
+const METALWORKS_AGENDA_BUCKET_ORDER = ["overdue", "today", "tomorrow", "this_week", "upcoming"];
+const METALWORKS_AGENDA_EVENT_TYPE_OPTIONS = [
+  "personal",
+  "client",
+  "interview",
+  "internal",
+];
+const METALWORKS_AGENDA_EVENT_STATUS_OPTIONS = ["scheduled", "completed", "canceled"];
+const METALWORKS_IMPORTANT_DATE_RULES = [
+  "These are availability awareness notes, not hard schedule blocks.",
+  "Do not reject scheduling only because an important date exists.",
+  "If a job is scheduled on one of these dates, mention that Agustin or Rigo may be busy and suggest employee coverage or confirming coverage.",
+];
+const METALWORKS_IMPORTANT_DATES = [];
 const METALWORKS_APNS_JWT_CACHE = {
   token: "",
   expiresAt: 0,
@@ -125,7 +246,7 @@ ROLE:
 
 GOAL:
 - Help the visitor quickly understand the next best step.
-- Increase conversions to quote request or phone call.
+- Increase conversions to a text-back estimate or quote follow-up.
 - Qualify the job without sounding pushy.
 
 VOICE:
@@ -137,16 +258,27 @@ VOICE:
 
 RULES:
 - Most replies should be 2 or 3 short sentences.
+- Ask for the visitor's name and best phone number early, ideally before deeper qualification, so the team can text back if the chat disconnects.
 - Ask for photos early when that will help.
 - Ask whether it is repair, replacement, or new installation when useful.
 - Ask for ZIP code or job location when useful.
-- Ask for the best phone number only when it helps move the quote forward.
+- After name and phone are captured, move toward photos, ZIP code, and the job description needed for a text-back estimate.
 - If the visitor asks for a callback or phone call, collect name, best phone number, best day/time to call, and job ZIP code in as few messages as possible.
 - If the visitor has project photos, tell them they can upload them directly in the chat.
-- If the job sounds unsafe or urgent, tell them to call 773 798 4107 now.
+- If recent project photos are attached, use them to identify the likely metalwork type and any clearly visible issues.
+- Only describe what is reasonably visible in the photos. If an image is blurry, partial, or not enough, say so and ask for a better angle or one more photo.
+- If the job sounds unsafe or urgent, tell them to call 708 731 6762 now.
 - Do not give exact final pricing without enough detail.
 - If enough context exists, you may give a rough range and clearly frame it as preliminary.
-- Push toward quote form or phone call when the visitor shows real buying intent.
+- When you already have the name, phone, job type, and enough details to follow up, stop asking extra questions and close by saying the team will text them back with an estimate or ask for one more detail if needed.
+- Do not claim exact measurements, hidden damage, or structural certainty from a photo alone.
+- Only ask for email, address, or appointment timing after the basic lead capture when it truly helps.
+
+COMMON CUSTOMER WORDING TO UNDERSTAND:
+- Front steps: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too", "front steps repair", "repair or replace".
+- Gates: "it's not always closing", "latch added to the side gate", "the latch is on the outside", "prefer one on the inside", "dragging gate", "sagging gate".
+- Porch and railing structure: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- When a visitor uses this kind of wording, answer directly to the real problem first, then move into contact capture and photos.
 
 SERVICE FIT:
 - High-fit: metalwork, welding, railings, handrails, gates, fences, fabrication, stairs, balconies, porch railings.
@@ -203,8 +335,23 @@ function cleanText(value = "", maxLength = 0) {
   return maxLength > 0 ? text.slice(0, maxLength) : text;
 }
 
+function cleanMultilineText(value = "", maxLength = 0) {
+  const text = String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return maxLength > 0 ? text.slice(0, maxLength).trim() : text;
+}
+
 function normalizeEmail(value = "") {
   return cleanText(value).toLowerCase();
+}
+
+function normalizePasswordInput(value = "", maxLength = 120) {
+  const safeValue = String(value || "").trim();
+  return maxLength > 0 ? safeValue.slice(0, maxLength) : safeValue;
 }
 
 function normalizePhone(value = "") {
@@ -226,6 +373,21 @@ function parseEmailList(value = "") {
     .split(/[,\n;]/)
     .map((item) => normalizeEmail(item))
     .filter(Boolean);
+}
+
+function parseJsonObject(value = "") {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 function getMetalworksNotificationEmails() {
@@ -252,6 +414,12 @@ function hashToken(token = "") {
   return crypto.createHash("sha256").update(String(token || "")).digest("hex");
 }
 
+function waitMs(ms = 0) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, Math.max(0, Number(ms || 0)));
+  });
+}
+
 function parseCookies(header = "") {
   return String(header || "")
     .split(";")
@@ -275,6 +443,23 @@ function requestIsSecure(req) {
   return Boolean(req.secure || req.headers["x-forwarded-proto"] === "https");
 }
 
+function normalizePublicChatThreadKey(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 120);
+}
+
+function buildPublicChatThreadPath(threadKey = "") {
+  const safeThreadKey = normalizePublicChatThreadKey(threadKey);
+
+  if (!safeThreadKey) {
+    return "/metalworks-chat/";
+  }
+
+  return `/metalworks-chat/?thread=${encodeURIComponent(safeThreadKey)}`;
+}
+
 function compareSecrets(input = "", expected = "") {
   const left = Buffer.from(String(input || ""), "utf8");
   const right = Buffer.from(String(expected || ""), "utf8");
@@ -284,6 +469,32 @@ function compareSecrets(input = "", expected = "") {
   }
 
   return crypto.timingSafeEqual(left, right);
+}
+
+function parseBasicAuthorizationHeader(header = "") {
+  const value = String(header || "").trim();
+
+  if (!/^Basic\s+/i.test(value)) {
+    return { username: "", password: "" };
+  }
+
+  try {
+    const decoded = Buffer.from(value.replace(/^Basic\s+/i, "").trim(), "base64").toString(
+      "utf8",
+    );
+    const separatorIndex = decoded.indexOf(":");
+
+    if (separatorIndex === -1) {
+      return { username: "", password: "" };
+    }
+
+    return {
+      username: cleanText(decoded.slice(0, separatorIndex), 160),
+      password: decoded.slice(separatorIndex + 1).trim(),
+    };
+  } catch (error) {
+    return { username: "", password: "" };
+  }
 }
 
 function getClientIp(req) {
@@ -305,11 +516,84 @@ function getExternalSyncToken(req) {
   return cleanText(req.headers["x-metalworks-sync-token"] || "", 240);
 }
 
+function thumbtackWebhookConfigured() {
+  return Boolean(THUMBTACK_WEBHOOK_PASSWORD || THUMBTACK_WEBHOOK_TOKEN);
+}
+
+function requestHasThumbtackWebhookAccess(req) {
+  if (THUMBTACK_WEBHOOK_PASSWORD) {
+    const basicAuth = parseBasicAuthorizationHeader(req.headers.authorization || "");
+
+    if (
+      compareSecrets(basicAuth.username, THUMBTACK_WEBHOOK_USERNAME) &&
+      compareSecrets(basicAuth.password, THUMBTACK_WEBHOOK_PASSWORD)
+    ) {
+      return true;
+    }
+  }
+
+  if (THUMBTACK_WEBHOOK_TOKEN) {
+    const token = getExternalSyncToken(req);
+
+    if (compareSecrets(token, THUMBTACK_WEBHOOK_TOKEN)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function shouldApplyExternalLeadStatus(currentStatus = "", incomingStatus = "") {
+  const current = cleanText(currentStatus || "", 24).toLowerCase();
+  const next = cleanText(incomingStatus || "", 24).toLowerCase();
+
+  if (!next || next === current) {
+    return false;
+  }
+
+  if (!current || current === "new") {
+    return true;
+  }
+
+  if (next === "won" || next === "lost") {
+    return true;
+  }
+
+  if (current === "contacted" && next === "quoted") {
+    return true;
+  }
+
+  return false;
+}
+
+export function resolveExternalLeadCreateStatus(
+  incomingStatus = "",
+  externalSystem = "",
+  sourceType = "",
+) {
+  const normalizedStatus = normalizeStatus(incomingStatus || "new");
+  const normalizedSystem = cleanText(externalSystem || "", 80).toLowerCase();
+  const normalizedSource = cleanText(sourceType || "", 80).toLowerCase();
+
+  if (
+    normalizedStatus === "contacted" &&
+    normalizedSystem === "thumbtack" &&
+    normalizedSource.startsWith("thumbtack_")
+  ) {
+    return "new";
+  }
+
+  return normalizedStatus || "new";
+}
+
 function getAllowedEmails() {
+  const passwordOverrides = Object.keys(getMetalworksUserPasswordOverrides());
+
   return Array.from(
     new Set([
       METALWORKS_CRM_DEFAULT_EMAIL,
       ...Object.keys(METALWORKS_CRM_USER_PROFILES),
+      ...passwordOverrides,
       ...parseEmailList(process.env.METALWORKS_CRM_ALLOWED_EMAILS || ""),
     ]),
   ).filter(Boolean);
@@ -319,8 +603,40 @@ function getMetalworksPassword() {
   return String(process.env.METALWORKS_CRM_PASSWORD || "").trim();
 }
 
+function getMetalworksUserPasswordOverrides() {
+  const source = parseJsonObject(process.env.METALWORKS_CRM_USER_PASSWORDS_JSON || "");
+  const normalized = {};
+
+  Object.entries(source).forEach(([email, password]) => {
+    const safeEmail = normalizeEmail(email || "");
+    const safePassword = normalizePasswordInput(password || "");
+
+    if (!safeEmail || !safePassword) {
+      return;
+    }
+
+    normalized[safeEmail] = safePassword;
+  });
+
+  return normalized;
+}
+
+function getMetalworksPasswordForEmail(email = "") {
+  const safeEmail = normalizeEmail(email || "");
+  const overrides = getMetalworksUserPasswordOverrides();
+
+  if (safeEmail && overrides[safeEmail]) {
+    return overrides[safeEmail];
+  }
+
+  return getMetalworksPassword();
+}
+
 function metalworksCrmConfigured() {
-  return Boolean(getAllowedEmails().length && getMetalworksPassword());
+  return Boolean(
+    getAllowedEmails().length &&
+      (getMetalworksPassword() || Object.keys(getMetalworksUserPasswordOverrides()).length),
+  );
 }
 
 function normalizeProspectorStatus(value = "") {
@@ -358,6 +674,10 @@ function generateProspectorTemporaryPassword() {
   return crypto.randomBytes(10).toString("base64url");
 }
 
+function prospectorPasswordIsValid(password = "") {
+  return normalizePasswordInput(password).length >= METALWORKS_PROSPECTOR_PASSWORD_MIN;
+}
+
 function getMetalworksCrmProfile(email = "") {
   const safeEmail = normalizeEmail(email || "");
   const preset = METALWORKS_CRM_USER_PROFILES[safeEmail] || {};
@@ -365,14 +685,270 @@ function getMetalworksCrmProfile(email = "") {
   return {
     email: safeEmail,
     displayName: preset.displayName || (safeEmail ? safeEmail.split("@")[0] : "CMWF Admin"),
-    skin: preset.skin || "classic",
+    skin: preset.skin || "executive-steel",
     themeLabel: preset.themeLabel || "",
   };
+}
+
+function normalizeMetalworksCrmSkin(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return safeValue === "executive-steel" ? safeValue : "executive-steel";
+}
+
+async function sendMetalworksCrmShell(res, filePath, profile = {}) {
+  const safeSkin = normalizeMetalworksCrmSkin(profile?.skin || "executive-steel");
+  const template = await fs.readFile(filePath, "utf8");
+  const html = template.replace(/data-crm-skin="[^"]*"/, `data-crm-skin="${safeSkin}"`);
+  res.type("html").send(html);
 }
 
 function normalizeStatus(value = "") {
   const status = cleanText(value).toLowerCase();
   return METALWORKS_CRM_STATUS_OPTIONS.includes(status) ? status : "new";
+}
+
+function normalizeAppointmentType(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_APPOINTMENT_TYPE_OPTIONS.includes(safeValue) ? safeValue : "";
+}
+
+function normalizeAppointmentStatus(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_APPOINTMENT_STATUS_OPTIONS.includes(safeValue) ? safeValue : "";
+}
+
+function normalizeAgendaEventType(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_AGENDA_EVENT_TYPE_OPTIONS.includes(safeValue) ? safeValue : "internal";
+}
+
+function normalizeAgendaEventStatus(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  return METALWORKS_AGENDA_EVENT_STATUS_OPTIONS.includes(safeValue) ? safeValue : "scheduled";
+}
+
+function normalizeAppointmentDurationMinutes(value = 0) {
+  const safeValue = Math.round(Number(value || 0));
+  if (!Number.isFinite(safeValue) || safeValue <= 0) {
+    return 0;
+  }
+
+  return Math.min(safeValue, 24 * 60);
+}
+
+function inferLeadAppointmentType(lead = null) {
+  const explicitType = normalizeAppointmentType(lead?.appointmentType || "");
+
+  if (explicitType) {
+    return explicitType;
+  }
+
+  const nextActionText = cleanText(lead?.nextAction || "", 160).toLowerCase();
+  const leadStatus = normalizeStatus(lead?.status || "new");
+  const callbackIntent = cleanText(lead?.callbackIntent || "", 12).toLowerCase();
+
+  if (
+    callbackIntent === "yes" ||
+    /callback|call|phone|llamar|llamada|callback_requested/.test(nextActionText)
+  ) {
+    return "callback";
+  }
+
+  if (
+    /estimate|quote|site visit|visit|measure|measurement|cotizacion|medir|onsite/.test(
+      nextActionText,
+    )
+  ) {
+    return "estimate_visit";
+  }
+
+  if (leadStatus === "booked") {
+    return "job";
+  }
+
+  if (lead?.nextActionAt) {
+    return "followup";
+  }
+
+  return "";
+}
+
+function inferLeadAppointmentStatus(lead = null) {
+  const explicitStatus = normalizeAppointmentStatus(lead?.appointmentStatus || "");
+
+  if (explicitStatus) {
+    return explicitStatus;
+  }
+
+  if (!lead?.nextActionAt) {
+    return "";
+  }
+
+  const leadStatus = normalizeStatus(lead?.status || "new");
+
+  if (leadStatus === "won") {
+    return "completed";
+  }
+
+  if (["lost", "archived"].includes(leadStatus)) {
+    return "canceled";
+  }
+
+  return "scheduled";
+}
+
+function inferAppointmentDurationMinutes(type = "") {
+  const normalizedType = normalizeAppointmentType(type || "");
+  const defaults = {
+    job: 120,
+    estimate_visit: 60,
+    callback: 30,
+    followup: 15,
+  };
+
+  return defaults[normalizedType] || 0;
+}
+
+function isInactiveAppointmentStatus(status = "") {
+  const normalizedStatus = normalizeAppointmentStatus(status || "");
+  return normalizedStatus === "completed" || normalizedStatus === "canceled";
+}
+
+const METALWORKS_LEAD_SOURCE_GROUP_OPTIONS = [
+  { value: "thumbtack", label: "Thumbtack" },
+  { value: "search_kings_google_ads", label: "Search Kings Google Ads" },
+  { value: "google_ads", label: "Google Ads" },
+  { value: "atlas_commercial_outreach", label: "Atlas Commercial Outreach" },
+  { value: "assistant_organic", label: "Agustin 2.0 / SEO organico" },
+  { value: "prospector", label: "Prospector" },
+  { value: "website", label: "Website form/chat" },
+  { value: "manual", label: "Manual CRM" },
+  { value: "other", label: "Other / uncategorized" },
+];
+
+function normalizeLeadSourceGroup(value = "") {
+  const safeValue = cleanText(value || "", 40).toLowerCase();
+  return METALWORKS_LEAD_SOURCE_GROUP_OPTIONS.some((item) => item.value === safeValue)
+    ? safeValue
+    : "";
+}
+
+function labelLeadSourceGroup(value = "") {
+  const normalized = normalizeLeadSourceGroup(value);
+  return (
+    METALWORKS_LEAD_SOURCE_GROUP_OPTIONS.find((item) => item.value === normalized)?.label ||
+    "Other / uncategorized"
+  );
+}
+
+function getPlainTracking(tracking = null) {
+  if (!tracking) {
+    return {};
+  }
+
+  if (typeof tracking.toObject === "function") {
+    return tracking.toObject();
+  }
+
+  return { ...tracking };
+}
+
+function getSourceGroupOverrideFields(sourceGroup = "", currentLead = null) {
+  const normalizedSourceGroup = normalizeLeadSourceGroup(sourceGroup || "");
+  const tracking = getPlainTracking(currentLead?.tracking || {});
+
+  if (!normalizedSourceGroup) {
+    return null;
+  }
+
+  if (normalizedSourceGroup === "search_kings_google_ads") {
+    return {
+      sourceType: "search_kings_google_ads",
+      sourceExternalSystem: "search_kings_google_ads",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "search_kings",
+        utmMedium: tracking.utmMedium || "google_ads",
+        utmCampaign: tracking.utmCampaign || "search_kings_google_ads",
+      },
+    };
+  }
+
+  if (normalizedSourceGroup === "google_ads") {
+    return {
+      sourceType: "google_ads_manual",
+      sourceExternalSystem: "google_ads",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "google",
+        utmMedium: tracking.utmMedium || "paid_search",
+        utmCampaign: tracking.utmCampaign || "manual_google_ads",
+      },
+    };
+  }
+
+  if (normalizedSourceGroup === "thumbtack") {
+    return {
+      sourceType: "thumbtack_manual",
+      sourceExternalSystem: "thumbtack",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "atlas_commercial_outreach") {
+    return {
+      sourceType: "atlas_commercial_outreach",
+      sourceExternalSystem: "atlas_outreach",
+      tracking: {
+        ...tracking,
+        utmSource: tracking.utmSource || "atlas",
+        utmMedium: tracking.utmMedium || "email_outreach",
+        utmCampaign: tracking.utmCampaign || "commercial_property_management",
+      },
+    };
+  }
+
+  if (normalizedSourceGroup === "assistant_organic") {
+    return {
+      sourceType: "assistant_chat",
+      sourceExternalSystem: "agustin_2_0",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "prospector") {
+    return {
+      sourceType: "lead_distribution_prospector",
+      sourceExternalSystem: "field_prospector",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "website") {
+    return {
+      sourceType: "website_form",
+      sourceExternalSystem: "website",
+      tracking,
+    };
+  }
+
+  if (normalizedSourceGroup === "manual") {
+    return {
+      sourceType: "manual_crm_entry",
+      sourceExternalSystem: "crm_manual",
+      tracking,
+    };
+  }
+
+  return {
+    sourceType: "other_manual",
+    sourceExternalSystem: "",
+    tracking,
+  };
 }
 
 function normalizeApplicantStatus(value = "") {
@@ -412,6 +988,357 @@ function parseDateOnly(value = "") {
     : safeValue;
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getGoogleCalendarConfig() {
+  const calendarId = cleanText(process.env.METALWORKS_GOOGLE_CALENDAR_ID || "", 240);
+  const clientId = cleanText(process.env.GOOGLE_CALENDAR_CLIENT_ID || "", 240);
+  const clientSecret = String(process.env.GOOGLE_CALENDAR_CLIENT_SECRET || "").trim();
+  const refreshToken = String(process.env.GOOGLE_CALENDAR_REFRESH_TOKEN || "").trim();
+
+  if (!calendarId || !clientId || !clientSecret || !refreshToken) {
+    return {
+      configured: false,
+      reason:
+        "Missing METALWORKS_GOOGLE_CALENDAR_ID, GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET, or GOOGLE_CALENDAR_REFRESH_TOKEN.",
+    };
+  }
+
+  return {
+    configured: true,
+    calendarId,
+    clientId,
+    clientSecret,
+    refreshToken,
+  };
+}
+
+function getGoogleCalendarDateKey(value = null) {
+  const date = value instanceof Date ? value : value ? new Date(value) : null;
+
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysToGoogleCalendarDateKey(dateKey = "", days = 1) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return "";
+  }
+
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return getGoogleCalendarDateKey(date);
+}
+
+function getLeadGoogleCalendarStartDate(lead = null) {
+  if (!lead) {
+    return null;
+  }
+
+  const appointmentStartAt = lead.nextActionAt ? new Date(lead.nextActionAt) : null;
+
+  if (appointmentStartAt instanceof Date && !Number.isNaN(appointmentStartAt.getTime())) {
+    return {
+      mode: "dateTime",
+      startsAt: appointmentStartAt,
+      durationMinutes:
+        normalizeAppointmentDurationMinutes(lead.appointmentDurationMinutes || 0) ||
+        inferAppointmentDurationMinutes(lead.appointmentType || "") ||
+        METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES,
+    };
+  }
+
+  const workDate = lead.clientDocumentWorkDate ? new Date(lead.clientDocumentWorkDate) : null;
+
+  if (workDate instanceof Date && !Number.isNaN(workDate.getTime())) {
+    return {
+      mode: "date",
+      dateKey: getGoogleCalendarDateKey(workDate),
+    };
+  }
+
+  return null;
+}
+
+function shouldSyncLeadToGoogleCalendar(lead = null) {
+  if (!lead) {
+    return false;
+  }
+
+  const status = normalizeStatus(lead.status || "new");
+  const appointmentStatus = normalizeAppointmentStatus(lead.appointmentStatus || "");
+  const hasCalendarDate = Boolean(getLeadGoogleCalendarStartDate(lead));
+  const eligibleStatuses = new Set(["booked", "won"]);
+  const eligibleAppointmentStatuses = new Set([
+    "scheduled",
+    "rescheduled",
+    "confirmed",
+    "en_route",
+  ]);
+
+  return (
+    hasCalendarDate &&
+    (eligibleStatuses.has(status) ||
+      eligibleAppointmentStatuses.has(appointmentStatus) ||
+      Boolean(lead.clientDocumentWorkDate))
+  );
+}
+
+function buildGoogleCalendarEventForLead(lead = null) {
+  const start = getLeadGoogleCalendarStartDate(lead);
+
+  if (!lead || !start) {
+    return null;
+  }
+
+  const projectType = cleanText(lead.projectType || lead.estimateTitle || "Job", 80);
+  const fullName = cleanText(lead.fullName || "Customer", 80);
+  const location = cleanText(
+    lead.addressLine || lead.location || [lead.city, lead.zipCode].filter(Boolean).join(" "),
+    240,
+  );
+  const assignedTo = cleanText(lead.appointmentAssignedTo || "", 80);
+  const phone = cleanText(lead.phoneDisplay || lead.phone || "", 40);
+  const details = cleanMultilineText(lead.details || lead.estimateScope || "", 1200);
+  const privateNotes = cleanMultilineText(lead.privateNotes || "", 800);
+  const descriptionLines = [
+    `CRM Lead ID: ${String(lead._id || "")}`,
+    phone ? `Phone: ${phone}` : "",
+    lead.email ? `Email: ${lead.email}` : "",
+    assignedTo ? `Assigned to: ${assignedTo}` : "",
+    lead.appointmentType ? `Appointment type: ${labelAppointmentType(lead.appointmentType)}` : "",
+    lead.appointmentStatus
+      ? `Appointment status: ${labelAppointmentStatus(lead.appointmentStatus)}`
+      : "",
+    details ? `Scope/details:\n${details}` : "",
+    privateNotes ? `Private notes:\n${privateNotes}` : "",
+  ].filter(Boolean);
+
+  const event = {
+    summary: `CMW - ${projectType} - ${fullName}`,
+    location,
+    description: descriptionLines.join("\n\n"),
+    extendedProperties: {
+      private: {
+        source: "metalworks-crm",
+        leadId: String(lead._id || ""),
+      },
+    },
+  };
+
+  if (start.mode === "dateTime") {
+    const endsAt = new Date(start.startsAt.getTime() + start.durationMinutes * 60 * 1000);
+    event.start = {
+      dateTime: start.startsAt.toISOString(),
+      timeZone: METALWORKS_GOOGLE_CALENDAR_TIME_ZONE,
+    };
+    event.end = {
+      dateTime: endsAt.toISOString(),
+      timeZone: METALWORKS_GOOGLE_CALENDAR_TIME_ZONE,
+    };
+  } else {
+    event.start = { date: start.dateKey };
+    event.end = { date: addDaysToGoogleCalendarDateKey(start.dateKey, 1) };
+  }
+
+  return event;
+}
+
+async function getGoogleCalendarAccessToken(config) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      refresh_token: config.refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || "Google token request failed.");
+  }
+
+  return payload.access_token;
+}
+
+async function googleCalendarRequest(config, accessToken, pathName, options = {}) {
+  const url = new URL(`https://www.googleapis.com/calendar/v3${pathName}`);
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const reason = payload?.error?.message || payload?.error_description || response.statusText;
+    throw new Error(reason || "Google Calendar request failed.");
+  }
+
+  return payload;
+}
+
+async function syncLeadGoogleCalendarEvent(leadDoc) {
+  const eventId = cleanText(leadDoc.googleCalendarEventId || "", 240);
+  const eligible = shouldSyncLeadToGoogleCalendar(leadDoc);
+
+  if (!eligible && !eventId) {
+    return { status: "ignored", changed: false };
+  }
+
+  const config = getGoogleCalendarConfig();
+
+  if (!config.configured) {
+    leadDoc.googleCalendarSyncStatus = "not_configured";
+    leadDoc.googleCalendarSyncError = config.reason;
+    return { status: "not_configured", changed: true };
+  }
+
+  const calendarId = encodeURIComponent(config.calendarId);
+  const accessToken = await getGoogleCalendarAccessToken(config);
+
+  if (!eligible) {
+    if (eventId) {
+      await googleCalendarRequest(
+        config,
+        accessToken,
+        `/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`,
+        { method: "DELETE" },
+      ).catch((error) => {
+        if (!/not found/i.test(error?.message || "")) {
+          throw error;
+        }
+      });
+    }
+
+    leadDoc.googleCalendarEventId = "";
+    leadDoc.googleCalendarEventHtmlLink = "";
+    leadDoc.googleCalendarLastSyncedAt = new Date();
+    leadDoc.googleCalendarSyncStatus = "skipped";
+    leadDoc.googleCalendarSyncError = "";
+    return { status: "skipped", changed: true };
+  }
+
+  const event = buildGoogleCalendarEventForLead(leadDoc);
+
+  if (!event) {
+    leadDoc.googleCalendarSyncStatus = "skipped";
+    leadDoc.googleCalendarSyncError = "Lead does not have a usable scheduled date.";
+    return { status: "skipped", changed: true };
+  }
+
+  const savedEvent = eventId
+    ? await googleCalendarRequest(
+        config,
+        accessToken,
+        `/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(event),
+        },
+      )
+    : await googleCalendarRequest(config, accessToken, `/calendars/${calendarId}/events`, {
+        method: "POST",
+        body: JSON.stringify(event),
+      });
+
+  leadDoc.googleCalendarEventId = savedEvent.id || eventId;
+  leadDoc.googleCalendarEventHtmlLink = savedEvent.htmlLink || "";
+  leadDoc.googleCalendarLastSyncedAt = new Date();
+  leadDoc.googleCalendarSyncStatus = eventId ? "updated" : "created";
+  leadDoc.googleCalendarSyncError = "";
+
+  return { status: leadDoc.googleCalendarSyncStatus, changed: true };
+}
+
+export function parseCrmDatetimeInput(
+  value = "",
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(safeValue)) {
+    const parsed = new Date(safeValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const localMatch = safeValue.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+
+  if (localMatch) {
+    return buildAssistantZonedDate(
+      {
+        year: Number(localMatch[1] || 0),
+        month: Number(localMatch[2] || 0),
+        day: Number(localMatch[3] || 0),
+        hour: Number(localMatch[4] || 0),
+        minute: Number(localMatch[5] || 0),
+      },
+      timeZone,
+    );
+  }
+
+  const parsed = new Date(safeValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseLegacyCrmScheduleLabel(
+  value = "",
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const safeValue = cleanText(value || "", 80);
+
+  if (!safeValue) {
+    return null;
+  }
+
+  const match = safeValue.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[4] || 0);
+  const meridiem = String(match[7] || "").toUpperCase();
+
+  if (meridiem === "PM" && hour < 12) {
+    hour += 12;
+  } else if (meridiem === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return buildAssistantZonedDate(
+    {
+      month: Number(match[1] || 0),
+      day: Number(match[2] || 0),
+      year: Number(match[3] || 0),
+      hour,
+      minute: Number(match[5] || 0),
+    },
+    timeZone,
+  );
 }
 
 function formatMoneyLabel(value = 0) {
@@ -471,7 +1398,107 @@ function formatDateTimeLabel(value = "", timeZone = "") {
   return date.toLocaleString("en-US", options);
 }
 
-function buildMetalworksClientDocumentSnapshot(lead = null) {
+function getMetalworksSalesWindowBoundaries(
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const nowParts = getAssistantZonedParts(now, timeZone);
+  const monthStart = buildAssistantZonedDate(
+    { year: nowParts.year, month: nowParts.month, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+  const nextMonthStart = buildAssistantZonedDate(
+    {
+      year: nowParts.month === 12 ? nowParts.year + 1 : nowParts.year,
+      month: nowParts.month === 12 ? 1 : nowParts.month + 1,
+      day: 1,
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
+  const yearStart = buildAssistantZonedDate(
+    { year: nowParts.year, month: 1, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+  const nextYearStart = buildAssistantZonedDate(
+    { year: nowParts.year + 1, month: 1, day: 1, hour: 0, minute: 0 },
+    timeZone,
+  );
+
+  return {
+    monthStart,
+    nextMonthStart,
+    yearStart,
+    nextYearStart,
+  };
+}
+
+function buildMetalworksEffectiveSoldAtExpression() {
+  return {
+    $ifNull: [
+      "$soldAt",
+      {
+        $ifNull: [
+          "$estimateSentAt",
+          {
+            $ifNull: [
+              "$updatedAt",
+              {
+                $ifNull: ["$clientDocumentWorkDate", "$createdAt"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+async function buildMetalworksSalesSummary(MetalworksLead, now = new Date()) {
+  const { monthStart, nextMonthStart, yearStart, nextYearStart } =
+    getMetalworksSalesWindowBoundaries(now);
+  const effectiveSoldAt = buildMetalworksEffectiveSoldAtExpression();
+
+  const [monthSummary, yearSummary] = await Promise.all([
+    MetalworksLead.aggregate([
+      { $match: { status: "won", estimateAmount: { $gt: 0 } } },
+      { $addFields: { effectiveSoldAt } },
+      { $match: { effectiveSoldAt: { $gte: monthStart, $lt: nextMonthStart } } },
+      {
+        $group: {
+          _id: null,
+          soldAmount: { $sum: "$estimateAmount" },
+          soldJobs: { $sum: 1 },
+        },
+      },
+    ]),
+    MetalworksLead.aggregate([
+      { $match: { status: "won", estimateAmount: { $gt: 0 } } },
+      { $addFields: { effectiveSoldAt } },
+      { $match: { effectiveSoldAt: { $gte: yearStart, $lt: nextYearStart } } },
+      {
+        $group: {
+          _id: null,
+          soldAmount: { $sum: "$estimateAmount" },
+          soldJobs: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const month = monthSummary?.[0] || {};
+  const year = yearSummary?.[0] || {};
+
+  return {
+    soldMonthAmount: normalizeMoney(month.soldAmount || 0),
+    soldMonthJobs: Number(month.soldJobs || 0) || 0,
+    soldYearAmount: normalizeMoney(year.soldAmount || 0),
+    soldYearJobs: Number(year.soldJobs || 0) || 0,
+  };
+}
+
+export function buildMetalworksClientDocumentSnapshot(lead = null) {
   const fullName =
     sanitizeAssistantStoredName(cleanText(lead?.fullName || "", 120)) ||
     cleanText(lead?.fullName || "", 120);
@@ -489,7 +1516,12 @@ function buildMetalworksClientDocumentSnapshot(lead = null) {
   const warranty =
     cleanText(lead?.clientDocumentWarranty || "", 2400) || METALWORKS_DEFAULT_CLIENT_WARRANTY;
   const totalAmount = normalizeMoney(lead?.estimateAmount || 0);
+  const depositAmount = normalizeMoney(lead?.invoiceDepositAmount || 0);
+  const balanceDueAmount = Math.max(0, normalizeMoney(totalAmount - depositAmount));
   const total = totalAmount > 0 ? formatMoneyLabel(totalAmount) : "";
+  const deposit = depositAmount > 0 ? formatMoneyLabel(depositAmount) : "";
+  const balanceDue = totalAmount > 0 ? formatMoneyLabel(balanceDueAmount) : "";
+  const soldAt = lead?.soldAt ? new Date(lead.soldAt) : null;
   const location = cleanText(lead?.location || "", 160);
   const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
   const email = normalizeEmail(lead?.email || "");
@@ -506,6 +1538,11 @@ function buildMetalworksClientDocumentSnapshot(lead = null) {
     warranty,
     totalAmount,
     total,
+    depositAmount,
+    deposit,
+    balanceDueAmount,
+    balanceDue,
+    soldAt: soldAt instanceof Date && !Number.isNaN(soldAt.getTime()) ? soldAt.toISOString() : "",
     location,
     phone,
     email,
@@ -640,7 +1677,7 @@ function buildThumbtackOauthCallbackPage({
         </ul>
       </div>
       <p>
-        Need help? Call <a href="tel:+17737984107">773 798 4107</a> or email
+        Need help? Call <a href="tel:+17087316762">708 731 6762</a> or email
         <a href="mailto:${escapeHtmlMarkup(METALWORKS_CONTACT_EMAIL)}">${escapeHtmlMarkup(
           METALWORKS_CONTACT_EMAIL,
         )}</a>.
@@ -650,7 +1687,7 @@ function buildThumbtackOauthCallbackPage({
 </html>`;
 }
 
-function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
+export function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
   const snapshot = buildMetalworksClientDocumentSnapshot(lead);
   const subject = `${snapshot.documentLabel} from Chicago Metal Works & Fencing - ${snapshot.projectLabel}`;
   const textLines = [
@@ -667,7 +1704,17 @@ function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
     snapshot.documentType === "estimate" && snapshot.validUntil
       ? `Valid until: ${snapshot.validUntil}`
       : "",
-    snapshot.total ? `Total: ${snapshot.total}` : "",
+    snapshot.documentType === "invoice" && snapshot.total
+      ? `Total project amount: ${snapshot.total}`
+      : snapshot.total
+        ? `Total: ${snapshot.total}`
+        : "",
+    snapshot.documentType === "invoice" && snapshot.deposit
+      ? `Amount collected: ${snapshot.deposit}`
+      : "",
+    snapshot.documentType === "invoice" && snapshot.balanceDue
+      ? `Balance remaining: ${snapshot.balanceDue}`
+      : "",
     "",
     snapshot.description ? `Work to be performed:\n${snapshot.description}` : "",
     snapshot.warranty ? `Warranty / terms:\n${snapshot.warranty}` : "",
@@ -696,8 +1743,20 @@ function buildMetalworksEstimateEmail(lead = null, replyTo = "") {
               : ""
           }
           ${
-            snapshot.total
-              ? `<p style="margin:0"><strong>Total:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+            snapshot.documentType === "invoice" && snapshot.total
+              ? `<p style="margin:0 0 10px"><strong>Total project amount:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+              : snapshot.total
+                ? `<p style="margin:0"><strong>Total:</strong> ${escapeHtmlMarkup(snapshot.total)}</p>`
+                : ""
+          }
+          ${
+            snapshot.documentType === "invoice" && snapshot.deposit
+              ? `<p style="margin:0 0 10px"><strong>Amount collected:</strong> ${escapeHtmlMarkup(snapshot.deposit)}</p>`
+              : ""
+          }
+          ${
+            snapshot.documentType === "invoice" && snapshot.balanceDue
+              ? `<p style="margin:0"><strong>Balance remaining:</strong> ${escapeHtmlMarkup(snapshot.balanceDue)}</p>`
               : ""
           }
         </div>
@@ -1130,6 +2189,71 @@ function metalworksApnsConfigured() {
   return getMetalworksApnsConfig().configured;
 }
 
+function getMetalworksWebPushConfig() {
+  return {
+    publicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+    privateKey: METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY,
+    subject: METALWORKS_WEB_PUSH_SUBJECT,
+    configured: Boolean(
+      METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY &&
+        METALWORKS_WEB_PUSH_VAPID_PRIVATE_KEY &&
+        METALWORKS_WEB_PUSH_SUBJECT,
+    ),
+  };
+}
+
+function metalworksWebPushConfigured() {
+  return getMetalworksWebPushConfig().configured;
+}
+
+function normalizeWebPushSubscription(input = null) {
+  const subscription = input && typeof input === "object" ? input : null;
+  const endpoint = cleanText(subscription?.endpoint || "", 1200);
+  const auth = cleanText(subscription?.keys?.auth || "", 400);
+  const p256dh = cleanText(subscription?.keys?.p256dh || "", 600);
+
+  if (!endpoint || !auth || !p256dh) {
+    return null;
+  }
+
+  return {
+    endpoint,
+    expirationTime:
+      subscription?.expirationTime === null || subscription?.expirationTime === undefined
+        ? null
+        : Number(subscription.expirationTime) || null,
+    keys: {
+      auth,
+      p256dh,
+    },
+  };
+}
+
+function normalizeMetalworksNotificationPath(
+  value = "",
+  fallback = "/metalworks-crm/operator/",
+) {
+  const safeValue = String(value || "").trim();
+
+  if (
+    !safeValue.startsWith("/metalworks-crm") &&
+    !safeValue.startsWith("/metalworks-chat")
+  ) {
+    return fallback;
+  }
+
+  const normalized = safeValue.endsWith("/") ? safeValue : `${safeValue}/`;
+  return cleanText(normalized, 240) || fallback;
+}
+
+function buildMetalworksNotificationUrl(leadId = "", basePath = "/metalworks-crm/operator/") {
+  const safeLeadId = cleanText(leadId || "", 80);
+  const safeBasePath = normalizeMetalworksNotificationPath(basePath);
+  return safeLeadId
+    ? `${safeBasePath}?lead=${encodeURIComponent(safeLeadId)}`
+    : safeBasePath;
+}
+
 function getMetalworksApnsJwt() {
   const config = getMetalworksApnsConfig();
 
@@ -1199,10 +2323,29 @@ function buildMetalworksPushCopy({
     };
   }
 
+  if (alertType === "assistant_photo_uploaded") {
+    return {
+      title: "New project photos",
+      body: `${fullName} uploaded photos for ${projectType}.`,
+    };
+  }
+
+  if (alertType === "assistant_lead") {
+    const lastMessage =
+      trimPushCopy(lead?.lastUserMessage || "", 78) ||
+      trimPushCopy(lead?.details || "", 78) ||
+      trimPushCopy(projectType || "", 78);
+
+    return {
+      title: "New Agustin 2.0 lead",
+      body: lastMessage ? `${fullName}: ${lastMessage}` : `${fullName} • ${projectType}`,
+    };
+  }
+
   if (alertType === "crm_test") {
     return {
       title: "Agustin 2.0 CRM",
-      body: "Test alert delivered to this iPhone from Chicago Metal Works & Fencing.",
+      body: "Test alert delivered from Chicago Metal Works & Fencing.",
     };
   }
 
@@ -1212,6 +2355,30 @@ function buildMetalworksPushCopy({
       body: callbackLabel
         ? `${fullName} • ${projectType} • ${callbackLabel}`
         : `${fullName} • ${projectType}`,
+    };
+  }
+
+  if (alertType === "website_live_chat") {
+    const lastMessage =
+      trimPushCopy(lead?.lastUserMessage || "", 78) ||
+      trimPushCopy(lead?.details || "", 78) ||
+      trimPushCopy(projectType || "", 78);
+
+    return {
+      title: "New website chat",
+      body: lastMessage ? `${fullName}: ${lastMessage}` : `${fullName} sent a website chat.`,
+    };
+  }
+
+  if (alertType === "lead_followup_reminder") {
+    const actionLabel =
+      trimPushCopy(lead?.nextAction || "", 54) || trimPushCopy(projectType || "", 54);
+
+    return {
+      title: "Lead reminder",
+      body: callbackLabel
+        ? `${fullName} • ${actionLabel} • ${callbackLabel}`
+        : `${fullName} needs a follow-up soon.`,
     };
   }
 
@@ -1345,6 +2512,75 @@ async function sendMetalworksApnsNotification({
   });
 }
 
+async function sendMetalworksWebPushNotification({
+  subscription = null,
+  alertType = "assistant_lead",
+  title = "",
+  body = "",
+  leadId = "",
+  notificationPath = "/metalworks-crm/operator/",
+  targetUrl = "",
+} = {}) {
+  const config = getMetalworksWebPushConfig();
+
+  if (!config.configured) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "Web push credentials are not configured yet.",
+      reason: "",
+      status: 0,
+    };
+  }
+
+  const safeSubscription = normalizeWebPushSubscription(subscription);
+
+  if (!safeSubscription) {
+    return {
+      attempted: false,
+      delivered: false,
+      error: "The web push subscription is missing.",
+      reason: "MissingWebPushSubscription",
+      status: 0,
+    };
+  }
+
+  try {
+    const safeTargetUrl = cleanText(targetUrl || "", 500);
+    webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+    await webpush.sendNotification(
+      safeSubscription,
+      JSON.stringify({
+        title: trimPushCopy(title || "", 60),
+        body: trimPushCopy(body || "", 140),
+        alertType: cleanText(alertType || "", 60),
+        leadId: cleanText(leadId || "", 80),
+        url: safeTargetUrl || buildMetalworksNotificationUrl(leadId, notificationPath),
+      }),
+      {
+        TTL: 90,
+        urgency: "high",
+      },
+    );
+
+    return {
+      attempted: true,
+      delivered: true,
+      error: "",
+      reason: "",
+      status: 201,
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      delivered: false,
+      error: cleanText(error?.body || error?.message || "Web push failed.", 240),
+      reason: cleanText(error?.name || error?.code || "", 120),
+      status: Number(error?.statusCode || 0) || 0,
+    };
+  }
+}
+
 function cleanPushDevice(doc = null) {
   if (!doc) {
     return null;
@@ -1393,6 +2629,51 @@ function labelStatus(status = "") {
   return labels[normalizeStatus(status)] || "Nuevo";
 }
 
+function labelAppointmentType(type = "") {
+  const labels = {
+    job: "Job",
+    estimate_visit: "Estimate Visit",
+    callback: "Callback",
+    followup: "Follow-Up",
+  };
+
+  return labels[normalizeAppointmentType(type)] || "";
+}
+
+function labelAppointmentStatus(status = "") {
+  const labels = {
+    scheduled: "Scheduled",
+    confirmed: "Confirmed",
+    en_route: "En Route",
+    completed: "Completed",
+    rescheduled: "Rescheduled",
+    canceled: "Canceled",
+  };
+
+  return labels[normalizeAppointmentStatus(status)] || "";
+}
+
+function labelAgendaEventType(type = "") {
+  const labels = {
+    personal: "Personal",
+    client: "Client",
+    interview: "Interview",
+    internal: "Internal",
+  };
+
+  return labels[normalizeAgendaEventType(type)] || "Internal";
+}
+
+function labelAgendaEventStatus(status = "") {
+  const labels = {
+    scheduled: "Scheduled",
+    completed: "Completed",
+    canceled: "Canceled",
+  };
+
+  return labels[normalizeAgendaEventStatus(status)] || "Scheduled";
+}
+
 function labelApplicantStatus(status = "") {
   const normalized = normalizeApplicantStatus(status);
   const labels = {
@@ -1414,7 +2695,7 @@ function formatActivityTitle(type = "") {
     lead_created: "Lead creado",
     lead_updated: "Lead actualizado",
     note_added: "Nota agregada",
-    prospector_lead_submitted: "Lead de prospectador",
+    prospector_lead_submitted: "Prospector lead",
     estimate_sent: "Estimate enviado",
     assistant_open: "Assistant abierto",
     assistant_cta_click: "Assistant CTA",
@@ -1423,9 +2704,11 @@ function formatActivityTitle(type = "") {
     assistant_fallback: "Fallback del assistant",
     assistant_booking_requested: "Cita pedida desde assistant",
     assistant_photo_uploaded: "Fotos subidas desde assistant",
-    assistant_whatsapp_followups_scheduled: "Follow-ups de WhatsApp programados",
-    assistant_whatsapp_followup_sent: "Follow-up de WhatsApp enviado",
-    assistant_whatsapp_followup_skipped: "Follow-up de WhatsApp omitido",
+    website_live_chat_message: "Mensaje del chat web",
+    website_live_chat_photo_uploaded: "Fotos subidas desde chat web",
+    website_live_chat_reply: "Respuesta del CRM",
+    text_thread_imported: "Textos importados",
+    lead_followup_reminder_sent: "Reminder enviado",
     job_applicant_created: "Candidato nuevo",
     job_applicant_updated: "Candidato actualizado",
     job_applicant_interview_requested: "Entrevista de candidato",
@@ -1435,6 +2718,318 @@ function formatActivityTitle(type = "") {
   };
 
   return labels[type] || "Actividad";
+}
+
+function buildExternalLeadLockKey(externalSystem = "", externalLeadId = "") {
+  const safeSystem = cleanText(externalSystem || "", 80);
+  const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+
+  if (!safeSystem || !safeExternalLeadId) {
+    return "";
+  }
+
+  return `${safeSystem}:${safeExternalLeadId}`;
+}
+
+export function buildThumbtackExternalEventKey(parsedEvent = {}) {
+  const eventType = cleanText(parsedEvent?.eventType || "", 80);
+  const entityType = cleanText(parsedEvent?.entityType || "", 40);
+  const externalLeadId = cleanText(parsedEvent?.leadCandidate?.externalLeadId || "", 120);
+  const negotiationId =
+    cleanText(parsedEvent?.activity?.meta?.negotiationId || "", 120) || externalLeadId;
+  const messageId = cleanText(parsedEvent?.activity?.meta?.messageId || "", 120);
+  const reviewId = cleanText(parsedEvent?.activity?.meta?.reviewId || "", 120);
+
+  if (entityType === "message" && negotiationId && messageId) {
+    return `thumbtack:${negotiationId}:message:${messageId}`;
+  }
+
+  if (entityType === "review" && reviewId) {
+    return `thumbtack:review:${reviewId}`;
+  }
+
+  if (entityType === "negotiation" && negotiationId && eventType) {
+    return `thumbtack:${negotiationId}:negotiation:${eventType}`;
+  }
+
+  if (externalLeadId && eventType) {
+    return `thumbtack:${externalLeadId}:${eventType}`;
+  }
+
+  return "";
+}
+
+export function mergeLeadTextImportIntoPrivateNotes(
+  existingNotes = "",
+  importedText = "",
+  {
+    sourceLabel = "",
+    importedAt = new Date(),
+    timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+    maxLength = 12000,
+  } = {},
+) {
+  const safeImportedText = cleanMultilineText(importedText || "", 8000);
+
+  if (!safeImportedText) {
+    return cleanMultilineText(existingNotes || "", maxLength);
+  }
+
+  const safeExistingNotes = cleanMultilineText(existingNotes || "", maxLength);
+  const safeSourceLabel = cleanText(sourceLabel || "", 60) || "Text thread";
+  const importedAtLabel =
+    formatDateTimeLabel(importedAt, timeZone) || formatDateTimeLabel(new Date(), timeZone);
+  const importBlock = cleanMultilineText(
+    [`[${safeSourceLabel} import • ${importedAtLabel}]`, safeImportedText].join("\n"),
+    maxLength,
+  );
+
+  return cleanMultilineText(
+    [importBlock, safeExistingNotes].filter(Boolean).join("\n\n"),
+    maxLength,
+  );
+}
+
+export function normalizeLeadReminderOffsets(values = []) {
+  const safeValues = Array.isArray(values) ? values : [values];
+  const unique = [];
+  const seen = new Set();
+
+  safeValues.forEach((value) => {
+    const minutes = Math.round(Number(value || 0));
+
+    if (!METALWORKS_LEAD_REMINDER_MINUTES.has(minutes) || seen.has(minutes)) {
+      return;
+    }
+
+    seen.add(minutes);
+    unique.push(minutes);
+  });
+
+  return unique.sort((left, right) => left - right);
+}
+
+export function formatLeadReminderOffsetLabel(value = 0) {
+  const minutes = Math.round(Number(value || 0));
+  return (
+    METALWORKS_LEAD_REMINDER_OPTIONS.find((option) => option.minutes === minutes)?.label || ""
+  );
+}
+
+function startOfLocalDay(value = new Date()) {
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfLocalWeek(value = new Date()) {
+  const date = startOfLocalDay(value);
+  const dayOfWeek = date.getDay();
+  date.setDate(date.getDate() + (6 - dayOfWeek));
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function formatCalendarDayPartsKey(parts = null) {
+  if (!parts?.year || !parts?.month || !parts?.day) {
+    return "";
+  }
+
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function getMetalworksAgendaBucket(
+  nextActionAt = null,
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return null;
+  }
+
+  if (scheduledAt.getTime() < now.getTime()) {
+    return {
+      key: "overdue",
+      label: "Overdue",
+      order: 0,
+    };
+  }
+
+  const scheduledDayKey = formatAssistantCalendarDayKey(scheduledAt, timeZone);
+  const todayDayKey = formatAssistantCalendarDayKey(now, timeZone);
+  const todayParts = parseAssistantCalendarDayKey(todayDayKey);
+
+  if (!scheduledDayKey || !todayDayKey || !todayParts) {
+    return {
+      key: "upcoming",
+      label: "Later",
+      order: 4,
+    };
+  }
+
+  const todayIndex = new Date(
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day),
+  ).getUTCDay();
+  const tomorrowDayKey = formatCalendarDayPartsKey(addAssistantCalendarDays(todayParts, 1));
+  const weekEndDayKey = formatCalendarDayPartsKey(
+    addAssistantCalendarDays(todayParts, 6 - todayIndex),
+  );
+
+  if (scheduledDayKey === todayDayKey) {
+    return {
+      key: "today",
+      label: "Today",
+      order: 1,
+    };
+  }
+
+  if (scheduledDayKey === tomorrowDayKey) {
+    return {
+      key: "tomorrow",
+      label: "Tomorrow",
+      order: 2,
+    };
+  }
+
+  if (scheduledDayKey <= weekEndDayKey) {
+    return {
+      key: "this_week",
+      label: "This Week",
+      order: 3,
+    };
+  }
+
+  return {
+    key: "upcoming",
+    label: "Later",
+    order: 4,
+  };
+}
+
+function buildDefaultBookedReminderOffsets(nextActionAt = null, now = new Date()) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return [];
+  }
+
+  return METALWORKS_BOOKED_REMINDER_PRIORITY.filter((minutes) => {
+    const reminderAt = scheduledAt.getTime() - minutes * 60 * 1000;
+    return reminderAt > now.getTime() + METALWORKS_LEAD_REMINDER_GRACE_MS;
+  });
+}
+
+function filterUsableLeadReminderOffsets(offsets = [], nextActionAt = null, now = new Date()) {
+  const scheduledAt =
+    nextActionAt instanceof Date ? nextActionAt : nextActionAt ? new Date(nextActionAt) : null;
+
+  if (!(scheduledAt instanceof Date) || Number.isNaN(scheduledAt.getTime())) {
+    return [];
+  }
+
+  return normalizeLeadReminderOffsets(offsets).filter((minutes) => {
+    const reminderAt = scheduledAt.getTime() - minutes * 60 * 1000;
+    return reminderAt > now.getTime() + METALWORKS_LEAD_REMINDER_GRACE_MS;
+  });
+}
+
+function resolveBookedReminderOffsets(offsets = [], nextActionAt = null, now = new Date()) {
+  const usableOffsets = filterUsableLeadReminderOffsets(offsets, nextActionAt, now);
+  return usableOffsets.length ? usableOffsets : buildDefaultBookedReminderOffsets(nextActionAt, now);
+}
+
+function buildLeadReminderSentKey(nextActionAt = null, offsetMinutes = 0) {
+  const schedule =
+    nextActionAt instanceof Date
+      ? nextActionAt
+      : nextActionAt
+        ? new Date(nextActionAt)
+        : null;
+
+  if (!(schedule instanceof Date) || Number.isNaN(schedule.getTime())) {
+    return "";
+  }
+
+  const safeOffset = Math.round(Number(offsetMinutes || 0));
+
+  if (!METALWORKS_LEAD_REMINDER_MINUTES.has(safeOffset)) {
+    return "";
+  }
+
+  return `${schedule.toISOString()}|${safeOffset}`;
+}
+
+function pruneLeadReminderSentKeys(sentKeys = [], nextActionAt = null, reminderOffsets = []) {
+  const safeKeys = Array.isArray(sentKeys) ? sentKeys : [];
+  const allowedOffsets = normalizeLeadReminderOffsets(reminderOffsets);
+
+  if (!allowedOffsets.length) {
+    return [];
+  }
+
+  const allowedKeys = new Set(
+    allowedOffsets
+      .map((offsetMinutes) => buildLeadReminderSentKey(nextActionAt, offsetMinutes))
+      .filter(Boolean),
+  );
+
+  return safeKeys
+    .map((key) => cleanText(key || "", 120))
+    .filter((key) => key && allowedKeys.has(key));
+}
+
+export function collectDueLeadReminderOffsets({
+  nextActionAt = null,
+  reminderOffsets = [],
+  sentKeys = [],
+  now = new Date(),
+  graceMs = METALWORKS_LEAD_REMINDER_GRACE_MS,
+} = {}) {
+  const schedule =
+    nextActionAt instanceof Date
+      ? nextActionAt
+      : nextActionAt
+        ? new Date(nextActionAt)
+        : null;
+  const safeNow = now instanceof Date ? now : new Date(now);
+
+  if (
+    !(schedule instanceof Date) ||
+    Number.isNaN(schedule.getTime()) ||
+    !(safeNow instanceof Date) ||
+    Number.isNaN(safeNow.getTime())
+  ) {
+    return [];
+  }
+
+  const sentKeySet = new Set(
+    (Array.isArray(sentKeys) ? sentKeys : [])
+      .map((key) => cleanText(key || "", 120))
+      .filter(Boolean),
+  );
+
+  return normalizeLeadReminderOffsets(reminderOffsets)
+    .map((offsetMinutes) => {
+      const triggerAtMs = schedule.getTime() - offsetMinutes * 60 * 1000;
+      const diffMs = safeNow.getTime() - triggerAtMs;
+      const key = buildLeadReminderSentKey(schedule, offsetMinutes);
+
+      if (!key || diffMs < 0 || diffMs > graceMs || sentKeySet.has(key)) {
+        return null;
+      }
+
+      return {
+        offsetMinutes,
+        label: formatLeadReminderOffsetLabel(offsetMinutes),
+        key,
+        triggerAt: new Date(triggerAtMs),
+      };
+    })
+    .filter(Boolean);
 }
 
 function detectSpanish(value = "") {
@@ -1486,15 +3081,274 @@ function looksLikeStandaloneApplicantRole(value = "") {
   ].includes(normalized);
 }
 
-function detectEmploymentIntent(value = "") {
+export function detectAssistantProjectLeadIntent(value = "") {
   const normalized = normalizeAssistantSearchText(value || "");
 
   if (!normalized) {
     return false;
   }
 
+  return /\b(project|quote|estimate|repair|replace|replacement|new install|new installation|install|installation|guardrail|guardrails|railing|railings|handrail|handrails|gate|gates|fence|fencing|weld|welding|fabricat|stairs|stair|step|steps|balcony|porch|landing|tread|hinge|latch|dragging|sagging|rust|rusted|crack|cracked|post|posts|awning|opening|opening width|opening height|safety issue|unsafe)\b/.test(
+    normalized,
+  );
+}
+
+function isMissingOperationalName(value = "") {
+  const safe = cleanText(value || "", 120).toLowerCase();
+  return (
+    !safe ||
+    safe === cleanText(METALWORKS_ASSISTANT_PLACEHOLDER_NAME, 120).toLowerCase() ||
+    safe === cleanText(METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME, 120).toLowerCase() ||
+    safe.startsWith(cleanText(METALWORKS_WEBSITE_CHAT_PLACEHOLDER_PREFIX, 120).toLowerCase())
+  );
+}
+
+function deriveLeadPhotoStatus(lead = {}) {
+  return Array.isArray(lead.photoFileNames) && lead.photoFileNames.length ? "has_photos" : "missing_photos";
+}
+
+function deriveLeadEstimateStatus(lead = {}) {
+  if (normalizeStatus(lead?.status || "new") === "won") {
+    return "won";
+  }
+
+  if (normalizeStatus(lead?.status || "new") === "lost") {
+    return "lost";
+  }
+
+  if (Number(lead?.estimateAmount || 0) > 0 || lead?.estimateSentAt) {
+    return "priced";
+  }
+
+  return "not_priced";
+}
+
+function deriveLeadFollowupStatus(lead = {}) {
+  const nextActionAt =
+    lead?.nextActionAt instanceof Date
+      ? lead.nextActionAt
+      : lead?.nextActionAt
+        ? new Date(lead.nextActionAt)
+        : null;
+
+  if (!(nextActionAt instanceof Date) || Number.isNaN(nextActionAt.getTime())) {
+    return "unscheduled";
+  }
+
+  if (nextActionAt.getTime() < Date.now()) {
+    return "overdue";
+  }
+
+  return "scheduled";
+}
+
+function buildAtlasMissingFields(lead = {}) {
+  const missing = [];
+  const projectType = cleanText(lead?.projectType || "", 120);
+  const location = cleanText(
+    lead?.location || lead?.zipCode || lead?.city || lead?.addressLine || "",
+    160,
+  );
+  const details = cleanText(lead?.details || "", 3000);
+  const phone = cleanText(lead?.phoneDisplay || lead?.phone || "", 40);
+  const nextAction = cleanText(lead?.nextAction || "", 160).toLowerCase();
+  const status = normalizeStatus(lead?.status || "new");
+
+  if (isMissingOperationalName(lead?.fullName || "")) {
+    missing.push("name");
+  }
+
+  if (!phone) {
+    missing.push("phone");
+  }
+
+  if (!projectType) {
+    missing.push("project_type");
+  }
+
+  if (!location) {
+    missing.push("location");
+  }
+
+  if (!details) {
+    missing.push("scope_details");
+  }
+
   if (
-    /\b(job|jobs|employment|hiring|hire me|apply|application|position|opening|opening up|vacante|vacantes|empleo|trabajo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|trabajar con ustedes|work for you|work with you|are you hiring)\b/.test(
+    deriveLeadPhotoStatus(lead) === "missing_photos" &&
+    !["won", "lost", "archived"].includes(status) &&
+    !/invoice|paid|payment/.test(nextAction)
+  ) {
+    missing.push("photos");
+  }
+
+  return missing;
+}
+
+function labelAtlasMissingField(field = "") {
+  const labels = {
+    name: "name",
+    phone: "phone",
+    project_type: "project type",
+    location: "location",
+    scope_details: "scope details",
+    photos: "photos",
+  };
+
+  return labels[field] || field;
+}
+
+function labelAtlasStage(stage = "") {
+  const labels = {
+    new_lead: "New lead",
+    needs_intake: "Needs intake",
+    needs_photos: "Needs photos",
+    needs_internal_price: "Needs Agustin price",
+    ready_to_schedule: "Ready to schedule",
+    followup_scheduled: "Follow-up scheduled",
+    quoted: "Quoted",
+    scheduled: "Scheduled",
+    won: "Won",
+    lost: "Lost",
+    archived: "Archived",
+    active: "Active",
+  };
+
+  return labels[stage] || "Active";
+}
+
+function buildAtlasSuggestedActions({ stage = "", missingFields = [] } = {}) {
+  const actions = [];
+
+  if (missingFields.includes("phone")) {
+    actions.push("capture_phone");
+  }
+
+  if (missingFields.includes("project_type")) {
+    actions.push("capture_project_type");
+  }
+
+  if (missingFields.includes("location")) {
+    actions.push("capture_location");
+  }
+
+  if (missingFields.includes("scope_details")) {
+    actions.push("capture_scope_details");
+  }
+
+  if (missingFields.includes("photos")) {
+    actions.push("request_photos");
+  }
+
+  if (stage === "needs_internal_price") {
+    actions.push("request_agustin_price");
+  }
+
+  if (stage === "ready_to_schedule") {
+    actions.push("schedule_visit");
+  }
+
+  if (stage === "followup_scheduled") {
+    actions.push("review_followup_clock");
+  }
+
+  if (stage === "quoted") {
+    actions.push("follow_up_quote");
+  }
+
+  if (!actions.length && stage === "active") {
+    actions.push("review_lead");
+  }
+
+  return Array.from(new Set(actions));
+}
+
+export function deriveAtlasLeadState(lead = {}) {
+  const status = normalizeStatus(lead?.status || "new");
+  const photoStatus = deriveLeadPhotoStatus(lead);
+  const estimateStatus = deriveLeadEstimateStatus(lead);
+  const followupStatus = deriveLeadFollowupStatus(lead);
+  const missingFields = buildAtlasMissingFields(lead);
+  const nextAction = cleanText(lead?.nextAction || "", 160).toLowerCase();
+  const appointmentStatus = normalizeAppointmentStatus(lead?.appointmentStatus || "");
+  let stage = "active";
+
+  if (status === "won") {
+    stage = "won";
+  } else if (status === "lost") {
+    stage = "lost";
+  } else if (status === "archived") {
+    stage = "archived";
+  } else if (status === "booked" || ["scheduled", "confirmed", "en_route"].includes(appointmentStatus)) {
+    stage = "scheduled";
+  } else if (status === "quoted" || estimateStatus === "priced") {
+    stage = "quoted";
+  } else if (/agustin|price|pricing|estimate prep|need price|precio/.test(nextAction)) {
+    stage = "needs_internal_price";
+  } else if (/ready to schedule|schedule visit|ready for visit|listo para agenda|listo para programar/.test(nextAction)) {
+    stage = "ready_to_schedule";
+  } else if (missingFields.includes("phone") || missingFields.includes("project_type") || missingFields.includes("location")) {
+    stage = "needs_intake";
+  } else if (missingFields.includes("photos")) {
+    stage = "needs_photos";
+  } else if (followupStatus === "scheduled" || followupStatus === "overdue") {
+    stage = "followup_scheduled";
+  } else if (status === "new") {
+    stage = "new_lead";
+  }
+
+  const suggestedActions = buildAtlasSuggestedActions({ stage, missingFields });
+  const briefParts = [
+    cleanText(lead?.projectType || "", 80),
+    cleanText(lead?.location || lead?.zipCode || lead?.city || "", 80),
+    cleanText(lead?.nextAction || "", 120),
+  ].filter(Boolean);
+
+  return {
+    stage,
+    stageLabel: labelAtlasStage(stage),
+    missingFields,
+    missingFieldsLabel: missingFields.map(labelAtlasMissingField),
+    photoStatus,
+    estimateStatus,
+    followupStatus,
+    suggestedActions,
+    brief: briefParts.join(" • "),
+  };
+}
+
+export function detectEmploymentCorrection(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    /\b(?:not|is not|isnt|isn't|no)\b[^.!?\n]{0,60}\b(?:hiring|employment|job|jobs|apply|application|position|interview)\b/.test(
+      normalized,
+    ) ||
+    /\b(?:this|it|its|it's)\b[^.!?\n]{0,40}\b(?:project|quote|estimate)\b/.test(normalized) ||
+    /\bfor (?:a|this) project\b/.test(normalized) ||
+    /\bnot (?:looking for|applying for)\b[^.!?\n]{0,30}\b(?:job|employment|position)\b/.test(
+      normalized,
+    )
+  );
+}
+
+export function detectEmploymentIntent(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (detectEmploymentCorrection(normalized)) {
+    return false;
+  }
+
+  if (
+    /\b(employment|hiring|hire me|apply|application|position|job opening|open position|position opening|vacante|vacantes|empleo|contratando|aplicar|solicitud|interview|interview for|phone interview|entrevista|trabajar con ustedes|work for you|work with you|are you hiring|looking for a job|need a job|busco trabajo|quiero trabajo|oportunidad de trabajo)\b/.test(
       normalized,
     )
   ) {
@@ -1536,6 +3390,24 @@ function inferApplicantRole(value = "") {
   }
 
   return "";
+}
+
+function applicantLooksLikeMisclassifiedCustomer(applicant = null) {
+  if (!applicant) {
+    return false;
+  }
+
+  return detectEmploymentCorrection(
+    [
+      applicant?.positionApplied || "",
+      applicant?.detailsSummary || "",
+      applicant?.experienceSummary || "",
+      applicant?.lastUserMessage || "",
+      applicant?.lastAssistantMessage || "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
 }
 
 function inferApplicantRoleTrack(value = "") {
@@ -1679,10 +3551,33 @@ function getApplicantMissingFieldQuestion(field = "", inSpanish = false, roleTra
 function buildAssistantFallbackReply(message = "", conversationState = null) {
   const text = cleanText(message, 500).toLowerCase();
   const inSpanish = detectSpanish(message);
+  const projectTypeText = normalizeAssistantSearchText(conversationState?.projectType || "");
   const callbackIntent = conversationState?.callbackIntent === "yes";
   const callbackMissingFields = Array.isArray(conversationState?.callbackMissingFields)
     ? conversationState.callbackMissingFields
     : [];
+  const leadContactMissingFields = Array.isArray(conversationState?.leadContactMissingFields)
+    ? conversationState.leadContactMissingFields
+    : [];
+  const readyForTextEstimate = conversationState?.readyForTextEstimate === true;
+
+  if (!callbackIntent && leadContactMissingFields.length) {
+    if (leadContactMissingFields.includes("name") && leadContactMissingFields.includes("best phone number")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto y cual es el mejor numero para textearte por si se corta el chat?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with, and what is the best phone number to text you back in case the chat disconnects?";
+    }
+
+    if (leadContactMissingFields.includes("name")) {
+      return inSpanish
+        ? "Claro. Antes de seguir, ¿con quien tengo el gusto?"
+        : "Absolutely. Before we keep going, who do I have the pleasure of speaking with?";
+    }
+
+    return inSpanish
+      ? "Perfecto. ¿Cual es el mejor numero para textearte por si se corta el chat?"
+      : "Perfect. What is the best phone number to text you back in case the chat disconnects?";
+  }
 
   if (callbackIntent) {
     if (callbackMissingFields.length) {
@@ -1701,20 +3596,59 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
       : `Perfect. I have your request for ${callbackLabel}. If you can, send photos and your ZIP code so we can prep the follow-up faster.`;
   }
 
+  if (readyForTextEstimate) {
+    return inSpanish
+      ? "Perfecto, ya tengo suficiente para pasarlo al equipo. Te vamos a textear a este numero con un estimado basado en esta informacion, o te pediremos un detalle mas si hace falta."
+      : "Perfect, I have enough to pass this to the team. We will text you back at this number with an estimate based on this information, or we will ask for one more detail if needed.";
+  }
+
+  if (
+    (
+      /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) ||
+      /front steps repair/.test(projectTypeText)
+    ) &&
+    /\b(rust|rusted|underneath|crack|cracked|railing|railings|unsafe)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, trabajamos escalones frontales cuando el metal de abajo esta oxidado, la superficie esta cuarteada o el barandal tambien forma parte del problema. Manda una foto amplia, una foto cerrada del daño, tu ZIP code y el mejor numero para textearte con un estimado."
+      : "Yes, we handle front steps when the metal underneath is rusted, the stair surface is cracked, or the front railing is part of the problem. Send one wide photo, one close shot of the damage, your ZIP code, and the best number to text you back with a first estimate.";
+  }
+
+  if (
+    (/\b(gate|side gate|porton|portón)\b/.test(text) || /\bgate\b/.test(projectTypeText)) &&
+    /\b(not closing|wont close|won't close|latch|inside portion|outside|dragging|sagging)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, ayudamos cuando el porton no esta cerrando bien, necesita latch, arrastra o se ve caido. Manda una foto completa, una del lado de la bisagra, otra del latch, tu ZIP code y el mejor numero para textearte."
+      : "Yes, we help when a gate is not closing right, needs a latch, drags, or has started sagging. Send a full photo, one of the hinge side, one of the latch area, your ZIP code, and the best number to text you back.";
+  }
+
+  if (
+    (
+      /\b(post|posts|porch|concrete|base plate|mounting)\b/.test(text) ||
+      /metal porch repair/.test(projectTypeText)
+    ) &&
+    /\b(replaced|replace|secured|repair|rust|rusted|fractured)\b/.test(text)
+  ) {
+    return inSpanish
+      ? "Si, tambien revisamos postes de porch, anclajes a concreto y barandales que tal vez se reparan en sitio o se reemplazan por secciones. Si mandas fotos y tu ZIP code, te digo el siguiente paso mas rapido."
+      : "Yes, we also look at porch posts, base plates, concrete anchoring, and railings that may need repair in place or section replacement. If you send photos and your ZIP code, I can point you to the fastest next step.";
+  }
+
   if (
     /unsafe|danger|falling|broken loose|asap|today|urgent|emergency|unsafe stair|unsafe railing/i.test(
       text,
     )
   ) {
     return inSpanish
-      ? "Si la pieza esta floja, peligrosa o urgente, llama ahora al 773 798 4107. Si puedes, manda fotos y tu ZIP code para decirte mas rapido si parece reparacion o reemplazo."
-      : "If the metalwork is loose, unsafe, or urgent, call 773 798 4107 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
+      ? "Si la pieza esta floja, peligrosa o urgente, llama ahora al 708 731 6762. Si puedes, manda fotos y tu ZIP code para decirte mas rapido si parece reparacion o reemplazo."
+      : "If the metalwork is loose, unsafe, or urgent, call 708 731 6762 now. If you can also send photos and your ZIP code, we can tell you faster whether it looks like a repair or a replacement.";
   }
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza|estimate/i.test(text)) {
     return inSpanish
-      ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 773 798 4107."
-      : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 773 798 4107.";
+      ? "La forma mas rapida de cotizar es subir fotos aqui en el chat, mandar medidas aproximadas, tu ZIP code y decir si es reparacion o trabajo nuevo. Si quieres moverlo mas rapido, usa el formulario o llama al 708 731 6762."
+      : "The fastest way to get pricing is to upload photos here in the chat, send rough measurements, your ZIP code, and whether you need a repair or a new build. If you want to move faster, use the quote form or call 708 731 6762.";
   }
 
   if (/gate|gates|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
@@ -1750,6 +3684,14 @@ function buildAssistantFallbackReply(message = "", conversationState = null) {
   return inSpanish
     ? "Puedo ayudar con portones, barandales, cercas, soldadura y fabricacion metalica. Dime que necesita reparacion o que quieres construir, agrega tu ZIP code, y si tienes fotos subelas aqui en el chat para moverlo mas rapido."
     : "I can help with gates, railings, fence work, welding, and custom metal fabrication. Tell me what needs repair or what you want built, include your ZIP code, and if you have photos, upload them here in the chat so we can move faster.";
+}
+
+function buildAssistantHiringDisabledReply(message = "") {
+  const inSpanish = detectSpanish(message);
+
+  return inSpanish
+    ? "Este asistente del website solo ayuda con clientes, cotizaciones y trabajos de metal. Si necesitas ayuda con un proyecto, mandame una breve descripcion, tu ZIP code y fotos del trabajo."
+    : "This website assistant only helps with customer projects, quotes, and metalwork jobs. If you need help with a project, send a short description, your ZIP code, and photos of the work.";
 }
 
 function buildEmploymentFallbackReply(message = "", conversationState = null) {
@@ -1800,10 +3742,23 @@ function buildAssistantContext(message = "", pagePath = "") {
 METAL WORKS WEBSITE CONTEXT:
 - Business: Chicago Metal Works & Fencing
 - Service area: Chicago, Blue Island, and nearby suburbs
-- Main CTA phone: 773 798 4107
-- Best quote path: photos, rough measurements, ZIP code, and whether the job is repair or new build
+- Main CTA phone: 708 731 6762
+- Best quote path: name, best phone number to text back, photos, rough measurements, ZIP code, and whether the job is repair or new build
 - Public website page: ${cleanText(pagePath || "", 120) || "/"}
 `);
+
+  if (
+    /front-steps-repair/.test(pagePath || "") ||
+    (/\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(text) &&
+      /\b(rust|rusted|crack|cracked|railing|railings)\b/.test(text))
+  ) {
+    contextParts.push(`
+FRONT STEPS CONTEXT:
+- Common customer wording: "underneath the metal is rusted", "the stairs on top of the metal are cracked", "front railings painted too".
+- Treat this as a high-intent front-step repair lead.
+- Ask for one wide photo, one close photo of the rust or crack, ZIP code, and whether the entry feels unsafe.
+`);
+  }
 
   if (/price|pricing|quote|estimate|cost|how much|precio|cotiza/i.test(text)) {
     contextParts.push(`
@@ -1814,11 +3769,20 @@ QUOTE RULE:
 `);
   }
 
-  if (/gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
+  if (/gate-repair/.test(pagePath || "") || /gate|hinge|latch|dragging|sagging|porton|portón/i.test(text)) {
     contextParts.push(`
 GATE CONTEXT:
 - Common issues: dragging gates, latch issues, hinge issues, frame repairs, rewelds, replacement sections.
+- Common customer wording: "it's not always closing", "latch added to the side gate", "latch on the outside", "prefer one on the inside".
 - Move toward photo + repair vs replace + ZIP code.
+`);
+  }
+
+  if (/post|posts|base plate|mounting|secured to concrete|concrete/i.test(text)) {
+    contextParts.push(`
+PORCH STRUCTURE CONTEXT:
+- Common customer wording: "posts replaced and secured to the concrete", "fractured at the mounting positions", "removed or repaired in place".
+- Explain the next step in practical terms and move toward photos + ZIP code.
 `);
   }
 
@@ -1915,6 +3879,140 @@ function buildAssistantHistoryDigest(history = []) {
     .map((item) => `${item.role === "assistant" ? "Agustin" : "Visitor"}: ${item.content}`)
     .join("\n")
     .slice(0, 1800);
+}
+
+function normalizeAssistantSummaryHistory(history = []) {
+  return (Array.isArray(history) ? history : [])
+    .map((item) => ({
+      role: item?.role === "assistant" ? "assistant" : "user",
+      content: cleanText(item?.content || "", 320),
+    }))
+    .filter((item) => item.content)
+    .slice(-24);
+}
+
+function dedupeAssistantSummaryHistory(history = []) {
+  const deduped = [];
+  const seen = new Set();
+
+  normalizeAssistantSummaryHistory(history).forEach((item) => {
+    const key = `${item.role}:${normalizeAssistantSearchText(item.content)}`;
+
+    if (!key || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    deduped.push(item);
+  });
+
+  return deduped;
+}
+
+function isLowSignalAssistantConversationMessage(value = "") {
+  const normalized = normalizeAssistantSearchText(value);
+
+  if (!normalized) {
+    return true;
+  }
+
+  return [
+    "hi",
+    "hello",
+    "hola",
+    "ho",
+    "hey",
+    "ok",
+    "okay",
+    "si",
+    "sí",
+    "yes",
+    "sr",
+    "senor",
+    "señor",
+    "perfecto",
+    "gracias",
+    "thanks",
+    "thank you",
+  ].includes(normalized);
+}
+
+function extractAssistantRequestSummary(value = "") {
+  const safeValue = cleanText(value || "", 500);
+
+  if (!safeValue) {
+    return "";
+  }
+
+  const requestMatch = safeValue.match(
+    /Request:\s*(.+?)(?:(?:\.\s*)(?:Best callback window|Visitor asked for a call or appointment|Best requested time)|$)/i,
+  );
+
+  if (requestMatch?.[1]) {
+    return cleanText(requestMatch[1], 220);
+  }
+
+  const summaryMatch = safeValue.match(/Summary:\s*(.+)$/i);
+
+  if (summaryMatch?.[1]) {
+    return cleanText(summaryMatch[1], 220);
+  }
+
+  return cleanText(safeValue, 220);
+}
+
+function buildAssistantConversationSummary({
+  history = [],
+  detailsSummary = "",
+  lastUserMessage = "",
+  lastAssistantMessage = "",
+} = {}) {
+  const dedupedHistory = dedupeAssistantSummaryHistory(history);
+  const userMessages = dedupedHistory
+    .filter((item) => item.role === "user")
+    .map((item) => cleanText(item.content || "", 220))
+    .filter(Boolean);
+  const meaningfulUserMessages = userMessages.filter(
+    (item) => !isLowSignalAssistantConversationMessage(item) && item.split(/\s+/).length >= 4,
+  );
+  const requestSummary = extractAssistantRequestSummary(detailsSummary) || meaningfulUserMessages[0] || "";
+  const latestVisitorMessage =
+    cleanText(lastUserMessage || "", 220) || meaningfulUserMessages[meaningfulUserMessages.length - 1] || "";
+  const latestAssistantStep =
+    cleanText(lastAssistantMessage || "", 260) ||
+    dedupedHistory
+      .filter((item) => item.role === "assistant")
+      .map((item) => item.content)
+      .filter(Boolean)
+      .slice(-1)[0] ||
+    "";
+  const seenMessages = new Set(
+    [requestSummary, latestVisitorMessage]
+      .map((item) => normalizeAssistantSearchText(item))
+      .filter(Boolean),
+  );
+  const keyPoints = [];
+
+  meaningfulUserMessages.forEach((item) => {
+    const normalized = normalizeAssistantSearchText(item);
+
+    if (!normalized || seenMessages.has(normalized)) {
+      return;
+    }
+
+    seenMessages.add(normalized);
+    keyPoints.push(item);
+  });
+
+  return [
+    requestSummary ? `Visitor goal: ${requestSummary}` : "",
+    keyPoints.length ? `Key points: ${keyPoints.slice(0, 2).join(" / ")}` : "",
+    latestVisitorMessage ? `Latest visitor message: ${latestVisitorMessage}` : "",
+    latestAssistantStep ? `Latest assistant step: ${latestAssistantStep}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 1400);
 }
 
 function normalizeAssistantSearchText(value = "") {
@@ -2048,11 +4146,29 @@ function inferAssistantProjectTypeFromText(text = "") {
     return "";
   }
 
-  if (/\b(porch|landing|rust|repaint|primer|top coat|paint failure)\b/.test(normalized)) {
+  if (
+    /\b(front step|front steps|steps|step|stairs|stair|landing|tread)\b/.test(normalized) &&
+    /\b(rust|rusted|crack|cracked|railing|railings|repair|replace|replacement|unsafe)\b/.test(
+      normalized,
+    )
+  ) {
+    return "Front steps repair / restoration";
+  }
+
+  if (
+    /\b(porch|porch post|porch posts|post|posts|landing)\b/.test(normalized) &&
+    /\b(rust|rusted|repaint|paint|primer|top coat|secured to concrete|concrete|base plate|mounting)\b/.test(
+      normalized,
+    )
+  ) {
     return "Metal porch repair / restoration";
   }
 
-  if (/\b(gate|hinge|latch|dragging|sagging|porton)\b/.test(normalized)) {
+  if (
+    /\b(gate|side gate|hinge|latch|dragging|sagging|porton|not closing|wont close|won't close)\b/.test(
+      normalized,
+    )
+  ) {
     return "Gate fabrication / gate repair";
   }
 
@@ -2079,6 +4195,40 @@ function inferAssistantProjectTypeFromText(text = "") {
   return "";
 }
 
+function inferAssistantProjectTypeFromPagePath(pagePath = "") {
+  const normalized = normalizeAssistantSearchText(pagePath || "");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.includes("front steps repair")) {
+    return "Front steps repair / restoration";
+  }
+
+  if (normalized.includes("metal porch repair")) {
+    return "Metal porch repair / restoration";
+  }
+
+  if (normalized.includes("gate repair")) {
+    return "Gate fabrication / gate repair";
+  }
+
+  if (normalized.includes("fence repair")) {
+    return "Fence fabrication / fence repair";
+  }
+
+  if (
+    normalized.includes("custom railings") ||
+    normalized.includes("handrails") ||
+    normalized.includes("railing rust repair")
+  ) {
+    return "Custom railings / handrails";
+  }
+
+  return "";
+}
+
 function extractAssistantLocation(text = "") {
   const safeText = String(text || "");
   const zipCode = extractAssistantZipCode(safeText);
@@ -2099,6 +4249,11 @@ function extractAssistantLocation(text = "") {
     "Alsip",
     "Crestwood",
     "Tinley Park",
+    "Bucktown",
+    "West Town",
+    "Wicker Park",
+    "Beverly",
+    "Morgan Park",
   ];
   const normalized = normalizeAssistantSearchText(safeText);
 
@@ -2334,6 +4489,183 @@ function parseAssistantCalendarDayKey(value = "") {
   return { year, month, day };
 }
 
+function getNextImportantDateOccurrence(
+  monthDay = "",
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const match = cleanText(monthDay || "", 12).match(/^(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const month = Number(match[1] || 0);
+  const day = Number(match[2] || 0);
+  const todayKey = formatAssistantCalendarDayKey(now, timeZone);
+  const todayParts = parseAssistantCalendarDayKey(todayKey);
+
+  if (!month || !day || !todayParts?.year) {
+    return null;
+  }
+
+  let occurrence = buildAssistantZonedDate(
+    {
+      year: todayParts.year,
+      month,
+      day,
+      hour: 12,
+      minute: 0,
+    },
+    timeZone,
+  );
+
+  if (!occurrence || formatAssistantCalendarDayKey(occurrence, timeZone) < todayKey) {
+    occurrence = buildAssistantZonedDate(
+      {
+        year: todayParts.year + 1,
+        month,
+        day,
+        hour: 12,
+        minute: 0,
+      },
+      timeZone,
+    );
+  }
+
+  return occurrence;
+}
+
+function buildMetalworksImportantDates(now = new Date()) {
+  return METALWORKS_IMPORTANT_DATES.map((item) => {
+    const nextOccurrence = getNextImportantDateOccurrence(item.monthDay, now);
+    const dateKey = nextOccurrence
+      ? formatAssistantCalendarDayKey(nextOccurrence, METALWORKS_CALLBACK_TIME_ZONE)
+      : "";
+
+    return {
+      id: item.id,
+      title: item.title,
+      owner: item.owner,
+      impact: item.impact,
+      notes: item.notes,
+      recurring: Boolean(item.recurring),
+      monthDay: item.monthDay,
+      date: dateKey,
+      nextOccurrenceAt: nextOccurrence ? nextOccurrence.toISOString() : null,
+      schedulingRule: "Awareness only. Jobs can still be scheduled with employee coverage or confirmation.",
+    };
+  }).filter((item) => item.date);
+}
+
+function findImportantDatesForLead(lead = {}, importantDates = []) {
+  if (!lead?.nextActionAt || !Array.isArray(importantDates) || !importantDates.length) {
+    return [];
+  }
+
+  const leadDateKey = formatAssistantCalendarDayKey(
+    lead.nextActionAt,
+    METALWORKS_CALLBACK_TIME_ZONE,
+  );
+
+  if (!leadDateKey) {
+    return [];
+  }
+
+  return importantDates.filter((item) => item.date === leadDateKey);
+}
+
+function buildImportantDateAgendaEvents(importantDates = [], now = new Date()) {
+  return (Array.isArray(importantDates) ? importantDates : [])
+    .map((item) => {
+      const nextActionAt = item?.nextOccurrenceAt ? new Date(item.nextOccurrenceAt) : null;
+
+      if (!(nextActionAt instanceof Date) || Number.isNaN(nextActionAt.getTime())) {
+        return null;
+      }
+
+      const bucket = getMetalworksAgendaBucket(nextActionAt, now);
+
+      if (!bucket) {
+        return null;
+      }
+
+      return {
+        id: `important-date-${item.id || item.date || item.monthDay}`,
+        type: "important_date",
+        isImportantDate: true,
+        title: item.title || "Important date",
+        fullName: item.title || "Important date",
+        owner: item.owner || "Team",
+        projectType: "Personal availability",
+        location: item.owner ? `${item.owner} awareness note` : "Team awareness note",
+        details: item.notes || item.impact || "Awareness only. Jobs can still be scheduled.",
+        status: "important_date",
+        statusLabel: "Important date",
+        nextAction: "Awareness note - not a lead",
+        nextActionAt: nextActionAt.toISOString(),
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+        importantDate: item,
+        schedulingRule: item.schedulingRule || "Awareness only. Jobs can still be scheduled.",
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+}
+
+function buildStoredAgendaEvents(agendaEvents = [], now = new Date()) {
+  return (Array.isArray(agendaEvents) ? agendaEvents : [])
+    .map((item) => {
+      const startsAt = item?.startsAt ? new Date(item.startsAt) : null;
+
+      if (!(startsAt instanceof Date) || Number.isNaN(startsAt.getTime())) {
+        return null;
+      }
+
+      if (normalizeAgendaEventStatus(item.status || "scheduled") === "canceled") {
+        return null;
+      }
+
+      const bucket = getMetalworksAgendaBucket(startsAt, now);
+
+      if (!bucket) {
+        return null;
+      }
+
+      const eventType = normalizeAgendaEventType(item.eventType || "internal");
+      const owner = cleanText(item.owner || "", 80);
+
+      return {
+        ...item,
+        id: `agenda-event-${item.id || item._id || item.startsAt}`,
+        sourceAgendaEventId: item.id || "",
+        type: "agenda_event",
+        isAgendaEvent: true,
+        isImportantDate: false,
+        fullName: item.title || "Agenda event",
+        owner,
+        projectType: labelAgendaEventType(eventType),
+        location: owner ? `${owner} agenda` : "Internal agenda",
+        details: item.notes || "Internal agenda item.",
+        status: "agenda_event",
+        statusLabel: labelAgendaEventType(eventType),
+        nextAction: "Agenda event - not a lead",
+        nextActionAt: startsAt.toISOString(),
+        appointmentEndAt: item.endsAt || "",
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+        schedulingRule: "Internal agenda event. It is not a lead unless explicitly linked later.",
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+}
+
 function resolveAssistantTimeParts(label = "") {
   const normalized = normalizeAssistantSearchText(label || "");
 
@@ -2503,6 +4835,216 @@ function buildAssistantNextActionAt(
     },
     timeZone,
   );
+}
+
+function resolveAgendaEventDateTimeFromText(
+  value = "",
+  now = new Date(),
+  timeZone = METALWORKS_CALLBACK_TIME_ZONE,
+) {
+  const raw = cleanText(value || "", 600);
+  const normalized = normalizeAssistantSearchText(raw);
+  const timeParts = resolveAssistantTimeParts(normalized) || { hour: 9, minute: 0 };
+  const isoDateMatch = normalized.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+
+  if (isoDateMatch) {
+    return buildAssistantZonedDate(
+      {
+        year: Number(isoDateMatch[1] || 0),
+        month: Number(isoDateMatch[2] || 0),
+        day: Number(isoDateMatch[3] || 0),
+        hour: timeParts.hour,
+        minute: timeParts.minute,
+      },
+      timeZone,
+    );
+  }
+
+  const numericDateMatch = normalized.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](20\d{2}))?\b/);
+
+  if (numericDateMatch) {
+    const nowParts = getAssistantZonedParts(now, timeZone);
+    const firstNumber = Number(numericDateMatch[1] || 0);
+    const secondNumber = Number(numericDateMatch[2] || 0);
+    const month = firstNumber > 12 ? secondNumber : firstNumber;
+    const day = firstNumber > 12 ? firstNumber : secondNumber;
+    let year = Number(numericDateMatch[3] || nowParts.year || 0);
+    let candidate = buildAssistantZonedDate(
+      { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+      timeZone,
+    );
+
+    if (
+      candidate &&
+      !numericDateMatch[3] &&
+      formatAssistantCalendarDayKey(candidate, timeZone) < formatAssistantCalendarDayKey(now, timeZone)
+    ) {
+      year += 1;
+      candidate = buildAssistantZonedDate(
+        { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+        timeZone,
+      );
+    }
+
+    return candidate;
+  }
+
+  const monthMap = {
+    january: 1,
+    enero: 1,
+    february: 2,
+    febrero: 2,
+    march: 3,
+    marzo: 3,
+    april: 4,
+    abril: 4,
+    may: 5,
+    mayo: 5,
+    june: 6,
+    junio: 6,
+    july: 7,
+    julio: 7,
+    august: 8,
+    agosto: 8,
+    september: 9,
+    septiembre: 9,
+    sept: 9,
+    october: 10,
+    octubre: 10,
+    november: 11,
+    noviembre: 11,
+    december: 12,
+    diciembre: 12,
+  };
+  const monthLabels = Object.keys(monthMap).join("|");
+  const monthDayMatch =
+    normalized.match(new RegExp(`\\b(\\d{1,2})\\s*(?:de\\s*)?(${monthLabels})(?:\\s*(?:de\\s*)?(20\\d{2}))?\\b`)) ||
+    normalized.match(new RegExp(`\\b(${monthLabels})\\s*(\\d{1,2})(?:,?\\s*(20\\d{2}))?\\b`));
+
+  if (monthDayMatch) {
+    const first = monthDayMatch[1] || "";
+    const second = monthDayMatch[2] || "";
+    const day = /^\d+$/.test(first) ? Number(first) : Number(second);
+    const month = monthMap[/^\d+$/.test(first) ? second : first] || 0;
+    const nowParts = getAssistantZonedParts(now, timeZone);
+    let year = Number(monthDayMatch[3] || nowParts.year || 0);
+    let candidate = buildAssistantZonedDate(
+      { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+      timeZone,
+    );
+
+    if (
+      candidate &&
+      !monthDayMatch[3] &&
+      formatAssistantCalendarDayKey(candidate, timeZone) < formatAssistantCalendarDayKey(now, timeZone)
+    ) {
+      year += 1;
+      candidate = buildAssistantZonedDate(
+        { year, month, day, hour: timeParts.hour, minute: timeParts.minute },
+        timeZone,
+      );
+    }
+
+    return candidate;
+  }
+
+  const dayParts = resolveAssistantDayParts(normalized, timeParts, now, timeZone);
+
+  if (!dayParts) {
+    return null;
+  }
+
+  return buildAssistantZonedDate(
+    {
+      year: dayParts.year,
+      month: dayParts.month,
+      day: dayParts.day,
+      hour: timeParts.hour,
+      minute: timeParts.minute,
+    },
+    timeZone,
+  );
+}
+
+function inferAgendaEventTypeFromText(value = "") {
+  const normalized = normalizeAssistantSearchText(value || "");
+
+  if (/\b(cliente|client|customer|estimate|estimado|quote|trabajo|job|visita)\b/.test(normalized)) {
+    return "client";
+  }
+
+  if (/\b(entrevista|interview|applicant|candidato|empleado|worker|trabajador)\b/.test(normalized)) {
+    return "interview";
+  }
+
+  if (/\b(cumple|cumpleanos|birthday|doctor|medico|familia|family|personal|escuela|school)\b/.test(normalized)) {
+    return "personal";
+  }
+
+  return "internal";
+}
+
+function inferAgendaEventTitleFromText(value = "", eventType = "internal") {
+  const raw = cleanText(value || "", 300);
+  const withoutPrefix = raw
+    .replace(/^\s*(atlas[,:\s]+)?/i, "")
+    .replace(/\b(agendame|agenda|programa|pon|crea|anota|recuerdame|recordame|schedule|add|create|set)\b/gi, "")
+    .replace(/\b(en la agenda|a la agenda|para la agenda|un evento|una tarjeta|recordatorio|reminder)\b/gi, "")
+    .replace(/\b(el|la|para|por|este|esta)\b\s*(\d{1,2}[\/-]\d{1,2}(?:[\/-]20\d{2})?|20\d{2}-\d{2}-\d{2})\b/gi, "")
+    .replace(/\b(a las?|at)\s+\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (withoutPrefix && withoutPrefix.length >= 3) {
+    return cleanText(withoutPrefix, 120);
+  }
+
+  if (eventType === "client") {
+    return "Client appointment";
+  }
+
+  if (eventType === "interview") {
+    return "Interview";
+  }
+
+  if (eventType === "personal") {
+    return "Personal event";
+  }
+
+  return "Internal agenda event";
+}
+
+function detectAgendaEventCreateRequest(message = "") {
+  const normalized = normalizeAssistantSearchText(message || "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const asksToCreate = /\b(agend|agenda|programa|pon|crea|anota|recuerd|schedule|add|create|set)\b/.test(normalized);
+  const looksLikeAgendaEvent = /\b(cumple|cumpleanos|birthday|entrevista|interview|cita|appointment|evento|event|recordatorio|reminder|doctor|medico|personal|cliente|client)\b/.test(normalized);
+
+  if (!asksToCreate || !looksLikeAgendaEvent) {
+    return null;
+  }
+
+  const startsAt = resolveAgendaEventDateTimeFromText(message);
+
+  if (!startsAt) {
+    return {
+      missingDate: true,
+    };
+  }
+
+  const eventType = inferAgendaEventTypeFromText(message);
+
+  return {
+    title: inferAgendaEventTitleFromText(message, eventType),
+    eventType,
+    startsAt,
+    notes: cleanText(message || "", 600),
+    source: "atlas_chat",
+  };
 }
 
 function formatAssistantCallbackLabel({
@@ -2907,8 +5449,8 @@ function buildAssistantConversationSignals({
   const bestContactDayForResolution =
     latestBestContactDay || !storedCalendarDayKey ? bestContactDay : storedCalendarDayKey;
 
-  if (!projectType && /metal-porch-repair|porch/i.test(pagePath || "")) {
-    projectType = "Metal porch repair / restoration";
+  if (!projectType) {
+    projectType = inferAssistantProjectTypeFromPagePath(pagePath || "");
   }
 
   const nextActionAt =
@@ -2957,6 +5499,26 @@ function buildAssistantConversationSignals({
     .trim()
     .slice(0, 1500);
   const inSpanish = detectSpanish(combinedUserText || latestUserMessage);
+  const strongProjectIntent =
+    detectAssistantProjectLeadIntent(combinedUserText) ||
+    detectAssistantProjectLeadIntent(serviceSummarySource) ||
+    detectAssistantProjectLeadIntent(projectType) ||
+    detectAssistantProjectLeadIntent(location);
+  const leadContactMissingFields = [
+    !name ? "name" : "",
+    !phone ? "best phone number" : "",
+  ].filter(Boolean);
+  const leadProjectMissingFields = [
+    !projectType && !strongProjectIntent ? "what needs to be repaired or built" : "",
+    !location ? "ZIP code" : "",
+    photoFileCount > 0 ? "" : "photos",
+  ].filter(Boolean);
+  const readyForTextEstimate = Boolean(
+    name &&
+      phone &&
+      (projectType || strongProjectIntent) &&
+      (location || photoFileCount > 0),
+  );
 
   return {
     items,
@@ -2970,6 +5532,9 @@ function buildAssistantConversationSignals({
     phoneDisplay,
     projectType,
     location,
+    leadContactMissingFields,
+    leadProjectMissingFields,
+    readyForTextEstimate,
     bestContactDay: normalizedBestContactDay,
     bestContactTime,
     callbackIntent: callbackIntent === "no" ? "no" : callbackIntent === "yes" ? "yes" : "",
@@ -2978,8 +5543,17 @@ function buildAssistantConversationSignals({
     callbackLabel,
     detailsSummary,
     photoFileCount,
-    shouldCreateLead: Boolean(lead?._id || phone || email || callbackIntent === "yes"),
-    shouldAlert: (callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email),
+    shouldCreateLead: Boolean(
+      lead?._id ||
+        phone ||
+        email ||
+        callbackIntent === "yes" ||
+        photoFileCount > 0 ||
+        strongProjectIntent,
+    ),
+    shouldAlert:
+      ((callbackIntent === "yes" || lead?.callbackIntent === "yes") && Boolean(phone || email)) ||
+      readyForTextEstimate,
     conversationDigest: buildAssistantHistoryDigest(items),
   };
 }
@@ -2987,11 +5561,19 @@ function buildAssistantConversationSignals({
 function buildAssistantStatePrompt(state = {}) {
   const callbackIntent = state?.callbackIntent === "yes" ? "yes" : state?.callbackIntent === "no" ? "no" : "unknown";
   const missingFields = Array.isArray(state?.callbackMissingFields) ? state.callbackMissingFields.join(", ") : "";
+  const missingContactFields = Array.isArray(state?.leadContactMissingFields)
+    ? state.leadContactMissingFields.join(", ")
+    : "";
+  const missingProjectFields = Array.isArray(state?.leadProjectMissingFields)
+    ? state.leadProjectMissingFields.join(", ")
+    : "";
   const callbackLabel = cleanText(state?.callbackLabel || "", 120) || "pending";
   const responseChannel = cleanText(state?.sourceChannel || "web", 40) || "web";
+  const readyForTextEstimate = state?.readyForTextEstimate === true ? "yes" : "no";
+  const visionImageCount = Number(state?.visionImageCount || 0) || 0;
 
   return `
-CALL CAPTURE STATE:
+TEXT QUOTE CAPTURE STATE:
 - response_channel: ${responseChannel}
 - callback_intent: ${callbackIntent}
 - visitor_name: ${state?.name || "pending"}
@@ -3000,6 +5582,10 @@ CALL CAPTURE STATE:
 - project_type: ${state?.projectType || "pending"}
 - location: ${state?.location || "pending"}
 - uploaded_photos: ${Number(state?.photoFileCount || 0) || 0}
+- vision_images_attached: ${visionImageCount}
+- ready_for_text_estimate: ${readyForTextEstimate}
+- missing_contact_fields: ${missingContactFields || "none"}
+- missing_project_fields: ${missingProjectFields || "none"}
 - best_day: ${state?.bestContactDay || "pending"}
 - best_time: ${state?.bestContactTime || "pending"}
 - callback_window: ${callbackLabel}
@@ -3007,10 +5593,16 @@ CALL CAPTURE STATE:
 
 INSTRUCTIONS:
 - If response_channel is whatsapp, keep replies extra short and text-message friendly.
+- If callback_intent is not yes and there are missing_contact_fields, ask only for the missing contact fields first in one short message. Explain it is so the team can text back if the chat disconnects.
+- After contact is captured, keep moving toward photos, ZIP code, and the job details needed for a text-back estimate.
+- If ready_for_text_estimate is yes and callback_intent is not yes, stop qualifying and close the conversation. Tell the visitor the team will text them back with an estimate based on this information, or ask for one more detail if needed.
 - If callback_intent is yes and there are missing callback fields, ask only for the missing callback fields in one short message.
 - If callback_intent is yes and contact details are already present, confirm the appointment or callback request and ask for photos or ZIP code only if still useful.
 - If uploaded_photos is greater than 0, acknowledge the photos are already attached to the lead.
+- If vision_images_attached is greater than 0, use those images to identify the likely issue or job type when that is genuinely visible. If the photos are not enough, say what is unclear and ask for one more angle.
+- If the visitor uses direct homeowner wording like "underneath the metal is rusted", "the stairs are cracked", "it's not always closing", or "I need a latch added", answer that issue directly instead of switching into generic chatbot language.
 - Do not say the appointment is booked unless the visitor actually gave a specific day and time.
+- Only ask for email, address, or scheduling details after the basic lead capture if that truly helps.
 - Keep replies practical, short, and contractor-like.
 `;
 }
@@ -3062,9 +5654,251 @@ function stripAssistantNotesBlock(value = "") {
   return source.slice(0, markerIndex).trim();
 }
 
-function buildAssistantPrivateNotes(state = {}) {
+function isAssistantLeadSourceType(value = "") {
+  return cleanText(value || "", 80).startsWith("assistant_");
+}
+
+function isWebsiteLiveChatLeadSourceType(value = "") {
+  return cleanText(value || "", 80) === METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+}
+
+function leadHasSearchKingsGoogleAdsAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const attributionText = [
+    doc?.sourceType,
+    doc?.sourceExternalSystem,
+    tracking.utmSource,
+    tracking.utmMedium,
+    tracking.utmCampaign,
+    tracking.utmContent,
+    tracking.utmTerm,
+  ]
+    .map((value) => cleanText(value || "", 160).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  return /search[\s_-]*kings|searchkings/.test(attributionText);
+}
+
+function leadHasGoogleAdsAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const sourceType = cleanText(doc?.sourceType || "", 80).toLowerCase();
+  const sourceExternalSystem = cleanText(doc?.sourceExternalSystem || "", 80).toLowerCase();
+  const utmSource = cleanText(tracking.utmSource || "", 80).toLowerCase();
+  const utmMedium = cleanText(tracking.utmMedium || "", 80).toLowerCase();
+
+  return Boolean(
+    sourceType.includes("google_ads") ||
+      sourceExternalSystem.includes("google_ads") ||
+      cleanText(tracking.gclid || "", 120) ||
+      cleanText(tracking.gbraid || "", 120) ||
+      cleanText(tracking.wbraid || "", 120) ||
+      (utmSource.includes("google") && /(cpc|ppc|paid|paid_search|search)/i.test(utmMedium)),
+  );
+}
+
+function leadHasThumbtackAttribution(doc = null) {
+  const sourceType = cleanText(doc?.sourceType || "", 80).toLowerCase();
+  const sourceExternalSystem = cleanText(doc?.sourceExternalSystem || "", 80).toLowerCase();
+  const utmSource = cleanText(doc?.tracking?.utmSource || "", 80).toLowerCase();
+
+  return Boolean(
+    sourceType.includes("thumbtack") ||
+      sourceExternalSystem.includes("thumbtack") ||
+      utmSource.includes("thumbtack"),
+  );
+}
+
+function leadHasAtlasCommercialOutreachAttribution(doc = null) {
+  const tracking = doc?.tracking || {};
+  const attributionText = [
+    doc?.sourceType,
+    doc?.sourceExternalSystem,
+    tracking.utmSource,
+    tracking.utmMedium,
+    tracking.utmCampaign,
+    tracking.utmContent,
+    tracking.utmTerm,
+    doc?.projectType,
+    doc?.details,
+    doc?.nextAction,
+    doc?.privateNotes,
+  ]
+    .map((value) => cleanText(value || "", 3000).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  return /atlas[_\s-]*(commercial[_\s-]*)?outreach|commercial[_\s-]*outreach|property management outreach|vendor onboarding|intro email sent/.test(
+    attributionText,
+  );
+}
+
+function isColdAtlasCommercialOutreachLead(lead = null) {
+  if (!leadHasAtlasCommercialOutreachAttribution(lead)) {
+    return false;
+  }
+
+  const status = normalizeStatus(lead?.status || "new");
+  const appointmentType = inferLeadAppointmentType(lead);
+  const outreachText = [
+    lead?.projectType,
+    lead?.details,
+    lead?.nextAction,
+    lead?.privateNotes,
+  ]
+    .map((value) => cleanText(value || "", 3000).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (["quoted", "booked", "won"].includes(status)) {
+    return false;
+  }
+
+  if (["callback", "estimate_visit", "job"].includes(appointmentType)) {
+    return false;
+  }
+
+  return /property management outreach|commercial outreach|intro email sent|if no reply|wait for .*reply|vendor onboarding/.test(
+    outreachText,
+  );
+}
+
+function getLeadSourceGroup(doc = null) {
+  if (!doc) {
+    return "other";
+  }
+
+  const sourceType = cleanText(doc.sourceType || "", 80).toLowerCase();
+
+  if (leadHasThumbtackAttribution(doc)) {
+    return "thumbtack";
+  }
+
+  if (leadHasSearchKingsGoogleAdsAttribution(doc)) {
+    return "search_kings_google_ads";
+  }
+
+  if (leadHasGoogleAdsAttribution(doc)) {
+    return "google_ads";
+  }
+
+  if (leadHasAtlasCommercialOutreachAttribution(doc)) {
+    return "atlas_commercial_outreach";
+  }
+
+  if (isAssistantLeadSourceType(sourceType)) {
+    return "assistant_organic";
+  }
+
+  if (sourceType === "field_prospector" || sourceType === "lead_distribution_prospector") {
+    return "prospector";
+  }
+
+  if (
+    sourceType === "website_form" ||
+    sourceType === "website_live_chat" ||
+    sourceType === "website_live_chat_photo"
+  ) {
+    return "website";
+  }
+
+  if (sourceType === "manual_crm_entry" || sourceType === "crm_manual_photo") {
+    return "manual";
+  }
+
+  return "other";
+}
+
+function isWebsiteLiveChatLead(doc = null) {
+  return Boolean(
+    doc &&
+      (isWebsiteLiveChatLeadSourceType(doc.sourceType || "") ||
+        cleanText(doc.sourceExternalSystem || "", 80) === "website_live_chat" ||
+        cleanText(doc.pagePath || "", 240).startsWith("/metalworks-chat")),
+  );
+}
+
+function buildWebsiteLiveChatPlaceholderName(visitorId = "") {
+  const suffix = cleanText(visitorId || "", 120)
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(-4)
+    .toUpperCase();
+
+  if (!suffix) {
+    return METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME;
+  }
+
+  return `${METALWORKS_WEBSITE_CHAT_PLACEHOLDER_PREFIX} ${suffix}`;
+}
+
+function getAssistantLeadSourceLabel({ sourceType = "", sourceLabel = "" } = {}) {
+  const explicitLabel = cleanText(sourceLabel || "", 120);
+
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const safeSourceType = cleanText(sourceType || "", 80);
+  const sourceLabels = {
+    assistant_chat: "Agustin 2.0 website assistant",
+    assistant_chat_photo: "Agustin 2.0 website assistant",
+    assistant_whatsapp: "Agustin 2.0 WhatsApp assistant",
+    assistant_booking: "Agustin 2.0 callback assistant",
+  };
+
+  return sourceLabels[safeSourceType] || "Agustin 2.0 website assistant";
+}
+
+function buildAssistantNotesStateFromLead(lead = null) {
+  if (!lead) {
+    return {};
+  }
+
+  const nextActionAt =
+    lead?.nextActionAt instanceof Date
+      ? lead.nextActionAt
+      : lead?.nextActionAt
+        ? new Date(lead.nextActionAt)
+        : null;
+  const safeNextActionAt =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime()) ? nextActionAt : null;
+
+  return {
+    sourceType: cleanText(lead?.sourceType || "", 80),
+    sourceLabel: getAssistantLeadSourceLabel({
+      sourceType: lead?.sourceType || "",
+      sourceLabel: lead?.sourceLabel || "",
+    }),
+    projectType: cleanText(lead?.projectType || "", 120),
+    location: cleanText(lead?.location || "", 160),
+    photoFileCount: Array.isArray(lead?.photoFileNames)
+      ? lead.photoFileNames.filter(Boolean).length
+      : 0,
+    callbackIntent: cleanText(lead?.callbackIntent || "", 12),
+    callbackLabel: formatAssistantCallbackLabel({
+      nextActionAt: safeNextActionAt,
+      bestContactDay: cleanText(lead?.bestContactDay || "", 80),
+      bestContactTime: cleanText(lead?.bestContactTime || "", 80),
+    }),
+    detailsSummary: cleanText(lead?.details || "", 1500),
+    latestUserMessage: cleanText(lead?.lastUserMessage || "", 500),
+    lastAssistantMessage: cleanText(lead?.lastAssistantMessage || "", 1500),
+    items: Array.isArray(lead?.conversationHistory) ? lead.conversationHistory : [],
+  };
+}
+
+function buildAssistantPrivateNotes(state = {}, history = []) {
   const sourceLabel =
-    cleanText(state?.sourceLabel || "", 120) || "Agustin 2.0 website assistant";
+    getAssistantLeadSourceLabel({
+      sourceType: state?.sourceType || "",
+      sourceLabel: state?.sourceLabel || "",
+    });
+  const conversationSummary = buildAssistantConversationSummary({
+    history: Array.isArray(history) && history.length ? history : state?.items || [],
+    detailsSummary: state?.detailsSummary || state?.details || "",
+    lastUserMessage: state?.latestUserMessage || state?.lastUserMessage || "",
+    lastAssistantMessage: state?.lastAssistantMessage || "",
+  });
 
   return [
     `Source: ${sourceLabel}.`,
@@ -3075,15 +5909,16 @@ function buildAssistantPrivateNotes(state = {}) {
     state?.callbackIntent === "no" ? "Callback requested: no." : "",
     state?.callbackLabel ? `Best requested time: ${state.callbackLabel}.` : "",
     state?.detailsSummary ? `Summary: ${state.detailsSummary}` : "",
+    conversationSummary ? `Conversation recap:\n${conversationSummary}` : "",
   ]
     .filter(Boolean)
     .join("\n")
     .slice(0, 2600);
 }
 
-function mergeAssistantPrivateNotes(existingNotes = "", state = {}) {
+function mergeAssistantPrivateNotes(existingNotes = "", state = {}, history = []) {
   const manualNotes = stripAssistantNotesBlock(existingNotes);
-  const generatedNotes = buildAssistantPrivateNotes(state);
+  const generatedNotes = buildAssistantPrivateNotes(state, history);
 
   if (!generatedNotes) {
     return manualNotes;
@@ -3189,6 +6024,170 @@ function normalizeLeadAssetMimeType(value = "") {
   return "";
 }
 
+function getLeadAssetExtensionForMimeType(mimeType = "") {
+  const normalized = normalizeLeadAssetMimeType(mimeType || "");
+
+  if (normalized === "image/png") {
+    return ".png";
+  }
+
+  if (normalized === "image/webp") {
+    return ".webp";
+  }
+
+  if (normalized === "image/gif") {
+    return ".gif";
+  }
+
+  if (normalized === "image/heic") {
+    return ".heic";
+  }
+
+  if (normalized === "image/heif") {
+    return ".heif";
+  }
+
+  if (normalized === "image/bmp") {
+    return ".bmp";
+  }
+
+  return ".jpg";
+}
+
+function buildLeadAssetFileNameFromUrl(url = "", mimeType = "", fallbackName = "project-photo") {
+  const safeFallbackName = cleanText(fallbackName || "", 80) || "project-photo";
+
+  try {
+    const parsedUrl = new URL(String(url || "").trim());
+    const candidateName = decodeURIComponent(parsedUrl.pathname.split("/").pop() || "").trim();
+
+    if (candidateName) {
+      return sanitizeLeadAssetFileName(candidateName);
+    }
+  } catch {}
+
+  return sanitizeLeadAssetFileName(
+    `${safeFallbackName}${getLeadAssetExtensionForMimeType(mimeType)}`,
+  );
+}
+
+async function fetchExternalLeadAssetUpload(
+  attachment = {},
+  { timeoutMs = 12000, fallbackName = "external-photo" } = {},
+) {
+  const safeUrl = cleanText(attachment?.url || "", 1200);
+
+  if (!/^https?:\/\//i.test(safeUrl)) {
+    throw new Error("Attachment URL is invalid.");
+  }
+
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(safeUrl, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        Accept: "image/*",
+        "User-Agent": "Chicago Metal Works CRM Thumbtack Import",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Attachment download failed with status ${response.status}.`);
+    }
+
+    const responseMimeType = cleanText(
+      String(response.headers.get("content-type") || "").split(";")[0] || "",
+      80,
+    );
+    const mimeType = normalizeLeadAssetMimeType(responseMimeType || attachment?.mimeType || "");
+
+    if (!mimeType) {
+      throw new Error("Attachment is not a supported image.");
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const fileData = Buffer.from(arrayBuffer);
+
+    if (!fileData.length) {
+      throw new Error("Attachment payload is empty.");
+    }
+
+    if (fileData.length > METALWORKS_LEAD_ASSET_MAX_BYTES) {
+      throw new Error("Attachment image is larger than 2 MB.");
+    }
+
+    return {
+      fileName: sanitizeLeadAssetFileName(
+        attachment?.fileName || buildLeadAssetFileNameFromUrl(safeUrl, mimeType, fallbackName),
+      ),
+      mimeType,
+      sizeBytes: fileData.length,
+      fileData,
+    };
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+async function fetchExternalLeadAssetUploads(
+  attachments = [],
+  { limit = METALWORKS_LEAD_ASSET_MAX_FILES, fallbackPrefix = "external-photo" } = {},
+) {
+  const safeAttachments = Array.isArray(attachments) ? attachments : [];
+  const deduped = [];
+  const seenUrls = new Set();
+
+  for (const attachment of safeAttachments) {
+    const safeUrl = cleanText(attachment?.url || "", 1200);
+
+    if (!safeUrl || seenUrls.has(safeUrl)) {
+      continue;
+    }
+
+    seenUrls.add(safeUrl);
+    deduped.push({
+      url: safeUrl,
+      fileName: cleanText(attachment?.fileName || "", 120),
+      mimeType: cleanText(attachment?.mimeType || "", 80),
+    });
+
+    if (deduped.length >= limit) {
+      break;
+    }
+  }
+
+  const parsedFiles = [];
+  const errors = [];
+
+  for (let index = 0; index < deduped.length; index += 1) {
+    const attachment = deduped[index];
+
+    try {
+      const file = await fetchExternalLeadAssetUpload(attachment, {
+        fallbackName: `${fallbackPrefix}-${index + 1}`,
+      });
+      parsedFiles.push(file);
+    } catch (error) {
+      errors.push({
+        url: attachment.url,
+        message: cleanText(error?.message || "Attachment import failed.", 240),
+      });
+    }
+  }
+
+  return {
+    parsedFiles,
+    importedCount: parsedFiles.length,
+    attemptedCount: deduped.length,
+    skippedCount: Math.max(deduped.length - parsedFiles.length, 0),
+    errors,
+  };
+}
+
 function parseAssistantLeadAssetUpload(payload = {}) {
   const explicitMimeType = normalizeLeadAssetMimeType(payload?.mimeType || "");
   const dataUrl = String(payload?.dataUrl || "").trim();
@@ -3239,6 +6238,108 @@ function cleanLeadAsset(doc = null) {
   };
 }
 
+function normalizeLeadAssetBuffer(value = null) {
+  if (!value) {
+    return Buffer.alloc(0);
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+
+  if (value?.buffer instanceof ArrayBuffer) {
+    return Buffer.from(value.buffer);
+  }
+
+  if (Array.isArray(value)) {
+    return Buffer.from(value);
+  }
+
+  if (typeof value === "object" && value?.type === "Buffer" && Array.isArray(value?.data)) {
+    return Buffer.from(value.data);
+  }
+
+  return Buffer.alloc(0);
+}
+
+async function loadRecentLeadAssetsForVision({
+  leadId = null,
+  limit = METALWORKS_ASSISTANT_VISION_MAX_IMAGES,
+} = {}) {
+  if (!leadId || limit < 1) {
+    return [];
+  }
+
+  const assetDocs = await MetalworksLeadAsset.find({ leadId })
+    .sort({ uploadedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .select("fileName mimeType fileData sizeBytes uploadedAt createdAt");
+
+  return assetDocs
+    .map((doc) => {
+      const mimeType = normalizeLeadAssetMimeType(doc?.mimeType || "");
+      const fileData = normalizeLeadAssetBuffer(doc?.fileData);
+
+      if (!mimeType || !fileData.length) {
+        return null;
+      }
+
+      return {
+        fileName: sanitizeLeadAssetFileName(doc?.fileName || ""),
+        mimeType,
+        sizeBytes: Number(doc?.sizeBytes || fileData.length) || fileData.length,
+        uploadedAt: doc?.uploadedAt || doc?.createdAt || null,
+        dataUrl: `data:${mimeType};base64,${fileData.toString("base64")}`,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildAssistantUserInputContent({
+  message = "",
+  visionAssets = [],
+} = {}) {
+  const safeMessage = cleanText(message || "", 500);
+  const assets = Array.isArray(visionAssets) ? visionAssets.filter(Boolean) : [];
+  const content = [];
+  const recentPhotoLabel = assets.length
+    ? `Recent uploaded project photos are attached below (${assets.length}, most recent first). Use them only as visual context for this project.`
+    : "";
+  const inputText = [safeMessage, recentPhotoLabel].filter(Boolean).join("\n\n").trim();
+
+  if (inputText) {
+    content.push({
+      type: "input_text",
+      text: inputText,
+    });
+  }
+
+  assets.forEach((asset) => {
+    if (!asset?.dataUrl) {
+      return;
+    }
+
+    content.push({
+      type: "input_image",
+      image_url: asset.dataUrl,
+      detail: "auto",
+    });
+  });
+
+  return content.length
+    ? content
+    : [
+        {
+          type: "input_text",
+          text: safeMessage,
+        },
+      ];
+}
+
 function extractAssistantResponseText(data = null) {
   const directText = cleanText(data?.output_text || "", 1500);
 
@@ -3272,6 +6373,7 @@ async function generateAssistantReply({
   history = [],
   pagePath = "",
   conversationState = null,
+  visionAssets = [],
   mode = "customer",
 } = {}) {
   const assistantMode = cleanText(mode || "", 40).toLowerCase() === "employment"
@@ -3336,7 +6438,10 @@ async function generateAssistantReply({
           ...normalizeAssistantHistory(history),
           {
             role: "user",
-            content: cleanText(message, 500),
+            content: buildAssistantUserInputContent({
+              message,
+              visionAssets,
+            }),
           },
         ],
       }),
@@ -3379,214 +6484,6 @@ async function generateAssistantReply({
   }
 }
 
-function getMetalworksWhatsAppFollowupStepConfig(step = "") {
-  return (
-    METALWORKS_WHATSAPP_FOLLOWUP_STEPS.find((item) => item.step === cleanText(step || "", 40)) ||
-    null
-  );
-}
-
-function metalworksWhatsAppFollowupsEnabled() {
-  return String(process.env.METALWORKS_WHATSAPP_FOLLOWUPS_ENABLED || "").toLowerCase() === "true";
-}
-
-function buildAssistantFollowupFallbackReply({
-  step = "",
-  conversationState = null,
-} = {}) {
-  const stepConfig = getMetalworksWhatsAppFollowupStepConfig(step);
-  const inSpanish = Boolean(conversationState?.inSpanish);
-  const missingFields = Array.isArray(conversationState?.callbackMissingFields)
-    ? conversationState.callbackMissingFields
-    : [];
-  const serviceBucket = cleanText(conversationState?.serviceBucket || "", 40);
-  const callbackLabel =
-    cleanText(conversationState?.callbackLabel || "", 120) || "your requested time";
-
-  if (conversationState?.callbackIntent === "yes" && missingFields.length) {
-    const missingLabel = missingFields.join(", ");
-    return inSpanish
-      ? `Solo me faltan estos datos para dejar la llamada o visita lista: ${missingLabel}.`
-      : `I just need these details to line up the callback or site visit: ${missingLabel}.`;
-  }
-
-  if (stepConfig?.step === "nudge_10m" && cleanText(conversationState?.leadTemperature || "", 20) === "hot") {
-    return inSpanish
-      ? "Sigo aqui para mover esto rapido. Prefieres llamada o visita para estimate?"
-      : "I’m still here to move this fast. Would you like a callback or a site visit?";
-  }
-
-  if (stepConfig?.step === "nudge_10m") {
-    if (serviceBucket === "gate") {
-      return inSpanish
-        ? "Si gustas, manda una foto del porton y tu ZIP code y te ayudo con el siguiente paso."
-        : "If you want, send a photo of the gate and your ZIP code and I’ll help with the next step.";
-    }
-
-    if (serviceBucket === "railing") {
-      return inSpanish
-        ? "Si gustas, manda una foto del barandal o pasamanos y tu ZIP code y seguimos de alli."
-        : "If you want, send a photo of the railing or handrail and your ZIP code and we can keep moving.";
-    }
-
-    if (serviceBucket === "fence") {
-      return inSpanish
-        ? "Si gustas, manda fotos de la cerca y tu ZIP code y te ayudo a mover la cotizacion."
-        : "If you want, send photos of the fence and your ZIP code and I’ll help move the quote forward.";
-    }
-
-    if (serviceBucket === "welding") {
-      return inSpanish
-        ? "Si gustas, manda una foto de la pieza o del daño y tu ZIP code y seguimos de alli."
-        : "If you want, send a photo of the piece or the damage and your ZIP code and we can keep moving.";
-    }
-  }
-
-  if (stepConfig?.step === "nudge_6h") {
-    return inSpanish
-      ? "Si todavia ocupas ayuda con este trabajo, responde aqui y tambien puedes mandar fotos para avanzar mas rapido."
-      : "If you still need help with this job, reply here and you can also send photos to move it faster.";
-  }
-
-  if (conversationState?.callbackIntent === "yes" && !missingFields.length) {
-    return inSpanish
-      ? `Sigo teniendo tu solicitud para ${callbackLabel}. Si quieres agregar fotos o detalles, responde aqui.`
-      : `I still have your request for ${callbackLabel}. If you want to add photos or details, reply here.`;
-  }
-
-  return inSpanish
-    ? "Todavia te puedo ayudar por aqui. Si quieres llamada, visita o mandar fotos, responde a este mensaje."
-    : "I can still help here. If you want a callback, site visit, or to send photos, just reply to this message.";
-}
-
-function buildAssistantFollowupSystemPrompt({
-  step = "",
-  conversationState = null,
-} = {}) {
-  const stepConfig = getMetalworksWhatsAppFollowupStepConfig(step);
-
-  return `
-WHATSAPP FOLLOW-UP TASK:
-- You are sending an outbound follow-up inside an active customer-service WhatsApp window.
-- The visitor has not replied since the last assistant message.
-- Keep the follow-up under 240 characters.
-- Sound human, practical, helpful, and low-pressure.
-- Do not use a long greeting.
-- Ask at most one direct question.
-- Do not mention policies, the 24-hour window, automation, or templates.
-- If lead_temperature is hot, move directly toward callback or site visit.
-- If callback_intent is yes and fields are still missing, ask only for the missing fields.
-- If photos would help, you may mention sending photos.
-- Step right now: ${stepConfig?.label || cleanText(step || "", 80) || "follow-up"}.
-`;
-}
-
-async function generateAssistantFollowupReply({
-  step = "",
-  history = [],
-  pagePath = "",
-  conversationState = null,
-} = {}) {
-  const fallbackReply = buildAssistantFollowupFallbackReply({
-    step,
-    conversationState,
-  });
-  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
-
-  if (!apiKey) {
-    return {
-      reply: fallbackReply,
-      usedFallback: true,
-      reason: "OPENAI_API_KEY missing",
-    };
-  }
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        max_output_tokens: 160,
-        reasoning: {
-          effort: "low",
-        },
-        text: {
-          verbosity: "low",
-          format: {
-            type: "text",
-          },
-        },
-        input: [
-          {
-            role: "system",
-            content: METALWORKS_ASSISTANT_SYSTEM_PROMPT,
-          },
-          {
-            role: "system",
-            content: buildAssistantContext(
-              cleanText(
-                conversationState?.latestUserMessage ||
-                  conversationState?.detailsSummary ||
-                  conversationState?.projectType ||
-                  "",
-                500,
-              ),
-              pagePath,
-            ),
-          },
-          {
-            role: "system",
-            content: buildAssistantStatePrompt(conversationState || {}),
-          },
-          {
-            role: "system",
-            content: buildAssistantFollowupSystemPrompt({
-              step,
-              conversationState,
-            }),
-          },
-          ...normalizeAssistantHistory(history),
-          {
-            role: "user",
-            content: `Create the ${cleanText(step || "follow-up", 40)} WhatsApp follow-up now.`,
-          },
-        ],
-      }),
-    });
-
-    const data = await response.json().catch(() => null);
-    const reply = extractAssistantResponseText(data);
-
-    if (!response.ok || !reply) {
-      return {
-        reply: fallbackReply,
-        usedFallback: true,
-        reason:
-          cleanText(
-            data?.error?.message || data?.message || `OpenAI error ${response.status}`,
-            240,
-          ) || "OpenAI error",
-      };
-    }
-
-    return {
-      reply,
-      usedFallback: false,
-      reason: "",
-    };
-  } catch (error) {
-    return {
-      reply: fallbackReply,
-      usedFallback: true,
-      reason: cleanText(error?.message || "Assistant error", 240),
-    };
-  }
-}
-
 function cleanLead(doc = null, { includeConversation = false } = {}) {
   if (!doc) {
     return null;
@@ -3594,6 +6491,43 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
 
   const safeFullName =
     sanitizeAssistantStoredName(doc.fullName || "") || cleanText(doc.fullName || "", 120);
+  const assistantNotesState =
+    includeConversation &&
+    (isAssistantLeadSourceType(doc.sourceType || "") ||
+      (Array.isArray(doc.conversationHistory) && doc.conversationHistory.length))
+      ? buildAssistantNotesStateFromLead(doc)
+      : null;
+  const composedAssistantNotes = assistantNotesState
+    ? mergeAssistantPrivateNotes(doc.privateNotes || "", assistantNotesState, assistantNotesState.items || [])
+    : doc.privateNotes || "";
+  const conversationSummary = assistantNotesState
+    ? buildAssistantConversationSummary({
+        history: assistantNotesState.items || [],
+        detailsSummary: assistantNotesState.detailsSummary || "",
+        lastUserMessage: assistantNotesState.latestUserMessage || "",
+        lastAssistantMessage: assistantNotesState.lastAssistantMessage || "",
+      })
+    : "";
+  const nextActionAt = doc.nextActionAt ? new Date(doc.nextActionAt) : null;
+  const safeNextActionAt =
+    nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime()) ? nextActionAt : null;
+  const appointmentType = inferLeadAppointmentType(doc);
+  const appointmentStatus = inferLeadAppointmentStatus(doc);
+  const appointmentDurationMinutes =
+    normalizeAppointmentDurationMinutes(doc.appointmentDurationMinutes || 0) ||
+    (safeNextActionAt ? inferAppointmentDurationMinutes(appointmentType) : 0);
+  const appointmentEndAt =
+    safeNextActionAt && appointmentDurationMinutes
+      ? new Date(safeNextActionAt.getTime() + appointmentDurationMinutes * 60 * 1000).toISOString()
+      : "";
+  const appointmentAssignedTo = cleanText(doc.appointmentAssignedTo || "", 80);
+  const atlas = deriveAtlasLeadState({
+    ...doc,
+    fullName: safeFullName,
+    nextActionAt: safeNextActionAt,
+    appointmentType,
+    appointmentStatus,
+  });
 
   return {
     id: String(doc._id || ""),
@@ -3623,7 +6557,15 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     status: normalizeStatus(doc.status || "new"),
     statusLabel: labelStatus(doc.status || "new"),
     nextAction: doc.nextAction || "",
-    nextActionAt: doc.nextActionAt ? new Date(doc.nextActionAt).toISOString() : "",
+    nextActionAt: safeNextActionAt ? safeNextActionAt.toISOString() : "",
+    appointmentType,
+    appointmentTypeLabel: labelAppointmentType(appointmentType),
+    appointmentStatus,
+    appointmentStatusLabel: labelAppointmentStatus(appointmentStatus),
+    appointmentDurationMinutes,
+    appointmentAssignedTo,
+    appointmentEndAt,
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(doc.nextActionReminderOffsets || []),
     bestContactDay: doc.bestContactDay || "",
     bestContactTime: doc.bestContactTime || "",
     callbackIntent: doc.callbackIntent || "",
@@ -3631,7 +6573,9 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
       ? new Date(doc.callbackRequestedAt).toISOString()
       : "",
     callbackAlertedAt: doc.callbackAlertedAt ? new Date(doc.callbackAlertedAt).toISOString() : "",
-    privateNotes: doc.privateNotes || "",
+    privateNotes: composedAssistantNotes,
+    conversationSummary,
+    atlas,
     lastUserMessage: doc.lastUserMessage || "",
     lastAssistantMessage: doc.lastAssistantMessage || "",
     conversationHistory: includeConversation
@@ -3651,25 +6595,73 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
     estimateMiscCost: normalizeMoney(doc.estimateMiscCost || 0),
     estimateDiscount: normalizeMoney(doc.estimateDiscount || 0),
     estimateAmount: Number(doc.estimateAmount || 0) || 0,
+    invoiceDepositAmount: normalizeMoney(doc.invoiceDepositAmount || 0),
+    invoiceBalanceDue: Math.max(
+      0,
+      normalizeMoney((doc.estimateAmount || 0) - (doc.invoiceDepositAmount || 0)),
+    ),
     estimateValidUntil: doc.estimateValidUntil ? new Date(doc.estimateValidUntil).toISOString() : "",
     estimateNotes: doc.estimateNotes || "",
     clientDocumentType: normalizeClientDocumentType(doc.clientDocumentType || ""),
     clientDocumentDescription: doc.clientDocumentDescription || "",
     clientDocumentWorkDate: doc.clientDocumentWorkDate ? new Date(doc.clientDocumentWorkDate).toISOString() : "",
     clientDocumentWarranty: doc.clientDocumentWarranty || "",
+    googleCalendarEventId: doc.googleCalendarEventId || "",
+    googleCalendarEventHtmlLink: doc.googleCalendarEventHtmlLink || "",
+    googleCalendarLastSyncedAt: doc.googleCalendarLastSyncedAt
+      ? new Date(doc.googleCalendarLastSyncedAt).toISOString()
+      : "",
+    googleCalendarSyncStatus: doc.googleCalendarSyncStatus || "",
+    googleCalendarSyncError: doc.googleCalendarSyncError || "",
     estimateSentAt: doc.estimateSentAt ? new Date(doc.estimateSentAt).toISOString() : "",
     estimateSentTo: doc.estimateSentTo || "",
+    soldAt: doc.soldAt ? new Date(doc.soldAt).toISOString() : "",
     pageTitle: doc.pageTitle || "",
     pagePath: doc.pagePath || "",
     pageUrl: doc.pageUrl || "",
     referrer: doc.referrer || "",
     sourceType: doc.sourceType || "website_form",
+    sourceGroup: getLeadSourceGroup(doc),
+    sourceGroupLabel: labelLeadSourceGroup(getLeadSourceGroup(doc)),
+    supportsLiveChatReply:
+      isWebsiteLiveChatLead(doc) &&
+      ((Array.isArray(doc.conversationHistory) ? doc.conversationHistory.length > 0 : false) ||
+        (Array.isArray(doc.photoFileNames) ? doc.photoFileNames.length > 0 : false)),
     sourceExternalId: doc.sourceExternalId || "",
     sourceExternalSystem: doc.sourceExternalSystem || "",
     tracking: doc.tracking || {},
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
     updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
     lastContactAt: doc.lastContactAt ? new Date(doc.lastContactAt).toISOString() : "",
+  };
+}
+
+function cleanPublicWebsiteLiveChatThread(doc = null) {
+  if (!doc || !isWebsiteLiveChatLead(doc)) {
+    return null;
+  }
+
+  const safeFullName =
+    sanitizeAssistantStoredName(doc.fullName || "") ||
+    cleanText(doc.fullName || "", 120) ||
+    METALWORKS_WEBSITE_CHAT_PLACEHOLDER_NAME;
+
+  return {
+    leadId: String(doc._id || ""),
+    threadKey: normalizePublicChatThreadKey(doc.publicChatThreadKey || ""),
+    fullName: safeFullName,
+    phoneDisplay: doc.phoneDisplay || "",
+    email: doc.email || "",
+    photoFileNames: Array.isArray(doc.photoFileNames) ? doc.photoFileNames : [],
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    messages: (Array.isArray(doc.conversationHistory) ? doc.conversationHistory : [])
+      .map((entry) => ({
+        role: entry?.role === "assistant" ? "assistant" : "user",
+        content: cleanText(entry?.content || "", 1500),
+        createdAt: entry?.createdAt ? new Date(entry.createdAt).toISOString() : "",
+      }))
+      .filter((entry) => entry.content),
   };
 }
 
@@ -3752,11 +6744,104 @@ function cleanActivity(doc = null) {
   };
 }
 
+function cleanAgendaEvent(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const startsAt = doc.startsAt ? new Date(doc.startsAt) : null;
+  const endsAt = doc.endsAt ? new Date(doc.endsAt) : null;
+  const eventType = normalizeAgendaEventType(doc.eventType || "internal");
+  const status = normalizeAgendaEventStatus(doc.status || "scheduled");
+
+  return {
+    id: String(doc._id || doc.id || ""),
+    type: "agenda_event",
+    isAgendaEvent: true,
+    isImportantDate: false,
+    eventType,
+    eventTypeLabel: labelAgendaEventType(eventType),
+    title: cleanText(doc.title || "", 120) || "Agenda event",
+    owner: cleanText(doc.owner || "", 80),
+    notes: cleanText(doc.notes || "", 1000),
+    status,
+    statusLabel: labelAgendaEventStatus(status),
+    startsAt:
+      startsAt instanceof Date && !Number.isNaN(startsAt.getTime())
+        ? startsAt.toISOString()
+        : "",
+    endsAt:
+      endsAt instanceof Date && !Number.isNaN(endsAt.getTime())
+        ? endsAt.toISOString()
+        : "",
+    source: cleanText(doc.source || "", 80),
+    createdByEmail: cleanText(doc.createdByEmail || "", 160),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
+function cleanWebPushDevice(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    endpoint: cleanText(doc.endpoint || "", 240),
+    platform: cleanText(doc.platform || "web", 40) || "web",
+    deviceName: cleanText(doc.deviceName || "", 120),
+    browserName: cleanText(doc.browserName || "", 80),
+    notificationPath: normalizeMetalworksNotificationPath(
+      doc.notificationPath || "/metalworks-crm/operator/",
+    ),
+    authorizationStatus: cleanText(doc.authorizationStatus || "", 40),
+    notificationsEnabled: Boolean(doc.notificationsEnabled),
+    isActive: Boolean(doc.isActive),
+    lastSeenAt: doc.lastSeenAt ? new Date(doc.lastSeenAt).toISOString() : "",
+    lastPushAt: doc.lastPushAt ? new Date(doc.lastPushAt).toISOString() : "",
+    lastPushError: cleanText(doc.lastPushError || "", 240),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
+function cleanPublicChatWebPushDevice(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  return {
+    id: String(doc._id || ""),
+    leadId: doc.leadId ? String(doc.leadId) : "",
+    visitorId: cleanText(doc.visitorId || "", 120),
+    sessionId: cleanText(doc.sessionId || "", 120),
+    endpoint: cleanText(doc.endpoint || "", 240),
+    platform: cleanText(doc.platform || "web", 40) || "web",
+    deviceName: cleanText(doc.deviceName || "", 120),
+    browserName: cleanText(doc.browserName || "", 80),
+    notificationPath: normalizeMetalworksNotificationPath(
+      doc.notificationPath || "/metalworks-chat/",
+      "/metalworks-chat/",
+    ),
+    authorizationStatus: cleanText(doc.authorizationStatus || "", 40),
+    notificationsEnabled: Boolean(doc.notificationsEnabled),
+    isActive: Boolean(doc.isActive),
+    lastSeenAt: doc.lastSeenAt ? new Date(doc.lastSeenAt).toISOString() : "",
+    lastPushAt: doc.lastPushAt ? new Date(doc.lastPushAt).toISOString() : "",
+    lastPushError: cleanText(doc.lastPushError || "", 240),
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : "",
+  };
+}
+
 function buildLeadQuery(filters = {}) {
   const query = {};
   const status = normalizeStatus(filters?.status || "");
   const search = cleanText(filters?.search || "", 120);
   const projectType = cleanText(filters?.projectType || "", 80);
+  const sourceGroup = normalizeLeadSourceGroup(filters?.sourceGroup || "");
+  const andClauses = [];
 
   if (filters?.status && METALWORKS_CRM_STATUS_OPTIONS.includes(status)) {
     query.status = status;
@@ -3766,24 +6851,114 @@ function buildLeadQuery(filters = {}) {
     query.projectType = projectType;
   }
 
+  const googleAdsClause = {
+    $or: [
+      { sourceType: /google_ads/i },
+      { sourceExternalSystem: /google_ads/i },
+      { "tracking.gclid": { $exists: true, $nin: ["", null] } },
+      { "tracking.gbraid": { $exists: true, $nin: ["", null] } },
+      { "tracking.wbraid": { $exists: true, $nin: ["", null] } },
+      {
+        "tracking.utmSource": /google/i,
+        "tracking.utmMedium": /(cpc|ppc|paid|paid_search|search)/i,
+      },
+    ],
+  };
+  const searchKingsGoogleAdsClause = {
+    $or: [
+      { sourceType: /search[\s_-]*kings|searchkings/i },
+      { sourceExternalSystem: /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmSource": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmCampaign": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmContent": /search[\s_-]*kings|searchkings/i },
+      { "tracking.utmTerm": /search[\s_-]*kings|searchkings/i },
+    ],
+  };
+  const googleAdsOnlyClause = { $and: [googleAdsClause, { $nor: [searchKingsGoogleAdsClause] }] };
+  const thumbtackClause = {
+    $or: [
+      { sourceType: /thumbtack/i },
+      { sourceExternalSystem: /thumbtack/i },
+      { "tracking.utmSource": /thumbtack/i },
+    ],
+  };
+  const atlasCommercialOutreachClause = {
+    $or: [
+      { sourceType: /atlas[_\s-]*(commercial[_\s-]*)?outreach|commercial[_\s-]*outreach/i },
+      { sourceExternalSystem: /atlas[_\s-]*outreach|commercial[_\s-]*outreach/i },
+      { "tracking.utmSource": /atlas/i },
+      { "tracking.utmMedium": /email[_\s-]*outreach/i },
+      { "tracking.utmCampaign": /commercial[_\s-]*property[_\s-]*management|property[_\s-]*management/i },
+      { projectType: /property management outreach|vendor onboarding/i },
+      { details: /property management outreach|commercial outreach|intro email sent|vendor onboarding/i },
+      { nextAction: /property management outreach|if no reply|vendor onboarding|wait for .*reply/i },
+    ],
+  };
+  const assistantClause = { sourceType: /^assistant_/i };
+  const prospectorClause = {
+    sourceType: { $in: ["field_prospector", "lead_distribution_prospector"] },
+  };
+  const websiteClause = {
+    sourceType: { $in: ["website_form", "website_live_chat", "website_live_chat_photo"] },
+  };
+  const manualClause = { sourceType: { $in: ["manual_crm_entry", "crm_manual_photo"] } };
+  const knownSourceClauses = [
+    thumbtackClause,
+    searchKingsGoogleAdsClause,
+    googleAdsClause,
+    atlasCommercialOutreachClause,
+    assistantClause,
+    prospectorClause,
+    websiteClause,
+    manualClause,
+  ];
+
+  if (sourceGroup === "thumbtack") {
+    andClauses.push(thumbtackClause);
+  } else if (sourceGroup === "search_kings_google_ads") {
+    andClauses.push(searchKingsGoogleAdsClause);
+  } else if (sourceGroup === "google_ads") {
+    andClauses.push(googleAdsOnlyClause);
+  } else if (sourceGroup === "atlas_commercial_outreach") {
+    andClauses.push(atlasCommercialOutreachClause);
+  } else if (sourceGroup === "assistant_organic") {
+    andClauses.push({
+      $and: [assistantClause, { $nor: [thumbtackClause, searchKingsGoogleAdsClause, googleAdsClause] }],
+    });
+  } else if (sourceGroup === "prospector") {
+    andClauses.push(prospectorClause);
+  } else if (sourceGroup === "website") {
+    andClauses.push(websiteClause);
+  } else if (sourceGroup === "manual") {
+    andClauses.push(manualClause);
+  } else if (sourceGroup === "other") {
+    andClauses.push({ $nor: knownSourceClauses });
+  }
+
   if (search) {
     const pattern = new RegExp(escapeRegex(search), "i");
-    query.$or = [
-      { fullName: pattern },
-      { phoneDisplay: pattern },
-      { phone: pattern },
-      { email: pattern },
-      { location: pattern },
-      { addressLine: pattern },
-      { zipCode: pattern },
-      { city: pattern },
-      { details: pattern },
-      { projectType: pattern },
-      { qualificationNotes: pattern },
-      { sourceProspectorName: pattern },
-      { estimateTitle: pattern },
-      { estimateScope: pattern },
-    ];
+    andClauses.push({
+      $or: [
+        { fullName: pattern },
+        { phoneDisplay: pattern },
+        { phone: pattern },
+        { email: pattern },
+        { location: pattern },
+        { addressLine: pattern },
+        { zipCode: pattern },
+        { city: pattern },
+        { details: pattern },
+        { projectType: pattern },
+        { qualificationNotes: pattern },
+        { sourceProspectorName: pattern },
+        { estimateTitle: pattern },
+        { estimateScope: pattern },
+      ],
+    });
+  }
+
+  if (andClauses.length) {
+    query.$and = andClauses;
   }
 
   return query;
@@ -3793,14 +6968,34 @@ async function buildDashboardSnapshot(
   MetalworksLead,
   MetalworksLeadActivity,
   MetalworksApplicant = null,
+  MetalworksAgendaEvent = null,
   filters = {},
 ) {
   const query = buildLeadQuery(filters);
+  const statusFilter = normalizeStatus(filters?.status || "");
+  const hasLeadStatusFilter = Boolean(
+    filters?.status && METALWORKS_CRM_STATUS_OPTIONS.includes(statusFilter),
+  );
+  const leadQuery = hasLeadStatusFilter
+    ? query
+    : {
+        ...query,
+        status: { $nin: ["won", "lost", "archived"] },
+      };
+  const completedLeadQuery = hasLeadStatusFilter
+    ? null
+    : {
+        ...query,
+        status: "won",
+      };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const applicantModelAvailable = Boolean(MetalworksApplicant?.find);
+  const agendaEventModelAvailable = Boolean(MetalworksAgendaEvent?.find);
+  const salesSummaryPromise = buildMetalworksSalesSummary(MetalworksLead);
 
   const [
     leads,
+    completedLeads,
     recentActivity,
     totalLeads,
     newLeads,
@@ -3818,14 +7013,29 @@ async function buildDashboardSnapshot(
     newApplicants,
     interviewApplicants,
     recentApplicants,
+    agendaEvents,
+    salesSummary,
   ] = await Promise.all([
-    MetalworksLead.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(250).lean(),
+    MetalworksLead.find(leadQuery)
+      .select(METALWORKS_CRM_DASHBOARD_LEAD_SELECT)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(250)
+      .lean(),
+    completedLeadQuery
+      ? MetalworksLead.find(completedLeadQuery)
+          .select(METALWORKS_CRM_DASHBOARD_LEAD_SELECT)
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(60)
+          .lean()
+      : [],
     MetalworksLeadActivity.find({
       activityType: {
         $nin: [
           "assistant_user_message",
           "assistant_ai_reply",
           "assistant_fallback",
+          "website_live_chat_message",
+          "website_live_chat_reply",
           "applicant_user_message",
           "applicant_ai_reply",
           "applicant_fallback",
@@ -3879,7 +7089,26 @@ async function buildDashboardSnapshot(
           .limit(12)
           .lean()
       : [],
+    agendaEventModelAvailable
+      ? MetalworksAgendaEvent.find({
+          status: { $ne: "canceled" },
+          startsAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+        })
+          .sort({ startsAt: 1, updatedAt: -1 })
+          .limit(120)
+          .lean()
+      : [],
+    salesSummaryPromise,
   ]);
+  const hideColdAtlasOutreachFromDefaultInbox = Boolean(
+    !normalizeLeadSourceGroup(filters?.sourceGroup || "") &&
+      !cleanText(filters?.search || "", 120) &&
+      !cleanText(filters?.projectType || "", 80) &&
+      !hasLeadStatusFilter,
+  );
+  const visibleLeads = hideColdAtlasOutreachFromDefaultInbox
+    ? leads.filter((lead) => !isColdAtlasCommercialOutreachLead(lead))
+    : leads;
 
   return {
     summary: {
@@ -3894,6 +7123,10 @@ async function buildDashboardSnapshot(
       phoneClicks30d,
       emailClicks30d,
       quoteSubmits30d,
+      soldMonthAmount: Number(salesSummary?.soldMonthAmount || 0) || 0,
+      soldMonthJobs: Number(salesSummary?.soldMonthJobs || 0) || 0,
+      soldYearAmount: Number(salesSummary?.soldYearAmount || 0) || 0,
+      soldYearJobs: Number(salesSummary?.soldYearJobs || 0) || 0,
       totalApplicants: Number(totalApplicants || 0) || 0,
       newApplicants: Number(newApplicants || 0) || 0,
       interviewApplicants: Number(interviewApplicants || 0) || 0,
@@ -3902,6 +7135,7 @@ async function buildDashboardSnapshot(
       status: query.status || "",
       search: cleanText(filters?.search || "", 120),
       projectType: cleanText(filters?.projectType || "", 80),
+      sourceGroup: normalizeLeadSourceGroup(filters?.sourceGroup || ""),
     },
     serviceBreakdown: serviceBreakdown
       .map((item) => ({
@@ -3909,15 +7143,22 @@ async function buildDashboardSnapshot(
         count: Number(item?.count || 0) || 0,
       }))
       .filter((item) => item.count > 0),
-    leads: leads.map(cleanLead).filter(Boolean),
+    leads: visibleLeads.map(cleanLead).filter(Boolean),
+    completedLeads: (Array.isArray(completedLeads) ? completedLeads : [])
+      .map((item) => cleanLead(item))
+      .filter(Boolean),
     recentApplicants: (Array.isArray(recentApplicants) ? recentApplicants : [])
       .map((item) => cleanApplicant(item))
+      .filter(Boolean),
+    agendaEvents: (Array.isArray(agendaEvents) ? agendaEvents : [])
+      .map((item) => cleanAgendaEvent(item))
       .filter(Boolean),
     recentActivity: recentActivity.map(cleanActivity).filter(Boolean),
     statusOptions: METALWORKS_CRM_STATUS_OPTIONS.map((status) => ({
       value: status,
       label: labelStatus(status),
     })),
+    sourceOptions: METALWORKS_LEAD_SOURCE_GROUP_OPTIONS,
   };
 }
 
@@ -3931,6 +7172,7 @@ function scoreMetalworksOperatorLead(lead = null, now = new Date()) {
   }
 
   const status = normalizeStatus(lead.status || "new");
+  const appointmentStatus = inferLeadAppointmentStatus(lead);
 
   if (!isMetalworksOperatorOpenStatus(status)) {
     return -9999;
@@ -3984,7 +7226,11 @@ function scoreMetalworksOperatorLead(lead = null, now = new Date()) {
     }
   }
 
-  if (nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())) {
+  if (
+    nextActionAt instanceof Date &&
+    !Number.isNaN(nextActionAt.getTime()) &&
+    !isInactiveAppointmentStatus(appointmentStatus)
+  ) {
     const diffHours = (nextActionAt.getTime() - now.getTime()) / (60 * 60 * 1000);
 
     if (diffHours < 0) {
@@ -4018,6 +7264,17 @@ function summarizeLeadForOperator(lead = null) {
     statusLabel: lead.statusLabel || labelStatus(lead.status || "new"),
     nextAction: lead.nextAction || "",
     nextActionAt: lead.nextActionAt || "",
+    appointmentType: lead.appointmentType || "",
+    appointmentTypeLabel: lead.appointmentTypeLabel || labelAppointmentType(lead.appointmentType || ""),
+    appointmentStatus: lead.appointmentStatus || "",
+    appointmentStatusLabel:
+      lead.appointmentStatusLabel || labelAppointmentStatus(lead.appointmentStatus || ""),
+    appointmentDurationMinutes: normalizeAppointmentDurationMinutes(
+      lead.appointmentDurationMinutes || 0,
+    ),
+    appointmentAssignedTo: lead.appointmentAssignedTo || "",
+    appointmentEndAt: lead.appointmentEndAt || "",
+    nextActionReminderOffsets: normalizeLeadReminderOffsets(lead.nextActionReminderOffsets || []),
     callbackIntent: lead.callbackIntent || "",
     estimateAmount: Number(lead.estimateAmount || 0) || 0,
     sourceType: lead.sourceType || "",
@@ -4034,6 +7291,8 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
   const now = new Date();
   const leads = Array.isArray(dashboard?.leads) ? dashboard.leads : [];
   const recentActivity = Array.isArray(dashboard?.recentActivity) ? dashboard.recentActivity : [];
+  const importantDates = buildMetalworksImportantDates(now);
+  const storedAgendaEvents = buildStoredAgendaEvents(dashboard?.agendaEvents || [], now);
   const focusLeads = leads
     .map((lead) => ({
       lead: summarizeLeadForOperator(lead),
@@ -4050,18 +7309,84 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     .slice(0, 10)
     .map((item) => item.lead);
   const agendaLeads = leads
-    .filter((lead) => isMetalworksOperatorOpenStatus(lead.status || "new") && lead.nextActionAt)
-    .sort((left, right) =>
-      String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")),
-    )
-    .slice(0, 8)
-    .map(summarizeLeadForOperator)
-    .filter(Boolean);
+    .map((lead) => {
+      if (
+        !isMetalworksOperatorOpenStatus(lead.status || "new") ||
+        !lead.nextActionAt ||
+        isInactiveAppointmentStatus(inferLeadAppointmentStatus(lead))
+      ) {
+        return null;
+      }
+
+      const nextActionAt = new Date(lead.nextActionAt);
+
+      if (Number.isNaN(nextActionAt.getTime())) {
+        return null;
+      }
+
+      const summary = summarizeLeadForOperator(lead);
+      const bucket = getMetalworksAgendaBucket(nextActionAt, now);
+
+      if (!summary || !bucket) {
+        return null;
+      }
+
+      return {
+        ...summary,
+        agendaBucket: bucket.key,
+        agendaBucketLabel: bucket.label,
+        agendaBucketOrder: bucket.order,
+        agendaIsOverdue: bucket.key === "overdue",
+        importantDates: findImportantDatesForLead(lead, importantDates),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      if ((left.agendaBucketOrder || 0) !== (right.agendaBucketOrder || 0)) {
+        return (left.agendaBucketOrder || 0) - (right.agendaBucketOrder || 0);
+      }
+
+      return String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || ""));
+    });
+  const agendaEvents = [
+    ...storedAgendaEvents,
+    ...buildImportantDateAgendaEvents(importantDates, now),
+  ].sort((left, right) => String(left.nextActionAt || "").localeCompare(String(right.nextActionAt || "")));
+  const agendaItems = [...agendaLeads, ...agendaEvents];
+  const agendaSummary = METALWORKS_AGENDA_BUCKET_ORDER.reduce(
+    (summary, bucketKey) => ({
+      ...summary,
+      [bucketKey]: 0,
+    }),
+    {
+      totalScheduled: agendaItems.length,
+    },
+  );
+
+  agendaItems.forEach((item) => {
+    const bucketKey = String(item.agendaBucket || "").trim();
+
+    if (!bucketKey || !Object.prototype.hasOwnProperty.call(agendaSummary, bucketKey)) {
+      return;
+    }
+
+    agendaSummary[bucketKey] += 1;
+  });
   const callbackCount = leads.filter(
-    (lead) =>
-      isMetalworksOperatorOpenStatus(lead.status || "new") &&
-      lead.callbackIntent === "yes" &&
-      lead.nextActionAt,
+    (lead) => {
+      if (
+        !isMetalworksOperatorOpenStatus(lead.status || "new") ||
+        lead.callbackIntent !== "yes" ||
+        !lead.nextActionAt ||
+        isInactiveAppointmentStatus(inferLeadAppointmentStatus(lead))
+      ) {
+        return false;
+      }
+
+      const nextActionAt = new Date(lead.nextActionAt);
+
+      return !Number.isNaN(nextActionAt.getTime());
+    },
   ).length;
 
   return {
@@ -4083,6 +7408,10 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
     },
     focusLeads,
     agendaLeads,
+    agendaEvents,
+    agendaSummary,
+    importantDates,
+    importantDateRules: METALWORKS_IMPORTANT_DATE_RULES,
     recentActivity: recentActivity.slice(0, 12),
     fullCrmUrl: "/metalworks-crm/",
   };
@@ -4108,8 +7437,6 @@ function buildMetalworksDirectWhatsAppUrl() {
 function buildMetalworksCrmResourceSections() {
   const websiteBase = METALWORKS_WEBSITE_URL.replace(/\/$/, "");
   const directWhatsAppUrl = buildMetalworksDirectWhatsAppUrl();
-  const thumbtackProfileUrl =
-    "https://www.thumbtack.com/il/blue-island/metal-fabricators/chicago-metal-works-fencing/service/456785560962318359";
   const sections = [
     {
       id: "public-links",
@@ -4149,7 +7476,7 @@ function buildMetalworksCrmResourceSections() {
     {
       id: "crm-links",
       title: "CRM Links",
-      description: "Internal tools for office, operator, and field teams.",
+      description: "Internal tools for office and field teams.",
       items: [
         {
           id: "crm-main",
@@ -4157,13 +7484,6 @@ function buildMetalworksCrmResourceSections() {
           description: "Lead inbox and applicant pipeline.",
           url: `${websiteBase}/metalworks-crm/`,
           symbol: "rectangle.stack.fill",
-        },
-        {
-          id: "crm-operator",
-          label: "Operator CRM",
-          description: "Mobile operator workspace for fast follow-up.",
-          url: `${websiteBase}/metalworks-crm/operator/`,
-          symbol: "iphone.gen3",
         },
         {
           id: "prospector-login",
@@ -4197,7 +7517,7 @@ function buildMetalworksCrmResourceSections() {
           id: "thumbtack-profile",
           label: "Thumbtack Profile",
           description: "Public Thumbtack profile and reviews.",
-          url: thumbtackProfileUrl,
+          url: METALWORKS_THUMBTACK_PROFILE_URL,
           symbol: "star.fill",
         },
         {
@@ -4274,6 +7594,11 @@ RULES:
 - Use only the CRM snapshot and selected lead context provided in the prompt.
 - If there is a selected lead, anchor the answer to that lead first.
 - If multiple leads matter, rank them clearly.
+- Important dates are personal/team availability warnings, not hard blocks. Jobs can still be scheduled on those dates when employee coverage or explicit confirmation makes sense.
+- When a scheduled lead falls on an important date, mention the awareness note and suggest confirming coverage rather than refusing the booking.
+- When the user asks what is on a date or whether a date is available, always check agendaEvents and importantDates in addition to agendaLeads. If an important date exists on that date, mention it even when there are also lead appointments.
+- Agenda events are internal/personal/client-scheduling cards that are not leads. Use them for birthdays, interviews, personal appointments, internal reminders, or client appointments that should appear on the agenda without creating a lead.
+- If a user asks to schedule a non-lead item and the system reports agenda_event_created, acknowledge that the card was created and do not say it became a customer lead.
 `;
 }
 
@@ -4305,6 +7630,15 @@ async function generateMetalworksOperatorReply({
       : [],
     agendaLeads: Array.isArray(operatorSnapshot?.agendaLeads)
       ? operatorSnapshot.agendaLeads.slice(0, 6)
+      : [],
+    agendaEvents: Array.isArray(operatorSnapshot?.agendaEvents)
+      ? operatorSnapshot.agendaEvents.slice(0, 12)
+      : [],
+    importantDates: Array.isArray(operatorSnapshot?.importantDates)
+      ? operatorSnapshot.importantDates.slice(0, 12)
+      : [],
+    importantDateRules: Array.isArray(operatorSnapshot?.importantDateRules)
+      ? operatorSnapshot.importantDateRules
       : [],
     selectedLead: selectedLead || null,
     selectedActivity: Array.isArray(selectedActivity)
@@ -4574,11 +7908,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     qualificationNotes: String,
     sourceProspectorName: String,
     sourceProspectorEmail: String,
+    clientSubmissionId: { type: String, index: true },
     details: String,
     photoFileNames: [String],
     status: { type: String, default: "new", index: true },
     nextAction: String,
     nextActionAt: Date,
+    appointmentType: String,
+    appointmentStatus: String,
+    appointmentDurationMinutes: { type: Number, default: 0 },
+    appointmentAssignedTo: String,
+    nextActionReminderOffsets: { type: [Number], default: [] },
+    nextActionReminderSentKeys: { type: [String], default: [] },
     privateNotes: String,
     estimateTitle: String,
     estimateScope: String,
@@ -4588,17 +7929,25 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     estimateMiscCost: { type: Number, default: 0 },
     estimateDiscount: { type: Number, default: 0 },
     estimateAmount: { type: Number, default: 0 },
+    invoiceDepositAmount: { type: Number, default: 0 },
     estimateValidUntil: Date,
     estimateNotes: String,
     clientDocumentType: { type: String, default: "estimate" },
     clientDocumentDescription: String,
     clientDocumentWorkDate: Date,
     clientDocumentWarranty: String,
+    googleCalendarEventId: String,
+    googleCalendarEventHtmlLink: String,
+    googleCalendarLastSyncedAt: Date,
+    googleCalendarSyncStatus: String,
+    googleCalendarSyncError: String,
     estimateSentAt: Date,
     estimateSentTo: String,
+    soldAt: Date,
     sourceType: { type: String, default: "website_form", index: true },
     sourceExternalId: { type: String, index: true },
     sourceExternalSystem: String,
+    publicChatThreadKey: { type: String, index: true },
     pageTitle: String,
     pagePath: String,
     pageUrl: String,
@@ -4678,6 +8027,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       index: true,
     },
     activityType: { type: String, default: "lead_updated", index: true },
+    externalEventKey: { type: String, index: true },
     title: String,
     body: String,
     meta: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -4686,6 +8036,27 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     ipAddress: String,
     userAgent: String,
     tracking: trackingSchema,
+    createdAt: { type: Date, default: Date.now, index: true },
+  });
+
+  const metalworksAgendaEventSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true, index: true },
+    eventType: { type: String, default: "internal", index: true },
+    owner: String,
+    notes: String,
+    startsAt: { type: Date, required: true, index: true },
+    endsAt: Date,
+    status: { type: String, default: "scheduled", index: true },
+    source: { type: String, default: "manual", index: true },
+    relatedLeadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetalworksLead",
+      default: null,
+      index: true,
+    },
+    createdByEmail: String,
+    updatedByEmail: String,
+    updatedAt: Date,
     createdAt: { type: Date, default: Date.now, index: true },
   });
 
@@ -4763,32 +8134,56 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
-  const metalworksWhatsAppFollowupSchema = new mongoose.Schema({
+  const metalworksCrmWebPushDeviceSchema = new mongoose.Schema({
+    adminEmail: { type: String, required: true, index: true },
+    endpoint: { type: String, required: true, unique: true, index: true },
+    platform: { type: String, default: "web" },
+    browserName: String,
+    deviceName: String,
+    notificationPath: { type: String, default: "/metalworks-crm/operator/" },
+    authorizationStatus: String,
+    subscription: { type: mongoose.Schema.Types.Mixed, required: true },
+    vapidPublicKey: String,
+    notificationsEnabled: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true, index: true },
+    lastSeenAt: { type: Date, default: Date.now, index: true },
+    lastPushAt: Date,
+    lastPushError: String,
+    ipAddress: String,
+    userAgent: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
+  const metalworksPublicChatWebPushDeviceSchema = new mongoose.Schema({
+    endpoint: { type: String, required: true, unique: true, index: true },
     leadId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MetalworksLead",
       default: null,
       index: true,
     },
-    phone: { type: String, index: true },
-    phoneDisplay: String,
     visitorId: { type: String, index: true },
     sessionId: { type: String, index: true },
-    step: { type: String, required: true, index: true },
-    status: { type: String, default: "queued", index: true },
-    dueAt: { type: Date, required: true, index: true },
-    windowExpiresAt: { type: Date, required: true, index: true },
-    lastInboundAt: { type: Date, required: true, index: true },
-    serviceBucket: String,
-    leadTemperature: String,
-    language: String,
-    messageBody: String,
-    attempts: { type: Number, default: 0 },
-    lockedAt: Date,
-    sentAt: Date,
-    canceledAt: Date,
-    cancelReason: String,
-    error: String,
+    platform: { type: String, default: "web" },
+    browserName: String,
+    deviceName: String,
+    notificationPath: { type: String, default: "/metalworks-chat/" },
+    authorizationStatus: String,
+    subscription: { type: mongoose.Schema.Types.Mixed, required: true },
+    vapidPublicKey: String,
+    notificationsEnabled: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true, index: true },
+    lastSeenAt: { type: Date, default: Date.now, index: true },
+    lastPushAt: Date,
+    lastPushError: String,
+    ipAddress: String,
+    userAgent: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
+  const metalworksExternalLeadLockSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true },
+    expiresAt: { type: Date, required: true, index: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
@@ -4796,6 +8191,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadSchema.index({ createdAt: -1 });
   metalworksLeadSchema.index({ updatedAt: -1 });
   metalworksLeadSchema.index({ status: 1, updatedAt: -1 });
+  metalworksLeadSchema.index({ publicChatThreadKey: 1 });
   metalworksLeadSchema.index({ visitorIds: 1 });
   metalworksLeadSchema.index({ sessionIds: 1 });
   metalworksApplicantSchema.index({ createdAt: -1 });
@@ -4806,6 +8202,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksLeadActivitySchema.index({ leadId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ applicantId: 1, createdAt: -1 });
   metalworksLeadActivitySchema.index({ activityType: 1, createdAt: -1 });
+  metalworksLeadActivitySchema.index({ externalEventKey: 1, createdAt: -1 });
+  metalworksAgendaEventSchema.index({ startsAt: 1, status: 1 });
+  metalworksAgendaEventSchema.index({ eventType: 1, startsAt: 1 });
+  metalworksAgendaEventSchema.index({ createdByEmail: 1, createdAt: -1 });
   metalworksLeadAssetSchema.index({ leadId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ visitorId: 1, uploadedAt: -1 });
   metalworksLeadAssetSchema.index({ sessionId: 1, uploadedAt: -1 });
@@ -4817,9 +8217,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   metalworksProspectorSessionSchema.index({ prospectorEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
   metalworksCrmPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
-  metalworksWhatsAppFollowupSchema.index({ status: 1, dueAt: 1, createdAt: 1 });
-  metalworksWhatsAppFollowupSchema.index({ leadId: 1, status: 1, dueAt: 1 });
-  metalworksWhatsAppFollowupSchema.index({ leadId: 1, step: 1, lastInboundAt: 1 });
+  metalworksCrmWebPushDeviceSchema.index({ adminEmail: 1, lastSeenAt: -1 });
+  metalworksCrmWebPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ leadId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ visitorId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ sessionId: 1, lastSeenAt: -1 });
+  metalworksPublicChatWebPushDeviceSchema.index({ isActive: 1, lastSeenAt: -1 });
+  metalworksExternalLeadLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   const MetalworksLead =
     mongoose.models.MetalworksLead ||
@@ -4830,6 +8234,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksLeadActivity =
     mongoose.models.MetalworksLeadActivity ||
     mongoose.model("MetalworksLeadActivity", metalworksLeadActivitySchema);
+  const MetalworksAgendaEvent =
+    mongoose.models.MetalworksAgendaEvent ||
+    mongoose.model("MetalworksAgendaEvent", metalworksAgendaEventSchema);
   const MetalworksLeadAsset =
     mongoose.models.MetalworksLeadAsset ||
     mongoose.model("MetalworksLeadAsset", metalworksLeadAssetSchema);
@@ -4845,12 +8252,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   const MetalworksCrmPushDevice =
     mongoose.models.MetalworksCrmPushDevice ||
     mongoose.model("MetalworksCrmPushDevice", metalworksCrmPushDeviceSchema);
-  const MetalworksWhatsAppFollowup =
-    mongoose.models.MetalworksWhatsAppFollowup ||
-    mongoose.model("MetalworksWhatsAppFollowup", metalworksWhatsAppFollowupSchema);
-  let metalworksWhatsAppFollowupWorkerRunning = false;
-  let metalworksWhatsAppFollowupWorkerInterval = null;
-  let metalworksWhatsAppFollowupWakeTimer = null;
+  const MetalworksCrmWebPushDevice =
+    mongoose.models.MetalworksCrmWebPushDevice ||
+    mongoose.model("MetalworksCrmWebPushDevice", metalworksCrmWebPushDeviceSchema);
+  const MetalworksPublicChatWebPushDevice =
+    mongoose.models.MetalworksPublicChatWebPushDevice ||
+    mongoose.model("MetalworksPublicChatWebPushDevice", metalworksPublicChatWebPushDeviceSchema);
+  const MetalworksExternalLeadLock =
+    mongoose.models.MetalworksExternalLeadLock ||
+    mongoose.model("MetalworksExternalLeadLock", metalworksExternalLeadLockSchema);
 
   function setSessionCookie(res, req, token) {
     res.cookie(METALWORKS_CRM_SESSION_COOKIE, token, {
@@ -4888,6 +8298,52 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       secure: requestIsSecure(req),
       path: "/",
     });
+  }
+
+  function setPublicChatThreadCookie(res, req, threadKey) {
+    const safeThreadKey = normalizePublicChatThreadKey(threadKey);
+
+    if (!safeThreadKey) {
+      return;
+    }
+
+    res.cookie(METALWORKS_PUBLIC_CHAT_THREAD_COOKIE, safeThreadKey, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: requestIsSecure(req),
+      path: "/",
+      maxAge: METALWORKS_PUBLIC_CHAT_THREAD_DAYS * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  function getPublicChatThreadKey(req) {
+    const bodyThreadKey = normalizePublicChatThreadKey(
+      req.body?.threadKey || req.query?.thread || req.query?.t || "",
+    );
+
+    if (bodyThreadKey) {
+      return bodyThreadKey;
+    }
+
+    const cookies = parseCookies(req.headers.cookie || "");
+    return normalizePublicChatThreadKey(cookies[METALWORKS_PUBLIC_CHAT_THREAD_COOKIE] || "");
+  }
+
+  function ensureWebsiteLiveChatThreadKey(leadDoc = null, fallbackThreadKey = "") {
+    if (!leadDoc) {
+      return "";
+    }
+
+    const currentThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+
+    if (currentThreadKey) {
+      leadDoc.publicChatThreadKey = currentThreadKey;
+      return currentThreadKey;
+    }
+
+    const nextThreadKey = normalizePublicChatThreadKey(fallbackThreadKey || "") || generateToken();
+    leadDoc.publicChatThreadKey = nextThreadKey;
+    return nextThreadKey;
   }
 
   function respondError(res, statusCode, message) {
@@ -5025,7 +8481,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const auth = await getProspectorAuth(req);
 
     if (!auth.email || !auth.name) {
-      respondError(res, 401, "Necesitas iniciar sesion como prospectador.");
+      respondError(res, 401, "You need to sign in as a prospector.");
       return null;
     }
 
@@ -5107,18 +8563,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       query.adminEmail = normalizeEmail(adminEmail);
     }
 
-    const deviceDocs = await MetalworksCrmPushDevice.find(query)
-      .sort({ lastSeenAt: -1, updatedAt: -1 })
-      .limit(adminEmail ? 8 : 24)
-      .lean();
+    const [deviceDocs, webDeviceDocs] = await Promise.all([
+      MetalworksCrmPushDevice.find(query)
+        .sort({ lastSeenAt: -1, updatedAt: -1 })
+        .limit(adminEmail ? 8 : 24)
+        .lean(),
+      MetalworksCrmWebPushDevice.find(query)
+        .sort({ lastSeenAt: -1, updatedAt: -1 })
+        .limit(adminEmail ? 8 : 24)
+        .lean(),
+    ]);
 
-    if (!deviceDocs.length) {
+    if (!deviceDocs.length && !webDeviceDocs.length) {
       return {
         attempted: false,
         delivered: false,
         deliveredCount: 0,
         deviceCount: 0,
-        error: "No iPhone devices are registered for push alerts yet.",
+        error: "No active push devices are registered for lead alerts yet.",
       };
     }
 
@@ -5128,7 +8590,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       alertType,
       requestedAtLabel,
     });
-    const results = await Promise.all(
+    const apnsResults = await Promise.all(
       deviceDocs.map(async (device) => {
         const result = await sendMetalworksApnsNotification({
           deviceToken: device.deviceToken,
@@ -5160,6 +8622,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return result;
       }),
     );
+    const webResults = await Promise.all(
+      webDeviceDocs.map(async (device) => {
+        const result = await sendMetalworksWebPushNotification({
+          subscription: device.subscription,
+          alertType,
+          title: copy.title,
+          body: copy.body,
+          leadId: lead?._id ? String(lead._id) : "",
+          notificationPath: normalizeMetalworksNotificationPath(
+            device.notificationPath || "/metalworks-crm/operator/",
+          ),
+        });
+        const update = {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          lastPushAt: result.delivered ? new Date() : device.lastPushAt || null,
+          lastPushError: result.delivered ? "" : cleanText(result.error || "", 240),
+        };
+
+        if ([404, 410].includes(Number(result.status || 0))) {
+          update.isActive = false;
+          update.notificationsEnabled = false;
+        }
+
+        await MetalworksCrmWebPushDevice.updateOne(
+          { _id: device._id },
+          {
+            $set: update,
+          },
+        );
+
+        return result;
+      }),
+    );
+    const results = [...apnsResults, ...webResults];
     const deliveredCount = results.filter((item) => item.delivered).length;
     const firstError = results.find((item) => item.error)?.error || "";
 
@@ -5167,15 +8664,505 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       attempted: true,
       delivered: deliveredCount > 0,
       deliveredCount,
-      deviceCount: deviceDocs.length,
+      deviceCount: deviceDocs.length + webDeviceDocs.length,
       error: firstError,
     };
+  }
+
+  async function processMetalworksLeadReminders() {
+    if (METALWORKS_LEAD_REMINDER_WORKER.running) {
+      return;
+    }
+
+    METALWORKS_LEAD_REMINDER_WORKER.running = true;
+
+    try {
+      const now = new Date();
+      const candidateLeads = await MetalworksLead.find({
+        status: { $nin: ["won", "lost", "archived"] },
+        appointmentStatus: { $nin: ["completed", "canceled"] },
+        nextActionAt: {
+          $gte: new Date(now.getTime() - METALWORKS_LEAD_REMINDER_GRACE_MS),
+          $lte: new Date(now.getTime() + METALWORKS_LEAD_REMINDER_SCAN_WINDOW_MS),
+        },
+        nextActionReminderOffsets: { $exists: true, $ne: [] },
+      })
+        .sort({ nextActionAt: 1, updatedAt: -1 })
+        .limit(80);
+
+      for (const leadDoc of candidateLeads) {
+        if (
+          !isMetalworksOperatorOpenStatus(leadDoc.status || "new") ||
+          isInactiveAppointmentStatus(inferLeadAppointmentStatus(leadDoc))
+        ) {
+          continue;
+        }
+
+        const dueReminders = collectDueLeadReminderOffsets({
+          nextActionAt: leadDoc.nextActionAt,
+          reminderOffsets: leadDoc.nextActionReminderOffsets || [],
+          sentKeys: leadDoc.nextActionReminderSentKeys || [],
+          now,
+        });
+
+        if (!dueReminders.length) {
+          continue;
+        }
+
+        const scheduleLabel = leadDoc.nextActionAt
+          ? formatDateTimeLabel(leadDoc.nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
+          : "";
+        const deliveredReminderKeys = [];
+
+        for (const reminder of dueReminders) {
+          let delivery = null;
+
+          try {
+            delivery = await sendMetalworksPushAlert({
+              lead: leadDoc,
+              alertType: "lead_followup_reminder",
+              requestedAtLabel: [reminder.label, scheduleLabel].filter(Boolean).join(" • "),
+            });
+          } catch (error) {
+            console.error("Error sending Metal Works lead reminder push:", error.message);
+            continue;
+          }
+
+          if (!delivery?.delivered) {
+            continue;
+          }
+
+          deliveredReminderKeys.push(reminder.key);
+
+          await appendActivity({
+            leadId: leadDoc._id,
+            activityType: "lead_followup_reminder_sent",
+            title: "Reminder push sent",
+            body: [reminder.label, scheduleLabel].filter(Boolean).join(" • "),
+          }).catch(() => null);
+        }
+
+        if (!deliveredReminderKeys.length) {
+          continue;
+        }
+
+        leadDoc.nextActionReminderSentKeys = Array.from(
+          new Set([
+            ...pruneLeadReminderSentKeys(
+              leadDoc.nextActionReminderSentKeys || [],
+              leadDoc.nextActionAt,
+              leadDoc.nextActionReminderOffsets || [],
+            ),
+            ...deliveredReminderKeys,
+          ]),
+        );
+        leadDoc.updatedAt = new Date();
+        await leadDoc.save();
+      }
+    } finally {
+      METALWORKS_LEAD_REMINDER_WORKER.running = false;
+    }
+  }
+
+  function startMetalworksLeadReminderWorker() {
+    if (METALWORKS_LEAD_REMINDER_WORKER.started) {
+      return;
+    }
+
+    METALWORKS_LEAD_REMINDER_WORKER.started = true;
+    const tick = async () => {
+      try {
+        await processMetalworksLeadReminders();
+      } catch (error) {
+        console.error("Error processing Metal Works lead reminders:", error.message);
+      }
+    };
+
+    METALWORKS_LEAD_REMINDER_WORKER.timer = setInterval(
+      tick,
+      METALWORKS_LEAD_REMINDER_POLL_MS,
+    );
+
+    if (typeof METALWORKS_LEAD_REMINDER_WORKER.timer?.unref === "function") {
+      METALWORKS_LEAD_REMINDER_WORKER.timer.unref();
+    }
+
+    void tick();
+  }
+
+  startMetalworksLeadReminderWorker();
+  void repairExistingExternalLeadDuplicates({ externalSystem: "thumbtack" });
+  void repairUnlinkedThumbtackReviewActivities();
+  void repairScheduledReminderDrift();
+
+  async function withExternalLeadLock(lockKey = "", task = async () => null) {
+    const safeLockKey = cleanText(lockKey || "", 200);
+
+    if (!safeLockKey) {
+      return await task();
+    }
+
+    let acquired = false;
+
+    try {
+      for (let attempt = 0; attempt < METALWORKS_EXTERNAL_LOCK_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          await MetalworksExternalLeadLock.create({
+            key: safeLockKey,
+            expiresAt: new Date(Date.now() + METALWORKS_EXTERNAL_LOCK_TTL_MS),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          acquired = true;
+          break;
+        } catch (error) {
+          if (error?.code !== 11000) {
+            throw error;
+          }
+
+          await MetalworksExternalLeadLock.deleteMany({
+            key: safeLockKey,
+            expiresAt: { $lte: new Date() },
+          }).catch(() => null);
+          await waitMs(METALWORKS_EXTERNAL_LOCK_RETRY_MS + attempt * 30);
+        }
+      }
+
+      if (!acquired) {
+        throw createRequestError(503, "Timed out waiting for the external lead lock.");
+      }
+
+      return await task();
+    } finally {
+      if (acquired) {
+        await MetalworksExternalLeadLock.deleteOne({ key: safeLockKey }).catch(() => null);
+      }
+    }
+  }
+
+  async function mergeDuplicateExternalLeadsByKey({
+    externalSystem = "",
+    externalLeadId = "",
+  } = {}) {
+    const safeExternalSystem = cleanText(externalSystem || "", 80);
+    const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+
+    if (!safeExternalSystem || !safeExternalLeadId) {
+      return null;
+    }
+
+    const leadDocs = await MetalworksLead.find({
+      sourceExternalSystem: safeExternalSystem,
+      sourceExternalId: safeExternalLeadId,
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(20);
+
+    if (leadDocs.length <= 1) {
+      return leadDocs[0] || null;
+    }
+
+    const leadIds = leadDocs.map((doc) => doc._id);
+    const [activityCounts, assetCounts] = await Promise.all([
+      MetalworksLeadActivity.aggregate([
+        { $match: { leadId: { $in: leadIds } } },
+        { $group: { _id: "$leadId", count: { $sum: 1 } } },
+      ]),
+      MetalworksLeadAsset.aggregate([
+        { $match: { leadId: { $in: leadIds } } },
+        { $group: { _id: "$leadId", count: { $sum: 1 } } },
+      ]),
+    ]);
+    const activityCountMap = new Map(activityCounts.map((item) => [String(item._id || ""), Number(item.count || 0)]));
+    const assetCountMap = new Map(assetCounts.map((item) => [String(item._id || ""), Number(item.count || 0)]));
+    const statusRank = {
+      won: 7,
+      booked: 6,
+      quoted: 5,
+      contacted: 4,
+      new: 3,
+      lost: 2,
+      archived: 1,
+    };
+    const genericProjectTypes = new Set(["thumbtack lead", "thumbtack conversation"]);
+    const scoredLeads = leadDocs
+      .map((doc) => {
+        const docId = String(doc._id || "");
+        const activityCount = activityCountMap.get(docId) || 0;
+        const assetCount = assetCountMap.get(docId) || 0;
+        const status = normalizeStatus(doc.status || "new");
+        const projectType = cleanText(doc.projectType || "", 120).toLowerCase();
+        const projectTypeBonus =
+          projectType && !genericProjectTypes.has(projectType) ? 30 : 0;
+        const sourceBonus = String(doc.sourceType || "").includes("message") ? 40 : 0;
+        const score =
+          activityCount * 100 +
+          assetCount * 30 +
+          (statusRank[status] || 0) * 20 +
+          projectTypeBonus +
+          sourceBonus +
+          (doc.updatedAt ? new Date(doc.updatedAt).getTime() / 1e11 : 0);
+
+        return { doc, score };
+      })
+      .sort((left, right) => right.score - left.score);
+
+    const primaryDoc = scoredLeads[0]?.doc || leadDocs[0];
+    const duplicateDocs = leadDocs.filter((doc) => String(doc._id || "") !== String(primaryDoc._id || ""));
+
+    const pickBestText = (...values) =>
+      values
+        .map((value) => cleanText(value || "", 3000))
+        .filter(Boolean)
+        .sort((left, right) => right.length - left.length)[0] || "";
+    const pickBestProjectType = (...values) =>
+      values
+        .map((value) => cleanText(value || "", 120))
+        .filter(Boolean)
+        .sort((left, right) => {
+          const leftGeneric = genericProjectTypes.has(left.toLowerCase());
+          const rightGeneric = genericProjectTypes.has(right.toLowerCase());
+
+          if (leftGeneric !== rightGeneric) {
+            return leftGeneric ? 1 : -1;
+          }
+
+          return right.length - left.length;
+        })[0] || "";
+
+    primaryDoc.fullName = pickBestText(...leadDocs.map((doc) => doc.fullName || "")).slice(0, 120) || primaryDoc.fullName;
+    primaryDoc.phone =
+      leadDocs.map((doc) => normalizePhone(doc.phone || doc.phoneDisplay || "")).find(Boolean) ||
+      primaryDoc.phone ||
+      "";
+    primaryDoc.phoneDisplay =
+      leadDocs.map((doc) => cleanText(doc.phoneDisplay || doc.phone || "", 40)).find(Boolean) ||
+      primaryDoc.phoneDisplay ||
+      primaryDoc.phone ||
+      "";
+    primaryDoc.email =
+      leadDocs.map((doc) => normalizeEmail(doc.email || "")).find(Boolean) || primaryDoc.email || "";
+    primaryDoc.projectType =
+      pickBestProjectType(...leadDocs.map((doc) => doc.projectType || "")) || primaryDoc.projectType || "";
+    primaryDoc.location =
+      pickBestText(...leadDocs.map((doc) => doc.location || "")).slice(0, 160) || primaryDoc.location || "";
+    primaryDoc.addressLine =
+      pickBestText(...leadDocs.map((doc) => doc.addressLine || "")).slice(0, 160) ||
+      primaryDoc.addressLine ||
+      "";
+    primaryDoc.zipCode =
+      leadDocs.map((doc) => cleanText(doc.zipCode || "", 20)).find(Boolean) || primaryDoc.zipCode || "";
+    primaryDoc.city =
+      leadDocs.map((doc) => cleanText(doc.city || "", 120)).find(Boolean) || primaryDoc.city || "";
+    primaryDoc.details =
+      pickBestText(...leadDocs.map((doc) => doc.details || "")) || primaryDoc.details || "";
+    primaryDoc.photoFileNames = mergeAssistantUniqueValues(
+      ...leadDocs.map((doc) => (Array.isArray(doc.photoFileNames) ? doc.photoFileNames : [])),
+    ).slice(0, 20);
+    primaryDoc.lastUserMessage =
+      pickBestText(...leadDocs.map((doc) => doc.lastUserMessage || "")).slice(0, 500) ||
+      primaryDoc.lastUserMessage ||
+      "";
+    primaryDoc.lastAssistantMessage =
+      pickBestText(...leadDocs.map((doc) => doc.lastAssistantMessage || "")).slice(0, 1500) ||
+      primaryDoc.lastAssistantMessage ||
+      "";
+    primaryDoc.status = leadDocs
+      .map((doc) => normalizeStatus(doc.status || "new"))
+      .sort((left, right) => (statusRank[right] || 0) - (statusRank[left] || 0))[0] || primaryDoc.status;
+    primaryDoc.createdAt = leadDocs
+      .map((doc) => (doc.createdAt ? new Date(doc.createdAt) : null))
+      .filter(Boolean)
+      .sort((left, right) => left.getTime() - right.getTime())[0] || primaryDoc.createdAt;
+    primaryDoc.updatedAt = new Date();
+    await primaryDoc.save();
+
+    const duplicateIds = duplicateDocs.map((doc) => doc._id);
+
+    if (duplicateIds.length) {
+      await Promise.all([
+        MetalworksLeadActivity.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id } },
+        ),
+        MetalworksLeadAsset.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id, updatedAt: new Date() } },
+        ),
+        MetalworksPublicChatWebPushDevice.updateMany(
+          { leadId: { $in: duplicateIds } },
+          { $set: { leadId: primaryDoc._id, updatedAt: new Date() } },
+        ),
+      ]);
+
+      await MetalworksLead.deleteMany({ _id: { $in: duplicateIds } });
+    }
+
+    return primaryDoc;
+  }
+
+  async function findThumbtackLeadByNegotiationId(negotiationId = "") {
+    const safeNegotiationId = cleanText(negotiationId || "", 120);
+
+    if (!safeNegotiationId) {
+      return null;
+    }
+
+    return (
+      (await mergeDuplicateExternalLeadsByKey({
+        externalSystem: "thumbtack",
+        externalLeadId: safeNegotiationId,
+      })) ||
+      (await MetalworksLead.findOne({
+        sourceExternalSystem: "thumbtack",
+        sourceExternalId: safeNegotiationId,
+      }).sort({ updatedAt: -1, createdAt: -1 }))
+    );
+  }
+
+  function getThumbtackReviewNegotiationIdFromActivity(activityDoc = null) {
+    return cleanText(
+      activityDoc?.meta?.negotiationId ||
+        activityDoc?.meta?.webhookPayload?.data?.negotiationID ||
+        activityDoc?.meta?.webhookPayload?.data?.negotiationId ||
+        activityDoc?.meta?.webhookPayload?.review?.negotiationID ||
+        activityDoc?.meta?.webhookPayload?.review?.negotiationId ||
+        "",
+      120,
+    );
+  }
+
+  async function repairExistingExternalLeadDuplicates({ externalSystem = "" } = {}) {
+    const match = {
+      sourceExternalId: { $exists: true, $ne: "" },
+    };
+
+    if (externalSystem) {
+      match.sourceExternalSystem = cleanText(externalSystem || "", 80);
+    }
+
+    const groups = await MetalworksLead.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            sourceExternalSystem: "$sourceExternalSystem",
+            sourceExternalId: "$sourceExternalId",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $match: { count: { $gt: 1 } } },
+      { $limit: 50 },
+    ]);
+
+    for (const group of groups) {
+      await mergeDuplicateExternalLeadsByKey({
+        externalSystem: group?._id?.sourceExternalSystem || "",
+        externalLeadId: group?._id?.sourceExternalId || "",
+      }).catch((error) => {
+        console.error("Error repairing duplicate external lead:", error.message);
+      });
+    }
+  }
+
+  async function repairUnlinkedThumbtackReviewActivities() {
+    const reviewActivities = await MetalworksLeadActivity.find({
+      activityType: "thumbtack_review",
+      $or: [{ leadId: null }, { leadId: { $exists: false } }],
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    for (const activityDoc of reviewActivities) {
+      try {
+        const negotiationId = getThumbtackReviewNegotiationIdFromActivity(activityDoc);
+
+        if (!negotiationId) {
+          continue;
+        }
+
+        const leadDoc = await findThumbtackLeadByNegotiationId(negotiationId);
+
+        if (!leadDoc?._id) {
+          continue;
+        }
+
+        activityDoc.leadId = leadDoc._id;
+        activityDoc.meta = {
+          ...(activityDoc.meta || {}),
+          negotiationId,
+        };
+        activityDoc.updatedAt = new Date();
+        await activityDoc.save();
+      } catch (error) {
+        console.error("Error repairing unlinked Thumbtack review:", error.message);
+      }
+    }
+  }
+
+  async function repairScheduledReminderDrift() {
+    const now = new Date();
+    const candidateLeads = await MetalworksLead.find({
+      status: { $nin: ["won", "lost", "archived"] },
+      appointmentStatus: { $nin: ["completed", "canceled"] },
+      nextActionAt: { $gte: new Date(now.getTime() - 12 * 60 * 60 * 1000) },
+      nextActionReminderOffsets: { $exists: true, $ne: [] },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(60);
+
+    for (const leadDoc of candidateLeads) {
+      if (Array.isArray(leadDoc.nextActionReminderSentKeys) && leadDoc.nextActionReminderSentKeys.length) {
+        continue;
+      }
+
+      const latestScheduleActivity = await MetalworksLeadActivity.findOne({
+        leadId: leadDoc._id,
+        activityType: "lead_updated",
+        body: /Seguimiento:/i,
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const scheduleLabelMatch = String(latestScheduleActivity?.body || "").match(
+        /Seguimiento:\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4},\s*[0-9]{1,2}:\d{2}(?::\d{2})?\s*[AP]M)/i,
+      );
+      const intendedDate = parseLegacyCrmScheduleLabel(scheduleLabelMatch?.[1] || "");
+      const currentDate =
+        leadDoc.nextActionAt instanceof Date
+          ? leadDoc.nextActionAt
+          : leadDoc.nextActionAt
+            ? new Date(leadDoc.nextActionAt)
+            : null;
+
+      if (
+        !(intendedDate instanceof Date) ||
+        Number.isNaN(intendedDate.getTime()) ||
+        !(currentDate instanceof Date) ||
+        Number.isNaN(currentDate.getTime())
+      ) {
+        continue;
+      }
+
+      const diffHours = Math.abs(intendedDate.getTime() - currentDate.getTime()) / (60 * 60 * 1000);
+
+      if (diffHours < 4 || diffHours > 6.5) {
+        continue;
+      }
+
+      leadDoc.nextActionAt = intendedDate;
+      leadDoc.nextActionReminderSentKeys = [];
+      leadDoc.updatedAt = new Date();
+      await leadDoc.save().catch(() => null);
+    }
   }
 
   async function appendActivity({
     leadId = null,
     applicantId = null,
     activityType = "",
+    externalEventKey = "",
     title = "",
     body = "",
     meta = null,
@@ -5183,624 +9170,270 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     pageUrl = "",
     req = null,
     tracking = {},
-    createdAt = null,
   } = {}) {
-    await MetalworksLeadActivity.create({
-      leadId,
-      applicantId,
-      activityType,
-      title: title || formatActivityTitle(activityType),
-      body: cleanText(body || "", 1200),
-      meta,
-      pagePath: cleanText(pagePath || "", 240),
-      pageUrl: cleanText(pageUrl || "", 500),
-      ipAddress: req ? cleanText(getClientIp(req), 120) : "",
-      userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
-      tracking: buildTrackingPayload(tracking),
-      createdAt:
-        createdAt instanceof Date && !Number.isNaN(createdAt.getTime()) ? createdAt : new Date(),
-    });
-  }
-
-  function isMetalworksWhatsAppFollowupFinalLeadStatus(status = "") {
-    return METALWORKS_WHATSAPP_CLOSED_LEAD_STATUSES.has(normalizeStatus(status || "new"));
-  }
-
-  function buildMetalworksWhatsAppConversationState(leadDoc = null) {
-    if (!leadDoc) {
-      return null;
-    }
-
-    const lead =
-      leadDoc && typeof leadDoc.toObject === "function"
-        ? leadDoc.toObject()
-        : { ...(leadDoc || {}) };
-
-    return {
-      ...buildAssistantConversationSignals({
-        history: Array.isArray(lead?.conversationHistory) ? lead.conversationHistory : [],
-        lead,
-        pagePath: cleanText(lead?.pagePath || "", 240) || "/whatsapp",
-      }),
-      sourceChannel: "whatsapp",
-      sourceLabel: "Agustin 2.0 WhatsApp assistant",
-    };
-  }
-
-  function shouldSkipMetalworksWhatsAppFollowups(leadDoc = null, conversationState = null) {
-    if (!leadDoc?._id) {
-      return {
-        skip: true,
-        reason: "missing_lead",
-      };
-    }
-
-    if (isMetalworksWhatsAppFollowupFinalLeadStatus(leadDoc.status)) {
-      return {
-        skip: true,
-        reason: `lead_${normalizeStatus(leadDoc.status || "new")}`,
-      };
-    }
-
-    const state = conversationState || buildMetalworksWhatsAppConversationState(leadDoc);
-    const phone = normalizePhone(leadDoc?.phone || state?.phone || "");
-    const hasScheduledCallback =
-      state?.nextActionAt instanceof Date &&
-      !Number.isNaN(state.nextActionAt.getTime()) &&
-      state?.callbackIntent === "yes" &&
-      (!Array.isArray(state?.callbackMissingFields) || !state.callbackMissingFields.length);
-
-    if (!phone) {
-      return {
-        skip: true,
-        reason: "missing_phone",
-      };
-    }
-
-    if (hasScheduledCallback) {
-      return {
-        skip: true,
-        reason: "callback_already_booked",
-      };
-    }
-
-    return {
-      skip: false,
-      reason: "",
-    };
-  }
-
-  async function cancelMetalworksWhatsAppFollowupsForLead({
-    leadId = null,
-    reason = "",
-    lastInboundAt = null,
-    excludeFollowupId = null,
-  } = {}) {
-    if (!leadId) {
-      return 0;
-    }
-
-    const query = {
-      leadId,
-      status: { $in: ["queued", "retrying"] },
-    };
-
-    if (lastInboundAt instanceof Date && !Number.isNaN(lastInboundAt.getTime())) {
-      query.lastInboundAt = lastInboundAt;
-    }
-
-    if (excludeFollowupId) {
-      query._id = { $ne: excludeFollowupId };
-    }
-
-    const result = await MetalworksWhatsAppFollowup.updateMany(query, {
-      $set: {
-        status: "canceled",
-        cancelReason: cleanText(reason || "", 160),
-        canceledAt: new Date(),
-        lockedAt: null,
-        updatedAt: new Date(),
-      },
-    });
-
-    return Number(result?.modifiedCount || 0) || 0;
-  }
-
-  async function scheduleMetalworksWhatsAppFollowups({
-    leadDoc = null,
-    inboundAt = null,
-    sourceChannel = "",
-    tracking = {},
-  } = {}) {
-    if (!leadDoc?._id || cleanText(sourceChannel || "", 40) !== "whatsapp") {
-      return {
-        scheduled: 0,
-        skipped: true,
-        reason: "not_whatsapp",
-      };
-    }
-
-    const safeInboundAt =
-      inboundAt instanceof Date && !Number.isNaN(inboundAt.getTime()) ? inboundAt : new Date();
-    const conversationState = buildMetalworksWhatsAppConversationState(leadDoc);
-    const skipState = shouldSkipMetalworksWhatsAppFollowups(leadDoc, conversationState);
-
-    await cancelMetalworksWhatsAppFollowupsForLead({
-      leadId: leadDoc._id,
-      reason: skipState.skip ? skipState.reason : "reset_by_new_inbound",
-    });
-
-    if (!metalworksWhatsAppFollowupsEnabled()) {
-      return {
-        scheduled: 0,
-        skipped: true,
-        reason: "disabled",
-      };
-    }
-
-    if (skipState.skip) {
-      return {
-        scheduled: 0,
-        skipped: true,
-        reason: skipState.reason,
-      };
-    }
-
-    const phone = normalizePhone(leadDoc.phone || conversationState?.phone || "");
-
-    if (!phone) {
-      return {
-        scheduled: 0,
-        skipped: true,
-        reason: "missing_phone",
-      };
-    }
-
-    const phoneDisplay = cleanText(
-      leadDoc.phoneDisplay || conversationState?.phoneDisplay || phone,
-      40,
-    );
-    const windowExpiresAt = new Date(safeInboundAt.getTime() + METALWORKS_WHATSAPP_WINDOW_MS);
-    const docs = METALWORKS_WHATSAPP_FOLLOWUP_STEPS.map((stepConfig) => ({
-      leadId: leadDoc._id,
-      phone,
-      phoneDisplay,
-      visitorId: cleanText(
-        (Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds[0] : "") ||
-          conversationState?.visitorId ||
-          "",
-        120,
-      ),
-      sessionId: cleanText(
-        (Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds[0] : "") ||
-          conversationState?.sessionId ||
-          "",
-        120,
-      ),
-      step: stepConfig.step,
-      status: "queued",
-      dueAt: new Date(safeInboundAt.getTime() + stepConfig.delayMs),
-      windowExpiresAt,
-      lastInboundAt: safeInboundAt,
-      serviceBucket: cleanText(conversationState?.serviceBucket || "", 40),
-      leadTemperature: cleanText(conversationState?.leadTemperature || "", 20),
-      language: conversationState?.inSpanish ? "es" : "en",
-      attempts: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-
-    if (!docs.length) {
-      return {
-        scheduled: 0,
-        skipped: true,
-        reason: "no_steps",
-      };
-    }
-
-    await MetalworksWhatsAppFollowup.insertMany(docs, { ordered: true });
-    await appendActivity({
-      leadId: leadDoc._id,
-      activityType: "assistant_whatsapp_followups_scheduled",
-      body: `Queued ${docs.length} WhatsApp follow-ups inside the active reply window.`,
-      meta: {
-        count: docs.length,
-        steps: docs.map((item) => item.step),
-        lastInboundAt: safeInboundAt.toISOString(),
-        windowExpiresAt: windowExpiresAt.toISOString(),
-        sourceChannel: "whatsapp",
-      },
-      pagePath: cleanText(leadDoc.pagePath || "", 240) || "/whatsapp",
-      pageUrl: cleanText(leadDoc.pageUrl || "", 500) || "whatsapp://twilio/inbound",
-      tracking,
-    });
-
-    despertarMetalworksWhatsAppFollowupWorker(500);
-
-    return {
-      scheduled: docs.length,
-      skipped: false,
-      reason: "",
-      windowExpiresAt,
-    };
-  }
-
-  async function hasNewerWhatsAppInboundSince({ leadId = null, lastInboundAt = null } = {}) {
-    if (!leadId || !(lastInboundAt instanceof Date) || Number.isNaN(lastInboundAt.getTime())) {
-      return false;
-    }
-
-    const match = await MetalworksLeadActivity.exists({
-      leadId,
-      activityType: "assistant_user_message",
-      createdAt: { $gt: lastInboundAt },
-      "meta.sourceChannel": "whatsapp",
-    });
-
-    return Boolean(match);
-  }
-
-  async function tomarMetalworksWhatsAppFollowupPendiente() {
-    const now = new Date();
-    const staleLockAt = new Date(now.getTime() - METALWORKS_WHATSAPP_FOLLOWUP_LOCK_MS);
-
-    return MetalworksWhatsAppFollowup.findOneAndUpdate(
-      {
-        $or: [
-          {
-            status: "queued",
-            dueAt: { $lte: now },
-          },
-          {
-            status: "retrying",
-            dueAt: { $lte: now },
-          },
-          {
-            status: "processing",
-            lockedAt: { $lte: staleLockAt },
-          },
-        ],
-      },
-      {
-        $set: {
-          status: "processing",
-          lockedAt: now,
-          updatedAt: now,
-        },
-        $inc: {
-          attempts: 1,
-        },
-      },
-      {
-        sort: {
-          dueAt: 1,
-          createdAt: 1,
-        },
-        new: true,
-      },
-    );
-  }
-
-  async function markMetalworksWhatsAppFollowupSent(
-    followupDoc = null,
-    { messageBody = "", error = "" } = {},
-  ) {
-    if (!followupDoc?._id) {
-      return;
-    }
-
-    const now = new Date();
-    await MetalworksWhatsAppFollowup.updateOne(
-      { _id: followupDoc._id },
-      {
-        $set: {
-          status: "sent",
-          messageBody: cleanText(messageBody || "", 1500),
-          error: cleanText(error || "", 240),
-          sentAt: now,
-          lockedAt: null,
-          updatedAt: now,
-        },
-      },
-    );
-  }
-
-  async function markMetalworksWhatsAppFollowupSkipped(
-    followupDoc = null,
-    reason = "",
-  ) {
-    if (!followupDoc?._id) {
-      return;
-    }
-
-    const now = new Date();
-    await MetalworksWhatsAppFollowup.updateOne(
-      { _id: followupDoc._id },
-      {
-        $set: {
-          status: "skipped",
-          cancelReason: cleanText(reason || "", 160),
-          canceledAt: now,
-          lockedAt: null,
-          updatedAt: now,
-        },
-      },
-    );
-  }
-
-  async function markMetalworksWhatsAppFollowupFailed(
-    followupDoc = null,
-    error = "",
-  ) {
-    if (!followupDoc?._id) {
-      return;
-    }
-
-    const now = new Date();
-    const safeError = cleanText(error || "Unknown follow-up error", 240);
-    const windowExpiresAt =
-      followupDoc.windowExpiresAt instanceof Date &&
-      !Number.isNaN(followupDoc.windowExpiresAt.getTime())
-        ? followupDoc.windowExpiresAt
-        : followupDoc.windowExpiresAt
-          ? new Date(followupDoc.windowExpiresAt)
-          : null;
-    const retryAt = new Date(
-      now.getTime() + Math.min(Math.max(Number(followupDoc.attempts || 1), 1), 3) * 5 * 60 * 1000,
-    );
-    const canRetry =
-      Number(followupDoc.attempts || 0) < 3 &&
-      windowExpiresAt instanceof Date &&
-      !Number.isNaN(windowExpiresAt.getTime()) &&
-      retryAt.getTime() < windowExpiresAt.getTime();
-
-    await MetalworksWhatsAppFollowup.updateOne(
-      { _id: followupDoc._id },
-      {
-        $set: {
-          status: canRetry ? "retrying" : "failed",
-          dueAt: canRetry ? retryAt : followupDoc.dueAt,
-          error: safeError,
-          lockedAt: null,
-          updatedAt: now,
-        },
-      },
-    );
-  }
-
-  function shouldLogMetalworksWhatsAppFollowupSkip(reason = "") {
-    return !["newer_inbound_message", "stale_followup"].includes(cleanText(reason || "", 80));
-  }
-
-  async function procesarMetalworksWhatsAppFollowups() {
-    if (
-      metalworksWhatsAppFollowupWorkerRunning ||
-      mongoose.connection.readyState !== 1 ||
-      !metalworksWhatsAppFollowupsEnabled()
-    ) {
-      return;
-    }
-
-    if (typeof app.locals.sendMetalworksWhatsAppMessage !== "function") {
-      return;
-    }
-
-    metalworksWhatsAppFollowupWorkerRunning = true;
-
-    try {
-      for (let index = 0; index < METALWORKS_WHATSAPP_FOLLOWUP_BATCH_SIZE; index += 1) {
-        const followupDoc = await tomarMetalworksWhatsAppFollowupPendiente();
-
-        if (!followupDoc?._id) {
-          break;
-        }
-
-        try {
-          const leadDoc = followupDoc.leadId
-            ? await MetalworksLead.findById(followupDoc.leadId)
-            : await resolveConversationLead({
-                visitorId: followupDoc.visitorId,
-                sessionId: followupDoc.sessionId,
-                phone: followupDoc.phone,
-              });
-          const pagePath = cleanText(leadDoc?.pagePath || "", 240) || "/whatsapp";
-          const pageUrl = cleanText(leadDoc?.pageUrl || "", 500) || "whatsapp://twilio/followup";
-          const tracking = buildTrackingPayload(leadDoc?.tracking || {});
-
-          if (!leadDoc?._id) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "missing_lead");
-            continue;
-          }
-
-          const stepConfig = getMetalworksWhatsAppFollowupStepConfig(followupDoc.step);
-
-          if (!stepConfig) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "invalid_step");
-            continue;
-          }
-
-          const conversationState = buildMetalworksWhatsAppConversationState(leadDoc);
-          const skipState = shouldSkipMetalworksWhatsAppFollowups(leadDoc, conversationState);
-
-          if (skipState.skip) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, skipState.reason);
-            await cancelMetalworksWhatsAppFollowupsForLead({
-              leadId: leadDoc._id,
-              reason: skipState.reason,
-            });
-
-            if (shouldLogMetalworksWhatsAppFollowupSkip(skipState.reason)) {
-              await appendActivity({
-                leadId: leadDoc._id,
-                activityType: "assistant_whatsapp_followup_skipped",
-                body: `Skipped WhatsApp follow-up (${followupDoc.step}) because ${skipState.reason}.`,
-                meta: {
-                  reason: skipState.reason,
-                  step: followupDoc.step,
-                  sourceChannel: "whatsapp",
-                },
-                pagePath,
-                pageUrl,
-                tracking,
-              });
-            }
-
-            continue;
-          }
-
-          const now = new Date();
-          const windowExpiresAt =
-            followupDoc.windowExpiresAt instanceof Date &&
-            !Number.isNaN(followupDoc.windowExpiresAt.getTime())
-              ? followupDoc.windowExpiresAt
-              : new Date(followupDoc.windowExpiresAt);
-          const lastInboundAt =
-            followupDoc.lastInboundAt instanceof Date &&
-            !Number.isNaN(followupDoc.lastInboundAt.getTime())
-              ? followupDoc.lastInboundAt
-              : new Date(followupDoc.lastInboundAt);
-          const dueAt =
-            followupDoc.dueAt instanceof Date && !Number.isNaN(followupDoc.dueAt.getTime())
-              ? followupDoc.dueAt
-              : new Date(followupDoc.dueAt);
-
-          if (!(windowExpiresAt instanceof Date) || Number.isNaN(windowExpiresAt.getTime())) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "missing_window");
-            continue;
-          }
-
-          if (now.getTime() >= windowExpiresAt.getTime()) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "window_expired");
-            continue;
-          }
-
-          if (
-            dueAt instanceof Date &&
-            !Number.isNaN(dueAt.getTime()) &&
-            stepConfig.maxLagMs > 0 &&
-            now.getTime() - dueAt.getTime() > stepConfig.maxLagMs
-          ) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "stale_followup");
-            continue;
-          }
-
-          if (await hasNewerWhatsAppInboundSince({ leadId: leadDoc._id, lastInboundAt })) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "newer_inbound_message");
-            await cancelMetalworksWhatsAppFollowupsForLead({
-              leadId: leadDoc._id,
-              reason: "newer_inbound_message",
-              lastInboundAt,
-              excludeFollowupId: followupDoc._id,
-            });
-            continue;
-          }
-
-          const followupResult = await generateAssistantFollowupReply({
-            step: followupDoc.step,
-            history: Array.isArray(leadDoc.conversationHistory) ? leadDoc.conversationHistory : [],
-            pagePath,
-            conversationState,
-          });
-          const reply = cleanText(followupResult?.reply || "", 1500);
-
-          if (!reply) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "blank_reply");
-            continue;
-          }
-
-          if (await hasNewerWhatsAppInboundSince({ leadId: leadDoc._id, lastInboundAt })) {
-            await markMetalworksWhatsAppFollowupSkipped(followupDoc, "newer_inbound_message");
-            await cancelMetalworksWhatsAppFollowupsForLead({
-              leadId: leadDoc._id,
-              reason: "newer_inbound_message",
-              lastInboundAt,
-              excludeFollowupId: followupDoc._id,
-            });
-            continue;
-          }
-
-          const sendResult = await app.locals.sendMetalworksWhatsAppMessage({
-            to: leadDoc.phone || followupDoc.phone,
-            body: reply,
-          });
-
-          if (!sendResult?.ok) {
-            throw new Error(sendResult?.error || "Twilio WhatsApp send failed.");
-          }
-
-          const sentAt = new Date();
-          leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
-            {
-              role: "assistant",
-              content: reply,
-              createdAt: sentAt,
-            },
-          ]);
-          leadDoc.lastAssistantMessage = reply;
-          leadDoc.lastContactAt = sentAt;
-          leadDoc.updatedAt = sentAt;
-          await leadDoc.save();
-          await markMetalworksWhatsAppFollowupSent(followupDoc, {
-            messageBody: reply,
-          });
-          await appendActivity({
-            leadId: leadDoc._id,
-            activityType: "assistant_whatsapp_followup_sent",
-            body: reply,
-            meta: {
-              step: followupDoc.step,
-              twilioSid: cleanText(sendResult?.sid || "", 120),
-              usedFallback: Boolean(followupResult?.usedFallback),
-              reason: cleanText(followupResult?.reason || "", 240),
-              sourceChannel: "whatsapp",
-            },
-            pagePath,
-            pageUrl,
-            tracking,
-            createdAt: sentAt,
-          });
-        } catch (error) {
-          console.error(
-            "Error sending Metal Works WhatsApp follow-up:",
-            followupDoc?.step,
-            error.message,
-          );
-          await markMetalworksWhatsAppFollowupFailed(
-            followupDoc,
-            error?.message || "WhatsApp follow-up failed.",
-          );
+    const safeExternalEventKey = cleanText(externalEventKey || "", 240);
+    const createActivity = async () => {
+      if (safeExternalEventKey) {
+        const existingActivity = await MetalworksLeadActivity.findOne({
+          externalEventKey: safeExternalEventKey,
+        }).lean();
+
+        if (existingActivity?._id) {
+          return existingActivity;
         }
       }
-    } finally {
-      metalworksWhatsAppFollowupWorkerRunning = false;
+
+      return await MetalworksLeadActivity.create({
+        leadId,
+        applicantId,
+        activityType,
+        externalEventKey: safeExternalEventKey,
+        title: title || formatActivityTitle(activityType),
+        body: cleanText(body || "", 1200),
+        meta,
+        pagePath: cleanText(pagePath || "", 240),
+        pageUrl: cleanText(pageUrl || "", 500),
+        ipAddress: req ? cleanText(getClientIp(req), 120) : "",
+        userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
+        tracking: buildTrackingPayload(tracking),
+      });
+    };
+
+    if (!safeExternalEventKey) {
+      return await createActivity();
     }
+
+    return await withExternalLeadLock(`activity:${safeExternalEventKey}`, createActivity);
   }
 
-  function despertarMetalworksWhatsAppFollowupWorker(delayMs = 200) {
-    if (metalworksWhatsAppFollowupWakeTimer) {
-      return;
-    }
-
-    metalworksWhatsAppFollowupWakeTimer = setTimeout(() => {
-      metalworksWhatsAppFollowupWakeTimer = null;
-      procesarMetalworksWhatsAppFollowups().catch((error) => {
-        console.error("Error waking Metal Works WhatsApp follow-up worker:", error.message);
-      });
-    }, delayMs);
+  function createRequestError(statusCode = 500, message = "Request error") {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
   }
 
-  function iniciarMetalworksWhatsAppFollowupWorker() {
-    if (metalworksWhatsAppFollowupWorkerInterval) {
-      return;
+  async function upsertExternalLeadRecord({
+    externalLeadId = "",
+    externalSystem = "external_sync",
+    fullName = "",
+    phone = "",
+    phoneDisplay = "",
+    email = "",
+    projectType = "",
+    location = "",
+    addressLine = "",
+    zipCode = "",
+    city = "",
+    details = "",
+    sourceType = "",
+    pageTitle = "",
+    pagePath = "",
+    pageUrl = "",
+    referrer = "",
+    tracking = {},
+    parsedFiles = [],
+    rawPhotoFileNames = [],
+    req = null,
+    crmStatus = "new",
+    requirePhone = true,
+  } = {}) {
+    const safeExternalLeadId = cleanText(externalLeadId || "", 120);
+    const safeExternalSystem = cleanText(externalSystem || "", 80) || "external_sync";
+    const safeFullName = cleanText(fullName || "", 120);
+    const safePhoneDisplay = cleanText(phoneDisplay || phone || "", 40);
+    const safePhone = normalizePhone(phone || phoneDisplay || "");
+    const safeEmail = normalizeEmail(email || "");
+    const safeProjectType = cleanText(projectType || "", 120);
+    const safeLocation = cleanText(location || "", 160);
+    const safeAddressLine = cleanText(addressLine || "", 160);
+    const safeZipCode = cleanText(zipCode || "", 20);
+    const safeCity = cleanText(city || "", 120);
+    const safeDetails = cleanText(details || "", 3000);
+    const safeSourceType = cleanText(sourceType || "", 80) || safeExternalSystem;
+    const safePageTitle = cleanText(pageTitle || "", 160);
+    const safePagePath = cleanText(pagePath || "", 240);
+    const safePageUrl = cleanText(pageUrl || "", 500);
+    const safeReferrer = cleanText(referrer || "", 500);
+    const safeTracking = buildTrackingPayload(tracking || {});
+    const safeCrmStatus = METALWORKS_CRM_STATUS_OPTIONS.includes(cleanText(crmStatus || "", 24))
+      ? cleanText(crmStatus || "", 24)
+      : "new";
+    const safeParsedFiles = Array.isArray(parsedFiles)
+      ? parsedFiles.slice(0, METALWORKS_LEAD_ASSET_MAX_FILES)
+      : [];
+    const safeRawPhotoFileNames = Array.isArray(rawPhotoFileNames)
+      ? rawPhotoFileNames
+          .map((item) => cleanText(item, 120))
+          .filter(Boolean)
+          .slice(0, 20)
+      : [];
+    const photoFileNames = mergeAssistantUniqueValues(
+      safeRawPhotoFileNames,
+      ...safeParsedFiles.map((item) => item.fileName || ""),
+    ).slice(0, 20);
+
+    if (!safeExternalLeadId) {
+      throw createRequestError(400, "Missing external lead id.");
     }
 
-    metalworksWhatsAppFollowupWorkerInterval = setInterval(() => {
-      procesarMetalworksWhatsAppFollowups().catch((error) => {
-        console.error("Error in Metal Works WhatsApp follow-up worker:", error.message);
-      });
-    }, METALWORKS_WHATSAPP_FOLLOWUP_POLL_MS);
+    if (!safeFullName) {
+      throw createRequestError(400, "The full name is required.");
+    }
 
-    despertarMetalworksWhatsAppFollowupWorker(500);
+    if (requirePhone && !safePhone) {
+      throw createRequestError(400, "The phone number is required.");
+    }
+
+    if (!safeDetails) {
+      throw createRequestError(400, "The lead details are required.");
+    }
+
+    const lockKey = buildExternalLeadLockKey(safeExternalSystem, safeExternalLeadId);
+
+    return await withExternalLeadLock(lockKey, async () => {
+      const now = new Date();
+      let leadDoc = await mergeDuplicateExternalLeadsByKey({
+        externalSystem: safeExternalSystem,
+        externalLeadId: safeExternalLeadId,
+      });
+
+      if (!leadDoc) {
+        leadDoc = await MetalworksLead.findOne({
+          sourceExternalSystem: safeExternalSystem,
+          sourceExternalId: safeExternalLeadId,
+        }).sort({ updatedAt: -1, createdAt: -1 });
+      }
+
+      const duplicate = Boolean(leadDoc);
+
+      if (leadDoc) {
+        leadDoc.fullName = safeFullName || leadDoc.fullName;
+        leadDoc.phone = safePhone || leadDoc.phone || "";
+        leadDoc.phoneDisplay =
+          safePhoneDisplay || safePhone || leadDoc.phoneDisplay || leadDoc.phone || "";
+        leadDoc.email = safeEmail || leadDoc.email || "";
+        leadDoc.projectType = safeProjectType || leadDoc.projectType || "";
+        leadDoc.location = safeLocation || leadDoc.location || "";
+        leadDoc.addressLine = safeAddressLine || leadDoc.addressLine || "";
+        leadDoc.zipCode = safeZipCode || leadDoc.zipCode || "";
+        leadDoc.city = safeCity || leadDoc.city || "";
+        leadDoc.details = safeDetails || leadDoc.details || "";
+        leadDoc.photoFileNames = photoFileNames.length
+          ? mergeAssistantUniqueValues(leadDoc.photoFileNames || [], photoFileNames).slice(0, 20)
+          : Array.isArray(leadDoc.photoFileNames)
+            ? leadDoc.photoFileNames
+            : [];
+        leadDoc.sourceType = safeSourceType;
+        leadDoc.sourceExternalId = safeExternalLeadId;
+        leadDoc.sourceExternalSystem = safeExternalSystem;
+        leadDoc.pageTitle = safePageTitle || leadDoc.pageTitle || "";
+        leadDoc.pagePath = safePagePath || leadDoc.pagePath || "";
+        leadDoc.pageUrl = safePageUrl || leadDoc.pageUrl || "";
+        leadDoc.referrer = safeReferrer || leadDoc.referrer || "";
+        leadDoc.ipAddress = req ? cleanText(getClientIp(req), 120) : leadDoc.ipAddress || "";
+        leadDoc.userAgent =
+          req ? cleanText(req.headers["user-agent"] || "", 400) : leadDoc.userAgent || "";
+        leadDoc.tracking = safeTracking;
+
+        if (shouldApplyExternalLeadStatus(leadDoc.status || "", safeCrmStatus)) {
+          leadDoc.status = safeCrmStatus;
+        }
+
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+      } else {
+        const createStatus = resolveExternalLeadCreateStatus(
+          safeCrmStatus,
+          safeExternalSystem,
+          safeSourceType,
+        );
+
+        leadDoc = await MetalworksLead.create({
+          fullName: safeFullName,
+          phone: safePhone,
+          phoneDisplay: safePhoneDisplay || safePhone,
+          email: safeEmail,
+          projectType: safeProjectType,
+          location: safeLocation,
+          addressLine: safeAddressLine,
+          zipCode: safeZipCode,
+          city: safeCity,
+          details: safeDetails,
+          photoFileNames,
+          status: createStatus,
+          sourceType: safeSourceType,
+          sourceExternalId: safeExternalLeadId,
+          sourceExternalSystem: safeExternalSystem,
+          pageTitle: safePageTitle,
+          pagePath: safePagePath,
+          pageUrl: safePageUrl,
+          referrer: safeReferrer,
+          ipAddress: req ? cleanText(getClientIp(req), 120) : "",
+          userAgent: req ? cleanText(req.headers["user-agent"] || "", 400) : "",
+          tracking: safeTracking,
+          updatedAt: now,
+          createdAt: now,
+        });
+      }
+
+      let syncedAssetCount = 0;
+
+      if (leadDoc?._id && safeParsedFiles.length) {
+        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+          .select("fileName sizeBytes")
+          .lean();
+        const existingKeys = new Set(
+          existingAssets.map(
+            (item) =>
+              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+          ),
+        );
+        const newFiles = safeParsedFiles.filter((item) => {
+          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+            item.sizeBytes || 0,
+          )}`;
+
+          if (existingKeys.has(key)) {
+            return false;
+          }
+
+          existingKeys.add(key);
+          return true;
+        });
+
+        if (newFiles.length) {
+          await Promise.all(
+            newFiles.map((item) =>
+              MetalworksLeadAsset.create({
+                leadId: leadDoc._id,
+                sourceType: safeSourceType,
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                fileData: item.fileData,
+                uploadedAt: now,
+                updatedAt: now,
+                createdAt: now,
+              }),
+            ),
+          );
+          syncedAssetCount = newFiles.length;
+          leadDoc.photoFileNames = mergeAssistantUniqueValues(
+            leadDoc.photoFileNames || [],
+            ...newFiles.map((item) => item.fileName || ""),
+          ).slice(0, 20);
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+        }
+      }
+
+      return {
+        duplicate,
+        syncedAssetCount,
+        photoFileNames,
+        leadDoc,
+      };
+    });
   }
 
   async function syncLeadAssetsToLead({
@@ -5881,6 +9514,175 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     return MetalworksLead.findOne({ $or: conditions }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
+  async function resolveWebsiteLiveChatLead({
+    visitorId = "",
+    sessionId = "",
+    threadKey = "",
+  } = {}) {
+    const safeThreadKey = normalizePublicChatThreadKey(threadKey);
+    const conditions = [];
+
+    if (safeThreadKey) {
+      const threadMatch = await MetalworksLead.findOne({
+        sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        publicChatThreadKey: safeThreadKey,
+      }).sort({ updatedAt: -1, createdAt: -1 });
+
+      if (threadMatch) {
+        return threadMatch;
+      }
+    }
+
+    if (visitorId) {
+      conditions.push({ visitorIds: visitorId });
+    }
+
+    if (sessionId) {
+      conditions.push({ sessionIds: sessionId });
+    }
+
+    if (!conditions.length) {
+      return null;
+    }
+
+    return MetalworksLead.findOne({
+      sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+      $or: conditions,
+    }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+
+  async function syncPublicChatPushDevicesToLead(leadDoc = null) {
+    if (!leadDoc?._id) {
+      return 0;
+    }
+
+    const conditions = [];
+    const visitorIds = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.filter(Boolean) : [];
+    const sessionIds = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.filter(Boolean) : [];
+
+    if (visitorIds.length) {
+      conditions.push({ visitorId: { $in: visitorIds } });
+    }
+
+    if (sessionIds.length) {
+      conditions.push({ sessionId: { $in: sessionIds } });
+    }
+
+    if (!conditions.length) {
+      return 0;
+    }
+
+    const result = await MetalworksPublicChatWebPushDevice.updateMany(
+      {
+        $or: conditions,
+      },
+      {
+        $set: {
+          leadId: leadDoc._id,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
+    return Number(result?.modifiedCount || 0) || 0;
+  }
+
+  async function sendWebsiteLiveChatReplyPushAlert({ lead = null, message = "" } = {}) {
+    if (!lead?._id) {
+      return {
+        attempted: false,
+        delivered: false,
+        deliveredCount: 0,
+        deviceCount: 0,
+        error: "Lead is required for public chat push.",
+      };
+    }
+
+    const conditions = [{ leadId: lead._id }];
+    const visitorIds = Array.isArray(lead.visitorIds) ? lead.visitorIds.filter(Boolean) : [];
+    const sessionIds = Array.isArray(lead.sessionIds) ? lead.sessionIds.filter(Boolean) : [];
+
+    if (visitorIds.length) {
+      conditions.push({ visitorId: { $in: visitorIds } });
+    }
+
+    if (sessionIds.length) {
+      conditions.push({ sessionId: { $in: sessionIds } });
+    }
+
+    const deviceDocs = await MetalworksPublicChatWebPushDevice.find({
+      isActive: true,
+      notificationsEnabled: true,
+      $or: conditions,
+    })
+      .sort({ lastSeenAt: -1, updatedAt: -1 })
+      .limit(24)
+      .lean();
+
+    if (!deviceDocs.length) {
+      return {
+        attempted: false,
+        delivered: false,
+        deliveredCount: 0,
+        deviceCount: 0,
+        error: "No active public chat devices are registered for this lead.",
+      };
+    }
+
+    const title = "Chicago Metal Works replied";
+    const body =
+      trimPushCopy(message || "", 140) ||
+      "Open your chat to see the latest update from Chicago Metal Works & Fencing.";
+    const targetUrl = buildPublicChatThreadPath(lead.publicChatThreadKey || "");
+    const results = await Promise.all(
+      deviceDocs.map(async (device) => {
+        const result = await sendMetalworksWebPushNotification({
+          subscription: device.subscription,
+          alertType: "website_live_chat_reply",
+          title,
+          body,
+          leadId: String(lead._id || ""),
+          notificationPath: "/metalworks-chat/",
+          targetUrl,
+        });
+        const update = {
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          lastPushAt: result.delivered ? new Date() : device.lastPushAt || null,
+          lastPushError: result.delivered ? "" : cleanText(result.error || "", 240),
+        };
+
+        if (
+          METALWORKS_PUSH_INVALID_REASONS.has(result.reason || "") ||
+          Number(result.status || 0) === 410
+        ) {
+          update.isActive = false;
+          update.notificationsEnabled = false;
+        }
+
+        await MetalworksPublicChatWebPushDevice.updateOne(
+          { _id: device._id },
+          {
+            $set: update,
+          },
+        );
+
+        return result;
+      }),
+    );
+
+    return {
+      attempted: true,
+      delivered: results.some((item) => item.delivered),
+      deliveredCount: results.filter((item) => item.delivered).length,
+      deviceCount: deviceDocs.length,
+      results,
+      error: results.some((item) => item.delivered)
+        ? ""
+        : results[0]?.error || "No pude entregar alertas del chat publico.",
+    };
   }
 
   async function resolveConversationApplicant({
@@ -6032,7 +9834,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? "scheduled follow-up from assistant chat"
         : currentLead?.nextAction || "";
     leadDoc.nextActionAt = state?.nextActionAt || currentLead?.nextActionAt || null;
-    leadDoc.privateNotes = mergeAssistantPrivateNotes(currentLead?.privateNotes || "", state);
+    leadDoc.privateNotes = mergeAssistantPrivateNotes(
+      currentLead?.privateNotes || "",
+      {
+        ...state,
+        sourceType: cleanText(sourceType || currentLead?.sourceType || "", 80) || "assistant_chat",
+        lastAssistantMessage: cleanText(assistantReply || currentLead?.lastAssistantMessage || "", 1500),
+      },
+      mergedHistory,
+    );
     leadDoc.sourceType =
       cleanText(sourceType || currentLead?.sourceType || "", 80) || "assistant_chat";
     leadDoc.pageTitle = cleanText(pageTitle || currentLead?.pageTitle || "", 160);
@@ -6306,13 +10116,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     nameHint = "",
     phoneHint = "",
     phoneDisplayHint = "",
+    allowEmployment = true,
   } = {}) {
     const normalizedPhoneHint = normalizePhone(phoneHint || "");
-    const initialEmploymentHint = detectEmploymentIntent(
-      [message, ...normalizeAssistantHistory(history).map((item) => item.content || "")]
-        .filter(Boolean)
-        .join("\n"),
-    );
+    const incomingHistory = normalizeAssistantHistory(history);
+    const incomingConversationText = [message, ...incomingHistory.map((item) => item.content || "")]
+      .filter(Boolean)
+      .join("\n");
+    const initialEmploymentHint =
+      allowEmployment && detectEmploymentIntent(incomingConversationText);
     let currentLead = await resolveConversationLead({
       visitorId,
       sessionId,
@@ -6333,10 +10145,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       phoneHint,
       phoneDisplayHint,
     });
+    let forceCustomerIntent =
+      detectEmploymentCorrection(incomingConversationText) ||
+      applicantLooksLikeMisclassifiedCustomer(currentApplicant);
     let mergedHistory = mergeConversationHistory(
-      currentApplicant?.conversationHistory ||
-        (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
-      normalizeAssistantHistory(history),
+      forceCustomerIntent
+        ? currentLead?.conversationHistory || []
+        : currentApplicant?.conversationHistory ||
+            (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
+      incomingHistory,
     );
     let userConversationItems = buildAssistantConversationItems({
       history: mergedHistory,
@@ -6381,10 +10198,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         phoneHint,
         phoneDisplayHint,
       });
+      forceCustomerIntent =
+        detectEmploymentCorrection(incomingConversationText) ||
+        applicantLooksLikeMisclassifiedCustomer(currentApplicant);
       mergedHistory = mergeConversationHistory(
-        currentApplicant?.conversationHistory ||
-          (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
-        normalizeAssistantHistory(history),
+        forceCustomerIntent
+          ? currentLead?.conversationHistory || []
+          : currentApplicant?.conversationHistory ||
+              (initialEmploymentHint ? [] : currentLead?.conversationHistory || []),
+        incomingHistory,
       );
       userConversationItems = buildAssistantConversationItems({
         history: mergedHistory,
@@ -6405,12 +10227,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     const intentType =
-      currentApplicant?._id ||
-      detectEmploymentIntent(
-        applicantConversationState.combinedUserText ||
-          applicantConversationState.latestUserMessage ||
-          message,
-      )
+      allowEmployment &&
+      !forceCustomerIntent &&
+      (currentApplicant?._id ||
+        detectEmploymentIntent(
+          applicantConversationState.combinedUserText ||
+            applicantConversationState.latestUserMessage ||
+            message,
+        ))
         ? "employment"
         : "customer";
 
@@ -6443,6 +10267,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     sourceType = "assistant_chat",
     sourceChannel = "web",
     sourceLabel = "Agustin 2.0 website assistant",
+    allowEmployment = true,
   } = {}) {
     const safeMessage = cleanText(message || "", 500);
     const safeVisitorId = cleanText(visitorId || "", 120);
@@ -6452,7 +10277,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const safePageUrl = cleanText(pageUrl || "", 500);
     const safeReferrer = cleanText(referrer || "", 500);
     const safeTracking = buildTrackingPayload(tracking || {});
-    const inboundReceivedAt = new Date();
 
     if (!safeMessage) {
       return {
@@ -6477,7 +10301,37 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return {
         ok: false,
         status: 429,
-        error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 773 798 4107 or try again tomorrow.`,
+        error: `You reached the daily limit of ${METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY} assistant messages for today. Please call 708 731 6762 or try again tomorrow.`,
+      };
+    }
+
+    const combinedConversationText = [
+      safeMessage,
+      ...normalizeAssistantHistory(history).map((item) => item.content || ""),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (
+      !allowEmployment &&
+      !detectEmploymentCorrection(combinedConversationText) &&
+      detectEmploymentIntent(combinedConversationText)
+    ) {
+      return {
+        ok: true,
+        status: 200,
+        respuesta: buildAssistantHiringDisabledReply(safeMessage),
+        usedFallback: false,
+        leadCaptured: false,
+        leadId: "",
+        applicantCaptured: false,
+        applicantId: "",
+        callbackCaptured: false,
+        callbackLabel: "",
+        notified: false,
+        remainingToday: safeVisitorId
+          ? Math.max(METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY - usedToday, 0)
+          : METALWORKS_ASSISTANT_MAX_MESSAGES_PER_DAY,
       };
     }
 
@@ -6496,6 +10350,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       nameHint,
       phoneHint,
       phoneDisplayHint,
+      allowEmployment,
     });
 
     let conversationState = {
@@ -6733,6 +10588,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const previousLeadNextActionAt = currentLead?.nextActionAt
       ? new Date(currentLead.nextActionAt).toISOString()
       : "";
+    let leadCreatedActivityRecorded = false;
     let leadDoc = await upsertConversationLead({
       currentLead,
       state: conversationState,
@@ -6768,6 +10624,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         pageUrl: safePageUrl,
         tracking: safeTracking,
       });
+      leadCreatedActivityRecorded = true;
     }
 
     await appendActivity({
@@ -6786,14 +10643,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       pagePath: safePagePath,
       pageUrl: safePageUrl,
       tracking: safeTracking,
-      createdAt: inboundReceivedAt,
     });
+
+    let visionAssets = [];
+
+    try {
+      visionAssets = await loadRecentLeadAssetsForVision({
+        leadId: leadDoc?._id || currentLead?._id || null,
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works assistant vision photos:", error.message);
+    }
+
+    const replyConversationState = {
+      ...conversationState,
+      visionImageCount: Array.isArray(visionAssets) ? visionAssets.length : 0,
+    };
 
     const result = await generateAssistantReply({
       message: safeMessage,
       history: userConversationItems,
       pagePath: safePagePath,
-      conversationState,
+      conversationState: replyConversationState,
+      visionAssets,
     });
 
     const conversationItemsWithReply = buildAssistantConversationItems({
@@ -6829,16 +10701,45 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       sourceType,
     });
 
+    const leadCreatedThisTurn = Boolean(!leadExistedBeforeMessage && leadDoc?._id);
+
+    if (leadCreatedThisTurn && !leadCreatedActivityRecorded) {
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "lead_created",
+        title: "Lead creado",
+        body:
+          finalState.callbackIntent === "yes"
+            ? "Agustin 2.0 creo un lead conversacional para seguimiento de llamada."
+            : "Agustin 2.0 creo un lead conversacional desde el chat del sitio.",
+        meta: {
+          sourceType,
+          sourceChannel: finalState.sourceChannel,
+          projectType: leadDoc.projectType || "",
+          location: leadDoc.location || "",
+          visitorId: safeVisitorId,
+          sessionId: safeSessionId,
+          pageTitle: safePageTitle,
+        },
+        req,
+        pagePath: safePagePath,
+        pageUrl: safePageUrl,
+        tracking: safeTracking,
+      });
+      leadCreatedActivityRecorded = true;
+    }
+
     const currentLeadNextActionAt = leadDoc?.nextActionAt
       ? new Date(leadDoc.nextActionAt).toISOString()
       : "";
-
-    if (
+    const callbackCapturedThisTurn = Boolean(
       leadDoc?._id &&
-      finalState.callbackIntent === "yes" &&
-      finalState.nextActionAt &&
-      (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt)
-    ) {
+        finalState.callbackIntent === "yes" &&
+        finalState.nextActionAt &&
+        (previousLeadStatus !== "booked" || previousLeadNextActionAt !== currentLeadNextActionAt),
+    );
+
+    if (callbackCapturedThisTurn) {
       await appendActivity({
         leadId: leadDoc._id,
         activityType: "assistant_booking_requested",
@@ -6873,7 +10774,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       delivered: false,
     };
 
-    if (leadDoc?._id && finalState.shouldAlert && !leadDoc.callbackAlertedAt) {
+    const shouldSendAssistantCallbackAlert = Boolean(
+      leadDoc?._id &&
+        (finalState.shouldAlert || callbackCapturedThisTurn) &&
+        (callbackCapturedThisTurn || !leadDoc.callbackAlertedAt),
+    );
+    const shouldSendAssistantLeadPush = Boolean(
+      leadDoc?._id && leadCreatedThisTurn && !shouldSendAssistantCallbackAlert,
+    );
+
+    if (shouldSendAssistantCallbackAlert) {
       try {
         alertDelivery = await sendMetalworksLeadAlertEmail({
           lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
@@ -6912,6 +10822,15 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       } catch (error) {
         console.error("Error sending Metal Works assistant push:", error.message);
       }
+    } else if (shouldSendAssistantLeadPush) {
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "assistant_lead",
+        });
+      } catch (error) {
+        console.error("Error sending Metal Works assistant lead push:", error.message);
+      }
     }
 
     await appendActivity({
@@ -6932,19 +10851,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       tracking: safeTracking,
     });
 
-    if (leadDoc?._id && finalState.sourceChannel === "whatsapp") {
-      try {
-        await scheduleMetalworksWhatsAppFollowups({
-          leadDoc,
-          inboundAt: inboundReceivedAt,
-          sourceChannel: finalState.sourceChannel,
-          tracking: safeTracking,
-        });
-      } catch (error) {
-        console.error("Error scheduling Metal Works WhatsApp follow-ups:", error.message);
-      }
-    }
-
     return {
       ok: true,
       status: 200,
@@ -6964,7 +10870,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   }
 
   app.locals.processMetalworksAssistantMessage = processMetalworksAssistantMessage;
-  app.locals.startMetalworksWhatsAppFollowupWorker = iniciarMetalworksWhatsAppFollowupWorker;
 
   app.get(
     [
@@ -7034,7 +10939,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error loading Metal Works prospector auth:", error.message);
-      respondError(res, 500, "No pude revisar la sesion del prospectador.");
+      respondError(res, 500, "I couldn't check the prospector session.");
     }
   });
 
@@ -7043,7 +10948,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const password = String(req.body?.password || "");
 
     if (!email || !password) {
-      return respondError(res, 400, "Correo y password son requeridos.");
+      return respondError(res, 400, "Email and password are required.");
     }
 
     try {
@@ -7053,21 +10958,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(
           res,
           503,
-          "Primero crea una cuenta de prospectador desde el CRM de Metal Works.",
+          "Ask an admin to create your prospector account in the Metal Works CRM first.",
         );
       }
 
       const prospectorUser = await MetalworksProspectorUser.findOne({ email });
 
       if (!prospectorUser) {
-        return respondError(res, 401, "No encontre una cuenta con ese correo.");
+        return respondError(res, 401, "No account was found with that email.");
       }
 
       if (normalizeProspectorStatus(prospectorUser.status || "active") !== "active") {
         return respondError(
           res,
           403,
-          "Esta cuenta esta pausada. Pidele al administrador que la reactive.",
+          "This account is paused. Ask an admin to reactivate it.",
         );
       }
 
@@ -7078,7 +10983,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           prospectorUser.passwordHash,
         )
       ) {
-        return respondError(res, 401, "Password incorrecto.");
+        return respondError(res, 401, "Incorrect password.");
       }
 
       prospectorUser.lastLoginAt = new Date();
@@ -7095,7 +11000,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error logging into Metal Works prospector portal:", error.message);
-      respondError(res, 500, "No pude iniciar sesion en el portal del prospectador.");
+      respondError(res, 500, "I couldn't sign you into the prospector portal.");
     }
   });
 
@@ -7105,7 +11010,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       res.json({ ok: true });
     } catch (error) {
       console.error("Error logging out of Metal Works prospector portal:", error.message);
-      respondError(res, 500, "No pude cerrar la sesion del prospectador.");
+      respondError(res, 500, "I couldn't sign you out of the prospector portal.");
     }
   });
 
@@ -7132,7 +11037,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error loading Metal Works prospector dashboard:", error.message);
-      respondError(res, 500, "No pude cargar el panel del prospectador.");
+      respondError(res, 500, "I couldn't load the prospector dashboard.");
     }
   });
 
@@ -7162,6 +11067,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const preferredLanguage = cleanText(req.body?.preferredLanguage || "", 80);
       const qualificationTier = cleanText(req.body?.qualificationTier || "", 12).toUpperCase();
       const qualificationNotes = cleanText(req.body?.qualificationNotes || "", 1200);
+      const clientSubmissionId = cleanText(req.body?.clientSubmissionId || "", 120);
       const details = cleanText(req.body?.details || req.body?.notes || "", 3000);
       const location = cleanText(
         [addressLine, city, zipCode].filter(Boolean).join(", "),
@@ -7199,33 +11105,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(
           res,
           400,
-          "Llena nombre, telefono, servicio, direccion, ZIP, timeline, owner y notas.",
+          "Fill in client name, phone, service, address, ZIP, timeline, owner status, and notes.",
         );
       }
 
       if (!qualificationTier || !qualificationNotes) {
-        return respondError(res, 400, "Pon tier del lead y nota corta de calificacion.");
+        return respondError(res, 400, "Add the lead tier and a short qualification note.");
       }
 
       if (parsedFiles.length > 8) {
-        return respondError(res, 400, "Puedes subir hasta 8 fotos por lead.");
+        return respondError(res, 400, "You can upload up to 8 photos per lead.");
       }
 
       if (totalSizeBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
         return respondError(
           res,
           400,
-          "El total de fotos es demasiado grande. Comprime o manda menos archivos.",
+          "The total photo size is too large. Compress or send fewer files.",
         );
       }
 
       const now = new Date();
       const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      let leadDoc = await MetalworksLead.findOne({
-        createdAt: { $gte: fourteenDaysAgo },
-        phone,
-        zipCode,
-      }).sort({ createdAt: -1 });
+
+      let leadDoc = clientSubmissionId
+        ? await MetalworksLead.findOne({ clientSubmissionId }).sort({ createdAt: -1 })
+        : null;
+
+      if (!leadDoc) {
+        leadDoc = await MetalworksLead.findOne({
+          createdAt: { $gte: fourteenDaysAgo },
+          phone,
+          zipCode,
+        }).sort({ createdAt: -1 });
+      }
+
       const duplicate = Boolean(leadDoc);
 
       if (leadDoc) {
@@ -7250,6 +11164,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.qualificationNotes = qualificationNotes;
         leadDoc.sourceProspectorName = auth.name;
         leadDoc.sourceProspectorEmail = auth.email;
+        if (!leadDoc.clientSubmissionId && clientSubmissionId) {
+          leadDoc.clientSubmissionId = clientSubmissionId;
+        }
         leadDoc.details = details;
         leadDoc.photoFileNames = photoFileNames;
         leadDoc.sourceType = "field_prospector";
@@ -7284,6 +11201,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           qualificationNotes,
           sourceProspectorName: auth.name,
           sourceProspectorEmail: auth.email,
+          clientSubmissionId,
           details,
           photoFileNames,
           status: "new",
@@ -7301,8 +11219,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         await appendActivity({
           leadId: leadDoc._id,
           activityType: "lead_created",
-          title: "Lead creado",
-          body: `${fullName} fue capturado por ${auth.name} desde el portal de prospectadores.`,
+          title: "Lead created",
+          body: `${fullName} was captured by ${auth.name} from the prospector portal.`,
           meta: {
             prospectorName: auth.name,
             prospectorEmail: auth.email,
@@ -7369,10 +11287,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       await appendActivity({
         leadId: leadDoc._id,
         activityType: "prospector_lead_submitted",
-        title: duplicate ? "Lead de prospectador actualizado" : "Lead de prospectador guardado",
+        title: duplicate ? "Prospector lead updated" : "Prospector lead saved",
         body: duplicate
-          ? `${auth.name} actualizo este lead desde campo.`
-          : `${auth.name} envio este lead desde el portal de prospectadores.`,
+          ? `${auth.name} updated this lead from the field.`
+          : `${auth.name} submitted this lead from the prospector portal.`,
         meta: {
           duplicate,
           prospectorName: auth.name,
@@ -7424,7 +11342,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error saving Metal Works prospector lead:", error.message);
-      respondError(res, 500, "No pude guardar este lead del prospectador.");
+      respondError(res, 500, "I couldn't save this prospector lead.");
     }
   });
 
@@ -7450,7 +11368,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return res.redirect("/metalworks-crm/login/");
     }
 
-    res.sendFile(path.join(privateDir, "metalworks-crm.html"));
+    try {
+      await sendMetalworksCrmShell(
+        res,
+        path.join(privateDir, "metalworks-crm.html"),
+        getMetalworksCrmProfile(auth.email),
+      );
+    } catch (error) {
+      console.error("Error loading Metal Works CRM shell:", error.message);
+      respondError(res, 500, "No pude abrir el shell del CRM.");
+    }
   });
 
   app.get(
@@ -7463,7 +11390,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return res.redirect("/metalworks-crm/login/");
       }
 
-      res.sendFile(path.join(privateDir, "metalworks-operator-mobile.html"));
+      try {
+        await sendMetalworksCrmShell(
+          res,
+          path.join(privateDir, "metalworks-operator-mobile.html"),
+          getMetalworksCrmProfile(auth.email),
+        );
+      } catch (error) {
+        console.error("Error loading Metal Works operator shell:", error.message);
+        respondError(res, 500, "No pude abrir el operador movil.");
+      }
     },
   );
 
@@ -7514,6 +11450,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     const name = cleanText(req.body?.name || "", 120);
     const email = normalizeEmail(req.body?.email || "");
+    const customPassword = normalizePasswordInput(req.body?.password || "");
 
     if (!name) {
       return respondError(res, 400, "El nombre del prospectador es requerido.");
@@ -7523,6 +11460,14 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return respondError(res, 400, "El correo del prospectador es requerido.");
     }
 
+    if (customPassword && !prospectorPasswordIsValid(customPassword)) {
+      return respondError(
+        res,
+        400,
+        `El password debe tener al menos ${METALWORKS_PROSPECTOR_PASSWORD_MIN} caracteres.`,
+      );
+    }
+
     try {
       const existingUser = await MetalworksProspectorUser.findOne({ email }).select("_id");
 
@@ -7530,8 +11475,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 409, "Ese correo ya tiene una cuenta creada.");
       }
 
-      const temporaryPassword = generateProspectorTemporaryPassword();
-      const securePassword = createSecurePasswordHash(temporaryPassword);
+      const passwordToSave = customPassword || generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(passwordToSave);
       const now = new Date();
       const prospectorUser = await MetalworksProspectorUser.create({
         name,
@@ -7548,7 +11493,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         prospector: cleanProspectorUser(prospectorUser.toObject ? prospectorUser.toObject() : prospectorUser),
         credentials: {
           email,
-          temporaryPassword,
+          temporaryPassword: passwordToSave,
+          passwordLabel: customPassword ? "Password" : "Temporary password",
+          passwordMode: customPassword ? "custom" : "generated",
         },
       });
     } catch (error) {
@@ -7641,9 +11588,18 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     const prospectorId = String(req.params?.prospectorId || "").trim();
+    const customPassword = normalizePasswordInput(req.body?.password || "");
 
     if (!prospectorId || !mongoose.Types.ObjectId.isValid(prospectorId)) {
       return respondError(res, 400, "Prospectador invalido.");
+    }
+
+    if (customPassword && !prospectorPasswordIsValid(customPassword)) {
+      return respondError(
+        res,
+        400,
+        `El password debe tener al menos ${METALWORKS_PROSPECTOR_PASSWORD_MIN} caracteres.`,
+      );
     }
 
     try {
@@ -7653,8 +11609,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         return respondError(res, 404, "No encontre ese prospectador.");
       }
 
-      const temporaryPassword = generateProspectorTemporaryPassword();
-      const securePassword = createSecurePasswordHash(temporaryPassword);
+      const passwordToSave = customPassword || generateProspectorTemporaryPassword();
+      const securePassword = createSecurePasswordHash(passwordToSave);
 
       prospectorUser.passwordHash = securePassword.hash;
       prospectorUser.passwordSalt = securePassword.salt;
@@ -7680,7 +11636,9 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         prospector: cleanProspector,
         credentials: {
           email: normalizeEmail(prospectorUser.email || ""),
-          temporaryPassword,
+          temporaryPassword: passwordToSave,
+          passwordLabel: customPassword ? "Password" : "Temporary password",
+          passwordMode: customPassword ? "custom" : "generated",
         },
         forcedSignOut: true,
       });
@@ -7702,6 +11660,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         MetalworksLead,
         MetalworksLeadActivity,
         MetalworksApplicant,
+        MetalworksAgendaEvent,
         {},
       );
       const snapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -7732,10 +11691,52 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
 
     try {
+      const agendaRequest = detectAgendaEventCreateRequest(message);
+
+      if (agendaRequest?.missingDate) {
+        return res.json({
+          ok: true,
+          reply: "Sí puedo crear esa tarjeta de agenda, pero necesito la fecha y hora. Ejemplo: “Agenda entrevista con Juan el 22 de junio a las 3pm”.",
+          usedFallback: true,
+          reason: "agenda_event_missing_date",
+        });
+      }
+
+      if (agendaRequest?.startsAt) {
+        const now = new Date();
+        const eventDoc = await MetalworksAgendaEvent.create({
+          title: agendaRequest.title,
+          eventType:
+            leadId && mongoose.Types.ObjectId.isValid(leadId)
+              ? "client"
+              : agendaRequest.eventType,
+          owner: getMetalworksCrmProfile(auth.email)?.displayName || auth.email,
+          notes: agendaRequest.notes,
+          startsAt: agendaRequest.startsAt,
+          status: "scheduled",
+          source: "atlas_operator_chat",
+          relatedLeadId: leadId && mongoose.Types.ObjectId.isValid(leadId) ? leadId : null,
+          createdByEmail: auth.email,
+          updatedByEmail: auth.email,
+          updatedAt: now,
+          createdAt: now,
+        });
+        const event = cleanAgendaEvent(eventDoc.toObject ? eventDoc.toObject() : eventDoc);
+
+        return res.json({
+          ok: true,
+          reply: `Listo. Cree la tarjeta en la agenda: ${event.title} (${event.eventTypeLabel}) para ${formatDateTimeLabel(event.startsAt, METALWORKS_CALLBACK_TIME_ZONE)}. No la guarde como lead.`,
+          agendaEvent: event,
+          usedFallback: false,
+          reason: "agenda_event_created",
+        });
+      }
+
       const dashboard = await buildDashboardSnapshot(
         MetalworksLead,
         MetalworksLeadActivity,
         MetalworksApplicant,
+        MetalworksAgendaEvent,
         {},
       );
       const operatorSnapshot = buildMetalworksOperatorSnapshot(dashboard);
@@ -7782,13 +11783,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const email = normalizeEmail(req.body?.email || "");
     const password = String(req.body?.password || "");
     const allowedEmails = getAllowedEmails();
-    const expectedPassword = getMetalworksPassword();
+    const expectedPassword = getMetalworksPasswordForEmail(email);
 
     if (!metalworksCrmConfigured()) {
       return respondError(
         res,
         503,
-        "Primero configura METALWORKS_CRM_PASSWORD en el backend.",
+        "Primero configura METALWORKS_CRM_PASSWORD o METALWORKS_CRM_USER_PASSWORDS_JSON en el backend.",
       );
     }
 
@@ -7798,6 +11799,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
     if (!allowedEmails.includes(email)) {
       return respondError(res, 403, "Ese correo no tiene acceso al CRM.");
+    }
+
+    if (!expectedPassword) {
+      return respondError(res, 403, "Ese correo no tiene password configurado para el CRM.");
     }
 
     if (!compareSecrets(password, expectedPassword)) {
@@ -7820,6 +11825,44 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error logging out of Metal Works CRM:", error.message);
       respondError(res, 500, "No pude cerrar la sesion.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/push/config", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const [iosDeviceCount, webDeviceCount] = await Promise.all([
+        MetalworksCrmPushDevice.countDocuments({
+          adminEmail: auth.email,
+          isActive: true,
+          notificationsEnabled: true,
+        }),
+        MetalworksCrmWebPushDevice.countDocuments({
+          adminEmail: auth.email,
+          isActive: true,
+          notificationsEnabled: true,
+        }),
+      ]);
+
+      res.json({
+        ok: true,
+        apnsConfigured: metalworksApnsConfigured(),
+        webPushConfigured: metalworksWebPushConfigured(),
+        vapidPublicKey: metalworksWebPushConfigured()
+          ? METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY
+          : "",
+        subject: metalworksWebPushConfigured() ? METALWORKS_WEB_PUSH_SUBJECT : "",
+        iosDeviceCount,
+        webDeviceCount,
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works push config:", error.message);
+      respondError(res, 500, "No pude revisar la configuracion de alerts.");
     }
   });
 
@@ -7889,6 +11932,79 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     }
   });
 
+  app.post("/api/metalworks-crm/push/web/register", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    if (!metalworksWebPushConfigured()) {
+      return respondError(
+        res,
+        503,
+        "Web push credentials are not configured yet.",
+      );
+    }
+
+    const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
+    const deviceName = cleanText(req.body?.deviceName || "", 120);
+    const browserName = cleanText(req.body?.browserName || "", 80);
+    const notificationPath = normalizeMetalworksNotificationPath(
+      req.body?.notificationPath || "/metalworks-crm/operator/",
+    );
+    const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
+    const notificationsEnabled =
+      req.body?.notificationsEnabled === false ? false : Boolean(subscription);
+
+    if (!subscription) {
+      return respondError(res, 400, "Web push subscription is required.");
+    }
+
+    try {
+      const now = new Date();
+      const doc = await MetalworksCrmWebPushDevice.findOneAndUpdate(
+        { endpoint: subscription.endpoint },
+        {
+          $set: {
+            adminEmail: auth.email,
+            deviceName,
+            browserName,
+            notificationPath,
+            authorizationStatus,
+            subscription,
+            vapidPublicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+            notificationsEnabled,
+            isActive: notificationsEnabled,
+            ipAddress: cleanText(getClientIp(req), 120),
+            userAgent: cleanText(req.headers["user-agent"] || "", 400),
+            lastSeenAt: now,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            platform: "web",
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        },
+      );
+
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        message: "This browser is ready for live lead alerts.",
+        device: cleanWebPushDevice(doc),
+      });
+    } catch (error) {
+      console.error("Error registering Metal Works web push device:", error.message);
+      respondError(res, 500, "No pude registrar este navegador para alerts.");
+    }
+  });
+
   app.post("/api/metalworks-crm/push/test", async (req, res) => {
     const auth = await requireAuth(req, res);
 
@@ -7909,12 +12025,97 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         deliveredCount: delivery.deliveredCount || 0,
         deviceCount: delivery.deviceCount || 0,
         message: delivery.delivered
-          ? "Test push sent to this iPhone."
+          ? "Test push sent to your active device."
           : delivery.error || "I could not send the test push yet.",
       });
     } catch (error) {
       console.error("Error sending Metal Works test push:", error.message);
       respondError(res, 500, "No pude mandar el test push.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/agenda-events", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const docs = await MetalworksAgendaEvent.find({
+        status: { $ne: "canceled" },
+        startsAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+      })
+        .sort({ startsAt: 1, updatedAt: -1 })
+        .limit(160)
+        .lean();
+
+      res.json({
+        ok: true,
+        agendaEvents: docs.map(cleanAgendaEvent).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works agenda events:", error.message);
+      respondError(res, 500, "No pude cargar los eventos de agenda.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/agenda-events", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const title = cleanText(req.body?.title || "", 120);
+    const eventType = normalizeAgendaEventType(req.body?.eventType || "internal");
+    const owner = cleanText(req.body?.owner || getMetalworksCrmProfile(auth.email)?.displayName || "", 80);
+    const notes = cleanText(req.body?.notes || "", 1000);
+    const startsAt = parseCrmDatetimeInput(req.body?.startsAt || "");
+    const endsAt = req.body?.endsAt ? parseCrmDatetimeInput(req.body.endsAt) : null;
+    const relatedLeadId = String(req.body?.relatedLeadId || "").trim();
+
+    if (!title) {
+      return respondError(res, 400, "El titulo del evento es requerido.");
+    }
+
+    if (!(startsAt instanceof Date) || Number.isNaN(startsAt.getTime())) {
+      return respondError(res, 400, "La fecha/hora del evento es requerida.");
+    }
+
+    if (endsAt && endsAt.getTime() <= startsAt.getTime()) {
+      return respondError(res, 400, "La hora de fin debe ser despues de la hora de inicio.");
+    }
+
+    if (relatedLeadId && !mongoose.Types.ObjectId.isValid(relatedLeadId)) {
+      return respondError(res, 400, "Lead relacionado invalido.");
+    }
+
+    try {
+      const now = new Date();
+      const doc = await MetalworksAgendaEvent.create({
+        title,
+        eventType,
+        owner,
+        notes,
+        startsAt,
+        endsAt,
+        status: "scheduled",
+        source: cleanText(req.body?.source || "manual", 80),
+        relatedLeadId: relatedLeadId || null,
+        createdByEmail: auth.email,
+        updatedByEmail: auth.email,
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      res.status(201).json({
+        ok: true,
+        agendaEvent: cleanAgendaEvent(doc.toObject ? doc.toObject() : doc),
+      });
+    } catch (error) {
+      console.error("Error creating Metal Works agenda event:", error.message);
+      respondError(res, 500, "No pude crear el evento de agenda.");
     }
   });
 
@@ -7925,22 +12126,153 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return;
     }
 
-    try {
-      const snapshot = await buildDashboardSnapshot(
-        MetalworksLead,
-        MetalworksLeadActivity,
-        MetalworksApplicant,
-        {
-          status: req.query?.status || "",
-          search: req.query?.search || "",
-          projectType: req.query?.projectType || "",
-        },
-      );
+    const filters = {
+      status: req.query?.status || "",
+      search: req.query?.search || "",
+      projectType: req.query?.projectType || "",
+      sourceGroup: req.query?.sourceGroup || "",
+    };
+    const hasFilters = Boolean(
+      cleanText(filters.status || "", 40) ||
+        cleanText(filters.search || "", 120) ||
+        cleanText(filters.projectType || "", 80) ||
+        normalizeLeadSourceGroup(filters.sourceGroup || ""),
+    );
 
-      res.json(snapshot);
+    try {
+      const [snapshot, agendaSource] = hasFilters
+        ? await Promise.all([
+            buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              MetalworksAgendaEvent,
+              filters,
+            ),
+            buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              MetalworksAgendaEvent,
+              {},
+            ),
+          ])
+        : [
+            await buildDashboardSnapshot(
+              MetalworksLead,
+              MetalworksLeadActivity,
+              MetalworksApplicant,
+              MetalworksAgendaEvent,
+              filters,
+            ),
+            null,
+          ];
+      const agendaSnapshot = buildMetalworksOperatorSnapshot(agendaSource || snapshot);
+
+      res.json({
+        ...snapshot,
+        agendaLeads: Array.isArray(agendaSnapshot?.agendaLeads) ? agendaSnapshot.agendaLeads : [],
+        agendaEvents: Array.isArray(agendaSnapshot?.agendaEvents) ? agendaSnapshot.agendaEvents : [],
+        agendaSummary:
+          agendaSnapshot && typeof agendaSnapshot.agendaSummary === "object"
+            ? agendaSnapshot.agendaSummary
+            : {
+                totalScheduled: 0,
+                overdue: 0,
+                today: 0,
+                tomorrow: 0,
+                this_week: 0,
+                upcoming: 0,
+              },
+        importantDates: Array.isArray(agendaSnapshot?.importantDates)
+          ? agendaSnapshot.importantDates
+          : [],
+        importantDateRules: Array.isArray(agendaSnapshot?.importantDateRules)
+          ? agendaSnapshot.importantDateRules
+          : [],
+      });
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);
       respondError(res, 500, "No pude cargar el dashboard del CRM.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/leads", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const fullName = cleanText(req.body?.fullName || "", 120);
+    const phoneDisplay = cleanText(req.body?.phoneDisplay || "", 40);
+    const phone = normalizePhone(phoneDisplay);
+    const email = normalizeEmail(req.body?.email || "");
+    const projectType = cleanText(req.body?.projectType || "", 120);
+    const location = cleanText(req.body?.location || "", 160);
+    const details = cleanText(req.body?.details || "", 3000);
+    const status = normalizeStatus(req.body?.status || "new");
+    const sourceGroup = normalizeLeadSourceGroup(req.body?.sourceGroup || "") || "manual";
+    const sourceFields =
+      getSourceGroupOverrideFields(sourceGroup) || getSourceGroupOverrideFields("manual");
+
+    if (!fullName) {
+      return respondError(res, 400, "El nombre es requerido.");
+    }
+
+    try {
+      const now = new Date();
+      const leadDoc = await MetalworksLead.create({
+        fullName,
+        phone,
+        phoneDisplay,
+        email,
+        projectType,
+        location,
+        details,
+        status,
+        sourceType: sourceFields.sourceType,
+        sourceExternalSystem: sourceFields.sourceExternalSystem,
+        tracking: sourceFields.tracking,
+        lastContactAt: now,
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "lead_created",
+        title: "Lead creado manualmente",
+        body: `${fullName} se agrego manualmente al CRM.`,
+        meta: {
+          adminEmail: auth.email,
+          sourceGroup,
+          sourceLabel: labelLeadSourceGroup(sourceGroup),
+          sourceType: sourceFields.sourceType,
+          projectType,
+          location,
+        },
+        req,
+      });
+
+      const [activityDocs, assets] = await Promise.all([
+        MetalworksLeadActivity.find({ leadId: leadDoc._id })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadDoc._id),
+      ]);
+
+      res.status(201).json({
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc, {
+          includeConversation: true,
+        }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error creating manual Metal Works lead:", error.message);
+      respondError(res, 500, "No pude crear ese lead manual.");
     }
   });
 
@@ -8074,7 +12406,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? String(req.body?.nextActionAt || "").trim()
         : null;
       const nextActionAt = nextActionAtRaw
-        ? new Date(nextActionAtRaw)
+        ? parseCrmDatetimeInput(nextActionAtRaw)
         : nextActionAtRaw === ""
           ? null
           : undefined;
@@ -8193,7 +12525,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push(
           `Seguimiento: ${
             nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
-              ? nextActionAt.toLocaleString("en-US")
+              ? formatDateTimeLabel(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
               : "Sin fecha"
           }`,
         );
@@ -8354,6 +12686,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const location = Object.prototype.hasOwnProperty.call(req.body || {}, "location")
         ? cleanText(req.body?.location || "", 160)
         : null;
+      const sourceGroupRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "sourceGroup")
+        ? cleanText(req.body?.sourceGroup || "", 40)
+        : null;
+      const sourceGroup = sourceGroupRaw ? normalizeLeadSourceGroup(sourceGroupRaw) : null;
       const details = Object.prototype.hasOwnProperty.call(req.body || {}, "details")
         ? cleanText(req.body?.details || "", 3000)
         : null;
@@ -8373,15 +12709,55 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ? String(req.body?.nextActionAt || "").trim()
         : null;
       const nextActionAt = nextActionAtRaw
-        ? new Date(nextActionAtRaw)
+        ? parseCrmDatetimeInput(nextActionAtRaw)
         : nextActionAtRaw === ""
           ? null
           : undefined;
+      const appointmentType = Object.prototype.hasOwnProperty.call(req.body || {}, "appointmentType")
+        ? normalizeAppointmentType(req.body?.appointmentType || "")
+        : null;
+      const appointmentStatus = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentStatus",
+      )
+        ? normalizeAppointmentStatus(req.body?.appointmentStatus || "")
+        : null;
+      const appointmentDurationMinutes = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentDurationMinutes",
+      )
+        ? normalizeAppointmentDurationMinutes(req.body?.appointmentDurationMinutes || 0)
+        : null;
+      const appointmentAssignedTo = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "appointmentAssignedTo",
+      )
+        ? cleanText(req.body?.appointmentAssignedTo || "", 80)
+        : null;
+      const nextActionReminderOffsetsProvided = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "nextActionReminderOffsets",
+      );
+      const nextActionReminderOffsets = nextActionReminderOffsetsProvided
+        ? normalizeLeadReminderOffsets(req.body?.nextActionReminderOffsets || [])
+        : null;
       const privateNotes = Object.prototype.hasOwnProperty.call(req.body || {}, "privateNotes")
-        ? cleanText(req.body?.privateNotes || "", 4000)
+        ? cleanMultilineText(req.body?.privateNotes || "", 12000)
+        : null;
+      const textThreadImportSource = Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "textThreadImportSource",
+      )
+        ? cleanText(req.body?.textThreadImportSource || "", 60)
+        : "";
+      const textThreadImport = Object.prototype.hasOwnProperty.call(req.body || {}, "textThreadImport")
+        ? cleanMultilineText(req.body?.textThreadImport || "", 8000)
         : null;
       const estimateAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateAmount")
         ? normalizeMoney(req.body?.estimateAmount || 0)
+        : null;
+      const invoiceDepositAmount = Object.prototype.hasOwnProperty.call(req.body || {}, "invoiceDepositAmount")
+        ? normalizeMoney(req.body?.invoiceDepositAmount || 0)
         : null;
       const estimateTitle = Object.prototype.hasOwnProperty.call(req.body || {}, "estimateTitle")
         ? cleanText(req.body?.estimateTitle || "", 160)
@@ -8436,6 +12812,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       let estimateChanged = false;
       let estimateMoneyChanged = false;
       let clientDocumentChanged = false;
+      let invoiceDepositChanged = false;
       let profileChanged = false;
 
       if (fullName !== null) {
@@ -8473,6 +12850,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         profileChanged = true;
       }
 
+      if (sourceGroupRaw && !sourceGroup) {
+        return respondError(res, 400, "Fuente invalida.");
+      }
+
+      if (sourceGroup) {
+        const currentLeadSnapshot = leadDoc.toObject ? leadDoc.toObject() : leadDoc;
+        const currentSourceGroup = getLeadSourceGroup(currentLeadSnapshot);
+
+        if (currentSourceGroup !== sourceGroup) {
+          const sourceFields = getSourceGroupOverrideFields(sourceGroup, currentLeadSnapshot);
+
+          if (sourceFields) {
+            leadDoc.sourceType = sourceFields.sourceType;
+            leadDoc.sourceExternalSystem = sourceFields.sourceExternalSystem;
+            leadDoc.tracking = sourceFields.tracking;
+            changes.push(
+              `Fuente: ${labelLeadSourceGroup(currentSourceGroup)} -> ${labelLeadSourceGroup(sourceGroup)}`,
+            );
+            profileChanged = true;
+          }
+        }
+      }
+
       if (details !== null && leadDoc.details !== details) {
         leadDoc.details = details;
         profileChanged = true;
@@ -8491,6 +12891,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       if (nextStatus && leadDoc.status !== nextStatus) {
         changes.push(`Estado: ${labelStatus(leadDoc.status)} -> ${labelStatus(nextStatus)}`);
         leadDoc.status = nextStatus;
+
+        if (nextStatus === "won") {
+          leadDoc.soldAt = new Date();
+        }
       }
 
       if (nextAction !== null && leadDoc.nextAction !== nextAction) {
@@ -8502,7 +12906,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push(
           `Seguimiento: ${
             nextActionAt instanceof Date && !Number.isNaN(nextActionAt.getTime())
-              ? nextActionAt.toLocaleString("en-US")
+              ? formatDateTimeLabel(nextActionAt, METALWORKS_CALLBACK_TIME_ZONE)
               : "Sin fecha"
           }`,
         );
@@ -8512,8 +12916,156 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             : null;
       }
 
-      if (privateNotes !== null) {
-        leadDoc.privateNotes = privateNotes;
+      if (appointmentType !== null) {
+        const currentAppointmentType = normalizeAppointmentType(leadDoc.appointmentType || "");
+
+        if (appointmentType && currentAppointmentType !== appointmentType) {
+          leadDoc.appointmentType = appointmentType;
+          changes.push(`Tipo de cita: ${labelAppointmentType(appointmentType) || "Sin tipo"}`);
+        } else if (!appointmentType && !leadDoc.nextActionAt && currentAppointmentType) {
+          leadDoc.appointmentType = "";
+          changes.push("Tipo de cita: Sin tipo");
+        }
+      }
+
+      if (appointmentStatus !== null) {
+        const currentAppointmentStatus = normalizeAppointmentStatus(leadDoc.appointmentStatus || "");
+
+        if (appointmentStatus && currentAppointmentStatus !== appointmentStatus) {
+          leadDoc.appointmentStatus = appointmentStatus;
+          changes.push(
+            `Estado de cita: ${labelAppointmentStatus(appointmentStatus) || "Sin estado"}`,
+          );
+        } else if (!appointmentStatus && !leadDoc.nextActionAt && currentAppointmentStatus) {
+          leadDoc.appointmentStatus = "";
+          changes.push("Estado de cita: Sin estado");
+        }
+      }
+
+      if (appointmentDurationMinutes !== null) {
+        const currentAppointmentDuration = normalizeAppointmentDurationMinutes(
+          leadDoc.appointmentDurationMinutes || 0,
+        );
+
+        if (appointmentDurationMinutes && currentAppointmentDuration !== appointmentDurationMinutes) {
+          leadDoc.appointmentDurationMinutes = appointmentDurationMinutes;
+          changes.push(`Duracion de cita: ${appointmentDurationMinutes} min`);
+        } else if (!appointmentDurationMinutes && !leadDoc.nextActionAt && currentAppointmentDuration) {
+          leadDoc.appointmentDurationMinutes = 0;
+          changes.push("Duracion de cita: Sin duracion");
+        }
+      }
+
+      if (
+        appointmentAssignedTo !== null &&
+        cleanText(leadDoc.appointmentAssignedTo || "", 80) !== appointmentAssignedTo
+      ) {
+        leadDoc.appointmentAssignedTo = appointmentAssignedTo;
+        changes.push(`Asignado a: ${appointmentAssignedTo || "Sin asignar"}`);
+      }
+
+      if (leadDoc.nextActionAt) {
+        const inferredAppointmentType =
+          normalizeAppointmentType(leadDoc.appointmentType || "") || inferLeadAppointmentType(leadDoc);
+
+        if (
+          inferredAppointmentType &&
+          normalizeAppointmentType(leadDoc.appointmentType || "") !== inferredAppointmentType
+        ) {
+          leadDoc.appointmentType = inferredAppointmentType;
+        }
+
+        const inferredAppointmentStatus =
+          normalizeAppointmentStatus(leadDoc.appointmentStatus || "") ||
+          inferLeadAppointmentStatus(leadDoc);
+
+        if (
+          inferredAppointmentStatus &&
+          normalizeAppointmentStatus(leadDoc.appointmentStatus || "") !== inferredAppointmentStatus
+        ) {
+          leadDoc.appointmentStatus = inferredAppointmentStatus;
+        }
+
+        const resolvedDurationMinutes =
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) ||
+          inferAppointmentDurationMinutes(leadDoc.appointmentType || "");
+
+        if (
+          resolvedDurationMinutes &&
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) !==
+            resolvedDurationMinutes
+        ) {
+          leadDoc.appointmentDurationMinutes = resolvedDurationMinutes;
+        }
+      }
+
+      if (
+        !nextActionReminderOffsetsProvided &&
+        nextActionAt !== undefined &&
+        leadDoc.nextActionAt &&
+        normalizeStatus(leadDoc.status || "new") === "booked"
+      ) {
+        const currentReminderOffsets = normalizeLeadReminderOffsets(
+          leadDoc.nextActionReminderOffsets || [],
+        );
+        const autoReminderOffsets = resolveBookedReminderOffsets(
+          currentReminderOffsets,
+          leadDoc.nextActionAt,
+          new Date(),
+        );
+
+        if (
+          JSON.stringify(currentReminderOffsets) !== JSON.stringify(autoReminderOffsets) &&
+          autoReminderOffsets.length
+        ) {
+          leadDoc.nextActionReminderOffsets = autoReminderOffsets;
+          changes.push(
+            `Reminders: ${autoReminderOffsets
+              .map((value) => formatLeadReminderOffsetLabel(value))
+              .filter(Boolean)
+              .join(", ")}`,
+          );
+        }
+      }
+
+      if (nextActionReminderOffsets !== null) {
+        const currentReminderOffsets = normalizeLeadReminderOffsets(
+          leadDoc.nextActionReminderOffsets || [],
+        );
+
+        if (
+          JSON.stringify(currentReminderOffsets) !== JSON.stringify(nextActionReminderOffsets)
+        ) {
+          changes.push(
+            nextActionReminderOffsets.length
+              ? `Reminders: ${nextActionReminderOffsets
+                  .map((value) => formatLeadReminderOffsetLabel(value))
+                  .filter(Boolean)
+                  .join(", ")}`
+              : "Reminders: Off",
+          );
+        }
+
+        leadDoc.nextActionReminderOffsets = nextActionReminderOffsets;
+      }
+
+      if (privateNotes !== null || textThreadImport) {
+        const nextPrivateNotesBase =
+          privateNotes !== null
+            ? privateNotes
+            : cleanMultilineText(leadDoc.privateNotes || "", 12000);
+        const nextPrivateNotes = textThreadImport
+          ? mergeLeadTextImportIntoPrivateNotes(nextPrivateNotesBase, textThreadImport, {
+              sourceLabel: textThreadImportSource || "Text thread",
+            })
+          : nextPrivateNotesBase;
+
+        if (leadDoc.privateNotes !== nextPrivateNotes) {
+          leadDoc.privateNotes = nextPrivateNotes;
+          changes.push(
+            textThreadImport ? "Text thread guardado en notas privadas" : "Notas privadas actualizadas",
+          );
+        }
       }
 
       if (estimateTitle !== null) {
@@ -8630,8 +13182,34 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.estimateAmount = nextEstimateAmount;
       }
 
+      const nextInvoiceDepositAmount =
+        invoiceDepositAmount !== null
+          ? invoiceDepositAmount
+          : normalizeMoney(leadDoc.invoiceDepositAmount || 0);
+
+      if (nextInvoiceDepositAmount > 0 && normalizeMoney(leadDoc.estimateAmount || 0) <= 0) {
+        return respondError(res, 400, "Add the total before recording the amount collected.");
+      }
+
+      if (nextInvoiceDepositAmount > normalizeMoney(leadDoc.estimateAmount || 0)) {
+        return respondError(res, 400, "Amount collected can't be higher than the total.");
+      }
+
+      if (invoiceDepositAmount !== null) {
+        if (normalizeMoney(leadDoc.invoiceDepositAmount || 0) !== invoiceDepositAmount) {
+          clientDocumentChanged = true;
+          invoiceDepositChanged = true;
+        }
+
+        leadDoc.invoiceDepositAmount = invoiceDepositAmount;
+      }
+
       if (estimateChanged) {
         changes.push(`Estimate: ${formatMoneyLabel(leadDoc.estimateAmount || 0)}`);
+      }
+
+      if (invoiceDepositChanged) {
+        changes.push(`Amount collected: ${formatMoneyLabel(leadDoc.invoiceDepositAmount || 0)}`);
       }
 
       if (clientDocumentChanged) {
@@ -8642,12 +13220,38 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         changes.push("Perfil del cliente actualizado");
       }
 
+      if (nextActionAt !== undefined || nextActionReminderOffsets !== null) {
+        leadDoc.nextActionReminderSentKeys = pruneLeadReminderSentKeys(
+          leadDoc.nextActionReminderSentKeys || [],
+          leadDoc.nextActionAt,
+          leadDoc.nextActionReminderOffsets || [],
+        );
+      }
+
       if (changes.length || note) {
         leadDoc.lastContactAt = new Date();
       }
 
+      if (normalizeStatus(leadDoc.status || "new") === "won" && !leadDoc.soldAt) {
+        leadDoc.soldAt = leadDoc.estimateSentAt || leadDoc.updatedAt || leadDoc.clientDocumentWorkDate || new Date();
+      }
+
       leadDoc.updatedAt = new Date();
       await leadDoc.save();
+
+      try {
+        const googleCalendarSync = await syncLeadGoogleCalendarEvent(leadDoc);
+
+        if (googleCalendarSync?.changed) {
+          await leadDoc.save();
+        }
+      } catch (syncError) {
+        leadDoc.googleCalendarSyncStatus = "error";
+        leadDoc.googleCalendarSyncError = cleanText(syncError?.message || "Google Calendar sync failed.", 500);
+        leadDoc.googleCalendarLastSyncedAt = new Date();
+        await leadDoc.save().catch(() => null);
+        console.warn("Metal Works Google Calendar sync failed:", syncError?.message || syncError);
+      }
 
       if (changes.length) {
         await appendActivity({
@@ -8675,6 +13279,24 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         });
       }
 
+      if (textThreadImport) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "text_thread_imported",
+          title: "Text thread imported",
+          body: cleanText(
+            `${textThreadImportSource || "Text thread"} saved to private notes.`,
+            280,
+          ),
+          meta: {
+            adminEmail: auth.email,
+            source: textThreadImportSource || "Text thread",
+            charCount: textThreadImport.length,
+          },
+          req,
+        });
+      }
+
       const [updatedLead, activityDocs] = await Promise.all([
         MetalworksLead.findById(leadId).lean(),
         MetalworksLeadActivity.find({ leadId })
@@ -8692,6 +13314,270 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error updating Metal Works lead:", error.message);
       respondError(res, 500, "No pude guardar ese lead.");
+    }
+  });
+
+  app.delete("/api/metalworks-crm/leads/:leadId", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId).select("fullName");
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      const now = new Date();
+
+      await Promise.all([
+        MetalworksLeadActivity.deleteMany({ leadId: leadDoc._id }),
+        MetalworksLeadAsset.deleteMany({ leadId: leadDoc._id }),
+        MetalworksPublicChatWebPushDevice.updateMany(
+          { leadId: leadDoc._id },
+          {
+            $set: {
+              leadId: null,
+              updatedAt: now,
+            },
+          },
+        ),
+        MetalworksLead.deleteOne({ _id: leadDoc._id }),
+      ]);
+
+      res.json({
+        ok: true,
+        deletedLeadId: leadId,
+        deletedLeadName: cleanText(leadDoc.fullName || "", 120),
+        deletedBy: auth.email,
+      });
+    } catch (error) {
+      console.error("Error deleting Metal Works lead:", error.message);
+      respondError(res, 500, "No pude borrar ese lead.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/leads/:leadId/assets", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
+
+    if (!filePayloads.length) {
+      return respondError(res, 400, "Add at least one image.");
+    }
+
+    if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+      return respondError(
+        res,
+        400,
+        `Upload up to ${METALWORKS_LEAD_ASSET_MAX_FILES} images at a time.`,
+      );
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId);
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      const parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      const totalBytes = parsedFiles.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+
+      if (totalBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Total image upload is too large.");
+      }
+
+      const now = new Date();
+      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+        .select("fileName sizeBytes")
+        .lean();
+      const existingKeys = new Set(
+        existingAssets.map(
+          (item) =>
+            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+        ),
+      );
+      const newFiles = parsedFiles.filter((item) => {
+        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+          item.sizeBytes || 0,
+        )}`;
+
+        if (existingKeys.has(key)) {
+          return false;
+        }
+
+        existingKeys.add(key);
+        return true;
+      });
+      const assetDocs = await Promise.all(
+        newFiles.map((item) =>
+          MetalworksLeadAsset.create({
+            leadId: leadDoc._id,
+            sourceType: "crm_manual_photo",
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            fileData: item.fileData,
+            uploadedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          }),
+        ),
+      );
+
+      if (assetDocs.length) {
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          newFiles.map((item) => item.fileName),
+        );
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "crm_photo_uploaded",
+          title: "Fotos agregadas manualmente",
+          body: `Se agregaron ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} desde el CRM.`,
+          meta: {
+            adminEmail: auth.email,
+            fileNames: newFiles.map((item) => item.fileName),
+          },
+          req,
+        });
+      }
+
+      const [updatedLead, activityDocs, assets] = await Promise.all([
+        MetalworksLead.findById(leadId).lean(),
+        MetalworksLeadActivity.find({ leadId })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadId),
+      ]);
+
+      res.json({
+        ok: true,
+        uploadedCount: assetDocs.length,
+        lead: cleanLead(updatedLead, { includeConversation: true }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error saving manual Metal Works photos:", error.message);
+      respondError(res, 500, error?.message || "No pude guardar esas fotos.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/leads/:leadId/live-chat-reply", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    const leadId = String(req.params?.leadId || "").trim();
+
+    if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+      return respondError(res, 400, "Lead invalido.");
+    }
+
+    const message = cleanText(req.body?.message || "", 500);
+
+    if (!message) {
+      return respondError(res, 400, "El mensaje es requerido.");
+    }
+
+    try {
+      const leadDoc = await MetalworksLead.findById(leadId);
+
+      if (!leadDoc) {
+        return respondError(res, 404, "No encontre ese lead.");
+      }
+
+      if (!isWebsiteLiveChatLead(leadDoc)) {
+        return respondError(res, 400, "Este lead no usa el chat web conectado.");
+      }
+
+      const now = new Date();
+      const currentStatus = normalizeStatus(leadDoc.status || "new");
+
+      leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
+        {
+          role: "assistant",
+          content: message,
+          createdAt: now,
+        },
+      ]);
+      leadDoc.lastAssistantMessage = message;
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (currentStatus === "new") {
+        leadDoc.status = "contacted";
+      }
+
+      await leadDoc.save();
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "website_live_chat_reply",
+        title: "Respuesta del CRM",
+        body: message,
+        meta: {
+          adminEmail: auth.email,
+          sourceType: leadDoc.sourceType || METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        },
+        req,
+      });
+
+      try {
+        await sendWebsiteLiveChatReplyPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          message,
+        });
+      } catch (error) {
+        console.error("Error sending website live chat reply push:", error.message);
+      }
+
+      const [activityDocs, assets] = await Promise.all([
+        MetalworksLeadActivity.find({ leadId: leadDoc._id })
+          .sort({ createdAt: -1 })
+          .limit(80)
+          .lean(),
+        listLeadAssets(leadDoc._id),
+      ]);
+
+      res.json({
+        ok: true,
+        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc, {
+          includeConversation: true,
+        }),
+        assets,
+        activity: activityDocs.map(cleanActivity).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error replying to Metal Works website chat:", error.message);
+      respondError(res, 500, "No pude mandar la respuesta al chat web.");
     }
   });
 
@@ -9016,6 +13902,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const pageUrl = cleanText(req.body?.pageUrl || "", 500);
       const referrer = cleanText(req.body?.referrer || "", 500);
       const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
       const parsedFiles = Array.isArray(req.body?.photos)
         ? req.body.photos
             .map((item) => parseAssistantLeadAssetUpload(item))
@@ -9028,79 +13915,31 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
             .filter(Boolean)
             .slice(0, 20)
         : [];
-      const photoFileNames = mergeAssistantUniqueValues(
-        rawPhotoFileNames,
-        ...parsedFiles.map((item) => item.fileName || ""),
-      ).slice(0, 20);
-
-      if (!externalLeadId) {
-        return respondError(res, 400, "Missing external lead id.");
-      }
-
-      if (!fullName) {
-        return respondError(res, 400, "The full name is required.");
-      }
-
-      if (!phone) {
-        return respondError(res, 400, "The phone number is required.");
-      }
-
-      if (!details) {
-        return respondError(res, 400, "The lead details are required.");
-      }
-
-      const now = new Date();
-      let leadDoc = await MetalworksLead.findOne({
-        sourceExternalId: externalLeadId,
-      }).sort({ updatedAt: -1, createdAt: -1 });
-      const duplicate = Boolean(leadDoc);
-
-      if (leadDoc) {
-        leadDoc.fullName = fullName;
-        leadDoc.phone = phone;
-        leadDoc.phoneDisplay = phoneDisplay || phone;
-        leadDoc.email = email;
-        leadDoc.projectType = projectType;
-        leadDoc.location = location;
-        leadDoc.details = details;
-        leadDoc.photoFileNames = photoFileNames;
-        leadDoc.sourceType = sourceType;
-        leadDoc.sourceExternalId = externalLeadId;
-        leadDoc.sourceExternalSystem = externalSystem;
-        leadDoc.pageTitle = pageTitle;
-        leadDoc.pagePath = pagePath;
-        leadDoc.pageUrl = pageUrl;
-        leadDoc.referrer = referrer;
-        leadDoc.ipAddress = cleanText(getClientIp(req), 120);
-        leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
-        leadDoc.tracking = tracking;
-        leadDoc.updatedAt = now;
-        await leadDoc.save();
-      } else {
-        leadDoc = await MetalworksLead.create({
+      const { duplicate, syncedAssetCount, photoFileNames, leadDoc } =
+        await upsertExternalLeadRecord({
+          externalLeadId,
+          externalSystem,
           fullName,
           phone,
-          phoneDisplay: phoneDisplay || phone,
+          phoneDisplay,
           email,
           projectType,
           location,
           details,
-          photoFileNames,
-          status: "new",
           sourceType,
-          sourceExternalId: externalLeadId,
-          sourceExternalSystem: externalSystem,
           pageTitle,
           pagePath,
           pageUrl,
           referrer,
-          ipAddress: cleanText(getClientIp(req), 120),
-          userAgent: cleanText(req.headers["user-agent"] || "", 400),
           tracking,
-          updatedAt: now,
-          createdAt: now,
+          parsedFiles,
+          rawPhotoFileNames,
+          req,
+          crmStatus: "new",
+          requirePhone: true,
         });
 
+      if (!duplicate) {
         await appendActivity({
           leadId: leadDoc._id,
           activityType: "lead_created",
@@ -9117,57 +13956,6 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           pageUrl,
           tracking,
         });
-      }
-
-      let syncedAssetCount = 0;
-
-      if (leadDoc?._id && parsedFiles.length) {
-        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
-          .select("fileName sizeBytes")
-          .lean();
-        const existingKeys = new Set(
-          existingAssets.map(
-            (item) =>
-              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
-          ),
-        );
-        const newFiles = parsedFiles.filter((item) => {
-          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
-            item.sizeBytes || 0,
-          )}`;
-
-          if (existingKeys.has(key)) {
-            return false;
-          }
-
-          existingKeys.add(key);
-          return true;
-        });
-
-        if (newFiles.length) {
-          await Promise.all(
-            newFiles.map((item) =>
-              MetalworksLeadAsset.create({
-                leadId: leadDoc._id,
-                sourceType,
-                fileName: item.fileName,
-                mimeType: item.mimeType,
-                sizeBytes: item.sizeBytes,
-                fileData: item.fileData,
-                uploadedAt: now,
-                updatedAt: now,
-                createdAt: now,
-              }),
-            ),
-          );
-          syncedAssetCount = newFiles.length;
-          leadDoc.photoFileNames = mergeAssistantUniqueValues(
-            leadDoc.photoFileNames || [],
-            ...newFiles.map((item) => item.fileName || ""),
-          ).slice(0, 20);
-          leadDoc.updatedAt = now;
-          await leadDoc.save();
-        }
       }
 
       await appendActivity({
@@ -9215,9 +14003,196 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       });
     } catch (error) {
       console.error("Error saving external Metal Works lead:", error.message);
-      respondError(res, 500, "No pude sincronizar este lead externo.");
+      respondError(
+        res,
+        error?.statusCode || 500,
+        error?.statusCode ? error.message : "No pude sincronizar este lead externo.",
+      );
     }
   });
+
+  app.post(
+    ["/integrations/thumbtack/webhook", "/api/integrations/thumbtack/webhook"],
+    async (req, res) => {
+      try {
+        if (!thumbtackWebhookConfigured()) {
+          return respondError(
+            res,
+            503,
+            "Thumbtack webhook auth is not configured yet.",
+          );
+        }
+
+        if (!requestHasThumbtackWebhookAccess(req)) {
+          res.setHeader("WWW-Authenticate", 'Basic realm="Thumbtack Webhook"');
+          return respondError(res, 401, "Unauthorized Thumbtack webhook request.");
+        }
+
+        const parsedEvent = buildThumbtackWebhookEvent(req.body || {});
+        const thumbtackEventKey = buildThumbtackExternalEventKey(parsedEvent);
+        const tracking = buildTrackingPayload({
+          utmSource: "thumbtack",
+          utmMedium: "webhook",
+          utmCampaign: parsedEvent.eventType || "",
+        });
+        const pagePath = "/integrations/thumbtack/webhook";
+        const pageUrl = METALWORKS_THUMBTACK_PROFILE_URL;
+        let leadDoc = null;
+        let duplicate = false;
+        let syncedAssetCount = 0;
+        let attachmentImport = {
+          attemptedCount: 0,
+          importedCount: 0,
+          skippedCount: 0,
+          errors: [],
+        };
+
+        if (parsedEvent.leadCandidate) {
+          if (Array.isArray(parsedEvent.leadCandidate.attachments) && parsedEvent.leadCandidate.attachments.length) {
+            try {
+              attachmentImport = await fetchExternalLeadAssetUploads(
+                parsedEvent.leadCandidate.attachments,
+                {
+                  fallbackPrefix: "thumbtack-photo",
+                },
+              );
+            } catch (error) {
+              attachmentImport = {
+                attemptedCount: Array.isArray(parsedEvent.leadCandidate.attachments)
+                  ? parsedEvent.leadCandidate.attachments.length
+                  : 0,
+                importedCount: 0,
+                skippedCount: Array.isArray(parsedEvent.leadCandidate.attachments)
+                  ? parsedEvent.leadCandidate.attachments.length
+                  : 0,
+                errors: [
+                  {
+                    url: "",
+                    message: cleanText(error?.message || "Thumbtack attachment import failed.", 240),
+                  },
+                ],
+              };
+            }
+          }
+
+          const syncResult = await upsertExternalLeadRecord({
+            externalLeadId: parsedEvent.leadCandidate.externalLeadId,
+            externalSystem: parsedEvent.leadCandidate.externalSystem,
+            fullName: parsedEvent.leadCandidate.fullName,
+            phone: parsedEvent.leadCandidate.phone,
+            phoneDisplay: parsedEvent.leadCandidate.phoneDisplay,
+            email: parsedEvent.leadCandidate.email,
+            projectType: parsedEvent.leadCandidate.projectType,
+            location: parsedEvent.leadCandidate.location,
+            addressLine: parsedEvent.leadCandidate.addressLine,
+            zipCode: parsedEvent.leadCandidate.zipCode,
+            city: parsedEvent.leadCandidate.city,
+            details: parsedEvent.leadCandidate.details,
+            sourceType: parsedEvent.leadCandidate.sourceType,
+            pageTitle: "Thumbtack",
+            pagePath,
+            pageUrl,
+            referrer: pageUrl,
+            tracking,
+            parsedFiles: attachmentImport.parsedFiles || [],
+            rawPhotoFileNames: [],
+            req,
+            crmStatus: parsedEvent.leadCandidate.crmStatus || "new",
+            requirePhone: false,
+          });
+
+          leadDoc = syncResult.leadDoc;
+          duplicate = syncResult.duplicate;
+          syncedAssetCount = syncResult.syncedAssetCount;
+
+          if (!duplicate) {
+            await appendActivity({
+              leadId: leadDoc._id,
+              activityType: "lead_created",
+              title: "Lead creado",
+              body: `${parsedEvent.leadCandidate.fullName} entro desde Thumbtack.`,
+              meta: {
+                externalLeadId: parsedEvent.leadCandidate.externalLeadId,
+                externalSystem: "thumbtack",
+                eventType: parsedEvent.eventType,
+                entityType: parsedEvent.entityType,
+                attachmentAttemptedCount: attachmentImport.attemptedCount || 0,
+                attachmentImportedCount: attachmentImport.importedCount || 0,
+              },
+              externalEventKey: thumbtackEventKey ? `${thumbtackEventKey}:lead_created` : "",
+              req,
+              pagePath,
+              pageUrl,
+              tracking,
+            });
+          }
+        }
+
+        if (!leadDoc && parsedEvent.entityType === "review") {
+          leadDoc = await findThumbtackLeadByNegotiationId(
+            parsedEvent.activity?.meta?.negotiationId || "",
+          );
+        }
+
+        await appendActivity({
+          leadId: leadDoc?._id || null,
+          activityType: parsedEvent.activity.activityType,
+          title: parsedEvent.activity.title,
+          body: parsedEvent.activity.body,
+          meta: {
+            ...(parsedEvent.activity.meta || {}),
+            duplicate,
+            syncedAssetCount,
+            attachmentAttemptedCount: attachmentImport.attemptedCount || 0,
+            attachmentImportedCount: attachmentImport.importedCount || 0,
+            attachmentSkippedCount: attachmentImport.skippedCount || 0,
+            attachmentImportErrors: Array.isArray(attachmentImport.errors)
+              ? attachmentImport.errors
+              : [],
+            webhookPayload: req.body || {},
+          },
+          externalEventKey: thumbtackEventKey,
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+
+        let pushDelivery = {
+          attempted: false,
+          delivered: false,
+        };
+
+        if (leadDoc && !duplicate) {
+          try {
+            pushDelivery = await sendMetalworksPushAlert({
+              lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+              alertType: "website_lead",
+            });
+          } catch (error) {
+            console.error("Error sending Thumbtack webhook push:", error.message);
+          }
+        }
+
+        res.json({
+          ok: true,
+          eventType: parsedEvent.eventType || "",
+          entityType: parsedEvent.entityType || "unknown",
+          duplicate,
+          syncedAssetCount,
+          notified: Boolean(pushDelivery.delivered),
+          lead: leadDoc ? cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc) : null,
+        });
+      } catch (error) {
+        console.error("Error handling Thumbtack webhook:", error.message);
+        respondError(
+          res,
+          error?.statusCode || 500,
+          error?.statusCode ? error.message : "No pude procesar el webhook de Thumbtack.",
+        );
+      }
+    },
+  );
 
   app.post("/api/public/metalworks/appointments", async (req, res) => {
     try {
@@ -9270,6 +14245,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         createdAt: -1,
       });
       const now = new Date();
+      const defaultReminderOffsets = buildDefaultBookedReminderOffsets(preferredDateTime, now);
       const duplicate = Boolean(leadDoc);
       const requestedAtLabel = formatDateTimeLabel(preferredDateTime, timeZone);
       const callbackNote = [
@@ -9291,6 +14267,11 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.status = "booked";
         leadDoc.nextAction = "callback_requested";
         leadDoc.nextActionAt = preferredDateTime;
+        leadDoc.appointmentType = "callback";
+        leadDoc.appointmentStatus = "scheduled";
+        leadDoc.appointmentDurationMinutes =
+          normalizeAppointmentDurationMinutes(leadDoc.appointmentDurationMinutes || 0) ||
+          inferAppointmentDurationMinutes("callback");
         leadDoc.sourceType = leadDoc.sourceType || "assistant_booking";
         leadDoc.pageTitle = pageTitle || leadDoc.pageTitle || "";
         leadDoc.pagePath = pagePath || leadDoc.pagePath || "";
@@ -9300,6 +14281,16 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
         leadDoc.tracking = tracking;
         leadDoc.lastContactAt = now;
+        leadDoc.nextActionReminderOffsets = resolveBookedReminderOffsets(
+          leadDoc.nextActionReminderOffsets || defaultReminderOffsets,
+          leadDoc.nextActionAt,
+          now,
+        );
+        leadDoc.nextActionReminderSentKeys = pruneLeadReminderSentKeys(
+          leadDoc.nextActionReminderSentKeys || [],
+          leadDoc.nextActionAt,
+          leadDoc.nextActionReminderOffsets || [],
+        );
         leadDoc.privateNotes = [String(leadDoc.privateNotes || "").trim(), callbackNote]
           .filter(Boolean)
           .join("\n\n")
@@ -9318,6 +14309,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           status: "booked",
           nextAction: "callback_requested",
           nextActionAt: preferredDateTime,
+          appointmentType: "callback",
+          appointmentStatus: "scheduled",
+          appointmentDurationMinutes: inferAppointmentDurationMinutes("callback"),
+          nextActionReminderOffsets: defaultReminderOffsets,
           privateNotes: callbackNote,
           sourceType: "assistant_booking",
           pageTitle,
@@ -9487,8 +14482,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       }
 
       const now = new Date();
+      const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+        .select("fileName sizeBytes")
+        .lean();
+      const existingKeys = new Set(
+        existingAssets.map(
+          (item) =>
+            `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+        ),
+      );
+      const newFiles = parsedFiles.filter((item) => {
+        const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+          item.sizeBytes || 0,
+        )}`;
+
+        if (existingKeys.has(key)) {
+          return false;
+        }
+
+        existingKeys.add(key);
+        return true;
+      });
       const assetDocs = await Promise.all(
-        parsedFiles.map((item) =>
+        newFiles.map((item) =>
           MetalworksLeadAsset.create({
             leadId: leadDoc._id,
             visitorId,
@@ -9504,25 +14520,355 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           }),
         ),
       );
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      if (assetDocs.length) {
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          newFiles.map((item) => item.fileName),
+        );
+        leadDoc.lastContactAt = now;
+        leadDoc.updatedAt = now;
+        await leadDoc.save();
+
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "assistant_photo_uploaded",
+          title: "Fotos subidas desde assistant",
+          body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} en el chat.`,
+          meta: {
+            visitorId,
+            sessionId,
+            pageTitle,
+            fileNames: newFiles.map((item) => item.fileName),
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+            alertType: "assistant_photo_uploaded",
+          });
+        } catch (error) {
+          console.error("Error sending Metal Works assistant photo push:", error.message);
+        }
+      }
+
+      res.json({
+        ok: true,
+        uploadedCount: assetDocs.length,
+        leadId: String(leadDoc._id),
+        notified: Boolean(pushDelivery.delivered),
+        assets: assetDocs.map(cleanLeadAsset).filter(Boolean),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works assistant photos:", error.message);
+      respondError(res, 500, error?.message || "I could not save those photos.");
+    }
+  });
+
+  app.get("/api/public/metalworks/live-chat/push/config", async (req, res) => {
+    try {
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        vapidPublicKey: metalworksWebPushConfigured()
+          ? METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY
+          : "",
+        subject: metalworksWebPushConfigured() ? METALWORKS_WEB_PUSH_SUBJECT : "",
+      });
+    } catch (error) {
+      console.error("Error loading public chat push config:", error.message);
+      respondError(res, 500, "I could not load push configuration.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/push/register", async (req, res) => {
+    if (!metalworksWebPushConfigured()) {
+      return respondError(res, 503, "Web push credentials are not configured yet.");
+    }
+
+    const subscription = normalizeWebPushSubscription(req.body?.subscription || null);
+    const visitorId = cleanText(req.body?.visitorId || "", 120);
+    const sessionId = cleanText(req.body?.sessionId || "", 120);
+    const threadKey = getPublicChatThreadKey(req);
+    const deviceName = cleanText(req.body?.deviceName || "", 120);
+    const browserName = cleanText(req.body?.browserName || "", 80);
+    const notificationPath = normalizeMetalworksNotificationPath(
+      req.body?.notificationPath || "/metalworks-chat/",
+      "/metalworks-chat/",
+    );
+    const authorizationStatus = cleanText(req.body?.authorizationStatus || "", 40);
+    const notificationsEnabled =
+      req.body?.notificationsEnabled === false ? false : Boolean(subscription);
+
+    if (!subscription) {
+      return respondError(res, 400, "La suscripcion web es requerida.");
+    }
+
+    if (!visitorId && !sessionId && !threadKey) {
+      return respondError(res, 400, "Missing live chat visitor session.");
+    }
+
+    try {
+      const now = new Date();
+      const leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+        threadKey,
+      });
+      let resolvedThreadKey = normalizePublicChatThreadKey(threadKey);
+
+      if (leadDoc?._id) {
+        const previousVisitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const previousSessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const previousThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+        resolvedThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+        leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+        leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+        const visitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const sessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const identityChanged =
+          visitorCount !== previousVisitorCount ||
+          sessionCount !== previousSessionCount ||
+          normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "") !== previousThreadKey;
+
+        if (identityChanged) {
+          leadDoc.updatedAt = now;
+          await leadDoc.save();
+          await syncPublicChatPushDevicesToLead(leadDoc);
+        }
+      }
+
+      if (resolvedThreadKey) {
+        setPublicChatThreadCookie(res, req, resolvedThreadKey);
+      }
+      const doc = await MetalworksPublicChatWebPushDevice.findOneAndUpdate(
+        { endpoint: subscription.endpoint },
+        {
+          $set: {
+            leadId: leadDoc?._id || null,
+            visitorId,
+            sessionId,
+            deviceName,
+            browserName,
+            notificationPath,
+            authorizationStatus,
+            subscription,
+            vapidPublicKey: METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY,
+            notificationsEnabled,
+            isActive: notificationsEnabled,
+            ipAddress: cleanText(getClientIp(req), 120),
+            userAgent: cleanText(req.headers["user-agent"] || "", 400),
+            lastSeenAt: now,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            platform: "web",
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        },
+      );
+
+      res.json({
+        ok: true,
+        webPushConfigured: metalworksWebPushConfigured(),
+        message: "This chat is ready for live reply alerts.",
+        device: cleanPublicChatWebPushDevice(doc),
+      });
+    } catch (error) {
+      console.error("Error registering public chat web push device:", error.message);
+      respondError(res, 500, "Could not register this browser for chat alerts.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/thread", async (req, res) => {
+    try {
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
+
+      if (!visitorId && !sessionId && !threadKey) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      const leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+        threadKey,
+      });
+
+      if (leadDoc?._id) {
+        const previousVisitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const previousSessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const previousThreadKey = normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "");
+        const resolvedThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+        leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+        leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+        const visitorCount = Array.isArray(leadDoc.visitorIds) ? leadDoc.visitorIds.length : 0;
+        const sessionCount = Array.isArray(leadDoc.sessionIds) ? leadDoc.sessionIds.length : 0;
+        const identityChanged =
+          visitorCount !== previousVisitorCount ||
+          sessionCount !== previousSessionCount ||
+          normalizePublicChatThreadKey(leadDoc.publicChatThreadKey || "") !== previousThreadKey;
+
+        if (identityChanged) {
+          leadDoc.updatedAt = new Date();
+          await leadDoc.save();
+          await syncPublicChatPushDevicesToLead(leadDoc);
+        }
+
+        setPublicChatThreadCookie(res, req, resolvedThreadKey);
+      }
+
+      res.json({
+        ok: true,
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
+      });
+    } catch (error) {
+      console.error("Error loading Metal Works website chat thread:", error.message);
+      respondError(res, 500, "I could not load this conversation.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/photos", async (req, res) => {
+    try {
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
+      const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
+      const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
+      const phone = normalizePhone(phoneDisplay);
+      const email = normalizeEmail(req.body?.profile?.email || "");
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
+      const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
+
+      if (!visitorId && !sessionId && !threadKey) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      if (!filePayloads.length) {
+        return respondError(res, 400, "Add at least one image.");
+      }
+
+      if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+        return respondError(
+          res,
+          400,
+          `Upload up to ${METALWORKS_LEAD_ASSET_MAX_FILES} images at a time.`,
+        );
+      }
+
+      const parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      const totalBytes = parsedFiles.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+
+      if (totalBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Total image upload is too large.");
+      }
+
+      let leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+        threadKey,
+      });
+      const now = new Date();
+
+      if (!leadDoc) {
+        leadDoc = new MetalworksLead();
+      }
+
+      leadDoc.fullName =
+        fullName ||
+        sanitizeAssistantStoredName(leadDoc.fullName || "") ||
+        buildWebsiteLiveChatPlaceholderName(visitorId || sessionId);
+      leadDoc.phone = phone || leadDoc.phone || "";
+      leadDoc.phoneDisplay = phoneDisplay || leadDoc.phoneDisplay || leadDoc.phone || "";
+      leadDoc.email = email || leadDoc.email || "";
+      leadDoc.projectType = cleanText(leadDoc.projectType || "", 120) || "Website chat";
+      leadDoc.details =
+        cleanText(leadDoc.details || "", 3000) ||
+        "Visitor uploaded project photos from the website chat.";
+      leadDoc.status = normalizeStatus(leadDoc.status || "new");
+      leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+      leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.publicChatThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+      leadDoc.sourceExternalId =
+        cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
+      leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
+      leadDoc.pagePath = cleanText(pagePath || leadDoc.pagePath || "", 240);
+      leadDoc.pageUrl = cleanText(pageUrl || leadDoc.pageUrl || "", 500);
+      leadDoc.referrer = cleanText(referrer || leadDoc.referrer || "", 500);
+      leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+      leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+      leadDoc.tracking = hasTracking
+        ? tracking
+        : buildTrackingPayload(leadDoc.tracking || {});
+      leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+      leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (!leadDoc.createdAt) {
+        leadDoc.createdAt = now;
+      }
+
+      await leadDoc.save();
+      setPublicChatThreadCookie(res, req, leadDoc.publicChatThreadKey || "");
+
+      const assetDocs = await Promise.all(
+        parsedFiles.map((item) =>
+          MetalworksLeadAsset.create({
+            leadId: leadDoc._id,
+            visitorId,
+            sessionId,
+            sourceType: "website_live_chat_photo",
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            fileData: item.fileData,
+            uploadedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          }),
+        ),
+      );
 
       leadDoc.photoFileNames = mergeAssistantUniqueValues(
         leadDoc.photoFileNames || [],
         parsedFiles.map((item) => item.fileName),
       );
-      leadDoc.lastContactAt = now;
-      leadDoc.updatedAt = now;
+      leadDoc.updatedAt = new Date();
       await leadDoc.save();
+      await syncPublicChatPushDevicesToLead(leadDoc);
 
       await appendActivity({
         leadId: leadDoc._id,
-        activityType: "assistant_photo_uploaded",
-        title: "Fotos subidas desde assistant",
-        body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} en el chat.`,
+        activityType: "website_live_chat_photo_uploaded",
+        title: "Fotos subidas desde chat web",
+        body: `El visitante subio ${assetDocs.length} foto${assetDocs.length === 1 ? "" : "s"} desde el chat directo.`,
         meta: {
           visitorId,
           sessionId,
           pageTitle,
           fileNames: parsedFiles.map((item) => item.fileName),
+          sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
         },
         req,
         pagePath,
@@ -9535,10 +14881,163 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         uploadedCount: assetDocs.length,
         leadId: String(leadDoc._id),
         assets: assetDocs.map(cleanLeadAsset).filter(Boolean),
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
       });
     } catch (error) {
-      console.error("Error saving Metal Works assistant photos:", error.message);
+      console.error("Error saving Metal Works website chat photos:", error.message);
       respondError(res, 500, error?.message || "I could not save those photos.");
+    }
+  });
+
+  app.post("/api/public/metalworks/live-chat/messages", async (req, res) => {
+    try {
+      const message = cleanText(req.body?.message || "", 500);
+      const visitorId = cleanText(req.body?.visitorId || "", 120);
+      const sessionId = cleanText(req.body?.sessionId || "", 120);
+      const threadKey = getPublicChatThreadKey(req);
+      const fullName = sanitizeAssistantStoredName(req.body?.profile?.fullName || "");
+      const phoneDisplay = cleanText(req.body?.profile?.phoneDisplay || "", 40);
+      const phone = normalizePhone(phoneDisplay);
+      const email = normalizeEmail(req.body?.profile?.email || "");
+      const pageTitle = cleanText(req.body?.pageTitle || "", 160);
+      const pagePath = cleanText(req.body?.pagePath || "", 240);
+      const pageUrl = cleanText(req.body?.pageUrl || "", 500);
+      const referrer = cleanText(req.body?.referrer || "", 500);
+      const tracking = buildTrackingPayload(req.body?.tracking || {});
+      const hasTracking = Object.values(tracking).some(Boolean);
+
+      if (!message) {
+        return respondError(res, 400, "Message is required.");
+      }
+
+      if (!visitorId && !sessionId && !threadKey) {
+        return respondError(res, 400, "Missing live chat visitor session.");
+      }
+
+      let leadDoc = await resolveWebsiteLiveChatLead({
+        visitorId,
+        sessionId,
+        threadKey,
+      });
+      const leadExistedBeforeMessage = Boolean(leadDoc?._id);
+      const now = new Date();
+      const existingName = sanitizeAssistantStoredName(leadDoc?.fullName || "");
+      const existingDetails = cleanText(leadDoc?.details || "", 3000);
+      const previousLastUserMessage = cleanText(leadDoc?.lastUserMessage || "", 500);
+      const currentStatus = normalizeStatus(leadDoc?.status || "new");
+
+      if (!leadDoc) {
+        leadDoc = new MetalworksLead();
+      }
+
+      leadDoc.fullName =
+        fullName ||
+        existingName ||
+        buildWebsiteLiveChatPlaceholderName(visitorId || sessionId);
+      leadDoc.phone = phone || leadDoc.phone || "";
+      leadDoc.phoneDisplay = phoneDisplay || leadDoc.phoneDisplay || leadDoc.phone || "";
+      leadDoc.email = email || leadDoc.email || "";
+      leadDoc.projectType = cleanText(leadDoc.projectType || "", 120) || "Website chat";
+      leadDoc.details =
+        !existingDetails || existingDetails === previousLastUserMessage
+          ? selectAssistantLongestText(message, existingDetails)
+          : existingDetails;
+      leadDoc.status =
+        ["won", "lost", "archived"].includes(currentStatus) ? currentStatus : currentStatus || "new";
+      leadDoc.sourceType = METALWORKS_WEBSITE_CHAT_SOURCE_TYPE;
+      leadDoc.sourceExternalSystem = "website_live_chat";
+      leadDoc.publicChatThreadKey = ensureWebsiteLiveChatThreadKey(leadDoc, threadKey);
+      leadDoc.sourceExternalId =
+        cleanText(leadDoc.sourceExternalId || visitorId || sessionId, 120) || "";
+      leadDoc.pageTitle = cleanText(pageTitle || leadDoc.pageTitle || "", 160);
+      leadDoc.pagePath = cleanText(pagePath || leadDoc.pagePath || "", 240);
+      leadDoc.pageUrl = cleanText(pageUrl || leadDoc.pageUrl || "", 500);
+      leadDoc.referrer = cleanText(referrer || leadDoc.referrer || "", 500);
+      leadDoc.ipAddress = cleanText(getClientIp(req), 120);
+      leadDoc.userAgent = cleanText(req.headers["user-agent"] || "", 400);
+      leadDoc.tracking = hasTracking
+        ? tracking
+        : buildTrackingPayload(leadDoc.tracking || {});
+      leadDoc.visitorIds = mergeAssistantUniqueValues(leadDoc.visitorIds || [], visitorId);
+      leadDoc.sessionIds = mergeAssistantUniqueValues(leadDoc.sessionIds || [], sessionId);
+      leadDoc.conversationHistory = mergeConversationHistory(leadDoc.conversationHistory || [], [
+        {
+          role: "user",
+          content: message,
+          createdAt: now,
+        },
+      ]);
+      leadDoc.lastUserMessage = message;
+      leadDoc.lastContactAt = now;
+      leadDoc.updatedAt = now;
+
+      if (!leadDoc.createdAt) {
+        leadDoc.createdAt = now;
+      }
+
+      await leadDoc.save();
+      setPublicChatThreadCookie(res, req, leadDoc.publicChatThreadKey || "");
+      await syncPublicChatPushDevicesToLead(leadDoc);
+
+      if (!leadExistedBeforeMessage && leadDoc?._id) {
+        await appendActivity({
+          leadId: leadDoc._id,
+          activityType: "lead_created",
+          title: "Lead creado",
+          body: "El chat web creo un lead nuevo desde la pagina de mensajes.",
+          meta: {
+            sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+            visitorId,
+            sessionId,
+            pageTitle,
+          },
+          req,
+          pagePath,
+          pageUrl,
+          tracking,
+        });
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id,
+        activityType: "website_live_chat_message",
+        title: "Mensaje del chat web",
+        body: message,
+        meta: {
+          visitorId,
+          sessionId,
+          pageTitle,
+          sourceType: METALWORKS_WEBSITE_CHAT_SOURCE_TYPE,
+        },
+        req,
+        pagePath,
+        pageUrl,
+        tracking,
+      });
+
+      let pushDelivery = {
+        attempted: false,
+        delivered: false,
+      };
+
+      try {
+        pushDelivery = await sendMetalworksPushAlert({
+          lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc,
+          alertType: "website_live_chat",
+        });
+      } catch (error) {
+        console.error("Error sending website chat push:", error.message);
+      }
+
+      res.json({
+        ok: true,
+        duplicate: leadExistedBeforeMessage,
+        notified: Boolean(pushDelivery.delivered),
+        thread: cleanPublicWebsiteLiveChatThread(leadDoc),
+      });
+    } catch (error) {
+      console.error("Error saving Metal Works website chat message:", error.message);
+      respondError(res, 500, "I could not send this message right now.");
     }
   });
 
@@ -9591,6 +15090,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         sourceType: "assistant_chat",
         sourceChannel: "web",
         sourceLabel: "Agustin 2.0 website assistant",
+        allowEmployment: false,
       });
 
       if (!result.ok) {
