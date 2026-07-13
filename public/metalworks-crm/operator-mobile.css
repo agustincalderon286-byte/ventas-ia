@@ -36,6 +36,11 @@
   align-items: center;
 }
 
+.operator-push-feedback {
+  margin: 2px 0 0;
+  max-width: 34rem;
+}
+
 .operator-summary-grid,
 .operator-grid {
   display: grid;

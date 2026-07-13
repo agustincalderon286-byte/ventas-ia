@@ -1,5 +1,6 @@
 const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
+const PROSPECTOR_AUTH_STORAGE_KEY = "cmwf_prospector_auth_v1";
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -8,7 +9,7 @@ function wait(ms) {
 }
 
 function createApiError(message = "", status = 0, retryable = false) {
-  const error = new Error(message || "No pude completar esa accion.");
+  const error = new Error(message || "I couldn't complete that action.");
   error.status = status;
   error.retryable = retryable;
   return error;
@@ -40,7 +41,7 @@ async function apiRequest(url, options = {}) {
 
       if (!response.ok) {
         throw createApiError(
-          data.error || "No pude completar esa accion.",
+          data.error || "I couldn't complete that action.",
           response.status,
           TRANSIENT_STATUS_CODES.has(response.status),
         );
@@ -63,11 +64,11 @@ async function apiRequest(url, options = {}) {
         throw error;
       }
 
-      throw createApiError("No pude completar esa accion.", status, retryable);
+      throw createApiError("I couldn't complete that action.", status, retryable);
     }
   }
 
-  throw createApiError("No pude completar esa accion.");
+  throw createApiError("I couldn't complete that action.");
 }
 
 const loginForm = document.querySelector("[data-prospector-login-form]");
@@ -80,6 +81,24 @@ function setFeedback(message = "", tone = "") {
 
   feedback.textContent = message;
   feedback.dataset.tone = tone;
+}
+
+function writeCachedProspectorAuth(auth = null) {
+  try {
+    if (!auth?.email) {
+      window.localStorage.removeItem(PROSPECTOR_AUTH_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      PROSPECTOR_AUTH_STORAGE_KEY,
+      JSON.stringify({
+        name: String(auth.name || "").trim(),
+        email: String(auth.email || "").trim().toLowerCase(),
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {}
 }
 
 async function init() {
@@ -119,10 +138,11 @@ if (loginForm) {
     };
 
     try {
-      await apiRequest("/api/metalworks-crm/prospector/login", {
+      const result = await apiRequest("/api/metalworks-crm/prospector/login", {
         method: "POST",
         body: payload,
       });
+      writeCachedProspectorAuth(result);
 
       window.location.href = "/metalworks-crm/prospector/";
     } catch (error) {

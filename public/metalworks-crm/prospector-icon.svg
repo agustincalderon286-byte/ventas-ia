@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Chicago Metal Works Prospector">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#13273e" />
+      <stop offset="52%" stop-color="#1d3b5e" />
+      <stop offset="100%" stop-color="#0d1d2f" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f4d7aa" />
+      <stop offset="100%" stop-color="#b48a52" />
+    </linearGradient>
+    <linearGradient id="highlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fafc" />
+      <stop offset="100%" stop-color="#d9e3ee" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)" />
+  <path d="M74 126h364" stroke="#f4d7aa" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round" />
+  <path
+    d="M112 144h168c62.961 0 112 49.039 112 112s-49.039 112-112 112H196v72h-84V144Zm84 76v72h80c20.928 0 40-15.664 40-36s-19.072-36-40-36h-80Z"
+    fill="url(#accent)"
+  />
+  <path
+    d="M322 318c31.48 0 58 26.52 58 58v12h-52v-8c0-8.848-7.152-16-16-16h-14v-46h24Z"
+    fill="url(#highlight)"
+    opacity="0.92"
+  />
+  <circle cx="366" cy="204" r="22" fill="#f0c888" />
+</svg>
