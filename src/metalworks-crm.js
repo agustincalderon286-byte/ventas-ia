@@ -1262,6 +1262,25 @@ async function syncLeadGoogleCalendarEvent(leadDoc) {
   return { status: leadDoc.googleCalendarSyncStatus, changed: true };
 }
 
+async function syncAndSaveLeadGoogleCalendarEvent(leadDoc) {
+  try {
+    const googleCalendarSync = await syncLeadGoogleCalendarEvent(leadDoc);
+
+    if (googleCalendarSync?.changed) {
+      await leadDoc.save();
+    }
+
+    return googleCalendarSync;
+  } catch (syncError) {
+    leadDoc.googleCalendarSyncStatus = "error";
+    leadDoc.googleCalendarSyncError = cleanText(syncError?.message || "Google Calendar sync failed.", 500);
+    leadDoc.googleCalendarLastSyncedAt = new Date();
+    await leadDoc.save().catch(() => null);
+    console.warn("Metal Works Google Calendar sync failed:", syncError?.message || syncError);
+    return { status: "error", changed: true, error: syncError };
+  }
+}
+
 export function parseCrmDatetimeInput(
   value = "",
   timeZone = METALWORKS_CALLBACK_TIME_ZONE,
@@ -13239,19 +13258,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       leadDoc.updatedAt = new Date();
       await leadDoc.save();
 
-      try {
-        const googleCalendarSync = await syncLeadGoogleCalendarEvent(leadDoc);
-
-        if (googleCalendarSync?.changed) {
-          await leadDoc.save();
-        }
-      } catch (syncError) {
-        leadDoc.googleCalendarSyncStatus = "error";
-        leadDoc.googleCalendarSyncError = cleanText(syncError?.message || "Google Calendar sync failed.", 500);
-        leadDoc.googleCalendarLastSyncedAt = new Date();
-        await leadDoc.save().catch(() => null);
-        console.warn("Metal Works Google Calendar sync failed:", syncError?.message || syncError);
-      }
+      await syncAndSaveLeadGoogleCalendarEvent(leadDoc);
 
       if (changes.length) {
         await appendActivity({
@@ -14404,6 +14411,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         visitorIds: [visitorId],
         sessionIds: [sessionId],
       });
+
+      await syncAndSaveLeadGoogleCalendarEvent(leadDoc);
 
       res.json({
         ok: true,
