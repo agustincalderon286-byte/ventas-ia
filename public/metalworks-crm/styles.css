@@ -2724,6 +2724,7 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 }
 
 .crm-job-map-stage-panel {
+  position: relative;
   min-height: 680px;
   padding: 16px;
   overflow: hidden;
@@ -2750,6 +2751,75 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
   z-index: 3;
   min-height: 640px;
   background: #d6cfb8;
+}
+
+.crm-job-map-fullscreen-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(23, 49, 77, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #17314d;
+  box-shadow: 0 14px 30px rgba(12, 27, 39, 0.18);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.crm-job-map-fullscreen-button:hover {
+  background: #fff7e4;
+  box-shadow: 0 18px 36px rgba(12, 27, 39, 0.24);
+  transform: translateY(-1px);
+}
+
+.crm-job-map-stage-panel:fullscreen,
+.crm-job-map-stage-panel.is-map-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: #0f2233;
+}
+
+.crm-job-map-stage-panel.is-map-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+body.is-job-map-fullscreen-fallback {
+  overflow: hidden;
+}
+
+.crm-job-map-stage-panel:fullscreen .crm-job-map-canvas,
+.crm-job-map-stage-panel.is-map-fullscreen .crm-job-map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 24px);
+  border-radius: 22px;
+}
+
+.crm-job-map-stage-panel:fullscreen .crm-job-map-real,
+.crm-job-map-stage-panel.is-map-fullscreen .crm-job-map-real,
+.crm-job-map-stage-panel:fullscreen .crm-job-map-real.leaflet-container,
+.crm-job-map-stage-panel.is-map-fullscreen .crm-job-map-real.leaflet-container {
+  min-height: calc(100vh - 24px);
+  border-radius: 22px;
 }
 
 .crm-job-map-canvas:not(.has-real-map) .crm-job-map-real {

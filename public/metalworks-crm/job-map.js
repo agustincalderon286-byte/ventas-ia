@@ -6,6 +6,7 @@
     leafletMap: null,
     leafletMarkers: new Map(),
     leafletLayer: null,
+    fullscreenFallback: false,
   };
 
   const boundsFallback = {
@@ -250,6 +251,77 @@
       .join("");
   }
 
+  function resizeMapSoon() {
+    if (!state.leafletMap) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      state.leafletMap.invalidateSize();
+      const marker = state.selectedId ? state.leafletMarkers.get(state.selectedId) : null;
+      if (marker) {
+        state.leafletMap.panTo(marker.getLatLng(), { animate: false });
+      }
+    }, 160);
+  }
+
+  function isMapFullscreen() {
+    const targetNode = $("[data-job-map-fullscreen-target]");
+    return document.fullscreenElement === targetNode || state.fullscreenFallback;
+  }
+
+  function syncFullscreenButton() {
+    const button = $("[data-job-map-fullscreen]");
+    const targetNode = $("[data-job-map-fullscreen-target]");
+    const fullscreen = isMapFullscreen();
+
+    targetNode?.classList.toggle("is-map-fullscreen", state.fullscreenFallback);
+    document.body.classList.toggle("is-job-map-fullscreen-fallback", state.fullscreenFallback);
+
+    if (!button) {
+      return;
+    }
+
+    button.textContent = fullscreen ? "Salir de pantalla completa" : "Pantalla completa";
+    button.setAttribute("aria-label", fullscreen ? "Salir de pantalla completa" : "Expandir mapa a pantalla completa");
+    button.setAttribute("aria-pressed", fullscreen ? "true" : "false");
+  }
+
+  async function toggleMapFullscreen() {
+    const targetNode = $("[data-job-map-fullscreen-target]");
+
+    if (!targetNode) {
+      return;
+    }
+
+    if (document.fullscreenElement === targetNode) {
+      await document.exitFullscreen?.();
+      syncFullscreenButton();
+      resizeMapSoon();
+      return;
+    }
+
+    if (state.fullscreenFallback) {
+      state.fullscreenFallback = false;
+      syncFullscreenButton();
+      resizeMapSoon();
+      return;
+    }
+
+    if (targetNode.requestFullscreen) {
+      try {
+        await targetNode.requestFullscreen();
+      } catch (error) {
+        state.fullscreenFallback = true;
+      }
+    } else {
+      state.fullscreenFallback = true;
+    }
+
+    syncFullscreenButton();
+    resizeMapSoon();
+  }
+
   function renderPins() {
     const pinsNode = $("[data-job-map-pins]");
     const emptyNode = $("[data-job-map-empty]");
@@ -432,8 +504,30 @@
 
     if (event.target.closest("[data-job-map-refresh]")) {
       loadJobMap();
+      return;
+    }
+
+    if (event.target.closest("[data-job-map-fullscreen]")) {
+      toggleMapFullscreen();
     }
   });
 
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      state.fullscreenFallback = false;
+    }
+    syncFullscreenButton();
+    resizeMapSoon();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.fullscreenFallback) {
+      state.fullscreenFallback = false;
+      syncFullscreenButton();
+      resizeMapSoon();
+    }
+  });
+
+  syncFullscreenButton();
   loadJobMap();
 })();
