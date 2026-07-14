@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#17314d" />
+    <title>CMW Job Map</title>
+    <link rel="manifest" href="/metalworks-crm/crm.webmanifest" />
+    <link rel="icon" href="/metalworks-crm/crm-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/metalworks-crm/crm-icon-180.png" />
+    <link rel="stylesheet" href="/metalworks-crm/styles.css" />
+  </head>
+  <body class="crm-app-page crm-job-map-page" data-crm-skin="executive-steel">
+    <div class="crm-shell crm-job-map-shell">
+      <header class="crm-header crm-job-map-header">
+        <div>
+          <p class="crm-eyebrow">Chicago Area</p>
+          <h1>Job Map</h1>
+          <p class="crm-subtitle">
+            Pins automaticos de trabajos y visitas agendadas en el CRM.
+          </p>
+        </div>
+        <div class="crm-header-actions">
+          <a class="crm-secondary-button crm-action-link" href="/metalworks-crm/">
+            Back to CRM
+          </a>
+          <a class="crm-secondary-button crm-action-link" href="/metalworks-crm/operator/">
+            Operator
+          </a>
+          <button class="crm-secondary-button" type="button" data-job-map-refresh>
+            Recargar
+          </button>
+        </div>
+      </header>
+
+      <section class="crm-panel crm-job-map-control-panel">
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Route planning</p>
+            <h2>Mapa de agenda</h2>
+            <p>
+              Los pines salen de leads con fecha de trabajo/cita. Si falta direccion o ciudad,
+              queda abajo en "sin pin" para corregirlo en el CRM.
+            </p>
+          </div>
+          <div class="crm-job-map-range" role="group" aria-label="Rango del mapa">
+            <button class="crm-tab-button" type="button" data-job-map-range="today">
+              Hoy
+            </button>
+            <button class="crm-tab-button is-active" type="button" data-job-map-range="week">
+              7 dias
+            </button>
+            <button class="crm-tab-button" type="button" data-job-map-range="month">
+              Mes
+            </button>
+            <button class="crm-tab-button" type="button" data-job-map-range="all">
+              Todos
+            </button>
+          </div>
+        </div>
+        <div class="crm-job-map-stat-grid" data-job-map-stats></div>
+      </section>
+
+      <section class="crm-job-map-layout">
+        <section class="crm-panel crm-job-map-stage-panel" aria-label="Mapa de Chicago">
+          <div class="crm-job-map-canvas" data-job-map-canvas>
+            <div class="crm-job-map-lake" aria-hidden="true"></div>
+            <div class="crm-job-map-road crm-job-map-road-i90" aria-hidden="true">I-90</div>
+            <div class="crm-job-map-road crm-job-map-road-i55" aria-hidden="true">I-55</div>
+            <div class="crm-job-map-road crm-job-map-road-i294" aria-hidden="true">I-294</div>
+            <div class="crm-job-map-label crm-job-map-label-chicago">Chicago</div>
+            <div class="crm-job-map-label crm-job-map-label-evanston">Evanston</div>
+            <div class="crm-job-map-label crm-job-map-label-oakpark">Oak Park</div>
+            <div class="crm-job-map-label crm-job-map-label-orland">Orland Park</div>
+            <div class="crm-job-map-label crm-job-map-label-schaumburg">Schaumburg</div>
+            <div class="crm-job-map-empty" data-job-map-empty hidden>
+              No hay trabajos agendados para este rango.
+            </div>
+            <div class="crm-job-map-pins" data-job-map-pins></div>
+          </div>
+        </section>
+
+        <aside class="crm-panel crm-job-map-sidebar">
+          <div class="crm-panel-head crm-panel-head-stack">
+            <div>
+              <p class="crm-eyebrow">Schedule</p>
+              <h2>Trabajos</h2>
+            </div>
+          </div>
+          <div class="crm-job-map-list" data-job-map-list></div>
+        </aside>
+      </section>
+
+      <section class="crm-panel crm-job-map-unmapped-panel" data-job-map-unmapped-panel hidden>
+        <div class="crm-panel-head crm-panel-head-stack">
+          <div>
+            <p class="crm-eyebrow">Needs address</p>
+            <h2>Sin pin todavia</h2>
+            <p>Agrega ZIP, ciudad o direccion en el lead para que aparezca en el mapa.</p>
+          </div>
+        </div>
+        <div class="crm-job-map-list crm-job-map-list-compact" data-job-map-unmapped></div>
+      </section>
+    </div>
+
+    <script src="/metalworks-crm/job-map.js" defer></script>
+  </body>
+</html>

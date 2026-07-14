@@ -119,6 +119,12 @@ const METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES = Math.max(
   15,
   Number(process.env.METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES || 120),
 );
+const METALWORKS_JOB_MAP_BOUNDS = Object.freeze({
+  north: 42.18,
+  south: 41.35,
+  west: -88.45,
+  east: -87.35,
+});
 const METALWORKS_ASSISTANT_HISTORY_LIMIT = 18;
 const METALWORKS_ASSISTANT_VISION_MAX_IMAGES = Math.max(
   0,
@@ -1085,6 +1091,414 @@ function shouldSyncLeadToGoogleCalendar(lead = null) {
       eligibleAppointmentStatuses.has(appointmentStatus) ||
       Boolean(lead.clientDocumentWorkDate))
   );
+}
+
+const METALWORKS_JOB_MAP_ZIP_CENTERS = Object.freeze({
+  60004: [42.112, -87.98],
+  60005: [42.066, -87.986],
+  60007: [42.005, -87.993],
+  60016: [42.043, -87.883],
+  60018: [41.982, -87.901],
+  60025: [42.076, -87.811],
+  60026: [42.091, -87.836],
+  60053: [42.041, -87.789],
+  60056: [42.066, -87.937],
+  60062: [42.127, -87.829],
+  60067: [42.114, -88.044],
+  60101: [41.931, -87.989],
+  60103: [41.986, -88.185],
+  60106: [41.956, -87.944],
+  60120: [42.037, -88.282],
+  60126: [41.899, -87.94],
+  60130: [41.874, -87.812],
+  60131: [41.936, -87.879],
+  60148: [41.874, -88.016],
+  60153: [41.879, -87.844],
+  60160: [41.905, -87.864],
+  60164: [41.916, -87.895],
+  60169: [42.052, -88.134],
+  60173: [42.051, -88.047],
+  60176: [41.961, -87.87],
+  60181: [41.882, -87.974],
+  60187: [41.858, -88.109],
+  60193: [42.009, -88.099],
+  60201: [42.056, -87.695],
+  60202: [42.03, -87.684],
+  60203: [42.049, -87.717],
+  60301: [41.887, -87.798],
+  60302: [41.893, -87.789],
+  60304: [41.873, -87.788],
+  60402: [41.841, -87.791],
+  60406: [41.657, -87.676],
+  60409: [41.615, -87.543],
+  60415: [41.698, -87.777],
+  60419: [41.63, -87.597],
+  60426: [41.608, -87.656],
+  60430: [41.557, -87.665],
+  60435: [41.536, -88.126],
+  60438: [41.571, -87.55],
+  60439: [41.69, -87.985],
+  60445: [41.63, -87.738],
+  60452: [41.607, -87.754],
+  60453: [41.719, -87.752],
+  60455: [41.745, -87.806],
+  60459: [41.741, -87.77],
+  60462: [41.62, -87.842],
+  60463: [41.665, -87.792],
+  60465: [41.702, -87.826],
+  60477: [41.574, -87.786],
+  60482: [41.743, -87.806],
+  60513: [41.822, -87.848],
+  60521: [41.802, -87.929],
+  60523: [41.839, -87.953],
+  60525: [41.8, -87.872],
+  60526: [41.833, -87.871],
+  60540: [41.776, -88.148],
+  60546: [41.836, -87.823],
+  60559: [41.793, -87.974],
+  60563: [41.799, -88.166],
+  60601: [41.886, -87.622],
+  60605: [41.867, -87.618],
+  60606: [41.882, -87.638],
+  60607: [41.875, -87.651],
+  60608: [41.848, -87.67],
+  60609: [41.813, -87.656],
+  60610: [41.906, -87.635],
+  60611: [41.895, -87.621],
+  60612: [41.881, -87.687],
+  60613: [41.953, -87.656],
+  60614: [41.922, -87.65],
+  60615: [41.802, -87.603],
+  60616: [41.845, -87.626],
+  60617: [41.72, -87.555],
+  60618: [41.946, -87.702],
+  60619: [41.744, -87.605],
+  60620: [41.741, -87.652],
+  60621: [41.776, -87.64],
+  60622: [41.902, -87.683],
+  60623: [41.848, -87.718],
+  60624: [41.88, -87.724],
+  60625: [41.972, -87.702],
+  60626: [42.009, -87.669],
+  60628: [41.692, -87.624],
+  60629: [41.775, -87.711],
+  60630: [41.972, -87.759],
+  60631: [41.995, -87.813],
+  60632: [41.81, -87.713],
+  60634: [41.946, -87.807],
+  60636: [41.775, -87.669],
+  60637: [41.781, -87.603],
+  60638: [41.782, -87.77],
+  60639: [41.92, -87.755],
+  60640: [41.973, -87.662],
+  60641: [41.946, -87.746],
+  60642: [41.902, -87.659],
+  60643: [41.7, -87.662],
+  60644: [41.881, -87.756],
+  60645: [42.008, -87.696],
+  60646: [41.995, -87.759],
+  60647: [41.921, -87.702],
+  60649: [41.763, -87.57],
+  60651: [41.902, -87.741],
+  60652: [41.746, -87.712],
+  60653: [41.819, -87.611],
+  60654: [41.892, -87.635],
+  60655: [41.696, -87.703],
+  60656: [41.974, -87.827],
+  60657: [41.94, -87.658],
+  60659: [41.991, -87.704],
+  60660: [41.991, -87.665],
+  60661: [41.883, -87.644],
+});
+
+const METALWORKS_JOB_MAP_PLACE_CENTERS = Object.freeze({
+  addison: [41.932, -87.989],
+  arlingtonheights: [42.088, -87.981],
+  aurora: [41.761, -88.32],
+  berwyn: [41.85, -87.793],
+  blueisland: [41.657, -87.68],
+  bolingbrook: [41.699, -88.068],
+  bridgeview: [41.75, -87.805],
+  brookfield: [41.823, -87.852],
+  burbank: [41.748, -87.771],
+  calumetcity: [41.616, -87.529],
+  chicago: [41.878, -87.63],
+  cicero: [41.845, -87.753],
+  "des plaines": [42.034, -87.883],
+  desplaines: [42.034, -87.883],
+  downersgrove: [41.808, -88.011],
+  elmhurst: [41.899, -87.94],
+  evanston: [42.045, -87.688],
+  franklinpark: [41.936, -87.879],
+  glenview: [42.07, -87.812],
+  harvey: [41.61, -87.646],
+  highlandpark: [42.182, -87.8],
+  hinsdale: [41.802, -87.929],
+  hoffmanestates: [42.063, -88.122],
+  homewood: [41.557, -87.666],
+  joliet: [41.525, -88.081],
+  lagrange: [41.805, -87.87],
+  lincolnwood: [42.005, -87.735],
+  lombard: [41.88, -88.007],
+  maywood: [41.879, -87.844],
+  melrosepark: [41.9, -87.856],
+  mortongrove: [42.04, -87.782],
+  naperville: [41.75, -88.153],
+  niles: [42.018, -87.802],
+  northbrook: [42.127, -87.829],
+  oakbrook: [41.839, -87.953],
+  oakforest: [41.603, -87.743],
+  oaklawn: [41.719, -87.748],
+  oakpark: [41.885, -87.784],
+  orlandpark: [41.63, -87.854],
+  palatine: [42.11, -88.034],
+  palosheights: [41.668, -87.796],
+  "park ridge": [42.011, -87.84],
+  parkridge: [42.011, -87.84],
+  riverside: [41.835, -87.822],
+  rosemont: [41.996, -87.884],
+  schaumburg: [42.033, -88.083],
+  skokie: [42.033, -87.733],
+  tinleypark: [41.573, -87.784],
+  westchester: [41.85, -87.882],
+  wheaton: [41.866, -88.107],
+  woodridge: [41.746, -88.05],
+});
+
+function normalizeJobMapPlaceKey(value = "") {
+  return cleanText(value || "", 120).toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function getStableJobMapJitter(seed = "") {
+  const text = String(seed || "");
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) % 9973;
+  }
+
+  return {
+    lat: (((hash % 17) - 8) / 8) * 0.004,
+    lng: ((((Math.floor(hash / 17) % 17) - 8) / 8) * 0.006),
+  };
+}
+
+function extractJobMapZipCode(value = "") {
+  const match = String(value || "").match(/\b(60\d{3})\b/);
+  return match ? match[1] : "";
+}
+
+function getLeadJobMapSchedule(lead = null) {
+  const appointmentStartAt = lead?.nextActionAt ? new Date(lead.nextActionAt) : null;
+
+  if (
+    appointmentStartAt instanceof Date &&
+    !Number.isNaN(appointmentStartAt.getTime()) &&
+    !isInactiveAppointmentStatus(inferLeadAppointmentStatus(lead))
+  ) {
+    const durationMinutes =
+      normalizeAppointmentDurationMinutes(lead.appointmentDurationMinutes || 0) ||
+      inferAppointmentDurationMinutes(inferLeadAppointmentType(lead)) ||
+      METALWORKS_GOOGLE_CALENDAR_DEFAULT_DURATION_MINUTES;
+
+    return {
+      startsAt: appointmentStartAt,
+      endsAt: new Date(appointmentStartAt.getTime() + durationMinutes * 60 * 1000),
+      mode: "dateTime",
+    };
+  }
+
+  const workDate = lead?.clientDocumentWorkDate ? new Date(lead.clientDocumentWorkDate) : null;
+
+  if (workDate instanceof Date && !Number.isNaN(workDate.getTime())) {
+    return {
+      startsAt: workDate,
+      endsAt: null,
+      mode: "date",
+    };
+  }
+
+  return null;
+}
+
+function shouldIncludeLeadOnJobMap(lead = null) {
+  if (!lead || !getLeadJobMapSchedule(lead)) {
+    return false;
+  }
+
+  const status = normalizeStatus(lead.status || "new");
+  const appointmentStatus = inferLeadAppointmentStatus(lead);
+  const appointmentType = inferLeadAppointmentType(lead);
+
+  if (["lost", "archived"].includes(status) || isInactiveAppointmentStatus(appointmentStatus)) {
+    return false;
+  }
+
+  if (isColdAtlasCommercialOutreachLead(lead) && appointmentType !== "job") {
+    return false;
+  }
+
+  return true;
+}
+
+function resolveMetalworksJobMapPoint(lead = null) {
+  const query = cleanText(
+    [
+      lead?.addressLine,
+      lead?.location,
+      lead?.city,
+      lead?.zipCode,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    320,
+  );
+
+  if (!query) {
+    return null;
+  }
+
+  const zipCode = cleanText(lead?.zipCode || extractJobMapZipCode(query), 12);
+  let point = zipCode && METALWORKS_JOB_MAP_ZIP_CENTERS[zipCode];
+  let source = point ? `zip:${zipCode}` : "";
+
+  if (!point) {
+    const cityKey = normalizeJobMapPlaceKey(lead?.city || "");
+    if (cityKey && METALWORKS_JOB_MAP_PLACE_CENTERS[cityKey]) {
+      point = METALWORKS_JOB_MAP_PLACE_CENTERS[cityKey];
+      source = `city:${lead.city}`;
+    }
+  }
+
+  if (!point) {
+    const queryKey = normalizeJobMapPlaceKey(query);
+    const matchedKey = Object.keys(METALWORKS_JOB_MAP_PLACE_CENTERS).find((key) =>
+      queryKey.includes(normalizeJobMapPlaceKey(key)),
+    );
+
+    if (matchedKey) {
+      point = METALWORKS_JOB_MAP_PLACE_CENTERS[matchedKey];
+      source = `place:${matchedKey}`;
+    }
+  }
+
+  if (!point) {
+    return null;
+  }
+
+  const jitter = getStableJobMapJitter(String(lead?._id || lead?.id || query));
+
+  return {
+    lat: Math.max(
+      METALWORKS_JOB_MAP_BOUNDS.south,
+      Math.min(METALWORKS_JOB_MAP_BOUNDS.north, point[0] + jitter.lat),
+    ),
+    lng: Math.max(
+      METALWORKS_JOB_MAP_BOUNDS.west,
+      Math.min(METALWORKS_JOB_MAP_BOUNDS.east, point[1] + jitter.lng),
+    ),
+    source,
+    query,
+  };
+}
+
+function getMetalworksJobMapWindow(range = "week", now = new Date()) {
+  const safeRange = cleanText(range || "week", 24).toLowerCase();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  if (safeRange === "all") {
+    return { range: "all", start: null, end: null };
+  }
+
+  const days = safeRange === "today" ? 1 : safeRange === "month" ? 31 : 7;
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  end.setMilliseconds(end.getMilliseconds() - 1);
+
+  return {
+    range: ["today", "week", "month"].includes(safeRange) ? safeRange : "week",
+    start,
+    end,
+  };
+}
+
+function buildMetalworksJobMapSnapshot(leads = [], range = "week", now = new Date()) {
+  const window = getMetalworksJobMapWindow(range, now);
+  const items = (Array.isArray(leads) ? leads : [])
+    .map((lead) => {
+      const schedule = getLeadJobMapSchedule(lead);
+
+      if (!schedule) {
+        return null;
+      }
+
+      if (window.start && schedule.startsAt < window.start) {
+        return null;
+      }
+
+      if (window.end && schedule.startsAt > window.end) {
+        return null;
+      }
+
+      const clean = cleanLead(lead);
+      const point = resolveMetalworksJobMapPoint(lead);
+      const address = cleanText(
+        clean.addressLine || clean.location || [clean.city, clean.zipCode].filter(Boolean).join(" "),
+        240,
+      );
+
+      return {
+        id: clean.id,
+        fullName: clean.fullName,
+        projectType: clean.projectType || clean.estimateTitle || "Job",
+        status: clean.status,
+        statusLabel: clean.statusLabel,
+        appointmentType: clean.appointmentType,
+        appointmentTypeLabel: clean.appointmentTypeLabel,
+        appointmentStatus: clean.appointmentStatus,
+        appointmentStatusLabel: clean.appointmentStatusLabel,
+        appointmentAssignedTo: clean.appointmentAssignedTo,
+        startsAt: schedule.startsAt.toISOString(),
+        endsAt: schedule.endsAt ? schedule.endsAt.toISOString() : "",
+        scheduleMode: schedule.mode,
+        phoneDisplay: clean.phoneDisplay || clean.phone,
+        email: clean.email,
+        address,
+        location: clean.location,
+        city: clean.city,
+        zipCode: clean.zipCode,
+        estimateAmount: clean.estimateAmount,
+        invoiceBalanceDue: clean.invoiceBalanceDue,
+        googleCalendarEventHtmlLink: clean.googleCalendarEventHtmlLink,
+        mapPoint: point
+          ? {
+              lat: point.lat,
+              lng: point.lng,
+              source: point.source,
+              query: point.query,
+            }
+          : null,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(left.startsAt || "").localeCompare(String(right.startsAt || "")));
+
+  const mapped = items.filter((item) => item.mapPoint).length;
+
+  return {
+    generatedAt: now.toISOString(),
+    range: window.range,
+    windowStart: window.start ? window.start.toISOString() : "",
+    windowEnd: window.end ? window.end.toISOString() : "",
+    bounds: METALWORKS_JOB_MAP_BOUNDS,
+    items,
+    stats: {
+      total: items.length,
+      mapped,
+      unmapped: items.length - mapped,
+    },
+  };
 }
 
 function buildGoogleCalendarEventForLead(lead = null) {
@@ -11400,6 +11814,29 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   });
 
   app.get(
+    ["/metalworks-crm/job-map", "/metalworks-crm/job-map/"],
+    async (req, res) => {
+      res.set("Cache-Control", "no-store");
+      const auth = await getAuth(req, { touch: false });
+
+      if (!auth.email) {
+        return res.redirect("/metalworks-crm/login/");
+      }
+
+      try {
+        await sendMetalworksCrmShell(
+          res,
+          path.join(privateDir, "metalworks-job-map.html"),
+          getMetalworksCrmProfile(auth.email),
+        );
+      } catch (error) {
+        console.error("Error loading Metal Works job map shell:", error.message);
+        respondError(res, 500, "No pude abrir el mapa de trabajos.");
+      }
+    },
+  );
+
+  app.get(
     ["/metalworks-crm/operator", "/metalworks-crm/operator/"],
     async (req, res) => {
       res.set("Cache-Control", "no-store");
@@ -12213,6 +12650,32 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error loading Metal Works dashboard:", error.message);
       respondError(res, 500, "No pude cargar el dashboard del CRM.");
+    }
+  });
+
+  app.get("/api/metalworks-crm/job-map", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const leadDocs = await MetalworksLead.find({
+        $or: [
+          { nextActionAt: { $exists: true, $ne: null } },
+          { clientDocumentWorkDate: { $exists: true, $ne: null } },
+        ],
+      })
+        .sort({ nextActionAt: 1, clientDocumentWorkDate: 1, updatedAt: -1 })
+        .limit(600)
+        .lean();
+      const scheduledLeads = leadDocs.filter((lead) => shouldIncludeLeadOnJobMap(lead));
+
+      res.json(buildMetalworksJobMapSnapshot(scheduledLeads, req.query?.range || "week"));
+    } catch (error) {
+      console.error("Error loading Metal Works job map:", error.message);
+      respondError(res, 500, "No pude cargar el mapa de trabajos.");
     }
   });
 
