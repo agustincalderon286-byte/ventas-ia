@@ -16,6 +16,15 @@
     east: -87.35,
   };
 
+  const shopBase = {
+    id: "cmw-shop-base",
+    label: "Base / Taller",
+    name: "Chicago Metal Works & Fencing",
+    address: "2059 Desplaines St, Blue Island, IL",
+    lat: 41.6576,
+    lng: -87.6804,
+  };
+
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
@@ -150,6 +159,22 @@
     `;
   }
 
+  function buildBasePopupHtml() {
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopBase.address)}`;
+
+    return `
+      <div class="crm-job-map-popup">
+        <div class="crm-job-map-popup-kicker">${escapeHtml(shopBase.label)}</div>
+        <strong>${escapeHtml(shopBase.name)}</strong>
+        <span>Referencia fija para distancias</span>
+        <p>${escapeHtml(shopBase.address)}</p>
+        <div>
+          <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">Google Maps</a>
+        </div>
+      </div>
+    `;
+  }
+
   function ensureLeafletMap() {
     const realMapNode = $("[data-job-map-real]");
     const canvasNode = $("[data-job-map-canvas]");
@@ -190,7 +215,24 @@
     state.leafletLayer.clearLayers();
     state.leafletMarkers.clear();
 
-    const latLngs = [];
+    const baseMarker = window.L.marker([shopBase.lat, shopBase.lng], {
+      title: shopBase.label,
+      zIndexOffset: 1000,
+      icon: window.L.divIcon({
+        className: "crm-job-map-leaflet-marker crm-job-map-leaflet-marker-base",
+        html: `<span><b>CMW</b></span>`,
+        iconSize: [46, 54],
+        iconAnchor: [23, 52],
+        popupAnchor: [0, -48],
+      }),
+    });
+    baseMarker.bindPopup(buildBasePopupHtml(), {
+      closeButton: true,
+      maxWidth: 300,
+    });
+    baseMarker.addTo(state.leafletLayer);
+
+    const latLngs = [[shopBase.lat, shopBase.lng]];
     mappedItems.forEach((item, index) => {
       const point = item.mapPoint;
       const marker = window.L.marker([point.lat, point.lng], {
@@ -360,6 +402,19 @@
         `;
       })
       .join("");
+
+    pinsNode.insertAdjacentHTML(
+      "afterbegin",
+      `
+        <div
+          class="crm-job-map-pin crm-job-map-pin-base"
+          style="${getPointStyle({ lat: shopBase.lat, lng: shopBase.lng }, bounds)}"
+          aria-label="${escapeHtml(shopBase.label)} ${escapeHtml(shopBase.address)}"
+        >
+          <span>CMW</span>
+        </div>
+      `,
+    );
 
     if (emptyNode) {
       emptyNode.hidden = items.length > 0;
