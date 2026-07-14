@@ -3145,8 +3145,31 @@ body.is-job-map-fullscreen-fallback {
 }
 
 .crm-job-map-sidebar {
-  max-height: 730px;
-  overflow: auto;
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: min(730px, calc(100vh - 32px));
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(182, 115, 32, 0.65) rgba(23, 49, 77, 0.08);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.crm-job-map-sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.crm-job-map-sidebar::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(23, 49, 77, 0.08);
+}
+
+.crm-job-map-sidebar::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(182, 115, 32, 0.68);
 }
 
 .crm-job-map-list {
@@ -3280,7 +3303,9 @@ body.is-job-map-fullscreen-fallback {
   }
 
   .crm-job-map-sidebar {
+    position: static;
     max-height: none;
+    overflow: visible;
   }
 
   .crm-job-map-list-compact {
