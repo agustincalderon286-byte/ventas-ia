@@ -3150,7 +3150,7 @@ body.is-job-map-fullscreen-fallback {
   display: flex;
   flex-direction: column;
   align-self: start;
-  max-height: min(730px, calc(100vh - 32px));
+  height: clamp(430px, 58vh, 680px);
   min-height: 0;
   overflow: hidden;
 }
@@ -3313,7 +3313,7 @@ body.is-job-map-fullscreen-fallback {
   .crm-job-map-sidebar {
     position: static;
     display: block;
-    max-height: none;
+    height: auto;
     overflow: visible;
   }
 
