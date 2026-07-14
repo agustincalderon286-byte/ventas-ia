@@ -3,6 +3,9 @@
     range: "week",
     data: null,
     selectedId: "",
+    leafletMap: null,
+    leafletMarkers: new Map(),
+    leafletLayer: null,
   };
 
   const boundsFallback = {
@@ -73,6 +76,10 @@
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || item.fullName || "Chicago")}`;
   }
 
+  function getMappedItems() {
+    return (state.data?.items || []).filter((item) => item.mapPoint);
+  }
+
   function getPointStyle(point = null, bounds = boundsFallback) {
     if (!point) {
       return "";
@@ -100,6 +107,121 @@
     }
 
     return "scheduled";
+  }
+
+  function getMarkerColor(item = {}) {
+    const accent = getItemAccent(item);
+    if (accent === "booked") {
+      return "#1f7a55";
+    }
+    if (accent === "confirmed") {
+      return "#266ab0";
+    }
+    if (accent === "en-route") {
+      return "#b67320";
+    }
+    return "#d64a31";
+  }
+
+  function buildPopupHtml(item = {}, index = 0) {
+    const money = formatMoney(item.estimateAmount);
+    const address = item.address || item.location || [item.city, item.zipCode].filter(Boolean).join(" ");
+    const mapsUrl = buildMapsUrl(item);
+    const crmUrl = `/metalworks-crm/?lead=${encodeURIComponent(item.id)}`;
+    const calendarUrl = item.googleCalendarEventHtmlLink || "";
+
+    return `
+      <div class="crm-job-map-popup">
+        <div class="crm-job-map-popup-kicker">Job ${index + 1}</div>
+        <strong>${escapeHtml(item.fullName || "Lead sin nombre")}</strong>
+        <span>${escapeHtml(formatDateTime(item.startsAt, item.scheduleMode))}</span>
+        <p>${escapeHtml(item.projectType || "Trabajo")}</p>
+        <p>${escapeHtml(address || "Direccion pendiente")}</p>
+        <small>${escapeHtml(item.appointmentStatusLabel || item.statusLabel || "Agendado")}${
+          item.appointmentAssignedTo ? ` · ${escapeHtml(item.appointmentAssignedTo)}` : ""
+        }${money ? ` · ${escapeHtml(money)}` : ""}</small>
+        <div>
+          <a href="${escapeHtml(crmUrl)}">CRM</a>
+          <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">Google Maps</a>
+          ${calendarUrl ? `<a href="${escapeHtml(calendarUrl)}" target="_blank" rel="noopener">Calendar</a>` : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  function ensureLeafletMap() {
+    const realMapNode = $("[data-job-map-real]");
+    const canvasNode = $("[data-job-map-canvas]");
+
+    if (!realMapNode || typeof window.L === "undefined") {
+      return false;
+    }
+
+    if (state.leafletMap) {
+      window.setTimeout(() => state.leafletMap.invalidateSize(), 0);
+      return true;
+    }
+
+    canvasNode?.classList.add("has-real-map");
+    state.leafletMap = window.L.map(realMapNode, {
+      center: [41.878, -87.73],
+      zoom: 10,
+      minZoom: 8,
+      maxZoom: 18,
+      scrollWheelZoom: true,
+    });
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(state.leafletMap);
+    state.leafletLayer = window.L.layerGroup().addTo(state.leafletMap);
+
+    window.setTimeout(() => state.leafletMap.invalidateSize(), 0);
+    return true;
+  }
+
+  function renderLeafletMarkers() {
+    if (!ensureLeafletMap() || !state.leafletLayer) {
+      return false;
+    }
+
+    const mappedItems = getMappedItems();
+    state.leafletLayer.clearLayers();
+    state.leafletMarkers.clear();
+
+    const latLngs = [];
+    mappedItems.forEach((item, index) => {
+      const point = item.mapPoint;
+      const marker = window.L.marker([point.lat, point.lng], {
+        title: item.fullName || "Job",
+        icon: window.L.divIcon({
+          className: "crm-job-map-leaflet-marker",
+          html: `<span style="--marker-color:${escapeHtml(getMarkerColor(item))}"><b>${index + 1}</b></span>`,
+          iconSize: [34, 44],
+          iconAnchor: [17, 42],
+          popupAnchor: [0, -38],
+        }),
+      });
+
+      marker.bindPopup(buildPopupHtml(item, index), {
+        closeButton: true,
+        maxWidth: 300,
+      });
+      marker.on("click", () => selectItem(item.id));
+      marker.addTo(state.leafletLayer);
+      state.leafletMarkers.set(item.id, marker);
+      latLngs.push([point.lat, point.lng]);
+    });
+
+    if (latLngs.length > 1) {
+      state.leafletMap.fitBounds(latLngs, { padding: [44, 44], maxZoom: 12 });
+    } else if (latLngs.length === 1) {
+      state.leafletMap.setView(latLngs[0], 12);
+    } else {
+      state.leafletMap.setView([41.878, -87.73], 10);
+    }
+
+    return true;
   }
 
   function renderStats() {
@@ -132,10 +254,19 @@
     const pinsNode = $("[data-job-map-pins]");
     const emptyNode = $("[data-job-map-empty]");
     const items = state.data?.items || [];
-    const mappedItems = items.filter((item) => item.mapPoint);
+    const mappedItems = getMappedItems();
     const bounds = state.data?.bounds || boundsFallback;
+    const renderedLeaflet = renderLeafletMarkers();
 
     if (!pinsNode) {
+      return;
+    }
+
+    if (renderedLeaflet) {
+      pinsNode.innerHTML = "";
+      if (emptyNode) {
+        emptyNode.hidden = items.length > 0;
+      }
       return;
     }
 
@@ -240,6 +371,13 @@
     state.selectedId = id;
     renderPins();
     renderLists();
+
+    const marker = state.leafletMarkers.get(id);
+    if (marker && state.leafletMap) {
+      const latLng = marker.getLatLng();
+      state.leafletMap.panTo(latLng, { animate: true, duration: 0.35 });
+      marker.openPopup();
+    }
   }
 
   async function loadJobMap() {
