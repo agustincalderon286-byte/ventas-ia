@@ -3147,9 +3147,22 @@ body.is-job-map-fullscreen-fallback {
 .crm-job-map-sidebar {
   position: sticky;
   top: 16px;
+  display: flex;
+  flex-direction: column;
   align-self: start;
   max-height: min(730px, calc(100vh - 32px));
   min-height: 0;
+  overflow: hidden;
+}
+
+.crm-job-map-list {
+  display: grid;
+  gap: 12px;
+}
+
+.crm-job-map-sidebar > .crm-job-map-list {
+  min-height: 0;
+  padding-right: 6px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-color: rgba(182, 115, 32, 0.65) rgba(23, 49, 77, 0.08);
@@ -3157,24 +3170,19 @@ body.is-job-map-fullscreen-fallback {
   -webkit-overflow-scrolling: touch;
 }
 
-.crm-job-map-sidebar::-webkit-scrollbar {
+.crm-job-map-sidebar > .crm-job-map-list::-webkit-scrollbar {
   width: 10px;
 }
 
-.crm-job-map-sidebar::-webkit-scrollbar-track {
+.crm-job-map-sidebar > .crm-job-map-list::-webkit-scrollbar-track {
   border-radius: 999px;
   background: rgba(23, 49, 77, 0.08);
 }
 
-.crm-job-map-sidebar::-webkit-scrollbar-thumb {
+.crm-job-map-sidebar > .crm-job-map-list::-webkit-scrollbar-thumb {
   border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 999px;
   background: rgba(182, 115, 32, 0.68);
-}
-
-.crm-job-map-list {
-  display: grid;
-  gap: 12px;
 }
 
 .crm-job-map-card {
@@ -3304,7 +3312,13 @@ body.is-job-map-fullscreen-fallback {
 
   .crm-job-map-sidebar {
     position: static;
+    display: block;
     max-height: none;
+    overflow: visible;
+  }
+
+  .crm-job-map-sidebar > .crm-job-map-list {
+    padding-right: 0;
     overflow: visible;
   }
 
