@@ -1671,7 +1671,14 @@ async function googleCalendarRequest(config, accessToken, pathName, options = {}
   return payload;
 }
 
-async function syncLeadGoogleCalendarEvent(leadDoc) {
+function isGoogleCalendarEventMissingError(error) {
+  return /not found|resource has been deleted/i.test(error?.message || "");
+}
+
+async function syncLeadGoogleCalendarEvent(
+  leadDoc,
+  { configOverride = null, accessTokenOverride = "" } = {},
+) {
   const eventId = cleanText(leadDoc.googleCalendarEventId || "", 240);
   const eligible = shouldSyncLeadToGoogleCalendar(leadDoc);
 
@@ -1679,7 +1686,7 @@ async function syncLeadGoogleCalendarEvent(leadDoc) {
     return { status: "ignored", changed: false };
   }
 
-  const config = getGoogleCalendarConfig();
+  const config = configOverride || getGoogleCalendarConfig();
 
   if (!config.configured) {
     leadDoc.googleCalendarSyncStatus = "not_configured";
@@ -1688,7 +1695,7 @@ async function syncLeadGoogleCalendarEvent(leadDoc) {
   }
 
   const calendarId = encodeURIComponent(config.calendarId);
-  const accessToken = await getGoogleCalendarAccessToken(config);
+  const accessToken = accessTokenOverride || (await getGoogleCalendarAccessToken(config));
 
   if (!eligible) {
     if (eventId) {
@@ -1698,7 +1705,7 @@ async function syncLeadGoogleCalendarEvent(leadDoc) {
         `/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`,
         { method: "DELETE" },
       ).catch((error) => {
-        if (!/not found/i.test(error?.message || "")) {
+        if (!isGoogleCalendarEventMissingError(error)) {
           throw error;
         }
       });
@@ -1744,9 +1751,9 @@ async function syncLeadGoogleCalendarEvent(leadDoc) {
   return { status: leadDoc.googleCalendarSyncStatus, changed: true };
 }
 
-async function syncAndSaveLeadGoogleCalendarEvent(leadDoc) {
+async function syncAndSaveLeadGoogleCalendarEvent(leadDoc, options = {}) {
   try {
-    const googleCalendarSync = await syncLeadGoogleCalendarEvent(leadDoc);
+    const googleCalendarSync = await syncLeadGoogleCalendarEvent(leadDoc, options);
 
     if (googleCalendarSync?.changed) {
       await leadDoc.save();
@@ -12654,6 +12661,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const leads = await MetalworksLead.find({
         googleCalendarEventId: { $exists: true, $nin: ["", null] },
       });
+      const calendarConfig = getGoogleCalendarConfig();
+
+      if (!calendarConfig.configured) {
+        return respondError(res, 503, calendarConfig.reason);
+      }
+
+      const accessToken = await getGoogleCalendarAccessToken(calendarConfig);
       let removed = 0;
       let errors = 0;
 
@@ -12662,13 +12676,19 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           continue;
         }
 
-        const result = await syncAndSaveLeadGoogleCalendarEvent(leadDoc);
+        const result = await syncAndSaveLeadGoogleCalendarEvent(leadDoc, {
+          configOverride: calendarConfig,
+          accessTokenOverride: accessToken,
+        });
 
         if (result?.status === "skipped") {
           removed += 1;
         } else if (result?.status === "error") {
           errors += 1;
         }
+
+        // Stay below Google Calendar's write limit while clearing historical events.
+        await new Promise((resolve) => setTimeout(resolve, 350));
       }
 
       res.json({
