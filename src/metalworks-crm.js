@@ -398,6 +398,43 @@ function parseJsonObject(value = "") {
   }
 }
 
+function parseSearchKingsWebhookBody(body = {}) {
+  if (typeof body === "string") {
+    return parseJsonObject(body);
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {};
+  }
+
+  for (const key of ["payload", "data", "body", "json"]) {
+    if (typeof body[key] === "string") {
+      const parsed = parseJsonObject(body[key]);
+      if (Object.keys(parsed).length) {
+        return parsed;
+      }
+    }
+  }
+
+  const entries = Object.entries(body);
+  if (entries.length === 1) {
+    const [[onlyKey, onlyValue]] = entries;
+    if (typeof onlyValue === "string") {
+      const parsedValue = parseJsonObject(onlyValue);
+      if (Object.keys(parsedValue).length) {
+        return parsedValue;
+      }
+    }
+
+    const parsedKey = parseJsonObject(onlyKey);
+    if (Object.keys(parsedKey).length) {
+      return parsedKey;
+    }
+  }
+
+  return body;
+}
+
 function getMetalworksNotificationEmails() {
   return Array.from(
     new Set(
@@ -14383,7 +14420,8 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           return respondError(res, 401, "Unauthorized SearchKings webhook request.");
         }
 
-        const parsedEvent = buildSearchKingsWebhookEvent(req.body || {});
+        const webhookPayload = parseSearchKingsWebhookBody(req.body || {});
+        const parsedEvent = buildSearchKingsWebhookEvent(webhookPayload);
         const leadCandidate = parsedEvent.leadCandidate || {};
         const externalLeadId = cleanText(leadCandidate.externalLeadId || "", 120);
         const fullName = cleanText(leadCandidate.fullName || "", 120);
@@ -14500,7 +14538,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           meta: {
             ...(parsedEvent?.activity?.meta || {}),
             duplicate,
-            webhookPayload: req.body || {},
+            webhookPayload,
           },
           req,
           pagePath,
