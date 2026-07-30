@@ -1132,8 +1132,13 @@ function getLeadGoogleCalendarStartDate(lead = null) {
   return null;
 }
 
-function shouldSyncLeadToGoogleCalendar(lead = null) {
+export function shouldSyncLeadToGoogleCalendar(lead = null) {
   if (!lead) {
+    return false;
+  }
+
+  // Atlas Outreach follow-ups belong to Atlas, not the team's Google Calendar.
+  if (leadHasAtlasCommercialOutreachAttribution(lead)) {
     return false;
   }
 
@@ -12635,6 +12640,46 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     } catch (error) {
       console.error("Error creating Metal Works agenda event:", error.message);
       respondError(res, 500, "No pude crear el evento de agenda.");
+    }
+  });
+
+  app.post("/api/metalworks-crm/google-calendar/cleanup-atlas-outreach", async (req, res) => {
+    const auth = await requireAuth(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    try {
+      const leads = await MetalworksLead.find({
+        googleCalendarEventId: { $exists: true, $nin: ["", null] },
+      });
+      let removed = 0;
+      let errors = 0;
+
+      for (const leadDoc of leads) {
+        if (!leadHasAtlasCommercialOutreachAttribution(leadDoc)) {
+          continue;
+        }
+
+        const result = await syncAndSaveLeadGoogleCalendarEvent(leadDoc);
+
+        if (result?.status === "skipped") {
+          removed += 1;
+        } else if (result?.status === "error") {
+          errors += 1;
+        }
+      }
+
+      res.json({
+        ok: errors === 0,
+        removed,
+        errors,
+        message: `${removed} Atlas Outreach event${removed === 1 ? "" : "s"} removed from Google Calendar.`,
+      });
+    } catch (error) {
+      console.error("Error cleaning Atlas Outreach Google Calendar events:", error.message);
+      respondError(res, 500, "No pude limpiar los eventos de Atlas Outreach.");
     }
   });
 
