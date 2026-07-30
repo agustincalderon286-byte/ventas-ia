@@ -118,15 +118,16 @@ function buildLocationParts(payload = {}) {
   const city = cleanText(
     record.city ||
       record.locality ||
-      pickFirst(payload, [["city"], ["callerCity"], ["data", "city"]]) ||
+      pickFirst(payload, [["city"], ["callerCity"], ["caller_city"], ["data", "city"]]) ||
       "",
     80,
   );
   const state = cleanText(
     record.state ||
       record.stateCode ||
+      record.state_code ||
       record.region ||
-      pickFirst(payload, [["state"], ["callerState"], ["data", "state"]]) ||
+      pickFirst(payload, [["state"], ["callerState"], ["caller_state"], ["data", "state"]]) ||
       "",
     40,
   );
@@ -134,7 +135,8 @@ function buildLocationParts(payload = {}) {
     record.zipCode ||
       record.zip ||
       record.postalCode ||
-      pickFirst(payload, [["zipCode"], ["zip"], ["callerZip"], ["data", "zipCode"]]) ||
+      record.postal_code ||
+      pickFirst(payload, [["zipCode"], ["zip"], ["postal_code"], ["callerZip"], ["caller_zip"], ["data", "zipCode"]]) ||
       "",
     20,
   );
@@ -186,8 +188,16 @@ function buildSearchKingsLeadCandidate(payload = {}) {
       [
         ["callerPhone"],
         ["callerNumber"],
+        ["caller_number"],
+        ["caller_number_complete"],
+        ["caller_number_format"],
+        ["caller_number_bare"],
+        ["contact_number"],
+        ["alternative_number"],
         ["fromNumber"],
+        ["from_number"],
         ["phoneNumber"],
+        ["phone_number"],
         ["phone"],
         ["caller", "phone"],
         ["contact", "phone"],
@@ -199,8 +209,16 @@ function buildSearchKingsLeadCandidate(payload = {}) {
       [
         ["callerPhone"],
         ["callerNumber"],
+        ["caller_number"],
+        ["caller_number_complete"],
+        ["caller_number_format"],
+        ["caller_number_bare"],
+        ["contact_number"],
+        ["alternative_number"],
         ["fromNumber"],
+        ["from_number"],
         ["phoneNumber"],
+        ["phone_number"],
         ["phone"],
         ["caller", "phone"],
         ["contact", "phone"],
@@ -267,14 +285,14 @@ function buildSearchKingsLeadCandidate(payload = {}) {
     160,
   );
   const recordingUrl = cleanText(
-    pickFirst(call, [["recordingUrl"], ["recordingURL"], ["recording"], ["recordingLink"]]) ||
-      pickFirst(payload, [["recordingUrl"], ["recordingURL"], ["recording"], ["recordingLink"]]) ||
+    pickFirst(call, [["recordingUrl"], ["recordingURL"], ["recording_url"], ["recording"], ["recordingLink"], ["recording_link"], ["audio"]]) ||
+      pickFirst(payload, [["recordingUrl"], ["recordingURL"], ["recording_url"], ["recording"], ["recordingLink"], ["recording_link"], ["audio"]]) ||
       "",
     1200,
   );
   const transcript = cleanText(
-    pickFirst(call, [["transcript"], ["callTranscript"], ["notesTranscript"]]) ||
-      pickFirst(payload, [["transcript"], ["callTranscript"], ["notesTranscript"]]) ||
+    pickFirst(call, [["transcript"], ["callTranscript"], ["call_transcript"], ["notesTranscript"], ["notes_transcript"], ["transcription_text"]]) ||
+      pickFirst(payload, [["transcript"], ["callTranscript"], ["call_transcript"], ["notesTranscript"], ["notes_transcript"], ["transcription_text"]]) ||
       "",
     2400,
   );
@@ -309,8 +327,14 @@ function buildSearchKingsLeadCandidate(payload = {}) {
     80,
   );
   const callTimestamp = cleanText(
-    pickFirst(call, [["callTime"], ["timestamp"], ["receivedAt"], ["createdAt"], ["startTime"]]) ||
-      pickFirst(payload, [["callTime"], ["timestamp"], ["receivedAt"], ["createdAt"], ["startTime"]]) ||
+    pickFirst(
+      call,
+      [["callTime"], ["call_time"], ["timestamp"], ["called_at"], ["receivedAt"], ["received_at"], ["createdAt"], ["created_at"], ["startTime"], ["start_time"]],
+    ) ||
+      pickFirst(
+        payload,
+        [["callTime"], ["call_time"], ["timestamp"], ["called_at"], ["receivedAt"], ["received_at"], ["createdAt"], ["created_at"], ["startTime"], ["start_time"]],
+      ) ||
       "",
     80,
   );
@@ -321,8 +345,8 @@ function buildSearchKingsLeadCandidate(payload = {}) {
     40,
   );
   const landingUrl = cleanText(
-    pickFirst(call, [["landingUrl"], ["landingURL"], ["pageUrl"], ["pageURL"]]) ||
-      pickFirst(payload, [["landingUrl"], ["landingURL"], ["pageUrl"], ["pageURL"]]) ||
+    pickFirst(call, [["landingUrl"], ["landingURL"], ["landing_url"], ["pageUrl"], ["pageURL"], ["page_url"], ["last_location"], ["location"]]) ||
+      pickFirst(payload, [["landingUrl"], ["landingURL"], ["landing_url"], ["pageUrl"], ["pageURL"], ["page_url"], ["last_location"], ["location"]]) ||
       "",
     500,
   );

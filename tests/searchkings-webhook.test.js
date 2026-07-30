@@ -78,3 +78,39 @@ test("acepta nombres alternos de campos para llamadas de SearchKings", () => {
   assert.equal(event.leadCandidate.email, "chris@example.com");
   assert.match(event.activity.body, /Asked for fence repair pricing/);
 });
+
+test("acepta payload de Call Tracking Metrics con snake_case", () => {
+  const payload = {
+    id: 4385277242,
+    sid: "CA5144d115d2dff6d16c056fd792bceb9d",
+    name: "Private",
+    source: "Google Ads",
+    city: "Arlington Heights",
+    state: "IL",
+    postal_code: "60004",
+    called_at: "2026-07-30 09:08 AM -05:00",
+    duration: 180,
+    status: "answered",
+    caller_number: "+12244864244",
+    caller_number_format: "(224) 486-4244",
+    contact_number: "+12244864244",
+    audio: "https://calls.searchkings.com/api/v1/accounts/597554/calls/example/recording",
+    location: "https://www.chicagometalworksandfencing.com/google-ads-metalwork-chicago.html?gclid=test",
+    transcription_text: "Jonathan requested a repair estimate for a car trunk metal repair.",
+    summary:
+      "Agent Sofia took a message for Rigo from caller Jonathan, who requested a repair estimate for a car trunk metal repair.",
+  };
+
+  const event = buildSearchKingsWebhookEvent(payload);
+
+  assert.ok(event.leadCandidate);
+  assert.equal(event.leadCandidate.externalLeadId, "4385277242");
+  assert.equal(event.leadCandidate.phone, "2244864244");
+  assert.equal(event.leadCandidate.phoneDisplay, "+12244864244");
+  assert.equal(event.leadCandidate.city, "Arlington Heights");
+  assert.equal(event.leadCandidate.zipCode, "60004");
+  assert.match(event.leadCandidate.details, /Call Time: 2026-07-30 09:08 AM -05:00/);
+  assert.match(event.leadCandidate.details, /Recording: https:\/\/calls.searchkings.com/);
+  assert.match(event.leadCandidate.meta.landingUrl, /google-ads-metalwork-chicago/);
+  assert.match(event.activity.body, /Agent Sofia took a message/);
+});
