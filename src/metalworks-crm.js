@@ -7227,6 +7227,22 @@ function cleanLead(doc = null, { includeConversation = false } = {}) {
   };
 }
 
+// Public forms and third-party webhooks only need an acknowledgement, never CRM notes or client data.
+export function cleanExternalLeadReceipt(doc = null) {
+  if (!doc) {
+    return null;
+  }
+
+  const receivedAt = doc.updatedAt || doc.createdAt;
+
+  return {
+    id: String(doc._id || ""),
+    status: normalizeStatus(doc.status || "new"),
+    statusLabel: labelStatus(doc.status || "new"),
+    receivedAt: receivedAt ? new Date(receivedAt).toISOString() : "",
+  };
+}
+
 function cleanPublicWebsiteLiveChatThread(doc = null) {
   if (!doc || !isWebsiteLiveChatLead(doc)) {
     return null;
@@ -11539,6 +11555,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   app.post("/api/metalworks-crm/prospector/login", async (req, res) => {
     const email = normalizeEmail(req.body?.email || "");
     const password = String(req.body?.password || "");
+    const throttle = getCrmLoginThrottle(req, email);
+
+    if (throttle.blocked) {
+      res.set("Retry-After", String(throttle.retryAfterSeconds));
+      return respondError(res, 429, "Too many attempts. Try again in a few minutes.");
+    }
 
     if (!email || !password) {
       return respondError(res, 400, "Email and password are required.");
@@ -11557,26 +11579,21 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
       const prospectorUser = await MetalworksProspectorUser.findOne({ email });
 
-      if (!prospectorUser) {
-        return respondError(res, 401, "No account was found with that email.");
-      }
-
-      if (normalizeProspectorStatus(prospectorUser.status || "active") !== "active") {
-        return respondError(
-          res,
-          403,
-          "This account is paused. Ask an admin to reactivate it.",
-        );
-      }
-
       if (
+        !prospectorUser ||
+        normalizeProspectorStatus(prospectorUser.status || "active") !== "active" ||
         !verifySecurePasswordHash(
           password,
           prospectorUser.passwordSalt,
           prospectorUser.passwordHash,
         )
       ) {
-        return respondError(res, 401, "Incorrect password.");
+        const failedAttempt = recordCrmLoginFailure(req, email);
+        if (failedAttempt.blocked) {
+          res.set("Retry-After", String(failedAttempt.retryAfterSeconds));
+          return respondError(res, 429, "Too many attempts. Try again in a few minutes.");
+        }
+        return respondError(res, 401, "Email or password is incorrect.");
       }
 
       prospectorUser.lastLoginAt = new Date();
@@ -11584,6 +11601,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       await prospectorUser.save();
 
       await createProspectorSession(req, res, { prospectorUser });
+      clearCrmLoginFailures(req, email);
       res.json({
         ok: true,
         userId: String(prospectorUser._id || ""),
@@ -13301,7 +13319,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         ok: true,
         duplicate,
         notified: Boolean(pushDelivery.delivered),
-        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+        lead: cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
       });
     } catch (error) {
       console.error("Error saving public Metal Works lead:", error.message);
@@ -13453,7 +13471,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         duplicate,
         syncedAssetCount,
         notified: Boolean(pushDelivery.delivered),
-        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+        lead: cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
       });
     } catch (error) {
       console.error("Error saving external Metal Works lead:", error.message);
@@ -13635,7 +13653,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           duplicate,
           syncedAssetCount,
           notified: Boolean(pushDelivery.delivered),
-          lead: leadDoc ? cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc) : null,
+          lead: leadDoc ? cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc) : null,
         });
       } catch (error) {
         console.error("Error handling Thumbtack webhook:", error.message);
@@ -13866,7 +13884,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         duplicate,
         notified: Boolean(alertDelivery.delivered || pushDelivery.delivered),
         requestedAtLabel,
-        lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+        lead: cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
       });
     } catch (error) {
       console.error("Error saving Metal Works assistant appointment:", error.message);

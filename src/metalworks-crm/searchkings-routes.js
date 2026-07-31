@@ -14,7 +14,7 @@ export function registerMetalworksSearchKingsRoutes(app, dependencies) {
     getClientIp,
     appendActivity,
     sendMetalworksPushAlert,
-    cleanLead,
+    cleanExternalLeadReceipt,
   } = dependencies;
 
   app.post(
@@ -163,7 +163,7 @@ export function registerMetalworksSearchKingsRoutes(app, dependencies) {
           entityType: parsedEvent.entityType || "call",
           duplicate,
           notified: Boolean(pushDelivery.delivered),
-          lead: cleanLead(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+          lead: cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
         });
       } catch (error) {
         console.error("Error handling SearchKings webhook:", error.message);

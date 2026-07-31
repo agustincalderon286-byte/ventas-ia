@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildGoogleCalendarEventForLead,
+  cleanExternalLeadReceipt,
   clearCrmLoginFailures,
   getCrmLoginThrottle,
   recordCrmLoginFailure,
@@ -73,4 +74,25 @@ test("temporarily blocks repeated CRM login failures", () => {
 
   clearCrmLoginFailures(request, email);
   assert.equal(getCrmLoginThrottle(request, email, now).blocked, false);
+});
+
+test("external lead receipts never expose private CRM fields", () => {
+  const receipt = cleanExternalLeadReceipt({
+    _id: "lead-123",
+    status: "quoted",
+    updatedAt: new Date("2026-07-30T12:00:00.000Z"),
+    fullName: "Private customer",
+    email: "customer@example.com",
+    phone: "+15551234567",
+    privateNotes: "Internal pricing note",
+    estimateAmount: 4000,
+    conversationHistory: [{ content: "Private conversation" }],
+  });
+
+  assert.deepEqual(receipt, {
+    id: "lead-123",
+    status: "quoted",
+    statusLabel: "Cotizado",
+    receivedAt: "2026-07-30T12:00:00.000Z",
+  });
 });

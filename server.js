@@ -14,15 +14,54 @@ import {
   inferirTiposFuentePorPregunta
 } from "./src/knowledge/vector-store.js";
 
+function normalizeCorsOrigin(value = "") {
+  return String(value || "").trim().replace(/\/$/, "");
+}
+
+const CORS_ALLOWED_ORIGINS = new Set(
+  [
+    "https://www.chicagometalworksandfencing.com",
+    "https://chicagometalworksandfencing.com",
+    "https://cmwf-crm-api.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:4173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:4173",
+    ...String(process.env.CORS_ALLOWED_ORIGINS || "").split(","),
+  ]
+    .map(normalizeCorsOrigin)
+    .filter(Boolean),
+);
+
 const app = express();
-app.use(cors());
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  next();
+});
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Webhooks and server-to-server integrations do not send an Origin header.
+      if (!origin || CORS_ALLOWED_ORIGINS.has(normalizeCorsOrigin(origin))) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
 app.get("/api/healthz", (req, res) => {
+  res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
     service: "cmwf-crm-api",
-    uptimeSeconds: Math.round(process.uptime()),
-    mongoReadyState: mongoose.connection.readyState,
-    timestamp: new Date().toISOString()
   });
 });
 const PUBLIC_DIR = path.join(process.cwd(), "public");
@@ -47,6 +86,13 @@ const COACH_RETURN_SESSION_COOKIE = "agustin_coach_session_return";
 const COACH_SESSION_DAYS = 30;
 const COACH_RETURN_SESSION_MS = 12 * 60 * 60 * 1000;
 const COACH_PASSWORD_MIN = 8;
+const COACH_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const COACH_LOGIN_MAX_FAILURES = 5;
+const COACH_LOGIN_LOCK_MS = 15 * 60 * 1000;
+const COACH_LOGIN_ATTEMPTS = new Map();
+const METALWORKS_PUBLIC_RATE_WINDOW_MS = 15 * 60 * 1000;
+const METALWORKS_PUBLIC_RATE_MAX_REQUESTS = 240;
+const METALWORKS_PUBLIC_REQUESTS = new Map();
 const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
@@ -2240,6 +2286,7 @@ const CoachMarketingAutomationRun =
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+app.use("/api/public/metalworks", limitarSolicitudesPublicasMetalworks);
 registerMetalworksCrm(app, {
   mongoose,
   publicDir: PUBLIC_DIR,
@@ -3029,6 +3076,95 @@ async function consumirStreamingOpenAiChat(response, onDelta) {
 
 function normalizarEmail(email = "") {
   return String(email || "").trim().toLowerCase();
+}
+
+function obtenerCoachLoginIntentosKeys(req, email = "") {
+  const ipAddress = String(req.ip || req.socket?.remoteAddress || "unknown").slice(0, 120) || "unknown";
+  const normalizedEmail = normalizarEmail(email) || "unknown";
+  return [`ip:${ipAddress}`, `email:${normalizedEmail}`];
+}
+
+function limpiarSolicitudesPublicasMetalworks(now = Date.now()) {
+  if (METALWORKS_PUBLIC_REQUESTS.size < 1000) return;
+
+  for (const [key, entry] of METALWORKS_PUBLIC_REQUESTS.entries()) {
+    if (!entry || entry.windowStartedAt + METALWORKS_PUBLIC_RATE_WINDOW_MS <= now) {
+      METALWORKS_PUBLIC_REQUESTS.delete(key);
+    }
+  }
+}
+
+function limitarSolicitudesPublicasMetalworks(req, res, next) {
+  const now = Date.now();
+  limpiarSolicitudesPublicasMetalworks(now);
+  const ipAddress = String(req.ip || req.socket?.remoteAddress || "unknown").slice(0, 120) || "unknown";
+  const previous = METALWORKS_PUBLIC_REQUESTS.get(ipAddress);
+  const entry =
+    previous && previous.windowStartedAt + METALWORKS_PUBLIC_RATE_WINDOW_MS > now
+      ? previous
+      : { count: 0, windowStartedAt: now };
+
+  entry.count += 1;
+  METALWORKS_PUBLIC_REQUESTS.set(ipAddress, entry);
+
+  if (entry.count > METALWORKS_PUBLIC_RATE_MAX_REQUESTS) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((entry.windowStartedAt + METALWORKS_PUBLIC_RATE_WINDOW_MS - now) / 1000),
+    );
+    res.set("Retry-After", String(retryAfterSeconds));
+    return res.status(429).json({ error: "Too many requests. Try again in a few minutes." });
+  }
+
+  return next();
+}
+
+function obtenerCoachLoginThrottle(req, email = "", now = Date.now()) {
+  if (COACH_LOGIN_ATTEMPTS.size >= 1000) {
+    for (const [key, entry] of COACH_LOGIN_ATTEMPTS.entries()) {
+      if (!entry || Math.max(entry.blockedUntil || 0, entry.firstFailedAt + COACH_LOGIN_WINDOW_MS) <= now) {
+        COACH_LOGIN_ATTEMPTS.delete(key);
+      }
+    }
+  }
+
+  for (const key of obtenerCoachLoginIntentosKeys(req, email)) {
+    const entry = COACH_LOGIN_ATTEMPTS.get(key);
+
+    if (!entry) continue;
+    if (entry.blockedUntil > now) {
+      return { blocked: true, retryAfterSeconds: Math.ceil((entry.blockedUntil - now) / 1000) };
+    }
+    if (entry.firstFailedAt + COACH_LOGIN_WINDOW_MS <= now) COACH_LOGIN_ATTEMPTS.delete(key);
+  }
+
+  return { blocked: false, retryAfterSeconds: 0 };
+}
+
+function registrarCoachLoginFallido(req, email = "", now = Date.now()) {
+  let blockedUntil = 0;
+
+  for (const key of obtenerCoachLoginIntentosKeys(req, email)) {
+    const previous = COACH_LOGIN_ATTEMPTS.get(key);
+    const entry =
+      previous && previous.firstFailedAt + COACH_LOGIN_WINDOW_MS > now
+        ? previous
+        : { failures: 0, firstFailedAt: now, blockedUntil: 0 };
+
+    entry.failures += 1;
+    if (entry.failures >= COACH_LOGIN_MAX_FAILURES) entry.blockedUntil = now + COACH_LOGIN_LOCK_MS;
+    COACH_LOGIN_ATTEMPTS.set(key, entry);
+    blockedUntil = Math.max(blockedUntil, entry.blockedUntil || 0);
+  }
+
+  return {
+    blocked: blockedUntil > now,
+    retryAfterSeconds: blockedUntil > now ? Math.ceil((blockedUntil - now) / 1000) : 0,
+  };
+}
+
+function limpiarCoachLoginFallidos(req, email = "") {
+  for (const key of obtenerCoachLoginIntentosKeys(req, email)) COACH_LOGIN_ATTEMPTS.delete(key);
 }
 
 function parseCoachEmailList(value = "") {
@@ -24835,6 +24971,12 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 app.post("/api/coach/login", async (req, res) => {
   const email = normalizarEmail(req.body?.email || "");
   const password = String(req.body?.password || "");
+  const throttle = obtenerCoachLoginThrottle(req, email);
+
+  if (throttle.blocked) {
+    res.set("Retry-After", String(throttle.retryAfterSeconds));
+    return responderCoachError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
+  }
 
   if (!email || !password) {
     return responderCoachError(res, 400, "Correo y contrasena son requeridos.");
@@ -24844,6 +24986,11 @@ app.post("/api/coach/login", async (req, res) => {
     let userDoc = await CoachUser.findOne({ email });
 
     if (!userDoc || !verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash)) {
+      const failedAttempt = registrarCoachLoginFallido(req, email);
+      if (failedAttempt.blocked) {
+        res.set("Retry-After", String(failedAttempt.retryAfterSeconds));
+        return responderCoachError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
+      }
       return responderCoachError(res, 401, "Correo o contrasena incorrectos.");
     }
 
@@ -24854,6 +25001,7 @@ app.post("/api/coach/login", async (req, res) => {
     let profileDoc = await asegurarCoachDistributorProfile(userDoc);
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
     await crearCoachSesion(req, res, userDoc._id);
+    limpiarCoachLoginFallidos(req, email);
 
     res.json({ user: await construirCoachUserView(userDoc) });
   } catch (error) {
