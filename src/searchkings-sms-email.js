@@ -22,8 +22,10 @@ function normalizePhone(value = "") {
 }
 
 function normalizeSender(value = "") {
-  const match = String(value || "").match(/<([^>]+)>/);
-  return cleanText(match?.[1] || value, 160).toLowerCase();
+  const rawValue = String(value || "");
+  const bracketedMatch = rawValue.match(/<([^>]+)>/);
+  const emailMatch = rawValue.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return cleanText(bracketedMatch?.[1] || emailMatch?.[0] || rawValue, 160).toLowerCase();
 }
 
 function findSection(body = "", label = "", nextLabel = "") {

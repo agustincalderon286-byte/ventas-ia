@@ -25,3 +25,14 @@ test("rechaza emails que no son alertas SMS de SearchKings", () => {
     body: "From: 7735550199\nMessage: Test",
   }), null);
 });
+
+test("acepta el formato de remitente que Gmail usa sin corchetes", () => {
+  const candidate = buildSearchKingsSmsEmailCandidate({
+    gmailMessageId: "display-sender", from: "SearchKings calls@searchkings.com",
+    subject: "SearchKings: New SMS Lead from +17731234567",
+    body: "From: +17731234567\nMessage: Need a gate repair in Chicago",
+  });
+
+  assert.ok(candidate);
+  assert.equal(candidate.phone, "7731234567");
+});
