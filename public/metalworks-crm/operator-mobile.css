@@ -1,9 +1,12 @@
 .operator-page {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .operator-shell {
   width: min(1040px, calc(100% - 20px));
+  max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 18px 0 34px;
   position: relative;
@@ -46,6 +49,16 @@
   display: grid;
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.operator-summary-grid > *,
+.operator-grid > *,
+.operator-panel,
+.operator-panel-head > *,
+.operator-lead-head > *,
+.operator-detail-form label,
+.operator-form-actions > * {
+  min-width: 0;
 }
 
 .operator-summary-grid {
@@ -193,6 +206,18 @@ body[data-crm-skin="intel-ops"] .operator-mini-feed article {
 .operator-mini-feed p {
   color: var(--crm-muted);
   line-height: 1.5;
+}
+
+.operator-lead-meta,
+.operator-lead-notes,
+.operator-detail-context,
+.operator-context-block p,
+.operator-activity-card p,
+.operator-chat-card p,
+.operator-mini-feed p,
+.operator-push-feedback,
+.crm-form-result {
+  overflow-wrap: anywhere;
 }
 
 .operator-lead-actions,
@@ -394,6 +419,19 @@ body[data-crm-skin="intel-ops"] .operator-chat-form textarea {
     grid-template-columns: 1fr 1fr;
   }
 
+  .operator-header-actions > *,
+  .operator-lead-actions > *,
+  .operator-detail-actions > *,
+  .operator-suggestion-row > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .operator-header-actions .crm-user-chip,
+  .operator-header-actions .crm-chip {
+    overflow-wrap: anywhere;
+  }
+
   .operator-form-actions {
     align-items: stretch;
   }
@@ -414,5 +452,10 @@ body[data-crm-skin="intel-ops"] .operator-chat-form textarea {
 
   .operator-summary-card strong {
     font-size: 1.75rem;
+  }
+
+  .operator-panel-head .crm-chip {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 }
