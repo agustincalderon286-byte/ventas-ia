@@ -1,6 +1,18 @@
 import { buildSearchKingsWebhookEvent } from "../searchkings-webhook.js";
 import { buildSearchKingsSmsEmailCandidate } from "../searchkings-sms-email.js";
 
+const SEARCHKINGS_SMS_CONVERSATION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+function mergeSearchKingsSmsDetails(existingDetails = "", incomingDetails = "") {
+  const existing = String(existingDetails || "").trim();
+  const incoming = String(incomingDetails || "").trim();
+
+  if (!existing) return incoming;
+  if (!incoming || existing.includes(incoming)) return existing;
+
+  return `${existing}\n\n---\n\n${incoming}`.slice(0, 12000);
+}
+
 export function registerMetalworksSearchKingsRoutes(app, dependencies) {
   const {
     searchKingsWebhookConfigured,
@@ -201,14 +213,33 @@ export function registerMetalworksSearchKingsRoutes(app, dependencies) {
         sourceExternalSystem: candidate.externalSystem,
         sourceExternalId: candidate.externalLeadId,
       }).sort({ updatedAt: -1, createdAt: -1 });
+
+      // SearchKings sends each SMS and media item as a separate Gmail message.
+      // Keep those messages together under the caller's existing SMS lead.
+      if (!leadDoc && candidate.phone) {
+        leadDoc = await MetalworksLead.findOne({
+          sourceExternalSystem: candidate.externalSystem,
+          sourceType: candidate.sourceType,
+          phone: candidate.phone,
+          createdAt: { $gte: new Date(now.getTime() - SEARCHKINGS_SMS_CONVERSATION_WINDOW_MS) },
+        }).sort({ createdAt: 1, updatedAt: -1 });
+      }
+
       const duplicate = Boolean(leadDoc);
 
       if (leadDoc) {
         Object.assign(leadDoc, {
-          fullName: candidate.fullName, phone: candidate.phone,
-          phoneDisplay: candidate.phoneDisplay || candidate.phone, projectType: candidate.projectType,
-          location: candidate.location, zipCode: candidate.zipCode, city: candidate.city,
-          details: candidate.details, sourceType: candidate.sourceType, tracking, updatedAt: now,
+          fullName: candidate.fullName || leadDoc.fullName,
+          phone: candidate.phone,
+          phoneDisplay: candidate.phoneDisplay || leadDoc.phoneDisplay || candidate.phone,
+          projectType: candidate.projectType || leadDoc.projectType,
+          location: candidate.location || leadDoc.location,
+          zipCode: candidate.zipCode || leadDoc.zipCode,
+          city: candidate.city || leadDoc.city,
+          details: mergeSearchKingsSmsDetails(leadDoc.details, candidate.details),
+          sourceType: candidate.sourceType,
+          tracking,
+          updatedAt: now,
         });
         await leadDoc.save();
       } else {
