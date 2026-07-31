@@ -8533,7 +8533,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     sourceType: { type: String, default: "website_form", index: true },
     sourceExternalId: { type: String, index: true },
     sourceExternalSystem: String,
-    publicChatThreadKey: { type: String, index: true },
+    publicChatThreadKey: String,
     pageTitle: String,
     pagePath: String,
     pageUrl: String,
@@ -8769,7 +8769,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
   });
   const metalworksExternalLeadLockSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true, index: true },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });

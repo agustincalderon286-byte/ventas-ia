@@ -1905,7 +1905,7 @@ const coachMarketingIntakeSourceSchema = new mongoose.Schema({
   intakeType: { type: String, default: "webhook", index: true },
   label: String,
   status: { type: String, default: "draft", index: true },
-  endpointToken: { type: String, default: "", index: true },
+  endpointToken: { type: String, default: "" },
   externalSourceId: String,
   externalSourceName: String,
   acceptedFields: [String],
