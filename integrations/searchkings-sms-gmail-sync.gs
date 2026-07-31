@@ -15,6 +15,15 @@ function syncSearchKingsSmsLeads() {
     thread.getMessages().forEach((message) => {
       const messageId = message.getId();
       const processedKey = `${SEARCHKINGS_SMS_SYNC.processedPrefix}${messageId}`;
+
+      // A Gmail thread can also contain replies or drafts. Only import the original alert.
+      if (
+        !/calls@searchkings\.com/i.test(message.getFrom()) ||
+        !/new\s+sms\s+lead/i.test(message.getSubject())
+      ) {
+        return;
+      }
+
       if (properties.getProperty(processedKey)) return;
 
       const response = UrlFetchApp.fetch(SEARCHKINGS_SMS_SYNC.endpoint, {

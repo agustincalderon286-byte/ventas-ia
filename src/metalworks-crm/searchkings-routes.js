@@ -189,7 +189,9 @@ export function registerMetalworksSearchKingsRoutes(app, dependencies) {
       }
 
       const candidate = buildSearchKingsSmsEmailCandidate(req.body || {});
-      if (!candidate) return respondError(res, 400, "This email is not a valid SearchKings SMS lead.");
+      // Gmail searches return every message in a matching thread, including replies and drafts.
+      // A non-alert must not stop the scheduled sync from reaching later SMS alerts.
+      if (!candidate) return res.json({ ok: true, ignored: true });
 
       const now = new Date();
       const pagePath = "/api/integrations/searchkings/sms-email";
