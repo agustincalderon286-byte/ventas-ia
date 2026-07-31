@@ -1593,6 +1593,7 @@ body[data-crm-skin="executive-steel"] .crm-resource-qr-card {
 
 .crm-detail-panel {
   position: relative;
+  min-width: 0;
 }
 
 .crm-panel-head {
@@ -1905,9 +1906,29 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   font-size: 0.92rem;
 }
 
+.crm-detail-meta,
+.crm-detail-meta *,
+.crm-activity-card p,
+.crm-conversation-card p,
+.crm-composer-head p,
+.crm-form-result,
+.crm-field-hint {
+  overflow-wrap: anywhere;
+}
+
 .crm-detail-wrap {
   display: grid;
   gap: 18px;
+  min-width: 0;
+}
+
+.crm-detail-wrap > *,
+.crm-detail-form > *,
+.crm-detail-view > *,
+.crm-detail-tabs > *,
+.crm-panel-head > *,
+.crm-form-actions > * {
+  min-width: 0;
 }
 
 .crm-detail-tabs {
@@ -2618,7 +2639,29 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-detail-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-detail-tabs .crm-tab-button:last-child {
+    grid-column: 1 / -1;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-detail-panel {
+    overflow-x: clip;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-panel-head {
+    display: grid;
+    align-items: stretch;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-mobile-back-button {
+    width: 100%;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-detail-tabs .crm-tab-button {
+    width: 100%;
+    padding: 0 12px;
   }
 
   .crm-view-toggle {
@@ -2657,6 +2700,14 @@ body[data-crm-skin="executive-steel"] .crm-capture-photo-card {
 
   .crm-photo-actions {
     flex-direction: column;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-detail-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-crm-mobile-layout="true"][data-crm-mobile-pane="workspace"] .crm-detail-tabs .crm-tab-button:last-child {
+    grid-column: auto;
   }
 }
 
