@@ -2015,6 +2015,45 @@ body[data-crm-skin="executive-steel"] .crm-status-badge[data-status="paused"] {
   border-radius: 12px;
 }
 
+.crm-sms-media-card {
+  align-content: start;
+}
+
+.crm-sms-media-preview {
+  display: grid;
+  min-height: 132px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(16, 20, 23, 0.08);
+}
+
+.crm-sms-media-preview img,
+.crm-sms-media-preview video {
+  width: 100%;
+  min-height: 132px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 0;
+}
+
+.crm-sms-media-preview video {
+  background: #101417;
+}
+
+.crm-sms-media-fallback {
+  align-self: center;
+  padding: 14px;
+  color: var(--crm-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.crm-sms-media-card a {
+  color: var(--crm-red-deep);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .crm-photo-card span {
   font-size: 0.84rem;
   font-weight: 700;

@@ -3618,16 +3618,90 @@ function renderConversationThread(
     .join("");
 }
 
-function renderLeadAssets(assets = []) {
+function normalizeSearchKingsSmsMediaUrl(value = "") {
+  try {
+    const url = new URL(String(value || "").trim());
+
+    // SMS attachments are delivered through SearchKings' Plivo media host.
+    return url.protocol === "https:" && url.hostname === "media.plivo.com" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function getSearchKingsSmsMediaUrls(detail = null) {
+  const urls = [];
+  const addUrl = (value) => {
+    const safeUrl = normalizeSearchKingsSmsMediaUrl(value);
+    if (safeUrl && !urls.includes(safeUrl)) {
+      urls.push(safeUrl);
+    }
+  };
+
+  (Array.isArray(detail?.activity) ? detail.activity : []).forEach((activity) => {
+    if (activity?.activityType !== "searchkings_sms") {
+      return;
+    }
+
+    (Array.isArray(activity?.meta?.mediaUrls) ? activity.meta.mediaUrls : []).forEach(addUrl);
+  });
+
+  // Keeps the first imported SMS leads useful too, before media metadata existed in the UI.
+  const details = String(detail?.lead?.details || "");
+  Array.from(details.matchAll(/^Media:\s*(https:\/\/[^\s]+)/gim)).forEach((match) => addUrl(match[1]));
+
+  return urls;
+}
+
+function mountSearchKingsSmsMediaPreviews() {
+  if (!photoGrid) {
+    return;
+  }
+
+  photoGrid.querySelectorAll("[data-crm-sms-media-preview]").forEach((preview) => {
+    const mediaUrl = preview.dataset.crmSmsMediaPreview || "";
+    const openLink = preview.closest(".crm-sms-media-card")?.querySelector("[data-crm-sms-media-link]");
+    const showFallback = () => {
+      preview.replaceChildren();
+      const message = document.createElement("span");
+      message.className = "crm-sms-media-fallback";
+      message.textContent = "Vista previa no disponible. Abre el archivo original.";
+      preview.append(message);
+    };
+    const showVideo = () => {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.preload = "metadata";
+      video.playsInline = true;
+      video.src = mediaUrl;
+      video.addEventListener("error", showFallback, { once: true });
+      preview.replaceChildren(video);
+      openLink.textContent = "Open video";
+    };
+    const image = document.createElement("img");
+
+    image.src = mediaUrl;
+    image.alt = "SMS media from the customer";
+    image.loading = "lazy";
+    image.referrerPolicy = "no-referrer";
+    image.addEventListener("error", showVideo, { once: true });
+    preview.replaceChildren(image);
+  });
+}
+
+function renderLeadAssets(assets = [], smsMediaUrls = []) {
   if (!photoSection || !photoGrid || !photoSummary) {
     return;
   }
 
   const safeAssets = Array.isArray(assets) ? assets.filter((item) => item?.downloadUrl) : [];
+  const safeSmsMediaUrls = Array.isArray(smsMediaUrls)
+    ? smsMediaUrls.map(normalizeSearchKingsSmsMediaUrl).filter(Boolean)
+    : [];
   photoSection.hidden = false;
 
-  if (!safeAssets.length) {
-    photoSummary.textContent = "No photos yet.";
+  if (!safeAssets.length && !safeSmsMediaUrls.length) {
+    photoSummary.textContent = "No photos or SMS media yet.";
     photoGrid.innerHTML = `
       <div class="crm-photo-empty">
         Upload site photos, inspiration shots, or follow-up pictures so the whole team can see them from this lead.
@@ -3636,9 +3710,15 @@ function renderLeadAssets(assets = []) {
     return;
   }
 
-  photoSummary.textContent = `${safeAssets.length} photo${safeAssets.length === 1 ? "" : "s"} saved`;
-  photoGrid.innerHTML = safeAssets
-    .map(
+  const savedPhotosLabel = safeAssets.length
+    ? `${safeAssets.length} photo${safeAssets.length === 1 ? "" : "s"} saved`
+    : "";
+  const smsMediaLabel = safeSmsMediaUrls.length
+    ? `${safeSmsMediaUrls.length} SMS file${safeSmsMediaUrls.length === 1 ? "" : "s"}`
+    : "";
+  photoSummary.textContent = [savedPhotosLabel, smsMediaLabel].filter(Boolean).join(" · ");
+  photoGrid.innerHTML = [
+    ...safeAssets.map(
       (asset) => `
         <a
           class="crm-photo-card"
@@ -3654,8 +3734,18 @@ function renderLeadAssets(assets = []) {
           <span>${escapeHtml(asset.fileName || "Project photo")}</span>
         </a>
       `,
-    )
-    .join("");
+    ),
+    ...safeSmsMediaUrls.map(
+      (mediaUrl, index) => `
+        <article class="crm-photo-card crm-sms-media-card">
+          <div class="crm-sms-media-preview" data-crm-sms-media-preview="${escapeAttribute(mediaUrl)}"></div>
+          <span>Customer SMS media ${index + 1}</span>
+          <a data-crm-sms-media-link href="${escapeAttribute(mediaUrl)}" target="_blank" rel="noreferrer">Open media</a>
+        </article>
+      `,
+    ),
+  ].join("");
+  mountSearchKingsSmsMediaPreviews();
 }
 
 function syncManualPhotoUploadUi(lead = null) {
@@ -4146,7 +4236,7 @@ function renderLeadDetail(detail = null) {
   setPhotoUploadFeedback("", "");
   syncDetailQuickActions(lead);
   syncLiveChatComposer(lead);
-  renderLeadAssets(detail.assets || []);
+  renderLeadAssets(detail.assets || [], getSearchKingsSmsMediaUrls(detail));
   renderConversationThread(conversationThread, conversationSummary, lead.conversationHistory || [], {
     assistantLabel: isLiveChatThread ? "Chicago Metal Works" : "Agustin 2.0",
     userLabel: isLiveChatThread ? "Cliente web" : "Cliente",
