@@ -13237,10 +13237,41 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       const pagePath = cleanText(req.body?.pagePath || "", 240);
       const pageUrl = cleanText(req.body?.pageUrl || "", 500);
       const referrer = cleanText(req.body?.referrer || "", 500);
-      const photoFileNames = Array.isArray(req.body?.selectedPhotos)
+      const selectedPhotoFileNames = Array.isArray(req.body?.selectedPhotos)
         ? req.body.selectedPhotos.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 20)
         : [];
+      const filePayloads = Array.isArray(req.body?.files) ? req.body.files : [];
       const tracking = buildTrackingPayload(req.body?.tracking || {});
+
+      if (filePayloads.length > METALWORKS_LEAD_ASSET_MAX_FILES) {
+        return respondError(
+          res,
+          400,
+          `Sube hasta ${METALWORKS_LEAD_ASSET_MAX_FILES} fotos por solicitud.`,
+        );
+      }
+
+      let parsedFiles = [];
+
+      try {
+        parsedFiles = filePayloads.map((item) => parseAssistantLeadAssetUpload(item));
+      } catch (error) {
+        return respondError(res, 400, error?.message || "Una foto no es valida.");
+      }
+
+      const totalPhotoBytes = parsedFiles.reduce(
+        (total, item) => total + (Number(item?.sizeBytes || 0) || 0),
+        0,
+      );
+
+      if (totalPhotoBytes > METALWORKS_LEAD_ASSET_MAX_TOTAL_BYTES) {
+        return respondError(res, 400, "Las fotos juntas son demasiado grandes.");
+      }
+
+      const photoFileNames = mergeAssistantUniqueValues(
+        selectedPhotoFileNames,
+        ...parsedFiles.map((item) => item.fileName || ""),
+      ).slice(0, 20);
 
       if (!fullName) {
         return respondError(res, 400, "El nombre es requerido.");
@@ -13278,7 +13309,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         leadDoc.email = email;
         leadDoc.projectType = projectType;
         leadDoc.location = location;
-        leadDoc.photoFileNames = photoFileNames;
+        leadDoc.photoFileNames = mergeAssistantUniqueValues(
+          leadDoc.photoFileNames || [],
+          photoFileNames,
+        ).slice(0, 20);
         leadDoc.pageTitle = pageTitle;
         leadDoc.pagePath = pagePath;
         leadDoc.pageUrl = pageUrl;
@@ -13327,6 +13361,51 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
         });
       }
 
+      let syncedAssetCount = 0;
+
+      if (leadDoc?._id && parsedFiles.length) {
+        const existingAssets = await MetalworksLeadAsset.find({ leadId: leadDoc._id })
+          .select("fileName sizeBytes")
+          .lean();
+        const existingKeys = new Set(
+          existingAssets.map(
+            (item) =>
+              `${sanitizeLeadAssetFileName(item?.fileName || "")}:${Number(item?.sizeBytes || 0)}`,
+          ),
+        );
+        const newFiles = parsedFiles.filter((item) => {
+          const key = `${sanitizeLeadAssetFileName(item.fileName || "")}:${Number(
+            item.sizeBytes || 0,
+          )}`;
+
+          if (existingKeys.has(key)) {
+            return false;
+          }
+
+          existingKeys.add(key);
+          return true;
+        });
+
+        if (newFiles.length) {
+          await Promise.all(
+            newFiles.map((item) =>
+              MetalworksLeadAsset.create({
+                leadId: leadDoc._id,
+                sourceType: "website_form",
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                fileData: item.fileData,
+                uploadedAt: now,
+                updatedAt: now,
+                createdAt: now,
+              }),
+            ),
+          );
+          syncedAssetCount = newFiles.length;
+        }
+      }
+
       await appendActivity({
         leadId: leadDoc._id,
         activityType: "quote_submit",
@@ -13339,6 +13418,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
           projectType,
           location,
           photoFileCount: photoFileNames.length,
+          syncedAssetCount,
         },
         req,
         pagePath,
