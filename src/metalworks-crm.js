@@ -10,6 +10,10 @@ import { buildThumbtackWebhookEvent } from "./thumbtack-webhook.js";
 
 const METALWORKS_CRM_SESSION_COOKIE = "cmwf_crm_session";
 const METALWORKS_CRM_SESSION_DAYS = 30;
+const METALWORKS_CRM_LOGIN_MAX_FAILURES = 5;
+const METALWORKS_CRM_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const METALWORKS_CRM_LOGIN_LOCK_MS = 15 * 60 * 1000;
+const METALWORKS_CRM_LOGIN_ATTEMPTS = new Map();
 const METALWORKS_PROSPECTOR_SESSION_COOKIE = "cmwf_prospector_session";
 const METALWORKS_PROSPECTOR_SESSION_DAYS = 14;
 const METALWORKS_PUBLIC_CHAT_THREAD_COOKIE = "cmwf_live_chat_thread";
@@ -549,6 +553,82 @@ function getClientIp(req) {
     .filter(Boolean)[0];
 
   return forwarded || req.ip || req.socket?.remoteAddress || "";
+}
+
+function getCrmLoginAttemptKeys(req, email = "") {
+  const ipAddress = cleanText(getClientIp(req) || "unknown", 120) || "unknown";
+  const normalizedEmail = normalizeEmail(email || "") || "unknown";
+
+  return [`ip:${ipAddress}`, `email:${normalizedEmail}`];
+}
+
+function pruneExpiredCrmLoginAttempts(now = Date.now()) {
+  if (METALWORKS_CRM_LOGIN_ATTEMPTS.size < 1000) {
+    return;
+  }
+
+  for (const [key, entry] of METALWORKS_CRM_LOGIN_ATTEMPTS.entries()) {
+    if (!entry || Math.max(entry.blockedUntil || 0, (entry.firstFailedAt || 0) + METALWORKS_CRM_LOGIN_WINDOW_MS) <= now) {
+      METALWORKS_CRM_LOGIN_ATTEMPTS.delete(key);
+    }
+  }
+}
+
+export function getCrmLoginThrottle(req, email = "", now = Date.now()) {
+  pruneExpiredCrmLoginAttempts(now);
+
+  for (const key of getCrmLoginAttemptKeys(req, email)) {
+    const entry = METALWORKS_CRM_LOGIN_ATTEMPTS.get(key);
+
+    if (!entry) {
+      continue;
+    }
+
+    if (entry.blockedUntil > now) {
+      return {
+        blocked: true,
+        retryAfterSeconds: Math.ceil((entry.blockedUntil - now) / 1000),
+      };
+    }
+
+    if (entry.firstFailedAt + METALWORKS_CRM_LOGIN_WINDOW_MS <= now) {
+      METALWORKS_CRM_LOGIN_ATTEMPTS.delete(key);
+    }
+  }
+
+  return { blocked: false, retryAfterSeconds: 0 };
+}
+
+export function recordCrmLoginFailure(req, email = "", now = Date.now()) {
+  let blockedUntil = 0;
+
+  for (const key of getCrmLoginAttemptKeys(req, email)) {
+    const previous = METALWORKS_CRM_LOGIN_ATTEMPTS.get(key);
+    const entry =
+      previous && previous.firstFailedAt + METALWORKS_CRM_LOGIN_WINDOW_MS > now
+        ? previous
+        : { failures: 0, firstFailedAt: now, blockedUntil: 0 };
+
+    entry.failures += 1;
+
+    if (entry.failures >= METALWORKS_CRM_LOGIN_MAX_FAILURES) {
+      entry.blockedUntil = now + METALWORKS_CRM_LOGIN_LOCK_MS;
+    }
+
+    METALWORKS_CRM_LOGIN_ATTEMPTS.set(key, entry);
+    blockedUntil = Math.max(blockedUntil, entry.blockedUntil || 0);
+  }
+
+  return {
+    blocked: blockedUntil > now,
+    retryAfterSeconds: blockedUntil > now ? Math.ceil((blockedUntil - now) / 1000) : 0,
+  };
+}
+
+export function clearCrmLoginFailures(req, email = "") {
+  for (const key of getCrmLoginAttemptKeys(req, email)) {
+    METALWORKS_CRM_LOGIN_ATTEMPTS.delete(key);
+  }
 }
 
 function getExternalSyncToken(req) {
@@ -1569,7 +1649,7 @@ function buildMetalworksJobMapSnapshot(leads = [], range = "week", now = new Dat
   };
 }
 
-function buildGoogleCalendarEventForLead(lead = null) {
+export function buildGoogleCalendarEventForLead(lead = null) {
   const start = getLeadGoogleCalendarStartDate(lead);
 
   if (!lead || !start) {
@@ -1585,7 +1665,6 @@ function buildGoogleCalendarEventForLead(lead = null) {
   const assignedTo = cleanText(lead.appointmentAssignedTo || "", 80);
   const phone = cleanText(lead.phoneDisplay || lead.phone || "", 40);
   const details = cleanMultilineText(lead.details || lead.estimateScope || "", 1200);
-  const privateNotes = cleanMultilineText(lead.privateNotes || "", 800);
   const descriptionLines = [
     `CRM Lead ID: ${String(lead._id || "")}`,
     phone ? `Phone: ${phone}` : "",
@@ -1596,7 +1675,6 @@ function buildGoogleCalendarEventForLead(lead = null) {
       ? `Appointment status: ${labelAppointmentStatus(lead.appointmentStatus)}`
       : "",
     details ? `Scope/details:\n${details}` : "",
-    privateNotes ? `Private notes:\n${privateNotes}` : "",
   ].filter(Boolean);
 
   const event = {
@@ -9298,10 +9376,12 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     void tick();
   }
 
-  startMetalworksLeadReminderWorker();
-  void repairExistingExternalLeadDuplicates({ externalSystem: "thumbtack" });
-  void repairUnlinkedThumbtackReviewActivities();
-  void repairScheduledReminderDrift();
+  if (process.env.NODE_ENV !== "test") {
+    startMetalworksLeadReminderWorker();
+    void repairExistingExternalLeadDuplicates({ externalSystem: "thumbtack" });
+    void repairUnlinkedThumbtackReviewActivities();
+    void repairScheduledReminderDrift();
+  }
 
   async function withExternalLeadLock(lockKey = "", task = async () => null) {
     const safeLockKey = cleanText(lockKey || "", 200);
@@ -12316,6 +12396,13 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     const allowedEmails = getAllowedEmails();
     const expectedPassword = getMetalworksPasswordForEmail(email);
 
+    const throttle = getCrmLoginThrottle(req, email);
+
+    if (throttle.blocked) {
+      res.set("Retry-After", String(throttle.retryAfterSeconds));
+      return respondError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
+    }
+
     if (!metalworksCrmConfigured()) {
       return respondError(
         res,
@@ -12328,20 +12415,20 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
       return respondError(res, 400, "Correo y password son requeridos.");
     }
 
-    if (!allowedEmails.includes(email)) {
-      return respondError(res, 403, "Ese correo no tiene acceso al CRM.");
-    }
+    if (!allowedEmails.includes(email) || !expectedPassword || !compareSecrets(password, expectedPassword)) {
+      const failedAttempt = recordCrmLoginFailure(req, email);
 
-    if (!expectedPassword) {
-      return respondError(res, 403, "Ese correo no tiene password configurado para el CRM.");
-    }
+      if (failedAttempt.blocked) {
+        res.set("Retry-After", String(failedAttempt.retryAfterSeconds));
+        return respondError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
+      }
 
-    if (!compareSecrets(password, expectedPassword)) {
       return respondError(res, 401, "Correo o password incorrectos.");
     }
 
     try {
       await createSession(req, res, email);
+      clearCrmLoginFailures(req, email);
       res.json({ ok: true, email, profile: getMetalworksCrmProfile(email) });
     } catch (error) {
       console.error("Error logging into Metal Works CRM:", error.message);
