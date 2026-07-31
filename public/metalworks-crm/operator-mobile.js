@@ -6,6 +6,7 @@ const CRM_DEFAULT_SKIN = "executive-steel";
 const OPERATOR_CHAT_HISTORY_STORAGE_KEY = "cmwf_operator_chat_history_v1";
 const OPERATOR_SERVICE_WORKER_PATH = "/metalworks-crm/operator-sw.js";
 const OPERATOR_SERVICE_WORKER_SCOPE = "/metalworks-crm/";
+const OPERATOR_AUTO_REFRESH_MS = 60 * 1000;
 const OPERATOR_STATUS_OPTIONS = [
   { value: "new", label: "Nuevo" },
   { value: "contacted", label: "Contacted" },
@@ -247,6 +248,7 @@ const statusNode = document.querySelector("[data-operator-status]");
 const userChip = document.querySelector("[data-operator-user-chip]");
 const themeBadge = document.querySelector("[data-operator-theme-badge]");
 const refreshButton = document.querySelector("[data-operator-refresh]");
+const lastUpdatedNode = document.querySelector("[data-operator-last-updated]");
 const logoutButton = document.querySelector("[data-operator-logout]");
 const openCrmButton = document.querySelector("[data-operator-open-crm]");
 const enablePushButton = document.querySelector("[data-operator-enable-push]");
@@ -294,6 +296,13 @@ function setStatus(message = "", tone = "") {
   statusNode.hidden = !message;
   statusNode.textContent = message;
   statusNode.dataset.tone = tone;
+}
+
+function setLastUpdated(value = "") {
+  if (!lastUpdatedNode) return;
+
+  const formatted = formatDate(value);
+  lastUpdatedNode.textContent = formatted ? `Live: ${formatted}` : "Syncing...";
 }
 
 function setDetailFeedback(message = "", tone = "") {
@@ -584,22 +593,22 @@ function renderSummary(summary = {}) {
     {
       label: "New Leads",
       value: summary.newLeads || 0,
-      note: `${summary.totalLeads || 0} total leads · ${summary.newApplicants || 0} new applicants`,
+      note: "Operational leads only",
     },
     {
-      label: "Active Follow-ups",
+      label: "Follow-ups",
       value: summary.activeFollowups || 0,
-      note: `${summary.callbacksScheduled || 0} callbacks scheduled`,
+      note: "Operational follow-ups only",
     },
     {
-      label: "Booked",
-      value: summary.bookedLeads || 0,
-      note: `${summary.quoteSubmits30d || 0} site quotes in 30 days`,
+      label: "Agenda",
+      value: summary.agendaTotal || 0,
+      note: `${summary.agendaOverdue || 0} overdue`,
     },
     {
-      label: "Won",
-      value: summary.wonLeads || 0,
-      note: `${summary.phoneClicks30d || 0} phone clicks · ${summary.totalApplicants || 0} applicants`,
+      label: "Focus now",
+      value: summary.focusLeads || 0,
+      note: "Highest-priority leads",
     },
   ];
 
@@ -841,6 +850,7 @@ async function loadSnapshot({ silent = false } = {}) {
     const snapshot = await apiRequest("/api/metalworks-crm/operator/snapshot");
     state.snapshot = snapshot;
     applyProfileTheme(snapshot.profile || {}, snapshot.email || "");
+    setLastUpdated(snapshot.generatedAt || "");
     renderSummary(snapshot.summary || {});
     renderLeadList(focusList, snapshot.focusLeads || [], focusCount);
     renderLeadList(agendaList, snapshot.agendaLeads || [], agendaCount);
@@ -1171,6 +1181,24 @@ function bindApp() {
   enablePushButton?.addEventListener("click", handleEnablePush);
   testPushButton?.addEventListener("click", handleTestPush);
   bindQuickPrompts();
+
+  const refreshWhenSafe = () => {
+    const editingLead = Boolean(detailForm?.contains(document.activeElement));
+    const writingMessage = Boolean(chatForm?.contains(document.activeElement));
+
+    if (document.hidden || editingLead || writingMessage) return;
+
+    loadSnapshot({ silent: true }).catch(() => {
+      setStatus("Connection lost. Keeping the last live data.", "warning");
+    });
+  };
+
+  window.setInterval(refreshWhenSafe, OPERATOR_AUTO_REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshWhenSafe();
+  });
+  window.addEventListener("focus", refreshWhenSafe);
+  window.addEventListener("online", refreshWhenSafe);
 }
 
 async function init() {

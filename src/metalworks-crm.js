@@ -7351,6 +7351,27 @@ function cleanActivity(doc = null) {
   };
 }
 
+export function buildOperationalLeadSummary(activeLeads = [], completedLeads = []) {
+  const active = Array.isArray(activeLeads) ? activeLeads : [];
+  const completed = Array.isArray(completedLeads) ? completedLeads : [];
+  const countStatus = (leads, status) =>
+    leads.filter((lead) => normalizeStatus(lead?.status || "new") === status).length;
+
+  const newLeads = countStatus(active, "new");
+  const contactedLeads = countStatus(active, "contacted");
+  const quotedLeads = countStatus(active, "quoted");
+
+  return {
+    activeLeads: active.length,
+    newLeads,
+    contactedLeads,
+    quotedLeads,
+    activeFollowups: contactedLeads + quotedLeads,
+    bookedLeads: countStatus(active, "booked"),
+    wonLeads: countStatus(completed, "won"),
+  };
+}
+
 function cleanAgendaEvent(doc = null) {
   if (!doc) {
     return null;
@@ -7716,6 +7737,7 @@ async function buildDashboardSnapshot(
   const visibleLeads = hideColdAtlasOutreachFromDefaultInbox
     ? leads.filter((lead) => !isColdAtlasCommercialOutreachLead(lead))
     : leads;
+  const operationalSummary = buildOperationalLeadSummary(visibleLeads, completedLeads);
 
   return {
     summary: {
@@ -7737,6 +7759,7 @@ async function buildDashboardSnapshot(
       totalApplicants: Number(totalApplicants || 0) || 0,
       newApplicants: Number(newApplicants || 0) || 0,
       interviewApplicants: Number(interviewApplicants || 0) || 0,
+      operational: operationalSummary,
     },
     filters: {
       status: query.status || "",
@@ -7995,21 +8018,32 @@ function buildMetalworksOperatorSnapshot(dashboard = {}) {
       return !Number.isNaN(nextActionAt.getTime());
     },
   ).length;
+  const operationalSummary = dashboard?.summary?.operational || {};
+  const operationalValue = (key, fallback = 0) => {
+    const value = Number(operationalSummary?.[key]);
+    return Number.isFinite(value) ? value : fallback;
+  };
 
   return {
     generatedAt: now.toISOString(),
     summary: {
       totalLeads: Number(dashboard?.summary?.totalLeads || 0) || 0,
-      newLeads: Number(dashboard?.summary?.newLeads || 0) || 0,
+      newLeads: operationalValue("newLeads", Number(dashboard?.summary?.newLeads || 0) || 0),
       totalApplicants: Number(dashboard?.summary?.totalApplicants || 0) || 0,
       newApplicants: Number(dashboard?.summary?.newApplicants || 0) || 0,
       interviewApplicants: Number(dashboard?.summary?.interviewApplicants || 0) || 0,
       activeFollowups:
-        (Number(dashboard?.summary?.contactedLeads || 0) || 0) +
-        (Number(dashboard?.summary?.quotedLeads || 0) || 0),
-      bookedLeads: Number(dashboard?.summary?.bookedLeads || 0) || 0,
-      wonLeads: Number(dashboard?.summary?.wonLeads || 0) || 0,
+        operationalValue(
+          "activeFollowups",
+          (Number(dashboard?.summary?.contactedLeads || 0) || 0) +
+            (Number(dashboard?.summary?.quotedLeads || 0) || 0),
+        ),
+      bookedLeads: operationalValue("bookedLeads", Number(dashboard?.summary?.bookedLeads || 0) || 0),
+      wonLeads: operationalValue("wonLeads", Number(dashboard?.summary?.wonLeads || 0) || 0),
       callbacksScheduled: callbackCount,
+      agendaTotal: Number(agendaSummary.totalScheduled || 0) || 0,
+      agendaOverdue: Number(agendaSummary.overdue || 0) || 0,
+      focusLeads: focusLeads.length,
       quoteSubmits30d: Number(dashboard?.summary?.quoteSubmits30d || 0) || 0,
       phoneClicks30d: Number(dashboard?.summary?.phoneClicks30d || 0) || 0,
     },

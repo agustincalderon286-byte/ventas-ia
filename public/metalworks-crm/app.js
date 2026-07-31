@@ -2,6 +2,7 @@ const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const GET_RETRY_DELAYS_MS = [450, 1100, 2200];
 const CRM_THEME_STORAGE_KEY = "cmwf_crm_theme_v2";
 const CRM_DEFAULT_SKIN = "executive-steel";
+const CRM_AUTO_REFRESH_MS = 60 * 1000;
 const CRM_DASHBOARD_CACHE_KEY = "cmwf_crm_dashboard_v1";
 const CRM_LEAD_DETAIL_CACHE_KEY = "cmwf_crm_lead_detail_v1";
 const CRM_SELECTED_LEAD_STORAGE_KEY = "cmwf_crm_selected_lead_v1";
@@ -2190,26 +2191,26 @@ function scrollDetailIntoView() {
   }, 80);
 }
 
-function renderSummary(summary = {}, serviceBreakdown = []) {
+function renderSummary(summary = {}, serviceBreakdown = [], agendaSummary = {}) {
   if (!summaryWrap) {
     return;
   }
 
   const cards = [
     {
-      label: "Leads totales",
-      value: summary.totalLeads || 0,
-      note: `${summary.newLeads || 0} nuevos · ${summary.newApplicants || 0} candidatos`,
+      label: "Leads operativos",
+      value: summary.operational?.activeLeads || 0,
+      note: `${summary.operational?.newLeads || 0} nuevos · outreach frio de Atlas separado`,
     },
     {
-      label: "Seguimiento activo",
-      value: (summary.contactedLeads || 0) + (summary.quotedLeads || 0),
-      note: `${summary.bookedLeads || 0} agendados`,
+      label: "Seguimiento operativo",
+      value: summary.operational?.activeFollowups || 0,
+      note: `${summary.operational?.bookedLeads || 0} agendados`,
     },
     {
-      label: "Quotes 30 dias",
-      value: summary.quoteSubmits30d || 0,
-      note: `${summary.phoneClicks30d || 0} clicks al telefono`,
+      label: "Agenda activa",
+      value: agendaSummary.totalScheduled || 0,
+      note: `${agendaSummary.overdue || 0} vencidos`,
     },
     {
       label: "Ganados",
@@ -4338,7 +4339,7 @@ async function loadProspectorAdmin() {
 async function renderDashboardSnapshot(dashboard, { fromCache = false, savedAt = 0 } = {}) {
   state.dashboard = dashboard;
   const query = buildQueryString(state.filters);
-  renderSummary(dashboard.summary, dashboard.serviceBreakdown);
+  renderSummary(dashboard.summary, dashboard.serviceBreakdown, dashboard.agendaSummary);
   renderAgenda(
     dashboard.agendaLeads || [],
     dashboard.agendaSummary || null,
@@ -5257,6 +5258,22 @@ async function init() {
   applyMobilePaneLayout();
   setSystemStatus("", "");
   await Promise.all([refreshDashboardSafely(), refreshProspectorsSafely()]);
+
+  const refreshWhenSafe = () => {
+    const editingLead = Boolean(detailForm?.contains(document.activeElement));
+    const editingManualLead = Boolean(manualLeadForm?.contains(document.activeElement));
+
+    if (document.hidden || editingLead || editingManualLead) return;
+
+    refreshDashboardSafely();
+  };
+
+  window.setInterval(refreshWhenSafe, CRM_AUTO_REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshWhenSafe();
+  });
+  window.addEventListener("focus", refreshWhenSafe);
+  window.addEventListener("online", refreshWhenSafe);
 }
 
 init().catch((error) => {

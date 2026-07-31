@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildGoogleCalendarEventForLead,
+  buildOperationalLeadSummary,
   cleanExternalLeadReceipt,
   clearCrmLoginFailures,
   getCrmLoginThrottle,
@@ -94,5 +95,27 @@ test("external lead receipts never expose private CRM fields", () => {
     status: "quoted",
     statusLabel: "Cotizado",
     receivedAt: "2026-07-30T12:00:00.000Z",
+  });
+});
+
+test("operational counters use the same leads shown to the team", () => {
+  const summary = buildOperationalLeadSummary(
+    [
+      { status: "new" },
+      { status: "contacted" },
+      { status: "quoted" },
+      { status: "booked" },
+    ],
+    [{ status: "won" }],
+  );
+
+  assert.deepEqual(summary, {
+    activeLeads: 4,
+    newLeads: 1,
+    contactedLeads: 1,
+    quotedLeads: 1,
+    activeFollowups: 2,
+    bookedLeads: 1,
+    wonLeads: 1,
   });
 });
