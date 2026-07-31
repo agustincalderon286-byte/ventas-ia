@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmwf-operator-shell-v8";
+const CACHE_NAME = "cmwf-operator-shell-v9";
 const SHELL_URLS = [
   "/metalworks-crm/",
   "/metalworks-crm/operator/",
@@ -72,6 +72,10 @@ self.addEventListener("fetch", (event) => {
     requestUrl.pathname === "/metalworks-crm/app.js" ||
     requestUrl.pathname === "/metalworks-crm/styles.css" ||
     requestUrl.pathname === "/metalworks-crm/crm.webmanifest" ||
+    requestUrl.pathname === "/metalworks-crm/operator-mobile.css" ||
+    requestUrl.pathname === "/metalworks-crm/operator-mobile.js" ||
+    requestUrl.pathname === "/metalworks-crm/operator.webmanifest" ||
+    requestUrl.pathname === "/metalworks-crm/operator-icon.svg" ||
     requestUrl.pathname === "/metalworks-crm/operator-sw.js"
   ) {
     event.respondWith(
