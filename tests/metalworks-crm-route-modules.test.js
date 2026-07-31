@@ -68,6 +68,10 @@ test("registers the CRM feature routes from dedicated modules", () => {
       method: "post",
       path: ["/integrations/searchkings/webhook", "/api/integrations/searchkings/webhook"],
     },
+    {
+      method: "post",
+      path: "/api/integrations/searchkings/sms-email",
+    },
   ]);
 });
 

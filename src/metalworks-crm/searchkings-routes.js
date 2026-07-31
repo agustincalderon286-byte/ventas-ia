@@ -1,10 +1,13 @@
 import { buildSearchKingsWebhookEvent } from "../searchkings-webhook.js";
+import { buildSearchKingsSmsEmailCandidate } from "../searchkings-sms-email.js";
 
 export function registerMetalworksSearchKingsRoutes(app, dependencies) {
   const {
     searchKingsWebhookConfigured,
+    searchKingsSmsEmailConfigured,
     respondError,
     requestHasSearchKingsWebhookAccess,
+    requestHasSearchKingsSmsEmailAccess,
     parseSearchKingsWebhookBody,
     cleanText,
     normalizePhone,
@@ -175,4 +178,82 @@ export function registerMetalworksSearchKingsRoutes(app, dependencies) {
       }
     },
   );
+
+  app.post("/api/integrations/searchkings/sms-email", async (req, res) => {
+    try {
+      if (!searchKingsSmsEmailConfigured()) {
+        return respondError(res, 503, "SearchKings SMS email sync is not configured yet.");
+      }
+      if (!requestHasSearchKingsSmsEmailAccess(req)) {
+        return respondError(res, 401, "Unauthorized SearchKings SMS email request.");
+      }
+
+      const candidate = buildSearchKingsSmsEmailCandidate(req.body || {});
+      if (!candidate) return respondError(res, 400, "This email is not a valid SearchKings SMS lead.");
+
+      const now = new Date();
+      const pagePath = "/api/integrations/searchkings/sms-email";
+      const pageUrl = "https://calls.searchkings.com/";
+      const tracking = buildTrackingPayload(candidate.tracking);
+      let leadDoc = await MetalworksLead.findOne({
+        sourceExternalSystem: candidate.externalSystem,
+        sourceExternalId: candidate.externalLeadId,
+      }).sort({ updatedAt: -1, createdAt: -1 });
+      const duplicate = Boolean(leadDoc);
+
+      if (leadDoc) {
+        Object.assign(leadDoc, {
+          fullName: candidate.fullName, phone: candidate.phone,
+          phoneDisplay: candidate.phoneDisplay || candidate.phone, projectType: candidate.projectType,
+          location: candidate.location, zipCode: candidate.zipCode, city: candidate.city,
+          details: candidate.details, sourceType: candidate.sourceType, tracking, updatedAt: now,
+        });
+        await leadDoc.save();
+      } else {
+        leadDoc = await MetalworksLead.create({
+          fullName: candidate.fullName, phone: candidate.phone, phoneDisplay: candidate.phoneDisplay || candidate.phone,
+          projectType: candidate.projectType, location: candidate.location, zipCode: candidate.zipCode, city: candidate.city,
+          details: candidate.details, status: candidate.crmStatus, sourceType: candidate.sourceType,
+          sourceExternalId: candidate.externalLeadId, sourceExternalSystem: candidate.externalSystem,
+          pageTitle: "SearchKings SMS", pagePath, pageUrl, referrer: pageUrl,
+          ipAddress: cleanText(getClientIp(req), 120), userAgent: cleanText(req.headers["user-agent"] || "", 400),
+          tracking, updatedAt: now, createdAt: now,
+        });
+        await appendActivity({
+          leadId: leadDoc._id, activityType: "lead_created", title: "Lead creado",
+          body: "Nuevo SMS de SearchKings guardado en el CRM.",
+          meta: { externalLeadId: candidate.externalLeadId, externalSystem: candidate.externalSystem },
+          externalEventKey: `searchkings:sms:${candidate.externalLeadId}:lead_created`,
+          req, pagePath, pageUrl, tracking,
+        });
+      }
+
+      await appendActivity({
+        leadId: leadDoc._id, activityType: candidate.activity.activityType, title: candidate.activity.title,
+        body: candidate.activity.body, meta: { ...candidate.activity.meta, duplicate },
+        externalEventKey: `searchkings:sms:${candidate.externalLeadId}`,
+        req, pagePath, pageUrl, tracking,
+      });
+
+      let pushDelivery = { attempted: false, delivered: false };
+      if (!duplicate) {
+        try {
+          pushDelivery = await sendMetalworksPushAlert({
+            lead: leadDoc.toObject ? leadDoc.toObject() : leadDoc, alertType: "website_lead",
+          });
+        } catch (error) {
+          console.error("Error sending SearchKings SMS email push:", error.message);
+        }
+      }
+
+      return res.json({ ok: true, entityType: candidate.entityType, duplicate,
+        notified: Boolean(pushDelivery.delivered),
+        lead: cleanExternalLeadReceipt(leadDoc.toObject ? leadDoc.toObject() : leadDoc),
+      });
+    } catch (error) {
+      console.error("Error importing SearchKings SMS email:", error.message);
+      return respondError(res, error?.statusCode || 500,
+        error?.statusCode ? error.message : "No pude importar el SMS de SearchKings.");
+    }
+  });
 }

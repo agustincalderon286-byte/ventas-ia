@@ -20,3 +20,5 @@ services:
         sync: false
       - key: METALWORKS_CRM_ALLOWED_EMAILS
         value: agustincalderon423@gmail.com,agustincalderon286@gmail.com
+      - key: SEARCHKINGS_SMS_EMAIL_TOKEN
+        sync: false

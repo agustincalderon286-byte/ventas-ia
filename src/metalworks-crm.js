@@ -158,6 +158,7 @@ const THUMBTACK_WEBHOOK_USERNAME =
 const THUMBTACK_WEBHOOK_PASSWORD = String(process.env.THUMBTACK_WEBHOOK_PASSWORD || "").trim();
 const THUMBTACK_WEBHOOK_TOKEN = String(process.env.THUMBTACK_WEBHOOK_TOKEN || "").trim();
 const SEARCHKINGS_WEBHOOK_TOKEN = String(process.env.SEARCHKINGS_WEBHOOK_TOKEN || "").trim();
+const SEARCHKINGS_SMS_EMAIL_TOKEN = String(process.env.SEARCHKINGS_SMS_EMAIL_TOKEN || "").trim();
 const METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY = String(
   process.env.METALWORKS_WEB_PUSH_VAPID_PUBLIC_KEY || "",
 ).trim();
@@ -738,6 +739,18 @@ function getSearchKingsWebhookToken(req) {
 
 function requestHasSearchKingsWebhookAccess(req) {
   return compareSecrets(getSearchKingsWebhookToken(req), SEARCHKINGS_WEBHOOK_TOKEN);
+}
+
+function searchKingsSmsEmailConfigured() {
+  return Boolean(SEARCHKINGS_SMS_EMAIL_TOKEN);
+}
+
+function requestHasSearchKingsSmsEmailAccess(req) {
+  const authHeader = String(req.headers.authorization || "").trim();
+  const token = /^Bearer\s+/i.test(authHeader)
+    ? authHeader.replace(/^Bearer\s+/i, "").trim()
+    : cleanText(req.query?.token || req.headers["x-searchkings-sms-email-token"] || "", 240);
+  return compareSecrets(token, SEARCHKINGS_SMS_EMAIL_TOKEN);
 }
 
 function getAllowedEmails() {
@@ -13363,8 +13376,10 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
 
   registerMetalworksSearchKingsRoutes(app, {
     searchKingsWebhookConfigured,
+    searchKingsSmsEmailConfigured,
     respondError,
     requestHasSearchKingsWebhookAccess,
+    requestHasSearchKingsSmsEmailAccess,
     parseSearchKingsWebhookBody,
     cleanText,
     normalizePhone,
@@ -13374,7 +13389,7 @@ export function registerMetalworksCrm(app, { mongoose, publicDir, privateDir }) 
     getClientIp,
     appendActivity,
     sendMetalworksPushAlert,
-    cleanLead,
+    cleanExternalLeadReceipt,
   });
 
   app.post("/api/public/metalworks/external-leads", async (req, res) => {
