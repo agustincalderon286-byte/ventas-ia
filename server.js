@@ -154,7 +154,7 @@ const COACH_TURBO_MAX_HISTORY_MESSAGES = Math.max(
 );
 const COACH_TURBO_MAX_COMPLETION_TOKENS = Math.max(
   120,
-  Number(process.env.COACH_TURBO_MAX_COMPLETION_TOKENS || 220)
+  Number(process.env.COACH_TURBO_MAX_COMPLETION_TOKENS || 700)
 );
 const MAX_RAM_SESSION_MESSAGES = Math.max(
   MAX_PROMPT_HISTORY_MESSAGES,
@@ -23460,7 +23460,7 @@ CANAL ACTIVO:
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-5-mini",
+          model: "gpt-5-mini", reasoning_effort: "low",
           messages: [
             { role: "system", content: construirPromptModo(modoChat) },
             { role: "system", content: modoPrompt },
@@ -33094,7 +33094,7 @@ MODO TURBO DEL COACH:
       const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
 
       const openAiPayload = {
-        model: "gpt-5-mini",
+        model: "gpt-5-mini", reasoning_effort: "low",
         messages: [
           { role: "system", content: construirPromptModo(modoChat) },
           { role: "system", content: modoPrompt },
