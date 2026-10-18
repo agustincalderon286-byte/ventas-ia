@@ -33136,7 +33136,7 @@ MODO TURBO DEL COACH:
           parsedError = rawError ? { message: rawError } : null;
         }
 
-        return failChatResponse(response.status, {
+        console.error("Error de OpenAI en chat", {          mode: modoChat,          status: response.status,          type: parsedError?.error?.type || "",          code: parsedError?.error?.code || "",          message: parsedError?.error?.message || parsedError?.message || "Respuesta invalida del API"        });        return failChatResponse(response.status, {
           error: "Error OpenAI",
           detalle: parsedError || { message: "Respuesta invalida del API" }
         });
