@@ -15060,7 +15060,7 @@ async function initCoachAppPage() {
       }
 
       if (parsed.type === "error") {
-        throw new Error(parsed.error || "No pude responder en este momento.");
+        const detail = String(parsed.detalle?.error?.message || parsed.detalle?.message || "").trim(); throw new Error(detail ? ((parsed.error || "No pude responder en este momento.") + ": " + detail) : (parsed.error || "No pude responder en este momento."));
       }
 
       if (parsed.type === "done") {
