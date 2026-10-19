@@ -18290,6 +18290,16 @@ function construirCoachTurboReply({
     /cita_instantanea/i.test(activeDemoStage) ||
     /cita instantanea|cita instantánea|llamar ahora|marcar ahorita/.test(normalized);
 
+  // Las respuestas instantaneas solo se usan cuando existe una venta o seguimiento real.
+  // Sin ese contexto, dejamos que el modelo adapte la respuesta a las palabras del usuario.
+  const hasLiveSalesContext = Boolean(
+    referral?.fullName ||
+      activeDemoStage ||
+      activeHealthSurveyContext?.salesAnalysis ||
+      paymentSummary ||
+      activeDecisionContext?.summary
+  );
+
   if (isInstantCallLane) {
     if (/mandame informacion|manda informacion|manda info|texto|mensaje/.test(normalized)) {
       return [
@@ -18322,7 +18332,7 @@ function construirCoachTurboReply({
     }
   }
 
-  if (/esta caro|muy caro|\bcaro\b/.test(normalized)) {
+  if (hasLiveSalesContext && /esta caro|muy caro|\bcaro\b/.test(normalized)) {
     return [
       "No pelees el total. Bajalo a uso y a pago.",
       weekly || monthly
@@ -18337,7 +18347,7 @@ function construirCoachTurboReply({
       .join(" ");
   }
 
-  if (/lo voy a pensar|voy a pensarlo|pensarlo|lo pensare|lo pensar[eé]/.test(normalized)) {
+  if (hasLiveSalesContext && /lo voy a pensar|voy a pensarlo|pensarlo|lo pensare|lo pensar[eé]/.test(normalized)) {
     return [
       "Aisla primero la objecion real.",
       `Di: "Antes de pensarlo, dime que parte te frena mas, el precio o que quieres consultarlo?"`,
@@ -18348,7 +18358,7 @@ function construirCoachTurboReply({
       .join(" ");
   }
 
-  if (/ahorita no puedo|ahora no puedo|no puedo ahorita|no se puede ahorita/.test(normalized)) {
+  if (hasLiveSalesContext && /ahorita no puedo|ahora no puedo|no puedo ahorita|no se puede ahorita/.test(normalized)) {
     return [
       "No discutas todo. Recorta el siguiente paso.",
       weekly || daily
@@ -18362,7 +18372,7 @@ function construirCoachTurboReply({
       .join(" ");
   }
 
-  if (/que le digo|como le contesto|como respondo|que respondo/.test(normalized) && /caro|pensar|ahorita no/.test(normalized)) {
+  if (hasLiveSalesContext && /que le digo|como le contesto|como respondo|que respondo/.test(normalized) && /caro|pensar|ahorita no/.test(normalized)) {
     return [
       "Ve directo y corto.",
       weekly
@@ -18374,7 +18384,7 @@ function construirCoachTurboReply({
       .join(" ");
   }
 
-  if (/que producto|cual producto|por donde empiezo|que le enseño|que le recomiendo/.test(normalized)) {
+  if (hasLiveSalesContext && /que producto|cual producto|por donde empiezo|que le enseño|que le recomiendo/.test(normalized)) {
     return [
       productLabel ? `Empieza por ${productLabel}.` : "Empieza por el producto mas util para esa casa.",
       objectionAnchor ? `Conecta con esto: ${objectionAnchor}.` : "",
@@ -22480,6 +22490,14 @@ VOZ Y TONO:
 - Ejemplo bueno: "Si quieres, te ayudo a que te llamen y te expliquen bien, sin compromiso."
 - Ejemplo malo: "Este utensilio optimiza la distribucion termica."
 - Ejemplo malo: "Te recomiendo agendar una llamada informativa con un representante especializado."
+
+RESPUESTA MODERNA Y PERSONAL:
+- No repitas guiones conocidos ni frases de memoria si todavia no sabes el producto, la etapa de la venta o la objecion real.
+- Si falta contexto para ayudar a vender, haz una sola pregunta corta para ubicar la situacion.
+- Adapta cada respuesta a las palabras exactas del cliente, al producto y al momento de la conversacion.
+- No inventes descuentos, promociones, precios ni beneficios. Si un dato no esta confirmado, dilo con honestidad.
+- Usa "Di esto" y "Siguiente paso" solo cuando el usuario pida un guion o accion concreta. Si pide estrategia, explica en dos o tres ideas breves.
+- Evita muletillas repetidas como "perfecto", "claro" o "antes de pensarlo"; varia la forma de hablar de manera natural.
 
 OBJETIVO PRINCIPAL:
 - Ayudar gratis a cocinar saludable y usar bien los productos
