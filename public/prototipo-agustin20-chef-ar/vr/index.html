@@ -30,6 +30,11 @@
       button { font: inherit; border: 0; cursor: pointer; }
       #enter-vr { color: #18120c; background: linear-gradient(135deg, #ffcf78, var(--accent-2)); padding: 11px 15px; border-radius: 12px; font-weight: 800; white-space: nowrap; box-shadow: 0 8px 25px rgba(255, 183, 93, .22); }
       #enter-vr:disabled { background: #607283; color: #d9e3ec; cursor: default; box-shadow: none; }
+      #xr-controls { position: absolute; top: max(88px, calc(env(safe-area-inset-top) + 70px)); right: max(18px, env(safe-area-inset-right)); display: flex; gap: 9px; pointer-events: auto; }
+      #xr-controls[hidden] { display: none; }
+      .xr-action { padding: 10px 13px; color: #f8fbff; background: rgba(7, 24, 39, .9); border: 1px solid rgba(255,255,255,.22); border-radius: 12px; font-weight: 750; }
+      .xr-action.exit { color: #211109; background: linear-gradient(135deg, #ffcf78, #e99556); border: 0; }
+      body.xr-active .panel, body.xr-active .toast { display: none; }
       .panel { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 36px)); padding: 18px; border-radius: 20px; }
       .eyebrow { color: var(--accent-2); font-weight: 800; font-size: 11px; letter-spacing: .15em; margin: 0 0 8px; }
       h1 { margin: 0; font-size: clamp(24px, 4vw, 38px); letter-spacing: -.04em; }
@@ -74,6 +79,10 @@
         </div>
         <button id="enter-vr" type="button">Entrar a VR</button>
       </header>
+      <div id="xr-controls" hidden>
+        <button id="reload-vr" class="xr-action" type="button">↻ Recargar</button>
+        <button id="exit-vr" class="xr-action exit" type="button">Salir de VR</button>
+      </div>
 
       <section class="panel">
         <p class="eyebrow">ROYAL PRESTIGE · COCINA DEMO</p>
@@ -345,6 +354,21 @@
         });
       }
 
+      const xrControls = document.getElementById("xr-controls");
+      const exitVrButton = document.getElementById("exit-vr");
+      const reloadVrButton = document.getElementById("reload-vr");
+
+      exitVrButton.addEventListener("click", async () => {
+        const session = renderer.xr.getSession();
+        if (session) await session.end();
+      });
+
+      reloadVrButton.addEventListener("click", async () => {
+        const session = renderer.xr.getSession();
+        if (session) await session.end();
+        window.location.reload();
+      });
+
       async function updateVrButton() {
         const button = document.getElementById("enter-vr");
         if (!navigator.xr || !(await navigator.xr.isSessionSupported("immersive-vr"))) {
@@ -355,9 +379,18 @@
         button.addEventListener("click", async () => {
           try {
             const session = await navigator.xr.requestSession("immersive-vr", {
-              optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking"]
+              optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking", "dom-overlay"],
+              domOverlay: { root: document.getElementById("hud") }
+            });
+            session.addEventListener("end", () => {
+              xrControls.hidden = true;
+              document.body.classList.remove("xr-active");
+              button.textContent = "Entrar a VR";
             });
             await renderer.xr.setSession(session);
+            xrControls.hidden = false;
+            document.body.classList.add("xr-active");
+            button.textContent = "En VR";
           } catch (error) {
             console.warn(error);
           }
