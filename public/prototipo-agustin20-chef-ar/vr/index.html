@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#071827" />
+    <meta name="description" content="Muestra inmersiva WebXR de Agustin 2.0 para Meta Quest." />
+    <title>Agustin 2.0 · Novel en VR</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f6f8fb;
+        --muted: #b7c5d6;
+        --glass: rgba(5, 20, 37, 0.78);
+        --line: rgba(255, 255, 255, 0.14);
+        --accent: #e45267;
+        --accent-2: #ffbd67;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #071827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      canvas { display: block; touch-action: none; }
+      #hud { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+      .topbar, .panel, .toast { pointer-events: auto; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+      .topbar { position: absolute; top: max(18px, env(safe-area-inset-top)); left: max(18px, env(safe-area-inset-left)); right: max(18px, env(safe-area-inset-right)); min-height: 62px; padding: 12px 14px 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 19px; }
+      .brand { display: flex; gap: 11px; align-items: center; min-width: 0; }
+      .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: linear-gradient(135deg, var(--accent), #9a2a66); font-weight: 900; }
+      .brand strong, .brand span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .brand strong { font-size: 13px; letter-spacing: .08em; }
+      .brand span { color: var(--muted); font-size: 12px; margin-top: 2px; }
+      button { font: inherit; border: 0; cursor: pointer; }
+      #enter-vr { color: #18120c; background: linear-gradient(135deg, #ffcf78, var(--accent-2)); padding: 11px 15px; border-radius: 12px; font-weight: 800; white-space: nowrap; box-shadow: 0 8px 25px rgba(255, 183, 93, .22); }
+      #enter-vr:disabled { background: #607283; color: #d9e3ec; cursor: default; box-shadow: none; }
+      .panel { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 36px)); padding: 18px; border-radius: 20px; }
+      .eyebrow { color: var(--accent-2); font-weight: 800; font-size: 11px; letter-spacing: .15em; margin: 0 0 8px; }
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 38px); letter-spacing: -.04em; }
+      .panel p { color: var(--muted); margin: 9px 0 14px; line-height: 1.42; font-size: 14px; }
+      .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .fact { border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 10px; background: rgba(255,255,255,.04); }
+      .fact b { display: block; font-size: 12px; }
+      .fact span { color: var(--muted); font-size: 11px; display: block; margin-top: 3px; line-height: 1.25; }
+      .toast { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); border-radius: 12px; padding: 10px 12px; max-width: min(310px, calc(100vw - 36px)); color: var(--muted); font-size: 12px; line-height: 1.35; }
+      .loading { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #193d5b 0, #071827 65%); transition: opacity .45s ease, visibility .45s ease; }
+      .loading[hidden] { opacity: 0; visibility: hidden; }
+      .loading-card { text-align: center; }
+      .orb { width: 42px; height: 42px; margin: 0 auto 15px; border: 4px solid rgba(255,255,255,.22); border-top-color: var(--accent-2); border-radius: 50%; animation: spin .9s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (max-width: 620px) {
+        .topbar { padding: 10px 11px; min-height: 55px; }
+        .brand-mark { width: 30px; height: 30px; }
+        .brand strong { font-size: 11px; }
+        .brand span { font-size: 10px; }
+        #enter-vr { padding: 9px 11px; font-size: 12px; }
+        .panel { padding: 14px; bottom: 14px; }
+        .toast { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading" id="loading">
+      <div class="loading-card">
+        <div class="orb"></div>
+        <strong>Cargando la muestra VR…</strong>
+      </div>
+    </div>
+
+    <main id="hud">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">A2</div>
+          <div>
+            <strong>AGUSTIN 2.0 · VR SHOWROOM</strong>
+            <span>Muestra privada para Meta Quest 2</span>
+          </div>
+        </div>
+        <button id="enter-vr" type="button">Entrar a VR</button>
+      </header>
+
+      <section class="panel">
+        <p class="eyebrow">PRODUCTO 01 · MUESTRA</p>
+        <h1>Novel</h1>
+        <p>Acércate al producto, míralo a escala y tómalo con el gatillo del control. Esta es una primera sala virtual de prueba.</p>
+        <div class="facts">
+          <div class="fact"><b>✋ Interacción</b><span>Apunta, presiona el gatillo y gira el producto.</span></div>
+          <div class="fact"><b>◉ En Quest 2</b><span>Selecciona “Entrar a VR” desde el navegador.</span></div>
+        </div>
+      </section>
+
+      <aside class="toast" id="toast">En computadora puedes girar la vista con el mouse. En Quest 2 usa los controles para señalar y tomar el producto.</aside>
+    </main>
+
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js";
+      import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js";
+      import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/controls/OrbitControls.js";
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x071827);
+      scene.fog = new THREE.Fog(0x071827, 7, 16);
+
+      const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.01, 100);
+      camera.position.set(0, 1.55, 4.4);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.xr.enabled = true;
+      renderer.xr.setReferenceSpaceType("local-floor");
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 1.05, 0);
+      controls.enableDamping = true;
+      controls.minDistance = 1.8;
+      controls.maxDistance = 7;
+      controls.maxPolarAngle = Math.PI * 0.48;
+
+      scene.add(new THREE.HemisphereLight(0xc5e5ff, 0x102335, 2.4));
+      const key = new THREE.DirectionalLight(0xffefd2, 3.2);
+      key.position.set(3.5, 5.5, 3);
+      key.castShadow = true;
+      key.shadow.mapSize.set(1024, 1024);
+      scene.add(key);
+
+      const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(7, 72),
+        new THREE.MeshStandardMaterial({ color: 0x102c43, roughness: 0.87, metalness: 0.05 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const grid = new THREE.GridHelper(12, 24, 0x426c89, 0x234459);
+      grid.position.y = 0.006;
+      scene.add(grid);
+
+      const plinth = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.1, 1.24, 0.13, 64),
+        new THREE.MeshStandardMaterial({ color: 0x1d536f, metalness: 0.54, roughness: 0.31 })
+      );
+      plinth.position.y = 0.07;
+      plinth.receiveShadow = true;
+      scene.add(plinth);
+
+      const glow = new THREE.PointLight(0xe45267, 10, 5.5, 2);
+      glow.position.set(-1.5, 2.6, 1);
+      scene.add(glow);
+
+      const product = new THREE.Group();
+      product.position.set(0, 0.16, 0);
+      scene.add(product);
+
+      const loader = new GLTFLoader();
+      const loading = document.getElementById("loading");
+      const toast = document.getElementById("toast");
+      let grabbedBy = null;
+
+      loader.load(
+        "../assets/novel.glb",
+        gltf => {
+          const model = gltf.scene;
+          const initialBox = new THREE.Box3().setFromObject(model);
+          const size = initialBox.getSize(new THREE.Vector3());
+          const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+          const scale = 1.55 / maxAxis;
+          model.scale.setScalar(scale);
+          const box = new THREE.Box3().setFromObject(model);
+          const center = box.getCenter(new THREE.Vector3());
+          model.position.x -= center.x;
+          model.position.z -= center.z;
+          model.position.y -= box.min.y;
+          model.traverse(node => {
+            if (node.isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+              node.material.envMapIntensity = 1.1;
+            }
+          });
+          product.add(model);
+          loading.hidden = true;
+        },
+        undefined,
+        error => {
+          console.error(error);
+          loading.innerHTML = "<div class=\"loading-card\"><strong>No pude cargar el modelo.</strong><p>Revisa tu conexión y vuelve a abrir esta muestra.</p></div>";
+        }
+      );
+
+      const raycaster = new THREE.Raycaster();
+      const tempMatrix = new THREE.Matrix4();
+      const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
+
+      function getIntersection(controller) {
+        tempMatrix.identity().extractRotation(controller.matrixWorld);
+        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+        return raycaster.intersectObject(product, true)[0] || null;
+      }
+
+      controllers.forEach(controller => {
+        controller.addEventListener("selectstart", () => {
+          if (!getIntersection(controller)) return;
+          grabbedBy = controller;
+          controller.attach(product);
+          toast.textContent = "Suelta el gatillo para dejar el producto en su nueva posición.";
+        });
+        controller.addEventListener("selectend", () => {
+          if (grabbedBy !== controller) return;
+          scene.attach(product);
+          grabbedBy = null;
+          toast.textContent = "Producto colocado. Puedes tomarlo otra vez con el gatillo.";
+        });
+        scene.add(controller);
+      });
+
+      async function updateVrButton() {
+        const button = document.getElementById("enter-vr");
+        if (!navigator.xr || !(await navigator.xr.isSessionSupported("immersive-vr"))) {
+          button.disabled = true;
+          button.textContent = "Abre esto en Quest 2";
+          return;
+        }
+        button.addEventListener("click", async () => {
+          try {
+            const session = await navigator.xr.requestSession("immersive-vr", {
+              optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking"]
+            });
+            await renderer.xr.setSession(session);
+          } catch (error) {
+            console.warn(error);
+          }
+        });
+      }
+      updateVrButton();
+
+      function onResize() {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      }
+      addEventListener("resize", onResize);
+
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        const elapsed = clock.getElapsedTime();
+        if (!grabbedBy) product.rotation.y = Math.sin(elapsed * 0.42) * 0.12;
+        controls.update();
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
