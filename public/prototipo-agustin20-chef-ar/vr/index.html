@@ -78,14 +78,14 @@
       <section class="panel">
         <p class="eyebrow">PRODUCTO 01 · MUESTRA</p>
         <h1>Novel</h1>
-        <p>Acércate al producto, míralo a escala y tómalo con el gatillo del control. Esta es una primera sala virtual de prueba.</p>
+        <p>Acerca tu mano al producto y pellizca con índice y pulgar para tomarlo. Los controles quedan como respaldo.</p>
         <div class="facts">
-          <div class="fact"><b>✋ Interacción</b><span>Apunta, presiona el gatillo y gira el producto.</span></div>
-          <div class="fact"><b>◉ En Quest 2</b><span>Selecciona “Entrar a VR” desde el navegador.</span></div>
+          <div class="fact"><b>✋ Manos primero</b><span>Pellizca índice y pulgar cerca de Novel para tomarlo.</span></div>
+          <div class="fact"><b>◉ Respaldo</b><span>Si usas controles, apunta y usa el gatillo.</span></div>
         </div>
       </section>
 
-      <aside class="toast" id="toast">En computadora puedes girar la vista con el mouse. En Quest 2 usa los controles para señalar y tomar el producto.</aside>
+      <aside class="toast" id="toast">En Quest 2 activa tus manos, acerca índice y pulgar a Novel y pellizca. Los controles también funcionan.</aside>
     </main>
 
     <script type="importmap">
@@ -100,6 +100,7 @@
       import * as THREE from "three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
       import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+      import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
       const scene = new THREE.Scene();
@@ -204,7 +205,12 @@
 
       const raycaster = new THREE.Raycaster();
       const tempMatrix = new THREE.Matrix4();
+      const worldPoint = new THREE.Vector3();
       const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
+      const hands = [renderer.xr.getHand(0), renderer.xr.getHand(1)];
+      const handModelFactory = new XRHandModelFactory();
+      const HAND_PINCH_DISTANCE = 0.029;
+      const HAND_GRAB_DISTANCE = 0.68;
 
       function getIntersection(controller) {
         tempMatrix.identity().extractRotation(controller.matrixWorld);
@@ -213,21 +219,63 @@
         return raycaster.intersectObject(product, true)[0] || null;
       }
 
+      function grabProduct(source, message) {
+        if (grabbedBy) return false;
+        grabbedBy = source;
+        source.attach(product);
+        toast.textContent = message;
+        return true;
+      }
+
+      function dropProduct(source, message) {
+        if (grabbedBy !== source) return;
+        scene.attach(product);
+        grabbedBy = null;
+        toast.textContent = message;
+      }
+
       controllers.forEach(controller => {
         controller.addEventListener("selectstart", () => {
           if (!getIntersection(controller)) return;
-          grabbedBy = controller;
-          controller.attach(product);
-          toast.textContent = "Suelta el gatillo para dejar el producto en su nueva posición.";
+          grabProduct(controller, "Suelta el gatillo para dejar el producto en su nueva posición.");
         });
         controller.addEventListener("selectend", () => {
-          if (grabbedBy !== controller) return;
-          scene.attach(product);
-          grabbedBy = null;
-          toast.textContent = "Producto colocado. Puedes tomarlo otra vez con el gatillo.";
+          dropProduct(controller, "Producto colocado. Puedes tomarlo otra vez con el gatillo.");
         });
         scene.add(controller);
       });
+
+      hands.forEach(hand => {
+        hand.userData.wasPinching = false;
+        hand.add(handModelFactory.createHandModel(hand, "spheres"));
+        scene.add(hand);
+      });
+
+      function updateHandTracking() {
+        hands.forEach(hand => {
+          const thumbTip = hand.joints?.["thumb-tip"];
+          const indexTip = hand.joints?.["index-finger-tip"];
+          if (!thumbTip || !indexTip) return;
+
+          const thumbPosition = thumbTip.getWorldPosition(new THREE.Vector3());
+          const indexPosition = indexTip.getWorldPosition(new THREE.Vector3());
+          const pinching = thumbPosition.distanceTo(indexPosition) <= HAND_PINCH_DISTANCE;
+          const wasPinching = Boolean(hand.userData.wasPinching);
+
+          if (pinching && !wasPinching && !grabbedBy) {
+            const productPosition = product.getWorldPosition(worldPoint);
+            if (indexPosition.distanceTo(productPosition) <= HAND_GRAB_DISTANCE) {
+              grabProduct(hand, "Ahora abre los dedos para dejar Novel en su nueva posición.");
+            }
+          }
+
+          if (!pinching && wasPinching && grabbedBy === hand) {
+            dropProduct(hand, "Producto colocado. Acerca tu mano y pellizca para tomarlo otra vez.");
+          }
+
+          hand.userData.wasPinching = pinching;
+        });
+      }
 
       async function updateVrButton() {
         const button = document.getElementById("enter-vr");
@@ -259,6 +307,7 @@
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
         const elapsed = clock.getElapsedTime();
+        updateHandTracking();
         if (!grabbedBy) product.rotation.y = Math.sin(elapsed * 0.42) * 0.12;
         controls.update();
         renderer.render(scene, camera);
