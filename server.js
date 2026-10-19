@@ -32454,11 +32454,8 @@ app.post("/api/public/contact-share/import", async (req, res) => {
   }
 });
 
-// Enlaces de entrada estables para Quest Browser y enlaces compartidos.
+// Enlace corto y estable para Quest Browser y enlaces compartidos.
 app.get("/vr", (req, res) => {
-  return res.redirect(307, `${AR_PROTOTYPE_PATH_PREFIX}/vr/`);
-});
-app.get(`${AR_PROTOTYPE_PATH_PREFIX}/vr`, (req, res) => {
   return res.redirect(307, `${AR_PROTOTYPE_PATH_PREFIX}/vr/`);
 });
 
