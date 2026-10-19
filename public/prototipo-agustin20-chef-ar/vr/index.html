@@ -134,7 +134,7 @@
       document.body.appendChild(renderer.domElement);
 
       const controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(0, 1.55, 0.1);
+      controls.target.set(0, 1.42, -1.25);
       controls.enableDamping = true;
       controls.minDistance = 1.8;
       controls.maxDistance = 7;
@@ -254,14 +254,15 @@
         scene.add(knob);
       });
 
-      // Isla central: convierte el producto en la pieza protagonista.
-      addBox(4.2, 0.92, 1.72, kitchenMaterials.wood, new THREE.Vector3(0, 0.46, 0.1));
-      addBox(4.48, 0.12, 1.98, kitchenMaterials.stone, new THREE.Vector3(0, 0.98, 0.1));
+      // La isla empieza enfrente del visitante para no iniciar dentro del producto.
+      const exhibitZ = -1.25;
+      addBox(3.5, 0.92, 1.18, kitchenMaterials.wood, new THREE.Vector3(0, 0.46, exhibitZ));
+      addBox(3.76, 0.12, 1.42, kitchenMaterials.stone, new THREE.Vector3(0, 0.98, exhibitZ));
       const displayPlate = new THREE.Mesh(
         new THREE.CylinderGeometry(0.57, 0.62, 0.045, 64),
         new THREE.MeshStandardMaterial({ color: 0x173b50, metalness: 0.72, roughness: 0.2, emissive: 0x0c2432, emissiveIntensity: 0.5 })
       );
-      displayPlate.position.set(0, 1.065, 0.1);
+      displayPlate.position.set(0, 1.065, exhibitZ);
       displayPlate.castShadow = true;
       displayPlate.receiveShadow = true;
       scene.add(displayPlate);
@@ -281,26 +282,26 @@
       );
 
       const warmGlow = new THREE.PointLight(0xffbd67, 15, 5.7, 2);
-      warmGlow.position.set(0, 2.45, 0.7);
+      warmGlow.position.set(0, 2.45, exhibitZ + 0.55);
       scene.add(warmGlow);
       const accentGlow = new THREE.PointLight(0xe45267, 7, 4.5, 2);
-      accentGlow.position.set(-2.2, 2.15, -0.4);
+      accentGlow.position.set(-2.2, 2.15, exhibitZ - 0.4);
       scene.add(accentGlow);
 
       [-1.45, 1.45].forEach(x => {
         const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.08, 12), kitchenMaterials.stove);
-        cord.position.set(x, 3.93, 0.12);
+        cord.position.set(x, 3.93, exhibitZ);
         scene.add(cord);
         const pendant = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 16), kitchenMaterials.brass);
-        pendant.position.set(x, 3.35, 0.12);
+        pendant.position.set(x, 3.35, exhibitZ);
         scene.add(pendant);
         const pendantLight = new THREE.PointLight(0xffe1aa, 5.5, 4, 2);
-        pendantLight.position.set(x, 3.16, 0.12);
+        pendantLight.position.set(x, 3.16, exhibitZ);
         scene.add(pendantLight);
       });
 
       const product = new THREE.Group();
-      product.position.set(0, 1.095, 0.1);
+      product.position.set(0, 1.095, exhibitZ);
       scene.add(product);
 
       const loader = new GLTFLoader();
@@ -347,9 +348,7 @@
       const worldPoint = new THREE.Vector3();
       const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
       const hands = [renderer.xr.getHand(0), renderer.xr.getHand(1)];
-      const handModelLoader = new GLTFLoader().setPath("https://cdn.jsdelivr.net/npm/three@0.160.1/examples/models/fbx/");
-      const handModelFactory = new XRHandModelFactory(handModelLoader);
-      handModelFactory.setPath("https://cdn.jsdelivr.net/npm/three@0.160.1/examples/models/fbx/");
+      const handModelFactory = new XRHandModelFactory();
       const HAND_PINCH_DISTANCE = 0.029;
       const HAND_GRAB_DISTANCE = 0.68;
 
@@ -388,8 +387,8 @@
 
       hands.forEach(hand => {
         hand.userData.wasPinching = false;
-        // Malla Oculus realista: mantiene el seguimiento de las 25 articulaciones sin mostrar el esqueleto de esferas.
-        hand.add(handModelFactory.createHandModel(hand, "mesh"));
+        // Perfil estable para Quest Browser: las articulaciones visibles conservan interacción de pellizco fiable.
+        hand.add(handModelFactory.createHandModel(hand, "spheres"));
         scene.add(hand);
       });
 
