@@ -109,7 +109,9 @@
       import * as THREE from "three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
       import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+      import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
       import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
+      import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
       const scene = new THREE.Scene();
@@ -145,19 +147,65 @@
       key.shadow.mapSize.set(1024, 1024);
       scene.add(key);
 
+      function canvasTexture(painter, repeat = [1, 1]) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+        painter(ctx, canvas.width, canvas.height);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(...repeat);
+        texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+        return texture;
+      }
+
+      const marbleTexture = canvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#d9d4ca";
+        ctx.fillRect(0, 0, w, h);
+        for (let i = 0; i < 22; i++) {
+          ctx.beginPath();
+          ctx.strokeStyle = i % 3 ? "rgba(91,82,72,.19)" : "rgba(177,145,110,.25)";
+          ctx.lineWidth = 1 + Math.random() * 3;
+          ctx.moveTo(-30, Math.random() * h);
+          for (let x = 0; x < w + 80; x += 55) ctx.lineTo(x, Math.random() * h);
+          ctx.stroke();
+        }
+      }, [2.4, 1.15]);
+
+      const walnutTexture = canvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#4a2417";
+        ctx.fillRect(0, 0, w, h);
+        for (let y = 0; y < h; y += 7) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${110 + Math.floor(Math.random() * 45)}, ${55 + Math.floor(Math.random() * 35)}, 29, .42)`;
+          ctx.lineWidth = 1 + Math.random() * 2;
+          ctx.moveTo(0, y + Math.random() * 6);
+          for (let x = 0; x < w; x += 44) ctx.quadraticCurveTo(x + 18, y - 5 + Math.random() * 10, x + 44, y + Math.random() * 8);
+          ctx.stroke();
+        }
+      }, [2.1, 1.1]);
+
+      const tileTexture = canvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#d8d3c9";
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(72,68,61,.22)";
+        ctx.lineWidth = 4;
+        for (let x = 0; x <= w; x += 96) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = 0; y <= h; y += 96) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      }, [5, 5]);
+
       const kitchenMaterials = {
-        floor: new THREE.MeshStandardMaterial({ color: 0x17384b, roughness: 0.78, metalness: 0.08 }),
-        wall: new THREE.MeshStandardMaterial({ color: 0xd9d1c4, roughness: 0.92 }),
-        wood: new THREE.MeshStandardMaterial({ color: 0x573c2d, roughness: 0.55, metalness: 0.04 }),
-        stone: new THREE.MeshStandardMaterial({ color: 0xf0e6d8, roughness: 0.24, metalness: 0.06 }),
-        brass: new THREE.MeshStandardMaterial({ color: 0xd5a85d, roughness: 0.27, metalness: 0.72 }),
-        stove: new THREE.MeshStandardMaterial({ color: 0x12191f, roughness: 0.21, metalness: 0.68 })
+        floor: new THREE.MeshStandardMaterial({ color: 0x8b928d, map: tileTexture, roughness: 0.53, metalness: 0.08 }),
+        wall: new THREE.MeshStandardMaterial({ color: 0xe3ded4, roughness: 0.82 }),
+        wood: new THREE.MeshStandardMaterial({ color: 0xffffff, map: walnutTexture, roughness: 0.38, metalness: 0.04 }),
+        stone: new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: marbleTexture, roughness: 0.17, metalness: 0.03, clearcoat: 0.42, clearcoatRoughness: 0.18 }),
+        brass: new THREE.MeshStandardMaterial({ color: 0xe0b66d, roughness: 0.2, metalness: 0.83 }),
+        stove: new THREE.MeshPhysicalMaterial({ color: 0x141b20, roughness: 0.16, metalness: 0.78, clearcoat: 0.55, clearcoatRoughness: 0.12 })
       };
 
-      function addBox(width, height, depth, material, position, bevel = 0) {
-        const geometry = bevel
-          ? new THREE.BoxGeometry(width, height, depth, 2, 2, 2)
-          : new THREE.BoxGeometry(width, height, depth);
+      function addBox(width, height, depth, material, position, radius = 0.035) {
+        const geometry = new RoundedBoxGeometry(width, height, depth, 4, Math.min(radius, width / 6, height / 6, depth / 6));
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.copy(position);
         mesh.castShadow = true;
@@ -217,6 +265,20 @@
       displayPlate.castShadow = true;
       displayPlate.receiveShadow = true;
       scene.add(displayPlate);
+
+      // Iluminación de entorno: mejora reflejos en acero, mármol y producto. Si la red no entrega el HDRI, la cocina conserva las luces locales.
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      new RGBELoader().load(
+        "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kiara_interior_1k.hdr",
+        texture => {
+          const environment = pmremGenerator.fromEquirectangular(texture).texture;
+          scene.environment = environment;
+          texture.dispose();
+          pmremGenerator.dispose();
+        },
+        undefined,
+        () => pmremGenerator.dispose()
+      );
 
       const warmGlow = new THREE.PointLight(0xffbd67, 15, 5.7, 2);
       warmGlow.position.set(0, 2.45, 0.7);
@@ -285,7 +347,9 @@
       const worldPoint = new THREE.Vector3();
       const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
       const hands = [renderer.xr.getHand(0), renderer.xr.getHand(1)];
-      const handModelFactory = new XRHandModelFactory();
+      const handModelLoader = new GLTFLoader().setPath("https://cdn.jsdelivr.net/npm/three@0.160.1/examples/models/fbx/");
+      const handModelFactory = new XRHandModelFactory(handModelLoader);
+      handModelFactory.setPath("https://cdn.jsdelivr.net/npm/three@0.160.1/examples/models/fbx/");
       const HAND_PINCH_DISTANCE = 0.029;
       const HAND_GRAB_DISTANCE = 0.68;
 
@@ -324,7 +388,8 @@
 
       hands.forEach(hand => {
         hand.userData.wasPinching = false;
-        hand.add(handModelFactory.createHandModel(hand, "spheres"));
+        // Malla Oculus realista: mantiene el seguimiento de las 25 articulaciones sin mostrar el esqueleto de esferas.
+        hand.add(handModelFactory.createHandModel(hand, "mesh"));
         scene.add(hand);
       });
 
