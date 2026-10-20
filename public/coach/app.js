@@ -35,6 +35,10 @@ const COACH_ACTIVE_DEMO_OUTCOME_KEY = "agustin-coach-active-demo-outcome";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
+// Durante esta etapa el portal principal se concentra en ayudar al representante
+// dentro de la casa: demo, objeciones y cierre. Los demas modulos siguen
+// existiendo en el codigo y se pueden reactivar cuando toque ampliar el flujo.
+const COACH_FOCUSED_WORKSPACE_TAB = "cierre";
 const DAILY_PRIZE_DURATION_MS = 5 * 60 * 1000;
 const COACH_DEMO_STAGE_CONFIG = [
   {
@@ -380,7 +384,7 @@ function syncCoachManagerUi(user = null) {
   const statusCopy = isTelemarketing ? "CRM listo" : "Listo";
   const workspaceCopy = isTelemarketing
     ? "Portal operativo para telemarketing. Aqui trabajas tu CRM asignado y el tablero 4 en 14 sin salir del flujo."
-    : "Escoge el area donde quieres trabajar hoy. Cada pestaña usa la misma data privada del Coach.";
+    : "Por ahora el Coach esta enfocado en la demo, las objeciones y el cierre. Las demas areas siguen guardadas para reactivarlas despues.";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
   document.title = isTelemarketing ? "Telemarketing | Agustin 2.0 Coach" : "Coach Privado | Agustin 2.0 Coach";
@@ -407,7 +411,7 @@ function syncCoachManagerUi(user = null) {
 
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
-    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : false;
+    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : tabId !== COACH_FOCUSED_WORKSPACE_TAB;
   });
 
   document.querySelectorAll("[data-telemarketing-hide]").forEach(node => {
@@ -445,6 +449,14 @@ function syncCoachManagerUi(user = null) {
   document.querySelectorAll("[data-control-tower-link]").forEach(node => {
     node.hidden = isTelemarketing || !canViewControlTower;
   });
+
+  // Equipo y territorio pueden habilitarse segun el rol. Reafirmamos el modo
+  // enfocado despues de esas reglas para que no reaparezcan como pestañas.
+  if (!isTelemarketing) {
+    document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
+      node.hidden = String(node.dataset.coachWorkspaceTab || "").trim() !== COACH_FOCUSED_WORKSPACE_TAB;
+    });
+  }
 }
 
 function formatDateTime(dateString) {
