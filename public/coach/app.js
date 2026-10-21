@@ -411,7 +411,10 @@ function syncCoachManagerUi(user = null) {
 
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
-    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : tabId !== COACH_FOCUSED_WORKSPACE_TAB;
+    const focusedTabs = canManageTeam
+      ? [COACH_FOCUSED_WORKSPACE_TAB, "equipo"]
+      : [COACH_FOCUSED_WORKSPACE_TAB];
+    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : !focusedTabs.includes(tabId);
   });
 
   document.querySelectorAll("[data-telemarketing-hide]").forEach(node => {
@@ -454,7 +457,11 @@ function syncCoachManagerUi(user = null) {
   // enfocado despues de esas reglas para que no reaparezcan como pestañas.
   if (!isTelemarketing) {
     document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
-      node.hidden = String(node.dataset.coachWorkspaceTab || "").trim() !== COACH_FOCUSED_WORKSPACE_TAB;
+      const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
+      const focusedTabs = canManageTeam
+        ? [COACH_FOCUSED_WORKSPACE_TAB, "equipo"]
+        : [COACH_FOCUSED_WORKSPACE_TAB];
+      node.hidden = !focusedTabs.includes(tabId);
     });
   }
 }
