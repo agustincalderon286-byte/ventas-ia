@@ -14742,16 +14742,22 @@ function initCoachDemoRecorder() {
   }
 
   const consent = root.querySelector("[data-demo-recorder-consent]");
-  const outcome = root.querySelector("[data-demo-recorder-outcome]");
+  const outcome = document.querySelector("[data-demo-recorder-outcome]");
   const startButton = root.querySelector("[data-demo-recorder-start]");
-  const stopButton = root.querySelector("[data-demo-recorder-stop]");
-  const live = root.querySelector("[data-demo-recorder-live]");
-  const timer = root.querySelector("[data-demo-recorder-timer]");
-  const chunkStatus = root.querySelector("[data-demo-recorder-chunks]");
+  const stopButton = document.querySelector("[data-demo-recorder-stop]");
+  const recordingDock = document.querySelector("[data-demo-recording-dock]");
+  const timer = document.querySelector("[data-demo-recorder-timer]");
+  const chunkStatus = document.querySelector("[data-demo-recorder-chunks]");
   const status = root.querySelector("[data-demo-recorder-status]");
-  const currentReport = root.querySelector("[data-demo-analysis-current]");
-  const list = root.querySelector("[data-demo-analysis-list]");
-  const refreshButton = root.querySelector("[data-demo-analysis-refresh]");
+  const analysisCenter = document.querySelector("[data-demo-analysis-center]");
+  const currentReport = document.querySelector("[data-demo-analysis-current]");
+  const list = document.querySelector("[data-demo-analysis-list]");
+  const refreshButton = document.querySelector("[data-demo-analysis-refresh]");
+  const analysisNotice = document.querySelector("[data-demo-analysis-notice]");
+  const analysisNoticeTitle = document.querySelector("[data-demo-analysis-notice-title]");
+  const analysisNoticeCopy = document.querySelector("[data-demo-analysis-notice-copy]");
+  const analysisNoticeOpen = document.querySelector("[data-demo-analysis-notice-open]");
+  const analysisNoticeClose = document.querySelector("[data-demo-analysis-notice-close]");
   const state = {
     recording: false,
     processing: false,
@@ -14782,7 +14788,16 @@ function initCoachDemoRecorder() {
     stopButton.disabled = !state.recording || state.processing;
     consent.disabled = state.recording || state.processing;
     outcome.disabled = state.processing;
-    live.hidden = !state.recording;
+    recordingDock.hidden = !state.recording;
+  };
+
+  const showAnalysisNotice = ({ title, copy, analysisId = "", ready = false } = {}) => {
+    analysisNotice.hidden = false;
+    analysisNotice.dataset.analysisId = analysisId;
+    analysisNotice.dataset.state = ready ? "ready" : "processing";
+    analysisNoticeTitle.textContent = title || "Preparando tu analisis";
+    analysisNoticeCopy.textContent = copy || "Puedes continuar con el cierre mientras terminamos.";
+    analysisNoticeOpen.hidden = !ready || !analysisId;
   };
 
   const releaseWakeLock = async () => {
@@ -14978,6 +14993,10 @@ function initCoachDemoRecorder() {
     window.clearInterval(state.clockTimer);
     window.clearTimeout(state.rotateTimer);
     updateControls();
+    showAnalysisNotice({
+      title: "Preparando tu analisis",
+      copy: "Puedes continuar con el cierre. Te avisaremos cuando el reporte este listo."
+    });
     setRecorderMessage("Terminando el ultimo fragmento...", "info");
 
     try {
@@ -14992,17 +15011,28 @@ function initCoachDemoRecorder() {
         body: { knownOutcome: outcome.value || "unknown" }
       });
       currentReport.dataset.analysisId = data.analysis?.id || state.sessionId;
-      renderCoachDemoReport(currentReport, data.analysis);
+      showAnalysisNotice({
+        title: autoStopped ? "La grabacion termino a los 90 minutos" : "Tu analisis esta listo",
+        copy: state.uploadErrors.length
+          ? "El reporte esta listo, aunque un fragmento no alcanzo a subir."
+          : "Revisalo cuando hayas terminado con el cliente.",
+        analysisId: data.analysis?.id || state.sessionId,
+        ready: true
+      });
       setRecorderMessage(
         autoStopped
-          ? "Llegaste a 90 minutos. La grabacion termino y tu reporte ya esta listo."
+          ? "Llegaste a 90 minutos. El reporte quedo guardado en Mis analisis."
           : state.uploadErrors.length
-            ? "Reporte listo. Un fragmento no entro, asi que revisa la transcripcion antes de usar las recomendaciones."
-            : "Reporte listo. Ya puedes revisar tu demostracion.",
+            ? "Reporte guardado. Revisa la transcripcion porque un fragmento no entro."
+            : "Reporte guardado en Mis analisis de demostracion.",
         state.uploadErrors.length ? "info" : "success"
       );
       await loadHistory();
     } catch (error) {
+      showAnalysisNotice({
+        title: "No pudimos terminar el reporte",
+        copy: "La transcripcion se guardo. Intenta abrirla mas tarde desde Mis analisis."
+      });
       setRecorderMessage(error.message, "error");
     } finally {
       state.processing = false;
@@ -15056,6 +15086,8 @@ function initCoachDemoRecorder() {
       state.uploadedChunks = 0;
       state.uploadErrors = [];
       state.uploadQueue = Promise.resolve();
+      analysisNotice.hidden = true;
+      analysisNotice.dataset.analysisId = "";
       timer.textContent = "00:00";
       chunkStatus.textContent = "Preparando primer fragmento";
       currentReport.hidden = true;
@@ -15102,6 +15134,18 @@ function initCoachDemoRecorder() {
   startButton.addEventListener("click", startRecording);
   stopButton.addEventListener("click", () => finishRecording(false));
   refreshButton?.addEventListener("click", loadHistory);
+  analysisNoticeOpen?.addEventListener("click", async () => {
+    const id = analysisNotice.dataset.analysisId || "";
+    if (!id) {
+      return;
+    }
+    analysisNotice.hidden = true;
+    analysisCenter?.scrollIntoView({ behavior: "smooth", block: "start" });
+    await loadAnalysis(id);
+  });
+  analysisNoticeClose?.addEventListener("click", () => {
+    analysisNotice.hidden = true;
+  });
   list?.addEventListener("click", async event => {
     const openButton = event.target.closest("[data-demo-analysis-open]");
     const deleteButton = event.target.closest("[data-demo-analysis-delete]");
