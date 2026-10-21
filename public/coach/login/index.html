@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login | Agustin 2.0 Coach</title>
+    <title>Entrar | Coach de Cierre</title>
     <meta
       name="description"
-      content="Acceso privado para distribuidores con suscripción activa a Agustin 2.0 Coach."
+      content="Acceso privado al Coach de Cierre para representantes con cuenta activa."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,66 +16,131 @@
     />
     <link rel="stylesheet" href="/coach/styles.css" />
   </head>
-  <body>
-    <div class="coach-shell" data-coach-login-page>
-      <header class="coach-nav">
-        <a class="coach-brand" href="/coach/">
-          <div class="coach-brand-badge">🔐</div>
-          <div class="coach-brand-copy">
-            <h1>Agustin 2.0 Coach</h1>
-            <p>Login privado para distribuidores</p>
-          </div>
+  <body class="coach-login-body">
+    <div class="coach-login-shell" data-coach-login-page>
+      <header class="coach-login-nav">
+        <a class="coach-login-brand" href="/coach/" aria-label="Ir al inicio del Coach">
+          <span class="coach-login-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" role="img">
+              <path d="M7 23.5 4.5 27v-8.2A10.5 10.5 0 0 1 15 8.3h2A10.5 10.5 0 0 1 27.5 18.8v.2A10.5 10.5 0 0 1 17 29.5h-2a10.4 10.4 0 0 1-8-3.7" />
+              <path d="M10 20v-4m6 4v-7m6 7V10" />
+            </svg>
+          </span>
+          <span class="coach-login-brand-copy">
+            <strong>Coach de Cierre</strong>
+            <small>Entrenamiento para presentaciones</small>
+          </span>
         </a>
 
-        <nav class="coach-nav-links">
-          <a class="nav-link" href="/coach/">Inicio</a>
-          <a class="nav-link" href="/coach/planes/">Plan $30</a>
-        </nav>
+        <a class="coach-login-home-link" href="/coach/">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Volver al inicio
+        </a>
       </header>
 
-      <section class="login-layout">
-        <article class="login-panel">
-          <div class="eyebrow">Acceso privado</div>
-          <h2>Entra a tu Coach</h2>
-          <p>
-            Solo distribuidores con cuenta y suscripcion activa podran entrar al modo privado del Coach.
-          </p>
+      <main class="coach-login-layout">
+        <section class="coach-login-visual" aria-labelledby="coach-login-welcome">
+          <div class="coach-login-visual-content">
+            <span class="coach-login-kicker">Tu entrenamiento continúa</span>
+            <h1 id="coach-login-welcome">Entra preparado.<br />Cierra con confianza.</h1>
+            <p>
+              Retoma tu ruta guiada, consulta las herramientas de la demostración y avanza cada cita con claridad.
+            </p>
 
-          <div class="form-result" data-login-banner></div>
+            <div class="coach-login-route" aria-label="Ruta de la presentación">
+              <div class="coach-login-route-step is-active"><span>1</span><strong>Conecta</strong></div>
+              <div class="coach-login-route-step"><span>2</span><strong>Descubre</strong></div>
+              <div class="coach-login-route-step"><span>3</span><strong>Demuestra</strong></div>
+              <div class="coach-login-route-step"><span>4</span><strong>Cierra</strong></div>
+            </div>
+          </div>
 
-          <form class="coach-form" data-login-form>
+          <div class="coach-login-visual-note">
+            <span aria-hidden="true">✓</span>
+            <p><strong>Todo en un solo lugar</strong>Guía, herramientas y apoyo durante la presentación.</p>
+          </div>
+        </section>
+
+        <section class="coach-login-card" aria-labelledby="coach-login-title">
+          <div class="coach-login-card-head">
+            <span class="coach-login-lock" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img">
+                <rect x="5" y="10" width="14" height="10" rx="3" />
+                <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5" />
+              </svg>
+            </span>
             <div>
-              <label for="coach-email">Correo</label>
-              <input
-                id="coach-email"
-                name="email"
-                type="email"
-                placeholder="tu-correo@ejemplo.com"
-                required
-              />
+              <span class="coach-login-overline">Acceso privado</span>
+              <h2 id="coach-login-title">Bienvenido de vuelta</h2>
+            </div>
+          </div>
+
+          <p class="coach-login-intro">Usa el correo y la contraseña de tu cuenta para entrar al Coach.</p>
+
+          <div class="form-result coach-login-banner" data-login-banner></div>
+
+          <form class="coach-form coach-login-form" data-login-form>
+            <div class="coach-login-field">
+              <label for="coach-email">Correo electrónico</label>
+              <div class="coach-login-input-wrap">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="3" />
+                  <path d="m4 7 8 6 8-6" />
+                </svg>
+                <input
+                  id="coach-email"
+                  name="email"
+                  type="email"
+                  placeholder="tu-correo@ejemplo.com"
+                  autocomplete="email"
+                  required
+                />
+              </div>
             </div>
 
-            <div>
+            <div class="coach-login-field">
               <label for="coach-password">Contraseña</label>
-              <input
-                id="coach-password"
-                name="password"
-                type="password"
-                placeholder="Tu contraseña"
-                required
-              />
+              <div class="coach-login-input-wrap">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="5" y="10" width="14" height="10" rx="3" />
+                  <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" />
+                </svg>
+                <input
+                  id="coach-password"
+                  name="password"
+                  type="password"
+                  placeholder="Tu contraseña"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
             </div>
 
-            <button class="primary-button" type="submit">Entrar al Coach</button>
+            <button class="primary-button coach-login-submit" type="submit">
+              Entrar al Coach
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-5-5 5 5-5 5" />
+              </svg>
+            </button>
             <div class="form-result"></div>
           </form>
 
-          <div class="form-help">
-            Si todavia no tienes acceso, primero activa tu plan desde la pagina de suscripcion. Si ya pagaste y tu
-            cuenta esta activa, aqui mismo entras al Coach privado.
+          <div class="coach-login-help">
+            <span aria-hidden="true">i</span>
+            <p>
+              ¿Todavía no tienes acceso? <a href="/coach/planes/">Consulta los planes</a> para activar tu cuenta.
+            </p>
           </div>
-        </article>
-      </section>
+        </section>
+      </main>
+
+      <footer class="coach-login-footer">
+        <span>Acceso protegido para representantes</span>
+        <span>·</span>
+        <a href="/privacy/">Privacidad</a>
+      </footer>
     </div>
 
     <script src="/coach/app.js"></script>
