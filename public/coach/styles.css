@@ -7315,6 +7315,13 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-worksp
   display: none;
 }
 
+html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"])
+  .coach-app-body
+  .coach-workspace-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .coach-journey {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
