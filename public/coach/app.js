@@ -14573,6 +14573,570 @@ async function initLoginPage() {
   });
 }
 
+function formatCoachDemoRecordingTime(totalSeconds = 0) {
+  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds || 0)));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return hours > 0
+    ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatCoachDemoAnalysisDate(value = "") {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha pendiente";
+  }
+  return new Intl.DateTimeFormat("es-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function getCoachDemoRecorderMimeType() {
+  const candidates = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"];
+  return candidates.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+}
+
+function renderCoachDemoReport(root, analysis = null) {
+  if (!root || !analysis?.report) {
+    if (root) {
+      root.hidden = true;
+      root.innerHTML = "";
+    }
+    return;
+  }
+
+  const report = analysis.report || {};
+  const scores = report.scores || {};
+  const scoreItems = [
+    ["Conexion", scores.conexion],
+    ["Descubre", scores.descubrimiento],
+    ["Presenta", scores.presentacion],
+    ["Objeciones", scores.objeciones],
+    ["Cierre", scores.cierre]
+  ];
+  const renderSimpleList = items =>
+    Array.isArray(items) && items.length
+      ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : '<p class="mini-note">No se detectaron puntos suficientes en esta parte.</p>';
+  const strengths = Array.isArray(report.strengths) ? report.strengths : [];
+  const improvements = Array.isArray(report.improvements) ? report.improvements : [];
+  const objections = Array.isArray(report.objections) ? report.objections : [];
+  const moments = Array.isArray(report.keyMoments) ? report.keyMoments : [];
+
+  root.hidden = false;
+  root.innerHTML = `
+    <div class="coach-demo-report-header">
+      <div>
+        <div class="eyebrow">Reporte privado</div>
+        <h4>${escapeHtml(report.title || "Analisis de tu demostracion")}</h4>
+        <p>${escapeHtml(report.summary || "")}</p>
+      </div>
+      <span class="coach-demo-score-pill">${Math.max(0, Math.min(100, Number(report.overallScore || 0)))}/100</span>
+    </div>
+    <div class="coach-demo-score-grid">
+      ${scoreItems
+        .map(
+          ([label, score]) => `
+            <div>
+              <span>${escapeHtml(label)}</span>
+              <strong>${Math.max(0, Math.min(100, Number(score || 0)))}</strong>
+            </div>`
+        )
+        .join("")}
+    </div>
+    <div class="coach-demo-report-columns">
+      <section class="coach-demo-report-section">
+        <h5>Lo que hiciste bien</h5>
+        ${
+          strengths.length
+            ? `<ul>${strengths
+                .map(
+                  item =>
+                    `<li><strong>${escapeHtml(item.title || "Fortaleza")}</strong><br>${escapeHtml(
+                      item.evidence || ""
+                    )}<br><small>${escapeHtml(item.whyItMatters || "")}</small></li>`
+                )
+                .join("")}</ul>`
+            : renderSimpleList([])
+        }
+      </section>
+      <section class="coach-demo-report-section">
+        <h5>Oportunidades de mejora</h5>
+        ${
+          improvements.length
+            ? `<ul>${improvements
+                .map(
+                  item =>
+                    `<li><strong>${escapeHtml(item.title || "Oportunidad")}</strong><br>${escapeHtml(
+                      item.evidence || ""
+                    )}<br><small>${escapeHtml(item.recommendation || "")}</small></li>`
+                )
+                .join("")}</ul>`
+            : renderSimpleList([])
+        }
+      </section>
+      <section class="coach-demo-report-section">
+        <h5>Objeciones detectadas</h5>
+        ${
+          objections.length
+            ? `<ul>${objections
+                .map(
+                  item =>
+                    `<li><strong>${escapeHtml(item.objection || "Objecion")}</strong><br>${escapeHtml(
+                      item.responseAssessment || ""
+                    )}<br><small>Sugerencia: ${escapeHtml(item.suggestedResponse || "")}</small></li>`
+                )
+                .join("")}</ul>`
+            : renderSimpleList([])
+        }
+      </section>
+      <section class="coach-demo-report-section">
+        <h5>Momentos importantes</h5>
+        ${
+          moments.length
+            ? `<ol>${moments
+                .map(
+                  item =>
+                    `<li><strong>Minuto ${Math.max(0, Number(item.approxMinute || 0))}: ${escapeHtml(
+                      item.label || "Momento"
+                    )}</strong><br>${escapeHtml(item.detail || "")}</li>`
+                )
+                .join("")}</ol>`
+            : renderSimpleList([])
+        }
+      </section>
+      <section class="coach-demo-report-section">
+        <h5>Razones probables del resultado</h5>
+        ${renderSimpleList(report.probableReasons)}
+      </section>
+      <section class="coach-demo-report-section">
+        <h5>Proximos pasos</h5>
+        ${renderSimpleList(report.nextSteps)}
+      </section>
+      <section class="coach-demo-report-section coach-demo-report-section-wide">
+        <h5>Practica recomendada</h5>
+        <p>${escapeHtml(report.practiceScript || "")}</p>
+      </section>
+    </div>
+    <details class="coach-demo-transcript">
+      <summary>Ver transcripcion completa</summary>
+      <pre>${escapeHtml(analysis.transcript || "")}</pre>
+    </details>
+    <p class="mini-note">${escapeHtml(
+      report.disclaimer || "Este analisis es una herramienta de entrenamiento y puede interpretar partes de forma imperfecta."
+    )}</p>
+  `;
+  root.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function initCoachDemoRecorder() {
+  const root = document.querySelector("[data-demo-recorder]");
+  if (!root) {
+    return;
+  }
+
+  const consent = root.querySelector("[data-demo-recorder-consent]");
+  const outcome = root.querySelector("[data-demo-recorder-outcome]");
+  const startButton = root.querySelector("[data-demo-recorder-start]");
+  const stopButton = root.querySelector("[data-demo-recorder-stop]");
+  const live = root.querySelector("[data-demo-recorder-live]");
+  const timer = root.querySelector("[data-demo-recorder-timer]");
+  const chunkStatus = root.querySelector("[data-demo-recorder-chunks]");
+  const status = root.querySelector("[data-demo-recorder-status]");
+  const currentReport = root.querySelector("[data-demo-analysis-current]");
+  const list = root.querySelector("[data-demo-analysis-list]");
+  const refreshButton = root.querySelector("[data-demo-analysis-refresh]");
+  const state = {
+    recording: false,
+    processing: false,
+    rotating: false,
+    rotationPromise: null,
+    stream: null,
+    recorder: null,
+    segmentParts: [],
+    segmentStartedAt: 0,
+    segmentIndex: 0,
+    sessionId: "",
+    startedAt: 0,
+    clockTimer: null,
+    rotateTimer: null,
+    stopResolver: null,
+    uploadQueue: Promise.resolve(),
+    uploadedChunks: 0,
+    uploadErrors: [],
+    wakeLock: null
+  };
+  const SEGMENT_MS = 4 * 60 * 1000;
+  const MAX_RECORDING_MS = 90 * 60 * 1000;
+
+  const setRecorderMessage = (message, type = "info") => setMessage(status, message, type);
+
+  const updateControls = () => {
+    startButton.disabled = state.recording || state.processing || !consent.checked;
+    stopButton.disabled = !state.recording || state.processing;
+    consent.disabled = state.recording || state.processing;
+    outcome.disabled = state.processing;
+    live.hidden = !state.recording;
+  };
+
+  const releaseWakeLock = async () => {
+    if (state.wakeLock) {
+      await state.wakeLock.release().catch(() => null);
+      state.wakeLock = null;
+    }
+  };
+
+  const stopMediaTracks = () => {
+    state.stream?.getTracks?.().forEach(track => track.stop());
+    state.stream = null;
+  };
+
+  const uploadSegment = async (blob, durationSeconds, index) => {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await fetch(`/api/coach/demo-analyses/${encodeURIComponent(state.sessionId)}/chunks`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": blob.type || "audio/webm",
+            "X-Coach-Chunk-Index": String(index),
+            "X-Coach-Chunk-Duration": String(Math.max(1, Math.round(durationSeconds)))
+          },
+          body: blob
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "No pude subir un fragmento.");
+        }
+        state.uploadedChunks += 1;
+        chunkStatus.textContent = `${state.uploadedChunks} fragmento${state.uploadedChunks === 1 ? "" : "s"} protegido${
+          state.uploadedChunks === 1 ? "" : "s"
+        }`;
+        return data;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) {
+          await new Promise(resolve => window.setTimeout(resolve, attempt * 1200));
+        }
+      }
+    }
+    throw lastError || new Error("No pude subir un fragmento.");
+  };
+
+  const beginSegment = () => {
+    if (!state.recording || !state.stream) {
+      return;
+    }
+
+    const mimeType = getCoachDemoRecorderMimeType();
+    let recorder = null;
+    try {
+      recorder = new MediaRecorder(state.stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 32000
+      });
+    } catch (error) {
+      recorder = new MediaRecorder(state.stream);
+    }
+
+    state.segmentParts = [];
+    state.segmentStartedAt = Date.now();
+    state.recorder = recorder;
+    recorder.addEventListener("dataavailable", event => {
+      if (event.data?.size) {
+        state.segmentParts.push(event.data);
+      }
+    });
+    recorder.addEventListener("stop", () => {
+      const durationSeconds = Math.max(1, (Date.now() - state.segmentStartedAt) / 1000);
+      const blob = new Blob(state.segmentParts, { type: recorder.mimeType || mimeType || "audio/webm" });
+      const index = state.segmentIndex;
+      state.segmentIndex += 1;
+      if (blob.size > 0) {
+        state.uploadQueue = state.uploadQueue
+          .then(() => uploadSegment(blob, durationSeconds, index))
+          .catch(error => {
+            state.uploadErrors.push(error);
+            setRecorderMessage(
+              "Un fragmento no pudo subir. Conservare lo demas y te avisare al finalizar.",
+              "error"
+            );
+          });
+      }
+      const resolve = state.stopResolver;
+      state.stopResolver = null;
+      resolve?.();
+    });
+    recorder.start(1000);
+    state.rotateTimer = window.setTimeout(() => rotateSegment(false), SEGMENT_MS);
+  };
+
+  const rotateSegment = async finalSegment => {
+    if (state.rotating) {
+      await state.rotationPromise;
+      return;
+    }
+    if (!state.recorder || state.recorder.state === "inactive") {
+      if (!finalSegment && state.recording) {
+        beginSegment();
+      }
+      return;
+    }
+
+    state.rotating = true;
+    state.rotationPromise = (async () => {
+      window.clearTimeout(state.rotateTimer);
+      await new Promise(resolve => {
+        state.stopResolver = resolve;
+        state.recorder.stop();
+      });
+      if (!finalSegment && state.recording) {
+        beginSegment();
+      }
+    })();
+    try {
+      await state.rotationPromise;
+    } finally {
+      state.rotating = false;
+      state.rotationPromise = null;
+    }
+  };
+
+  const loadAnalysis = async id => {
+    setRecorderMessage("Abriendo tu reporte...", "info");
+    try {
+      const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(id)}`);
+      currentReport.dataset.analysisId = id;
+      renderCoachDemoReport(currentReport, data.analysis);
+      setRecorderMessage("Reporte listo.", "success");
+    } catch (error) {
+      setRecorderMessage(error.message, "error");
+    }
+  };
+
+  const renderHistory = analyses => {
+    if (!list) {
+      return;
+    }
+    if (!Array.isArray(analyses) || !analyses.length) {
+      list.innerHTML = '<p class="mini-note">Todavia no hay demostraciones analizadas.</p>';
+      return;
+    }
+    list.innerHTML = analyses
+      .map(analysis => {
+        const completed = analysis.status === "completed" && analysis.report;
+        const stateLabel = completed
+          ? `${Number(analysis.report?.overallScore || 0)}/100`
+          : analysis.status === "error"
+            ? "Pendiente"
+            : analysis.status === "processing"
+              ? "Procesando"
+              : "Grabacion";
+        return `
+          <article class="coach-demo-history-item">
+            <div>
+              <strong>${escapeHtml(analysis.report?.title || "Demostracion")}</strong>
+              <span>${escapeHtml(formatCoachDemoAnalysisDate(analysis.startedAt || analysis.createdAt))} · ${escapeHtml(
+                formatCoachDemoRecordingTime(analysis.durationSeconds)
+              )} · ${escapeHtml(analysis.knownOutcomeLabel || "Resultado pendiente")}</span>
+            </div>
+            <div class="coach-demo-history-actions">
+              <span class="coach-demo-history-state">${escapeHtml(stateLabel)}</span>
+              ${completed ? `<button type="button" data-demo-analysis-open="${escapeHtml(analysis.id)}">Abrir</button>` : ""}
+              <button type="button" data-demo-analysis-delete="${escapeHtml(analysis.id)}">Eliminar</button>
+            </div>
+          </article>`;
+      })
+      .join("");
+  };
+
+  const loadHistory = async () => {
+    try {
+      const data = await apiRequest("/api/coach/demo-analyses");
+      renderHistory(data.analyses || []);
+    } catch (error) {
+      if (list) {
+        list.innerHTML = `<p class="mini-note">${escapeHtml(error.message)}</p>`;
+      }
+    }
+  };
+
+  const finishRecording = async autoStopped => {
+    if (!state.recording || state.processing) {
+      return;
+    }
+
+    state.recording = false;
+    state.processing = true;
+    window.clearInterval(state.clockTimer);
+    window.clearTimeout(state.rotateTimer);
+    updateControls();
+    setRecorderMessage("Terminando el ultimo fragmento...", "info");
+
+    try {
+      await rotateSegment(true);
+      stopMediaTracks();
+      await releaseWakeLock();
+      setRecorderMessage("Terminando transcripcion. No cierres esta pagina...", "info");
+      await state.uploadQueue;
+      setRecorderMessage("La inteligencia artificial esta preparando tu reporte...", "info");
+      const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(state.sessionId)}/complete`, {
+        method: "POST",
+        body: { knownOutcome: outcome.value || "unknown" }
+      });
+      currentReport.dataset.analysisId = data.analysis?.id || state.sessionId;
+      renderCoachDemoReport(currentReport, data.analysis);
+      setRecorderMessage(
+        autoStopped
+          ? "Llegaste a 90 minutos. La grabacion termino y tu reporte ya esta listo."
+          : state.uploadErrors.length
+            ? "Reporte listo. Un fragmento no entro, asi que revisa la transcripcion antes de usar las recomendaciones."
+            : "Reporte listo. Ya puedes revisar tu demostracion.",
+        state.uploadErrors.length ? "info" : "success"
+      );
+      await loadHistory();
+    } catch (error) {
+      setRecorderMessage(error.message, "error");
+    } finally {
+      state.processing = false;
+      state.sessionId = "";
+      state.recorder = null;
+      updateControls();
+    }
+  };
+
+  const startRecording = async () => {
+    if (!consent.checked || state.recording || state.processing) {
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setRecorderMessage("Este navegador no permite grabar audio. Prueba Safari o Chrome actualizado.", "error");
+      return;
+    }
+
+    state.processing = true;
+    updateControls();
+    setRecorderMessage("Solicitando permiso para usar el microfono...", "info");
+
+    try {
+      state.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        },
+        video: false
+      });
+      const startedAt = new Date().toISOString();
+      const data = await apiRequest("/api/coach/demo-analyses", {
+        method: "POST",
+        body: {
+          consentConfirmed: true,
+          knownOutcome: outcome.value || "unknown",
+          startedAt
+        }
+      });
+      state.sessionId = data.analysis?.id || "";
+      if (!state.sessionId) {
+        throw new Error("No pude crear la sesion de grabacion.");
+      }
+
+      state.recording = true;
+      state.processing = false;
+      state.startedAt = Date.now();
+      state.segmentIndex = 0;
+      state.uploadedChunks = 0;
+      state.uploadErrors = [];
+      state.uploadQueue = Promise.resolve();
+      timer.textContent = "00:00";
+      chunkStatus.textContent = "Preparando primer fragmento";
+      currentReport.hidden = true;
+      currentReport.innerHTML = "";
+      if (navigator.wakeLock?.request) {
+        state.wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
+      }
+      beginSegment();
+      state.clockTimer = window.setInterval(() => {
+        const elapsedMs = Date.now() - state.startedAt;
+        timer.textContent = formatCoachDemoRecordingTime(elapsedMs / 1000);
+        if (elapsedMs >= MAX_RECORDING_MS) {
+          finishRecording(true);
+        }
+      }, 1000);
+      setRecorderMessage("Grabacion activa. Deja esta pagina abierta durante la demostracion.", "success");
+      updateControls();
+    } catch (error) {
+      state.recording = false;
+      state.processing = false;
+      stopMediaTracks();
+      await releaseWakeLock();
+      setRecorderMessage(
+        error?.name === "NotAllowedError"
+          ? "El microfono no tiene permiso. Abre la configuracion del navegador y permite el acceso."
+          : error.message,
+        "error"
+      );
+      updateControls();
+    }
+  };
+
+  consent.addEventListener("change", () => {
+    updateControls();
+    if (!state.recording && !state.processing) {
+      setRecorderMessage(
+        consent.checked
+          ? "Listo. Presiona Iniciar grabacion cuando comience la demostracion."
+          : "Activa el consentimiento para comenzar. Maximo 90 minutos.",
+        "info"
+      );
+    }
+  });
+  startButton.addEventListener("click", startRecording);
+  stopButton.addEventListener("click", () => finishRecording(false));
+  refreshButton?.addEventListener("click", loadHistory);
+  list?.addEventListener("click", async event => {
+    const openButton = event.target.closest("[data-demo-analysis-open]");
+    const deleteButton = event.target.closest("[data-demo-analysis-delete]");
+    if (openButton) {
+      await loadAnalysis(openButton.dataset.demoAnalysisOpen || "");
+      return;
+    }
+    if (deleteButton) {
+      const id = deleteButton.dataset.demoAnalysisDelete || "";
+      if (!id || !window.confirm("Quieres eliminar permanentemente esta transcripcion y su reporte?")) {
+        return;
+      }
+      try {
+        await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (currentReport.dataset.analysisId === id) {
+          renderCoachDemoReport(currentReport, null);
+        }
+        await loadHistory();
+        setRecorderMessage("Analisis eliminado.", "success");
+      } catch (error) {
+        setRecorderMessage(error.message, "error");
+      }
+    }
+  });
+  window.addEventListener("beforeunload", event => {
+    if (state.recording || state.processing) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+
+  updateControls();
+  loadHistory();
+}
+
 async function initCoachAppPage() {
   const appPage = document.querySelector("[data-coach-app-page]");
 
@@ -14684,6 +15248,7 @@ async function initCoachAppPage() {
     initBuyerProfileTool();
     initDailyPrizeTool();
     initCoachDemoOutcomeWorkspace(me.user);
+    initCoachDemoRecorder();
   }
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");

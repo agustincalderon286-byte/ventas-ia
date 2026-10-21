@@ -40,7 +40,7 @@ app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=()");
   next();
 });
 app.use(
@@ -71,6 +71,13 @@ const PRIVATE_COACH_PRICE_LIST_FILE = path.join(
   PRIVATE_COACH_RESOURCES_DIR,
   "royal-prestige-alianza-prices-2026.pdf"
 );
+const COACH_DEMO_TRANSCRIPTION_MODEL = String(
+  process.env.COACH_DEMO_TRANSCRIPTION_MODEL || "gpt-transcribe"
+).trim();
+const COACH_DEMO_ANALYSIS_MODEL = String(process.env.COACH_DEMO_ANALYSIS_MODEL || "gpt-6-luna").trim();
+const COACH_DEMO_MAX_SECONDS = 90 * 60;
+const COACH_DEMO_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
+const COACH_DEMO_MAX_CHUNKS = 30;
 
 const conversaciones = {};
 const estadosConversacion = {};
@@ -1173,6 +1180,51 @@ const coachPrivateResourceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const coachDemoAnalysisChunkSchema = new mongoose.Schema(
+  {
+    index: { type: Number, required: true },
+    durationSeconds: { type: Number, default: 0 },
+    mimeType: String,
+    sizeBytes: { type: Number, default: 0 },
+    status: { type: String, default: "transcribed" },
+    text: String,
+    languages: [String],
+    error: String,
+    uploadedAt: Date,
+    transcribedAt: Date
+  },
+  { _id: false }
+);
+
+const coachDemoAnalysisSchema = new mongoose.Schema({
+  ownerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CoachUser",
+    required: true,
+    index: true
+  },
+  ownerEmail: { type: String, index: true },
+  ownerName: String,
+  status: { type: String, default: "recording", index: true },
+  consentConfirmed: { type: Boolean, default: false },
+  knownOutcome: { type: String, default: "unknown" },
+  startedAt: Date,
+  stoppedAt: Date,
+  durationSeconds: { type: Number, default: 0 },
+  chunkCount: { type: Number, default: 0 },
+  chunks: [coachDemoAnalysisChunkSchema],
+  transcript: String,
+  report: { type: mongoose.Schema.Types.Mixed, default: null },
+  transcriptionModel: String,
+  analysisModel: String,
+  error: String,
+  analyzedAt: Date,
+  updatedAt: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+coachDemoAnalysisSchema.index({ ownerUserId: 1, createdAt: -1 });
+
 const coachDemoOutcomeSchema = new mongoose.Schema({
   ownerUserId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -2232,6 +2284,8 @@ const CoachRecruitmentApplication =
   mongoose.model("CoachRecruitmentApplication", coachRecruitmentApplicationSchema);
 const CoachPrivateResource =
   mongoose.models.CoachPrivateResource || mongoose.model("CoachPrivateResource", coachPrivateResourceSchema);
+const CoachDemoAnalysis =
+  mongoose.models.CoachDemoAnalysis || mongoose.model("CoachDemoAnalysis", coachDemoAnalysisSchema);
 const CoachDemoOutcome =
   mongoose.models.CoachDemoOutcome || mongoose.model("CoachDemoOutcome", coachDemoOutcomeSchema);
 const CoachTerritory = mongoose.models.CoachTerritory || mongoose.model("CoachTerritory", coachTerritorySchema);
@@ -12225,6 +12279,286 @@ function limpiarCoachDemoOutcome(outcomeDoc = null, options = {}) {
     createdAt: outcomeDoc.createdAt || null,
     updatedAt: outcomeDoc.updatedAt || null
   };
+}
+
+function normalizarCoachDemoKnownOutcome(value = "") {
+  const safeValue = String(value || "")
+    .trim()
+    .toLowerCase();
+  return ["unknown", "sale", "follow_up", "no_sale"].includes(safeValue) ? safeValue : "unknown";
+}
+
+function formatearCoachDemoKnownOutcome(value = "") {
+  const labels = {
+    unknown: "Todavia no definido",
+    sale: "Venta",
+    follow_up: "Seguimiento",
+    no_sale: "No venta"
+  };
+  return labels[normalizarCoachDemoKnownOutcome(value)] || labels.unknown;
+}
+
+function limpiarCoachDemoAnalysis(doc = null, options = {}) {
+  if (!doc?._id) {
+    return null;
+  }
+
+  const includeDetail = Boolean(options.includeDetail);
+  const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
+  const completedChunks = chunks.filter(chunk => chunk?.status === "transcribed" && chunk?.text).length;
+
+  return {
+    id: String(doc._id),
+    status: doc.status || "recording",
+    knownOutcome: normalizarCoachDemoKnownOutcome(doc.knownOutcome || "unknown"),
+    knownOutcomeLabel: formatearCoachDemoKnownOutcome(doc.knownOutcome || "unknown"),
+    startedAt: doc.startedAt || null,
+    stoppedAt: doc.stoppedAt || null,
+    durationSeconds: Math.max(0, Math.round(Number(doc.durationSeconds || 0))),
+    chunkCount: Number(doc.chunkCount || chunks.length || 0),
+    completedChunks,
+    report: includeDetail ? doc.report || null : doc.report
+      ? {
+          title: doc.report.title || "Analisis de demostracion",
+          summary: doc.report.summary || "",
+          overallScore: Number(doc.report.overallScore || 0)
+        }
+      : null,
+    transcript: includeDetail ? doc.transcript || "" : "",
+    chunks: includeDetail
+      ? chunks
+          .slice()
+          .sort((a, b) => Number(a.index || 0) - Number(b.index || 0))
+          .map(chunk => ({
+            index: Number(chunk.index || 0),
+            durationSeconds: Math.max(0, Math.round(Number(chunk.durationSeconds || 0))),
+            status: chunk.status || "",
+            text: chunk.text || "",
+            error: chunk.error || ""
+          }))
+      : [],
+    error: includeDetail ? doc.error || "" : "",
+    analyzedAt: doc.analyzedAt || null,
+    createdAt: doc.createdAt || null,
+    updatedAt: doc.updatedAt || null
+  };
+}
+
+function extraerCoachDemoResponseText(data = null) {
+  if (typeof data?.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  const output = Array.isArray(data?.output) ? data.output : [];
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const part of content) {
+      if (part?.type === "output_text" && typeof part.text === "string" && part.text.trim()) {
+        return part.text.trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+async function transcribirCoachDemoChunk(buffer, options = {}) {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("La clave de OpenAI no esta configurada en el servidor.");
+  }
+
+  const mimeType = String(options.mimeType || "audio/webm").split(";")[0] || "audio/webm";
+  const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("wav") ? "wav" : "webm";
+  const form = new FormData();
+  form.append("file", new Blob([buffer], { type: mimeType }), `demo-segmento-${options.index || 0}.${extension}`);
+  form.append("model", COACH_DEMO_TRANSCRIPTION_MODEL);
+  form.append(
+    "prompt",
+    "Demostracion de ventas en espanol de Royal Prestige. Vocabulario esperado: Royal Prestige, Innove, Novel, " +
+      "4 en 14, demostracion, utensilios, ollas, sartenes, cuchillos, filtro de agua, pago inicial, mensualidad, " +
+      "referencias, objeciones y cierre. Transcribe fielmente sin inventar contenido."
+  );
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: form
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = data?.error?.message || data?.message || `OpenAI respondio ${response.status}.`;
+    throw new Error(detail);
+  }
+
+  return {
+    text: String(data?.text || "").trim(),
+    languages: Array.isArray(data?.languages)
+      ? data.languages.map(item => String(item?.code || item || "").trim()).filter(Boolean).slice(0, 4)
+      : []
+  };
+}
+
+const COACH_DEMO_REPORT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "title",
+    "summary",
+    "outcomeAssessment",
+    "outcomeConfidence",
+    "overallScore",
+    "scores",
+    "strengths",
+    "improvements",
+    "objections",
+    "keyMoments",
+    "probableReasons",
+    "nextSteps",
+    "practiceScript",
+    "disclaimer"
+  ],
+  properties: {
+    title: { type: "string" },
+    summary: { type: "string" },
+    outcomeAssessment: { type: "string", enum: ["venta", "seguimiento", "no_venta", "incierto"] },
+    outcomeConfidence: { type: "integer" },
+    overallScore: { type: "integer" },
+    scores: {
+      type: "object",
+      additionalProperties: false,
+      required: ["conexion", "descubrimiento", "presentacion", "objeciones", "cierre"],
+      properties: {
+        conexion: { type: "integer" },
+        descubrimiento: { type: "integer" },
+        presentacion: { type: "integer" },
+        objeciones: { type: "integer" },
+        cierre: { type: "integer" }
+      }
+    },
+    strengths: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title", "evidence", "whyItMatters"],
+        properties: {
+          title: { type: "string" },
+          evidence: { type: "string" },
+          whyItMatters: { type: "string" }
+        }
+      }
+    },
+    improvements: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title", "evidence", "recommendation"],
+        properties: {
+          title: { type: "string" },
+          evidence: { type: "string" },
+          recommendation: { type: "string" }
+        }
+      }
+    },
+    objections: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["objection", "responseAssessment", "suggestedResponse"],
+        properties: {
+          objection: { type: "string" },
+          responseAssessment: { type: "string" },
+          suggestedResponse: { type: "string" }
+        }
+      }
+    },
+    keyMoments: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["approxMinute", "label", "detail"],
+        properties: {
+          approxMinute: { type: "integer" },
+          label: { type: "string" },
+          detail: { type: "string" }
+        }
+      }
+    },
+    probableReasons: { type: "array", items: { type: "string" } },
+    nextSteps: { type: "array", items: { type: "string" } },
+    practiceScript: { type: "string" },
+    disclaimer: { type: "string" }
+  }
+};
+
+async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "unknown" } = {}) {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("La clave de OpenAI no esta configurada en el servidor.");
+  }
+
+  const outcomeLabel = formatearCoachDemoKnownOutcome(knownOutcome);
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: COACH_DEMO_ANALYSIS_MODEL,
+      input: [
+        {
+          role: "system",
+          content:
+            "Eres un coach de ventas experto en demostraciones presenciales de Royal Prestige para representantes " +
+            "hispanohablantes. Evalua solo lo que aparece en la transcripcion. Separa hechos de inferencias, no " +
+            "inventes quien dijo una frase si no es claro y cita evidencia con parafrasis breves. Tu meta es ayudar " +
+            "al representante a mejorar conexion, descubrimiento de necesidades, demostracion de valor, manejo de " +
+            "objeciones y cierre. Responde en espanol claro, directo, respetuoso y accionable."
+        },
+        {
+          role: "user",
+          content:
+            `Resultado indicado por el representante: ${outcomeLabel}.\n\n` +
+            "Analiza la demostracion completa. Explica las razones probables del resultado, que hizo bien, que debe " +
+            "mejorar y que puede practicar antes de la proxima cita. Los marcadores de minuto son aproximados.\n\n" +
+            `TRANSCRIPCION:\n${transcript}`
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "coach_demo_report",
+          strict: true,
+          schema: COACH_DEMO_REPORT_SCHEMA
+        }
+      }
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = data?.error?.message || data?.message || `OpenAI respondio ${response.status}.`;
+    throw new Error(detail);
+  }
+
+  const rawText = extraerCoachDemoResponseText(data);
+  if (!rawText) {
+    throw new Error("OpenAI no devolvio el reporte estructurado.");
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    throw new Error("El reporte de OpenAI no llego en el formato esperado.");
+  }
 }
 
 async function obtenerCoachDemoOutcomeSummary(match = {}) {
@@ -31328,6 +31662,326 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
   }
 });
 
+app.get("/api/coach/demo-analyses", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const docs = await CoachDemoAnalysis.find({ ownerUserId: auth.user._id })
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean();
+
+    res.json({
+      analyses: docs.map(doc => limpiarCoachDemoAnalysis(doc)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error cargando analisis de demostraciones:", error.message);
+    responderCoachError(res, 500, "No pude cargar tus analisis de demostraciones.");
+  }
+});
+
+app.get("/api/coach/demo-analyses/:id", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(req.params?.id || "")) {
+    return responderCoachError(res, 404, "Ese analisis no existe.");
+  }
+
+  try {
+    const doc = await CoachDemoAnalysis.findOne({
+      _id: req.params.id,
+      ownerUserId: auth.user._id
+    }).lean();
+
+    if (!doc) {
+      return responderCoachError(res, 404, "Ese analisis no existe.");
+    }
+
+    res.json({ analysis: limpiarCoachDemoAnalysis(doc, { includeDetail: true }) });
+  } catch (error) {
+    console.error("Error abriendo analisis de demostracion:", error.message);
+    responderCoachError(res, 500, "No pude abrir ese analisis.");
+  }
+});
+
+app.post("/api/coach/demo-analyses", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (req.body?.consentConfirmed !== true) {
+    return responderCoachError(res, 400, "Confirma el consentimiento antes de grabar.");
+  }
+
+  try {
+    const now = new Date();
+    const requestedStart = new Date(req.body?.startedAt || now);
+    const startedAt = Number.isFinite(requestedStart.getTime()) ? requestedStart : now;
+    const doc = await CoachDemoAnalysis.create({
+      ownerUserId: auth.user._id,
+      ownerEmail: auth.user.email || "",
+      ownerName: auth.user.name || "",
+      status: "recording",
+      consentConfirmed: true,
+      knownOutcome: normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || "unknown"),
+      startedAt,
+      durationSeconds: 0,
+      chunkCount: 0,
+      chunks: [],
+      transcriptionModel: COACH_DEMO_TRANSCRIPTION_MODEL,
+      analysisModel: COACH_DEMO_ANALYSIS_MODEL,
+      updatedAt: now,
+      createdAt: now
+    });
+
+    res.status(201).json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
+  } catch (error) {
+    console.error("Error iniciando analisis de demostracion:", error.message);
+    responderCoachError(res, 500, "No pude iniciar la grabacion en este momento.");
+  }
+});
+
+app.post(
+  "/api/coach/demo-analyses/:id/chunks",
+  express.raw({ type: ["audio/*", "video/webm", "application/octet-stream"], limit: "8mb" }),
+  async (req, res) => {
+    const auth = await requireCoachActivo(req, res);
+
+    if (!auth) {
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params?.id || "")) {
+      return responderCoachError(res, 404, "Esa grabacion no existe.");
+    }
+
+    const index = Number.parseInt(req.headers["x-coach-chunk-index"] || req.query?.index || "", 10);
+    const durationSeconds = Math.max(
+      1,
+      Math.min(6 * 60, Math.round(Number(req.headers["x-coach-chunk-duration"] || req.query?.durationSeconds || 0)))
+    );
+    const mimeType = String(req.headers["content-type"] || "audio/webm").split(";")[0].toLowerCase();
+    const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+
+    if (!Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS) {
+      return responderCoachError(res, 400, "El numero de fragmento no es valido.");
+    }
+
+    if (!buffer.length) {
+      return responderCoachError(res, 400, "El fragmento de audio llego vacio.");
+    }
+
+    if (buffer.length > COACH_DEMO_MAX_CHUNK_BYTES) {
+      return responderCoachError(res, 413, "Ese fragmento de audio es demasiado pesado.");
+    }
+
+    try {
+      const doc = await CoachDemoAnalysis.findOne({
+        _id: req.params.id,
+        ownerUserId: auth.user._id
+      });
+
+      if (!doc) {
+        return responderCoachError(res, 404, "Esa grabacion no existe.");
+      }
+
+      if (doc.status !== "recording") {
+        return responderCoachError(res, 409, "Esa grabacion ya termino.");
+      }
+
+      const previousChunk = doc.chunks.find(chunk => Number(chunk.index) === index);
+      if (previousChunk?.status === "transcribed" && previousChunk?.text) {
+        return res.json({
+          ok: true,
+          duplicate: true,
+          chunk: {
+            index,
+            durationSeconds: previousChunk.durationSeconds || durationSeconds,
+            status: previousChunk.status
+          }
+        });
+      }
+
+      const otherDuration = doc.chunks
+        .filter(chunk => Number(chunk.index) !== index)
+        .reduce((total, chunk) => total + Math.max(0, Number(chunk.durationSeconds || 0)), 0);
+      if (otherDuration + durationSeconds > COACH_DEMO_MAX_SECONDS + 15) {
+        return responderCoachError(res, 400, "La demostracion llego al limite de 90 minutos.");
+      }
+
+      const now = new Date();
+      try {
+        const transcription = await transcribirCoachDemoChunk(buffer, { index, mimeType });
+        doc.chunks = doc.chunks.filter(chunk => Number(chunk.index) !== index);
+        doc.chunks.push({
+          index,
+          durationSeconds,
+          mimeType,
+          sizeBytes: buffer.length,
+          status: "transcribed",
+          text: transcription.text,
+          languages: transcription.languages,
+          error: "",
+          uploadedAt: now,
+          transcribedAt: new Date()
+        });
+        doc.durationSeconds = otherDuration + durationSeconds;
+        doc.chunkCount = doc.chunks.length;
+        doc.error = "";
+        doc.updatedAt = new Date();
+        await doc.save();
+
+        return res.json({
+          ok: true,
+          chunk: {
+            index,
+            durationSeconds,
+            status: "transcribed",
+            characters: transcription.text.length
+          }
+        });
+      } catch (error) {
+        doc.chunks = doc.chunks.filter(chunk => Number(chunk.index) !== index);
+        doc.chunks.push({
+          index,
+          durationSeconds,
+          mimeType,
+          sizeBytes: buffer.length,
+          status: "error",
+          text: "",
+          languages: [],
+          error: truncarTextoPrompt(error.message || "No pude transcribir este fragmento.", 320),
+          uploadedAt: now
+        });
+        doc.chunkCount = doc.chunks.length;
+        doc.error = truncarTextoPrompt(error.message || "No pude transcribir un fragmento.", 320);
+        doc.updatedAt = new Date();
+        await doc.save();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error transcribiendo fragmento de demostracion:", error.message);
+      responderCoachError(res, error.status || 502, "No pude transcribir un fragmento. Puedes intentar finalizar otra vez.");
+    }
+  }
+);
+
+app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(req.params?.id || "")) {
+    return responderCoachError(res, 404, "Esa grabacion no existe.");
+  }
+
+  let doc = null;
+  try {
+    doc = await CoachDemoAnalysis.findOne({
+      _id: req.params.id,
+      ownerUserId: auth.user._id
+    });
+
+    if (!doc) {
+      return responderCoachError(res, 404, "Esa grabacion no existe.");
+    }
+
+    if (doc.status === "completed" && doc.report) {
+      return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
+    }
+
+    const successfulChunks = doc.chunks
+      .filter(chunk => chunk?.status === "transcribed" && String(chunk?.text || "").trim())
+      .sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
+
+    if (!successfulChunks.length) {
+      return responderCoachError(res, 400, "Todavia no hay audio transcrito para analizar.");
+    }
+
+    let elapsedSeconds = 0;
+    const transcript = successfulChunks
+      .map(chunk => {
+        const startMinute = Math.floor(elapsedSeconds / 60);
+        elapsedSeconds += Math.max(1, Number(chunk.durationSeconds || 0));
+        const endMinute = Math.max(startMinute + 1, Math.ceil(elapsedSeconds / 60));
+        return `[Minutos aproximados ${startMinute}-${endMinute}]\n${String(chunk.text || "").trim()}`;
+      })
+      .join("\n\n")
+      .trim();
+
+    if (transcript.length < 40) {
+      return responderCoachError(res, 400, "La grabacion tiene muy poco dialogo para generar un analisis util.");
+    }
+
+    doc.status = "processing";
+    doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
+    doc.stoppedAt = new Date();
+    doc.durationSeconds = Math.min(COACH_DEMO_MAX_SECONDS, elapsedSeconds);
+    doc.transcript = transcript;
+    doc.error = "";
+    doc.updatedAt = new Date();
+    await doc.save();
+
+    const report = await analizarCoachDemoTranscript({
+      transcript,
+      knownOutcome: doc.knownOutcome
+    });
+
+    doc.status = "completed";
+    doc.report = report;
+    doc.analysisModel = COACH_DEMO_ANALYSIS_MODEL;
+    doc.analyzedAt = new Date();
+    doc.updatedAt = new Date();
+    await doc.save();
+
+    res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
+  } catch (error) {
+    console.error("Error completando analisis de demostracion:", error.message);
+    if (doc?._id) {
+      doc.status = "error";
+      doc.error = truncarTextoPrompt(error.message || "No pude generar el analisis.", 400);
+      doc.updatedAt = new Date();
+      await doc.save().catch(() => null);
+    }
+    responderCoachError(res, error.status || 502, "La transcripcion se guardo, pero no pude generar el reporte todavia.");
+  }
+});
+
+app.delete("/api/coach/demo-analyses/:id", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(req.params?.id || "")) {
+    return responderCoachError(res, 404, "Ese analisis no existe.");
+  }
+
+  try {
+    const deleted = await CoachDemoAnalysis.findOneAndDelete({
+      _id: req.params.id,
+      ownerUserId: auth.user._id
+    });
+    res.json({ deleted: Boolean(deleted) });
+  } catch (error) {
+    console.error("Error eliminando analisis de demostracion:", error.message);
+    responderCoachError(res, 500, "No pude eliminar ese analisis.");
+  }
+});
+
 app.get("/api/coach/demo-outcomes", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -33751,6 +34405,7 @@ if (process.env.NODE_ENV !== "test") {
 
 export {
   construirImagenProductoCatalogoCoach,
+  analizarCoachDemoTranscript,
   construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
@@ -33759,6 +34414,9 @@ export {
   detectarEnvioDatosContacto,
   extraerLeadInfo,
   limpiarCoachAgendaRecord,
+  extraerCoachDemoResponseText,
+  formatearCoachDemoKnownOutcome,
+  normalizarCoachDemoKnownOutcome,
   parseCoachProgram414ImportedSheets,
   parseCoachLeadNextActionAt,
   resolverCoachCrmStatusDesdeDemoOutcome,

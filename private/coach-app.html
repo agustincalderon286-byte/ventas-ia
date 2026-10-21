@@ -1359,6 +1359,91 @@
               </figure>
             </div>
 
+            <section class="coach-demo-recorder" data-demo-recorder>
+              <div class="coach-demo-recorder-head">
+                <div>
+                  <div class="eyebrow">Piloto · Coach con inteligencia artificial</div>
+                  <h4>Graba y analiza tu demostracion</h4>
+                  <p>
+                    El Coach transcribe la conversacion por fragmentos y al terminar te entrega fortalezas,
+                    objeciones, oportunidades y una practica concreta para tu proxima cita.
+                  </p>
+                </div>
+                <span class="coach-demo-recorder-badge">Privado</span>
+              </div>
+
+              <div class="coach-demo-recorder-grid">
+                <div class="coach-demo-recorder-controls">
+                  <label class="coach-demo-consent">
+                    <input type="checkbox" data-demo-recorder-consent />
+                    <span>
+                      Confirmo que avise a las personas presentes y que aceptaron la grabacion para entrenamiento.
+                    </span>
+                  </label>
+
+                  <label class="native-lead-field coach-demo-outcome-field">
+                    <span>Resultado de esta demo</span>
+                    <select data-demo-recorder-outcome>
+                      <option value="unknown">Todavia no definido</option>
+                      <option value="sale">Venta</option>
+                      <option value="follow_up">Seguimiento</option>
+                      <option value="no_sale">No venta</option>
+                    </select>
+                  </label>
+
+                  <div class="coach-demo-recorder-actions">
+                    <button type="button" class="primary-button" data-demo-recorder-start disabled>
+                      Iniciar grabacion
+                    </button>
+                    <button type="button" class="coach-demo-stop" data-demo-recorder-stop disabled>
+                      Finalizar y analizar
+                    </button>
+                  </div>
+
+                  <div class="coach-demo-recorder-live" data-demo-recorder-live hidden>
+                    <span class="coach-demo-live-dot" aria-hidden="true"></span>
+                    <strong>Grabando</strong>
+                    <time data-demo-recorder-timer>00:00</time>
+                    <span data-demo-recorder-chunks>Preparando primer fragmento</span>
+                  </div>
+
+                  <div class="form-result coach-demo-recorder-status" data-demo-recorder-status>
+                    Activa el consentimiento para comenzar. Maximo 90 minutos.
+                  </div>
+                  <p class="mini-note">
+                    En este piloto el audio se usa para transcribir y no se guarda despues del procesamiento. La
+                    transcripcion y el reporte quedan privados en tu cuenta.
+                  </p>
+                </div>
+
+                <aside class="coach-demo-recorder-guide">
+                  <strong>Que revisara el Coach</strong>
+                  <ul>
+                    <li>Conexion y preguntas de descubrimiento</li>
+                    <li>Presentacion de valor y necesidades</li>
+                    <li>Objeciones y respuestas</li>
+                    <li>Momento y claridad del cierre</li>
+                    <li>Razones probables del resultado</li>
+                  </ul>
+                </aside>
+              </div>
+
+              <div class="coach-demo-analysis-current" data-demo-analysis-current hidden></div>
+
+              <div class="coach-demo-analysis-history">
+                <div class="coach-demo-analysis-history-head">
+                  <div>
+                    <strong>Analisis recientes</strong>
+                    <span>Solo aparecen los de esta cuenta.</span>
+                  </div>
+                  <button type="button" class="nav-button" data-demo-analysis-refresh>Actualizar</button>
+                </div>
+                <div class="coach-demo-analysis-list" data-demo-analysis-list>
+                  <p class="mini-note">Todavia no hay demostraciones analizadas.</p>
+                </div>
+              </div>
+            </section>
+
             <div class="resource-stack">
               <section class="resource-item">
                 <div class="resource-copy">
