@@ -934,6 +934,12 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
     box-shadow 180ms ease;
 }
 
+/* Los botones inactivos usan el atributo hidden desde el Coach. Este estilo
+   garantiza que la regla visual de la pestaña no vuelva a mostrarlos. */
+.coach-workspace-tab[hidden] {
+  display: none !important;
+}
+
 .coach-workspace-tab:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.16);
