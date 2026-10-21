@@ -23980,30 +23980,163 @@ function obtenerPrecioBaseCatalogo(item = {}) {
 }
 
 const COACH_CATALOG_IMAGE_BASE = "/coach/assets/catalog/innove";
+const COACH_CATALOG_PRODUCT_IMAGE_BASE = `${COACH_CATALOG_IMAGE_BASE}/products`;
+const COACH_CATALOG_PRODUCT_IMAGES = {
+  CO9600: ["tapa-pequena", 8, "Tapa pequena"],
+  CO9605: ["tapa-mediana", 8, "Tapa mediana"],
+  CO9560: ["olla-3-cuartos", 9, "Olla de 3 cuartos"],
+  CO9570: ["olla-6-cuartos", 9, "Olla de 6 cuartos"],
+  CO9610: ["tapa-grande", 9, "Tapa grande"],
+  CO9590: ["sarten-10-5-pulgadas", 9, "Sarten de 10.5 pulgadas"],
+  CO9550: ["olla-1-5-cuartos", 8, "Olla de 1 1/2 cuartos"],
+  CO9580: ["sarten-8-pulgadas", 8, "Sarten de 8 pulgadas"],
+  CO9565: ["olla-4-cuartos", 8, "Olla de 4 cuartos"],
+  CO9555: ["olla-2-cuartos", 8, "Olla de 2 cuartos"],
+  CO9575: ["olla-8-cuartos", 7, "Olla de 8 cuartos"],
+  CO9620: ["tapa-alta", 6, "Tapa alta"],
+  CO9615: ["colador-pequeno", 11, "Colador pequeno"],
+  CO9076: ["colador-pequeno", 11, "Colador pequeno INNOVE"],
+  CO9080: ["colador-grande", 11, "Colador grande INNOVE"],
+  CO9736: ["easy-release-8", 12, "Sarten Easy Release de 8 pulgadas"],
+  CO9738: ["easy-release-10", 12, "Sarten Easy Release de 10 pulgadas"],
+  CO9739: ["easy-release-12", 12, "Sarten Easy Release de 12 pulgadas"],
+  SP0098: ["easy-release-utensilios", 12, "Utensilios de silicona"],
+  CO9777: ["easy-release-olla-2", 13, "Olla Easy Release de 2 cuartos"],
+  CO9778: ["easy-release-olla-3", 13, "Olla Easy Release de 3 cuartos"],
+  CO9779: ["easy-release-olla-3-5", 13, "Sarten profundo Easy Release de 10.5 pulgadas"],
+  CO9660: ["olla-12-cuartos", 16, "Olla de 12 cuartos"],
+  CO9675: ["olla-20-cuartos", 16, "Olla de 20 cuartos"],
+  CO9267: ["olla-12-cuartos", 16, "Olla de 12 cuartos y parrilla"],
+  CO9268: ["olla-20-cuartos", 16, "Olla de 20 cuartos y parrilla"],
+  CO9269: ["olla-30-cuartos", 16, "Olla de 30 cuartos y parrilla"],
+  CO9630: ["sarten-gourmet-8", 10, "Sarten Gourmet de 8 pulgadas"],
+  CO9640: ["sarten-gourmet-10", 10, "Sarten Gourmet de 10 pulgadas"],
+  CO9650: ["sarten-gourmet-12", 10, "Sarten Gourmet de 12 pulgadas"],
+  CO9232: ["sarten-gourmet-10", 10, "Sarten INNOVE de 10 pulgadas"],
+  CO9234: ["sarten-gourmet-12", 10, "Sarten INNOVE de 12 pulgadas"],
+  CO1253: ["olla-presion-6", 15, "Olla de presion de 6 litros"],
+  CO1258: ["olla-presion-10", 15, "Olla de presion de 10 litros"],
+  CO9598: ["paellera-14", 20, "Paellera de 14 pulgadas"],
+  CO9315: ["paellera-14", 20, "Paellera de 14 pulgadas INNOVE"],
+  CO9317: ["paellera-10", 20, "Paellera de 10 pulgadas INNOVE"],
+  CO8072: ["paellera-10", 20, "Paellera de 10 pulgadas"],
+  CO8070: ["paellera-14", 20, "Paellera de 14 pulgadas"],
+  PR2124: ["cacerola", 20, "Cacerola Royal Prestige"],
+  CO9220: ["plancha-sencilla", 19, "Plancha sencilla"],
+  CO9687: ["plancha-sencilla", 19, "Plancha sencilla de 5 capas"],
+  CO9219: ["plancha-redonda", 19, "Plancha redonda"],
+  CO9686: ["plancha-redonda", 19, "Plancha redonda de 5 capas"],
+  CO9218: ["plancha-doble", 19, "Plancha doble"],
+  CO9685: ["plancha-doble", 19, "Plancha doble de 5 capas"],
+  PR0025: ["perfect-pop", 21, "Royal Prestige Perfect Pop"],
+  PR2685: ["hervidor-1", 21, "Hervidor de 1 cuarto"],
+  PR2675: ["hervidor-medio", 21, "Hervidor de medio cuarto"],
+  SP0305: ["base-magnetica", 22, "Base magnetica para ollas"],
+  ES0082: ["power-blender-max", 24, "Power Blender Max"],
+  PE0050: ["jarra-tritan", 24, "Jarra de Tritan"],
+  PE0051: ["maxcup", 24, "Royal Prestige MaxCup"],
+  PE0040: ["fresh-max", 24, "Royal Prestige Fresh Max"],
+  ES4200: ["power-blender-go", 25, "Power Blender Go"],
+  PE0029: ["blender-go-batidor-cepillo", 25, "Batidor y cepillo"],
+  PE0028: ["blender-go-taza-picadora", 25, "Taza y picadora"],
+  JU0038: ["extractor-jugos", 26, "Extractor de jugos"],
+  PR1460: ["coladores-extractor", 26, "Coladores para extractor"],
+  PR1459: ["exprimidor-jugos", 26, "Exprimidor de jugos"],
+  CU0056: ["bloque-cuchillos", 30, "Bloque de madera para cuchillos"],
+  CU0740: ["cuchillos-churrasco", 31, "Cuchillos para churrasco"],
+  CU0800: ["cuchillos-cocina-5", 30, "Juego de cuchillos de cocina de 5 piezas"],
+  CU0815: ["cuchillos-trinchar-4", 30, "Juego de trinchar de 4 piezas"],
+  CU0820: ["cuchillos-carne-4", 30, "Cuchillos para carne de 4 piezas"],
+  CU0810: ["cuchillo-pelar", 31, "Cuchillo para pelar"],
+  CU0825: ["hacha-cocina", 31, "Hacha de cocina"],
+  SP0297: ["santoku-3", 31, "Cuchillo Santoku de 3.5 pulgadas"],
+  SP0296: ["santoku-5", 32, "Cuchillo Santoku de 5 pulgadas"],
+  CU814: ["cuchillo-multiusos", 32, "Cuchillo multiusos"],
+  CU0148: ["santoku-damascus", 31, "Cuchillo Santoku Damascus"],
+  PR1841: ["afilador", 32, "Afilador Royal Prestige"],
+  PR0008: ["tabla-bambu", 32, "Tabla de bambu"],
+  PR0021: ["tabla-bambu-pequena", 32, "Tabla de bambu pequena"],
+  CO1001: ["expertea", 35, "Royal Prestige ExperTea"],
+  PR2128: ["espresso-4", 35, "Royal Espresso de 4 tazas"],
+  PR2129: ["espresso-10", 35, "Royal Espresso de 10 tazas"],
+  CO0101: ["chocolatera", 36, "Royal Prestige Chocolatera"],
+  SP0136: ["tazas-pared-doble", 36, "Tazas con pared doble"],
+  SP0261: ["azucarera-jarro", 36, "Azucarera y jarro para leche"],
+  CR2679: ["copas-vino", 38, "Copas para vino Gala"],
+  CR1670: ["vasos-agua", 38, "Vasos London para agua"],
+  CR2672: ["vasos-cortos", 38, "Vasos cortos London"],
+  SP2137: ["vasos-tequileros", 38, "Vasos tequileros"],
+  CO4900: ["tazones-completos", 40, "Juego de tazones para mezclar y rallar"],
+  SP0066: ["tazon-mezclar-10", 43, "Tazon para mezclar de 10 cuartos"],
+  SP0262: ["tazones-dos", 40, "Juego de dos tazones para mezclar"],
+  PR4902: ["tazones-tres", 40, "Juego de tres tazones para mezclar"],
+  SP0068: ["tazon-5-pared-doble", 43, "Tazon de 5 cuartos con pared doble"],
+  SP1860: ["pelador-vertical", 43, "Pelador vertical"],
+  SP1854: ["pelador", 43, "Pelador"],
+  SP1850: ["destapador", 43, "Destapador"],
+  SP1852: ["espatula", 43, "Espatula"],
+  SP1856: ["cortapizza", 43, "Cortapizza"],
+  SP1867: ["machacador", 43, "Machacador"],
+  SP1851: ["rallador", 43, "Rallador"],
+  SP1859: ["espatula-helados", 43, "Espatula para helados"],
+  SP1861: ["espatula-silicona", 43, "Espatula de silicona"],
+  SP1853: ["batidor-globo", 43, "Batidor de globo"],
+  PR0196: ["utensilios-cocina-6", 44, "Juego de utensilios de cocina de 6 piezas"],
+  SP0145: ["recipiente-utensilios", 44, "Recipiente para utensilios"],
+  SP0113: ["recipientes-almacenar", 44, "Recipientes para almacenar"],
+  SP0254: ["copas-helado", 45, "Copas para helado"],
+  WF0419: ["frescapure-5500", 48, "FrescaPure 5500"],
+  WF0485: ["frescapure-5500", 48, "FrescaPure 5500 bajo el mostrador"],
+  WF0451: ["frescapure-3500", 48, "FrescaPure 3500"],
+  WF0500: ["frescapure-5500", 48, "Filtro FP4500/FP5500"],
+  WF0530: ["frescapure-5500", 48, "FrescaPure 5500 bajo el mostrador"],
+  WF0654: ["cartucho-frescapure", 48, "Cartucho FrescaPure"],
+  RP6161: ["frescapure-5500", 48, "Kit debajo del mostrador"],
+  RP6196: ["frescapure-3500", 48, "Valvula de desvio simple"],
+  RP1686: ["frescapure-3500", 48, "Valvula de desvio doble"],
+  RP0140: ["cartucho-frescapure", 48, "Cartuchos para filtro"],
+  PR0333: ["filtro-ducha", 49, "Filtro para ducha"],
+  AP2801: ["filtro-aire", 49, "Filtro de aire"],
+  WF0075: ["filtro-ducha", 49, "Cartuchos para ducha"],
+  WF0080: ["filtro-ducha", 49, "Cartuchos para ducha"],
+  AP2704: ["filtro-aire", 49, "Cartucho Pure Ambience"]
+};
+
+const COACH_CATALOG_PRODUCT_NAME_RULES = [
+  {
+    patron: /^olla de 3 cuartos$/,
+    producto: ["olla-3-cuartos", 9, "Olla de 3 cuartos"]
+  },
+  {
+    patron: /^olla de 2 cuartos$/,
+    producto: ["olla-2-cuartos", 8, "Olla de 2 cuartos"]
+  }
+];
+
 const COACH_CATALOG_IMAGE_RULES = [
   {
     pagina: 6,
     titulo: "Sistema de Cocina Familiar de 10 Piezas",
     codigos: ["CO9883", "CO9261", "CO7044"],
-    patron: /(?:10 piezas|sistema.*familiar)/
+    patron: /(?:(?:sistema|set).*\b10 piezas\b|\b10 piezas\b.*(?:sistema|familiar))/
   },
   {
     pagina: 7,
     titulo: "Sistema de Cocina Especial de 8 Piezas",
     codigos: ["CO9573", "CO9256", "CO7034"],
-    patron: /(?:8 piezas|sistema.*especial)/
+    patron: /(?:(?:sistema|set).*\b8 piezas\b|\b8 piezas\b.*(?:sistema|especial))/
   },
   {
     pagina: 8,
     titulo: "Sistema de Cocina Clasico de 7 Piezas",
     codigos: ["CO9563", "CO9251", "CO7024"],
-    patron: /(?:7 piezas|sistema.*clasico)/
+    patron: /(?:(?:sistema|set).*\b7 piezas\b|\b7 piezas\b.*(?:sistema|clasico))/
   },
   {
     pagina: 9,
     titulo: "Sistema de Cocina Complementario de 5 Piezas",
     codigos: ["CO9893", "CO9846", "CO7014"],
-    patron: /(?:5 piezas|sistema.*complementario)/
+    patron: /(?:(?:sistema|set).*\b5 piezas\b|\b5 piezas\b.*(?:sistema|complementario))/
   },
   {
     pagina: 10,
@@ -24214,18 +24347,26 @@ const COACH_CATALOG_IMAGE_RULES = [
 function construirImagenProductoCatalogoCoach(codigo = "", nombre = "") {
   const codigoNormalizado = String(codigo || "").trim().toUpperCase();
   const nombreNormalizado = normalizarTextoBusquedaCoach(nombre);
-  const regla = COACH_CATALOG_IMAGE_RULES.find(item => {
-    if (codigoNormalizado && item.codigos.includes(codigoNormalizado)) {
-      return true;
-    }
-
-    return Boolean(nombreNormalizado && item.patron.test(nombreNormalizado));
-  });
-  const pagina = regla?.pagina || 4;
-  const titulo = regla?.titulo || "Sistemas de Cocina INNOVE";
+  const productoPorNombre = nombreNormalizado
+    ? COACH_CATALOG_PRODUCT_NAME_RULES.find(item => item.patron.test(nombreNormalizado))?.producto
+    : null;
+  const productoPorCodigo = codigoNormalizado ? COACH_CATALOG_PRODUCT_IMAGES[codigoNormalizado] : null;
+  const producto = productoPorNombre || productoPorCodigo;
+  const reglaPorCodigo = codigoNormalizado
+    ? COACH_CATALOG_IMAGE_RULES.find(item => item.codigos.includes(codigoNormalizado))
+    : null;
+  const reglaPorNombre = nombreNormalizado
+    ? COACH_CATALOG_IMAGE_RULES.find(item => item.patron.test(nombreNormalizado))
+    : null;
+  const regla = reglaPorCodigo || reglaPorNombre;
+  const pagina = producto?.[1] || regla?.pagina || 4;
+  const titulo = producto?.[2] || regla?.titulo || "Sistemas de Cocina INNOVE";
+  const imagen = producto
+    ? `${COACH_CATALOG_PRODUCT_IMAGE_BASE}/${producto[0]}.webp`
+    : `${COACH_CATALOG_IMAGE_BASE}/catalogo-innove-pagina-${String(pagina).padStart(2, "0")}.webp`;
 
   return {
-    imagen_producto: `${COACH_CATALOG_IMAGE_BASE}/catalogo-innove-pagina-${String(pagina).padStart(2, "0")}.webp`,
+    imagen_producto: imagen,
     imagen_producto_alt: `${titulo} en el catalogo Royal Prestige INNOVE`,
     catalogo_pagina: pagina,
     catalogo_titulo: titulo

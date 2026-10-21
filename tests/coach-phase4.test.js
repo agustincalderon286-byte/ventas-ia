@@ -27,9 +27,41 @@ test("asocia productos de la calculadora con su imagen del catalogo INNOVE", () 
   assert.equal(sistema.catalogo_pagina, 6);
   assert.match(sistema.imagen_producto, /pagina-06\.webp$/);
   assert.equal(licuadora.catalogo_pagina, 24);
-  assert.match(licuadora.imagen_producto, /pagina-24\.webp$/);
+  assert.match(licuadora.imagen_producto, /products\/power-blender-max\.webp$/);
   assert.equal(filtro.catalogo_pagina, 48);
-  assert.match(filtro.imagen_producto, /pagina-48\.webp$/);
+  assert.match(filtro.imagen_producto, /products\/frescapure-3500\.webp$/);
+});
+
+test("distingue el juego de cuchillos de 5 piezas del sistema de cocina", () => {
+  const cuchillos = construirImagenProductoCatalogoCoach("CU0800", "JUEGO DE CUCHILLOS DE 5 PIEZAS");
+  const sistemaCinco = construirImagenProductoCatalogoCoach(
+    "CO9893",
+    "5 PIEZAS SISTEMA DE COSINA COMPLEMENTARIO"
+  );
+  const sistemaQuince = construirImagenProductoCatalogoCoach(
+    "CO9554",
+    "15 PIEZAS SISTEMA DE COSINA VERSATIL"
+  );
+
+  assert.equal(cuchillos.catalogo_pagina, 30);
+  assert.match(cuchillos.imagen_producto, /products\/cuchillos-cocina-5\.webp$/);
+  assert.equal(sistemaCinco.catalogo_pagina, 9);
+  assert.match(sistemaCinco.imagen_producto, /pagina-09\.webp$/);
+  assert.notEqual(sistemaQuince.catalogo_pagina, 9);
+});
+
+test("muestra una imagen especifica y distinta para cada tamano de olla", () => {
+  const ollas = [
+    ["CO9550", "OLLA DE 1 1/2 CUARTOS"],
+    ["CO9555", "OLLA DE 2 CUARTOS"],
+    ["CO9555", "OLLA DE 3 CUARTOS"],
+    ["CO9565", "OLLA DE 4 CUARTOS"],
+    ["CO9570", "OLLA DE 6 CUARTOS"],
+    ["CO9575", "OLLA DE 8 CUARTOS"]
+  ].map(([codigo, nombre]) => construirImagenProductoCatalogoCoach(codigo, nombre));
+
+  assert.equal(new Set(ollas.map(item => item.imagen_producto)).size, ollas.length);
+  assert.ok(ollas.every(item => item.imagen_producto.includes("/products/olla-")));
 });
 
 test("todos los productos con precio reciben una imagen publica disponible", () => {
