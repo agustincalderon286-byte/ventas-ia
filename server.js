@@ -33569,6 +33569,16 @@ app.use(AR_PROTOTYPE_PATH_PREFIX, (req, res, next) => {
   return res.status(401).type("html").send(renderArPrototypeLockPage(req));
 });
 
+app.get("/", (req, res, next) => {
+  const hostname = String(req.hostname || "").trim().toLowerCase();
+
+  if (hostname === "totalelitecoaching.com" || hostname === "www.totalelitecoaching.com") {
+    return res.redirect(302, "/coach/login/");
+  }
+
+  return next();
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 // =============================
