@@ -1203,6 +1203,14 @@ function createOrderCalcProductCard(index) {
         <div class="order-calc-product-total" data-order-calc-gross>$0.00</div>
       </div>
 
+      <figure class="order-calc-product-visual" data-order-calc-visual hidden>
+        <img data-order-calc-visual-image src="" alt="" loading="lazy" />
+        <figcaption>
+          <strong data-order-calc-visual-title>Producto Royal Prestige</strong>
+          <span data-order-calc-visual-meta>Imagen del catalogo INNOVE</span>
+        </figcaption>
+      </figure>
+
       <div class="order-calc-grid">
         <label class="order-calc-field order-calc-field-name">
           <span>Nombre del producto</span>
@@ -1315,8 +1323,46 @@ function initOrderCalculator() {
     nameInput: card.querySelector("[data-order-calc-name]"),
     priceInput: card.querySelector("[data-order-calc-price]"),
     matchNode: card.querySelector("[data-order-calc-match]"),
-    suggestionsNode: card.querySelector("[data-order-calc-suggestions]")
+    suggestionsNode: card.querySelector("[data-order-calc-suggestions]"),
+    visualNode: card.querySelector("[data-order-calc-visual]"),
+    visualImage: card.querySelector("[data-order-calc-visual-image]"),
+    visualTitle: card.querySelector("[data-order-calc-visual-title]"),
+    visualMeta: card.querySelector("[data-order-calc-visual-meta]")
   });
+
+  const clearCatalogVisual = card => {
+    const { visualNode, visualImage } = getProductNodes(card);
+
+    if (visualImage) {
+      visualImage.removeAttribute("src");
+      visualImage.alt = "";
+    }
+
+    if (visualNode) {
+      visualNode.hidden = true;
+    }
+  };
+
+  const renderCatalogVisual = (card, match) => {
+    const { visualNode, visualImage, visualTitle, visualMeta } = getProductNodes(card);
+    const imageUrl = String(match?.imagen_producto || "").trim();
+
+    if (!visualNode || !visualImage || !imageUrl) {
+      clearCatalogVisual(card);
+      return;
+    }
+
+    visualImage.src = imageUrl;
+    visualImage.alt = String(match?.imagen_producto_alt || `Imagen de ${match?.nombre_producto || "producto Royal Prestige"}`);
+    if (visualTitle) {
+      visualTitle.textContent = String(match?.nombre_producto || match?.catalogo_titulo || "Producto Royal Prestige");
+    }
+    if (visualMeta) {
+      const pageCopy = Number(match?.catalogo_pagina) > 0 ? `Pagina ${match.catalogo_pagina}` : "Catalogo INNOVE";
+      visualMeta.textContent = `${match?.codigo_producto || "Royal Prestige"} · ${pageCopy}`;
+    }
+    visualNode.hidden = false;
+  };
 
   const setMatchMessage = (card, message = "", tone = "") => {
     const { matchNode } = getProductNodes(card);
@@ -1368,6 +1414,7 @@ function initOrderCalculator() {
 
     card.dataset.orderCalcCatalogCode = String(match.codigo_producto || "").trim();
     card.dataset.orderCalcCatalogName = String(match.nombre_producto || "").trim();
+    renderCatalogVisual(card, match);
 
     setMatchMessage(
       card,
@@ -1409,20 +1456,28 @@ function initOrderCalculator() {
     }
 
     suggestionsNode.innerHTML = matches
-      .map(
-        (match, index) => `
+      .map((match, index) => {
+        const imageUrl = String(match.imagen_producto || "").trim();
+        const imageMarkup = imageUrl
+          ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy" />`
+          : `<span class="order-calc-suggestion-placeholder" aria-hidden="true">RP</span>`;
+
+        return `
           <button
             type="button"
             class="order-calc-suggestion${index === 0 ? " is-top" : ""}"
             data-order-calc-suggestion="${escapeHtml(match.codigo_producto || match.nombre_producto || "")}"
           >
-            <strong>${escapeHtml(match.nombre_producto || "Producto sin nombre")}</strong>
-            <span>${escapeHtml(match.codigo_producto || "Sin codigo")} · Base ${escapeHtml(
-              formatMoney(Number(match.precio_base_catalogo) || 0)
-            )}</span>
+            <span class="order-calc-suggestion-media">${imageMarkup}</span>
+            <span class="order-calc-suggestion-copy">
+              <strong>${escapeHtml(match.nombre_producto || "Producto sin nombre")}</strong>
+              <span>${escapeHtml(match.codigo_producto || "Sin codigo")} · Base ${escapeHtml(
+                formatMoney(Number(match.precio_base_catalogo) || 0)
+              )}</span>
+            </span>
           </button>
-        `
-      )
+        `;
+      })
       .join("");
     suggestionsNode.hidden = false;
     suggestionsNode._matches = matches;
@@ -1711,6 +1766,7 @@ function initOrderCalculator() {
       nameInput.dataset.orderCalcSource = "manual";
       delete card.dataset.orderCalcCatalogCode;
       delete card.dataset.orderCalcCatalogName;
+      clearCatalogVisual(card);
       window.clearTimeout(nameInput._lookupTimer);
       const query = String(nameInput.value || "").trim();
 

@@ -23979,6 +23979,259 @@ function obtenerPrecioBaseCatalogo(item = {}) {
   return Number.isFinite(precio) ? precio : null;
 }
 
+const COACH_CATALOG_IMAGE_BASE = "/coach/assets/catalog/innove";
+const COACH_CATALOG_IMAGE_RULES = [
+  {
+    pagina: 6,
+    titulo: "Sistema de Cocina Familiar de 10 Piezas",
+    codigos: ["CO9883", "CO9261", "CO7044"],
+    patron: /(?:10 piezas|sistema.*familiar)/
+  },
+  {
+    pagina: 7,
+    titulo: "Sistema de Cocina Especial de 8 Piezas",
+    codigos: ["CO9573", "CO9256", "CO7034"],
+    patron: /(?:8 piezas|sistema.*especial)/
+  },
+  {
+    pagina: 8,
+    titulo: "Sistema de Cocina Clasico de 7 Piezas",
+    codigos: ["CO9563", "CO9251", "CO7024"],
+    patron: /(?:7 piezas|sistema.*clasico)/
+  },
+  {
+    pagina: 9,
+    titulo: "Sistema de Cocina Complementario de 5 Piezas",
+    codigos: ["CO9893", "CO9846", "CO7014"],
+    patron: /(?:5 piezas|sistema.*complementario)/
+  },
+  {
+    pagina: 10,
+    titulo: "Sartenes Gourmet",
+    codigos: ["CO9655", "CO9630", "CO9640", "CO9650", "CO9265", "CO9232", "CO9234"],
+    patron: /sarten(?:es)? gourmet/
+  },
+  {
+    pagina: 11,
+    titulo: "Coladores INNOVE",
+    codigos: ["CO9615", "CO9076", "CO9080"],
+    patron: /colador/
+  },
+  {
+    pagina: 12,
+    titulo: "Sartenes Deluxe Easy Release",
+    codigos: ["CO9740", "CO9736", "CO9738", "CO9739"],
+    patron: /(?:sartenes?.*easy release|easy release (?:8|10|12))/
+  },
+  {
+    pagina: 13,
+    titulo: "Linea Deluxe Easy Release",
+    codigos: ["CO9780", "CO9777", "CO9778", "CO9779"],
+    patron: /(?:cookware easy release|olla.*\ber\b)/
+  },
+  {
+    pagina: 14,
+    titulo: "Royal Prestige MultiPan",
+    codigos: ["CO4911"],
+    patron: /multipan/
+  },
+  {
+    pagina: 15,
+    titulo: "Ollas de Presion",
+    codigos: ["CO1253", "CO1258"],
+    patron: /olla de presion/
+  },
+  {
+    pagina: 17,
+    titulo: "Olla de 60 Cuartos",
+    codigos: ["CO9144"],
+    patron: /60 cuartos/
+  },
+  {
+    pagina: 16,
+    titulo: "Ollas Grandes y Parrilla",
+    codigos: ["CO9660", "CO9675", "CO9690", "CO9267", "CO9268", "CO9269"],
+    patron: /(?:olla de (?:12|20|30) cuartos|parrilla.*(?:20|30) cuartos)/
+  },
+  {
+    pagina: 18,
+    titulo: "Pavera Ovalada",
+    codigos: ["CO6589"],
+    patron: /pavera/
+  },
+  {
+    pagina: 19,
+    titulo: "Planchas INNOVE",
+    codigos: ["CO9220", "CO9219", "CO9218", "CO9687", "CO9686", "CO9685"],
+    patron: /(?:plancha|comal)/
+  },
+  {
+    pagina: 20,
+    titulo: "Paelleras y Cacerolas",
+    codigos: ["CO9598", "CO9315", "CO9317", "CO8072", "CO8070", "PR2124"],
+    patron: /(?:paellera|cacerola)/
+  },
+  {
+    pagina: 21,
+    titulo: "Perfect Pop y Hervidores",
+    codigos: ["PR0025", "PR2685", "PR2675"],
+    patron: /(?:perfect pop|perfetc pop|hervidor)/
+  },
+  {
+    pagina: 22,
+    titulo: "Accesorios para tus Ollas",
+    codigos: ["SP0305"],
+    patron: /(?:smart temp|royal shine|base magnetica)/
+  },
+  {
+    pagina: 24,
+    titulo: "Power Blender Max",
+    codigos: ["ES0082", "PE0050", "PE0051", "PE0040"],
+    patron: /(?:power blender max|jarra de tritan|maxcup|fresh max)/
+  },
+  {
+    pagina: 25,
+    titulo: "Power Blender Go",
+    codigos: ["ES4200", "PE0029", "PE0028"],
+    patron: /(?:power blender go|batidor y cepillo|taza y picadora)/
+  },
+  {
+    pagina: 26,
+    titulo: "Extractor de Jugos Royal Prestige",
+    codigos: ["JU0038", "PR1460", "PR1459"],
+    patron: /(?:extractor|juicer|exprimidor de jugos)/
+  },
+  {
+    pagina: 27,
+    titulo: "Precision Cook",
+    codigos: ["ES0071"],
+    patron: /precision cook/
+  },
+  {
+    pagina: 29,
+    titulo: "All-In-One Knife Block",
+    codigos: ["CU0931", "CU0056"],
+    patron: /(?:juego completo de cuchillos|bloque de bambu)/
+  },
+  {
+    pagina: 30,
+    titulo: "Juegos de Cuchillos Royal Prestige",
+    codigos: ["CU0800", "CU0815", "CU0820"],
+    patron: /(?:juego de cuchillos|juego de 4 piezas para rebanar|cuchillos para carne)/
+  },
+  {
+    pagina: 31,
+    titulo: "Cuchillos Individuales Royal Prestige",
+    codigos: ["CU0810", "CU0825", "SP0297", "SP0296", "CU814", "CU0148"],
+    patron: /(?:cuchillo|santoku|hacha de cosina)/
+  },
+  {
+    pagina: 32,
+    titulo: "Tablas de Bambu y Afilador",
+    codigos: ["PR1841", "PR0008", "PR0021"],
+    patron: /(?:afilador|tabla de bambu)/
+  },
+  {
+    pagina: 34,
+    titulo: "Royal Prestige Barista",
+    codigos: ["CO2106", "PR2134"],
+    patron: /barista/
+  },
+  {
+    pagina: 35,
+    titulo: "ExperTea y Royal Espresso",
+    codigos: ["CO1001", "PR2128", "PR2129"],
+    patron: /(?:expertea|royal espresso)/
+  },
+  {
+    pagina: 36,
+    titulo: "Cafe, Te y Chocolate",
+    codigos: ["CO0101", "SP0136", "SP0261"],
+    patron: /(?:chocolatera|pared doble|azucarera|jarro para leche)/
+  },
+  {
+    pagina: 38,
+    titulo: "Cristaleria Royal Prestige",
+    codigos: ["CR2679", "CR1670", "CR2672", "SP2137"],
+    patron: /(?:copas para vino|vasos para agua|vasos cortos|vasos tequileros)/
+  },
+  {
+    pagina: 40,
+    titulo: "Tazones para Mezclar y Rallar",
+    codigos: ["CO4900", "SP0066", "SP0262", "PR4902", "SP0068"],
+    patron: /(?:tazon|tazones).*(?:mezclar|rallar)/
+  },
+  {
+    pagina: 41,
+    titulo: "Royal Prestige Salad Machine",
+    codigos: ["PR2614"],
+    patron: /(?:salad machine|maquina para ensaladas)/
+  },
+  {
+    pagina: 42,
+    titulo: "Royal Prestige Warmer Pro",
+    codigos: ["PE4000"],
+    patron: /warmer pro/
+  },
+  {
+    pagina: 43,
+    titulo: "Accesorios de Cocina Precision Series 3",
+    codigos: ["SP1860", "SP1854", "SP1850", "SP1852", "SP1856", "SP1867", "SP1851", "SP1859", "SP1861", "SP1853"],
+    patron: /(?:pelador|destapador|espatula|corta pizzas|cortapizza|machacador|rallador|batidor de globo|accesorios de cosina precision)/
+  },
+  {
+    pagina: 44,
+    titulo: "Utensilios y Recipientes de Cocina",
+    codigos: ["PR0196", "SP0145", "SP0113", "SP0098"],
+    patron: /(?:utensilio|utenzilio|recipiente)/
+  },
+  {
+    pagina: 45,
+    titulo: "Cubiertos y Copas para Helado",
+    codigos: ["SP0254"],
+    patron: /(?:cubiertos|copas para helado)/
+  },
+  {
+    pagina: 47,
+    titulo: "Royal Prestige FrescaFlow",
+    codigos: ["WF1200", "PR2002", "PR2003", "PR2004", "WF0060"],
+    patron: /(?:frescaflow|osmosis inversa|prefiltro)/
+  },
+  {
+    pagina: 48,
+    titulo: "FrescaPure 3500 y 5500",
+    codigos: ["WF0419", "WF0485", "WF0451", "WF0500", "WF0530", "WF0654", "RP6161", "RP6196", "RP1686", "RP0140"],
+    patron: /(?:frescapure|fp3500|fp4500|fp5500|cartuchos? para el filtro|valvula de desvio|kit debajo)/
+  },
+  {
+    pagina: 49,
+    titulo: "Filtro para Ducha y Filtracion de Aire",
+    codigos: ["PR0333", "AP2801", "WF0075", "WF0080", "AP2704"],
+    patron: /(?:filtro para la ducha|filtro de aire|cartuchos? de ducha|pure ambience)/
+  }
+];
+
+function construirImagenProductoCatalogoCoach(codigo = "", nombre = "") {
+  const codigoNormalizado = String(codigo || "").trim().toUpperCase();
+  const nombreNormalizado = normalizarTextoBusquedaCoach(nombre);
+  const regla = COACH_CATALOG_IMAGE_RULES.find(item => {
+    if (codigoNormalizado && item.codigos.includes(codigoNormalizado)) {
+      return true;
+    }
+
+    return Boolean(nombreNormalizado && item.patron.test(nombreNormalizado));
+  });
+  const pagina = regla?.pagina || 4;
+  const titulo = regla?.titulo || "Sistemas de Cocina INNOVE";
+
+  return {
+    imagen_producto: `${COACH_CATALOG_IMAGE_BASE}/catalogo-innove-pagina-${String(pagina).padStart(2, "0")}.webp`,
+    imagen_producto_alt: `${titulo} en el catalogo Royal Prestige INNOVE`,
+    catalogo_pagina: pagina,
+    catalogo_titulo: titulo
+  };
+}
+
 function construirPreciosRelevantesCoach(pregunta = "") {
   if (!Array.isArray(preciosCatalogo) || !preciosCatalogo.length) {
     return {
@@ -24148,12 +24401,14 @@ function construirPreciosRelevantesCoach(pregunta = "") {
     .slice(0, 5)
     .map(item => {
       const calculo = calcularPagoCoach(item.precio);
+      const imagenCatalogo = construirImagenProductoCatalogoCoach(item.codigo, item.nombre);
       return {
         codigo_producto: item.codigo,
         nombre_producto: item.nombre,
         precio_base_catalogo: item.precio,
         total_estimado_coach: calculo.total,
-        mensualidad_estimada_coach: calculo.mensualidad
+        mensualidad_estimada_coach: calculo.mensualidad,
+        ...imagenCatalogo
       };
     });
 
@@ -33350,6 +33605,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export {
+  construirImagenProductoCatalogoCoach,
   construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,

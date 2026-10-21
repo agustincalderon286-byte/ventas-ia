@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
 import mongoose from "mongoose";
 
 process.env.NODE_ENV = "test";
 
 const {
+  construirImagenProductoCatalogoCoach,
   construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,
@@ -16,6 +18,37 @@ const {
   parseCoachProgram414ImportedSheets,
   resolverCoachCrmStatusDesdeDemoOutcome
 } = await import("../server.js");
+
+test("asocia productos de la calculadora con su imagen del catalogo INNOVE", () => {
+  const sistema = construirImagenProductoCatalogoCoach("CO9261", "SET DE 10 PIEZAS FAMILIAR INNOVE");
+  const licuadora = construirImagenProductoCatalogoCoach("ES0082", "POWER BLENDER MAX");
+  const filtro = construirImagenProductoCatalogoCoach("WF0451", "FRESCAPURE 3500");
+
+  assert.equal(sistema.catalogo_pagina, 6);
+  assert.match(sistema.imagen_producto, /pagina-06\.webp$/);
+  assert.equal(licuadora.catalogo_pagina, 24);
+  assert.match(licuadora.imagen_producto, /pagina-24\.webp$/);
+  assert.equal(filtro.catalogo_pagina, 48);
+  assert.match(filtro.imagen_producto, /pagina-48\.webp$/);
+});
+
+test("todos los productos con precio reciben una imagen publica disponible", () => {
+  const priceList = JSON.parse(
+    readFileSync(new URL("../src/data/lista_de_precios.json", import.meta.url), "utf8")
+  );
+
+  assert.ok(priceList.length > 100);
+
+  for (const item of priceList) {
+    const image = construirImagenProductoCatalogoCoach(
+      item["Codigo Del Producto"],
+      item["Nombre Del Producto NOVEL"]
+    );
+    const imageFile = new URL(`../public${image.imagen_producto}`, import.meta.url);
+
+    assert.ok(existsSync(imageFile), `${item["Nombre Del Producto NOVEL"]} no tiene imagen`);
+  }
+});
 
 test("calcula inicio y vencimiento automatico de 4 en 14 desde la fecha de inicio", () => {
   const startWindow = construirCoachProgram414StartWindow({
