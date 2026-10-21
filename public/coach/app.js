@@ -176,22 +176,15 @@ const COACH_CRM_STATUS_LABELS = {
   no_venta: "No venta"
 };
 const COACH_PLAN_CONFIG = {
-  trial: {
-    name: "Prueba gratis de 7 dias",
-    copy: "Empiezas sin tarjeta. Si despues quieres seguir, activas tu plan de pago.",
-    signupLabel: "Crear cuenta y empezar gratis",
-    memberLabel: "Empezar prueba gratis",
-    memberCopy: "Tu cuenta ya existe. Puedes arrancar tu prueba gratis de 7 dias sin tarjeta."
-  },
   monthly: {
-    name: "Plan mensual de $30",
-    copy: "Acceso privado completo por 30 dolares al mes para usar el Coach de forma continua.",
+    name: "Plan mensual de $50",
+    copy: "Acceso privado completo por 50 dolares al mes para usar el Coach de forma continua.",
     signupLabel: "Crear cuenta y continuar al mensual",
     memberLabel: "Continuar con plan mensual",
     memberCopy: "Tu cuenta ya existe. Solo falta abrir el plan mensual para activar tu Coach."
   },
   annual: {
-    name: "Plan anual de $300",
+    name: "Plan anual de $500",
     copy: "Acceso completo por 12 meses. Ahorras 2 meses al pagar anual.",
     signupLabel: "Crear cuenta y continuar al anual",
     memberLabel: "Continuar con plan anual",
@@ -14764,7 +14757,7 @@ async function initPlanPage() {
   const me = await fetchViewer();
   const user = me.user || null;
   updateAuthTargets(user);
-  let selectedPlan = user && !user.trialEligible ? "monthly" : "trial";
+  let selectedPlan = "monthly";
 
   function getPlanConfig(plan) {
     return COACH_PLAN_CONFIG[plan] || COACH_PLAN_CONFIG.monthly;
@@ -14799,28 +14792,17 @@ async function initPlanPage() {
 
     planCards.forEach(card => {
       card.classList.toggle("is-selected", card.dataset.plan === selectedPlan);
-      card.classList.toggle("is-disabled", card.dataset.plan === "trial" && Boolean(user) && !user.trialEligible);
     });
 
     planSelectButtons.forEach(button => {
-      const isTrialDisabled = button.dataset.planSelect === "trial" && Boolean(user) && !user.trialEligible;
-      button.disabled = isTrialDisabled;
-
-      if (isTrialDisabled) {
-        button.textContent = "Prueba ya utilizada";
-      } else {
-        button.textContent = button.dataset.defaultLabel || button.textContent;
-      }
+      button.disabled = false;
+      button.textContent = button.dataset.defaultLabel || button.textContent;
     });
   }
 
   planSelectButtons.forEach(button => {
     button.addEventListener("click", () => {
       const plan = button.dataset.planSelect || "monthly";
-
-      if (plan === "trial" && user && !user.trialEligible) {
-        return;
-      }
 
       selectedPlan = plan;
       syncPlanUi();

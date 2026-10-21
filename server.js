@@ -86,8 +86,10 @@ const contextosCoachSesion = {};
 const ENABLE_VECTOR_SEARCH = String(process.env.ENABLE_VECTOR_SEARCH || "").toLowerCase() === "true";
 const REDIS_URL = String(process.env.REDIS_URL || "").trim();
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
-const STRIPE_PRICE_ID_MONTHLY = process.env.STRIPE_PRICE_ID || "";
-const STRIPE_PRICE_ID_ANNUAL = process.env.STRIPE_PRICE_ID_ANNUAL || "";
+const STRIPE_PRICE_ID_MONTHLY = String(
+  process.env.STRIPE_PRICE_ID_MONTHLY || process.env.STRIPE_PRICE_ID || ""
+).trim();
+const STRIPE_PRICE_ID_ANNUAL = String(process.env.STRIPE_PRICE_ID_ANNUAL || "").trim();
 const COACH_SESSION_COOKIE = "agustin_coach_session";
 const COACH_RETURN_SESSION_COOKIE = "agustin_coach_session_return";
 const COACH_SESSION_DAYS = 30;
@@ -100,7 +102,6 @@ const COACH_LOGIN_ATTEMPTS = new Map();
 const METALWORKS_PUBLIC_RATE_WINDOW_MS = 15 * 60 * 1000;
 const METALWORKS_PUBLIC_RATE_MAX_REQUESTS = 240;
 const METALWORKS_PUBLIC_REQUESTS = new Map();
-const COACH_TRIAL_DAYS = Math.max(1, Number(process.env.COACH_TRIAL_DAYS || 7));
 const COACH_MAX_ACTIVE_SESSIONS = Math.max(1, Number(process.env.COACH_MAX_ACTIVE_SESSIONS || 2));
 const COACH_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.COACH_MAX_MESSAGES_PER_DAY || 100));
 const CHEF_MAX_MESSAGES_PER_DAY = Math.max(1, Number(process.env.CHEF_MAX_MESSAGES_PER_DAY || 50));
@@ -20057,14 +20058,10 @@ function normalizarPlanCoach(plan = "") {
     return "annual";
   }
 
-  if (value === "trial") {
-    return "trial";
-  }
-
   return "monthly";
 }
 
-function obtenerPlanCoach(plan = "", userDoc = null) {
+function obtenerPlanCoach(plan = "") {
   const selectedPlan = normalizarPlanCoach(plan);
 
   if (selectedPlan === "annual") {
@@ -20076,24 +20073,8 @@ function obtenerPlanCoach(plan = "", userDoc = null) {
       code: "annual",
       label: "plan anual",
       priceId: STRIPE_PRICE_ID_ANNUAL,
-      trialDays: 0
-    };
-  }
-
-  if (selectedPlan === "trial") {
-    if (!STRIPE_PRICE_ID_MONTHLY) {
-      throw new Error("El precio mensual del Coach todavia no esta configurado.");
-    }
-
-    if (!coachPuedeIniciarTrial(userDoc)) {
-      throw new Error("La prueba gratis ya no esta disponible para esta cuenta.");
-    }
-
-    return {
-      code: "trial",
-      label: "prueba gratis",
-      priceId: STRIPE_PRICE_ID_MONTHLY,
-      trialDays: COACH_TRIAL_DAYS
+      amountUsd: 500,
+      interval: "year"
     };
   }
 
@@ -20105,7 +20086,8 @@ function obtenerPlanCoach(plan = "", userDoc = null) {
     code: "monthly",
     label: "plan mensual",
     priceId: STRIPE_PRICE_ID_MONTHLY,
-    trialDays: 0
+    amountUsd: 50,
+    interval: "month"
   };
 }
 
@@ -20397,11 +20379,16 @@ async function validarLimiteUsoChef(visitorId = "") {
 }
 
 function stripeConfigurado() {
-  return Boolean(stripe && STRIPE_PRICE_ID_MONTHLY && process.env.STRIPE_WEBHOOK_SECRET);
+  return Boolean(
+    stripe &&
+      STRIPE_PRICE_ID_MONTHLY &&
+      STRIPE_PRICE_ID_ANNUAL &&
+      process.env.STRIPE_WEBHOOK_SECRET
+  );
 }
 
 function stripeListoParaCheckout() {
-  return Boolean(stripe && STRIPE_PRICE_ID_MONTHLY);
+  return Boolean(stripe && STRIPE_PRICE_ID_MONTHLY && STRIPE_PRICE_ID_ANNUAL);
 }
 
 function construirCheckoutCoach(req, userDoc, plan = "monthly") {
@@ -20419,6 +20406,7 @@ function construirCheckoutCoach(req, userDoc, plan = "monthly") {
     success_url: `${obtenerBaseUrl(req)}/coach/success/?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${obtenerBaseUrl(req)}/coach/cancel/`,
     allow_promotion_codes: true,
+    locale: "auto",
     metadata: {
       coachUserId: String(userDoc._id),
       coachPlan: selectedPlan.code
@@ -20431,16 +20419,6 @@ function construirCheckoutCoach(req, userDoc, plan = "monthly") {
       }
     }
   };
-
-  if (selectedPlan.code === "trial") {
-    checkoutConfig.payment_method_collection = "if_required";
-    checkoutConfig.subscription_data.trial_period_days = selectedPlan.trialDays;
-    checkoutConfig.subscription_data.trial_settings = {
-      end_behavior: {
-        missing_payment_method: "pause"
-      }
-    };
-  }
 
   return {
     selectedPlan,
@@ -25656,7 +25634,7 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
   const name = String(req.body?.name || "").trim();
   const email = normalizarEmail(req.body?.email || "");
   const password = String(req.body?.password || "");
-  const plan = normalizarPlanCoach(req.body?.plan || "trial");
+  const plan = normalizarPlanCoach(req.body?.plan || "monthly");
   const accesoDePrueba = coachTieneAccesoDePrueba(email);
 
   if (!name) {
@@ -34567,6 +34545,9 @@ export {
   extraerCoachDemoResponseText,
   formatearCoachDemoKnownOutcome,
   normalizarCoachDemoKnownOutcome,
+  normalizarPlanCoach,
+  obtenerPlanCoach,
+  construirCheckoutCoach,
   parseCoachProgram414ImportedSheets,
   parseCoachLeadNextActionAt,
   resolverCoachCrmStatusDesdeDemoOutcome,
