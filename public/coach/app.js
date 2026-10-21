@@ -8566,6 +8566,13 @@ function renderCoachTeamSeats(seats = []) {
           </p>
 
           <div class="dashboard-actions compact-top">
+            <button
+              type="button"
+              class="primary-button"
+              data-team-seat-open-activity
+            >
+              Ver actividad
+            </button>
             <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || "")}">
               Copiar correo
             </button>
@@ -8635,6 +8642,266 @@ function renderCoachTeamSeats(seats = []) {
     .join("");
 }
 
+function formatCoachTeamActivityType(type = "") {
+  const labels = {
+    lead: "Lead",
+    program: "4 en 14",
+    analysis: "Analisis de audio",
+    survey: "Encuesta",
+    application: "Aplicacion"
+  };
+
+  return labels[String(type || "").trim()] || "Actividad";
+}
+
+function renderCoachTeamActivityEmpty(message = "Todavia no hay actividad guardada.") {
+  return `<div class="team-seat-empty">${escapeHtml(message)}</div>`;
+}
+
+function renderCoachTeamActivity(payload = null, activeTab = "summary") {
+  const panel = document.querySelector("[data-team-seat-activity-panel]");
+  const shell = document.querySelector("[data-team-activity-shell]");
+
+  if (!panel || !shell || !payload?.seat) {
+    return;
+  }
+
+  const seat = payload.seat || {};
+  const counts = payload.counts || seat.counts || {};
+  const leads = Array.isArray(payload.leads) ? payload.leads : [];
+  const programSheets = Array.isArray(payload.programSheets) ? payload.programSheets : [];
+  const analyses = Array.isArray(payload.analyses) ? payload.analyses : [];
+  const surveys = Array.isArray(payload.surveys) ? payload.surveys : [];
+  const applications = Array.isArray(payload.applications) ? payload.applications : [];
+  const personName = seat.seatLabel || seat.name || "Esta representante";
+  const safeTab = ["summary", "leads", "programs", "analyses", "forms"].includes(activeTab)
+    ? activeTab
+    : "summary";
+
+  shell.dataset.state = "open";
+  panel.hidden = false;
+  panel.dataset.teamSeatId = seat.id || "";
+  const nameNode = panel.querySelector("[data-team-activity-name]");
+  const copyNode = panel.querySelector("[data-team-activity-copy]");
+  if (nameNode) {
+    nameNode.textContent = seat.seatLabel || seat.name || "Actividad de representante";
+  }
+  if (copyNode) {
+    copyNode.textContent = `${seat.name || "Representante"} · ${seat.email || "Sin correo"} · ${formatTeamSeatRoleLabel(
+      seat.teamRole
+    )}`;
+  }
+
+  const countValues = {
+    leads: Number(counts.leads || 0),
+    programs: Number(counts.programSheets || 0),
+    analyses: Number(counts.demoAnalyses || 0),
+    forms: Number(counts.surveys || 0) + Number(counts.applications || 0)
+  };
+  Object.entries(countValues).forEach(([key, value]) => {
+    panel.querySelectorAll(`[data-team-activity-count-${key}]`).forEach(node => {
+      node.textContent = String(value);
+    });
+  });
+
+  panel.querySelectorAll("[data-team-activity-tab]").forEach(button => {
+    const isActive = button.dataset.teamActivityTab === safeTab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  panel.querySelectorAll("[data-team-activity-pane]").forEach(pane => {
+    pane.hidden = pane.dataset.teamActivityPane !== safeTab;
+  });
+
+  const leadList = panel.querySelector("[data-team-activity-lead-list]");
+  if (leadList) {
+    leadList.innerHTML = leads.length
+      ? leads
+          .map(
+            lead => `
+              <article class="team-activity-item">
+                <div class="team-activity-item-head">
+                  <div>
+                    <strong>${escapeHtml(lead.fullName || "Lead sin nombre")}</strong>
+                    <span>${escapeHtml(lead.phone ? formatLeadPhone(lead.phone) : lead.email || "Sin contacto")}</span>
+                  </div>
+                  <span class="team-seat-status" data-state="blue">${escapeHtml(formatLeadStatusLabel(lead.status))}</span>
+                </div>
+                <p class="team-activity-item-copy">${escapeHtml(
+                  lead.summary || lead.interest || lead.notes || "Sin resumen guardado."
+                )}</p>
+                <details class="team-activity-details">
+                  <summary>Ver datos del lead</summary>
+                  <div class="team-activity-details-grid">
+                    <div><span>Origen</span><strong>${escapeHtml(formatLeadSourceLabel(lead.source))}</strong></div>
+                    <div><span>Creado</span><strong>${escapeHtml(formatDateTimeShort(lead.createdAt))}</strong></div>
+                    <div><span>Direccion</span><strong>${escapeHtml(
+                      [lead.address, lead.city, lead.zipCode].filter(Boolean).join(", ") || "Sin direccion"
+                    )}</strong></div>
+                    <div><span>Siguiente accion</span><strong>${escapeHtml(
+                      formatLeadNextActionLabel(lead.nextAction || "")
+                    )}</strong></div>
+                  </div>
+                </details>
+              </article>`
+          )
+          .join("")
+      : renderCoachTeamActivityEmpty(`${personName} todavia no tiene leads guardados.`);
+  }
+
+  const programList = panel.querySelector("[data-team-activity-program-list]");
+  if (programList) {
+    programList.innerHTML = programSheets.length
+      ? programSheets
+          .map(sheet => {
+            const referrals = Array.isArray(sheet.referrals) ? sheet.referrals : [];
+            return `
+              <article class="team-activity-item">
+                <div class="team-activity-item-head">
+                  <div>
+                    <strong>${escapeHtml(sheet.hostName || "Anfitrion sin nombre")}</strong>
+                    <span>${escapeHtml(sheet.hostPhone ? formatLeadPhone(sheet.hostPhone) : "Sin telefono")}</span>
+                  </div>
+                  <span class="team-seat-status" data-state="violet">${Number(
+                    sheet.referralCount || referrals.length || 0
+                  )} referencias</span>
+                </div>
+                <p class="team-activity-item-copy">${escapeHtml(
+                  sheet.summary || sheet.notes || `Regalo: ${sheet.giftSelected || "sin seleccionar"}`
+                )}</p>
+                <details class="team-activity-details">
+                  <summary>Ver hoja y referencias</summary>
+                  <div class="team-activity-details-grid">
+                    <div><span>Inicio</span><strong>${escapeHtml(formatDateTimeShort(sheet.startDate || sheet.createdAt))}</strong></div>
+                    <div><span>Regalo</span><strong>${escapeHtml(sheet.giftSelected || "Sin seleccionar")}</strong></div>
+                  </div>
+                  <ol class="team-activity-referrals">
+                    ${
+                      referrals.length
+                        ? referrals
+                            .map(
+                              referral => `<li><strong>${escapeHtml(referral.fullName || "Referencia")}</strong> · ${escapeHtml(
+                                referral.phone ? formatLeadPhone(referral.phone) : "Sin telefono"
+                              )} · ${escapeHtml(formatProgram414StatusLabel(referral.instantCallStatus || ""))}</li>`
+                            )
+                            .join("")
+                        : "<li>Todavia no hay referencias en esta hoja.</li>"
+                    }
+                  </ol>
+                </details>
+              </article>`;
+          })
+          .join("")
+      : renderCoachTeamActivityEmpty(`${personName} todavia no tiene hojas 4 en 14 guardadas.`);
+  }
+
+  const analysisList = panel.querySelector("[data-team-activity-analysis-list]");
+  if (analysisList) {
+    analysisList.innerHTML = analyses.length
+      ? analyses
+          .map(analysis => {
+            const completed = analysis.status === "completed" && analysis.report;
+            const stateLabel = completed
+              ? `${Number(analysis.report?.overallScore || 0)}/100`
+              : analysis.status === "processing"
+                ? "Procesando"
+                : analysis.status === "error"
+                  ? "Con error"
+                  : "Grabacion";
+            return `
+              <article class="team-activity-item">
+                <div class="team-activity-item-head">
+                  <div>
+                    <strong>${escapeHtml(analysis.report?.title || "Demostracion grabada")}</strong>
+                    <span>${escapeHtml(formatCoachDemoAnalysisDate(analysis.startedAt || analysis.createdAt))} · ${escapeHtml(
+                      formatCoachDemoRecordingTime(analysis.durationSeconds)
+                    )}</span>
+                  </div>
+                  <span class="team-seat-status" data-state="${completed ? "green" : "amber"}">${escapeHtml(
+                    stateLabel
+                  )}</span>
+                </div>
+                <p class="team-activity-item-copy">${escapeHtml(
+                  analysis.report?.summary || `${analysis.knownOutcomeLabel || "Resultado pendiente"}.`
+                )}</p>
+                ${
+                  completed
+                    ? `<div class="dashboard-actions compact-top"><button type="button" class="primary-button" data-team-activity-open-analysis="${escapeHtml(
+                        analysis.id
+                      )}">Abrir analisis completo</button></div>`
+                    : ""
+                }
+              </article>`;
+          })
+          .join("")
+      : renderCoachTeamActivityEmpty(`${personName} todavia no tiene analisis de audio guardados.`);
+  }
+
+  const formList = panel.querySelector("[data-team-activity-form-list]");
+  if (formList) {
+    const forms = [
+      ...surveys.map(item => ({ type: "survey", item, date: item.updatedAt || item.createdAt })),
+      ...applications.map(item => ({ type: "application", item, date: item.updatedAt || item.createdAt }))
+    ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    formList.innerHTML = forms.length
+      ? forms
+          .map(({ type, item, date }) => {
+            const isSurvey = type === "survey";
+            const detailCopy = isSurvey
+              ? item.summary || item.salesAnalysis?.objectionAnchor || "Encuesta de salud guardada."
+              : item.summary || item.about || "Aplicacion guardada.";
+            return `
+              <article class="team-activity-item">
+                <div class="team-activity-item-head">
+                  <div>
+                    <strong>${escapeHtml(item.fullName || "Sin nombre")}</strong>
+                    <span>${escapeHtml(item.phone ? formatLeadPhone(item.phone) : item.email || "Sin contacto")}</span>
+                  </div>
+                  <span class="team-seat-status" data-state="${isSurvey ? "sky" : "rose"}">${escapeHtml(
+                    formatCoachTeamActivityType(type)
+                  )}</span>
+                </div>
+                <p class="team-activity-item-copy">${escapeHtml(detailCopy)}</p>
+                <small>${escapeHtml(formatDateTimeShort(date))}</small>
+              </article>`;
+          })
+          .join("")
+      : renderCoachTeamActivityEmpty(`${personName} todavia no tiene encuestas ni aplicaciones guardadas.`);
+  }
+
+  const summaryList = panel.querySelector("[data-team-activity-summary-list]");
+  if (summaryList) {
+    const timeline = [
+      ...leads.map(item => ({ type: "lead", title: item.fullName, detail: formatLeadStatusLabel(item.status), date: item.updatedAt || item.createdAt, tab: "leads" })),
+      ...programSheets.map(item => ({ type: "program", title: item.hostName, detail: `${Number(item.referralCount || 0)} referencias`, date: item.updatedAt || item.createdAt, tab: "programs" })),
+      ...analyses.map(item => ({ type: "analysis", title: item.report?.title || "Demostracion grabada", detail: item.report ? `${Number(item.report.overallScore || 0)}/100` : item.status || "Pendiente", date: item.updatedAt || item.createdAt, tab: "analyses" })),
+      ...surveys.map(item => ({ type: "survey", title: item.fullName, detail: "Encuesta de salud", date: item.updatedAt || item.createdAt, tab: "forms" })),
+      ...applications.map(item => ({ type: "application", title: item.fullName, detail: "Aplicacion", date: item.updatedAt || item.createdAt, tab: "forms" }))
+    ]
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+      .slice(0, 10);
+
+    summaryList.innerHTML = timeline.length
+      ? timeline
+          .map(
+            event => `
+              <article class="team-activity-item">
+                <div class="team-activity-item-head">
+                  <div>
+                    <strong>${escapeHtml(event.title || formatCoachTeamActivityType(event.type))}</strong>
+                    <span>${escapeHtml(event.detail || "Actividad guardada")} · ${escapeHtml(formatDateTimeShort(event.date))}</span>
+                  </div>
+                  <button type="button" class="nav-button" data-team-activity-open-tab="${escapeHtml(event.tab)}">
+                    Ver ${escapeHtml(formatCoachTeamActivityType(event.type))}
+                  </button>
+                </div>
+              </article>`
+          )
+          .join("")
+      : renderCoachTeamActivityEmpty("Esta representante todavia no tiene movimiento guardado.");
+  }
+}
+
 function initCoachTeamWorkspace(user = null) {
   const form = document.querySelector("[data-team-seat-form]");
   const feedbackNode = document.querySelector("[data-team-seat-feedback]");
@@ -8642,6 +8909,12 @@ function initCoachTeamWorkspace(user = null) {
   const list = document.querySelector("[data-team-seat-list]");
   const copyEmailButton = document.querySelector("[data-team-copy-email]");
   const copyPasswordButton = document.querySelector("[data-team-copy-password]");
+  const activityShell = document.querySelector("[data-team-activity-shell]");
+  const activityPanel = document.querySelector("[data-team-seat-activity-panel]");
+  const activityFeedback = document.querySelector("[data-team-activity-feedback]");
+  const activityReport = document.querySelector("[data-team-activity-analysis-report]");
+  const activityRefreshButton = document.querySelector("[data-team-activity-refresh]");
+  const activityCloseButton = document.querySelector("[data-team-activity-close]");
 
   if (!form || !list) {
     return;
@@ -8651,16 +8924,109 @@ function initCoachTeamWorkspace(user = null) {
     renderCoachTeamCreatedCredentials(null);
     renderCoachTeamSummary(null);
     renderCoachTeamSeats([]);
+    if (activityShell) {
+      activityShell.dataset.state = "closed";
+    }
     return;
   }
 
   let latestCredentials = null;
+  const activityState = {
+    seatId: "",
+    activeTab: "summary",
+    payload: null
+  };
 
   const loadTeam = async () => {
     const data = await apiRequest("/api/coach/team");
     renderCoachTeamSummary(data.summary || null);
     renderCoachTeamSeats(data.seats || []);
   };
+
+  const setActivityTab = nextTab => {
+    activityState.activeTab = ["summary", "leads", "programs", "analyses", "forms"].includes(nextTab)
+      ? nextTab
+      : "summary";
+    if (activityState.payload) {
+      renderCoachTeamActivity(activityState.payload, activityState.activeTab);
+    }
+  };
+
+  const loadSeatActivity = async (seatId, { shouldScroll = true } = {}) => {
+    if (!seatId) {
+      return;
+    }
+
+    activityState.seatId = seatId;
+    clearMessage(activityFeedback);
+    if (activityShell) {
+      activityShell.dataset.state = "open";
+    }
+    if (activityPanel) {
+      activityPanel.hidden = false;
+    }
+    setButtonLoading(activityRefreshButton, true, "Cargando...");
+
+    try {
+      const data = await apiRequest(`/api/coach/team/seats/${encodeURIComponent(seatId)}/activity`);
+      activityState.payload = data;
+      renderCoachTeamActivity(data, activityState.activeTab);
+      if (shouldScroll) {
+        activityShell?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } catch (error) {
+      setMessage(activityFeedback, error.message || "No pude cargar esa actividad.", "error");
+    } finally {
+      setButtonLoading(activityRefreshButton, false);
+    }
+  };
+
+  activityPanel?.addEventListener("click", async event => {
+    const tabButton = event.target.closest("[data-team-activity-tab], [data-team-activity-open-tab]");
+    const analysisButton = event.target.closest("[data-team-activity-open-analysis]");
+
+    if (tabButton) {
+      setActivityTab(tabButton.dataset.teamActivityTab || tabButton.dataset.teamActivityOpenTab || "summary");
+      return;
+    }
+
+    if (analysisButton) {
+      const analysisId = analysisButton.dataset.teamActivityOpenAnalysis || "";
+      if (!analysisId || !activityReport) {
+        return;
+      }
+
+      setButtonLoading(analysisButton, true, "Abriendo...");
+      try {
+        const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(analysisId)}`);
+        renderCoachDemoReport(activityReport, data.analysis);
+      } catch (error) {
+        setMessage(activityFeedback, error.message || "No pude abrir ese analisis.", "error");
+      } finally {
+        setButtonLoading(analysisButton, false);
+      }
+    }
+  });
+
+  activityRefreshButton?.addEventListener("click", () => {
+    loadSeatActivity(activityState.seatId, { shouldScroll: false });
+  });
+
+  activityCloseButton?.addEventListener("click", () => {
+    activityState.seatId = "";
+    activityState.payload = null;
+    activityState.activeTab = "summary";
+    if (activityReport) {
+      renderCoachDemoReport(activityReport, null);
+    }
+    if (activityPanel) {
+      activityPanel.hidden = true;
+      activityPanel.dataset.teamSeatId = "";
+    }
+    if (activityShell) {
+      activityShell.dataset.state = "closed";
+    }
+  });
 
   copyEmailButton?.addEventListener("click", async () => {
     if (!latestCredentials?.email) {
@@ -8719,6 +9085,19 @@ function initCoachTeamWorkspace(user = null) {
   });
 
   list.addEventListener("click", async event => {
+    const activityButton = event.target.closest("[data-team-seat-open-activity]");
+
+    if (activityButton) {
+      const card = activityButton.closest("[data-team-seat-id]");
+      const seatId = card?.dataset.teamSeatId || "";
+
+      if (seatId) {
+        activityState.activeTab = "summary";
+        await loadSeatActivity(seatId);
+      }
+      return;
+    }
+
     const copyButton = event.target.closest("[data-team-seat-copy-email]");
 
     if (copyButton) {

@@ -29341,6 +29341,93 @@ app.get("/api/coach/team", async (req, res) => {
   }
 });
 
+app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
+  const auth = await requireCoachTeamManager(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  const userId = String(req.params?.userId || "").trim();
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return responderCoachError(res, 400, "Subcuenta invalida.");
+  }
+
+  try {
+    const seatDoc = await CoachUser.findOne({
+      _id: userId,
+      teamOwnerUserId: auth.user._id,
+      accountType: "seat"
+    }).lean();
+
+    if (!seatDoc) {
+      return responderCoachError(res, 404, "No encontre esa subcuenta dentro de tu equipo.");
+    }
+
+    const seatObjectId = seatDoc._id;
+    const ownerQuery = {
+      ownerUserId: auth.user._id,
+      generatedByUserId: seatObjectId
+    };
+
+    const [
+      profileDoc,
+      leadDocs,
+      programDocs,
+      surveyDocs,
+      applicationDocs,
+      analysisDocs,
+      leadCount,
+      programCount,
+      surveyCount,
+      applicationCount,
+      analysisCount
+    ] = await Promise.all([
+      CoachDistributorProfile.findOne({ userId: seatObjectId }).lean(),
+      CoachLeadInbox.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(50).lean(),
+      CoachProgramSheet.find({ ...ownerQuery, programType: "4_en_14" })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(30)
+        .lean(),
+      CoachHealthSurvey.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean(),
+      CoachRecruitmentApplication.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean(),
+      CoachDemoAnalysis.find({ ownerUserId: seatObjectId })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(30)
+        .lean(),
+      CoachLeadInbox.countDocuments(ownerQuery),
+      CoachProgramSheet.countDocuments({ ...ownerQuery, programType: "4_en_14" }),
+      CoachHealthSurvey.countDocuments(ownerQuery),
+      CoachRecruitmentApplication.countDocuments(ownerQuery),
+      CoachDemoAnalysis.countDocuments({ ownerUserId: seatObjectId, status: "completed" })
+    ]);
+
+    const counts = {
+      leads: Number(leadCount || 0),
+      surveys: Number(surveyCount || 0),
+      programSheets: Number(programCount || 0),
+      applications: Number(applicationCount || 0),
+      demoAnalyses: Number(analysisCount || 0)
+    };
+
+    res.json({
+      seat: limpiarCoachTeamSeat(seatDoc, profileDoc, counts),
+      counts,
+      leads: leadDocs.map(limpiarCoachInboxLead).filter(Boolean),
+      programSheets: programDocs.map(limpiarCoachProgramSheet).filter(Boolean),
+      surveys: surveyDocs.map(limpiarCoachHealthSurvey).filter(Boolean),
+      applications: applicationDocs.map(limpiarCoachRecruitmentApplication).filter(Boolean),
+      analyses: analysisDocs
+        .map(doc => limpiarCoachDemoAnalysis(doc, { viewerUserId: auth.user._id }))
+        .filter(Boolean)
+    });
+  } catch (error) {
+    console.error("Error cargando actividad de subcuenta Coach:", error.message);
+    responderCoachError(res, 500, "No pude cargar la actividad de esa representante.");
+  }
+});
+
 app.post("/api/coach/team/seats", async (req, res) => {
   const auth = await requireCoachTeamManager(req, res);
 

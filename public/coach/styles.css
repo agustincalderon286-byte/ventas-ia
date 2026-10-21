@@ -1576,6 +1576,184 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   text-align: center;
 }
 
+[data-team-activity-shell][data-state="closed"] {
+  display: none !important;
+}
+
+.team-activity-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.team-activity-header h3 {
+  margin-bottom: 8px;
+}
+
+.team-activity-header p {
+  margin-bottom: 0;
+}
+
+.team-activity-metrics {
+  margin-top: 22px;
+}
+
+.team-activity-metric {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.team-activity-metric:hover,
+.team-activity-metric:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(197, 31, 54, 0.34);
+  box-shadow: 0 16px 34px rgba(7, 31, 59, 0.1);
+  outline: none;
+}
+
+.team-activity-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(7, 31, 59, 0.12);
+}
+
+.team-activity-tabs .nav-button.active {
+  background: #071f3b;
+  border-color: #071f3b;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(7, 31, 59, 0.2);
+}
+
+.team-activity-pane[hidden] {
+  display: none !important;
+}
+
+.team-activity-list {
+  display: grid;
+  gap: 12px;
+}
+
+.team-activity-item {
+  padding: 17px 18px;
+  border: 1px solid rgba(7, 31, 59, 0.11);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 28px rgba(7, 31, 59, 0.06);
+}
+
+.team-activity-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.team-activity-item-head strong,
+.team-activity-item-head span {
+  display: block;
+}
+
+.team-activity-item-head span,
+.team-activity-item-copy,
+.team-activity-item small {
+  color: var(--muted);
+}
+
+.team-activity-item-head span {
+  margin-top: 5px;
+}
+
+.team-activity-item-copy {
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+
+.team-activity-details {
+  margin-top: 12px;
+}
+
+.team-activity-details summary {
+  color: #071f3b;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.team-activity-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.team-activity-details-grid > div {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(7, 31, 59, 0.05);
+}
+
+.team-activity-details-grid span,
+.team-activity-details-grid strong {
+  display: block;
+}
+
+.team-activity-details-grid span {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.team-activity-referrals {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.team-activity-referrals li + li {
+  margin-top: 8px;
+}
+
+.team-activity-analysis-report {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 720px) {
+  .team-activity-header,
+  .team-activity-item-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .team-activity-header .dashboard-actions,
+  .team-activity-header .dashboard-actions button {
+    width: 100%;
+  }
+
+  .team-activity-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+
+  .team-activity-tabs button {
+    flex: 0 0 auto;
+  }
+
+  .team-activity-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .marketing-summary-grid {
   margin-top: 18px;
 }
@@ -6785,6 +6963,15 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .secondary-bu
   color: #173b63;
   background: #ffffff;
   border-color: rgba(15, 43, 75, 0.16);
+}
+
+html:not([data-coach-portal-mode="telemarketing"])
+  .coach-app-body
+  .team-activity-tabs
+  .nav-button.active {
+  color: #ffffff;
+  background: #071f3b;
+  border-color: #071f3b;
 }
 
 html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .primary-button {

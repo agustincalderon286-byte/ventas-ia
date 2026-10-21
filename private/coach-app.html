@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261021-6" />
   </head>
   <body class="coach-app-body">
     <div class="coach-shell" data-coach-app-page>
@@ -4048,6 +4048,79 @@
           </article>
 
           <article
+            class="dashboard-card team-activity-shell"
+            data-coach-workspace-section="equipo"
+            data-team-manager-only
+            data-team-activity-shell
+            data-state="closed"
+            hidden
+          >
+            <div data-team-seat-activity-panel hidden>
+              <div class="team-activity-header">
+                <div>
+                  <div class="eyebrow">Expediente de representante</div>
+                  <h3 data-team-activity-name>Actividad de la subcuenta</h3>
+                  <p data-team-activity-copy>
+                    Revisa el trabajo guardado sin entrar a la cuenta de la representante.
+                  </p>
+                </div>
+                <div class="dashboard-actions">
+                  <button type="button" class="nav-button" data-team-activity-refresh>Actualizar</button>
+                  <button type="button" class="secondary-button" data-team-activity-close>Cerrar</button>
+                </div>
+              </div>
+
+              <div class="insight-grid team-activity-metrics">
+                <button type="button" class="mini-stat team-activity-metric" data-team-activity-open-tab="leads">
+                  <strong data-team-activity-count-leads>0</strong>
+                  <span>Leads</span>
+                </button>
+                <button type="button" class="mini-stat team-activity-metric" data-team-activity-open-tab="programs">
+                  <strong data-team-activity-count-programs>0</strong>
+                  <span>4 en 14</span>
+                </button>
+                <button type="button" class="mini-stat team-activity-metric" data-team-activity-open-tab="analyses">
+                  <strong data-team-activity-count-analyses>0</strong>
+                  <span>Analisis de audio</span>
+                </button>
+                <button type="button" class="mini-stat team-activity-metric" data-team-activity-open-tab="forms">
+                  <strong data-team-activity-count-forms>0</strong>
+                  <span>Encuestas y aplicaciones</span>
+                </button>
+              </div>
+
+              <div class="team-activity-tabs" role="tablist" aria-label="Actividad de representante">
+                <button type="button" class="nav-button active" data-team-activity-tab="summary">Resumen</button>
+                <button type="button" class="nav-button" data-team-activity-tab="leads">Leads</button>
+                <button type="button" class="nav-button" data-team-activity-tab="programs">4 en 14</button>
+                <button type="button" class="nav-button" data-team-activity-tab="analyses">Audios</button>
+                <button type="button" class="nav-button" data-team-activity-tab="forms">Formularios</button>
+              </div>
+
+              <div class="form-result" data-team-activity-feedback></div>
+
+              <section class="team-activity-pane" data-team-activity-pane="summary">
+                <div class="team-activity-list" data-team-activity-summary-list>
+                  <div class="team-seat-empty">Selecciona una representante para ver su movimiento.</div>
+                </div>
+              </section>
+              <section class="team-activity-pane" data-team-activity-pane="leads" hidden>
+                <div class="team-activity-list" data-team-activity-lead-list></div>
+              </section>
+              <section class="team-activity-pane" data-team-activity-pane="programs" hidden>
+                <div class="team-activity-list" data-team-activity-program-list></div>
+              </section>
+              <section class="team-activity-pane" data-team-activity-pane="analyses" hidden>
+                <div class="coach-demo-analysis-current team-activity-analysis-report" data-team-activity-analysis-report hidden></div>
+                <div class="team-activity-list" data-team-activity-analysis-list></div>
+              </section>
+              <section class="team-activity-pane" data-team-activity-pane="forms" hidden>
+                <div class="team-activity-list" data-team-activity-form-list></div>
+              </section>
+            </div>
+          </article>
+
+          <article
             class="dashboard-card"
             data-coach-workspace-section="equipo"
             data-team-manager-only
@@ -5717,6 +5790,6 @@
       </p>
     </div>
 
-    <script src="/coach/app.js?v=20261021-5"></script>
+    <script src="/coach/app.js?v=20261021-6"></script>
   </body>
 </html>
