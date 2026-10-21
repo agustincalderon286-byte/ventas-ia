@@ -6449,3 +6449,661 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
     grid-template-columns: 1fr;
   }
 }
+
+/* Experiencia visual premium del Coach de Cierre. Mantiene intacto el
+   portal operativo de telemarketing y todas las herramientas existentes. */
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-shell {
+  width: min(1280px, calc(100% - 32px));
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body [hidden] {
+  display: none !important;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav {
+  min-height: 76px;
+  margin-top: 14px;
+  padding: 12px 18px;
+  color: #ffffff;
+  background: linear-gradient(100deg, #061b34 0%, #0a3159 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 14px 34px rgba(6, 27, 52, 0.2);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand {
+  gap: 12px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-badge svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-copy h1 {
+  color: #ffffff;
+  font-size: 1.03rem;
+  letter-spacing: 0.08em;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-copy p {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav-links > :is(
+  a[href="/coach/"],
+  a[href="/coach/planes/"],
+  [data-chef-self-open-link],
+  [data-open-chef-share]
+) {
+  display: none;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav .nav-button {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav .primary-button {
+  min-height: 42px;
+  padding-inline: 18px;
+  background: #c8102e;
+  box-shadow: 0 10px 24px rgba(200, 16, 46, 0.28);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-console {
+  gap: 22px;
+  padding-top: 18px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar {
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+  padding: 36px 38px 28px;
+  color: #ffffff;
+  background:
+    linear-gradient(90deg, rgba(5, 25, 49, 0.98) 0%, rgba(5, 25, 49, 0.88) 36%, rgba(5, 25, 49, 0.44) 74%, rgba(5, 25, 49, 0.7) 100%),
+    url("/coach/assets/coach-summit-hero.jpg") center / cover no-repeat;
+  border: 1px solid rgba(8, 43, 78, 0.22);
+  border-radius: 28px;
+  box-shadow: 0 24px 54px rgba(7, 34, 63, 0.22);
+  isolation: isolate;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -42%;
+  right: 32%;
+  width: 82px;
+  height: 190%;
+  background: linear-gradient(180deg, #ed1738, #a90825);
+  opacity: 0.9;
+  transform: rotate(34deg);
+  box-shadow: 0 0 0 18px rgba(200, 16, 46, 0.08);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
+  align-items: center;
+  gap: 40px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-copy {
+  max-width: 650px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head h2 {
+  margin-top: 22px;
+  color: #ffffff;
+  font-size: clamp(3rem, 6vw, 5.35rem);
+  letter-spacing: -0.045em;
+  line-height: 0.94;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head p {
+  max-width: 590px;
+  margin-top: 20px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.04rem;
+  line-height: 1.65;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar .eyebrow {
+  color: #ff536f;
+  background: transparent;
+  border: 0;
+  padding: 0 0 0 26px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar .eyebrow::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 3px;
+  border-radius: 99px;
+  background: #ed1738;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress {
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  color: #0a2848;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  box-shadow: 0 22px 55px rgba(3, 19, 38, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.coach-hero-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.coach-hero-progress-head span,
+.coach-hero-progress-head strong {
+  display: block;
+}
+
+.coach-hero-progress-head span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.coach-hero-progress-head strong {
+  margin-top: 5px;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.35rem;
+}
+
+.coach-route-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #c8102e;
+  background: #fff1f3;
+  border: 7px solid rgba(200, 16, 46, 0.15);
+  font-weight: 800;
+}
+
+.coach-progress-track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.coach-progress-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: #7a899a;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.coach-progress-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: calc(50% + 17px);
+  right: calc(-50% + 17px);
+  height: 2px;
+  background: #e2e8f0;
+}
+
+.coach-progress-step > span {
+  position: relative;
+  z-index: 1;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #6d7c8c;
+  background: #edf1f5;
+  border: 1px solid #dde4eb;
+  font-weight: 800;
+}
+
+.coach-progress-step.is-active {
+  color: #0a2848;
+}
+
+.coach-progress-step.is-active > span {
+  color: #ffffff;
+  background: #c8102e;
+  border-color: #c8102e;
+  box-shadow: 0 8px 18px rgba(200, 16, 46, 0.23);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress .coach-compact-actions {
+  justify-content: flex-start;
+  padding-top: 17px;
+  border-top: 1px solid #e5eaf0;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress .nav-button,
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress .coach-chat-status {
+  min-height: 40px;
+  color: #0a3159;
+  background: #f5f7fa;
+  border-color: #dde4eb;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-strip-slim {
+  position: relative;
+  z-index: 1;
+  width: min(650px, 100%);
+  margin-top: 22px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-live-context {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  background: rgba(3, 20, 39, 0.54);
+  border-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-live-context strong {
+  color: #ffffff;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-live-context span {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-workspace-switch {
+  padding: 26px 30px 28px;
+  border-radius: 26px;
+  box-shadow: 0 16px 40px rgba(10, 40, 72, 0.08);
+}
+
+.coach-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.coach-section-heading h2 {
+  margin: 10px 0 0;
+  color: #071f3b;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.coach-focus-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #a30e29;
+  background: #fff1f3;
+  border: 1px solid #ffd7de;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-workspace-tabs {
+  display: none;
+}
+
+.coach-journey {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 26px;
+}
+
+.coach-journey-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  color: #65768a;
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.coach-journey-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 22px);
+  right: calc(-50% + 22px);
+  height: 3px;
+  border-radius: 99px;
+  background: #dfe5ec;
+}
+
+.coach-journey-step > span {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #496079;
+  background: #eef2f6;
+  border: 1px solid #dde5ed;
+  font-weight: 800;
+}
+
+.coach-journey-step.is-active {
+  color: #071f3b;
+}
+
+.coach-journey-step.is-active > span {
+  color: #ffffff;
+  background: #c8102e;
+  border-color: #c8102e;
+  box-shadow: 0 8px 20px rgba(200, 16, 46, 0.24);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-workspace-switch > .mini-note {
+  margin-top: 20px;
+  text-align: center;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .dashboard-card[data-coach-workspace-section="cierre"] {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(9, 47, 84, 0.11);
+  box-shadow: 0 16px 40px rgba(10, 40, 72, 0.08);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .dashboard-card[data-coach-workspace-section="cierre"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #c8102e, #0a3159);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+  gap: 24px;
+  padding: 22px;
+}
+
+.coach-step-copy {
+  align-self: center;
+  padding: 12px 6px 12px 18px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured h3 {
+  margin-top: 16px;
+  color: #071f3b;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 1;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured p {
+  max-width: 620px;
+}
+
+.coach-step-visual {
+  min-height: 280px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #e9eef3;
+  box-shadow: inset 0 0 0 1px rgba(10, 40, 72, 0.08);
+}
+
+.coach-step-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-demo-button {
+  min-height: 48px;
+  padding: 0 22px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #df1637, #b20d2b);
+  border-color: #c8102e;
+  font-weight: 700;
+  box-shadow: 0 12px 24px rgba(200, 16, 46, 0.2);
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-demo-button:hover,
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-demo-button.is-active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #bd0e2b, #930a21);
+  border-color: #9d0a24;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-dock {
+  right: 18px;
+  bottom: 18px;
+  left: auto;
+  justify-items: end;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-toggle {
+  min-width: 68px;
+  min-height: 68px;
+  padding: 0 12px;
+  color: #ffffff;
+  background: linear-gradient(145deg, #df1637, #a70b28);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 16px 34px rgba(166, 11, 40, 0.3);
+  opacity: 1;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-dock {
+  right: 18px;
+  bottom: 98px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-dock-toggle {
+  min-height: 44px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #0a3159, #061b34);
+  box-shadow: 0 12px 28px rgba(6, 27, 52, 0.25);
+}
+
+@media (max-width: 980px) {
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head,
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured {
+    grid-template-columns: 1fr;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar {
+    background-position: 62% center;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress {
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 720px) {
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-shell {
+    width: min(100% - 18px, 1280px);
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav {
+    min-height: 0;
+    padding: 13px;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-copy p {
+    display: none;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-brand-badge {
+    width: 42px;
+    height: 42px;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav-links {
+    width: auto;
+    margin-left: auto;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-nav-links .primary-button {
+    width: auto;
+    min-height: 38px;
+    padding: 0 13px;
+    font-size: 0.75rem;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar {
+    min-height: 0;
+    padding: 30px 20px 22px;
+    border-radius: 24px;
+    background-position: 66% center;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-bar::before {
+    right: 13%;
+    opacity: 0.55;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head {
+    gap: 28px;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head h2 {
+    font-size: clamp(2.65rem, 14vw, 4rem);
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress {
+    padding: 19px 15px;
+  }
+
+  .coach-progress-step strong {
+    font-size: 0.58rem;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-live-context {
+    grid-template-columns: 1fr;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-strip-slim {
+    display: none;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-workspace-switch {
+    padding: 22px 16px;
+  }
+
+  .coach-section-heading {
+    align-items: flex-start;
+  }
+
+  .coach-journey-step strong {
+    font-size: 0.66rem;
+  }
+
+  .coach-journey-step > span {
+    width: 34px;
+    height: 34px;
+  }
+
+  .coach-journey-step:not(:last-child)::after {
+    top: 16px;
+    left: calc(50% + 19px);
+    right: calc(-50% + 19px);
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured {
+    padding: 16px;
+  }
+
+  .coach-step-copy {
+    padding: 10px 6px 4px;
+  }
+
+  .coach-step-visual {
+    min-height: 210px;
+    order: -1;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-dock {
+    right: 12px;
+    bottom: 12px;
+    left: auto;
+    justify-items: end;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-toggle {
+    width: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    padding: 0 8px;
+    font-size: 0.73rem;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-panel {
+    width: min(420px, calc(100vw - 24px));
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-dock {
+    right: 12px;
+    bottom: 82px;
+    left: auto;
+    justify-items: end;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-dock-toggle {
+    width: auto;
+    min-height: 40px;
+    padding: 0 13px;
+    font-size: 0.72rem;
+  }
+
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-dock-panel {
+    width: min(360px, calc(100vw - 24px));
+  }
+}

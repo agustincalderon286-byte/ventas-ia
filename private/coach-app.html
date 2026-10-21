@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Coach Privado | Agustin 2.0 Coach</title>
+    <title>Coach de Cierre | Area privada</title>
     <meta
       name="description"
-      content="Area privada para distribuidores con suscripcion activa a Agustin 2.0 Coach."
+      content="Entrenamiento privado para avanzar cada presentacion con claridad y confianza."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,10 +24,15 @@
     <div class="coach-shell" data-coach-app-page>
       <header class="coach-nav">
         <a class="coach-brand" href="/coach/app/" data-coach-home-link>
-          <div class="coach-brand-badge">🧠</div>
+          <div class="coach-brand-badge" aria-hidden="true">
+            <svg viewBox="0 0 32 32" role="img">
+              <path d="M7 23.5 4.5 27v-8.2A10.5 10.5 0 0 1 15 8.3h2A10.5 10.5 0 0 1 27.5 18.8v.2A10.5 10.5 0 0 1 17 29.5h-2a10.4 10.4 0 0 1-8-3.7" />
+              <path d="M10 20v-4m6 4v-7m6 7V10" />
+            </svg>
+          </div>
           <div class="coach-brand-copy">
-            <h1>Agustin 2.0 Coach</h1>
-            <p data-coach-brand-subtitle>Area privada para distribuidores</p>
+            <h1>Coach de Cierre</h1>
+            <p data-coach-brand-subtitle>Entrenamiento para presentaciones</p>
           </div>
         </a>
 
@@ -46,18 +51,36 @@
       <section class="coach-console">
         <div class="coach-compact-bar">
           <div class="coach-compact-head">
-            <div>
-              <div class="eyebrow" data-coach-active-kicker>Coach activo</div>
+            <div class="coach-hero-copy">
+              <div class="eyebrow" data-coach-active-kicker>Entrenamiento en accion</div>
               <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
+              <p>Avanza con claridad, conecta con la familia y dirige cada presentacion con confianza.</p>
             </div>
 
-            <div class="coach-compact-actions">
-              <button class="nav-button" type="button" data-coach-open-messages data-telemarketing-hide>
-                Mensajes
-                <span class="coach-unread-badge" data-coach-unread-badge hidden>0</span>
-              </button>
-              <a class="nav-button" href="/control/" data-control-tower-link hidden>Ir a torre</a>
-              <div class="coach-chat-status" data-coach-chat-status>Listo</div>
+            <div class="coach-hero-progress">
+              <div class="coach-hero-progress-head">
+                <div>
+                  <span>Tu ruta de cierre</span>
+                  <strong>Presentacion guiada</strong>
+                </div>
+                <div class="coach-route-mark" aria-hidden="true">4</div>
+              </div>
+
+              <div class="coach-progress-track" role="list" aria-label="Etapas de la presentacion">
+                <div class="coach-progress-step is-active" role="listitem"><span>1</span><strong>Conecta</strong></div>
+                <div class="coach-progress-step" role="listitem"><span>2</span><strong>Descubre</strong></div>
+                <div class="coach-progress-step" role="listitem"><span>3</span><strong>Demuestra</strong></div>
+                <div class="coach-progress-step" role="listitem"><span>4</span><strong>Cierra</strong></div>
+              </div>
+
+              <div class="coach-compact-actions">
+                <button class="nav-button" type="button" data-coach-open-messages data-telemarketing-hide>
+                  Mensajes
+                  <span class="coach-unread-badge" data-coach-unread-badge hidden>0</span>
+                </button>
+                <a class="nav-button" href="/control/" data-control-tower-link hidden>Ir a torre</a>
+                <div class="coach-chat-status" data-coach-chat-status>Listo</div>
+              </div>
             </div>
           </div>
 
@@ -72,7 +95,13 @@
 
         <aside class="coach-sidebar">
           <div class="coach-workspace-switch">
-            <div class="eyebrow">Modo de trabajo</div>
+            <div class="coach-section-heading">
+              <div>
+                <div class="eyebrow">Ruta guiada</div>
+                <h2>Cierre</h2>
+              </div>
+              <span class="coach-focus-chip">Enfoque actual</span>
+            </div>
             <div class="coach-workspace-tabs" role="tablist" aria-label="Modo del Coach">
               <button
                 type="button"
@@ -159,8 +188,14 @@
                 Torre
               </a>
             </div>
+            <div class="coach-journey" aria-label="Camino del cierre">
+              <div class="coach-journey-step is-active"><span>1</span><strong>Conexion</strong></div>
+              <div class="coach-journey-step"><span>2</span><strong>Descubrimiento</strong></div>
+              <div class="coach-journey-step"><span>3</span><strong>Demostracion</strong></div>
+              <div class="coach-journey-step"><span>4</span><strong>Decision</strong></div>
+            </div>
             <p class="mini-note" data-coach-workspace-copy>
-              Cambia de lado segun el momento: presentacion y cierre, o calle y prospeccion.
+              Sigue el orden de la visita y activa el paso donde te encuentras.
             </p>
           </div>
 
@@ -1098,24 +1133,36 @@
           </article>
 
           <article
-            class="dashboard-card"
+            id="paso-conexion"
+            class="dashboard-card coach-step-card coach-step-featured"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 10"
           >
-            <div class="eyebrow">Paso 1</div>
-            <h3>Rompe de hielo</h3>
-            <p>
-              Aqui solo conectas. Habla de donde son, en que trabajan, cuanto tiempo tienen en Estados Unidos y deja
-              que la casa se afloje primero.
-            </p>
+            <div class="coach-step-copy">
+              <div class="eyebrow">Paso 1 · Conexion</div>
+              <h3>Rompe el hielo</h3>
+              <p>
+                Aqui solo conectas. Habla de donde son, en que trabajan, cuanto tiempo tienen en Estados Unidos y deja
+                que la casa se afloje primero.
+              </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="rompe_hielo">Estoy aqui</button>
+              <div class="dashboard-actions compact-top">
+                <button type="button" class="coach-demo-button" data-coach-stage-activate="rompe_hielo">
+                  Iniciar practica <span aria-hidden="true">→</span>
+                </button>
+              </div>
+
+              <p class="mini-note">
+                En este paso no cierres ni expliques todo. Solo crea confianza y escucha.
+              </p>
             </div>
-
-            <p class="mini-note">
-              En este paso no cierres ni expliques todo. Solo crea confianza y escucha.
-            </p>
+            <figure class="coach-step-visual">
+              <img
+                src="/coach/assets/coach-conexion-home.jpg"
+                alt="Mesa preparada para una conversacion tranquila durante una visita"
+                loading="lazy"
+              />
+            </figure>
           </article>
 
           <article
@@ -5371,7 +5418,7 @@
           <div class="coach-messages coach-float-messages" data-coach-chat-messages-floating>
             <article class="coach-message assistant">
               <p>
-                Hola, soy Agustin 2.0 Coach. Estoy listo para ayudarte con objeciones, cierres, precios, pagos y
+                Hola, soy tu Coach de Cierre. Estoy listo para ayudarte con objeciones, cierres, precios, pagos y
                 negociacion.
               </p>
             </article>
@@ -5425,7 +5472,7 @@
       </div>
 
       <p class="footer-note">
-        Agustin 2.0 Coach vive en su area privada para distribuidores.
+        Tu Coach de Cierre vive en esta area privada para distribuidores.
       </p>
     </div>
 
