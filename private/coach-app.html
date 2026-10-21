@@ -1166,24 +1166,34 @@
           </article>
 
           <article
-            class="dashboard-card"
+            id="paso-regalo"
+            class="dashboard-card coach-step-card coach-step-featured"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 20"
           >
-            <div class="eyebrow">Paso 2</div>
-            <h3>Entrega de regalo</h3>
-            <p>
-              Primero cumple lo prometido. Ese regalo abre confianza y te sirve como puente natural para explicar el
-              programa de regalos.
-            </p>
+            <div class="coach-step-copy">
+              <div class="eyebrow">Paso 2 · Confianza</div>
+              <h3>Entrega de regalo</h3>
+              <p>
+                Primero cumple lo prometido. Ese regalo abre confianza y te sirve como puente natural para explicar el
+                programa de regalos.
+              </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="entrega_regalo">Estoy aqui</button>
+              <div class="dashboard-actions compact-top">
+                <button type="button" class="coach-demo-button" data-coach-stage-activate="entrega_regalo">Estoy aqui</button>
+              </div>
+
+              <p class="mini-note">
+                No corras. Cuando sienten que si cumpliste, te escuchan mejor para lo que sigue.
+              </p>
             </div>
-
-            <p class="mini-note">
-              No corras. Cuando sienten que si cumpliste, te escuchan mejor para lo que sigue.
-            </p>
+            <figure class="coach-step-visual">
+              <img
+                src="/coach/assets/steps/step-2-entrega-regalo.jpg"
+                alt="Representante entregando un regalo de bienvenida a una pareja"
+                loading="lazy"
+              />
+            </figure>
           </article>
 
           <article class="dashboard-card" data-coach-workspace-section="prospeccion" hidden>
@@ -1322,19 +1332,31 @@
           </article>
 
           <article
+            id="paso-demostracion"
             class="dashboard-card resource-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 60"
           >
-            <div class="eyebrow">Paso 6 · Demo</div>
-            <h3>Recursos y pruebas para la demo</h3>
-            <p>
-              Ten aqui tus apoyos principales para presentar productos, hacer pruebas y sostener la demostracion con
-              orden.
-            </p>
+            <div class="coach-step-intro">
+              <div class="coach-step-copy">
+                <div class="eyebrow">Paso 6 · Demo</div>
+                <h3>Recursos y pruebas para la demo</h3>
+                <p>
+                  Ten aqui tus apoyos principales para presentar productos, hacer pruebas y sostener la demostracion con
+                  orden.
+                </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="demo_producto">Estoy aqui</button>
+                <div class="dashboard-actions compact-top">
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="demo_producto">Estoy aqui</button>
+                </div>
+              </div>
+              <figure class="coach-step-visual">
+                <img
+                  src="/coach/assets/steps/step-6-demostracion.jpg"
+                  alt="Demostracion de utensilios de cocina frente a una pareja"
+                  loading="lazy"
+                />
+              </figure>
             </div>
 
             <div class="resource-stack">
@@ -1554,31 +1576,43 @@
           </article>
 
           <article
+            id="paso-4-en-14"
             class="dashboard-card fourteen-sheet-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 30"
           >
-            <div class="eyebrow">Paso 3 · Programa 4 en 14</div>
-            <h3>Hoja nativa del programa</h3>
-            <p>
-              Llena aqui tu hoja de 4 en 14 y deja tus referencias listas para trabajarlas con orden.
-            </p>
+            <div class="coach-step-intro">
+              <div class="coach-step-copy">
+                <div class="eyebrow">Paso 3 · Programa 4 en 14</div>
+                <h3>Hoja nativa del programa</h3>
+                <p>
+                  Llena aqui tu hoja de 4 en 14 y deja tus referencias listas para trabajarlas con orden.
+                </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="programa_4_14">Estoy aqui</button>
-              <button
-                type="button"
-                class="secondary-button native-lead-toggle"
-                data-fourteen-sheet-toggle
-                aria-expanded="false"
-              >
-                Abrir hoja
-              </button>
+                <div class="dashboard-actions compact-top">
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="programa_4_14">Estoy aqui</button>
+                  <button
+                    type="button"
+                    class="secondary-button native-lead-toggle"
+                    data-fourteen-sheet-toggle
+                    aria-expanded="false"
+                  >
+                    Abrir hoja
+                  </button>
+                </div>
+
+                <p class="mini-note" data-coach-crm-context-note>
+                  Si entras desde CRM o Agenda, esta hoja queda ligada a la casa activa.
+                </p>
+              </div>
+              <figure class="coach-step-visual">
+                <img
+                  src="/coach/assets/steps/step-3-programa-4-en-14.jpg"
+                  alt="Familia organizando referencias y futuras citas con su representante"
+                  loading="lazy"
+                />
+              </figure>
             </div>
-
-            <p class="mini-note" data-coach-crm-context-note>
-              Si entras desde CRM o Agenda, esta hoja queda ligada a la casa activa.
-            </p>
 
             <div class="native-lead-wrap" data-fourteen-sheet-wrap hidden>
               <form class="native-lead-form fourteen-sheet-form" data-fourteen-sheet-form>
@@ -1665,7 +1699,7 @@
                 </p>
               </section>
 
-              <section class="fourteen-instant-wrap" data-fourteen-instant-wrap hidden>
+              <section id="paso-cita-instantanea" class="fourteen-instant-wrap" data-fourteen-instant-wrap hidden>
                 <div class="fourteen-instant-head">
                   <div>
                     <strong>Paso 4 · Cita instantanea</strong>
@@ -1675,6 +1709,14 @@
                     Estoy aqui
                   </button>
                 </div>
+
+                <figure class="coach-step-banner coach-step-banner-compact">
+                  <img
+                    src="/coach/assets/steps/step-4-cita-instantanea.jpg"
+                    alt="Familia realizando una llamada inmediata a una referencia"
+                    loading="lazy"
+                  />
+                </figure>
 
                 <div class="fourteen-instant-summary" data-fourteen-instant-summary>
                   Guarda una hoja para activar este paso.
@@ -4136,32 +4178,44 @@
           </article>
 
           <article
+            id="paso-encuesta"
             class="dashboard-card health-survey-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 50"
           >
-            <div class="eyebrow">Paso 5 · Encuesta</div>
-            <h3>Encuesta de salud</h3>
-            <p>
-              Llena esta encuesta durante la visita para entender mejor prioridades, necesidades y oportunidades de
-              cierre.
-            </p>
+            <div class="coach-step-intro">
+              <div class="coach-step-copy">
+                <div class="eyebrow">Paso 5 · Encuesta</div>
+                <h3>Encuesta de salud</h3>
+                <p>
+                  Llena esta encuesta durante la visita para entender mejor prioridades, necesidades y oportunidades de
+                  cierre.
+                </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="encuesta_salud">Estoy aqui</button>
-              <button
-                type="button"
-                class="secondary-button health-survey-toggle"
-                data-health-survey-toggle
-                aria-expanded="false"
-              >
-                Abrir encuesta
-              </button>
+                <div class="dashboard-actions compact-top">
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="encuesta_salud">Estoy aqui</button>
+                  <button
+                    type="button"
+                    class="secondary-button health-survey-toggle"
+                    data-health-survey-toggle
+                    aria-expanded="false"
+                  >
+                    Abrir encuesta
+                  </button>
+                </div>
+
+                <p class="mini-note" data-coach-crm-context-note>
+                  Si entras desde CRM o Agenda, la encuesta queda conectada a esa misma visita.
+                </p>
+              </div>
+              <figure class="coach-step-visual">
+                <img
+                  src="/coach/assets/steps/step-5-encuesta-salud.jpg"
+                  alt="Conversacion sobre prioridades de salud durante la encuesta"
+                  loading="lazy"
+                />
+              </figure>
             </div>
-
-            <p class="mini-note" data-coach-crm-context-note>
-              Si entras desde CRM o Agenda, la encuesta queda conectada a esa misma visita.
-            </p>
 
             <div class="health-survey-wrap" data-health-survey-wrap hidden>
               <form class="native-lead-form health-survey-form" data-health-survey-form>
@@ -4553,19 +4607,31 @@
           </article>
 
           <article
-            class="dashboard-card"
+            id="paso-cierre"
+            class="dashboard-card coach-step-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 70"
           >
-            <div class="eyebrow">Paso 7 · Cierre</div>
-            <h3>Momento de cerrar con apoyo</h3>
-            <p>
-              Aqui ya puedes llamar al jefe, negociar, usar encuesta, calculadora, balance, descuentos y regalos.
-              Desde este punto todo empuja a decision.
-            </p>
+            <div class="coach-step-intro">
+              <div class="coach-step-copy">
+                <div class="eyebrow">Paso 7 · Cierre</div>
+                <h3>Momento de cerrar con apoyo</h3>
+                <p>
+                  Aqui ya puedes llamar al jefe, negociar, usar encuesta, calculadora, balance, descuentos y regalos.
+                  Desde este punto todo empuja a decision.
+                </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="cierre_final">Estoy aqui</button>
+                <div class="dashboard-actions compact-top">
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="cierre_final">Estoy aqui</button>
+                </div>
+              </div>
+              <figure class="coach-step-visual">
+                <img
+                  src="/coach/assets/steps/step-7-cierre.jpg"
+                  alt="Familia y representante confirmando una decision con confianza"
+                  loading="lazy"
+                />
+              </figure>
             </div>
 
             <div class="feature-list compact">
@@ -4939,22 +5005,34 @@
           </article>
 
           <article
-            class="dashboard-card"
+            id="paso-invitacion"
+            class="dashboard-card coach-step-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 80"
             data-recruitment-root="cierre"
           >
-            <div class="eyebrow">Paso 8 · Invitacion al negocio</div>
-            <h3>Invitalos a hacer lo que tu haces</h3>
-            <p>
-              Si viste apertura, este es el momento para ofrecer la oportunidad de negocio sin enredarte ni hablar de
-              mas.
-            </p>
+            <div class="coach-step-intro">
+              <div class="coach-step-copy">
+                <div class="eyebrow">Paso 8 · Invitacion al negocio</div>
+                <h3>Invitalos a hacer lo que tu haces</h3>
+                <p>
+                  Si viste apertura, este es el momento para ofrecer la oportunidad de negocio sin enredarte ni hablar de
+                  mas.
+                </p>
 
-            <div class="dashboard-actions compact-top">
-              <button type="button" class="coach-demo-button" data-coach-stage-activate="invitacion_negocio">
-                Estoy aqui
-              </button>
+                <div class="dashboard-actions compact-top">
+                  <button type="button" class="coach-demo-button" data-coach-stage-activate="invitacion_negocio">
+                    Estoy aqui
+                  </button>
+                </div>
+              </div>
+              <figure class="coach-step-visual">
+                <img
+                  src="/coach/assets/steps/step-8-invitacion-negocio.jpg"
+                  alt="Representante explicando una oportunidad de crecimiento profesional"
+                  loading="lazy"
+                />
+              </figure>
             </div>
 
             <div class="feature-list compact">

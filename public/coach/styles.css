@@ -6888,6 +6888,22 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-f
   max-width: 620px;
 }
 
+.coach-step-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-intro h3 {
+  margin-top: 16px;
+  color: #071f3b;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(1.8rem, 3.2vw, 2.55rem);
+  line-height: 1.04;
+}
+
 .coach-step-visual {
   min-height: 280px;
   margin: 0;
@@ -6898,6 +6914,28 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-f
 }
 
 .coach-step-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coach-step-banner {
+  width: 100%;
+  min-height: 260px;
+  aspect-ratio: 16 / 7;
+  margin: 20px 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #e9eef3;
+  box-shadow: inset 0 0 0 1px rgba(10, 40, 72, 0.08);
+}
+
+.coach-step-banner-compact {
+  min-height: 220px;
+  aspect-ratio: 16 / 8;
+}
+
+.coach-step-banner img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -6952,7 +6990,8 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-doc
 
 @media (max-width: 980px) {
   html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-compact-head,
-  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured {
+  html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-step-featured,
+  .coach-step-intro {
     grid-template-columns: 1fr;
   }
 
@@ -7061,6 +7100,11 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-doc
     padding: 16px;
   }
 
+  .coach-step-intro {
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
   .coach-step-copy {
     padding: 10px 6px 4px;
   }
@@ -7068,6 +7112,13 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .royalone-doc
   .coach-step-visual {
     min-height: 210px;
     order: -1;
+  }
+
+  .coach-step-banner,
+  .coach-step-banner-compact {
+    min-height: 180px;
+    aspect-ratio: 16 / 9;
+    margin: 16px 0;
   }
 
   html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-float-dock {
