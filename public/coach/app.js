@@ -26,6 +26,12 @@ const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
+
+if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/coach/sw.js", { scope: "/coach/" }).catch(() => null);
+  });
+}
 const COACH_ACTIVE_CRM_RECORD_KEY = "agustin-coach-active-crm-record";
 const COACH_ACTIVE_HEALTH_SURVEY_KEY = "agustin-coach-active-health-survey";
 const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
