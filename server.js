@@ -25653,18 +25653,11 @@ function construirCoachHelpReply({ userDoc = null, profileDoc = null, question =
 // COACH: AUTH, STRIPE Y RUTAS PRIVADAS
 // =============================
 app.post("/api/coach/signup-checkout", async (req, res) => {
-  if (!stripeListoParaCheckout()) {
-    return responderCoachError(
-      res,
-      503,
-      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
-    );
-  }
-
   const name = String(req.body?.name || "").trim();
   const email = normalizarEmail(req.body?.email || "");
   const password = String(req.body?.password || "");
   const plan = normalizarPlanCoach(req.body?.plan || "trial");
+  const accesoDePrueba = coachTieneAccesoDePrueba(email);
 
   if (!name) {
     return responderCoachError(res, 400, "Tu nombre es requerido.");
@@ -25682,6 +25675,14 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     );
   }
 
+  if (!accesoDePrueba && !stripeListoParaCheckout()) {
+    return responderCoachError(
+      res,
+      503,
+      "Stripe todavia no esta configurado. Falta conectar las claves del Coach."
+    );
+  }
+
   const existente = await CoachUser.findOne({ email });
 
   if (existente) {
@@ -25694,7 +25695,6 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 
   try {
     const passwordSeguro = crearPasswordSeguro(password);
-    const accesoDePrueba = coachTieneAccesoDePrueba(email);
     let userDoc = await CoachUser.create({
       name,
       email,
