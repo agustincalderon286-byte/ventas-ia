@@ -8544,6 +8544,7 @@ function renderCoachTeamSeats(seats = []) {
             <span>Encuestas: <strong>${Number(seat.counts?.surveys || 0)}</strong></span>
             <span>4 en 14: <strong>${Number(seat.counts?.programSheets || 0)}</strong></span>
             <span>Aplicaciones: <strong>${Number(seat.counts?.applications || 0)}</strong></span>
+            <span>Analisis de audio: <strong>${Number(seat.counts?.demoAnalyses || 0)}</strong></span>
           </div>
 
           <p class="mini-note team-seat-note">
@@ -8686,7 +8687,8 @@ function initCoachTeamWorkspace(user = null) {
           name: formData.get("name"),
           email: formData.get("email"),
           seatLabel: formData.get("seatLabel"),
-          teamRole: formData.get("teamRole")
+          teamRole: formData.get("teamRole"),
+          temporaryPassword: formData.get("temporaryPassword")
         }
       });
 
@@ -14958,14 +14960,14 @@ function initCoachDemoRecorder() {
           <article class="coach-demo-history-item">
             <div>
               <strong>${escapeHtml(analysis.report?.title || "Demostracion")}</strong>
-              <span>${escapeHtml(formatCoachDemoAnalysisDate(analysis.startedAt || analysis.createdAt))} · ${escapeHtml(
+              <span>${analysis.ownerName ? `${escapeHtml(analysis.ownerName)} · ` : ""}${escapeHtml(formatCoachDemoAnalysisDate(analysis.startedAt || analysis.createdAt))} · ${escapeHtml(
                 formatCoachDemoRecordingTime(analysis.durationSeconds)
               )} · ${escapeHtml(analysis.knownOutcomeLabel || "Resultado pendiente")}</span>
             </div>
             <div class="coach-demo-history-actions">
               <span class="coach-demo-history-state">${escapeHtml(stateLabel)}</span>
               ${completed ? `<button type="button" data-demo-analysis-open="${escapeHtml(analysis.id)}">Abrir</button>` : ""}
-              <button type="button" data-demo-analysis-delete="${escapeHtml(analysis.id)}">Eliminar</button>
+              ${analysis.canDelete ? `<button type="button" data-demo-analysis-delete="${escapeHtml(analysis.id)}">Eliminar</button>` : ""}
             </div>
           </article>`;
       })

@@ -9796,7 +9796,8 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
       leads: Number(stats?.leads || 0),
       surveys: Number(stats?.surveys || 0),
       programSheets: Number(stats?.programSheets || 0),
-      applications: Number(stats?.applications || 0)
+      applications: Number(stats?.applications || 0),
+      demoAnalyses: Number(stats?.demoAnalyses || 0)
     }
   };
 }
@@ -12304,11 +12305,17 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
   }
 
   const includeDetail = Boolean(options.includeDetail);
+  const viewerUserId = String(options.viewerUserId || "");
+  const ownerUserId = String(doc.ownerUserId || "");
   const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
   const completedChunks = chunks.filter(chunk => chunk?.status === "transcribed" && chunk?.text).length;
 
   return {
     id: String(doc._id),
+    ownerUserId,
+    ownerName: doc.ownerName || "",
+    ownerEmail: doc.ownerEmail || "",
+    canDelete: Boolean(viewerUserId && ownerUserId && viewerUserId === ownerUserId),
     status: doc.status || "recording",
     knownOutcome: normalizarCoachDemoKnownOutcome(doc.knownOutcome || "unknown"),
     knownOutcomeLabel: formatearCoachDemoKnownOutcome(doc.knownOutcome || "unknown"),
@@ -12342,6 +12349,23 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
     createdAt: doc.createdAt || null,
     updatedAt: doc.updatedAt || null
   };
+}
+
+async function listarCoachDemoAnalysisUserIds(userDoc = null) {
+  if (!userDoc?._id) {
+    return [];
+  }
+
+  if (!esCoachTeamManager(userDoc)) {
+    return [userDoc._id];
+  }
+
+  const seatIds = await CoachUser.find({
+    teamOwnerUserId: userDoc._id,
+    accountType: "seat"
+  }).distinct("_id");
+
+  return [userDoc._id, ...seatIds];
 }
 
 function extraerCoachDemoResponseText(data = null) {
@@ -29239,7 +29263,7 @@ app.get("/api/coach/team", async (req, res) => {
       });
     }
 
-    const [profileDocs, leadCounts, surveyCounts, programCounts, applicationCounts] = await Promise.all([
+    const [profileDocs, leadCounts, surveyCounts, programCounts, applicationCounts, demoAnalysisCounts] = await Promise.all([
       CoachDistributorProfile.find({ userId: { $in: seatIds } }).lean(),
       CoachLeadInbox.aggregate([
         {
@@ -29276,6 +29300,15 @@ app.get("/api/coach/team", async (req, res) => {
           }
         },
         { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
+      ]),
+      CoachDemoAnalysis.aggregate([
+        {
+          $match: {
+            ownerUserId: { $in: seatIds },
+            status: "completed"
+          }
+        },
+        { $group: { _id: "$ownerUserId", total: { $sum: 1 } } }
       ])
     ]);
 
@@ -29284,6 +29317,7 @@ app.get("/api/coach/team", async (req, res) => {
     const surveyMap = new Map(surveyCounts.map(item => [String(item._id), Number(item.total || 0)]));
     const programMap = new Map(programCounts.map(item => [String(item._id), Number(item.total || 0)]));
     const applicationMap = new Map(applicationCounts.map(item => [String(item._id), Number(item.total || 0)]));
+    const demoAnalysisMap = new Map(demoAnalysisCounts.map(item => [String(item._id), Number(item.total || 0)]));
 
     const seats = seatDocs
       .map(seatDoc =>
@@ -29291,7 +29325,8 @@ app.get("/api/coach/team", async (req, res) => {
           leads: leadMap.get(String(seatDoc._id)) || 0,
           surveys: surveyMap.get(String(seatDoc._id)) || 0,
           programSheets: programMap.get(String(seatDoc._id)) || 0,
-          applications: applicationMap.get(String(seatDoc._id)) || 0
+          applications: applicationMap.get(String(seatDoc._id)) || 0,
+          demoAnalyses: demoAnalysisMap.get(String(seatDoc._id)) || 0
         })
       )
       .filter(Boolean);
@@ -29333,7 +29368,16 @@ app.post("/api/coach/team/seats", async (req, res) => {
       return responderCoachError(res, 409, "Ese correo ya tiene una cuenta creada.");
     }
 
-    const temporaryPassword = generarCoachSeatPasswordTemporal();
+    const requestedPassword = String(req.body?.temporaryPassword || "").trim();
+    if (requestedPassword && !passwordEsValido(requestedPassword)) {
+      return responderCoachError(
+        res,
+        400,
+        `La contrasena debe tener al menos ${COACH_PASSWORD_MIN} caracteres.`
+      );
+    }
+
+    const temporaryPassword = requestedPassword || generarCoachSeatPasswordTemporal();
     const passwordSeguro = crearPasswordSeguro(temporaryPassword);
     const now = new Date();
     const seatDoc = await CoachUser.create({
@@ -31670,13 +31714,16 @@ app.get("/api/coach/demo-analyses", async (req, res) => {
   }
 
   try {
-    const docs = await CoachDemoAnalysis.find({ ownerUserId: auth.user._id })
+    const accessibleUserIds = await listarCoachDemoAnalysisUserIds(auth.user);
+    const docs = await CoachDemoAnalysis.find({ ownerUserId: { $in: accessibleUserIds } })
       .sort({ createdAt: -1 })
       .limit(12)
       .lean();
 
     res.json({
-      analyses: docs.map(doc => limpiarCoachDemoAnalysis(doc)).filter(Boolean)
+      analyses: docs
+        .map(doc => limpiarCoachDemoAnalysis(doc, { viewerUserId: auth.user._id }))
+        .filter(Boolean)
     });
   } catch (error) {
     console.error("Error cargando analisis de demostraciones:", error.message);
@@ -31696,16 +31743,22 @@ app.get("/api/coach/demo-analyses/:id", async (req, res) => {
   }
 
   try {
+    const accessibleUserIds = await listarCoachDemoAnalysisUserIds(auth.user);
     const doc = await CoachDemoAnalysis.findOne({
       _id: req.params.id,
-      ownerUserId: auth.user._id
+      ownerUserId: { $in: accessibleUserIds }
     }).lean();
 
     if (!doc) {
       return responderCoachError(res, 404, "Ese analisis no existe.");
     }
 
-    res.json({ analysis: limpiarCoachDemoAnalysis(doc, { includeDetail: true }) });
+    res.json({
+      analysis: limpiarCoachDemoAnalysis(doc, {
+        includeDetail: true,
+        viewerUserId: auth.user._id
+      })
+    });
   } catch (error) {
     console.error("Error abriendo analisis de demostracion:", error.message);
     responderCoachError(res, 500, "No pude abrir ese analisis.");
