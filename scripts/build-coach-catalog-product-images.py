@@ -149,7 +149,7 @@ def main():
         "cortapizza": (0.36, 0.12, 0.55, 0.47),
         "machacador": (0.48, 0.29, 0.70, 0.64),
         "rallador": (0.67, 0.08, 0.82, 0.50),
-        "espatula-helados": (0.11, 0.55, 0.34, 0.88),
+        "espatula-helados": (0.46, 0.61, 0.67, 0.99),
         "espatula-silicona": (0.34, 0.46, 0.54, 0.94),
         "batidor-globo": (0.68, 0.38, 0.85, 0.87),
     }

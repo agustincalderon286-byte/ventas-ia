@@ -24104,6 +24104,10 @@ const COACH_CATALOG_PRODUCT_IMAGES = {
 
 const COACH_CATALOG_PRODUCT_NAME_RULES = [
   {
+    patron: /^luz ultra violeta$/,
+    producto: null
+  },
+  {
     patron: /^olla de 3 cuartos$/,
     producto: ["olla-3-cuartos", 9, "Olla de 3 cuartos"]
   },
@@ -24347,11 +24351,11 @@ const COACH_CATALOG_IMAGE_RULES = [
 function construirImagenProductoCatalogoCoach(codigo = "", nombre = "") {
   const codigoNormalizado = String(codigo || "").trim().toUpperCase();
   const nombreNormalizado = normalizarTextoBusquedaCoach(nombre);
-  const productoPorNombre = nombreNormalizado
-    ? COACH_CATALOG_PRODUCT_NAME_RULES.find(item => item.patron.test(nombreNormalizado))?.producto
+  const reglaProductoPorNombre = nombreNormalizado
+    ? COACH_CATALOG_PRODUCT_NAME_RULES.find(item => item.patron.test(nombreNormalizado))
     : null;
   const productoPorCodigo = codigoNormalizado ? COACH_CATALOG_PRODUCT_IMAGES[codigoNormalizado] : null;
-  const producto = productoPorNombre || productoPorCodigo;
+  const producto = reglaProductoPorNombre ? reglaProductoPorNombre.producto : productoPorCodigo;
   const reglaPorCodigo = codigoNormalizado
     ? COACH_CATALOG_IMAGE_RULES.find(item => item.codigos.includes(codigoNormalizado))
     : null;

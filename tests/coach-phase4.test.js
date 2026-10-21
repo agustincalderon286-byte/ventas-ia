@@ -64,6 +64,15 @@ test("muestra una imagen especifica y distinta para cada tamano de olla", () => 
   assert.ok(ollas.every(item => item.imagen_producto.includes("/products/olla-")));
 });
 
+test("mantiene distintas las espatulas y no inventa una foto para la luz ultravioleta", () => {
+  const espatula = construirImagenProductoCatalogoCoach("SP1852", "ESPATULA");
+  const espatulaHelados = construirImagenProductoCatalogoCoach("SP1859", "ESPATULA PARA HELADOS");
+  const luzUltravioleta = construirImagenProductoCatalogoCoach("WF0654", "LUZ ULTRA VIOLETA");
+
+  assert.notEqual(espatula.imagen_producto, espatulaHelados.imagen_producto);
+  assert.match(luzUltravioleta.imagen_producto, /pagina-48\.webp$/);
+});
+
 test("todos los productos con precio reciben una imagen publica disponible", () => {
   const priceList = JSON.parse(
     readFileSync(new URL("../src/data/lista_de_precios.json", import.meta.url), "utf8")
