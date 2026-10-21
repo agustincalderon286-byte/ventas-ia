@@ -387,7 +387,7 @@ function syncCoachManagerUi(user = null) {
     : "Por ahora el Coach esta enfocado en la demo, las objeciones y el cierre. Las demas areas siguen guardadas para reactivarlas despues.";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
-  document.title = isTelemarketing ? "Telemarketing | Agustin 2.0 Coach" : "Coach Privado | Agustin 2.0 Coach";
+  document.title = isTelemarketing ? "Telemarketing | TEC" : "Coach Privado | TEC Total Elite Coaching";
 
   document.querySelectorAll("[data-coach-home-link]").forEach(node => {
     node.href = getCoachHomePath(user);

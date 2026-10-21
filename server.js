@@ -13007,7 +13007,7 @@ function construirCoachLeadDeliveryPayload(userDoc = null, lead = null, destinat
   });
 
   return {
-    app: "Agustin 2.0 Coach",
+    app: "TEC Total Elite Coaching",
     kind: "lead",
     sentAt: new Date().toISOString(),
     owner: {
@@ -13066,7 +13066,7 @@ function construirCorreoLeadCoach(userDoc = null, lead = null, destination = nul
   const lines = [
     `Hola ${ownerName},`,
     "",
-    "Te acaba de entrar un lead nuevo en Agustin 2.0 Coach.",
+    "Te acaba de entrar un lead nuevo en TEC Total Elite Coaching.",
     "",
     `Nombre: ${lead?.fullName || "Sin nombre"}`,
     `Telefono: ${lead?.phone || "Sin telefono"}`,
@@ -13089,7 +13089,7 @@ function construirCorreoLeadCoach(userDoc = null, lead = null, destination = nul
   const html = `
     <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a">
       <h2 style="margin:0 0 12px">Nuevo lead para ${escapeXml(ownerName)}</h2>
-      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar un lead nuevo en Agustin 2.0 Coach.</p>
+      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar un lead nuevo en TEC Total Elite Coaching.</p>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Nombre</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.fullName || "Sin nombre")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(lead?.phone || "Sin telefono")}</td></tr>
@@ -13124,7 +13124,7 @@ function construirCoachRecruitmentApplicationDeliveryPayload(userDoc = null, app
   });
 
   return {
-    app: "Agustin 2.0 Coach",
+    app: "TEC Total Elite Coaching",
     kind: "reclutamiento",
     sentAt: new Date().toISOString(),
     owner: {
@@ -13184,7 +13184,7 @@ function construirCorreoCoachRecruitmentApplication(userDoc = null, application 
   const lines = [
     `Hola ${ownerName},`,
     "",
-    "Te acaba de entrar una aplicacion rapida de reclutamiento en Agustin 2.0 Coach.",
+    "Te acaba de entrar una aplicacion rapida de reclutamiento en TEC Total Elite Coaching.",
     "",
     `Nombre: ${application?.fullName || "Sin nombre"}`,
     `Telefono: ${application?.phone || "Sin telefono"}`,
@@ -13208,7 +13208,7 @@ function construirCorreoCoachRecruitmentApplication(userDoc = null, application 
   const html = `
     <div style="font-family:Arial,sans-serif;padding:24px;color:#0f172a">
       <h2 style="margin:0 0 12px">Nueva aplicacion de reclutamiento</h2>
-      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar una aplicacion rapida dentro de Agustin 2.0 Coach.</p>
+      <p style="margin:0 0 18px;color:#475569">Te acaba de entrar una aplicacion rapida dentro de TEC Total Elite Coaching.</p>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Nombre</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.fullName || "Sin nombre")}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e2e8f0"><strong>Telefono</strong></td><td style="padding:8px;border:1px solid #e2e8f0">${escapeXml(application?.phone || "Sin telefono")}</td></tr>
@@ -13238,7 +13238,7 @@ function construirCorreoCoachRecruitmentApplication(userDoc = null, application 
 
 function construirCoachProgramSheetDeliveryPayload(userDoc = null, sheetDoc = null, destination = null, createdLeads = []) {
   return {
-    app: "Agustin 2.0 Coach",
+    app: "TEC Total Elite Coaching",
     kind: "programa_4_en_14",
     sentAt: new Date().toISOString(),
     owner: {
@@ -13284,7 +13284,7 @@ function construirCorreoPrograma414Coach(userDoc = null, sheetDoc = null, destin
   const textLines = [
     `Hola ${ownerName},`,
     "",
-    "Acabas de guardar una hoja nativa de 4 en 14 en Agustin 2.0 Coach.",
+    "Acabas de guardar una hoja nativa de 4 en 14 en TEC Total Elite Coaching.",
     "",
     `Anfitrion: ${sheetDoc?.hostName || "Sin nombre"}`,
     `Telefono anfitrion: ${sheetDoc?.hostPhone || "Sin telefono"}`,
@@ -22894,7 +22894,7 @@ No repitas informacion innecesaria.
 `;
 
 const coachSystemPrompt = `
-Eres Agustin 2.0 Coach, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, sacar precios y pagos, armar paquetes, negociar y cerrar con mas claridad.
+Eres TEC Total Elite Coaching, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, sacar precios y pagos, armar paquetes, negociar y cerrar con mas claridad.
 
 VOZ Y TONO:
 - Habla claro, directo, calido y util

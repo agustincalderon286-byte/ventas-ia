@@ -506,6 +506,34 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   font-size: 0.88rem;
 }
 
+.coach-brand--tec {
+  flex: 0 0 auto;
+}
+
+.coach-brand-logo-frame,
+.coach-login-brand-logo-frame {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 24px rgba(6, 27, 52, 0.18);
+}
+
+.coach-brand-logo-frame {
+  width: 178px;
+  height: 66px;
+  padding: 5px 9px;
+  border-radius: 15px;
+}
+
+.coach-brand-logo,
+.coach-login-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .coach-nav-links {
   display: flex;
   align-items: center;
@@ -8103,6 +8131,17 @@ body.coach-login-body::before {
   gap: 12px;
 }
 
+.coach-login-brand--tec {
+  flex: 0 0 auto;
+}
+
+.coach-login-brand-logo-frame {
+  width: 186px;
+  height: 68px;
+  padding: 5px 10px;
+  border-radius: 15px;
+}
+
 .coach-login-brand-mark {
   display: grid;
   place-items: center;
@@ -8591,6 +8630,13 @@ body.coach-login-body::before {
     height: 42px;
   }
 
+  .coach-login-brand-logo-frame {
+    width: 126px;
+    height: 48px;
+    padding: 3px 6px;
+    border-radius: 11px;
+  }
+
   .coach-login-brand-copy strong {
     font-size: 0.78rem;
   }
@@ -8677,5 +8723,14 @@ body.coach-login-body::before {
 
   .coach-login-footer {
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .coach-brand-logo-frame {
+    width: 132px;
+    height: 50px;
+    padding: 3px 6px;
+    border-radius: 11px;
   }
 }
