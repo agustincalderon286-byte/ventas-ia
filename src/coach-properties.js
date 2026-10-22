@@ -27,7 +27,7 @@ export function normalizePropertyCity(value = "HILLSIDE") {
 
 function literal(value) { return `'${String(value).replaceAll("'", "''")}'`; }
 function clean(value) { return String(value || "").trim().replace(/\s+/g, " "); }
-function ownerName(value) { const name = clean(value); return /^(NULL|UNKNOWN|N\/A|NONE)$/i.test(name) ? "" : name; }
+function ownerName(value) { const name = clean(value); return /^(NULL|UNKNOWN|N\/A|NONE|TAXPAYER OF|CURRENT OWNER|OWNER OF RECORD)$/i.test(name) ? "" : name; }
 function coordinates(row) {
   if (row?.lat == null || row?.lon == null || row.lat === "" || row.lon === "") return null;
   const lat = Number(row.lat), lon = Number(row.lon);

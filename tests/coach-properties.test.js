@@ -53,7 +53,7 @@ test("nearby search filters the circle, excludes the appointment, and groups sam
     const where = url.searchParams.get("$where");
     if (url.pathname.includes("3723-97qp")) {
       if (where.startsWith("pin =")) return ok([property(anchorPin)]);
-      return ok([property(pins[1], "102 TEST ST", "OWNER A"), property(pins[2], "102 TEST ST", "OWNER B"), property(pins[3], "104 TEST ST", "NULL")]);
+      return ok([property(pins[1], "102 TEST ST", "OWNER A"), property(pins[2], "102 TEST ST", "OWNER B"), property(pins[3], "104 TEST ST", "TAXPAYER OF")]);
     }
     if (where.startsWith("pin in")) return ok([coordinate(anchorPin)]);
     return ok([coordinate(anchorPin), coordinate(pins[1], 41.8701), coordinate(pins[2], 41.8701), coordinate(pins[3], 41.8702), coordinate(pins[4], 41.88)]);
