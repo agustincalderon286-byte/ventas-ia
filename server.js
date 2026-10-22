@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
+import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -36,6 +37,11 @@ const CORS_ALLOWED_ORIGINS = new Set(
 );
 
 const app = express();
+const CoachFormWriteReceipt = mongoose.models.CoachFormWriteReceipt || mongoose.model("CoachFormWriteReceipt", new mongoose.Schema({
+  _id: String, accountId: { type: String, required: true }, fingerprint: String, token: String,
+  state: String, statusCode: Number, responseBody: mongoose.Schema.Types.Mixed, createdAt: Date, updatedAt: Date
+}));
+const guardCoachFormWrite = createCoachFormWriteGuard({ model: CoachFormWriteReceipt, requireAuth: requireCoachActivo });
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use((req, res, next) => {
@@ -31231,8 +31237,8 @@ app.get("/api/coach/recruitment-applications", async (req, res) => {
   }
 });
 
-app.post("/api/coach/recruitment-applications", async (req, res) => {
-  const auth = await requireCoachActivo(req, res);
+app.post("/api/coach/recruitment-applications", guardCoachFormWrite, async (req, res) => {
+  const auth = req.tecFormAuth || await requireCoachActivo(req, res);
 
   if (!auth) {
     return;
@@ -31433,8 +31439,8 @@ app.get("/api/coach/health-surveys", async (req, res) => {
   }
 });
 
-app.post("/api/coach/health-surveys", async (req, res) => {
-  const auth = await requireCoachActivo(req, res);
+app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
+  const auth = req.tecFormAuth || await requireCoachActivo(req, res);
 
   if (!auth) {
     return;
@@ -32328,8 +32334,8 @@ app.get("/api/coach/demo-outcomes", async (req, res) => {
   }
 });
 
-app.post("/api/coach/demo-outcomes", async (req, res) => {
-  const auth = await requireCoachActivo(req, res);
+app.post("/api/coach/demo-outcomes", guardCoachFormWrite, async (req, res) => {
+  const auth = req.tecFormAuth || await requireCoachActivo(req, res);
 
   if (!auth) {
     return;

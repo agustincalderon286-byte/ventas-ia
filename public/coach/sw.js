@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261022-audit2";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-audit2";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-forms1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-forms1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -9,16 +9,17 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261022-audit2",
-  "/coach/app.js?v=20261022-audit2",
-  "/coach/order-calculator.js?v=20261022-audit2",
-  "/coach/styles.css?v=20261022-audit2",
-  "/coach/property-map.js?v=20261022-audit2",
-  "/coach/property-map.css?v=20261022-audit2",
-  "/coach/property-visit-helpers.js?v=20261022-audit2",
+  "/coach/site.webmanifest?v=20261022-forms1",
+  "/coach/app.js?v=20261022-forms1",
+  "/coach/order-calculator.js?v=20261022-forms1",
+  "/coach/offline-forms.js?v=20261022-forms1",
+  "/coach/styles.css?v=20261022-forms1",
+  "/coach/property-map.js?v=20261022-forms1",
+  "/coach/property-map.css?v=20261022-forms1",
+  "/coach/property-visit-helpers.js?v=20261022-forms1",
   "/coach/document.html",
-  "/coach/document-viewer.js?v=20261022-audit2",
-  "/coach/document-viewer.css?v=20261022-audit2",
+  "/coach/document-viewer.js?v=20261022-forms1",
+  "/coach/document-viewer.css?v=20261022-forms1",
   "/coach/assets/documents/manifest-v1.json",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
@@ -243,6 +244,35 @@ async function deleteOutboxItem(id) {
   });
 }
 
+async function completeOfflineForm(item, data) {
+  const db = await openTecOfflineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(["cache", "outbox"], "readwrite");
+    tx.objectStore("cache").put({ key: `form-result:${item.ownerEmail}:${item.id}`, ownerEmail: item.ownerEmail,
+      kind: item.kind, requestId: item.id, value: data, body: item.body, savedAt: new Date().toISOString() });
+    tx.objectStore("outbox").delete(item.id);
+    tx.addEventListener("complete", resolve);
+    tx.addEventListener("abort", () => reject(tx.error || new Error("No local confirmation")));
+    tx.addEventListener("error", () => reject(tx.error || new Error("No local confirmation")));
+  });
+}
+
+async function recordOfflineFormError(item, message, status) {
+  const db = await openTecOfflineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("outbox", "readwrite");
+    const store = tx.objectStore("outbox");
+    const request = store.get(item.id);
+    request.addEventListener("success", () => {
+      if (request.result) store.put({ ...request.result, attempts: Number(request.result.attempts || 0) + 1,
+        lastError: String(message || "No pude sincronizar.").slice(0, 240), lastStatus: Number(status || 0), lastAttemptAt: new Date().toISOString() });
+    });
+    tx.addEventListener("complete", resolve);
+    tx.addEventListener("abort", () => reject(tx.error));
+    tx.addEventListener("error", () => reject(tx.error));
+  });
+}
+
 async function broadcastOfflineStatus(synced = 0) {
   const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
   windows.forEach(client => client.postMessage({ type: "TEC_OFFLINE_SYNC", synced }));
@@ -273,12 +303,20 @@ async function flushOutboxInServiceWorker() {
       ...(item.body ? { body: JSON.stringify(item.body) } : {})
     });
     if (!response.ok) {
+      if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+        const data = await response.json().catch(() => ({}));
+        await recordOfflineFormError(item, data.error || `Error ${response.status}`, response.status);
+      }
       if (response.status === 401 || response.status === 403) {
         break;
       }
       continue;
     }
-    await deleteOutboxItem(item.id);
+    if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+      await completeOfflineForm(item, await response.json());
+    } else {
+      await deleteOutboxItem(item.id);
+    }
     synced += 1;
   }
 

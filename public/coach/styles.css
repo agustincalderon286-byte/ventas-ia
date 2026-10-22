@@ -4541,6 +4541,25 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   line-height: 1.5;
 }
 
+.tec-form-status,
+.tec-form-pending {
+  grid-column: 1 / -1;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--card);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.tec-form-pending summary { cursor: pointer; font-weight: 700; }
+.tec-form-status[data-state="error"] { border-color: var(--danger); }
+.tec-form-status[data-state="success"] { border-color: var(--green); }
+.tec-form-status[data-state="pending"] { border-color: var(--gold); }
+
 .order-calc input[aria-invalid="true"] {
   border-color: #b4232f !important;
 }

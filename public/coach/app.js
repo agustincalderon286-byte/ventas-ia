@@ -64,7 +64,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-audit2", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-forms1", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
@@ -174,18 +174,38 @@ async function clearTecCachedViewer() {
 
 async function queueTecOfflineRequest(item = {}) {
   const viewer = await getTecCachedViewer().catch(() => null);
-  await tecOfflinePut("outbox", {
+  const entry = {
     id: item.id || createTecOfflineId(item.kind || "request"),
     kind: item.kind || "request",
     url: item.url || "",
     method: item.method || "POST",
     headers: item.headers || {},
     body: item.body || null,
+    formSnapshot: item.formSnapshot || null,
     ownerEmail: String(viewer?.user?.email || "").trim().toLowerCase(),
     attempts: 0,
     lastError: "",
     createdAt: new Date().toISOString()
-  });
+  };
+  if (item.draftKey) {
+    if (!entry.ownerEmail || String(item.body?.accountId || "") !== String(viewer?.user?.id || viewer?.user?._id || "")) {
+      throw new Error("La cuenta cambió. Conservamos el borrador sin enviarlo.");
+    }
+    const db = await openTecOfflineDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(["outbox", "cache"], "readwrite");
+      tx.objectStore("outbox").put(entry);
+      const reading = tx.objectStore("cache").get(item.draftKey);
+      reading.addEventListener("success", () => {
+        if (reading.result?.value?.revision === item.formSnapshot?.revision) tx.objectStore("cache").delete(item.draftKey);
+      });
+      tx.addEventListener("complete", resolve);
+      tx.addEventListener("abort", () => reject(tx.error || new Error("No pude guardar el pendiente en este dispositivo.")));
+      tx.addEventListener("error", () => reject(tx.error || new Error("No pude guardar el pendiente en este dispositivo.")));
+    });
+  } else {
+    await tecOfflinePut("outbox", entry);
+  }
   window.dispatchEvent(new CustomEvent("tec:offline-status"));
   navigator.serviceWorker?.ready
     ?.then(registration => registration.sync?.register?.("tec-sync-outbox"))
@@ -197,7 +217,55 @@ async function getTecOfflinePendingCount() {
     tecOfflineGetAll("outbox").catch(() => []),
     tecOfflineGetAll("recordings").catch(() => [])
   ]);
-  return outbox.length + recordings.filter(item => item.status !== "synced").length;
+  const viewer = await getTecCachedViewer();
+  const email = String(viewer?.user?.email || "").trim().toLowerCase();
+  if (!email) return 0;
+  return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email && item.status !== "synced").length;
+}
+
+function attachTecOfflineForm(form, options) {
+  if (!window.TecOfflineForms?.attach) {
+    const warning = document.createElement("p");
+    warning.textContent = "No pude cargar el guardado local. Reabre el Coach con internet antes de llenar este formulario.";
+    warning.className = "tec-form-status";
+    warning.dataset.state = "error";
+    form.append(warning);
+    form.querySelector('[type="submit"]')?.setAttribute("disabled", "");
+    return { hasDraft: () => false, submit: async () => { throw new Error(warning.textContent); } };
+  }
+  return window.TecOfflineForms.attach(form, { ...options, storage: {
+    get: tecOfflineGet, put: tecOfflinePut, all: tecOfflineGetAll, remove: tecOfflineDelete,
+    viewer: getTecCachedViewer, queue: queueTecOfflineRequest, flush: flushTecOfflineOutbox, id: createTecOfflineId
+  } });
+}
+async function completeTecOfflineForm(item, data) {
+  const db = await openTecOfflineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(["cache", "outbox"], "readwrite");
+    tx.objectStore("cache").put({ key: `form-result:${item.ownerEmail}:${item.id}`, ownerEmail: item.ownerEmail,
+      kind: item.kind, requestId: item.id, value: data, body: item.body, savedAt: new Date().toISOString() });
+    tx.objectStore("outbox").delete(item.id);
+    tx.addEventListener("complete", resolve);
+    tx.addEventListener("abort", () => reject(tx.error || new Error("No pude guardar la confirmación local.")));
+    tx.addEventListener("error", () => reject(tx.error || new Error("No pude guardar la confirmación local.")));
+  });
+}
+
+async function recordTecOfflineFormError(item, error) {
+  const db = await openTecOfflineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("outbox", "readwrite");
+    const store = tx.objectStore("outbox");
+    const request = store.get(item.id);
+    request.addEventListener("success", () => {
+      // The other synchronizer may already have committed the confirmation.
+      if (request.result) store.put({ ...request.result, attempts: Number(request.result.attempts || 0) + 1,
+        lastError: String(error.message || "No pude sincronizar.").slice(0, 240), lastStatus: Number(error.status || 0), lastAttemptAt: new Date().toISOString() });
+    });
+    tx.addEventListener("complete", resolve);
+    tx.addEventListener("abort", () => reject(tx.error));
+    tx.addEventListener("error", () => reject(tx.error));
+  });
 }
 
 async function flushTecOfflineOutbox() {
@@ -223,8 +291,11 @@ async function flushTecOfflineOutbox() {
         continue;
       }
 
+      const controller = typeof AbortController === "function" && typeof setTimeout === "function" ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 20000) : null;
       try {
         const response = await fetch(item.url, {
+          ...(controller ? { signal: controller.signal } : {}),
           method: item.method || "POST",
           credentials: "same-origin",
           headers: {
@@ -235,26 +306,31 @@ async function flushTecOfflineOutbox() {
           ...(item.body ? { body: JSON.stringify(item.body) } : {})
         });
 
-        if (response.status === 401 || response.status === 403) {
-          break;
-        }
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || `No pude sincronizar (${response.status}).`);
+          throw Object.assign(new Error(payload.error || `No pude sincronizar (${response.status}).`), { status: response.status });
         }
 
-        await tecOfflineDelete("outbox", item.id);
+        if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+          await completeTecOfflineForm(item, await response.json());
+        } else {
+          await tecOfflineDelete("outbox", item.id);
+        }
         synced += 1;
       } catch (error) {
-        await tecOfflinePut("outbox", {
+        if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+          await recordTecOfflineFormError(item, error).catch(() => null);
+        } else await tecOfflinePut("outbox", {
           ...item,
           attempts: Number(item.attempts || 0) + 1,
           lastError: String(error.message || "No pude sincronizar.").slice(0, 240),
           lastAttemptAt: new Date().toISOString()
         }).catch(() => null);
-        if (!navigator.onLine || error?.name === "TypeError") {
+        if (!navigator.onLine || ["TypeError", "AbortError"].includes(error?.name) || [401, 403].includes(error?.status)) {
           break;
         }
+      } finally {
+        if (timer) clearTimeout(timer);
       }
     }
 
@@ -291,9 +367,9 @@ function initTecOfflineStatus() {
     status.hidden = online && pending === 0;
     status.dataset.state = online ? (pending ? "syncing" : "online") : "offline";
     status.textContent = !online
-      ? `Sin internet · ${pending ? `${pending} pendiente${pending === 1 ? "" : "s"}` : "guardado local activo"}`
+      ? `Sin internet · ${pending ? `${pending} pendiente${pending === 1 ? "" : "s"}` : "revisa el estado de cada formulario"}`
       : pending
-        ? `Sincronizando · ${pending} pendiente${pending === 1 ? "" : "s"}`
+        ? `${pending} pendiente${pending === 1 ? "" : "s"} · toca para reintentar`
         : event?.detail?.synced
           ? "Todo sincronizado"
           : "Conectado";
@@ -3964,7 +4040,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   });
 }
 
-function initHealthSurveyTool() {
+function initHealthSurveyTool(user) {
   const formWrap = document.querySelector("[data-health-survey-wrap]");
   const formToggle = document.querySelector("[data-health-survey-toggle]");
   const form = document.querySelector("[data-health-survey-form]");
@@ -4199,6 +4275,18 @@ function initHealthSurveyTool() {
     renderFolderList();
   };
 
+  const offlineForm = attachTecOfflineForm(form, { user, kind: "health-survey", collect: collectPayload,
+    contextFields: ["activeCrmRecordId"], onRestore: () => syncFormToggle(true),
+    onSynced: async (data, body) => {
+      if (!offlineForm.hasDraft() && !form.elements.namedItem("fullName")?.value &&
+          String(getActiveCoachCrmContext()?.id || "") === String(body.activeCrmRecordId || "") && data.survey) {
+        activateSurvey(data.survey, { announce: true });
+        fillForm(data.survey);
+      }
+      await loadSurveys().catch(() => null);
+    }
+  });
+
   syncFormToggle(false);
   syncFolderToggle(false);
 
@@ -4226,24 +4314,12 @@ function initHealthSurveyTool() {
 
     try {
       const payload = collectPayload();
-      const data = await apiRequest("/api/coach/health-surveys", {
-        method: "POST",
-        body: payload
-      });
-
-      activateSurvey(data.survey, { announce: true });
-      fillForm(data.survey);
-      await loadSurveys();
-      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
-      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
-      syncFolderToggle(true);
-      setMessage(
-        feedbackNode,
-        data.created
-          ? `Encuesta guardada. ${data.survey?.salesAnalysis?.coachReply || ""}`.trim()
-          : `Encuesta actualizada. ${data.survey?.salesAnalysis?.coachReply || ""}`.trim(),
-        "success"
-      );
+      if (!String(payload.fullName || "").trim() || normalizeLeadPhone(payload.phone).length !== 10) {
+        throw new Error("Escribe el nombre y un teléfono de 10 dígitos antes de guardar.");
+      }
+      const data = await offlineForm.submit();
+      if (!data.preserveDraft) resetFormState();
+      setMessage(feedbackNode, "Copia local guardada. El estado de envío y cualquier error aparecen debajo del formulario.", "success");
     } catch (error) {
       setMessage(feedbackNode, error.message, "error");
     } finally {
@@ -4251,11 +4327,7 @@ function initHealthSurveyTool() {
     }
   });
 
-  form.addEventListener("reset", () => {
-    window.requestAnimationFrame(() => {
-      resetFormState();
-    });
-  });
+  form.querySelector('[type="reset"]')?.addEventListener("click", () => setNamedFieldValue(form, "surveyId", ""));
 
   folderList.addEventListener("click", event => {
     const openButton = event.target.closest("[data-health-survey-open]");
@@ -4279,7 +4351,7 @@ function initHealthSurveyTool() {
   });
 }
 
-function initRecruitmentTool() {
+function initRecruitmentTool(user) {
   const formControllers = Array.from(document.querySelectorAll("[data-recruitment-root]"))
     .map(root => ({
       root,
@@ -4328,10 +4400,6 @@ function initRecruitmentTool() {
     controller.form.reset();
     setNamedFieldValue(controller.form, "applicationId", "");
     clearMessage(controller.feedbackNode);
-  };
-
-  const resetAllForms = () => {
-    formControllers.forEach(resetControllerForm);
   };
 
   const fillAllForms = application => {
@@ -4468,7 +4536,10 @@ function initRecruitmentTool() {
   });
   syncFolderToggle(false);
 
-  formControllers.forEach(controller => {
+  formControllers.forEach((controller, index) => {
+    controller.offlineForm = attachTecOfflineForm(controller.form, { user, kind: "recruitment", slot: String(index),
+      collect: () => collectPayload(controller.form), onRestore: () => syncFormToggle(controller, true),
+      onSynced: () => loadApplications().catch(() => null) });
     controller.toggle.addEventListener("click", () => {
       syncFormToggle(controller, controller.wrap.hidden);
     });
@@ -4479,27 +4550,12 @@ function initRecruitmentTool() {
       setButtonLoading(controller.saveButton, true, "Guardando...");
 
       try {
-        const data = await apiRequest("/api/coach/recruitment-applications", {
-          method: "POST",
-          body: collectPayload(controller.form)
-        });
-
-        const deliveryCopy = data.delivery?.queued
-          ? " Tambien la estoy mandando a tu destino."
-          : data.delivery?.attempted
-            ? " Ya intente mandarla a tu destino."
-            : "";
-
-        resetAllForms();
-        await loadApplications();
-        syncFolderToggle(true);
-        setMessage(
-          controller.feedbackNode,
-          data.created
-            ? `Aplicacion guardada.${deliveryCopy}`
-            : `Aplicacion actualizada correctamente.${deliveryCopy}`,
-          "success"
-        );
+        const payload = collectPayload(controller.form);
+        if (!String(payload.fullName || "").trim() || (!payload.phone && !payload.email)) throw new Error("Escribe el nombre y un teléfono o correo.");
+        if (payload.phone && normalizeLeadPhone(payload.phone).length !== 10) throw new Error("Revisa el teléfono: debe tener 10 dígitos.");
+        const data = await controller.offlineForm.submit();
+        if (!data.preserveDraft) resetControllerForm(controller);
+        setMessage(controller.feedbackNode, "Copia local guardada. El envío al servidor y a tu destino requiere conexión; revisa el estado de abajo.", "success");
       } catch (error) {
         setMessage(controller.feedbackNode, error.message, "error");
       } finally {
@@ -4507,11 +4563,7 @@ function initRecruitmentTool() {
       }
     });
 
-    controller.form.addEventListener("reset", () => {
-      window.requestAnimationFrame(() => {
-        resetControllerForm(controller);
-      });
-    });
+    controller.form.querySelector('[type="reset"]')?.addEventListener("click", () => setNamedFieldValue(controller.form, "applicationId", ""));
   });
 
   folderToggle?.addEventListener("click", async () => {
@@ -15040,53 +15092,49 @@ function initCoachDemoOutcomeWorkspace(user = null) {
   typeSelect.addEventListener("change", syncTypeUi);
   syncTypeUi();
 
+  const collectOutcome = () => {
+    const data = new FormData(form);
+    const stage = getCoachDemoStageMeta(getCoachDemoStageId());
+    return { resultType: data.get("resultType"), saleAmount: data.get("saleAmount"),
+      products: String(data.get("products") || "").split(/[\n,;]+/g).map(item => item.trim()).filter(Boolean),
+      privateReason: data.get("privateReason"), activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
+      activeDemoStage: stage.id, activeDemoStageLabel: stage.label,
+      activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
+      activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
+      activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
+        ? getActiveCoachProgram414Context().referralIndex : "",
+      activeCrmRecordId: getActiveCoachCrmContext()?.id || "", activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
+      activeDecisionContext: getActiveCoachDecisionContext() || null, recentCoachEvents: getCoachDemoEvents() };
+  };
+  const offlineForm = attachTecOfflineForm(form, { user, kind: "demo-outcome", collect: collectOutcome,
+    contextFields: ["activeWorkspace", "activeDemoStage", "activeDemoStageLabel", "activeHealthSurveyId", "activeProgram414SheetId",
+      "activeProgram414ReferralIndex", "activeCrmRecordId", "activeOrderCalcContext", "activeDecisionContext", "recentCoachEvents"],
+    onRestore: syncTypeUi, onSynced: async (data, body) => {
+      if (!offlineForm.hasDraft() && !form.elements.namedItem("privateReason")?.value &&
+          !form.elements.namedItem("products")?.value &&
+          String(getActiveCoachCrmContext()?.id || "") === String(body.activeCrmRecordId || "")) {
+        setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext || null);
+      }
+      await loadOutcomes().catch(() => null);
+    }
+  });
+
   form.addEventListener("submit", async event => {
     event.preventDefault();
     clearMessage(feedbackNode);
     setButtonLoading(saveButton, true, "Guardando...");
 
     try {
-      const formData = new FormData(form);
-      const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
-      const data = await apiRequest("/api/coach/demo-outcomes", {
-        method: "POST",
-        body: {
-          resultType: formData.get("resultType"),
-          saleAmount: formData.get("saleAmount"),
-          products: String(formData.get("products") || "")
-            .split(/[\n,;]+/g)
-            .map(item => item.trim())
-            .filter(Boolean),
-          privateReason: formData.get("privateReason"),
-          activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
-          activeDemoStage: activeDemoStageMeta.id,
-          activeDemoStageLabel: activeDemoStageMeta.label,
-        activeHealthSurveyId: getActiveCoachHealthSurveyContext()?.id || "",
-        activeProgram414SheetId: getActiveCoachProgram414Context()?.sheetId || "",
-        activeProgram414ReferralIndex: Number.isInteger(getActiveCoachProgram414Context()?.referralIndex)
-          ? getActiveCoachProgram414Context().referralIndex
-          : "",
-        activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
-        activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
-        activeDecisionContext: getActiveCoachDecisionContext() || null,
-        recentCoachEvents: getCoachDemoEvents()
-        }
-      });
-
-      setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext || null);
-      setMessage(feedbackNode, "Resultado guardado correctamente.", "success");
-
-      registerCoachDemoEvent({
-        id: `demo_outcome_${data.outcome?.resultType || "follow_up"}`,
-        label: "Se reporto resultado",
-        detail: data.outcome?.summary || data.coachReply || "La demo ya quedo marcada."
-      });
-
-      form.reset();
-      syncTypeUi();
-      await loadOutcomes();
-      window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
-      window.dispatchEvent(new CustomEvent("coach-agenda-refresh-request"));
+      const payload = collectOutcome();
+      if (payload.resultType === "venta" && (!Number.isFinite(Number(payload.saleAmount)) || Number(payload.saleAmount) <= 0)) {
+        throw new Error("Pon una cantidad de venta mayor que cero.");
+      }
+      if (payload.resultType !== "venta" && !String(payload.privateReason || "").trim() && !payload.products.length) {
+        throw new Error("Agrega una nota corta para recordar cómo terminó la visita.");
+      }
+      const data = await offlineForm.submit();
+      if (!data.preserveDraft) { form.reset(); syncTypeUi(); }
+      setMessage(feedbackNode, "Resultado guardado en este dispositivo. Revisa abajo cuándo queda confirmado por el servidor.", "success");
     } catch (error) {
       setMessage(feedbackNode, error.message, "error");
     } finally {
@@ -15094,9 +15142,7 @@ function initCoachDemoOutcomeWorkspace(user = null) {
     }
   });
 
-  loadOutcomes().catch(error => {
-    setMessage(feedbackNode, error.message || "No pude cargar los resultados.", "error");
-  });
+  loadOutcomes().catch(() => null);
 }
 
 function formatProgram414StatusLabel(status = "") {
@@ -16278,8 +16324,8 @@ async function initCoachAppPage() {
     initCoachMessagesWorkspace(me.user);
     initCoachTeamWorkspace(me.user);
     initCoachTerritoryWorkspace(me.user);
-    initRecruitmentTool();
-    initHealthSurveyTool();
+    initRecruitmentTool(me.user);
+    initHealthSurveyTool(me.user);
     initOrderCalculator();
     const orderCalcRoot = document.querySelector("[data-order-calc]");
     if (orderCalcRoot) {
