@@ -6705,6 +6705,31 @@ html[data-coach-portal-mode="telemarketing"] .team-seat-status {
   line-height: 1.7;
 }
 
+.tec-public-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.tec-public-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 16px;
+}
+
+.tec-public-footer a {
+  color: #0b4d88;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tec-public-footer a:hover {
+  color: #d71920;
+  text-decoration: underline;
+}
+
 @media (max-width: 980px) {
   .coach-hero,
   .split-section,
