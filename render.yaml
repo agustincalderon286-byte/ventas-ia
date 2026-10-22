@@ -7,7 +7,7 @@ services:
     healthCheckPath: /api/healthz
     maxShutdownDelaySeconds: 300
     autoDeploy: true
-    plan: free
+    plan: starter
     envVars:
       - key: NODE_ENV
         value: production
