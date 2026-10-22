@@ -64,7 +64,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-pages1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-audit2", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
@@ -1738,7 +1738,7 @@ function createOrderCalcProductCard(index) {
       <div class="order-calc-product-head">
         <div>
           <strong>Producto ${index}</strong>
-          <span>Calcula bruto, ahorro y balance real.</span>
+          <span>Calcula total, descuento y balance estimado.</span>
         </div>
         <div class="order-calc-product-total" data-order-calc-gross>$0.00</div>
       </div>
@@ -1763,7 +1763,7 @@ function createOrderCalcProductCard(index) {
           <input type="number" min="0" step="0.01" data-order-calc-price placeholder="0.00" />
         </label>
         <label class="order-calc-field">
-          <span>Down payment</span>
+          <span>Anticipo (down payment)</span>
           <input type="number" min="0" step="0.01" data-order-calc-down placeholder="0.00" />
         </label>
         <label class="order-calc-field">
@@ -1772,17 +1772,18 @@ function createOrderCalcProductCard(index) {
         </label>
         <label class="order-calc-field">
           <span>Descuento %</span>
-          <input type="number" min="0" step="0.01" data-order-calc-desc-percent placeholder="0" />
+          <input type="number" min="0" max="100" step="0.01" data-order-calc-desc-percent placeholder="0" />
         </label>
       </div>
 
+      <p class="order-calc-validation" id="order-calc-product-validation-${index}" data-order-calc-product-validation hidden></p>
       <div class="order-calc-metrics">
         <div class="order-calc-metric">
           <span>Total bruto</span>
           <strong data-order-calc-total>$0.00</strong>
         </div>
         <div class="order-calc-metric">
-          <span>Ahorro aplicado</span>
+          <span>Descuento aplicado</span>
           <strong data-order-calc-savings>$0.00</strong>
         </div>
         <div class="order-calc-metric is-balance">
@@ -1790,24 +1791,21 @@ function createOrderCalcProductCard(index) {
           <strong data-order-calc-balance>$0.00</strong>
         </div>
         <div class="order-calc-metric">
-          <span>Pago mensual</span>
+          <span>Mensual estimado</span>
           <strong data-order-calc-monthly>$0.00</strong>
         </div>
         <div class="order-calc-metric">
-          <span>Pago semanal</span>
+          <span>Semanal estimado</span>
           <strong data-order-calc-weekly>$0.00</strong>
         </div>
         <div class="order-calc-metric">
-          <span>Pago diario</span>
+          <span>Diario estimado</span>
           <strong data-order-calc-daily>$0.00</strong>
         </div>
       </div>
+      <p class="order-calc-summary-note" data-order-calc-breakdown></p>
     </section>
   `;
-}
-
-function readCalcNumber(input) {
-  return Number.parseFloat(input?.value || "") || 0;
 }
 
 function initOrderCalculator() {
@@ -1836,6 +1834,32 @@ function initOrderCalculator() {
   const weeklyNode = root.querySelector("[data-order-calc-summary-weekly]");
   const dailyNode = root.querySelector("[data-order-calc-summary-daily]");
   const submitContextButton = root.querySelector("[data-order-calc-submit-context]");
+  const validationNode = root.querySelector("[data-order-calc-validation]");
+  if (!window.TecOrderCalculator?.calculateOrder) {
+    if (validationNode) {
+      validationNode.hidden = false;
+      validationNode.textContent = "No se pudo cargar la calculadora. Vuelve a abrir el Coach con conexión para actualizarla.";
+    }
+    if (submitContextButton) submitContextButton.disabled = true;
+    return;
+  }
+  const numericFields = {
+    basePrice: "[data-order-calc-price]", down: "[data-order-calc-down]",
+    descFixed: "[data-order-calc-desc-fixed]", descPercent: "[data-order-calc-desc-percent]",
+    extraDown: "[data-order-calc-down-total]", extraDescFixed: "[data-order-calc-desc-fixed-total]",
+    extraDescPercent: "[data-order-calc-desc-percent-total]"
+  };
+  const readValue = input => input?.validity?.badInput ? "NaN" : input?.value || "";
+  const getCalculation = () => window.TecOrderCalculator.calculateOrder({
+    products: productCards.map(card => ({
+      name: card.querySelector("[data-order-calc-name]")?.value || "",
+      code: card.dataset.orderCalcCatalogCode || "",
+      ...Object.fromEntries(["basePrice", "down", "descFixed", "descPercent"].map(field =>
+        [field, readValue(card.querySelector(numericFields[field]))]))
+    })),
+    summary: { extraDown: readValue(summaryDown), extraDescFixed: readValue(summaryDescFixed),
+      extraDescPercent: readValue(summaryDescPercent) }
+  });
   const catalogSearchCache = new Map();
 
   const normalizeCatalogLookupText = value =>
@@ -2135,82 +2159,12 @@ function initOrderCalculator() {
   };
 
   const buildCurrentOrderCalcContext = () => {
-    const products = [];
-    let totalGeneral = 0;
-    let totalDown = 0;
-    let totalDiscount = 0;
-
-    productCards.forEach((card, index) => {
-      const { nameInput } = getProductNodes(card);
-      const name = String(nameInput?.value || "").trim();
-      const code = String(card.dataset.orderCalcCatalogCode || "").trim();
-      const basePrice = readCalcNumber(card.querySelector("[data-order-calc-price]"));
-      const down = readCalcNumber(card.querySelector("[data-order-calc-down]"));
-      const descFixed = readCalcNumber(card.querySelector("[data-order-calc-desc-fixed]"));
-      const descPercent = readCalcNumber(card.querySelector("[data-order-calc-desc-percent]"));
-      const tax = basePrice * 0.1;
-      const shipping = basePrice * 0.05;
-      const grossTotal = basePrice + tax + shipping;
-      const discountAmount = descFixed + grossTotal * (descPercent / 100);
-      const balance = Math.max(0, grossTotal - down - discountAmount);
-      const monthly = balance * 0.05;
-      const weekly = monthly / 4;
-      const daily = weekly / 7;
-
-      totalGeneral += grossTotal;
-      totalDown += down;
-      totalDiscount += discountAmount;
-
-      if (
-        name ||
-        code ||
-        basePrice > 0 ||
-        down > 0 ||
-        discountAmount > 0 ||
-        balance > 0
-      ) {
-        products.push({
-          slot: index + 1,
-          name,
-          code,
-          basePrice,
-          grossTotal,
-          downPayment: down,
-          discountAmount,
-          balance,
-          monthly,
-          weekly,
-          daily
-        });
-      }
-    });
-
-    const extraDown = readCalcNumber(summaryDown);
-    const extraDescFixed = readCalcNumber(summaryDescFixed);
-    const extraDescPercent = readCalcNumber(summaryDescPercent);
-    const extraDiscount = extraDescFixed + totalGeneral * (extraDescPercent / 100);
-    const finalDown = totalDown + extraDown;
-    const finalDiscount = totalDiscount + extraDiscount;
-    const finalBalance = Math.max(0, totalGeneral - finalDown - finalDiscount);
-    const finalMonthly = finalBalance * 0.05;
-    const finalWeekly = finalMonthly / 4;
-    const finalDaily = finalWeekly / 7;
-
+    const calculation = getCalculation();
+    if (!calculation.valid) return null;
     return buildCoachOrderCalcContext({
       ownerUserId: root.dataset.orderCalcOwnerUserId || "",
-      products,
-      summary: {
-        totalGross: totalGeneral,
-        totalDown: finalDown,
-        totalDiscount: finalDiscount,
-        balanceFinal: finalBalance,
-        monthly: finalMonthly,
-        weekly: finalWeekly,
-        daily: finalDaily,
-        extraDown,
-        extraDescFixed,
-        extraDescPercent
-      }
+      products: calculation.products,
+      summary: calculation.summary
     });
   };
 
@@ -2225,7 +2179,7 @@ function initOrderCalculator() {
       return;
     }
 
-    if (draftContext?.signature && draftContext.signature !== activeContext.signature) {
+    if (!draftContext?.signature || draftContext.signature !== activeContext.signature) {
       renderActiveCoachOrderCalcContext({
         ...activeContext,
         isDirty: true
@@ -2237,66 +2191,54 @@ function initOrderCalculator() {
   };
 
   function recalculate() {
-    let totalGeneral = 0;
-    let totalDown = 0;
-    let totalDiscount = 0;
-
-    productCards.forEach(card => {
-      const price = readCalcNumber(card.querySelector("[data-order-calc-price]"));
-      const down = readCalcNumber(card.querySelector("[data-order-calc-down]"));
-      const descFixed = readCalcNumber(card.querySelector("[data-order-calc-desc-fixed]"));
-      const descPercent = readCalcNumber(card.querySelector("[data-order-calc-desc-percent]"));
-
-      const tax = price * 0.1;
-      const shipping = price * 0.05;
-      const grossTotal = price + tax + shipping;
-      const discountAmount = descFixed + grossTotal * (descPercent / 100);
-      const savings = down + discountAmount;
-      const balance = Math.max(0, grossTotal - savings);
-      const monthly = balance * 0.05;
-      const weekly = monthly / 4;
-      const daily = weekly / 7;
-
-      const grossNode = card.querySelector("[data-order-calc-gross]");
-      const totalProductNode = card.querySelector("[data-order-calc-total]");
-      const savingsNode = card.querySelector("[data-order-calc-savings]");
-      const balanceProductNode = card.querySelector("[data-order-calc-balance]");
-      const monthlyProductNode = card.querySelector("[data-order-calc-monthly]");
-      const weeklyProductNode = card.querySelector("[data-order-calc-weekly]");
-      const dailyProductNode = card.querySelector("[data-order-calc-daily]");
-
-      if (grossNode) grossNode.textContent = formatMoney(grossTotal);
-      if (totalProductNode) totalProductNode.textContent = formatMoney(grossTotal);
-      if (savingsNode) savingsNode.textContent = formatMoney(savings);
-      if (balanceProductNode) balanceProductNode.textContent = formatMoney(balance);
-      if (monthlyProductNode) monthlyProductNode.textContent = formatMoney(monthly);
-      if (weeklyProductNode) weeklyProductNode.textContent = formatMoney(weekly);
-      if (dailyProductNode) dailyProductNode.textContent = formatMoney(daily);
-
-      totalGeneral += grossTotal;
-      totalDown += down;
-      totalDiscount += discountAmount;
+    const result = getCalculation();
+    root.dataset.orderCalcValid = String(result.valid);
+    root.querySelectorAll('input[type="number"]').forEach(input => {
+      input.setCustomValidity("");
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
     });
-
-    const extraDown = readCalcNumber(summaryDown);
-    const extraDescFixed = readCalcNumber(summaryDescFixed);
-    const extraDescPercent = readCalcNumber(summaryDescPercent);
-    const extraDiscount = extraDescFixed + totalGeneral * (extraDescPercent / 100);
-    const finalDown = totalDown + extraDown;
-    const finalDiscount = totalDiscount + extraDiscount;
-    const finalBalance = Math.max(0, totalGeneral - finalDown - finalDiscount);
-    const finalMonthly = finalBalance * 0.05;
-    const finalWeekly = finalMonthly / 4;
-    const finalDaily = finalWeekly / 7;
-
-    if (totalNode) totalNode.textContent = formatMoney(totalGeneral);
-    if (downNode) downNode.textContent = formatMoney(finalDown);
-    if (discountNode) discountNode.textContent = formatMoney(finalDiscount);
-    if (balanceNode) balanceNode.textContent = formatMoney(finalBalance);
-    if (monthlyNode) monthlyNode.textContent = formatMoney(finalMonthly);
-    if (weeklyNode) weeklyNode.textContent = formatMoney(finalWeekly);
-    if (dailyNode) dailyNode.textContent = formatMoney(finalDaily);
-
+    result.errors.forEach(error => {
+      const scope = error.scope === "summary" ? root : productCards[error.scope];
+      const input = error.field ? scope?.querySelector(numericFields[error.field]) : null;
+      if (input) {
+        input.setCustomValidity(error.message);
+        input.setAttribute("aria-invalid", "true");
+        input.setAttribute("aria-describedby", error.scope === "summary" ? "order-calc-validation"
+          : `order-calc-product-validation-${error.scope + 1}`);
+      }
+    });
+    if (validationNode) {
+      validationNode.hidden = result.valid;
+      validationNode.textContent = [...new Set(result.errors.map(error =>
+        typeof error.scope === "number" && !error.message.startsWith("Producto")
+          ? `Producto ${error.scope + 1}: ${error.message}` : error.message))].join(" ");
+    }
+    if (submitContextButton) submitContextButton.disabled = !result.valid;
+    const display = (node, value) => {
+      if (node) node.textContent = result.valid ? formatMoney(value) : "—";
+    };
+    productCards.forEach((card, index) => {
+      const product = result.products[index];
+      const productError = card.querySelector("[data-order-calc-product-validation]");
+      if (productError) {
+        const messages = [...new Set(result.errors.filter(error => error.scope === index).map(error => error.message))];
+        productError.hidden = !messages.length;
+        productError.textContent = messages.join(" ");
+      }
+      Object.entries({ gross: "grossTotal", total: "grossTotal", savings: "discountAmount", balance: "balance",
+        monthly: "monthly", weekly: "weekly", daily: "daily" }).forEach(([attribute, field]) =>
+        display(card.querySelector(`[data-order-calc-${attribute}]`), product?.[field]));
+      const breakdown = card.querySelector("[data-order-calc-breakdown]");
+      if (breakdown) breakdown.textContent = result.valid
+        ? `Base ${formatMoney(product.basePrice)} + impuesto estimado (10%) ${formatMoney(product.tax)} + envío estimado (5%) ${formatMoney(product.shipping)}.`
+        : "Corrige los valores para ver el desglose.";
+    });
+    [[totalNode, "totalGross"], [downNode, "totalDown"], [discountNode, "totalDiscount"],
+      [balanceNode, "balanceFinal"], [monthlyNode, "monthly"], [weeklyNode, "weekly"], [dailyNode, "daily"]]
+      .forEach(([node, field]) => display(node, result.summary?.[field]));
+    // An invalid draft must not leave a previously shared scenario active in chat.
+    if (!result.valid && getActiveCoachOrderCalcContext()) setActiveCoachOrderCalcContext(null);
     syncOrderCalcCoachState();
   }
 
@@ -2393,6 +2335,11 @@ function initOrderCalculator() {
   syncOrderCalcCoachState();
 
   submitContextButton?.addEventListener("click", () => {
+    recalculate();
+    if (root.dataset.orderCalcValid !== "true") {
+      root.querySelector('[aria-invalid="true"]')?.focus();
+      return;
+    }
     const context = buildCurrentOrderCalcContext();
 
     if (!context?.signature) {

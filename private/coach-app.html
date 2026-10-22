@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TEC Coach" />
-    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-pages1" />
+    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-audit2" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,9 +25,9 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261022-pages1" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-pages1" />
-    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261022-pages1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261022-audit2" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-audit2" />
+    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261022-audit2" />
   </head>
   <body class="coach-app-body">
     <div class="coach-shell" data-coach-app-page>
@@ -4876,7 +4876,7 @@
 
                   <div class="order-calc-summary-grid">
                     <label class="order-calc-field">
-                      <span>Down payment extra</span>
+                      <span>Anticipo extra</span>
                       <input type="number" min="0" step="0.01" data-order-calc-down-total placeholder="0.00" />
                     </label>
                     <label class="order-calc-field">
@@ -4885,7 +4885,7 @@
                     </label>
                     <label class="order-calc-field">
                       <span>Descuento % total</span>
-                      <input type="number" min="0" step="0.01" data-order-calc-desc-percent-total placeholder="0" />
+                      <input type="number" min="0" max="100" step="0.01" data-order-calc-desc-percent-total placeholder="0" />
                     </label>
                   </div>
 
@@ -4895,7 +4895,7 @@
                       <strong data-order-calc-summary-total>$0.00</strong>
                     </div>
                     <div class="order-calc-rollup-item">
-                      <span>Down payments</span>
+                      <span>Anticipos</span>
                       <strong data-order-calc-summary-down>$0.00</strong>
                     </div>
                     <div class="order-calc-rollup-item">
@@ -4910,20 +4910,27 @@
 
                   <div class="order-calc-payment-grid">
                     <div class="order-calc-payment-item">
-                      <span>Mensual</span>
+                      <span>Mensual estimado</span>
                       <strong data-order-calc-summary-monthly>$0.00</strong>
                     </div>
                     <div class="order-calc-payment-item">
-                      <span>Semanal</span>
+                      <span>Semanal estimado</span>
                       <strong data-order-calc-summary-weekly>$0.00</strong>
                     </div>
                     <div class="order-calc-payment-item">
-                      <span>Diario</span>
+                      <span>Diario estimado</span>
                       <strong data-order-calc-summary-daily>$0.00</strong>
                     </div>
                   </div>
 
                   <div class="order-calc-summary-actions">
+                    <p class="order-calc-validation" id="order-calc-validation" data-order-calc-validation role="alert" hidden></p>
+                    <p class="order-calc-summary-note">
+                      Estimación: base + 10% de impuesto + 5% de envío. El pago mensual se estima al 5% del balance;
+                      el semanal es mensual ÷ 4 y el diario es semanal ÷ 7. Los descuentos porcentuales se calculan
+                      sobre el total bruto, incluso el porcentaje general. El anticipo reduce el balance, no es un descuento.
+                      No es una aprobación de crédito ni una cotización final; confirma impuestos, envío y condiciones en RoyalOne.
+                    </p>
                     <button type="button" class="secondary-button" data-order-calc-submit-context>
                       Usar este cierre con Coach
                     </button>
@@ -4936,7 +4943,7 @@
             </div>
 
             <p class="mini-note">
-              El down payment ya se refleja tambien en cada producto, no solo en el resumen de abajo.
+              Los anticipos por producto y el anticipo extra se suman en el resumen general.
             </p>
           </article>
 
@@ -5832,8 +5839,9 @@
       </p>
     </div>
 
-    <script src="/coach/document-viewer.js?v=20261022-pages1"></script>
-    <script type="module" src="/coach/property-map.js?v=20261022-pages1"></script>
-    <script src="/coach/app.js?v=20261022-pages1"></script>
+    <script src="/coach/document-viewer.js?v=20261022-audit2"></script>
+    <script src="/coach/order-calculator.js?v=20261022-audit2"></script>
+    <script type="module" src="/coach/property-map.js?v=20261022-audit2"></script>
+    <script src="/coach/app.js?v=20261022-audit2"></script>
   </body>
 </html>

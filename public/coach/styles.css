@@ -4531,6 +4531,25 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   color: #ffd39a;
 }
 
+.order-calc-validation {
+  margin: 0;
+  padding: 12px 14px;
+  color: #ffc2cc;
+  background: rgba(180, 35, 47, 0.12);
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.order-calc input[aria-invalid="true"] {
+  border-color: #b4232f !important;
+}
+
+.order-calc [data-order-calc-submit-context]:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .order-calc-rollup-item,
 .order-calc-payment-item {
   padding: 14px;
@@ -7181,7 +7200,8 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .order-calc-s
 }
 
 html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(input, textarea)::placeholder {
-  color: #8190a3;
+  color: #5f7086;
+  opacity: 1;
 }
 
 html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-messages {
@@ -7204,6 +7224,7 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-messag
 
 html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
   .order-calc-match[data-tone="success"],
+  .order-calc-summary-note[data-state="success"],
   .order-calc-metric.is-balance strong,
   .order-calc-rollup-item.is-highlight strong,
   .decision-insight-card.is-next strong,
@@ -7214,9 +7235,27 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
 
 html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
   .decision-score-card.is-cons strong,
-  .daily-prize-feedback[data-state="error"]
+  .daily-prize-feedback[data-state="error"],
+  .order-calc-validation
 ) {
   color: #b4232f;
+}
+
+/* Light cards need dark text even when their original dark-theme state changes. */
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
+  .daily-prize-result-card.is-main strong,
+  .daily-prize-result-card.is-copy strong,
+  .buyer-profile-result-card.is-main strong
+) {
+  color: #102b4e;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
+  .decision-score-card.is-highlight strong,
+  .order-calc-match[data-tone="warning"],
+  .order-calc-summary-note[data-state="warning"]
+) {
+  color: #805300;
 }
 
 @media (max-width: 720px) {
