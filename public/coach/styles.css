@@ -4556,6 +4556,19 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 }
 
 .tec-form-pending summary { cursor: pointer; font-weight: 700; }
+.tec-update-notice,
+.tec-audio-recovery section {
+  margin: 16px;
+  padding: 16px;
+  color: #102b4e;
+  background: #f6f8fb;
+  border: 1px solid #abb9ca;
+  border-radius: 16px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.tec-audio-recovery .secondary-button { margin: 6px; }
+.tec-update-notice { position: relative; z-index: 10; }
 .tec-form-status[data-state="error"] { border-color: var(--danger); }
 .tec-form-status[data-state="success"] { border-color: var(--green); }
 .tec-form-status[data-state="pending"] { border-color: var(--gold); }

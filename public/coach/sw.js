@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261022-forms1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-forms1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-audio3";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-audio3";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -9,17 +9,18 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261022-forms1",
-  "/coach/app.js?v=20261022-forms1",
-  "/coach/order-calculator.js?v=20261022-forms1",
-  "/coach/offline-forms.js?v=20261022-forms1",
-  "/coach/styles.css?v=20261022-forms1",
-  "/coach/property-map.js?v=20261022-forms1",
-  "/coach/property-map.css?v=20261022-forms1",
-  "/coach/property-visit-helpers.js?v=20261022-forms1",
+  "/coach/site.webmanifest?v=20261022-audio3",
+  "/coach/app.js?v=20261022-audio3",
+  "/coach/order-calculator.js?v=20261022-audio3",
+  "/coach/offline-forms.js?v=20261022-audio3",
+  "/coach/pwa-safety.js?v=20261022-audio3",
+  "/coach/styles.css?v=20261022-audio3",
+  "/coach/property-map.js?v=20261022-audio3",
+  "/coach/property-map.css?v=20261022-audio3",
+  "/coach/property-visit-helpers.js?v=20261022-audio3",
   "/coach/document.html",
-  "/coach/document-viewer.js?v=20261022-forms1",
-  "/coach/document-viewer.css?v=20261022-forms1",
+  "/coach/document-viewer.js?v=20261022-audio3",
+  "/coach/document-viewer.css?v=20261022-audio3",
   "/coach/assets/documents/manifest-v1.json",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
@@ -57,7 +58,19 @@ async function cacheIndividually(cacheName, urls = []) {
 }
 
 self.addEventListener("install", event => {
-  event.waitUntil(cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    // Reject a broken/quota-exhausted shell instead of replacing a working one.
+    const critical = TEC_CORE_ASSETS.filter(url => /\.(?:js|css)(?:\?|$)/.test(url));
+    const cache = await caches.open(TEC_CACHE_VERSION);
+    await Promise.all(critical.map(async url => {
+      const response = await fetch(url, { credentials: "same-origin", cache: "reload" });
+      if (!response.ok || response.redirected) throw new Error("Incomplete Coach update");
+      await cache.put(url, response);
+    }));
+    await cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS.filter(url => !critical.includes(url)));
+    await cacheCurrentCoachApp().catch(() => null);
+    // No skipWaiting: an update must not take over an open demo or recording.
+  })());
 });
 
 self.addEventListener("activate", event => {
@@ -67,7 +80,11 @@ self.addEventListener("activate", event => {
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key.startsWith("tec-coach-") && ![TEC_CACHE_VERSION, TEC_RUNTIME_CACHE, TEC_CATALOG_CACHE, TEC_DOCUMENT_CACHE, TEC_PDF_CACHE].includes(key))
+            .filter(key => key.startsWith("tec-coach-") && ![
+              TEC_CACHE_VERSION, TEC_RUNTIME_CACHE, TEC_CATALOG_CACHE, TEC_DOCUMENT_CACHE, TEC_PDF_CACHE,
+              keys.filter(key => key.startsWith("tec-coach-shell-") && key !== TEC_CACHE_VERSION).at(-1),
+              keys.filter(key => key.startsWith("tec-coach-runtime-") && key !== TEC_RUNTIME_CACHE).at(-1)
+            ].includes(key))
             .map(key => caches.delete(key))
         )
       )
@@ -84,13 +101,24 @@ async function networkFirst(request, cacheName, fallbackRequest = null) {
     }
     return response;
   } catch (error) {
-    return (await cache.match(request)) || (fallbackRequest ? await cache.match(fallbackRequest) : null) || Promise.reject(error);
+    const cached = (await cache.match(request)) || (fallbackRequest ? await cache.match(fallbackRequest) : null);
+    if (cached) return cached;
+    if (cacheName === TEC_RUNTIME_CACHE) {
+      const previous = (await caches.keys()).filter(key => key.startsWith("tec-coach-runtime-")).reverse();
+      for (const name of previous) {
+        const old = await caches.open(name);
+        const page = (await old.match(request)) || (fallbackRequest ? await old.match(fallbackRequest) : null);
+        if (page) return page;
+      }
+    }
+    throw error;
   }
 }
 
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
+  // Historical HTML must retain its own versioned dependencies when offline.
+  const cached = (await cache.match(request)) || (await caches.match(request));
   if (cached) {
     fetch(request)
       .then(response => {

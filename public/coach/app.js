@@ -13,11 +13,14 @@ async function apiRequest(url, options = {}) {
   if (options.body) {
     config.body = JSON.stringify(options.body);
   }
-
   if (options.offlineQueue && options.queueFirst) {
     await queueTecOfflineRequest({ id: requestId, kind: options.offlineKind || "request", url, method: config.method, headers: config.headers, body: options.body || null });
     return { ...(options.offlineFallback || {}), offlineQueued: true, requestId };
   }
+
+  const controller = options.timeoutMs ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(() => controller.abort(), options.timeoutMs) : null;
+  if (controller) config.signal = controller.signal;
 
   try {
     const response = await fetch(url, config);
@@ -53,6 +56,8 @@ async function apiRequest(url, options = {}) {
       offlineQueued: true,
       requestId
     };
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
   }
 }
 
@@ -64,8 +69,9 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-forms1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-audio3", { scope: "/coach/" })
       .then(async registration => {
+        window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
       })
@@ -89,6 +95,7 @@ let tecOfflineDbPromise = null;
 let tecOutboxFlushPromise = null;
 let coachOfflineCatalogPromise = null;
 const tecActiveRecordingIds = new Set();
+const tecRecordingSyncTasks = new Map();
 
 function createTecOfflineId(prefix = "item") {
   const randomPart = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -154,7 +161,7 @@ const tecOfflineDelete = (storeName, key) => tecOfflineStoreRequest(storeName, "
 
 async function getTecCachedViewer() {
   const entry = await tecOfflineGet("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
-  return entry?.value || null;
+  return entry?.value ? { ...entry.value, offlineVerifiedAt: entry.verifiedAt || entry.savedAt } : null;
 }
 
 async function cacheTecViewer(value = null) {
@@ -164,6 +171,7 @@ async function cacheTecViewer(value = null) {
   await tecOfflinePut("cache", {
     key: TEC_VIEWER_CACHE_KEY,
     value,
+    verifiedAt: new Date().toISOString(),
     savedAt: new Date().toISOString()
   }).catch(() => null);
 }
@@ -220,7 +228,7 @@ async function getTecOfflinePendingCount() {
   const viewer = await getTecCachedViewer();
   const email = String(viewer?.user?.email || "").trim().toLowerCase();
   if (!email) return 0;
-  return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email && item.status !== "synced").length;
+  return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email && !["synced", "partial-synced"].includes(item.status)).length;
 }
 
 function attachTecOfflineForm(form, options) {
@@ -526,8 +534,50 @@ async function saveTecOfflineAudioChunk({ localId, index, blob, durationSeconds,
 }
 
 async function getTecOfflineAudioChunks(localId = "") {
-  const chunks = await tecOfflineGetAll("audioChunks").catch(() => []);
-  return chunks.filter(item => item.localId === localId).sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
+  const chunks = await tecOfflineGetAll("audioChunks");
+  return chunks.filter(item => item.localId === localId && !item.draft).sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
+}
+
+async function finalizeTecAudioSegment(chunk) {
+  const db = await openTecOfflineDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("audioChunks", "readwrite");
+    const store = tx.objectStore("audioChunks");
+    const prefix = `${chunk.localId}:${String(chunk.index).padStart(4, "0")}:part:`;
+    store.put({ ...chunk, key: `${chunk.localId}:${String(chunk.index).padStart(4, "0")}`, finalized: true,
+      sizeBytes: chunk.blob.size, createdAt: new Date().toISOString() });
+    const request = store.openKeyCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+    request.addEventListener("success", () => {
+      const cursor = request.result;
+      if (cursor) { store.delete(cursor.primaryKey); cursor.continue(); }
+    });
+    tx.addEventListener("complete", resolve);
+    tx.addEventListener("abort", () => reject(tx.error || new Error("No pude proteger el segmento completo.")));
+    tx.addEventListener("error", () => reject(tx.error || new Error("No pude proteger el segmento completo.")));
+  });
+}
+
+async function getTecAudioTail(localId) {
+  return (await tecOfflineGetAll("audioChunks")).filter(item => item.localId === localId && item.draft)
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+
+async function withTecRecordingLock(localId, action) {
+  if (navigator.locks?.request) {
+    return navigator.locks.request(`tec-audio:${localId}`, { ifAvailable: true }, lock => lock ? action() : null);
+  }
+  return action();
+}
+
+async function holdTecRecordingLock(localId) {
+  if (!navigator.locks?.request) return () => {};
+  return new Promise((resolve, reject) => {
+    let held;
+    held = navigator.locks.request(`tec-audio:${localId}`, { ifAvailable: true }, async lock => {
+      if (!lock) throw new Error("Esta grabación está abierta en otra ventana.");
+      await new Promise(release => resolve(async () => { release(); await held; }));
+    }).catch(reject);
+  });
 }
 
 async function uploadTecStoredAudioChunk(serverSessionId, chunk) {
@@ -552,6 +602,13 @@ async function uploadTecStoredAudioChunk(serverSessionId, chunk) {
 }
 
 async function syncTecOfflineRecording(localId = "") {
+  if (tecRecordingSyncTasks.has(localId)) return tecRecordingSyncTasks.get(localId);
+  const task = withTecRecordingLock(localId, () => syncTecOfflineRecordingUnlocked(localId));
+  tecRecordingSyncTasks.set(localId, task);
+  try { return await task; } finally { tecRecordingSyncTasks.delete(localId); }
+}
+
+async function syncTecOfflineRecordingUnlocked(localId = "") {
   if (!navigator.onLine || !localId) {
     throw new Error("Sin conexion para sincronizar la grabacion.");
   }
@@ -561,13 +618,17 @@ async function syncTecOfflineRecording(localId = "") {
     return null;
   }
 
-  if (recording.status === "recording") {
-    recording = await saveTecOfflineRecording({ ...recording, status: "ready" });
-  }
+  if (!["ready", "syncing"].includes(recording.status)) return null;
 
   const viewer = await getTecCachedViewer().catch(() => null);
   const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
-  if (recording.ownerEmail && viewerEmail && recording.ownerEmail !== viewerEmail) {
+  if (!recording.ownerEmail || !viewerEmail || recording.ownerEmail !== viewerEmail || recording.consentConfirmed !== true) {
+    return null;
+  }
+
+  const tail = await getTecAudioTail(localId);
+  if (tail.length && !recording.analyzeCompletePartsOnly) {
+    await saveTecOfflineRecording({ ...recording, status: "needs-review", lastError: "El último segmento se interrumpió. Revisa la copia local antes de analizar." });
     return null;
   }
 
@@ -582,7 +643,7 @@ async function syncTecOfflineRecording(localId = "") {
           knownOutcome: recording.knownOutcome || "unknown",
           startedAt: recording.startedAt || recording.createdAt,
           clientRecordingId: recording.localId
-        }
+        }, timeoutMs: 15000
       });
       recording = await saveTecOfflineRecording({
         ...recording,
@@ -607,7 +668,8 @@ async function syncTecOfflineRecording(localId = "") {
         body: { knownOutcome: recording.knownOutcome || "unknown" }
       }
     );
-    await tecOfflineDelete("recordings", localId);
+    if (tail.length) await saveTecOfflineRecording({ ...recording, status: "partial-synced", analysisId: completed.analysis?.id || "" });
+    else await tecOfflineDelete("recordings", localId);
     window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced: 1 } }));
     return completed.analysis || null;
   } catch (error) {
@@ -626,7 +688,7 @@ async function syncTecOfflineRecordings() {
     return { synced: 0 };
   }
   const recordings = (await tecOfflineGetAll("recordings").catch(() => []))
-    .filter(item => item.status !== "synced" && !tecActiveRecordingIds.has(item.localId))
+    .filter(item => ["ready", "syncing"].includes(item.status) && !tecActiveRecordingIds.has(item.localId))
     .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
   let synced = 0;
   for (const recording of recordings) {
@@ -8711,12 +8773,18 @@ function updateCoachMessage(messageHandles, content, options = {}) {
 
 async function fetchViewer() {
   try {
-    const viewer = await apiRequest("/api/coach/me");
+    const viewer = await apiRequest("/api/coach/me", { timeoutMs: 6000 });
+    if (!viewer.authenticated) { await clearTecCachedViewer(); return viewer; }
     await cacheTecViewer(viewer);
     return viewer;
   } catch (error) {
+    if ([401, 403].includes(error?.status)) {
+      await clearTecCachedViewer();
+      return { authenticated: false, error: error.message };
+    }
     const cachedViewer = await getTecCachedViewer().catch(() => null);
-    if (!navigator.onLine && cachedViewer?.authenticated && cachedViewer?.user?.email) {
+    const transient = !error?.status || Number(error.status) >= 500;
+    if (transient && window.TecPwaSafety?.offlineViewerAllowed(cachedViewer)) {
       return {
         ...cachedViewer,
         offline: true
@@ -15721,15 +15789,25 @@ function initCoachDemoRecorder() {
     uploadQueue: Promise.resolve(),
     uploadedChunks: 0,
     uploadErrors: [],
-    wakeLock: null
+    wakeLock: null,
+    releaseCaptureLock: null, segmentStopped: null, journal: null, storageFailure: false
   };
   const SEGMENT_MS = 4 * 60 * 1000;
   const MAX_RECORDING_MS = 90 * 60 * 1000;
 
   const setRecorderMessage = (message, type = "info") => setMessage(status, message, type);
+  const emergency = document.createElement("a");
+  emergency.className = "secondary-button";
+  emergency.hidden = true;
+  emergency.textContent = "Descargar copia de emergencia antes de salir";
+  root.append(emergency);
+  const localRecovery = document.createElement("div");
+  localRecovery.className = "tec-audio-recovery";
+  localRecovery.dataset.tecAudioRecovery = "";
+  analysisCenter?.append(localRecovery);
 
   const updateControls = () => {
-    startButton.disabled = state.recording || state.processing || !consent.checked;
+    startButton.disabled = state.recording || state.processing || !consent.checked || !emergency.hidden;
     stopButton.disabled = !state.recording || state.processing;
     consent.disabled = state.recording || state.processing;
     outcome.disabled = state.processing;
@@ -15758,24 +15836,8 @@ function initCoachDemoRecorder() {
   };
 
   const uploadSegment = async (blob, durationSeconds, index) => {
-    let chunkKey = "";
-    try {
-      chunkKey = await saveTecOfflineAudioChunk({
-        localId: state.localSessionId,
-        index,
-        blob,
-        durationSeconds,
-        mimeType: blob.type || "audio/webm"
-      });
-    } catch (error) {
-      if (!state.sessionId || !navigator.onLine) {
-        throw new Error("El telefono no tiene espacio suficiente para proteger este fragmento de audio.");
-      }
-    }
-    state.uploadedChunks += 1;
-    chunkStatus.textContent = `${state.uploadedChunks} fragmento${state.uploadedChunks === 1 ? "" : "s"} protegido${
-      state.uploadedChunks === 1 ? "" : "s"
-    } en este dispositivo`;
+    // Already finalized locally by the stop handler, independently of network speed.
+    const chunkKey = `${state.localSessionId}:${String(index).padStart(4, "0")}`;
 
     if (!state.sessionId || !navigator.onLine) {
       window.dispatchEvent(new CustomEvent("tec:offline-status"));
@@ -15836,33 +15898,59 @@ function initCoachDemoRecorder() {
     }
 
     state.segmentParts = [];
-    state.segmentStartedAt = Date.now();
+    const segmentStartedAt = Date.now();
+    const index = state.segmentIndex++;
+    state.segmentStartedAt = segmentStartedAt;
     state.recorder = recorder;
+    let segmentDone;
+    state.segmentStopped = new Promise(resolve => { segmentDone = resolve; });
+    const journal = window.TecPwaSafety.createAudioJournal({ localId: state.localSessionId, index,
+      mimeType: recorder.mimeType || mimeType || "audio/webm", writePart: part => tecOfflinePut("audioChunks", part),
+      finalize: finalizeTecAudioSegment, onProtected: duration => {
+        chunkStatus.textContent = `Audio guardado hasta ${formatCoachDemoRecordingTime((segmentStartedAt - state.startedAt) / 1000 + duration)} en este dispositivo`;
+      } });
+    state.journal = journal;
     recorder.addEventListener("dataavailable", event => {
       if (event.data?.size) {
         state.segmentParts.push(event.data);
+        journal.append(event.data, (Date.now() - segmentStartedAt) / 1000).catch(() => {
+          setRecorderMessage("La memoria local está fallando. Voy a detener la grabación para proteger lo disponible.", "error");
+          if (state.recording && !state.processing) finishRecording(false);
+        });
       }
     });
-    recorder.addEventListener("stop", () => {
-      const durationSeconds = Math.max(1, (Date.now() - state.segmentStartedAt) / 1000);
-      const blob = new Blob(state.segmentParts, { type: recorder.mimeType || mimeType || "audio/webm" });
-      const index = state.segmentIndex;
-      state.segmentIndex += 1;
-      if (blob.size > 0) {
+    recorder.addEventListener("stop", async () => {
+      const durationSeconds = Math.max(1, (Date.now() - segmentStartedAt) / 1000);
+      try {
+        const blob = await journal.finish(durationSeconds);
+        if (blob?.size) {
+          state.uploadedChunks++;
+          await saveTecOfflineRecording({ localId: state.localSessionId, protectedChunks: state.uploadedChunks });
         state.uploadQueue = state.uploadQueue
           .then(() => uploadSegment(blob, durationSeconds, index))
           .catch(error => {
             state.uploadErrors.push(error);
             setRecorderMessage(
-              "Un fragmento no pudo subir. Conservare lo demas y te avisare al finalizar.",
-              "error"
+              "Un segmento sigue guardado en el dispositivo y pendiente de envío.", "info"
             );
           });
+        }
+      } catch (error) {
+        state.storageFailure = true;
+        const blob = journal.emergencyBlob();
+        if (blob.size) {
+          if (emergency.href) URL.revokeObjectURL(emergency.href);
+          emergency.href = URL.createObjectURL(blob);
+          emergency.download = `TEC-audio-emergencia-${index}.${blob.type.includes("mp4") ? "m4a" : "webm"}`;
+          emergency.hidden = false;
+        }
+        setRecorderMessage("No se pudo guardar todo el audio. Descarga la copia de emergencia antes de cerrar esta página.", "error");
+      } finally {
+        segmentDone();
+        if (state.recording && !state.rotating) finishRecording(false);
       }
-      const resolve = state.stopResolver;
-      state.stopResolver = null;
-      resolve?.();
     });
+    recorder.addEventListener("error", () => setRecorderMessage("El navegador interrumpió el micrófono. Se conservará el audio que pudo entregar.", "error"));
     recorder.start(1000);
     state.rotateTimer = window.setTimeout(() => rotateSegment(false), SEGMENT_MS);
   };
@@ -15873,21 +15961,19 @@ function initCoachDemoRecorder() {
       return;
     }
     if (!state.recorder || state.recorder.state === "inactive") {
-      if (!finalSegment && state.recording) {
-        beginSegment();
-      }
+      await state.segmentStopped;
       return;
     }
 
     state.rotating = true;
     state.rotationPromise = (async () => {
       window.clearTimeout(state.rotateTimer);
-      await new Promise(resolve => {
-        state.stopResolver = resolve;
-        state.recorder.stop();
-      });
-      if (!finalSegment && state.recording) {
+      state.recorder.stop();
+      await state.segmentStopped;
+      if (!finalSegment && state.recording && !state.storageFailure) {
         beginSegment();
+      } else if (!finalSegment && state.storageFailure) {
+        window.setTimeout(() => finishRecording(false), 0);
       }
     })();
     try {
@@ -15946,7 +16032,78 @@ function initCoachDemoRecorder() {
       .join("");
   };
 
+  let recoveryUrls = [];
+  let recoveryRenderId = 0;
+  const renderLocalRecovery = async () => {
+    const renderId = ++recoveryRenderId;
+    const viewer = await getTecCachedViewer();
+    const email = String(viewer?.user?.email || "").toLowerCase();
+    const rows = (await tecOfflineGetAll("recordings")).filter(row => row.ownerEmail === email && !tecActiveRecordingIds.has(row.localId));
+    const nextUrls = [];
+    const fragment = document.createDocumentFragment();
+    for (const row of rows) {
+      const card = document.createElement("section");
+      const title = document.createElement("h4");
+      title.textContent = "Audio guardado en este dispositivo";
+      const copy = document.createElement("p");
+      copy.textContent = row.status === "recording" || row.status === "needs-review"
+        ? "Grabación interrumpida o abierta en otra ventana. El último tramo puede estar incompleto. Cierra otras ventanas antes de recuperarla."
+        : row.status === "partial-synced" ? "Se analizaron solo los segmentos completos. La parte interrumpida sigue disponible aquí."
+        : "Pendiente de confirmar el análisis con el servidor. La copia local se conserva.";
+      card.append(title, copy);
+      const tail = await getTecAudioTail(row.localId);
+      const groups = new Map();
+      tail.forEach(part => { if (!groups.has(part.index)) groups.set(part.index, []); groups.get(part.index).push(part); });
+      groups.forEach((parts, index) => {
+        const blob = new Blob(parts.map(part => part.blob), { type: parts[0].mimeType });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        nextUrls.push(link.href);
+        link.download = `TEC-parte-interrumpida-${index}.${blob.type.includes("mp4") ? "m4a" : "webm"}`;
+        link.className = "secondary-button";
+        link.textContent = "Descargar parte interrumpida (puede requerir reparación)";
+        card.append(link);
+      });
+      if (row.status !== "partial-synced") {
+        const finalized = await getTecOfflineAudioChunks(row.localId);
+        const hasComplete = finalized.length || Number(row.protectedChunks || 0) > 0 || (row.protectedChunks === undefined && row.serverSessionId);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary-button";
+        button.textContent = tail.length ? "Analizar solo los segmentos completos" : "Recuperar y enviar segmentos completos";
+        if (!hasComplete) {
+          button.disabled = true;
+          copy.textContent += " No hay segmentos completos para analizar; descarga la parte interrumpida para revisión.";
+        }
+        button.addEventListener("click", async () => {
+          if (!navigator.onLine) return setRecorderMessage("La copia sigue aquí. Conéctate para preparar el análisis.", "info");
+          if (!window.confirm("Cierra primero las otras ventanas del Coach. Se analizarán solo los segmentos completos; el último tramo interrumpido no se incluirá y seguirá disponible para descargar. ¿Continuar?")) return;
+          button.disabled = true;
+          try {
+            const prepared = await withTecRecordingLock(row.localId, async () => {
+              const current = await tecOfflineGet("recordings", row.localId);
+              if (!current || current.ownerEmail !== email || tecActiveRecordingIds.has(row.localId)) return null;
+              return saveTecOfflineRecording({ ...current, status: "ready", analyzeCompletePartsOnly: true });
+            });
+            if (!prepared) throw new Error("La grabación está abierta en otra ventana. Ciérrala antes de continuar.");
+            const analysis = await syncTecOfflineRecording(row.localId);
+            if (!analysis) throw new Error("El envío sigue en otra ventana. Tu copia local se conserva.");
+            setRecorderMessage(tail.length ? "Análisis parcial listo: no incluye el tramo interrumpido." : "Análisis recuperado.", "success");
+            await loadHistory();
+          } catch (error) { setRecorderMessage(error.message, "error"); }
+          finally { button.disabled = false; }
+        });
+        card.append(button);
+      }
+      fragment.append(card);
+    }
+    if (renderId !== recoveryRenderId) { nextUrls.forEach(url => URL.revokeObjectURL(url)); return; }
+    recoveryUrls.forEach(url => URL.revokeObjectURL(url));
+    recoveryUrls = nextUrls;
+    localRecovery.replaceChildren(fragment);
+  };
   const loadHistory = async () => {
+    await renderLocalRecovery().catch(() => null);
     try {
       const data = await apiRequest("/api/coach/demo-analyses");
       renderHistory(data.analyses || []);
@@ -15979,6 +16136,7 @@ function initCoachDemoRecorder() {
       await releaseWakeLock();
       setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
       await state.uploadQueue;
+      if (state.storageFailure) throw new Error("Hay audio sin guardar. Descarga la copia de emergencia antes de salir.");
       await saveTecOfflineRecording({
         localId: state.localSessionId,
         serverSessionId: state.sessionId,
@@ -15986,6 +16144,9 @@ function initCoachDemoRecorder() {
         knownOutcome: outcome.value || "unknown",
         stoppedAt: new Date().toISOString()
       });
+      tecActiveRecordingIds.delete(state.localSessionId);
+      await state.releaseCaptureLock?.();
+      state.releaseCaptureLock = null;
 
       if (!navigator.onLine) {
         showAnalysisNotice({
@@ -15999,22 +16160,18 @@ function initCoachDemoRecorder() {
 
       setRecorderMessage("La inteligencia artificial esta preparando tu reporte...", "info");
       const analysis = await syncTecOfflineRecording(state.localSessionId);
+      if (!analysis) throw new Error("El envío está pendiente o abierto en otra ventana. La copia local se conserva.");
       currentReport.dataset.analysisId = analysis?.id || state.sessionId;
       showAnalysisNotice({
         title: autoStopped ? "La grabacion termino a los 90 minutos" : "Tu analisis esta listo",
-        copy: state.uploadErrors.length
-          ? "El reporte esta listo, aunque un fragmento no alcanzo a subir."
-          : "Revisalo cuando hayas terminado con el cliente.",
+        copy: "Los segmentos completos quedaron enviados. Revísalo cuando hayas terminado con el cliente.",
         analysisId: analysis?.id || state.sessionId,
         ready: true
       });
       setRecorderMessage(
         autoStopped
           ? "Llegaste a 90 minutos. El reporte quedo guardado en Mis analisis."
-          : state.uploadErrors.length
-            ? "Reporte guardado. Revisa la transcripcion porque un fragmento no entro."
-            : "Reporte guardado en Mis analisis de demostracion.",
-        state.uploadErrors.length ? "info" : "success"
+          : "Reporte guardado en Mis analisis de demostracion.", "success"
       );
       await loadHistory();
     } catch (error) {
@@ -16023,29 +16180,32 @@ function initCoachDemoRecorder() {
         : null;
       showAnalysisNotice({
         title: protectedRecording ? "Grabacion protegida y pendiente" : "No pudimos terminar el reporte",
-        copy: protectedRecording
+        copy: state.storageFailure ? "Parte del audio no se pudo guardar. Descarga la copia de emergencia antes de cerrar esta página." : protectedRecording
           ? "El audio sigue guardado en este telefono. TEC volvera a intentar cuando haya una conexion estable."
           : "La transcripcion se guardo. Intenta abrirla mas tarde desde Mis analisis."
       });
       setRecorderMessage(
-        protectedRecording ? "No se perdio el audio. Quedo pendiente de sincronizacion." : error.message,
-        protectedRecording ? "info" : "error"
+        state.storageFailure ? error.message : protectedRecording ? "Los segmentos guardados siguen pendientes de confirmación." : error.message,
+        state.storageFailure ? "error" : protectedRecording ? "info" : "error"
       );
     } finally {
       state.processing = false;
+      await state.releaseCaptureLock?.();
+      state.releaseCaptureLock = null;
       state.sessionId = "";
       tecActiveRecordingIds.delete(state.localSessionId);
       state.localSessionId = "";
       state.recorder = null;
       updateControls();
+      renderLocalRecovery().catch(() => null);
     }
   };
 
   const startRecording = async () => {
-    if (!consent.checked || state.recording || state.processing) {
+    if (!consent.checked || state.recording || state.processing || !emergency.hidden) {
       return;
     }
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.TecPwaSafety?.createAudioJournal) {
       setRecorderMessage("Este navegador no permite grabar audio. Prueba Safari o Chrome actualizado.", "error");
       return;
     }
@@ -16066,12 +16226,14 @@ function initCoachDemoRecorder() {
       });
       const startedAt = new Date().toISOString();
       state.localSessionId = createTecOfflineId("recording");
+      state.releaseCaptureLock = await holdTecRecordingLock(state.localSessionId);
       tecActiveRecordingIds.add(state.localSessionId);
       await saveTecOfflineRecording({
         localId: state.localSessionId,
         status: "recording",
         consentConfirmed: true,
         knownOutcome: outcome.value || "unknown",
+        protectedChunks: 0,
         startedAt,
         serverSessionId: ""
       });
@@ -16080,7 +16242,7 @@ function initCoachDemoRecorder() {
       if (navigator.onLine) {
         try {
           data = await apiRequest("/api/coach/demo-analyses", {
-            method: "POST",
+            method: "POST", timeoutMs: 8000,
             body: {
               consentConfirmed: true,
               knownOutcome: outcome.value || "unknown",
@@ -16105,6 +16267,7 @@ function initCoachDemoRecorder() {
       state.segmentIndex = 0;
       state.uploadedChunks = 0;
       state.uploadErrors = [];
+      state.storageFailure = false;
       state.uploadQueue = Promise.resolve();
       analysisNotice.hidden = true;
       analysisNotice.dataset.analysisId = "";
@@ -16135,11 +16298,14 @@ function initCoachDemoRecorder() {
     } catch (error) {
       state.recording = false;
       state.processing = false;
+      await state.releaseCaptureLock?.();
+      state.releaseCaptureLock = null;
       stopMediaTracks();
       await releaseWakeLock();
-      if (state.localSessionId && state.segmentIndex === 0) {
+      if (state.localSessionId) {
         tecActiveRecordingIds.delete(state.localSessionId);
-        await tecOfflineDelete("recordings", state.localSessionId).catch(() => null);
+        const captured = (await tecOfflineGetAll("audioChunks").catch(() => [])).some(chunk => chunk.localId === state.localSessionId);
+        if (!captured) await tecOfflineDelete("recordings", state.localSessionId).catch(() => null);
         state.localSessionId = "";
       }
       setRecorderMessage(
@@ -16203,7 +16369,7 @@ function initCoachDemoRecorder() {
     }
   });
   window.addEventListener("beforeunload", event => {
-    if (state.recording || state.processing) {
+    if (state.recording || state.processing || !emergency.hidden) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -16211,6 +16377,7 @@ function initCoachDemoRecorder() {
 
   updateControls();
   loadHistory();
+  window.addEventListener("tec:offline-status", () => { if (!state.recording) renderLocalRecovery().catch(() => null); });
 }
 
 async function initCoachAppPage() {
@@ -16232,6 +16399,15 @@ async function initCoachAppPage() {
   if (!me.authenticated) {
     window.location.href = "/coach/login/";
     return;
+  }
+
+  if (me.offline) {
+    const notice = document.createElement("p");
+    notice.className = "tec-form-status";
+    notice.dataset.tecOfflineAccess = "";
+    notice.setAttribute("role", "status");
+    notice.textContent = "Conexión inestable: estás usando el acceso local, válido hasta 24 horas desde la última verificación con el servidor. Los envíos y análisis pueden quedar pendientes.";
+    appPage.prepend(notice);
   }
 
   if (!hasCoachAccess(me.user)) {

@@ -32,10 +32,9 @@ test("leads y 4 en 14 entran a la bandeja local cuando falla la red", () => {
 });
 
 test("el audio se escribe localmente antes de intentar subirlo", () => {
-  const localWrite = appSource.indexOf("await saveTecOfflineAudioChunk");
-  const remoteWrite = appSource.indexOf("fetch(`/api/coach/demo-analyses/", localWrite);
-  assert.ok(localWrite > 0);
-  assert.ok(remoteWrite > localWrite);
+  assert.match(appSource, /finalize: finalizeTecAudioSegment/);
+  const recorderStop = appSource.slice(appSource.indexOf('recorder.addEventListener("stop"'));
+  assert.ok(recorderStop.indexOf("await journal.finish") < recorderStop.indexOf(".then(() => uploadSegment"));
   assert.match(appSource, /Grabacion protegida en este telefono/);
 });
 

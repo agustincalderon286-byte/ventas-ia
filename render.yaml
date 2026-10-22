@@ -5,6 +5,7 @@ services:
     buildCommand: npm ci --omit=dev --prefer-offline --no-audit --no-fund
     startCommand: npm start
     healthCheckPath: /api/healthz
+    maxShutdownDelaySeconds: 300
     autoDeploy: true
     plan: free
     envVars:

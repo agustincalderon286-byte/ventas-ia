@@ -11,6 +11,7 @@ import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
 import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
+import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -37,6 +38,7 @@ const CORS_ALLOWED_ORIGINS = new Set(
 );
 
 const app = express();
+let serverDraining = false;
 const CoachFormWriteReceipt = mongoose.models.CoachFormWriteReceipt || mongoose.model("CoachFormWriteReceipt", new mongoose.Schema({
   _id: String, accountId: { type: String, required: true }, fingerprint: String, token: String,
   state: String, statusCode: Number, responseBody: mongoose.Schema.Types.Mixed, createdAt: Date, updatedAt: Date
@@ -67,8 +69,9 @@ app.use(
 );
 app.get("/api/healthz", (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({
-    ok: true,
+  const ready = !serverDraining && mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({
+    ok: ready,
     service: "cmwf-crm-api",
   });
 });
@@ -14292,7 +14295,7 @@ async function tomarCoachAsyncJobPendiente() {
 }
 
 async function procesarCoachAsyncJobs() {
-  if (coachAsyncJobWorkerRunning || mongoose.connection.readyState !== 1) {
+  if (serverDraining || coachAsyncJobWorkerRunning || mongoose.connection.readyState !== 1) {
     return;
   }
 
@@ -14300,6 +14303,7 @@ async function procesarCoachAsyncJobs() {
 
   try {
     for (let index = 0; index < COACH_ASYNC_JOB_BATCH_SIZE; index += 1) {
+      if (serverDraining) break;
       const jobDoc = await tomarCoachAsyncJobPendiente();
 
       if (!jobDoc?._id) {
@@ -34716,9 +34720,12 @@ async function iniciarServidor() {
     console.log("MongoDB Atlas conectado");
     iniciarCoachAsyncJobWorker();
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
+    installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
+      stopWorker: () => { clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => coachAsyncJobWorkerRunning, disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);
