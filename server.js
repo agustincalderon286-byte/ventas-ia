@@ -12,6 +12,8 @@ import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
 import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
+import { registerTecControlRoutes } from "./src/tec-control.js";
+import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -12058,7 +12060,11 @@ function limpiarCoachAgendaRecord(recordDoc = null) {
     ...cleaned,
     appointmentAt,
     phoneHref: phoneDigits || "",
-    mapsUrl: construirCoachAgendaMapsUrl(cleaned)
+    mapsUrl: construirCoachAgendaMapsUrl(cleaned),
+    appleMapsUrl: (() => {
+      const address = [cleaned.address, cleaned.city, cleaned.zipCode].filter(Boolean).join(", ");
+      return address ? `https://maps.apple.com/?q=${encodeURIComponent(address)}` : "";
+    })()
   };
 }
 
@@ -32885,6 +32891,22 @@ app.get(
   }
 );
 
+registerTecControlRoutes(app, {
+  models: { users: CoachUser, profiles: CoachDistributorProfile, leads: CoachLeadInbox,
+    programs: CoachProgramSheet, surveys: CoachHealthSurvey, outcomes: CoachDemoOutcome, analyses: CoachDemoAnalysis,
+    crm: CoachCrmRecord, visits: mongoose.models.CoachPropertyVisit },
+  requireAdmin: requireControlTowerAccess, isTest: coachTieneAccesoDePrueba, isAdmin: usuarioPuedeVerTorreControl,
+  monthlyPrice: STRIPE_PRICE_ID_MONTHLY, annualPrice: STRIPE_PRICE_ID_ANNUAL,
+  cleanAnalysis: limpiarCoachDemoAnalysis, mongoose, stripe
+});
+registerTecAudioLab(app, {
+  requireAdmin: requireControlTowerAccess,
+  // Deliberately NOT all administrators: no other user's audio is archived.
+  emails: parseCoachEmailList(process.env.CONTROL_TOWER_AUDIO_TEST_EMAILS || "agustincalderon286@gmail.com"),
+  getBucket: () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_private_audio_tests" }),
+  ObjectId: mongoose.Types.ObjectId, analyses: CoachDemoAnalysis
+});
+
 app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
 
@@ -32896,7 +32918,8 @@ app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, 
     return res.redirect("/coach/app/");
   }
 
-  res.sendFile(path.join(PRIVATE_DIR, "control-tower.html"));
+  res.set("Cache-Control", "private, no-store");
+  res.sendFile(path.join(PRIVATE_DIR, "tec-control-tower.html"));
 });
 
 app.get("/api/control/overview", async (req, res) => {

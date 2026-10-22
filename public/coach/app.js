@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-coherence3", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-tower1", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -5969,7 +5969,10 @@ function buildCoachAgendaCard(record = null) {
       ? `<a class="secondary-button" href="tel:${escapeHtml(record.phoneHref)}">Llamar</a>`
       : "",
     record.mapsUrl
-      ? `<a class="nav-button" href="${escapeHtml(record.mapsUrl)}" target="_blank" rel="noreferrer">Mapa</a>`
+      ? `<a class="nav-button" href="${escapeHtml(record.mapsUrl)}" target="_blank" rel="noopener noreferrer">Google Maps</a>`
+      : "",
+    record.appleMapsUrl
+      ? `<a class="nav-button" href="${escapeHtml(record.appleMapsUrl)}" target="_blank" rel="noopener noreferrer">Apple Maps</a>`
       : "",
     address
       ? `<button type="button" class="nav-button" data-agenda-copy-address="${escapeHtml(address)}">Copiar direccion</button>`

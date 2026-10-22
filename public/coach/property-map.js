@@ -1,4 +1,4 @@
-import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261022-coherence3";
+import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261022-tower1";
 
 (() => {
   const MAX_STOPS = 4;
@@ -49,6 +49,7 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
     const find = selector => root.querySelector(`[data-property-${selector}]`);
     const form = find("search"), feedback = find("feedback"), candidatesBox = find("candidates"), results = find("results");
     const mapBox = find("map"), list = find("list"), route = find("route"), clear = find("clear");
+    const appleRoute = find("apple-route"), appleStop = find("apple-stop");
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
     let visits = new Map(), pendingLeadKeys = new Set(), refreshPromise = null, syncPromise = null, syncRequested = false, editingProperty = null, awaitingSync = false;
     const accountId = String(user.id || user._id || "");
@@ -266,7 +267,7 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
             maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
           });
           tiles.on("tileerror", () => {
-            if (++failedTiles >= 3) find("map-note").textContent = "El mapa de calles no pudo cargarse. Puedes seguir usando la lista y abrir la ruta en Google Maps.";
+            if (++failedTiles >= 3) find("map-note").textContent = "El mapa de calles no pudo cargarse. Puedes seguir usando la lista y abrir las direcciones en Google Maps o Apple Maps.";
           });
           tiles.addTo(map);
           layers = L.layerGroup().addTo(map);
@@ -307,6 +308,20 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
       }
     }
 
+    function syncAppleRoute() {
+      if (!appleRoute || !appleStop) return;
+      const index = Number(appleStop.value || 0), target = selected[index];
+      if (target && data?.anchor) {
+        const url = new URL("https://maps.apple.com/");
+        url.searchParams.set("saddr", (index ? selected[index - 1] : data.anchor).formattedAddress);
+        url.searchParams.set("daddr", target.formattedAddress);
+        url.searchParams.set("dirflg", "w");
+        appleRoute.href = url.href;
+        appleRoute.textContent = `Apple Maps · parada ${index + 1} de ${selected.length}`;
+      } else { appleRoute.removeAttribute("href"); appleRoute.textContent = "Abrir parada en Apple Maps"; }
+      appleRoute.setAttribute("aria-disabled", String(!target));
+    }
+    appleStop?.addEventListener("change", syncAppleRoute);
     function syncRoute() {
       find("count").textContent = `${selected.length} / ${MAX_STOPS}`;
       find("stops").replaceChildren(...selected.map(property => {
@@ -320,6 +335,18 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
       const url = buildRouteUrl(data?.anchor, selected);
       if (url) route.href = url; else route.removeAttribute("href");
       route.setAttribute("aria-disabled", String(!url));
+      if (appleStop) {
+        const previousPin = appleStop.selectedOptions?.[0]?.dataset.pin;
+        appleStop.replaceChildren(...selected.map((item, index) => {
+          const option = node("option", "", `${index + 1}. ${item.address}`);
+          option.value = String(index); option.dataset.pin = item.pin; return option;
+        }));
+        const previousIndex = selected.findIndex(item => item.pin === previousPin);
+        if (selected.length) appleStop.value = String(Math.max(0, previousIndex));
+        else { const option = node("option", "", "Agrega una parada"); appleStop.append(option); }
+        appleStop.disabled = !selected.length;
+        syncAppleRoute();
+      }
       clear.disabled = !selected.length;
       for (const card of list.children) {
         const index = selected.findIndex(item => item.pin === card.dataset.pin);

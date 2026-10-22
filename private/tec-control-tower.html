@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>Torre | Total Elite Coaching</title>
+  <link rel="icon" href="/coach/icons/favicon-64.png"><link rel="stylesheet" href="/control/tec.css?v=20261022-tower1">
+</head>
+<body>
+  <header class="topbar"><a href="/coach/app/" aria-label="Volver al Coach"><img src="/coach/assets/brand/tec-total-elite-coaching-transparent.png" alt="TEC Total Elite Coaching"></a><div><span class="eyebrow">Administración privada</span><h1>Torre de TEC</h1></div><a class="button secondary" href="/coach/app/">Volver al Coach</a></header>
+  <main>
+    <section class="intro"><div><span class="eyebrow">Una vista de todo el negocio</span><h2>Personas, actividad y resultados.</h2><p>Supervisión de todos los equipos, sin entrar como otro usuario. Las ventas de representantes y los cobros de TEC se muestran por separado.</p></div>
+      <form id="filters"><label>Período<select id="days"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="all">Todo el historial</option></select></label><button class="button" type="submit">Actualizar</button></form>
+    </section>
+    <p id="feedback" role="status" aria-live="polite">Cargando datos privados…</p>
+    <div id="dashboard" hidden>
+      <section aria-labelledby="activity-title"><div class="section-heading"><h2 id="activity-title">Actividad de la red</h2><small id="updated"></small></div><div class="metrics" id="activity-metrics"></div><p class="note">Actividad registrada y sincronizada del período. Citas: fecha de la cita dentro del período. Demostraciones: resultados registrados, no grabaciones. La tasa de cierre es ventas / resultados registrados, no una evaluación de la IA.</p></section>
+      <section class="panel" aria-labelledby="business-title"><span class="eyebrow">Negocio de TEC</span><h2 id="business-title">Membresías y cobros</h2><div class="metrics compact" id="membership-metrics"></div><p id="billing" class="billing"></p><p class="note">Membresías: estado actual registrado. Pruebas, administradores y subcuentas no se cuentan como suscripciones mensuales o anuales. Un estado activo no acredita por sí solo un pago.</p><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Consultar movimientos en Stripe ↗</a></section>
+      <section class="panel" aria-labelledby="users-title"><div class="section-heading"><div><span class="eyebrow">Todos los usuarios y equipos</span><h2 id="users-title">Actividad por persona</h2></div><form id="search-form"><label>Equipo<select id="team"><option value="">Todos los equipos</option></select></label><label>Buscar por nombre o correo<input id="search" type="search" maxlength="100" placeholder="David, Lorena…"></label><button class="button secondary">Buscar</button></form></div>
+        <p class="note">Las cifras se atribuyen al representante que generó cada registro, sin sumarlas de nuevo al upline. Usa el buscador para encontrar cualquier cuenta. «Sin registro» no significa que una persona no haya trabajado.</p>
+        <div class="table-wrap"><table><thead><tr><th>Persona / equipo</th><th>Acceso</th><th>Leads</th><th>Citas</th><th>4 en 14</th><th>Demos / ventas</th><th>Análisis</th><th>Último registro / ingreso</th><th>Detalle</th></tr></thead><tbody id="users"></tbody></table></div>
+        <nav class="pagination" aria-label="Páginas de usuarios"><button id="previous" class="button secondary">Anterior</button><span id="page-label"></span><button id="next" class="button secondary">Siguiente</button></nav>
+      </section>
+      <section id="person" class="panel" hidden tabindex="-1"><div class="section-heading"><h2 id="person-title">Actividad individual</h2><button id="close-person" class="button secondary">Cerrar detalle</button></div><p id="person-note"></p><div id="person-content"></div></section>
+      <section id="analysis" class="panel" hidden tabindex="-1"><div class="section-heading"><h2 id="analysis-title">Análisis de demostración</h2><button id="close-analysis" class="button secondary">Cerrar análisis</button></div><div id="analysis-content"></div></section>
+      <section id="audio-lab" class="panel lab" hidden><span class="eyebrow">Solo tu cuenta · prueba privada</span><h2>Escuchar una grabación completa</h2><p>Este espacio conserva únicamente los audios propios de prueba que tú subas aquí. No cambia el grabador de representantes ni archiva sus audios. No realiza análisis de IA ni genera cargos de análisis.</p>
+        <p class="note">Máximo cinco archivos, 16 MB cada uno. Permanecen en MongoDB hasta que los elimines. Usa solo tu voz de prueba, sin clientes reales. Primero guarda, después reproduce desde el servidor para verificarlo.</p>
+        <div class="actions"><button class="button" id="record-test">Grabar prueba con mi voz</button><button class="button secondary" id="stop-test" disabled>Terminar prueba</button></div><p class="note">Prueba de micrófono de hasta cinco minutos. No cierres esta página durante la grabación o antes de guardar/descargar tu copia.</p>
+        <form id="audio-form"><label>O selecciona un audio propio<input id="audio-file" type="file" accept="audio/*"></label><label>Nombre de la prueba<input id="audio-label" maxlength="100" value="Mi prueba de reproducción"></label><label>Análisis propio a vincular (opcional)<select id="audio-analysis"><option value="">Sin vincular</option></select></label><label class="check"><input type="checkbox" id="own-audio" required>Confirmo que es una grabación mía de prueba, sin clientes reales.</label><audio id="local-audio" controls preload="none" hidden></audio><a id="download-test" hidden>Descargar mi copia antes de cerrar</a><button class="button" id="upload-audio">Guardar prueba privada</button></form>
+        <p id="audio-feedback" role="status" aria-live="polite"></p><div id="audio-files"></div>
+      </section>
+    </div>
+  </main><footer>TEC · Acceso exclusivo de administradores. Lo pendiente en un dispositivo sin conexión aparecerá después de sincronizarse.</footer>
+  <script type="module" src="/control/tec.js?v=20261022-tower1"></script>
+</body></html>

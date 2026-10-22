@@ -30,6 +30,9 @@ html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"
 .tec-property-route-panel > strong span { font-size: 13px; background: white; border-radius: 30px; padding: 5px 10px; }
 .tec-property-route-panel p { font-size: 13px; color: #52677e; margin: 9px 0; }
 .tec-property-route-panel ol { margin: 12px 0; padding-left: 22px; }
+.tec-property-route-actions label { display: grid; gap: 7px; min-width: 0; width: min(100%, 320px); color: #173d64; font-size: 13px; }
+.tec-property-route-actions select { width: 100%; min-height: 44px; border: 1px solid #b7c9dc; border-radius: 9px; padding: 9px; background: #fff; color: #173d64; font: inherit; font-size: 16px; }
+.tec-property-route-actions a[aria-disabled="true"] { pointer-events: none; opacity: .5; }
 .tec-property-route-panel li { font-size: 13px; padding: 5px 0; overflow-wrap: anywhere; }
 .tec-property-remove { font: inherit; color: #a51a30; border: 0; background: none; padding: 5px 7px; cursor: pointer; text-decoration: underline; }
 .tec-property-route-actions { display: flex; flex-wrap: wrap; gap: 8px; }
