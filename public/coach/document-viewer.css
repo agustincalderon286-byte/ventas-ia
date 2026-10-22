@@ -54,3 +54,11 @@
 .tec-document-page-image[hidden] { display: none; }
 .tec-document-save { margin-top: 8px; }
 .tec-document-fallback { display: inline-block; margin: 12px; text-decoration: none; }
+.tec-pin-dialog { width: min(420px, calc(100vw - 36px)); box-sizing: border-box; padding: 24px; border: 1px solid #abb9ca; border-radius: 20px; background: #fff; color: #102b4e; }
+.tec-pin-dialog::backdrop { background: rgba(7, 31, 59, .65); }
+.tec-pin-dialog form { display: grid; gap: 14px; }
+.tec-pin-dialog h2, .tec-pin-dialog p { margin: 0; }
+.tec-pin-dialog p { line-height: 1.6; }
+.tec-pin-dialog input { box-sizing: border-box; width: 100%; padding: 14px; border: 1px solid #71839b; border-radius: 12px; font: inherit; color: #102b4e; background: #fff; }
+.tec-pin-dialog button { padding: 12px; margin: 4px; border: 1px solid #71839b; border-radius: 12px; background: #f6f8fb; color: #102b4e; cursor: pointer; font: inherit; }
+.tec-pin-dialog :focus-visible { outline: 3px solid #124d80; outline-offset: 3px; }

@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-audio3", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-coherence3", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -84,7 +84,6 @@ const COACH_ACTIVE_PROGRAM_414_KEY = "agustin-coach-active-program-414";
 const COACH_ACTIVE_ORDER_CALC_KEY = "agustin-coach-active-order-calc";
 const COACH_ACTIVE_DECISION_KEY = "agustin-coach-active-decision";
 const COACH_ACTIVE_DEMO_OUTCOME_KEY = "agustin-coach-active-demo-outcome";
-const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
 const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
@@ -772,14 +771,14 @@ const DAILY_PRIZE_OFFERS = {
     type: "discount",
     title: "Descuento especial",
     copy: "Activalo solo cuando ya viste interes real y quieras ayudarles a tomar la decision hoy.",
-    note: "Descuento real disponible solo durante esta activacion."
+    note: "Confirma el descuento autorizado y aplícalo manualmente al pedido. TEC no cambia los importes ni envía promociones a RoyalOne."
   },
   "14407": {
     code: "14407",
     type: "gift",
     title: "Regalo especial",
     copy: "Usalo cuando la compra ya va en serio y quieras cerrar con valor extra, no como gancho temprano.",
-    note: "Regalo valido para compra arriba de $2500 mientras esta activacion siga viva."
+    note: "Condición indicada: compra arriba de $2500. Confirma que el pedido y el regalo cumplan los términos autorizados; TEC no los valida ni aplica automáticamente."
   }
 };
 const FOURTEEN_SHEET_DEFAULT_REFERRALS = 4;
@@ -1459,6 +1458,7 @@ function setActiveCoachCrmContext(context = null) {
   }
 
   renderActiveCoachCrmContext(next);
+  window.dispatchEvent(new CustomEvent("coach:visit-change"));
 }
 
 function prefillCoachHealthSurveyFromCrm(record = null) {
@@ -1901,7 +1901,7 @@ function createOrderCalcProductCard(index) {
           <input type="number" min="0" step="0.01" data-order-calc-price placeholder="0.00" />
         </label>
         <label class="order-calc-field">
-          <span>Anticipo (down payment)</span>
+          <span>Anticipo</span>
           <input type="number" min="0" step="0.01" data-order-calc-down placeholder="0.00" />
         </label>
         <label class="order-calc-field">
@@ -2515,8 +2515,10 @@ function createDecisionToolRow(kind, index) {
 
   return `
     <div class="decision-tool-row">
-      <input type="text" data-decision-text data-decision-kind="${kind}" placeholder="${placeholder} ${index}" />
-      <select data-decision-weight data-decision-kind="${kind}">
+      <label class="tec-sr-only" for="decision-${kind}-${index}">${placeholder} ${index}</label>
+      <input id="decision-${kind}-${index}" type="text" data-decision-text data-decision-kind="${kind}" placeholder="${placeholder} ${index}" />
+      <label class="tec-sr-only" for="decision-weight-${kind}-${index}">Peso de ${placeholder.toLowerCase()} ${index}, de 0 a 10</label>
+      <select id="decision-weight-${kind}-${index}" data-decision-weight data-decision-kind="${kind}">
         <option value="0">Peso 0</option>
         <option value="1">1</option>
         <option value="2">2</option>
@@ -2930,7 +2932,7 @@ function initBuyerProfileTool() {
   resetButton?.addEventListener("click", reset);
 }
 
-function initDailyPrizeTool() {
+function initDailyPrizeTool(user = null) {
   const wrap = document.querySelector("[data-daily-prize-wrap]");
   const root = document.querySelector("[data-daily-prize-tool]");
   const toggle = document.querySelector("[data-daily-prize-toggle]");
@@ -2952,6 +2954,27 @@ function initDailyPrizeTool() {
   const claimButton = root.querySelector("[data-daily-prize-claim]");
   let timerInterval = null;
   let currentState = { ...DAILY_PRIZE_DEFAULT_STATE };
+  const accountId = String(user?.id || user?.email || "").trim().toLowerCase();
+  let storageKey = "";
+  const contextNote = root.querySelector("[data-daily-prize-context]");
+  const newVisitButton = root.querySelector("[data-daily-prize-new-visit]");
+  const anonymousKey = `tec-offer-visit:${accountId}`;
+  let anonymousVisit;
+  try { anonymousVisit = window.sessionStorage.getItem(anonymousKey); } catch { /* Tab-only fallback. */ }
+  const newAnonymousVisit = () => {
+    anonymousVisit = createTecOfflineId("visit");
+    try { window.sessionStorage.setItem(anonymousKey, anonymousVisit); } catch { /* Do not share an untracked visit across tabs. */ }
+  };
+  if (!anonymousVisit) newAnonymousVisit();
+  const visitContext = () => {
+    const crm = getActiveCoachCrmContext();
+    const survey = getActiveCoachHealthSurveyContext();
+    const sheet = getActiveCoachProgram414Context();
+    if (crm?.id) return { id: `crm:${crm.id}`, label: crm.leadName || "Casa activa del CRM", linked: true };
+    if (survey?.id) return { id: `survey:${survey.id}`, label: "Encuesta activa", linked: true };
+    if (sheet?.sheetId) return { id: `sheet:${sheet.sheetId}:${sheet.referralIndex}`, label: "Referencia activa de 4 en 14", linked: true };
+    return { id: anonymousVisit, label: "Visita sin cliente identificado, solo en esta ventana", linked: false };
+  };
 
   const syncPrizeToggle = open => {
     wrap.hidden = !open;
@@ -2961,7 +2984,7 @@ function initDailyPrizeTool() {
 
   const getStoredState = () => {
     try {
-      const raw = window.localStorage.getItem(COACH_DAILY_PRIZE_KEY);
+      const raw = window.localStorage.getItem(storageKey);
       const parsed = raw ? JSON.parse(raw) : null;
       return parsed && typeof parsed === "object" ? parsed : null;
     } catch (error) {
@@ -2971,11 +2994,16 @@ function initDailyPrizeTool() {
 
   const saveStoredState = state => {
     if (!state || (state.status === "idle" && !state.offerCode && !state.code)) {
-      window.localStorage.removeItem(COACH_DAILY_PRIZE_KEY);
+      window.localStorage.removeItem(storageKey);
       return;
     }
 
-    window.localStorage.setItem(COACH_DAILY_PRIZE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(storageKey, JSON.stringify(state));
+  };
+
+  const persistState = () => {
+    try { saveStoredState(currentState); return true; }
+    catch { setFeedback("No se pudo conservar esta oferta en el dispositivo. No quedó confirmada; revisa el espacio y vuelve a intentarlo.", "error"); return false; }
   };
 
   const normalizeState = state => ({
@@ -3040,7 +3068,7 @@ function initDailyPrizeTool() {
       ...currentState,
       status: "expired"
     };
-    saveStoredState(currentState);
+    persistState();
     renderState(currentState);
   };
 
@@ -3048,6 +3076,7 @@ function initDailyPrizeTool() {
     stopTimer();
 
     const tick = () => {
+      if (syncVisit()) return;
       const expiresAt = new Date(currentState.expiresAt).getTime();
       if (!Number.isFinite(expiresAt)) {
         markExpired();
@@ -3093,7 +3122,7 @@ function initDailyPrizeTool() {
         ...currentState,
         status: "expired"
       };
-      saveStoredState(currentState);
+      persistState();
     }
 
     resultNode.hidden = false;
@@ -3105,12 +3134,12 @@ function initDailyPrizeTool() {
       stopTimer();
       claimButton.disabled = true;
       if (timerNode) {
-        timerNode.textContent = "Reclamada";
+        timerNode.textContent = "Marcada";
       }
       if (progressNode) {
         progressNode.style.width = "100%";
       }
-      setFeedback("Oferta reclamada. Ya puedes seguir con el cierre final.", "success");
+      setFeedback("Oferta marcada para esta visita en este dispositivo. Confirma las condiciones y aplícala manualmente; no se reservó ni modificó un pedido en RoyalOne.", "success");
       return;
     }
 
@@ -3118,7 +3147,7 @@ function initDailyPrizeTool() {
       stopTimer();
       claimButton.disabled = true;
       updateTimerUi(0);
-      setFeedback("Oferta agotada.", "error");
+      setFeedback("Terminó el tiempo de esta presentación. Confirma con tu líder si la promoción sigue disponible; TEC no verifica inventario.", "info");
       return;
     }
 
@@ -3127,12 +3156,30 @@ function initDailyPrizeTool() {
     startTimer();
   };
 
-  currentState = normalizeState(getStoredState());
-  applyStateToFields(currentState);
-  renderState(currentState);
+  const syncVisit = () => {
+    const visit = visitContext();
+    const key = window.TecUi.offerStorageKey(accountId, visit.id);
+    if (contextNote) contextNote.textContent = `Oferta vinculada a: ${visit.label}. No se comparte con otras cuentas o visitas.`;
+    if (newVisitButton) newVisitButton.hidden = visit.linked;
+    if (key === storageKey) return false;
+    storageKey = key;
+    stopTimer();
+    setFeedback();
+    currentState = normalizeState(getStoredState());
+    renderState(currentState);
+    return true;
+  };
+  syncVisit();
   syncPrizeToggle(false);
 
+  window.addEventListener("coach:visit-change", syncVisit);
+  window.addEventListener("storage", event => {
+    if (event.key === storageKey) { setFeedback(); renderState(normalizeState(getStoredState())); }
+  });
+  newVisitButton?.addEventListener("click", () => { newAnonymousVisit(); syncVisit(); });
+
   toggle.addEventListener("click", () => {
+    syncVisit();
     syncPrizeToggle(wrap.hidden);
   });
 
@@ -3141,6 +3188,7 @@ function initDailyPrizeTool() {
   });
 
   activateButton?.addEventListener("click", () => {
+    syncVisit();
     const code = String(codeInput?.value || "").trim();
     const offer = getOffer(code);
 
@@ -3149,7 +3197,7 @@ function initDailyPrizeTool() {
         ...DAILY_PRIZE_DEFAULT_STATE,
         code
       };
-      saveStoredState(currentState);
+      persistState();
       renderState(currentState);
       setFeedback("Codigo invalido. Usa 305 para descuento o 14407 para regalo.", "error");
       return;
@@ -3163,7 +3211,13 @@ function initDailyPrizeTool() {
       expiresAt: new Date(Date.now() + DAILY_PRIZE_DURATION_MS).toISOString(),
       claimedAt: ""
     };
-    saveStoredState(currentState);
+    if (!persistState()) {
+      currentState = { ...DAILY_PRIZE_DEFAULT_STATE };
+      stopTimer();
+      resultNode.hidden = true;
+      claimButton.disabled = true;
+      return;
+    }
     renderState(currentState);
     registerCoachDemoEvent({
       id: "daily_prize_active",
@@ -3175,16 +3229,19 @@ function initDailyPrizeTool() {
   resetButton?.addEventListener("click", () => {
     stopTimer();
     currentState = { ...DAILY_PRIZE_DEFAULT_STATE };
-    saveStoredState(currentState);
+    persistState();
     setFeedback("", "info");
     renderState(currentState);
     codeInput?.focus();
   });
 
   claimButton?.addEventListener("click", () => {
+    if (syncVisit()) return;
     if (currentState.status !== "active") {
       return;
     }
+
+    if (new Date(currentState.expiresAt).getTime() <= Date.now()) { markExpired(); return; }
 
     stopTimer();
     currentState = {
@@ -3192,7 +3249,7 @@ function initDailyPrizeTool() {
       status: "claimed",
       claimedAt: new Date().toISOString()
     };
-    saveStoredState(currentState);
+    if (!persistState()) { currentState = { ...currentState, status: "active", claimedAt: "" }; startTimer(); return; }
     renderState(currentState);
     registerCoachDemoEvent({
       id: "daily_prize_claimed",
@@ -4741,18 +4798,20 @@ function initCoachPrivateResources() {
       return;
     }
 
-    const pin = sanitizePin4(window.prompt("Escribe tu PIN de 4 numeros para abrir este archivo.") || "");
-
-    if (!pin) {
-      setMessage(nodes.feedback, "Necesitas un PIN valido de 4 numeros.", "error");
-      return;
-    }
+    const unsupported = window.TecDocuments?.privateSupportMessage?.();
+    if (unsupported) { setMessage(nodes.feedback, unsupported, "info"); return; }
 
     clearMessage(nodes.feedback);
-    if (!window.TecDocuments) {
+    if (!window.TecDocuments?.requestPin) {
       setMessage(nodes.feedback, "Actualiza el Coach para abrir el visor de documentos.", "error");
       return;
     }
+
+    let pin;
+    try { pin = await window.TecDocuments.requestPin(); }
+    catch { setMessage(nodes.feedback, "No se pudo abrir el control de PIN. Vuelve a abrir el Coach e inténtalo otra vez.", "error"); return; }
+    if (pin === null) return;
+    if (!/^\d{4}$/.test(pin || "")) { setMessage(nodes.feedback, "Necesitas un PIN válido de 4 números.", "error"); return; }
 
     await window.TecDocuments.open({
       title: resource.fileName || "Documento privado",
@@ -5812,11 +5871,11 @@ async function buildCoachAgendaActionPayload(action = "", record = null) {
     }
     case "follow_up": {
       const scheduleResult = await openCoachAgendaScheduleDialog({
-        title: "Programar follow up",
+        title: "Programar seguimiento",
         message: "Elige la fecha y hora del siguiente seguimiento.",
         initialDate: record.nextActionAt || record.appointmentAt || "",
         initialNote: record.lastNote || "",
-        confirmLabel: "Guardar follow up"
+        confirmLabel: "Guardar seguimiento"
       });
 
       if (!scheduleResult?.nextActionAt) {
@@ -5827,7 +5886,7 @@ async function buildCoachAgendaActionPayload(action = "", record = null) {
         status: "seguimiento",
         nextAction: "seguimiento",
         nextActionAt: scheduleResult.nextActionAt,
-        lastNote: scheduleResult.note || "Follow up programado desde Agenda."
+        lastNote: scheduleResult.note || "Seguimiento programado desde Agenda."
       };
     }
     case "reschedule": {
@@ -5925,7 +5984,7 @@ function buildCoachAgendaCard(record = null) {
     { action: "demo", label: "Demo hecha" },
     { action: "no_answer", label: "No atendio" },
     { action: "reschedule", label: "Reagendar" },
-    { action: "follow_up", label: "Follow up" },
+    { action: "follow_up", label: "Seguimiento" },
     { action: "sale", label: "Venta" },
     { action: "no_sale", label: "No venta" }
   ]
@@ -6342,7 +6401,7 @@ function initCoachCrmWorkspace(user = null) {
             {
               label: "Pendientes de hoy",
               secondary: `${safeSummary.pendingToday || 0} filas para mover`,
-              tertiary: `${safeSummary.followUpCount || 0} follow up · ${safeSummary.noAnswerCount || 0} no atendio`
+              tertiary: `${safeSummary.followUpCount || 0} seguimiento · ${safeSummary.noAnswerCount || 0} no atendio`
             },
             {
               label: "Cartera activa",
@@ -7073,7 +7132,7 @@ function initCoachCrmWorkspace(user = null) {
             }
             <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
             <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
-            <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+            <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Seguimiento</button>
             <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
             <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
           </span>
@@ -7449,7 +7508,7 @@ function initCoachCrmWorkspace(user = null) {
                   }
                   <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
                   <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
-                  <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+                  <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Seguimiento</button>
                   <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
                   <button type="button" class="nav-button" data-crm-inline-save>Guardar</button>
                 </span>
@@ -7526,7 +7585,7 @@ function initCoachCrmWorkspace(user = null) {
                 }
                 <button type="button" class="crm-inline-action-chip" data-crm-inline-appointment>Cita</button>
                 <button type="button" class="crm-inline-action-chip" data-crm-inline-no-answer>No atendio</button>
-                <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Follow up</button>
+                <button type="button" class="crm-inline-action-chip" data-crm-inline-follow-up>Seguimiento</button>
               </span>
               <span class="crm-inline-action-grid crm-inline-action-grid-meta">
                 <button type="button" class="secondary-button" data-crm-inline-open>Detalle</button>
@@ -7862,7 +7921,7 @@ function initCoachCrmWorkspace(user = null) {
         actionType === "no_answer"
           ? "Fila marcada como No atendio."
           : actionType === "follow_up"
-            ? "Fila movida a Follow up."
+            ? "Fila movida a Seguimiento."
             : "Cita marcada y enviada a Agenda.";
       saveInlineRow(row, quickActionButton, payload, successMessage);
       return;
@@ -8020,7 +8079,7 @@ function initCoachCrmWorkspace(user = null) {
         actionType === "no_answer"
           ? "Referencia marcada como No atendio."
           : actionType === "follow_up"
-            ? "Referencia movida a Follow up."
+            ? "Referencia movida a Seguimiento."
             : "Cita marcada dentro de 4 en 14.";
       saveInlineRow(row, quickActionButton, payload, successMessage);
       return;
@@ -8795,18 +8854,7 @@ async function fetchViewer() {
 }
 
 function updateAuthTargets(user) {
-  const accessLabel =
-    user?.accountType === "seat" && hasCoachAccess(user)
-      ? "Activa por equipo"
-      : user?.subscriptionStatus === "test_access" || user?.subscriptionStatus === "trialing"
-        ? "Prueba activa"
-        : hasCoachAccess(user)
-          ? "Activa"
-          : user?.subscriptionStatus === "past_due"
-            ? "Pago pendiente"
-            : user?.accountType === "seat"
-              ? "Acceso pausado"
-              : "Sin activar";
+  const billing = window.TecUi.billingState(user || {});
 
   document.querySelectorAll("[data-coach-user-name]").forEach(node => {
     node.textContent = user?.name || "Distribuidor";
@@ -8817,13 +8865,16 @@ function updateAuthTargets(user) {
   });
 
   document.querySelectorAll("[data-coach-subscription-status]").forEach(node => {
-    node.textContent = accessLabel;
+    node.textContent = billing.label;
   });
 
   document.querySelectorAll("[data-coach-subscription-period]").forEach(node => {
-    node.textContent = user?.subscriptionCurrentPeriodEnd
+    node.textContent = billing.period || (user?.subscriptionCurrentPeriodEnd
       ? formatDate(user.subscriptionCurrentPeriodEnd)
-      : "Todavia no disponible";
+      : "Fecha no disponible");
+  });
+  document.querySelectorAll("[data-open-billing-portal]").forEach(node => {
+    node.hidden = !billing.portal;
   });
 }
 
@@ -9213,7 +9264,7 @@ function renderCoachTeamSeats(seats = []) {
               class="nav-button"
               data-team-seat-reset-password
             >
-              Reset password
+              Restablecer contraseña
             </button>
             ${
               canOpenChef
@@ -14754,7 +14805,7 @@ function buildCoachOrderCalcReply(context = null) {
     `Productos: ${productCopy}.`,
     `Balance final ${formatMoney(safeContext.summary.balanceFinal)}.`,
     `Semanal ${formatMoney(safeContext.summary.weekly)}.`,
-    "Si sale objecion por precio, Agustin ya puede responder con estos numeros."
+    "Si sale objecion por precio, el Coach ya puede responder con estos numeros."
   ].join(" ");
 }
 
@@ -14929,7 +14980,7 @@ function setActiveCoachDecisionContext(context) {
 function formatCoachDemoOutcomeLabel(value = "") {
   const labels = {
     venta: "Venta",
-    follow_up: "Follow up",
+    follow_up: "Seguimiento",
     no_venta: "No venta",
     no_atendio: "No atendio"
   };
@@ -14980,7 +15031,7 @@ function getActiveCoachDemoOutcomeContext() {
 
 function renderActiveCoachDemoOutcomeContext(context = null) {
   const safeContext = context?.resultType ? context : buildCoachDemoOutcomeContext(context);
-  const defaultCopy = "Cuando guardes el resultado, Agustin tomara esta demo desde ese estado real.";
+  const defaultCopy = "Cuando guardes el resultado, TEC tomará esta demostración desde ese estado real.";
   const noteCopy = safeContext
     ? `${formatCoachDemoOutcomeLabel(safeContext.resultType)} guardada${safeContext.saleAmount > 0 ? ` · ${formatMoney(
         safeContext.saleAmount
@@ -15271,10 +15322,12 @@ function getActiveCoachProgram414Context() {
 function setActiveCoachProgram414Context(context) {
   if (!context?.sheetId) {
     window.sessionStorage.removeItem(COACH_ACTIVE_PROGRAM_414_KEY);
+    window.dispatchEvent(new CustomEvent("coach:visit-change"));
     return;
   }
 
   window.sessionStorage.setItem(COACH_ACTIVE_PROGRAM_414_KEY, JSON.stringify(context));
+  window.dispatchEvent(new CustomEvent("coach:visit-change"));
 }
 
 function buildCoachProgram414Reply(context = null) {
@@ -15337,6 +15390,7 @@ function setActiveCoachHealthSurveyContext(context) {
   }
 
   renderActiveHealthSurveyContext(next);
+  window.dispatchEvent(new CustomEvent("coach:visit-change"));
 
   const orderCalcRoot = document.querySelector("[data-order-calc]");
   if (orderCalcRoot?.dataset.orderCalcSyncReady === "true" && typeof orderCalcRoot.syncProductsFromSurvey === "function") {
@@ -16382,6 +16436,29 @@ function initCoachDemoRecorder() {
 
 async function initCoachAppPage() {
   const appPage = document.querySelector("[data-coach-app-page]");
+  if (!appPage) return;
+  const loading = document.querySelector("[data-coach-loading]");
+  const message = document.querySelector("[data-coach-loading-message]");
+  const retry = document.querySelector("[data-coach-load-retry]");
+  retry?.addEventListener("click", () => window.location.reload());
+  try {
+    if (!window.TecUi) throw new Error("Falta un archivo esencial");
+    const ready = await loadCoachAppPage();
+    if (ready === false) return;
+    window.TecUi.alignFlow(appPage.querySelector(".coach-sidebar"));
+    appPage.hidden = false;
+    if (loading) loading.hidden = true;
+  } catch (error) {
+    appPage.hidden = true;
+    if (loading) loading.hidden = false;
+    if (message) message.textContent = "No se pudo preparar el Coach. Tus pendientes guardados no se borraron. Reintenta o vuelve al acceso.";
+    if (retry) retry.hidden = false;
+    console.error("No se pudo preparar la interfaz del Coach.");
+  }
+}
+
+async function loadCoachAppPage() {
+  const appPage = document.querySelector("[data-coach-app-page]");
 
   if (!appPage) {
     return;
@@ -16391,14 +16468,14 @@ async function initCoachAppPage() {
   let platformConfig = null;
 
   try {
-    platformConfig = await apiRequest("/api/platform/config");
+    platformConfig = await apiRequest("/api/platform/config", { timeoutMs: 6000 });
   } catch (error) {
     platformConfig = null;
   }
 
   if (!me.authenticated) {
     window.location.href = "/coach/login/";
-    return;
+    return false;
   }
 
   if (me.offline) {
@@ -16412,7 +16489,7 @@ async function initCoachAppPage() {
 
   if (!hasCoachAccess(me.user)) {
     window.location.href = "/coach/planes/";
-    return;
+    return false;
   }
 
   if (navigator.onLine) {
@@ -16513,7 +16590,7 @@ async function initCoachAppPage() {
       decisionRoot.dataset.decisionOwnerUserId = effectiveOwnerId;
     }
     initBuyerProfileTool();
-    initDailyPrizeTool();
+    initDailyPrizeTool(me.user);
     initCoachDemoOutcomeWorkspace(me.user);
     initCoachDemoRecorder();
   }
@@ -16825,6 +16902,7 @@ async function initCoachAppPage() {
 
     demoStageButtons.forEach(button => {
       button.classList.toggle("is-active", button.dataset.coachStageActivate === meta.id);
+      button.setAttribute("aria-pressed", button.dataset.coachStageActivate === meta.id ? "true" : "false");
     });
   };
 
@@ -16866,6 +16944,8 @@ async function initCoachAppPage() {
       const currentStage = getCoachDemoStageId();
       const stageMeta = getCoachDemoStageMeta(nextStage);
       setCoachDemoStageId(nextStage);
+      const stageNotice = document.querySelector("[data-coach-stage-notice]");
+      if (stageNotice) stageNotice.textContent = `Paso actual: ${stageMeta.label}.`;
 
       registerCoachDemoEvent({
         id: `stage_${stageMeta.id}`,
@@ -17340,7 +17420,7 @@ async function initCoachAppPage() {
       registerCoachDemoEvent({
         id: "order_calc_open",
         label: "Se abrio calculadora de pedido",
-        detail: "Ya entraron a hablar de precio, down payment o pagos."
+        detail: "Ya entraron a hablar de precio, anticipo o pagos."
       });
     }
   });
@@ -17352,40 +17432,46 @@ async function initCoachAppPage() {
     }
   });
 
-  waterCheckForm?.addEventListener("submit", async event => {
-    event.preventDefault();
-
+  const waterOpen = document.querySelector("[data-water-check-open]");
+  const prepareWaterZip = () => {
     const zip = sanitizeZipCode(waterCheckInput?.value || "");
-
-    if (!zip || zip.length < 5) {
+    if (zip.length !== 5) {
+      waterCheckInput?.setAttribute("aria-invalid", "true");
       setMessage(waterCheckFeedback, "Ingresa un ZIP Code valido de 5 digitos.", "error");
       waterCheckInput?.focus();
-      return;
+      return null;
     }
-
+    waterCheckInput?.removeAttribute("aria-invalid");
+    return zip;
+  };
+  waterOpen?.addEventListener("click", event => {
+    const zip = prepareWaterZip();
+    if (!zip) { event.preventDefault(); return; }
+    setMessage(waterCheckFeedback, `Consulta el ZIP ${zip} en EWG. Si no aparece otra pestaña, vuelve a pulsar el enlace. TEC no realiza un análisis del agua.`, "info");
+    registerCoachDemoEvent({ id: "water_zip_check", label: "Se solicitó consulta externa de agua", detail: `ZIP ${zip}. Los resultados se consultan en EWG.` });
+    // Native link navigation preserves the user gesture. No delayed window.open.
+  });
+  waterCheckForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const zip = prepareWaterZip();
+    if (!zip) return;
     clearMessage(waterCheckFeedback);
 
     try {
       await copyTextToClipboard(zip);
       setMessage(
         waterCheckFeedback,
-        `Se abrio EWG en una nueva pestana y el ZIP ${zip} quedo copiado para pegarlo en la busqueda.`,
+        `ZIP ${zip} copiado. Pulsa Consultar agua en EWG y pégalo en su búsqueda.`,
         "success"
       );
     } catch (error) {
       setMessage(
         waterCheckFeedback,
-        `Se abrio EWG en una nueva pestana. Usa el ZIP ${zip} en la busqueda.`,
+        `No se pudo copiar. Anota el ZIP ${zip} y usa el enlace Consultar agua en EWG.`,
         "info"
       );
     }
 
-    registerCoachDemoEvent({
-      id: "water_zip_check",
-      label: "Se reviso agua por ZIP",
-      detail: `Consultaron el area ${zip} para hablar de calidad del agua.`
-    });
-    window.open("https://www.ewg.org/tapwater/", "_blank", "noopener,noreferrer");
   });
 
   royalOneOpenLink?.addEventListener("click", () => {

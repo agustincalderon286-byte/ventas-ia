@@ -13,7 +13,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function viewerHarness() {
+function viewerHarness({ userAgent = "" } = {}) {
   const events = {};
   const nodes = new Map();
   const renders = [];
@@ -82,6 +82,7 @@ function viewerHarness() {
   };
   let cacheWrites = 0;
   const context = vm.createContext({
+    navigator: { userAgent },
     window: win, document, history,
     location: { pathname: "/coach/app/", href: "https://example.invalid/coach/app/" },
     AbortController, Uint8Array, URLSearchParams, setTimeout, clearTimeout,
@@ -129,6 +130,37 @@ test("a rejected PIN or failed fetch retains a working exit and never caches pri
   h.node("[data-document-close]").click();
   assert.equal(h.dialog.open, false);
   assert.equal(h.cacheWrites, 0);
+});
+
+test("old iPhone private documents show a safe alternative without requesting PIN bytes, while public pages still work", async () => {
+  for (const userAgent of ["Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) AppleWebKit/605.1.15 Version/16.6 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) AppleWebKit/605.1.15 CriOS/130.0 Mobile/15E148 Safari/604.1"]) {
+    const h = viewerHarness({ userAgent }); let loaded = false;
+    assert.equal(await h.api.open({ title: "Privado", load: async () => { loaded = true; return new Blob(["pdf"]); } }), false);
+    assert.equal(loaded, false); assert.equal(h.cacheWrites, 0); assert.equal(h.libraryLoads, 0);
+    assert.match(h.node("[data-document-status]").textContent, /misma cuenta y PIN/);
+    h.api.close();
+    assert.equal(await h.api.open({ documentId: "catalogo" }), true);
+    assert.equal(h.libraryLoads, 0);
+  }
+});
+
+test("private PIN dialog clears the secret and restores focus on submit and cancellation without storing it", async () => {
+  const h = viewerHarness();
+  const first = h.api.requestPin();
+  assert.equal(h.dialog.open, true);
+  h.node("[data-private-pin]").value = "1234";
+  h.node("[data-private-pin-form]").submit({ preventDefault() {} });
+  assert.equal(await first, "1234");
+  assert.equal(h.node("[data-private-pin]").value, "");
+  assert.equal(h.dialog.open, false); assert.equal(h.focusRestored, true);
+  const next = h.api.requestPin();
+  assert.equal(await h.api.requestPin(), null);
+  h.node("[data-private-pin]").value = "9999";
+  h.node("[data-private-pin-cancel]").click();
+  assert.equal(await next, null);
+  assert.equal(h.node("[data-private-pin]").value, "");
+  assert.equal(h.cacheWrites, 0); assert.equal(h.requests.length, 0);
 });
 
 test("public documents use one bounded image and never load PDF.js, a worker or the full PDF", async () => {

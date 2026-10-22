@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TEC Coach" />
-    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-audio3" />
+    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-coherence3" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,12 +25,19 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261022-audio3" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-audio3" />
-    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261022-audio3" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261022-coherence3" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-coherence3" />
+    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261022-coherence3" />
   </head>
   <body class="coach-app-body">
-    <div class="coach-shell" data-coach-app-page>
+    <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
+      <h1>Preparando tu Coach</h1>
+      <p data-coach-loading-message>Estamos verificando tu cuenta y preparando tus herramientas.</p>
+      <button type="button" class="secondary-button" data-coach-load-retry hidden>Reintentar</button>
+      <a href="/coach/login/">Volver al acceso</a>
+    </section>
+    <noscript><p>El Coach necesita JavaScript. Actívalo en tu navegador y vuelve a abrir la página. <a href="/coach/contacto/#recuperar-acceso">Solicitar ayuda</a></p></noscript>
+    <div class="coach-shell" data-coach-app-page hidden>
       <header class="coach-nav">
         <a class="coach-brand coach-brand--tec" href="/coach/app/" data-coach-home-link aria-label="TEC Total Elite Coaching">
           <span class="coach-brand-logo-frame">
@@ -43,7 +50,7 @@
         </a>
 
         <nav class="coach-nav-links">
-          <a class="nav-link" href="/coach/">Landing</a>
+          <a class="nav-link" href="/coach/">Inicio</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
           <a class="nav-link" href="/chef/" target="_blank" rel="noreferrer" data-chef-self-open-link data-telemarketing-hide>Ver Chef</a>
           <a class="nav-link" href="/control/" data-control-tower-link hidden>Torre</a>
@@ -206,6 +213,7 @@
             <p class="mini-note" data-coach-workspace-copy>
               Sigue el orden de la visita y activa el paso donde te encuentras.
             </p>
+            <p class="tec-sr-only" data-coach-stage-notice role="status" aria-live="polite"></p>
           </div>
 
           <article class="dashboard-card tec-property-workspace" data-coach-workspace-section="mapa" data-property-workspace hidden>
@@ -408,7 +416,7 @@
                 <strong data-crm-quick-count="today">0</strong>
               </button>
               <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="follow_up">
-                Follow up
+                Seguimiento
                 <strong data-crm-quick-count="follow_up">0</strong>
               </button>
               <button type="button" class="crm-quick-filter-chip" data-crm-quick-filter="appointments">
@@ -668,7 +676,7 @@
                 <strong data-crm-personal-appointments>0</strong>
               </article>
               <article class="telemarketing-kpi-card">
-                <span>Follow up</span>
+                <span>Seguimiento</span>
                 <strong data-crm-personal-follow-up>0</strong>
               </article>
               <article class="telemarketing-kpi-card">
@@ -731,7 +739,7 @@
               </div>
               <div class="mini-stat">
                 <strong data-crm-follow-up>0</strong>
-                <span>Follow up</span>
+                <span>Seguimiento</span>
               </div>
               <div class="mini-stat">
                 <strong data-crm-territory-count>0</strong>
@@ -1234,7 +1242,7 @@
 
               <div class="dashboard-actions compact-top">
                 <button type="button" class="coach-demo-button" data-coach-stage-activate="rompe_hielo">
-                  Iniciar practica <span aria-hidden="true">→</span>
+                  Estoy en este paso <span aria-hidden="true">→</span>
                 </button>
               </div>
 
@@ -1518,11 +1526,12 @@
                     data-water-check-input
                     required
                   />
-                  <button type="submit" class="secondary-button water-tool-button">Analizar agua</button>
+                  <button type="submit" class="secondary-button water-tool-button">Copiar ZIP</button>
+                  <a class="secondary-button" data-water-check-open href="https://www.ewg.org/tapwater/" target="_blank" rel="noopener noreferrer">Consultar agua en EWG ↗</a>
                 </form>
 
                 <p class="water-tool-note">
-                  Abre EWG en una nueva pestana y deja el ZIP listo para pegar en la busqueda.
+                  Consulta externa: copia el ZIP y abre EWG para buscarlo. TEC no analiza el agua ni obtiene los resultados automáticamente. Si no se abre otra pestaña, usa de nuevo el enlace.
                 </p>
                 <div class="form-result water-tool-feedback" data-water-check-feedback></div>
               </section>
@@ -1579,8 +1588,9 @@
                       Guardar catalogo
                     </button>
                   </div>
-                  <div class="form-result" data-private-resource-feedback="catalogo_privado"></div>
                 </form>
+                <div class="form-result" data-private-resource-feedback="catalogo_privado" role="status" aria-live="polite"></div>
+                <p class="mini-note">Los PDF privados requieren un navegador compatible; en Apple, Safari/iOS 18 o posterior. En equipos antiguos usa tu misma cuenta y PIN desde una computadora compatible. No publiques tu archivo privado.</p>
 
                 <p class="mini-note">
                   Si olvidas el PIN, solo borra el archivo y vuelve a subirlo con uno nuevo.
@@ -1654,8 +1664,9 @@
                       Guardar lista
                     </button>
                   </div>
-                  <div class="form-result" data-private-resource-feedback="lista_precios_privada"></div>
                 </form>
+                <div class="form-result" data-private-resource-feedback="lista_precios_privada" role="status" aria-live="polite"></div>
+                <p class="mini-note">Los PDF privados requieren un navegador compatible; en Apple, Safari/iOS 18 o posterior. Los catálogos públicos no tienen esta limitación.</p>
 
                 <p class="mini-note">
                   Si olvidas el PIN, borra el archivo y vuelve a cargarlo con un PIN nuevo.
@@ -2432,7 +2443,7 @@
             hidden
           >
             <div class="eyebrow">Tracking de ventas HighLevel</div>
-            <h3>Mide cuantas ventas salen de Agustin 2.0</h3>
+            <h3>Mide las ventas de tu canal Chef</h3>
             <p>
               Dale a tu cliente una URL unica para que su workflow de HighLevel mande las ventas ganadas de regreso.
             </p>
@@ -3246,7 +3257,7 @@
                 </label>
                 <label>
                   Nombre del canal
-                  <input type="text" name="label" maxlength="120" placeholder="Ej. Instagram Agustin" required />
+                  <input type="text" name="label" maxlength="120" placeholder="Ej. Instagram TEC" required />
                 </label>
                 <label>
                   Handle / referencia
@@ -3302,7 +3313,7 @@
                 </label>
                 <label>
                   Cuenta visible
-                  <input type="text" name="accountLabel" maxlength="120" placeholder="Ej. BM Coach Agustin" />
+                  <input type="text" name="accountLabel" maxlength="120" placeholder="Ej. BM TEC" />
                 </label>
                 <label>
                   Business / workspace ID
@@ -4185,7 +4196,7 @@
               </div>
               <div class="mini-stat">
                 <strong data-team-outcome-followups>0</strong>
-                <span>Follow up</span>
+                <span>Seguimiento</span>
               </div>
               <div class="mini-stat">
                 <strong data-team-outcome-amount>$0.00</strong>
@@ -4840,7 +4851,7 @@
                 <div class="eyebrow">Herramienta de cierre</div>
                 <h3>Calculadora de pedido</h3>
                 <p>
-                  Usa esta calculadora para sacar balances, down payments y pagos estimados sin perder tiempo en plena
+                  Usa esta calculadora para sacar balances, anticipos y pagos estimados sin perder tiempo en plena
                   presentacion.
                 </p>
               </div>
@@ -5157,8 +5168,7 @@
                 <div class="eyebrow">Cierre especial</div>
                 <h3>Oferta especial</h3>
                 <p>
-                  Esta herramienta activa una oferta real con codigo. El reloj solo sirve para ayudar a tomar una decision
-                  en ese momento. Si no la reclaman a tiempo, solo marca que la oferta se agoto.
+                  Apoyo para presentar una promoción autorizada durante esta visita. El reloj es una ayuda visual, no una reserva de inventario. Marcar la oferta no cambia la calculadora ni aplica descuentos o regalos en RoyalOne.
                 </p>
               </div>
               <figure class="coach-tool-visual">
@@ -5183,6 +5193,8 @@
 
             <div class="daily-prize-wrap" data-daily-prize-wrap hidden>
               <div class="daily-prize-tool" data-daily-prize-tool>
+                <p class="mini-note" data-daily-prize-context></p>
+                <button type="button" class="secondary-button" data-daily-prize-new-visit>Nueva visita sin cliente identificado</button>
                 <div class="daily-prize-grid daily-prize-grid-single">
                   <label class="daily-prize-field">
                     <span>Codigo de activacion</span>
@@ -5195,12 +5207,12 @@
                   <button type="button" class="secondary-button" data-daily-prize-reset>Volver a empezar</button>
                 </div>
 
-                <div class="daily-prize-feedback" data-daily-prize-feedback hidden></div>
+                <div class="daily-prize-feedback" data-daily-prize-feedback role="status" aria-live="polite" hidden></div>
 
                 <div class="daily-prize-result" data-daily-prize-result hidden>
                   <div class="daily-prize-result-grid">
                     <div class="daily-prize-result-card is-main">
-                      <span>Oferta activa</span>
+                      <span>Promoción seleccionada</span>
                       <strong data-daily-prize-title>Oferta especial</strong>
                     </div>
                     <div class="daily-prize-result-card">
@@ -5212,7 +5224,7 @@
                       <strong data-daily-prize-copy></strong>
                     </div>
                     <div class="daily-prize-result-card">
-                      <span>Condicion real</span>
+                      <span>Condiciones por confirmar</span>
                       <strong data-daily-prize-note-output></strong>
                     </div>
                   </div>
@@ -5222,7 +5234,7 @@
                   </div>
 
                   <div class="decision-tool-actions compact-top">
-                    <button type="button" class="primary-button" data-daily-prize-claim>Reclamar oferta</button>
+                    <button type="button" class="primary-button" data-daily-prize-claim>Marcar para esta visita</button>
                   </div>
                 </div>
               </div>
@@ -5402,7 +5414,7 @@
                   <span>Como termino</span>
                   <select name="resultType" data-demo-outcome-type>
                     <option value="venta">Venta</option>
-                    <option value="follow_up">Follow up</option>
+                    <option value="follow_up">Seguimiento</option>
                     <option value="no_venta">No venta</option>
                     <option value="no_atendio">No atendio</option>
                   </select>
@@ -5434,7 +5446,7 @@
                     name="privateReason"
                     rows="3"
                     maxlength="320"
-                    placeholder="Ej. cerro por salud, quedo follow up por credito o no se pudo hoy"
+                    placeholder="Ej. cerro por salud, quedo seguimiento por credito o no se pudo hoy"
                     data-demo-outcome-reason
                   ></textarea>
                 </label>
@@ -5446,7 +5458,7 @@
 
               <div class="form-result" data-demo-outcome-feedback></div>
               <p class="mini-note demo-outcome-context-note" data-demo-outcome-context-note>
-                Cuando guardes el resultado, Agustin tomara esta demo desde ese estado real.
+                Cuando guardes el resultado, TEC tomará esta demostración desde ese estado real.
               </p>
               <p class="mini-note" data-coach-crm-context-note>
                 Si llegaste desde CRM o Agenda, este resultado regresara al mismo registro.
@@ -5839,11 +5851,12 @@
       </p>
     </div>
 
-    <script src="/coach/document-viewer.js?v=20261022-audio3"></script>
-    <script src="/coach/order-calculator.js?v=20261022-audio3"></script>
-    <script src="/coach/offline-forms.js?v=20261022-audio3"></script>
-    <script src="/coach/pwa-safety.js?v=20261022-audio3"></script>
-    <script type="module" src="/coach/property-map.js?v=20261022-audio3"></script>
-    <script src="/coach/app.js?v=20261022-audio3"></script>
+    <script src="/coach/document-viewer.js?v=20261022-coherence3"></script>
+    <script src="/coach/order-calculator.js?v=20261022-coherence3"></script>
+    <script src="/coach/offline-forms.js?v=20261022-coherence3"></script>
+    <script src="/coach/pwa-safety.js?v=20261022-coherence3"></script>
+    <script type="module" src="/coach/property-map.js?v=20261022-coherence3"></script>
+    <script src="/coach/ui-coherence.js?v=20261022-coherence3"></script>
+    <script src="/coach/app.js?v=20261022-coherence3"></script>
   </body>
 </html>

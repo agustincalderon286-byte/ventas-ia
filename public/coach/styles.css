@@ -4556,6 +4556,15 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 }
 
 .tec-form-pending summary { cursor: pointer; font-weight: 700; }
+[data-coach-app-page][hidden], [data-coach-loading][hidden] { display: none !important; }
+.tec-loading { max-width: 640px; margin: 10vh auto; padding: 28px; border-radius: 24px; background: #fff; color: #102b4e; line-height: 1.7; }
+.tec-loading a, .coach-login-recovery a { color: #124d80; text-decoration: underline; }
+.tec-loading button { margin-right: 16px; }
+.coach-login-recovery { margin-top: 20px; color: #102b4e; line-height: 1.65; }
+.coach-login-recovery summary { cursor: pointer; font-weight: 700; }
+.tec-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.coach-app-body :is(button, a, input, select, summary, textarea):focus-visible { outline: 3px solid #124d80; outline-offset: 3px; }
+.water-tool-form [data-water-check-open] { text-align: center; }
 .tec-update-notice,
 .tec-audio-recovery section {
   margin: 16px;
@@ -7171,7 +7180,9 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
   .decision-insight-card,
   .buyer-profile-row,
   .buyer-profile-result-card,
-  .daily-prize-result-card
+  .daily-prize-result-card,
+  .resource-item-water,
+  .resource-private-status
 ) {
   color: #102b4e;
   background: #f6f8fb;
@@ -7288,6 +7299,10 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(
   .order-calc-summary-note[data-state="warning"]
 ) {
   color: #805300;
+}
+
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body :is(.water-tool-note, .resource-copy span) {
+  color: #405570;
 }
 
 @media (max-width: 720px) {

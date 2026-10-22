@@ -19,7 +19,9 @@ test("light-theme states keep at least 4.5 to 1 contrast on the audited cards an
     { selectors: [".daily-prize-result-card.is-main strong", ".daily-prize-result-card.is-copy strong", ".buyer-profile-result-card.is-main strong"], color: "#102b4e" },
     { selectors: [".decision-score-card.is-highlight strong", '.order-calc-match[data-tone="warning"]', '.order-calc-summary-note[data-state="warning"]'], color: "#805300" },
     { selectors: ['.order-calc-summary-note[data-state="success"]'], color: "#15734c" },
-    { selectors: [".order-calc-validation"], color: "#b4232f" }
+    { selectors: [".order-calc-validation"], color: "#b4232f" },
+    { selectors: [".resource-item-water", ".resource-private-status"], color: "#102b4e" },
+    { selectors: [".water-tool-note", ".resource-copy span"], color: "#405570" }
   ];
   for (const group of groups) {
     const rule = lightRules.split("}").find(block => group.selectors.every(selector => block.includes(selector)) && block.includes(`color: ${group.color};`));

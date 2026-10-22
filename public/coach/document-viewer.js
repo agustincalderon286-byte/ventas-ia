@@ -12,7 +12,56 @@
   let dialog;
   let closingHistory = Promise.resolve();
   let finishHistory;
+  let pinDialog;
+  let pinRequest;
   const standalone = location.pathname === "/coach/document.html";
+
+  function privateSupportMessage() {
+    const ua = typeof navigator === "undefined" ? "" : navigator.userAgent || "";
+    const ios = /(?:iPhone|iPad|iPod)/.test(ua) && ua.match(/OS (\d+)[_.]/);
+    const safari = /Safari\//.test(ua) && !/(?:Chrome|Chromium|Edg|OPR|Android)\//.test(ua) && ua.match(/Version\/(\d+)/);
+    if ((ios && Number(ios[1]) < 18) || (safari && Number(safari[1]) < 18)) {
+      return "Este dispositivo no es compatible con el visor de PDF privados (en Apple requiere Safari/iOS 18 o posterior). Entra con tu misma cuenta y PIN desde una computadora o tableta compatible. Los catálogos públicos sí están disponibles aquí. El archivo sigue privado; no lo subas a la sección pública.";
+    }
+    return "";
+  }
+
+  function requestPin() {
+    if (pinRequest) return Promise.resolve(null);
+    if (!pinDialog) {
+      pinDialog = document.createElement("dialog");
+      pinDialog.className = "tec-pin-dialog";
+      pinDialog.setAttribute("aria-labelledby", "tec-private-pin-title");
+      pinDialog.innerHTML = `<form data-private-pin-form>
+        <h2 id="tec-private-pin-title">Abrir documento privado</h2>
+        <label for="tec-private-pin">PIN de 4 números</label>
+        <input id="tec-private-pin" data-private-pin type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required autofocus>
+        <p>El PIN se verifica con el servidor. No se guarda en este dispositivo.</p>
+        <div><button type="submit">Abrir documento</button><button type="button" data-private-pin-cancel>Cancelar</button></div>
+      </form>`;
+      document.body.append(pinDialog);
+      const finish = pin => {
+        const request = pinRequest;
+        pinRequest = null;
+        pinDialog.querySelector("[data-private-pin]").value = "";
+        pinDialog.close();
+        request?.opener?.focus({ preventScroll: true });
+        request?.resolve(pin);
+      };
+      pinDialog.querySelector("[data-private-pin-form]").addEventListener("submit", event => {
+        event.preventDefault();
+        const input = pinDialog.querySelector("[data-private-pin]");
+        if (!/^\d{4}$/.test(input.value)) { input.reportValidity?.(); return; }
+        finish(input.value);
+      });
+      pinDialog.querySelector("[data-private-pin-cancel]").addEventListener("click", () => finish(null));
+      pinDialog.addEventListener("cancel", event => { event.preventDefault(); finish(null); });
+    }
+    return new Promise((resolve, reject) => {
+      pinRequest = { resolve, opener: document.activeElement };
+      try { pinDialog.showModal(); } catch (error) { pinRequest = null; reject(error); }
+    });
+  }
 
   function status(session, message) {
     if (active === session) dialog.querySelector("[data-document-status]").textContent = message;
@@ -260,7 +309,9 @@
     if (!standalone) history.pushState({ ...history.state, tecDocument: session.id }, "", location.href);
     status(session, "Abriendo documento… Puedes volver al Coach aunque esté cargando.");
     try {
+      if (!resource && privateSupportMessage()) { status(session, privateSupportMessage()); return false; }
       const data = load ? await load(session.abort.signal) : null;
+      session.privateFetched = Boolean(load);
       if (active !== session) return false;
       if (resource) {
         // Public documents are rendered at build time, not on the phone. This path
@@ -303,12 +354,15 @@
       if (save && active === session) saveOffline(session);
       return active === session;
     } catch (error) {
-      status(session, error.message && load ? error.message : "No se pudo cargar el índice del documento. Vuelve al Coach e inténtalo otra vez con conexión.");
+      status(session, load ? (session.privateFetched
+        ? "No se pudo mostrar el PDF privado. Prueba con tu misma cuenta y PIN desde una computadora o tableta con navegador actualizado; en Apple, Safari/iOS 18 o posterior. Tu archivo no se hizo público. Puedes volver al Coach."
+        : error.message || "No se pudo obtener el archivo privado. Vuelve al Coach e intenta con conexión.")
+        : "No se pudo cargar el índice del documento. Vuelve al Coach e inténtalo otra vez con conexión.");
       return false;
     }
   }
 
-  window.TecDocuments = Object.freeze({ open, close });
+  window.TecDocuments = Object.freeze({ open, close, privateSupportMessage, requestPin });
   document.addEventListener("click", event => {
     const link = event.target.closest("[data-tec-document]");
     if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

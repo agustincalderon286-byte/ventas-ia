@@ -16,6 +16,10 @@ Los enlaces públicos tienen como respaldo `/coach/document.html?document=catalo
 
 Los archivos privados mantienen el POST autenticado y el PIN del servidor. Solo se entregan a PDF.js en memoria y no ofrecen guardado offline ni URLs blob/nuevas ventanas. Esta corrección de iPhone X cubre los dos documentos públicos; los PDF privados arbitrarios aún requieren el navegador compatible con PDF.js 6. No se cambian permisos, cuentas, membresías o datos de clientes.
 
+Desde `20261022-coherence3`, los dispositivos Apple identificados con Safari o iOS anterior a 18 reciben un aviso antes de solicitar el PIN o el PDF. La alternativa es usar la misma cuenta y PIN desde un equipo compatible, sin publicar ni convertir el documento privado en un recurso público. Un fallo del motor en otros navegadores también conserva la salida y explica la alternativa. Esta medida gestiona la incompatibilidad; no añade renderizado privado al iPhone X.
+
+El PIN ya no depende de `window.prompt`: usa un diálogo propio con campo etiquetado, validación de cuatro dígitos y Cancelar. Se limpia al enviar o cancelar y se restaura el foco. Los errores de apertura y los avisos de compatibilidad se muestran fuera del formulario plegable de carga. La autenticación, la comprobación del PIN y el `no-store` del servidor permanecen intactos.
+
 Distribución vendorizada sin modificar desde `pdfjs-dist@6.4.299` de npm, con su licencia Apache 2.0 y licencias de fuentes/decodificadores en `public/coach/vendor/pdfjs/6.4.299`, ahora cargada únicamente al abrir un PDF privado. No es una dependencia del servidor Node 20.
 
 Referencia de integración: https://mozilla.github.io/pdf.js/examples/ (renderizado y control de tareas). La distribución legacy actual documenta Safari 18+; un fallo de compatibilidad no elimina el botón de regreso.
