@@ -2,7 +2,7 @@ services:
   - type: web
     name: cmwf-crm-api
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev --prefer-offline --no-audit --no-fund
     startCommand: npm start
     healthCheckPath: /api/healthz
     autoDeploy: true
