@@ -16,6 +16,7 @@ const {
   extraerLeadInfo,
   limpiarCoachAgendaRecord,
   parseCoachProgram414ImportedSheets,
+  resolverCoachOwnerUserId,
   resolverCoachCrmStatusDesdeDemoOutcome
 } = await import("../server.js");
 
@@ -116,6 +117,22 @@ test("el tablero 4 en 14 consulta por workspace del dueno y no por creador indiv
   assert.equal(String(query.ownerUserId), String(ownerUserId));
   assert.equal(query.programType, "4_en_14");
   assert.equal("generatedByUserId" in query, false);
+});
+
+test("un administrador lider comparte el workspace de la cuenta duena", () => {
+  const ownerUserId = new mongoose.Types.ObjectId();
+  const leaderUserId = new mongoose.Types.ObjectId();
+
+  assert.equal(
+    String(
+      resolverCoachOwnerUserId({
+        _id: leaderUserId,
+        accountType: "leader",
+        teamOwnerUserId: ownerUserId
+      })
+    ),
+    String(ownerUserId)
+  );
 });
 
 test("detecta datos de contacto compartidos desde Chef", () => {

@@ -4846,7 +4846,9 @@ async function construirCoachOwnershipSnapshot(userDoc = null) {
 
   const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
   const ownerUserId =
-    accountType === "seat" && userDoc.teamOwnerUserId ? userDoc.teamOwnerUserId : userDoc._id;
+    ["seat", "leader"].includes(accountType) && userDoc.teamOwnerUserId
+      ? userDoc.teamOwnerUserId
+      : userDoc._id;
   let ownerName = userDoc.name || "";
   let ownerEmail = userDoc.email || "";
 
@@ -5033,7 +5035,9 @@ function resolverCoachOwnerUserId(userDoc = null) {
   }
 
   const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
-  return accountType === "seat" && userDoc.teamOwnerUserId ? userDoc.teamOwnerUserId : userDoc._id;
+  return ["seat", "leader"].includes(accountType) && userDoc.teamOwnerUserId
+    ? userDoc.teamOwnerUserId
+    : userDoc._id;
 }
 
 function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
@@ -5094,7 +5098,7 @@ async function listarCoachMarketingWorkspaceMembers(userDoc = null, profileDoc =
     }
   ];
 
-  if (!esCoachTeamManager(userDoc) || !ownerUserId || String(currentUserId) !== String(ownerUserId)) {
+  if (!esCoachTeamManager(userDoc) || !ownerUserId) {
     return members;
   }
 
@@ -5241,7 +5245,7 @@ async function coachTieneAccesoOperativo(userDoc = null) {
   const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
   const seatStatus = normalizarCoachSeatStatus(userDoc.seatStatus || "active");
 
-  if (accountType === "seat" && seatStatus !== "active") {
+  if (["seat", "leader"].includes(accountType) && seatStatus !== "active") {
     return false;
   }
 
@@ -5249,7 +5253,11 @@ async function coachTieneAccesoOperativo(userDoc = null) {
     return true;
   }
 
-  if (accountType !== "seat" || !userDoc.teamOwnerUserId) {
+  if (
+    !["seat", "leader"].includes(accountType) ||
+    !userDoc.teamOwnerUserId ||
+    String(userDoc.teamOwnerUserId) === String(userDoc._id)
+  ) {
     return false;
   }
 
@@ -10244,7 +10252,11 @@ async function resolverCoachAudienceOwner(userDoc = null) {
 
   const accountType = normalizarCoachAccountType(userDoc.accountType || "owner");
 
-  if (accountType === "seat" && userDoc.teamOwnerUserId && String(userDoc.teamOwnerUserId) !== String(userDoc._id)) {
+  if (
+    ["seat", "leader"].includes(accountType) &&
+    userDoc.teamOwnerUserId &&
+    String(userDoc.teamOwnerUserId) !== String(userDoc._id)
+  ) {
     const ownerUserDoc = await CoachUser.findById(userDoc.teamOwnerUserId)
       .select("_id name email officeId territoryId accountType")
       .lean();
@@ -12361,12 +12373,15 @@ async function listarCoachDemoAnalysisUserIds(userDoc = null) {
     return [userDoc._id];
   }
 
+  const ownerUserId = resolverCoachOwnerUserId(userDoc);
   const seatIds = await CoachUser.find({
-    teamOwnerUserId: userDoc._id,
+    teamOwnerUserId: ownerUserId,
     accountType: "seat"
   }).distinct("_id");
 
-  return [userDoc._id, ...seatIds];
+  return Array.from(
+    new Map([ownerUserId, userDoc._id, ...seatIds].filter(Boolean).map(userId => [String(userId), userId])).values()
+  );
 }
 
 function extraerCoachDemoResponseText(data = null) {
@@ -29225,8 +29240,9 @@ app.get("/api/coach/team", async (req, res) => {
   }
 
   try {
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDocs = await CoachUser.find({
-      teamOwnerUserId: auth.user._id,
+      teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
     })
       .sort({ createdAt: -1, name: 1 })
@@ -29246,7 +29262,7 @@ app.get("/api/coach/team", async (req, res) => {
       CoachLeadInbox.aggregate([
         {
           $match: {
-            ownerUserId: auth.user._id,
+            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
@@ -29255,7 +29271,7 @@ app.get("/api/coach/team", async (req, res) => {
       CoachHealthSurvey.aggregate([
         {
           $match: {
-            ownerUserId: auth.user._id,
+            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
@@ -29264,7 +29280,7 @@ app.get("/api/coach/team", async (req, res) => {
       CoachProgramSheet.aggregate([
         {
           $match: {
-            ownerUserId: auth.user._id,
+            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
@@ -29273,7 +29289,7 @@ app.get("/api/coach/team", async (req, res) => {
       CoachRecruitmentApplication.aggregate([
         {
           $match: {
-            ownerUserId: auth.user._id,
+            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
@@ -29333,9 +29349,10 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
   }
 
   try {
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.findOne({
       _id: userId,
-      teamOwnerUserId: auth.user._id,
+      teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
     }).lean();
 
@@ -29345,7 +29362,7 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
 
     const seatObjectId = seatDoc._id;
     const ownerQuery = {
-      ownerUserId: auth.user._id,
+      ownerUserId: managerOwnerUserId,
       generatedByUserId: seatObjectId
     };
 
@@ -29445,6 +29462,7 @@ app.post("/api/coach/team/seats", async (req, res) => {
     const temporaryPassword = requestedPassword || generarCoachSeatPasswordTemporal();
     const passwordSeguro = crearPasswordSeguro(temporaryPassword);
     const now = new Date();
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.create({
       name,
       email,
@@ -29452,8 +29470,8 @@ app.post("/api/coach/team/seats", async (req, res) => {
       passwordSalt: passwordSeguro.salt,
       accountType: "seat",
       parentUserId: auth.user._id,
-      billingOwnerUserId: auth.user._id,
-      teamOwnerUserId: auth.user._id,
+      billingOwnerUserId: managerOwnerUserId,
+      teamOwnerUserId: managerOwnerUserId,
       sponsorUserId: auth.user.sponsorUserId || null,
       sponsorName: auth.user.sponsorName || "",
       sponsorCommissionRate: limpiarCoachCommissionRate(auth.user.sponsorCommissionRate || 0),
@@ -29522,9 +29540,10 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
   }
 
   try {
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.findOne({
       _id: userId,
-      teamOwnerUserId: auth.user._id,
+      teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
     });
 
@@ -29563,19 +29582,19 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
     res.json({
       seat: limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile.toObject(), {
         leads: await CoachLeadInbox.countDocuments({
-          ownerUserId: auth.user._id,
+          ownerUserId: managerOwnerUserId,
           generatedByUserId: seatDoc._id
         }),
         surveys: await CoachHealthSurvey.countDocuments({
-          ownerUserId: auth.user._id,
+          ownerUserId: managerOwnerUserId,
           generatedByUserId: seatDoc._id
         }),
         programSheets: await CoachProgramSheet.countDocuments({
-          ownerUserId: auth.user._id,
+          ownerUserId: managerOwnerUserId,
           generatedByUserId: seatDoc._id
         }),
         applications: await CoachRecruitmentApplication.countDocuments({
-          ownerUserId: auth.user._id,
+          ownerUserId: managerOwnerUserId,
           generatedByUserId: seatDoc._id
         })
       })
@@ -29600,9 +29619,10 @@ app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
   }
 
   try {
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.findOne({
       _id: userId,
-      teamOwnerUserId: auth.user._id,
+      teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
     });
 
@@ -29657,9 +29677,10 @@ app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
       return responderCoachError(res, 401, "Necesitas una sesion activa para cambiar de cuenta.");
     }
 
+    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.findOne({
       _id: userId,
-      teamOwnerUserId: auth.user._id,
+      teamOwnerUserId: managerOwnerUserId,
       accountType: "seat",
       seatStatus: "active"
     });
@@ -32512,7 +32533,8 @@ app.get("/api/coach/private-resources", async (req, res) => {
   }
 
   try {
-    const resourceDocs = await CoachPrivateResource.find({ ownerUserId: auth.user._id })
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
+    const resourceDocs = await CoachPrivateResource.find({ ownerUserId })
       .select("slotType fileName mimeType fileSize uploadedAt updatedAt")
       .lean();
 
@@ -32557,8 +32579,9 @@ app.post("/api/coach/private-resources/:slot/upload", async (req, res) => {
 
   try {
     const now = new Date();
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
     const resourceDoc = await CoachPrivateResource.findOneAndUpdate(
-      { ownerUserId: auth.user._id, slotType },
+      { ownerUserId, slotType },
       {
         $set: {
           ownerEmail: auth.user.email || "",
@@ -32567,13 +32590,13 @@ app.post("/api/coach/private-resources/:slot/upload", async (req, res) => {
           fileName,
           mimeType: "application/pdf",
           fileSize: buffer.length,
-          pinHash: construirHashPinCoachPrivateResource(auth.user._id, slotType, pin),
+          pinHash: construirHashPinCoachPrivateResource(ownerUserId, slotType, pin),
           fileData: buffer,
           uploadedAt: now,
           updatedAt: now
         },
         $setOnInsert: {
-          ownerUserId: auth.user._id,
+          ownerUserId,
           createdAt: now
         }
       },
@@ -32606,8 +32629,9 @@ app.delete("/api/coach/private-resources/:slot", async (req, res) => {
   }
 
   try {
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
     const deleted = await CoachPrivateResource.findOneAndDelete({
-      ownerUserId: auth.user._id,
+      ownerUserId,
       slotType
     });
 
@@ -32640,8 +32664,9 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
   }
 
   try {
+    const ownerUserId = resolverCoachOwnerUserId(auth.user);
     const resourceDoc = await CoachPrivateResource.findOne({
-      ownerUserId: auth.user._id,
+      ownerUserId,
       slotType
     });
 
@@ -32649,7 +32674,7 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
       return responderCoachError(res, 404, "Todavia no has subido archivo en ese espacio.");
     }
 
-    const expectedPinHash = construirHashPinCoachPrivateResource(auth.user._id, slotType, pin);
+    const expectedPinHash = construirHashPinCoachPrivateResource(ownerUserId, slotType, pin);
 
     if (resourceDoc.pinHash !== expectedPinHash) {
       return responderCoachError(res, 403, "Ese PIN no coincide.");
@@ -34550,6 +34575,7 @@ export {
   construirCheckoutCoach,
   parseCoachProgram414ImportedSheets,
   parseCoachLeadNextActionAt,
+  resolverCoachOwnerUserId,
   resolverCoachCrmStatusDesdeDemoOutcome,
   resolverCoachCrmStatusDesdeLead
 };
