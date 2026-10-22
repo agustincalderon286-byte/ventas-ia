@@ -5,7 +5,13 @@ process.env.NODE_ENV = "test";
 process.env.STRIPE_PRICE_ID_MONTHLY = "price_tec_monthly_test";
 process.env.STRIPE_PRICE_ID_ANNUAL = "price_tec_annual_test";
 
-const { construirCheckoutCoach, normalizarPlanCoach, obtenerPlanCoach } = await import("../server.js");
+const {
+  coachTieneAccesoTotal,
+  construirCheckoutCoach,
+  normalizarPlanCoach,
+  obtenerPlanCoach,
+  usuarioPuedeVerTorreControl
+} = await import("../server.js");
 
 test("acepta solamente los ciclos mensual y anual", () => {
   assert.equal(normalizarPlanCoach("monthly"), "monthly");
@@ -53,4 +59,18 @@ test("construye Checkout de suscripcion sin prueba gratis", () => {
   assert.equal(checkoutConfig.line_items[0].price, "price_tec_annual_test");
   assert.equal(checkoutConfig.subscription_data.trial_period_days, undefined);
   assert.equal(checkoutConfig.success_url, "https://totalelitecoaching.com/coach/success/?session_id={CHECKOUT_SESSION_ID}");
+});
+
+test("un lider enlazado recibe acceso administrativo completo", () => {
+  const ownerUserId = "671000000000000000000001";
+  const leaderUser = {
+    _id: "671000000000000000000002",
+    accountType: "leader",
+    teamOwnerUserId: ownerUserId,
+    subscriptionActive: false,
+    email: "admin@example.com"
+  };
+
+  assert.equal(coachTieneAccesoTotal(leaderUser), true);
+  assert.equal(usuarioPuedeVerTorreControl(leaderUser), true);
 });

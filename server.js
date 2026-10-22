@@ -4076,9 +4076,24 @@ function coachTieneAccesoDePrueba(email = "") {
   return COACH_TEST_ACCESS_EMAILS.includes(normalizarEmail(email));
 }
 
+function esCoachAdministradorCompartido(userDoc = null) {
+  if (!userDoc?._id || !userDoc.teamOwnerUserId) {
+    return false;
+  }
+
+  return (
+    normalizarCoachAccountType(userDoc.accountType || "owner") === "leader" &&
+    String(userDoc.teamOwnerUserId) !== String(userDoc._id)
+  );
+}
+
 function usuarioPuedeVerTorreControl(userDoc = null) {
   if (!userDoc) {
     return false;
+  }
+
+  if (esCoachAdministradorCompartido(userDoc)) {
+    return true;
   }
 
   const email = normalizarEmail(userDoc.email);
@@ -4095,7 +4110,11 @@ function coachTieneAccesoTotal(userDoc = null) {
     return false;
   }
 
-  return Boolean(userDoc.subscriptionActive) || coachTieneAccesoDePrueba(userDoc.email);
+  return (
+    Boolean(userDoc.subscriptionActive) ||
+    coachTieneAccesoDePrueba(userDoc.email) ||
+    esCoachAdministradorCompartido(userDoc)
+  );
 }
 
 function coachPuedeIniciarTrial(userDoc = null) {
@@ -20344,7 +20363,7 @@ function obtenerFinDia(date = new Date()) {
 }
 
 async function validarLimiteUsoCoach(userDoc = null) {
-  if (!userDoc || coachTieneAccesoDePrueba(userDoc.email)) {
+  if (!userDoc || coachTieneAccesoTotal(userDoc)) {
     return {
       allowed: true,
       usedToday: 0,
@@ -34573,9 +34592,11 @@ export {
   normalizarPlanCoach,
   obtenerPlanCoach,
   construirCheckoutCoach,
+  coachTieneAccesoTotal,
   parseCoachProgram414ImportedSheets,
   parseCoachLeadNextActionAt,
   resolverCoachOwnerUserId,
   resolverCoachCrmStatusDesdeDemoOutcome,
-  resolverCoachCrmStatusDesdeLead
+  resolverCoachCrmStatusDesdeLead,
+  usuarioPuedeVerTorreControl
 };
