@@ -932,6 +932,7 @@ const coachLeadInboxSchema = new mongoose.Schema({
   },
   generatedByName: String,
   generatedByAccountType: String,
+  offlineRequestId: String,
   fullName: { type: String, required: true, trim: true },
   phone: String,
   email: String,
@@ -1025,6 +1026,7 @@ const coachProgramSheetSchema = new mongoose.Schema({
   },
   generatedByName: String,
   generatedByAccountType: String,
+  offlineRequestId: String,
   linkedCrmRecordId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CoachCrmRecord",
@@ -1208,6 +1210,7 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
   },
   ownerEmail: { type: String, index: true },
   ownerName: String,
+  clientRecordingId: String,
   status: { type: String, default: "recording", index: true },
   consentConfirmed: { type: Boolean, default: false },
   knownOutcome: { type: String, default: "unknown" },
@@ -1227,6 +1230,10 @@ const coachDemoAnalysisSchema = new mongoose.Schema({
 });
 
 coachDemoAnalysisSchema.index({ ownerUserId: 1, createdAt: -1 });
+coachDemoAnalysisSchema.index(
+  { ownerUserId: 1, clientRecordingId: 1 },
+  { unique: true, partialFilterExpression: { clientRecordingId: { $type: "string" } } }
+);
 
 const coachDemoOutcomeSchema = new mongoose.Schema({
   ownerUserId: {
@@ -2187,10 +2194,18 @@ coachLeadInboxSchema.index({ ownerUserId: 1, status: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, phone: 1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, email: 1 });
+coachLeadInboxSchema.index(
+  { ownerUserId: 1, offlineRequestId: 1 },
+  { unique: true, partialFilterExpression: { offlineRequestId: { $type: "string" } } }
+);
 coachLeadInboxSchema.index({ ownerUserId: 1, "attribution.source": 1, updatedAt: -1 });
 coachLeadInboxSchema.index({ ownerUserId: 1, "attribution.campaign": 1, updatedAt: -1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, programType: 1, createdAt: -1 });
 coachProgramSheetSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
+coachProgramSheetSchema.index(
+  { ownerUserId: 1, offlineRequestId: 1 },
+  { unique: true, partialFilterExpression: { offlineRequestId: { $type: "string" } } }
+);
 coachHealthSurveySchema.index({ ownerUserId: 1, updatedAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, generatedByUserId: 1, updatedAt: -1 });
 coachHealthSurveySchema.index({ ownerUserId: 1, phone: 1, updatedAt: -1 });
@@ -11300,6 +11315,7 @@ async function crearCoachProgram414Sheet({
   const referrals = Array.isArray(payload?.referrals)
     ? payload.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
     : [];
+  const offlineRequestId = String(payload?.offlineRequestId || "").trim().slice(0, 100);
 
   if (!hostName) {
     throw new Error("El nombre del anfitrion es requerido.");
@@ -11310,6 +11326,30 @@ async function crearCoachProgram414Sheet({
   }
 
   const effectiveOwnership = ownership || (await construirCoachOwnershipSnapshot(userDoc));
+
+  if (offlineRequestId) {
+    const existingSheet = await CoachProgramSheet.findOne({
+      ownerUserId: effectiveOwnership.ownerUserId,
+      offlineRequestId
+    });
+
+    if (existingSheet) {
+      return {
+        sheetDoc: existingSheet,
+        createdLeads: [],
+        leadDeliveries: [],
+        duplicates: Number(existingSheet.referralCount || 0),
+        duplicateRequest: true,
+        delivery: {
+          attempted: false,
+          delivered: false,
+          skipped: true,
+          duplicateRequest: true
+        }
+      };
+    }
+  }
+
   const now = new Date();
   const sheetBase = {
     ownerUserId: effectiveOwnership.ownerUserId,
@@ -11318,6 +11358,7 @@ async function crearCoachProgram414Sheet({
     generatedByUserId: effectiveOwnership.generatedByUserId,
     generatedByName: effectiveOwnership.generatedByName || "",
     generatedByAccountType: effectiveOwnership.generatedByAccountType,
+    ...(offlineRequestId ? { offlineRequestId } : {}),
     linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
     programType: "4_en_14",
     hostName,
@@ -17012,6 +17053,7 @@ async function guardarCoachInboxLead({
   const nextStatus = rawStatus ? normalizarCoachLeadStatus(rawStatus) : "";
   const summaryOverride = String(payload?.summary || "").trim().slice(0, 600);
   const replaceNotes = payload?.replaceNotes === true;
+  const offlineRequestId = String(payload?.offlineRequestId || "").trim().slice(0, 100);
   const leadAttribution = construirCoachAttributionSnapshot(payload, {
     captureType: "lead",
     recordSource: source,
@@ -17028,6 +17070,30 @@ async function guardarCoachInboxLead({
     const error = new Error("Necesitas telefono o correo para guardar el lead.");
     error.status = 400;
     throw error;
+  }
+
+  if (offlineRequestId) {
+    const existingOfflineLead = await CoachLeadInbox.findOne({
+      ownerUserId: ownership.ownerUserId,
+      offlineRequestId
+    });
+
+    if (existingOfflineLead) {
+      return {
+        leadDoc: existingOfflineLead,
+        lead: limpiarCoachInboxLead(existingOfflineLead.toObject()),
+        duplicate: true,
+        duplicateRequest: true,
+        delivery: {
+          attempted: false,
+          queued: false,
+          skipped: true,
+          duplicateRequest: true,
+          destination: effectiveDestination
+        },
+        highLevel: { attempted: false, skipped: true, duplicateRequest: true }
+      };
+    }
   }
 
   const duplicateQuery = [];
@@ -17203,6 +17269,7 @@ async function guardarCoachInboxLead({
     generatedByUserId: ownership.generatedByUserId,
     generatedByName: ownership.generatedByName || "",
     generatedByAccountType: ownership.generatedByAccountType,
+    ...(offlineRequestId ? { offlineRequestId } : {}),
     fullName,
     phone,
     email,
@@ -30936,6 +31003,47 @@ app.get("/api/coach/catalog-prices", async (req, res) => {
   }
 });
 
+app.get("/api/coach/catalog-offline", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+
+  if (!auth) {
+    return;
+  }
+
+  try {
+    const products = (Array.isArray(preciosCatalogo) ? preciosCatalogo : [])
+      .map(item => {
+        const codigo = obtenerCodigoPrecioCatalogo(item);
+        const nombre = obtenerNombrePrecioCatalogo(item);
+        const precio = obtenerPrecioBaseCatalogo(item);
+
+        if (!codigo || !nombre || !Number.isFinite(precio)) {
+          return null;
+        }
+
+        const calculo = calcularPagoCoach(precio);
+        return {
+          codigo_producto: codigo,
+          nombre_producto: nombre,
+          precio_base_catalogo: precio,
+          total_estimado_coach: calculo.total,
+          mensualidad_estimada_coach: calculo.mensualidad,
+          ...construirImagenProductoCatalogoCoach(codigo, nombre)
+        };
+      })
+      .filter(Boolean);
+
+    res.set("Cache-Control", "private, max-age=3600");
+    res.json({
+      version: "2026-10-21",
+      products
+    });
+  } catch (error) {
+    console.error("Error preparando catalogo offline del Coach:", error.message);
+    responderCoachError(res, 500, "No pude preparar el catalogo offline ahorita.");
+  }
+});
+
 app.get("/api/coach/leads", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -31070,7 +31178,10 @@ app.post("/api/coach/leads", async (req, res) => {
     const result = await guardarCoachInboxLead({
       userDoc: auth.user,
       profileDoc,
-      payload: req.body || {},
+      payload: {
+        ...(req.body || {}),
+        offlineRequestId: String(req.headers["x-tec-request-id"] || "").trim()
+      },
       sendDestination: true
     });
 
@@ -31504,7 +31615,10 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
       profileDoc,
       ownership,
       linkedCrmRecordDoc,
-      payload: req.body,
+      payload: {
+        ...(req.body || {}),
+        offlineRequestId: String(req.headers["x-tec-request-id"] || "").trim()
+      },
       sendDestination: true
     });
 
@@ -31883,10 +31997,27 @@ app.post("/api/coach/demo-analyses", async (req, res) => {
     const now = new Date();
     const requestedStart = new Date(req.body?.startedAt || now);
     const startedAt = Number.isFinite(requestedStart.getTime()) ? requestedStart : now;
+    const clientRecordingId = String(req.body?.clientRecordingId || "").trim().slice(0, 100);
+
+    if (clientRecordingId) {
+      const existingDoc = await CoachDemoAnalysis.findOne({
+        ownerUserId: auth.user._id,
+        clientRecordingId
+      });
+
+      if (existingDoc) {
+        return res.json({
+          analysis: limpiarCoachDemoAnalysis(existingDoc.toObject(), { includeDetail: true }),
+          duplicateRequest: true
+        });
+      }
+    }
+
     const doc = await CoachDemoAnalysis.create({
       ownerUserId: auth.user._id,
       ownerEmail: auth.user.email || "",
       ownerName: auth.user.name || "",
+      ...(clientRecordingId ? { clientRecordingId } : {}),
       status: "recording",
       consentConfirmed: true,
       knownOutcome: normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || "unknown"),

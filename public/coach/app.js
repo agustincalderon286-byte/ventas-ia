@@ -1,9 +1,11 @@
 async function apiRequest(url, options = {}) {
+  const requestId = options.requestId || (options.offlineQueue ? createTecOfflineId(options.offlineKind || "request") : "");
   const config = {
     method: options.method || "GET",
     credentials: "same-origin",
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(requestId ? { "X-TEC-Request-ID": requestId } : {}),
       ...(options.headers || {})
     }
   };
@@ -12,14 +14,41 @@ async function apiRequest(url, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(url, config);
-  const data = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
-    throw new Error(data.error || "No pude completar esa accion.");
+    if (!response.ok) {
+      const error = new Error(data.error || "No pude completar esa accion.");
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    const canQueue =
+      options.offlineQueue === true &&
+      (!navigator.onLine || error?.name === "TypeError" || Number(error?.status || 0) >= 500);
+
+    if (!canQueue) {
+      throw error;
+    }
+
+    await queueTecOfflineRequest({
+      id: requestId,
+      kind: options.offlineKind || "request",
+      url,
+      method: config.method,
+      headers: config.headers,
+      body: options.body || null
+    });
+
+    return {
+      ...(options.offlineFallback || {}),
+      offlineQueued: true,
+      requestId
+    };
   }
-
-  return data;
 }
 
 const COACH_CHAT_API_URL = "/chat";
@@ -29,7 +58,13 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/coach/sw.js", { scope: "/coach/" }).catch(() => null);
+    navigator.serviceWorker
+      .register("/coach/sw.js?v=20261021-pwa1", { scope: "/coach/" })
+      .then(async registration => {
+        await navigator.serviceWorker.ready;
+        registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
+      })
+      .catch(() => null);
   });
 }
 const COACH_ACTIVE_CRM_RECORD_KEY = "agustin-coach-active-crm-record";
@@ -41,6 +76,489 @@ const COACH_ACTIVE_DEMO_OUTCOME_KEY = "agustin-coach-active-demo-outcome";
 const COACH_DAILY_PRIZE_KEY = "agustin-coach-daily-prize";
 const COACH_DEMO_STAGE_KEY = "agustin-coach-demo-stage";
 const COACH_DEMO_EVENTS_KEY = "agustin-coach-demo-events";
+const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
+const TEC_OFFLINE_DB_VERSION = 1;
+const TEC_VIEWER_CACHE_KEY = "viewer";
+const TEC_CATALOG_CACHE_KEY = "catalog";
+let tecOfflineDbPromise = null;
+let tecOutboxFlushPromise = null;
+let coachOfflineCatalogPromise = null;
+const tecActiveRecordingIds = new Set();
+
+function createTecOfflineId(prefix = "item") {
+  const randomPart = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${String(prefix || "item").replace(/[^a-z0-9_-]/gi, "-")}-${randomPart}`.slice(0, 100);
+}
+
+function openTecOfflineDb() {
+  if (!window.indexedDB) {
+    return Promise.reject(new Error("Este navegador no permite almacenamiento offline."));
+  }
+
+  if (!tecOfflineDbPromise) {
+    tecOfflineDbPromise = new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(TEC_OFFLINE_DB_NAME, TEC_OFFLINE_DB_VERSION);
+      request.addEventListener("upgradeneeded", () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("outbox")) {
+          const store = db.createObjectStore("outbox", { keyPath: "id" });
+          store.createIndex("createdAt", "createdAt");
+        }
+        if (!db.objectStoreNames.contains("cache")) {
+          db.createObjectStore("cache", { keyPath: "key" });
+        }
+        if (!db.objectStoreNames.contains("recordings")) {
+          const store = db.createObjectStore("recordings", { keyPath: "localId" });
+          store.createIndex("createdAt", "createdAt");
+        }
+        if (!db.objectStoreNames.contains("audioChunks")) {
+          const store = db.createObjectStore("audioChunks", { keyPath: "key" });
+          store.createIndex("localId", "localId");
+        }
+      });
+      request.addEventListener("success", () => resolve(request.result));
+      request.addEventListener("error", () => reject(request.error || new Error("No pude abrir la memoria offline.")));
+    });
+  }
+
+  return tecOfflineDbPromise;
+}
+
+async function tecOfflineStoreRequest(storeName, mode, action) {
+  const db = await openTecOfflineDb();
+  return await new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+    let request = null;
+    try {
+      request = action(store);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    request.addEventListener("success", () => resolve(request.result));
+    request.addEventListener("error", () => reject(request.error || new Error("No pude usar la memoria offline.")));
+  });
+}
+
+const tecOfflinePut = (storeName, value) => tecOfflineStoreRequest(storeName, "readwrite", store => store.put(value));
+const tecOfflineGet = (storeName, key) => tecOfflineStoreRequest(storeName, "readonly", store => store.get(key));
+const tecOfflineGetAll = storeName => tecOfflineStoreRequest(storeName, "readonly", store => store.getAll());
+const tecOfflineDelete = (storeName, key) => tecOfflineStoreRequest(storeName, "readwrite", store => store.delete(key));
+
+async function getTecCachedViewer() {
+  const entry = await tecOfflineGet("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
+  return entry?.value || null;
+}
+
+async function cacheTecViewer(value = null) {
+  if (!value?.authenticated || !value?.user?.email) {
+    return;
+  }
+  await tecOfflinePut("cache", {
+    key: TEC_VIEWER_CACHE_KEY,
+    value,
+    savedAt: new Date().toISOString()
+  }).catch(() => null);
+}
+
+async function clearTecCachedViewer() {
+  await tecOfflineDelete("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
+}
+
+async function queueTecOfflineRequest(item = {}) {
+  const viewer = await getTecCachedViewer().catch(() => null);
+  await tecOfflinePut("outbox", {
+    id: item.id || createTecOfflineId(item.kind || "request"),
+    kind: item.kind || "request",
+    url: item.url || "",
+    method: item.method || "POST",
+    headers: item.headers || {},
+    body: item.body || null,
+    ownerEmail: String(viewer?.user?.email || "").trim().toLowerCase(),
+    attempts: 0,
+    lastError: "",
+    createdAt: new Date().toISOString()
+  });
+  window.dispatchEvent(new CustomEvent("tec:offline-status"));
+  navigator.serviceWorker?.ready
+    ?.then(registration => registration.sync?.register?.("tec-sync-outbox"))
+    .catch(() => null);
+}
+
+async function getTecOfflinePendingCount() {
+  const [outbox, recordings] = await Promise.all([
+    tecOfflineGetAll("outbox").catch(() => []),
+    tecOfflineGetAll("recordings").catch(() => [])
+  ]);
+  return outbox.length + recordings.filter(item => item.status !== "synced").length;
+}
+
+async function flushTecOfflineOutbox() {
+  if (!navigator.onLine) {
+    window.dispatchEvent(new CustomEvent("tec:offline-status"));
+    return { synced: 0, pending: await getTecOfflinePendingCount() };
+  }
+
+  if (tecOutboxFlushPromise) {
+    return await tecOutboxFlushPromise;
+  }
+
+  tecOutboxFlushPromise = (async () => {
+    const viewer = await getTecCachedViewer().catch(() => null);
+    const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+    const items = (await tecOfflineGetAll("outbox").catch(() => [])).sort((a, b) =>
+      String(a.createdAt || "").localeCompare(String(b.createdAt || ""))
+    );
+    let synced = 0;
+
+    for (const item of items) {
+      if (item.ownerEmail && viewerEmail && item.ownerEmail !== viewerEmail) {
+        continue;
+      }
+
+      try {
+        const response = await fetch(item.url, {
+          method: item.method || "POST",
+          credentials: "same-origin",
+          headers: {
+            ...(item.body ? { "Content-Type": "application/json" } : {}),
+            ...(item.headers || {}),
+            "X-TEC-Request-ID": item.id
+          },
+          ...(item.body ? { body: JSON.stringify(item.body) } : {})
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          break;
+        }
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || `No pude sincronizar (${response.status}).`);
+        }
+
+        await tecOfflineDelete("outbox", item.id);
+        synced += 1;
+      } catch (error) {
+        await tecOfflinePut("outbox", {
+          ...item,
+          attempts: Number(item.attempts || 0) + 1,
+          lastError: String(error.message || "No pude sincronizar.").slice(0, 240),
+          lastAttemptAt: new Date().toISOString()
+        }).catch(() => null);
+        if (!navigator.onLine || error?.name === "TypeError") {
+          break;
+        }
+      }
+    }
+
+    const recordingSync = await syncTecOfflineRecordings().catch(() => ({ synced: 0 }));
+    synced += Number(recordingSync.synced || 0);
+    window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced } }));
+    window.dispatchEvent(new CustomEvent("coach-crm-refresh-request"));
+    return { synced, pending: await getTecOfflinePendingCount() };
+  })();
+
+  try {
+    return await tecOutboxFlushPromise;
+  } finally {
+    tecOutboxFlushPromise = null;
+  }
+}
+
+function initTecOfflineStatus() {
+  if (!document.body || document.querySelector("[data-tec-offline-status]")) {
+    return;
+  }
+
+  const status = document.createElement("button");
+  status.type = "button";
+  status.className = "tec-offline-status";
+  status.dataset.tecOfflineStatus = "";
+  status.hidden = true;
+  status.setAttribute("aria-live", "polite");
+  document.body.appendChild(status);
+
+  const render = async event => {
+    const pending = await getTecOfflinePendingCount().catch(() => 0);
+    const online = navigator.onLine;
+    status.hidden = online && pending === 0;
+    status.dataset.state = online ? (pending ? "syncing" : "online") : "offline";
+    status.textContent = !online
+      ? `Sin internet · ${pending ? `${pending} pendiente${pending === 1 ? "" : "s"}` : "guardado local activo"}`
+      : pending
+        ? `Sincronizando · ${pending} pendiente${pending === 1 ? "" : "s"}`
+        : event?.detail?.synced
+          ? "Todo sincronizado"
+          : "Conectado";
+    if (online && !pending && event?.detail?.synced) {
+      status.hidden = false;
+      window.setTimeout(() => {
+        status.hidden = true;
+      }, 3500);
+    }
+  };
+
+  status.addEventListener("click", () => {
+    if (navigator.onLine) {
+      flushTecOfflineOutbox().catch(() => null);
+    }
+  });
+  window.addEventListener("tec:offline-status", render);
+  navigator.serviceWorker?.addEventListener?.("message", event => {
+    if (event.data?.type === "TEC_OFFLINE_SYNC") {
+      window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced: Number(event.data.synced || 0) } }));
+    }
+  });
+  window.addEventListener("online", () => flushTecOfflineOutbox().catch(() => render()));
+  window.addEventListener("offline", render);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && navigator.onLine) {
+      flushTecOfflineOutbox().catch(() => render());
+    }
+  });
+  render();
+}
+
+function normalizeTecCatalogText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .trim();
+}
+
+async function loadCoachOfflineCatalog({ refresh = false } = {}) {
+  if (coachOfflineCatalogPromise && !refresh) {
+    return await coachOfflineCatalogPromise;
+  }
+
+  coachOfflineCatalogPromise = (async () => {
+    let products = [];
+    try {
+      const data = await apiRequest("/api/coach/catalog-offline");
+      products = Array.isArray(data.products) ? data.products : [];
+      if (products.length) {
+        await tecOfflinePut("cache", {
+          key: TEC_CATALOG_CACHE_KEY,
+          value: products,
+          version: data.version || "",
+          savedAt: new Date().toISOString()
+        }).catch(() => null);
+      }
+    } catch (error) {
+      const cached = await tecOfflineGet("cache", TEC_CATALOG_CACHE_KEY).catch(() => null);
+      products = Array.isArray(cached?.value) ? cached.value : [];
+    }
+
+    if (products.length && navigator.serviceWorker) {
+      const registration = await navigator.serviceWorker.ready.catch(() => null);
+      const worker = navigator.serviceWorker.controller || registration?.active;
+      worker?.postMessage({
+          type: "CACHE_CATALOG_ASSETS",
+          urls: Array.from(new Set(products.map(item => String(item.imagen_producto || "").trim()).filter(Boolean)))
+        });
+    }
+
+    return products;
+  })();
+
+  try {
+    return await coachOfflineCatalogPromise;
+  } finally {
+    if (refresh) {
+      coachOfflineCatalogPromise = null;
+    }
+  }
+}
+
+async function searchCoachOfflineCatalog(rawQuery = "") {
+  const query = normalizeTecCatalogText(rawQuery);
+  if (query.length < 3) {
+    return [];
+  }
+
+  const products = await loadCoachOfflineCatalog();
+  const queryTokens = query.split(/\s+/).filter(Boolean);
+  return products
+    .map((product, index) => {
+      const code = normalizeTecCatalogText(product.codigo_producto || "");
+      const name = normalizeTecCatalogText(product.nombre_producto || "");
+      const corpus = `${code} ${name}`;
+      const productTokens = new Set(corpus.split(/\s+/).filter(Boolean));
+      let score = 0;
+      if (query === code) score += 150;
+      if (query === name) score += 120;
+      if (name.includes(query)) score += 60;
+      if (code.includes(query)) score += 80;
+      queryTokens.forEach(token => {
+        if (productTokens.has(token)) score += /^\d+$/.test(token) ? 12 : token.length >= 5 ? 10 : 6;
+        else if (corpus.includes(token)) score += 3;
+      });
+      const pieces = query.match(/\b(\d+)\s+piezas\b/)?.[1] || "";
+      if (pieces && name.includes(`${pieces} piezas`)) score += 35;
+      if (/\bcuchill/.test(query) && /\bcuchill/.test(name)) score += 25;
+      if (/\bolla\b/.test(query) && /\bolla\b/.test(name)) score += 25;
+      if (/\bsarten\b/.test(query) && /\bsarten\b/.test(name)) score += 25;
+      return { product, score, index };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, 5)
+    .map(item => item.product);
+}
+
+async function saveTecOfflineRecording(recording = {}) {
+  const viewer = await getTecCachedViewer().catch(() => null);
+  const current = recording.localId ? await tecOfflineGet("recordings", recording.localId).catch(() => null) : null;
+  const next = {
+    ...(current || {}),
+    ...recording,
+    localId: recording.localId || current?.localId || createTecOfflineId("recording"),
+    ownerEmail: recording.ownerEmail || current?.ownerEmail || String(viewer?.user?.email || "").trim().toLowerCase(),
+    createdAt: current?.createdAt || recording.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  await tecOfflinePut("recordings", next);
+  window.dispatchEvent(new CustomEvent("tec:offline-status"));
+  return next;
+}
+
+async function saveTecOfflineAudioChunk({ localId, index, blob, durationSeconds, mimeType = "audio/webm" } = {}) {
+  if (!localId || !Number.isInteger(index) || !blob?.size) {
+    throw new Error("No pude proteger ese fragmento de audio.");
+  }
+  const key = `${localId}:${String(index).padStart(4, "0")}`;
+  await tecOfflinePut("audioChunks", {
+    key,
+    localId,
+    index,
+    blob,
+    durationSeconds: Math.max(1, Number(durationSeconds || 0)),
+    mimeType: mimeType || blob.type || "audio/webm",
+    sizeBytes: blob.size,
+    createdAt: new Date().toISOString()
+  });
+  return key;
+}
+
+async function getTecOfflineAudioChunks(localId = "") {
+  const chunks = await tecOfflineGetAll("audioChunks").catch(() => []);
+  return chunks.filter(item => item.localId === localId).sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
+}
+
+async function uploadTecStoredAudioChunk(serverSessionId, chunk) {
+  const response = await fetch(`/api/coach/demo-analyses/${encodeURIComponent(serverSessionId)}/chunks`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": chunk.mimeType || chunk.blob?.type || "audio/webm",
+      "X-Coach-Chunk-Index": String(chunk.index),
+      "X-Coach-Chunk-Duration": String(Math.max(1, Math.round(Number(chunk.durationSeconds || 0))))
+    },
+    body: chunk.blob
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "No pude subir un fragmento guardado.");
+    error.status = response.status;
+    throw error;
+  }
+  await tecOfflineDelete("audioChunks", chunk.key);
+  return data;
+}
+
+async function syncTecOfflineRecording(localId = "") {
+  if (!navigator.onLine || !localId) {
+    throw new Error("Sin conexion para sincronizar la grabacion.");
+  }
+
+  let recording = await tecOfflineGet("recordings", localId);
+  if (!recording || tecActiveRecordingIds.has(localId)) {
+    return null;
+  }
+
+  if (recording.status === "recording") {
+    recording = await saveTecOfflineRecording({ ...recording, status: "ready" });
+  }
+
+  const viewer = await getTecCachedViewer().catch(() => null);
+  const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+  if (recording.ownerEmail && viewerEmail && recording.ownerEmail !== viewerEmail) {
+    return null;
+  }
+
+  recording = await saveTecOfflineRecording({ ...recording, status: "syncing", lastError: "" });
+
+  try {
+    if (!recording.serverSessionId) {
+      const created = await apiRequest("/api/coach/demo-analyses", {
+        method: "POST",
+        body: {
+          consentConfirmed: true,
+          knownOutcome: recording.knownOutcome || "unknown",
+          startedAt: recording.startedAt || recording.createdAt,
+          clientRecordingId: recording.localId
+        }
+      });
+      recording = await saveTecOfflineRecording({
+        ...recording,
+        serverSessionId: created.analysis?.id || "",
+        status: "syncing"
+      });
+    }
+
+    if (!recording.serverSessionId) {
+      throw new Error("No pude crear la sesion para enviar el audio.");
+    }
+
+    const chunks = await getTecOfflineAudioChunks(localId);
+    for (const chunk of chunks) {
+      await uploadTecStoredAudioChunk(recording.serverSessionId, chunk);
+    }
+
+    const completed = await apiRequest(
+      `/api/coach/demo-analyses/${encodeURIComponent(recording.serverSessionId)}/complete`,
+      {
+        method: "POST",
+        body: { knownOutcome: recording.knownOutcome || "unknown" }
+      }
+    );
+    await tecOfflineDelete("recordings", localId);
+    window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced: 1 } }));
+    return completed.analysis || null;
+  } catch (error) {
+    await saveTecOfflineRecording({
+      ...recording,
+      status: "ready",
+      attempts: Number(recording.attempts || 0) + 1,
+      lastError: String(error.message || "No pude sincronizar la grabacion.").slice(0, 240)
+    }).catch(() => null);
+    throw error;
+  }
+}
+
+async function syncTecOfflineRecordings() {
+  if (!navigator.onLine) {
+    return { synced: 0 };
+  }
+  const recordings = (await tecOfflineGetAll("recordings").catch(() => []))
+    .filter(item => item.status !== "synced" && !tecActiveRecordingIds.has(item.localId))
+    .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+  let synced = 0;
+  for (const recording of recordings) {
+    try {
+      const result = await syncTecOfflineRecording(recording.localId);
+      if (result) synced += 1;
+    } catch (error) {
+      if (!navigator.onLine || error?.status === 401 || error?.status === 403) {
+        break;
+      }
+    }
+  }
+  return { synced };
+}
 // Durante esta etapa el portal principal se concentra en ayudar al representante
 // dentro de la casa: demo, objeciones y cierre. Los demas modulos siguen
 // existiendo en el codigo y se pueden reactivar cuando toque ampliar el flujo.
@@ -1444,8 +1962,17 @@ function initOrderCalculator() {
       return catalogSearchCache.get(cacheKey);
     }
 
-    const data = await apiRequest(`/api/coach/catalog-prices?query=${encodeURIComponent(query)}`);
-    const matches = Array.isArray(data.matches) ? data.matches : [];
+    let matches = [];
+    if (navigator.onLine) {
+      try {
+        const data = await apiRequest(`/api/coach/catalog-prices?query=${encodeURIComponent(query)}`);
+        matches = Array.isArray(data.matches) ? data.matches : [];
+      } catch (error) {
+        matches = await searchCoachOfflineCatalog(query);
+      }
+    } else {
+      matches = await searchCoachOfflineCatalog(query);
+    }
     catalogSearchCache.set(cacheKey, matches);
     return matches;
   };
@@ -3363,8 +3890,27 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     try {
       const data = await apiRequest("/api/coach/program-4-in-14", {
         method: "POST",
-        body: payload
+        body: payload,
+        offlineQueue: true,
+        offlineKind: "programa-4-en-14",
+        offlineFallback: {
+          createdLeadCount: referrals.length,
+          duplicateCount: 0,
+          delivery: { attempted: false, queued: true }
+        }
       });
+
+      if (data.offlineQueued) {
+        setMessage(
+          feedbackNode,
+          `Hoja protegida en este telefono con ${referrals.length} referido(s). TEC la enviara cuando vuelva el internet.`,
+          "success"
+        );
+        skipNextResetFeedback = true;
+        rebuildForm({ clearFeedback: false, resetFields: true });
+        window.dispatchEvent(new CustomEvent("tec:offline-status"));
+        return;
+      }
 
       const duplicateCopy = data.duplicateCount
         ? ` ${data.duplicateCount} ya existian y se actualizaron.`
@@ -4728,8 +5274,31 @@ function initCoachLeadWorkspace() {
     try {
       const data = await apiRequest("/api/coach/leads", {
         method: "POST",
-        body: payload
+        body: payload,
+        offlineQueue: true,
+        offlineKind: "lead",
+        offlineFallback: {
+          lead: {
+            id: "",
+            ...payload,
+            status: "nuevo",
+            createdAt: new Date().toISOString()
+          },
+          duplicate: false,
+          delivery: { attempted: false, queued: true }
+        }
       });
+
+      if (data.offlineQueued) {
+        setMessage(
+          captureFeedback,
+          "Lead protegido en este telefono. TEC lo enviara automaticamente cuando vuelva el internet.",
+          "success"
+        );
+        captureForm.reset();
+        window.dispatchEvent(new CustomEvent("tec:offline-status"));
+        return;
+      }
 
       const deliveryCopy = data.delivery?.queued
         ? " Tambien lo estoy mandando a tu destino."
@@ -8149,8 +8718,17 @@ function updateCoachMessage(messageHandles, content, options = {}) {
 
 async function fetchViewer() {
   try {
-    return await apiRequest("/api/coach/me");
+    const viewer = await apiRequest("/api/coach/me");
+    await cacheTecViewer(viewer);
+    return viewer;
   } catch (error) {
+    const cachedViewer = await getTecCachedViewer().catch(() => null);
+    if (!navigator.onLine && cachedViewer?.authenticated && cachedViewer?.user?.email) {
+      return {
+        ...cachedViewer,
+        offline: true
+      };
+    }
     return { authenticated: false, error: error.message };
   }
 }
@@ -14937,6 +15515,8 @@ async function initLoginPage() {
         }
       });
 
+      await cacheTecViewer({ authenticated: true, ...data });
+
       if (hasCoachAccess(data.user)) {
         window.location.href = getCoachHomePath(data.user);
         return;
@@ -15146,6 +15726,7 @@ function initCoachDemoRecorder() {
     segmentStartedAt: 0,
     segmentIndex: 0,
     sessionId: "",
+    localSessionId: "",
     startedAt: 0,
     clockTimer: null,
     rotateTimer: null,
@@ -15190,6 +15771,30 @@ function initCoachDemoRecorder() {
   };
 
   const uploadSegment = async (blob, durationSeconds, index) => {
+    let chunkKey = "";
+    try {
+      chunkKey = await saveTecOfflineAudioChunk({
+        localId: state.localSessionId,
+        index,
+        blob,
+        durationSeconds,
+        mimeType: blob.type || "audio/webm"
+      });
+    } catch (error) {
+      if (!state.sessionId || !navigator.onLine) {
+        throw new Error("El telefono no tiene espacio suficiente para proteger este fragmento de audio.");
+      }
+    }
+    state.uploadedChunks += 1;
+    chunkStatus.textContent = `${state.uploadedChunks} fragmento${state.uploadedChunks === 1 ? "" : "s"} protegido${
+      state.uploadedChunks === 1 ? "" : "s"
+    } en este dispositivo`;
+
+    if (!state.sessionId || !navigator.onLine) {
+      window.dispatchEvent(new CustomEvent("tec:offline-status"));
+      return { offlineQueued: true, key: chunkKey };
+    }
+
     let lastError = null;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
@@ -15207,13 +15812,18 @@ function initCoachDemoRecorder() {
         if (!response.ok) {
           throw new Error(data.error || "No pude subir un fragmento.");
         }
-        state.uploadedChunks += 1;
+        if (chunkKey) {
+          await tecOfflineDelete("audioChunks", chunkKey);
+        }
         chunkStatus.textContent = `${state.uploadedChunks} fragmento${state.uploadedChunks === 1 ? "" : "s"} protegido${
           state.uploadedChunks === 1 ? "" : "s"
         }`;
         return data;
       } catch (error) {
         lastError = error;
+        if (!navigator.onLine || error?.name === "TypeError") {
+          break;
+        }
         if (attempt < 3) {
           await new Promise(resolve => window.setTimeout(resolve, attempt * 1200));
         }
@@ -15380,20 +15990,35 @@ function initCoachDemoRecorder() {
       await rotateSegment(true);
       stopMediaTracks();
       await releaseWakeLock();
-      setRecorderMessage("Terminando transcripcion. No cierres esta pagina...", "info");
+      setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
       await state.uploadQueue;
-      setRecorderMessage("La inteligencia artificial esta preparando tu reporte...", "info");
-      const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(state.sessionId)}/complete`, {
-        method: "POST",
-        body: { knownOutcome: outcome.value || "unknown" }
+      await saveTecOfflineRecording({
+        localId: state.localSessionId,
+        serverSessionId: state.sessionId,
+        status: "ready",
+        knownOutcome: outcome.value || "unknown",
+        stoppedAt: new Date().toISOString()
       });
-      currentReport.dataset.analysisId = data.analysis?.id || state.sessionId;
+
+      if (!navigator.onLine) {
+        showAnalysisNotice({
+          title: "Grabacion protegida en este telefono",
+          copy: "Puedes cerrar esta seccion. TEC enviara el audio y preparara el reporte cuando vuelva la conexion."
+        });
+        setRecorderMessage("Audio guardado sin internet. Quedo pendiente de sincronizacion.", "success");
+        window.dispatchEvent(new CustomEvent("tec:offline-status"));
+        return;
+      }
+
+      setRecorderMessage("La inteligencia artificial esta preparando tu reporte...", "info");
+      const analysis = await syncTecOfflineRecording(state.localSessionId);
+      currentReport.dataset.analysisId = analysis?.id || state.sessionId;
       showAnalysisNotice({
         title: autoStopped ? "La grabacion termino a los 90 minutos" : "Tu analisis esta listo",
         copy: state.uploadErrors.length
           ? "El reporte esta listo, aunque un fragmento no alcanzo a subir."
           : "Revisalo cuando hayas terminado con el cliente.",
-        analysisId: data.analysis?.id || state.sessionId,
+        analysisId: analysis?.id || state.sessionId,
         ready: true
       });
       setRecorderMessage(
@@ -15406,14 +16031,24 @@ function initCoachDemoRecorder() {
       );
       await loadHistory();
     } catch (error) {
+      const protectedRecording = state.localSessionId
+        ? await tecOfflineGet("recordings", state.localSessionId).catch(() => null)
+        : null;
       showAnalysisNotice({
-        title: "No pudimos terminar el reporte",
-        copy: "La transcripcion se guardo. Intenta abrirla mas tarde desde Mis analisis."
+        title: protectedRecording ? "Grabacion protegida y pendiente" : "No pudimos terminar el reporte",
+        copy: protectedRecording
+          ? "El audio sigue guardado en este telefono. TEC volvera a intentar cuando haya una conexion estable."
+          : "La transcripcion se guardo. Intenta abrirla mas tarde desde Mis analisis."
       });
-      setRecorderMessage(error.message, "error");
+      setRecorderMessage(
+        protectedRecording ? "No se perdio el audio. Quedo pendiente de sincronizacion." : error.message,
+        protectedRecording ? "info" : "error"
+      );
     } finally {
       state.processing = false;
       state.sessionId = "";
+      tecActiveRecordingIds.delete(state.localSessionId);
+      state.localSessionId = "";
       state.recorder = null;
       updateControls();
     }
@@ -15443,18 +16078,39 @@ function initCoachDemoRecorder() {
         video: false
       });
       const startedAt = new Date().toISOString();
-      const data = await apiRequest("/api/coach/demo-analyses", {
-        method: "POST",
-        body: {
-          consentConfirmed: true,
-          knownOutcome: outcome.value || "unknown",
-          startedAt
-        }
+      state.localSessionId = createTecOfflineId("recording");
+      tecActiveRecordingIds.add(state.localSessionId);
+      await saveTecOfflineRecording({
+        localId: state.localSessionId,
+        status: "recording",
+        consentConfirmed: true,
+        knownOutcome: outcome.value || "unknown",
+        startedAt,
+        serverSessionId: ""
       });
-      state.sessionId = data.analysis?.id || "";
-      if (!state.sessionId) {
-        throw new Error("No pude crear la sesion de grabacion.");
+
+      let data = null;
+      if (navigator.onLine) {
+        try {
+          data = await apiRequest("/api/coach/demo-analyses", {
+            method: "POST",
+            body: {
+              consentConfirmed: true,
+              knownOutcome: outcome.value || "unknown",
+              startedAt,
+              clientRecordingId: state.localSessionId
+            }
+          });
+        } catch (error) {
+          data = null;
+        }
       }
+      state.sessionId = data?.analysis?.id || "";
+      await saveTecOfflineRecording({
+        localId: state.localSessionId,
+        serverSessionId: state.sessionId,
+        status: "recording"
+      });
 
       state.recording = true;
       state.processing = false;
@@ -15466,7 +16122,9 @@ function initCoachDemoRecorder() {
       analysisNotice.hidden = true;
       analysisNotice.dataset.analysisId = "";
       timer.textContent = "00:00";
-      chunkStatus.textContent = "Preparando primer fragmento";
+      chunkStatus.textContent = state.sessionId
+        ? "Preparando primer fragmento"
+        : "Modo sin conexion · protegiendo audio en este telefono";
       currentReport.hidden = true;
       currentReport.innerHTML = "";
       if (navigator.wakeLock?.request) {
@@ -15480,13 +16138,23 @@ function initCoachDemoRecorder() {
           finishRecording(true);
         }
       }, 1000);
-      setRecorderMessage("Grabacion activa. Deja esta pagina abierta durante la demostracion.", "success");
+      setRecorderMessage(
+        state.sessionId
+          ? "Grabacion activa. Deja esta pagina abierta durante la demostracion."
+          : "Grabacion activa sin internet. El audio se enviara cuando vuelva la conexion.",
+        "success"
+      );
       updateControls();
     } catch (error) {
       state.recording = false;
       state.processing = false;
       stopMediaTracks();
       await releaseWakeLock();
+      if (state.localSessionId && state.segmentIndex === 0) {
+        tecActiveRecordingIds.delete(state.localSessionId);
+        await tecOfflineDelete("recordings", state.localSessionId).catch(() => null);
+        state.localSessionId = "";
+      }
       setRecorderMessage(
         error?.name === "NotAllowedError"
           ? "El microfono no tiene permiso. Abre la configuracion del navegador y permite el acceso."
@@ -15582,6 +16250,12 @@ async function initCoachAppPage() {
   if (!hasCoachAccess(me.user)) {
     window.location.href = "/coach/planes/";
     return;
+  }
+
+  if (navigator.onLine) {
+    loadCoachOfflineCatalog({ refresh: true }).catch(() => null);
+    flushTecOfflineOutbox().catch(() => null);
+    navigator.storage?.persist?.().catch(() => false);
   }
 
   syncCoachManagerUi(me.user);
@@ -16580,6 +17254,8 @@ async function initCoachAppPage() {
           method: "POST"
         });
 
+        await clearTecCachedViewer();
+
         window.location.href = "/coach/login/";
       } catch (error) {
         setMessage(appMessage, error.message, "error");
@@ -16659,6 +17335,7 @@ async function initSuccessPage() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTecOfflineStatus();
   initFaq();
   initPlanPage();
   initLoginPage();
