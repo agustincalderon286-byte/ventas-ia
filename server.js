@@ -8,6 +8,7 @@ import path from "path";
 import { createClient } from "redis";
 import Stripe from "stripe";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
+import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -31002,6 +31003,8 @@ app.get("/api/coach/catalog-prices", async (req, res) => {
     responderCoachError(res, 500, "No pude revisar el catalogo ahorita.");
   }
 });
+
+registerCoachPropertyRoutes(app, { requireCoachActivo });
 
 app.get("/api/coach/catalog-offline", async (req, res) => {
   const auth = await requireCoachActivo(req, res);

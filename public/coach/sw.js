@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261021-pwa1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261021-pwa1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-map1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-map1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
@@ -7,9 +7,13 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261021-pwa1",
-  "/coach/app.js?v=20261021-pwa1",
-  "/coach/styles.css?v=20261021-pwa1",
+  "/coach/site.webmanifest?v=20261022-map1",
+  "/coach/app.js?v=20261022-map1",
+  "/coach/styles.css?v=20261022-map1",
+  "/coach/property-map.js?v=20261022-map1",
+  "/coach/property-map.css?v=20261022-map1",
+  "/coach/vendor/leaflet/leaflet.js",
+  "/coach/vendor/leaflet/leaflet.css",
   "/coach/icons/favicon-64.png?v=20261021",
   "/coach/icons/apple-touch-icon.png?v=20261021",
   "/coach/icons/icon-192.png?v=20261021",

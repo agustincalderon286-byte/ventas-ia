@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TEC Coach" />
-    <link rel="manifest" href="/coach/site.webmanifest?v=20261021-pwa1" />
+    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-map1" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,7 +25,8 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261021-pwa1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261022-map1" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-map1" />
   </head>
   <body class="coach-app-body">
     <div class="coach-shell" data-coach-app-page>
@@ -102,7 +103,7 @@
             <div class="coach-section-heading">
               <div>
                 <div class="eyebrow">Ruta guiada</div>
-                <h2>Cierre</h2>
+                <h2 data-coach-workspace-title>Cierre</h2>
               </div>
               <span class="coach-focus-chip">Enfoque actual</span>
             </div>
@@ -114,6 +115,9 @@
                 aria-selected="true"
               >
                 Cierre
+              </button>
+              <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="mapa" aria-selected="false">
+                Mapa
               </button>
               <button
                 type="button"
@@ -202,6 +206,44 @@
               Sigue el orden de la visita y activa el paso donde te encuentras.
             </p>
           </div>
+
+          <article class="dashboard-card tec-property-workspace" data-coach-workspace-section="mapa" data-property-workspace hidden>
+            <div class="tec-property-heading">
+              <div><div class="eyebrow">Explora tu próxima zona</div><h2>Propiedades cerca de tu cita</h2>
+                <p>Encuentra una dirección, revisa sus alrededores y prepara tus próximas paradas.</p></div>
+              <span class="tec-property-coverage">Cook County · Illinois</span>
+            </div>
+            <form class="coach-form tec-property-search" data-property-search>
+              <label>Dirección de la cita<input name="address" type="text" placeholder="Número y calle, por ejemplo 123 MAIN ST" maxlength="160" autocomplete="street-address" required /></label>
+              <label>Ciudad<input name="city" type="text" value="Hillside" maxlength="60" autocomplete="address-level2" required /></label>
+              <label>Buscar alrededor<select name="radius"><option value="100">100 metros</option><option value="200" selected>200 metros</option><option value="300">300 metros</option></select></label>
+              <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
+            </form>
+            <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe la calle por separado de la ciudad.</span></div>
+            <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Comienza con la dirección de una cita. La búsqueda y el mapa necesitan internet.</p>
+            <div class="tec-property-candidates" data-property-candidates hidden></div>
+            <div class="tec-property-results" data-property-results hidden>
+              <div class="tec-property-summary" data-property-summary></div>
+              <div class="tec-property-layout">
+                <div class="tec-property-map-column">
+                  <div class="tec-property-map" data-property-map role="region" aria-label="Mapa de propiedades cercanas"></div>
+                  <p class="tec-property-map-note" data-property-map-note>La distancia indicada es en línea recta. El navegador calcula el recorrido por calles.</p>
+                </div>
+                <div class="tec-property-list-column">
+                  <div class="tec-property-route-panel">
+                    <strong>Tu recorrido <span data-property-count>0 / 4</span></strong>
+                    <p>Selecciona hasta 4 direcciones. Se visitan en el orden que las agregues.</p>
+                    <ol data-property-stops></ol>
+                    <div class="tec-property-route-actions"><a class="primary-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir ruta en Google Maps</a><button class="nav-button" type="button" data-property-clear disabled>Limpiar</button></div>
+                    <span class="tec-property-route-note">Recorrido a pie, saliendo de la dirección de tu cita.</span>
+                  </div>
+                  <div class="tec-property-list" data-property-list aria-label="Lista de propiedades cercanas"></div>
+                </div>
+              </div>
+            </div>
+            <p class="tec-property-disclaimer">El propietario registrado puede no vivir en la propiedad y los datos pueden estar desactualizados. Una dirección puede reunir varias parcelas.</p>
+            <div class="tec-property-sources">Datos públicos del <a href="https://datacatalog.cookcountyil.gov/d/3723-97qp" target="_blank" rel="noopener noreferrer">Cook County Assessor</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Reportar un problema del mapa</a></div>
+          </article>
 
           <article
             class="dashboard-card coach-demo-launcher"
@@ -5790,6 +5832,7 @@
       </p>
     </div>
 
-    <script src="/coach/app.js?v=20261021-pwa1"></script>
+    <script src="/coach/property-map.js?v=20261022-map1"></script>
+    <script src="/coach/app.js?v=20261022-map1"></script>
   </body>
 </html>

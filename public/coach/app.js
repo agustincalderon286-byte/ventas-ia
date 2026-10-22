@@ -59,7 +59,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261021-pwa1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-map1", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
@@ -901,7 +901,7 @@ function syncCoachManagerUi(user = null) {
   const statusCopy = isTelemarketing ? "CRM listo" : "Listo";
   const workspaceCopy = isTelemarketing
     ? "Portal operativo para telemarketing. Aqui trabajas tu CRM asignado y el tablero 4 en 14 sin salir del flujo."
-    : "Por ahora el Coach esta enfocado en la demo, las objeciones y el cierre. Las demas areas siguen guardadas para reactivarlas despues.";
+    : "Prepara tu recorrido en Mapa y vuelve a Cierre para seguir la presentación guiada.";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
   document.documentElement.dataset.coachTeamManager = canManageTeam ? "true" : "false";
@@ -930,8 +930,8 @@ function syncCoachManagerUi(user = null) {
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
     const focusedTabs = canManageTeam
-      ? [COACH_FOCUSED_WORKSPACE_TAB, "equipo"]
-      : [COACH_FOCUSED_WORKSPACE_TAB];
+      ? [COACH_FOCUSED_WORKSPACE_TAB, "mapa", "equipo"]
+      : [COACH_FOCUSED_WORKSPACE_TAB, "mapa"];
     node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : !focusedTabs.includes(tabId);
   });
 
@@ -977,8 +977,8 @@ function syncCoachManagerUi(user = null) {
     document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
       const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
       const focusedTabs = canManageTeam
-        ? [COACH_FOCUSED_WORKSPACE_TAB, "equipo"]
-        : [COACH_FOCUSED_WORKSPACE_TAB];
+        ? [COACH_FOCUSED_WORKSPACE_TAB, "mapa", "equipo"]
+        : [COACH_FOCUSED_WORKSPACE_TAB, "mapa"];
       node.hidden = !focusedTabs.includes(tabId);
     });
   }
@@ -1184,6 +1184,11 @@ function initCoachWorkspaceTabs() {
     });
 
     window.sessionStorage.setItem(COACH_WORKSPACE_TAB_KEY, safeTab);
+    const workspaceTitle = document.querySelector("[data-coach-workspace-title]");
+    if (workspaceTitle) workspaceTitle.textContent = visibleTabButtons.find(button => button.dataset.coachWorkspaceTab === safeTab)?.textContent.trim() || "Cierre";
+    const journey = document.querySelector(".coach-journey");
+    if (journey) journey.hidden = safeTab !== "cierre";
+    window.dispatchEvent(new CustomEvent("coach:workspace-change", { detail: { workspace: safeTab } }));
   };
 
   tabButtons.forEach(button => {
@@ -1215,6 +1220,10 @@ function initCoachWorkspaceTabs() {
           equipo: {
             label: "Cambio a modo equipo",
             detail: "Entraste al panel para mover subcuentas y revisar produccion del equipo."
+          },
+          mapa: {
+            label: "Cambio a mapa de propiedades",
+            detail: "Entraste al mapa para preparar un recorrido desde tu cita."
           },
           territorio: {
             label: "Cambio a modo territorio",
@@ -16320,6 +16329,7 @@ async function initCoachAppPage() {
 
   initCoachCrmWorkspace(me.user);
   if (!isTelemarketingPortal) {
+    window.initTecPropertyMap?.({ request: apiRequest, getCurrentAppointment: getActiveCoachCrmContext });
     initCoachMarketingWorkspace(me.user, me.marketing || null);
     initCoachPrivateResources();
     initCoachLeadWorkspace();
