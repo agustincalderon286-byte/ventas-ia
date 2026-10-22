@@ -59,6 +59,37 @@ html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"
 .tec-property-map .leaflet-tooltip.tec-property-anchor-label { color: #9d182e; font-weight: 700; }
 .tec-property-workspace button:disabled { opacity: .5; cursor: not-allowed; }
 .tec-property-workspace :focus-visible { outline: 3px solid #2a72af; outline-offset: 3px; }
+.tec-property-saved { margin: 18px 0; padding: 15px 17px; border: 1px solid #d3dfeb; border-radius: 14px; background: #f7f9fc; }
+.tec-property-saved > summary { cursor: pointer; font-weight: 700; color: #173d64; }
+.tec-property-saved > summary span { display: inline-block; margin-left: 6px; padding: 2px 8px; background: #e3ecf6; border-radius: 20px; font-size: 12px; }
+.tec-property-workspace .tec-property-saved > p { font-size: 12px; color: #61778d; }
+[data-property-saved-list] { display: grid; gap: 8px; max-height: 330px; overflow-y: auto; }
+.tec-visit-saved-row { display: grid; gap: 6px; text-align: left; background: white; padding: 12px; border: 1px solid #dae4ee; border-radius: 10px; font: inherit; color: #173d64; cursor: pointer; }
+.tec-visit-saved-row strong { font-size: 13px; overflow-wrap: anywhere; }
+.tec-visit-saved-row span { font-size: 12px; color: #63788e; }
+.tec-visit-card-details { margin-top: 10px; }
+.tec-visit-card-details:empty { display: none; }
+.tec-visit-badge { display: inline-block; padding: 5px 9px; border-radius: 8px; background: #f1f5f9; border-left: 3px solid var(--visit-color, #173d64); color: #173d64; font-size: 11px; line-height: 1.5; }
+.tec-property-workspace .tec-visit-note-preview { font-size: 12px; color: #52677e; white-space: pre-wrap; overflow-wrap: anywhere; margin: 7px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tec-visit-anchor-button { justify-self: start; font-size: 12px; }
+.tec-visit-dialog { width: min(560px, calc(100vw - 32px)); max-height: min(88dvh, 900px); padding: 24px; box-sizing: border-box; border: 1px solid #d4e0eb; border-top: 4px solid #c51e37; border-radius: 20px; background: #fff; color: #173d64; box-shadow: 0 25px 80px #071f3b44; overflow-y: auto; font-family: inherit; }
+.tec-visit-dialog::backdrop { background: #071f3baa; backdrop-filter: blur(3px); }
+.tec-visit-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.tec-visit-dialog-heading span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #a31c31; }
+.tec-visit-dialog h2 { font-size: 22px; margin: 8px 0; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.tec-visit-dialog-heading p { font-size: 13px; margin: 0; }
+.tec-visit-dialog form { display: grid; gap: 15px; }
+.tec-visit-dialog label { display: grid; gap: 7px; color: #173d64; font-size: 13px; font-weight: 600; }
+.tec-visit-dialog select, .tec-visit-dialog input, .tec-visit-dialog textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; background: #fff; color: #173d64; border: 1px solid #cbd8e5; border-radius: 11px; font: inherit; font-size: 16px; }
+.tec-visit-dialog textarea { resize: vertical; min-height: 100px; }
+.tec-visit-dialog .tec-visit-feedback { padding: 11px 13px; border-radius: 10px; background: #edf5fb; color: #24527b; font-size: 13px; }
+.tec-visit-dialog .tec-visit-feedback[data-error="true"] { background: #fff0f2; color: #a0172e; }
+.tec-visit-dialog .tec-visit-privacy, .tec-visit-contact p { color: #63788e; font-size: 12px; }
+.tec-visit-contact { border-top: 1px solid #dce5ee; padding-top: 16px; margin-top: 18px; }
+.tec-visit-contact summary { cursor: pointer; font-size: 14px; font-weight: 700; }
+.tec-visit-dialog [hidden] { display: none !important; }
+.tec-visit-dialog :focus-visible { outline: 3px solid #2a72af; outline-offset: 3px; }
+.tec-visit-dialog button:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 1050px) {
   .tec-property-search { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .tec-property-layout { grid-template-columns: minmax(0, 1fr); }
@@ -71,4 +102,5 @@ html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"
   .tec-property-map { height: 290px; }
   .tec-property-list { max-height: 500px; }
   .tec-property-route-actions a { width: 100%; }
+  .tec-visit-dialog { padding: 18px; }
 }

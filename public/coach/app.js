@@ -14,6 +14,11 @@ async function apiRequest(url, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
+  if (options.offlineQueue && options.queueFirst) {
+    await queueTecOfflineRequest({ id: requestId, kind: options.offlineKind || "request", url, method: config.method, headers: config.headers, body: options.body || null });
+    return { ...(options.offlineFallback || {}), offlineQueued: true, requestId };
+  }
+
   try {
     const response = await fetch(url, config);
     const data = await response.json().catch(() => ({}));
@@ -59,7 +64,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-map1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-visits1", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
@@ -136,8 +141,9 @@ async function tecOfflineStoreRequest(storeName, mode, action) {
       reject(error);
       return;
     }
-    request.addEventListener("success", () => resolve(request.result));
-    request.addEventListener("error", () => reject(request.error || new Error("No pude usar la memoria offline.")));
+    transaction.addEventListener("complete", () => resolve(request.result));
+    transaction.addEventListener("abort", () => reject(transaction.error || new Error("No pude guardar en la memoria offline.")));
+    transaction.addEventListener("error", () => reject(transaction.error || new Error("No pude usar la memoria offline.")));
   });
 }
 
@@ -208,12 +214,12 @@ async function flushTecOfflineOutbox() {
     const viewer = await getTecCachedViewer().catch(() => null);
     const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
     const items = (await tecOfflineGetAll("outbox").catch(() => [])).sort((a, b) =>
-      String(a.createdAt || "").localeCompare(String(b.createdAt || ""))
+      String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead")
     );
     let synced = 0;
 
     for (const item of items) {
-      if (item.ownerEmail && viewerEmail && item.ownerEmail !== viewerEmail) {
+      if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail) {
         continue;
       }
 
@@ -16329,7 +16335,15 @@ async function initCoachAppPage() {
 
   initCoachCrmWorkspace(me.user);
   if (!isTelemarketingPortal) {
-    window.initTecPropertyMap?.({ request: apiRequest, getCurrentAppointment: getActiveCoachCrmContext });
+    window.initTecPropertyMap?.({
+      request: apiRequest, user: me.user, getCurrentAppointment: getActiveCoachCrmContext,
+      offline: {
+        read: async key => (await tecOfflineGet("cache", key))?.value || [],
+        write: (key, value) => tecOfflinePut("cache", { key, value, savedAt: new Date().toISOString() }),
+        pending: () => tecOfflineGetAll("outbox"),
+        flush: flushTecOfflineOutbox
+      }
+    });
     initCoachMarketingWorkspace(me.user, me.marketing || null);
     initCoachPrivateResources();
     initCoachLeadWorkspace();

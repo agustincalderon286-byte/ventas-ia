@@ -39,3 +39,24 @@ Las rutas se abren mediante [Maps URLs](https://developers.google.com/maps/docum
 - Vista previa sin errores de JavaScript. La previsualización usa un servidor temporal local con datos de cuenta ficticios y no forma parte del código publicado.
 
 No se contrató ninguna suscripción ni se enviaron leads a un servicio externo durante las pruebas.
+
+## Fichas de seguimiento por casa
+
+La versión `20261022-visits1` añade el botón **Seguimiento** en cada propiedad, en su marcador y en la dirección de la cita. Permite guardar No contestaron, Nos atendieron, Volver después, Cita agendada o No volver a visitar, junto con notas de hasta 2000 caracteres. Los dos estados con fecha requieren día y hora. Estas fechas son datos de seguimiento; no generan por sí solas notificaciones ni eventos externos de calendario.
+
+**Mis seguimientos por casa** permite volver a abrir las fichas recientes sin repetir la búsqueda, incluso cuando no hay conexión. Las fichas se identifican por dirección, ciudad y estado normalizados, no por el nombre del propietario; un cambio de PIN o un ZIP faltante no separa las notas de una misma dirección. Las unidades con direcciones distintas conservan fichas separadas. Los estados aparecen en las tarjetas y con colores en los marcadores; los resultados y la selección de rutas se conservan.
+
+Las notas son privadas del usuario autenticado que las registra, no del propietario del inmueble ni del administrador de su equipo. `CoachPropertyVisit` guarda cada cambio como un evento, con índice único por usuario e identificador de petición. La ficha muestra el evento con fecha de captura más reciente, aunque otro evento más antiguo llegue después desde un dispositivo sin conexión. El historial se conserva en el servidor; esta versión muestra el estado actual, no un visor del historial completo.
+
+Cada escritura se confirma primero en la bandeja de IndexedDB y después se intenta enviar. La interfaz distingue protegido en el teléfono, pendiente de sincronizar y sincronizado. Las transacciones locales sólo se consideran guardadas cuando se confirma su commit, incluyendo detección de abortos por almacenamiento. Se reutilizan los mecanismos de reconexión y sincronización de la PWA. La caché de fichas está separada por ID y correo de cuenta; el servidor rechaza peticiones pendientes que no correspondan a la cuenta que inició sesión.
+
+En **Crear lead con datos de contacto**, el vendedor introduce nombre y teléfono o correo de quien lo atendió. No se presupone que el propietario registrado sea esa persona. La creación es manual y reutiliza el CRM y los destinos que el usuario ya tenga configurados en TEC. Se conserva la dirección, las notas y la fecha de seguimiento, y se guarda el identificador del lead para no crear otro al reintentar. No se añadió ninguna conexión con Konverta.
+
+Endpoints privados adicionales:
+
+- `GET /api/coach/property-visits`: hasta 100 fichas recientes de la propia cuenta.
+- `POST /api/coach/property-visits/lookup`: consulta de hasta 61 claves de propiedades de la propia cuenta.
+- `POST /api/coach/property-visits`: nuevo evento idempotente de seguimiento.
+- `POST /api/coach/property-visits/lead`: creación manual y enlace del lead.
+
+Verificación de esta ampliación: pruebas de aislamiento entre usuarios, idempotencia, registros offline fuera de orden, fechas requeridas, límites de notas, conservación del enlace al lead, recuperación desde la bandeja local, confirmación de transacciones y orden de sincronización. En la vista previa con almacenamiento de servidor simulado se guardó una nota con fecha sin conexión simulada, se recargó la página, se recuperó la ficha y se sincronizó al reconectar. Se creó un único lead ficticio y se comprobó el diseño a 375 px sin desbordamiento. No se escribieron notas ni leads de prueba en la base de producción.

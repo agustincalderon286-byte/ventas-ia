@@ -9,6 +9,7 @@ import { createClient } from "redis";
 import Stripe from "stripe";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
+import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -31005,6 +31006,15 @@ app.get("/api/coach/catalog-prices", async (req, res) => {
 });
 
 registerCoachPropertyRoutes(app, { requireCoachActivo });
+registerCoachPropertyVisitRoutes(app, {
+  requireCoachActivo,
+  createLead: async (userDoc, payload) => guardarCoachInboxLead({
+    userDoc,
+    profileDoc: await obtenerCoachOwnerProfile(userDoc, { lean: true }),
+    payload,
+    sendDestination: true
+  })
+});
 
 app.get("/api/coach/catalog-offline", async (req, res) => {
   const auth = await requireCoachActivo(req, res);

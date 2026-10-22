@@ -1,3 +1,5 @@
+import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261022-visits1";
+
 (() => {
   const MAX_STOPS = 4;
   let leafletPromise;
@@ -40,7 +42,7 @@
     return url.href;
   }
 
-  window.initTecPropertyMap = function ({ request, getCurrentAppointment = () => null }) {
+  window.initTecPropertyMap = function ({ request, user = {}, offline = null, getCurrentAppointment = () => null }) {
     const root = document.querySelector("[data-property-workspace]");
     if (!root || root.dataset.initialized) return;
     root.dataset.initialized = "true";
@@ -48,6 +50,201 @@
     const form = find("search"), feedback = find("feedback"), candidatesBox = find("candidates"), results = find("results");
     const mapBox = find("map"), list = find("list"), route = find("route"), clear = find("clear");
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
+    let visits = new Map(), pendingLeadKeys = new Set(), refreshPromise = null, syncPromise = null, syncRequested = false, editingProperty = null, awaitingSync = false;
+    const accountId = String(user.id || user._id || "");
+    const email = String(user.email || "").trim().toLowerCase();
+    const cacheKey = `property-visits:${accountId}:${email}`;
+    const visitMeta = status => PROPERTY_VISIT_STATUSES.find(item => item.value === status);
+    const dateLabel = value => value ? new Date(value).toLocaleString("es-US", { dateStyle: "medium", timeStyle: "short" }) : "";
+    const uniqueId = prefix => `${prefix}-${crypto.randomUUID()}`;
+
+    async function pendingItems() {
+      const items = offline ? await offline.pending() : [];
+      return items.filter(item => item.ownerEmail === email && String(item.body?.accountId || "") === accountId);
+    }
+
+    function visitLabel(record) {
+      return `${visitMeta(record.status)?.label || "Seguimiento"}${record.nextVisitAt ? ` · ${dateLabel(record.nextVisitAt)}` : ""}${record.pending ? " · Pendiente de sincronizar" : ""}`;
+    }
+
+    function refreshVisitDecorations() {
+      for (const card of list.children) {
+        const property = data?.properties.find(item => item.pin === card.dataset.pin);
+        const badge = card.querySelector("[data-visit-badge]");
+        if (!property || !badge) continue;
+        const record = visits.get(propertyVisitKey(property));
+        badge.replaceChildren();
+        if (record) {
+          const status = node("span", "tec-visit-badge", visitLabel(record));
+          status.style.setProperty("--visit-color", visitMeta(record.status)?.color || "#173d64");
+          badge.append(status);
+          if (record.notes) badge.append(node("p", "tec-visit-note-preview", record.notes));
+        }
+      }
+      const saved = [...visits.values()].sort((a, b) => String(b.clientUpdatedAt).localeCompare(String(a.clientUpdatedAt)));
+      find("saved-count").textContent = String(saved.length);
+      find("saved-list").replaceChildren();
+      for (const record of saved.slice(0, 100)) {
+        const button = node("button", "tec-visit-saved-row"); button.type = "button";
+        button.append(node("strong", "", record.property.formattedAddress), node("span", "", visitLabel(record)));
+        button.addEventListener("click", () => openVisit(record.property));
+        find("saved-list").append(button);
+      }
+      if (!saved.length) find("saved-list").append(node("p", "", "Todavía no tienes seguimientos. Usa el botón Seguimiento de cualquier propiedad."));
+      drawMarkers();
+    }
+
+    async function rememberVisits() {
+      await offline?.write(cacheKey, [...visits.values()].slice(0, 300)).catch(() => null);
+    }
+
+    async function loadLocalVisits() {
+      const stored = offline ? await offline.read(cacheKey).catch(() => []) : [];
+      const pending = await pendingItems().catch(() => []);
+      pendingLeadKeys = new Set(pending.filter(item => item.kind === "property-lead").map(item => propertyVisitKey(item.body.property)));
+      const records = mergePropertyVisits(Array.isArray(stored) ? stored : [], pending.map(propertyVisitFromQueuedItem).filter(Boolean));
+      visits = new Map(records.map(record => [record.propertyKey, record]));
+      refreshVisitDecorations();
+    }
+
+    async function refreshVisits() {
+      if (refreshPromise) return refreshPromise;
+      if (!navigator.onLine || !accountId) return;
+      refreshPromise = (async () => {
+        try {
+          const recent = await request("/api/coach/property-visits");
+          let zone = [];
+          if (data) {
+            const lookup = await request("/api/coach/property-visits/lookup", { method: "POST", body: { keys: [data.anchor, ...data.properties].map(propertyVisitKey) } });
+            zone = lookup.visits || [];
+          }
+          const all = new Map([...visits.values(), ...(recent.visits || []), ...zone].map(record => [record.propertyKey, record]));
+          const pending = await pendingItems().catch(() => []);
+          pendingLeadKeys = new Set(pending.filter(item => item.kind === "property-lead").map(item => propertyVisitKey(item.body.property)));
+          const combined = mergePropertyVisits([...all.values()], pending.map(propertyVisitFromQueuedItem).filter(Boolean));
+          visits = new Map(combined.slice(0, 300).map(record => [record.propertyKey, record]));
+          find("saved-status").textContent = "Las fichas y notas son privadas de tu cuenta. Los cambios pendientes se sincronizan al recuperar conexión.";
+          await rememberVisits();
+          refreshVisitDecorations();
+          syncLeadButton();
+          const current = editingProperty && visits.get(propertyVisitKey(editingProperty));
+          if (dialog.open && awaitingSync && current && !current.pending && !pendingLeadKeys.has(current.propertyKey)) {
+            visitMessage(current.linkedLeadId ? "Seguimiento sincronizado y lead creado en tu cuenta de TEC." : "Seguimiento sincronizado con tu cuenta.");
+            awaitingSync = false;
+          }
+        } catch (error) {
+          find("saved-status").textContent = "Mostrando las fichas guardadas en este teléfono. No pude actualizar tu cuenta en este momento.";
+        }
+      })();
+      try { return await refreshPromise; } finally { refreshPromise = null; }
+    }
+
+    function kickSync() {
+      syncRequested = true;
+      if (syncPromise || !navigator.onLine || !offline) return;
+      syncPromise = (async () => {
+        while (syncRequested && navigator.onLine) {
+          syncRequested = false;
+          await offline.flush();
+          await refreshVisits();
+        }
+      })().catch(() => null).finally(() => { syncPromise = null; });
+    }
+
+    const dialog = node("dialog", "tec-visit-dialog");
+    dialog.setAttribute("aria-labelledby", "tec-property-visit-title");
+    dialog.innerHTML = `<div class="tec-visit-dialog-heading"><div><span>Ficha privada de la casa</span><h2 data-visit-title></h2><p data-visit-location></p></div><button type="button" class="nav-button" data-visit-close aria-label="Cerrar seguimiento">Cerrar</button></div>
+      <form data-visit-form><label>Resultado de la visita<select name="status" required><option value="">Selecciona qué pasó</option></select></label><label data-visit-date-wrap hidden><span data-visit-date-label>Fecha y hora para volver</span><input name="nextVisitAt" type="datetime-local" /></label><label>Notas de esta casa<textarea name="notes" rows="4" maxlength="2000" placeholder="Ej. Pidieron regresar el sábado después de las 5."></textarea></label><button type="submit" class="primary-button" data-visit-save>Guardar seguimiento</button></form>
+      <p class="tec-visit-feedback" data-visit-feedback role="status" aria-live="polite"></p><p class="tec-visit-privacy">El seguimiento se guarda en tu cuenta. Si no hay internet, queda protegido en este teléfono hasta sincronizarse.</p>
+      <details class="tec-visit-contact"><summary>Crear lead con datos de contacto</summary><p>Escribe los datos de quien te atendió; puede ser una persona diferente del propietario registrado.</p><form data-visit-lead-form><label>Nombre del contacto<input name="fullName" maxlength="120" autocomplete="name" required /></label><label>Teléfono<input name="phone" type="tel" maxlength="40" autocomplete="tel" /></label><label>Correo (opcional)<input name="email" type="email" maxlength="160" autocomplete="email" /></label><button type="submit" class="nav-button" data-visit-lead-save>Crear lead en TEC</button></form></details>`;
+    root.append(dialog);
+    dialog.querySelector("[data-visit-title]").id = "tec-property-visit-title";
+    const d = selector => dialog.querySelector(`[data-visit-${selector}]`);
+    const visitForm = d("form"), leadForm = d("lead-form");
+    for (const option of PROPERTY_VISIT_STATUSES) {
+      const element = node("option", "", option.label); element.value = option.value; visitForm.elements.status.append(element);
+    }
+    function visitMessage(text, error = false) { d("feedback").textContent = text; d("feedback").dataset.error = String(error); }
+    function updateVisitDate() {
+      const timed = ["return_later", "appointment"].includes(visitForm.elements.status.value);
+      d("date-wrap").hidden = !timed; visitForm.elements.nextVisitAt.required = timed;
+      d("date-label").textContent = visitForm.elements.status.value === "appointment" ? "Fecha y hora de la cita" : "Fecha y hora para volver";
+    }
+    function syncLeadButton() {
+      if (!editingProperty) return;
+      const key = propertyVisitKey(editingProperty), linked = visits.get(key)?.linkedLeadId;
+      d("lead-save").disabled = Boolean(linked || pendingLeadKeys.has(key));
+      d("lead-save").textContent = linked ? "Lead creado en TEC" : pendingLeadKeys.has(key) ? "Lead pendiente de sincronizar" : "Crear lead en TEC";
+    }
+    function openVisit(property) {
+      editingProperty = property;
+      awaitingSync = false;
+      const record = visits.get(propertyVisitKey(property));
+      d("title").textContent = property.address;
+      d("location").textContent = `${property.city}, IL ${property.zipCode || ""}`;
+      visitForm.elements.status.value = record?.status || "";
+      visitForm.elements.notes.value = record?.notes || "";
+      if (record?.nextVisitAt) {
+        const local = new Date(record.nextVisitAt);
+        visitForm.elements.nextVisitAt.value = new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      } else visitForm.elements.nextVisitAt.value = "";
+      leadForm.reset();
+      dialog.querySelector("details").open = false;
+      updateVisitDate(); syncLeadButton();
+      visitMessage(record ? visitLabel(record) : "Marca el resultado y guarda tus notas.");
+      if (!dialog.open) dialog.showModal();
+    }
+
+    async function saveVisit() {
+      if (d("save").disabled) return false;
+      if (!visitForm.reportValidity()) return false;
+      if (!offline || !accountId || !email) { visitMessage("No pude activar el guardado seguro. Recarga TEC y entra a tu cuenta.", true); return false; }
+      const body = {
+        accountId, property: editingProperty, status: visitForm.elements.status.value, notes: visitForm.elements.notes.value,
+        nextVisitAt: ["return_later", "appointment"].includes(visitForm.elements.status.value) ? new Date(visitForm.elements.nextVisitAt.value).toISOString() : null,
+        clientUpdatedAt: new Date().toISOString()
+      };
+      d("save").disabled = true;
+      try {
+        const response = await request("/api/coach/property-visits", { method: "POST", body, requestId: uniqueId("property-visit"), offlineQueue: true, queueFirst: true, offlineKind: "property-visit" });
+        const record = { ...body, propertyKey: propertyVisitKey(editingProperty), requestId: response.requestId, pending: true, linkedLeadId: visits.get(propertyVisitKey(editingProperty))?.linkedLeadId || "" };
+        visits.set(record.propertyKey, record);
+        awaitingSync = true;
+        await rememberVisits(); refreshVisitDecorations();
+        visitMessage(navigator.onLine ? "Seguimiento protegido en este teléfono. Sincronizando con tu cuenta…" : "Seguimiento protegido en este teléfono. Se sincronizará cuando vuelva internet.");
+        kickSync(); return true;
+      } catch (error) { visitMessage(`No pude guardar: ${error.message}. Conserva esta ficha abierta e intenta nuevamente.`, true); return false; }
+      finally { d("save").disabled = false; }
+    }
+    visitForm.addEventListener("submit", async event => { event.preventDefault(); await saveVisit(); });
+    visitForm.elements.status.addEventListener("change", updateVisitDate);
+    d("close").addEventListener("click", () => dialog.close());
+    leadForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (pendingLeadKeys.has(propertyVisitKey(editingProperty)) || visits.get(propertyVisitKey(editingProperty))?.linkedLeadId) return;
+      if (!leadForm.elements.phone.value.trim() && !leadForm.elements.email.value.trim()) { visitMessage("Escribe al menos un teléfono o correo del contacto.", true); return; }
+      const digits = leadForm.elements.phone.value.replace(/\D/g, "");
+      if (leadForm.elements.phone.value.trim() && (digits.length < 10 || digits.length > 15)) { visitMessage("Revisa el teléfono: debe tener de 10 a 15 dígitos.", true); return; }
+      const contactEmail = leadForm.elements.email.value.trim();
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { visitMessage("Revisa el correo del contacto.", true); return; }
+      if (d("lead-save").disabled) return;
+      d("lead-save").disabled = true;
+      if (!(await saveVisit())) { syncLeadButton(); return; }
+      try {
+        await request("/api/coach/property-visits/lead", {
+          method: "POST", requestId: uniqueId("property-lead"), offlineQueue: true, queueFirst: true, offlineKind: "property-lead",
+          body: { accountId, property: editingProperty, fullName: leadForm.elements.fullName.value.trim(), phone: leadForm.elements.phone.value.trim(), email: leadForm.elements.email.value.trim(), clientUpdatedAt: new Date().toISOString() }
+        });
+        pendingLeadKeys.add(propertyVisitKey(editingProperty)); syncLeadButton();
+        awaitingSync = true;
+        visitMessage(navigator.onLine ? "Lead protegido en este teléfono. Se está enviando a tu cuenta de TEC." : "Lead protegido en este teléfono. Se creará en TEC cuando vuelva internet.");
+        kickSync();
+      } catch (error) { visitMessage(error.message, true); syncLeadButton(); }
+    });
+    find("saved").addEventListener("toggle", () => { if (find("saved").open) refreshVisits(); });
+    window.addEventListener("tec:offline-status", event => { if (event.detail?.synced) refreshVisits(); });
+    window.addEventListener("online", kickSync);
+    loadLocalVisits().catch(() => null).then(() => { if (!root.hidden) refreshVisits(); });
 
     function message(text, type = "info") { feedback.textContent = text; feedback.dataset.type = type; }
     function busy(value) {
@@ -94,13 +291,16 @@
         .bindTooltip("Tu cita", { permanent: true, direction: "top", className: "tec-property-anchor-label" }).addTo(layers);
       for (const property of data.properties) {
         const index = selected.findIndex(item => item.pin === property.pin);
-        const marker = L.circleMarker([property.lat, property.lon], { radius: index >= 0 ? 9 : 6, color: "#fff", weight: 2, fillColor: index >= 0 ? "#d51e36" : "#123d69", fillOpacity: 1 });
+        const visit = visits.get(propertyVisitKey(property));
+        const marker = L.circleMarker([property.lat, property.lon], { radius: index >= 0 ? 9 : 6, color: "#fff", weight: 2, fillColor: index >= 0 ? "#d51e36" : visitMeta(visit?.status)?.color || "#123d69", fillOpacity: 1 });
         const popup = node("div", "tec-property-popup");
         popup.append(node("strong", "", property.address), node("p", "", ownerText(property)));
         const toggle = node("button", "nav-button", index >= 0 ? "Quitar parada" : "Agregar parada");
         toggle.type = "button";
         toggle.addEventListener("click", () => toggleStop(property));
-        popup.append(toggle);
+        const followup = node("button", "nav-button", "Seguimiento"); followup.type = "button"; followup.addEventListener("click", () => openVisit(property));
+        if (visit) popup.append(node("p", "", visitLabel(visit)));
+        popup.append(toggle, followup);
         marker.bindPopup(popup).addTo(layers);
         if (index >= 0) marker.bindTooltip(String(index + 1), { permanent: true, direction: "center", className: "tec-property-number-label" });
         markers.set(property.pin, marker);
@@ -124,6 +324,7 @@
       for (const card of list.children) {
         const index = selected.findIndex(item => item.pin === card.dataset.pin);
         const button = card.querySelector("[data-select-stop]");
+        if (!button) continue;
         button.textContent = index >= 0 ? `Parada ${index + 1} · Quitar` : "Agregar a mi ruta";
         button.setAttribute("aria-pressed", String(index >= 0));
         button.disabled = loading || (index < 0 && selected.length >= MAX_STOPS);
@@ -159,7 +360,9 @@
           map.setView([property.lat, property.lon], 18); markers.get(property.pin)?.openPopup();
           mapBox.scrollIntoView({ behavior: "smooth", block: "center" });
         });
-        actions.append(select, locate); card.append(actions); list.append(card);
+        const followup = node("button", "nav-button", "Seguimiento"); followup.type = "button"; followup.addEventListener("click", () => openVisit(property));
+        const badge = node("div", "tec-visit-card-details"); badge.dataset.visitBadge = "true";
+        actions.append(select, locate, followup); card.append(badge, actions); list.append(card);
       }
       if (!data.properties.length) list.append(node("p", "tec-property-empty", "No encontré propiedades con dirección disponible en este radio. Prueba ampliar la distancia."));
     }
@@ -169,10 +372,13 @@
       data = payload; selected = []; candidatesBox.hidden = true; results.hidden = false;
       const summary = find("summary"); summary.replaceChildren();
       summary.append(node("strong", "", `Tu cita: ${data.anchor.formattedAddress}`), node("span", "", `${data.properties.length} direcciones · radio de ${data.radiusMeters} m · registros ${data.year}`));
+      const anchorFollowup = node("button", "nav-button tec-visit-anchor-button", "Seguimiento de esta cita"); anchorFollowup.type = "button"; anchorFollowup.addEventListener("click", () => openVisit(data.anchor)); summary.append(anchorFollowup);
       if (data.truncated) summary.append(node("span", "tec-property-limit-note", "La zona tiene más propiedades. Mostramos una selección limitada; reduce el radio para revisar con más detalle."));
       if (data.unavailableAddresses) summary.append(node("span", "tec-property-limit-note", `${data.unavailableAddresses} parcelas no tienen dirección disponible para mostrarlas.`));
       find("map-note").textContent = "La distancia indicada es en línea recta. El navegador calcula el recorrido por calles.";
       renderList();
+      refreshVisitDecorations();
+      refreshVisits();
       await ensureMap();
       message(`${data.properties.length} direcciones disponibles. Elige las que quieras visitar.`, "success");
     }
@@ -217,6 +423,9 @@
     });
     clear.addEventListener("click", () => { selected = []; syncRoute(); });
     route.addEventListener("click", event => { if (!route.hasAttribute("href")) event.preventDefault(); });
-    window.addEventListener("coach:workspace-change", event => { if (event.detail?.workspace === "mapa") requestAnimationFrame(ensureMap); });
+    window.addEventListener("coach:workspace-change", event => {
+      if (event.detail?.workspace === "mapa") { requestAnimationFrame(ensureMap); refreshVisits(); }
+      else if (dialog.open) dialog.close();
+    });
   };
 })();

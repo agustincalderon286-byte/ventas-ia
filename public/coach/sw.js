@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261022-map1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-map1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-visits1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-visits1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
@@ -7,11 +7,12 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261022-map1",
-  "/coach/app.js?v=20261022-map1",
-  "/coach/styles.css?v=20261022-map1",
-  "/coach/property-map.js?v=20261022-map1",
-  "/coach/property-map.css?v=20261022-map1",
+  "/coach/site.webmanifest?v=20261022-visits1",
+  "/coach/app.js?v=20261022-visits1",
+  "/coach/styles.css?v=20261022-visits1",
+  "/coach/property-map.js?v=20261022-visits1",
+  "/coach/property-map.css?v=20261022-visits1",
+  "/coach/property-visit-helpers.js?v=20261022-visits1",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
   "/coach/icons/favicon-64.png?v=20261021",
@@ -211,11 +212,11 @@ async function flushOutboxInServiceWorker() {
   }
   const viewer = await viewerResponse.json().catch(() => ({}));
   const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
-  const items = (await getAllOutboxItems()).sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+  const items = (await getAllOutboxItems()).sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead"));
   let synced = 0;
 
   for (const item of items) {
-    if (item.ownerEmail && viewerEmail && item.ownerEmail !== viewerEmail) {
+    if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail) {
       continue;
     }
     const response = await fetch(item.url, {
