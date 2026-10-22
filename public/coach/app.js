@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-tower1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-audio-status1", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -227,7 +227,9 @@ async function getTecOfflinePendingCount() {
   const viewer = await getTecCachedViewer();
   const email = String(viewer?.user?.email || "").trim().toLowerCase();
   if (!email) return 0;
-  return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email && !["synced", "partial-synced"].includes(item.status)).length;
+  // Active capture is normal work, not an offline failure or a retryable upload.
+  return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email &&
+    window.TecPwaSafety.recordingCanRetry(item, tecActiveRecordingIds)).length;
 }
 
 function attachTecOfflineForm(form, options) {
@@ -596,6 +598,9 @@ async function uploadTecStoredAudioChunk(serverSessionId, chunk) {
     error.status = response.status;
     throw error;
   }
+  if (data.ok !== true || data.chunk?.status !== "transcribed") {
+    throw Object.assign(new Error("El servidor no confirmó la transcripción del segmento. La copia local se conserva."), { status: 502 });
+  }
   await tecOfflineDelete("audioChunks", chunk.key);
   return data;
 }
@@ -631,8 +636,9 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
     return null;
   }
 
-  recording = await saveTecOfflineRecording({ ...recording, status: "syncing", lastError: "" });
+  recording = await saveTecOfflineRecording({ ...recording, status: "syncing" });
 
+  let failureStage = "session";
   try {
     if (!recording.serverSessionId) {
       const created = await apiRequest("/api/coach/demo-analyses", {
@@ -655,11 +661,13 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
       throw new Error("No pude crear la sesion para enviar el audio.");
     }
 
+    failureStage = "transcription";
     const chunks = await getTecOfflineAudioChunks(localId);
     for (const chunk of chunks) {
       await uploadTecStoredAudioChunk(recording.serverSessionId, chunk);
     }
 
+    failureStage = "analysis";
     const completed = await apiRequest(
       `/api/coach/demo-analyses/${encodeURIComponent(recording.serverSessionId)}/complete`,
       {
@@ -676,7 +684,9 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
       ...recording,
       status: "ready",
       attempts: Number(recording.attempts || 0) + 1,
-      lastError: String(error.message || "No pude sincronizar la grabacion.").slice(0, 240)
+      lastError: String(error.message || "No pude sincronizar la grabacion.").slice(0, 240),
+      lastStatus: Number(error.status || 0), lastErrorName: error.name || "Error", failureStage,
+      lastAttemptAt: new Date().toISOString()
     }).catch(() => null);
     throw error;
   }
@@ -15853,6 +15863,7 @@ function initCoachDemoRecorder() {
   const MAX_RECORDING_MS = 90 * 60 * 1000;
 
   const setRecorderMessage = (message, type = "info") => setMessage(status, message, type);
+  const audioFailure = error => window.TecPwaSafety.describeAudioFailure(error, navigator.onLine);
   const emergency = document.createElement("a");
   emergency.className = "secondary-button";
   emergency.hidden = true;
@@ -15915,9 +15926,8 @@ function initCoachDemoRecorder() {
           body: blob
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || "No pude subir un fragmento.");
-        }
+        if (!response.ok) throw Object.assign(new Error(data.error || "No pude subir un fragmento."), { status: response.status });
+        if (data.ok !== true || data.chunk?.status !== "transcribed") throw Object.assign(new Error("El servidor no confirmó la transcripción del segmento. La copia local se conserva."), { status: 502 });
         if (chunkKey) {
           await tecOfflineDelete("audioChunks", chunkKey);
         }
@@ -15927,7 +15937,11 @@ function initCoachDemoRecorder() {
         return data;
       } catch (error) {
         lastError = error;
-        if (!navigator.onLine || error?.name === "TypeError") {
+        await saveTecOfflineRecording({ localId: state.localSessionId,
+          lastError: String(error.message || "No pude subir un fragmento.").slice(0, 240),
+          lastStatus: Number(error.status || 0), lastErrorName: error.name || "Error", failureStage: "transcription",
+          lastAttemptAt: new Date().toISOString() }).catch(() => null);
+        if (!navigator.onLine || error?.name === "TypeError" || [400, 401, 403, 404, 409, 413, 415, 422].includes(error?.status)) {
           break;
         }
         if (attempt < 3) {
@@ -16108,6 +16122,31 @@ function initCoachDemoRecorder() {
         : row.status === "partial-synced" ? "Se analizaron solo los segmentos completos. La parte interrumpida sigue disponible aquí."
         : "Pendiente de confirmar el análisis con el servidor. La copia local se conserva.";
       card.append(title, copy);
+      const connectionResult = document.createElement("p");
+      connectionResult.className = "mini-note";
+      const checkConnection = document.createElement("button");
+      checkConnection.type = "button";
+      checkConnection.className = "secondary-button";
+      checkConnection.textContent = "Comprobar conexión y sesión";
+      checkConnection.addEventListener("click", async () => {
+        checkConnection.disabled = true;
+        connectionResult.textContent = "Consultando TEC sin enviar audio ni solicitar un análisis…";
+        try {
+          const response = await apiRequest("/api/coach/me", { timeoutMs: 8000 });
+          if (!response.authenticated || String(response.user?.email || "").toLowerCase() !== email) {
+            throw Object.assign(new Error("Entra con la misma cuenta que guardó esta grabación."), { status: 401 });
+          }
+          connectionResult.textContent = "TEC respondió: tienes conexión con el servidor y la sesión es válida. Esto no confirma todavía el envío ni el análisis del audio.";
+        } catch (error) { connectionResult.textContent = audioFailure(error).text; }
+        finally { checkConnection.disabled = false; }
+      });
+      card.append(checkConnection, connectionResult);
+      if (row.lastError) {
+        const problem = document.createElement("p");
+        problem.className = "mini-note";
+        problem.textContent = `${audioFailure(row).text} Detalle: ${row.lastError}`;
+        card.append(problem);
+      }
       const tail = await getTecAudioTail(row.localId);
       const groups = new Map();
       tail.forEach(part => { if (!groups.has(part.index)) groups.set(part.index, []); groups.get(part.index).push(part); });
@@ -16237,12 +16276,10 @@ function initCoachDemoRecorder() {
         : null;
       showAnalysisNotice({
         title: protectedRecording ? "Grabacion protegida y pendiente" : "No pudimos terminar el reporte",
-        copy: state.storageFailure ? "Parte del audio no se pudo guardar. Descarga la copia de emergencia antes de cerrar esta página." : protectedRecording
-          ? "El audio sigue guardado en este telefono. TEC volvera a intentar cuando haya una conexion estable."
-          : "La transcripcion se guardo. Intenta abrirla mas tarde desde Mis analisis."
+        copy: state.storageFailure ? "Parte del audio no se pudo guardar. Descarga la copia de emergencia antes de cerrar esta página." : audioFailure(error).text
       });
       setRecorderMessage(
-        state.storageFailure ? error.message : protectedRecording ? "Los segmentos guardados siguen pendientes de confirmación." : error.message,
+        state.storageFailure ? error.message : audioFailure(error).text,
         state.storageFailure ? "error" : protectedRecording ? "info" : "error"
       );
     } finally {
@@ -16296,6 +16333,7 @@ function initCoachDemoRecorder() {
       });
 
       let data = null;
+      let sessionError = null;
       if (navigator.onLine) {
         try {
           data = await apiRequest("/api/coach/demo-analyses", {
@@ -16307,7 +16345,9 @@ function initCoachDemoRecorder() {
               clientRecordingId: state.localSessionId
             }
           });
+          if (!data.analysis?.id) throw Object.assign(new Error("El servidor no confirmó la sesión de audio."), { status: 502 });
         } catch (error) {
+          sessionError = error;
           data = null;
         }
       }
@@ -16315,7 +16355,10 @@ function initCoachDemoRecorder() {
       await saveTecOfflineRecording({
         localId: state.localSessionId,
         serverSessionId: state.sessionId,
-        status: "recording"
+        status: "recording",
+        lastError: sessionError ? String(sessionError.message || "No pude abrir la sesión de audio.").slice(0, 240) : "",
+        lastStatus: Number(sessionError?.status || 0), lastErrorName: sessionError?.name || "",
+        failureStage: sessionError ? "session" : "", lastAttemptAt: new Date().toISOString()
       });
 
       state.recording = true;
@@ -16331,7 +16374,7 @@ function initCoachDemoRecorder() {
       timer.textContent = "00:00";
       chunkStatus.textContent = state.sessionId
         ? "Preparando primer fragmento"
-        : "Modo sin conexion · protegiendo audio en este telefono";
+        : navigator.onLine ? "Grabando en este dispositivo · envío aún no confirmado" : "Dispositivo sin conexión · guardando audio local";
       currentReport.hidden = true;
       currentReport.innerHTML = "";
       if (navigator.wakeLock?.request) {
@@ -16348,8 +16391,8 @@ function initCoachDemoRecorder() {
       setRecorderMessage(
         state.sessionId
           ? "Grabacion activa. Deja esta pagina abierta durante la demostracion."
-          : "Grabacion activa sin internet. El audio se enviara cuando vuelva la conexion.",
-        "success"
+          : `Grabación activa en este dispositivo. ${audioFailure(sessionError || {}).text}`,
+        state.sessionId ? "success" : "info"
       );
       updateControls();
     } catch (error) {

@@ -40,5 +40,7 @@ test("both maps are available in property routes and agenda and PWA updates do n
   assert.match(html, /data-property-apple-stop/); assert.match(html, /data-property-apple-route/);
   assert.match(app, /record\.appleMapsUrl/); assert.match(app, />Google Maps<\/a>/);
   assert.match(app, />Apple Maps<\/a>/);
-  assert.match(worker, /20261022-tower1/); assert.doesNotMatch(worker, /self\.skipWaiting\(/);
+  const version = html.match(/property-map\.js\?v=([^" ]+)/)?.[1];
+  assert.ok(version && worker.includes(`/coach/property-map.js?v=${version}`));
+  assert.doesNotMatch(worker, /self\.skipWaiting\(/);
 });

@@ -1,5 +1,18 @@
 (() => {
   "use strict";
+  function describeAudioFailure(error = {}, online = true) {
+    const status = Number(error.status || error.lastStatus || 0);
+    if ([401, 403].includes(status)) return { kind: "auth", text: "El servidor no autorizó la sesión. El audio local se conserva; vuelve a entrar con la misma cuenta para enviarlo." };
+    if (status === 429) return { kind: "busy", text: "El servicio alcanzó su límite temporal. El audio sigue pendiente; inténtalo más tarde." };
+    if ([400, 404, 409, 413, 415, 422].includes(status)) return { kind: "rejected", text: `El servidor no aceptó el envío (HTTP ${status}). La copia local se conserva para revisión.` };
+    if (status >= 500) return { kind: "server", text: `El servidor o el servicio de análisis no pudo completar la solicitud (HTTP ${status}). No significa que tu dispositivo esté sin internet.` };
+    if (error.name === "AbortError" || error.lastErrorName === "AbortError") return { kind: "timeout", text: "La respuesta del servidor tardó demasiado. No se confirmó el envío; la copia local se conserva." };
+    if (!online) return { kind: "offline", text: "El dispositivo indica que está sin conexión. El audio se conserva localmente para enviarlo después." };
+    return { kind: "unconfirmed", text: "No se pudo confirmar la comunicación con el servidor. La copia local se conserva; no se ha comprobado una falta de internet." };
+  }
+  function recordingCanRetry(recording, activeIds = new Set()) {
+    return Boolean(recording?.localId && ["ready", "syncing"].includes(recording.status) && !activeIds.has(recording.localId));
+  }
   function createAudioJournal({ localId, index, mimeType, writePart, finalize, onProtected = () => {} }) {
     const parts = [];
     let pending = Promise.resolve(), sequence = 0, ended = false, gap = false;
@@ -62,5 +75,5 @@
       worker?.addEventListener("statechange", () => { if (worker.state === "installed") show(); });
     });
   }
-  window.TecPwaSafety = Object.freeze({ createAudioJournal, offlineViewerAllowed, watchUpdates });
+  window.TecPwaSafety = Object.freeze({ createAudioJournal, offlineViewerAllowed, watchUpdates, describeAudioFailure, recordingCanRetry });
 })();
