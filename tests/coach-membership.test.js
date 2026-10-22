@@ -74,3 +74,15 @@ test("un lider enlazado recibe acceso administrativo completo", () => {
   assert.equal(coachTieneAccesoTotal(leaderUser), true);
   assert.equal(usuarioPuedeVerTorreControl(leaderUser), true);
 });
+
+test("una cuenta de prueba normal no recibe acceso a la Torre", () => {
+  assert.equal(
+    usuarioPuedeVerTorreControl({
+      _id: "671000000000000000000003",
+      accountType: "owner",
+      teamOwnerUserId: "671000000000000000000003",
+      email: "jorpe34@hotmail.com"
+    }),
+    false
+  );
+});

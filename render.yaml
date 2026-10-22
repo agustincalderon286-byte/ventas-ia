@@ -16,6 +16,8 @@ services:
         sync: false
       - key: APP_BASE_URL
         value: https://totalelitecoaching.com
+      - key: CONTROL_TOWER_ACCESS_EMAILS
+        value: agustincalderon286@gmail.com
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_PRICE_ID_MONTHLY

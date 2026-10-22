@@ -187,7 +187,9 @@ const REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS = Math.max(
   Number(process.env.REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS || 7 * 24 * 60 * 60)
 );
 const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
-const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_ACCESS_EMAILS || "");
+const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(
+  process.env.CONTROL_TOWER_ACCESS_EMAILS || "agustincalderon286@gmail.com"
+);
 const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
 const COACH_ACCOUNT_PRESETS_JSON = String(process.env.COACH_ACCOUNT_PRESETS_JSON || "").trim();
 const COACH_DEFAULT_SPONSOR_EMAIL = parseCoachEmailList(process.env.COACH_DEFAULT_SPONSOR_EMAIL || "")[0] || "";
@@ -4098,11 +4100,7 @@ function usuarioPuedeVerTorreControl(userDoc = null) {
 
   const email = normalizarEmail(userDoc.email);
 
-  if (CONTROL_TOWER_ACCESS_EMAILS.length) {
-    return CONTROL_TOWER_ACCESS_EMAILS.includes(email);
-  }
-
-  return coachTieneAccesoDePrueba(email);
+  return CONTROL_TOWER_ACCESS_EMAILS.includes(email);
 }
 
 function coachTieneAccesoTotal(userDoc = null) {
