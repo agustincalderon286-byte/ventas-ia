@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import crypto from "node:crypto";
 
 const source = fs.readFileSync(new URL("../public/coach/document-viewer.js", import.meta.url), "utf8");
 const workerSource = fs.readFileSync(new URL("../public/coach/sw.js", import.meta.url), "utf8");
@@ -20,11 +21,18 @@ function viewerHarness() {
   const tasks = [];
   let focusRestored = false;
   let lastScroll;
+  let libraryLoads = 0;
+  let failImages = false;
+  const requests = [];
+  const cached = new Map();
+  const manifest = { version: 1, documents: Object.fromEntries(["catalogo", "carpeta"].map(id => [id, { pages: [1, 2, 3].map(number => ({
+    url: `/coach/assets/documents/${id}-v1/page-${String(number).padStart(2, "0")}.jpg`, width: 1600, height: 1200
+  })) }])) };
   const node = selector => {
     if (!nodes.has(selector)) nodes.set(selector, {
       hidden: true, disabled: false, style: {}, value: "1", clientWidth: 375,
       textContent: "", addEventListener(type, callback) { this[type] = callback; },
-      setAttribute() {}, getContext() { return {}; }
+      setAttribute() {}, getContext() { return {}; }, replaceChildren(...children) { this.children = children; }
     });
     return nodes.get(selector);
   };
@@ -45,7 +53,15 @@ function viewerHarness() {
   const document = {
     body: { style: { cssText: "color: navy" }, append() {} },
     activeElement: { focus() { focusRestored = true; } },
-    createElement() { return dialog; }, addEventListener(type, callback) { events[type] = callback; }
+    createElement(tag) {
+      if (tag === "dialog") return dialog;
+      const image = { style: {}, removeAttribute() { this.url = ""; } };
+      Object.defineProperty(image, "src", { get() { return this.url; }, set(url) {
+        this.url = url;
+        queueMicrotask(() => { if (failImages) this.onerror?.(); else this.onload?.(); });
+      } });
+      return image;
+    }, addEventListener(type, callback) { events[type] = callback; }
   };
   const library = {
     GlobalWorkerOptions: {},
@@ -69,13 +85,18 @@ function viewerHarness() {
     window: win, document, history,
     location: { pathname: "/coach/app/", href: "https://example.invalid/coach/app/" },
     AbortController, Uint8Array, URLSearchParams, setTimeout, clearTimeout,
-    caches: { open: async () => ({ put: async () => { cacheWrites++; } }) },
-    fetch: async () => new Response("%PDF-test", { headers: { "Content-Type": "application/pdf" } }),
-    __loadPdfLibrary: async () => library
+    Response,
+    caches: { open: async () => ({ match: async key => cached.get(key), put: async (key, response) => { cacheWrites++; cached.set(key, response); } }) },
+    fetch: async url => {
+      requests.push(url);
+      return url.endsWith(".json") ? Response.json(manifest) : new Response("jpeg", { headers: { "Content-Type": "image/jpeg" } });
+    },
+    __loadPdfLibrary: async () => { libraryLoads++; return library; }
   });
   // Only the lazy vendor import is replaced; all lifecycle/render code is exercised.
   vm.runInContext(source.replace('import(`${VENDOR}legacy/build/pdf.min.mjs`)', "__loadPdfLibrary()"), context);
-  return { api: win.TecDocuments, dialog, node, events, history, document, renders, pageCleanups, tasks,
+  return { api: win.TecDocuments, dialog, node, events, history, document, renders, pageCleanups, tasks, requests, cached,
+    get libraryLoads() { return libraryLoads; }, set failImages(value) { failImages = value; },
     get cacheWrites() { return cacheWrites; }, get lastScroll() { return lastScroll; }, get focusRestored() { return focusRestored; } };
 }
 
@@ -110,25 +131,65 @@ test("a rejected PIN or failed fetch retains a working exit and never caches pri
   assert.equal(h.cacheWrites, 0);
 });
 
-test("public documents render inside TEC, clamp page numbers and bound the single canvas", async () => {
+test("public documents use one bounded image and never load PDF.js, a worker or the full PDF", async () => {
   const h = viewerHarness();
   assert.equal(await h.api.open({ documentId: "carpeta" }), true);
-  assert.equal(h.tasks[0].options.url, "/coach/resources/novel-sales-presentation-2024.pdf");
-  assert.equal(h.tasks[0].options.isEvalSupported, false);
+  assert.equal(h.libraryLoads, 0);
+  assert.equal(h.tasks.length, 0);
+  assert.equal(h.requests.some(url => url.endsWith(".pdf")), false);
   assert.equal(h.history.state.keep, "existing-state");
-  assert.equal(h.renders[0].number, 1);
+  assert.match(h.node("[data-document-image]").children[0].src, /page-01.jpg$/);
   h.node("[data-document-page]").change({ target: { value: "999" } });
   await tick();
-  assert.equal(h.renders.at(-1).number, 3);
+  assert.match(h.node("[data-document-image]").children[0].src, /page-03.jpg$/);
   assert.equal(h.node("[data-document-next]").disabled, true);
   h.node("[data-document-zoom]").click();
   await tick();
-  const canvas = h.node("canvas");
-  assert.ok(canvas.width * canvas.height <= 6_000_000);
-  assert.ok(h.pageCleanups.length >= 2);
+  const images = h.node("[data-document-image]").children;
+  assert.equal(images.length, 1);
+  assert.ok(images[0].width * images[0].height <= 2_560_000);
+  assert.equal(images[0].style.width, "710px");
+  assert.equal(h.renders.length, 0);
   h.api.close();
-  assert.equal(canvas.width, 0);
+  assert.equal(h.node("canvas").width, 0);
+  assert.equal(h.node("[data-document-image]").children.length, 0);
+});
+
+test("private PDFs keep their memory-only renderer and release its canvas on close", async () => {
+  const h = viewerHarness();
+  assert.equal(await h.api.open({ title: "Privado", load: async () => new Blob(["%PDF-test"]) }), true);
+  assert.equal(h.libraryLoads, 1);
+  assert.ok(h.tasks[0].options.data instanceof Uint8Array);
+  assert.equal(h.tasks[0].options.isEvalSupported, false);
+  assert.equal(h.node("[data-document-save]").hidden, true);
+  h.api.close();
   assert.equal(h.tasks[0].destroyed, true);
+  assert.equal(h.node("canvas").width, 0);
+  assert.equal(h.cacheWrites, 0);
+});
+
+test("page image failures offer retry without leaving the app or requiring a PDF engine", async () => {
+  const h = viewerHarness();
+  h.failImages = true;
+  await h.api.open({ documentId: "catalogo" });
+  assert.equal(h.node("[data-document-retry]").hidden, false);
+  assert.match(h.node("[data-document-status]").textContent, /Reintentar/);
+  h.failImages = false;
+  h.node("[data-document-retry]").click();
+  await tick();
+  assert.equal(h.node("[data-document-retry]").hidden, true);
+  assert.match(h.node("[data-document-status]").textContent, /Página 1 de 3/);
+  assert.equal(h.libraryLoads, 0);
+});
+
+test("offline save confirms completion only after all page images and the manifest are stored", async () => {
+  const h = viewerHarness();
+  await h.api.open({ documentId: "catalogo" });
+  h.node("[data-document-save]").click();
+  await tick();
+  assert.equal(h.cacheWrites, 5); // manifest + 3 images + completion marker
+  assert.match(h.node("[data-document-status]").textContent, /Todas las páginas están guardadas/);
+  assert.equal(h.requests.some(url => url.endsWith(".pdf")), false);
 });
 
 test("device/browser Back closes the document instead of leaving the Coach", async () => {
@@ -150,8 +211,24 @@ test("a late old open cannot replace a new document after rapid close and reopen
   wait.resolve(new Blob(["%PDF-old"]));
   assert.equal(await old, false);
   assert.equal(h.dialog.open, true);
-  assert.equal(h.tasks.length, 1);
+  assert.equal(h.tasks.length, 0);
   assert.equal(h.node("#tec-document-title").textContent, "Carpeta de presentación Novel");
+});
+
+test("every public PDF page has an ordered, complete and memory-bounded JPEG asset", () => {
+  const base = new URL("../public", import.meta.url);
+  const manifest = JSON.parse(fs.readFileSync(new URL("../public/coach/assets/documents/manifest-v1.json", import.meta.url), "utf8"));
+  for (const [id, count] of [["catalogo", 42], ["carpeta", 50]]) {
+    const pages = manifest.documents[id].pages;
+    assert.equal(pages.length, count);
+    pages.forEach((page, index) => {
+      assert.equal(page.url, `/coach/assets/documents/${id}-v1/page-${String(index + 1).padStart(2, "0")}.jpg`);
+      const bytes = fs.readFileSync(new URL(`.${page.url}`, `${base.href}/`));
+      assert.equal(bytes.length, page.bytes);
+      assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), page.sha256);
+      assert.ok(page.width > 0 && page.height > 0 && page.width * page.height <= 2_560_000);
+    });
+  }
 });
 
 function workerHarness(cached) {

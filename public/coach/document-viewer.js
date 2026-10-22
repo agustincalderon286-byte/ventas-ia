@@ -2,6 +2,7 @@
 (() => {
   const VENDOR = "/coach/vendor/pdfjs/6.4.299/";
   const CACHE = "tec-coach-documents-v1";
+  const PAGE_MANIFEST = "/coach/assets/documents/manifest-v1.json";
   const DOCUMENTS = Object.freeze({
     catalogo: { title: "Catálogo Novel", url: "/coach/resources/novel-catalog-digital-3.pdf" },
     carpeta: { title: "Carpeta de presentación Novel", url: "/coach/resources/novel-sales-presentation-2024.pdf" }
@@ -19,7 +20,7 @@
 
   function syncControls(session) {
     if (active !== session) return;
-    const total = session.pdf?.numPages || 0;
+    const total = session.total || 0;
     dialog.querySelector("[data-document-prev]").disabled = !total || session.page <= 1;
     dialog.querySelector("[data-document-next]").disabled = !total || session.page >= total;
     const input = dialog.querySelector("[data-document-page]");
@@ -36,6 +37,7 @@
     if (!session) return;
     active = null;
     session.abort.abort();
+    session.cancelImage?.();
     session.render?.cancel();
     // Destruction is asynchronous; no PDF resources survive in the UI after closing.
     session.task?.destroy().catch(() => null);
@@ -43,6 +45,7 @@
     const canvas = dialog.querySelector("canvas");
     canvas.width = canvas.height = 0;
     canvas.hidden = true;
+    dialog.querySelector("[data-document-image]").replaceChildren();
     document.body.style.cssText = session.bodyStyle;
     window.scrollTo(0, session.scrollY);
     session.opener?.focus({ preventScroll: true });
@@ -74,10 +77,12 @@
           <button type="button" data-document-zoom>Ampliar +</button>
         </div>
         <button type="button" class="tec-document-save" data-document-save>Guardar sin internet</button>
+        <button type="button" data-document-retry hidden>Reintentar página</button>
         <p class="tec-document-status" data-document-status role="status" aria-live="polite"></p>
       </header>
       <div class="tec-document-stage" tabindex="0" aria-label="Página del documento">
         <canvas hidden role="img" aria-label="Página del documento"></canvas>
+        <div data-document-image></div>
       </div>`;
     document.body.append(dialog);
     dialog.querySelector("[data-document-close]").addEventListener("click", () => close());
@@ -85,8 +90,8 @@
     dialog.querySelector("[data-document-prev]").addEventListener("click", () => changePage(-1));
     dialog.querySelector("[data-document-next]").addEventListener("click", () => changePage(1));
     const goToPage = event => {
-      if (!active?.pdf) return;
-      active.page = Math.min(active.pdf.numPages, Math.max(1, Math.floor(Number(event.target.value) || 1)));
+      if (!active?.total) return;
+      active.page = Math.min(active.total, Math.max(1, Math.floor(Number(event.target.value) || 1)));
       render(active);
     };
     dialog.querySelector("[data-document-page]").addEventListener("change", goToPage);
@@ -99,10 +104,11 @@
       render(active);
     });
     dialog.querySelector("[data-document-save]").addEventListener("click", () => saveOffline(active));
+    dialog.querySelector("[data-document-retry]").addEventListener("click", () => { if (active?.total) render(active); });
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { if (active?.pdf) render(active); }, 160);
+      resizeTimer = setTimeout(() => { if (active?.total) render(active); }, 160);
     });
     window.addEventListener("popstate", () => {
       if (active && history.state?.tecDocument !== active.id) close({ fromHistory: true });
@@ -112,18 +118,50 @@
   }
 
   function changePage(delta) {
-    if (!active?.pdf) return;
-    active.page = Math.max(1, Math.min(active.pdf.numPages, active.page + delta));
+    if (!active?.total) return;
+    active.page = Math.max(1, Math.min(active.total, active.page + delta));
     render(active);
+  }
+
+  function renderImage(session) {
+    const page = session.pages[session.page - 1];
+    const stage = dialog.querySelector(".tec-document-stage");
+    const image = document.createElement("img");
+    image.className = "tec-document-page-image";
+    image.alt = `${session.title}, página ${session.page} de ${session.total}`;
+    image.width = page.width;
+    image.height = page.height;
+    image.style.width = `${Math.floor(Math.max(240, stage.clientWidth - 20) * session.zoom)}px`;
+    image.style.height = "auto";
+    image.hidden = true;
+    stage.scrollTop = stage.scrollLeft = 0;
+    return new Promise((resolve, reject) => {
+      const clear = () => { image.onload = image.onerror = null; };
+      session.cancelImage = () => { clear(); image.removeAttribute("src"); resolve(false); };
+      image.onload = () => { clear(); image.hidden = false; resolve(true); };
+      image.onerror = () => { clear(); reject(new Error("document-page-image")); };
+      // Exactly one displayed/pending image, never all PDF pages or a PDF worker.
+      dialog.querySelector("[data-document-image]").replaceChildren(image);
+      image.src = page.url;
+    });
   }
 
   async function render(session) {
     const revision = session.revision = (session.revision || 0) + 1;
     const previous = session.render;
     previous?.cancel();
+    session.cancelImage?.();
+    dialog.querySelector("[data-document-retry]").hidden = true;
     syncControls(session);
     status(session, `Cargando página ${session.page}…`);
     try {
+      if (session.pages) {
+        const loaded = await renderImage(session);
+        if (loaded && active === session && session.revision === revision) {
+          status(session, `Página ${session.page} de ${session.total}. ${session.saved ? "Disponible sin internet." : "Puedes volver al Coach en cualquier momento."}`);
+        }
+        return;
+      }
       await previous?.promise.catch(() => null);
       if (active !== session || session.revision !== revision) return;
       session.pageProxy?.cleanup();
@@ -152,7 +190,8 @@
       if (session.revision === revision) status(session, `Página ${session.page} de ${session.pdf.numPages}. ${session.saved ? "Disponible sin internet." : "Puedes volver al Coach en cualquier momento."}`);
     } catch (error) {
       if (active === session && session.revision === revision && error.name !== "RenderingCancelledException") {
-        status(session, "No se pudo mostrar esta página. Intenta otra página o vuelve al Coach.");
+        dialog.querySelector("[data-document-retry]").hidden = false;
+        status(session, "No se pudo cargar esta página. Pulsa Reintentar página o vuelve al Coach.");
       }
     }
   }
@@ -164,6 +203,25 @@
     button.disabled = true;
     status(session, "Guardando documento completo… Mantén esta pantalla abierta hasta que termine.");
     try {
+      if (session.pages) {
+        const cache = await caches.open(CACHE);
+        const manifestResponse = await fetch(PAGE_MANIFEST, { signal: session.abort.signal });
+        if (!manifestResponse.ok || !manifestResponse.headers.get("Content-Type")?.includes("application/json")) throw new Error("invalid-manifest");
+        await cache.put(PAGE_MANIFEST, manifestResponse);
+        let count = 0;
+        for (const page of session.pages) {
+          if (session.abort.signal.aborted) throw new Error("cancelled");
+          status(session, `Guardando páginas ${count + 1} de ${session.total}… Mantén el visor abierto.`);
+          const response = await fetch(page.url, { credentials: "same-origin", signal: session.abort.signal });
+          if (!response.ok || response.status === 206 || !response.headers.get("Content-Type")?.includes("image/jpeg")) throw new Error("invalid-page");
+          await cache.put(page.url, response);
+          count++;
+        }
+        await cache.put(session.offlineKey, new Response("complete"));
+        session.saved = true;
+        status(session, "Todas las páginas están guardadas en este teléfono para abrirlas sin internet.");
+        return;
+      }
       const response = await fetch(session.url, { credentials: "same-origin", signal: session.abort.signal });
       if (!response.ok || response.status === 206 || !response.headers.get("Content-Type")?.includes("application/pdf")) throw new Error("invalid-pdf");
       const cache = await caches.open(CACHE);
@@ -204,6 +262,29 @@
     try {
       const data = load ? await load(session.abort.signal) : null;
       if (active !== session) return false;
+      if (resource) {
+        // Public documents are rendered at build time, not on the phone. This path
+        // deliberately works with no PDF.js, worker, canvas or new Safari features.
+        const response = await fetch(PAGE_MANIFEST, { signal: session.abort.signal, credentials: "same-origin" });
+        if (!response.ok) throw new Error("document-manifest");
+        const manifest = await response.json();
+        if (active !== session) return false;
+        const pages = manifest.documents?.[documentId]?.pages;
+        const prefix = `/coach/assets/documents/${documentId}-v1/page-`;
+        if (manifest.version !== 1 || !Array.isArray(pages) || !pages.length || pages.length > 200 ||
+            pages.some(page => !page.url?.startsWith(prefix) || !/^\d+\.jpg$/.test(page.url.slice(prefix.length)) ||
+              !(page.width > 0 && page.width <= 1600 && page.height > 0 && page.height <= 1600))) {
+          throw new Error("document-manifest-invalid");
+        }
+        session.pages = pages;
+        session.total = pages.length;
+        session.offlineKey = `/coach/assets/documents/${documentId}-v1/offline-complete`;
+        try { session.saved = Boolean(await (await caches.open(CACHE)).match(session.offlineKey)); } catch { /* Reading doesn't require storage permission. */ }
+        if (active !== session) return false;
+        await render(session);
+        if (save && active === session) saveOffline(session);
+        return active === session;
+      }
       library ||= import(`${VENDOR}legacy/build/pdf.min.mjs`).catch(error => { library = null; throw error; });
       const pdfjs = await library;
       if (active !== session) return false;
@@ -217,11 +298,12 @@
       if (active !== session) { await session.task.destroy(); return false; }
       session.pdf = await session.task.promise;
       if (active !== session) return false;
+      session.total = session.pdf.numPages;
       await render(session);
       if (save && active === session) saveOffline(session);
       return active === session;
     } catch (error) {
-      status(session, error.message && load ? error.message : "No se pudo abrir el documento. Revisa tu conexión o vuelve al Coach. Para usarlo sin internet, guárdalo primero desde este visor.");
+      status(session, error.message && load ? error.message : "No se pudo cargar el índice del documento. Vuelve al Coach e inténtalo otra vez con conexión.");
       return false;
     }
   }

@@ -64,7 +64,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-pdf1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-pages1", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });

@@ -1,26 +1,24 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261022-pdf1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-pdf1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-pages1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-pages1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
-importScripts("/coach/vendor/pdfjs/6.4.299/offline-assets.js");
 const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261022-pdf1",
-  "/coach/app.js?v=20261022-pdf1",
-  "/coach/styles.css?v=20261022-pdf1",
-  "/coach/property-map.js?v=20261022-pdf1",
-  "/coach/property-map.css?v=20261022-pdf1",
-  "/coach/property-visit-helpers.js?v=20261022-pdf1",
+  "/coach/site.webmanifest?v=20261022-pages1",
+  "/coach/app.js?v=20261022-pages1",
+  "/coach/styles.css?v=20261022-pages1",
+  "/coach/property-map.js?v=20261022-pages1",
+  "/coach/property-map.css?v=20261022-pages1",
+  "/coach/property-visit-helpers.js?v=20261022-pages1",
   "/coach/document.html",
-  "/coach/document-viewer.js?v=20261022-pdf1",
-  "/coach/document-viewer.css?v=20261022-pdf1",
-  "/coach/vendor/pdfjs/6.4.299/legacy/build/pdf.min.mjs",
-  "/coach/vendor/pdfjs/6.4.299/legacy/build/pdf.worker.min.mjs",
+  "/coach/document-viewer.js?v=20261022-pages1",
+  "/coach/document-viewer.css?v=20261022-pages1",
+  "/coach/assets/documents/manifest-v1.json",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
   "/coach/icons/favicon-64.png?v=20261021",
@@ -57,10 +55,7 @@ async function cacheIndividually(cacheName, urls = []) {
 }
 
 self.addEventListener("install", event => {
-  event.waitUntil(Promise.all([
-    cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS),
-    cacheIndividually(TEC_PDF_CACHE, TEC_PDF_ASSETS)
-  ]).then(() => self.skipWaiting()));
+  event.waitUntil(cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {
@@ -142,6 +137,21 @@ self.addEventListener("fetch", event => {
 
   if (url.pathname.startsWith("/coach/vendor/pdfjs/6.4.299/")) {
     event.respondWith(cacheFirst(request, TEC_PDF_CACHE));
+    return;
+  }
+
+  if (url.pathname.startsWith("/coach/assets/documents/")) {
+    event.respondWith((async () => {
+      // A full storage quota must never prevent an online page from displaying.
+      const cache = await caches.open(TEC_DOCUMENT_CACHE).catch(() => null);
+      const cached = await cache?.match(request).catch(() => null);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (cache && response.ok && response.status !== 206 && !response.redirected) {
+        event.waitUntil(cache.put(request, response.clone()).catch(() => null));
+      }
+      return response;
+    })());
     return;
   }
 

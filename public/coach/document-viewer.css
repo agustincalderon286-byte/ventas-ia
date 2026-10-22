@@ -50,5 +50,7 @@
 .tec-document-stage { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px 10px max(16px, env(safe-area-inset-bottom)); }
 .tec-document-stage canvas { display: block; margin: 0 auto; max-width: none; box-shadow: 0 2px 16px #071f3b20; background: #fff; }
 .tec-document-stage canvas[hidden] { display: none; }
+.tec-document-page-image { display: block; margin: 0 auto; max-width: none; background: white; box-shadow: 0 2px 16px #071f3b20; }
+.tec-document-page-image[hidden] { display: none; }
 .tec-document-save { margin-top: 8px; }
 .tec-document-fallback { display: inline-block; margin: 12px; text-decoration: none; }
