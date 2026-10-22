@@ -142,7 +142,7 @@ export function registerTecControlRoutes(app, deps) {
       query(m.analyses, { ownerUserId: id, createdAt: { $gte: from } }, "ownerUserId ownerName status report durationSeconds createdAt"),
       m.visits ? query(m.visits, { ownerUserId: id, createdAt: { $gte: from } }, "property status notes nextVisitAt createdAt") : [],
       m.crm ? query(m.crm, { appointmentAt: { $gte: from, $lte: new Date() }, $or: [{ appointmentRepUserId: id },
-        { appointmentRepUserId: null, ...userActivityQuery(id) }] }, "fullName address city appointmentAt status createdAt") : []
+        { appointmentRepUserId: null, ...userActivityQuery(id) }] }, "leadName phone address city appointmentAt status createdAt") : []
     ]);
     res.json({ user: { id: String(id), name: user.name, email: user.email }, leads, programs, surveys, outcomes, visits, appointments,
       analyses: analyses.map(doc => cleanAnalysis(doc)), limitPerSection: 30,
