@@ -1,18 +1,26 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261022-visits1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-visits1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261022-pdf1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261022-pdf1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
+const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
+const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
+importScripts("/coach/vendor/pdfjs/6.4.299/offline-assets.js");
 const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261022-visits1",
-  "/coach/app.js?v=20261022-visits1",
-  "/coach/styles.css?v=20261022-visits1",
-  "/coach/property-map.js?v=20261022-visits1",
-  "/coach/property-map.css?v=20261022-visits1",
-  "/coach/property-visit-helpers.js?v=20261022-visits1",
+  "/coach/site.webmanifest?v=20261022-pdf1",
+  "/coach/app.js?v=20261022-pdf1",
+  "/coach/styles.css?v=20261022-pdf1",
+  "/coach/property-map.js?v=20261022-pdf1",
+  "/coach/property-map.css?v=20261022-pdf1",
+  "/coach/property-visit-helpers.js?v=20261022-pdf1",
+  "/coach/document.html",
+  "/coach/document-viewer.js?v=20261022-pdf1",
+  "/coach/document-viewer.css?v=20261022-pdf1",
+  "/coach/vendor/pdfjs/6.4.299/legacy/build/pdf.min.mjs",
+  "/coach/vendor/pdfjs/6.4.299/legacy/build/pdf.worker.min.mjs",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
   "/coach/icons/favicon-64.png?v=20261021",
@@ -49,7 +57,10 @@ async function cacheIndividually(cacheName, urls = []) {
 }
 
 self.addEventListener("install", event => {
-  event.waitUntil(cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS).then(() => self.skipWaiting()));
+  event.waitUntil(Promise.all([
+    cacheIndividually(TEC_CACHE_VERSION, TEC_CORE_ASSETS),
+    cacheIndividually(TEC_PDF_CACHE, TEC_PDF_ASSETS)
+  ]).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {
@@ -59,7 +70,7 @@ self.addEventListener("activate", event => {
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key.startsWith("tec-coach-") && ![TEC_CACHE_VERSION, TEC_RUNTIME_CACHE, TEC_CATALOG_CACHE].includes(key))
+            .filter(key => key.startsWith("tec-coach-") && ![TEC_CACHE_VERSION, TEC_RUNTIME_CACHE, TEC_CATALOG_CACHE, TEC_DOCUMENT_CACHE, TEC_PDF_CACHE].includes(key))
             .map(key => caches.delete(key))
         )
       )
@@ -117,7 +128,28 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  if (["/coach/resources/novel-catalog-digital-3.pdf", "/coach/resources/novel-sales-presentation-2024.pdf"].includes(url.pathname)) {
+    if (request.mode === "navigate") {
+      const documentId = url.pathname.includes("sales-presentation") ? "carpeta" : "catalogo";
+      event.respondWith(Response.redirect(new URL(`/coach/document.html?document=${documentId}`, self.location.origin)));
+      return;
+    }
+    // PDF.js requests byte ranges. Never cache a 206 response as a complete PDF.
+    // Only the viewer's explicit offline-save action writes complete public documents.
+    event.respondWith(caches.open(TEC_DOCUMENT_CACHE).then(async cache => (await cache.match(url.pathname)) || fetch(request)));
+    return;
+  }
+
+  if (url.pathname.startsWith("/coach/vendor/pdfjs/6.4.299/")) {
+    event.respondWith(cacheFirst(request, TEC_PDF_CACHE));
+    return;
+  }
+
   if (request.mode === "navigate" && url.pathname.startsWith("/coach/")) {
+    if (url.pathname === "/coach/document.html") {
+      event.respondWith(networkFirst(request, TEC_CACHE_VERSION, "/coach/document.html"));
+      return;
+    }
     const fallback = ["/coach/app/", "/coach/telemarketing/"].includes(url.pathname) ? "/coach/app/" : "/coach/login/";
     event.respondWith(networkFirst(request, TEC_RUNTIME_CACHE, fallback));
     return;

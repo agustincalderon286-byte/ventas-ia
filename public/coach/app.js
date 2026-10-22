@@ -64,7 +64,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-visits1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261022-pdf1", { scope: "/coach/" })
       .then(async registration => {
         await navigator.serviceWorker.ready;
         registration.active?.postMessage({ type: "CACHE_CURRENT_COACH_APP" });
@@ -4688,55 +4688,34 @@ function initCoachPrivateResources() {
     }
 
     clearMessage(nodes.feedback);
-    const viewer = window.open("", "_blank");
-
-    if (viewer) {
-      viewer.document.write("<p style=\"font-family:Arial,sans-serif;padding:24px\">Abriendo archivo privado...</p>");
-      viewer.document.close();
+    if (!window.TecDocuments) {
+      setMessage(nodes.feedback, "Actualiza el Coach para abrir el visor de documentos.", "error");
+      return;
     }
 
-    try {
-      const response = await fetch(`/api/coach/private-resources/${slotId}/file`, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ pin })
-      });
+    await window.TecDocuments.open({
+      title: resource.fileName || "Documento privado",
+      load: async signal => {
+        const response = await fetch(`/api/coach/private-resources/${slotId}/file`, {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          signal,
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ pin })
+        });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "No pude abrir ese archivo.");
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "No pude abrir ese archivo.");
+        }
+
+        // PIN-protected documents stay in memory only; never put them in offline caches.
+        return await response.blob();
       }
-
-      const blob = await response.blob();
-      const fileUrl = window.URL.createObjectURL(blob);
-
-      if (viewer) {
-        viewer.location.replace(fileUrl);
-      } else {
-        const tempLink = document.createElement("a");
-        tempLink.href = fileUrl;
-        tempLink.target = "_blank";
-        tempLink.rel = "noreferrer";
-        document.body.appendChild(tempLink);
-        tempLink.click();
-        document.body.removeChild(tempLink);
-      }
-
-      window.setTimeout(() => {
-        window.URL.revokeObjectURL(fileUrl);
-      }, 60_000);
-
-      setMessage(nodes.feedback, "Archivo abierto.", "success");
-    } catch (error) {
-      if (viewer && !viewer.closed) {
-        viewer.close();
-      }
-
-      setMessage(nodes.feedback, error.message, "error");
-    }
+    });
   };
 
   slotIds.forEach(slotId => {

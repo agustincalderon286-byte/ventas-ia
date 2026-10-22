@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TEC Coach" />
-    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-visits1" />
+    <link rel="manifest" href="/coach/site.webmanifest?v=20261022-pdf1" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,8 +25,9 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261022-visits1" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-visits1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261022-pdf1" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261022-pdf1" />
+    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261022-pdf1" />
   </head>
   <body class="coach-app-body">
     <div class="coach-shell" data-coach-app-page>
@@ -1456,14 +1457,13 @@
                 <div class="dashboard-actions">
                   <a
                     class="secondary-button"
-                    href="/coach/resources/novel-catalog-digital-3.pdf"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="/coach/document.html?document=catalogo"
+                    data-tec-document="catalogo"
                   >
                     Abrir catalogo
                   </a>
-                  <a class="nav-button" href="/coach/resources/novel-catalog-digital-3.pdf" download>
-                    Descargar PDF
+                  <a class="nav-button" href="/coach/document.html?document=catalogo&amp;save=1" data-tec-document="catalogo" data-tec-document-save>
+                    Guardar sin internet
                   </a>
                 </div>
               </section>
@@ -1477,14 +1477,13 @@
                 <div class="dashboard-actions">
                   <a
                     class="secondary-button"
-                    href="/coach/resources/novel-sales-presentation-2024.pdf"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="/coach/document.html?document=carpeta"
+                    data-tec-document="carpeta"
                   >
                     Abrir carpeta
                   </a>
-                  <a class="nav-button" href="/coach/resources/novel-sales-presentation-2024.pdf" download>
-                    Descargar PDF
+                  <a class="nav-button" href="/coach/document.html?document=carpeta&amp;save=1" data-tec-document="carpeta" data-tec-document-save>
+                    Guardar sin internet
                   </a>
                 </div>
               </section>
@@ -5833,7 +5832,8 @@
       </p>
     </div>
 
-    <script type="module" src="/coach/property-map.js?v=20261022-visits1"></script>
-    <script src="/coach/app.js?v=20261022-visits1"></script>
+    <script src="/coach/document-viewer.js?v=20261022-pdf1"></script>
+    <script type="module" src="/coach/property-map.js?v=20261022-pdf1"></script>
+    <script src="/coach/app.js?v=20261022-pdf1"></script>
   </body>
 </html>

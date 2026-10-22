@@ -32852,10 +32852,16 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
   }
 });
 
-app.get("/coach/resources/novel-catalog-digital-3.pdf", async (req, res) => {
+app.get(["/coach/resources/novel-catalog-digital-3.pdf", "/coach/resources/novel-sales-presentation-2024.pdf"], async (req, res) => {
+  const presentation = req.path.includes("sales-presentation");
+  // Old bookmarks/installed clients must also retain a way back to the Coach.
+  // PDF.js fetch/range requests aren't navigations and still receive PDF bytes.
+  if (req.get("Sec-Fetch-Mode") === "navigate" || req.get("Sec-Fetch-Dest") === "document") {
+    return res.redirect(`/coach/document.html?document=${presentation ? "carpeta" : "catalogo"}`);
+  }
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
-  res.sendFile(path.join(PUBLIC_DIR, "coach", "resources", "novel-catalog-digital-3.pdf"));
+  res.sendFile(path.join(PUBLIC_DIR, "coach", "resources", presentation ? "novel-sales-presentation-2024.pdf" : "novel-catalog-digital-3.pdf"));
 });
 
 app.get(["/coach/resources/lista-precios-2026", "/coach/resources/lista-precios-2026/"], async (req, res) => {
