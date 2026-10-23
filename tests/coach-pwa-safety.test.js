@@ -9,6 +9,77 @@ const worker = fs.readFileSync(new URL("../public/coach/sw.js", import.meta.url)
 function api() { const window = {}; vm.runInNewContext(safety, { window, Blob }); return window.TecPwaSafety; }
 const tick = () => new Promise(setImmediate);
 
+function captureHarness() {
+  let time = 0, check, cleared = 0;
+  const track = new EventTarget(); track.readyState = "live"; track.muted = false; track.enabled = true;
+  const failures = [];
+  const monitor = api().watchAudioCapture({ stream: { getAudioTracks: () => [track] }, now: () => time,
+    timers: { setInterval(fn) { check = fn; return 1; }, clearInterval() { cleared++; } },
+    onInterrupted: reason => failures.push(reason) });
+  return { track, failures, monitor, advance(ms) { time += ms; check(); }, get cleared() { return cleared; } };
+}
+
+test("microphone dictation mute and ended interrupt once, and listeners are cleaned up", () => {
+  for (const event of ["mute", "ended"]) {
+    const h = captureHarness();
+    h.track.dispatchEvent(new Event(event));
+    h.track.dispatchEvent(new Event(event));
+    h.monitor.error();
+    assert.equal(h.failures.length, 1); assert.equal(h.cleared, 1);
+  }
+  const h = captureHarness(); h.monitor.dispose();
+  h.track.dispatchEvent(new Event("mute")); assert.equal(h.failures.length, 0);
+});
+
+test("35 minutes of encoded audio including silence keep recording; five-byte headers do not", () => {
+  const h = captureHarness();
+  for (let second = 0; second < 35 * 60; second++) {
+    if (second % 240 === 0) h.monitor.beginSegment();
+    h.monitor.data(new Blob([new Uint8Array(100)]));
+    h.advance(1000);
+  }
+  assert.equal(h.failures.length, 0);
+  for (let second = 0; second < 20; second++) {
+    h.monitor.data(new Blob([new Uint8Array(5)])); h.advance(1000);
+  }
+  assert.equal(h.failures.length, 1);
+  assert.match(h.failures[0], /20 segundos/);
+});
+
+test("capture watchdog also catches missed mute events and does not depend on voice amplitude", () => {
+  for (const change of [track => { track.muted = true; }, track => { track.readyState = "ended"; }, track => { track.enabled = false; }]) {
+    const h = captureHarness(); change(h.track); h.monitor.check();
+    assert.equal(h.failures.length, 1);
+  }
+  assert.match(app, /status: state.interruptionReason \? "needs-review" : "ready"/);
+  assert.match(app, /state.captureMonitor\?\.dispose\(\)/);
+});
+
+test("actual recorder finish freezes interrupted capture, saves for review and never requests a complete report", async () => {
+  for (const timing of ['before-stop', 'empty-final-blob']) {
+    const state = { recording: true, processing: false, localSessionId: 'local', sessionId: 'server',
+      interruptionReason: timing === 'before-stop' ? 'Dictado interrumpió el micrófono' : '',
+      captureMonitor: { dispose() {} }, uploadQueue: Promise.resolve(), releaseCaptureLock: async () => {} };
+    let saved, stopped = 0, syncs = 0, clockCleared = false;
+    const notices = [];
+    const body = app.slice(app.indexOf('  const finishRecording = async autoStopped =>'), app.indexOf('  const startRecording = async () =>'));
+    const finish = vm.runInNewContext(body + '\nfinishRecording;', {
+      state, navigator: { onLine: true }, outcome: { value: 'unknown' }, CustomEvent,
+      window: { clearInterval() { clockCleared = true; }, clearTimeout() {}, dispatchEvent() {} },
+      updateControls() {}, showAnalysisNotice: value => notices.push(value), setRecorderMessage() {},
+      rotateSegment: async () => { if (timing === 'empty-final-blob') state.interruptionReason = 'Archivo sin audio'; },
+      stopMediaTracks: () => { stopped++; }, releaseWakeLock: async () => {},
+      saveTecOfflineRecording: async value => { saved = value; }, tecActiveRecordingIds: new Set(['local']),
+      syncTecOfflineRecording: async () => { syncs++; }, renderLocalRecovery: async () => {}
+    });
+    await finish(false);
+    assert.equal(saved.status, 'needs-review'); assert.ok(saved.interruptionReason);
+    assert.equal(state.recording, false); assert.equal(state.processing, false);
+    assert.equal(state.localSessionId, ''); assert.ok(stopped); assert.ok(clockCleared);
+    assert.equal(syncs, 0); assert.match(notices.at(-1).title, /interrumpido/);
+  }
+});
+
 test("incremental journal preserves byte order and publishes progress only after committed writes", async () => {
   const parts = [], progress = []; let release, finalized;
   const wait = new Promise(resolve => { release = resolve; });

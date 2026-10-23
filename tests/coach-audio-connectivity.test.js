@@ -43,7 +43,7 @@ test("failed sync preserves HTTP status, phase and local recording without delet
       navigator: { onLine: true }, tecActiveRecordingIds: new Set(), tecOfflineGet: async () => recording,
       getTecCachedViewer: async () => ({ user: { email: "me@example.invalid" } }), getTecAudioTail: async () => [],
       saveTecOfflineRecording: async row => { recording = { ...recording, ...row }; return recording; },
-      getTecOfflineAudioChunks: async () => stage === "transcription" ? [{ key: "audio" }] : [],
+      getTecOfflineAudioChunks: async () => stage === "transcription" ? [{ key: "audio", blob: new Blob(["audio".repeat(20)]) }] : [],
       uploadTecStoredAudioChunk: async () => { throw Object.assign(new Error("Transcription failed"), { status: responseStatus }); },
       apiRequest: async () => { throw Object.assign(new Error("Service failed"), { status: responseStatus }); },
       tecOfflineDelete: async () => { deletes++; }

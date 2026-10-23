@@ -665,7 +665,14 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
 
     failureStage = "transcription";
     const chunks = await getTecOfflineAudioChunks(localId);
-    for (const chunk of chunks) {
+    const invalidChunks = chunks.filter(chunk => (chunk.blob?.size || 0) < 32);
+    const partial = recording.analyzeCompletePartsOnly === true;
+    if (invalidChunks.length && !partial) {
+      throw Object.assign(new Error("Hay segmentos sin audio utilizable. Revisa la grabación y elige analizar solo los segmentos válidos."), { status: 422, captureInterrupted: true });
+    }
+    const includedChunks = chunks.filter(chunk => (chunk.blob?.size || 0) >= 32);
+    if (partial && !includedChunks.length) throw Object.assign(new Error("No hay segmentos válidos en este dispositivo para analizar."), { status: 422, captureInterrupted: true });
+    for (const chunk of includedChunks) {
       await uploadTecStoredAudioChunk(recording.serverSessionId, chunk, { retryEmpty: recording.retryEmpty === true });
     }
 
@@ -677,7 +684,8 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
         body: {
           knownOutcome: recording.knownOutcome || "unknown",
           audioReviewVersion: 1,
-          ...(Number(recording.protectedChunks) > 0 ? {
+          ...(partial ? { allowPartial: true, includedChunkIndexes: includedChunks.map(chunk => Number(chunk.index)),
+            expectedChunkIndexes: includedChunks.map(chunk => Number(chunk.index)) } : Number(recording.protectedChunks) > 0 ? {
             expectedChunkIndexes: Array.from({ length: Number(recording.protectedChunks) }, (_, index) => index)
           } : {})
         }
@@ -692,15 +700,17 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
     if (completed.analysis?.id !== recording.serverSessionId || completed.analysis?.status !== "completed" || !completed.analysis?.report) {
       throw Object.assign(new Error("El servidor todavía no confirmó el reporte completo. La grabación sigue pendiente."), { status: 502 });
     }
-    for (const chunk of chunks) await tecOfflineDelete("audioChunks", chunk.key);
-    if (tail.length) await saveTecOfflineRecording({ ...recording, status: "partial-synced", analysisId: completed.analysis?.id || "" });
-    else await tecOfflineDelete("recordings", localId);
+    if (tail.length || partial) await saveTecOfflineRecording({ ...recording, status: "partial-synced", analysisId: completed.analysis?.id || "" });
+    else {
+      for (const chunk of chunks) await tecOfflineDelete("audioChunks", chunk.key);
+      await tecOfflineDelete("recordings", localId);
+    }
     window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced: 1, recordingId: localId, analysis: completed.analysis } }));
     return completed.analysis || null;
   } catch (error) {
     await saveTecOfflineRecording({
       ...recording,
-      status: "ready",
+      status: error.captureInterrupted || error.status === 422 ? "needs-review" : "ready",
       attempts: Number(recording.attempts || 0) + 1,
       lastError: String(error.message || "No pude sincronizar la grabacion.").slice(0, 240),
       lastStatus: Number(error.status || 0), lastErrorName: error.name || "Error", failureStage,
@@ -15875,7 +15885,8 @@ function initCoachDemoRecorder() {
     uploadedChunks: 0,
     uploadErrors: [],
     wakeLock: null,
-    releaseCaptureLock: null, segmentStopped: null, journal: null, storageFailure: false
+    releaseCaptureLock: null, segmentStopped: null, journal: null, storageFailure: false,
+    captureMonitor: null, interruptionReason: ""
   };
   const SEGMENT_MS = 4 * 60 * 1000;
   const MAX_RECORDING_MS = 90 * 60 * 1000;
@@ -15917,6 +15928,8 @@ function initCoachDemoRecorder() {
   };
 
   const stopMediaTracks = () => {
+    state.captureMonitor?.dispose();
+    state.captureMonitor = null;
     state.stream?.getTracks?.().forEach(track => track.stop());
     state.stream = null;
   };
@@ -15989,6 +16002,7 @@ function initCoachDemoRecorder() {
     const index = state.segmentIndex++;
     state.segmentStartedAt = segmentStartedAt;
     state.recorder = recorder;
+    state.captureMonitor?.beginSegment();
     let segmentDone;
     state.segmentStopped = new Promise(resolve => { segmentDone = resolve; });
     const journal = window.TecPwaSafety.createAudioJournal({ localId: state.localSessionId, index,
@@ -15998,6 +16012,7 @@ function initCoachDemoRecorder() {
       } });
     state.journal = journal;
     recorder.addEventListener("dataavailable", event => {
+      state.captureMonitor?.data(event.data);
       if (event.data?.size) {
         state.segmentParts.push(event.data);
         journal.append(event.data, (Date.now() - segmentStartedAt) / 1000).catch(() => {
@@ -16013,14 +16028,18 @@ function initCoachDemoRecorder() {
         if (blob?.size) {
           state.uploadedChunks++;
           await saveTecOfflineRecording({ localId: state.localSessionId, protectedChunks: state.uploadedChunks });
-        state.uploadQueue = state.uploadQueue
-          .then(() => uploadSegment(blob, durationSeconds, index))
-          .catch(error => {
-            state.uploadErrors.push(error);
-            setRecorderMessage(
-              "Un segmento sigue guardado en el dispositivo y pendiente de envío.", "info"
-            );
-          });
+          if (blob.size < 32) {
+            state.interruptionReason = "El micrófono no produjo audio utilizable. La grabación se detuvo; revisa los segmentos anteriores.";
+            return;
+          }
+          state.uploadQueue = state.uploadQueue
+            .then(() => uploadSegment(blob, durationSeconds, index))
+            .catch(error => {
+              state.uploadErrors.push(error);
+              if (!state.interruptionReason) setRecorderMessage(
+                "Un segmento sigue guardado en el dispositivo y pendiente de envío.", "info"
+              );
+            });
         }
       } catch (error) {
         state.storageFailure = true;
@@ -16034,10 +16053,13 @@ function initCoachDemoRecorder() {
         setRecorderMessage("No se pudo guardar todo el audio. Descarga la copia de emergencia antes de cerrar esta página.", "error");
       } finally {
         segmentDone();
-        if (state.recording && !state.rotating) finishRecording(false);
+        if (state.recording && !state.rotating) {
+          state.interruptionReason ||= "El navegador detuvo la grabación inesperadamente. Revisa el audio guardado.";
+          finishRecording(false);
+        }
       }
     });
-    recorder.addEventListener("error", () => setRecorderMessage("El navegador interrumpió el micrófono. Se conservará el audio que pudo entregar.", "error"));
+    recorder.addEventListener("error", () => state.captureMonitor?.error());
     recorder.start(1000);
     state.rotateTimer = window.setTimeout(() => rotateSegment(false), SEGMENT_MS);
   };
@@ -16057,9 +16079,9 @@ function initCoachDemoRecorder() {
       window.clearTimeout(state.rotateTimer);
       state.recorder.stop();
       await state.segmentStopped;
-      if (!finalSegment && state.recording && !state.storageFailure) {
+      if (!finalSegment && state.recording && !state.storageFailure && !state.interruptionReason) {
         beginSegment();
-      } else if (!finalSegment && state.storageFailure) {
+      } else if (!finalSegment && (state.storageFailure || state.interruptionReason)) {
         window.setTimeout(() => finishRecording(false), 0);
       }
     })();
@@ -16134,9 +16156,9 @@ function initCoachDemoRecorder() {
       title.textContent = "Audio guardado en este dispositivo";
       const copy = document.createElement("p");
       copy.textContent = row.status === "recording" || row.status === "needs-review"
-        ? "Grabación interrumpida o abierta en otra ventana. El último tramo puede estar incompleto. Cierra otras ventanas antes de recuperarla."
+        ? (row.interruptionReason || "Grabación interrumpida o con segmentos sin audio. Cierra otras ventanas del Coach antes de revisarla.")
         : row.status === "needs-audio" ? "No se obtuvo suficiente diálogo para preparar el reporte. Esta grabación necesita revisión; no está esperando conexión."
-        : row.status === "partial-synced" ? "Se analizaron solo los segmentos completos. La parte interrumpida sigue disponible aquí."
+        : row.status === "partial-synced" ? "Reporte parcial guardado: solo se analizaron los segmentos válidos. Las copias locales se conservan aquí; no se reintentarán automáticamente."
         : "Pendiente de confirmar el análisis con el servidor. La copia local se conserva.";
       card.append(title, copy);
       const connectionResult = document.createElement("p");
@@ -16178,11 +16200,18 @@ function initCoachDemoRecorder() {
         link.textContent = "Descargar parte interrumpida (puede requerir reparación)";
         card.append(link);
       });
-      if (row.status !== "partial-synced") {
+      {
         const finalized = await getTecOfflineAudioChunks(row.localId);
-        if (row.status === "needs-audio") {
+        const invalid = finalized.filter(chunk => (chunk.blob?.size || 0) < 32);
+        if (row.status === "needs-audio" || row.status === "needs-review" || row.status === "partial-synced" || invalid.length) {
           title.textContent = "Revisar audio de la demostración";
           for (const chunk of finalized) {
+            if ((chunk.blob?.size || 0) < 32) {
+              const warning = document.createElement("p");
+              warning.textContent = `Segmento ${Number(chunk.index) + 1}: sin audio utilizable. No se enviará al análisis parcial.`;
+              card.append(warning);
+              continue;
+            }
             const url = URL.createObjectURL(chunk.blob);
             nextUrls.push(url);
             const player = document.createElement("audio");
@@ -16197,32 +16226,37 @@ function initCoachDemoRecorder() {
             download.className = "secondary-button";
             card.append(player, download);
           }
-          if (!finalized.length) copy.textContent = "La transcripción de esta grabación anterior quedó vacía y no hay una copia de audio disponible en este dispositivo. Inicia una nueva demostración; esta ya no se reintentará automáticamente.";
+          if (!finalized.length && row.status === "needs-audio") copy.textContent = "La transcripción de esta grabación anterior quedó vacía y no hay una copia de audio disponible en este dispositivo. Inicia una nueva demostración; esta ya no se reintentará automáticamente.";
         }
-        const hasComplete = finalized.length || Number(row.protectedChunks || 0) > 0 || (row.protectedChunks === undefined && row.serverSessionId);
+        const partialRecovery = Boolean(invalid.length || tail.length || row.interruptionReason || ["needs-review", "recording"].includes(row.status));
+        const hasComplete = finalized.some(chunk => (chunk.blob?.size || 0) >= 32) ||
+          (!partialRecovery && (Number(row.protectedChunks || 0) > 0 || (row.protectedChunks === undefined && row.serverSessionId)));
         const button = document.createElement("button");
         button.type = "button";
         button.className = "secondary-button";
-        button.textContent = row.status === "needs-audio" ? "Volver a transcribir el audio" : tail.length ? "Analizar solo los segmentos completos" : "Recuperar y enviar segmentos completos";
+        button.textContent = partialRecovery ? "Analizar solo los segmentos válidos (reporte parcial)" : row.status === "needs-audio" ? "Volver a transcribir el audio" : "Recuperar y enviar segmentos completos";
+        button.hidden = row.status === "partial-synced";
         if (!hasComplete || (row.status === "needs-audio" && !finalized.length)) {
           button.disabled = true;
           if (row.status !== "needs-audio") copy.textContent += " No hay segmentos completos para analizar; descarga la parte interrumpida para revisión.";
         }
         button.addEventListener("click", async () => {
           if (!navigator.onLine) return setRecorderMessage("La copia sigue aquí. Conéctate para preparar el análisis.", "info");
-          if (!window.confirm("Cierra primero las otras ventanas del Coach. Se analizarán solo los segmentos completos; el último tramo interrumpido no se incluirá y seguirá disponible para descargar. ¿Continuar?")) return;
+          if (!window.confirm(partialRecovery
+            ? "Cierra primero las otras ventanas del Coach. Se creará un REPORTE PARCIAL con los segmentos válidos. Los tramos vacíos o interrumpidos no se incluirán; las copias locales se conservarán. ¿Continuar?"
+            : "Cierra primero las otras ventanas del Coach. Se reenviarán los segmentos guardados y se confirmará el reporte antes de liberar la copia local. ¿Continuar?")) return;
           button.disabled = true;
           try {
             const prepared = await withTecRecordingLock(row.localId, async () => {
               const current = await tecOfflineGet("recordings", row.localId);
               if (!current || current.ownerEmail !== email || tecActiveRecordingIds.has(row.localId)) return null;
-              return saveTecOfflineRecording({ ...current, status: "ready", analyzeCompletePartsOnly: true, retryEmpty: row.status === "needs-audio" });
+              return saveTecOfflineRecording({ ...current, status: "ready", analyzeCompletePartsOnly: partialRecovery, retryEmpty: row.status === "needs-audio" });
             });
             if (!prepared) throw new Error("La grabación está abierta en otra ventana. Ciérrala antes de continuar.");
             const analysis = await syncTecOfflineRecording(row.localId);
             if (!analysis) throw new Error("El envío sigue en otra ventana. Tu copia local se conserva.");
             if (analysis.status === "needs_audio") { setRecorderMessage("No se obtuvo suficiente diálogo. Puedes escuchar la copia disponible en Revisar audio.", "info"); await loadHistory(); return; }
-            setRecorderMessage(tail.length ? "Análisis parcial listo: no incluye el tramo interrumpido." : "Análisis recuperado.", "success");
+            setRecorderMessage(partialRecovery ? "Análisis parcial listo: no incluye los tramos vacíos o interrumpidos." : "Análisis recuperado.", "success");
             await loadHistory();
           } catch (error) { setRecorderMessage(error.message, "error"); }
           finally { button.disabled = false; }
@@ -16255,32 +16289,41 @@ function initCoachDemoRecorder() {
 
     state.recording = false;
     state.processing = true;
+    state.captureMonitor?.dispose();
     window.clearInterval(state.clockTimer);
     window.clearTimeout(state.rotateTimer);
     updateControls();
     showAnalysisNotice({
-      title: "Preparando tu analisis",
-      copy: "Puedes continuar con el cierre. Te avisaremos cuando el reporte este listo."
+      title: state.interruptionReason ? "Grabación detenida: micrófono interrumpido" : "Preparando tu analisis",
+      copy: state.interruptionReason || "Puedes continuar con el cierre. Te avisaremos cuando el reporte este listo."
     });
-    setRecorderMessage("Terminando el ultimo fragmento...", "info");
+    setRecorderMessage(state.interruptionReason || "Terminando el ultimo fragmento...", state.interruptionReason ? "error" : "info");
 
     try {
       await rotateSegment(true);
       stopMediaTracks();
       await releaseWakeLock();
-      setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
+      if (!state.interruptionReason) setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
       await state.uploadQueue;
       if (state.storageFailure) throw new Error("Hay audio sin guardar. Descarga la copia de emergencia antes de salir.");
       await saveTecOfflineRecording({
         localId: state.localSessionId,
         serverSessionId: state.sessionId,
-        status: "ready",
+        status: state.interruptionReason ? "needs-review" : "ready",
+        interruptionReason: state.interruptionReason,
         knownOutcome: outcome.value || "unknown",
         stoppedAt: new Date().toISOString()
       });
       tecActiveRecordingIds.delete(state.localSessionId);
       await state.releaseCaptureLock?.();
       state.releaseCaptureLock = null;
+
+      if (state.interruptionReason) {
+        showAnalysisNotice({ title: "Grabación detenida: micrófono interrumpido", copy: `${state.interruptionReason} Puedes revisar lo guardado en Mis análisis. Para continuar, cierra el dictado y presiona Iniciar grabación.` });
+        setRecorderMessage(state.interruptionReason, "error");
+        window.dispatchEvent(new CustomEvent("tec:offline-status"));
+        return;
+      }
 
       if (!navigator.onLine) {
         showAnalysisNotice({
@@ -16327,6 +16370,8 @@ function initCoachDemoRecorder() {
         state.storageFailure ? "error" : protectedRecording ? "info" : "error"
       );
     } finally {
+      stopMediaTracks();
+      await releaseWakeLock();
       state.processing = false;
       await state.releaseCaptureLock?.();
       state.releaseCaptureLock = null;
@@ -16412,6 +16457,7 @@ function initCoachDemoRecorder() {
       state.uploadedChunks = 0;
       state.uploadErrors = [];
       state.storageFailure = false;
+      state.interruptionReason = "";
       state.uploadQueue = Promise.resolve();
       analysisNotice.hidden = true;
       analysisNotice.dataset.analysisId = "";
@@ -16424,7 +16470,14 @@ function initCoachDemoRecorder() {
       if (navigator.wakeLock?.request) {
         state.wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
       }
+      state.captureMonitor = window.TecPwaSafety.watchAudioCapture({ stream: state.stream, onInterrupted: reason => {
+        if (!state.recording) return;
+        state.interruptionReason = reason;
+        finishRecording(false);
+      } });
       beginSegment();
+      state.captureMonitor?.check();
+      if (!state.recording) return;
       state.clockTimer = window.setInterval(() => {
         const elapsedMs = Date.now() - state.startedAt;
         timer.textContent = formatCoachDemoRecordingTime(elapsedMs / 1000);
@@ -16434,7 +16487,7 @@ function initCoachDemoRecorder() {
       }, 1000);
       setRecorderMessage(
         state.sessionId
-          ? "Grabacion activa. Deja esta pagina abierta durante la demostracion."
+          ? "Grabación activa. Mantén esta página abierta. No uses el dictado del teclado, llamadas u otra aplicación con micrófono mientras grabas; escribe las notas con el teclado."
           : `Grabación activa en este dispositivo. ${audioFailure(sessionError || {}).text}`,
         state.sessionId ? "success" : "info"
       );

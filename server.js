@@ -32148,6 +32148,12 @@ app.post(
         return responderCoachError(res, 409, "Esa grabacion ya termino. Este segmento no se ha confirmado; su copia local se conserva.");
       }
 
+      // A header-only payload cannot contain a usable recording. Do not charge
+      // for repeated transcription attempts of the five-byte iOS interruption.
+      if (buffer.length < 32) {
+        return responderCoachError(res, 422, "El segmento no contiene audio utilizable. Revisa la grabacion y recupera solo los segmentos validos.");
+      }
+
       const otherDuration = doc.chunks
         .filter(chunk => Number(chunk.index) !== index)
         .reduce((total, chunk) => total + Math.max(0, Number(chunk.durationSeconds || 0)), 0);
@@ -32237,7 +32243,13 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       return responderCoachError(res, 404, "Esa grabacion no existe.");
     }
 
-    const expected = req.body?.expectedChunkIndexes;
+    const partial = req.body?.allowPartial === true;
+    const included = req.body?.includedChunkIndexes;
+    if (partial && (!Array.isArray(included) || !included.length || included.length > COACH_DEMO_MAX_CHUNKS ||
+        new Set(included).size !== included.length || included.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS))) {
+      return responderCoachError(res, 400, "Selecciona los segmentos validos para el reporte parcial.");
+    }
+    const expected = partial ? included : req.body?.expectedChunkIndexes;
     if (expected !== undefined) {
       if (!Array.isArray(expected) || !expected.length || expected.length > COACH_DEMO_MAX_CHUNKS ||
           expected.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS)) {
@@ -32253,20 +32265,22 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
     }
 
     const successfulChunks = doc.chunks
-      .filter(chunk => chunk?.status === "transcribed" && String(chunk?.text || "").trim())
+      .filter(chunk => chunk?.status === "transcribed" && (!partial || included.includes(Number(chunk.index))) && String(chunk?.text || "").trim())
       .sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
 
-    if (!doc.chunks.length || doc.chunks.some(chunk => chunk.status !== "transcribed")) {
+    if (!doc.chunks.length || (!partial && doc.chunks.some(chunk => chunk.status !== "transcribed"))) {
       return responderCoachError(res, 409, "Todavia hay segmentos pendientes de transcribir. La grabacion se conserva para reintentar.");
     }
 
     let elapsedSeconds = 0;
-    const transcript = successfulChunks
+    let transcript = successfulChunks
       .map(chunk => {
-        const startMinute = Math.floor(elapsedSeconds / 60);
+        const precedingSeconds = doc.chunks.filter(other => Number(other.index) < Number(chunk.index))
+          .reduce((total, other) => total + Math.max(0, Number(other.durationSeconds || 0)), 0);
+        const startMinute = Math.floor(precedingSeconds / 60);
         elapsedSeconds += Math.max(1, Number(chunk.durationSeconds || 0));
-        const endMinute = Math.max(startMinute + 1, Math.ceil(elapsedSeconds / 60));
-        return `[Minutos aproximados ${startMinute}-${endMinute}]\n${String(chunk.text || "").trim()}`;
+        const endMinute = Math.max(startMinute + 1, Math.ceil((precedingSeconds + Number(chunk.durationSeconds || 0)) / 60));
+        return `[Segmento ${Number(chunk.index) + 1}; minutos aproximados ${startMinute}-${endMinute}]\n${String(chunk.text || "").trim()}`;
       })
       .join("\n\n")
       .trim();
@@ -32284,6 +32298,8 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
     }
 
+    const partialNotice = "REPORTE PARCIAL: hubo una interrupcion del audio. Solo se evaluan los segmentos disponibles; las partes ausentes no permiten concluir que el representante omitio pasos o no cerro la venta.";
+    if (partial) transcript = `${partialNotice}\nSegmentos incluidos: ${included.map(index => index + 1).join(", ")}.\n\n${transcript}`;
     doc.status = "processing";
     doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
     doc.stoppedAt = new Date();
@@ -32297,6 +32313,13 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       transcript,
       knownOutcome: doc.knownOutcome
     });
+
+    if (partial) {
+      report.title = `[Parcial] ${report.title || "Analisis de demostracion"}`;
+      report.summary = `${partialNotice}\n\n${report.summary || ""}`;
+      report.partial = true;
+      report.includedChunkIndexes = included;
+    }
 
     doc.status = "completed";
     doc.report = report;

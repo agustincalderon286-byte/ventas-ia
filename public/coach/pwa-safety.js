@@ -13,6 +13,40 @@
   function recordingCanRetry(recording, activeIds = new Set()) {
     return Boolean(recording?.localId && ["ready", "syncing"].includes(recording.status) && !activeIds.has(recording.localId));
   }
+  // Watch delivery of encoded data, not voice loudness: silence is valid audio.
+  function watchAudioCapture({ stream, onInterrupted, now = () => Date.now(), timers = window }) {
+    let lastData = now(), stopped = false;
+    const tracks = stream.getAudioTracks();
+    const listeners = [];
+    const interrupt = reason => {
+      if (stopped) return;
+      dispose();
+      onInterrupted(reason);
+    };
+    const check = () => {
+      if (tracks.some(track => track.readyState === "ended" || track.muted || track.enabled === false)) {
+        interrupt("El micrófono se interrumpió. El dictado, una llamada u otra aplicación pueden ocuparlo.");
+      } else if (now() - lastData >= 20000) {
+        interrupt("El navegador dejó de entregar audio durante 20 segundos. Detuvimos la grabación para evitar segmentos vacíos.");
+      }
+    };
+    for (const track of tracks) {
+      for (const event of ["mute", "ended"]) {
+        const handler = () => interrupt("El micrófono se interrumpió. Cierra el dictado o la otra aplicación antes de volver a grabar.");
+        track.addEventListener(event, handler);
+        listeners.push([track, event, handler]);
+      }
+    }
+    const interval = timers.setInterval(check, 1000);
+    function dispose() {
+      stopped = true;
+      timers.clearInterval(interval);
+      listeners.forEach(([track, event, handler]) => track.removeEventListener(event, handler));
+    }
+    return { check, dispose, beginSegment() { lastData = now(); },
+      data(blob) { if (blob?.size >= 32) lastData = now(); },
+      error() { interrupt("El navegador interrumpió la grabación. Se conserva el audio que pudo entregar."); } };
+  }
   function createAudioJournal({ localId, index, mimeType, writePart, finalize, onProtected = () => {} }) {
     const parts = [];
     let pending = Promise.resolve(), sequence = 0, ended = false, gap = false;
@@ -75,5 +109,5 @@
       worker?.addEventListener("statechange", () => { if (worker.state === "installed") show(); });
     });
   }
-  window.TecPwaSafety = Object.freeze({ createAudioJournal, offlineViewerAllowed, watchUpdates, describeAudioFailure, recordingCanRetry });
+  window.TecPwaSafety = Object.freeze({ createAudioJournal, offlineViewerAllowed, watchUpdates, describeAudioFailure, recordingCanRetry, watchAudioCapture });
 })();

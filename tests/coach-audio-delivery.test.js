@@ -50,11 +50,63 @@ async function harness(run) {
   };
   const create = async () => (await request('', { consentConfirmed: true, clientRecordingId: `fixture-${records.size}` })).data.analysis.id;
   const chunk = (id, index, extra = {}) => request(`/${id}/chunks`, {}, {
-    headers: { 'Content-Type': 'audio/mp4;codecs=mp4a.40.2', 'X-Coach-Chunk-Index': String(index), 'X-Coach-Chunk-Duration': '240', ...extra }, body: Buffer.from(`audio-${index}`)
+    headers: { 'Content-Type': 'audio/mp4;codecs=mp4a.40.2', 'X-Coach-Chunk-Index': String(index), 'X-Coach-Chunk-Duration': '240', ...extra }, body: Buffer.from(`audio-${index}`.padEnd(64, '.'))
   });
   try { await run({ request, create, chunk, counts, records, base }); }
   finally { await new Promise(resolve => server.close(resolve)); }
 }
+
+test('five-byte microphone interruption is rejected without spending a transcription request', () => harness(async ({ create, request, counts }) => {
+  const id = await create();
+  const response = await request(`/${id}/chunks`, {}, { headers: { 'Content-Type': 'audio/webm', 'X-Coach-Chunk-Index': '0' }, body: Buffer.from('12345') });
+  assert.equal(response.status, 422); assert.equal(counts.transcriptions, 0);
+}));
+
+test('explicit partial recovery skips corrupt segments, labels report, preserves metadata and rejects unsafe selections', () => harness(async ({ create, chunk, request, records, counts }) => {
+  const id = await create();
+  for (const index of [0, 2]) await chunk(id, index);
+  records.get(id).chunks.push({ index: 1, durationSeconds: 240, sizeBytes: 5, status: 'error', text: '', error: 'corrupt' });
+  assert.equal((await request(`/${id}/complete`)).status, 409);
+  for (const selection of [[], [0, 0], [-1], [30], ['0']]) {
+    assert.equal((await request(`/${id}/complete`, { allowPartial: true, includedChunkIndexes: selection })).status, 400);
+  }
+  assert.equal((await request(`/${id}/complete`, { allowPartial: true, includedChunkIndexes: [0, 1] })).status, 409);
+  assert.equal((await request(`/${id}/complete`, { allowPartial: true, includedChunkIndexes: [0, 2] }, { headers: { 'Content-Type': 'application/json', 'x-test-account': 'other' } })).status, 404);
+  const result = await request(`/${id}/complete`, { allowPartial: true, includedChunkIndexes: [0, 2] });
+  assert.equal(result.status, 200); assert.equal(result.data.analysis.report.partial, true);
+  assert.match(result.data.analysis.report.title, /Parcial/);
+  assert.match(result.data.analysis.transcript, /minutos aproximados 8-12/);
+  assert.match(result.data.analysis.transcript, /REPORTE PARCIAL/);
+  assert.equal(records.get(id).chunks.length, 3);
+  await request(`/${id}/complete`, { allowPartial: true, includedChunkIndexes: [0, 2] });
+  assert.equal(counts.reports, 1);
+}));
+
+test('client stops automatic retries of empty chunks and preserves every local copy after explicit partial recovery', async () => {
+  const client = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
+  let local = { localId: 'local', serverSessionId: 'server', ownerEmail: 'test@example.invalid', consentConfirmed: true, status: 'ready', protectedChunks: 2 };
+  let deleted = 0, requests = 0, submitted;
+  const uploaded = [];
+  const chunks = [0, 1].map(index => ({ index, key: String(index), blob: new Blob([new Uint8Array(index ? 5 : 1024)]) }));
+  const sync = vm.runInNewContext(`(${client.slice(client.indexOf('async function syncTecOfflineRecordingUnlocked'), client.indexOf('async function syncTecOfflineRecordings()')).trim()})`, {
+    navigator: { onLine: true }, tecActiveRecordingIds: new Set(),
+    tecOfflineGet: async () => local, getTecCachedViewer: async () => ({ user: { email: 'test@example.invalid' } }),
+    getTecAudioTail: async () => [], getTecOfflineAudioChunks: async () => chunks,
+    uploadTecStoredAudioChunk: async (_id, chunk) => uploaded.push(chunk.index),
+    apiRequest: async (_url, options) => { requests++; submitted = options.body; return { analysis: { id: 'server', status: 'completed', report: { title: '[Parcial]' } } }; },
+    saveTecOfflineRecording: async value => (local = { ...local, ...value }),
+    tecOfflineDelete: async () => { deleted++; }, window: { dispatchEvent() {} }, CustomEvent
+  });
+  await assert.rejects(sync('local'), /sin audio utilizable/);
+  assert.equal(local.status, 'needs-review'); assert.equal(requests, 0);
+  assert.equal(await sync('local'), null);
+  local.status = 'ready'; local.analyzeCompletePartsOnly = true;
+  await sync('local');
+  assert.deepEqual(uploaded, [0]); assert.equal(submitted.allowPartial, true);
+  assert.deepEqual(Array.from(submitted.includedChunkIndexes), [0]);
+  assert.equal(local.status, 'partial-synced'); assert.equal(deleted, 0);
+  assert.equal(await sync('local'), null); assert.equal(requests, 1);
+});
 
 test('a lost upload receipt can be retried after completion without leaving a permanent HTTP 409', () => harness(async ({ create, chunk, request, counts }) => {
   const id = await create();
@@ -106,7 +158,7 @@ test('actual client sync recovers lost upload and report responses, clears pendi
   const id = await create();
   const client = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
   let local = { localId: 'local', serverSessionId: id, ownerEmail: 'test@example.invalid', consentConfirmed: true, status: 'ready', protectedChunks: 2 };
-  const chunks = new Map([0, 1].map(index => [String(index), { key: String(index), index, durationSeconds: 240, mimeType: 'audio/mp4', blob: new Blob([`audio-${index}`]) }]));
+  const chunks = new Map([0, 1].map(index => [String(index), { key: String(index), index, durationSeconds: 240, mimeType: 'audio/mp4', blob: new Blob([`audio-${index}`.padEnd(64, '.')]) }]));
   const events = [];
   let loseChunkReceipt = true, loseReportReceipt = true;
   const ctx = vm.createContext({
@@ -161,7 +213,7 @@ test('client retains audio for empty transcripts and stops automatic retries', a
   const sync = vm.runInNewContext(`(${client.slice(client.indexOf('async function syncTecOfflineRecordingUnlocked'), client.indexOf('async function syncTecOfflineRecordings()')).trim()})`, {
     navigator: { onLine: true }, tecActiveRecordingIds: new Set(),
     tecOfflineGet: async () => local, getTecCachedViewer: async () => ({ user: { email: 'test@example.invalid' } }),
-    getTecAudioTail: async () => [], getTecOfflineAudioChunks: async () => [{ key: 'audio', blob: new Blob(['original audio']) }],
+    getTecAudioTail: async () => [], getTecOfflineAudioChunks: async () => [{ key: 'audio', blob: new Blob(['original audio'.repeat(5)]) }],
     uploadTecStoredAudioChunk: async () => {},
     apiRequest: async () => { requests++; return { analysis: { id: 'server', status: 'needs_audio', error: 'No dialogue' } }; },
     saveTecOfflineRecording: async value => (local = { ...local, ...value }),
