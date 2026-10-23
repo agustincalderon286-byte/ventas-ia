@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261023-visit-resume1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261023-product-picker2", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -2058,54 +2058,85 @@ async function searchTecProductCatalog(query) {
 
 function initSurveyProductPicker() {
   const form = document.querySelector("[data-health-survey-form]");
-  if (!form) return;
+  if (!form || form.getSelectedCatalogProducts) return;
   const calc = document.querySelector("[data-order-calc]");
   const inputs = [1, 2, 3].map(index => form.elements.namedItem(`topProduct${index}`));
-  const sync = () => calc?.syncProductsFromSurvey?.({ id: `draft:${getTecVisitId()}`, topProducts: inputs.map(input => input?.value || "") });
+  const selected = [null, null, null];
+  form.getSelectedCatalogProducts = () => selected.map((match, index) => match?.nombre_producto === inputs[index]?.value ? match : null);
   const refreshers = [];
   inputs.forEach((input, index) => {
     if (!input) return;
+    // Also support an older cached HTML shell while the new script is installed.
+    input.parentElement.classList.add("tec-survey-product");
+    calc?.clearSurveyProduct?.(index);
+    const code = document.createElement("input"); code.type = "hidden"; code.name = `topProductCode${index + 1}`;
+    const search = document.createElement("button"); search.type = "button"; search.className = "secondary-button tec-survey-product-search";
+    search.textContent = "Buscar productos"; search.setAttribute("aria-label", `Buscar productos para producto ${index + 1}`);
     const results = document.createElement("div"); results.className = "order-calc-suggestions"; results.hidden = true;
+    results.id = `survey-product-options-${index + 1}`;
     results.setAttribute("aria-label", `Opciones para producto ${index + 1}`);
+    search.setAttribute("aria-controls", results.id); search.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", results.id); input.setAttribute("aria-expanded", "false");
+    input.setAttribute("autocomplete", "off");
     const visual = document.createElement("div"); visual.className = "tec-survey-product-visual"; visual.hidden = true;
-    const note = document.createElement("span"); note.className = "mini-note"; note.textContent = "Busca por nombre o código. Sin precios en la encuesta.";
-    input.parentElement.append(visual, results, note);
-    let revision = 0, timer;
+    const note = document.createElement("span"); note.className = "mini-note"; note.setAttribute("role", "status");
+    note.textContent = "Escribe 3 letras y elige una tarjeta con foto. Sin precios.";
+    input.parentElement.append(code, search, results, visual, note);
+    let revision = 0, timer, observedValue = input.value;
+    const showResults = open => { results.hidden = !open; input.setAttribute("aria-expanded", String(open)); search.setAttribute("aria-expanded", String(open)); };
+    const invalidateSelection = () => {
+      selected[index] = null; code.value = ""; visual.hidden = true;
+      calc?.clearSurveyProduct?.(index);
+    };
     const select = match => {
       revision++; clearTimeout(timer);
       input.value = match.nombre_producto || "";
+      observedValue = input.value;
+      code.value = match.codigo_producto || ""; selected[index] = match;
       visual.replaceChildren(); visual.hidden = false;
       if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = match.nombre_producto || "Producto"; image.loading = "lazy"; visual.append(image); }
       const label = document.createElement("span"); label.textContent = `${match.nombre_producto || ""} · ${match.codigo_producto || ""}`; visual.append(label);
-      results.hidden = true; results.replaceChildren();
-      input.dispatchEvent(new Event("change", { bubbles: true }));
+      showResults(false); results.replaceChildren();
       calc?.applySurveyProduct?.(index, match);
+      note.textContent = "Producto seleccionado y enviado a la calculadora. Para cambiarlo, busca y elige otra tarjeta.";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     };
     const lookup = async (restore = false) => {
+      clearTimeout(timer);
       const id = ++revision, query = input.value.trim();
-      if (query.length < 3) { results.hidden = true; return; }
+      if (query.length < 3) { showResults(false); note.textContent = "Escribe al menos 3 letras del nombre o código y toca Buscar productos."; return; }
+      showResults(true); results.textContent = "Buscando productos…";
       try {
         const matches = await searchTecProductCatalog(query);
         if (id !== revision || input.value.trim() !== query) return;
         if (restore) {
-          const match = matches.find(item => String(item.nombre_producto).toLowerCase() === query.toLowerCase() || String(item.codigo_producto).toLowerCase() === query.toLowerCase());
-          if (match) select(match);
-          return;
+          const exact = matches.filter(item => String(item.nombre_producto).toLowerCase() === query.toLowerCase());
+          const match = exact.find(item => code.value && item.codigo_producto === code.value) || (exact.length === 1 ? exact[0] : null);
+          if (match) { select(match); return; }
         }
-        results.replaceChildren(); results.hidden = false;
+        results.replaceChildren(); showResults(true);
+        note.textContent = matches.length ? "Toca la tarjeta del producto exacto para enviarlo a la calculadora." : "No hay coincidencias. Prueba otro nombre o código.";
         for (const match of matches) {
           const button = document.createElement("button"); button.type = "button"; button.className = "order-calc-suggestion";
-          if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = ""; image.loading = "lazy"; image.className = "tec-survey-product-thumb"; button.append(image); }
-          const label = document.createElement("span"); label.textContent = `${match.nombre_producto || "Producto"} · ${match.codigo_producto || ""}`; button.append(label);
+          const media = document.createElement("span"); media.className = "order-calc-suggestion-media";
+          if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = ""; image.loading = "lazy"; media.append(image); }
+          else media.textContent = "Sin foto";
+          const label = document.createElement("span"); label.className = "order-calc-suggestion-copy";
+          const name = document.createElement("strong"); name.textContent = match.nombre_producto || "Producto";
+          const detail = document.createElement("span"); detail.textContent = `${match.codigo_producto || "Sin código"} · Elegir producto`;
+          label.append(name, detail); button.append(media, label);
           button.addEventListener("click", () => select(match)); results.append(button);
         }
         if (!matches.length) results.textContent = "No hay coincidencias. Prueba otro nombre o código.";
-      } catch { if (id === revision) note.textContent = "No pude consultar el catálogo. Puedes escribir el nombre y continuar."; }
+      } catch { if (id === revision) { showResults(false); note.textContent = "No pude consultar el catálogo. Toca Buscar productos para reintentar; no se seleccionó ningún producto."; } }
     };
-    input.addEventListener("input", () => { revision++; clearTimeout(timer); visual.hidden = true; results.hidden = true; sync(); timer = setTimeout(() => lookup(), 260); });
-    input.addEventListener("change", sync);
-    input.addEventListener("keydown", event => { if (event.key === "Escape") results.hidden = true; });
-    refreshers.push(() => { revision++; clearTimeout(timer); visual.hidden = true; results.hidden = true; if (input.value) lookup(true); });
+    input.addEventListener("input", () => { observedValue = input.value; revision++; clearTimeout(timer); invalidateSelection(); showResults(false); note.textContent = "Elige un producto de la lista para copiarlo a la calculadora."; timer = setTimeout(() => lookup(), 260); });
+    input.addEventListener("focus", () => { if (input.value.trim().length >= 3) lookup(); });
+    // Blur fires change before a suggestion's click. Do not replace the tapped card.
+    input.addEventListener("change", () => { if (observedValue !== input.value) { observedValue = input.value; invalidateSelection(); lookup(); } });
+    input.addEventListener("keydown", event => { if (event.key === "Escape") { revision++; showResults(false); } if (event.key === "Enter") { event.preventDefault(); lookup(); } });
+    search.addEventListener("click", () => lookup());
+    refreshers.push(() => { revision++; clearTimeout(timer); selected[index] = null; calc?.clearSurveyProduct?.(index); visual.hidden = true; showResults(false); if (input.value) lookup(true); });
   });
   form.refreshProductPicker = () => refreshers.forEach(refresh => refresh());
   form.addEventListener("reset", () => { setTimeout(() => form.refreshProductPicker(), 0); });
@@ -2402,6 +2433,13 @@ function initOrderCalculator() {
 
   const syncProductsFromSurvey = context => {
     const surveyForm = document.querySelector("[data-health-survey-form]");
+    if (surveyForm?.getSelectedCatalogProducts) {
+      surveyForm.getSelectedCatalogProducts().forEach((match, index) => {
+        if (match) root.applySurveyProduct?.(index, match);
+        else root.clearSurveyProduct?.(index);
+      });
+      return;
+    }
     const liveProducts = [1, 2, 3].map(index => surveyForm?.elements?.namedItem(`topProduct${index}`)?.value || "");
     const safeContext = context?.id ? context : liveProducts.some(Boolean) ? { id: `draft:${getTecVisitId()}`, topProducts: liveProducts } : getActiveCoachHealthSurveyContext();
     const topProducts = Array.isArray(safeContext?.topProducts)
@@ -2671,7 +2709,21 @@ function initOrderCalculator() {
 
   root.dataset.orderCalcSyncReady = "true";
   root.syncProductsFromSurvey = syncProductsFromSurvey;
-  root.applySurveyProduct = (index, match) => { if (productCards[index]) applyCatalogMatch(productCards[index], match, { forcePrice: true, nameSource: "survey" }); };
+  root.applySurveyProduct = (index, match) => {
+    if (!productCards[index]) return;
+    productCards[index]._lookupRevision = (productCards[index]._lookupRevision || 0) + 1;
+    applyCatalogMatch(productCards[index], match, { forcePrice: true, nameSource: "survey" });
+  };
+  root.clearSurveyProduct = index => {
+    const card = productCards[index]; if (!card) return;
+    const {nameInput, priceInput} = getProductNodes(card);
+    if (nameInput?.dataset.orderCalcSource !== "survey") return;
+    card._lookupRevision = (card._lookupRevision || 0) + 1;
+    nameInput.value = ""; priceInput.value = "";
+    delete nameInput.dataset.orderCalcSource; delete priceInput.dataset.orderCalcPriceSource;
+    delete card.dataset.orderCalcCatalogCode; delete card.dataset.orderCalcCatalogName;
+    clearCatalogVisual(card); hideSuggestions(card); setMatchMessage(card); recalculate();
+  };
   root.resetForNewClient = () => {
     delete root.dataset.orderCalcSurveyId;
     productCards.forEach(card => {

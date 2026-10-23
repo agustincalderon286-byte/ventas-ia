@@ -4326,7 +4326,8 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 }
 
 .tec-survey-product { position: relative; min-width: 0; align-content: start; }
-.tec-survey-product .order-calc-suggestions { position: relative; top: auto; max-height: 280px; }
+.tec-survey-product .order-calc-suggestions { position: relative; top: auto; max-height: 360px; overscroll-behavior: contain; }
+.tec-survey-product-search { justify-self: start; min-height: 44px; }
 .tec-survey-product-thumb { width: 64px; height: 64px; object-fit: contain; background: white; border-radius: 10px; flex: 0 0 64px; }
 .tec-survey-product-visual { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d5deea; border-radius: 12px; color: #102b4e; background: #fff; }
 .tec-survey-product-visual[hidden] { display: none; }

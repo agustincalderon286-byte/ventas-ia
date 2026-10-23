@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261023-visit-resume1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261023-visit-resume1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261023-product-picker2";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261023-product-picker2";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -9,19 +9,19 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261023-visit-resume1",
-  "/coach/app.js?v=20261023-visit-resume1",
-  "/coach/order-calculator.js?v=20261023-visit-resume1",
-  "/coach/offline-forms.js?v=20261023-visit-resume1",
-  "/coach/pwa-safety.js?v=20261023-visit-resume1",
-  "/coach/ui-coherence.js?v=20261023-visit-resume1",
-  "/coach/styles.css?v=20261023-visit-resume1",
-  "/coach/property-map.js?v=20261023-visit-resume1",
-  "/coach/property-map.css?v=20261023-visit-resume1",
-  "/coach/property-visit-helpers.js?v=20261023-visit-resume1",
+  "/coach/site.webmanifest?v=20261023-product-picker2",
+  "/coach/app.js?v=20261023-product-picker2",
+  "/coach/order-calculator.js?v=20261023-product-picker2",
+  "/coach/offline-forms.js?v=20261023-product-picker2",
+  "/coach/pwa-safety.js?v=20261023-product-picker2",
+  "/coach/ui-coherence.js?v=20261023-product-picker2",
+  "/coach/styles.css?v=20261023-product-picker2",
+  "/coach/property-map.js?v=20261023-product-picker2",
+  "/coach/property-map.css?v=20261023-product-picker2",
+  "/coach/property-visit-helpers.js?v=20261023-product-picker2",
   "/coach/document.html",
-  "/coach/document-viewer.js?v=20261023-visit-resume1",
-  "/coach/document-viewer.css?v=20261023-visit-resume1",
+  "/coach/document-viewer.js?v=20261023-product-picker2",
+  "/coach/document-viewer.css?v=20261023-product-picker2",
   "/coach/assets/documents/manifest-v1.json",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
