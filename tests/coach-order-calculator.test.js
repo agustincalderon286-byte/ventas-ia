@@ -99,7 +99,8 @@ function uiHarness({ loadHelper = true } = {}) {
   const cardFields = ["name", "price", "down", "desc-fixed", "desc-percent", "gross", "total", "savings", "balance", "monthly", "weekly", "daily", "breakdown", "product-validation"];
   const cards = Array.from({ length: 3 }, () => {
     const nodes = Object.fromEntries(cardFields.map(key => [`[data-order-calc-${key}]`, element()]));
-    return { dataset: {}, nodes, querySelector: selector => nodes[selector] || null };
+    return { dataset: {}, nodes, querySelector: selector => nodes[selector] || null,
+      querySelectorAll: () => ['name','price','down','desc-fixed','desc-percent'].map(key=>nodes[`[data-order-calc-${key}]`]) };
   });
   const nodes = Object.fromEntries(["down-total", "desc-fixed-total", "desc-percent-total", "summary-total", "summary-down", "summary-discount",
     "summary-balance", "summary-monthly", "summary-weekly", "summary-daily", "submit-context", "validation"].map(key => [`[data-order-calc-${key}]`, element()]));
@@ -109,13 +110,14 @@ function uiHarness({ loadHelper = true } = {}) {
   const root = { dataset: {}, querySelector: selector => selector === '[aria-invalid="true"]' ? numeric.find(input => input.attributes["aria-invalid"]) : nodes[selector] || null,
     querySelectorAll: selector => selector === "[data-order-calc-product]" ? cards : selector === "input" ? [...numeric, ...cards.map(card => card.nodes["[data-order-calc-name]"])] : numeric };
   let active = null;
-  const win = {};
+  const win = { requestAnimationFrame: fn => fn() };
   const ctx = vm.createContext({ window: win, document: { querySelector: () => root, querySelectorAll: () => [] },
     formatMoney: amount => `$${amount.toFixed(2)}`, getActiveCoachHealthSurveyContext: () => null,
     getActiveCoachOrderCalcContext: () => active, renderActiveCoachOrderCalcContext() {},
     buildCoachOrderCalcContext: value => ({ ...value, signature: JSON.stringify(value) }),
     setActiveCoachOrderCalcContext: value => { active = value; }, registerCoachDemoEvent() {}, addCoachMessage() {},
-    buildCoachOrderCalcReply: () => "", ORDER_CALC_PRODUCT_COUNT: 3 });
+    buildCoachOrderCalcReply: () => "", ORDER_CALC_PRODUCT_COUNT: 3, clearTimeout,
+    normalizeCatalogLookupText: value => value.toLowerCase(), searchTecProductCatalog: async () => [] });
   if (loadHelper) vm.runInContext(helper, ctx);
   vm.runInContext(app.slice(app.indexOf("function initOrderCalculator()"), app.indexOf("function createDecisionToolRow(")) + "\ninitOrderCalculator();", ctx);
   return { root, cards, nodes, input(index, field, value, badInput = false) {
@@ -159,6 +161,20 @@ test("missing calculator dependency explains recovery and never shares unvalidat
   assert.equal(h.nodes["[data-order-calc-validation]"].hidden, false);
   assert.match(h.nodes["[data-order-calc-validation]"].textContent, /con conexión/);
   assert.equal(h.active, null);
+});
+
+test("survey products keep their slots and selected catalog price; new client clears all totals", () => {
+  const h=uiHarness();
+  h.root.syncProductsFromSurvey({id:'new-visit',topProducts:['','SARTEN 12','OLLA']});
+  assert.deepEqual(h.cards.map(c=>c.nodes['[data-order-calc-name]'].value),['','SARTEN 12','OLLA']);
+  h.root.applySurveyProduct(1,{nombre_producto:'SARTEN 12',codigo_producto:'C12',precio_base_catalogo:999});
+  assert.equal(h.cards[1].nodes['[data-order-calc-price]'].value,'999');
+  assert.equal(h.cards[1].dataset.orderCalcCatalogCode,'C12');
+  h.input(1,'down','100');
+  h.root.resetForNewClient();
+  assert.deepEqual(h.cards.map(c=>c.nodes['[data-order-calc-name]'].value),['','','']);
+  assert.deepEqual(h.cards.map(c=>c.nodes['[data-order-calc-price]'].value),['','','']);
+  assert.equal(h.nodes['[data-order-calc-summary-balance]'].textContent,'$0.00');
 });
 
 test("calculator dependency is loaded before app and included in offline shell", () => {

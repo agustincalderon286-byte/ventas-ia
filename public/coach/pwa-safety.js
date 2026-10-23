@@ -14,16 +14,18 @@
     return Boolean(recording?.localId && ["ready", "syncing"].includes(recording.status) && !activeIds.has(recording.localId));
   }
   // Watch delivery of encoded data, not voice loudness: silence is valid audio.
-  function watchAudioCapture({ stream, onInterrupted, now = () => Date.now(), timers = window }) {
-    let lastData = now(), stopped = false;
+  function watchAudioCapture({ stream, onInterrupted, onAvailable, now = () => Date.now(), timers = window }) {
+    let lastData = now(), stopped = false, paused = false;
     const tracks = stream.getAudioTracks();
     const listeners = [];
     const interrupt = reason => {
-      if (stopped) return;
-      dispose();
+      if (stopped || paused) return;
+      paused = true;
+      if (!onAvailable) dispose();
       onInterrupted(reason);
     };
     const check = () => {
+      if (paused || stopped) return;
       if (tracks.some(track => track.readyState === "ended" || track.muted || track.enabled === false)) {
         interrupt("El micrófono se interrumpió. El dictado, una llamada u otra aplicación pueden ocuparlo.");
       } else if (now() - lastData >= 20000) {
@@ -36,6 +38,11 @@
         track.addEventListener(event, handler);
         listeners.push([track, event, handler]);
       }
+      const available = () => {
+        if (!stopped && paused && tracks.every(item => item.readyState === "live" && !item.muted && item.enabled !== false)) onAvailable?.();
+      };
+      track.addEventListener("unmute", available);
+      listeners.push([track, "unmute", available]);
     }
     const interval = timers.setInterval(check, 1000);
     function dispose() {
@@ -44,6 +51,7 @@
       listeners.forEach(([track, event, handler]) => track.removeEventListener(event, handler));
     }
     return { check, dispose, beginSegment() { lastData = now(); },
+      pause() { paused = true; },
       data(blob) { if (blob?.size >= 32) lastData = now(); },
       error() { interrupt("El navegador interrumpió la grabación. Se conserva el audio que pudo entregar."); } };
   }

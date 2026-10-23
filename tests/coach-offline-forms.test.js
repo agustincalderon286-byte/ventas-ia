@@ -32,6 +32,7 @@ function harness(storage, options = {}) {
     setAttribute(key, value) { this.attributes[key] = value; }, append(...children) { this.children.push(...children); },
     replaceChildren(...children) { this.children = children; }, addEventListener(type, handler) { this.listeners[type] = handler; } });
   const form = node("form");
+  form.reset = () => { form.listeners.reset?.(); form.elements.forEach(field => { field.value = ["checkbox", "radio"].includes(field.type) ? field.value : ""; field.checked = false; }); };
   form.elements = [ { name: "fullName", value: "", type: "text" }, { name: "phone", value: "", type: "tel" },
     { name: "materials", value: "Acero", type: "checkbox", checked: false }, { name: "materials", value: "Aluminio", type: "checkbox", checked: false } ];
   const events = {};
@@ -63,6 +64,32 @@ test("a draft survives a reload with checkboxes and its original visit context",
   assert.equal([...storage.stores.outbox.values()][0].body.activeCrmRecordId, "house-one");
   assert.equal([...storage.stores.outbox.values()][0].body.accountId, "one");
   assert.equal(storage.stores.cache.size, 0);
+});
+
+test("new visit archives the draft, preserves pending submissions and reloads clean", async () => {
+  const storage = memory(), h = harness(storage); await h.controller.ready;
+  h.input("fullName", "Submitted house"); await settle(); await h.controller.submit();
+  h.input("fullName", "Unsent house"); await settle();
+  await h.controller.startNewVisit();
+  assert.equal(h.form.elements[0].value, "");
+  assert.equal(h.controller.hasDraft(), false);
+  assert.equal(storage.stores.outbox.size, 1);
+  const archive = [...storage.stores.cache.values()].find(row => row.key.startsWith('form-archive:'));
+  assert.equal(archive.value.payload.fullName, "Unsent house");
+  const reload = harness(storage); await reload.controller.ready;
+  assert.equal(reload.form.elements[0].value, "");
+  assert.ok(reload.pending.children.some(node => node.textContent.includes('Recuperar borrador')));
+  const other = harness(storage, {user: {id:'two',email:'two@example.invalid'}}); await other.controller.ready;
+  assert.equal(other.pending.hidden, true);
+});
+
+test("failed visit archive leaves current draft and fields intact", async () => {
+  const storage = memory(), h = harness(storage); await h.controller.ready;
+  h.input("fullName", "Keep this house"); await settle(); storage.failPut = true;
+  await assert.rejects(h.controller.startNewVisit(), /quota/);
+  assert.equal(h.form.elements[0].value, "Keep this house");
+  assert.equal(h.controller.hasDraft(), true);
+  assert.equal(storage.stores.cache.size, 1);
 });
 
 test("another account cannot read or send a draft or its pending copies", async () => {

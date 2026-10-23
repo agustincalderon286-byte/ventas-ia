@@ -32244,6 +32244,12 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
     }
 
     const partial = req.body?.allowPartial === true;
+    const rawGaps = req.body?.recordingGaps || [];
+    if (!Array.isArray(rawGaps) || rawGaps.length > 30 || rawGaps.some(gap =>
+      !Number.isFinite(gap?.offsetSeconds) || gap.offsetSeconds < 0 || gap.offsetSeconds > 86400 ||
+      !Number.isFinite(gap?.durationSeconds) || gap.durationSeconds < 0 || gap.durationSeconds > 86400)) {
+      return responderCoachError(res, 400, "Los intervalos de pausa no son validos.");
+    }
     const included = req.body?.includedChunkIndexes;
     if (partial && (!Array.isArray(included) || !included.length || included.length > COACH_DEMO_MAX_CHUNKS ||
         new Set(included).size !== included.length || included.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS))) {
@@ -32300,6 +32306,8 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
 
     const partialNotice = "REPORTE PARCIAL: hubo una interrupcion del audio. Solo se evaluan los segmentos disponibles; las partes ausentes no permiten concluir que el representante omitio pasos o no cerro la venta.";
     if (partial) transcript = `${partialNotice}\nSegmentos incluidos: ${included.map(index => index + 1).join(", ")}.\n\n${transcript}`;
+    const gapNotice = rawGaps.map(gap => `Pausa sin audio: desde el minuto ${(gap.offsetSeconds / 60).toFixed(1)}, durante ${Math.round(gap.durationSeconds)} segundos.`).join("\n");
+    if (gapNotice) transcript = `${gapNotice}\nLos minutos de los segmentos son aproximados y no incluyen necesariamente estos intervalos.\n\n${transcript}`;
     doc.status = "processing";
     doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
     doc.stoppedAt = new Date();
@@ -32320,6 +32328,7 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       report.partial = true;
       report.includedChunkIndexes = included;
     }
+    if (gapNotice) { report.summary = `${gapNotice}\n\n${report.summary || ""}`; report.recordingGaps = rawGaps; }
 
     doc.status = "completed";
     doc.report = report;

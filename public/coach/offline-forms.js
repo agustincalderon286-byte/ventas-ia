@@ -50,12 +50,30 @@
         await onSynced?.(receipt.value, receipt.body);
       }
       const own = items.filter(belongs).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      const archives = cache.filter(item => item.key?.startsWith(`form-archive:${email}:${accountId}:${kind}:`));
       pending.replaceChildren();
-      pending.hidden = !own.length;
-      if (own.length) {
+      pending.hidden = !own.length && !archives.length;
+      if (own.length || archives.length) {
         const title = document.createElement("summary");
-        title.textContent = `${own.length} pendiente${own.length === 1 ? "" : "s"} de este formulario`;
+        title.textContent = [own.length ? `${own.length} pendiente${own.length === 1 ? "" : "s"} de este formulario` : "", archives.length ? "Borradores de visitas anteriores" : ""].filter(Boolean).join(" · ");
         pending.append(title);
+      }
+      if (archives.length) {
+        for (const item of archives) {
+          const restore = document.createElement("button"); restore.type = "button"; restore.className = "secondary-button";
+          restore.textContent = `Recuperar borrador: ${item.value?.payload?.fullName || kind} · ${new Date(item.value.savedAt).toLocaleDateString()}`;
+          restore.addEventListener("click", async () => {
+            if (draft) return say("Primero guarda o limpia el borrador actual.", "error");
+            if (!window.confirm("¿Recuperar este borrador anterior en el formulario actual?")) return;
+            const recovered = { ...item.value, revision: ++revision, requestId: storage.id(kind) };
+            await storage.put("cache", { key: draftKey, ownerEmail: email, accountId, kind, value: recovered });
+            draft = recovered; restoreFields(form, recovered.fields || {}); onRestore?.();
+            say("Borrador anterior recuperado; revisa el cliente antes de guardarlo.", "draft");
+          });
+          pending.append(restore);
+        }
+      }
+      if (own.length) {
         own.forEach(item => {
           const row = document.createElement("p");
           const label = item.body.fullName || item.body.products?.join?.(", ") || item.body.resultType || "Registro";
@@ -135,6 +153,14 @@
     window.addEventListener("tec:offline-status", () => { ready.then(() => refresh()).catch(() => null); });
     return {
       ready, hasDraft: () => Boolean(draft), wasRestored: () => restored,
+      async startNewVisit() {
+        await ready; await chain;
+        if (draft) await storage.put("cache", { key: `form-archive:${email}:${accountId}:${kind}:${storage.id('archive')}`, ownerEmail: email, accountId, kind, value: draft });
+        await clearDraft();
+        form.reset();
+        await chain;
+        await refresh(true);
+      },
       async submit() {
         await ready;
         await chain;

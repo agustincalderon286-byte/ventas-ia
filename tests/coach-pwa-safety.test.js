@@ -31,6 +31,42 @@ test("microphone dictation mute and ended interrupt once, and listeners are clea
   h.track.dispatchEvent(new Event("mute")); assert.equal(h.failures.length, 0);
 });
 
+test("resumable microphone monitor waits for live unmute and stops listening after disposal", () => {
+  const track = new EventTarget(); Object.assign(track, {readyState:'live', muted:false, enabled:true});
+  let interrupted = 0, available = 0;
+  const monitor = api().watchAudioCapture({stream:{getAudioTracks:()=>[track]},
+    timers:{setInterval(){return 1;},clearInterval(){}},
+    onInterrupted(){interrupted++;}, onAvailable(){available++;}});
+  track.muted=true; track.dispatchEvent(new Event('mute')); monitor.check();
+  assert.equal(interrupted,1);
+  track.dispatchEvent(new Event('unmute')); assert.equal(available,0);
+  track.muted=false; track.dispatchEvent(new Event('unmute')); assert.equal(available,1);
+  monitor.dispose(); track.dispatchEvent(new Event('unmute')); assert.equal(available,1);
+});
+
+test("actual pause and resume keep one recording, persist gaps, and only manual recovery requests a new mic", async () => {
+  let now=10000, acquisitions=0, segments=0, stopped=0;
+  const track={readyState:'live',muted:false,enabled:true};
+  const state={recording:true,processing:false,capturePaused:false,resumeBusy:false,storageFailure:false,
+    startedAt:0,pausedMs:0,segmentIndex:2,recordingGaps:[],localSessionId:'same-local',sessionId:'same-server',stream:{getAudioTracks:()=>[track]}};
+  const saved=[];
+  const snippet=app.slice(app.indexOf('  const attachCaptureMonitor = () =>'),app.indexOf('  const uploadSegment = async'));
+  const methods=vm.runInNewContext(snippet+'\n({pauseCapture,resumeCapture});',{
+    state,Date:{now:()=>now},window:{TecPwaSafety:{watchAudioCapture:()=>({dispose(){},pause(){}})}},
+    navigator:{mediaDevices:{async getUserMedia(){acquisitions++;return {getAudioTracks:()=>[track]};}}},
+    updateControls(){},setRecorderMessage(){},rotateSegment:async()=>{stopped++;},beginSegment(){segments++;},
+    stopMediaTracks(){},saveTecOfflineRecording:async row=>saved.push(structuredClone(row))
+  });
+  await methods.pauseCapture('Dictation'); assert.equal(state.capturePaused,true); assert.equal(stopped,1);
+  now=15000; await methods.resumeCapture(false);
+  assert.equal(state.capturePaused,false); assert.equal(acquisitions,0); assert.equal(segments,1);
+  assert.equal(state.recordingGaps[0].durationSeconds,5); assert.equal(state.pausedMs,5000);
+  now=20000; await methods.pauseCapture('Ended'); now=23000; await methods.resumeCapture(true);
+  assert.equal(acquisitions,1); assert.equal(segments,2); assert.equal(state.recordingGaps.length,2);
+  assert.equal(state.localSessionId,'same-local'); assert.equal(state.sessionId,'same-server');
+  assert.ok(saved.every(row=>row.localId==='same-local'));
+});
+
 test("35 minutes of encoded audio including silence keep recording; five-byte headers do not", () => {
   const h = captureHarness();
   for (let second = 0; second < 35 * 60; second++) {
@@ -58,6 +94,7 @@ test("capture watchdog also catches missed mute events and does not depend on vo
 test("actual recorder finish freezes interrupted capture, saves for review and never requests a complete report", async () => {
   for (const timing of ['before-stop', 'empty-final-blob']) {
     const state = { recording: true, processing: false, localSessionId: 'local', sessionId: 'server',
+      recordingGaps: [], capturePaused: false, pausePromise: null,
       interruptionReason: timing === 'before-stop' ? 'Dictado interrumpió el micrófono' : '',
       captureMonitor: { dispose() {} }, uploadQueue: Promise.resolve(), releaseCaptureLock: async () => {} };
     let saved, stopped = 0, syncs = 0, clockCleared = false;

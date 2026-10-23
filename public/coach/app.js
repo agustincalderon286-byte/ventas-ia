@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261022-audio-recovery2", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261023-visit-resume1", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -242,10 +242,71 @@ function attachTecOfflineForm(form, options) {
     form.querySelector('[type="submit"]')?.setAttribute("disabled", "");
     return { hasDraft: () => false, submit: async () => { throw new Error(warning.textContent); } };
   }
-  return window.TecOfflineForms.attach(form, { ...options, storage: {
+  form.dataset.tecVisitId = getTecVisitId();
+  const controller = window.TecOfflineForms.attach(form, { ...options, storage: {
     get: tecOfflineGet, put: tecOfflinePut, all: tecOfflineGetAll, remove: tecOfflineDelete,
     viewer: getTecCachedViewer, queue: queueTecOfflineRequest, flush: flushTecOfflineOutbox, id: createTecOfflineId
   } });
+  form._tecOfflineController = controller;
+  return controller;
+}
+
+function getTecVisitId() {
+  let id = window.sessionStorage.getItem("tec-current-visit");
+  if (!id) { id = createTecOfflineId("visit"); window.sessionStorage.setItem("tec-current-visit", id); }
+  return id;
+}
+
+function initTecNewClient(user) {
+  const button = document.querySelector("[data-coach-new-client]");
+  if (!button) return;
+  const note = document.createElement("p"); note.className = "mini-note"; note.setAttribute("role", "status"); button.parentElement.after(note);
+  let archiveUrl = "";
+  const scopes = ["[data-health-survey-form]", "[data-fourteen-sheet-form]", "[data-native-lead-form]", "[data-demo-outcome-form]", "[data-water-check-form]", "[data-order-calc]", "[data-decision-tool]", "[data-buyer-profile-tool]"];
+  button.addEventListener("click", async () => {
+    if (document.querySelector('[data-demo-recorder]')?.dataset.captureBusy === "true") {
+      note.textContent = "Finaliza la grabación actual (también si está pausada) antes de cambiar de cliente."; return;
+    }
+    if (document.querySelector('[data-coach-app-page] button[disabled][data-loading="true"], [data-coach-chat-form][data-loading="true"]')) {
+      note.textContent = "Espera a que termine el envío o la respuesta del Coach antes de cambiar de cliente."; return;
+    }
+    if (!window.confirm("¿Empezar con un nuevo cliente? Se limpiarán encuesta, calculadora, notas y contexto de esta visita. Los registros guardados, envíos pendientes y grabaciones NO se borran. Conservaremos una copia local de los datos actuales.")) return;
+    button.disabled = true;
+    try {
+      const snapshot = scopes.map(selector => ({ selector, fields: Array.from(document.querySelector(selector)?.querySelectorAll("input,select,textarea") || []).filter(field => !["password", "file"].includes(field.type)).map(field => ({ name: field.name || field.id || "", value: field.value, checked: field.checked })) }));
+      const email = String(user.email || "").toLowerCase();
+      const archive = { key: `visit-archive:${email}:${createTecOfflineId('visit')}`, ownerEmail: email, savedAt: new Date().toISOString(), value: snapshot };
+      await tecOfflinePut("cache", archive);
+      const forms = scopes.map(selector => document.querySelector(selector)).filter(node => node?.tagName === "FORM");
+      window.sessionStorage.setItem("tec-current-visit", createTecOfflineId("visit"));
+      forms.forEach(form => { form.dataset.tecVisitId = getTecVisitId(); });
+      for (const form of forms) {
+        if (form._tecOfflineController) await form._tecOfflineController.startNewVisit();
+        else form.reset();
+      }
+      setActiveCoachHealthSurveyContext(null); setActiveCoachCrmContext(null); setActiveCoachProgram414Context(null);
+      setActiveCoachOrderCalcContext(null); setActiveCoachDecisionContext(null); setActiveCoachDemoOutcomeContext(null);
+      window.sessionStorage.removeItem(COACH_CHAT_SESSION_KEY);
+      window.sessionStorage.removeItem(COACH_DEMO_EVENTS_KEY);
+      window.sessionStorage.removeItem(COACH_DEMO_STAGE_KEY);
+      syncCoachDemoContextBroadcast();
+      document.querySelector("[data-order-calc]")?.resetForNewClient?.();
+      document.querySelector("[data-decision-tool-reset]")?.click();
+      document.querySelector("[data-buyer-profile-reset]")?.click();
+      document.querySelectorAll('[data-coach-chat-messages],[data-coach-chat-messages-floating]').forEach(node => node.replaceChildren());
+      document.querySelectorAll('[data-coach-chat-input],[data-coach-chat-input-floating]').forEach(node => { node.value = ""; });
+      renderActiveLeadContext(null);
+      window.dispatchEvent(new CustomEvent("coach:new-client"));
+      window.dispatchEvent(new CustomEvent("coach:visit-change"));
+      note.textContent = "Listo para un nuevo cliente. Pendientes y grabaciones conservados. ";
+      const link = document.createElement("a"); link.textContent = "Descargar copia de la visita anterior";
+      if (archiveUrl) URL.revokeObjectURL(archiveUrl);
+      archiveUrl = URL.createObjectURL(new Blob([JSON.stringify(archive, null, 2)], { type: "application/json" }));
+      link.href = archiveUrl; link.download = "TEC-visita-anterior.json"; note.append(link);
+      button.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (error) { note.textContent = "No pude preparar el nuevo cliente con seguridad. Revisa el espacio local; no borres la aplicación."; }
+    finally { button.disabled = false; }
+  });
 }
 async function completeTecOfflineForm(item, data) {
   const db = await openTecOfflineDb();
@@ -684,6 +745,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
         body: {
           knownOutcome: recording.knownOutcome || "unknown",
           audioReviewVersion: 1,
+          recordingGaps: recording.recordingGaps || [],
           ...(partial ? { allowPartial: true, includedChunkIndexes: includedChunks.map(chunk => Number(chunk.index)),
             expectedChunkIndexes: includedChunks.map(chunk => Number(chunk.index)) } : Number(recording.protectedChunks) > 0 ? {
             expectedChunkIndexes: Array.from({ length: Number(recording.protectedChunks) }, (_, index) => index)
@@ -1020,6 +1082,7 @@ function setButtonLoading(button, loading, label = "Procesando...") {
   }
 
   button.disabled = loading;
+  button.dataset.loading = loading ? "true" : "false";
   button.textContent = loading ? label : button.dataset.defaultLabel;
 }
 
@@ -1984,6 +2047,71 @@ function createOrderCalcProductCard(index) {
   `;
 }
 
+async function searchTecProductCatalog(query) {
+  if (String(query || "").trim().length < 3) return [];
+  if (navigator.onLine) {
+    try { const data = await apiRequest(`/api/coach/catalog-prices?query=${encodeURIComponent(query)}`); return Array.isArray(data.matches) ? data.matches : []; }
+    catch { /* Cached catalog works offline as well. */ }
+  }
+  return searchCoachOfflineCatalog(query);
+}
+
+function initSurveyProductPicker() {
+  const form = document.querySelector("[data-health-survey-form]");
+  if (!form) return;
+  const calc = document.querySelector("[data-order-calc]");
+  const inputs = [1, 2, 3].map(index => form.elements.namedItem(`topProduct${index}`));
+  const sync = () => calc?.syncProductsFromSurvey?.({ id: `draft:${getTecVisitId()}`, topProducts: inputs.map(input => input?.value || "") });
+  const refreshers = [];
+  inputs.forEach((input, index) => {
+    if (!input) return;
+    const results = document.createElement("div"); results.className = "order-calc-suggestions"; results.hidden = true;
+    results.setAttribute("aria-label", `Opciones para producto ${index + 1}`);
+    const visual = document.createElement("div"); visual.className = "tec-survey-product-visual"; visual.hidden = true;
+    const note = document.createElement("span"); note.className = "mini-note"; note.textContent = "Busca por nombre o código. Sin precios en la encuesta.";
+    input.parentElement.append(visual, results, note);
+    let revision = 0, timer;
+    const select = match => {
+      revision++; clearTimeout(timer);
+      input.value = match.nombre_producto || "";
+      visual.replaceChildren(); visual.hidden = false;
+      if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = match.nombre_producto || "Producto"; image.loading = "lazy"; visual.append(image); }
+      const label = document.createElement("span"); label.textContent = `${match.nombre_producto || ""} · ${match.codigo_producto || ""}`; visual.append(label);
+      results.hidden = true; results.replaceChildren();
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      calc?.applySurveyProduct?.(index, match);
+    };
+    const lookup = async (restore = false) => {
+      const id = ++revision, query = input.value.trim();
+      if (query.length < 3) { results.hidden = true; return; }
+      try {
+        const matches = await searchTecProductCatalog(query);
+        if (id !== revision || input.value.trim() !== query) return;
+        if (restore) {
+          const match = matches.find(item => String(item.nombre_producto).toLowerCase() === query.toLowerCase() || String(item.codigo_producto).toLowerCase() === query.toLowerCase());
+          if (match) select(match);
+          return;
+        }
+        results.replaceChildren(); results.hidden = false;
+        for (const match of matches) {
+          const button = document.createElement("button"); button.type = "button"; button.className = "order-calc-suggestion";
+          if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = ""; image.loading = "lazy"; image.className = "tec-survey-product-thumb"; button.append(image); }
+          const label = document.createElement("span"); label.textContent = `${match.nombre_producto || "Producto"} · ${match.codigo_producto || ""}`; button.append(label);
+          button.addEventListener("click", () => select(match)); results.append(button);
+        }
+        if (!matches.length) results.textContent = "No hay coincidencias. Prueba otro nombre o código.";
+      } catch { if (id === revision) note.textContent = "No pude consultar el catálogo. Puedes escribir el nombre y continuar."; }
+    };
+    input.addEventListener("input", () => { revision++; clearTimeout(timer); visual.hidden = true; results.hidden = true; sync(); timer = setTimeout(() => lookup(), 260); });
+    input.addEventListener("change", sync);
+    input.addEventListener("keydown", event => { if (event.key === "Escape") results.hidden = true; });
+    refreshers.push(() => { revision++; clearTimeout(timer); visual.hidden = true; results.hidden = true; if (input.value) lookup(true); });
+  });
+  form.refreshProductPicker = () => refreshers.forEach(refresh => refresh());
+  form.addEventListener("reset", () => { setTimeout(() => form.refreshProductPicker(), 0); });
+  form.refreshProductPicker();
+}
+
 function initOrderCalculator() {
   const root = document.querySelector("[data-order-calc]");
 
@@ -2177,17 +2305,7 @@ function initOrderCalculator() {
       return catalogSearchCache.get(cacheKey);
     }
 
-    let matches = [];
-    if (navigator.onLine) {
-      try {
-        const data = await apiRequest(`/api/coach/catalog-prices?query=${encodeURIComponent(query)}`);
-        matches = Array.isArray(data.matches) ? data.matches : [];
-      } catch (error) {
-        matches = await searchCoachOfflineCatalog(query);
-      }
-    } else {
-      matches = await searchCoachOfflineCatalog(query);
-    }
+    const matches = await searchTecProductCatalog(query);
     catalogSearchCache.set(cacheKey, matches);
     return matches;
   };
@@ -2233,6 +2351,7 @@ function initOrderCalculator() {
   };
 
   const tryAutofillCatalogFromName = async (card, query, options = {}) => {
+    const revision = (card._lookupRevision || 0) + 1; card._lookupRevision = revision;
     const safeQuery = String(query || "").trim();
 
     if (safeQuery.length < 3) {
@@ -2245,6 +2364,7 @@ function initOrderCalculator() {
 
     try {
       const matches = await searchCatalog(safeQuery);
+      if (card._lookupRevision !== revision || getProductNodes(card).nameInput?.value.trim() !== safeQuery) return;
 
       if (!matches.length) {
         renderSuggestions(card, []);
@@ -2281,9 +2401,11 @@ function initOrderCalculator() {
   };
 
   const syncProductsFromSurvey = context => {
-    const safeContext = context?.id ? context : getActiveCoachHealthSurveyContext();
+    const surveyForm = document.querySelector("[data-health-survey-form]");
+    const liveProducts = [1, 2, 3].map(index => surveyForm?.elements?.namedItem(`topProduct${index}`)?.value || "");
+    const safeContext = context?.id ? context : liveProducts.some(Boolean) ? { id: `draft:${getTecVisitId()}`, topProducts: liveProducts } : getActiveCoachHealthSurveyContext();
     const topProducts = Array.isArray(safeContext?.topProducts)
-      ? safeContext.topProducts.map(item => String(item || "").trim()).filter(Boolean)
+      ? safeContext.topProducts.map(item => String(item || "").trim())
       : [];
 
     if (!topProducts.length) {
@@ -2306,13 +2428,16 @@ function initOrderCalculator() {
       const isAutofill = nameInput.dataset.orderCalcSource === "survey";
 
       if (!nextName) {
-        if (shouldRefreshAll && isAutofill) {
+        if (isAutofill) {
+          card._lookupRevision = (card._lookupRevision || 0) + 1;
           setProgrammaticInputValue(nameInput, "", "survey");
           delete nameInput.dataset.orderCalcSource;
           if (priceInput.dataset.orderCalcPriceSource === "catalog") {
             setProgrammaticInputValue(priceInput, "", "catalog", "orderCalcPriceSource");
             delete priceInput.dataset.orderCalcPriceSource;
           }
+          delete card.dataset.orderCalcCatalogCode; delete card.dataset.orderCalcCatalogName;
+          clearCatalogVisual(card); hideSuggestions(card); recalculate();
         }
         return;
       }
@@ -2546,6 +2671,17 @@ function initOrderCalculator() {
 
   root.dataset.orderCalcSyncReady = "true";
   root.syncProductsFromSurvey = syncProductsFromSurvey;
+  root.applySurveyProduct = (index, match) => { if (productCards[index]) applyCatalogMatch(productCards[index], match, { forcePrice: true, nameSource: "survey" }); };
+  root.resetForNewClient = () => {
+    delete root.dataset.orderCalcSurveyId;
+    productCards.forEach(card => {
+      card._lookupRevision = (card._lookupRevision || 0) + 1;
+      card.querySelectorAll("input").forEach(input => { clearTimeout(input._lookupTimer); input.value = ""; delete input.dataset.orderCalcSource; delete input.dataset.orderCalcPriceSource; });
+      delete card.dataset.orderCalcCatalogCode; delete card.dataset.orderCalcCatalogName; clearCatalogVisual(card); hideSuggestions(card); setMatchMessage(card);
+    });
+    [summaryDown, summaryDescFixed, summaryDescPercent].forEach(input => { if (input) input.value = ""; });
+    recalculate();
+  };
 }
 
 function createDecisionToolRow(kind, index) {
@@ -3211,6 +3347,7 @@ function initDailyPrizeTool(user = null) {
   syncPrizeToggle(false);
 
   window.addEventListener("coach:visit-change", syncVisit);
+  window.addEventListener("coach:new-client", () => { newAnonymousVisit(); syncVisit(); });
   window.addEventListener("storage", event => {
     if (event.key === storageKey) { setFeedback(); renderState(normalizeState(getStoredState())); }
   });
@@ -3804,6 +3941,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
 
     setInstantFeedback("", "info");
   };
+  window.addEventListener("coach:new-client", () => { activeSheet = null; resetInstantSelection(); rebuildForm({ resetFields: false }); renderSavedList(); });
 
   const activateSavedSheet = (sheet, options = {}) => {
     activeSheet = sheet?.id ? sheet : null;
@@ -4297,6 +4435,7 @@ function initHealthSurveyTool(user) {
     setNamedFieldValue(form, "topProduct1", survey?.topProducts?.[0] || "");
     setNamedFieldValue(form, "topProduct2", survey?.topProducts?.[1] || "");
     setNamedFieldValue(form, "topProduct3", survey?.topProducts?.[2] || "");
+    form.refreshProductPicker?.();
     clearMessage(feedbackNode);
   };
 
@@ -4307,6 +4446,7 @@ function initHealthSurveyTool(user) {
       .filter(Boolean);
 
     return {
+      visitId: form.dataset.tecVisitId || getTecVisitId(),
       surveyId: formData.get("surveyId"),
       activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
       fullName: formData.get("fullName"),
@@ -4433,9 +4573,9 @@ function initHealthSurveyTool(user) {
   };
 
   const offlineForm = attachTecOfflineForm(form, { user, kind: "health-survey", collect: collectPayload,
-    contextFields: ["activeCrmRecordId"], onRestore: () => syncFormToggle(true),
+    contextFields: ["activeCrmRecordId", "visitId"], onRestore: () => { syncFormToggle(true); form.refreshProductPicker?.(); },
     onSynced: async (data, body) => {
-      if (!offlineForm.hasDraft() && !form.elements.namedItem("fullName")?.value &&
+      if (body.visitId === form.dataset.tecVisitId && !offlineForm.hasDraft() && !form.elements.namedItem("fullName")?.value &&
           String(getActiveCoachCrmContext()?.id || "") === String(body.activeCrmRecordId || "") && data.survey) {
         activateSurvey(data.survey, { announce: true });
         fillForm(data.survey);
@@ -15255,7 +15395,7 @@ function initCoachDemoOutcomeWorkspace(user = null) {
   const collectOutcome = () => {
     const data = new FormData(form);
     const stage = getCoachDemoStageMeta(getCoachDemoStageId());
-    return { resultType: data.get("resultType"), saleAmount: data.get("saleAmount"),
+    return { visitId: form.dataset.tecVisitId || getTecVisitId(), resultType: data.get("resultType"), saleAmount: data.get("saleAmount"),
       products: String(data.get("products") || "").split(/[\n,;]+/g).map(item => item.trim()).filter(Boolean),
       privateReason: data.get("privateReason"), activeWorkspace: window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || "cierre",
       activeDemoStage: stage.id, activeDemoStageLabel: stage.label,
@@ -15267,10 +15407,10 @@ function initCoachDemoOutcomeWorkspace(user = null) {
       activeDecisionContext: getActiveCoachDecisionContext() || null, recentCoachEvents: getCoachDemoEvents() };
   };
   const offlineForm = attachTecOfflineForm(form, { user, kind: "demo-outcome", collect: collectOutcome,
-    contextFields: ["activeWorkspace", "activeDemoStage", "activeDemoStageLabel", "activeHealthSurveyId", "activeProgram414SheetId",
+    contextFields: ["visitId", "activeWorkspace", "activeDemoStage", "activeDemoStageLabel", "activeHealthSurveyId", "activeProgram414SheetId",
       "activeProgram414ReferralIndex", "activeCrmRecordId", "activeOrderCalcContext", "activeDecisionContext", "recentCoachEvents"],
     onRestore: syncTypeUi, onSynced: async (data, body) => {
-      if (!offlineForm.hasDraft() && !form.elements.namedItem("privateReason")?.value &&
+      if (body.visitId === form.dataset.tecVisitId && !offlineForm.hasDraft() && !form.elements.namedItem("privateReason")?.value &&
           !form.elements.namedItem("products")?.value &&
           String(getActiveCoachCrmContext()?.id || "") === String(body.activeCrmRecordId || "")) {
         setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext || null);
@@ -15852,6 +15992,8 @@ function initCoachDemoRecorder() {
   const outcome = document.querySelector("[data-demo-recorder-outcome]");
   const startButton = root.querySelector("[data-demo-recorder-start]");
   const stopButton = document.querySelector("[data-demo-recorder-stop]");
+  const resumeButton = document.querySelector("[data-demo-recorder-resume]");
+  const recorderState = document.querySelector("[data-demo-recorder-state]");
   const recordingDock = document.querySelector("[data-demo-recording-dock]");
   const timer = document.querySelector("[data-demo-recorder-timer]");
   const chunkStatus = document.querySelector("[data-demo-recorder-chunks]");
@@ -15886,7 +16028,8 @@ function initCoachDemoRecorder() {
     uploadErrors: [],
     wakeLock: null,
     releaseCaptureLock: null, segmentStopped: null, journal: null, storageFailure: false,
-    captureMonitor: null, interruptionReason: ""
+    captureMonitor: null, interruptionReason: "", capturePaused: false, pausePromise: null,
+    resumeBusy: false, verifyingResume: false, pausedAt: 0, pausedMs: 0, recordingGaps: []
   };
   const SEGMENT_MS = 4 * 60 * 1000;
   const MAX_RECORDING_MS = 90 * 60 * 1000;
@@ -15904,11 +16047,15 @@ function initCoachDemoRecorder() {
   analysisCenter?.append(localRecovery);
 
   const updateControls = () => {
+    root.dataset.captureBusy = state.recording || state.processing ? "true" : "false";
     startButton.disabled = state.recording || state.processing || !consent.checked || !emergency.hidden;
     stopButton.disabled = !state.recording || state.processing;
     consent.disabled = state.recording || state.processing;
     outcome.disabled = state.processing;
     recordingDock.hidden = !state.recording;
+    recordingDock.dataset.paused = state.capturePaused ? "true" : "false";
+    if (resumeButton) { resumeButton.hidden = !state.capturePaused || !state.recording; resumeButton.disabled = state.resumeBusy || state.processing; }
+    if (recorderState) recorderState.textContent = state.capturePaused ? "Grabación pausada" : state.verifyingResume ? "Verificando micrófono…" : "Grabando demostración";
   };
 
   const showAnalysisNotice = ({ title, copy, analysisId = "", ready = false } = {}) => {
@@ -15932,6 +16079,57 @@ function initCoachDemoRecorder() {
     state.captureMonitor = null;
     state.stream?.getTracks?.().forEach(track => track.stop());
     state.stream = null;
+  };
+
+  const attachCaptureMonitor = () => {
+    state.captureMonitor?.dispose();
+    state.captureMonitor = window.TecPwaSafety.watchAudioCapture({ stream: state.stream,
+      onInterrupted: reason => pauseCapture(reason), onAvailable: () => resumeCapture(false) });
+  };
+  const pauseCapture = async reason => {
+    if (!state.recording || state.processing || state.capturePaused) return;
+    state.capturePaused = true;
+    state.captureMonitor?.pause();
+    state.pausedAt = Date.now();
+    state.recordingGaps.push({ offsetSeconds: Math.round((state.pausedAt - state.startedAt) / 1000), durationSeconds: 0 });
+    state.interruptionReason = "";
+    state.verifyingResume = false;
+    updateControls();
+    setRecorderMessage(`${reason} La demo está PAUSADA. Al terminar el dictado intentaremos continuar; si no, toca Reanudar.`, "info");
+    state.pausePromise = (async () => {
+      await rotateSegment(true);
+      state.interruptionReason = "";
+      await saveTecOfflineRecording({ localId: state.localSessionId, status: "recording", recordingGaps: state.recordingGaps });
+    })();
+    try { await state.pausePromise; }
+    catch (error) { state.storageFailure = true; setRecorderMessage("No pude proteger la pausa. Finaliza y descarga la copia de emergencia.", "error"); }
+  };
+  const resumeCapture = async (manual = true) => {
+    if (!state.recording || !state.capturePaused || state.processing || state.resumeBusy || state.storageFailure) return;
+    state.resumeBusy = true; updateControls();
+    try {
+      await state.pausePromise;
+      if (!state.recording || state.processing) return;
+      if (state.segmentIndex >= 30) throw new Error("Llegaste al límite de segmentos de esta demo. Finaliza para guardar el reporte.");
+      if (manual) {
+        const next = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: false });
+        if (!state.recording || state.processing) { next.getTracks().forEach(track => track.stop()); return; }
+        stopMediaTracks(); state.stream = next;
+      }
+      if (!state.stream?.getAudioTracks().some(track => track.readyState === "live" && !track.muted && track.enabled !== false)) throw new Error("El micrófono todavía está ocupado. Cierra el dictado y toca Reanudar.");
+      const gapMs = Date.now() - state.pausedAt;
+      state.recordingGaps[state.recordingGaps.length - 1].durationSeconds = Math.max(1, Math.round(gapMs / 1000));
+      await saveTecOfflineRecording({ localId: state.localSessionId, recordingGaps: state.recordingGaps });
+      if (!state.recording || state.processing) return;
+      state.capturePaused = false; state.verifyingResume = true; state.interruptionReason = "";
+      attachCaptureMonitor(); beginSegment();
+      state.pausedMs += gapMs;
+      setRecorderMessage("Comprobando que vuelva el audio de la misma demostración…", "info");
+    } catch (error) {
+      state.capturePaused = true;
+      state.captureMonitor?.pause();
+      setRecorderMessage(`${error.message || "No pude recuperar el micrófono."} La demo sigue pausada; no se ha borrado.`, "error");
+    } finally { state.resumeBusy = false; updateControls(); }
   };
 
   const uploadSegment = async (blob, durationSeconds, index) => {
@@ -15982,7 +16180,7 @@ function initCoachDemoRecorder() {
   };
 
   const beginSegment = () => {
-    if (!state.recording || !state.stream) {
+    if (!state.recording || state.capturePaused || !state.stream) {
       return;
     }
 
@@ -16013,6 +16211,10 @@ function initCoachDemoRecorder() {
     state.journal = journal;
     recorder.addEventListener("dataavailable", event => {
       state.captureMonitor?.data(event.data);
+      if (state.verifyingResume && !state.capturePaused && event.data?.size >= 32) {
+        state.verifyingResume = false; updateControls();
+        setRecorderMessage(state.recordingGaps.length ? "Grabación reanudada en la misma demostración. La pausa quedará señalada en el reporte." : "Micrófono verificado. Grabando demostración.", "success");
+      }
       if (event.data?.size) {
         state.segmentParts.push(event.data);
         journal.append(event.data, (Date.now() - segmentStartedAt) / 1000).catch(() => {
@@ -16053,9 +16255,8 @@ function initCoachDemoRecorder() {
         setRecorderMessage("No se pudo guardar todo el audio. Descarga la copia de emergencia antes de cerrar esta página.", "error");
       } finally {
         segmentDone();
-        if (state.recording && !state.rotating) {
-          state.interruptionReason ||= "El navegador detuvo la grabación inesperadamente. Revisa el audio guardado.";
-          finishRecording(false);
+        if (state.recording && !state.rotating && !state.capturePaused) {
+          pauseCapture("El navegador interrumpió el micrófono.");
         }
       }
     });
@@ -16079,10 +16280,12 @@ function initCoachDemoRecorder() {
       window.clearTimeout(state.rotateTimer);
       state.recorder.stop();
       await state.segmentStopped;
-      if (!finalSegment && state.recording && !state.storageFailure && !state.interruptionReason) {
+      if (!finalSegment && state.recording && !state.capturePaused && !state.storageFailure && !state.interruptionReason && state.segmentIndex < 30) {
         beginSegment();
-      } else if (!finalSegment && (state.storageFailure || state.interruptionReason)) {
+      } else if (!finalSegment && (state.storageFailure || state.segmentIndex >= 30)) {
         window.setTimeout(() => finishRecording(false), 0);
+      } else if (!finalSegment && state.interruptionReason) {
+        window.setTimeout(() => pauseCapture(state.interruptionReason), 0);
       }
     })();
     try {
@@ -16301,6 +16504,8 @@ function initCoachDemoRecorder() {
 
     try {
       await rotateSegment(true);
+      await state.pausePromise;
+      if (state.capturePaused && state.recordingGaps.length) state.recordingGaps[state.recordingGaps.length - 1].durationSeconds = Math.max(1, Math.round((Date.now() - state.pausedAt) / 1000));
       stopMediaTracks();
       await releaseWakeLock();
       if (!state.interruptionReason) setRecorderMessage("Protegiendo el ultimo fragmento...", "info");
@@ -16311,6 +16516,8 @@ function initCoachDemoRecorder() {
         serverSessionId: state.sessionId,
         status: state.interruptionReason ? "needs-review" : "ready",
         interruptionReason: state.interruptionReason,
+        recordingGaps: state.recordingGaps,
+        analyzeCompletePartsOnly: Boolean(state.recordingGaps.length),
         knownOutcome: outcome.value || "unknown",
         stoppedAt: new Date().toISOString()
       });
@@ -16458,6 +16665,8 @@ function initCoachDemoRecorder() {
       state.uploadErrors = [];
       state.storageFailure = false;
       state.interruptionReason = "";
+      state.capturePaused = false; state.pausePromise = null; state.resumeBusy = false;
+      state.verifyingResume = true; state.pausedMs = 0; state.pausedAt = 0; state.recordingGaps = [];
       state.uploadQueue = Promise.resolve();
       analysisNotice.hidden = true;
       analysisNotice.dataset.analysisId = "";
@@ -16470,16 +16679,12 @@ function initCoachDemoRecorder() {
       if (navigator.wakeLock?.request) {
         state.wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
       }
-      state.captureMonitor = window.TecPwaSafety.watchAudioCapture({ stream: state.stream, onInterrupted: reason => {
-        if (!state.recording) return;
-        state.interruptionReason = reason;
-        finishRecording(false);
-      } });
+      attachCaptureMonitor();
       beginSegment();
       state.captureMonitor?.check();
       if (!state.recording) return;
       state.clockTimer = window.setInterval(() => {
-        const elapsedMs = Date.now() - state.startedAt;
+        const elapsedMs = (state.capturePaused ? state.pausedAt : Date.now()) - state.startedAt - state.pausedMs;
         timer.textContent = formatCoachDemoRecordingTime(elapsedMs / 1000);
         if (elapsedMs >= MAX_RECORDING_MS) {
           finishRecording(true);
@@ -16487,7 +16692,7 @@ function initCoachDemoRecorder() {
       }, 1000);
       setRecorderMessage(
         state.sessionId
-          ? "Grabación activa. Mantén esta página abierta. No uses el dictado del teclado, llamadas u otra aplicación con micrófono mientras grabas; escribe las notas con el teclado."
+          ? "Grabación iniciada. Mantén esta página abierta. Si usas dictado, comprueba que TEC indique Grabando al terminar; puedes tocar Reanudar si queda pausada."
           : `Grabación activa en este dispositivo. ${audioFailure(sessionError || {}).text}`,
         state.sessionId ? "success" : "info"
       );
@@ -16528,6 +16733,7 @@ function initCoachDemoRecorder() {
   });
   startButton.addEventListener("click", startRecording);
   stopButton.addEventListener("click", () => finishRecording(false));
+  resumeButton?.addEventListener("click", () => resumeCapture(true));
   refreshButton?.addEventListener("click", loadHistory);
   analysisNoticeOpen?.addEventListener("click", async () => {
     const id = analysisNotice.dataset.analysisId || "";
@@ -16733,6 +16939,7 @@ async function loadCoachAppPage() {
     initRecruitmentTool(me.user);
     initHealthSurveyTool(me.user);
     initOrderCalculator();
+    initSurveyProductPicker();
     const orderCalcRoot = document.querySelector("[data-order-calc]");
     if (orderCalcRoot) {
       orderCalcRoot.dataset.orderCalcOwnerUserId = effectiveOwnerId;
@@ -16746,6 +16953,7 @@ async function loadCoachAppPage() {
     initDailyPrizeTool(me.user);
     initCoachDemoOutcomeWorkspace(me.user);
     initCoachDemoRecorder();
+    initTecNewClient(me.user);
   }
 
   const chatMessages = document.querySelector("[data-coach-chat-messages]");
@@ -17122,6 +17330,7 @@ async function loadCoachAppPage() {
   };
 
   const toggleCoachChatBusy = loading => {
+    if (chatForm) chatForm.dataset.loading = loading ? "true" : "false";
     chatInputs.forEach(input => {
       input.disabled = loading;
     });

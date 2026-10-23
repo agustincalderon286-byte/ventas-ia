@@ -4325,6 +4325,14 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   color: #ffd39a;
 }
 
+.tec-survey-product { position: relative; min-width: 0; align-content: start; }
+.tec-survey-product .order-calc-suggestions { position: relative; top: auto; max-height: 280px; }
+.tec-survey-product-thumb { width: 64px; height: 64px; object-fit: contain; background: white; border-radius: 10px; flex: 0 0 64px; }
+.tec-survey-product-visual { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d5deea; border-radius: 12px; color: #102b4e; background: #fff; }
+.tec-survey-product-visual[hidden] { display: none; }
+.tec-survey-product-visual img { width: 90px; height: 90px; object-fit: contain; }
+[data-demo-recording-dock][data-paused="true"] .coach-demo-live-dot { background: #ad6500; animation: none; }
+
 .order-calc-suggestions {
   position: absolute;
   z-index: 20;
