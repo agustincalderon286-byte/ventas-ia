@@ -61,7 +61,7 @@ test("real recorder startup preserves server errors and avoids the old false off
   assert.match(start, /audioFailure\(sessionError/);
   assert.doesNotMatch(app, /TEC volvera a intentar cuando haya una conexion estable/);
 });
-test("a successful HTTP response without a transcription receipt cannot delete local audio", async () => {
+test("local audio stays available even after a transcription receipt, until the full report is confirmed", async () => {
   const body = app.slice(app.indexOf("async function uploadTecStoredAudioChunk"), app.indexOf("async function syncTecOfflineRecording(localId"));
   let payload = {}, httpStatus = 200, deletes = 0;
   const upload = vm.runInNewContext(`(${body.trim()})`, {
@@ -76,7 +76,7 @@ test("a successful HTTP response without a transcription receipt cannot delete l
   assert.equal(deletes, 0);
   httpStatus = 200; payload = { ok: true, chunk: { status: "transcribed", index: 0 } };
   await upload("session", chunk);
-  assert.equal(deletes, 1);
+  assert.equal(deletes, 0);
 });
 test("connection check reads the authenticated session only, without triggering audio analysis", () => {
   const check = app.slice(app.indexOf('      checkConnection.addEventListener("click"'), app.indexOf("      card.append(checkConnection"));

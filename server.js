@@ -12488,6 +12488,7 @@ async function transcribirCoachDemoChunk(buffer, options = {}) {
   const form = new FormData();
   form.append("file", new Blob([buffer], { type: mimeType }), `demo-segmento-${options.index || 0}.${extension}`);
   form.append("model", COACH_DEMO_TRANSCRIPTION_MODEL);
+  form.append("response_format", "json");
   form.append(
     "prompt",
     "Demostracion de ventas en espanol de Royal Prestige. Vocabulario esperado: Royal Prestige, Innove, Novel, " +
@@ -12507,6 +12508,10 @@ async function transcribirCoachDemoChunk(buffer, options = {}) {
   if (!response.ok) {
     const detail = data?.error?.message || data?.message || `OpenAI respondio ${response.status}.`;
     throw new Error(detail);
+  }
+
+  if (typeof data.text !== "string") {
+    throw new Error("El servicio de transcripcion devolvio una respuesta incompleta. Conserva el audio para reintentar.");
   }
 
   return {
@@ -32011,6 +32016,17 @@ app.get("/api/coach/demo-analyses/:id", async (req, res) => {
   }
 });
 
+// Serialize changes to a recording on this service instance. A retry can arrive
+// while its original request is still transcribing or generating the report.
+const coachDemoMutations = new Map();
+async function withCoachDemoMutation(key, action) {
+  const previous = coachDemoMutations.get(key) || Promise.resolve();
+  const task = previous.catch(() => null).then(action);
+  coachDemoMutations.set(key, task);
+  try { return await task; }
+  finally { if (coachDemoMutations.get(key) === task) coachDemoMutations.delete(key); }
+}
+
 app.post("/api/coach/demo-analyses", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -32101,6 +32117,7 @@ app.post(
       return responderCoachError(res, 413, "Ese fragmento de audio es demasiado pesado.");
     }
 
+    return withCoachDemoMutation(`${auth.user._id}:${req.params.id}`, async () => {
     try {
       const doc = await CoachDemoAnalysis.findOne({
         _id: req.params.id,
@@ -32111,12 +32128,11 @@ app.post(
         return responderCoachError(res, 404, "Esa grabacion no existe.");
       }
 
-      if (doc.status !== "recording") {
-        return responderCoachError(res, 409, "Esa grabacion ya termino.");
-      }
-
       const previousChunk = doc.chunks.find(chunk => Number(chunk.index) === index);
-      if (previousChunk?.status === "transcribed" && previousChunk?.text) {
+      // A lost receipt must remain retryable even after /complete succeeded.
+      // Silence is also a successfully transcribed segment (with empty text).
+      const retryEmpty = req.headers["x-coach-retry-empty"] === "1" && !String(previousChunk?.text || "").trim();
+      if (previousChunk?.status === "transcribed" && !retryEmpty) {
         return res.json({
           ok: true,
           duplicate: true,
@@ -32126,6 +32142,10 @@ app.post(
             status: previousChunk.status
           }
         });
+      }
+
+      if (!["recording", "error", "needs_audio"].includes(doc.status)) {
+        return responderCoachError(res, 409, "Esa grabacion ya termino. Este segmento no se ha confirmado; su copia local se conserva.");
       }
 
       const otherDuration = doc.chunks
@@ -32153,6 +32173,7 @@ app.post(
         });
         doc.durationSeconds = otherDuration + durationSeconds;
         doc.chunkCount = doc.chunks.length;
+        doc.status = "recording";
         doc.error = "";
         doc.updatedAt = new Date();
         await doc.save();
@@ -32189,6 +32210,7 @@ app.post(
       console.error("Error transcribiendo fragmento de demostracion:", error.message);
       responderCoachError(res, error.status || 502, "No pude transcribir un fragmento. Puedes intentar finalizar otra vez.");
     }
+    });
   }
 );
 
@@ -32203,6 +32225,7 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
     return responderCoachError(res, 404, "Esa grabacion no existe.");
   }
 
+  return withCoachDemoMutation(`${auth.user._id}:${req.params.id}`, async () => {
   let doc = null;
   try {
     doc = await CoachDemoAnalysis.findOne({
@@ -32214,6 +32237,17 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       return responderCoachError(res, 404, "Esa grabacion no existe.");
     }
 
+    const expected = req.body?.expectedChunkIndexes;
+    if (expected !== undefined) {
+      if (!Array.isArray(expected) || !expected.length || expected.length > COACH_DEMO_MAX_CHUNKS ||
+          expected.some(index => !Number.isInteger(index) || index < 0 || index >= COACH_DEMO_MAX_CHUNKS)) {
+        return responderCoachError(res, 400, "La lista de segmentos de la grabacion no es valida.");
+      }
+      if (expected.some(index => !doc.chunks.some(chunk => Number(chunk.index) === index && chunk.status === "transcribed"))) {
+        return responderCoachError(res, 409, "Faltan segmentos por confirmar. Conservamos el audio pendiente para completar la demostracion.");
+      }
+    }
+
     if (doc.status === "completed" && doc.report) {
       return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
     }
@@ -32222,8 +32256,8 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       .filter(chunk => chunk?.status === "transcribed" && String(chunk?.text || "").trim())
       .sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
 
-    if (!successfulChunks.length) {
-      return responderCoachError(res, 400, "Todavia no hay audio transcrito para analizar.");
+    if (!doc.chunks.length || doc.chunks.some(chunk => chunk.status !== "transcribed")) {
+      return responderCoachError(res, 409, "Todavia hay segmentos pendientes de transcribir. La grabacion se conserva para reintentar.");
     }
 
     let elapsedSeconds = 0;
@@ -32237,8 +32271,17 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       .join("\n\n")
       .trim();
 
-    if (transcript.length < 40) {
-      return responderCoachError(res, 400, "La grabacion tiene muy poco dialogo para generar un analisis util.");
+    const dialogue = successfulChunks.map(chunk => String(chunk.text || "").trim()).join(" ");
+    if (dialogue.length < 40) {
+      doc.status = "needs_audio";
+      doc.transcript = transcript;
+      doc.stoppedAt = new Date();
+      doc.error = "No se obtuvo suficiente dialogo para analizar. Revisa la copia de audio y vuelve a transcribirla, o inicia una nueva grabacion.";
+      doc.updatedAt = new Date();
+      await doc.save();
+      // Older open clients assume every 200 completion means a report exists.
+      if (req.body?.audioReviewVersion !== 1) return responderCoachError(res, 422, doc.error);
+      return res.json({ analysis: limpiarCoachDemoAnalysis(doc.toObject(), { includeDetail: true }) });
     }
 
     doc.status = "processing";
@@ -32273,6 +32316,7 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
     }
     responderCoachError(res, error.status || 502, "La transcripcion se guardo, pero no pude generar el reporte todavia.");
   }
+  });
 });
 
 app.delete("/api/coach/demo-analyses/:id", async (req, res) => {
