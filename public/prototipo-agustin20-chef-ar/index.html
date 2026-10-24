@@ -282,6 +282,9 @@
         color: var(--navy);
       }
 
+      [hidden] { display: none !important; }
+      .action:disabled { opacity: 0.55; cursor: wait; }
+
       .action:hover,
       .ghost-action:hover,
       .product-card:hover {
@@ -450,7 +453,7 @@
         </p>
         <div class="hero-note">
           Usa tu teléfono y toca <strong>Ver en tu espacio</strong>. En iPhone/iPad se abre Quick Look. En dispositivos
-          compatibles con Android/Chrome, Novel puede abrir la experiencia AR desde el visor.
+          compatibles con Android/Chrome, Novel y la maleta pueden abrir la experiencia AR desde el visor.
         </div>
       </section>
 
@@ -511,6 +514,11 @@
             entrar a AR desde el visor.
           </p>
 
+          <p class="helper" id="viewerStatus" role="status" aria-live="polite"></p>
+          <a class="ghost-action" id="interactiveCaseLink" href="/prototipo-agustin20-chef-ar/maleta/" hidden>
+            Sacar y guardar las ollas en 3D
+          </a>
+
           <p class="fineprint">
             Esta demo está pensada para enseñar la visión del producto. No es el catálogo final, pero ya deja probar un
             flujo real y compartible desde tu propio dominio.
@@ -535,6 +543,16 @@
           </p>
 
           <div class="product-list" id="productList">
+            <button class="product-card" type="button" data-product-id="maleta">
+              <strong>Maleta Royal Prestige</strong>
+              <span>Maleta abierta con las ollas, tapas y MultiPan originales. Colócala en tu espacio con la cámara.</span>
+              <div class="product-tags">
+                <span class="product-tag">3D + AR</span>
+                <span class="product-tag">7 piezas</span>
+                <span class="product-tag">iPhone + Android compatible</span>
+              </div>
+            </button>
+
             <button class="product-card active" type="button" data-product-id="novel">
               <strong>Novel</strong>
               <span>Visor 3D completo dentro de la web y apertura AR desde el teléfono.</span>
@@ -605,6 +623,24 @@
 
     <script>
       const productCatalog = {
+        maleta: {
+          id: "maleta",
+          title: "Maleta Royal Prestige en tu espacio",
+          modeBadge: "Maleta completa · 3D + AR",
+          copy: "Gira la maleta para ver los productos y sus compartimentos. Toca Ver en tu espacio para colocar el conjunto abierto en el suelo usando la cámara del teléfono.",
+          helper: "En iPhone o iPad, abre esta página en Safari y elige AR dentro de Quick Look. En Android compatible, usa Chrome y permite la realidad aumentada. Para sacar cada olla o tapa, abre el visor de piezas de abajo.",
+          hasViewer: true,
+          src: "/prototipo-agustin20-chef-ar/assets/maleta-royal-prestige-ar-v3.glb",
+          poster: "/prototipo-agustin20-chef-ar/assets/maleta-royal-prestige-v3.webp",
+          actionLabel: "Ver en tu espacio",
+          // Keep private assets behind the existing PIN. WebXR uses this session;
+          // Quick Look receives a USDZ generated locally from the loaded model.
+          // Native Scene Viewer cannot forward the site's authentication cookie.
+          arModes: "webxr quick-look",
+          cameraOrbit: "35deg 62deg auto",
+          exposure: "1",
+          shadowIntensity: "1.3"
+        },
         novel: {
           id: "novel",
           title: "Novel dentro de tu espacio",
@@ -690,8 +726,11 @@
       const fallbackCopy = document.getElementById("fallbackCopy");
       const fallbackChipOne = document.getElementById("fallbackChipOne");
       const fallbackChipTwo = document.getElementById("fallbackChipTwo");
+      const viewerStatus = document.getElementById("viewerStatus");
+      const interactiveCaseLink = document.getElementById("interactiveCaseLink");
 
-      let activeProduct = productCatalog.novel;
+      const requestedProduct = new URLSearchParams(location.search).get("producto");
+      let activeProduct = Object.hasOwn(productCatalog, requestedProduct) ? productCatalog[requestedProduct] : productCatalog.novel;
 
       function isIosLike() {
         const ua = window.navigator.userAgent || "";
@@ -704,10 +743,21 @@
         viewerCopy.textContent = product.copy;
         viewerModeBadge.textContent = product.modeBadge;
         viewerHelper.textContent = product.helper;
+        viewerStatus.textContent = "";
+        interactiveCaseLink.hidden = product.id !== "maleta";
         openArButton.textContent = product.actionLabel;
+        openArButton.disabled = false;
         viewer.setAttribute("environment-image", product.environmentImage || "neutral");
         viewer.setAttribute("exposure", product.exposure || "1");
         viewer.setAttribute("shadow-intensity", product.shadowIntensity || "1.15");
+        viewer.setAttribute("ar-modes", product.arModes || "webxr scene-viewer quick-look");
+        viewer.setAttribute("camera-orbit", product.cameraOrbit || "0deg 75deg auto");
+        viewer.setAttribute("alt", product.title);
+        viewer.toggleAttribute("xr-environment", product.id === "maleta");
+        viewer.toggleAttribute("auto-rotate", product.id !== "maleta");
+        const shareUrl = new URL(location.href);
+        shareUrl.searchParams.set("producto", product.id);
+        history.replaceState(null, "", shareUrl);
 
         productCards.forEach(card => {
           card.classList.toggle("active", card.dataset.productId === product.id);
@@ -725,6 +775,10 @@
             quickLookLink.setAttribute("href", "#");
           }
           viewer.setAttribute("poster", product.poster);
+          if (product.id === "maleta" && !viewer.loaded) {
+            viewerStatus.textContent = "Cargando la maleta y las siete piezas…";
+            openArButton.disabled = true;
+          }
           return;
         }
 
@@ -739,6 +793,26 @@
 
       async function openActiveAr() {
         if (!activeProduct) {
+          return;
+        }
+
+        if (activeProduct.id === "maleta") {
+          await customElements.whenDefined("model-viewer");
+          if (!viewer.loaded) {
+            viewerStatus.textContent = "Espera a que termine de cargar el modelo antes de abrir la cámara.";
+            return;
+          }
+          if (!viewer.canActivateAR) {
+            viewerStatus.textContent = "Abre este enlace en Safari en un iPhone/iPad o en Chrome en un Android compatible con AR. En esta pantalla puedes girar la maleta en 3D.";
+            return;
+          }
+          viewerStatus.textContent = "Preparando la maleta para tu cámara…";
+          try {
+            await viewer.activateAR();
+            viewerStatus.textContent = "";
+          } catch (error) {
+            viewerStatus.textContent = "No se pudo abrir la realidad aumentada. Comprueba el permiso de cámara y vuelve a intentarlo desde Safari o Chrome.";
+          }
           return;
         }
 
@@ -760,6 +834,22 @@
           window.open(activeProduct.iosSrc, "_blank", "noopener");
         }
       }
+
+      viewer.addEventListener("load", () => {
+        if (activeProduct.id !== "maleta") return;
+        openArButton.disabled = false;
+        viewerStatus.textContent = "Maleta lista. Gírala con el dedo o toca Ver en tu espacio.";
+      });
+      viewer.addEventListener("error", () => {
+        if (activeProduct.id !== "maleta") return;
+        openArButton.disabled = true;
+        viewerStatus.textContent = "No se pudo cargar la maleta. Recarga la página; si tu sesión venció, vuelve a entrar con tu PIN.";
+      });
+      viewer.addEventListener("ar-status", event => {
+        if (activeProduct.id === "maleta" && event.detail.status === "failed") {
+          viewerStatus.textContent = "No se pudo iniciar AR. Revisa los permisos del navegador y la compatibilidad de tu teléfono.";
+        }
+      });
 
       productCards.forEach(card => {
         card.addEventListener("click", () => {

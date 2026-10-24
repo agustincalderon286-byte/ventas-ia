@@ -33982,6 +33982,9 @@ app.post(AR_PROTOTYPE_LOCK_PATH, express.urlencoded({ extended: false }), (req, 
 
 app.use(AR_PROTOTYPE_PATH_PREFIX, (req, res, next) => {
   if (arPrototypeTieneAcceso(req)) {
+    // Camera and spatial tracking are available only inside the authenticated AR
+    // prototype. The browser still asks the user before starting an AR session.
+    res.setHeader("Permissions-Policy", "camera=(self), xr-spatial-tracking=(self), microphone=(self), geolocation=(), payment=()");
     return next();
   }
 
