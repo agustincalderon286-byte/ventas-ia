@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#071827" />
     <meta name="description" content="Muestra inmersiva WebXR de Agustin 2.0 para Meta Quest." />
-    <title>Agustin 2.0 · Novel en VR</title>
+    <title>Agustin 2.0 · Maleta y ollas en VR</title>
     <style>
       :root {
         color-scheme: dark;
@@ -49,6 +49,12 @@
       .loading-card { text-align: center; }
       .orb { width: 42px; height: 42px; margin: 0 auto 15px; border: 4px solid rgba(255,255,255,.22); border-top-color: var(--accent-2); border-radius: 50%; animation: spin .9s linear infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
+      .piece-controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+      .piece-controls label { display:grid; gap:4px; font-size:12px; }
+      .piece-controls select,.piece-controls button { padding:9px; border:1px solid var(--line); border-radius:9px; background:#183b4e; color:#fff; max-width:280px; }
+      .piece-controls button:disabled { opacity:.45; }
+      #piece-status { margin-bottom:0; min-height:36px; }
+      .panel { max-height:calc(100vh - 110px); overflow:auto; }
       @media (max-width: 620px) {
         .topbar { padding: 10px 11px; min-height: 55px; }
         .brand-mark { width: 30px; height: 30px; }
@@ -86,15 +92,22 @@
 
       <section class="panel">
         <p class="eyebrow">ROYAL PRESTIGE · COCINA DEMO</p>
-        <h1>Novel</h1>
-        <p>Explora la cocina, acércate a la isla central y toma Novel con un pellizco. Los controles quedan como respaldo.</p>
+        <h1>Maleta Royal Prestige</h1>
+        <p>Toma la carcasa para mover la maleta completa. Pellizca una tapa u olla para sacarla, gírala con la mano y devuélvela a su compartimento.</p>
         <div class="facts">
-          <div class="fact"><b>✋ Manos primero</b><span>Pellizca índice y pulgar cerca de Novel para tomarlo.</span></div>
-          <div class="fact"><b>◉ Respaldo</b><span>Si usas controles, apunta y usa el gatillo.</span></div>
+          <div class="fact"><b>✋ Manos primero</b><span>Acerca índice y pulgar a una pieza y pellizca. Suelta para dejarla.</span></div>
+          <div class="fact"><b>◉ Respaldo</b><span>Apunta a una pieza y mantén el gatillo. Cerca de su hueco se guarda sola.</span></div>
         </div>
+        <div class="piece-controls">
+          <label>Pieza <select id="piece-picker" disabled></select></label>
+          <label>Arrastrar <select id="pointer-mode"><option value="move">Mover</option><option value="rotate">Girar</option></select></label>
+          <button id="take-piece" disabled>Sacar pieza</button><button id="store-piece" disabled>Guardar pieza</button>
+          <button id="reset-case" disabled>Recolocar todo</button>
+        </div>
+        <p id="piece-status" role="status" aria-live="polite">Cargando las siete piezas…</p>
       </section>
 
-      <aside class="toast" id="toast">En Quest 2 activa tus manos, acerca índice y pulgar a Novel y pellizca. Los controles también funcionan.</aside>
+      <aside class="toast" id="toast">En VR los botones flotantes permiten guardar la pieza seleccionada, recolocar todo o salir. Novel sigue en la isla.</aside>
     </main>
 
     <script type="importmap">
@@ -114,12 +127,16 @@
       import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+      import { createCaseSystem, PIECE_ORDER } from "../shared/case-system.js";
+      import { installPiecePointer } from "../shared/touch-pieces.js";
+      import { installXRHands } from "../shared/xr-pieces.js";
+
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x071827);
       scene.fog = new THREE.Fog(0x071827, 7, 16);
 
       const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.01, 100);
-      camera.position.set(0, 1.55, 4.4);
+      camera.position.set(2.6, 2.8, 2.9);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -262,7 +279,8 @@
         new THREE.CylinderGeometry(0.57, 0.62, 0.045, 64),
         new THREE.MeshStandardMaterial({ color: 0x173b50, metalness: 0.72, roughness: 0.2, emissive: 0x0c2432, emissiveIntensity: 0.5 })
       );
-      displayPlate.position.set(0, 1.065, exhibitZ);
+      displayPlate.position.set(1.32, 1.065, exhibitZ);
+      displayPlate.scale.setScalar(.55);
       displayPlate.castShadow = true;
       displayPlate.receiveShadow = true;
       scene.add(displayPlate);
@@ -300,123 +318,49 @@
         scene.add(pendantLight);
       });
 
-      const product = new THREE.Group();
-      product.position.set(0, 1.095, exhibitZ);
-      scene.add(product);
-
-      const loader = new GLTFLoader();
-      const dracoLoader = new DRACOLoader();
-      dracoLoader.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/libs/draco/");
-      loader.setDRACOLoader(dracoLoader);
-      const loading = document.getElementById("loading");
-      const toast = document.getElementById("toast");
-      let grabbedBy = null;
-
-      loader.load(
-        "../assets/novel.glb",
-        gltf => {
-          const model = gltf.scene;
-          const initialBox = new THREE.Box3().setFromObject(model);
-          const size = initialBox.getSize(new THREE.Vector3());
-          const maxAxis = Math.max(size.x, size.y, size.z) || 1;
-          const scale = 1.16 / maxAxis;
-          model.scale.setScalar(scale);
-          const box = new THREE.Box3().setFromObject(model);
-          const center = box.getCenter(new THREE.Vector3());
-          model.position.x -= center.x;
-          model.position.z -= center.z;
-          model.position.y -= box.min.y;
-          model.traverse(node => {
-            if (node.isMesh) {
-              node.castShadow = true;
-              node.receiveShadow = true;
-              node.material.envMapIntensity = 1.1;
-            }
-          });
-          product.add(model);
-          loading.hidden = true;
-        },
-        undefined,
-        error => {
-          console.error(error);
-          loading.innerHTML = "<div class=\"loading-card\"><strong>No pude cargar el modelo.</strong><p>Revisa tu conexión y vuelve a abrir esta muestra.</p></div>";
-        }
-      );
-
-      const raycaster = new THREE.Raycaster();
-      const tempMatrix = new THREE.Matrix4();
-      const worldPoint = new THREE.Vector3();
-      const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
-      const hands = [renderer.xr.getHand(0), renderer.xr.getHand(1)];
-      const handModelFactory = new XRHandModelFactory();
-      const HAND_PINCH_DISTANCE = 0.029;
-      const HAND_GRAB_DISTANCE = 0.68;
-
-      function getIntersection(controller) {
-        tempMatrix.identity().extractRotation(controller.matrixWorld);
-        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-        return raycaster.intersectObject(product, true)[0] || null;
+      const loading=document.getElementById('loading'), toast=document.getElementById('toast');
+      const picker=document.getElementById('piece-picker'), take=document.getElementById('take-piece'), put=document.getElementById('store-piece'), status=document.getElementById('piece-status');
+      let system=null, xrInput=null, pointerInput=null;
+      const buttons=[];
+      // World-space UI remains usable in immersive VR without a DOM overlay.
+      function textPanel(text,width,height,position,action) {
+        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
+        const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
+        mesh.position.copy(position);scene.add(mesh);
+        mesh.userData.paint=value=>{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,1024,256);ctx.fillStyle=action?'#174c50':'#071827';ctx.fillRect(0,0,1024,256);ctx.strokeStyle='#81d9c6';ctx.lineWidth=8;ctx.strokeRect(4,4,1016,248);ctx.fillStyle='#fff';ctx.font='bold 55px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(value,512,128,970);texture.needsUpdate=true;};
+        mesh.userData.paint(text);if(action){mesh.userData.action=action;buttons.push(mesh);}return mesh;
       }
-
-      function grabProduct(source, message) {
-        if (grabbedBy) return false;
-        grabbedBy = source;
-        source.attach(product);
-        toast.textContent = message;
-        return true;
+      const vrStatus=textPanel('Pellizca una tapa o apunta y mantén el gatillo',2.05,.24,new THREE.Vector3(0,1.32,-.38));
+      textPanel('Guardar pieza',.65,.17,new THREE.Vector3(-.7,1.1,-.38),()=>system?.store(system.selected));
+      textPanel('Recolocar todo',.65,.17,new THREE.Vector3(0,1.1,-.38),()=>{pointerInput?.cancel();xrInput?.resetInput();system?.reset();});
+      textPanel('Salir de VR',.65,.17,new THREE.Vector3(.7,1.1,-.38),()=>renderer.xr.getSession()?.end());
+      const loader=new GLTFLoader();const dracoLoader=new DRACOLoader();dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/libs/draco/');loader.setDRACOLoader(dracoLoader);
+      function sync(state) {
+        picker.value=state.selected;status.textContent=state.message;toast.textContent=state.message;vrStatus.userData.paint(state.message);
+        const p=system?.pieces.get(state.selected);take.disabled=!p||p.out||state.held>0;put.disabled=!p||!p.out||state.held>0;
+        document.body.dataset.out=JSON.stringify(state.pieces.filter(p=>p.out).map(p=>p.id));document.body.dataset.selected=state.selected;
+        if(system)document.body.dataset.poses=JSON.stringify(system.snapshot());
       }
-
-      function dropProduct(source, message) {
-        if (grabbedBy !== source) return;
-        scene.attach(product);
-        grabbedBy = null;
-        toast.textContent = message;
-      }
-
-      controllers.forEach(controller => {
-        controller.addEventListener("selectstart", () => {
-          if (!getIntersection(controller)) return;
-          grabProduct(controller, "Suelta el gatillo para dejar el producto en su nueva posición.");
-        });
-        controller.addEventListener("selectend", () => {
-          dropProduct(controller, "Producto colocado. Puedes tomarlo otra vez con el gatillo.");
-        });
-        scene.add(controller);
-      });
-
-      hands.forEach(hand => {
-        hand.userData.wasPinching = false;
-        // Perfil estable para Quest Browser: las articulaciones visibles conservan interacción de pellizco fiable.
-        hand.add(handModelFactory.createHandModel(hand, "spheres"));
-        scene.add(hand);
-      });
-
-      function updateHandTracking() {
-        hands.forEach(hand => {
-          const thumbTip = hand.joints?.["thumb-tip"];
-          const indexTip = hand.joints?.["index-finger-tip"];
-          if (!thumbTip || !indexTip) return;
-
-          const thumbPosition = thumbTip.getWorldPosition(new THREE.Vector3());
-          const indexPosition = indexTip.getWorldPosition(new THREE.Vector3());
-          const pinching = thumbPosition.distanceTo(indexPosition) <= HAND_PINCH_DISTANCE;
-          const wasPinching = Boolean(hand.userData.wasPinching);
-
-          if (pinching && !wasPinching && !grabbedBy) {
-            const productPosition = product.getWorldPosition(worldPoint);
-            if (indexPosition.distanceTo(productPosition) <= HAND_GRAB_DISTANCE) {
-              grabProduct(hand, "Ahora abre los dedos para dejar Novel en su nueva posición.");
-            }
-          }
-
-          if (!pinching && wasPinching && grabbedBy === hand) {
-            dropProduct(hand, "Producto colocado. Acerca tu mano y pellizca para tomarlo otra vez.");
-          }
-
-          hand.userData.wasPinching = pinching;
-        });
-      }
+      try {
+        const gltf=await loader.loadAsync('../assets/maleta-royal-prestige-ar-v3.glb');
+        const root=gltf.scene;root.position.set(-.35,1.045,exhibitZ);scene.add(root);
+        system=createCaseSystem(THREE,root,scene,sync);
+        for(const id of ['case',...PIECE_ORDER]){const o=document.createElement('option');o.value=id;o.textContent=system.item(id).label;picker.append(o);}
+        picker.disabled=false;document.getElementById('reset-case').disabled=false;
+        picker.addEventListener('change',()=>system.select(picker.value));
+        take.addEventListener('click',()=>system.extract(system.selected));put.addEventListener('click',()=>system.store(system.selected));
+        document.getElementById('reset-case').addEventListener('click',()=>{pointerInput?.cancel();xrInput?.resetInput();system.reset();});
+        pointerInput=installPiecePointer(THREE,{canvas:renderer.domElement,camera,system,world:scene,controls,canInteract:()=>!renderer.xr.isPresenting,mode:()=>document.getElementById('pointer-mode').value});
+        xrInput=installXRHands(THREE,{renderer,scene,system,handModelFactory:new XRHandModelFactory(),buttons});
+        system.update();loading.hidden=true;document.body.dataset.loaded='true';document.body.dataset.pieceCount=system.pieces.size;
+        // Preserve the original Novel product as a separately grabbable exhibit.
+        loader.load('../assets/novel.glb',gltf=>{
+          const novel=gltf.scene;const size=new THREE.Box3().setFromObject(novel).getSize(new THREE.Vector3());novel.scale.setScalar(.48/Math.max(size.x,size.y,size.z));
+          const box=new THREE.Box3().setFromObject(novel),center=box.getCenter(new THREE.Vector3());novel.position.set(1.32-center.x,1.095-box.min.y,exhibitZ-center.z);scene.add(novel);
+          system.registerExtra('novel',novel,'Novel original');const o=document.createElement('option');o.value='novel';o.textContent='Novel original';picker.append(o);
+        },undefined,()=>{toast.textContent='La maleta está lista. Novel no pudo cargarse; recarga si quieres verlo también.';});
+      } catch(error) { console.error(error);loading.innerHTML='<div class="loading-card"><strong>No pude cargar la maleta.</strong><p>Recarga la página y vuelve a entrar con tu PIN si la sesión venció.</p></div>'; }
 
       const xrControls = document.getElementById("xr-controls");
       const exitVrButton = document.getElementById("exit-vr");
@@ -456,7 +400,7 @@
             document.body.classList.add("xr-active");
             button.textContent = "En VR";
           } catch (error) {
-            console.warn(error);
+            console.warn(error);toast.textContent='No se pudo entrar a VR. Abre esta página en el navegador de Quest y permite la sesión inmersiva.';
           }
         });
       }
@@ -471,10 +415,8 @@
 
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        const elapsed = clock.getElapsedTime();
-        updateHandTracking();
-        if (!grabbedBy) product.rotation.y = Math.sin(elapsed * 0.42) * 0.12;
-        controls.update();
+        xrInput?.update();
+        if(!renderer.xr.isPresenting)controls.update();
         renderer.render(scene, camera);
       });
     </script>

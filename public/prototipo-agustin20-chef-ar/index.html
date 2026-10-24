@@ -519,6 +519,12 @@
             Sacar y guardar las ollas en 3D
           </a>
 
+          <div id="caseImmersiveLinks" hidden style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
+            <a class="action" href="/prototipo-agustin20-chef-ar/camara/">Sacar piezas con la cámara del iPhone</a>
+            <a class="ghost-action" href="/prototipo-agustin20-chef-ar/camara/referencia.html" target="_blank" rel="noopener">Mostrar tarjeta de referencia</a>
+            <a class="ghost-action" href="/prototipo-agustin20-chef-ar/vr/">Maleta y piezas en Meta Quest 2</a>
+            <p class="helper">La cámara interactiva de Safari necesita la tarjeta visible en otra pantalla o impresa. «Ver en tu espacio» muestra el conjunto en Quick Look.</p>
+          </div>
           <p class="fineprint">
             Esta demo está pensada para enseñar la visión del producto. No es el catálogo final, pero ya deja probar un
             flujo real y compartible desde tu propio dominio.
@@ -745,6 +751,7 @@
         viewerHelper.textContent = product.helper;
         viewerStatus.textContent = "";
         interactiveCaseLink.hidden = product.id !== "maleta";
+        document.getElementById("caseImmersiveLinks").hidden = product.id !== "maleta";
         openArButton.textContent = product.actionLabel;
         openArButton.disabled = false;
         viewer.setAttribute("environment-image", product.environmentImage || "neutral");

@@ -25,5 +25,8 @@
     "redis": "^4.7.1",
     "stripe": "^20.4.1",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "three": "0.160.1"
   }
 }
