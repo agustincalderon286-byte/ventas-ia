@@ -3,7 +3,7 @@ export const PIECE_ORDER = ['tapa_6','olla_6','tapa_3','olla_3','multipan_tapa',
 const SUPPORTS = {tapa_6:'olla_6',tapa_3:'olla_3',vaporera:'multipan',multipan_tapa:'vaporera'};
 const PARKED = [[-.72,.65,.8],[-.78,.5,1.25],[-.25,.65,.8],[-.25,.5,1.25],[.24,.65,.8],[.7,.55,.8],[.5,.5,1.3]];
 
-export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAccess=()=>true} = {}) {
+export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAccess=()=>true,onRelease=()=>false} = {}) {
   const pieces = new Map(), holders = new Map(), extras = new Map();
   const rootHome = {parent:root.parent, position:root.position.clone(), quaternion:root.quaternion.clone(), scale:root.scale.clone()};
   root.traverse(node => {
@@ -32,6 +32,7 @@ export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAc
   function select(id) { if (!item(id)) return; selected=id; update(); }
   function canTake(id) {
     const p=item(id); if (!p || p.owner!==null) return false;
+    if(p.canTake&&!p.canTake()){update('Abre el refrigerador para sacar los alimentos.');return false;}
     if (caseItem.owner!==null || (id==='case' && holders.size)) { update('Suelta primero lo que tienes en la mano.'); return false; }
     if (pieces.has(id) && !p.out) {
       if(!canAccess()){update("Abre la maleta para sacar las piezas.");return false;}
@@ -64,6 +65,7 @@ export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAc
     const p=holders.get(owner); if (!p) return;
     world.updateWorldMatrix(true,false); world.attach(p.node); holders.delete(owner); p.owner=null;
     if (pieces.has(p.id) && snap && trySnap(p)) return;
+    if(snap&&onRelease(p)){update();return;}
     update();
   }
   function extract(id) {
@@ -100,8 +102,8 @@ export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAc
     }
     return null;
   }
-  function registerExtra(id,node,label) { node.userData.extraId=id; extras.set(id,{id,node,label,extra:true,owner:null,out:true,parent:node.parent,home:node.position.clone(),homeQ:node.quaternion.clone(),homeS:node.scale.clone()}); }
+  function registerExtra(id,node,label,{canTake}={}) { node.userData.extraId=id; extras.set(id,{id,node,label,canTake,extra:true,owner:null,out:true,parent:node.parent,home:node.position.clone(),homeQ:node.quaternion.clone(),homeS:node.scale.clone()}); }
   function releaseAll() { for (const owner of [...holders.keys()]) release(owner,false); }
-  return {root,pieces,holders,registerExtra,item,select,get selected(){return selected;},update,beginGrab,release,releaseAll,extract,store,reset,resolve,meshes,closest,homeWorld,
+  return {root,pieces,holders,extras,registerExtra,item,select,get selected(){return selected;},update,beginGrab,release,releaseAll,extract,store,reset,resolve,meshes,closest,homeWorld,
     snapshot:()=>[...pieces.values()].map(p=>({id:p.id,out:p.out,position:p.node.position.toArray(),quaternion:p.node.quaternion.toArray()}))};
 }

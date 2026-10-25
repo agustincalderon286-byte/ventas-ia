@@ -1,7 +1,7 @@
 import {createActionPress,isVisible} from './intentional-action.js';
 export function installXRHands(THREE,{renderer,scene,rig=scene,system,handModelFactory,buttons=[],onMessage=()=>{},now=()=>performance.now()}) {
   const ray=new THREE.Raycaster(),rotation=new THREE.Matrix4();const states=[];
-  function intersect(source,uiOnly=false){source.updateWorldMatrix(true,false);rotation.extractRotation(source.matrixWorld);ray.ray.origin.setFromMatrixPosition(source.matrixWorld);ray.ray.direction.set(0,0,-1).applyMatrix4(rotation);return ray.intersectObjects([...buttons,...(uiOnly?[]:system.meshes())].filter(isVisible),false)[0];}
+  function intersect(source,uiOnly=false){source.updateWorldMatrix(true,false);rotation.extractRotation(source.matrixWorld);ray.ray.origin.setFromMatrixPosition(source.matrixWorld);ray.ray.direction.set(0,0,-1).applyMatrix4(rotation);const hudHit=ray.intersectObjects(buttons.filter(b=>b.userData.hud&&isVisible(b)),false)[0];if(hudHit)return hudHit;return ray.intersectObjects([...buttons,...(uiOnly?[]:system.meshes())].filter(isVisible),false)[0];}
   function nearButton(point){let best=null,distance=Infinity;for(const button of buttons){if(!isVisible(button)||button.userData.rayOnly)continue;const d=new THREE.Box3().setFromObject(button).distanceToPoint(point);if(d<(button.userData.nearRadius||.055)&&d<distance){best=button;distance=d;}}return best;}
   for(let index=0;index<2;index++){
     const controller=renderer.xr.getController(index),grip=renderer.xr.getControllerGrip(index),hand=renderer.xr.getHand(index),pinchHolder=new THREE.Group();rig.add(controller,grip,hand);scene.add(pinchHolder);
@@ -13,6 +13,8 @@ export function installXRHands(THREE,{renderer,scene,rig=scene,system,handModelF
     controller.addEventListener('disconnected',()=>{system.release(controller,false);system.release(hand,false);state.press.cancel();state.nearPress.cancel();state.input=null;state.pinching=false;cursor.visible=false;});
     controller.addEventListener('selectstart',()=>{
       const hit=intersect(controller,!!state.input?.hand);if(!hit)return;
+      // A nearby pot takes priority over a distant knob behind it when pinching with bare hands.
+      if(state.input?.hand&&hand.visible&&!hit.object.userData.hud){const thumb=hand.joints?.['thumb-tip'],finger=hand.joints?.['index-finger-tip'];if(thumb?.visible&&finger?.visible){const near=thumb.getWorldPosition(new THREE.Vector3()).add(finger.getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);if(!nearButton(near)&&system.closest(near,.065))return;}}
       if(hit.object.userData.action){if(!state.nearPress.active&&!system.holders.has(hand)&&!system.holders.has(controller))state.press.begin(hit.object,now());return;}
       if(state.input?.hand)return;
       const id=system.resolve(hit.object);if(id)system.beginGrab(id,controller,grip);
@@ -32,5 +34,5 @@ export function installXRHands(THREE,{renderer,scene,rig=scene,system,handModelF
     }
   }
   function resetInput(){system.releaseAll();for(const s of states){s.pinching=false;s.cursor.visible=false;s.press.cancel();s.nearPress.cancel();}}
-  renderer.xr.addEventListener('sessionend',resetInput);return {update,resetInput};
+  renderer.xr.addEventListener('sessionend',resetInput);return {update,resetInput,isPressing:()=>states.some(s=>s.press.active||s.nearPress.active)};
 }

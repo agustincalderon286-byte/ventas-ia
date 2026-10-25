@@ -108,14 +108,14 @@
         </div>
         <div class="piece-controls">
           <button id="case-toggle">Cerrar maleta</button><button id="case-led">Apagar LED</button>
-          <button id="go-island">Ir a la isla</button><button id="go-stove">Ir a la estufa</button><button id="go-sink">Ir al fregadero</button>
-          <button id="stove-toggle">Encender estufa</button><button id="water-toggle">Abrir grifo</button>
+          <button id="go-fridge">Ir al refrigerador</button><button id="go-drawers">Ir a los cajones</button><button id="go-island">Ir a la isla</button><button id="go-stove">Ir a la estufa</button><button id="go-sink">Ir al fregadero</button>
+          <button id="fridge-toggle">Abrir/cerrar refrigerador</button><button id="drawers-toggle">Abrir/cerrar cajones</button><button id="stove-toggle">Encender estufa</button><button id="water-toggle">Abrir grifo</button>
         </div>
-        <p>En Quest: joystick izquierdo para caminar, derecho para girar. Con manos, apunta al panel lateral y pellizca un momento; elige Isla, Estufa o Fregadero. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
+        <div class="piece-controls"><button id="pot-sink">Poner olla bajo grifo</button><button id="pot-stove">Poner olla en estufa</button><button id="pot-island">Poner olla en isla</button><button id="preview-menu">Ver/ocultar menú VR</button></div><p id="cooking-status" role="status"></p><p id="game-mission">Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.</p><p>Con manos: busca el botón Menú abajo a la izquierda de tu mirada. Apunta, pellizca unos 0.4 segundos y suelta. Elige Viajar para regresar a la isla desde cualquier lugar. Toma una olla sin tapa, déjala bajo el grifo y ábrelo; después llévala a un quemador encendido. Abre el refrigerador y toma alimentos para agregarlos a la olla.</p><p>Opcional con controles: joystick izquierdo para caminar, derecho para girar. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
         <p id="piece-status" role="status" aria-live="polite">Cargando las siete piezas…</p>
       </section>
 
-      <aside class="toast" id="toast">El panel de VR está a tu izquierda. Recolocar todo requiere confirmar una segunda vez.</aside>
+      <aside class="toast" id="toast">Menú te acompaña por la cocina: Viajar, Cocinar y Maleta. Recolocar todo requiere confirmar.</aside>
     </main>
 
     <script type="importmap">
@@ -137,8 +137,11 @@
 
       import { createCaseSystem, PIECE_ORDER } from "../shared/case-system.js";
       import { installPiecePointer } from "../shared/touch-pieces.js";
-      import { buildKitchen } from './kitchen.js?v=3';
+      import { buildKitchen } from './kitchen.js?v=4';
       import { createCaseControls } from '../shared/case-controls.js';
+      import { installActionPointer } from './action-pointer.js';
+      import { createCooking } from './cooking.js';
+      import { createHandMenu } from './hand-menu.js';
       import { createLocomotion, STATIONS } from './locomotion.js';
       import { createConfirmation } from '../shared/confirm-action.js';
       import { installXRHands } from "../shared/xr-pieces.js";
@@ -183,11 +186,11 @@
 
       const loading=document.getElementById('loading'), toast=document.getElementById('toast');
       const picker=document.getElementById('piece-picker'), take=document.getElementById('take-piece'), put=document.getElementById('store-piece'), status=document.getElementById('piece-status');
-      let system=null, xrInput=null, pointerInput=null, caseMechanics=null;
+      let system=null, xrInput=null, pointerInput=null, caseMechanics=null, cooking=null, handMenu=null;
       const buttons=[...(kitchen?.actions||[])],vrPanels=[];
-      const sidePanel=new THREE.Group();sidePanel.position.set(-2.55,1.55,-.05);sidePanel.rotation.y=.75;scene.add(sidePanel);
+      const sidePanel=new THREE.Group();sidePanel.position.set(-2.55,1.55,-.05);sidePanel.rotation.y=.75;scene.add(sidePanel);sidePanel.visible=false;
       const locomotion=createLocomotion({rig,camera,renderer,onMove:state=>document.body.dataset.location=JSON.stringify(state)});
-      function goTo(id){if(renderer.xr.isPresenting){locomotion.teleport(id);return;}const p=STATIONS[id];camera.position.set(p.x,1.65,p.z);controls.target.set(p.x,1.1,id==='island'?-1.25:-3.65);controls.minDistance=.35;controls.update();document.body.dataset.station=id;}
+      function goTo(id){if(renderer.xr.isPresenting){locomotion.teleport(id);handMenu?.hide();handMenu?.recenter();return;}const p=STATIONS[id];camera.position.set(p.x,1.65,p.z);controls.target.set(p.x,1.1,id==='island'?-1.25:-3.65);controls.minDistance=.35;controls.update();document.body.dataset.station=id;handMenu?.hide();handMenu?.recenter();}
       function message(text){status.textContent=text;toast.textContent=text;vrStatus.userData.paint(text);}
       function syncKitchen(state){document.body.dataset.burners=JSON.stringify(state.burners);document.body.dataset.water=String(state.water);document.getElementById('stove-toggle').textContent=state.burners.some(Boolean)?'Apagar estufa':'Encender estufa';document.getElementById('water-toggle').textContent=state.water?'Cerrar grifo':'Abrir grifo';}
       if(kitchen)syncKitchen(kitchen.state);
@@ -195,27 +198,42 @@
       function textPanel(text,width,height,position,action) {
         const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
         const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
-        mesh.position.copy(position);mesh.visible=false;vrPanels.push(mesh);sidePanel.add(mesh);
+        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthTest:false,depthWrite:false}));
+        mesh.renderOrder=1000;mesh.position.copy(position);mesh.visible=false;vrPanels.push(mesh);sidePanel.add(mesh);
         mesh.userData.paint=value=>{if(mesh.userData.text===value)return;mesh.userData.text=value;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,1024,256);ctx.fillStyle=action?'#174c50':'#071827';ctx.fillRect(0,0,1024,256);ctx.strokeStyle='#81d9c6';ctx.lineWidth=8;ctx.strokeRect(4,4,1016,248);ctx.fillStyle='#fff';ctx.font='bold 55px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(value,512,128,970);texture.needsUpdate=true;};
         mesh.userData.paint(text);if(action){mesh.userData.action=action;buttons.push(mesh);}return mesh;
       }
-      const vrStatus=textPanel('Apunta y pellizca, o usa el gatillo',1.25,.16,new THREE.Vector3(0,.25,0));
-      const resetGuard=createConfirmation(()=>{pointerInput?.cancel();xrInput?.resetInput();system?.reset();message('Piezas recolocadas.');},pending=>{resetPanel.userData.paint(pending?'Confirmar recolocar':'Recolocar todo');document.getElementById('reset-case').textContent=pending?'Confirmar recolocar':'Recolocar todo';if(pending)message('Pulsa otra vez en 7 segundos para confirmar.');});
-      const lidPanel=textPanel('Cerrar maleta',.59,.15,new THREE.Vector3(-.32,.04,0),()=>caseMechanics?.toggle());
-      const ledPanel=textPanel('Apagar LED',.59,.15,new THREE.Vector3(.32,.04,0),()=>caseMechanics?.toggleLights());
-      textPanel('Guardar pieza',.59,.15,new THREE.Vector3(-.32,-.15,0),()=>system?.store(system.selected));
-      const resetPanel=textPanel('Recolocar todo',.59,.15,new THREE.Vector3(.32,-.15,0),()=>resetGuard.press());resetPanel.userData.holdMs=400;
-      textPanel('Ir a la isla',.59,.15,new THREE.Vector3(-.32,-.34,0),()=>goTo('island'));
-      textPanel('Ir a la estufa',.59,.15,new THREE.Vector3(.32,-.34,0),()=>goTo('stove'));
-      textPanel('Ir al fregadero',.59,.15,new THREE.Vector3(-.32,-.53,0),()=>goTo('sink'));
-      textPanel('Salir de VR',.59,.15,new THREE.Vector3(.32,-.53,0),()=>renderer.xr.getSession()?.end());
-      textPanel('Estufa: ON / OFF',.59,.15,new THREE.Vector3(-.32,-.72,0),()=>kitchen?.toggleStove());
-      textPanel('Grifo: abrir / cerrar',.59,.15,new THREE.Vector3(.32,-.72,0),()=>kitchen?.toggleWater());
-      for(const panel of vrPanels)panel.userData.rayOnly=true;
+      const pagePanels={travel:[],cook:[],case:[]};let menuPage='travel';
+      const vrStatus=textPanel('Apunta, pellizca un momento y suelta',1.02,.12,new THREE.Vector3(0,.28,0));
+      function menuPageShow(page){menuPage=page;for(const [key,panels]of Object.entries(pagePanels))for(const p of panels)p.visible=key===page;}
+      for(const [i,[page,label]]of [['travel','Viajar'],['cook','Cocinar'],['case','Maleta']].entries())textPanel(label,.32,.12,new THREE.Vector3((i-1)*.35,.12,0),()=>menuPageShow(page));
+      function menuAction(page,label,fn){const i=pagePanels[page].length,p=textPanel(label,.49,.13,new THREE.Vector3(i%2?.265:-.265,-.06-Math.floor(i/2)*.16,0),fn);pagePanels[page].push(p);return p;}
+      const resetGuard=createConfirmation(()=>{pointerInput?.cancel();xrInput?.resetInput();system?.reset();cooking?.reset();message('Piezas y alimentos recolocados.');},pending=>{resetPanel.userData.paint(pending?'Confirmar recolocar':'Recolocar todo');document.getElementById('reset-case').textContent=pending?'Confirmar recolocar':'Recolocar todo';if(pending)message('Pulsa otra vez en 7 segundos para confirmar.');});
+      const lidPanel=menuAction('case','Cerrar maleta',()=>caseMechanics?.toggle());
+      const ledPanel=menuAction('case','Apagar LED',()=>caseMechanics?.toggleLights());
+      menuAction('case','Guardar pieza',()=>system?.store(system.selected));
+      const resetPanel=menuAction('case','Recolocar todo',()=>resetGuard.press());resetPanel.userData.holdMs=400;
+      menuAction('case','Salir de VR',()=>renderer.xr.getSession()?.end());
+      for(const [id,p]of Object.entries(STATIONS))menuAction('travel',p.label,()=>goTo(id));
+      menuAction('travel','Girar 90°',()=>{locomotion.turn(Math.PI/2);handMenu?.recenter();});
+      function placeSelected(destination){if(!cooking?.pots.has(system?.selected)){message('Selecciona o toma una olla, primero retira su tapa.');return;}cooking.place(system.selected,destination);}
+      menuAction('cook','Olla bajo grifo',()=>placeSelected('sink'));
+      menuAction('cook','Olla a estufa',()=>placeSelected('stove'));
+      menuAction('cook','Estufa ON / OFF',()=>kitchen?.toggleStove());
+      menuAction('cook','Grifo abrir/cerrar',()=>kitchen?.toggleWater());
+      menuAction('cook','Abrir/cerrar refri',()=>kitchen?.furniture.toggleFridge());
+      menuAction('cook','Abrir/cerrar cajones',()=>kitchen?.furniture.toggleDrawers());
+      menuAction('cook','Olla a la isla',()=>placeSelected('island'));
+      textPanel('Ocultar menú',1.02,.11,new THREE.Vector3(0,-.73,0),()=>handMenu?.hide());
+      const summon=textPanel('Menú',.28,.11,new THREE.Vector3(),()=>{handMenu?.toggle();menuPageShow(menuPage);});scene.attach(summon);summon.userData.hud=true;
+      for(const panel of vrPanels){panel.userData.rayOnly=true;panel.userData.hud=true;}
+      handMenu=createHandMenu({panel:sidePanel,button:summon,head:camera,isBusy:()=>xrInput?.isPressing()??false});
       for(const id of Object.keys(STATIONS))document.getElementById('go-'+id).onclick=()=>goTo(id);
       document.getElementById('case-toggle').onclick=()=>caseMechanics?.toggle();document.getElementById('case-led').onclick=()=>caseMechanics?.toggleLights();
       document.getElementById('stove-toggle').onclick=()=>kitchen?.toggleStove();document.getElementById('water-toggle').onclick=()=>kitchen?.toggleWater();
+      document.getElementById('fridge-toggle').onclick=()=>kitchen?.furniture.toggleFridge();document.getElementById('drawers-toggle').onclick=()=>kitchen?.furniture.toggleDrawers();
+      for(const where of ['sink','stove','island'])document.getElementById('pot-'+where).onclick=()=>placeSelected(where);
+      document.getElementById('preview-menu').onclick=()=>{if(handMenu.visible)handMenu.stop();else{vrPanels.forEach(p=>p.visible=true);handMenu.start();menuPageShow('travel');}};
       const loader=new GLTFLoader();const dracoLoader=new DRACOLoader();dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/libs/draco/');loader.setDRACOLoader(dracoLoader);
       function sync(state) {
         picker.value=state.selected;status.textContent=state.message;toast.textContent=state.message;vrStatus.userData.paint(state.message);
@@ -226,7 +244,7 @@
       try {
         const gltf=await loader.loadAsync('../assets/maleta-royal-prestige-ar-v3.glb');
         const root=gltf.scene;root.position.set(-.35,1.045,exhibitZ);scene.add(root);
-        system=createCaseSystem(THREE,root,scene,sync,{canAccess:()=>caseMechanics?.canAccess()??true});
+        system=createCaseSystem(THREE,root,scene,sync,{canAccess:()=>caseMechanics?.canAccess()??true,onRelease:item=>cooking?.release(item)??false});
         caseMechanics=createCaseControls(THREE,system,state=>{
           const lidText=state.target?'Cerrar maleta':'Abrir maleta',ledText=state.lights?'Apagar LED':'Encender LED';
           lidPanel.userData.paint(lidText);ledPanel.userData.paint(ledText);document.getElementById('case-toggle').textContent=lidText;document.getElementById('case-led').textContent=ledText;
@@ -239,8 +257,13 @@
         picker.addEventListener('change',()=>system.select(picker.value));
         take.addEventListener('click',()=>system.extract(system.selected));put.addEventListener('click',()=>system.store(system.selected));
         document.getElementById('reset-case').addEventListener('click',()=>resetGuard.press());
+        installActionPointer({canvas:renderer.domElement,camera,buttons,controls,system,enabled:()=>!renderer.xr.isPresenting});
         pointerInput=installPiecePointer(THREE,{canvas:renderer.domElement,camera,system,world:scene,controls,canInteract:()=>!renderer.xr.isPresenting,mode:()=>document.getElementById('pointer-mode').value});
         xrInput=installXRHands(THREE,{renderer,scene,rig,system,handModelFactory:new XRHandModelFactory(),buttons});
+        if(kitchen){
+          cooking=createCooking({system,scene,kitchen,onChange:(state,note)=>{document.body.dataset.cooking=JSON.stringify(state);document.getElementById('cooking-status').textContent=state.map(p=>`${system.item(p.id).label}: agua ${p.water}%${p.steaming?' · vapor':''}${p.ingredients.length?' · '+p.ingredients.length+' ingredientes':''}`).join(' | ');document.getElementById('game-mission').textContent=state.some(p=>p.steaming&&p.ingredients.length)?'¡Preparación lista! Puedes sacar los ingredientes y volver a jugar.':'Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.';if(note)message(note);}});
+          for(const f of kitchen.furniture.food){system.registerExtra(f.id,f.node,f.label,{canTake:f.canTake});cooking.registerFood(f.id,f.node);const o=document.createElement('option');o.value=f.id;o.textContent=f.label;picker.append(o);}
+        }
         system.update();loading.hidden=true;document.body.dataset.loaded='true';document.body.dataset.pieceCount=system.pieces.size;
         // Preserve the original Novel product as a separately grabbable exhibit.
         loader.load('../assets/novel.glb',gltf=>{
@@ -275,13 +298,13 @@
               domOverlay: { root: document.getElementById("hud") }
             });
             session.addEventListener("end", () => {
-              vrPanels.forEach(p=>p.visible=false);resetGuard.cancel();locomotion.reset();camera.position.copy(desktopPosition);camera.quaternion.copy(desktopRotation);controls.target.copy(desktopTarget);
+              vrPanels.forEach(p=>p.visible=false);handMenu.stop();resetGuard.cancel();locomotion.reset();camera.position.copy(desktopPosition);camera.quaternion.copy(desktopRotation);controls.target.copy(desktopTarget);
               xrControls.hidden = true;
               document.body.classList.remove("xr-active");
               button.textContent = "Entrar a VR";
             });
             await renderer.xr.setSession(session);
-            vrPanels.forEach(p=>p.visible=true);
+            vrPanels.forEach(p=>p.visible=true);handMenu.start();menuPageShow('travel');
             xrControls.hidden = false;
             document.body.classList.add("xr-active");
             button.textContent = "En VR";
@@ -301,8 +324,9 @@
 
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        const dt=clock.getDelta();caseMechanics?.update(dt);kitchen?.update(clock.elapsedTime);resetGuard.update();locomotion.update(dt);
-        xrInput?.update();
+        const dt=clock.getDelta();caseMechanics?.update(dt);kitchen?.update(clock.elapsedTime,dt);resetGuard.update();locomotion.update(dt);
+        xrInput?.update();cooking?.update(dt);handMenu?.update();
+        if(kitchen){document.body.dataset.furniture=JSON.stringify(kitchen.furniture.state);}
         if(!renderer.xr.isPresenting)controls.update();
         renderer.render(scene, camera);
       });

@@ -50,3 +50,19 @@ La cocina incorpora gabinetes y cajones individuales, encimera de cuarzo, piso d
 - En computadora están los mismos controles de tapa, LED, estaciones, estufa y grifo en el panel HTML.
 
 Validación V3: geometría real del cierre y retorno a su ángulo original, bloqueo de extracción con tapa cerrada, LEDs, confirmación con caducidad, pulsación deliberada por mano/control, colisiones de desplazamiento, giro alrededor de la cabeza y destinos del visor. Revisión visual en navegador del cierre, apertura, panorama, llama y agua. Esta versión nueva aún requiere comprobar ergonomía y rendimiento en el Quest físico del usuario.
+
+## Juego de cocina con manos · V4
+
+El usuario confirmó que el panel fijo quedaba inaccesible después de viajar al fregadero. Se sustituye por un botón **Menú**, abajo a la izquierda de la mirada, que acompaña al usuario. Al activarlo aparece un panel completo orientado hacia la vista, también al mirar hacia abajo. El panel permanece quieto durante la pulsación. Viajar lo oculta automáticamente; Menú lo vuelve a abrir desde cualquier estación. Las pestañas son Viajar, Cocinar y Maleta. Hay destinos para isla, estufa, fregadero, refrigerador y cajones, y giro de 90 grados sin controles físicos.
+
+1. Retira la tapa correspondiente y toma la olla de 3 o 6 cuartos, o el recipiente MultiPan sin sus piezas superiores.
+2. Suéltala cerca del centro del fregadero: se acomoda bajo el grifo. Abre la palanca con un pellizco breve y suelta, o usa Cocinar > Grifo. El nivel sube en unos siete segundos. También se puede sostener bajo el chorro. Una olla inclinada o tapada no se llena.
+3. Lleva la olla a un quemador y suéltala cerca de la parrilla. Se acomoda en posición vertical; no se superponen dos ollas sobre el mismo quemador. Enciende su perilla o el interruptor general del menú. El agua genera vapor después de un calentamiento breve de juego, y se enfría al retirarla o apagar el fuego.
+4. Abre el refrigerador mediante la puerta, su asa o el menú Cocinar. Hay nueve alimentos individuales: tomates, manzanas y zanahorias. Se pueden tomar, mover y soltar dentro de una olla; acompañan al recipiente y se pueden volver a sacar. Cambian de tono gradualmente al calentar.
+5. Cuatro cajones traseros abren/cierra individualmente al pellizcar y soltar su frente o asa. El menú también los abre/cierra juntos. Contienen bandejas y cubiertos decorativos que se desplazan con el cajón.
+
+Para facilitar la colocación hay acciones Olla bajo grifo, Olla a estufa y Olla a la isla en Cocinar; actúan sobre la olla seleccionada. La última pieza que se toma queda seleccionada. El agua se conserva al moverla y se vacía al inclinarla. Recolocar todo sigue exigiendo confirmación y devuelve también los alimentos a su estante, vacía el agua y reinicia el calentamiento.
+
+Se trata de una simulación de juego: los tiempos de llenado/calentamiento no son tiempos de cocina real, y no hay fluidos volumétricos ni gravedad general. Las colocaciones en parrillas, fregadero, olla y encimeras son asistidas; los cubiertos de los cajones son decoración. Esta actualización no cambia la cámara AR del iPhone ni los archivos originales del catálogo.
+
+Validación V4: 33 pruebas con geometría GLB real y eventos simulados, más revisión de navegador del agua, vapor, puertas, cajones y menú desde distintas estaciones. Se comprueban agua solo bajo chorro abierto, recipiente tapado/inclinado, enfriamiento, quemador ocupado, alimentos dentro/fuera de la olla, puertas, bloqueo de alimentos con refrigerador cerrado, menú tras teleportación/giro y panel quieto durante pulsación. La ergonomía final del botón con seguimiento de manos todavía requiere prueba física en Quest.

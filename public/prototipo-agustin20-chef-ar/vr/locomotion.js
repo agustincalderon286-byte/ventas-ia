@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-export const STATIONS={island:{x:0,z:.35,label:'Isla'},stove:{x:0,z:-2.68,label:'Estufa'},sink:{x:1.65,z:-2.68,label:'Fregadero'}};
+export const STATIONS={island:{x:0,z:.35,label:'Isla'},stove:{x:0,z:-2.68,label:'Estufa'},sink:{x:1.65,z:-2.68,label:'Fregadero'},fridge:{x:2.85,z:-2.30,label:'Refrigerador'},drawers:{x:-1.4,z:-2.68,label:'Cajones'}};
 const obstacles=[{minX:-2.10,maxX:2.10,minZ:-2.18,maxZ:-.32},{minX:-3.7,maxX:3.7,minZ:-4.3,maxZ:-3.08}];
 export function canOccupy(x,z){return x>=-3.65&&x<=3.65&&z>=-3.65&&z<=3.55&&!obstacles.some(b=>x>b.minX&&x<b.maxX&&z>b.minZ&&z<b.maxZ);}
 export function createLocomotion({rig,camera,renderer,onMove=()=>{},beforeJump=()=>{}}){
