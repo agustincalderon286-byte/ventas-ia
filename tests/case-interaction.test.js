@@ -68,11 +68,11 @@ test('releasing far from the compartment retains pose; reset recovers objects an
 });
 
 const {installXRHands}=await import('../public/prototipo-agustin20-chef-ar/shared/xr-pieces.js');
-function xrHarness(scene,system) {
+function xrHarness(scene,system,options={}) {
   const controllers=[new THREE.Group(),new THREE.Group()],grips=[new THREE.Group(),new THREE.Group()],hands=[new THREE.Group(),new THREE.Group()];
   for(const hand of hands){hand.visible=false;hand.joints={};for(const name of ['wrist','thumb-tip','index-finger-tip']){const joint=new THREE.Group();hand.add(joint);hand.joints[name]=joint;}}
   const xr=new THREE.EventDispatcher();Object.assign(xr,{isPresenting:true,getController:i=>controllers[i],getControllerGrip:i=>grips[i],getHand:i=>hands[i]});
-  const input=installXRHands(THREE,{renderer:{xr},scene,system,handModelFactory:{createHandModel:()=>new THREE.Group()}});
+  const input=installXRHands(THREE,{renderer:{xr},scene,system,handModelFactory:{createHandModel:()=>new THREE.Group()},...options});
   return {controllers,grips,hands,xr,input};
 }
 
@@ -108,4 +108,32 @@ test('touch rotation changes only the selected lid and never enables orbit contr
   const event=(x,y)=>({clientX:x,clientY:y,pointerId:1,isPrimary:true,button:0,stopImmediatePropagation(){}});
   handlers.pointerdown(event(500,400));handlers.pointermove(event(580,410));scene.updateMatrixWorld(true);handlers.pointerup(event(580,410));
   assert.equal(system.selected,p.id);assert.equal(p.out,true);assert.ok(p.node.quaternion.angleTo(p.homeQ)>.5);assert.equal(controls.enabled,false);assert.deepEqual(system.snapshot().filter(x=>x.id!==p.id),others);assert.equal(captures.size,0);
+});
+
+const {createCaseControls}=await import('../public/prototipo-agustin20-chef-ar/shared/case-controls.js');
+test('real GLB lid closes and reopens exactly, LEDs switch and held objects prevent hinge motion',()=>{
+  const {scene,root,system}=setup(),lid=root.getObjectByName('Tapa_articulada'),opened=lid.quaternion.clone(),mechanics=createCaseControls(THREE,system);
+  assert.equal(mechanics.setOpen(false),true);for(let i=0;i<100;i++)mechanics.update(.016);
+  assert.equal(mechanics.angle,0);assert.equal(mechanics.canAccess(),false);assert.ok(lid.quaternion.angleTo(new THREE.Quaternion())<1e-5);
+  mechanics.setLights(false);root.traverse(n=>{if(n.isMesh&&n.material.name.includes('LED'))assert.equal(n.material.emissiveIntensity,0);});
+  mechanics.setOpen(true);for(let i=0;i<100;i++)mechanics.update(.016);assert.ok(lid.quaternion.angleTo(opened)<1e-6);
+  const grip=new THREE.Group();scene.add(grip);system.beginGrab('tapa_6','left',grip);assert.equal(mechanics.setOpen(false),false);assert.equal(mechanics.target,108);
+});
+test('closed case prevents extraction and storage without losing the extracted piece',()=>{
+  const scene=new THREE.Scene(),root=gltf.scene.clone(true);scene.add(root);let access=true;
+  const system=createCaseSystem(THREE,root,scene,()=>{},{canAccess:()=>access});
+  system.extract('tapa_6');access=false;assert.equal(system.store('tapa_6'),false);assert.equal(system.pieces.get('tapa_6').out,true);assert.equal(system.extract('tapa_3'),false);
+  access=true;assert.equal(system.store('tapa_6'),true);
+});
+
+
+test('Quest panel activation happens on deliberate release; hidden UI and passing hands cannot reset',()=>{
+ const {scene,system}=setup();let time=100,calls=0;
+ const button=new THREE.Mesh(new THREE.PlaneGeometry(.4,.2),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));button.position.set(2,1.5,-1);button.userData.action=()=>calls++;button.userData.rayOnly=true;scene.add(button);
+ const {controllers,hands,input}=xrHarness(scene,system,{buttons:[button],now:()=>time});
+ controllers[0].position.set(2,1.5,0);scene.updateMatrixWorld(true);controllers[0].dispatchEvent({type:'connected',data:{hand:{},targetRayMode:'tracked-pointer'}});
+ controllers[0].dispatchEvent({type:'selectstart'});assert.equal(calls,0);time+=100;controllers[0].dispatchEvent({type:'selectend'});assert.equal(calls,0);
+ controllers[0].dispatchEvent({type:'selectstart'});time+=350;controllers[0].dispatchEvent({type:'selectend'});assert.equal(calls,1);
+ button.visible=false;controllers[0].dispatchEvent({type:'selectstart'});time+=350;controllers[0].dispatchEvent({type:'selectend'});assert.equal(calls,1);
+ button.visible=true;const hand=hands[0];hand.visible=true;hand.joints['thumb-tip'].position.set(1.995,1.5,-1);hand.joints['index-finger-tip'].position.set(2.005,1.5,-1);scene.updateMatrixWorld(true);input.update();time+=400;hand.joints['index-finger-tip'].position.x+=.1;scene.updateMatrixWorld(true);input.update();assert.equal(calls,1);
 });

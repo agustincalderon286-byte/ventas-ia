@@ -3,7 +3,7 @@ export const PIECE_ORDER = ['tapa_6','olla_6','tapa_3','olla_3','multipan_tapa',
 const SUPPORTS = {tapa_6:'olla_6',tapa_3:'olla_3',vaporera:'multipan',multipan_tapa:'vaporera'};
 const PARKED = [[-.72,.65,.8],[-.78,.5,1.25],[-.25,.65,.8],[-.25,.5,1.25],[.24,.65,.8],[.7,.55,.8],[.5,.5,1.3]];
 
-export function createCaseSystem(THREE, root, world, onChange = () => {}) {
+export function createCaseSystem(THREE, root, world, onChange = () => {}, {canAccess=()=>true} = {}) {
   const pieces = new Map(), holders = new Map(), extras = new Map();
   const rootHome = {parent:root.parent, position:root.position.clone(), quaternion:root.quaternion.clone(), scale:root.scale.clone()};
   root.traverse(node => {
@@ -34,6 +34,7 @@ export function createCaseSystem(THREE, root, world, onChange = () => {}) {
     const p=item(id); if (!p || p.owner!==null) return false;
     if (caseItem.owner!==null || (id==='case' && holders.size)) { update('Suelta primero lo que tienes en la mano.'); return false; }
     if (pieces.has(id) && !p.out) {
+      if(!canAccess()){update("Abre la maleta para sacar las piezas.");return false;}
       const blocked=p.blockers.map(id=>pieces.get(id)).find(q=>q&&!q.out);
       if (blocked) { update('Retira primero: '+blocked.label+'.'); return false; }
     }
@@ -48,6 +49,7 @@ export function createCaseSystem(THREE, root, world, onChange = () => {}) {
   function homeWorld(p) { p.parent.updateWorldMatrix(true,false); return p.parent.localToWorld(p.home.clone()); }
   function store(id) {
     const p=pieces.get(id); if (!p || !p.out || p.owner!==null) return false;
+    if(!canAccess()){update("Abre la maleta antes de guardar una pieza.");return false;}
     const support=pieces.get(SUPPORTS[id]);
     if (support?.out) { update('Guarda primero: '+support.label+'.'); return false; }
     p.parent.add(p.node); p.node.position.copy(p.home); p.node.quaternion.copy(p.homeQ); p.node.scale.copy(p.homeS); p.out=false; update(); return true;

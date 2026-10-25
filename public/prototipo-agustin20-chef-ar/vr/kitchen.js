@@ -3,7 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 
 // All dimensions in metres. Shared materials and modest bevels keep the room practical for standalone VR.
-export async function buildKitchen(scene,renderer) {
+export async function buildKitchen(scene,renderer,onChange=()=>{}) {
   const group=new THREE.Group();group.name='Cocina arquitectónica';scene.add(group);
   const loader=new THREE.TextureLoader(),base='../assets/kitchen/';
   async function maps(name,tile=1) {
@@ -38,7 +38,7 @@ export async function buildKitchen(scene,renderer) {
   box(8,3.1,.15,m.wall,0,1.55,-4.1);box(.15,3.1,9,m.wall,4,1.55,-.5);box(8,.12,9,m.ceiling,0,3.16,-.5);
   box(.15,1,9,m.wall,-4,.5,-.5);box(.15,.38,9,m.wall,-4,2.91,-.5);
   box(.15,1.72,2.1,m.wall,-4,1.86,-3.95);box(.15,1.72,3.3,m.wall,-4,1.86,2.35);
-  box(.06,1.65,3.6,m.daylight,-4.015,1.86,-1.1);
+  // Open glazing reveals the photographic outdoor panorama.
   box(.13,.07,3.72,m.black,-3.94,1.01,-1.1);box(.13,.07,3.72,m.black,-3.94,2.71,-1.1);
   for(const z of [-2.96,-1.1,.76])box(.13,1.72,.045,m.black,-3.94,1.86,z);
   box(.24,.04,3.9,m.stone,-3.86,1.0,-1.1);
@@ -50,7 +50,8 @@ export async function buildKitchen(scene,renderer) {
     box(1.13,.1,.56,m.black,x,.05,-3.66);
   }
   // Back counter at a realistic 92 cm, drawers and doors individually modelled.
-  box(4.45,.78,.63,m.shadow,0,.48,-3.67);box(4.5,.035,.73,m.stone,0,.9075,-3.64);
+  box(4.45,.78,.63,m.shadow,0,.48,-3.67);box(3.525,.035,.73,m.stone,-.4875,.9075,-3.64);box(.225,.035,.73,m.stone,2.1375,.9075,-3.64);
+  box(.75,.035,.185,m.stone,1.65,.9075,-3.9125);box(.75,.035,.125,m.stone,1.65,.9075,-3.3375);
   box(4.45,.84,.025,m.stone,0,1.35,-4.0);
   for(const x of [-1.8,-.9,.9,1.8]){
     box(.878,.46,.025,m.wood,x,.45,-3.337);box(.878,.17,.025,m.wood,x,.778,-3.337);handle(x,.8,-3.3,.3);handle(x,.63,-3.3,.3);
@@ -59,11 +60,24 @@ export async function buildKitchen(scene,renderer) {
   // Stainless oven, dark glazed door, rails, knobs and a cast-iron gas hob.
   box(.875,.79,.62,m.steel,0,.48,-3.64);box(.81,.54,.022,m.glass,0,.425,-3.313);
   box(.7,.35,.005,m.black,0,.43,-3.297);handle(0,.685,-3.26,.62);
-  for(const x of [-.3,-.1,.1,.3]){const k=cyl(.027,.027,.03,m.steel,x,.8,-3.287);k.rotation.x=Math.PI/2;box(.003,.013,.003,m.black,x,.811,-3.268);}
+  const actions=[],burners=[],knobs=[],flames=[];let waterOn=false;
+  function emit(){onChange({burners:[...burners],water:waterOn});}
+  function setBurner(i,on){burners[i]=!!on;flames[i].visible=!!on;knobs[i].rotation.z=on?Math.PI*.65:0;emit();}
+  for(const [i,x] of [-.3,-.1,.1,.3].entries()){
+    const k=cyl(.034,.034,.04,m.steel,x,.8,-3.275);k.rotation.x=Math.PI/2;
+    const tick=new THREE.Mesh(new THREE.BoxGeometry(.004,.01,.016),m.black);tick.position.set(0,.025,.014);k.add(tick);
+    k.userData.action=()=>setBurner(i,!burners[i]);k.userData.holdMs=180;actions.push(k);knobs.push(k);burners.push(false);
+  }
   box(.84,.018,.59,m.steel,0,.934,-3.63);
   for(const x of [-.235,.235])for(const z of [-3.79,-3.46]){
     cyl(.065,.065,.018,m.black,x,.95,z);const ring=new THREE.Mesh(new THREE.TorusGeometry(.105,.008,6,24),m.black);ring.rotation.x=Math.PI/2;ring.position.set(x,.96,z);group.add(ring);
     box(.27,.018,.018,m.black,x,.969,z);box(.018,.018,.26,m.black,x,.969,z);
+    const flame=new THREE.Group();flame.position.set(x,.959,z);flame.visible=false;group.add(flame);flames.push(flame);
+    const blue=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:false,
+      vertexShader:'varying vec2 flameUv; void main(){flameUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+      fragmentShader:'varying vec2 flameUv; void main(){float fade=pow(1.0-flameUv.y,1.4);float edge=.35+.65*sin(flameUv.x*3.14159);gl_FragColor=vec4(mix(vec3(.12,.3,1.),vec3(.35,.75,1.),fade),fade*edge*.7);}' });
+    for(let i=0;i<20;i++){const a=i*Math.PI/10,f=new THREE.Mesh(new THREE.ConeGeometry(.006,.03,10),blue);f.position.set(Math.cos(a)*.065,.015,Math.sin(a)*.065);flame.add(f);}
+    const glow=new THREE.PointLight(0x3f82ff,.09,.3,2);glow.position.y=.04;flame.add(glow);
   }
   box(.92,.14,.53,m.steel,0,1.87,-3.73);box(.37,.85,.26,m.steel,0,2.355,-3.92);box(.83,.012,.4,m.black,0,1.79,-3.69);
   // Upper doors, subtle warm task strips and switch plates.
@@ -81,8 +95,17 @@ export async function buildKitchen(scene,renderer) {
   // Pendant shades with inner diffusers, not gold balls.
   for(const x of [-1.15,1.15]){cyl(.006,.006,.78,m.black,x,2.73,exhibitZ,8);cyl(.045,.045,.025,m.black,x,3.087,exhibitZ);cyl(.07,.23,.19,m.black,x,2.28,exhibitZ,32);cyl(.207,.207,.008,m.led,x,2.182,exhibitZ,32);}
   // A sink and curved mixer tap on the right return; dark inset bowl avoids a solid fake basin.
-  box(.75,.02,.42,m.steel,1.65,.932,-3.61);box(.65,.012,.32,m.shadow,1.65,.944,-3.61);box(.59,.006,.265,m.steel,1.65,.95,-3.61);
+  box(.75,.008,.42,m.steel,1.65,.88,-3.61);
+  for(const x of [1.283,2.017])box(.016,.05,.42,m.steel,x,.907,-3.61);
+  for(const z of [-3.812,-3.408])box(.75,.05,.016,m.steel,1.65,.907,z);
+  cyl(.022,.022,.003,m.black,1.65,.886,-3.64);
   tube([[1.65,.94,-3.87],[1.65,1.25,-3.87],[1.65,1.34,-3.78],[1.65,1.29,-3.64],[1.65,1.2,-3.64]],.016,m.steel);cyl(.026,.026,.06,m.steel,1.84,.965,-3.86);
+  const lever=box(.018,.018,.105,m.steel,1.84,1.002,-3.82);actions.push(lever);lever.userData.nearRadius=.07;lever.userData.holdMs=180;
+  const waterMaterial=new THREE.MeshPhysicalMaterial({color:0xb8e4f0,transparent:true,opacity:.58,roughness:.08,metalness:.1,clearcoat:1,depthWrite:false});
+  const stream=cyl(.008,.011,.31,waterMaterial,1.65,1.04,-3.64,12);stream.castShadow=false;stream.visible=false;
+  const ripples=[];for(let i=0;i<3;i++){const r=new THREE.Mesh(new THREE.RingGeometry(.015,.019,24),new THREE.MeshBasicMaterial({color:0xc8ecfa,transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));r.rotation.x=-Math.PI/2;r.position.set(1.65,.889,-3.64);group.add(r);r.visible=false;ripples.push(r);}
+  function setWater(on){waterOn=!!on;stream.visible=waterOn;lever.rotation.x=waterOn?-.45:0;for(const r of ripples)r.visible=waterOn;emit();}
+  lever.userData.action=()=>setWater(!waterOn);
   // Everyday details give the room scale: cutting boards, linen, stacked dishes and a ceramic vase.
   const board=box(.3,.42,.022,m.wood,-1.55,1.15,-3.94,.015);board.rotation.x=-.13;board.rotation.z=.13;
   const small=box(.23,.32,.019,m.wood,-1.38,1.10,-3.91,.012);small.rotation.z=-.08;
@@ -97,8 +120,12 @@ export async function buildKitchen(scene,renderer) {
   const sun=new THREE.DirectionalLight(0xfff4df,2.3);sun.position.set(-3.7,2.65,-.2);sun.target.position.set(0,0,-2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-5,right:5,top:4,bottom:-4,near:.1,far:12});sun.shadow.bias=-.00002;sun.shadow.normalBias=.003;sun.shadow.radius=4;sun.shadow.blurSamples=8;scene.add(sun,sun.target);
   const fill=new THREE.PointLight(0xfff2e0,9,7,2);fill.position.set(0,2.65,-1.25);scene.add(fill);
   const task=new THREE.PointLight(0xffebcf,3,3,2);task.position.set(0,1.75,-3.35);scene.add(task);
+  const panorama=await new RGBELoader().loadAsync(base+'spruit_sunrise_2k.hdr');panorama.mapping=THREE.EquirectangularReflectionMapping;scene.background=panorama;scene.backgroundIntensity=.8;
   const hdr=await new RGBELoader().loadAsync(base+'kiara_interior_1k.hdr');const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(hdr).texture;hdr.dispose();
   // One local probe gives polished cookware reflections of THIS kitchen, including its window and lamps.
   const target=new THREE.WebGLCubeRenderTarget(256,{type:THREE.HalfFloatType});const probe=new THREE.CubeCamera(.1,20,target);probe.position.set(0,1.6,-1.25);probe.update(renderer,scene);const previous=scene.environment;scene.environment=pmrem.fromCubemap(target.texture).texture;previous.dispose();target.dispose();pmrem.dispose();
-  document.body.dataset.kitchen='pbr-v2';return {exhibitZ,group};
+  document.body.dataset.kitchen='interactive-v3';
+  return {exhibitZ,group,actions,setBurner,setWater,toggleWater:()=>setWater(!waterOn),toggleStove:()=>{const on=!burners.some(Boolean);for(let i=0;i<4;i++)setBurner(i,on);},
+    update(t){for(const [i,f]of flames.entries())if(f.visible)f.scale.y=.94+Math.sin(t*17+i)*.06; if(waterOn){stream.scale.x=1+Math.sin(t*23)*.08;for(const [i,r]of ripples.entries()){const phase=(t*1.4+i/3)%1;r.scale.setScalar(1+phase*4);r.material.opacity=(1-phase)*.35;}}},
+    get state(){return {burners:[...burners],water:waterOn};}};
 }

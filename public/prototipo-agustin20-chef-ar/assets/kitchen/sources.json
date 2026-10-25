@@ -34,5 +34,11 @@
     }
   ],
   "environment": "https://polyhaven.com/a/kiara_interior",
-  "note": "CC0 textures downloaded once; the website does not query the Poly Haven API."
+  "note": "CC0 textures downloaded once; the website does not query the Poly Haven API.",
+  "outdoorPanorama": {
+    "source": "https://polyhaven.com/a/spruit_sunrise",
+    "author": "Greg Zaal",
+    "license": "CC0",
+    "file": "spruit_sunrise_2k.hdr"
+  }
 }

@@ -18,11 +18,11 @@ La tarjeta debe permanecer visible: se oculta el modelo y se pausa la manipulaci
 
 Abre la página en Quest Browser y toca Entrar a VR. Apunta a una pieza y mantén el gatillo para moverla y girarla con el control; suelta para dejarla. Con manos, acerca pulgar e índice a la pieza y pellizca. Al soltar cerca del lugar correcto se encaja. Toma la carcasa para mover la maleta con las piezas guardadas. Las piezas que ya están fuera permanecen donde se dejaron. Novel se conserva como producto independiente en la isla.
 
-Los botones flotantes dentro de la escena permiten guardar la pieza seleccionada, recolocar todo y salir de VR. No dependen de que el visor admita superposición HTML. Al perder seguimiento de la mano/control o salir de la sesión se libera el objeto manteniendo su posición.
+El panel lateral a la izquierda permite guardar la pieza seleccionada, abrir/cerrar la maleta, encender/apagar LED, desplazarse entre estaciones, activar estufa y grifo, recolocar todo y salir de VR. Apunta con el control y pulsa/suelta el gatillo; con manos apunta y mantén un pellizco unos 0.4 segundos antes de soltar. Los paneles no reaccionan al contacto de las manos. Recolocar todo requiere dos pulsaciones completas en menos de siete segundos, con confirmación visible. No dependen de que el visor admita superposición HTML. Al perder seguimiento de la mano/control o salir de la sesión se libera el objeto manteniendo su posición.
 
 ## Validación y reproducción
 
-- `node --test tests/ar-maleta.test.js tests/case-interaction.test.js tests/square-marker.test.js`: 20 pruebas, con Three.js 0.160.1 y la geometría GLB real. Las pruebas de transformaciones omiten decodificación de texturas; el navegador valida la apariencia.
+- `node --test tests/ar-maleta.test.js tests/case-interaction.test.js tests/square-marker.test.js tests/vr-controls.test.js`: 27 pruebas, con Three.js 0.160.1 y la geometría GLB real. Las pruebas de transformaciones omiten decodificación de texturas; el navegador valida la apariencia.
 - Verificadas salida y devolución exacta de las siete piezas en navegador, vista móvil de 390 píxeles, carga del visor de Quest, conservación de Novel y controles de guardar/recolocar.
 - Pruebas de control y mano mediante eventos WebXR simulados; no equivalen a una sesión en un visor físico.
 - Pendiente la comprobación física de seguimiento de la tarjeta en el iPhone y agarre en Quest 2. No hay acceso a esos dispositivos desde esta tarea.
@@ -37,3 +37,16 @@ La tarjeta V2 debe tener el borde negro y el margen blanco completos. La cámara
 Validación adicional: cinco proyecciones sintéticas del SVG real, inclinación hasta 0.8 radianes, rotación hasta 180°, formatos vertical/horizontal, rechazo de imagen vacía y coincidencia entre proyección de cámara y CSS cover. En navegador, video sintético de la tarjeta en movimiento atravesó el detector real y mostró la maleta; las siete piezas salieron y regresaron con seguimiento activo. Esto no sustituye la validación física en el iPhone del usuario.
 
 La cocina incorpora gabinetes y cajones individuales, encimera de cuarzo, piso de piedra, nogal PBR, horno y parrillas, fregadero y grifo, zócalos, lámparas y detalles a escala. Texturas y HDRI de Poly Haven CC0 alojados localmente; fuentes en assets/kitchen/sources.json. Un mapa de reflexión capturado dentro de la propia cocina mejora el acero. Las sombras usan una sola luz direccional; los botones flotantes aparecen exclusivamente en VR. Foto genera una captura de 1920 × 1080 de la escena. No se promete fotorealismo absoluto ni una tasa de cuadros medida en Quest 2: falta prueba física. Los originales de Royal Prestige y MultiPan siguen sin modificarse.
+
+
+## Cocina interactiva · V3
+
+- Joystick izquierdo: desplazamiento a 0.9 m/s relativo a la mirada. Se bloquea el paso a través de la isla, gabinetes y límites de la habitación. Joystick derecho: giros de 30 grados. El movimiento físico del visor no se restringe por software.
+- Sin controles: apunta al panel lateral y pellizca brevemente para elegir Isla, Estufa o Fregadero. Los saltos conservan la altura y orientación de la cabeza. Las piezas agarradas viajan contigo.
+- La tapa se anima entre 0 y 108 grados; no abre/cierra mientras sostienes una pieza. Hay que abrir para sacar o guardar piezas. Los LED pueden encenderse y apagarse desde el panel o el interruptor de la maleta.
+- Cada perilla de la estufa controla un quemador. Apunta y pulsa/suelta el gatillo, o pellizca cerca de la perilla unos 0.4 segundos y suelta. El panel tiene un interruptor general para los cuatro.
+- La palanca del grifo responde igual: abre/cierra un chorro con ondas animadas en el fregadero. El agua y fuego son efectos visuales; no hay temperatura, llenado de ollas ni física de fluidos.
+- La ventana muestra un panorama HDR de campo al amanecer, de Poly Haven (CC0), alojado con el proyecto. Los reflejos de la cocina incluyen la ventana.
+- En computadora están los mismos controles de tapa, LED, estaciones, estufa y grifo en el panel HTML.
+
+Validación V3: geometría real del cierre y retorno a su ángulo original, bloqueo de extracción con tapa cerrada, LEDs, confirmación con caducidad, pulsación deliberada por mano/control, colisiones de desplazamiento, giro alrededor de la cabeza y destinos del visor. Revisión visual en navegador del cierre, apertura, panorama, llama y agua. Esta versión nueva aún requiere comprobar ergonomía y rendimiento en el Quest físico del usuario.
