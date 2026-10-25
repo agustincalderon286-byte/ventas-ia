@@ -62,9 +62,9 @@ export async function buildKitchen(scene,renderer,onChange=()=>{}) {
   // Stainless oven, dark glazed door, rails, knobs and a cast-iron gas hob.
   box(.875,.79,.62,m.steel,0,.48,-3.64);box(.81,.54,.022,m.glass,0,.425,-3.313);
   box(.7,.35,.005,m.black,0,.43,-3.297);handle(0,.685,-3.26,.62);
-  const burners=[],knobs=[],flames=[];let waterOn=false;
+  const burners=[],knobs=[],flames=[],burnerLights=[];let waterOn=false;
   function emit(){onChange({burners:[...burners],water:waterOn});}
-  function setBurner(i,on){burners[i]=!!on;flames[i].visible=!!on;knobs[i].rotation.z=on?Math.PI*.65:0;emit();}
+  function setBurner(i,on){burners[i]=!!on;flames[i].visible=!!on;burnerLights[i].intensity=on?.09:0;knobs[i].rotation.z=on?Math.PI*.65:0;emit();}
   for(const [i,x] of [-.3,-.1,.1,.3].entries()){
     const k=cyl(.034,.034,.04,m.steel,x,.8,-3.275);k.rotation.x=Math.PI/2;
     const tick=new THREE.Mesh(new THREE.BoxGeometry(.004,.01,.016),m.black);tick.position.set(0,.025,.014);k.add(tick);
@@ -79,7 +79,7 @@ export async function buildKitchen(scene,renderer,onChange=()=>{}) {
       vertexShader:'varying vec2 flameUv; void main(){flameUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
       fragmentShader:'varying vec2 flameUv; void main(){float fade=pow(1.0-flameUv.y,1.4);float edge=.35+.65*sin(flameUv.x*3.14159);gl_FragColor=vec4(mix(vec3(.12,.3,1.),vec3(.35,.75,1.),fade),fade*edge*.7);}' });
     for(let i=0;i<20;i++){const a=i*Math.PI/10,f=new THREE.Mesh(new THREE.ConeGeometry(.006,.03,10),blue);f.position.set(Math.cos(a)*.065,.015,Math.sin(a)*.065);flame.add(f);}
-    const glow=new THREE.PointLight(0x3f82ff,.09,.3,2);glow.position.y=.04;flame.add(glow);
+    const glow=new THREE.PointLight(0x3f82ff,.09,.3,2);glow.position.set(x,.999,z);glow.intensity=0;group.add(glow);burnerLights.push(glow);
   }
   box(.92,.14,.53,m.steel,0,1.87,-3.73);box(.37,.85,.26,m.steel,0,2.355,-3.92);box(.83,.012,.4,m.black,0,1.79,-3.69);
   // Upper doors, subtle warm task strips and switch plates.

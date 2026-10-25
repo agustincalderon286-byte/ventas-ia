@@ -11,7 +11,7 @@ export function createFurniture({group,materials:m,actions,onChange=()=>{}}){
   for(const y of [.1,2.65])box(fridge,1.15,.035,.66,m.lacquer,2.84,y,-3.67);
   box(fridge,1.06,2.48,.015,inner,2.84,1.36,-3.95);
   for(const y of [.45,.95,1.45,1.95])box(fridge,1.06,.024,.55,inner,2.84,y,-3.65);
-  const lamp=new THREE.PointLight(0xd8edff,.55,1.7,2);lamp.position.set(2.84,2.36,-3.44);lamp.visible=false;fridge.add(lamp);
+  const lamp=new THREE.PointLight(0xd8edff,.55,1.7,2);lamp.position.set(2.84,2.36,-3.44);lamp.intensity=0;fridge.add(lamp);
   const doors=[];
   for(const side of [-1,1]){
     const pivot=new THREE.Group();pivot.position.set(2.84+side*.573,1.41,-3.32);fridge.add(pivot);
@@ -34,7 +34,7 @@ export function createFurniture({group,materials:m,actions,onChange=()=>{}}){
     action(face,()=>setDrawer(i,joint.target===0));action(grip,()=>setDrawer(i,joint.target===0));
   }
   function notify(){onChange({fridge:fridgeOpen,drawers:drawers.map(d=>d.target>0)});}
-  function setFridge(on){fridgeOpen=!!on;for(const d of doors)d.target=on?d.sign*1.85:0;lamp.visible=fridgeOpen;notify();}
+  function setFridge(on){fridgeOpen=!!on;for(const d of doors)d.target=on?d.sign*1.85:0;lamp.intensity=fridgeOpen?.55:0;notify();}
   function setDrawer(i,on){if(!drawers[i])return;drawers[i].target=on?.42:0;drawersOpen=drawers.some(d=>d.target>0);notify();}
   const fruitMats={tomato:new THREE.MeshStandardMaterial({color:0xc93020,roughness:.4}),apple:new THREE.MeshStandardMaterial({color:0xa4bd38,roughness:.4}),carrot:new THREE.MeshStandardMaterial({color:0xe88923,roughness:.68}),leaf:new THREE.MeshStandardMaterial({color:0x3c6b28,roughness:.8})};
   function ingredient(type,index,x,y,z){const item=new THREE.Group();item.position.set(x,y,z);item.name=type+' '+index;fridge.add(item);
