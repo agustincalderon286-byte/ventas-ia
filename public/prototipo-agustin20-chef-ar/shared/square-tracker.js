@@ -30,6 +30,7 @@ export class SquareTracker {
   }
   resize() {
     const v=this.video;if(!v?.videoWidth)return;
+    this.sourceWidth=v.videoWidth;this.sourceHeight=v.videoHeight;
     const factor=Math.min(1,640/Math.max(v.videoWidth,v.videoHeight));this.canvas.width=Math.round(v.videoWidth*factor);this.canvas.height=Math.round(v.videoHeight*factor);
     const w=this.container.clientWidth,h=this.container.clientHeight,projection=videoProjection(this.canvas.width,this.canvas.height,w,h);
     this.focal=projection.focal;this.posit=new POS.Posit(1,this.focal);this.camera.fov=projection.fov;this.camera.aspect=projection.aspect;this.camera.near=.01;this.camera.far=100;this.camera.updateProjectionMatrix();this.renderer.setSize(w,h);
@@ -37,6 +38,7 @@ export class SquareTracker {
   update(time=performance.now()) {
     if(!this.active||time-this.lastFrame<50||this.video.readyState<2)return;this.lastFrame=time;
     try {
+      if(this.sourceWidth!==this.video.videoWidth||this.sourceHeight!==this.video.videoHeight)this.resize();
       const {width:w,height:h}=this.canvas;this.context.drawImage(this.video,0,0,w,h);
       const marker=this.detector.detect(this.context.getImageData(0,0,w,h)).find(m=>m.id===23);
       this.frames++;
