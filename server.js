@@ -14,7 +14,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
-import { COACH_CONSULTATION_PROMPT, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge } from "./src/knowledge/coach-knowledge.js";
+import { COACH_CONSULTATION_PROMPT, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -34264,7 +34264,8 @@ CONSULTA DEL COACH:
         activeDemoOutcomeContext
       }
     };
-    const cachedAiReply = await obtenerRespuestaAiCacheada(aiCacheOptions);
+    const directKnowledgeReply = modoChat === "coach" ? getCoachKnowledgeDirectReply(preguntaLimpia) : "";
+    const cachedAiReply = directKnowledgeReply ? { reply: directKnowledgeReply } : await obtenerRespuestaAiCacheada(aiCacheOptions);
     let respuestaIA = null;
     let cacheHit = false;
 

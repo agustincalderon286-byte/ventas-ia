@@ -65,10 +65,15 @@ test('conflicting price codes are flagged, never silently selected', () => {
     assert.match(context('precio '+code),/No elijas uno/);
   }
 });
+test('same piece count never substitutes knives for pans', () => {
+  assert.equal(search('Precio juego de cuchillos de 5 piezas').records[0].code,'CU0800');
+  assert.ok(search('Precio juego de sartenes de 5 piezas').records.every(r=>r.code!=='CU0800'));
+});
 test('unknown product and RoyalOne never invent private instructions', () => {
   assert.equal(search('garantia ZZZZZ9000').status, 'no_evidence');
   assert.equal(search('Como llenar Royal One').status,'royalone_pending');
-  assert.match(context('Como lleno RoyalOne'),/pendiente/);
+  assert.match(context('Como lleno RoyalOne'),/sistema para gestionar pedidos/);
+  assert.doesNotMatch(context('Como lleno RoyalOne'),/agua|vapor|aparato/);
 });
 test('only approved public/product sources; no legacy PII or other businesses', () => {
   const m = getCoachKnowledgeManifest();
