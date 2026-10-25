@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { pathToFileURL } from "node:url";
 
 const BASE_URL = "https://www.royalprestige.com";
 const SITEMAP_URL = `${BASE_URL}/sitemap/sitemap.xml`;
@@ -108,6 +109,7 @@ function absolutize(url) {
 
 async function fetchText(url) {
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(30000),
     headers: {
       "user-agent": "Mozilla/5.0",
       accept: "text/html,application/xml;q=0.9,*/*;q=0.8"
@@ -115,7 +117,7 @@ async function fetchText(url) {
   });
 
   if (!response.ok) {
-    throw new Error(`No se pudo descargar ${url}: ${response.status}`);
+    throw Object.assign(new Error(`No se pudo descargar ${url}: ${response.status}`), { status: response.status });
   }
 
   return await response.text();
@@ -214,7 +216,7 @@ function parseWarrantySections(html) {
   let currentSection = null;
 
   for (const paragraphHtml of paragraphs) {
-    const headingMatches = Array.from(paragraphHtml.matchAll(/<b><u>([\s\S]*?)<\/u><\/b>/gi))
+    const headingMatches = Array.from(paragraphHtml.matchAll(/<(?:b|strong)>\s*<u>([\s\S]*?)<\/u>\s*[:：]?\s*<\/(?:b|strong)>/gi))
       .map(match => stripHtml(match[1]))
       .filter(Boolean);
     const text = stripHtml(paragraphHtml);
@@ -485,14 +487,21 @@ function extractLocs(xml) {
 }
 
 async function buildProductsDocument() {
-  const sitemap = await fetchText(SITEMAP_URL);
+  const [sitemap, navigation] = await Promise.all([fetchText(SITEMAP_URL), fetchText(SUPPORT_URLS.warranty)]);
   const urls = unique(
-    extractLocs(sitemap)
-      .filter(url => url.includes("/productos/detalle/"))
-      .filter(url => !url.includes("/en-us/"))
-      .map(absolutize)
+    [...extractLocs(sitemap), ...Array.from(navigation.matchAll(/href="([^"]*\/productos\/detalle\/[^"?#]+)"/g), m => absolutize(m[1]))]
+      .filter(url => /^\/productos\/detalle\//.test(new URL(url).pathname))
+      .map(url => { const u = new URL(absolutize(url)); u.hostname = 'www.royalprestige.com'; return u.href; })
   );
-  const productos = await mapWithConcurrency(urls, 4, parseProductPage);
+  const fetched = await mapWithConcurrency(urls, 4, async url => {
+    try { return await parseProductPage(url); }
+    catch (error) {
+      if (error.status !== 404) throw error;
+      console.warn('Sitemap contiene una ficha retirada (404):', url);
+      return null;
+    }
+  });
+  const productos = fetched.filter(Boolean);
 
   return {
     metadata: {
@@ -760,7 +769,9 @@ async function main() {
   );
 }
 
-main().catch(error => {
+export { buildProductsDocument, buildWarrantyDocument, buildHelpfulHintsDocument, fetchText, stripHtml, extractSupportHeader };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main().catch(error => {
   console.error("Error descargando conocimiento general de Royal Prestige:", error.message);
   process.exit(1);
 });

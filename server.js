@@ -14,6 +14,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
+import { COACH_CONSULTATION_PROMPT, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge } from "./src/knowledge/coach-knowledge.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -2837,6 +2838,9 @@ function construirAiCacheKey({
   const normalizedQuestion = normalizarTextoBusquedaCoach(question || "");
   const safeMode = cleanLower(mode || "coach") || "coach";
   const safeScope = cleanText(scope || "").trim() || "public";
+  if (safeMode === "coach") return normalizedQuestion ? coachKnowledgeCacheKey({
+    scope: safeScope, question, activeWorkspace, activeDemoStage, statePrompt, profilePrompt, history, extra
+  }) : "";
   const semanticQuestion = construirPreguntaSemanticaIA({
     question,
     mode: safeMode,
@@ -19075,8 +19079,8 @@ INSTRUCCION DE PERSONALIZACION:
 - si es novato, usa palabras mas simples, menos teoria y un solo siguiente paso
 - si es intermedio, ve directo al punto y da una accion principal con una alternativa corta
 - si es avanzado, responde mas ejecutivo y asume que ya entiende la demo
-- si suele batallar en precio u objeciones, prioriza frase exacta + siguiente movimiento
-- si suele batallar en ordenes o docucite, agrega el paso operativo despues del cierre
+- responde a la consulta actual antes de sugerir acciones de ventas
+- no agregues pasos operativos privados que no estén documentados
 - si suele consultar producto o demo, conecta tu respuesta con beneficios reales del producto
 - usa el cierre mas consultado solo si siembra bien con la situacion actual
 `;
@@ -23017,114 +23021,7 @@ No repitas informacion innecesaria.
 - Siempre prioriza que la persona se sienta comoda, entendida y bienvenida.
 `;
 
-const coachSystemPrompt = `
-Eres TEC Total Elite Coaching, el copiloto privado para distribuidores. Ayudas a vender mejor, responder objeciones, sacar precios y pagos, armar paquetes, negociar y cerrar con mas claridad.
-
-VOZ Y TONO:
-- Habla claro, directo, calido y util
-- Usa palabras simples, de uso diario, faciles de leer rapido
-- Suena como un coach de ventas paciente, no como maestro, call center o vendedor agresivo
-- Da respuestas cortas que el distribuidor pueda usar de inmediato
-- Di mucho en poco
-- No metas relleno
-- Si algo se puede decir mas simple, dilo mas simple
-- Piensa en distribuidores latinos que trabajan duro, leen rapido y necesitan ayuda al momento
-
-OBJETIVO PRINCIPAL:
-- Ayudar al distribuidor a contestar objeciones y cerrar mejor
-- Sacar precios, pagos mensuales y paquetes sin enredarse
-- Dar apoyo para negociar con mas claridad y menos vueltas
-- Aterrizar el conocimiento del producto en palabras faciles
-- Convertir informacion dispersa en respuestas practicas
-- Ayudar a meter orden, pedir documentos correctos y no perder ventas por proceso mal hecho despues del cierre
-
-PRECIOS Y PAGOS DEL COACH:
-- Cuando el distribuidor te diga un numero como "1000" o "2500", toma ese numero como precio base de catalogo
-- Formula interna:
-  tax = base * 10%
-  envio = base * 5%
-  total = base + tax + envio
-  mensualidad = total * 5%
-- Si hay varios productos para paquete, suma primero todas las bases y luego aplica la formula al total base
-- Ejemplo interno:
-  base 2500
-  tax 250
-  envio 125
-  total 2875
-  mensualidad 143.75
-- No expliques esta formula a menos que el distribuidor te la pida
-- Si solo te piden el pago, da el pago
-- Si te piden total y pago, da ambos
-- Si ocupan negociar, usa los numeros para mover al siguiente paso sin dar discurso largo
-
-REGLAS DE RESPUESTA:
-- Prioriza claridad y utilidad inmediata
-- Respuesta normal: 2 bloques cortos
-  1. Di esto:
-  2. Siguiente:
-- Maximo 4 lineas cortas en la mayoria de los casos
-- No expliques "por que funciona" a menos que el distribuidor te lo pida
-- No des teoria si el momento pide accion
-- Si la pregunta es una objecion, da una frase util y luego el siguiente paso
-- Si la pregunta es sobre producto, explica como presentarlo facil y que preguntar despues
-- Si la pregunta es sobre precio o pago, da el numero claro y luego el siguiente paso mas util para vender
-- Si la pregunta es sobre seguimiento, da un guion corto o el proximo paso mas fuerte
-- Si la pregunta es sobre orden, DocuCite, documentos o aprobacion, di el paso exacto que sigue y que revisar
-- Si la pregunta es sobre reclutamiento, habla claro y sin exagerar
-- Si la pregunta es sobre como usar la pagina, CRM, Agenda, Prospeccion, Equipo, Territorio, Mensajes o Destino de leads, responde como guia interna del sistema
-- En preguntas de uso del sistema da pasos cortos y claros con el nombre real de la pestana o boton
-- En modo ayuda interna no vendas ni cierres; solo explica como se usa la herramienta
-- Si ya sabes en que momento de la demo va, usa ese contexto para dar la accion que sigue
-- Si el mejor movimiento es cerrar, cierra
-- Si el mejor movimiento es callar y amarrar, dilo sin rodeos
-- Si el cliente dice "lo voy a pensar", no te vayas por defecto al cierre de 3 o 15 dias
-- En ese caso, primero busca la objecion real con una pregunta corta y clara
-- Solo usa el cierre de 3 o 15 dias si el distribuidor te pide Alex Dey o Benjamin Franklin, o si deja claro que ya sabe continuar con papeleria y devolucion
-- Si el cliente ya escucho todo, ya entendio el pago y se queda callado, trata ese momento como cierre final
-- En ese momento no sigas explicando; manda al distribuidor a asumir la venta con la frase correcta
-- Si usas un cierre, da solo el mejor para ese momento
-- Si das ejemplo, da solo uno y pegado al contexto del chat
-- No des listas largas de opciones
-- No des varios cierres a la vez salvo que te los pidan
-- No pidas nombre, telefono ni datos de lead
-- No trates al distribuidor como cliente final
-- No invites a una llamada informativa como lo haria el Chef
-- No hables como recetario a menos que el distribuidor este preparando una demo o ejemplo para cliente
-
-FORMATO IDEAL:
-- Di esto: "frase corta que pueda repetir ya"
-- Siguiente: "paso breve y claro"
-
-CUANDO SEA UTIL:
-- Usa cierres cortos tipo doble alternativa, amarre, Benjamin Franklin, rebote o silencio
-- Ejemplo bueno:
-  Di esto: "Claro. ?Que parte quiere pensar bien, el producto o el pago?"
-  Siguiente: "No salgas de la objecion madre hasta sacar la razon real."
-- Ejemplo bueno:
-  Di esto: "?Que le queda mejor, sabado o domingo?"
-  Siguiente: "No abras mas opciones. Deja solo esas dos."
-- Ejemplo bueno:
-  Di esto: "Bienvenido a Royal Prestige, me facilita su ID."
-  Siguiente: "Si te da el ID, sigue con la orden. Si te objeta, esa ya es la objecion real."
-- Ejemplo bueno:
-  Di esto: "Perfecto, ahora vamos a meter su orden y subir sus documentos bien claritos."
-  Siguiente: "Confirma si vas en pedido nuevo, anexar documentos o aprobacion."
-
-ENFOQUE:
-- El usuario aqui es distribuidor, no prospecto
-- Piensa como coach de ventas, no como chef publico
-- Puedes usar recetas o producto solo si ayudan a vender, demostrar o explicar mejor
-- Si la informacion privada todavia no esta conectada, responde con lo mejor que haya en entrenamiento, producto y seguimiento
-- Nunca reveles que esta area es publica o abierta; esta es una herramienta privada del distribuidor
-
-IMPORTANTE:
-Tienes acceso a multiples bases de conocimiento.
-Usa primero lo mas relevante para ventas, objeciones, demos, producto y seguimiento.
-No inventes beneficios ni politicas fuera del contexto disponible.
-- Si aparece Alex Dey o Benjamin Franklin en el contexto, no los conviertas en respuesta automatica por reflejo.
-- Primero piensa si ese cierre de verdad le conviene al distribuidor que esta preguntando.
-- Si ves riesgo de que el novato lo use mal, dale una version mas simple, mas segura y mas facil de repetir.
-`;
+const coachSystemPrompt = COACH_CONSULTATION_PROMPT;
 
 const coachCierreFinalInterno = `
 CIERRE FINAL INTERNO DEL COACH:
@@ -24145,227 +24042,12 @@ GUIA DE PRECIOS PARA CHEF:
   return contexto;
 }
 
-function construirContextoEstaticoCoach(pregunta) {
-  const preguntaNormalizada = pregunta.toLowerCase();
-  const contextoBase = [];
-  const temaCoach = detectarTemaCoach(preguntaNormalizada);
-  const preciosRelevantesCoach = temaCoach.precio ? construirPreciosRelevantesCoach(pregunta) : null;
-
-  contextoBase.push(`
-GUIA DEL COACH:
-- Si es objecion o cierre, prioriza Alex Dey
-- Si es frustracion, actitud o liderazgo personal, prioriza Adrian Olmedo
-- Si es seguimiento despues de demo, prioriza Sistema 4 Citas en 14 Dias
-- Si es reclutamiento o retencion, prioriza Jose Miguel Ciprian
-- Si es demo o presentacion, prioriza Alejandro Jaramillo
-- Si es precio, usa lista de precios y pagos
-- Para sacar pagos del Coach, usa la formula interna de base + 10% tax + 5% envio; mensualidad = total * 5%
-- Si es producto, usa caracteristicas y especificaciones
-- Si es orden, DocuCite o documentos despues del cierre, prioriza la base publica de DocuCite y papeleria del manual
-`);
-
-  if (temaCoach.precio) {
-    contextoBase.push(`
-FORMULA INTERNA DE PRECIOS DEL COACH:
-- numero recibido = precio base de catalogo
-- tax = base * 10%
-- envio = base * 5%
-- total = base + tax + envio
-- mensualidad = total * 5%
-- si es paquete, suma primero las bases y luego aplica la formula al total base
-- no expliques la formula salvo que te la pidan
-- no uses costos internos, piezas sueltas ni listas de partes para cotizar productos
-`);
-    contextoBase.push(
-      construirBloquePrompt("PRECIOS_RELEVANTES", preciosRelevantesCoach?.coincidencias || [], {
-        maxArrayItems: 5,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 140
-      })
-    );
-    contextoBase.push(`
-GUIA_PRECIO_RELEVANTE:
-${preciosRelevantesCoach?.guidance || "- Si no encuentras el producto exacto, pide codigo o nombre exacto y no inventes precio."}
-`);
-    contextoBase.push(
-      construirBloquePrompt("PAGOS", opcionesPagoRoyalPrestige, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 140
-      })
-    );
-    contextoBase.push(`
-CALCULOS DETECTADOS:
-${construirCalculosPreciosCoach(pregunta)}
-`);
-  }
-
-  if (temaCoach.producto || temaCoach.demo) {
-    contextoBase.push(
-      construirBloquePrompt("PRODUCTO Y BENEFICIOS", beneficiosProductos, {
-        maxArrayItems: 10,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-    contextoBase.push(
-      construirBloquePrompt("ESPECIFICACIONES", especificacionesRoyalPrestige, {
-        maxArrayItems: 10,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  if (
-    temaCoach.precio ||
-    temaCoach.demo ||
-    temaCoach.objecion ||
-    temaCoach.cierre ||
-    temaCoach.ordenes ||
-    temaCoach.mentalidad ||
-    temaCoach.seguimiento ||
-    temaCoach.reclutamiento
-  ) {
-    contextoBase.push(
-      construirBloquePrompt("MANUAL DEL NOVATO CURADO", manualNovatoCoach, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 160
-      })
-    );
-  }
-
-  if (temaCoach.negocio) {
-    contextoBase.push(
-      construirBloquePrompt("PLAN DE NEGOCIO 2026", planNegocio2026Coach, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 160
-      })
-    );
-  }
-
-  if (temaCoach.demo) {
-    contextoBase.push(
-      construirBloquePrompt("DEMO", demoVenta, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 160
-      })
-    );
-  }
-
-  if (temaCoach.objecion || temaCoach.cierre) {
-    contextoBase.push(
-      construirBloquePrompt("CIERRES", cierresAlexDey, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  if (temaCoach.cierreFinal) {
-    contextoBase.push(coachCierreFinalInterno);
-  }
-
-  if (temaCoach.ordenes || temaCoach.cierreFinal) {
-    contextoBase.push(
-      construirBloquePrompt("DOCUCITE Y ORDENES", docuciteOrdenesCoach, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 160
-      })
-    );
-  }
-
-  if (temaCoach.mentalidad) {
-    contextoBase.push(
-      construirBloquePrompt("MENTALIDAD", mentalidadOlmedo, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  if (temaCoach.seguimiento) {
-    contextoBase.push(
-      construirBloquePrompt("SEGUIMIENTO", sistema4Citas, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  if (temaCoach.reclutamiento) {
-    contextoBase.push(
-      construirBloquePrompt("RECLUTAMIENTO", reclutamientoCiprian, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  const experienciaReal = construirExperienciaRealCoach(pregunta);
-
-  if (experienciaReal) {
-    contextoBase.push(experienciaReal);
-  }
-
-  if (
-    !temaCoach.precio &&
-    !temaCoach.producto &&
-    !temaCoach.demo &&
-    !temaCoach.objecion &&
-    !temaCoach.cierre &&
-    !temaCoach.ordenes &&
-    !temaCoach.mentalidad &&
-    !temaCoach.seguimiento &&
-    !temaCoach.reclutamiento
-  ) {
-    contextoBase.push(
-      construirBloquePrompt("BASE GENERAL COACH", beneficiosProductos, {
-        maxArrayItems: 8,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-    contextoBase.push(
-      construirBloquePrompt("CIERRES", cierresAlexDey, {
-        maxArrayItems: 6,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-    contextoBase.push(
-      construirBloquePrompt("MENTALIDAD", mentalidadOlmedo, {
-        maxArrayItems: 6,
-        maxObjectKeys: 8,
-        maxDepth: 2,
-        maxStringLength: 150
-      })
-    );
-  }
-
-  return contextoBase.join("\n\n");
+function construirContextoEstaticoCoach(pregunta, history = []) {
+  const context = buildCoachKnowledgeContext(pregunta, { history });
+  // Product codes, sizes and model numbers are not monetary amounts.
+  if (!classifyCoachQuestion(pregunta).price || !/^\s*\d+(?:\.\d+)?\s*$|\$\s*\d+|\bbase\s+(?:de\s+)?\d+/i.test(pregunta)) return context;
+  return context + "\nCALCULOS ESTIMADOS (no aprobación ni cotización final):\n" +
+    construirCalculosPreciosCoach(pregunta);
 }
 
 function detectarTemaCoach(preguntaNormalizada = "") {
@@ -25180,6 +24862,7 @@ function inferirTiposFuentePorModo(pregunta, modo = "chef") {
 }
 
 async function construirContexto(pregunta, modo = "chef") {
+  if (modo === "coach") return construirContextoEstaticoCoach(pregunta);
   const contextoEstatico =
     modo === "coach" ? construirContextoEstaticoCoach(pregunta) : construirContextoEstaticoChef(pregunta);
 
@@ -34233,7 +33916,7 @@ app.post("/chat", async (req, res) => {
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
 
-      const coachHelpReply = construirCoachHelpReply({
+      const coachHelpReply = isCoachKnowledgeQuestion(preguntaLimpia) ? null : construirCoachHelpReply({
         userDoc: coachAuth.user,
         profileDoc: coachProfileDoc,
         question: preguntaLimpia,
@@ -34336,7 +34019,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       activeHealthSurveyContext = activeHealthSurveyContextFromBody || null;
       activeProgram414Context = activeProgram414ContextFromBody || null;
 
-      const turboQuickReply = COACH_TURBO_MODE
+      const turboQuickReply = COACH_TURBO_MODE && /(?:dame|quiero|necesito).*guion|que (?:le )?digo/i.test(preguntaLimpia) && !isCoachKnowledgeQuestion(preguntaLimpia)
         ? construirCoachTurboReply({
             question: preguntaLimpia,
             activeDemoStage,
@@ -34466,11 +34149,10 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       if (COACH_TURBO_MODE) {
         perfilPrompt += `
 
-MODO TURBO DEL COACH:
-- responde en espanol simple, corto y accionable
-- usa maximo 4 lineas o un parrafo breve
-- no des teoria larga
-- si ya hay encuesta, calculadora, balance o resultado activo, apoyate primero en eso
+CONSULTA DEL COACH:
+- Responde directamente a la pregunta; la etapa de la demo no obliga a dar un cierre.
+- Sé breve sin omitir cobertura, exclusiones, ingredientes o pasos necesarios.
+- La biblioteca verificada prevalece sobre suposiciones de notas y contexto de la demo.
 `;
       }
 
@@ -34594,8 +34276,8 @@ MODO TURBO DEL COACH:
       cacheHit = true;
     } else {
       const contextoPromise =
-        modoChat === "coach" && preferFastCoachContext
-          ? Promise.resolve(construirContextoEstaticoCoach(preguntaLimpia))
+        modoChat === "coach"
+          ? Promise.resolve(construirContextoEstaticoCoach(preguntaLimpia, cacheHistory))
           : construirContexto(preguntaLimpia, modoChat);
       const historialPromptPromise = obtenerHistorialConversacionPrompt(sessionId, historyLimit, {
         preferMemory: modoChat === "coach"
@@ -34615,7 +34297,7 @@ MODO TURBO DEL COACH:
       };
 
       if (modoChat === "coach" && COACH_TURBO_MODE) {
-        openAiPayload.max_completion_tokens = COACH_TURBO_MAX_COMPLETION_TOKENS;
+        openAiPayload.max_completion_tokens = Math.max(1800, COACH_TURBO_MAX_COMPLETION_TOKENS);
       }
 
       if (shouldStreamResponse) {
@@ -34820,6 +34502,9 @@ async function iniciarServidor() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("MongoDB Atlas conectado");
+    void warmCoachKnowledge(mongoose.connection.db)
+      .then(source => console.log("TEC knowledge ready:", source))
+      .catch(() => console.warn("TEC knowledge: using validated bundled snapshot"));
     iniciarCoachAsyncJobWorker();
 
     const server = app.listen(PORT, () => {
@@ -34839,6 +34524,9 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export {
+  construirContextoEstaticoCoach,
+  construirAiCacheKey,
+  construirPromptModo,
   construirImagenProductoCatalogoCoach,
   analizarCoachDemoTranscript,
   construirCoachProgram414StartWindow,

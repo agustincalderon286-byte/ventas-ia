@@ -3,7 +3,7 @@
     "coleccion": "royalprestige_consejos_site",
     "descripcion": "Consejos útiles extraídos desde la página pública de apoyo de Royal Prestige US en español.",
     "total_consejos": 17,
-    "fetched_at": "2026-03-22T19:23:59.859Z",
+    "fetched_at": "2026-10-25T19:43:34.429Z",
     "source": "https://www.royalprestige.com/apoyo/consejos-utiles",
     "campos_por_chunk": [
       "pregunta",
