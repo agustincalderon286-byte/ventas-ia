@@ -1,0 +1,38 @@
+{
+  "license": "CC0 1.0",
+  "licenseURL": "https://polyhaven.com/license",
+  "assets": [
+    {
+      "file": "marble_01_Diffuse.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_diff_1k.jpg",
+      "bytes": 305029
+    },
+    {
+      "file": "marble_01_nor_gl.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_nor_gl_1k.jpg",
+      "bytes": 110230
+    },
+    {
+      "file": "marble_01_Rough.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_rough_1k.jpg",
+      "bytes": 91848
+    },
+    {
+      "file": "american_walnut_veneer_Diffuse.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_diff_1k.jpg",
+      "bytes": 579182
+    },
+    {
+      "file": "american_walnut_veneer_nor_gl.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_nor_gl_1k.jpg",
+      "bytes": 414945
+    },
+    {
+      "file": "american_walnut_veneer_Rough.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_rough_1k.jpg",
+      "bytes": 691712
+    }
+  ],
+  "environment": "https://polyhaven.com/a/kiara_interior",
+  "note": "CC0 textures downloaded once; the website does not query the Poly Haven API."
+}

@@ -16,6 +16,7 @@
         --accent: #e45267;
         --accent-2: #ffbd67;
       }
+      [hidden] { display:none!important; }
       * { box-sizing: border-box; }
       html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #071827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       canvas { display: block; touch-action: none; }
@@ -34,8 +35,8 @@
       #xr-controls[hidden] { display: none; }
       .xr-action { padding: 10px 13px; color: #f8fbff; background: rgba(7, 24, 39, .9); border: 1px solid rgba(255,255,255,.22); border-radius: 12px; font-weight: 750; }
       .xr-action.exit { color: #211109; background: linear-gradient(135deg, #ffcf78, #e99556); border: 0; }
-      body.xr-active .panel, body.xr-active .toast { display: none; }
-      .panel { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 36px)); padding: 18px; border-radius: 20px; }
+      body.xr-active #save-view, body.xr-active #toggle-panel, body.xr-active .panel, body.xr-active .toast { display: none; }
+      .panel { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: min(310px, calc(100vw - 36px)); padding: 18px; border-radius: 20px; }
       .eyebrow { color: var(--accent-2); font-weight: 800; font-size: 11px; letter-spacing: .15em; margin: 0 0 8px; }
       h1 { margin: 0; font-size: clamp(24px, 4vw, 38px); letter-spacing: -.04em; }
       .panel p { color: var(--muted); margin: 9px 0 14px; line-height: 1.42; font-size: 14px; }
@@ -56,7 +57,7 @@
       #piece-status { margin-bottom:0; min-height:36px; }
       .panel { max-height:calc(100vh - 110px); overflow:auto; }
       @media (max-width: 620px) {
-        .topbar { padding: 10px 11px; min-height: 55px; }
+        .brand {flex:1;min-width:80px}.topbar{flex-wrap:wrap;gap:6px}.topbar .brand span{display:none}#toggle-panel,#save-view{font-size:11px;padding:8px}.topbar { padding: 10px 11px; min-height: 55px; }
         .brand-mark { width: 30px; height: 30px; }
         .brand strong { font-size: 11px; }
         .brand span { font-size: 10px; }
@@ -74,6 +75,7 @@
       </div>
     </div>
 
+    <dialog id="photo-dialog" style="max-width:95vw;background:#151b20;color:white;border:0;border-radius:12px"><button id="close-photo">Cerrar</button> <a id="download-photo" style="color:white" download="cocina-royal-prestige.png">Descargar foto</a><img id="render-photo" alt="Vista de la cocina y maleta" style="display:block;max-width:90vw;max-height:80vh;margin-top:12px"></dialog>
     <main id="hud">
       <header class="topbar">
         <div class="brand">
@@ -83,7 +85,7 @@
             <span>Cocina Royal Prestige · Meta Quest 2</span>
           </div>
         </div>
-        <button id="enter-vr" type="button">Entrar a VR</button>
+        <button id="save-view" class="xr-action">Foto</button><button id="toggle-panel" class="xr-action">Ocultar controles</button><button id="enter-vr" type="button">Entrar a VR</button>
       </header>
       <div id="xr-controls" hidden>
         <button id="reload-vr" class="xr-action" type="button">↻ Recargar</button>
@@ -129,205 +131,55 @@
 
       import { createCaseSystem, PIECE_ORDER } from "../shared/case-system.js";
       import { installPiecePointer } from "../shared/touch-pieces.js";
+      import { buildKitchen } from './kitchen.js?v=2';
       import { installXRHands } from "../shared/xr-pieces.js";
 
+      document.getElementById('toggle-panel').addEventListener('click',event=>{const panel=document.querySelector('.panel');panel.hidden=!panel.hidden;event.target.textContent=panel.hidden?'Mostrar controles':'Ocultar controles';});
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x071827);
-      scene.fog = new THREE.Fog(0x071827, 7, 16);
+      scene.background = new THREE.Color(0xc9c3b7);
 
       const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.01, 100);
-      camera.position.set(2.6, 2.8, 2.9);
+      camera.position.set(3.25, 2.5, 3.3);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
       renderer.setSize(innerWidth, innerHeight);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.xr.enabled = true;
       renderer.xr.setReferenceSpaceType("local-floor");
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.12;
+      renderer.toneMappingExposure = 0.9;
       document.body.appendChild(renderer.domElement);
+      document.getElementById('close-photo').addEventListener('click',()=>document.getElementById('photo-dialog').close());
+      document.getElementById('save-view').addEventListener('click',()=>{
+        const oldAspect=camera.aspect,oldSize=renderer.getSize(new THREE.Vector2()),oldRatio=renderer.getPixelRatio();
+        renderer.setPixelRatio(1);renderer.setSize(1920,1080,false);camera.aspect=1920/1080;camera.updateProjectionMatrix();renderer.render(scene,camera);
+        const data=renderer.domElement.toDataURL('image/png');document.getElementById('render-photo').src=data;document.getElementById('download-photo').href=data;document.getElementById('photo-dialog').showModal();
+        renderer.setPixelRatio(oldRatio);renderer.setSize(oldSize.x,oldSize.y);camera.aspect=oldAspect;camera.updateProjectionMatrix();
+      });
 
       const controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(0, 1.42, -1.25);
+      controls.target.set(0, 1.3, -1.7);
       controls.enableDamping = true;
       controls.minDistance = 1.8;
       controls.maxDistance = 7;
       controls.maxPolarAngle = Math.PI * 0.48;
 
-      scene.add(new THREE.HemisphereLight(0xc5e5ff, 0x102335, 2.4));
-      const key = new THREE.DirectionalLight(0xffefd2, 3.2);
-      key.position.set(3.5, 5.5, 3);
-      key.castShadow = true;
-      key.shadow.mapSize.set(1024, 1024);
-      scene.add(key);
-
-      function canvasTexture(painter, repeat = [1, 1]) {
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = 512;
-        const ctx = canvas.getContext("2d");
-        painter(ctx, canvas.width, canvas.height);
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(...repeat);
-        texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-        return texture;
-      }
-
-      const marbleTexture = canvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#d9d4ca";
-        ctx.fillRect(0, 0, w, h);
-        for (let i = 0; i < 22; i++) {
-          ctx.beginPath();
-          ctx.strokeStyle = i % 3 ? "rgba(91,82,72,.19)" : "rgba(177,145,110,.25)";
-          ctx.lineWidth = 1 + Math.random() * 3;
-          ctx.moveTo(-30, Math.random() * h);
-          for (let x = 0; x < w + 80; x += 55) ctx.lineTo(x, Math.random() * h);
-          ctx.stroke();
-        }
-      }, [2.4, 1.15]);
-
-      const walnutTexture = canvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#4a2417";
-        ctx.fillRect(0, 0, w, h);
-        for (let y = 0; y < h; y += 7) {
-          ctx.beginPath();
-          ctx.strokeStyle = `rgba(${110 + Math.floor(Math.random() * 45)}, ${55 + Math.floor(Math.random() * 35)}, 29, .42)`;
-          ctx.lineWidth = 1 + Math.random() * 2;
-          ctx.moveTo(0, y + Math.random() * 6);
-          for (let x = 0; x < w; x += 44) ctx.quadraticCurveTo(x + 18, y - 5 + Math.random() * 10, x + 44, y + Math.random() * 8);
-          ctx.stroke();
-        }
-      }, [2.1, 1.1]);
-
-      const tileTexture = canvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#d8d3c9";
-        ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = "rgba(72,68,61,.22)";
-        ctx.lineWidth = 4;
-        for (let x = 0; x <= w; x += 96) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-        for (let y = 0; y <= h; y += 96) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-      }, [5, 5]);
-
-      const kitchenMaterials = {
-        floor: new THREE.MeshStandardMaterial({ color: 0x8b928d, map: tileTexture, roughness: 0.53, metalness: 0.08 }),
-        wall: new THREE.MeshStandardMaterial({ color: 0xe3ded4, roughness: 0.82 }),
-        wood: new THREE.MeshStandardMaterial({ color: 0xffffff, map: walnutTexture, roughness: 0.38, metalness: 0.04 }),
-        stone: new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: marbleTexture, roughness: 0.17, metalness: 0.03, clearcoat: 0.42, clearcoatRoughness: 0.18 }),
-        brass: new THREE.MeshStandardMaterial({ color: 0xe0b66d, roughness: 0.2, metalness: 0.83 }),
-        stove: new THREE.MeshPhysicalMaterial({ color: 0x141b20, roughness: 0.16, metalness: 0.78, clearcoat: 0.55, clearcoatRoughness: 0.12 })
-      };
-
-      function addBox(width, height, depth, material, position, radius = 0.035) {
-        const geometry = new RoundedBoxGeometry(width, height, depth, 4, Math.min(radius, width / 6, height / 6, depth / 6));
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.copy(position);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
-        return mesh;
-      }
-
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), kitchenMaterials.floor);
-      floor.rotation.x = -Math.PI / 2;
-      floor.receiveShadow = true;
-      scene.add(floor);
-
-      const grid = new THREE.GridHelper(14, 28, 0x355f70, 0x234556);
-      grid.position.y = 0.006;
-      scene.add(grid);
-
-      addBox(14, 5.2, 0.16, kitchenMaterials.wall, new THREE.Vector3(0, 2.6, -5.6));
-      addBox(0.16, 5.2, 11.2, kitchenMaterials.wall, new THREE.Vector3(-6.9, 2.6, 0));
-      addBox(0.16, 5.2, 11.2, kitchenMaterials.wall, new THREE.Vector3(6.9, 2.6, 0));
-
-      // Gabinetes de fondo y estación de estufa.
-      addBox(5.4, 0.9, 0.55, kitchenMaterials.wood, new THREE.Vector3(0, 0.45, -4.68));
-      addBox(5.7, 0.12, 0.72, kitchenMaterials.stone, new THREE.Vector3(0, 0.94, -4.62));
-      [-2.3, -1.15, 1.15, 2.3].forEach(x => {
-        const handle = addBox(0.03, 0.36, 0.05, kitchenMaterials.brass, new THREE.Vector3(x, 0.48, -4.32));
-        handle.castShadow = false;
-      });
-      [-2.2, 2.2].forEach(x => addBox(1.55, 1.1, 0.48, kitchenMaterials.wood, new THREE.Vector3(x, 3.4, -5.22)));
-      addBox(1.65, 1.22, 0.72, kitchenMaterials.stove, new THREE.Vector3(0, 0.61, -4.55));
-      const cooktop = addBox(1.78, 0.08, 0.8, kitchenMaterials.stove, new THREE.Vector3(0, 1.25, -4.55));
-      cooktop.castShadow = false;
-      [-0.48, 0.48].forEach(x => [-0.2, 0.2].forEach(z => {
-        const burner = new THREE.Mesh(
-          new THREE.TorusGeometry(0.16, 0.018, 10, 32),
-          kitchenMaterials.brass
-        );
-        burner.rotation.x = -Math.PI / 2;
-        burner.position.set(x, 1.305, -4.55 + z);
-        scene.add(burner);
-      }));
-      [-0.42, -0.14, 0.14, 0.42].forEach(x => {
-        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 18), kitchenMaterials.brass);
-        knob.rotation.x = Math.PI / 2;
-        knob.position.set(x, 0.82, -4.94);
-        scene.add(knob);
-      });
-
-      // La isla empieza enfrente del visitante para no iniciar dentro del producto.
-      const exhibitZ = -1.25;
-      addBox(3.5, 0.92, 1.18, kitchenMaterials.wood, new THREE.Vector3(0, 0.46, exhibitZ));
-      addBox(3.76, 0.12, 1.42, kitchenMaterials.stone, new THREE.Vector3(0, 0.98, exhibitZ));
-      const displayPlate = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.57, 0.62, 0.045, 64),
-        new THREE.MeshStandardMaterial({ color: 0x173b50, metalness: 0.72, roughness: 0.2, emissive: 0x0c2432, emissiveIntensity: 0.5 })
-      );
-      displayPlate.position.set(1.32, 1.065, exhibitZ);
-      displayPlate.scale.setScalar(.55);
-      displayPlate.castShadow = true;
-      displayPlate.receiveShadow = true;
-      scene.add(displayPlate);
-
-      // Iluminación de entorno: mejora reflejos en acero, mármol y producto. Si la red no entrega el HDRI, la cocina conserva las luces locales.
-      const pmremGenerator = new THREE.PMREMGenerator(renderer);
-      new RGBELoader().load(
-        "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kiara_interior_1k.hdr",
-        texture => {
-          const environment = pmremGenerator.fromEquirectangular(texture).texture;
-          scene.environment = environment;
-          texture.dispose();
-          pmremGenerator.dispose();
-        },
-        undefined,
-        () => pmremGenerator.dispose()
-      );
-
-      const warmGlow = new THREE.PointLight(0xffbd67, 15, 5.7, 2);
-      warmGlow.position.set(0, 2.45, exhibitZ + 0.55);
-      scene.add(warmGlow);
-      const accentGlow = new THREE.PointLight(0xe45267, 7, 4.5, 2);
-      accentGlow.position.set(-2.2, 2.15, exhibitZ - 0.4);
-      scene.add(accentGlow);
-
-      [-1.45, 1.45].forEach(x => {
-        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.08, 12), kitchenMaterials.stove);
-        cord.position.set(x, 3.93, exhibitZ);
-        scene.add(cord);
-        const pendant = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 16), kitchenMaterials.brass);
-        pendant.position.set(x, 3.35, exhibitZ);
-        scene.add(pendant);
-        const pendantLight = new THREE.PointLight(0xffe1aa, 5.5, 4, 2);
-        pendantLight.position.set(x, 3.16, exhibitZ);
-        scene.add(pendantLight);
-      });
+      const exhibitZ=-1.25;
+      try {await buildKitchen(scene,renderer);} catch(error){console.error(error);document.getElementById('toast').textContent='No se pudo cargar toda la cocina. Recarga para recuperar las texturas.';scene.add(new THREE.HemisphereLight(0xffffff,0x555555,2));}
 
       const loading=document.getElementById('loading'), toast=document.getElementById('toast');
       const picker=document.getElementById('piece-picker'), take=document.getElementById('take-piece'), put=document.getElementById('store-piece'), status=document.getElementById('piece-status');
       let system=null, xrInput=null, pointerInput=null;
-      const buttons=[];
+      const buttons=[],vrPanels=[];
       // World-space UI remains usable in immersive VR without a DOM overlay.
       function textPanel(text,width,height,position,action) {
         const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
         const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
         const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
-        mesh.position.copy(position);scene.add(mesh);
+        mesh.position.copy(position);mesh.visible=false;vrPanels.push(mesh);scene.add(mesh);
         mesh.userData.paint=value=>{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,1024,256);ctx.fillStyle=action?'#174c50':'#071827';ctx.fillRect(0,0,1024,256);ctx.strokeStyle='#81d9c6';ctx.lineWidth=8;ctx.strokeRect(4,4,1016,248);ctx.fillStyle='#fff';ctx.font='bold 55px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(value,512,128,970);texture.needsUpdate=true;};
         mesh.userData.paint(text);if(action){mesh.userData.action=action;buttons.push(mesh);}return mesh;
       }
@@ -391,11 +243,13 @@
               domOverlay: { root: document.getElementById("hud") }
             });
             session.addEventListener("end", () => {
+              vrPanels.forEach(p=>p.visible=false);
               xrControls.hidden = true;
               document.body.classList.remove("xr-active");
               button.textContent = "Entrar a VR";
             });
             await renderer.xr.setSession(session);
+            vrPanels.forEach(p=>p.visible=true);
             xrControls.hidden = false;
             document.body.classList.add("xr-active");
             button.textContent = "En VR";
