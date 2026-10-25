@@ -69,6 +69,13 @@ test('same piece count never substitutes knives for pans', () => {
   assert.equal(search('Precio juego de cuchillos de 5 piezas').records[0].code,'CU0800');
   assert.ok(search('Precio juego de sartenes de 5 piezas').records.every(r=>r.code!=='CU0800'));
 });
+test('combined questions retain both exact price and applicable warranty', () => {
+  const records=search('cuanto cuesta y que garantia tiene CO9738').records;
+  assert.ok(records.some(r=>r.kind==='price' && r.code==='CO9738'));
+  assert.ok(records.some(r=>r.kind==='warranty' && /Easy Release/.test(r.title)));
+  const both=search('garantia y devolucion de Easy Release').records;
+  assert.ok(both.some(r=>r.kind==='returns'));
+});
 test('unknown product and RoyalOne never invent private instructions', () => {
   assert.equal(search('garantia ZZZZZ9000').status, 'no_evidence');
   assert.equal(search('Como llenar Royal One').status,'royalone_pending');
