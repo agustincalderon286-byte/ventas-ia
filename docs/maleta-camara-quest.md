@@ -18,7 +18,7 @@ La tarjeta debe permanecer visible: se oculta el modelo y se pausa la manipulaci
 
 Abre la página en Quest Browser y toca Entrar a VR. Apunta a una pieza y mantén el gatillo para moverla y girarla con el control; suelta para dejarla. Con manos, acerca pulgar e índice a la pieza y pellizca. Al soltar cerca del lugar correcto se encaja. Toma la carcasa para mover la maleta con las piezas guardadas. Las piezas que ya están fuera permanecen donde se dejaron. Novel se conserva como producto independiente en la isla.
 
-El panel lateral a la izquierda permite guardar la pieza seleccionada, abrir/cerrar la maleta, encender/apagar LED, desplazarse entre estaciones, activar estufa y grifo, recolocar todo y salir de VR. Apunta con el control y pulsa/suelta el gatillo; con manos apunta y mantén un pellizco unos 0.4 segundos antes de soltar. Los paneles no reaccionan al contacto de las manos. Recolocar todo requiere dos pulsaciones completas en menos de siete segundos, con confirmación visible. No dependen de que el visor admita superposición HTML. Al perder seguimiento de la mano/control o salir de la sesión se libera el objeto manteniendo su posición.
+El menú frontal permite guardar la pieza seleccionada, abrir/cerrar la maleta, encender/apagar LED, desplazarse entre estaciones, activar estufa y grifo, recolocar todo y salir de VR. Apunta con el control y pulsa/suelta el gatillo; con manos apunta y mantén un pellizco unos 0.4 segundos antes de soltar. Los paneles no reaccionan al contacto de las manos. Recolocar todo requiere dos pulsaciones completas en menos de siete segundos, con confirmación visible. No dependen de que el visor admita superposición HTML. Al perder seguimiento de la mano/control o salir de la sesión se libera el objeto manteniendo su posición.
 
 ## Validación y reproducción
 
@@ -42,7 +42,7 @@ La cocina incorpora gabinetes y cajones individuales, encimera de cuarzo, piso d
 ## Cocina interactiva · V3
 
 - Joystick izquierdo: desplazamiento a 0.9 m/s relativo a la mirada. Se bloquea el paso a través de la isla, gabinetes y límites de la habitación. Joystick derecho: giros de 30 grados. El movimiento físico del visor no se restringe por software.
-- Sin controles: apunta al panel lateral y pellizca brevemente para elegir Isla, Estufa o Fregadero. Los saltos conservan la altura y orientación de la cabeza. Las piezas agarradas viajan contigo.
+- Sin controles: apunta al menú y pellizca brevemente para elegir Isla, Estufa o Fregadero. Los saltos conservan la altura y orientación de la cabeza. Las piezas agarradas viajan contigo.
 - La tapa se anima entre 0 y 108 grados; no abre/cierra mientras sostienes una pieza. Hay que abrir para sacar o guardar piezas. Los LED pueden encenderse y apagarse desde el panel o el interruptor de la maleta.
 - Cada perilla de la estufa controla un quemador. Apunta y pulsa/suelta el gatillo, o pellizca cerca de la perilla unos 0.4 segundos y suelta. El panel tiene un interruptor general para los cuatro.
 - La palanca del grifo responde igual: abre/cierra un chorro con ondas animadas en el fregadero. El agua y fuego son efectos visuales; no hay temperatura, llenado de ollas ni física de fluidos.
@@ -66,3 +66,19 @@ Para facilitar la colocación hay acciones Olla bajo grifo, Olla a estufa y Olla
 Se trata de una simulación de juego: los tiempos de llenado/calentamiento no son tiempos de cocina real, y no hay fluidos volumétricos ni gravedad general. Las colocaciones en parrillas, fregadero, olla y encimeras son asistidas; los cubiertos de los cajones son decoración. Esta actualización no cambia la cámara AR del iPhone ni los archivos originales del catálogo.
 
 Validación V4: 33 pruebas con geometría GLB real y eventos simulados, más revisión de navegador del agua, vapor, puertas, cajones y menú desde distintas estaciones. Se comprueban agua solo bajo chorro abierto, recipiente tapado/inclinado, enfriamiento, quemador ocupado, alimentos dentro/fuera de la olla, puertas, bloqueo de alimentos con refrigerador cerrado, menú tras teleportación/giro y panel quieto durante pulsación. La ergonomía final del botón con seguimiento de manos todavía requiere prueba física en Quest.
+
+
+## Estabilización del menú · V5 (vigente)
+
+Esta revisión sustituye el comportamiento de navegación del menú V4. El usuario reportó paneles inclinados, un botón periférico difícil de apuntar y pérdida del menú después de viajar. No se incorporan nuevas mecánicas de cocina.
+
+- Panel y botón Menú permanecen verticales respecto del suelo; solo usan el giro horizontal de la cabeza. La altura al abrir se ajusta a la mirada con límites, sin copiar inclinación ni roll. Se mantienen anclados en el mundo mientras se apunta.
+- Al viajar a otra estación el menú permanece abierto frente al usuario. Ocultar menú deja un único botón Menú centrado, ligeramente abajo. No hay botón lateral ni superposición del botón de recuperación sobre el panel.
+- Si el panel o botón queda lejos, demasiado cerca o fuera del campo frontal durante 650 ms, se coloca de nuevo delante. No se recoloca durante una pulsación ni mientras hay un objeto agarrado. Los pequeños movimientos de cabeza no desplazan los blancos.
+- La cámara se sincroniza con la pose WebXR del cuadro actual antes de navegar y ubicar los controles; las matrices del menú se actualizan antes del raycast. Al entrar se espera la primera actualización, evitando ubicarlo con la cámara de escritorio.
+- Los botones se iluminan al apuntarlos con las manos/controles. Para activar: apuntar, juntar índice y pulgar medio segundo, soltar sobre el mismo botón. La pérdida de seguimiento cancela pulsaciones pendientes. Recolocar todo conserva su confirmación de dos pasos.
+- Texturas de texto con proporción correspondiente al botón evitan letras estiradas. Los módulos modificados usan versión de URL nueva para renovar la caché.
+
+Validación: 37 pruebas aprobadas, incluidas inclinación/roll, rig girado, viajes repetidos, botón inmóvil al apuntar, recuperación con espera, bloqueo durante selección y pérdida de seguimiento. En navegador se comprobó Isla → Fregadero → ocultar → abrir Menú → Isla mediante los botones 3D. Estas verificaciones no sustituyen una sesión de seguimiento de manos en Quest físico.
+
+Prueba de aceptación en el visor: salir de VR, recargar la página, entrar; ir al fregadero y regresar a Isla; ocultar y recuperar Menú; girarse y esperar un segundo con las manos relajadas; apuntar/pellizcar/soltar; comprobar que no se inclina ni reinicia al pasar las manos. No declarar cerrada la ergonomía física hasta confirmar esa prueba.

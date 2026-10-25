@@ -44,10 +44,36 @@ test('fridge doors and drawers open independently and food is inaccessible until
  f.setDrawer(2,true);for(let i=0;i<100;i++)f.update(.016);assert.deepEqual(f.state.drawers,[false,false,true,false]);
  f.setFridge(false);for(let i=0;i<100;i++)f.update(.016);assert.equal(f.food[0].canTake(),false);assert.equal(f.state.drawers[2],true);assert.ok(actions.length>=12);
 });
-test('hands-only menu is recalled after teleport and turning, without shifting during a press',()=>{
- const scene=new THREE.Scene(),head=new THREE.PerspectiveCamera(),panel=new THREE.Group(),button=new THREE.Object3D();scene.add(head,panel,button);head.position.set(0,1.6,0);let busy=false;
- const menu=createHandMenu({panel,button,head,isBusy:()=>busy});menu.start();scene.updateMatrixWorld(true);const initial=panel.position.clone();
- head.position.set(1.65,1.6,-2.68);menu.recenter();menu.update();assert.ok(panel.position.distanceTo(head.position)<1.8);assert.ok(panel.position.distanceTo(initial)>2);
- menu.hide();head.rotation.y=Math.PI;menu.update();assert.ok(button.position.z>head.position.z);menu.show();menu.update();assert.ok(panel.position.z>head.position.z);
- busy=true;const frozen=panel.position.clone();head.position.x+=3;menu.recenter();menu.update();assert.ok(panel.position.equals(frozen));busy=false;menu.update();assert.ok(panel.position.distanceTo(frozen)>2);menu.stop();assert.equal(button.visible,false);assert.equal(panel.visible,false);
+function menuSetup(){
+ const scene=new THREE.Scene(),rig=new THREE.Group(),head=new THREE.PerspectiveCamera(),panel=new THREE.Group(),button=new THREE.Object3D();scene.add(rig,panel,button);rig.add(head);head.position.set(0,1.6,0);let busy=false,time=0;
+ const menu=createHandMenu({panel,button,head,isBusy:()=>busy,now:()=>time});menu.start();menu.update();
+ return {scene,rig,head,panel,button,menu,busy:value=>busy=value,tick:ms=>{time+=ms;menu.update();}};
+}
+function upright(node){assert.ok(new THREE.Vector3(0,1,0).applyQuaternion(node.quaternion).distanceTo(new THREE.Vector3(0,1,0))<1e-8);}
+test('menu and recall button stay upright with head tilt, roll and a rotated travel rig',()=>{
+ const {rig,head,panel,button,menu}=menuSetup();rig.position.set(1.65,0,-2.68);rig.rotation.y=1.2;head.rotation.set(-.6,.4,.45);menu.recenter();menu.update();upright(panel);
+ const position=head.getWorldPosition(new THREE.Vector3());assert.ok(panel.position.distanceTo(position)<1.7);
+ menu.hide();menu.update();upright(button);assert.ok(button.position.distanceTo(position)<1.4);assert.equal(panel.visible,false);assert.equal(button.visible,true);
+ const facing=new THREE.Vector3(0,0,-1).applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));facing.y=0;facing.normalize();const offset=button.position.clone().sub(position);offset.y=0;assert.ok(offset.normalize().dot(facing)>.999);
+});
+test('recall button remains stationary while aiming and small head movements never chase the pointer',()=>{
+ const {head,button,menu,tick,busy}=menuSetup();menu.hide();menu.update();const original=button.position.clone(),q=button.quaternion.clone();
+ head.position.x+=.08;head.rotation.set(.3,.25,.2);tick(1000);assert.ok(button.position.equals(original));assert.ok(button.quaternion.equals(q));
+ head.rotation.y=Math.PI;busy(true);tick(1000);tick(1000);assert.ok(button.position.equals(original));busy(false);tick(0);tick(649);assert.ok(button.position.equals(original));tick(1);assert.ok(button.position.z>head.position.z);upright(button);
+ menu.show();menu.update();assert.equal(button.visible,false);assert.equal(menu.visible,true);
+});
+test('travel keeps menu open and readable; hidden menu recovers after turning and repeated visits',()=>{
+ const {head,panel,button,menu,tick}=menuSetup();
+ for(const [x,z] of [[1.65,-2.68],[0,.35],[2.85,-2.3],[-1.4,-2.68],[0,.35]]){
+  head.position.set(x,1.6,z);menu.show();menu.update();assert.equal(panel.visible,true);assert.equal(button.visible,false);assert.ok(panel.position.distanceTo(head.position)<1.7);
+  // Its raycast matrix is current even before the renderer has drawn a frame.
+  assert.ok(new THREE.Vector3().setFromMatrixPosition(panel.matrixWorld).equals(panel.position));
+ }
+ menu.hide();menu.update();head.rotation.y=Math.PI;tick(0);tick(650);assert.ok(button.position.z>head.position.z);
+ menu.show();menu.update();assert.ok(panel.position.z>head.position.z);menu.stop();tick(1000);assert.equal(button.visible,false);assert.equal(panel.visible,false);
+});
+test('recall waits for release, never moves a menu during selection, and new session uses its first pose',()=>{
+ const {head,panel,menu,busy}=menuSetup();const original=panel.position.clone();busy(true);head.position.x+=3;menu.recenter();menu.update();assert.ok(panel.position.equals(original));busy(false);menu.update();assert.ok(panel.position.distanceTo(original)>2);
+ menu.stop();head.position.set(9,9,9);menu.start();head.position.set(0,1.6,0);menu.update();assert.ok(panel.position.distanceTo(head.position)<1.7);
+ head.rotation.x=Math.PI/2;menu.recenter();menu.update();upright(panel);assert.ok(panel.position.toArray().every(Number.isFinite));
 });

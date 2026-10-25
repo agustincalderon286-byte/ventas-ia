@@ -137,3 +137,12 @@ test('Quest panel activation happens on deliberate release; hidden UI and passin
  button.visible=false;controllers[0].dispatchEvent({type:'selectstart'});time+=350;controllers[0].dispatchEvent({type:'selectend'});assert.equal(calls,1);
  button.visible=true;const hand=hands[0];hand.visible=true;hand.joints['thumb-tip'].position.set(1.995,1.5,-1);hand.joints['index-finger-tip'].position.set(2.005,1.5,-1);scene.updateMatrixWorld(true);input.update();time+=400;hand.joints['index-finger-tip'].position.x+=.1;scene.updateMatrixWorld(true);input.update();assert.equal(calls,1);
 });
+
+test('losing hand tracking cancels a pending menu press and hover highlights clear on session exit',()=>{
+ const {scene,system}=setup();let time=0,calls=0,hover=false;
+ const button=new THREE.Mesh(new THREE.PlaneGeometry(.4,.2),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));button.position.set(2,1.5,-1);Object.assign(button.userData,{hud:true,rayOnly:true,action:()=>calls++,setHover:value=>hover=value});scene.add(button);
+ const {controllers,hands,input,xr}=xrHarness(scene,system,{buttons:[button],now:()=>time});const controller=controllers[0],hand=hands[0];controller.position.set(2,1.5,0);hand.visible=true;hand.joints['index-finger-tip'].position.x=.1;scene.updateMatrixWorld(true);
+ controller.dispatchEvent({type:'connected',data:{hand:{},targetRayMode:'tracked-pointer'}});input.update();assert.equal(hover,true);
+ controller.dispatchEvent({type:'selectstart'});assert.equal(input.isPressing(),true);hand.visible=false;time=500;input.update();assert.equal(input.isPressing(),false);controller.dispatchEvent({type:'selectend'});assert.equal(calls,0);
+ xr.dispatchEvent({type:'sessionend'});assert.equal(hover,false);
+});
