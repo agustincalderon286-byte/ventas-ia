@@ -68,7 +68,7 @@ Se trata de una simulación de juego: los tiempos de llenado/calentamiento no so
 Validación V4: 33 pruebas con geometría GLB real y eventos simulados, más revisión de navegador del agua, vapor, puertas, cajones y menú desde distintas estaciones. Se comprueban agua solo bajo chorro abierto, recipiente tapado/inclinado, enfriamiento, quemador ocupado, alimentos dentro/fuera de la olla, puertas, bloqueo de alimentos con refrigerador cerrado, menú tras teleportación/giro y panel quieto durante pulsación. La ergonomía final del botón con seguimiento de manos todavía requiere prueba física en Quest.
 
 
-## Estabilización del menú · V5 (vigente)
+## Estabilización del menú · V5 (histórica)
 
 Esta revisión sustituye el comportamiento de navegación del menú V4. El usuario reportó paneles inclinados, un botón periférico difícil de apuntar y pérdida del menú después de viajar. No se incorporan nuevas mecánicas de cocina.
 
@@ -82,3 +82,30 @@ Esta revisión sustituye el comportamiento de navegación del menú V4. El usuar
 Validación: 37 pruebas aprobadas, incluidas inclinación/roll, rig girado, viajes repetidos, botón inmóvil al apuntar, recuperación con espera, bloqueo durante selección y pérdida de seguimiento. En navegador se comprobó Isla → Fregadero → ocultar → abrir Menú → Isla mediante los botones 3D. Estas verificaciones no sustituyen una sesión de seguimiento de manos en Quest físico.
 
 Prueba de aceptación en el visor: salir de VR, recargar la página, entrar; ir al fregadero y regresar a Isla; ocultar y recuperar Menú; girarse y esperar un segundo con las manos relajadas; apuntar/pellizcar/soltar; comprobar que no se inclina ni reinicia al pasar las manos. No declarar cerrada la ergonomía física hasta confirmar esa prueba.
+
+
+## Manos, traslado y recuperación · V6 (vigente)
+
+Esta versión reemplaza el botón flotante y la reapertura automática de V5 por un gesto explícito. No añade nuevas mecánicas de cocina ni cambia los modelos originales.
+
+### Uso
+
+1. Entra a VR con las manos abiertas. La escena comienza sin menú. Gira una mano libre con la palma hacia arriba, dedos extendidos, a la altura del pecho y visible frente al visor. Mantenla quieta unos 0.7 segundos: un pequeño círculo sobre la muñeca indica el progreso y abre el menú. Sirve cualquiera de las manos. No usa el pellizco de palma reservado al sistema de Meta. El menú queda fijo; Ocultar menú elimina toda la interfaz flotante. El mismo gesto permite recuperarlo desde otro lugar.
+2. Con el menú cerrado, apunta la mano libre hacia el piso y pellizca. Aparecen un arco y un círculo: ámbar durante la preparación, verde tras 0.35 segundos si el destino es válido, rojo si está bloqueado o fuera de la habitación. Suelta para trasladarte. Apuntar fuera del piso o perder seguimiento cancela el traslado. Los destinos próximos a una estación se ajustan dentro de 40 cm. Se conserva la altura del visor.
+3. Pellizca cerca de una pieza para agarrarla; la mano ocupada no puede iniciar otro traslado ni invocar el menú. La otra mano puede navegar. La olla, el agua y los ingredientes viajan contigo. Separar los dedos durante 0.14 segundos libera la pieza; los picos más cortos no la sueltan.
+4. Ayuda > Recuperar controles cancela pulsaciones y traslados pendientes, libera piezas en su ubicación actual sin encajarlas ni recolocarlas y permite volver a agarrarlas después de abrir la mano. No resetea agua, comida, estufa, grifo ni muebles.
+5. Ayuda > Recargar página muestra un aviso y requiere una segunda pulsación en siete segundos. Sale de la sesión inmersiva antes de recargar. Reinicia la cocina; hay que pulsar Entrar a VR otra vez. La versión de escritorio también tiene Recuperar controles y Recargar página.
+
+### Estabilidad y límites
+
+Los soportes de agarre están dentro del grupo de desplazamiento del usuario; ya no dependen de recibir un nuevo cuadro de seguimiento para viajar. Las posiciones y rotaciones de articulaciones se convierten al espacio local de ese grupo. Se tolera hasta 1.2 segundos de ausencia de seguimiento, manteniendo la pose relativa al desplazamiento. Si la ausencia dura más, la pieza queda estacionada en su pose actual y se muestra un aviso; no se intenta inventar la ubicación de una mano invisible. Tras recuperar controles se exige abrir los dedos antes de permitir un nuevo agarre. Al salir de VR se liberan las piezas antes de restablecer el grupo de cámara.
+
+El gesto se calcula con articulaciones WebXR, no depende de microgestos nativos de OVRPlugin. Requiere normal de palma hacia arriba, dedos extendidos, mano frente al visor a una altura razonable y permanencia estable. Un gesto sostenido dispara una sola apertura; debe abandonarse antes de rearmarlo. Las pulsaciones UI, agarres cercanos y navegación tienen prioridades exclusivas. Una mano sin articulaciones válidas no puede iniciar una acción ni confirmar traslado.
+
+El traslado usa los mismos límites del suelo y zonas bloqueadas que el movimiento existente; no es un motor de colisiones volumétricas para todos los muebles/objetos. Las instrucciones de la página y los colores del arco explican el flujo sin agregar un botón fijo frente al usuario.
+
+### Validación
+
+50 pruebas con GLB real y eventos/juntas simulados. Incluyen ambas palmas, una apertura por gesto, rechazo de pellizco/mano cerrada/inclinación incorrecta/articulaciones ausentes; menú oculto durante viajes; arco válido/bloqueado, confirmación por liberación, cancelación por seguimiento y propietario exclusivo; olla real con agua y alimento viajando con cada mano mientras la contraria navega, incluso con una interrupción de seguimiento durante el salto; giro del usuario, liberación deliberada, recuperación sin reiniciar y salida de XR antes de recarga.
+
+En navegador se comprobó apertura de la previsualización, pestaña Ayuda, recuperación manteniendo quemadores encendidos, cierre sin botón flotante, confirmación y recarga completa sin errores. Las pruebas automatizadas y de navegador no equivalen a seguimiento físico en Quest 2: falta la verificación del usuario para confirmar comodidad del gesto y rendimiento en su visor.

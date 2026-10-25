@@ -6,7 +6,8 @@ export function createLocomotion({rig,camera,renderer,onMove=()=>{},beforeJump=(
   let turnReady=true,lastStation='island';const head=new THREE.Vector3(),forward=new THREE.Vector3(),right=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
   function headPosition(){renderer.xr.getCamera(camera).getWorldPosition(head);return head;}
   function translate(dx,dz){headPosition();let moved=false;if(canOccupy(head.x+dx,head.z)){rig.position.x+=dx;head.x+=dx;moved=true;}if(canOccupy(head.x,head.z+dz)){rig.position.z+=dz;head.z+=dz;moved=true;}if(moved)onMove({x:head.x,z:head.z,station:lastStation});}
-  function teleport(id){const place=STATIONS[id];if(!place||!canOccupy(place.x,place.z))return false;beforeJump();headPosition();rig.position.x+=place.x-head.x;rig.position.z+=place.z-head.z;lastStation=id;rig.updateMatrixWorld(true);onMove({...place,station:id});return true;}
+  function teleportTo(place,station='floor'){if(!place||!Number.isFinite(place.x)||!Number.isFinite(place.z)||!canOccupy(place.x,place.z))return false;beforeJump();headPosition();rig.position.x+=place.x-head.x;rig.position.z+=place.z-head.z;lastStation=station;rig.updateMatrixWorld(true);onMove({...place,station:lastStation});return true;}
+  function teleport(id){return teleportTo(STATIONS[id],id);}
   function turn(angle){beforeJump();headPosition();const pivot=head.clone(),offset=rig.position.clone().sub(pivot).applyAxisAngle(up,angle);rig.rotation.y+=angle;rig.position.copy(pivot).add(offset);rig.updateMatrixWorld(true);}
   function update(dt){if(!renderer.xr.isPresenting)return;const sources=renderer.xr.getSession()?.inputSources||[];let x=0,y=0,turnX=0;
     for(const source of sources){const axes=source.gamepad?.axes;if(!axes?.length)continue;const a=axes.length>=4?axes.slice(2,4):axes.slice(0,2);if(source.handedness==='left'){x=a[0];y=a[1];}if(source.handedness==='right')turnX=a[0];}
@@ -14,5 +15,5 @@ export function createLocomotion({rig,camera,renderer,onMove=()=>{},beforeJump=(
     if(Math.abs(turnX)<.25)turnReady=true;else if(Math.abs(turnX)>.7&&turnReady){turnReady=false;turn(-Math.sign(turnX)*Math.PI/6);}
   }
   function reset(){rig.position.set(0,0,0);rig.rotation.set(0,0,0);rig.updateMatrixWorld(true);turnReady=true;}
-  return {update,teleport,turn,reset};
+  return {update,teleport,teleportTo,turn,reset};
 }

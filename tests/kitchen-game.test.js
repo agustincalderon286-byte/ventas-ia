@@ -45,35 +45,22 @@ test('fridge doors and drawers open independently and food is inaccessible until
  f.setFridge(false);for(let i=0;i<100;i++)f.update(.016);assert.equal(f.food[0].canTake(),false);assert.equal(f.state.drawers[2],true);assert.ok(actions.length>=12);
 });
 function menuSetup(){
- const scene=new THREE.Scene(),rig=new THREE.Group(),head=new THREE.PerspectiveCamera(),panel=new THREE.Group(),button=new THREE.Object3D();scene.add(rig,panel,button);rig.add(head);head.position.set(0,1.6,0);let busy=false,time=0;
- const menu=createHandMenu({panel,button,head,isBusy:()=>busy,now:()=>time});menu.start();menu.update();
- return {scene,rig,head,panel,button,menu,busy:value=>busy=value,tick:ms=>{time+=ms;menu.update();}};
+ const scene=new THREE.Scene(),rig=new THREE.Group(),head=new THREE.PerspectiveCamera(),panel=new THREE.Group();scene.add(rig,panel);rig.add(head);head.position.set(0,1.6,0);let busy=false;
+ const menu=createHandMenu({panel,head,isBusy:()=>busy});menu.start();menu.update();
+ return {scene,rig,head,panel,menu,busy:value=>busy=value};
 }
 function upright(node){assert.ok(new THREE.Vector3(0,1,0).applyQuaternion(node.quaternion).distanceTo(new THREE.Vector3(0,1,0))<1e-8);}
-test('menu and recall button stay upright with head tilt, roll and a rotated travel rig',()=>{
- const {rig,head,panel,button,menu}=menuSetup();rig.position.set(1.65,0,-2.68);rig.rotation.y=1.2;head.rotation.set(-.6,.4,.45);menu.recenter();menu.update();upright(panel);
- const position=head.getWorldPosition(new THREE.Vector3());assert.ok(panel.position.distanceTo(position)<1.7);
- menu.hide();menu.update();upright(button);assert.ok(button.position.distanceTo(position)<1.4);assert.equal(panel.visible,false);assert.equal(button.visible,true);
- const facing=new THREE.Vector3(0,0,-1).applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));facing.y=0;facing.normalize();const offset=button.position.clone().sub(position);offset.y=0;assert.ok(offset.normalize().dot(facing)>.999);
+test('menu starts completely hidden and stays hidden through head movement and travel',()=>{
+ const {head,panel,menu}=menuSetup();assert.equal(panel.visible,false);
+ for(const [x,z]of [[1.65,-2.68],[0,.35],[2.85,-2.3]]){head.position.set(x,1.6,z);head.rotation.y+=1;menu.recenter();menu.update();assert.equal(panel.visible,false);}
+ menu.show();menu.update();assert.equal(panel.visible,true);menu.hide();head.position.x+=3;menu.update();assert.equal(panel.visible,false);
 });
-test('recall button remains stationary while aiming and small head movements never chase the pointer',()=>{
- const {head,button,menu,tick,busy}=menuSetup();menu.hide();menu.update();const original=button.position.clone(),q=button.quaternion.clone();
- head.position.x+=.08;head.rotation.set(.3,.25,.2);tick(1000);assert.ok(button.position.equals(original));assert.ok(button.quaternion.equals(q));
- head.rotation.y=Math.PI;busy(true);tick(1000);tick(1000);assert.ok(button.position.equals(original));busy(false);tick(0);tick(649);assert.ok(button.position.equals(original));tick(1);assert.ok(button.position.z>head.position.z);upright(button);
- menu.show();menu.update();assert.equal(button.visible,false);assert.equal(menu.visible,true);
+test('explicitly summoned menu is upright under head roll and remains fixed until summoned again',()=>{
+ const {rig,head,panel,menu}=menuSetup();rig.position.set(1.65,0,-2.68);rig.rotation.y=1.2;head.rotation.set(-.6,.4,.45);menu.show();menu.update();upright(panel);
+ assert.ok(panel.position.distanceTo(head.getWorldPosition(new THREE.Vector3()))<1.7);const anchor=panel.position.clone();head.position.x+=3;head.rotation.y+=2;menu.update();assert.ok(panel.position.equals(anchor));
+ menu.show();menu.update();assert.ok(panel.position.distanceTo(anchor)>1);upright(panel);assert.ok(new THREE.Vector3().setFromMatrixPosition(panel.matrixWorld).equals(panel.position));
 });
-test('travel keeps menu open and readable; hidden menu recovers after turning and repeated visits',()=>{
- const {head,panel,button,menu,tick}=menuSetup();
- for(const [x,z] of [[1.65,-2.68],[0,.35],[2.85,-2.3],[-1.4,-2.68],[0,.35]]){
-  head.position.set(x,1.6,z);menu.show();menu.update();assert.equal(panel.visible,true);assert.equal(button.visible,false);assert.ok(panel.position.distanceTo(head.position)<1.7);
-  // Its raycast matrix is current even before the renderer has drawn a frame.
-  assert.ok(new THREE.Vector3().setFromMatrixPosition(panel.matrixWorld).equals(panel.position));
- }
- menu.hide();menu.update();head.rotation.y=Math.PI;tick(0);tick(650);assert.ok(button.position.z>head.position.z);
- menu.show();menu.update();assert.ok(panel.position.z>head.position.z);menu.stop();tick(1000);assert.equal(button.visible,false);assert.equal(panel.visible,false);
-});
-test('recall waits for release, never moves a menu during selection, and new session uses its first pose',()=>{
- const {head,panel,menu,busy}=menuSetup();const original=panel.position.clone();busy(true);head.position.x+=3;menu.recenter();menu.update();assert.ok(panel.position.equals(original));busy(false);menu.update();assert.ok(panel.position.distanceTo(original)>2);
- menu.stop();head.position.set(9,9,9);menu.start();head.position.set(0,1.6,0);menu.update();assert.ok(panel.position.distanceTo(head.position)<1.7);
- head.rotation.x=Math.PI/2;menu.recenter();menu.update();upright(panel);assert.ok(panel.position.toArray().every(Number.isFinite));
+test('menu never moves during a press and session restart leaves the scene clear',()=>{
+ const {head,panel,menu,busy}=menuSetup();menu.show();menu.update();const original=panel.position.clone();busy(true);head.position.x+=3;menu.show();menu.update();assert.ok(panel.position.equals(original));busy(false);menu.update();assert.ok(panel.position.distanceTo(original)>2);
+ menu.stop();menu.start();menu.update();assert.equal(panel.visible,false);
 });

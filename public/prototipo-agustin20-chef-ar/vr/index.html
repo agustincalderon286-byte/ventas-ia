@@ -111,11 +111,11 @@
           <button id="go-fridge">Ir al refrigerador</button><button id="go-drawers">Ir a los cajones</button><button id="go-island">Ir a la isla</button><button id="go-stove">Ir a la estufa</button><button id="go-sink">Ir al fregadero</button>
           <button id="fridge-toggle">Abrir/cerrar refrigerador</button><button id="drawers-toggle">Abrir/cerrar cajones</button><button id="stove-toggle">Encender estufa</button><button id="water-toggle">Abrir grifo</button>
         </div>
-        <div class="piece-controls"><button id="pot-sink">Poner olla bajo grifo</button><button id="pot-stove">Poner olla en estufa</button><button id="pot-island">Poner olla en isla</button><button id="preview-menu">Ver/ocultar menú VR</button></div><p id="cooking-status" role="status"></p><p id="game-mission">Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.</p><p>Con manos: apunta al botón hasta que se ilumine, junta índice y pulgar medio segundo y suelta. Viajar permite ir y regresar entre estaciones. Ocultar menú deja un botón Menú al frente, un poco más abajo. Si lo pierdes, mira al frente un segundo y volverá a aparecer. Al viajar el menú permanece abierto. Toma una olla sin tapa, déjala bajo el grifo y ábrelo; después llévala a un quemador encendido. Abre el refrigerador y toma alimentos para agregarlos a la olla.</p><p>Opcional con controles: joystick izquierdo para caminar, derecho para girar. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
+        <div class="piece-controls"><button id="pot-sink">Poner olla bajo grifo</button><button id="pot-stove">Poner olla en estufa</button><button id="pot-island">Poner olla en isla</button><button id="preview-menu">Ver/ocultar menú VR</button><button id="recover-controls">Recuperar controles</button><button id="refresh-page">Recargar página</button></div><p id="cooking-status" role="status"></p><p id="game-mission">Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.</p><p><strong>Menú:</strong> abre una mano libre con la palma hacia arriba, a la altura del pecho, y mantenla quieta hasta completar el círculo. No pellizques para abrirlo. Usa cualquiera de las manos. Al cerrar el menú no queda nada frente a ti.<br><strong>Moverte:</strong> con el menú cerrado, apunta al piso con la mano libre, pellizca hasta ver el círculo verde y suelta. Rojo significa destino bloqueado. Lo que sostienes en la otra mano viaja contigo.<br><strong>Tomar y soltar:</strong> pellizca cerca de una pieza; separa los dedos para dejarla. Mantén las manos visibles para el visor.<br><strong>Ayuda:</strong> Recuperar controles conserva la cocina; Recargar página reinicia y requiere volver a entrar a VR.</p><p>Opcional con controles: joystick izquierdo para caminar, derecho para girar. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
         <p id="piece-status" role="status" aria-live="polite">Cargando las siete piezas…</p>
       </section>
 
-      <aside class="toast" id="toast">Menú te acompaña por la cocina: Viajar, Cocinar y Maleta. Recolocar todo requiere confirmar.</aside>
+      <aside class="toast" id="toast">Palma abierta hacia arriba: menú. Mano libre apuntando al piso: pellizca y suelta para moverte.</aside>
     </main>
 
     <script type="importmap">
@@ -140,11 +140,13 @@
       import { buildKitchen } from './kitchen.js?v=4';
       import { createCaseControls } from '../shared/case-controls.js';
       import { installActionPointer } from './action-pointer.js';
+      import { createFloorTravel } from './floor-travel.js?v=6';
+      import { recoverVRControls,reloadVRPage } from './session-recovery.js?v=6';
       import { createCooking } from './cooking.js';
-      import { createHandMenu } from './hand-menu.js?v=5';
-      import { createLocomotion, STATIONS } from './locomotion.js';
+      import { createHandMenu } from './hand-menu.js?v=6';
+      import { createLocomotion, STATIONS } from './locomotion.js?v=6';
       import { createConfirmation } from '../shared/confirm-action.js';
-      import { installXRHands } from "../shared/xr-pieces.js?v=5";
+      import { installXRHands } from "../shared/xr-pieces.js?v=6";
 
       document.getElementById('toggle-panel').addEventListener('click',event=>{const panel=document.querySelector('.panel');panel.hidden=!panel.hidden;event.target.textContent=panel.hidden?'Mostrar controles':'Ocultar controles';});
       const scene = new THREE.Scene();
@@ -190,7 +192,7 @@
       const buttons=[...(kitchen?.actions||[])],vrPanels=[];
       const sidePanel=new THREE.Group();sidePanel.position.set(-2.55,1.55,-.05);sidePanel.rotation.y=.75;scene.add(sidePanel);sidePanel.visible=false;
       const locomotion=createLocomotion({rig,camera,renderer,onMove:state=>document.body.dataset.location=JSON.stringify(state)});
-      function goTo(id){if(renderer.xr.isPresenting){locomotion.teleport(id);handMenu?.show();return;}const p=STATIONS[id];camera.position.set(p.x,1.65,p.z);controls.target.set(p.x,1.1,id==='island'?-1.25:-3.65);controls.minDistance=.35;controls.update();document.body.dataset.station=id;handMenu?.show();}
+      function goTo(id){if(renderer.xr.isPresenting){locomotion.teleport(id);handMenu?.hide();return;}const p=STATIONS[id];camera.position.set(p.x,1.65,p.z);controls.target.set(p.x,1.1,id==='island'?-1.25:-3.65);controls.minDistance=.35;controls.update();document.body.dataset.station=id;handMenu?.hide();}
       function message(text){status.textContent=text;toast.textContent=text;vrStatus.userData.paint(text);}
       function syncKitchen(state){document.body.dataset.burners=JSON.stringify(state.burners);document.body.dataset.water=String(state.water);document.getElementById('stove-toggle').textContent=state.burners.some(Boolean)?'Apagar estufa':'Encender estufa';document.getElementById('water-toggle').textContent=state.water?'Cerrar grifo':'Abrir grifo';}
       if(kitchen)syncKitchen(kitchen.state);
@@ -205,17 +207,23 @@
         mesh.userData.setHover=value=>{if(mesh.userData.hover!==value){mesh.userData.hover=value;paint();}};
         mesh.userData.paint(text);if(action){mesh.userData.action=action;buttons.push(mesh);}return mesh;
       }
-      const pagePanels={travel:[],cook:[],case:[]};let menuPage='travel';
+      const pagePanels={travel:[],cook:[],case:[],help:[]};let menuPage='travel';
       const vrStatus=textPanel('Apunta, pellizca un momento y suelta',1.02,.12,new THREE.Vector3(0,.28,0));
       function menuPageShow(page){menuPage=page;for(const [key,panels]of Object.entries(pagePanels))for(const p of panels)p.visible=key===page;}
-      for(const [i,[page,label]]of [['travel','Viajar'],['cook','Cocinar'],['case','Maleta']].entries())textPanel(label,.32,.12,new THREE.Vector3((i-1)*.35,.12,0),()=>menuPageShow(page));
+      for(const [i,[page,label]]of [['travel','Viajar'],['cook','Cocinar'],['case','Maleta'],['help','Ayuda']].entries())textPanel(label,.24,.12,new THREE.Vector3((i-1.5)*.26,.12,0),()=>menuPageShow(page));
       function menuAction(page,label,fn){const i=pagePanels[page].length,p=textPanel(label,.49,.13,new THREE.Vector3(i%2?.265:-.265,-.06-Math.floor(i/2)*.16,0),fn);pagePanels[page].push(p);return p;}
       const resetGuard=createConfirmation(()=>{pointerInput?.cancel();xrInput?.resetInput();system?.reset();cooking?.reset();message('Piezas y alimentos recolocados.');},pending=>{resetPanel.userData.paint(pending?'Confirmar recolocar':'Recolocar todo');document.getElementById('reset-case').textContent=pending?'Confirmar recolocar':'Recolocar todo';if(pending)message('Pulsa otra vez en 7 segundos para confirmar.');});
       const lidPanel=menuAction('case','Cerrar maleta',()=>caseMechanics?.toggle());
       const ledPanel=menuAction('case','Apagar LED',()=>caseMechanics?.toggleLights());
       menuAction('case','Guardar pieza',()=>system?.store(system.selected));
       const resetPanel=menuAction('case','Recolocar todo',()=>resetGuard.press());resetPanel.userData.holdMs=400;
-      menuAction('case','Salir de VR',()=>renderer.xr.getSession()?.end());
+      menuAction('help','Recuperar controles',()=>recoverControls());
+      const reloadPanel=menuAction('help','Recargar página',()=>reloadGuard.press());
+      menuAction('help','Salir de VR',()=>renderer.xr.getSession()?.end());
+      const reloadGuard=createConfirmation(()=>reloadVRPage({getSession:()=>renderer.xr.getSession(),reload:()=>location.reload(),onError:()=>message('Sal de VR y recarga desde el navegador.')}),pending=>{reloadPanel.userData.paint(pending?'Confirmar recarga':'Recargar página');document.getElementById('refresh-page').textContent=pending?'Confirmar recarga':'Recargar página';if(pending)message('Se reiniciará la cocina. Pulsa de nuevo para recargar.');});
+      function recoverControls(){recoverVRControls({input:xrInput,pointer:pointerInput,menu:handMenu,confirmations:[resetGuard,reloadGuard]});message('Controles recuperados. Abre las manos antes de volver a tomar una pieza.');}
+      document.getElementById('recover-controls').onclick=recoverControls;
+      document.getElementById('refresh-page').onclick=()=>reloadGuard.press();
       for(const [id,p]of Object.entries(STATIONS))menuAction('travel',p.label,()=>goTo(id));
       menuAction('travel','Girar 90°',()=>{locomotion.turn(Math.PI/2);handMenu?.recenter();});
       function placeSelected(destination){if(!cooking?.pots.has(system?.selected)){message('Selecciona o toma una olla, primero retira su tapa.');return;}cooking.place(system.selected,destination);}
@@ -227,15 +235,15 @@
       menuAction('cook','Abrir/cerrar cajones',()=>kitchen?.furniture.toggleDrawers());
       menuAction('cook','Olla a la isla',()=>placeSelected('island'));
       textPanel('Ocultar menú',1.02,.11,new THREE.Vector3(0,-.73,0),()=>handMenu?.hide());
-      const summon=textPanel('Menú',.38,.14,new THREE.Vector3(),()=>{handMenu?.toggle();menuPageShow(menuPage);});scene.attach(summon);summon.userData.hud=true;
       for(const panel of vrPanels){panel.userData.rayOnly=true;panel.userData.hud=true;}
-      handMenu=createHandMenu({panel:sidePanel,button:summon,head:camera,isBusy:()=>!!(xrInput?.isPressing()||system?.holders.size)});
+      handMenu=createHandMenu({panel:sidePanel,head:camera,isBusy:()=>!!xrInput?.isPressing()});
+      const floorTravel=createFloorTravel({scene,locomotion,enabled:()=>renderer.xr.isPresenting&&!handMenu.visible,onTravel:()=>{handMenu.hide();resetGuard.cancel();reloadGuard.cancel();}});
       for(const id of Object.keys(STATIONS))document.getElementById('go-'+id).onclick=()=>goTo(id);
       document.getElementById('case-toggle').onclick=()=>caseMechanics?.toggle();document.getElementById('case-led').onclick=()=>caseMechanics?.toggleLights();
       document.getElementById('stove-toggle').onclick=()=>kitchen?.toggleStove();document.getElementById('water-toggle').onclick=()=>kitchen?.toggleWater();
       document.getElementById('fridge-toggle').onclick=()=>kitchen?.furniture.toggleFridge();document.getElementById('drawers-toggle').onclick=()=>kitchen?.furniture.toggleDrawers();
       for(const where of ['sink','stove','island'])document.getElementById('pot-'+where).onclick=()=>placeSelected(where);
-      document.getElementById('preview-menu').onclick=()=>{if(handMenu.visible)handMenu.stop();else{vrPanels.forEach(p=>p.visible=true);handMenu.start();menuPageShow('travel');}};
+      document.getElementById('preview-menu').onclick=()=>{if(handMenu.visible)handMenu.stop();else{vrPanels.forEach(p=>p.visible=true);handMenu.start();handMenu.show();menuPageShow('travel');}};
       const loader=new GLTFLoader();const dracoLoader=new DRACOLoader();dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/libs/draco/');loader.setDRACOLoader(dracoLoader);
       function sync(state) {
         picker.value=state.selected;status.textContent=state.message;toast.textContent=state.message;vrStatus.userData.paint(state.message);
@@ -261,7 +269,7 @@
         document.getElementById('reset-case').addEventListener('click',()=>resetGuard.press());
         installActionPointer({canvas:renderer.domElement,camera,buttons,controls,system,enabled:()=>!renderer.xr.isPresenting});
         pointerInput=installPiecePointer(THREE,{canvas:renderer.domElement,camera,system,world:scene,controls,canInteract:()=>!renderer.xr.isPresenting,mode:()=>document.getElementById('pointer-mode').value});
-        xrInput=installXRHands(THREE,{renderer,scene,rig,system,handModelFactory:new XRHandModelFactory(),buttons});
+        xrInput=installXRHands(THREE,{renderer,scene,rig,system,handModelFactory:new XRHandModelFactory(),buttons,head:camera,floorTravel,onMenu:()=>{handMenu.show();handMenu.update();message('Apunta, pellizca medio segundo y suelta. Ayuda: recuperar o recargar.');},onMessage:message});
         if(kitchen){
           cooking=createCooking({system,scene,kitchen,onChange:(state,note)=>{document.body.dataset.cooking=JSON.stringify(state);document.getElementById('cooking-status').textContent=state.map(p=>`${system.item(p.id).label}: agua ${p.water}%${p.steaming?' · vapor':''}${p.ingredients.length?' · '+p.ingredients.length+' ingredientes':''}`).join(' | ');document.getElementById('game-mission').textContent=state.some(p=>p.steaming&&p.ingredients.length)?'¡Preparación lista! Puedes sacar los ingredientes y volver a jugar.':'Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.';if(note)message(note);}});
           for(const f of kitchen.furniture.food){system.registerExtra(f.id,f.node,f.label,{canTake:f.canTake});cooking.registerFood(f.id,f.node);const o=document.createElement('option');o.value=f.id;o.textContent=f.label;picker.append(o);}
@@ -300,7 +308,7 @@
               domOverlay: { root: document.getElementById("hud") }
             });
             session.addEventListener("end", () => {
-              vrPanels.forEach(p=>p.visible=false);handMenu.stop();resetGuard.cancel();locomotion.reset();camera.position.copy(desktopPosition);camera.quaternion.copy(desktopRotation);controls.target.copy(desktopTarget);
+              vrPanels.forEach(p=>p.visible=false);handMenu.stop();floorTravel.cancel();xrInput?.resetInput();resetGuard.cancel();reloadGuard.cancel();locomotion.reset();camera.position.copy(desktopPosition);camera.quaternion.copy(desktopRotation);controls.target.copy(desktopTarget);
               xrControls.hidden = true;
               document.body.classList.remove("xr-active");
               button.textContent = "Entrar a VR";
@@ -326,14 +334,14 @@
 
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        const dt=clock.getDelta();caseMechanics?.update(dt);kitchen?.update(clock.elapsedTime,dt);resetGuard.update();
+        const dt=clock.getDelta();caseMechanics?.update(dt);kitchen?.update(clock.elapsedTime,dt);resetGuard.update();reloadGuard.update();
         // WebXR has supplied this frame's pose, but render() normally updates the
         // application camera later. Synchronize before navigation and UI ray tests.
         if(renderer.xr.isPresenting){rig.updateMatrixWorld(true);renderer.xr.updateCamera(camera);}
         locomotion.update(dt);
         if(renderer.xr.isPresenting){rig.updateMatrixWorld(true);renderer.xr.updateCamera(camera);}else controls.update();
         handMenu?.update();xrInput?.update();cooking?.update(dt);
-        document.body.dataset.menu=JSON.stringify({version:5,open:sidePanel.visible,recall:summon.visible,page:menuPage,position:sidePanel.position.toArray(),up:new THREE.Vector3(0,1,0).applyQuaternion(sidePanel.quaternion).toArray()});
+        document.body.dataset.menu=JSON.stringify({version:6,open:sidePanel.visible,recall:false,travel:floorTravel.active,page:menuPage,position:sidePanel.position.toArray(),up:new THREE.Vector3(0,1,0).applyQuaternion(sidePanel.quaternion).toArray()});
         if(kitchen){document.body.dataset.furniture=JSON.stringify(kitchen.furniture.state);}
         renderer.render(scene, camera);
       });

@@ -86,15 +86,15 @@ test('Quest controller trigger grabs the ray-selected lid and session exit relea
   xr.dispatchEvent({type:'sessionend'});assert.equal(system.holders.size,0);close(p.node.getWorldPosition(new THREE.Vector3()),pose);assert.equal(p.out,true);
 });
 
-test('Quest hand pinch picks an individual lid, follows wrist rotation, and tracking loss releases it',()=>{
-  const {scene,system}=setup(),{hands,input}=xrHarness(scene,system),hand=hands[0];hand.visible=true;
+test('Quest hand pinch follows wrist rotation and tolerates brief tracking loss before safely parking',()=>{
+  let time=0;const {scene,system}=setup(),{hands,input}=xrHarness(scene,system,{now:()=>time}),hand=hands[0];hand.visible=true;
   const p=system.pieces.get('tapa_6'),center=new THREE.Box3().setFromObject(p.node).getCenter(new THREE.Vector3());
   hand.joints['thumb-tip'].position.copy(center).add(new THREE.Vector3(-.008,0,0));hand.joints['index-finger-tip'].position.copy(center).add(new THREE.Vector3(.008,0,0));
   scene.updateMatrixWorld(true);input.update();assert.equal(system.holders.get(hand)?.id,'tapa_6');
   const before=p.node.getWorldQuaternion(new THREE.Quaternion());hand.joints.wrist.rotation.y=.8;
   hand.joints['thumb-tip'].position.x+=.4;hand.joints['index-finger-tip'].position.x+=.4;scene.updateMatrixWorld(true);input.update();scene.updateMatrixWorld(true);
   assert.ok(before.angleTo(p.node.getWorldQuaternion(new THREE.Quaternion()))>.7);
-  hand.visible=false;input.update();assert.equal(system.holders.size,0);assert.equal(p.out,true);
+  hand.visible=false;input.update();assert.equal(system.holders.size,1);time=1100;input.update();assert.equal(system.holders.size,1);time=1201;input.update();assert.equal(system.holders.size,0);assert.equal(p.out,true);
 });
 
 const {installPiecePointer}=await import('../public/prototipo-agustin20-chef-ar/shared/touch-pieces.js');
@@ -145,4 +145,45 @@ test('losing hand tracking cancels a pending menu press and hover highlights cle
  controller.dispatchEvent({type:'connected',data:{hand:{},targetRayMode:'tracked-pointer'}});input.update();assert.equal(hover,true);
  controller.dispatchEvent({type:'selectstart'});assert.equal(input.isPressing(),true);hand.visible=false;time=500;input.update();assert.equal(input.isPressing(),false);controller.dispatchEvent({type:'selectend'});assert.equal(calls,0);
  xr.dispatchEvent({type:'sessionend'});assert.equal(hover,false);
+});
+
+const {createLocomotion}=await import('../public/prototipo-agustin20-chef-ar/vr/locomotion.js');
+const {createFloorTravel}=await import('../public/prototipo-agustin20-chef-ar/vr/floor-travel.js');
+const {createCooking}=await import('../public/prototipo-agustin20-chef-ar/vr/cooking.js');
+for(const holdingIndex of [0,1])test(`actual pot stays in hand ${holdingIndex} with water and food while the other hand teleports; recovery preserves the scene`,()=>{
+ const {scene,system}=setup(),rig=new THREE.Group(),head=new THREE.PerspectiveCamera();scene.add(rig);rig.add(head);head.position.y=1.65;
+ const move=createLocomotion({rig,camera:head,renderer:{xr:{getCamera:()=>head}}});move.teleport('stove');
+ const kitchen={state:{water:false,burners:[true,false,false,false]}};const cooking=createCooking({system,scene,kitchen});system.extract('tapa_6');cooking.place('olla_6','stove',0);const pot=system.item('olla_6'),water=cooking.pots.get('olla_6');water.fill=.7;
+ const food=new THREE.Group();pot.node.add(food);food.position.set(0,.15,0);
+ let time=0;const travel=createFloorTravel({scene,locomotion:move,now:()=>time});
+ const {hands,controllers,input}=xrHarness(scene,system,{rig,head,floorTravel:travel,now:()=>time});const held=hands[holdingIndex],free=hands[1-holdingIndex],source=controllers[1-holdingIndex];
+ function fingerPose(hand,world,closed){const local=rig.worldToLocal(world.clone());hand.joints['thumb-tip'].position.copy(local);hand.joints['index-finger-tip'].position.copy(local).add(new THREE.Vector3(closed?.015:.09,0,0));}
+ held.visible=free.visible=true;
+ const center=new THREE.Box3().setFromObject(pot.node).getCenter(new THREE.Vector3());fingerPose(held,center,true);fingerPose(free,new THREE.Vector3(2.5,1,-2.6),false);
+ source.position.copy(rig.worldToLocal(new THREE.Vector3(1.65,1.1,-2.68)));source.rotation.x=-Math.PI/2;scene.updateMatrixWorld(true);input.update();assert.equal(system.holders.get(held)?.id,'olla_6');
+ const localPot=rig.worldToLocal(pot.node.getWorldPosition(new THREE.Vector3()));
+ fingerPose(free,new THREE.Vector3(2.5,1,-2.6),true);scene.updateMatrixWorld(true);time=100;input.update();assert.ok(travel.isActive(free));
+ // Brief loss of the carrying hand exactly during travel must not park the pot behind us.
+ held.visible=false;time=400;input.update();time=500;fingerPose(free,new THREE.Vector3(2.5,1,-2.6),false);scene.updateMatrixWorld(true);input.update();assert.equal(travel.active,false);
+ close(head.getWorldPosition(new THREE.Vector3()),new THREE.Vector3(1.65,1.65,-2.68));assert.equal(system.holders.get(held)?.id,'olla_6');close(rig.worldToLocal(pot.node.getWorldPosition(new THREE.Vector3())),localPot);
+ assert.equal(water.fill,.7);assert.equal(food.parent,pot.node);
+ held.visible=true;time=600;input.update();assert.equal(system.holders.get(held)?.id,'olla_6');
+ // A short release-distance spike is ignored, but a sustained open hand releases.
+ held.joints['index-finger-tip'].position.x+=.09;time=650;input.update();assert.ok(system.holders.has(held));held.joints['index-finger-tip'].position.x-=.09;time=700;input.update();assert.ok(system.holders.has(held));
+ move.turn(Math.PI/2);close(rig.worldToLocal(pot.node.getWorldPosition(new THREE.Vector3())),localPot);
+ const before=pot.node.getWorldPosition(new THREE.Vector3());input.resetInput();assert.equal(system.holders.size,0);close(pot.node.getWorldPosition(new THREE.Vector3()),before);assert.equal(water.fill,.7);assert.equal(food.parent,pot.node);assert.equal(kitchen.state.burners[0],true);
+ input.update();assert.equal(system.holders.size,0); // Closed fingers after recovery must not immediately re-grab.
+});
+test('a deliberate release ends a grab after debounce and cannot start locomotion with the occupied hand',()=>{
+ const {scene,system}=setup();let time=0,begins=0;const travel={begin:()=>begins++,cancel(){},isActive:()=>false,active:false};const {hands,input}=xrHarness(scene,system,{floorTravel:travel,now:()=>time});const hand=hands[0];hand.visible=true;
+ const center=new THREE.Box3().setFromObject(system.item('tapa_6').node).getCenter(new THREE.Vector3());hand.joints['thumb-tip'].position.copy(center);hand.joints['index-finger-tip'].position.copy(center).add(new THREE.Vector3(.01,0,0));scene.updateMatrixWorld(true);input.update();assert.ok(system.holders.has(hand));
+ hand.joints['index-finger-tip'].position.x+=.1;time=100;input.update();assert.ok(system.holders.has(hand));time=250;input.update();assert.equal(system.holders.has(hand),false);assert.equal(begins,0);
+});
+for(const side of ['left','right'])test(`integrated ${side} palm opens menu once and never grabs or teleports`,()=>{
+ const {scene,system}=setup(),head=new THREE.PerspectiveCamera();head.position.set(0,1.65,0);scene.add(head);let time=0,opens=0,begins=0;
+ const travel={active:false,isActive:()=>false,begin:()=>begins++,cancel(){}};
+ const {hands,controllers,input}=xrHarness(scene,system,{head,now:()=>time,onMenu:()=>opens++,floorTravel:travel});const hand=hands[0];hand.visible=true;hand.position.set(side==='right'?.3:-.3,1.15,-.4);const sign=side==='right'?1:-1;
+ for(const [i,finger]of ['index','middle','ring','pinky'].entries())for(const suffix of ['phalanx-proximal','tip']){const name=`${finger}-finger-${suffix}`;if(!hand.joints[name]){hand.joints[name]=new THREE.Group();hand.add(hand.joints[name]);}hand.joints[name].position.set((-.03+i*.02)*sign,0,suffix==='tip'?-.16:-.07);}
+ hand.joints['thumb-tip'].position.set(-.09*sign,0,-.08);controllers[0].dispatchEvent({type:'connected',data:{hand:{},handedness:side}});
+ scene.updateMatrixWorld(true);input.update();time=700;input.update();assert.equal(opens,1);time=1500;input.update();assert.equal(opens,1);assert.equal(system.holders.size,0);assert.equal(begins,0);
 });
