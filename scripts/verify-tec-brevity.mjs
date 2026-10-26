@@ -1,10 +1,11 @@
 // Synthetic opt-in checks only: no customer data, chats, orders or memberships written.
 import assert from 'node:assert/strict';
-import { applyCoachResponseStyle, buildCoachKnowledgeContext, COACH_CONSULTATION_PROMPT, COACH_PROMPT_VERSION } from '../src/knowledge/coach-knowledge.js';
+import { applyCoachResponseStyle, buildCoachKnowledgeContext, COACH_CONSULTATION_PROMPT, COACH_PROMPT_VERSION, getCoachKnowledgeDirectReply } from '../src/knowledge/coach-knowledge.js';
 const cases = [
   {q:'Háblame de la licuadora',maxWords:45,clarify:true},
   {q:'Cuanto cuesta la licuadora',maxWords:45,clarify:true},
-  {q:'Quiero la batidora de mano',maxWords:45,clarify:true,contains:/Power Blender Go/i},
+  {q:'Quiero la batidora de mano',maxWords:45,clarify:true,contains:/Power Blender Go/i,forbidden:/Blender Max/i},
+  {q:'Ahora busco la batidora de mano',history:[{role:'user',content:'precio CO9555'},{role:'assistant',content:'La olla de 2 cuartos cuesta $649 base.'}],maxWords:45,clarify:true,contains:/Power Blender Go/i,forbidden:/Blender Max|CO9555/i},
   {q:'Como se llama la que sirve para moler cafe y triturar semillas',maxWords:45,clarify:true,contains:/Power Blender Max/i},
   {q:'El aparato que corta verduras',maxWords:45,clarify:true,contains:/ensaladas/i,forbidden:/tazon|tazón|CO4900/i},
   {q:'Tienen la licuadira?',maxWords:45,clarify:true,contains:/Blender/i},
@@ -33,9 +34,14 @@ if (!process.argv.includes('--live')) {
       ...(c.history||[]), {role:'user',content:c.q}
     ]});
     const start=Date.now();
-    const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:AbortSignal.timeout(60000),headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(!response.ok) throw new Error('OpenAI test HTTP '+response.status);
-    const value=await response.json();
+    const direct=getCoachKnowledgeDirectReply(c.q,{history:c.history||[]});
+    let value;
+    if(direct) value={choices:[{message:{content:direct},finish_reason:'stop'}]};
+    else {
+      const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:AbortSignal.timeout(60000),headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!response.ok) throw new Error('OpenAI test HTTP '+response.status);
+      value=await response.json();
+    }
     const answer=value.choices?.[0]?.message?.content||'';
     const words=answer.trim().split(/\s+/).length;
     const finish=value.choices?.[0]?.finish_reason;
@@ -47,7 +53,7 @@ if (!process.argv.includes('--live')) {
       if(c.contains) assert.match(answer,c.contains);
       if(c.forbidden) assert.doesNotMatch(answer,c.forbidden);
     } catch(e) {error=e.message;failures++;}
-    console.log(JSON.stringify({question:c.q,answer,words,ms:Date.now()-start,finish,passed:!error,error}));
+    console.log(JSON.stringify({question:c.q,answer,words,ms:Date.now()-start,finish,route:direct?'catalog-clarification':'openai',passed:!error,error}));
   }
   console.log(JSON.stringify({prompt:COACH_PROMPT_VERSION,cases:cases.length,failures}));
   if(failures) process.exitCode=1;

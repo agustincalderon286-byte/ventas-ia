@@ -15,7 +15,7 @@ const sources = [
   ['tec_returns_us.json', '', 'returns'],
   ['codigos_productos_internos_2026.json', '', 'part']
 ];
-export const COACH_PROMPT_VERSION = 'tec-consultation-v8-product-guards';
+export const COACH_PROMPT_VERSION = 'tec-consultation-v9-identity-questions';
 const sourceLabels = {
   product: 'Información de productos Royal Prestige',
   catalog: 'Catálogo de productos Royal Prestige',
@@ -63,10 +63,22 @@ RoyalOne es software de gestión de pedidos, no un utensilio ni un aparato que s
 Para recetas da ingredientes, cantidades y pasos suficientes. Si adaptas una receta identifica que es una adaptación, no una receta oficial. No inventes certificaciones, beneficios médicos ni eliminación de contaminantes.
 Cita brevemente el título y enlace de las fuentes realmente suministradas, o nombre/código del catálogo local. No muestres hashes, identificadores internos ni nombres técnicos de estados. No inventes URLs ni digas que consultaste la web en vivo. Limita la respuesta al producto consultado: no agregues garantías de otros productos ni direcciones de envío salvo que se solicite el trámite. Si solo dicen "el sartén" u "olla" sin modelo, pregunta cuál en vez de asumir RoyalCore o acero inoxidable. Conserva restricciones importantes aunque la respuesta requiera más de cuatro líneas. Si la evidencia no alcanza, dilo y pide el dato que falta; no rellenes con suposiciones. El contexto de la demo puede ayudar, pero no reemplaza políticas o fichas verificadas.`;
 
-export function getCoachKnowledgeDirectReply(question) {
-  return classifyCoachQuestion(question).royalone
-    ? 'RoyalOne es el sistema para gestionar pedidos. Aún no tengo su manual verificado para indicarte los pasos; lo incorporaremos después.'
-    : '';
+export function getCoachKnowledgeDirectReply(question, { history = [] } = {}) {
+  const intent=classifyCoachQuestion(question);
+  if (intent.royalone) return 'RoyalOne es el sistema para gestionar pedidos. Aún no tengo su manual verificado para indicarte los pasos; lo incorporaremos después.';
+  // Identity questions need no generative call. Never let an unrelated model become
+  // an extra option. Established conversations still use history-aware consultation.
+  if (history.some(m=>m.role==='assistant') || intent.warranty || intent.care || intent.recipe || intent.returns || intent.docucite || /compara|diferencia|versus/i.test(question)) return '';
+  const q=productSearch.normalize(question);
+  const candidates=findProducts(question).filter(r=>r.score>=80 && ['alias','fuzzy'].includes(r.matchType));
+  if (!candidates.length) return '';
+  if (productSearch.isPartQuery(question)) {
+    return !/[0-9]|innove|easy release|power blender|frescapure|frescaflow|expertea/.test(q)
+      ? '¿De qué modelo y medida es el producto para el que necesitas la pieza?' : '';
+  }
+  const names=[...new Set(candidates.map(r=>r.name))];
+  if (names.length>3) return '¿Qué modelo y tamaño buscas? Hay varias opciones que coinciden con esa descripción.';
+  return '¿Te refieres a '+names.map((name,i)=> (i===names.length-1 && i>0 ? 'o ' : '')+name).join(names.length===2?' ':', ')+'?';
 }
 
 export function normalizeKnowledge(text = '') {
@@ -182,6 +194,7 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
   const ranked = index.filter(r => relevantKinds.includes(r.kind))
     .filter(r => r.kind!=='part' || candidates.some(c=>c.code===r.code.trim()))
     .filter(r => !expandIdentity || !candidates.length || !['price','product'].includes(r.kind) || candidates.some(c=>c.code===r.code.trim()))
+    .filter(r => !expandIdentity || !candidates.length || !['catalog','care'].includes(r.kind) || (r.kind==='catalog' && candidates.some(c=>r.searchTitle.includes(normalizeKnowledge(c.name)))))
     .filter(r => !partIntent || knownCare || intent.warranty || intent.care || intent.returns || intent.recipe || (['part','price','product'].includes(r.kind) && candidates.some(c=>c.code===r.code.trim())))
     .filter(r => !['price','product'].includes(r.kind) || !intent.price || exactCodes.length || !categories.length || categories.some(([,pattern])=>pattern.test(r.searchTitle)))
     .filter(r => !intent.warranty || !families.length || ['price','returns'].includes(r.kind) || families.some(([,pattern])=>pattern.test(r.searchTitle)))

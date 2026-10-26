@@ -34072,7 +34072,7 @@ CONSULTA DEL COACH:
         activeDemoOutcomeContext
       }
     };
-    const directKnowledgeReply = modoChat === "coach" ? getCoachKnowledgeDirectReply(preguntaLimpia) : "";
+    const directKnowledgeReply = modoChat === "coach" ? getCoachKnowledgeDirectReply(preguntaLimpia, { history: cacheHistory }) : "";
     const cachedAiReply = directKnowledgeReply ? { reply: directKnowledgeReply } : await obtenerRespuestaAiCacheada(aiCacheOptions);
     let respuestaIA = null;
     let cacheHit = false;

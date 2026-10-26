@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { performance } from 'node:perf_hooks';
 import { productSearch, retailProducts, retailIndex, internalCodeProducts, findProducts } from '../src/knowledge/product-catalog.js';
-import { searchCoachKnowledge, buildCoachKnowledgeContext, isCoachKnowledgeQuestion } from '../src/knowledge/coach-knowledge.js';
+import { searchCoachKnowledge, buildCoachKnowledgeContext, isCoachKnowledgeQuestion, getCoachKnowledgeDirectReply } from '../src/knowledge/coach-knowledge.js';
 
 const cases = [
   ['licuadora',['ES0082','ES4200']],
@@ -68,6 +68,11 @@ test('parts match component and dimensions without exposing costs or guessing co
 });
 
 test('Coach routes nicknames/functions to verified identities, asks instead of assuming',()=>{
+  assert.match(getCoachKnowledgeDirectReply('Quiero la batidora de mano'),/POWER BLENDER GO/);
+  assert.doesNotMatch(getCoachKnowledgeDirectReply('Quiero la batidora de mano'),/MAX/);
+  assert.match(getCoachKnowledgeDirectReply('goma de la olla de presion'),/modelo y medida/);
+  assert.equal(getCoachKnowledgeDirectReply('Cuanto cuesta CO9555'),'');
+  assert.equal(getCoachKnowledgeDirectReply('batidora de mano',{history:[{role:'assistant',content:'¿Te refieres a la Power Blender Go?'}]}),'');
   for(const q of ['batidora de mano','aparato que corta verduras','goma de la olla de presion']) {
     assert.ok(isCoachKnowledgeQuestion(q));
     const ctx=buildCoachKnowledgeContext(q);
