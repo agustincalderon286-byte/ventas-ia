@@ -14,7 +14,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
-import { COACH_CONSULTATION_PROMPT, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
+import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
 import {
   buscarKnowledgeVectorial,
   construirContextoVectorial,
@@ -33974,7 +33974,7 @@ CONTEXTO INTERNO DEL COACH:
 - no capturar lead
 - no pedir telefono
 - no mandar informacion a Google Sheets
-- enfocate en objeciones, seguimiento, demo, cierre, reclutamiento, estrategia y ordenes
+- responde solo la pregunta actual; usa datos de demo o ventas solo si son pertinentes a lo que pide el usuario
 ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
 `;
       perfilPrompt += construirPromptCoachDemoActivo({
@@ -34298,6 +34298,10 @@ CONSULTA DEL COACH:
           ...historialPrompt
         ]
       };
+
+      if (modoChat === "coach") {
+        Object.assign(openAiPayload, applyCoachResponseStyle(openAiPayload));
+      }
 
       if (modoChat === "coach" && COACH_TURBO_MODE) {
         openAiPayload.max_completion_tokens = Math.max(1800, COACH_TURBO_MAX_COMPLETION_TOKENS);
