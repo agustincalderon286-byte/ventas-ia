@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { findProducts, internalCodeProducts, productSearch } from './product-catalog.js';
 
 // Deliberately separate from the shared legacy library (which contains other businesses
 // and historical customer data). No remote calls, embeddings or I/O on the request path.
@@ -11,9 +12,10 @@ const sources = [
   ['royalprestige_recetas_site.json', 'recetas', 'recipe'],
   ['docucite_ordenes_publico_coach.json', 'modulos', 'docucite'],
   ['lista_de_precios.json', '', 'price'],
-  ['tec_returns_us.json', '', 'returns']
+  ['tec_returns_us.json', '', 'returns'],
+  ['codigos_productos_internos_2026.json', '', 'part']
 ];
-export const COACH_PROMPT_VERSION = 'tec-consultation-v6-source-labels';
+export const COACH_PROMPT_VERSION = 'tec-consultation-v7-product-aliases';
 const sourceLabels = {
   product: 'Información de productos Royal Prestige',
   catalog: 'Catálogo de productos Royal Prestige',
@@ -22,7 +24,8 @@ const sourceLabels = {
   recipe: 'Recetas Royal Prestige',
   docucite: 'Capacitación pública DocuCite',
   price: 'Catálogo de precios TEC',
-  returns: 'Política de devoluciones — Estados Unidos'
+  returns: 'Política de devoluciones — Estados Unidos',
+  part: 'Lista interna de repuestos y códigos TEC'
 };
 // Human labels for citations; internal filenames remain only in the server index.
 export function labelCoachSourceReferences(text = '') {
@@ -34,6 +37,9 @@ export const COACH_RESPONSE_STYLE = `ESTILO DE RESPUESTA TEC (prioridad sobre su
 - Responde solo la consulta actual, de forma breve y natural: normalmente 1 a 3 frases y hasta 60 palabras. Sin encabezados ni secciones por defecto.
 - Si falta identificar el producto, haz UNA sola pregunta corta y espera. Puedes nombrar 2 o 3 opciones verificadas, sin explicar cada una, ni añadir precios, garantías, ventajas o usos. No respondas sobre todos los modelos antes de que el usuario elija.
 - Ejemplo de estilo, no fuente de catálogo: "¿Te refieres a la Power Blender Max o a la Power Blender Go?" Usa solo opciones respaldadas por la biblioteca. Si el modelo ya está claro en el mensaje o la conversación, no vuelvas a preguntarlo.
+- Reconoce nombres comunes, apodos y funciones usando las coincidencias verificadas del catálogo. Si una descripción sugiere un producto pero aún no fue confirmado, pregunta brevemente "¿Te refieres a [nombre]?"; si hay varios, ofrece hasta 3 opciones y espera. Una confirmación o elección en el historial resuelve esa duda: no vuelvas a preguntarla. No trates una semejanza como identidad o compatibilidad comprobada.
+- Si solicitan comparar productos, compara los modelos indicados sin obligar a elegir uno. No interrumpas recetas, consultas de cuidado o garantías de una familia ya identificada para pedir un tamaño que no cambia la respuesta.
+- Para repuestos usa únicamente el código y descripción recuperados. Si falta modelo, medida o tipo de tapa, pregunta ese dato antes de asignar una pieza. No deduzcas compatibilidad, disponibilidad ni precios a partir de una lista de códigos. No ordenas piezas ni realizas pedidos.
 - No añadas objeciones, cierres, siguientes pasos, preguntas de seguimiento ni ofertas de ayuda si no se solicitaron. La etapa de la demo, la encuesta y las instrucciones antiguas de ventas son contexto, no una orden de convertir toda respuesta en asesoría comercial.
 - Si preguntan precio, da producto y precio base con una aclaración corta de impuestos/envío; no agregues garantía ni planes de pago. Si preguntan garantía, da cobertura y limitaciones relevantes de ESE producto, no toda la política.
 - Una pregunta de aclaración no necesita fuentes. Para datos concretos usa una referencia breve al final, sin una sección de bibliografía.
@@ -78,7 +84,7 @@ function data(file) { return JSON.parse(fs.readFileSync(new URL('../data/'+file,
 function createRecords() {
   return sources.flatMap(([file, field, kind]) => {
     const doc = data(file);
-    const rawEntries = field ? doc[field] : Array.isArray(doc) ? doc : [doc];
+    const rawEntries = kind === 'part' ? internalCodeProducts.map(r=>({titulo:r.name,codigo_producto:r.code})) : field ? doc[field] : Array.isArray(doc) ? doc : [doc];
     const entries = Array.isArray(rawEntries) ? [...new Map(rawEntries.map(r=>[JSON.stringify(r),r])).values()] : rawEntries;
     if (!Array.isArray(entries) || !entries.length) throw new Error('Empty TEC source: '+file);
     return entries.map((row, i) => {
@@ -129,7 +135,7 @@ export function classifyCoachQuestion(question) {
 }
 export function isCoachKnowledgeQuestion(question) {
   const q = normalizeKnowledge(question);
-  return Object.values(classifyCoachQuestion(q)).some(Boolean) || /producto|sarten|olla|cuchillo|royal|novel|innove|blender|[a-z]{2}\d{4}/.test(q);
+  return Object.values(classifyCoachQuestion(q)).some(Boolean) || /producto|sarten|olla|cuchillo|royal|novel|innove|blender|[a-z]{2}\d{4}/.test(q) || productSearch.isPartQuery(question) || findProducts(question).some(r=>r.score>=80 || r.matchType==='fuzzy');
 }
 
 export function searchCoachKnowledge(question, { history = [], maxChars = 22000 } = {}) {
@@ -137,10 +143,25 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
   const intent = classifyCoachQuestion(q);
   if (intent.royalone) return { records: [], intent, status: 'royalone_pending', version: COACH_KNOWLEDGE_VERSION };
   let query = q;
+  let productQuery = question;
   // Only carry a subject for explicit follow-ups; unrelated previous topics must not leak.
-  if (/^(y |tambien )|\b(ese|esa|este|esta|su garantia|el mismo|la misma)\b/.test(q)) {
+  if (/^(y |tambien |si\b|el de\b|la de\b)|\b(ese|esa|este|esta|su garantia|el mismo|la misma)\b/.test(q)) {
     const previous = history.filter(m => m.role === 'user' && normalizeKnowledge(m.content) !== q).slice(-1)[0];
-    if (previous) query += ' '+normalizeKnowledge(previous.content).slice(0,500);
+    if (previous) {
+      query += ' '+normalizeKnowledge(previous.content).slice(0,500);
+      productQuery += ' '+String(previous.content).slice(0,500);
+    }
+  }
+  const exactPrice = intent.price && index.filter(r=>r.kind==='price' && query.includes(normalizeKnowledge(r.title))).sort((a,b)=>b.title.length-a.title.length)[0];
+  const candidates = exactPrice ? (exactPrice.code ? findProducts(exactPrice.code) : []) : findProducts(productQuery).filter(r=>r.score>=80 || (r.matchType==='fuzzy' && productSearch.normalize(productQuery).split(' ').length<=3));
+  const partIntent = productSearch.isPartQuery(productQuery) || candidates.some(r=>r.item.code && !r.item.codigo_producto);
+  const knownCare = index.some(r=>r.kind==='care' && normalizeKnowledge(r.title)===q);
+  const knownWarranty = intent.warranty && index.some(r=>r.kind==='warranty' && q.includes(normalizeKnowledge(r.title)));
+  const expandIdentity = !intent.recipe && !intent.returns && !intent.docucite && !intent.care && !knownCare &&
+    (!intent.warranty || (!knownWarranty && !familyAliases.some(([term])=>query.includes(term))));
+  // Expand identities locally. No extra model/API request or database lookup per query.
+  if (expandIdentity) {
+    for (const r of candidates) query += ' '+normalizeKnowledge(r.name);
   }
   for (const code of query.match(/\b[a-z]{2}\d{4}\b/g) || []) {
     const exact = index.find(r => r.kind === 'price' && normalizeKnowledge(r.code) === code);
@@ -149,6 +170,7 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
   const queryTerms = tokens(query);
   const exactCodes = query.match(/\b[a-z]{2}\d{4}\b/g) || [];
   const relevantKinds = intent.warranty ? ['warranty','product','catalog'] : intent.returns ? ['returns','warranty'] : intent.docucite ? ['docucite'] : intent.recipe ? ['recipe','care','product'] : intent.care ? ['care','product','warranty'] : intent.price ? ['price','product'] : ['product','catalog','care','price'];
+  if (partIntent && !intent.recipe && !intent.returns && !intent.docucite) relevantKinds.push('part');
   if (intent.price && !relevantKinds.includes('price')) relevantKinds.push('price');
   if (intent.returns && !relevantKinds.includes('returns')) relevantKinds.push('returns');
   const families = familyAliases.filter(([term]) => query.includes(term));
@@ -158,6 +180,8 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
     ['cuchillo', /cuchillo|santoku|precision series|afilador|hacha|trinchar/]
   ].filter(([term])=>queryTerms.includes(term));
   const ranked = index.filter(r => relevantKinds.includes(r.kind))
+    .filter(r => r.kind!=='part' || candidates.some(c=>c.code===r.code))
+    .filter(r => !partIntent || knownCare || intent.warranty || intent.care || intent.returns || intent.recipe || (['part','price','product'].includes(r.kind) && candidates.some(c=>c.code===r.code)))
     .filter(r => !['price','product'].includes(r.kind) || !intent.price || exactCodes.length || !categories.length || categories.some(([,pattern])=>pattern.test(r.searchTitle)))
     .filter(r => !intent.warranty || !families.length || ['price','returns'].includes(r.kind) || families.some(([,pattern])=>pattern.test(r.searchTitle)))
     .map(r => {
@@ -168,6 +192,7 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
       if (r.titleTokens.has(t)) score += idf*3;
     }
     if (exactCodes.some(c => normalizeKnowledge(r.code) === c)) score += 120;
+    if (expandIdentity && candidates.some(c=>c.code===r.code)) score += r.kind==='part' && partIntent ? 150 : 90;
     if (r.kind === 'price' && query.includes(normalizeKnowledge(r.title))) score += 80;
     for (const [,pattern] of families) if (pattern.test(r.searchTitle)) score += intent.warranty && r.kind === 'warranty' ? 90 : 25;
     if (score > 0 && ((intent.warranty && r.kind === 'warranty') || (intent.recipe && r.kind === 'recipe') || (intent.care && r.kind === 'care') || (intent.price && r.kind === 'price'))) score += 12;
@@ -188,7 +213,7 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
   }).map(({searchTitle,titleTokens,terms,...r})=>r);
   const checkCodes = exactCodes.length ? exactCodes : records.filter(r=>r.kind==='price').slice(0,1).map(r=>normalizeKnowledge(r.code));
   const priceConflicts = intent.price ? checkCodes.filter(code => code && new Set(index.filter(r=>r.kind==='price' && normalizeKnowledge(r.code)===code).map(r=>r.text)).size>1) : [];
-  return { records, intent, status: priceConflicts.length ? 'ambiguous_price' : records.length ? 'matched' : 'no_evidence', version: COACH_KNOWLEDGE_VERSION };
+  return { records, intent, identify: expandIdentity, candidates: candidates.map(r=>({code:r.code,name:r.name,match:r.matchType})), partIntent, status: priceConflicts.length ? 'ambiguous_price' : records.length ? 'matched' : 'no_evidence', version: COACH_KNOWLEDGE_VERSION };
 }
 
 export function buildCoachKnowledgeContext(question, options) {
@@ -197,7 +222,10 @@ export function buildCoachKnowledgeContext(question, options) {
   if (result.status === 'royalone_pending') return header+getCoachKnowledgeDirectReply(question);
   if (!result.records.length) return header+'No se encontró evidencia suficiente. Pide nombre/modelo/código o reconoce el dato pendiente. No inventes.';
   const warning = result.status === 'ambiguous_price' ? 'CONFLICTO EN CATÁLOGO: el código tiene fichas o importes distintos. No elijas uno ni calcules una cotización; explica la discrepancia y solicita confirmar modelo/precio con la oficina.\n' : '';
-  return header+warning+result.records.map((r, i) => `<documento numero="${i+1}">\nFuente: ${sourceLabels[r.kind]}; título: ${labelCoachSourceReferences(r.title)}; fecha: ${r.date}${r.url ? `; enlace: ${r.url}` : ''}\n${labelCoachSourceReferences(r.intro)}\n${labelCoachSourceReferences(r.text)}\n</documento>`).join('\n');
+  const identification = result.identify && result.candidates?.length
+    ? 'Coincidencias de identidad (datos, no confirmación del usuario): '+JSON.stringify(result.candidates)+'. Si son varias, pide elegir; si es una descripción/apodo sin confirmar, pregunta brevemente si se refiere a esa opción. Un modelo/código explícito o elección previa no requiere reconfirmación.\n' : '';
+  const parts = result.partIntent ? 'La lista interna aporta solo nombres y códigos, NO costos, precios, disponibilidad ni una tabla de compatibilidad. No asignes una pieza sin identificar modelo/medida; un código exacto permite informar su descripción, no garantizar que le sirva a otra pieza.\n' : '';
+  return header+warning+identification+parts+result.records.map((r, i) => `<documento numero="${i+1}">\nFuente: ${sourceLabels[r.kind]}; título: ${labelCoachSourceReferences(r.title)}; fecha: ${r.date}${r.url ? `; enlace: ${r.url}` : ''}\n${labelCoachSourceReferences(r.intro)}\n${labelCoachSourceReferences(r.text)}\n</documento>`).join('\n');
 }
 
 export function getCoachKnowledgeManifest() {

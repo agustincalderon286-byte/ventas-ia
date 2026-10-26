@@ -14,6 +14,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
+import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
 import {
   buscarKnowledgeVectorial,
@@ -24519,199 +24520,24 @@ function construirImagenProductoCatalogoCoach(codigo = "", nombre = "") {
   };
 }
 
-function construirPreciosRelevantesCoach(pregunta = "") {
-  if (!Array.isArray(preciosCatalogo) || !preciosCatalogo.length) {
-    return {
-      coincidencias: [],
-      guidance: "- No se pudo cargar la lista de catalogo. No inventes precios."
-    };
-  }
-
-  const stopwords = new Set([
-    "precio",
-    "precios",
-    "cuanto",
-    "cuesta",
-    "costo",
-    "costos",
-    "pago",
-    "pagos",
-    "mensual",
-    "mensualidad",
-    "mensualidades",
-    "plan",
-    "planes",
-    "catalogo",
-    "producto",
-    "productos",
-    "royal",
-    "prestige",
-    "quiero",
-    "saber",
-    "dime",
-    "dar",
-    "dame",
-    "del",
-    "de",
-    "la",
-    "el",
-    "los",
-    "las",
-    "por",
-    "para",
-    "una",
-    "uno",
-    "que",
-    "con"
-  ]);
-  const preguntaNormalizada = normalizarTextoBusquedaCoach(pregunta);
-  const tokens = tokenizarTextoBusquedaCoach(pregunta).filter(token => /^\d+$/.test(token) || !stopwords.has(token));
-  const buscaSet = /\bset\b/.test(preguntaNormalizada);
-  const buscaSistema = /\bsistema\b/.test(preguntaNormalizada);
-  const buscaTapa = /\btapa\b/.test(preguntaNormalizada);
-  const buscaOlla = /\bolla\b/.test(preguntaNormalizada);
-  const buscaComal = /\bcomal\b/.test(preguntaNormalizada);
-  const buscaSarten = /\bsarten\b/.test(preguntaNormalizada);
-  const buscaCuchillo = /\bcuchill(?:o|os)\b/.test(preguntaNormalizada);
-  const piezasMatch = preguntaNormalizada.match(/\b(\d+)\s+piezas\b/);
-  const piezasBuscadas = piezasMatch ? `${piezasMatch[1]} piezas` : "";
-
-  const coincidencias = preciosCatalogo
-    .map((item, index) => {
-      const codigo = obtenerCodigoPrecioCatalogo(item);
-      const nombre = obtenerNombrePrecioCatalogo(item);
-      const precio = obtenerPrecioBaseCatalogo(item);
-
-      if (!codigo || !nombre || !Number.isFinite(precio)) {
-        return null;
-      }
-
-      const codigoNormalizado = normalizarTextoBusquedaCoach(codigo);
-      const nombreNormalizado = normalizarTextoBusquedaCoach(nombre);
-      const corpus = `${codigoNormalizado} ${nombreNormalizado}`.trim();
-      const tokensProducto = new Set(tokenizarTextoBusquedaCoach(corpus));
-      const piezasProductoMatch = nombreNormalizado.match(/\b(\d+)\s+piezas\b/);
-      const piezasProducto = piezasProductoMatch ? `${piezasProductoMatch[1]} piezas` : "";
-      let score = 0;
-
-      if (codigoNormalizado && preguntaNormalizada.includes(codigoNormalizado)) {
-        score += 120;
-      }
-
-      if (nombreNormalizado && preguntaNormalizada === nombreNormalizado) {
-        score += 100;
-      }
-
-      if (nombreNormalizado && preguntaNormalizada.includes(nombreNormalizado) && preguntaNormalizada.length > 5) {
-        score += 45;
-      }
-
-      if (preguntaNormalizada.includes("chocolatera") && nombreNormalizado.includes("chocolatera")) {
-        score += 80;
-      }
-
-      if (piezasBuscadas && nombreNormalizado.includes(piezasBuscadas)) {
-        score += 35;
-      }
-
-      if (buscaSet && /\bset\b/.test(nombreNormalizado)) {
-        score += 20;
-      }
-
-      if (buscaSet && !/\bset\b/.test(nombreNormalizado) && /\bsistema\b/.test(nombreNormalizado)) {
-        score += 14;
-      }
-
-      if (buscaSistema && /\bsistema\b/.test(nombreNormalizado)) {
-        score += 16;
-      }
-
-      for (const token of tokens) {
-        if (codigoNormalizado === token) {
-          score += 80;
-          continue;
-        }
-
-        if (tokensProducto.has(token)) {
-          score += /^\d+$/.test(token) ? 10 : token.length >= 5 ? 8 : 5;
-        }
-      }
-
-      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaTapa && /\btapa\b/.test(nombreNormalizado)) {
-        score -= 30;
-      }
-
-      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaOlla && /\bolla\b/.test(nombreNormalizado)) {
-        score -= 18;
-      }
-
-      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaComal && /\bcomal\b/.test(nombreNormalizado)) {
-        score -= 18;
-      }
-
-      if ((buscaSet || buscaSistema || piezasBuscadas) && !buscaSarten && /\bsarten\b/.test(nombreNormalizado)) {
-        score -= 18;
-      }
-
-      if (piezasBuscadas && piezasProducto && piezasProducto !== piezasBuscadas) {
-        score -= 35;
-      }
-
-      if (
-        (buscaSet || buscaSistema || piezasBuscadas) &&
-        !buscaCuchillo &&
-        /(?:\bcuchill(?:o|os)\b|\bjuego\b)/.test(nombreNormalizado)
-      ) {
-        score -= 25;
-      }
-
-      if (/folleto|repuesto|kit|manual/i.test(nombreNormalizado)) {
-        score -= 25;
-      }
-
-      return {
-        index,
-        codigo,
-        nombre,
-        precio,
-        score
-      };
-    })
-    .filter(item => item && item.score > 0)
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-
-      return a.index - b.index;
-    })
-    .slice(0, 5)
-    .map(item => {
-      const calculo = calcularPagoCoach(item.precio);
-      const imagenCatalogo = construirImagenProductoCatalogoCoach(item.codigo, item.nombre);
-      return {
-        codigo_producto: item.codigo,
-        nombre_producto: item.nombre,
-        precio_base_catalogo: item.precio,
-        total_estimado_coach: calculo.total,
-        mensualidad_estimada_coach: calculo.mensualidad,
-        ...imagenCatalogo
-      };
-    });
-
-  if (coincidencias.length) {
-    return {
-      coincidencias,
-      guidance:
-        "- Usa solo estos productos encontrados del catalogo publico para cotizar. Si ves varias coincidencias parecidas, dilo antes de cotizar una sola. Si el nombre exacto no aparece aqui, pide codigo o nombre exacto y no inventes precio."
-    };
-  }
-
+export function formatCoachCatalogProduct(item) {
+  const calculo = calcularPagoCoach(item.precio_base_catalogo);
   return {
-    coincidencias: [],
-    guidance: extraerMontosCoach(pregunta).length
-      ? "- No se detecto un producto exacto del catalogo. Si ya te dieron una base numerica, usa CALCULOS DETECTADOS y aclara que la base vino del distribuidor."
-      : "- No se detecto un producto exacto del catalogo. Pide el codigo o nombre exacto antes de cotizar y no inventes precio."
+    ...item,
+    total_estimado_coach: calculo.total,
+    mensualidad_estimada_coach: calculo.mensualidad,
+    ...construirImagenProductoCatalogoCoach(item.codigo_producto, item.nombre_producto)
+  };
+}
+
+export function construirPreciosRelevantesCoach(pregunta = "") {
+  const coincidencias = productSearch.search(retailIndex, pregunta)
+    .map(result => formatCoachCatalogProduct(result.item));
+  return {
+    coincidencias,
+    guidance: coincidencias.length
+      ? "- Coincidencias por nombre, apodo o descripción. Si hay varias opciones, pide elegir modelo antes de cotizar. No adivines medidas ni compatibilidad."
+      : "- No se identificó un producto del catálogo. Pide modelo/código y no inventes precio."
   };
 }
 
@@ -30730,31 +30556,11 @@ app.get("/api/coach/catalog-offline", async (req, res) => {
   }
 
   try {
-    const products = (Array.isArray(preciosCatalogo) ? preciosCatalogo : [])
-      .map(item => {
-        const codigo = obtenerCodigoPrecioCatalogo(item);
-        const nombre = obtenerNombrePrecioCatalogo(item);
-        const precio = obtenerPrecioBaseCatalogo(item);
+    const products = retailProducts.map(formatCoachCatalogProduct);
 
-        if (!codigo || !nombre || !Number.isFinite(precio)) {
-          return null;
-        }
-
-        const calculo = calcularPagoCoach(precio);
-        return {
-          codigo_producto: codigo,
-          nombre_producto: nombre,
-          precio_base_catalogo: precio,
-          total_estimado_coach: calculo.total,
-          mensualidad_estimada_coach: calculo.mensualidad,
-          ...construirImagenProductoCatalogoCoach(codigo, nombre)
-        };
-      })
-      .filter(Boolean);
-
-    res.set("Cache-Control", "private, max-age=3600");
+    res.set("Cache-Control", "private, no-cache");
     res.json({
-      version: "2026-10-21",
+      version: productSearch.VERSION,
       products
     });
   } catch (error) {

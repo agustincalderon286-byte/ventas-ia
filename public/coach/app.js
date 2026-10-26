@@ -525,40 +525,17 @@ async function loadCoachOfflineCatalog({ refresh = false } = {}) {
   }
 }
 
+let coachOfflineSearchProducts = null;
+let coachOfflineSearchIndex = [];
 async function searchCoachOfflineCatalog(rawQuery = "") {
-  const query = normalizeTecCatalogText(rawQuery);
-  if (query.length < 3) {
-    return [];
-  }
-
   const products = await loadCoachOfflineCatalog();
-  const queryTokens = query.split(/\s+/).filter(Boolean);
-  return products
-    .map((product, index) => {
-      const code = normalizeTecCatalogText(product.codigo_producto || "");
-      const name = normalizeTecCatalogText(product.nombre_producto || "");
-      const corpus = `${code} ${name}`;
-      const productTokens = new Set(corpus.split(/\s+/).filter(Boolean));
-      let score = 0;
-      if (query === code) score += 150;
-      if (query === name) score += 120;
-      if (name.includes(query)) score += 60;
-      if (code.includes(query)) score += 80;
-      queryTokens.forEach(token => {
-        if (productTokens.has(token)) score += /^\d+$/.test(token) ? 12 : token.length >= 5 ? 10 : 6;
-        else if (corpus.includes(token)) score += 3;
-      });
-      const pieces = query.match(/\b(\d+)\s+piezas\b/)?.[1] || "";
-      if (pieces && name.includes(`${pieces} piezas`)) score += 35;
-      if (/\bcuchill/.test(query) && /\bcuchill/.test(name)) score += 25;
-      if (/\bolla\b/.test(query) && /\bolla\b/.test(name)) score += 25;
-      if (/\bsarten\b/.test(query) && /\bsarten\b/.test(name)) score += 25;
-      return { product, score, index };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, 5)
-    .map(item => item.product);
+  const search = globalThis.TecProductSearch;
+  if (!search) return [];
+  if (products !== coachOfflineSearchProducts) {
+    coachOfflineSearchProducts = products;
+    coachOfflineSearchIndex = search.createIndex(products);
+  }
+  return search.search(coachOfflineSearchIndex, rawQuery).map(result => result.item);
 }
 
 async function saveTecOfflineRecording(recording = {}) {

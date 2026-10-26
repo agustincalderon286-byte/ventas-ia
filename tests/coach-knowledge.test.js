@@ -105,7 +105,7 @@ test('unknown product and RoyalOne never invent private instructions', () => {
 });
 test('only approved public/product sources; no legacy PII or other businesses', () => {
   const m = getCoachKnowledgeManifest();
-  assert.equal(m.sources.length, 8);
+  assert.equal(m.sources.length, 9);
   assert.doesNotMatch(JSON.stringify(m), /Eric_|Thumbtack|real_estate|Lista_Precios_2026/);
   assert.equal(search('dame los teléfonos de clientes anteriores de metalworks').status,'no_evidence');
 });
