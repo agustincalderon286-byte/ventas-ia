@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261023-product-picker2", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261025-native-offline1", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
@@ -135,6 +135,11 @@ function openTecOfflineDb() {
   return tecOfflineDbPromise;
 }
 
+async function tecNativeStore(method, ...args) {
+  await globalThis.window?.TecNativeOffline.initialize(openTecOfflineDb);
+  return globalThis.window?.TecNativeOffline[method](...args);
+}
+
 async function tecOfflineStoreRequest(storeName, mode, action) {
   const db = await openTecOfflineDb();
   return await new Promise((resolve, reject) => {
@@ -153,10 +158,82 @@ async function tecOfflineStoreRequest(storeName, mode, action) {
   });
 }
 
-const tecOfflinePut = (storeName, value) => tecOfflineStoreRequest(storeName, "readwrite", store => store.put(value));
-const tecOfflineGet = (storeName, key) => tecOfflineStoreRequest(storeName, "readonly", store => store.get(key));
-const tecOfflineGetAll = storeName => tecOfflineStoreRequest(storeName, "readonly", store => store.getAll());
-const tecOfflineDelete = (storeName, key) => tecOfflineStoreRequest(storeName, "readwrite", store => store.delete(key));
+const tecOfflinePut = (storeName, value) => globalThis.window?.TecNativeOffline ? tecNativeStore("put", storeName, value) : tecOfflineStoreRequest(storeName, "readwrite", store => store.put(value));
+const tecOfflineGet = (storeName, key) => globalThis.window?.TecNativeOffline ? tecNativeStore("get", storeName, key) : tecOfflineStoreRequest(storeName, "readonly", store => store.get(key));
+const tecOfflineGetAll = storeName => globalThis.window?.TecNativeOffline ? tecNativeStore("all", storeName) : tecOfflineStoreRequest(storeName, "readonly", store => store.getAll());
+const tecOfflineDelete = (storeName, key) => globalThis.window?.TecNativeOffline ? tecNativeStore("remove", storeName, key) : tecOfflineStoreRequest(storeName, "readwrite", store => store.delete(key));
+const materializeTecAudioBlob = value => globalThis.window?.TecNativeOffline ? globalThis.window?.TecNativeOffline.blob(value) : Promise.resolve(value);
+
+function appendTecNativeAudioControl(card, chunks, label, filename, urls, playable = true) {
+  const button = document.createElement("button");
+  button.type = "button"; button.className = "secondary-button"; button.textContent = label;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      // Only the selected segment enters web memory, not the entire demo.
+      const parts = [];
+      for (const chunk of chunks) parts.push(await materializeTecAudioBlob(chunk.blob));
+      const audio = new Blob(parts, { type: chunks[0]?.mimeType || parts[0]?.type });
+      const url = URL.createObjectURL(audio); urls.push(url);
+      if (playable) {
+        const player = document.createElement("audio"); player.controls = true; player.preload = "none"; player.src = url;
+        player.setAttribute("aria-label", label); card.append(player);
+      }
+      const link = document.createElement("a"); link.href = url; link.download = filename;
+      link.className = "secondary-button"; link.textContent = "Exportar copia del audio"; card.append(link);
+      button.remove();
+    } catch { button.textContent = "No pude leer el audio. Reintentar (la copia se conserva)"; button.disabled = false; }
+  });
+  card.append(button);
+}
+
+async function verifyTecNativeSyncOwner(email) {
+  if (!globalThis.window?.TecNativeOffline) return;
+  const live = await apiRequest("/api/coach/me", { timeoutMs: 10000 });
+  if (!live.authenticated || String(live.user?.email || "").trim().toLowerCase() !== email) {
+    throw Object.assign(new Error("Entra con la cuenta que creó los pendientes. Las copias locales se conservan."), { status: 401 });
+  }
+}
+
+window.prepareTecNativeOffline = async () => {
+  if (!globalThis.window?.TecNativeOffline || !navigator.onLine) throw new Error("Necesitas conexión para preparar la app.");
+  const viewer = await getTecCachedViewer();
+  await verifyTecNativeSyncOwner(String(viewer?.user?.email || "").toLowerCase());
+  const products = await loadCoachOfflineCatalog({ refresh: true });
+  if (!products.length) throw new Error("No pude descargar los productos.");
+  await Promise.all(["/api/coach/leads", "/api/coach/program-4-in-14", "/api/coach/health-surveys"].map(tecNativeCachedList));
+  const registration = await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("No pude preparar la pantalla local. Reabre TEC con conexión.")), 15000))]);
+  const worker = navigator.serviceWorker.controller || registration.active;
+  if (!worker) throw new Error("Reabre el Coach con conexión para preparar la pantalla.");
+  await new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => { channel.port1.close(); reject(new Error("La pantalla aún no está preparada.")); }, 90000);
+    channel.port1.onmessage = event => { clearTimeout(timer); channel.port1.close(); event.data?.ok ? resolve() : reject(new Error("Preparación incompleta.")); };
+    worker.postMessage({ type: "PREPARE_NATIVE_OFFLINE" }, [channel.port2]);
+  });
+  return globalThis.window?.TecNativeOffline.prepareCatalogs([...new Set(products.map(p => p.imagen_producto).filter(Boolean))]);
+};
+
+async function tecNativeCachedList(url) {
+  if (!globalThis.window?.TecNativeOffline) return apiRequest(url);
+  const viewer = await getTecCachedViewer();
+  const email = String(viewer?.user?.email || "").trim().toLowerCase();
+  if (!email) throw new Error("Entra con tu cuenta para consultar los datos guardados.");
+  const key = `offline-list:${email}:${url}`;
+  try {
+    // Prevent caching a changed server session under the previous account.
+    await verifyTecNativeSyncOwner(email);
+    const data = await apiRequest(url, { timeoutMs: 8000 });
+    await tecOfflinePut("cache", { key, ownerEmail: email, value: data, savedAt: new Date().toISOString() });
+    return data;
+  } catch (error) {
+    if ([401, 403].includes(error.status)) throw error;
+    const stored = await tecOfflineGet("cache", key);
+    if (stored?.ownerEmail === email && stored.value) return { ...stored.value, offline: true };
+    throw error;
+  }
+}
 
 async function getTecCachedViewer() {
   const entry = await tecOfflineGet("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
@@ -198,6 +275,12 @@ async function queueTecOfflineRequest(item = {}) {
     if (!entry.ownerEmail || String(item.body?.accountId || "") !== String(viewer?.user?.id || viewer?.user?._id || "")) {
       throw new Error("La cuenta cambió. Conservamos el borrador sin enviarlo.");
     }
+    if (globalThis.window?.TecNativeOffline) {
+      await tecNativeStore("batch", [
+        { op: "put", store: "outbox", value: entry },
+        { op: "deleteRevision", store: "cache", key: item.draftKey, revision: item.formSnapshot?.revision }
+      ]);
+    } else {
     const db = await openTecOfflineDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(["outbox", "cache"], "readwrite");
@@ -210,6 +293,7 @@ async function queueTecOfflineRequest(item = {}) {
       tx.addEventListener("abort", () => reject(tx.error || new Error("No pude guardar el pendiente en este dispositivo.")));
       tx.addEventListener("error", () => reject(tx.error || new Error("No pude guardar el pendiente en este dispositivo.")));
     });
+    }
   } else {
     await tecOfflinePut("outbox", entry);
   }
@@ -309,6 +393,11 @@ function initTecNewClient(user) {
   });
 }
 async function completeTecOfflineForm(item, data) {
+  if (globalThis.window?.TecNativeOffline) return tecNativeStore("batch", [
+    { op: "put", store: "cache", value: { key: `form-result:${item.ownerEmail}:${item.id}`, ownerEmail: item.ownerEmail,
+      kind: item.kind, requestId: item.id, value: data, body: item.body, savedAt: new Date().toISOString() } },
+    { op: "delete", store: "outbox", key: item.id }
+  ]);
   const db = await openTecOfflineDb();
   await new Promise((resolve, reject) => {
     const tx = db.transaction(["cache", "outbox"], "readwrite");
@@ -322,6 +411,9 @@ async function completeTecOfflineForm(item, data) {
 }
 
 async function recordTecOfflineFormError(item, error) {
+  if (globalThis.window?.TecNativeOffline) return tecNativeStore("batch", [{ op: "updateExisting", store: "outbox", key: item.id,
+    fields: { attempts: Number(item.attempts || 0) + 1, lastError: String(error.message || "No pude sincronizar.").slice(0, 240),
+      lastStatus: Number(error.status || 0), lastAttemptAt: new Date().toISOString() } }]);
   const db = await openTecOfflineDb();
   await new Promise((resolve, reject) => {
     const tx = db.transaction("outbox", "readwrite");
@@ -351,6 +443,7 @@ async function flushTecOfflineOutbox() {
   tecOutboxFlushPromise = (async () => {
     const viewer = await getTecCachedViewer().catch(() => null);
     const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+    if (globalThis.window?.TecNativeOffline) await verifyTecNativeSyncOwner(viewerEmail);
     const items = (await tecOfflineGetAll("outbox").catch(() => [])).sort((a, b) =>
       String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead")
     );
@@ -381,14 +474,14 @@ async function flushTecOfflineOutbox() {
           throw Object.assign(new Error(payload.error || `No pude sincronizar (${response.status}).`), { status: response.status });
         }
 
-        if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+        if (["health-survey", "recruitment", "demo-outcome", "lead", "programa-4-en-14"].includes(item.kind)) {
           await completeTecOfflineForm(item, await response.json());
         } else {
           await tecOfflineDelete("outbox", item.id);
         }
         synced += 1;
       } catch (error) {
-        if (["health-survey", "recruitment", "demo-outcome"].includes(item.kind)) {
+        if (globalThis.window?.TecNativeOffline || ["health-survey", "recruitment", "demo-outcome", "lead", "programa-4-en-14"].includes(item.kind)) {
           await recordTecOfflineFormError(item, error).catch(() => null);
         } else await tecOfflinePut("outbox", {
           ...item,
@@ -469,6 +562,11 @@ function initTecOfflineStatus() {
       flushTecOfflineOutbox().catch(() => render());
     }
   });
+  // iOS can resume without an online event. Retry while foregrounded; never
+  // promise background execution after the OS suspends the app.
+  if (globalThis.window?.TecNativeOffline) window.setInterval(() => {
+    if (!document.hidden && navigator.onLine) flushTecOfflineOutbox().catch(() => null);
+  }, 60000);
   render();
 }
 
@@ -489,7 +587,7 @@ async function loadCoachOfflineCatalog({ refresh = false } = {}) {
   coachOfflineCatalogPromise = (async () => {
     let products = [];
     try {
-      const data = await apiRequest("/api/coach/catalog-offline");
+      const data = await apiRequest("/api/coach/catalog-offline", { timeoutMs: 8000 });
       products = Array.isArray(data.products) ? data.products : [];
       if (products.length) {
         await tecOfflinePut("cache", {
@@ -578,6 +676,11 @@ async function getTecOfflineAudioChunks(localId = "") {
 }
 
 async function finalizeTecAudioSegment(chunk) {
+  if (globalThis.window?.TecNativeOffline) return tecNativeStore("batch", [
+    { op: "put", store: "audioChunks", value: { ...chunk, key: `${chunk.localId}:${String(chunk.index).padStart(4, "0")}`,
+      finalized: true, sizeBytes: chunk.blob.size, createdAt: new Date().toISOString() } },
+    { op: "deletePrefix", store: "audioChunks", key: `${chunk.localId}:${String(chunk.index).padStart(4, "0")}:part:` }
+  ]);
   const db = await openTecOfflineDb();
   await new Promise((resolve, reject) => {
     const tx = db.transaction("audioChunks", "readwrite");
@@ -629,7 +732,7 @@ async function uploadTecStoredAudioChunk(serverSessionId, chunk, { retryEmpty = 
       "X-Coach-Chunk-Duration": String(Math.max(1, Math.round(Number(chunk.durationSeconds || 0)))),
       ...(retryEmpty ? { "X-Coach-Retry-Empty": "1" } : {})
     },
-    body: chunk.blob
+    body: globalThis.window?.TecNativeOffline ? await materializeTecAudioBlob(chunk.blob) : chunk.blob
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -669,6 +772,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
   if (!recording.ownerEmail || !viewerEmail || recording.ownerEmail !== viewerEmail || recording.consentConfirmed !== true) {
     return null;
   }
+  if (globalThis.window?.TecNativeOffline) await verifyTecNativeSyncOwner(viewerEmail);
 
   const tail = await getTecAudioTail(localId);
   if (tail.length && !recording.analyzeCompletePartsOnly) {
@@ -740,7 +844,9 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
       throw Object.assign(new Error("El servidor todavía no confirmó el reporte completo. La grabación sigue pendiente."), { status: 502 });
     }
     if (tail.length || partial) await saveTecOfflineRecording({ ...recording, status: "partial-synced", analysisId: completed.analysis?.id || "" });
-    else {
+    else if (globalThis.window?.TecNativeOffline) {
+      await saveTecOfflineRecording({ ...recording, status: "synced", analysisId: completed.analysis.id, lastError: "", lastStatus: 0 });
+    } else {
       for (const chunk of chunks) await tecOfflineDelete("audioChunks", chunk.key);
       await tecOfflineDelete("recordings", localId);
     }
@@ -3767,7 +3873,7 @@ function createFourteenSheetReferralRow(index) {
   return row;
 }
 
-function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
+function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
   const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
   const form = document.querySelector("[data-fourteen-sheet-form]");
@@ -4003,7 +4109,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   };
 
   const loadSavedSheets = async ({ focusLatest = false, focusSheetId = "", scrollToInstant = false } = {}) => {
-    const data = await apiRequest("/api/coach/program-4-in-14");
+    const data = await tecNativeCachedList("/api/coach/program-4-in-14");
     state.savedSheets = Array.isArray(data.sheets) ? data.sheets : [];
 
     let sheetToActivate = null;
@@ -4152,6 +4258,27 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
   renderInstantZone(null);
   syncFourteenDateRange(form, { forceToday: true });
 
+  const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(form, {
+    user, kind: "programa-4-en-14", contextFields: ["activeCrmRecordId"],
+    collect: () => ({ ...Object.fromEntries(new FormData(form)), activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
+      referrals: Array.from(referralsRoot.querySelectorAll("[data-fourteen-referral-row]")).map((row, index) => ({
+        fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
+        phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
+        notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
+      })).filter(r => r.fullName || r.phone || r.address || r.notes) }),
+    beforeRestore: fields => {
+      const count = Math.min(FOURTEEN_SHEET_MAX_REFERRALS, Math.max(0, ...Object.keys(fields).map(k => Number(k.match(/^referralName(\d+)$/)?.[1] || 0))));
+      while (referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length < count) appendReferralRow();
+    },
+    onRestore: () => syncFourteenDateRange(form),
+    onSynced: async data => {
+      setMessage(feedbackNode, "Hoja 4 en 14 confirmada por el servidor.", "success");
+      await loadSavedSheets({ focusSheetId: data.sheet?.id || "" });
+      await loadLeads();
+    }
+  }) : null;
+
   form.querySelector('[data-fourteen-start-date]')?.addEventListener("change", () => {
     syncFourteenDateRange(form);
   });
@@ -4250,7 +4377,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
     setButtonLoading(submitButton, true, "Guardando...");
 
     try {
-      const data = await apiRequest("/api/coach/program-4-in-14", {
+      const data = nativeOfflineForm ? await nativeOfflineForm.submit() : await apiRequest("/api/coach/program-4-in-14", {
         method: "POST",
         body: payload,
         offlineQueue: true,
@@ -4268,8 +4395,10 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle }) {
           `Hoja protegida en este telefono con ${referrals.length} referido(s). TEC la enviara cuando vuelva el internet.`,
           "success"
         );
-        skipNextResetFeedback = true;
-        rebuildForm({ clearFeedback: false, resetFields: true });
+        if (!data.preserveDraft) {
+          skipNextResetFeedback = true;
+          rebuildForm({ clearFeedback: false, resetFields: true });
+        }
         window.dispatchEvent(new CustomEvent("tec:offline-status"));
         return;
       }
@@ -4585,7 +4714,7 @@ function initHealthSurveyTool(user) {
   };
 
   const loadSurveys = async () => {
-    const data = await apiRequest("/api/coach/health-surveys");
+    const data = await tecNativeCachedList("/api/coach/health-surveys");
     state.surveys = Array.isArray(data.surveys) ? data.surveys : [];
 
     const currentContext = getActiveCoachHealthSurveyContext();
@@ -5157,7 +5286,7 @@ function initCoachPrivateResources() {
   });
 }
 
-function initCoachLeadWorkspace() {
+function initCoachLeadWorkspace(user) {
   const captureWrap = document.querySelector("[data-native-lead-wrap]");
   const captureToggle = document.querySelector("[data-native-lead-toggle]");
   const captureForm = document.querySelector("[data-native-lead-form]");
@@ -5545,7 +5674,7 @@ function initCoachLeadWorkspace() {
   };
 
   const loadLeads = async () => {
-    const data = await apiRequest("/api/coach/leads");
+    const data = await tecNativeCachedList("/api/coach/leads");
     state.leads = Array.isArray(data.leads) ? data.leads : [];
     renderSummary();
     renderLeadList();
@@ -5553,7 +5682,15 @@ function initCoachLeadWorkspace() {
 
   syncCaptureToggle(false);
   syncFolderToggle(false);
-  initFourteenSheetTool({ loadLeads, syncFolderToggle });
+  initFourteenSheetTool({ loadLeads, syncFolderToggle, user });
+  const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(captureForm, {
+    user, kind: "lead",
+    collect: () => { const values = Object.fromEntries(new FormData(captureForm)); return { ...values, consentGiven: values.consentGiven === "on" }; },
+    onSynced: async () => {
+      setMessage(captureFeedback, "Lead confirmado por el servidor.", "success");
+      await loadLeads();
+    }
+  }) : null;
 
   captureToggle.addEventListener("click", () => {
     syncCaptureToggle(captureWrap.hidden);
@@ -5593,7 +5730,7 @@ function initCoachLeadWorkspace() {
     setButtonLoading(submitButton, true, "Guardando...");
 
     try {
-      const data = await apiRequest("/api/coach/leads", {
+      const data = nativeOfflineForm ? await nativeOfflineForm.submit() : await apiRequest("/api/coach/leads", {
         method: "POST",
         body: payload,
         offlineQueue: true,
@@ -5616,7 +5753,7 @@ function initCoachLeadWorkspace() {
           "Lead protegido en este telefono. TEC lo enviara automaticamente cuando vuelva el internet.",
           "success"
         );
-        captureForm.reset();
+        if (!data.preserveDraft) captureForm.reset();
         window.dispatchEvent(new CustomEvent("tec:offline-status"));
         return;
       }
@@ -16391,6 +16528,7 @@ function initCoachDemoRecorder() {
         ? (row.interruptionReason || "Grabación interrumpida o con segmentos sin audio. Cierra otras ventanas del Coach antes de revisarla.")
         : row.status === "needs-audio" ? "No se obtuvo suficiente diálogo para preparar el reporte. Esta grabación necesita revisión; no está esperando conexión."
         : row.status === "partial-synced" ? "Reporte parcial guardado: solo se analizaron los segmentos válidos. Las copias locales se conservan aquí; no se reintentarán automáticamente."
+        : row.status === "synced" ? "Análisis confirmado por el servidor. El audio original sigue guardado en esta app y puedes escucharlo o exportarlo sin internet."
         : "Pendiente de confirmar el análisis con el servidor. La copia local se conserva.";
       card.append(title, copy);
       const connectionResult = document.createElement("p");
@@ -16399,7 +16537,7 @@ function initCoachDemoRecorder() {
       checkConnection.type = "button";
       checkConnection.className = "secondary-button";
       checkConnection.textContent = "Comprobar conexión y sesión";
-      checkConnection.hidden = row.status === "needs-audio";
+      checkConnection.hidden = ["needs-audio", "synced"].includes(row.status);
       checkConnection.addEventListener("click", async () => {
         checkConnection.disabled = true;
         connectionResult.textContent = "Consultando TEC sin enviar audio ni solicitar un análisis…";
@@ -16423,6 +16561,11 @@ function initCoachDemoRecorder() {
       const groups = new Map();
       tail.forEach(part => { if (!groups.has(part.index)) groups.set(part.index, []); groups.get(part.index).push(part); });
       groups.forEach((parts, index) => {
+        if (globalThis.window?.TecNativeOffline) {
+          appendTecNativeAudioControl(card, parts, "Recuperar parte interrumpida (puede requerir reparación)",
+            `TEC-parte-interrumpida-${index}.${parts[0].mimeType?.includes("mp4") ? "m4a" : "webm"}`, nextUrls, false);
+          return;
+        }
         const blob = new Blob(parts.map(part => part.blob), { type: parts[0].mimeType });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -16435,13 +16578,18 @@ function initCoachDemoRecorder() {
       {
         const finalized = await getTecOfflineAudioChunks(row.localId);
         const invalid = finalized.filter(chunk => (chunk.blob?.size || 0) < 32);
-        if (row.status === "needs-audio" || row.status === "needs-review" || row.status === "partial-synced" || invalid.length) {
+        if (row.status === "synced" || row.status === "needs-audio" || row.status === "needs-review" || row.status === "partial-synced" || invalid.length) {
           title.textContent = "Revisar audio de la demostración";
           for (const chunk of finalized) {
             if ((chunk.blob?.size || 0) < 32) {
               const warning = document.createElement("p");
               warning.textContent = `Segmento ${Number(chunk.index) + 1}: sin audio utilizable. No se enviará al análisis parcial.`;
               card.append(warning);
+              continue;
+            }
+            if (globalThis.window?.TecNativeOffline) {
+              appendTecNativeAudioControl(card, [chunk], `Escuchar segmento ${Number(chunk.index) + 1}`,
+                `TEC-audio-${Number(chunk.index) + 1}.${chunk.mimeType?.includes("mp4") ? "m4a" : "webm"}`, nextUrls);
               continue;
             }
             const url = URL.createObjectURL(chunk.blob);
@@ -16467,7 +16615,7 @@ function initCoachDemoRecorder() {
         button.type = "button";
         button.className = "secondary-button";
         button.textContent = partialRecovery ? "Analizar solo los segmentos válidos (reporte parcial)" : row.status === "needs-audio" ? "Volver a transcribir el audio" : "Recuperar y enviar segmentos completos";
-        button.hidden = row.status === "partial-synced";
+        button.hidden = ["partial-synced", "synced"].includes(row.status);
         if (!hasComplete || (row.status === "needs-audio" && !finalized.length)) {
           button.disabled = true;
           if (row.status !== "needs-audio") copy.textContent += " No hay segmentos completos para analizar; descarga la parte interrumpida para revisión.";
@@ -16959,7 +17107,7 @@ async function loadCoachAppPage() {
     });
     initCoachMarketingWorkspace(me.user, me.marketing || null);
     initCoachPrivateResources();
-    initCoachLeadWorkspace();
+    initCoachLeadWorkspace(me.user);
     initCoachAgendaWorkspace(me.user);
     initChefCampaignTool();
     initCoachMessagesWorkspace(me.user);

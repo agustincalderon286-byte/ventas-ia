@@ -16,7 +16,7 @@
     }
   };
 
-  function attach(form, { user, kind, slot = "main", collect, contextFields = [], onRestore, onSynced, storage }) {
+  function attach(form, { user, kind, slot = "main", collect, contextFields = [], beforeRestore, onRestore, onSynced, storage }) {
     const email = String(user.email || "").trim().toLowerCase();
     const accountId = String(user.id || user._id || "");
     const draftKey = `form-draft:${email}:${accountId}:${kind}:${slot}`;
@@ -67,7 +67,7 @@
             if (!window.confirm("¿Recuperar este borrador anterior en el formulario actual?")) return;
             const recovered = { ...item.value, revision: ++revision, requestId: storage.id(kind) };
             await storage.put("cache", { key: draftKey, ownerEmail: email, accountId, kind, value: recovered });
-            draft = recovered; restoreFields(form, recovered.fields || {}); onRestore?.();
+            draft = recovered; beforeRestore?.(recovered.fields || {}); restoreFields(form, recovered.fields || {}); onRestore?.();
             say("Borrador anterior recuperado; revisa el cliente antes de guardarlo.", "draft");
           });
           pending.append(restore);
@@ -91,6 +91,7 @@
                 const corrected = { ...item.formSnapshot, revision, requestId: storage.id(kind) };
                 await storage.put("cache", { key: draftKey, ownerEmail: email, accountId, kind, value: corrected });
                 draft = corrected;
+                beforeRestore?.(corrected.fields || {});
                 restoreFields(form, corrected.fields || {});
                 onRestore?.();
                 // Only validation rejections can be replaced; uncertain writes cannot.
@@ -116,6 +117,7 @@
         if (saved?.ownerEmail === email && saved.accountId === accountId && revision === 0 && saved.value) {
           draft = saved.value;
           revision = draft.revision || 0;
+          beforeRestore?.(draft.fields || {});
           restoreFields(form, draft.fields || {});
           onRestore?.();
           say("Borrador recuperado de este dispositivo. Aún no se ha enviado.", "draft");
@@ -171,7 +173,7 @@
         const snapshot = serialize();
         const submittedRevision = revision;
         // Queue first: a closing tab or dropped response must not lose this operation.
-        await storage.queue({ id: snapshot.requestId, kind, url: `/api/coach/${({ "health-survey": "health-surveys", recruitment: "recruitment-applications", "demo-outcome": "demo-outcomes" })[kind]}`,
+        await storage.queue({ id: snapshot.requestId, kind, url: `/api/coach/${({ "health-survey": "health-surveys", recruitment: "recruitment-applications", "demo-outcome": "demo-outcomes", lead: "leads", "programa-4-en-14": "program-4-in-14" })[kind]}`,
           method: "POST", headers: { "X-TEC-Request-ID": snapshot.requestId }, body: snapshot.payload,
           formSnapshot: snapshot, draftKey });
         if (revision === submittedRevision) { revision++; draft = null; }

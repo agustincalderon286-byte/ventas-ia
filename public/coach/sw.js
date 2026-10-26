@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261025-alias1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261025-alias1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261025-native-offline1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261025-native-offline1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -9,20 +9,20 @@ const TEC_OFFLINE_DB_VERSION = 1;
 const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
-  "/coach/site.webmanifest?v=20261025-alias1",
-  "/coach/app.js?v=20261025-alias1",
+  "/coach/site.webmanifest?v=20261025-native-offline1",
+  "/coach/app.js?v=20261025-native-offline1",
   "/coach/product-search.js?v=20261025-alias1",
-  "/coach/order-calculator.js?v=20261025-alias1",
-  "/coach/offline-forms.js?v=20261025-alias1",
-  "/coach/pwa-safety.js?v=20261025-alias1",
-  "/coach/ui-coherence.js?v=20261025-alias1",
-  "/coach/styles.css?v=20261025-alias1",
-  "/coach/property-map.js?v=20261025-alias1",
-  "/coach/property-map.css?v=20261025-alias1",
-  "/coach/property-visit-helpers.js?v=20261025-alias1",
+  "/coach/order-calculator.js?v=20261025-native-offline1",
+  "/coach/offline-forms.js?v=20261025-native-offline1",
+  "/coach/pwa-safety.js?v=20261025-native-offline1",
+  "/coach/ui-coherence.js?v=20261025-native-offline1",
+  "/coach/styles.css?v=20261025-native-offline1",
+  "/coach/property-map.js?v=20261025-native-offline1",
+  "/coach/property-map.css?v=20261025-native-offline1",
+  "/coach/property-visit-helpers.js?v=20261025-native-offline1",
   "/coach/document.html",
-  "/coach/document-viewer.js?v=20261025-alias1",
-  "/coach/document-viewer.css?v=20261025-alias1",
+  "/coach/document-viewer.js?v=20261025-native-offline1",
+  "/coach/document-viewer.css?v=20261025-native-offline1",
   "/coach/assets/documents/manifest-v1.json",
   "/coach/vendor/leaflet/leaflet.js",
   "/coach/vendor/leaflet/leaflet.css",
@@ -213,11 +213,27 @@ async function cacheCurrentCoachApp() {
   if (response.ok && !response.redirected && responseUrl.pathname === "/coach/app/") {
     const cache = await caches.open(TEC_RUNTIME_CACHE);
     await cache.put("/coach/app/", response.clone());
-  }
+  } else throw new Error("Coach session required for offline preparation");
 }
 
 self.addEventListener("message", event => {
   const type = event.data?.type || "";
+  if (type === "PREPARE_NATIVE_OFFLINE") {
+    event.waitUntil((async () => {
+      try {
+        await cacheCurrentCoachApp();
+        const cache = await caches.open(TEC_CACHE_VERSION);
+        // Do not mark ready on allSettled: every shell resource must succeed.
+        for (const url of TEC_CORE_ASSETS) {
+          const response = await fetch(url, { credentials: "same-origin", cache: "reload" });
+          if (!response.ok || response.redirected) throw new Error("Incomplete offline shell");
+          await cache.put(url, response);
+        }
+        event.ports?.[0]?.postMessage({ ok: true });
+      } catch { event.ports?.[0]?.postMessage({ ok: false }); }
+    })());
+    return;
+  }
   if (type === "CACHE_CURRENT_COACH_APP") {
     event.waitUntil(cacheCurrentCoachApp().catch(() => null));
     return;

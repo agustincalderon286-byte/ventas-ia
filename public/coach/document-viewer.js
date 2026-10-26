@@ -191,7 +191,11 @@
       image.onerror = () => { clear(); reject(new Error("document-page-image")); };
       // Exactly one displayed/pending image, never all PDF pages or a PDF worker.
       dialog.querySelector("[data-document-image]").replaceChildren(image);
-      image.src = page.url;
+      if (window.TecNativeOffline) {
+        window.TecNativeOffline.catalogURL(page.url).then(url => {
+          if (active === session && image.isConnected) image.src = url;
+        }).catch(() => { if (active === session && image.isConnected) image.src = page.url; });
+      } else image.src = page.url;
     });
   }
 
@@ -205,6 +209,12 @@
     status(session, `Cargando página ${session.page}…`);
     try {
       if (session.pages) {
+        if (window.TecNativeOffline) {
+          await window.TecNativeOffline.prepareCatalogs([]);
+          session.saved = true;
+          status(session, "Catálogos completos guardados en la memoria de TEC para usarlos sin internet.");
+          return;
+        }
         const loaded = await renderImage(session);
         if (loaded && active === session && session.revision === revision) {
           status(session, `Página ${session.page} de ${session.total}. ${session.saved ? "Disponible sin internet." : "Puedes volver al Coach en cualquier momento."}`);
@@ -316,9 +326,15 @@
       if (resource) {
         // Public documents are rendered at build time, not on the phone. This path
         // deliberately works with no PDF.js, worker, canvas or new Safari features.
-        const response = await fetch(PAGE_MANIFEST, { signal: session.abort.signal, credentials: "same-origin" });
-        if (!response.ok) throw new Error("document-manifest");
-        const manifest = await response.json();
+        let manifest;
+        try {
+          const response = await fetch(PAGE_MANIFEST, { signal: session.abort.signal, credentials: "same-origin" });
+          if (!response.ok) throw new Error("document-manifest");
+          manifest = await response.json();
+        } catch (error) {
+          if (!window.TecNativeOffline || session.abort.signal.aborted) throw error;
+          manifest = await window.TecNativeOffline.catalogJSON(PAGE_MANIFEST);
+        }
         if (active !== session) return false;
         const pages = manifest.documents?.[documentId]?.pages;
         const prefix = `/coach/assets/documents/${documentId}-v1/page-`;
