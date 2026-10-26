@@ -209,12 +209,6 @@
     status(session, `Cargando página ${session.page}…`);
     try {
       if (session.pages) {
-        if (window.TecNativeOffline) {
-          await window.TecNativeOffline.prepareCatalogs([]);
-          session.saved = true;
-          status(session, "Catálogos completos guardados en la memoria de TEC para usarlos sin internet.");
-          return;
-        }
         const loaded = await renderImage(session);
         if (loaded && active === session && session.revision === revision) {
           status(session, `Página ${session.page} de ${session.total}. ${session.saved ? "Disponible sin internet." : "Puedes volver al Coach en cualquier momento."}`);
@@ -263,6 +257,12 @@
     status(session, "Guardando documento completo… Mantén esta pantalla abierta hasta que termine.");
     try {
       if (session.pages) {
+        if (window.TecNativeOffline) {
+          await window.TecNativeOffline.prepareCatalogs([]);
+          session.saved = true;
+          status(session, "Catálogos completos guardados en la memoria de TEC para usarlos sin internet.");
+          return;
+        }
         const cache = await caches.open(CACHE);
         const manifestResponse = await fetch(PAGE_MANIFEST, { signal: session.abort.signal });
         if (!manifestResponse.ok || !manifestResponse.headers.get("Content-Type")?.includes("application/json")) throw new Error("invalid-manifest");

@@ -3,7 +3,18 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../public/coach/app.js',import.meta.url),'utf8');
+const viewer=readFileSync(new URL('../public/coach/document-viewer.js',import.meta.url),'utf8');
 const section=(start,end)=>app.slice(app.indexOf(start),app.indexOf(end));
+test('native catalog rendering never starts a download; only explicit save prepares catalogs',async()=>{
+  const session={pages:[{}],page:1,total:1,url:'/catalog',abort:{signal:{aborted:false}}};
+  let renders=0,downloads=0;const button={};
+  const context=vm.createContext({active:session,window:{TecNativeOffline:{prepareCatalogs:async()=>{downloads++;}}},
+    dialog:{querySelector:()=>button},syncControls(){},status(){},renderImage:async()=>{renders++;return true;}});
+  const render=vm.runInContext(`(${viewer.slice(viewer.indexOf('async function render(session)'),viewer.indexOf('async function saveOffline(session)')).trim()})`,context);
+  const save=vm.runInContext(`(${viewer.slice(viewer.indexOf('async function saveOffline(session)'),viewer.indexOf('async function open(')).trim()})`,context);
+  await render(session);assert.equal(renders,1);assert.equal(downloads,0);
+  await save(session);assert.equal(downloads,1);assert.equal(session.saved,true);assert.equal(button.disabled,false);
+});
 test('native queue commits pending and matching draft deletion in one transaction',async()=>{
   const ops=[];
   const queue=vm.runInNewContext(`(${section('async function queueTecOfflineRequest','async function getTecOfflinePendingCount').trim()})`,{

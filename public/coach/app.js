@@ -69,7 +69,7 @@ const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/coach/sw.js?v=20261025-native-offline1", { scope: "/coach/" })
+      .register("/coach/sw.js?v=20261025-native-offline2", { scope: "/coach/" })
       .then(async registration => {
         window.TecPwaSafety?.watchUpdates(registration);
         await navigator.serviceWorker.ready;
