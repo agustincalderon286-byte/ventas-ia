@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import path from "path";
 import { createClient } from "redis";
 import Stripe from "stripe";
+import { createCoachBillingSync } from "./src/coach-billing-sync.js";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
@@ -816,6 +817,7 @@ const coachUserSchema = new mongoose.Schema({
   stripeCustomerId: String,
   stripeSubscriptionId: String,
   stripePriceId: String,
+  stripeSyncRevision: { type: Number, default: 0 },
   subscriptionStatus: { type: String, default: "inactive" },
   subscriptionActive: { type: Boolean, default: false },
   subscriptionCurrentPeriodEnd: Date,
@@ -20576,86 +20578,9 @@ async function asegurarCoachCustomer(userDoc) {
   return userDoc;
 }
 
-async function actualizarCoachSuscripcion({
-  coachUserId = "",
-  customerId = "",
-  subscriptionId = "",
-  priceId = "",
-  status = "",
-  currentPeriodEnd = null,
-  cancelAtPeriodEnd = false,
-  checkoutSessionId = ""
-}) {
-  let userDoc = null;
-
-  if (coachUserId) {
-    userDoc = await CoachUser.findById(coachUserId);
-  }
-
-  if (!userDoc && customerId) {
-    userDoc = await CoachUser.findOne({ stripeCustomerId: customerId });
-  }
-
-  if (!userDoc && subscriptionId) {
-    userDoc = await CoachUser.findOne({ stripeSubscriptionId: subscriptionId });
-  }
-
-  if (!userDoc) {
-    return null;
-  }
-
-  if (customerId) {
-    userDoc.stripeCustomerId = customerId;
-  }
-
-  if (subscriptionId) {
-    userDoc.stripeSubscriptionId = subscriptionId;
-  }
-
-  if (priceId) {
-    userDoc.stripePriceId = priceId;
-  }
-
-  if (checkoutSessionId) {
-    userDoc.lastCheckoutSessionId = checkoutSessionId;
-  }
-
-  userDoc.subscriptionStatus = status || "inactive";
-  userDoc.subscriptionActive = coachTieneAcceso(status);
-  userDoc.subscriptionCurrentPeriodEnd = currentPeriodEnd || null;
-  userDoc.subscriptionCancelAtPeriodEnd = Boolean(cancelAtPeriodEnd);
-  userDoc.updatedAt = new Date();
-
-  await userDoc.save();
-  return userDoc;
-}
-
-async function encontrarCoachUserPorCheckout(session) {
-  const coachUserId = session?.metadata?.coachUserId || session?.client_reference_id || "";
-
-  if (coachUserId) {
-    const userById = await CoachUser.findById(coachUserId);
-
-    if (userById) {
-      return userById;
-    }
-  }
-
-  if (session?.customer) {
-    const userByCustomer = await CoachUser.findOne({ stripeCustomerId: session.customer });
-
-    if (userByCustomer) {
-      return userByCustomer;
-    }
-  }
-
-  const email = normalizarEmail(session?.customer_details?.email || session?.customer_email || "");
-
-  if (email) {
-    return CoachUser.findOne({ email });
-  }
-
-  return null;
+function obtenerCoachBillingSync() {
+  return createCoachBillingSync({ stripe, users: CoachUser,
+    priceIds: [STRIPE_PRICE_ID_MONTHLY, STRIPE_PRICE_ID_ANNUAL] });
 }
 
 async function sincronizarCoachDesdeCheckoutSession(sessionId) {
@@ -20663,29 +20588,7 @@ async function sincronizarCoachDesdeCheckoutSession(sessionId) {
     throw new Error("Stripe no configurado.");
   }
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ["subscription"]
-  });
-  const userDoc = await encontrarCoachUserPorCheckout(session);
-
-  if (!userDoc) {
-    return null;
-  }
-
-  const subscription = session.subscription && typeof session.subscription === "object"
-    ? session.subscription
-    : null;
-
-  return actualizarCoachSuscripcion({
-    coachUserId: String(userDoc._id),
-    customerId: typeof session.customer === "string" ? session.customer : userDoc.stripeCustomerId || "",
-    subscriptionId: subscription?.id || (typeof session.subscription === "string" ? session.subscription : ""),
-    priceId: subscription?.items?.data?.[0]?.price?.id || STRIPE_PRICE_ID_MONTHLY || "",
-    status: subscription?.status || userDoc.subscriptionStatus || "inactive",
-    currentPeriodEnd: convertirUnixADate(subscription?.current_period_end),
-    cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
-    checkoutSessionId: session.id
-  });
+  return obtenerCoachBillingSync().fromCheckout(sessionId);
 }
 
 async function manejarCheckoutCompletadoStripe(session) {
@@ -20697,17 +20600,7 @@ async function manejarCheckoutCompletadoStripe(session) {
 }
 
 async function manejarSubscriptionEventStripe(subscription) {
-  const customerId =
-    typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id || "";
-
-  await actualizarCoachSuscripcion({
-    customerId,
-    subscriptionId: subscription.id,
-    priceId: subscription.items?.data?.[0]?.price?.id || "",
-    status: subscription.status || "inactive",
-    currentPeriodEnd: convertirUnixADate(subscription.current_period_end),
-    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end)
-  });
+  return obtenerCoachBillingSync().fromSubscription(subscription);
 }
 
 async function manejarWebhookStripe(req, res) {
@@ -20724,6 +20617,11 @@ async function manejarWebhookStripe(req, res) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET
     );
+    const key = String(process.env.STRIPE_SECRET_KEY || "");
+    const live = /^(sk|rk)_live_/.test(key);
+    if (typeof event.livemode !== "boolean" || event.livemode !== live) {
+      return res.status(400).send("Stripe event mode does not match this server");
+    }
   } catch (error) {
     console.error("Webhook Stripe invalido:", error.message);
     return res.status(400).send(`Webhook Error: ${error.message}`);
@@ -34337,6 +34235,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export {
+  app,
   construirContextoEstaticoCoach,
   construirAiCacheKey,
   construirPromptModo,
