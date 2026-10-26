@@ -76,6 +76,8 @@ test('Coach routes nicknames/functions to verified identities, asks instead of a
   }
   assert.ok(searchCoachKnowledge('batidora de mano').records.some(r=>r.code==='ES4200'));
   assert.ok(searchCoachKnowledge('la que sirve para moler cafe').records.some(r=>r.code==='ES0082'));
+  assert.ok(searchCoachKnowledge('aparato que corta verduras').records.filter(r=>['product','price'].includes(r.kind)).every(r=>r.code==='PR2614'));
+  assert.match(buildCoachKnowledgeContext('Busco la goma de la olla de presion'),/FALTA IDENTIFICACIÓN DEL EQUIPO/);
   const confirmed=searchCoachKnowledge('si esa',{history:[{role:'user',content:'batidora de mano'},{role:'assistant',content:'¿Te refieres a la Power Blender Go?'}]});
   assert.ok(confirmed.records.some(r=>r.code==='ES4200'));
   assert.doesNotMatch(buildCoachKnowledgeContext('¿Por qué mi olla tiene una capa blanca?'),/Coincidencias de identidad/);

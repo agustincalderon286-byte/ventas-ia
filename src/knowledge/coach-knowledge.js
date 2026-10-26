@@ -15,7 +15,7 @@ const sources = [
   ['tec_returns_us.json', '', 'returns'],
   ['codigos_productos_internos_2026.json', '', 'part']
 ];
-export const COACH_PROMPT_VERSION = 'tec-consultation-v7-product-aliases';
+export const COACH_PROMPT_VERSION = 'tec-consultation-v8-product-guards';
 const sourceLabels = {
   product: 'Información de productos Royal Prestige',
   catalog: 'Catálogo de productos Royal Prestige',
@@ -180,8 +180,9 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
     ['cuchillo', /cuchillo|santoku|precision series|afilador|hacha|trinchar/]
   ].filter(([term])=>queryTerms.includes(term));
   const ranked = index.filter(r => relevantKinds.includes(r.kind))
-    .filter(r => r.kind!=='part' || candidates.some(c=>c.code===r.code))
-    .filter(r => !partIntent || knownCare || intent.warranty || intent.care || intent.returns || intent.recipe || (['part','price','product'].includes(r.kind) && candidates.some(c=>c.code===r.code)))
+    .filter(r => r.kind!=='part' || candidates.some(c=>c.code===r.code.trim()))
+    .filter(r => !expandIdentity || !candidates.length || !['price','product'].includes(r.kind) || candidates.some(c=>c.code===r.code.trim()))
+    .filter(r => !partIntent || knownCare || intent.warranty || intent.care || intent.returns || intent.recipe || (['part','price','product'].includes(r.kind) && candidates.some(c=>c.code===r.code.trim())))
     .filter(r => !['price','product'].includes(r.kind) || !intent.price || exactCodes.length || !categories.length || categories.some(([,pattern])=>pattern.test(r.searchTitle)))
     .filter(r => !intent.warranty || !families.length || ['price','returns'].includes(r.kind) || families.some(([,pattern])=>pattern.test(r.searchTitle)))
     .map(r => {
@@ -192,7 +193,7 @@ export function searchCoachKnowledge(question, { history = [], maxChars = 22000 
       if (r.titleTokens.has(t)) score += idf*3;
     }
     if (exactCodes.some(c => normalizeKnowledge(r.code) === c)) score += 120;
-    if (expandIdentity && candidates.some(c=>c.code===r.code)) score += r.kind==='part' && partIntent ? 150 : 90;
+    if (expandIdentity && candidates.some(c=>c.code===r.code.trim())) score += r.kind==='part' && partIntent ? 150 : 90;
     if (r.kind === 'price' && query.includes(normalizeKnowledge(r.title))) score += 80;
     for (const [,pattern] of families) if (pattern.test(r.searchTitle)) score += intent.warranty && r.kind === 'warranty' ? 90 : 25;
     if (score > 0 && ((intent.warranty && r.kind === 'warranty') || (intent.recipe && r.kind === 'recipe') || (intent.care && r.kind === 'care') || (intent.price && r.kind === 'price'))) score += 12;
@@ -224,7 +225,9 @@ export function buildCoachKnowledgeContext(question, options) {
   const warning = result.status === 'ambiguous_price' ? 'CONFLICTO EN CATÁLOGO: el código tiene fichas o importes distintos. No elijas uno ni calcules una cotización; explica la discrepancia y solicita confirmar modelo/precio con la oficina.\n' : '';
   const identification = result.identify && result.candidates?.length
     ? 'Coincidencias de identidad (datos, no confirmación del usuario): '+JSON.stringify(result.candidates)+'. Si son varias, pide elegir; si es una descripción/apodo sin confirmar, pregunta brevemente si se refiere a esa opción. Un modelo/código explícito o elección previa no requiere reconfirmación.\n' : '';
-  const parts = result.partIntent ? 'La lista interna aporta solo nombres y códigos, NO costos, precios, disponibilidad ni una tabla de compatibilidad. No asignes una pieza sin identificar modelo/medida; un código exacto permite informar su descripción, no garantizar que le sirva a otra pieza.\n' : '';
+  let parts = result.partIntent ? 'La lista interna aporta solo nombres y códigos, NO costos, precios, disponibilidad ni una tabla de compatibilidad. No asignes una pieza sin identificar modelo/medida; un código exacto permite informar su descripción, no garantizar que le sirva a otra pieza.\n' : '';
+  if (result.partIntent && !result.records.some(r=>r.kind==='price')) parts += 'No hay precio de venta verificado en el catálogo recuperado para esta pieza. Si preguntan precio, indica que debe confirmarse con la oficina; no ofrezcas consultar un catálogo que ya está incluido ni inventes el importe.\n';
+  if (result.partIntent && !result.intent.warranty && !result.intent.care && !/[0-9]|innove|easy release|power blender|frescapure|frescaflow|expertea/i.test(productSearch.normalize(question))) parts += 'FALTA IDENTIFICACIÓN DEL EQUIPO: antes de ofrecer un código, tu única respuesta debe preguntar de qué modelo y medida del producto necesita la pieza. No basta preguntar si se refiere al aro, porque todavía no se ha identificado la olla/equipo.\n';
   return header+warning+identification+parts+result.records.map((r, i) => `<documento numero="${i+1}">\nFuente: ${sourceLabels[r.kind]}; título: ${labelCoachSourceReferences(r.title)}; fecha: ${r.date}${r.url ? `; enlace: ${r.url}` : ''}\n${labelCoachSourceReferences(r.intro)}\n${labelCoachSourceReferences(r.text)}\n</documento>`).join('\n');
 }
 
