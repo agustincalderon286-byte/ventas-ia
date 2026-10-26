@@ -24,7 +24,7 @@ test('clarify first, no unsolicited sales coaching, but preserve necessary detai
   assert.ok(getCoachKnowledgeDirectReply('Como uso RoyalOne').split(/\s+/).length < 35);
 });
 test('brief style invalidates cached verbose replies and is wired before streaming', () => {
-  assert.equal(COACH_PROMPT_VERSION,'tec-consultation-v5-brief');
+  assert.equal(COACH_PROMPT_VERSION,'tec-consultation-v6-source-labels');
   assert.notEqual(coachKnowledgeCacheKey({question:'licuadora'}),coachKnowledgeCacheKey({question:'licuadora',prompt:'tec-consultation-v4'}));
   const server = fs.readFileSync(new URL('../server.js',import.meta.url),'utf8');
   assert.match(server,/if \(modoChat === "coach"\) \{\s*Object.assign\(openAiPayload, applyCoachResponseStyle\(openAiPayload\)\)/);

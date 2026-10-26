@@ -5,7 +5,7 @@ const cases = [
   {q:'Háblame de la licuadora',maxWords:45,clarify:true},
   {q:'Cuanto cuesta la licuadora',maxWords:45,clarify:true},
   {q:'La Max, cuánto cuesta?',history:[{role:'user',content:'Háblame de la licuadora'},{role:'assistant',content:'¿Te refieres a la Power Blender Max o a la Power Blender Go?'}],maxWords:90,contains:/[12][,.]?\d{3}|\$\s*\d/,forbidden:/garant[ií]a|objecion|siguiente paso/i},
-  {q:'Cuanto cuesta CO9555',maxWords:70,contains:/649/,forbidden:/garant[ií]a|objecion|siguiente paso/i},
+  {q:'Cuanto cuesta CO9555',history:[{role:'assistant',content:'Fuente: lista_de_precios.json.'}],maxWords:70,contains:/649/,forbidden:/garant[ií]a|objecion|siguiente paso/i},
   {q:'Que garantia tiene el sarten Easy Release',maxWords:110,contains:/5 (a[nñ]os|years)/i,forbidden:/siguiente paso|objecion/i},
   {q:'Compara la Power Blender Max con la Power Blender Go',maxWords:200,contains:/Max[\s\S]*Go|Go[\s\S]*Max/i},
   {q:'Dame la receta completa de arroz con pollo, ingredientes y pasos',maxWords:450,contains:/ingredientes|arroz/i}
@@ -34,6 +34,7 @@ if (!process.argv.includes('--live')) {
     let error='';
     try {
       assert.ok(answer); assert.equal(finish,'stop'); assert.ok(words<=c.maxWords,`Too long: ${words}`);
+      assert.doesNotMatch(answer,/\.json\b|src\/data\/|lista_de_precios|tec-consultation|[a-f0-9]{64}/i);
       if(c.clarify) { assert.equal((answer.match(/\?/g)||[]).length,1); assert.doesNotMatch(answer,/\$|garant[ií]a|objecion|siguiente paso/i); }
       if(c.contains) assert.match(answer,c.contains);
       if(c.forbidden) assert.doesNotMatch(answer,c.forbidden);
