@@ -60,9 +60,30 @@ test('followup carries product but a new explicit topic does not', () => {
   assert.match(search('garantía Power Blender Max',{history}).records[0].title, /Blender Max/);
 });
 test('conflicting price codes are flagged, never silently selected', () => {
-  for (const code of ['CO9555','WF0451']) {
+  for (const code of ['WF0654']) {
     assert.equal(search('precio '+code).status,'ambiguous_price');
     assert.match(context('precio '+code),/No elijas uno/);
+  }
+});
+test('verified retail prices distinguish pots, complete filters and replacement cartridges', () => {
+  const expected = [
+    ['CO9555', 'OLLA DE 2 CUARTOS', 649],
+    ['CO9560', 'OLLA DE 3 CUARTOS', 799],
+    ['WF0451', 'CARTUCHO DE REPUESTO FRESCAPURE 3500', 199],
+    ['WF0419', 'FRESCAPURE 3500', 1499],
+    ['WF0482', 'FRESCAPURE 5500', 1999]
+  ];
+  for (const [code, name, price] of expected) {
+    for (const query of ['precio '+code, 'precio '+name]) {
+      const result = search(query);
+      assert.equal(result.status, 'matched', query);
+      assert.equal(result.records[0].code, code, query);
+      assert.equal(result.records[0].title, name, query);
+      assert.equal(JSON.parse(result.records[0].text).Precio, price, query);
+    }
+    const rows = load('lista_de_precios.json').filter(r=>r['Codigo Del Producto']===code);
+    assert.ok(rows.length);
+    assert.ok(rows.every(r=>r['Nombre Del Producto NOVEL']===name && r.Precio===price));
   }
 });
 test('same piece count never substitutes knives for pans', () => {

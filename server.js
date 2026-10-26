@@ -24225,9 +24225,11 @@ const COACH_CATALOG_PRODUCT_IMAGES = {
   SP0145: ["recipiente-utensilios", 44, "Recipiente para utensilios"],
   SP0113: ["recipientes-almacenar", 44, "Recipientes para almacenar"],
   SP0254: ["copas-helado", 45, "Copas para helado"],
-  WF0419: ["frescapure-5500", 48, "FrescaPure 5500"],
+  WF0482: ["frescapure-5500", 48, "FrescaPure 5500"],
   WF0485: ["frescapure-5500", 48, "FrescaPure 5500 bajo el mostrador"],
-  WF0451: ["frescapure-3500", 48, "FrescaPure 3500"],
+  WF0419: ["frescapure-3500", 48, "FrescaPure 3500"],
+  // No verified individual image for WF0451: use the filtration catalog page,
+  // never the complete FrescaPure 3500 unit as a replacement-cartridge photo.
   WF0500: ["frescapure-5500", 48, "Filtro FP4500/FP5500"],
   WF0530: ["frescapure-5500", 48, "FrescaPure 5500 bajo el mostrador"],
   WF0654: ["cartucho-frescapure", 48, "Cartucho FrescaPure"],
@@ -24477,7 +24479,7 @@ const COACH_CATALOG_IMAGE_RULES = [
   {
     pagina: 48,
     titulo: "FrescaPure 3500 y 5500",
-    codigos: ["WF0419", "WF0485", "WF0451", "WF0500", "WF0530", "WF0654", "RP6161", "RP6196", "RP1686", "RP0140"],
+    codigos: ["WF0419", "WF0482", "WF0485", "WF0451", "WF0500", "WF0530", "WF0654", "RP6161", "RP6196", "RP1686", "RP0140"],
     patron: /(?:frescapure|fp3500|fp4500|fp5500|cartuchos? para el filtro|valvula de desvio|kit debajo)/
   },
   {

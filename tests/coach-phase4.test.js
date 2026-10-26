@@ -23,7 +23,7 @@ const {
 test("asocia productos de la calculadora con su imagen del catalogo INNOVE", () => {
   const sistema = construirImagenProductoCatalogoCoach("CO9261", "SET DE 10 PIEZAS FAMILIAR INNOVE");
   const licuadora = construirImagenProductoCatalogoCoach("ES0082", "POWER BLENDER MAX");
-  const filtro = construirImagenProductoCatalogoCoach("WF0451", "FRESCAPURE 3500");
+  const filtro = construirImagenProductoCatalogoCoach("WF0419", "FRESCAPURE 3500");
 
   assert.equal(sistema.catalogo_pagina, 6);
   assert.match(sistema.imagen_producto, /pagina-06\.webp$/);
@@ -55,7 +55,7 @@ test("muestra una imagen especifica y distinta para cada tamano de olla", () => 
   const ollas = [
     ["CO9550", "OLLA DE 1 1/2 CUARTOS"],
     ["CO9555", "OLLA DE 2 CUARTOS"],
-    ["CO9555", "OLLA DE 3 CUARTOS"],
+    ["CO9560", "OLLA DE 3 CUARTOS"],
     ["CO9565", "OLLA DE 4 CUARTOS"],
     ["CO9570", "OLLA DE 6 CUARTOS"],
     ["CO9575", "OLLA DE 8 CUARTOS"]
@@ -63,6 +63,16 @@ test("muestra una imagen especifica y distinta para cada tamano de olla", () => 
 
   assert.equal(new Set(ollas.map(item => item.imagen_producto)).size, ollas.length);
   assert.ok(ollas.every(item => item.imagen_producto.includes("/products/olla-")));
+});
+
+test("separa las imagenes del filtro completo, el 5500 y el cartucho de repuesto", () => {
+  const unit = construirImagenProductoCatalogoCoach("WF0419", "FRESCAPURE 3500");
+  const larger = construirImagenProductoCatalogoCoach("WF0482", "FRESCAPURE 5500");
+  const cartridge = construirImagenProductoCatalogoCoach("WF0451", "CARTUCHO DE REPUESTO FRESCAPURE 3500");
+  assert.match(unit.imagen_producto, /products\/frescapure-3500\.webp$/);
+  assert.match(larger.imagen_producto, /products\/frescapure-5500\.webp$/);
+  assert.match(cartridge.imagen_producto, /pagina-48\.webp$/);
+  assert.notEqual(cartridge.imagen_producto, unit.imagen_producto);
 });
 
 test("mantiene distintas las espatulas y no inventa una foto para la luz ultravioleta", () => {

@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-25",
+  "retailPriceSource": "private/resources/royal-prestige-alianza-prices-2026.pdf",
+  "retailSourceRevision": "ENERO 2026",
+  "identitySource": "src/data/Lista_Precios_2026",
+  "method": "Visual verification of retail PDF, cross-checked against local internal SKU descriptions. Internal costs were NOT copied into retail prices or AI knowledge.",
+  "sourceDiscrepancy": "The retail PDF itself repeats CO9555 for 2qt and 3qt pots on physical page 7; page 16 labels both the complete 3500 and its cartridge WF0451 and labels the complete 5500 WF0419. Internal SKU descriptions resolve those identities. Other retail rows already identify the 3qt pot as CO9560.",
+  "corrections": [
+    {"code": "CO9555", "product": "OLLA DE 2 CUARTOS", "retailUSD": 649, "pdfPage": 7},
+    {"code": "CO9560", "product": "OLLA DE 3 CUARTOS", "retailUSD": 799, "pdfPage": 7, "replacesIncorrectCode": "CO9555"},
+    {"code": "WF0451", "product": "CARTUCHO DE REPUESTO FRESCAPURE 3500", "retailUSD": 199, "pdfPage": 16, "note": "Replacement cartridge; not the full filter. No verified individual photo; show filtration catalog page."},
+    {"code": "WF0419", "product": "FRESCAPURE 3500", "retailUSD": 1499, "pdfPage": 16, "replacesIncorrectCode": "WF0451"},
+    {"code": "WF0482", "product": "FRESCAPURE 5500", "retailUSD": 1999, "pdfPage": 16, "replacesIncorrectCode": "WF0419"}
+  ],
+  "scope": "Amounts unchanged; corrected SKU associations and cartridge name/images. Original PDF and internal cost file unchanged. Prices are base catalog amounts, not totals with tax/shipping. No bulk rewriting of historical customer records."
+}
