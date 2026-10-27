@@ -111,7 +111,7 @@
           <button id="go-fridge">Ir al refrigerador</button><button id="go-drawers">Ir a los cajones</button><button id="go-island">Ir a la isla</button><button id="go-stove">Ir a la estufa</button><button id="go-sink">Ir al fregadero</button>
           <button id="fridge-toggle">Abrir/cerrar refrigerador</button><button id="drawers-toggle">Abrir/cerrar cajones</button><button id="stove-toggle">Encender estufa</button><button id="water-toggle">Abrir grifo</button>
         </div>
-        <div class="piece-controls"><button id="pot-sink">Poner olla bajo grifo</button><button id="pot-stove">Poner olla en estufa</button><button id="pot-island">Poner olla en isla</button><button id="preview-menu">Ver/ocultar menú VR</button><button id="recover-controls">Recuperar controles</button><button id="refresh-page">Recargar página</button></div><p id="cooking-status" role="status"></p><p id="game-mission">Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.</p><p><strong>Menú:</strong> abre una mano libre con la palma hacia arriba, a la altura del pecho, y mantenla quieta hasta completar el círculo. No pellizques para abrirlo. Usa cualquiera de las manos. Al cerrar el menú no queda nada frente a ti.<br><strong>Moverte:</strong> con el menú cerrado, apunta al piso con la mano libre, pellizca hasta ver el círculo verde y suelta. Rojo significa destino bloqueado. Lo que sostienes en la otra mano viaja contigo.<br><strong>Tomar y soltar:</strong> pellizca cerca de una pieza; separa los dedos para dejarla. Mantén las manos visibles para el visor.<br><strong>Ayuda:</strong> Recuperar controles conserva la cocina; Recargar página reinicia y requiere volver a entrar a VR.</p><p>Opcional con controles: joystick izquierdo para caminar, derecho para girar. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
+        <div class="piece-controls"><button id="pot-sink">Poner olla bajo grifo</button><button id="pot-stove">Poner olla en estufa</button><button id="pot-island">Poner olla en isla</button><button id="recover-controls">Recuperar controles</button><button id="refresh-page">Recargar página</button></div><p id="cooking-status" role="status"></p><p id="game-mission">Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.</p><p><strong>Moverte:</strong> apunta al piso con la mano libre, pellizca hasta ver el círculo verde y suelta. Rojo significa destino bloqueado. Lo que sostienes en la otra mano viaja contigo.<br><strong>Tomar y soltar:</strong> pellizca cerca de una pieza; separa los dedos para dejarla. Mantén las manos visibles para el visor.<br><strong>Ayuda:</strong> Recuperar controles conserva la cocina; Recargar página reinicia y requiere volver a entrar a VR.</p><p>Opcional con controles: joystick izquierdo para caminar, derecho para girar. Pellizca brevemente una perilla y suelta, o apúntale con el gatillo, para controlar cada quemador.</p>
         <p id="piece-status" role="status" aria-live="polite">Cargando las siete piezas…</p>
       </section>
 
@@ -243,7 +243,6 @@
       document.getElementById('stove-toggle').onclick=()=>kitchen?.toggleStove();document.getElementById('water-toggle').onclick=()=>kitchen?.toggleWater();
       document.getElementById('fridge-toggle').onclick=()=>kitchen?.furniture.toggleFridge();document.getElementById('drawers-toggle').onclick=()=>kitchen?.furniture.toggleDrawers();
       for(const where of ['sink','stove','island'])document.getElementById('pot-'+where).onclick=()=>placeSelected(where);
-      document.getElementById('preview-menu').onclick=()=>{if(handMenu.visible)handMenu.stop();else{vrPanels.forEach(p=>p.visible=true);handMenu.start();handMenu.show();menuPageShow('travel');}};
       const loader=new GLTFLoader();const dracoLoader=new DRACOLoader();dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/libs/draco/');loader.setDRACOLoader(dracoLoader);
       function sync(state) {
         picker.value=state.selected;status.textContent=state.message;toast.textContent=state.message;vrStatus.userData.paint(state.message);
@@ -269,7 +268,7 @@
         document.getElementById('reset-case').addEventListener('click',()=>resetGuard.press());
         installActionPointer({canvas:renderer.domElement,camera,buttons,controls,system,enabled:()=>!renderer.xr.isPresenting});
         pointerInput=installPiecePointer(THREE,{canvas:renderer.domElement,camera,system,world:scene,controls,canInteract:()=>!renderer.xr.isPresenting,mode:()=>document.getElementById('pointer-mode').value});
-        xrInput=installXRHands(THREE,{renderer,scene,rig,system,handModelFactory:new XRHandModelFactory(),buttons,head:camera,floorTravel,onMenu:()=>{handMenu.show();handMenu.update();message('Apunta, pellizca medio segundo y suelta. Ayuda: recuperar o recargar.');},onMessage:message});
+        xrInput=installXRHands(THREE,{renderer,scene,rig,system,handModelFactory:new XRHandModelFactory(),buttons,floorTravel,onMessage:message});
         if(kitchen){
           cooking=createCooking({system,scene,kitchen,onChange:(state,note)=>{document.body.dataset.cooking=JSON.stringify(state);document.getElementById('cooking-status').textContent=state.map(p=>`${system.item(p.id).label}: agua ${p.water}%${p.steaming?' · vapor':''}${p.ingredients.length?' · '+p.ingredients.length+' ingredientes':''}`).join(' | ');document.getElementById('game-mission').textContent=state.some(p=>p.steaming&&p.ingredients.length)?'¡Preparación lista! Puedes sacar los ingredientes y volver a jugar.':'Reto: llena una olla, caliéntala y agrega un alimento del refrigerador.';if(note)message(note);}});
           for(const f of kitchen.furniture.food){system.registerExtra(f.id,f.node,f.label,{canTake:f.canTake});cooking.registerFood(f.id,f.node);const o=document.createElement('option');o.value=f.id;o.textContent=f.label;picker.append(o);}
@@ -314,7 +313,8 @@
               button.textContent = "Entrar a VR";
             });
             await renderer.xr.setSession(session);
-            vrPanels.forEach(p=>p.visible=true);handMenu.start();menuPageShow('travel');
+            // Keep the floating green menu inactive; direct kitchen interaction and floor travel remain available.
+            handMenu.stop();
             xrControls.hidden = false;
             document.body.classList.add("xr-active");
             button.textContent = "En VR";
