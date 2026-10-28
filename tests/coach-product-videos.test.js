@@ -3,17 +3,26 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const context = {};
+const context = { URL };
 vm.runInNewContext(readFileSync(new URL('../public/coach/product-videos-catalog.js', import.meta.url), 'utf8'), context);
 const catalog = context.TecProductVideoCatalog;
 const ids = (code, name) => Array.from(catalog.forProduct({ codigo_producto: code, nombre_producto: name }), v => v.id);
 
-test('each approved video has a unique official YouTube watch link and a valid family', () => {
-  assert.equal(catalog.videos.length, 43);
-  assert.equal(new Set(catalog.videos.map(v => v.id)).size, 43);
+test('each approved video has a unique official watch link and a valid family', () => {
+  assert.equal(catalog.videos.length, 49);
+  assert.equal(new Set(catalog.videos.map(v => v.id)).size, 49);
   for (const video of catalog.videos) {
-    assert.match(video.id, /^[a-zA-Z0-9_-]{11}$/);
-    assert.equal(video.url, `https://www.youtube.com/watch?v=${video.id}`);
+    if (video.provider === 'hycite') {
+      assert.match(video.id, /^hycite-/);
+      assert.equal(new URL(video.url).hostname, 'hycite.widen.net');
+      assert.equal(catalog.embedUrl(video.id), video.embedUrl);
+    } else {
+      assert.match(video.id, /^[a-zA-Z0-9_-]{11}$/);
+      assert.equal(video.url, `https://www.youtube.com/watch?v=${video.id}`);
+    }
+    assert.ok(catalog.embedUrl(video.id));
+    if (video.id !== 'hycite-5500-uc') assert.ok(catalog.thumbnailUrl(video.id));
+    else assert.equal(catalog.thumbnailUrl(video.id), '', 'do not use a countertop photo for the under-counter model');
     assert.ok(catalog.families.some(f => f.id === video.family && f.videoIds.includes(video.id)));
     assert.equal(catalog.byId(video.id), video);
   }
@@ -39,7 +48,7 @@ test('cookware lines remain separate and ambiguous repeated price-sheet codes fa
 });
 
 test('parts, older bowls and unrelated knives cannot inherit whole-product or newer-model videos', () => {
-  for (const code of ['AP2704', 'SP0066', 'SP0068', 'PR4902', 'CU0148', 'PR1841', 'PE0029', 'PE0028', 'WF0482', 'WF0485', 'WF0419', 'WF0654']) {
+  for (const code of ['AP2704', 'SP0066', 'SP0068', 'PR4902', 'CU0148', 'PE0029', 'PE0028', 'WF0654', 'PR0333']) {
     assert.deepEqual(ids(code, 'Power Blender Max'), [], code);
   }
   for (const name of ['licuadora', 'olla', 'aro de silicona', 'válvula', 'tazón', 'filtro de agua']) {
@@ -70,16 +79,25 @@ test('shared knife care preserves exact model presentations and does not imply a
   assert.deepEqual(ids('CU0820'), ['p668z2hXy2c', 'OoMRj50udSY']);
   assert.deepEqual(ids('CU0815'), ['UNd9ca53PW0', 'OoMRj50udSY']);
   assert.deepEqual(ids('CU0056'), ['CuTE0_XE66U']);
-  assert.deepEqual(ids('PR1841'), []);
+  assert.deepEqual(ids('PR1841'), ['gfIyzRlbXaI']);
 });
 
-test('all 84 reviewed codes retain their explicit audit decision and every mapped video exists', () => {
+test('historical audit and explicit priority supplement account for every reviewed code', () => {
   const audit = JSON.parse(readFileSync(new URL('../docs/tec-product-video-audit-2026-10-28.json', import.meta.url), 'utf8'));
   assert.equal(audit.reviews.length, 84);
   assert.equal(new Set(audit.reviews.map(r => r.code)).size, 84);
   assert.equal(audit.reviews.filter(r => r.decision === 'verified-match').length, 22);
+  const supplement = JSON.parse(readFileSync(new URL('../docs/tec-priority-video-audit-2026-10-28.json', import.meta.url), 'utf8'));
+  assert.equal(supplement.reviews.length, 7);
+  assert.equal(supplement.reviews.filter(r => r.decision === 'verified-match').length, 6);
+  for (const row of supplement.reviews) {
+    assert.deepEqual(ids(row.code), row.videoIds, row.code);
+    assert.ok(row.officialSources.length > 0);
+    assert.ok(row.reason);
+  }
   for (const row of audit.reviews) {
-    assert.deepEqual(ids(row.code, row.catalogName), row.videoIds, row.code);
+    const current = supplement.reviews.find(r => r.code === row.code) || row;
+    assert.deepEqual(ids(row.code, row.catalogName), current.videoIds, row.code);
     assert.ok(row.channelSearches.length > 0);
     assert.ok(row.reason);
   }
@@ -112,4 +130,37 @@ test('close stops playback synchronously and an old close event cannot break a r
   ui.closeDialog();
   assert.equal(frames, 0);
   assert.equal(ui.document.body.style.overflow, '');
+});
+
+
+test('priority tutorials stay with their exact retail models, never replacement cartridges', () => {
+  assert.deepEqual(ids('CO9222'), ['hycite-wok-innove']);
+  assert.deepEqual(ids('PR2614'), ['y1sz5QIV5oc']);
+  assert.deepEqual(ids('WF0482', '5500 bajo el mostrador'), ['hycite-5500-ct']);
+  assert.deepEqual(ids('WF0485', '5500 sobre el mostrador'), ['hycite-5500-uc']);
+  assert.deepEqual(ids('WF0419'), ['hycite-3500']);
+  for (const code of ['WF0451', 'WF0500', 'WF0530', 'WF0075', 'PR0333']) assert.deepEqual(ids(code), []);
+});
+
+test('player URLs resolve only trusted canonical IDs; external callers cannot supply an iframe URL', () => {
+  assert.equal(catalog.embedUrl('unknown'), '');
+  assert.equal(catalog.thumbnailUrl('unknown'), '');
+  assert.equal(catalog.embedUrl({id:'hycite-3500', embedUrl:'https://example.com'}), '');
+  assert.match(catalog.embedUrl('hycite-3500'), /^https:\/\/hycite\.widen\.net\/view\/video\/kn6ykc3sxg\//);
+  assert.equal(catalog.thumbnailUrl('hycite-3500'), '/coach/assets/catalog/innove/products/frescapure-3500.webp');
+  assert.ok(Object.isFrozen(catalog.byId('hycite-3500')));
+  const source = readFileSync(new URL('../public/coach/product-videos.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('const source = catalog.embedUrl(video.id)'));
+  assert.ok(source.includes('frame.src = source'));
+});
+
+test('untrusted provider hosts, protocols, paths and posters are rejected even in a malformed catalog', () => {
+  const source = readFileSync(new URL('../public/coach/product-videos-catalog.js', import.meta.url), 'utf8');
+  const valid = catalog.byId('hycite-3500').embedUrl;
+  for (const bad of ['https://hycite.widen.net.evil.test/view/video/kn6ykc3sxg/a.mp4', 'http://hycite.widen.net/view/video/kn6ykc3sxg/a.mp4', 'javascript:alert(1)', 'https://hycite.widen.net/other/a.mp4', 'https://u:p@hycite.widen.net/view/video/kn6ykc3sxg/a.mp4']) {
+    const altered = {URL}; vm.runInNewContext(source.replace(valid, bad), altered);
+    assert.equal(altered.TecProductVideoCatalog.embedUrl('hycite-3500'), '', bad);
+  }
+  const badPoster = {URL}; vm.runInNewContext(source.replace('"thumbnail": "/coach/assets/catalog/innove/products/frescapure-3500.webp"', '"thumbnail": "https://example.com/tracker"'), badPoster);
+  assert.equal(badPoster.TecProductVideoCatalog.thumbnailUrl('hycite-3500'), '');
 });

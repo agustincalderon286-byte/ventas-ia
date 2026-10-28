@@ -1,0 +1,110 @@
+{
+  "reviewDate": "2026-10-28",
+  "scope": "Supplement to the earlier 84-code audit: seven priority codes, not a rewrite of historical findings.",
+  "addedVideos": 6,
+  "addedCodes": 6,
+  "finalVideoCount": 49,
+  "finalCoveredCodes": 96,
+  "stillPendingCodes": 56,
+  "license": {
+    "url": "https://hycite.widencollective.com/dl/eula/external",
+    "authorization": "User explicitly accepted the license and authorized obtaining the priority video links in this conversation.",
+    "use": "Publisher-provided embedded player only; no originals downloaded or rehosted."
+  },
+  "reviews": [
+    {
+      "code": "WF0482",
+      "decision": "verified-match",
+      "videoIds": [
+        "hycite-5500-ct"
+      ],
+      "officialSources": [
+        "https://hycite.widencollective.com/portals/kygv5pel/PortalFrescaPure5500"
+      ],
+      "reason": "Tutorial en español publicado en el portal oficial del modelo; enlace de inserción proporcionado por Hy Cite. CT y UC se mantienen separados."
+    },
+    {
+      "code": "WF0485",
+      "decision": "verified-match",
+      "videoIds": [
+        "hycite-5500-uc"
+      ],
+      "officialSources": [
+        "https://hycite.widencollective.com/portals/kygv5pel/PortalFrescaPure5500"
+      ],
+      "reason": "Tutorial en español publicado en el portal oficial del modelo; enlace de inserción proporcionado por Hy Cite. CT y UC se mantienen separados."
+    },
+    {
+      "code": "WF0419",
+      "decision": "verified-match",
+      "videoIds": [
+        "hycite-3500"
+      ],
+      "officialSources": [
+        "https://hycite.widencollective.com/portals/pjvcbrd7/PortalFrescaPure3500"
+      ],
+      "reason": "Tutorial en español publicado en el portal oficial del modelo; enlace de inserción proporcionado por Hy Cite. CT y UC se mantienen separados."
+    },
+    {
+      "code": "CO9222",
+      "decision": "verified-match",
+      "videoIds": [
+        "hycite-wok-innove"
+      ],
+      "officialSources": [
+        "https://hycite.widencollective.com/portals/pastjwqh/PortalWok"
+      ],
+      "reason": "Tutorial en español publicado en el portal oficial del modelo; enlace de inserción proporcionado por Hy Cite. CT y UC se mantienen separados."
+    },
+    {
+      "code": "PR1841",
+      "decision": "verified-match",
+      "videoIds": [
+        "gfIyzRlbXaI"
+      ],
+      "officialSources": [
+        "https://www.royalprestige.com/mx",
+        "https://www.youtube.com/@RoyalPrestigeMXOficial",
+        "https://www.youtube.com/watch?v=gfIyzRlbXaI"
+      ],
+      "reason": "Canal enlazado desde la página oficial del país. Reproducción y comparación visual con el catálogo: afilador independiente de mariposa, no bloque integrado."
+    },
+    {
+      "code": "PR2614",
+      "decision": "verified-match",
+      "videoIds": [
+        "y1sz5QIV5oc"
+      ],
+      "officialSources": [
+        "https://www.royalprestige.com/ec/productos/detalle/maquina-de-ensaladas",
+        "https://www.youtube.com/@royalprestigeecuadoroficial",
+        "https://www.youtube.com/watch?v=y1sz5QIV5oc"
+      ],
+      "reason": "Canal enlazado desde la página oficial del país. Reproducción y comparación visual con el catálogo: cortador manual de acero, manivela y base de succión con conos intercambiables."
+    },
+    {
+      "code": "PR0333",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "officialSources": [
+        "https://hycite.widencollective.com/portals/po47ueur/PortalShowerFilter",
+        "https://www.royalprestige.com/productos/detalle/filtro-para-la-ducha-frescapure"
+      ],
+      "reason": "El portal oficial contiene cuatro imágenes y no contiene videos. No se confirmó un clip oficial del modelo de cinco ajustes; se excluyen vendedores independientes y otros modelos."
+    }
+  ],
+  "verification": {
+    "automated": {
+      "tests": 701,
+      "passed": 701,
+      "failed": 0
+    },
+    "browser": [
+      "All four Hy Cite publisher embeds loaded without login or a license gate for viewers and began playback.",
+      "Visual model check: 5500CT countertop body and spout, 5500UC under-counter body, 3500 and INNOVE Wok compared against manufacturer catalog.",
+      "Official YouTube sharpener and salad-machine videos played and matched the catalog.",
+      "Calculator and survey both open the UC tutorial only; closing removes the iframe and preserves the selected product and name in the local read-only fixture."
+    ],
+    "videoFilesDownloaded": false
+  }
+}

@@ -42,9 +42,11 @@
       status.textContent = 'Necesitas internet para ver los videos. Puedes cerrar y seguir usando el Coach sin perder tus datos.';
       return;
     }
+    const source = catalog.embedUrl(video.id);
+    if (!source) { status.textContent = 'Este video no está disponible.'; return; }
     const frame = node('iframe');
     frame.title = video.title;
-    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(video.id)}?hl=es&playsinline=1&rel=0&autoplay=0`;
+    frame.src = source;
     frame.allow = 'encrypted-media; picture-in-picture; fullscreen';
     frame.allowFullscreen = true;
     frame.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -67,8 +69,8 @@
       button.dataset.tecVideoId = video.id;
       button.setAttribute('aria-label', `Ver ${video.title}`);
       button.setAttribute('aria-pressed', String(activeVideo?.id === video.id));
-      if (navigator.onLine !== false) {
-        const image = node('img'); image.src = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+      if (navigator.onLine !== false && catalog.thumbnailUrl(video.id)) {
+        const image = node('img'); image.src = catalog.thumbnailUrl(video.id);
         image.alt = ''; image.loading = 'lazy'; image.width = 480; image.height = 360;
         image.addEventListener('error', () => { image.hidden = true; });
         button.append(image);

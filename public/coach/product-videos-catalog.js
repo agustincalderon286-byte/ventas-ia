@@ -1,5 +1,5 @@
-/* Official, manually reviewed links. No YouTube API key, cookies or videos stored by TEC.
-   Source: @RoyalPrestigeOfficial, reviewed 2026-10-28. Keep code mappings explicit;
+/* Official, manually reviewed links. No video files or provider credentials stored by TEC.
+   Sources: official Royal Prestige channels and Hy Cite publisher-provided embeds, reviewed 2026-10-28. Keep code mappings explicit;
    never infer a model from a loose term such as "licuadora", "olla" or a spare part. */
 (function (root) {
   'use strict';
@@ -433,7 +433,81 @@
     "category": "Ollas y sartenes",
     "url": "https://www.youtube.com/watch?v=vwvQFg9pKyo",
     "family": "gourmet-skillets"
+  },
+
+  {
+    "product": "FrescaPure 5500 · sobre el mostrador",
+    "title": "FrescaPure 5500 · sobre el mostrador · uso y cuidados",
+    "id": "hycite-5500-ct",
+    "provider": "hycite",
+    "embedUrl": "https://hycite.widen.net/view/video/7lgy7w356t/Royal-Prestige%C2%AE-Frescapure-5500CT_Use-Care-Video_SPA.mp4?x.portal_shortcode_generated=kygv5pel&x.collection_sharename=xhrvreeq&x.app=portals",
+    "thumbnail": "/coach/assets/catalog/innove/products/frescapure-5500.webp",
+    "duration": "1:45",
+    "type": "Uso y cuidados",
+    "category": "Filtración",
+    "url": "https://hycite.widen.net/view/video/7lgy7w356t/Royal-Prestige%C2%AE-Frescapure-5500CT_Use-Care-Video_SPA.mp4?x.portal_shortcode_generated=kygv5pel&x.collection_sharename=xhrvreeq&x.app=portals",
+    "family": "frescapure-5500-ct"
+  },
+  {
+    "product": "FrescaPure 5500 · bajo el mostrador",
+    "title": "FrescaPure 5500 · bajo el mostrador · uso y cuidados",
+    "id": "hycite-5500-uc",
+    "provider": "hycite",
+    "embedUrl": "https://hycite.widen.net/view/video/fpgs5gkwlv/Royal-Prestige%C2%AE-Frescapure-5500UC_Use-Care-Video_SPA.mp4?x.portal_shortcode_generated=kygv5pel&x.collection_sharename=xhrvreeq&x.app=portals",
+    "thumbnail": "",
+    "duration": "1:41",
+    "type": "Uso y cuidados",
+    "category": "Filtración",
+    "url": "https://hycite.widen.net/view/video/fpgs5gkwlv/Royal-Prestige%C2%AE-Frescapure-5500UC_Use-Care-Video_SPA.mp4?x.portal_shortcode_generated=kygv5pel&x.collection_sharename=xhrvreeq&x.app=portals",
+    "family": "frescapure-5500-uc"
+  },
+  {
+    "product": "FrescaPure 3500",
+    "title": "FrescaPure 3500 · uso y cuidados",
+    "id": "hycite-3500",
+    "provider": "hycite",
+    "embedUrl": "https://hycite.widen.net/view/video/kn6ykc3sxg/Royal-Prestige%C2%AE-Frescapure-3500_Use-Care-Video_ESP.mp4?x.portal_shortcode_generated=pjvcbrd7&x.collection_sharename=3w1psnag&x.app=portals",
+    "thumbnail": "/coach/assets/catalog/innove/products/frescapure-3500.webp",
+    "duration": "1:20",
+    "type": "Uso y cuidados",
+    "category": "Filtración",
+    "url": "https://hycite.widen.net/view/video/kn6ykc3sxg/Royal-Prestige%C2%AE-Frescapure-3500_Use-Care-Video_ESP.mp4?x.portal_shortcode_generated=pjvcbrd7&x.collection_sharename=3w1psnag&x.app=portals",
+    "family": "frescapure-3500"
+  },
+  {
+    "product": "Royal Wok INNOVE",
+    "title": "Royal Wok INNOVE · uso y cuidados",
+    "id": "hycite-wok-innove",
+    "provider": "hycite",
+    "embedUrl": "https://hycite.widen.net/view/video/odnkhmbjnq/INNOVE-Wok_Use-Care-Video_YT_SPA.mp4?x.portal_shortcode_generated=pastjwqh&x.collection_sharename=tkvcc7ot&x.app=portals",
+    "thumbnail": "/coach/assets/catalog/innove/catalogo-innove-pagina-04.webp",
+    "duration": "1:08",
+    "type": "Uso y cuidados",
+    "category": "Ollas y sartenes",
+    "url": "https://hycite.widen.net/view/video/odnkhmbjnq/INNOVE-Wok_Use-Care-Video_YT_SPA.mp4?x.portal_shortcode_generated=pastjwqh&x.collection_sharename=tkvcc7ot&x.app=portals",
+    "family": "wok-innove"
+  },
+  {
+    "product": "Afilador de cuchillos",
+    "title": "Royal Prestige® Afilador de Cuchillos - Uso y Cuidados",
+    "id": "gfIyzRlbXaI",
+    "duration": "0:41",
+    "type": "Uso y cuidados",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=gfIyzRlbXaI",
+    "family": "butterfly-sharpener"
+  },
+  {
+    "product": "Máquina de ensaladas",
+    "title": "Máquina de Ensaladas de Royal Prestige · SALAD MACHINE",
+    "id": "y1sz5QIV5oc",
+    "duration": "0:32",
+    "type": "Presentación",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=y1sz5QIV5oc",
+    "family": "salad-machine"
   }
+
 ];
   const families = [
   {
@@ -855,7 +929,69 @@
     "videoIds": [
       "yCRIsyi62GU"
     ]
+  },
+
+  {
+    "id": "frescapure-5500-ct",
+    "label": "FrescaPure 5500 · sobre el mostrador",
+    "codes": [
+      "WF0482"
+    ],
+    "videoIds": [
+      "hycite-5500-ct"
+    ]
+  },
+  {
+    "id": "frescapure-5500-uc",
+    "label": "FrescaPure 5500 · bajo el mostrador",
+    "codes": [
+      "WF0485"
+    ],
+    "videoIds": [
+      "hycite-5500-uc"
+    ]
+  },
+  {
+    "id": "frescapure-3500",
+    "label": "FrescaPure 3500",
+    "codes": [
+      "WF0419"
+    ],
+    "videoIds": [
+      "hycite-3500"
+    ]
+  },
+  {
+    "id": "wok-innove",
+    "label": "Royal Wok INNOVE",
+    "codes": [
+      "CO9222"
+    ],
+    "videoIds": [
+      "hycite-wok-innove"
+    ]
+  },
+  {
+    "id": "butterfly-sharpener",
+    "label": "Afilador de cuchillos",
+    "codes": [
+      "PR1841"
+    ],
+    "videoIds": [
+      "gfIyzRlbXaI"
+    ]
+  },
+  {
+    "id": "salad-machine",
+    "label": "Máquina de ensaladas",
+    "codes": [
+      "PR2614"
+    ],
+    "videoIds": [
+      "y1sz5QIV5oc"
+    ]
   }
+
 ];
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const byId = new Map(videos.map(video => [video.id, Object.freeze(video)]));
@@ -871,8 +1007,31 @@
     const videoIds = new Set(families.filter(family => selected.includes(family.id)).flatMap(family => family.videoIds));
     return videos.filter(video => videoIds.has(video.id));
   }
+  // Resolve only catalog IDs: caller-provided URLs can never become iframe sources.
+  function embedUrl(id) {
+    const video = byId.get(id);
+    if (!video) return '';
+    if (!video.provider || video.provider === 'youtube') {
+      return /^[a-zA-Z0-9_-]{11}$/.test(video.id)
+        ? `https://www.youtube.com/embed/${video.id}?hl=es&playsinline=1&rel=0&autoplay=0` : '';
+    }
+    if (video.provider !== 'hycite') return '';
+    try {
+      const url = new URL(video.embedUrl);
+      return url.protocol === 'https:' && url.hostname === 'hycite.widen.net' && !url.username && !url.password && !url.port
+        && /^\/view\/video\/[a-z0-9]{10}\/[^/]+\.mp4$/.test(url.pathname) ? url.href : '';
+    } catch { return ''; }
+  }
+  function thumbnailUrl(id) {
+    const video = byId.get(id);
+    if (!video || !embedUrl(id)) return '';
+    if (video.provider === 'hycite') {
+      return /^\/coach\/assets\/catalog\/innove\/(?:products\/)?[a-z0-9-]+\.webp$/.test(video.thumbnail || '') ? video.thumbnail : '';
+    }
+    return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+  }
   root.TecProductVideoCatalog = Object.freeze({
-    version: '20261028-videos3', videos: Object.freeze(videos), families: Object.freeze(families),
-    forProduct, byId: id => byId.get(id) || null, normalize
+    version: '20261028-videos4', videos: Object.freeze(videos), families: Object.freeze(families),
+    forProduct, byId: id => byId.get(id) || null, embedUrl, thumbnailUrl, normalize
   });
 })(globalThis);
