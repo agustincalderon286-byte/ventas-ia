@@ -1,0 +1,393 @@
+{
+  "reviewDate": "2026-10-28",
+  "approval": "User approved all 24 recipes from the local gallery and requested integration, testing and publication.",
+  "officialChannel": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+  "manufacturerChannelLink": "https://www.royalprestige.com/mx",
+  "recipeCount": 24,
+  "totalVideoCount": 73,
+  "modelDecisions": [
+    "NOVEL 10.5-inch skillet recipes are linked to CO9590 and the four sets whose price-sheet components include CO9590; no other NOVEL pots or INNOVE sizes.",
+    "The common Easy Release shrimp recipe specifies the skillet line but no capacity, so it applies to the three skillet sizes and their set with an explicit capacity note; 10-inch recipes remain exclusive to CO9738 and CO9740.",
+    "Go recipes show accessory requirements; the old cup/chopper and Max jar do not inherit these recipes.",
+    "Mixing Bowls recipe maps to CO4900 only, not older bowl sets.",
+    "No recipes assigned to Wok or Precision Cook without an exact match."
+  ],
+  "recipes": [
+    {
+      "number": 1,
+      "id": "REj6w1WIzcw",
+      "title": "Muslos de Pollo Braseados",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=REj6w1WIzcw",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/muslos-de-pollo-braseados"
+      ],
+      "codes": [
+        "CO4911"
+      ],
+      "requirements": "MultiPan.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 2,
+      "id": "467WPWSALpg",
+      "title": "Tallarines Salteados de Verduras",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=467WPWSALpg",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/tallarines-saltados-con-verduras"
+      ],
+      "codes": [
+        "CO4911"
+      ],
+      "requirements": "MultiPan.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 3,
+      "id": "a79DV18g4Eo",
+      "title": "Pastel de Chocolate Espresso",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=a79DV18g4Eo",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/pastel-de-chocolate-expreso"
+      ],
+      "codes": [
+        "CO4911"
+      ],
+      "requirements": "MultiPan.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 4,
+      "id": "R57vXzfvnOI",
+      "title": "Costillas Estofadas con Puré de Papa",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=R57vXzfvnOI"
+      ],
+      "codes": [
+        "CO1253"
+      ],
+      "requirements": "Olla de presión de 6 litros.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 5,
+      "id": "iH3BuWHXIGQ",
+      "title": "Birria de Res",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=iH3BuWHXIGQ"
+      ],
+      "codes": [
+        "CO1258"
+      ],
+      "requirements": "Olla de presión de 10 litros.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 6,
+      "id": "5tCU3oBmKss",
+      "title": "Agua Chile Verde",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=5tCU3oBmKss"
+      ],
+      "codes": [
+        "ES0082"
+      ],
+      "requirements": "Power Blender Max.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 7,
+      "id": "DhcwmfZ-jVU",
+      "title": "Dip de Queso Fresco Batido con Verduras de Verano",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=DhcwmfZ-jVU"
+      ],
+      "codes": [
+        "ES0082"
+      ],
+      "requirements": "Power Blender Max.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 8,
+      "id": "HDhDwSA8628",
+      "title": "Sofrito",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=HDhDwSA8628",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/sofrito"
+      ],
+      "codes": [
+        "ES4200"
+      ],
+      "requirements": "Power Blender Go con recipiente picador Go Plus. Requiere ese accesorio.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 9,
+      "id": "wp7e0izJSOs",
+      "title": "Tortitas de avena y plátano",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=wp7e0izJSOs",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/tortitas-de-avena-y-plátano"
+      ],
+      "codes": [
+        "ES4200",
+        "CO9740",
+        "CO9738"
+      ],
+      "requirements": "Power Blender Go con jarra Go Plus y sartén Deluxe Easy Release de 10 pulgadas.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 10,
+      "id": "S9e6fkvYX4s",
+      "title": "Camarones empanizados",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=S9e6fkvYX4s"
+      ],
+      "codes": [
+        "CO9740",
+        "CO9736",
+        "CO9738",
+        "CO9739"
+      ],
+      "requirements": "Sartén Deluxe Easy Release. Ajusta las cantidades a la capacidad de tu sartén.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 11,
+      "id": "_p1vb_ffosM",
+      "title": "Ensalada de verduras con nueces y crumble de parmesano",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=_p1vb_ffosM"
+      ],
+      "codes": [
+        "CO9740",
+        "CO9738"
+      ],
+      "requirements": "Sartén Deluxe Easy Release de 10 pulgadas.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 12,
+      "id": "Fg1T6lbrlbg",
+      "title": "Café de Olla",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=Fg1T6lbrlbg",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/cafe-de-olla"
+      ],
+      "codes": [
+        "CO2106"
+      ],
+      "requirements": "Barista.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 13,
+      "id": "D5c5W1UBCKQ",
+      "title": "Café Latte con Miel y Coco",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=D5c5W1UBCKQ",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/cafe-latte-con-miel-y-coco"
+      ],
+      "codes": [
+        "CO2106"
+      ],
+      "requirements": "Barista.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 14,
+      "id": "rxSm2HLkSuE",
+      "title": "Café Helado con galletas",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=rxSm2HLkSuE",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/cafe-helado-con-galletas"
+      ],
+      "codes": [
+        "CO2106"
+      ],
+      "requirements": "Barista.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 15,
+      "id": "yn6iKMIyq2s",
+      "title": "Chocolate Caliente",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=yn6iKMIyq2s"
+      ],
+      "codes": [
+        "CO0101"
+      ],
+      "requirements": "Chocolatera.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 16,
+      "id": "p1e3gYyCrIA",
+      "title": "Chocolate Caliente de Naranja",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=p1e3gYyCrIA"
+      ],
+      "codes": [
+        "CO0101"
+      ],
+      "requirements": "Chocolatera.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 17,
+      "id": "vreJJ16s1fk",
+      "title": "Jugo de manzana verde y pepino",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=vreJJ16s1fk"
+      ],
+      "codes": [
+        "JU0038"
+      ],
+      "requirements": "Extractor de jugos Juicer.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 18,
+      "id": "eTUSfc2BrOg",
+      "title": "Shots de Manzana Verde, Espinacas y Naranja, Jengibre y Cúrcuma",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=eTUSfc2BrOg"
+      ],
+      "codes": [
+        "JU0038"
+      ],
+      "requirements": "Extractor de jugos Juicer.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 19,
+      "id": "KRdQe2vzNiI",
+      "title": "Té de Limón con Miel y Jengibre",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=KRdQe2vzNiI",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/te-de-limon-con-miel-y-jengibre"
+      ],
+      "codes": [
+        "CO1001"
+      ],
+      "requirements": "ExperTea.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 20,
+      "id": "9t1whiNGz98",
+      "title": "Té con Manzana",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=9t1whiNGz98",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/te-con-manzana"
+      ],
+      "codes": [
+        "CO1001"
+      ],
+      "requirements": "ExperTea.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 21,
+      "id": "y0E9xvDDhjo",
+      "title": "Lasaña Vegetariana",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=y0E9xvDDhjo"
+      ],
+      "codes": [
+        "PR2614"
+      ],
+      "requirements": "Máquina de ensaladas y un sartén de 10.5 pulgadas.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 22,
+      "id": "h0I_lgJ1758",
+      "title": "Ensalada de Salmón a la Plancha y en Escamas",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=h0I_lgJ1758"
+      ],
+      "codes": [
+        "CO9590",
+        "CO9893",
+        "CO9563",
+        "CO9883",
+        "CO9554"
+      ],
+      "requirements": "Sartén NOVEL de 10.5 pulgadas.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 23,
+      "id": "xdAOOykr3Nk",
+      "title": "Ensalada de pechuga de pollo",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=xdAOOykr3Nk"
+      ],
+      "codes": [
+        "CO9590",
+        "CO9893",
+        "CO9563",
+        "CO9883",
+        "CO9554"
+      ],
+      "requirements": "Sartén NOVEL de 10.5 pulgadas.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    },
+    {
+      "number": 24,
+      "id": "ULpGq-7tooA",
+      "title": "Ensalada Agitada",
+      "authorUrl": "https://www.youtube.com/@RoyalPrestigeMXOficial",
+      "sources": [
+        "https://www.youtube.com/watch?v=ULpGq-7tooA",
+        "https://www.royalprestige.com/mx/inspiracion/recetas/detalle/aguacate-en-cubos"
+      ],
+      "codes": [
+        "CO4900"
+      ],
+      "requirements": "Mixing Bowls con sus accesorios de rallado y corte. No corresponde al juego antiguo de tres tazones.",
+      "basis": "Official manufacturer recipe description / matching manufacturer recipe page. Explicit model, capacity and accessory associations."
+    }
+  ],
+  "verification": {
+    "automatedTests": 705,
+    "passed": 705,
+    "failed": 0,
+    "officialLinksAvailable": 24,
+    "browserChecks": [
+      "Library lists all 73 videos and 24 recipes with filters.",
+      "Survey MultiPan selection opens three MultiPan recipes.",
+      "Calculator inherits the selected MultiPan and opens the same three recipes.",
+      "Switching type filters removes the previous video iframe.",
+      "Recipe video loads in the embedded viewer.",
+      "Closing removes the iframe and preserves the survey name and chosen product.",
+      "Offline fixture retains 24 recipe entries, makes no player iframe and displays the internet requirement."
+    ]
+  }
+}

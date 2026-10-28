@@ -507,6 +507,272 @@
     "url": "https://www.youtube.com/watch?v=y1sz5QIV5oc",
     "family": "salad-machine"
   }
+,
+
+  {
+    "product": "MultiPan",
+    "title": "Muslos de Pollo Braseados",
+    "id": "REj6w1WIzcw",
+    "duration": "0:48",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=REj6w1WIzcw",
+    "family": "recipe-multipan",
+    "requirements": "MultiPan."
+  },
+  {
+    "product": "MultiPan",
+    "title": "Tallarines Salteados de Verduras",
+    "id": "467WPWSALpg",
+    "duration": "1:25",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=467WPWSALpg",
+    "family": "recipe-multipan",
+    "requirements": "MultiPan."
+  },
+  {
+    "product": "MultiPan",
+    "title": "Pastel de Chocolate Espresso",
+    "id": "a79DV18g4Eo",
+    "duration": "1:57",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=a79DV18g4Eo",
+    "family": "recipe-multipan",
+    "requirements": "MultiPan."
+  },
+  {
+    "product": "Olla de presión de 6 litros",
+    "title": "Costillas Estofadas con Puré de Papa",
+    "id": "R57vXzfvnOI",
+    "duration": "2:30",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=R57vXzfvnOI",
+    "family": "recipe-pressure-6",
+    "requirements": "Olla de presión de 6 litros."
+  },
+  {
+    "product": "Olla de presión de 10 litros",
+    "title": "Birria de Res",
+    "id": "iH3BuWHXIGQ",
+    "duration": "2:52",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=iH3BuWHXIGQ",
+    "family": "recipe-pressure-10",
+    "requirements": "Olla de presión de 10 litros."
+  },
+  {
+    "product": "Power Blender Max",
+    "title": "Agua Chile Verde",
+    "id": "5tCU3oBmKss",
+    "duration": "0:51",
+    "type": "Recetas",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=5tCU3oBmKss",
+    "family": "recipe-blender-max",
+    "requirements": "Power Blender Max."
+  },
+  {
+    "product": "Power Blender Max",
+    "title": "Dip de Queso Fresco Batido con Verduras de Verano",
+    "id": "DhcwmfZ-jVU",
+    "duration": "1:01",
+    "type": "Recetas",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=DhcwmfZ-jVU",
+    "family": "recipe-blender-max",
+    "requirements": "Power Blender Max."
+  },
+  {
+    "product": "Power Blender Go + recipiente picador Go Plus",
+    "title": "Sofrito",
+    "id": "HDhDwSA8628",
+    "duration": "0:51",
+    "type": "Recetas",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=HDhDwSA8628",
+    "family": "recipe-blender-go",
+    "requirements": "Power Blender Go con recipiente picador Go Plus. Requiere ese accesorio."
+  },
+  {
+    "product": "Power Blender Go + jarra Go Plus + Easy Release de 10 pulgadas",
+    "title": "Tortitas de avena y plátano",
+    "id": "wp7e0izJSOs",
+    "duration": "0:57",
+    "type": "Recetas",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=wp7e0izJSOs",
+    "family": "recipe-blender-go",
+    "requirements": "Power Blender Go con jarra Go Plus y sartén Deluxe Easy Release de 10 pulgadas."
+  },
+  {
+    "product": "Sartén Deluxe Easy Release",
+    "title": "Camarones empanizados",
+    "id": "S9e6fkvYX4s",
+    "duration": "2:21",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=S9e6fkvYX4s",
+    "family": "recipe-easy-release",
+    "requirements": "Sartén Deluxe Easy Release. Ajusta las cantidades a la capacidad de tu sartén."
+  },
+  {
+    "product": "Sartén Deluxe Easy Release de 10 pulgadas",
+    "title": "Ensalada de verduras con nueces y crumble de parmesano",
+    "id": "_p1vb_ffosM",
+    "duration": "1:40",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=_p1vb_ffosM",
+    "family": "recipe-easy-release-10",
+    "requirements": "Sartén Deluxe Easy Release de 10 pulgadas."
+  },
+  {
+    "product": "Barista",
+    "title": "Café de Olla",
+    "id": "Fg1T6lbrlbg",
+    "duration": "0:51",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=Fg1T6lbrlbg",
+    "family": "recipe-barista",
+    "requirements": "Barista."
+  },
+  {
+    "product": "Barista",
+    "title": "Café Latte con Miel y Coco",
+    "id": "D5c5W1UBCKQ",
+    "duration": "0:56",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=D5c5W1UBCKQ",
+    "family": "recipe-barista",
+    "requirements": "Barista."
+  },
+  {
+    "product": "Barista",
+    "title": "Café Helado con galletas",
+    "id": "rxSm2HLkSuE",
+    "duration": "0:50",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=rxSm2HLkSuE",
+    "family": "recipe-barista",
+    "requirements": "Barista."
+  },
+  {
+    "product": "Chocolatera",
+    "title": "Chocolate Caliente",
+    "id": "yn6iKMIyq2s",
+    "duration": "0:31",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=yn6iKMIyq2s",
+    "family": "recipe-chocolatera",
+    "requirements": "Chocolatera."
+  },
+  {
+    "product": "Chocolatera",
+    "title": "Chocolate Caliente de Naranja",
+    "id": "p1e3gYyCrIA",
+    "duration": "1:13",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=p1e3gYyCrIA",
+    "family": "recipe-chocolatera",
+    "requirements": "Chocolatera."
+  },
+  {
+    "product": "Extractor de jugos Juicer",
+    "title": "Jugo de manzana verde y pepino",
+    "id": "vreJJ16s1fk",
+    "duration": "0:31",
+    "type": "Recetas",
+    "category": "Electrodomésticos",
+    "url": "https://www.youtube.com/watch?v=vreJJ16s1fk",
+    "family": "recipe-juicer",
+    "requirements": "Extractor de jugos Juicer."
+  },
+  {
+    "product": "Extractor de jugos Juicer",
+    "title": "Shots de Manzana Verde, Espinacas y Naranja, Jengibre y Cúrcuma",
+    "id": "eTUSfc2BrOg",
+    "duration": "1:07",
+    "type": "Recetas",
+    "category": "Electrodomésticos",
+    "url": "https://www.youtube.com/watch?v=eTUSfc2BrOg",
+    "family": "recipe-juicer",
+    "requirements": "Extractor de jugos Juicer."
+  },
+  {
+    "product": "ExperTea",
+    "title": "Té de Limón con Miel y Jengibre",
+    "id": "KRdQe2vzNiI",
+    "duration": "1:00",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=KRdQe2vzNiI",
+    "family": "recipe-expertea",
+    "requirements": "ExperTea."
+  },
+  {
+    "product": "ExperTea",
+    "title": "Té con Manzana",
+    "id": "9t1whiNGz98",
+    "duration": "1:03",
+    "type": "Recetas",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=9t1whiNGz98",
+    "family": "recipe-expertea",
+    "requirements": "ExperTea."
+  },
+  {
+    "product": "Máquina de ensaladas + sartén de 10.5 pulgadas",
+    "title": "Lasaña Vegetariana",
+    "id": "y0E9xvDDhjo",
+    "duration": "1:01",
+    "type": "Recetas",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=y0E9xvDDhjo",
+    "family": "recipe-salad-machine",
+    "requirements": "Máquina de ensaladas y un sartén de 10.5 pulgadas."
+  },
+  {
+    "product": "Sartén NOVEL de 10.5 pulgadas",
+    "title": "Ensalada de Salmón a la Plancha y en Escamas",
+    "id": "h0I_lgJ1758",
+    "duration": "1:20",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=h0I_lgJ1758",
+    "family": "recipe-novel-10-5",
+    "requirements": "Sartén NOVEL de 10.5 pulgadas."
+  },
+  {
+    "product": "Sartén NOVEL de 10.5 pulgadas",
+    "title": "Ensalada de pechuga de pollo",
+    "id": "xdAOOykr3Nk",
+    "duration": "1:17",
+    "type": "Recetas",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=xdAOOykr3Nk",
+    "family": "recipe-novel-10-5",
+    "requirements": "Sartén NOVEL de 10.5 pulgadas."
+  },
+  {
+    "product": "Mixing Bowls con accesorios de rallado y corte",
+    "title": "Ensalada Agitada",
+    "id": "ULpGq-7tooA",
+    "duration": "0:36",
+    "type": "Recetas",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=ULpGq-7tooA",
+    "family": "recipe-mixing-bowls",
+    "requirements": "Mixing Bowls con sus accesorios de rallado y corte. No corresponde al juego antiguo de tres tazones."
+  }
 
 ];
   const families = [
@@ -991,6 +1257,167 @@
       "y1sz5QIV5oc"
     ]
   }
+,
+
+  {
+    "id": "recipe-multipan",
+    "label": "Recetas MultiPan",
+    "codes": [
+      "CO4911"
+    ],
+    "videoIds": [
+      "REj6w1WIzcw",
+      "467WPWSALpg",
+      "a79DV18g4Eo"
+    ]
+  },
+  {
+    "id": "recipe-pressure-6",
+    "label": "Recetas olla de presión de 6 litros",
+    "codes": [
+      "CO1253"
+    ],
+    "videoIds": [
+      "R57vXzfvnOI"
+    ]
+  },
+  {
+    "id": "recipe-pressure-10",
+    "label": "Recetas olla de presión de 10 litros",
+    "codes": [
+      "CO1258"
+    ],
+    "videoIds": [
+      "iH3BuWHXIGQ"
+    ]
+  },
+  {
+    "id": "recipe-blender-max",
+    "label": "Recetas Power Blender Max",
+    "codes": [
+      "ES0082"
+    ],
+    "videoIds": [
+      "5tCU3oBmKss",
+      "DhcwmfZ-jVU"
+    ]
+  },
+  {
+    "id": "recipe-blender-go",
+    "label": "Recetas Power Blender Go con accesorios",
+    "codes": [
+      "ES4200"
+    ],
+    "videoIds": [
+      "HDhDwSA8628",
+      "wp7e0izJSOs"
+    ]
+  },
+  {
+    "id": "recipe-easy-release",
+    "label": "Recetas sartenes Deluxe Easy Release",
+    "codes": [
+      "CO9740",
+      "CO9736",
+      "CO9738",
+      "CO9739"
+    ],
+    "videoIds": [
+      "S9e6fkvYX4s"
+    ]
+  },
+  {
+    "id": "recipe-easy-release-10",
+    "label": "Recetas Deluxe Easy Release de 10 pulgadas",
+    "codes": [
+      "CO9740",
+      "CO9738"
+    ],
+    "videoIds": [
+      "wp7e0izJSOs",
+      "_p1vb_ffosM"
+    ]
+  },
+  {
+    "id": "recipe-barista",
+    "label": "Recetas Barista",
+    "codes": [
+      "CO2106"
+    ],
+    "videoIds": [
+      "Fg1T6lbrlbg",
+      "D5c5W1UBCKQ",
+      "rxSm2HLkSuE"
+    ]
+  },
+  {
+    "id": "recipe-chocolatera",
+    "label": "Recetas Chocolatera",
+    "codes": [
+      "CO0101"
+    ],
+    "videoIds": [
+      "yn6iKMIyq2s",
+      "p1e3gYyCrIA"
+    ]
+  },
+  {
+    "id": "recipe-juicer",
+    "label": "Recetas Juicer",
+    "codes": [
+      "JU0038"
+    ],
+    "videoIds": [
+      "vreJJ16s1fk",
+      "eTUSfc2BrOg"
+    ]
+  },
+  {
+    "id": "recipe-expertea",
+    "label": "Recetas ExperTea",
+    "codes": [
+      "CO1001"
+    ],
+    "videoIds": [
+      "KRdQe2vzNiI",
+      "9t1whiNGz98"
+    ]
+  },
+  {
+    "id": "recipe-salad-machine",
+    "label": "Recetas máquina de ensaladas",
+    "codes": [
+      "PR2614"
+    ],
+    "videoIds": [
+      "y0E9xvDDhjo"
+    ]
+  },
+  {
+    "id": "recipe-novel-10-5",
+    "label": "Recetas NOVEL de 10.5 pulgadas",
+    "codes": [
+      "CO9590",
+      "CO9893",
+      "CO9563",
+      "CO9883",
+      "CO9554"
+    ],
+    "videoIds": [
+      "h0I_lgJ1758",
+      "xdAOOykr3Nk"
+    ]
+  },
+  {
+    "id": "recipe-mixing-bowls",
+    "label": "Recetas tazones para mezclar y rallar",
+    "codes": [
+      "CO4900"
+    ],
+    "videoIds": [
+      "ULpGq-7tooA"
+    ]
+  }
 
 ];
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -1006,6 +1433,11 @@
     // Shared care videos are linked explicitly, not inherited from a whole line.
     const videoIds = new Set(families.filter(family => selected.includes(family.id)).flatMap(family => family.videoIds));
     return videos.filter(video => videoIds.has(video.id));
+  }
+  function filterVideos(items, { query = '', category = '', type = '' } = {}) {
+    const term = normalize(query);
+    return items.filter(video => (!type || video.type === type) && (!category || video.category === category)
+      && (!term || normalize(`${video.product} ${video.title} ${video.type} ${video.requirements || ''} ${video.category === 'Licuadoras' ? 'licuadora batidora' : ''}`).includes(term)));
   }
   // Resolve only catalog IDs: caller-provided URLs can never become iframe sources.
   function embedUrl(id) {
@@ -1031,7 +1463,7 @@
     return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
   }
   root.TecProductVideoCatalog = Object.freeze({
-    version: '20261028-videos4', videos: Object.freeze(videos), families: Object.freeze(families),
-    forProduct, byId: id => byId.get(id) || null, embedUrl, thumbnailUrl, normalize
+    version: '20261028-recipes1', videos: Object.freeze(videos), families: Object.freeze(families),
+    forProduct, filterVideos, byId: id => byId.get(id) || null, embedUrl, thumbnailUrl, normalize
   });
 })(globalThis);

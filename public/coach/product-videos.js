@@ -2,7 +2,8 @@
   'use strict';
   const catalog = globalThis.TecProductVideoCatalog;
   if (!catalog) return;
-  let dialog, heading, subtitle, search, category, kind, grid, count, player, status, retry;
+  let dialog, heading, subtitle, search, category, typeTabs, grid, count, player, status, retry, requirements;
+  let kind = '';
   let activeVideo = null, available = [], opener = null, previousOverflow = '', origin = '';
   let viewerActive = false;
   const node = (tag, className, text) => {
@@ -15,6 +16,7 @@
     // Removing the frame also stops sound, including when closing with Escape.
     player.replaceChildren();
     player.hidden = true;
+    if (requirements) requirements.hidden = true;
   }
   function finishClose() {
     // A delayed close event from the previous opening must not affect a new one.
@@ -52,15 +54,14 @@
     frame.referrerPolicy = 'strict-origin-when-cross-origin';
     player.append(frame);
     player.hidden = false;
+    requirements.textContent = video.requirements ? `Necesitas: ${video.requirements}` : '';
+    requirements.hidden = !video.requirements;
     status.textContent = `${video.title}. Pulsa reproducir. Si no carga, comprueba tu conexión y toca Reintentar video.`;
     dialog.querySelector('[data-tec-video-body]').scrollTop = 0;
   }
   function renderList() {
-    const query = catalog.normalize(search.value);
-    const selected = available.filter(video => (!query || catalog.normalize(
-      `${video.product} ${video.title} ${video.category} ${video.category === 'Licuadoras' ? 'licuadora batidora' : ''}`
-    ).includes(query)) && (!category.value || video.category === category.value) && (!kind.value || video.type === kind.value));
-    count.textContent = `${selected.length} ${selected.length === 1 ? 'video disponible' : 'videos disponibles'}`;
+    const selected = catalog.filterVideos(available, { query: search.value, category: category.value, type: kind });
+    count.textContent = `${selected.length} ${kind === 'Recetas' ? (selected.length === 1 ? 'receta disponible' : 'recetas disponibles') : (selected.length === 1 ? 'video disponible' : 'videos disponibles')}`;
     grid.replaceChildren();
     if (!selected.length) grid.append(node('p', 'tec-video-empty', 'No hay videos con ese filtro. Prueba otro nombre.'));
     for (const video of selected) {
@@ -78,8 +79,27 @@
       const icon = node('span', 'tec-video-play', '▶'); icon.setAttribute('aria-hidden', 'true'); button.append(icon);
       if (video.duration) button.append(node('span', 'tec-video-duration', video.duration));
       button.addEventListener('click', () => play(video));
-      card.append(button, node('p', 'tec-video-type', video.type), node('h3', '', video.product), node('p', 'tec-video-title', video.title));
+      card.append(button, node('p', 'tec-video-type', video.type), node('h3', '', video.type === 'Recetas' ? video.title : video.product));
+      if (video.type !== 'Recetas') card.append(node('p', 'tec-video-title', video.title));
+      if (video.requirements) card.append(node('p', 'tec-video-requirements', `Necesitas: ${video.requirements}`));
       grid.append(card);
+    }
+  }
+  function renderTypes() {
+    typeTabs.replaceChildren();
+    for (const [value, label] of [['', 'Todos'], ['Presentación', 'Presentación'], ['Uso y cuidados', 'Uso y cuidados'], ['Recetas', 'Recetas']]) {
+      const total = available.filter(video => !value || video.type === value).length;
+      if (value && !total) continue;
+      const button = node('button', 'tec-video-type-button', `${label} (${total})`);
+      button.type = 'button'; button.dataset.tecVideoType = value;
+      button.setAttribute('aria-pressed', String(kind === value));
+      button.addEventListener('click', () => {
+        kind = value; stopPlayback(); activeVideo = null; retry.hidden = true;
+        status.textContent = navigator.onLine === false ? 'Necesitas internet para reproducir los videos. Puedes seguir usando el Coach sin perder tus datos.' : value === 'Recetas' ? 'Elige una receta para verla aquí. Revisa los utensilios que necesita.' : 'Elige un video para verlo aquí.';
+        renderTypes(); renderList();
+        typeTabs.querySelector(`[data-tec-video-type="${value}"]`)?.focus({ preventScroll: true });
+      });
+      typeTabs.append(button);
     }
   }
   function createDialog() {
@@ -94,6 +114,7 @@
     const body = node('div', 'tec-video-body'); body.setAttribute('data-tec-video-body', '');
     const note = node('p', 'tec-video-note', 'Videos oficiales de Royal Prestige · Requieren internet. Confirma que el modelo mostrado coincida con tu producto.');
     player = node('div', 'tec-video-player'); player.hidden = true;
+    requirements = node('p', 'tec-video-requirements'); requirements.hidden = true;
     status = node('p', 'tec-video-status'); status.setAttribute('role', 'status');
     retry = node('button', 'nav-button', 'Reintentar video'); retry.type = 'button'; retry.hidden = true;
     retry.addEventListener('click', () => { if (activeVideo) play(activeVideo); });
@@ -102,13 +123,12 @@
     category = node('select'); category.setAttribute('aria-label', 'Categoría de videos');
     category.add(new Option('Todas las categorías', ''));
     for (const label of [...new Set(catalog.videos.map(video => video.category))]) category.add(new Option(label, label));
-    kind = node('select'); kind.setAttribute('aria-label', 'Tipo de video'); kind.add(new Option('Todos los tipos', ''));
-    for (const label of ['Presentación', 'Uso y cuidados']) kind.add(new Option(label, label));
-    search.addEventListener('input', renderList); category.addEventListener('change', renderList); kind.addEventListener('change', renderList);
-    filters.append(search, category, kind);
+    typeTabs = node('div', 'tec-video-types'); typeTabs.setAttribute('role', 'group'); typeTabs.setAttribute('aria-label', 'Tipo de video');
+    search.addEventListener('input', renderList); category.addEventListener('change', renderList);
+    filters.append(search, category);
     count = node('p', 'tec-video-count'); count.setAttribute('role', 'status');
     grid = node('div', 'tec-video-grid');
-    body.append(note, player, status, retry, filters, count, grid); dialog.append(header, body); document.body.append(dialog);
+    body.append(note, typeTabs, player, requirements, status, retry, filters, count, grid); dialog.append(header, body); document.body.append(dialog);
     dialog.addEventListener('close', finishClose);
     dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(); });
     window.addEventListener('coach:workspace-change', closeDialog);
@@ -132,13 +152,13 @@
     if (dialog.open) return;
     available = [...videos].sort((a, b) => (a.type === 'Presentación' ? 0 : 1) - (b.type === 'Presentación' ? 0 : 1));
     opener = button; origin = returnTo;
-    heading.textContent = product ? `Videos · ${product.nombre_producto || product.name || 'Producto'}` : 'Videos de productos';
+    heading.textContent = product ? `Videos · ${product.nombre_producto || product.name || 'Producto'}` : 'Videos y recetas de productos';
     subtitle.textContent = `Al cerrar vuelves a ${origin}.`;
     dialog.querySelector('[data-tec-video-close]').setAttribute('aria-label', `Cerrar videos y volver a ${origin}`);
-    search.value = ''; category.value = ''; kind.value = '';
+    search.value = ''; category.value = ''; kind = '';
     activeVideo = null; retry.hidden = true; stopPlayback();
     status.textContent = navigator.onLine === false ? 'Necesitas internet para reproducir los videos. Puedes seguir usando el Coach sin perder tus datos.' : 'Elige un video para verlo aquí.';
-    renderList(); previousOverflow = document.body.style.overflow;
+    renderTypes(); renderList(); previousOverflow = document.body.style.overflow;
     dialog.showModal(); document.body.style.overflow = 'hidden';
     viewerActive = true;
     if (product) play(available[0]);

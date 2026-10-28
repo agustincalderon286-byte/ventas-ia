@@ -32,3 +32,9 @@
 .tec-video-dialog button:focus-visible, .tec-video-dialog input:focus-visible, .tec-video-dialog select:focus-visible { outline: 3px solid #2a72af; outline-offset: 3px; }
 @media (max-width: 900px) { .tec-video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .tec-video-grid { grid-template-columns: minmax(0, 1fr); } .tec-video-header { align-items: start; padding: 12px; gap: 8px; } .tec-video-close { max-width: 135px; font-size: 13px; } .tec-video-header p { font-size: 12px; } .tec-video-filters > * { width: 100%; } }
+
+.tec-video-types { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
+.tec-video-type-button { min-height: 44px; padding: 10px 16px; border: 1px solid #b9cbdc; border-radius: 10px; background: #fff; color: #102f52; font: inherit; font-weight: 650; cursor: pointer; }
+.tec-video-type-button[aria-pressed="true"] { background: #102f52; color: #fff; border-color: #102f52; }
+.tec-video-requirements, .tec-video-card .tec-video-requirements { color: #334e69; font-size: 14px; line-height: 1.6; }
+.tec-video-body > .tec-video-requirements { background: #fff; border-left: 4px solid #a71932; border-radius: 6px; padding: 12px 14px; }
