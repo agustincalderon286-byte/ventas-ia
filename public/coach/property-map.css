@@ -10,6 +10,13 @@ html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"
 .tec-property-search label { display: grid; gap: 8px; font-size: 13px; font-weight: 700; color: #173d64; }
 .tec-property-search input, .tec-property-search select { width: 100%; min-width: 0; min-height: 48px; box-sizing: border-box; padding: 12px 13px; border-radius: 12px; border: 1px solid #cbd8e5; color: #163856; background: white; font-size: 15px; }
 .tec-property-search button { min-height: 48px; }
+.tec-property-address-field { position: relative; min-width: 0; }
+.tec-address-popup { position: absolute; top: calc(100% + 5px); left: 0; width: max(100%, 330px); max-width: min(520px, calc(100vw - 64px)); z-index: 30; box-sizing: border-box; border: 1px solid #b9cce0; border-radius: 12px; background: #fff; box-shadow: 0 12px 30px #071f3b26; overflow: hidden; }
+.tec-address-popup[hidden] { display: none; }
+.tec-property-workspace .tec-address-status { margin: 0; padding: 11px 13px; color: #52677e; background: #f1f6fb; font-size: 12px; line-height: 1.5; }
+[data-address-options] { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.tec-address-option { padding: 13px; min-height: 44px; box-sizing: border-box; color: #173d64; background: #fff; border-top: 1px solid #e1e9f1; font-size: 14px; line-height: 1.5; cursor: pointer; overflow-wrap: anywhere; }
+.tec-address-option:hover, .tec-address-option[aria-selected="true"] { background: #e8f1fb; box-shadow: inset 3px 0 #225c94; }
 .tec-property-search-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
 .tec-property-search-tools span { font-size: 12px; color: #5a6f85; }
 .tec-property-workspace .tec-property-status { padding: 14px 16px; border-radius: 12px; background: #eff5fb; color: #254e73; font-size: 14px; margin: 18px 0; }

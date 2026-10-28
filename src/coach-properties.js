@@ -27,6 +27,40 @@ export function normalizePropertyCity(value = "HILLSIDE") {
 
 function literal(value) { return `'${String(value).replaceAll("'", "''")}'`; }
 function clean(value) { return String(value || "").trim().replace(/\s+/g, " "); }
+const SUGGESTION_FIELDS = "prop_address_full,prop_address_city_name,prop_address_zipcode_1";
+
+function suggestionInput(value) {
+  if (typeof value !== "string" || value.length > 160) throw propertyError(400, "Escribe el número y las primeras letras de la calle.");
+  const raw = value.trim();
+  if (!raw) return "";
+  if (!/^[\p{L}\d #/.'-]+$/u.test(raw)) throw propertyError(400, "Escribe la calle por separado de la ciudad.");
+  if (!/^\d[\dA-Z/-]*\s+[\p{L}]/iu.test(raw) || raw.length < 5) return "";
+  return normalizePropertyAddress(raw);
+}
+
+function streetForMatch(address) {
+  return address.replace(/^\S+\s+/, "").replace(/^(N|S|E|W)\s+/, "").replace(/\s+(ST|AVE|RD|DR|BLVD|LN|CT|PL|TER|PKWY)$/, "").slice(0, 80);
+}
+
+function editDistance(a, b) {
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j++) next[j] = Math.min(next[j - 1] + 1, row[j] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    row = next;
+  }
+  return row[b.length];
+}
+
+function suggestionScore(input, address) {
+  if (address.startsWith(input)) return 0;
+  const typed = streetForMatch(input), street = streetForMatch(address);
+  if (street.startsWith(typed)) return 1;
+  if (typed.length < 4) return Infinity;
+  let distance = Infinity;
+  for (let length = Math.max(1, typed.length - 2); length <= Math.min(street.length, typed.length + 2); length++) distance = Math.min(distance, editDistance(typed, street.slice(0, length)));
+  return distance <= Math.min(3, Math.floor(typed.length / 4)) ? 2 + distance : Infinity;
+}
 function ownerName(value) { const name = clean(value); return /^(NULL|UNKNOWN|N\/A|NONE|TAXPAYER OF|CURRENT OWNER|OWNER OF RECORD)$/i.test(name) ? "" : name; }
 function coordinates(row) {
   if (row?.lat == null || row?.lon == null || row.lat === "" || row.lon === "") return null;
@@ -97,6 +131,35 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
     return request(PARCEL_DATASET, { $select: "pin,year,lat,lon", $where: `pin in (${pins.map(literal).join(",")})`, $limit: String(pins.length) });
   }
 
+  async function suggest({ address: inputAddress, city: inputCity }) {
+    const address = suggestionInput(inputAddress);
+    if (!address) return { suggestions: [], needsMore: true };
+    const city = normalizePropertyCity(inputCity);
+    return cached(`suggest:${city}:${address}`, async () => {
+      const year = await latestYear(city);
+      const base = `year = ${year} AND prop_address_city_name = ${literal(city)}`;
+      const query = where => ({ $select: SUGGESTION_FIELDS, $group: SUGGESTION_FIELDS, $where: where, $order: "prop_address_full", $limit: "201" });
+      // Only scan addresses at the same house number; never download the county.
+      const house = address.split(" ")[0];
+      const rows = await cached(`suggest-house:${city}:${year}:${house}`, () => request(ADDRESS_DATASET, query(`${base} AND starts_with(prop_address_full, ${literal(house + " ")})`)));
+      // A common house number may exceed the sample. Still retrieve direct prefix matches.
+      const direct = rows.length > 200 ? await request(ADDRESS_DATASET, { ...query(`${base} AND starts_with(prop_address_full, ${literal(address)})`), $limit: "9" }) : [];
+      const ranked = [...direct, ...rows.slice(0, 200)].map(row => ({ row, score: suggestionScore(address, clean(row.prop_address_full)) })).filter(item => Number.isFinite(item.score));
+      ranked.sort((a, b) => a.score - b.score || clean(a.row.prop_address_full).localeCompare(clean(b.row.prop_address_full)));
+      const seen = new Set();
+      const suggestions = [];
+      for (const { row, score } of ranked) {
+        const street = clean(row.prop_address_full), rowCity = clean(row.prop_address_city_name), zipCode = clean(row.prop_address_zipcode_1);
+        const key = `${street}:${rowCity}:${zipCode}`;
+        if (!street || !rowCity || seen.has(key)) continue;
+        seen.add(key);
+        suggestions.push({ address: street, city: rowCity, zipCode, formattedAddress: [street, rowCity, "IL", zipCode].filter(Boolean).join(", "), approximate: score >= 2 });
+        if (suggestions.length === 8) break;
+      }
+      return { suggestions, truncated: rows.length > 200 || ranked.length > 8 };
+    });
+  }
+
   async function search({ address: inputAddress, city: inputCity }) {
     const address = normalizePropertyAddress(inputAddress), city = normalizePropertyCity(inputCity);
     return cached(`search:${city}:${address}`, async () => {
@@ -162,7 +225,7 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
       };
     });
   }
-  return { search, nearby };
+  return { search, nearby, suggest };
 }
 
 export function registerCoachPropertyRoutes(app, { requireCoachActivo, service = createCoachPropertyService(), now = Date.now }) {
@@ -174,12 +237,13 @@ export function registerCoachPropertyRoutes(app, { requireCoachActivo, service =
     const userId = String(auth.user?._id || "");
     if (!userId) return res.status(403).json({ error: "Entra a tu cuenta para consultar propiedades." });
     const time = now();
+    const key = method === "suggest" ? `${userId}:suggest` : userId;
     for (const [key, entry] of requests) if (entry.expires <= time) requests.delete(key);
-    if (!requests.has(userId) && requests.size >= 2000) return res.status(503).json({ error: "Hay muchas consultas en curso. Intenta más tarde." });
-    const bucket = requests.get(userId) || { count: 0, expires: time + 5 * 60 * 1000 };
+    if (!requests.has(key) && requests.size >= 2000) return res.status(503).json({ error: "Hay muchas consultas en curso. Intenta más tarde." });
+    const bucket = requests.get(key) || { count: 0, expires: time + 5 * 60 * 1000 };
     bucket.count++;
-    requests.set(userId, bucket);
-    if (bucket.count > 30) {
+    requests.set(key, bucket);
+    if (bucket.count > (method === "suggest" ? 180 : 30)) {
       res.set("Retry-After", String(Math.ceil((bucket.expires - time) / 1000)));
       return res.status(429).json({ error: "Alcanzaste el límite de búsquedas. Espera unos minutos antes de continuar." });
     }
@@ -188,4 +252,5 @@ export function registerCoachPropertyRoutes(app, { requireCoachActivo, service =
   }
   app.get("/api/coach/properties/search", (req, res, next) => handle(req, res, "search").catch(next));
   app.get("/api/coach/properties/nearby", (req, res, next) => handle(req, res, "nearby").catch(next));
+  app.get("/api/coach/properties/suggest", (req, res, next) => handle(req, res, "suggest").catch(next));
 }

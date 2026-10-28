@@ -1,4 +1,5 @@
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
+import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-address1";
 
 (() => {
   const MAX_STOPS = 4;
@@ -48,6 +49,7 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
     root.dataset.initialized = "true";
     const find = selector => root.querySelector(`[data-property-${selector}]`);
     const form = find("search"), feedback = find("feedback"), candidatesBox = find("candidates"), results = find("results");
+    const addressSuggestions = initTecAddressSuggestions({ form, request });
     const mapBox = find("map"), list = find("list"), route = find("route"), clear = find("clear");
     const appleRoute = find("apple-route"), appleStop = find("apple-stop");
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
@@ -447,12 +449,13 @@ import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propert
       if (appointment.city) form.elements.city.value = appointment.city;
       message("Dirección copiada. Revisa que la calle y la ciudad estén en sus campos y pulsa Buscar propiedades.");
       form.elements.address.focus();
+      addressSuggestions.refresh?.();
     });
     clear.addEventListener("click", () => { selected = []; syncRoute(); });
     route.addEventListener("click", event => { if (!route.hasAttribute("href")) event.preventDefault(); });
     window.addEventListener("coach:workspace-change", event => {
       if (event.detail?.workspace === "mapa") { requestAnimationFrame(ensureMap); refreshVisits(); }
-      else if (dialog.open) dialog.close();
+      else { addressSuggestions.close(); if (dialog.open) dialog.close(); }
     });
   };
 })();

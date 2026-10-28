@@ -122,3 +122,74 @@ test("property endpoints require an active account and rate-limit each account i
   assert.equal(limited.headers["Cache-Control"], "private, no-store");
   assert.equal((await run("two")).code, 200);
 });
+
+test("address suggestions match partial streets, abbreviations and small typos without exposing owners", async () => {
+  let calls = 0;
+  const service = createCoachPropertyService({ fetchImpl: async url => {
+    calls++;
+    if (url.searchParams.get("$select") === "max(year) as year") return ok([{ year: "2026" }]);
+    assert.equal(url.searchParams.get("$limit"), "201");
+    assert.match(url.searchParams.get("$where"), /starts_with\(prop_address_full, '4415 '\)/);
+    assert.doesNotMatch(url.searchParams.get("$select"), /owner|pin|lat|lon/);
+    return ok([property("1", "4415 HARRISON ST", "PRIVATE OWNER"), property("2", "4415 N HARLEM AVE"), property("3", "4415 HARRISON ST")]);
+  } });
+  for (const address of ["4415 har", "4415 harison", "4415 harrison street"]) {
+    const result = await service.suggest({ address, city: "Hillside" });
+    assert.ok(result.suggestions.some(item => item.address === "4415 HARRISON ST"));
+    assert.equal(result.suggestions.filter(item => item.address === "4415 HARRISON ST").length, 1);
+    assert.doesNotMatch(JSON.stringify(result), /PRIVATE OWNER|ownerName|pin/);
+    if (address === "4415 harison") assert.equal(result.suggestions[0].approximate, true);
+  }
+  assert.equal(calls, 2, "typing more letters reuses the bounded house-number query");
+  const unrelated = await service.suggest({ address: "4415 zyxw", city: "Hillside" });
+  assert.deepEqual(unrelated.suggestions, []);
+});
+
+test("short or invalid suggestions do not query the county, and punctuation is safely escaped", async () => {
+  let calls = 0;
+  const service = createCoachPropertyService({ fetchImpl: async url => {
+    calls++;
+    if (url.searchParams.get("$select") === "max(year) as year") {
+      assert.match(url.searchParams.get("$where"), /O''HARE/);
+      return ok([{ year: "2026" }]);
+    }
+    return ok([]);
+  } });
+  for (const address of ["", "44", "4415", "Main"]) assert.equal((await service.suggest({ address, city: "Hillside" })).needsMore, true);
+  for (const address of ["4415 TEST; DROP", "4415 ST, IL", {}]) await assert.rejects(service.suggest({ address, city: "Hillside" }), { status: 400 });
+  assert.equal(calls, 0);
+  await service.suggest({ address: "4415 O'NE", city: "O'Hare" });
+  assert.equal(calls, 2);
+});
+
+test("common house numbers stay bounded but still find a typed street beyond the sample", async () => {
+  const service = createCoachPropertyService({ fetchImpl: async url => {
+    if (url.searchParams.get("$select") === "max(year) as year") return ok([{ year: "2026" }]);
+    if (url.searchParams.get("$limit") === "201") return ok(Array.from({ length: 201 }, (_, i) => property(String(i), `100 A${i} ST`)));
+    assert.equal(url.searchParams.get("$limit"), "9");
+    assert.match(url.searchParams.get("$where"), /starts_with\(prop_address_full, '100 ZEB'\)/);
+    return ok([property("target", "100 ZEBRA ST")]);
+  } });
+  const result=await service.suggest({ address: "100 zeb", city: "Hillside" });
+  assert.equal(result.suggestions[0].address, "100 ZEBRA ST");
+  assert.equal(result.truncated, true);
+});
+
+test("suggestions enforce their own quota and never consume the final property-search allowance", async () => {
+  const handlers = new Map(); let authenticated = false; let suggestions = 0;
+  registerCoachPropertyRoutes({ get: (path, handler) => handlers.set(path, handler) }, {
+    requireCoachActivo: async (req, res) => authenticated ? { user: { _id: "a" } } : (res.status(401).json({}), null),
+    service: { suggest: async () => { suggestions++; return { suggestions: [] }; }, search: async () => ({ candidates: [] }) }
+  });
+  const run = async method => {
+    const res = { code: 200, headers: {}, set(k,v) { this.headers[k] = v; return this; }, status(v) { this.code = v; return this; }, json(v) { this.body = v; return this; } };
+    await handlers.get(`/api/coach/properties/${method}`)({ query: {} }, res, error => { throw error; });
+    return res;
+  };
+  assert.equal((await run("suggest")).code, 401); assert.equal(suggestions, 0);
+  authenticated = true;
+  for (let i=0; i<180; i++) assert.equal((await run("suggest")).code, 200);
+  const limited = await run("suggest"); assert.equal(limited.code, 429);
+  assert.equal(limited.headers["Cache-Control"], "private, no-store");
+  assert.equal((await run("search")).code, 200);
+});

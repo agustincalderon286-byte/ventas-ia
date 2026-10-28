@@ -26,7 +26,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261025-native-offline2" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261025-native-offline2" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-address1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261025-native-offline2" />
   </head>
   <body class="coach-app-body">
@@ -224,12 +224,18 @@
               <span class="tec-property-coverage">Cook County · Illinois</span>
             </div>
             <form class="coach-form tec-property-search" data-property-search>
-              <label>Dirección de la cita<input name="address" type="text" placeholder="Número y calle, por ejemplo 123 MAIN ST" maxlength="160" autocomplete="street-address" required /></label>
+              <div class="tec-property-address-field">
+                <label for="tec-property-address">Dirección de la cita<input id="tec-property-address" name="address" type="text" placeholder="Empieza con el número y la calle" maxlength="160" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tec-address-options" aria-expanded="false" required /></label>
+                <div class="tec-address-popup" data-address-popup hidden>
+                  <p class="tec-address-status" data-address-status role="status" aria-live="polite"></p>
+                  <div id="tec-address-options" data-address-options role="listbox" aria-label="Direcciones sugeridas"></div>
+                </div>
+              </div>
               <label>Ciudad<input name="city" type="text" value="Hillside" maxlength="60" autocomplete="address-level2" required /></label>
               <label>Buscar alrededor<select name="radius"><option value="100">100 metros</option><option value="200" selected>200 metros</option><option value="300">300 metros</option></select></label>
               <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
             </form>
-            <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe la calle por separado de la ciudad.</span></div>
+            <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe el número y las primeras letras de la calle, elige una sugerencia y pulsa Buscar propiedades. La ciudad va por separado.</span></div>
             <details class="tec-property-saved" data-property-saved><summary>Mis seguimientos por casa <span data-property-saved-count>0</span></summary><p data-property-saved-status>Las fichas y notas son privadas de tu cuenta. Aquí puedes retomarlas incluso sin buscar otra zona.</p><div data-property-saved-list></div></details>
             <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Comienza con la dirección de una cita. La búsqueda y el mapa necesitan internet.</p>
             <div class="tec-property-candidates" data-property-candidates hidden></div>
@@ -5858,7 +5864,7 @@
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261025-native-offline2"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
-    <script type="module" src="/coach/property-map.js?v=20261025-native-offline2"></script>
+    <script type="module" src="/coach/property-map.js?v=20261028-address1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/product-search.js?v=20261025-alias1"></script>
     <script src="/coach/app.js?v=20261025-native-offline2"></script>
