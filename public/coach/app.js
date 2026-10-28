@@ -212,7 +212,8 @@ window.prepareTecNativeOffline = async () => {
     channel.port1.onmessage = event => { clearTimeout(timer); channel.port1.close(); event.data?.ok ? resolve() : reject(new Error("Preparación incompleta.")); };
     worker.postMessage({ type: "PREPARE_NATIVE_OFFLINE" }, [channel.port2]);
   });
-  return globalThis.window?.TecNativeOffline.prepareCatalogs([...new Set(products.map(p => p.imagen_producto).filter(Boolean))]);
+  const giftImages = Array.from(document.querySelectorAll("[data-program-gift-visual] img"), image => image.getAttribute("src")).filter(Boolean);
+  return globalThis.window?.TecNativeOffline.prepareCatalogs([...new Set([...products.map(p => p.imagen_producto).filter(Boolean), ...giftImages])]);
 };
 
 async function tecNativeCachedList(url) {

@@ -33,9 +33,9 @@
   }
 
   document.addEventListener("click", event => {
-    const button = event.target.closest?.("[data-order-calc-image-open], [data-survey-image-open]");
+    const button = event.target.closest?.("[data-order-calc-image-open], [data-survey-image-open], [data-program-gift-image-open]");
     if (!button) return;
-    const figure = button.closest("[data-order-calc-visual], [data-survey-product-visual]");
+    const figure = button.closest("[data-order-calc-visual], [data-survey-product-visual], [data-program-gift-visual]");
     const source = figure?.querySelector("img");
     if (!source?.getAttribute("src") || figure.hidden) return;
     if (!dialog) createViewer();
@@ -43,7 +43,8 @@
     opener = button;
     title.textContent = button.getAttribute("data-image-title") || figure.querySelector("[data-order-calc-visual-title]")?.textContent || "Producto Royal Prestige";
     detail.textContent = button.getAttribute("data-image-detail") || figure.querySelector("[data-order-calc-visual-meta]")?.textContent || "";
-    const origin = button.hasAttribute("data-survey-image-open") ? "la encuesta" : "la calculadora";
+    const origin = button.hasAttribute("data-program-gift-image-open") ? "4 en 14"
+      : button.hasAttribute("data-survey-image-open") ? "la encuesta" : "la calculadora";
     dialog.querySelector("button").setAttribute("aria-label", `Cerrar imagen y volver a ${origin}`);
     error.textContent = `No se pudo cargar la imagen. Cierra esta vista para volver a ${origin}.`;
     error.hidden = true;

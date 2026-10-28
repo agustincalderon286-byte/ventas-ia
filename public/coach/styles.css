@@ -4393,6 +4393,19 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 .tec-survey-image-open img { display: block; }
 .tec-survey-image-hint { position: absolute; right: 2px; bottom: 2px; padding: 4px 6px; border-radius: 8px; color: #fff; background: #102f52; font-size: 10px; line-height: 1.3; }
 .tec-survey-image-open:focus-visible { outline: 3px solid #2a72af; outline-offset: 2px; }
+
+.tec-program-gifts { margin: 24px 0; }
+.tec-program-gifts-heading { margin-bottom: 16px; }
+.tec-program-gifts-heading h4 { margin: 0; color: #102f52; font-size: 21px; }
+.tec-program-gifts-heading p { margin: 8px 0 0; color: #52677e; font-size: 14px; line-height: 1.6; }
+.tec-program-gift-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.tec-program-gift { min-width: 0; margin: 0; background: #fff; border: 1px solid #d5dfeb; border-radius: 16px; overflow: hidden; }
+.tec-program-gift button { position: relative; display: block; width: 100%; padding: 10px; border: 0; border-radius: 0; background: #fff; cursor: zoom-in; }
+.tec-program-gift img { display: block; width: 100%; height: 160px; object-fit: contain; }
+.tec-program-gift button span { position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 16px; color: #fff; background: #102f52; font-size: 11px; line-height: 1.4; }
+.tec-program-gift figcaption { padding: 12px 14px 16px; color: #102f52; font-size: 14px; line-height: 1.4; font-weight: 700; }
+.tec-program-gift button:focus-visible { outline: 3px solid #2a72af; outline-offset: -3px; }
+@media (max-width: 760px) { .tec-program-gift-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .tec-program-gift img { height: 125px; } .tec-program-gift figcaption { font-size: 13px; padding: 10px; } }
 [data-demo-recording-dock][data-paused="true"] .coach-demo-live-dot { background: #ad6500; animation: none; }
 
 .order-calc-suggestions {

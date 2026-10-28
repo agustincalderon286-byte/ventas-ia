@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-survey-images1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-survey-images1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-program-gifts1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-program-gifts1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -16,6 +16,8 @@ const TEC_CORE_ASSETS = [
   "/coach/product-image-viewer.js?v=20261028-image-viewer1",
   "/coach/app.js?v=20261028-survey-images1",
   "/coach/product-image-viewer.js?v=20261028-survey-images1",
+  "/coach/app.js?v=20261028-program-gifts1",
+  "/coach/product-image-viewer.js?v=20261028-program-gifts1",
   "/coach/product-search.js?v=20261025-alias1",
   "/coach/order-calculator.js?v=20261025-native-offline2",
   "/coach/offline-forms.js?v=20261025-native-offline2",
@@ -25,6 +27,13 @@ const TEC_CORE_ASSETS = [
   "/coach/styles.css?v=20261028-password-eye1",
   "/coach/styles.css?v=20261028-image-viewer1",
   "/coach/styles.css?v=20261028-survey-images1",
+  "/coach/styles.css?v=20261028-program-gifts1",
+  "/coach/assets/catalog/programa-4-en-14/utensilios-6-piezas.jpg",
+  "/coach/assets/catalog/programa-4-en-14/tazones-4-piezas-original-hycite.jpg",
+  "/coach/assets/catalog/programa-4-en-14/tablas-bambu.jpg",
+  "/coach/assets/catalog/programa-4-en-14/santoku-5-pulgadas.jpg",
+  "/coach/assets/catalog/programa-4-en-14/cacerola-actual.webp",
+  "/coach/assets/catalog/programa-4-en-14/tazones-mezclar.webp",
   "/coach/property-map.js?v=20261025-native-offline2",
   "/coach/property-map.css?v=20261025-native-offline2",
   "/coach/property-map.js?v=20261028-address1",
