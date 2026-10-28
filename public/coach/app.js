@@ -1495,7 +1495,8 @@ function initCoachWorkspaceTabs() {
   const visibleTabButtons = tabButtons.filter(button => !button.hidden);
   const validTabs = new Set(visibleTabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
   const defaultTab = visibleTabButtons[0]?.dataset.coachWorkspaceTab || "cierre";
-  let activeTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY) || defaultTab;
+  const savedTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY);
+  let activeTab = window.TecVisitHeader?.initialWorkspace(savedTab, defaultTab) || savedTab || defaultTab;
 
   if (!validTabs.has(activeTab)) {
     activeTab = defaultTab;
@@ -17024,6 +17025,7 @@ async function initCoachAppPage() {
     window.TecUi.alignFlow(appPage.querySelector(".coach-sidebar"));
     appPage.hidden = false;
     if (loading) loading.hidden = true;
+    window.TecVisitHeader?.ready();
   } catch (error) {
     appPage.hidden = true;
     if (loading) loading.hidden = false;

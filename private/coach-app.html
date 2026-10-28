@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="tec-compact-navigation">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,12 +25,12 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261028-floating-tools1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261028-compact-header1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
     <link rel="stylesheet" href="/coach/property-map.css?v=20261028-address1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-floating-tools1" />
   </head>
-  <body class="coach-app-body">
+  <body class="coach-app-body tec-compact-page">
     <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
       <h1>Preparando tu Coach</h1>
       <p data-coach-loading-message>Estamos verificando tu cuenta y preparando tus herramientas.</p>
@@ -39,8 +39,9 @@
     </section>
     <noscript><p>El Coach necesita JavaScript. Actívalo en tu navegador y vuelve a abrir la página. <a href="/coach/contacto/#recuperar-acceso">Solicitar ayuda</a></p></noscript>
     <div class="coach-shell" data-coach-app-page hidden>
-      <header class="coach-nav">
-        <a class="coach-brand coach-brand--tec" href="/coach/app/" data-coach-home-link aria-label="TEC Total Elite Coaching">
+      <header class="tec-visit-header" data-visit-header>
+<div class="coach-nav tec-visit-bar">
+<a class="coach-brand coach-brand--tec" href="/coach/app/" data-coach-home-link aria-label="TEC Total Elite Coaching">
           <span class="coach-brand-logo-frame">
             <img
               class="coach-brand-logo"
@@ -49,28 +50,11 @@
             />
           </span>
         </a>
-
-        <nav class="coach-nav-links">
-          <a class="nav-link" href="/coach/">Inicio</a>
-          <a class="nav-link" href="/coach/planes/">Plan</a>
-          <a class="nav-link" href="/coach/chef/" data-tec-chef-admin-link hidden>Chef</a>
-          <a class="nav-link" href="/control/" data-control-tower-link hidden>Torre</a>
-          <button class="nav-button" data-coach-return-session hidden>Volver a mi cuenta</button>
-          <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
-          <button class="primary-button" data-coach-logout>Cerrar sesion</button>
-        </nav>
-      </header>
-
-      <section class="coach-console">
-        <div class="coach-compact-bar">
-          <div class="coach-compact-head">
-            <div class="coach-hero-copy">
+<div class="coach-hero-copy">
               <div class="eyebrow" data-coach-active-kicker>Entrenamiento en accion</div>
-              <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
+              <h2><span data-coach-user-name>Distribuidor</span></h2>
             </div>
-
-            <div class="coach-hero-progress">
-              <div class="coach-compact-actions">
+<div class="coach-compact-actions">
                 <button class="secondary-button" type="button" data-coach-new-client data-telemarketing-hide>↻ Nuevo cliente</button>
                 <button class="nav-button" type="button" data-coach-open-messages data-telemarketing-hide>
                   Mensajes
@@ -79,14 +63,19 @@
                 <a class="nav-button" href="/control/" data-control-tower-link hidden>Ir a torre</a>
                 <div class="coach-chat-status" data-coach-chat-status>Listo</div>
               </div>
-            </div>
-          </div>
-
-        </div>
-
-        <aside class="coach-sidebar">
-          <div class="coach-workspace-switch">
-            <div class="coach-section-heading">
+<details class="tec-account-menu" data-visit-account-menu><summary>Mi cuenta <span aria-hidden="true">⌄</span></summary>
+<nav class="coach-nav-links">
+          <a class="nav-link" href="/coach/">Inicio</a>
+          <a class="nav-link" href="/coach/planes/">Plan</a>
+          <a class="nav-link" href="/coach/chef/" data-tec-chef-admin-link hidden>Chef</a>
+          <a class="nav-link" href="/control/" data-control-tower-link hidden>Torre</a>
+          <button class="nav-button" data-coach-return-session hidden>Volver a mi cuenta</button>
+          <button class="nav-button" data-open-billing-portal data-team-manager-only hidden>Suscripcion</button>
+          <button class="primary-button" data-coach-logout>Cerrar sesion</button>
+        </nav>
+</details></div>
+<div class="coach-workspace-switch">
+            <div class="coach-section-heading tec-sr-only">
               <div>
                 <h2 data-coach-workspace-title>Cierre</h2>
               </div>
@@ -184,6 +173,13 @@
             </div>
             <p class="tec-sr-only" data-coach-stage-notice role="status" aria-live="polite"></p>
           </div>
+</header>
+
+      <section class="coach-console">
+
+
+        <aside class="coach-sidebar">
+
 
           <article class="dashboard-card tec-property-workspace" data-coach-workspace-section="mapa" data-property-workspace hidden>
             <div class="tec-property-heading">
@@ -5638,6 +5634,7 @@
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>
     <script src="/coach/product-videos-catalog.js?v=20261028-recipes1"></script>
     <script src="/coach/product-videos.js?v=20261028-recipes1"></script>
-    <script src="/coach/app.js?v=20261028-floating-tools1"></script>
+    <script src="/coach/compact-header.js?v=20261028-compact-header1"></script>
+    <script src="/coach/app.js?v=20261028-compact-header1"></script>
   </body>
 </html>

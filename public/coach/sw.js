@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-floating-tools1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-floating-tools1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-compact-header1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-compact-header1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -21,6 +21,9 @@ const TEC_CORE_ASSETS = [
   "/coach/app.js?v=20261028-videos1",
   "/coach/app.js?v=20261028-chef1",
   "/coach/app.js?v=20261028-floating-tools1",
+  "/coach/app.js?v=20261028-compact-header1",
+  "/coach/styles.css?v=20261028-compact-header1",
+  "/coach/compact-header.js?v=20261028-compact-header1",
   "/coach/styles.css?v=20261028-floating-tools1",
   "/coach/product-videos-catalog.js?v=20261028-videos1",
   "/coach/product-videos-catalog.js?v=20261028-videos3",

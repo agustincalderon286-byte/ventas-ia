@@ -9267,3 +9267,55 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-p
 .tec-audio-panel .form-result:empty { display:none; }
 .tec-audio-panel-close { position:absolute; top:10px; right:12px; width:36px; height:36px; border:1px solid #d8e1ea; border-radius:50%; background:#f5f8fc; color:#103b65; font-size:25px; cursor:pointer; }
 @media(max-width:640px) { .tec-audio-float { right:12px; bottom:132px; min-height:40px; padding:0 13px; font-size:.72rem; } .tec-audio-panel { padding:24px 20px; } }
+
+/* Compact visit navigation keeps the first step visible and every workspace within reach. */
+html.tec-compact-navigation { scroll-padding-top:var(--tec-visit-header-height,150px); }
+html .coach-app-body.tec-compact-page .tec-visit-header { position:sticky; top:0; z-index:50; margin-top:10px; border-radius:18px; background:#fff; border:1px solid #d8e1ea; box-shadow:0 8px 24px #071f3b14; }
+html .coach-app-body.tec-compact-page .tec-visit-header [hidden] { display:none!important; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-nav { display:flex; flex-wrap:nowrap; align-items:center; gap:16px; min-height:0; margin:0; padding:10px 14px; border:0; border-radius:17px 17px 0 0; background:linear-gradient(100deg,#061b34,#0a3159); box-shadow:none; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-brand-logo-frame { width:116px; height:46px; padding:4px 7px; border-radius:10px; box-shadow:none; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy { flex:1 1 160px; min-width:0; max-width:260px; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy h2 { margin:5px 0 0; color:#fff; font-size:1rem; line-height:1.3; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:none; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy .eyebrow { display:flex; align-items:center; gap:7px; padding:0; border:0; background:none; color:#d8e6f5; font-size:.66rem; line-height:1.3; letter-spacing:.08em; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy .eyebrow::before { content:""; position:static; width:7px; height:7px; border-radius:50%; background:#3bce86; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-compact-actions { display:flex; align-items:center; flex-wrap:nowrap; gap:7px; margin:0 0 0 auto; padding:0; border:0; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-compact-actions :is(button,a) { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; margin:0; padding:8px 12px; color:#fff; background:#ffffff0d; border:1px solid #ffffff4d; border-radius:10px; box-shadow:none; font-size:.76rem; line-height:1.3; white-space:nowrap; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-compact-actions [data-coach-new-client] { background:#c8102e; border-color:#c8102e; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-chat-status { color:#d8e6f5; background:none; border:0; padding:0 3px; font-size:.66rem; white-space:nowrap; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-unread-badge { display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 3px; margin:0; font-size:.64rem; }
+html .coach-app-body.tec-compact-page .tec-account-menu { position:relative; flex-shrink:0; }
+html .coach-app-body.tec-compact-page .tec-account-menu summary { display:flex; align-items:center; gap:6px; min-height:40px; padding:8px 10px; border:1px solid #ffffff4d; border-radius:10px; color:#fff; font-size:.76rem; cursor:pointer; list-style:none; white-space:nowrap; }
+html .coach-app-body.tec-compact-page .tec-account-menu summary::-webkit-details-marker { display:none; }
+html .coach-app-body.tec-compact-page .tec-account-menu .coach-nav-links { position:absolute; top:calc(100% + 10px); right:0; z-index:2; display:grid; grid-template-columns:1fr; align-items:stretch; width:230px; max-width:calc(100vw - 40px); margin:0; padding:10px; gap:6px; border:1px solid #d8e1ea; border-radius:14px; background:#fff; box-shadow:0 12px 35px #071f3b33; }
+html .coach-app-body.tec-compact-page .tec-account-menu .coach-nav-links > :is([data-tec-chef-admin-link],[data-control-tower-link],button) { display:flex; justify-content:flex-start; align-items:center; width:100%; min-height:42px; margin:0; padding:10px 12px; border:1px solid #d8e1ea; border-radius:9px; color:#103b65; background:#f7fafc; font-size:.8rem; line-height:1.4; box-shadow:none; }
+html .coach-app-body.tec-compact-page .tec-account-menu .coach-nav-links > [data-coach-logout] { color:#fff; background:#c8102e; border-color:#c8102e; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-switch { margin:0; padding:4px 12px; border:0; border-radius:0 0 17px 17px; box-shadow:none; background:#fff; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-switch .coach-workspace-tabs { display:flex; flex-wrap:nowrap; align-items:center; justify-content:flex-start; gap:3px; margin:0; padding:0; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-tab { flex:0 0 auto; min-height:44px; padding:9px 15px; border:0; border-bottom:3px solid transparent; border-radius:0; color:#385269; background:none; box-shadow:none; font-size:.82rem; line-height:1.3; white-space:nowrap; }
+html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-tab.is-active { color:#bd1835; border-bottom-color:#c8102e; background:none; font-weight:800; }
+html .coach-app-body.tec-compact-page .coach-console { padding-top:14px; gap:0; }
+html .coach-app-body.tec-compact-page .coach-sidebar { width:min(980px,100%); }
+html .coach-app-body.tec-compact-page [id^="paso-"] { scroll-margin-top:12px; }
+@media(max-width:760px) {
+  html .coach-app-body.tec-compact-page .tec-visit-header { margin-top:6px; border-radius:14px; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-nav { display:grid; grid-template-columns:96px minmax(0,1fr) auto; grid-template-areas:"brand identity account" "actions actions actions"; gap:8px; padding:10px; border-radius:13px 13px 0 0; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-brand { grid-area:brand; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-brand-logo-frame { width:96px; height:40px; padding:3px 5px; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy { grid-area:identity; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy h2 { font-size:.8rem; margin-top:4px; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-hero-copy .eyebrow { font-size:.57rem; letter-spacing:.02em; }
+  html .coach-app-body.tec-compact-page .tec-account-menu { grid-area:account; }
+  html .coach-app-body.tec-compact-page .tec-account-menu summary { min-height:36px; padding:7px; font-size:.66rem; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-compact-actions { grid-area:actions; justify-content:flex-start; gap:6px; margin:0; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-compact-actions :is(button,a) { min-height:38px; padding:8px 10px; font-size:.7rem; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-chat-status { display:none; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-switch { padding:2px 8px; border-radius:0 0 13px 13px; }
+  html .coach-app-body.tec-compact-page .tec-visit-header .coach-workspace-tab { min-height:42px; padding:9px 12px; font-size:.74rem; }
+  html .coach-app-body.tec-compact-page .coach-console { padding-top:10px; }
+}
+
+html .coach-app-body.tec-compact-page .tec-account-menu:not([open]) .coach-nav-links { display:none; }
+@media(max-width:980px) {
+  html .coach-app-body.tec-compact-page #paso-conexion .coach-step-copy { order:0; }
+  html .coach-app-body.tec-compact-page #paso-conexion .coach-step-visual { order:1; min-height:180px; height:180px; }
+}
