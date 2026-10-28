@@ -17219,9 +17219,6 @@ async function loadCoachAppPage() {
   const contactShareOpenLinks = document.querySelectorAll("[data-contact-share-open-link]");
   const orderCalcToggle = document.querySelector("[data-order-calc-toggle]");
   const orderCalcWrap = document.querySelector("[data-order-calc-wrap]");
-  const waterCheckForm = document.querySelector("[data-water-check-form]");
-  const waterCheckInput = document.querySelector("[data-water-check-input]");
-  const waterCheckFeedback = document.querySelector("[data-water-check-feedback]");
   const appMessage = document.querySelector("[data-coach-app-message]");
   const royalOneToggle = document.querySelector("[data-royalone-toggle]");
   const royalOnePanel = document.querySelector("[data-royalone-panel]");
@@ -18004,57 +18001,6 @@ async function loadCoachAppPage() {
         detail: "Ya entraron a hablar de precio, anticipo o pagos."
       });
     }
-  });
-
-  waterCheckInput?.addEventListener("input", () => {
-    const safeZip = sanitizeZipCode(waterCheckInput.value);
-    if (waterCheckInput.value !== safeZip) {
-      waterCheckInput.value = safeZip;
-    }
-  });
-
-  const waterOpen = document.querySelector("[data-water-check-open]");
-  const prepareWaterZip = () => {
-    const zip = sanitizeZipCode(waterCheckInput?.value || "");
-    if (zip.length !== 5) {
-      waterCheckInput?.setAttribute("aria-invalid", "true");
-      setMessage(waterCheckFeedback, "Ingresa un ZIP Code valido de 5 digitos.", "error");
-      waterCheckInput?.focus();
-      return null;
-    }
-    waterCheckInput?.removeAttribute("aria-invalid");
-    return zip;
-  };
-  waterOpen?.addEventListener("click", event => {
-    event.preventDefault();
-    const zip = prepareWaterZip();
-    if (!zip) return;
-    window.TecExternalTools?.openWater(zip);
-    setMessage(waterCheckFeedback, `Consulta del ZIP ${zip} en EWG.`, "info");
-    registerCoachDemoEvent({ id: "water_zip_check", label: "Se solicitó consulta externa de agua", detail: `ZIP ${zip}. Los resultados se consultan en EWG.` });
-    // The external page stays in the TEC viewer; only the requested ZIP is passed.
-  });
-  waterCheckForm?.addEventListener("submit", async event => {
-    event.preventDefault();
-    const zip = prepareWaterZip();
-    if (!zip) return;
-    clearMessage(waterCheckFeedback);
-
-    try {
-      await copyTextToClipboard(zip);
-      setMessage(
-        waterCheckFeedback,
-        `ZIP ${zip} copiado. Pulsa Consultar agua en EWG y pégalo en su búsqueda.`,
-        "success"
-      );
-    } catch (error) {
-      setMessage(
-        waterCheckFeedback,
-        `No se pudo copiar. Anota el ZIP ${zip} y usa el enlace Consultar agua en EWG.`,
-        "info"
-      );
-    }
-
   });
 
   royalOneOpenLink?.addEventListener("click", () => {

@@ -18,7 +18,7 @@ export function normalizePropertyAddress(value) {
   return result;
 }
 
-export function normalizePropertyCity(value = "HILLSIDE") {
+export function normalizePropertyCity(value = "") {
   if (typeof value !== "string" || value.length > 60) throw propertyError(400, "Revisa la ciudad de la cita.");
   const city = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
   if (!/^[A-Z][A-Z .'-]{1,59}$/.test(city)) throw propertyError(400, "Escribe una ciudad de Cook County, Illinois.");

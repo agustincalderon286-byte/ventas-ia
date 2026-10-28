@@ -83,6 +83,7 @@
     dialog.querySelector("[data-document-zoom-out]").disabled = !total || session.zoom <= 1;
     dialog.querySelector("[data-document-fit]").disabled = !total;
     dialog.querySelector("[data-document-scale]").textContent = `${Math.round(session.zoom * 100)}%`;
+    dialog.querySelector(".tec-document-stage").style.touchAction = session.zoom <= 1 ? "pan-y" : "pan-x pan-y";
   }
 
   function restorePosition(session, done) {
@@ -149,6 +150,7 @@
         <button type="button" class="tec-document-save" data-document-save aria-label="Guardar sin internet" title="Guardar sin internet">↓ Sin internet</button>
         <button type="button" data-document-retry hidden>Reintentar página</button>
         <p class="tec-document-status" data-document-status role="status" aria-live="polite"></p>
+        <span class="tec-document-gesture-hint">Desliza para cambiar de página · Pellizca para ampliar</span>
       </header>
       <div class="tec-document-stage" tabindex="0" aria-label="Página del documento">
         <canvas hidden role="img" aria-label="Página del documento"></canvas>
@@ -204,15 +206,32 @@
 
   function installZoomGestures(stage) {
     let pinch = null;
+    let swipe = null;
     const distance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
     stage.addEventListener("touchstart", event => {
-      if (!active?.total || event.touches.length !== 2) return;
+      swipe = null;
+      if (!active?.total) return;
+      if (event.touches.length === 1 && !pinch && active.zoom <= 1) {
+        const touch = event.touches[0];
+        swipe = { session: active, page: active.page, id: touch.identifier, x: touch.clientX, y: touch.clientY, time: Date.now(), horizontal: false };
+        return;
+      }
+      if (event.touches.length !== 2) return;
       const rect = stage.getBoundingClientRect?.() || { left: 0, top: 0 };
       pinch = { session: active, distance: Math.max(1, distance(event.touches)), zoom: active.zoom, next: active.zoom,
         x: (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left,
         y: (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top };
     }, { passive: true });
     stage.addEventListener("touchmove", event => {
+      if (swipe) {
+        if (active !== swipe.session || active.page !== swipe.page || active.zoom > 1 || event.touches.length !== 1) { swipe = null; return; }
+        const touch = event.touches[0];
+        const dx = Math.abs(touch.clientX - swipe.x), dy = Math.abs(touch.clientY - swipe.y);
+        if (!swipe.horizontal && dy > 12 && dy >= dx) { swipe = null; return; }
+        if (dx > 16 && dx > dy * 1.6) swipe.horizontal = true;
+        if (swipe.horizontal) event.preventDefault();
+        return;
+      }
       if (!pinch || active !== pinch.session || event.touches.length !== 2) return;
       event.preventDefault();
       pinch.next = Math.max(1, Math.min(4, pinch.zoom * distance(event.touches) / pinch.distance));
@@ -223,12 +242,21 @@
       media.style.height = active.pages ? "auto" : `${width * media.height / media.width}px`;
     }, { passive: false });
     const finish = event => {
+      const gesture = swipe; swipe = null;
+      if (gesture && event.touches.length === 0 && active === gesture.session && active.page === gesture.page && active.zoom <= 1) {
+        const touch = Array.from(event.changedTouches || []).find(item => item.identifier === gesture.id);
+        if (touch) {
+          const dx = touch.clientX - gesture.x, dy = Math.abs(touch.clientY - gesture.y);
+          const threshold = Math.max(48, Math.min(100, stage.clientWidth * .12));
+          if (Math.abs(dx) >= threshold && Math.abs(dx) > dy * 1.6 && Date.now() - gesture.time < 900) changePage(dx < 0 ? 1 : -1);
+        }
+      }
       if (!pinch || event.touches.length >= 2) return;
       const current = pinch; pinch = null;
       if (active === current.session) setZoom(current.next, current);
     };
     stage.addEventListener("touchend", finish);
-    stage.addEventListener("touchcancel", finish);
+    stage.addEventListener("touchcancel", () => { const wasPinching = pinch; swipe = null; pinch = null; if (wasPinching && active === wasPinching.session) render(active); });
     stage.addEventListener("dblclick", event => {
       if (!active?.total) return;
       event.preventDefault();
@@ -239,7 +267,9 @@
 
   function changePage(delta) {
     if (!active?.total) return;
-    active.page = Math.max(1, Math.min(active.total, active.page + delta));
+    const next = Math.max(1, Math.min(active.total, active.page + delta));
+    if (active.page === next) return;
+    active.page = next;
     render(active);
   }
 

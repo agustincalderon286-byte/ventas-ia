@@ -38,15 +38,26 @@
     if(history.state?.tecExternalToolSlot)history.replaceState(state,'',location.href);else history.pushState(state,'',location.href);
     frame.src = config.url;
   }
-  const openKonverta=()=>open({title:'Konverta',host:'dash.konverta.app',url:'https://dash.konverta.app/signin',note:'Si tu inicio de sesión no funciona en esta vista, usa «Abrir aparte».'});
+  const KONVERTA_URL = 'https://dash.konverta.app/signin';
+  // A top-level, user-initiated HTTPS link lets iOS use Konverta's verified
+  // universal link. A sandboxed iframe cannot launch the installed app.
+  const mobile = () => /iPhone|iPad|iPod|Android/i.test(window.navigator?.userAgent || '') ||
+    (/Macintosh/i.test(window.navigator?.userAgent || '') && window.navigator?.maxTouchPoints > 1);
+  const openKonverta=()=>mobile()
+    ? window.open(KONVERTA_URL,'_blank','noopener,noreferrer')
+    : open({title:'Konverta',host:'dash.konverta.app',url:KONVERTA_URL,note:'Si tu inicio de sesión no funciona en esta vista, usa «Abrir aparte».'});
   const openWater=zip=>{
-    if(!/^\d{5}$/.test(String(zip)))return false;
-    return open({title:`Consulta de agua · ${zip}`,host:'www.ewg.org',url:`https://www.ewg.org/tapwater/search-results.php?zip5=${zip}`,note:'Resultados de EWG. Si el sitio limita esta vista, usa «Abrir aparte».'});
+    if(zip != null && !/^\d{5}$/.test(String(zip)))return false;
+    return open({title:zip ? `Consulta de agua · ${zip}` : 'Consulta de agua',host:'www.ewg.org',url:zip ? `https://www.ewg.org/tapwater/search-results.php?zip5=${zip}` : 'https://www.ewg.org/tapwater/',note:'Resultados de EWG. Si el sitio limita esta vista, usa «Abrir aparte».'});
   };
   window.TecExternalTools = Object.freeze({openKonverta,openWater});
   document.addEventListener('click',event=>{
-    const link=event.target.closest('[data-open-konverta]');
+    const link=event.target.closest('[data-open-konverta], [data-open-water]');
     if(!link||event.defaultPrevented||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    if(link.hasAttribute('data-open-water')) { event.preventDefault(); openWater(); return; }
+    // Keep the actual anchor navigation in the original tap. No timers or
+    // guessed custom schemes; TEC stays open and receives no Konverta data.
+    if(mobile())return;
     event.preventDefault(); openKonverta();
   });
 })();

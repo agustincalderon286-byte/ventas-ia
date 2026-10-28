@@ -1,5 +1,5 @@
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
-import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-address1";
+import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-visit-tools2";
 
 (() => {
   const MAX_STOPS = 4;
@@ -446,7 +446,7 @@ import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-a
       const appointment = getCurrentAppointment();
       if (!appointment?.address) { message("Primero abre un cliente con dirección, o escribe aquí la dirección de tu cita."); return; }
       form.elements.address.value = appointment.address;
-      if (appointment.city) form.elements.city.value = appointment.city;
+      form.elements.city.value = appointment.city || "";
       message("Dirección copiada. Revisa que la calle y la ciudad estén en sus campos y pulsa Buscar propiedades.");
       form.elements.address.focus();
       addressSuggestions.refresh?.();

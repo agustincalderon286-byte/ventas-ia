@@ -67,3 +67,12 @@ test("tap selection works and failed suggestions leave manual address search ava
   assert.match(failed.status.textContent, /dirección completa/);
   assert.equal(failed.input.value, "123 main");
 });
+
+test("a blank city requests the user's city and does not silently search Hillside", async () => {
+ const requests=[];const h=harness(async url=>{requests.push(url);return {suggestions:[suggestion('123 MAIN ST','CHICAGO')]}});
+ h.city.value='';h.type('123 main');await h.flush();
+ assert.equal(requests.length,0);assert.match(h.status.textContent,/ciudad de tu cita/);
+ h.city.value='Chicago';h.city.events.input();await h.flush();
+ assert.equal(new URL('https://tec.example'+requests[0]).searchParams.get('city'),'Chicago');
+ h.list.children[0].events.click();assert.equal(h.city.value,'CHICAGO');
+});

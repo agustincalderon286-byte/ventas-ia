@@ -52,7 +52,8 @@ export function initTecAddressSuggestions({ form, request, onChoose = () => {} }
     close();
     if (composing) return;
     const address = input.value.trim(), locality = city.value.trim();
-    if (!/^\d[\dA-Z/-]*\s+[\p{L} .'-]{2,}/iu.test(address) || !locality) return;
+    if (!/^\d[\dA-Z/-]*\s+[\p{L} .'-]{2,}/iu.test(address)) return;
+    if (!locality) { list.replaceChildren(); show("Escribe también la ciudad de tu cita para ver direcciones sugeridas."); return; }
     if (!navigator.onLine) { show("Las sugerencias necesitan internet. Puedes seguir escribiendo la dirección."); return; }
     const token = generation;
     const key = `${locality.toUpperCase()}:${address.toUpperCase()}`;

@@ -9319,3 +9319,9 @@ html .coach-app-body.tec-compact-page .tec-account-menu:not([open]) .coach-nav-l
   html .coach-app-body.tec-compact-page #paso-conexion .coach-step-copy { order:0; }
   html .coach-app-body.tec-compact-page #paso-conexion .coach-step-visual { order:1; min-height:180px; height:180px; }
 }
+
+/* Instant appointment stays available independently of the reference form. */
+.tec-instant-appointment .tec-instant-steps { display:grid; gap:12px; margin:22px 0 0; padding-left:25px; color:#445a70; line-height:1.65; }
+.tec-instant-appointment .tec-instant-steps li { padding-left:5px; }
+.tec-instant-appointment .tec-instant-steps li::marker { color:#aa1230; font-weight:800; }
+.tec-instant-appointment .tec-instant-steps strong { color:#112b49; }

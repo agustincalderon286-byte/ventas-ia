@@ -76,6 +76,7 @@
 .tec-document-controls [data-document-total] { font-size:12px; }
 .tec-document-save { margin:0; font-size:12px!important; }
 .tec-document-status { width:100%; margin:0; font-size:11px; color:#52657a; }
-.tec-document-stage { padding:2px 2px max(2px,env(safe-area-inset-bottom)); touch-action:pan-x pan-y; }
+.tec-document-stage { padding:2px 2px max(2px,env(safe-area-inset-bottom)); touch-action:pan-y; }
+.tec-document-gesture-hint { width:100%; font-size:11px; color:#52657a; }
 .tec-document-stage canvas,.tec-document-page-image { margin:0; box-shadow:none; }
 @media(max-width:600px) { .tec-document-topline { flex-basis:calc(100% - 110px); order:0; } .tec-document-save { order:1; } .tec-document-controls { order:2; width:100%; justify-content:center; } .tec-document-status { order:4; } .tec-document-controls label { font-size:0; gap:0; } .tec-document-controls input { font-size:14px; } .tec-document-header { gap:5px; } }

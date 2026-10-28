@@ -222,6 +222,49 @@ test("pinch zoom is bounded, rerenders only at gesture end and can return to fit
   assert.equal(h.libraryLoads,0);
 });
 
+const finger = (clientX, clientY = 100, identifier = 1) => ({clientX,clientY,identifier});
+function swipePage(stage, start, end) {
+ stage.touchstart({touches:[start]});
+ stage.touchmove({touches:[end],preventDefault(){}});
+ stage.touchend({touches:[],changedTouches:[end]});
+}
+test("horizontal swipes turn exactly one page, respect document bounds and keep only one image",async()=>{
+ const h=viewerHarness();await h.api.open({documentId:'catalogo'});const stage=h.node('.tec-document-stage');
+ assert.equal(stage.style.touchAction,'pan-y');
+ swipePage(stage,finger(80),finger(240));await tick();assert.equal(h.node('[data-document-page]').value,1);
+ swipePage(stage,finger(250),finger(60));await tick();assert.equal(h.node('[data-document-page]').value,2);
+ swipePage(stage,finger(250),finger(60));await tick();assert.equal(h.node('[data-document-page]').value,3);
+ swipePage(stage,finger(250),finger(60));await tick();assert.equal(h.node('[data-document-page]').value,3);
+ swipePage(stage,finger(60),finger(250));await tick();assert.equal(h.node('[data-document-page]').value,2);
+ assert.equal(h.node('[data-document-image]').children.length,1);assert.equal(h.libraryLoads,0);
+ h.api.close();await tick();await h.api.open({documentId:'carpeta'});
+ stage.touchend({touches:[],changedTouches:[finger(60)]});await tick();assert.equal(h.node('[data-document-page]').value,1);
+});
+test("scrolling, short drags, cancellation, pinching and zoom panning never turn pages",async()=>{
+ const h=viewerHarness();await h.api.open({documentId:'catalogo'});const stage=h.node('.tec-document-stage');
+ const image=h.node('[data-document-image]').children[0];
+ swipePage(stage,finger(250),finger(230));
+ swipePage(stage,finger(250),finger(140,350));
+ // A gesture that begins vertically belongs to scrolling even if it ends sideways.
+ stage.touchstart({touches:[finger(250)]});stage.touchmove({touches:[finger(245,140)],preventDefault(){}});
+ stage.touchend({touches:[],changedTouches:[finger(30,150)]});
+ stage.touchstart({touches:[finger(250)]});stage.touchcancel({touches:[]});stage.touchend({touches:[],changedTouches:[finger(30)]});
+ await tick();assert.equal(h.node('[data-document-page]').value,1);assert.equal(h.node('[data-document-image]').children[0],image);
+ stage.touchstart({touches:[finger(250)]});
+ stage.touchstart({touches:[finger(50),finger(150,100,2)]});
+ stage.touchmove({touches:[finger(0),finger(200,100,2)],preventDefault(){}});
+ stage.touchend({touches:[],changedTouches:[finger(0),finger(200,100,2)]});await tick();
+ assert.equal(h.node('[data-document-scale]').textContent,'200%');assert.equal(stage.style.touchAction,'pan-x pan-y');
+ swipePage(stage,finger(250),finger(30));await tick();assert.equal(h.node('[data-document-page]').value,1);
+ h.node('[data-document-fit]').click();await tick();swipePage(stage,finger(250),finger(30));await tick();
+ assert.equal(h.node('[data-document-page]').value,2);
+});
+test("private PDF pages support the same swipes without enabling any document caching",async()=>{
+ const h=viewerHarness();await h.api.open({title:'Privado',load:async()=>new Blob(['%PDF-test'])});
+ swipePage(h.node('.tec-document-stage'),finger(250),finger(30));await tick();
+ assert.equal(h.node('[data-document-page]').value,2);assert.equal(h.renders.at(-1).number,2);assert.equal(h.cacheWrites,0);
+});
+
 test("private PDFs keep their memory-only renderer and release its canvas on close", async () => {
   const h = viewerHarness();
   assert.equal(await h.api.open({ title: "Privado", load: async () => new Blob(["%PDF-test"]) }), true);

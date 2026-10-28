@@ -13,6 +13,8 @@ test("normalizes a US street without accepting arbitrary query content", () => {
   assert.equal(normalizePropertyAddress("100 O'NEIL RD"), "100 O'NEIL RD");
   for (const input of [null, {}, "Test Street", "100 TEST ST; SELECT *", "100 TEST ST, HILLSIDE IL"]) assert.throws(() => normalizePropertyAddress(input), { status: 400 });
   assert.throws(() => normalizePropertyCity({}), { status: 400 });
+  assert.throws(() => normalizePropertyCity(), { status: 400 });
+  assert.throws(() => normalizePropertyCity(""), { status: 400 });
 });
 
 test("address search joins by the full PIN and never substitutes the taxpayer for the owner", async () => {
