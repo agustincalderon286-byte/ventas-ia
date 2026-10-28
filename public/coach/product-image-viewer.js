@@ -8,7 +8,7 @@
     dialog.innerHTML = `
       <header class="tec-product-image-header">
         <div><h2 id="tec-product-image-title"></h2><p data-product-image-detail></p></div>
-        <button type="button" class="tec-product-image-close" autofocus aria-label="Cerrar imagen y volver a la calculadora">✕ <span>Cerrar</span></button>
+        <button type="button" class="tec-product-image-close" autofocus aria-label="Cerrar imagen">✕ <span>Cerrar</span></button>
       </header>
       <div class="tec-product-image-content">
         <img data-product-image-full alt="" />
@@ -33,16 +33,19 @@
   }
 
   document.addEventListener("click", event => {
-    const button = event.target.closest?.("[data-order-calc-image-open]");
+    const button = event.target.closest?.("[data-order-calc-image-open], [data-survey-image-open]");
     if (!button) return;
-    const figure = button.closest("[data-order-calc-visual]");
-    const source = figure?.querySelector("[data-order-calc-visual-image]");
+    const figure = button.closest("[data-order-calc-visual], [data-survey-product-visual]");
+    const source = figure?.querySelector("img");
     if (!source?.getAttribute("src") || figure.hidden) return;
     if (!dialog) createViewer();
     if (dialog.open) return;
     opener = button;
-    title.textContent = figure.querySelector("[data-order-calc-visual-title]")?.textContent || "Producto Royal Prestige";
-    detail.textContent = figure.querySelector("[data-order-calc-visual-meta]")?.textContent || "";
+    title.textContent = button.getAttribute("data-image-title") || figure.querySelector("[data-order-calc-visual-title]")?.textContent || "Producto Royal Prestige";
+    detail.textContent = button.getAttribute("data-image-detail") || figure.querySelector("[data-order-calc-visual-meta]")?.textContent || "";
+    const origin = button.hasAttribute("data-survey-image-open") ? "la encuesta" : "la calculadora";
+    dialog.querySelector("button").setAttribute("aria-label", `Cerrar imagen y volver a ${origin}`);
+    error.textContent = `No se pudo cargar la imagen. Cierra esta vista para volver a ${origin}.`;
     error.hidden = true;
     image.hidden = false;
     image.alt = source.alt || title.textContent;

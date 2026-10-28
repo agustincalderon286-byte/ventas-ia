@@ -2165,6 +2165,7 @@ function initSurveyProductPicker() {
     input.setAttribute("aria-controls", results.id); input.setAttribute("aria-expanded", "false");
     input.setAttribute("autocomplete", "off");
     const visual = document.createElement("div"); visual.className = "tec-survey-product-visual"; visual.hidden = true;
+    visual.setAttribute("data-survey-product-visual", "");
     const note = document.createElement("span"); note.className = "mini-note"; note.setAttribute("role", "status");
     note.textContent = "Escribe 3 letras y elige una tarjeta con foto. Sin precios.";
     input.parentElement.append(code, search, results, visual, note);
@@ -2180,7 +2181,16 @@ function initSurveyProductPicker() {
       observedValue = input.value;
       code.value = match.codigo_producto || ""; selected[index] = match;
       visual.replaceChildren(); visual.hidden = false;
-      if (match.imagen_producto) { const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = match.nombre_producto || "Producto"; image.loading = "lazy"; visual.append(image); }
+      if (match.imagen_producto) {
+        const zoom = document.createElement("button"); zoom.type = "button"; zoom.className = "tec-survey-image-open";
+        zoom.setAttribute("data-survey-image-open", ""); zoom.setAttribute("aria-haspopup", "dialog");
+        zoom.setAttribute("aria-label", `Ampliar imagen de ${match.nombre_producto || "producto seleccionado"}`);
+        zoom.setAttribute("data-image-title", match.nombre_producto || "Producto Royal Prestige");
+        zoom.setAttribute("data-image-detail", match.codigo_producto || "");
+        const image = document.createElement("img"); image.src = match.imagen_producto; image.alt = match.nombre_producto || "Producto"; image.loading = "lazy";
+        const hint = document.createElement("span"); hint.className = "tec-survey-image-hint"; hint.textContent = "⤢ Ampliar"; hint.setAttribute("aria-hidden", "true");
+        zoom.append(image, hint); visual.append(zoom);
+      }
       const label = document.createElement("span"); label.textContent = `${match.nombre_producto || ""} · ${match.codigo_producto || ""}`; visual.append(label);
       showResults(false); results.replaceChildren();
       calc?.applySurveyProduct?.(index, match);
