@@ -233,6 +233,206 @@
     "category": "Accesorios",
     "url": "https://www.youtube.com/watch?v=LggddajOKlA",
     "family": "bowls"
+  },
+  {
+    "product": "Barista",
+    "title": "Te Presentamos el Nuevo Royal Prestige® Barista",
+    "id": "iy4tTfyv_wY",
+    "duration": "0:43",
+    "type": "Presentación",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=iy4tTfyv_wY",
+    "family": "barista"
+  },
+  {
+    "product": "Barista",
+    "title": "Cómo Usar y Cuidar Tu Royal Prestige® Barista",
+    "id": "we0PGQPAw48",
+    "duration": "",
+    "type": "Uso y cuidados",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=we0PGQPAw48",
+    "family": "barista"
+  },
+  {
+    "product": "BaristArt Kit",
+    "title": "Te Presentamos el Nuevo Royal Prestige® BaristArt Kit",
+    "id": "1bpewZi0r5w",
+    "duration": "1:01",
+    "type": "Presentación",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=1bpewZi0r5w",
+    "family": "baristart"
+  },
+  {
+    "product": "Precision Cook",
+    "title": "Royal Prestige® Precision Cook",
+    "id": "OroIxlvUVTA",
+    "duration": "1:25",
+    "type": "Presentación",
+    "category": "Electrodomésticos",
+    "url": "https://www.youtube.com/watch?v=OroIxlvUVTA",
+    "family": "precision-cook"
+  },
+  {
+    "product": "Precision Cook",
+    "title": "Cómo Usar tu Royal Prestige® Precision Cook",
+    "id": "1J5rF6naZ9o",
+    "duration": "3:22",
+    "type": "Uso y cuidados",
+    "category": "Electrodomésticos",
+    "url": "https://www.youtube.com/watch?v=1J5rF6naZ9o",
+    "family": "precision-cook"
+  },
+  {
+    "product": "Royal Espresso · 4 y 10 tazas",
+    "title": "Royal Prestige® Espresso",
+    "id": "ACweIGyBcsg",
+    "duration": "1:02",
+    "type": "Presentación",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=ACweIGyBcsg",
+    "family": "espresso"
+  },
+  {
+    "product": "Royal Espresso · 4 y 10 tazas",
+    "title": "Cómo Usar tu Royal Prestige® Espresso",
+    "id": "0dn4OHRnKhA",
+    "duration": "1:10",
+    "type": "Uso y cuidados",
+    "category": "Café y té",
+    "url": "https://www.youtube.com/watch?v=0dn4OHRnKhA",
+    "family": "espresso"
+  },
+  {
+    "product": "Perfect Pop",
+    "title": "Royal Prestige® Perfect Pop",
+    "id": "AYscfmVhG1s",
+    "duration": "0:42",
+    "type": "Presentación",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=AYscfmVhG1s",
+    "family": "perfect-pop"
+  },
+  {
+    "product": "Fresh Max",
+    "title": "Royal Prestige® Fresh Max",
+    "id": "vp1LX7r7pyw",
+    "duration": "1:04",
+    "type": "Presentación",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=vp1LX7r7pyw",
+    "family": "fresh-max"
+  },
+  {
+    "product": "Fresh Max",
+    "title": "Cómo Usar tu Royal Prestige® Fresh Max",
+    "id": "gD0q9oD6knE",
+    "duration": "1:07",
+    "type": "Uso y cuidados",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=gD0q9oD6knE",
+    "family": "fresh-max"
+  },
+  {
+    "product": "Max Cup",
+    "title": "Cómo Usar tu Royal Prestige® Max Cup",
+    "id": "GwBDGFtjJno",
+    "duration": "0:40",
+    "type": "Uso y cuidados",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=GwBDGFtjJno",
+    "family": "max-cup"
+  },
+  {
+    "product": "Jarra de Tritan para Power Blender Max",
+    "title": "¿Cómo usar tu Royal Prestige® Power Blender Max con Jarra de Tritan?",
+    "id": "zXhP18jvRK8",
+    "duration": "0:50",
+    "type": "Uso y cuidados",
+    "category": "Licuadoras",
+    "url": "https://www.youtube.com/watch?v=zXhP18jvRK8",
+    "family": "tritan-jar"
+  },
+  {
+    "product": "Cacerola Royal Prestige",
+    "title": "Royal Prestige® Casserole",
+    "id": "qvdt-Q8eQJ8",
+    "duration": "1:07",
+    "type": "Presentación",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=qvdt-Q8eQJ8",
+    "family": "casserole"
+  },
+  {
+    "product": "Cacerola Royal Prestige",
+    "title": "Cómo Usar tu Royal Prestige® Casserole",
+    "id": "3Ys_VtMeR-4",
+    "duration": "",
+    "type": "Uso y cuidados",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=3Ys_VtMeR-4",
+    "family": "casserole"
+  },
+  {
+    "product": "Bloque de cuchillos All-in-One",
+    "title": "Cómo Usar y Cuidar tu Royal Prestige® All-In-One Knife Block",
+    "id": "CuTE0_XE66U",
+    "duration": "1:41",
+    "type": "Uso y cuidados",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=CuTE0_XE66U",
+    "family": "knife-block"
+  },
+  {
+    "product": "Cuchillos para churrasco",
+    "title": "¿Sabes cómo cuidar tus cuchillos Royal Prestige®?",
+    "id": "mfQS_GM1mf4",
+    "duration": "0:57",
+    "type": "Uso y cuidados",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=mfQS_GM1mf4",
+    "family": "churrasco-knives"
+  },
+  {
+    "product": "Juego de cuchillos para carne · 4 piezas",
+    "title": "Te Presentamos el Nuevo Royal Prestige® Steak Knife Set",
+    "id": "p668z2hXy2c",
+    "duration": "0:17",
+    "type": "Presentación",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=p668z2hXy2c",
+    "family": "steak-knives"
+  },
+  {
+    "product": "Juego de 4 piezas para rebanar",
+    "title": "Te Presentamos el Nuevo Royal Prestige® Carving Knife Set",
+    "id": "UNd9ca53PW0",
+    "duration": "0:22",
+    "type": "Presentación",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=UNd9ca53PW0",
+    "family": "carving-knives"
+  },
+  {
+    "product": "Cuidados de cuchillos Santoku, para carne y para rebanar",
+    "title": "Cómo Cuidar Tus Cuchillos de Royal Prestige®",
+    "id": "OoMRj50udSY",
+    "duration": "1:05",
+    "type": "Uso y cuidados",
+    "category": "Accesorios",
+    "url": "https://www.youtube.com/watch?v=OoMRj50udSY",
+    "family": "knife-care"
+  },
+  {
+    "product": "Sartenes Gourmet",
+    "title": "Aprende a Cocinar con Chef Omar y las Sartenes Gourmet de Royal Prestige®",
+    "id": "vwvQFg9pKyo",
+    "duration": "15:04",
+    "type": "Uso y cuidados",
+    "category": "Ollas y sartenes",
+    "url": "https://www.youtube.com/watch?v=vwvQFg9pKyo",
+    "family": "gourmet-skillets"
   }
 ];
   const families = [
@@ -481,6 +681,180 @@
     "videoIds": [
       "LggddajOKlA"
     ]
+  },
+  {
+    "id": "barista",
+    "label": "Barista",
+    "codes": [
+      "CO2106"
+    ],
+    "videoIds": [
+      "iy4tTfyv_wY",
+      "we0PGQPAw48"
+    ]
+  },
+  {
+    "id": "baristart",
+    "label": "BaristArt Kit",
+    "codes": [
+      "PR2134"
+    ],
+    "videoIds": [
+      "1bpewZi0r5w"
+    ]
+  },
+  {
+    "id": "precision-cook",
+    "label": "Precision Cook",
+    "codes": [
+      "ES0071"
+    ],
+    "videoIds": [
+      "OroIxlvUVTA",
+      "1J5rF6naZ9o"
+    ]
+  },
+  {
+    "id": "espresso",
+    "label": "Royal Espresso",
+    "codes": [
+      "PR2128",
+      "PR2129"
+    ],
+    "videoIds": [
+      "ACweIGyBcsg",
+      "0dn4OHRnKhA"
+    ]
+  },
+  {
+    "id": "perfect-pop",
+    "label": "Perfect Pop",
+    "codes": [
+      "PR0025"
+    ],
+    "videoIds": [
+      "AYscfmVhG1s"
+    ]
+  },
+  {
+    "id": "fresh-max",
+    "label": "Fresh Max",
+    "codes": [
+      "PE0040"
+    ],
+    "videoIds": [
+      "vp1LX7r7pyw",
+      "gD0q9oD6knE"
+    ]
+  },
+  {
+    "id": "max-cup",
+    "label": "Max Cup",
+    "codes": [
+      "PE0051"
+    ],
+    "videoIds": [
+      "GwBDGFtjJno"
+    ]
+  },
+  {
+    "id": "tritan-jar",
+    "label": "Jarra de Tritan",
+    "codes": [
+      "PE0050"
+    ],
+    "videoIds": [
+      "zXhP18jvRK8"
+    ]
+  },
+  {
+    "id": "casserole",
+    "label": "Cacerola",
+    "codes": [
+      "PR2124"
+    ],
+    "videoIds": [
+      "qvdt-Q8eQJ8",
+      "3Ys_VtMeR-4"
+    ]
+  },
+  {
+    "id": "knife-block",
+    "label": "Bloque de cuchillos All-in-One",
+    "codes": [
+      "CU0056"
+    ],
+    "videoIds": [
+      "CuTE0_XE66U"
+    ]
+  },
+  {
+    "id": "churrasco-knives",
+    "label": "Cuchillos para churrasco",
+    "codes": [
+      "CU0740"
+    ],
+    "videoIds": [
+      "mfQS_GM1mf4"
+    ]
+  },
+  {
+    "id": "steak-knives",
+    "label": "Cuchillos para carne",
+    "codes": [
+      "CU0820"
+    ],
+    "videoIds": [
+      "p668z2hXy2c"
+    ]
+  },
+  {
+    "id": "carving-knives",
+    "label": "Juego de 4 piezas para rebanar",
+    "codes": [
+      "CU0815"
+    ],
+    "videoIds": [
+      "UNd9ca53PW0"
+    ]
+  },
+  {
+    "id": "knife-care",
+    "label": "Cuidados de cuchillos",
+    "codes": [
+      "CU0820",
+      "CU0815",
+      "SP0296",
+      "SP0297"
+    ],
+    "videoIds": [
+      "OoMRj50udSY"
+    ]
+  },
+  {
+    "id": "gourmet-skillets",
+    "label": "Sartenes Gourmet",
+    "codes": [
+      "CO9655",
+      "CO9630",
+      "CO9640",
+      "CO9650"
+    ],
+    "videoIds": [
+      "vwvQFg9pKyo"
+    ]
+  },
+  {
+    "id": "frescaflow-cartridges",
+    "label": "Cartuchos FrescaFlow",
+    "codes": [
+      "PR2002",
+      "PR2003",
+      "PR2004"
+    ],
+    "videoIds": [
+      "yCRIsyi62GU"
+    ]
   }
 ];
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -489,15 +863,16 @@
     if (!product) return [];
     const code = String(product.codigo_producto || product.code || '').trim().toUpperCase();
     const name = normalize(product.nombre_producto || product.name);
-    // CO9630 is repeated in the price sheet under two descriptions; only the
-    // explicitly named INNOVE entry can be safely associated with that line.
-    const selected = code === 'CO9630' ? (name.includes('innove') ? ['innove'] : [])
+    // The same price-sheet code appears in two lines. A named line is required.
+    const selected = code === 'CO9630' ? (name.includes('innove') ? ['innove'] : name.includes('gourmet') ? ['gourmet-skillets'] : [])
       : code ? families.filter(family => family.codes.includes(code)).map(family => family.id)
       : families.filter(family => normalize(family.label) === name || normalize('Royal Prestige ' + family.label) === name).map(family => family.id);
-    return videos.filter(video => selected.includes(video.family));
+    // Shared care videos are linked explicitly, not inherited from a whole line.
+    const videoIds = new Set(families.filter(family => selected.includes(family.id)).flatMap(family => family.videoIds));
+    return videos.filter(video => videoIds.has(video.id));
   }
   root.TecProductVideoCatalog = Object.freeze({
-    version: '20261028-videos1', videos: Object.freeze(videos), families: Object.freeze(families),
+    version: '20261028-videos3', videos: Object.freeze(videos), families: Object.freeze(families),
     forProduct, byId: id => byId.get(id) || null, normalize
   });
 })(globalThis);

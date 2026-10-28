@@ -1,0 +1,1376 @@
+{
+  "reviewDate": "2026-10-28",
+  "scope": "84 previously unlinked price-sheet codes, official US Royal Prestige channel and current official product pages. No promise that other videos do not exist.",
+  "initialCatalogCodes": 152,
+  "initialCoveredCodes": 68,
+  "reviewedPendingCodes": 84,
+  "newlyCoveredCodes": 22,
+  "finalCoveredCodes": 90,
+  "stillPendingCodes": 62,
+  "finalVideoCount": 43,
+  "verifiedNewVideoCount": 20,
+  "officialChannel": "https://www.youtube.com/@RoyalPrestigeOfficial",
+  "method": [
+    "Search product names and model families in Spanish and English.",
+    "Cross-check current product pages and existing catalog images; do not infer model from search ranking.",
+    "Verify new video availability and channel ownership via YouTube oEmbed.",
+    "Store explicit per-code and per-video assignments; unknown/ambiguous matches remain empty."
+  ],
+  "reviews": [
+    {
+      "code": "CO9605",
+      "catalogName": "TAPA MEDIANA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Se encontró ayuda genérica para tapas pegadas, pero no una ficha audiovisual específica que confirme esta pieza/medida.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tapa"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9610",
+      "catalogName": "TAPA GRANDE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Se encontró ayuda genérica para tapas pegadas, pero no una ficha audiovisual específica que confirme esta pieza/medida.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tapa"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9600",
+      "catalogName": "TAPA PEQUEÑA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Se encontró ayuda genérica para tapas pegadas, pero no una ficha audiovisual específica que confirme esta pieza/medida.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tapa"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9615",
+      "catalogName": "COLADOR PEQUEÑO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los resultados son recetas o utensilios distintos; no se confirmó un tutorial del colador y tamaño concreto.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Colador",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Steamer"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9620",
+      "catalogName": "TAPA ALTA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Se encontró ayuda genérica para tapas pegadas, pero no una ficha audiovisual específica que confirme esta pieza/medida.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tapa"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0098",
+      "catalogName": "UTELSILIOS 3 PIEZAS DE SILICONA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el juego exacto de tres utensilios de silicona; no se usa el juego Deluxe para servir como equivalente.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Silicona",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Utensilios"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/juego-para-servir-deluxe-de-3-piezas"
+      ]
+    },
+    {
+      "code": "CO9690",
+      "catalogName": "PARRILLA DE 5 Y 9 CAPAS DE 20 Y 30 CUARTOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "La parrilla interna de 5/9 capas no es una parrilla de inducción; no se confirmó video de esa pieza.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Parrilla",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Steamer"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9655",
+      "catalogName": "SARTENES GOURMET",
+      "decision": "verified-match",
+      "videoIds": [
+        "vwvQFg9pKyo"
+      ],
+      "reason": "Capacitación oficial titulada Sartenes Gourmet; familia cotejada con el catálogo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gourmet"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9640",
+      "catalogName": "SARTEN GOURMET 10\"",
+      "decision": "verified-match",
+      "videoIds": [
+        "vwvQFg9pKyo"
+      ],
+      "reason": "Sartén Gourmet de 10 pulgadas, misma línea que la capacitación oficial; no se usa INNOVE por semejanza de nombre.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gourmet"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9650",
+      "catalogName": "SARTEN GOURMET 12\"",
+      "decision": "verified-match",
+      "videoIds": [
+        "vwvQFg9pKyo"
+      ],
+      "reason": "Sartén Gourmet de 12 pulgadas, misma línea que la capacitación oficial; no se usa INNOVE por semejanza de nombre.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gourmet"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9222",
+      "catalogName": "ROYAL WOK",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas o MultiPan; no se confirmó el Royal Wok de este catálogo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Wok"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9076",
+      "catalogName": "COLADOR PEQUEÑO INNOVE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los resultados son recetas o utensilios distintos; no se confirmó un tutorial del colador y tamaño concreto.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Colador",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Steamer"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CO9080",
+      "catalogName": "COLADOR GRANDE INNOVE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los resultados son recetas o utensilios distintos; no se confirmó un tutorial del colador y tamaño concreto.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Colador",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Steamer"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/colador-de-pasta-de-8-cuartos"
+      ]
+    },
+    {
+      "code": "PR2124",
+      "catalogName": "JUEGO DE 4 CACEROLAS",
+      "decision": "verified-match",
+      "videoIds": [
+        "qvdt-Q8eQJ8",
+        "3Ys_VtMeR-4"
+      ],
+      "reason": "Cacerola con asas negras y tapa de vidrio, comparada visualmente con el catálogo y videos de la ficha oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cacerolas"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cacerola-de-cocina"
+      ]
+    },
+    {
+      "code": "CO2106",
+      "catalogName": "ROYAL PRESTIGE BARISTA (CAFETERA)",
+      "decision": "verified-match",
+      "videoIds": [
+        "iy4tTfyv_wY",
+        "we0PGQPAw48"
+      ],
+      "reason": "Barista negro de prensa francesa, comparado con la foto del catálogo; cuidado enlazado en la ficha oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Barista"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cafetera-barista"
+      ]
+    },
+    {
+      "code": "PR2134",
+      "catalogName": "BARISTA START KIT",
+      "decision": "verified-match",
+      "videoIds": [
+        "1bpewZi0r5w"
+      ],
+      "reason": "El nombre de la lista dice START KIT; la foto del catálogo identifica BaristArt Kit con los mismos componentes.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=BaristArt"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "ES0071",
+      "catalogName": "PRECISION COOK",
+      "decision": "verified-match",
+      "videoIds": [
+        "OroIxlvUVTA",
+        "1J5rF6naZ9o"
+      ],
+      "reason": "Modelo redondo blanco con dos controles, cotejado con el catálogo y la ficha oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Precision%20Cook"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/precision-cook"
+      ]
+    },
+    {
+      "code": "SP0136",
+      "catalogName": "JUEGO DE 2 TAZAS CON PARED DOBLE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó presentación o tutorial de estas tazas de doble pared.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tazas"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0254",
+      "catalogName": "JUEGO DE 4 COPAS PARA HELADO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el juego de copas para helado; recetas no identifican el modelo del juego.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Copas"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0261",
+      "catalogName": "JUEGO DE AZUCARERA Y JARRO PARA LECHE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "La ficha oficial del juego de azucarera/jarra no publica video; no se usan recetas de leche condensada.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Lechera"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/jarra-para-leche-y-azucarera"
+      ]
+    },
+    {
+      "code": "PR2128",
+      "catalogName": "ROYAL ESPRESSO 4 TAZAS",
+      "decision": "verified-match",
+      "videoIds": [
+        "ACweIGyBcsg",
+        "0dn4OHRnKhA"
+      ],
+      "reason": "La ficha oficial cubre expresamente tamaños de 4 y 10 tazas; video de la misma línea Royal Espresso.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Espresso"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR2129",
+      "catalogName": "ROYAL ESPRESSO 10 TAZAS",
+      "decision": "verified-match",
+      "videoIds": [
+        "ACweIGyBcsg",
+        "0dn4OHRnKhA"
+      ],
+      "reason": "La ficha oficial cubre expresamente tamaños de 4 y 10 tazas; video de la misma línea Royal Espresso.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Espresso"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cafetera-royal-espresso"
+      ]
+    },
+    {
+      "code": "PR2685",
+      "catalogName": "HERVIDOR DE1 CUARTO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los resultados corresponden a ExperTea; no se usan para hervidores de 1 o medio cuarto.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Hervidor"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR2675",
+      "catalogName": "HERVIDOR DE MEDIO CUARTO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los resultados corresponden a ExperTea; no se usan para hervidores de 1 o medio cuarto.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Hervidor"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0305",
+      "catalogName": "BASE MAGNETICA PARA OLLAS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video de la base magnética independiente.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Base%20Magn%C3%A9tica"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/base-magnetica-para-ollas"
+      ]
+    },
+    {
+      "code": "PR2614",
+      "catalogName": "MAQUINA PARA ENSALADAS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó presentación o tutorial del modelo; se excluyeron recetas de ensaladas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=M%C3%A1quina%20Ensaladas",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Salad%20Machine",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Salad%20Cutter"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/maquina-de-ensaladas"
+      ]
+    },
+    {
+      "code": "PR0008",
+      "catalogName": "TABLA DE BAMBU",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video específico que confirme la tabla de bambú y tamaño.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tablas%20Bamb%C3%BA",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bamboo"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/tablas-para-cortar-de-bambu"
+      ]
+    },
+    {
+      "code": "PR0021",
+      "catalogName": "TABLA DE BAMBU PEQUEÑA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video específico que confirme la tabla de bambú y tamaño.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tablas%20Bamb%C3%BA",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bamboo"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0066",
+      "catalogName": "TAZON PARA MEZCLAR DE 10 CUARTOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los videos encontrados son del nuevo sistema Mixing Bowls CO4900; no se heredan a juegos/tamaños anteriores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tazones",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Mixing%20Bowls%2010"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0262",
+      "catalogName": "JUEGO DE DOS TAZONES PARA MESCLAR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los videos encontrados son del nuevo sistema Mixing Bowls CO4900; no se heredan a juegos/tamaños anteriores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tazones",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Mixing%20Bowls%2010"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR0196",
+      "catalogName": "JUEGO E UTENZILIOS DE 6 PIEZAS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Ficha oficial sin video; no se confirmó un tutorial del juego metálico de seis piezas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Utensilios",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cooking%20Tools"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/juego-de-utensilios-de-cocina-de-6-piezas"
+      ]
+    },
+    {
+      "code": "SP0145",
+      "catalogName": "RECIPIENTE PARA UTELZILIOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video del recipiente para guardar utensilios.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Recipiente%20utensilios"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR4902",
+      "catalogName": "JUEGO DE 3 TAZONES PARA MEZCLAR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los videos encontrados son del nuevo sistema Mixing Bowls CO4900; no se heredan a juegos/tamaños anteriores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tazones",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Mixing%20Bowls%2010"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0068",
+      "catalogName": "TAZON PARA MEZCLAR DE 5 CUARTOS CON PARED DOBLE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Los videos encontrados son del nuevo sistema Mixing Bowls CO4900; no se heredan a juegos/tamaños anteriores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tazones",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Mixing%20Bowls%2010"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP0113",
+      "catalogName": "RECIPIENTES PARA ALMACENAR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Las fichas de almacenamiento no publican video y muestran juegos de distintas cantidades; sin coincidencia exacta confirmada.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Recipientes",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Royalware"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/juego-de-8-recipientes-para-almacenar-alimentos",
+        "https://www.royalprestige.com/productos/detalle/juego-de-6-recipientes-para-almacenar-alimentos"
+      ]
+    },
+    {
+      "code": "PR0025",
+      "catalogName": "ROYAL PRESTIGE PERFETC POP",
+      "decision": "verified-match",
+      "videoIds": [
+        "AYscfmVhG1s"
+      ],
+      "reason": "Tapa Perfect Pop para olla de 6 cuartos; coincide con la descripción oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Perfect%20Pop"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/perfect-pop"
+      ]
+    },
+    {
+      "code": "SP1860",
+      "catalogName": "PELADOR VERTICAL",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "El resultado Peeling Knife es un cuchillo; no corresponde a estos peladores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Pelador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1854",
+      "catalogName": "PELADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "El resultado Peeling Knife es un cuchillo; no corresponde a estos peladores.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Pelador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1850",
+      "catalogName": "DESTAPADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin resultado específico confirmado para el destapador.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Destapador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1852",
+      "catalogName": "ESPATULA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas; no se confirmó modelo exacto de espátula.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Esp%C3%A1tula",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Silicona"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1856",
+      "catalogName": "CORTA PIZZAS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas de pizza; no se confirmó el cortador.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cortador%20pizza"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1867",
+      "catalogName": "MACHACADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas que mencionan machacador, sin identificación del modelo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Machacador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1851",
+      "catalogName": "RALLADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas o productos distintos; no se confirmó el rallador independiente.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Rallador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1859",
+      "catalogName": "ESPATULA PARA HELADOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Recetas de helado no identifican la espátula del catálogo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Esp%C3%A1tula%20helados"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1861",
+      "catalogName": "ESPATULA DE SILICONA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Solo recetas; no se confirmó modelo exacto de espátula.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Esp%C3%A1tula",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Silicona"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "SP1853",
+      "catalogName": "BATIDOR DE GLOBO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confunde el batidor manual de globo con accesorios de Power Blender Go.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Batidor%20globo",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Batidor"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CR2679",
+      "catalogName": "4 COPAS PARA VINO GALA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video de estos modelos de cristalería.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=London",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gala",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tequileros",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Copas"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/copas-para-vino",
+        "https://www.royalprestige.com/productos/detalle/copas-para-vino"
+      ]
+    },
+    {
+      "code": "CR1670",
+      "catalogName": "4 VASOS PARA AGUA LONDON",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video de estos modelos de cristalería.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=London",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gala",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tequileros",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Copas"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/vasos-para-agua-london"
+      ]
+    },
+    {
+      "code": "CR2672",
+      "catalogName": "4 VASOS CORTOS LONDON",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video de estos modelos de cristalería.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=London",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gala",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tequileros",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Copas"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/vasos-cortos-london"
+      ]
+    },
+    {
+      "code": "SP2137",
+      "catalogName": "VASOS TEQUILEROS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó video de estos modelos de cristalería.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=London",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Gala",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tequileros",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Copas"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/vasos-tequileros"
+      ]
+    },
+    {
+      "code": "PR1460",
+      "catalogName": "3 COLADORES PARA EXTRACTOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Se encontraron videos del Juicer completo; no se confirmó el kit de tres coladores específico.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Strainer%20Juicer",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Colador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR1459",
+      "catalogName": "EXPRIMIDOR DE JUGOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el accesorio exprimidor; videos del Juicer completo no bastan.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Exprimidor"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PE0050",
+      "catalogName": "JARRA DE TRITAN",
+      "decision": "verified-match",
+      "videoIds": [
+        "zXhP18jvRK8"
+      ],
+      "reason": "Tutorial que identifica específicamente la jarra de Tritan para Power Blender Max.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Tritan"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PE0051",
+      "catalogName": "ROYAL PRESTIGE MAXCUP",
+      "decision": "verified-match",
+      "videoIds": [
+        "GwBDGFtjJno"
+      ],
+      "reason": "Tutorial que nombra Max Cup; no se hereda el tutorial de la jarra de vidrio.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Max%20Cup"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PE0040",
+      "catalogName": "ROYAL PRESTIGE FRESH MAX",
+      "decision": "verified-match",
+      "videoIds": [
+        "vp1LX7r7pyw",
+        "gD0q9oD6knE"
+      ],
+      "reason": "Accesorio de vacío Fresh Max; ficha oficial y video propio, no el tutorial genérico de la licuadora.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Fresh%20Max"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/fresh-max"
+      ]
+    },
+    {
+      "code": "PE0029",
+      "catalogName": "BATIDOR Y CEPILLO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó la combinación exacta y generación de estos accesorios; no se hereda un video de Go Plus.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Power%20Blender%20Go%20accesorios",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Batidor",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Picadora"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PE0028",
+      "catalogName": "TAZA Y PICADORA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó la combinación exacta y generación de estos accesorios; no se hereda un video de Go Plus.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Power%20Blender%20Go%20accesorios",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Batidor",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Picadora"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "CU0056",
+      "catalogName": "BLOQUE DE BAMBU",
+      "decision": "verified-match",
+      "videoIds": [
+        "CuTE0_XE66U"
+      ],
+      "reason": "Bloque de madera de 17 ranuras, comparado con la foto del catálogo y la ficha All-in-One; no es el afilador independiente.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bloque%20Bamb%C3%BA",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Afilador"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/bloque-para-cuchillos-con-17-ranuras"
+      ]
+    },
+    {
+      "code": "CU0740",
+      "catalogName": "CUCHILLOS CHURRASCOS",
+      "decision": "verified-match",
+      "videoIds": [
+        "mfQS_GM1mf4"
+      ],
+      "reason": "Cuidados publicados específicamente en la ficha oficial de cuchillos para churrasco.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Churrasco"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cuchillos-para-churrascos"
+      ]
+    },
+    {
+      "code": "CU0815",
+      "catalogName": "JUEGO DE 4 PIEZAS PARA REBANAR",
+      "decision": "verified-match",
+      "videoIds": [
+        "UNd9ca53PW0",
+        "OoMRj50udSY"
+      ],
+      "reason": "Set de cuatro piezas para rebanar (cuchillo, tenedor, chaira y tijeras), cotejado con catálogo y ficha oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Carving"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/juego-de-4-piezas-para-rebanar"
+      ]
+    },
+    {
+      "code": "CU0820",
+      "catalogName": "CUCHILLOS PARA CARNE",
+      "decision": "verified-match",
+      "videoIds": [
+        "p668z2hXy2c",
+        "OoMRj50udSY"
+      ],
+      "reason": "Set de cuatro cuchillos para carne; presentación y cuidados enlazados por su ficha oficial.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cuchillos%20para%20carne"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cuchillos-para-carne"
+      ]
+    },
+    {
+      "code": "SP0297",
+      "catalogName": "SANTOKU 3 PULGADAS",
+      "decision": "verified-match",
+      "videoIds": [
+        "OoMRj50udSY"
+      ],
+      "reason": "Solo cuidados generales enlazados en la ficha del Santoku de 3.5 pulgadas; la lista abrevia el nombre a 3 pulgadas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Santoku"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cuchillos-santoku-de-3.5-pulgadas"
+      ]
+    },
+    {
+      "code": "SP0296",
+      "catalogName": "SANTOKU 5 PULGADAS",
+      "decision": "verified-match",
+      "videoIds": [
+        "OoMRj50udSY"
+      ],
+      "reason": "Solo cuidados generales que la ficha oficial enlaza para Santoku de 5 pulgadas; no se asigna otra medida como presentación.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Santoku"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/cuchillos-santoku-de-5-pulgadas"
+      ]
+    },
+    {
+      "code": "CU0148",
+      "catalogName": "CUCHILLO DAMASCUS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video específico confirmado del cuchillo Damascus; se excluye la nueva línea Cutlery.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Damascus"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR1841",
+      "catalogName": "AFILADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "La foto es un afilador independiente de mariposa; los candidatos muestran el bloque integrado. No se mezclan.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Afilador"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/afilador-de-cuchillos-acero-inoxidable"
+      ]
+    },
+    {
+      "code": "WF0482",
+      "catalogName": "FRESCAPURE 5500",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0485",
+      "catalogName": "FRESCAPURE 5500 BAJO EL MOSTRADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/filtro-de-agua-frescapure-5500"
+      ]
+    },
+    {
+      "code": "WF0419",
+      "catalogName": "FRESCAPURE 3500",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR0333",
+      "catalogName": "FILTRO PARA LA DUCHA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del filtro de ducha o sus cartuchos; no se asigna filtración de aire/agua potable.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Filtro%20Ducha",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Shower%20Filter"
+      ],
+      "officialProductPages": [
+        "https://www.royalprestige.com/productos/detalle/filtro-para-la-ducha-frescapure"
+      ]
+    },
+    {
+      "code": "WF0451",
+      "catalogName": "CARTUCHO DE REPUESTO FRESCAPURE 3500",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0500",
+      "catalogName": "FP4500/FP5500",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0530",
+      "catalogName": "FP5500 BAJO EL MOSTRADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del modelo FrescaPure; no se asignan videos FrescaFlow.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%205500",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure%203500"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0654",
+      "catalogName": "LUZ ULTRA VIOLETA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Código repetido en la lista para lámpara UV y kit de cartuchos; sin modelo audiovisual confirmado para ambas descripciones.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Ultravioleta",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=FrescaPure"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0075",
+      "catalogName": "PAQUETE DE 2 CARTUCHOS DE DUCHA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del filtro de ducha o sus cartuchos; no se asigna filtración de aire/agua potable.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Filtro%20Ducha",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Shower%20Filter"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0080",
+      "catalogName": "PAQUETE DE 6 CARTUCHOS DE DUCHA",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Sin video confirmado del filtro de ducha o sus cartuchos; no se asigna filtración de aire/agua potable.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Filtro%20Ducha",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Shower%20Filter"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "RP6161",
+      "catalogName": "KIT DEBAJO DEL MOSTRADOR",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el kit bajo mostrador o válvulas de desvío específicas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=V%C3%A1lvula%20desv%C3%ADo",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bajo%20Mostrador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "RP6196",
+      "catalogName": "VALVULA DE DESVIO SIMPLE (MANGUERA)",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el kit bajo mostrador o válvulas de desvío específicas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=V%C3%A1lvula%20desv%C3%ADo",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bajo%20Mostrador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "RP1686",
+      "catalogName": "VALVULA DE DESVIO DOBLE( MANGUERA DOBLE)",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "No se confirmó el kit bajo mostrador o válvulas de desvío específicas.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=V%C3%A1lvula%20desv%C3%ADo",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Bajo%20Mostrador"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "RP0140",
+      "catalogName": "3 CARTUCHOS PARA EL FILTRO",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "La descripción del repuesto no permite confirmar modelo; no se asignan videos de otro sistema.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Prefiltro"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "AP2704",
+      "catalogName": "CARTUCHO PURE AMBIENCE",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "Cartucho Pure Ambience anterior; no se hereda el video del nuevo Air Filtration System AP2801.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Pure%20Ambience",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR2002",
+      "catalogName": "2 UNIDADES DE PREFILTRO FRESCAFLOW",
+      "decision": "verified-match",
+      "videoIds": [
+        "yCRIsyi62GU"
+      ],
+      "reason": "Solo sustitución de cartuchos del mismo sistema FrescaFlow; sin videos promocionales del equipo completo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Prefiltro"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR2003",
+      "catalogName": "CARTUCHO SOLAMENTE UNIDAD FILTRO OSMOSIS INVERSA",
+      "decision": "verified-match",
+      "videoIds": [
+        "yCRIsyi62GU"
+      ],
+      "reason": "Membrana del sistema FrescaFlow; solo tutorial de sustitución del mismo modelo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Prefiltro"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "PR2004",
+      "catalogName": "MINERALIZADOR Y FILTRO DE CARBON",
+      "decision": "verified-match",
+      "videoIds": [
+        "yCRIsyi62GU"
+      ],
+      "reason": "Mineralizador/carbón de FrescaFlow; solo tutorial de sustitución del mismo modelo.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Prefiltro"
+      ],
+      "officialProductPages": []
+    },
+    {
+      "code": "WF0060",
+      "catalogName": "PRE-FILTRO DE 10\" CON 3 CARTUCHOS",
+      "decision": "no-exact-match-confirmed",
+      "videoIds": [],
+      "reason": "La descripción del repuesto no permite confirmar modelo; no se asignan videos de otro sistema.",
+      "channelSearches": [
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Cartuchos",
+        "https://www.youtube.com/@RoyalPrestigeOfficial/search?query=Prefiltro"
+      ],
+      "officialProductPages": []
+    }
+  ],
+  "newVideoVerification": [
+    {
+      "id": "iy4tTfyv_wY",
+      "product": "Barista",
+      "family": "barista",
+      "category": "Café y té",
+      "type": "Presentación",
+      "duration": "0:43",
+      "title": "Te Presentamos el Nuevo Royal Prestige® Barista",
+      "url": "https://www.youtube.com/watch?v=iy4tTfyv_wY",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "we0PGQPAw48",
+      "product": "Barista",
+      "family": "barista",
+      "category": "Café y té",
+      "type": "Uso y cuidados",
+      "duration": "",
+      "title": "Cómo Usar y Cuidar Tu Royal Prestige® Barista",
+      "url": "https://www.youtube.com/watch?v=we0PGQPAw48",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "1bpewZi0r5w",
+      "product": "BaristArt Kit",
+      "family": "baristart",
+      "category": "Café y té",
+      "type": "Presentación",
+      "duration": "1:01",
+      "title": "Te Presentamos el Nuevo Royal Prestige® BaristArt Kit",
+      "url": "https://www.youtube.com/watch?v=1bpewZi0r5w",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "OroIxlvUVTA",
+      "product": "Precision Cook",
+      "family": "precision-cook",
+      "category": "Electrodomésticos",
+      "type": "Presentación",
+      "duration": "1:25",
+      "title": "Royal Prestige® Precision Cook",
+      "url": "https://www.youtube.com/watch?v=OroIxlvUVTA",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "1J5rF6naZ9o",
+      "product": "Precision Cook",
+      "family": "precision-cook",
+      "category": "Electrodomésticos",
+      "type": "Uso y cuidados",
+      "duration": "3:22",
+      "title": "Cómo Usar tu Royal Prestige® Precision Cook",
+      "url": "https://www.youtube.com/watch?v=1J5rF6naZ9o",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "ACweIGyBcsg",
+      "product": "Royal Espresso · 4 y 10 tazas",
+      "family": "espresso",
+      "category": "Café y té",
+      "type": "Presentación",
+      "duration": "1:02",
+      "title": "Royal Prestige® Espresso",
+      "url": "https://www.youtube.com/watch?v=ACweIGyBcsg",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "0dn4OHRnKhA",
+      "product": "Royal Espresso · 4 y 10 tazas",
+      "family": "espresso",
+      "category": "Café y té",
+      "type": "Uso y cuidados",
+      "duration": "1:10",
+      "title": "Cómo Usar tu Royal Prestige® Espresso",
+      "url": "https://www.youtube.com/watch?v=0dn4OHRnKhA",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "AYscfmVhG1s",
+      "product": "Perfect Pop",
+      "family": "perfect-pop",
+      "category": "Accesorios",
+      "type": "Presentación",
+      "duration": "0:42",
+      "title": "Royal Prestige® Perfect Pop",
+      "url": "https://www.youtube.com/watch?v=AYscfmVhG1s",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "vp1LX7r7pyw",
+      "product": "Fresh Max",
+      "family": "fresh-max",
+      "category": "Licuadoras",
+      "type": "Presentación",
+      "duration": "1:04",
+      "title": "Royal Prestige® Fresh Max",
+      "url": "https://www.youtube.com/watch?v=vp1LX7r7pyw",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "gD0q9oD6knE",
+      "product": "Fresh Max",
+      "family": "fresh-max",
+      "category": "Licuadoras",
+      "type": "Uso y cuidados",
+      "duration": "1:07",
+      "title": "Cómo Usar tu Royal Prestige® Fresh Max",
+      "url": "https://www.youtube.com/watch?v=gD0q9oD6knE",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "GwBDGFtjJno",
+      "product": "Max Cup",
+      "family": "max-cup",
+      "category": "Licuadoras",
+      "type": "Uso y cuidados",
+      "duration": "0:40",
+      "title": "Cómo Usar tu Royal Prestige® Max Cup",
+      "url": "https://www.youtube.com/watch?v=GwBDGFtjJno",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "zXhP18jvRK8",
+      "product": "Jarra de Tritan para Power Blender Max",
+      "family": "tritan-jar",
+      "category": "Licuadoras",
+      "type": "Uso y cuidados",
+      "duration": "0:50",
+      "title": "¿Cómo usar tu Royal Prestige® Power Blender Max con Jarra de Tritan?",
+      "url": "https://www.youtube.com/watch?v=zXhP18jvRK8",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "qvdt-Q8eQJ8",
+      "product": "Cacerola Royal Prestige",
+      "family": "casserole",
+      "category": "Ollas y sartenes",
+      "type": "Presentación",
+      "duration": "1:07",
+      "title": "Royal Prestige® Casserole",
+      "url": "https://www.youtube.com/watch?v=qvdt-Q8eQJ8",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "3Ys_VtMeR-4",
+      "product": "Cacerola Royal Prestige",
+      "family": "casserole",
+      "category": "Ollas y sartenes",
+      "type": "Uso y cuidados",
+      "duration": "",
+      "title": "Cómo Usar tu Royal Prestige® Casserole",
+      "url": "https://www.youtube.com/watch?v=3Ys_VtMeR-4",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "CuTE0_XE66U",
+      "product": "Bloque de cuchillos All-in-One",
+      "family": "knife-block",
+      "category": "Accesorios",
+      "type": "Uso y cuidados",
+      "duration": "1:41",
+      "title": "Cómo Usar y Cuidar tu Royal Prestige® All-In-One Knife Block",
+      "url": "https://www.youtube.com/watch?v=CuTE0_XE66U",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "mfQS_GM1mf4",
+      "product": "Cuchillos para churrasco",
+      "family": "churrasco-knives",
+      "category": "Accesorios",
+      "type": "Uso y cuidados",
+      "duration": "0:57",
+      "title": "¿Sabes cómo cuidar tus cuchillos Royal Prestige®?",
+      "url": "https://www.youtube.com/watch?v=mfQS_GM1mf4",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "p668z2hXy2c",
+      "product": "Juego de cuchillos para carne · 4 piezas",
+      "family": "steak-knives",
+      "category": "Accesorios",
+      "type": "Presentación",
+      "duration": "0:17",
+      "title": "Te Presentamos el Nuevo Royal Prestige® Steak Knife Set",
+      "url": "https://www.youtube.com/watch?v=p668z2hXy2c",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "UNd9ca53PW0",
+      "product": "Juego de 4 piezas para rebanar",
+      "family": "carving-knives",
+      "category": "Accesorios",
+      "type": "Presentación",
+      "duration": "0:22",
+      "title": "Te Presentamos el Nuevo Royal Prestige® Carving Knife Set",
+      "url": "https://www.youtube.com/watch?v=UNd9ca53PW0",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "OoMRj50udSY",
+      "product": "Cuidados de cuchillos Santoku, para carne y para rebanar",
+      "family": "knife-care",
+      "category": "Accesorios",
+      "type": "Uso y cuidados",
+      "duration": "1:05",
+      "title": "Cómo Cuidar Tus Cuchillos de Royal Prestige®",
+      "url": "https://www.youtube.com/watch?v=OoMRj50udSY",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    },
+    {
+      "id": "vwvQFg9pKyo",
+      "product": "Sartenes Gourmet",
+      "family": "gourmet-skillets",
+      "category": "Ollas y sartenes",
+      "type": "Uso y cuidados",
+      "duration": "15:04",
+      "title": "Aprende a Cocinar con Chef Omar y las Sartenes Gourmet de Royal Prestige®",
+      "url": "https://www.youtube.com/watch?v=vwvQFg9pKyo",
+      "author": "Royal Prestige",
+      "author_url": "https://www.youtube.com/@RoyalPrestigeOfficial",
+      "verified": true
+    }
+  ]
+}

@@ -9,8 +9,8 @@ const catalog = context.TecProductVideoCatalog;
 const ids = (code, name) => Array.from(catalog.forProduct({ codigo_producto: code, nombre_producto: name }), v => v.id);
 
 test('each approved video has a unique official YouTube watch link and a valid family', () => {
-  assert.equal(catalog.videos.length, 23);
-  assert.equal(new Set(catalog.videos.map(v => v.id)).size, 23);
+  assert.equal(catalog.videos.length, 43);
+  assert.equal(new Set(catalog.videos.map(v => v.id)).size, 43);
   for (const video of catalog.videos) {
     assert.match(video.id, /^[a-zA-Z0-9_-]{11}$/);
     assert.equal(video.url, `https://www.youtube.com/watch?v=${video.id}`);
@@ -34,11 +34,12 @@ test('cookware lines remain separate and ambiguous repeated price-sheet codes fa
   assert.deepEqual(ids('CO7014'), ['aa3c1fX83N8']);
   assert.deepEqual(ids('CO9738'), ['gIRieCFeMQc', 'm7tI3WypyVQ']);
   assert.deepEqual(ids('CO9630', 'SARTEN DE 8 INNOVE'), ['5G86YsDe6-4']);
-  assert.deepEqual(ids('CO9630', 'SARTEN GOURMET 8'), []);
+  assert.deepEqual(ids('CO9630', 'SARTEN GOURMET 8'), ['vwvQFg9pKyo']);
+  assert.deepEqual(ids('CO9630', 'SARTEN 8'), []);
 });
 
 test('parts, older bowls and unrelated knives cannot inherit whole-product or newer-model videos', () => {
-  for (const code of ['PR2002', 'PR2003', 'AP2704', 'SP0066', 'SP0068', 'PR4902', 'CU0148', 'CU0056', 'PE0051', 'PE0029']) {
+  for (const code of ['AP2704', 'SP0066', 'SP0068', 'PR4902', 'CU0148', 'PR1841', 'PE0029', 'PE0028', 'WF0482', 'WF0485', 'WF0419', 'WF0654']) {
     assert.deepEqual(ids(code, 'Power Blender Max'), [], code);
   }
   for (const name of ['licuadora', 'olla', 'aro de silicona', 'válvula', 'tazón', 'filtro de agua']) {
@@ -46,6 +47,45 @@ test('parts, older bowls and unrelated knives cannot inherit whole-product or ne
   }
   assert.ok(ids('WF1200').length === 3);
   assert.deepEqual(ids('CO4900'), ['LggddajOKlA']);
+});
+
+test('blender attachments receive only their own model tutorial, never the whole blender or Go Plus', () => {
+  assert.deepEqual(ids('PE0050'), ['zXhP18jvRK8']);
+  assert.deepEqual(ids('PE0051'), ['GwBDGFtjJno']);
+  assert.deepEqual(ids('PE0040'), ['vp1LX7r7pyw', 'gD0q9oD6knE']);
+  assert.deepEqual(ids('ES0071'), ['OroIxlvUVTA', '1J5rF6naZ9o']);
+  assert.deepEqual(ids('PE0029'), []);
+  assert.deepEqual(ids('PE0028'), []);
+});
+
+test('FrescaFlow parts share only the cartridge-replacement tutorial, never FrescaPure or air-filter videos', () => {
+  for (const code of ['PR2002', 'PR2003', 'PR2004']) assert.deepEqual(ids(code), ['yCRIsyi62GU']);
+  for (const code of ['WF0451', 'WF0500', 'WF0530', 'WF0075', 'AP2704']) assert.deepEqual(ids(code), []);
+  assert.deepEqual(ids('WF1200'), ['N5UzL3Lgj38', 'psqkTxfZ3Pw', 'yCRIsyi62GU']);
+});
+
+test('shared knife care preserves exact model presentations and does not imply a different size or sharpener', () => {
+  assert.deepEqual(ids('SP0296'), ['OoMRj50udSY']);
+  assert.deepEqual(ids('SP0297'), ['OoMRj50udSY']);
+  assert.deepEqual(ids('CU0820'), ['p668z2hXy2c', 'OoMRj50udSY']);
+  assert.deepEqual(ids('CU0815'), ['UNd9ca53PW0', 'OoMRj50udSY']);
+  assert.deepEqual(ids('CU0056'), ['CuTE0_XE66U']);
+  assert.deepEqual(ids('PR1841'), []);
+});
+
+test('all 84 reviewed codes retain their explicit audit decision and every mapped video exists', () => {
+  const audit = JSON.parse(readFileSync(new URL('../docs/tec-product-video-audit-2026-10-28.json', import.meta.url), 'utf8'));
+  assert.equal(audit.reviews.length, 84);
+  assert.equal(new Set(audit.reviews.map(r => r.code)).size, 84);
+  assert.equal(audit.reviews.filter(r => r.decision === 'verified-match').length, 22);
+  for (const row of audit.reviews) {
+    assert.deepEqual(ids(row.code, row.catalogName), row.videoIds, row.code);
+    assert.ok(row.channelSearches.length > 0);
+    assert.ok(row.reason);
+  }
+  for (const family of catalog.families) {
+    for (const id of family.videoIds) assert.ok(catalog.byId(id), `${family.id}: ${id}`);
+  }
 });
 
 test('close stops playback synchronously and an old close event cannot break a reopened viewer', () => {
