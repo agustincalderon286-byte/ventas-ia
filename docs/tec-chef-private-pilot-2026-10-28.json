@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-28",
+  "feature": "TEC Chef private admin pilot",
+  "counts": {
+    "recipes": 262,
+    "publicProductPages": 64,
+    "warrantySections": 41,
+    "careSections": 17,
+    "approvedRecipeVideos": 24
+  },
+  "validation": {
+    "automatedTestsPassed": 712,
+    "automatedTestsFailed": 0,
+    "desktopVisual": true,
+    "mobile390Visual": true,
+    "localConversationReload": true,
+    "localContactSave": true,
+    "embeddedOfficialVideo": true,
+    "productionAI": "pending"
+  },
+  "scope": {
+    "administratorsOnly": true,
+    "serverAuthorization": true,
+    "publicPricesExcluded": true,
+    "internalPartsExcluded": true,
+    "whatsappEnabled": false,
+    "outboundCampaignsEnabled": false,
+    "trialContactInternalCrmOnly": true,
+    "privatePageOfflineCache": false
+  },
+  "notes": [
+    "Existing Coach offline data stores are not modified.",
+    "Production AI and deployment verification follow deployment."
+  ]
+}

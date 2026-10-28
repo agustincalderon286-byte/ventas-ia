@@ -15,6 +15,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
+import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
 import {
@@ -2375,6 +2376,11 @@ const CoachMarketingAutomationRun =
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+registerTecChef(app, {
+  requireAdmin: requireControlTowerAccess, getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
+  privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
+  syncCrm: sincronizarCoachLeadInboxACrmRecord, isChefMode: mode => normalizarModoChat(mode) !== "coach"
+});
 app.use("/api/public/metalworks", limitarSolicitudesPublicasMetalworks);
 registerMetalworksCrm(app, {
   mongoose,
@@ -32723,6 +32729,9 @@ app.post("/webhooks/twilio/sms", express.urlencoded({ extended: false }), async 
       console.error("Error guardando SMS entrante del Coach:", error.message);
     }
   }
+
+  // Preserve incoming CRM activity; the Chef AI itself is web/admin-only in this pilot.
+  if (CHEF_PRIVATE_PILOT) return res.type("text/xml").send(construirTwilioEmptyResponse());
 
   if (!matchedLead || !leadChefContext?.ownership?.ownerUserId) {
     return res.type("text/xml").send(

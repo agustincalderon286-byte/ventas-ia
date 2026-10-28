@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-recipes1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-recipes1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-chef1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-chef1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -19,6 +19,7 @@ const TEC_CORE_ASSETS = [
   "/coach/app.js?v=20261028-program-gifts1",
   "/coach/app.js?v=20261028-program-gifts2",
   "/coach/app.js?v=20261028-videos1",
+  "/coach/app.js?v=20261028-chef1",
   "/coach/product-videos-catalog.js?v=20261028-videos1",
   "/coach/product-videos-catalog.js?v=20261028-videos3",
   "/coach/product-videos-catalog.js?v=20261028-videos4",
@@ -27,6 +28,7 @@ const TEC_CORE_ASSETS = [
   "/coach/product-videos.js?v=20261028-videos2",
   "/coach/product-videos.js?v=20261028-videos4",
   "/coach/product-videos.js?v=20261028-recipes1",
+  "/coach/product-videos.js?v=20261028-chef1",
   "/coach/product-videos.css?v=20261028-videos1",
   "/coach/product-videos.css?v=20261028-recipes1",
   "/coach/product-image-viewer.js?v=20261028-program-gifts1",
@@ -181,6 +183,8 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) {
     return;
   }
+
+  if (url.pathname === "/coach/chef" || url.pathname.startsWith("/coach/chef/")) return;
 
   if (url.pathname === "/api/coach/catalog-offline" || url.pathname === "/api/coach/catalog-prices") {
     event.respondWith(networkFirst(request, TEC_CATALOG_CACHE));

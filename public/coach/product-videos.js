@@ -145,23 +145,24 @@
       }
     });
   }
-  function open({ product = null, button = null, returnTo = 'los catálogos' } = {}) {
-    const videos = product ? catalog.forProduct(product) : catalog.videos;
+  function open({ product = null, videoId = '', button = null, returnTo = 'los catálogos' } = {}) {
+    const videos = videoId ? (catalog.byId(videoId) ? [catalog.byId(videoId)] : []) : product ? catalog.forProduct(product) : catalog.videos;
     if (!videos.length) return;
     if (!dialog) createDialog();
     if (dialog.open) return;
     available = [...videos].sort((a, b) => (a.type === 'Presentación' ? 0 : 1) - (b.type === 'Presentación' ? 0 : 1));
     opener = button; origin = returnTo;
-    heading.textContent = product ? `Videos · ${product.nombre_producto || product.name || 'Producto'}` : 'Videos y recetas de productos';
-    subtitle.textContent = `Al cerrar vuelves a ${origin}.`;
-    dialog.querySelector('[data-tec-video-close]').setAttribute('aria-label', `Cerrar videos y volver a ${origin}`);
+    heading.textContent = videoId ? catalog.byId(videoId).title : product ? `Videos · ${product.nombre_producto || product.name || 'Producto'}` : 'Videos y recetas de productos';
+    const destination = origin === 'el Chef' ? 'al Chef' : `a ${origin}`;
+    subtitle.textContent = `Al cerrar vuelves ${destination}.`;
+    dialog.querySelector('[data-tec-video-close]').setAttribute('aria-label', `Cerrar videos y volver ${destination}`);
     search.value = ''; category.value = ''; kind = '';
     activeVideo = null; retry.hidden = true; stopPlayback();
     status.textContent = navigator.onLine === false ? 'Necesitas internet para reproducir los videos. Puedes seguir usando el Coach sin perder tus datos.' : 'Elige un video para verlo aquí.';
     renderTypes(); renderList(); previousOverflow = document.body.style.overflow;
     dialog.showModal(); document.body.style.overflow = 'hidden';
     viewerActive = true;
-    if (product) play(available[0]);
+    if (product || videoId) play(available[0]);
     dialog.querySelector('[data-tec-video-body]').scrollTop = 0;
   }
   function mount(container, product, { origin = 'la calculadora' } = {}) {
@@ -180,5 +181,5 @@
     const button = event.target.closest?.('[data-product-video-library]');
     if (button) { event.preventDefault(); open({ button }); }
   });
-  window.TecProductVideos = Object.freeze({ mount });
+  window.TecProductVideos = Object.freeze({ mount, openVideo: (videoId, button) => open({ videoId, button, returnTo: 'el Chef' }) });
 })();
