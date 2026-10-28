@@ -4,6 +4,7 @@
   if (!catalog) return;
   let dialog, heading, subtitle, search, category, kind, grid, count, player, status, retry;
   let activeVideo = null, available = [], opener = null, previousOverflow = '', origin = '';
+  let viewerActive = false;
   const node = (tag, className, text) => {
     const result = document.createElement(tag);
     if (className) result.className = className;
@@ -14,6 +15,21 @@
     // Removing the frame also stops sound, including when closing with Escape.
     player.replaceChildren();
     player.hidden = true;
+  }
+  function finishClose() {
+    // A delayed close event from the previous opening must not affect a new one.
+    if (!viewerActive || dialog.open) return;
+    viewerActive = false;
+    stopPlayback(); activeVideo = null;
+    document.body.style.overflow = previousOverflow;
+    if (opener?.isConnected) opener.focus({ preventScroll: true });
+    opener = null;
+  }
+  function closeDialog() {
+    if (!dialog.open) return;
+    stopPlayback();
+    dialog.close();
+    finishClose();
   }
   function play(video) {
     activeVideo = video;
@@ -71,7 +87,7 @@
     const titles = node('div'); heading = node('h2'); heading.id = 'tec-video-heading';
     subtitle = node('p'); titles.append(heading, subtitle);
     const close = node('button', 'tec-video-close', '✕ Cerrar y volver'); close.type = 'button'; close.autofocus = true;
-    close.setAttribute('data-tec-video-close', ''); close.addEventListener('click', () => dialog.close());
+    close.setAttribute('data-tec-video-close', ''); close.addEventListener('click', closeDialog);
     header.append(titles, close);
     const body = node('div', 'tec-video-body'); body.setAttribute('data-tec-video-body', '');
     const note = node('p', 'tec-video-note', 'Videos oficiales de Royal Prestige · Requieren internet. Confirma que el modelo mostrado coincida con tu producto.');
@@ -91,16 +107,10 @@
     count = node('p', 'tec-video-count'); count.setAttribute('role', 'status');
     grid = node('div', 'tec-video-grid');
     body.append(note, player, status, retry, filters, count, grid); dialog.append(header, body); document.body.append(dialog);
-    dialog.addEventListener('close', () => {
-      stopPlayback(); activeVideo = null;
-      document.body.style.overflow = previousOverflow;
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
-      opener = null;
-    });
-    // Escape must stop sound immediately, before the asynchronous close event.
-    dialog.addEventListener('cancel', stopPlayback);
-    window.addEventListener('coach:workspace-change', () => { if (dialog.open) { stopPlayback(); dialog.close(); } });
-    window.addEventListener('pagehide', () => { stopPlayback(); if (dialog.open) dialog.close(); });
+    dialog.addEventListener('close', finishClose);
+    dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(); });
+    window.addEventListener('coach:workspace-change', closeDialog);
+    window.addEventListener('pagehide', closeDialog);
     window.addEventListener('offline', () => {
       if (!dialog.open) return;
       stopPlayback();
@@ -128,6 +138,7 @@
     status.textContent = navigator.onLine === false ? 'Necesitas internet para reproducir los videos. Puedes seguir usando el Coach sin perder tus datos.' : 'Elige un video para verlo aquí.';
     renderList(); previousOverflow = document.body.style.overflow;
     dialog.showModal(); document.body.style.overflow = 'hidden';
+    viewerActive = true;
     if (product) play(available[0]);
     dialog.querySelector('[data-tec-video-body]').scrollTop = 0;
   }

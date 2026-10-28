@@ -47,3 +47,29 @@ test('parts, older bowls and unrelated knives cannot inherit whole-product or ne
   assert.ok(ids('WF1200').length === 3);
   assert.deepEqual(ids('CO4900'), ['LggddajOKlA']);
 });
+
+test('close stops playback synchronously and an old close event cannot break a reopened viewer', () => {
+  const source = readFileSync(new URL('../public/coach/product-videos.js', import.meta.url), 'utf8');
+  let frames = 1, focused = 0;
+  const ui = vm.createContext({
+    player: { replaceChildren() { frames = 0; }, hidden: false },
+    dialog: { open: true, close() { this.open = false; } },
+    viewerActive: true, activeVideo: { id: 'first' }, previousOverflow: '',
+    opener: { isConnected: true, focus() { focused++; } },
+    document: { body: { style: { overflow: 'hidden' } } }
+  });
+  vm.runInContext(source.slice(source.indexOf('  function stopPlayback()'), source.indexOf('  function play(video)')), ui);
+  ui.closeDialog();
+  assert.equal(frames, 0, 'sound is stopped without waiting for a browser event');
+  assert.equal(ui.document.body.style.overflow, '');
+  assert.equal(focused, 1);
+  ui.dialog.open = true; ui.viewerActive = true; ui.activeVideo = { id: 'next' };
+  ui.document.body.style.overflow = 'hidden'; frames = 1;
+  ui.finishClose(); // Delayed event belonging to the previous opening.
+  assert.equal(frames, 1);
+  assert.equal(ui.activeVideo.id, 'next');
+  assert.equal(ui.document.body.style.overflow, 'hidden');
+  ui.closeDialog();
+  assert.equal(frames, 0);
+  assert.equal(ui.document.body.style.overflow, '');
+});
