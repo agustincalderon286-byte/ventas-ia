@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261025-native-offline2" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261028-password-eye1" />
   </head>
   <body class="coach-login-body">
     <div class="coach-login-shell" data-coach-login-page>
@@ -118,7 +118,7 @@
 
             <div class="coach-login-field">
               <label for="coach-password">Contraseña</label>
-              <div class="coach-login-input-wrap">
+              <div class="coach-login-input-wrap coach-login-password-wrap">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="5" y="10" width="14" height="10" rx="3" />
                   <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" />
@@ -131,6 +131,22 @@
                   autocomplete="current-password"
                   required
                 />
+                <button
+                  class="coach-login-password-toggle"
+                  type="button"
+                  data-password-toggle
+                  aria-controls="coach-password"
+                  aria-label="Mostrar contraseña"
+                  aria-pressed="false"
+                  title="Mostrar contraseña"
+                  hidden
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path class="coach-login-eye-slash" d="m3 3 18 18" />
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -171,6 +187,7 @@
       </footer>
     </div>
 
+    <script src="/coach/password-visibility.js?v=20261028-password-eye1"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/app.js?v=20261025-native-offline2"></script>

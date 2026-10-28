@@ -8862,6 +8862,58 @@ body.coach-login-body::before {
   color: #98a5b4;
 }
 
+.coach-login-form .coach-login-password-wrap input {
+  padding-right: 62px;
+}
+
+.coach-login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #294969;
+  cursor: pointer;
+}
+
+.coach-login-password-toggle[hidden] {
+  display: none;
+}
+
+.coach-login-password-toggle:hover {
+  background: #e5edf5;
+}
+
+.coach-login-password-toggle:focus-visible {
+  outline: 2px solid #294969;
+  outline-offset: -2px;
+}
+
+.coach-login-password-toggle svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.coach-login-eye-slash {
+  display: none;
+}
+
+.coach-login-password-toggle[aria-pressed="true"] .coach-login-eye-slash {
+  display: block;
+}
+
 .coach-login-form .coach-login-input-wrap input:focus {
   outline: none;
   background: #ffffff;
