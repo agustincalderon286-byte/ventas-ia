@@ -2077,6 +2077,7 @@ function createOrderCalcProductCard(index) {
         </figcaption>
       </figure>
 
+      <div data-order-calc-videos hidden></div>
       <div class="order-calc-grid">
         <label class="order-calc-field order-calc-field-name">
           <span>Nombre del producto</span>
@@ -2193,6 +2194,9 @@ function initSurveyProductPicker() {
         zoom.append(image, hint); visual.append(zoom);
       }
       const label = document.createElement("span"); label.textContent = `${match.nombre_producto || ""} · ${match.codigo_producto || ""}`; visual.append(label);
+      const videos = document.createElement("div"); videos.setAttribute("data-survey-product-videos", "");
+      visual.append(videos);
+      globalThis.TecProductVideos?.mount(videos, match, { origin: "la encuesta" });
       showResults(false); results.replaceChildren();
       calc?.applySurveyProduct?.(index, match);
       note.textContent = "Producto seleccionado y enviado a la calculadora. Para cambiarlo, busca y elige otra tarjeta.";
@@ -2328,6 +2332,7 @@ function initOrderCalculator() {
 
   const clearCatalogVisual = card => {
     const { visualNode, visualImage } = getProductNodes(card);
+    globalThis.TecProductVideos?.mount(card.querySelector("[data-order-calc-videos]"), null);
 
     if (visualImage) {
       visualImage.removeAttribute("src");
@@ -2411,6 +2416,7 @@ function initOrderCalculator() {
     card.dataset.orderCalcCatalogCode = String(match.codigo_producto || "").trim();
     card.dataset.orderCalcCatalogName = String(match.nombre_producto || "").trim();
     renderCatalogVisual(card, match);
+    globalThis.TecProductVideos?.mount(card.querySelector("[data-order-calc-videos]"), match, { origin: "la calculadora" });
 
     setMatchMessage(
       card,
