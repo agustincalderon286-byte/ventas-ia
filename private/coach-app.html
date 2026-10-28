@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261028-program-gifts1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261028-cierre-simple1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
     <link rel="stylesheet" href="/coach/property-map.css?v=20261028-address1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261025-native-offline2" />
@@ -67,25 +67,9 @@
             <div class="coach-hero-copy">
               <div class="eyebrow" data-coach-active-kicker>Entrenamiento en accion</div>
               <h2>Hola, <span data-coach-user-name>Distribuidor</span></h2>
-              <p>Avanza con claridad, conecta con la familia y dirige cada presentacion con confianza.</p>
             </div>
 
             <div class="coach-hero-progress">
-              <div class="coach-hero-progress-head">
-                <div>
-                  <span>Tu ruta de cierre</span>
-                  <strong>Presentacion guiada</strong>
-                </div>
-                <div class="coach-route-mark" aria-hidden="true">4</div>
-              </div>
-
-              <div class="coach-progress-track" role="list" aria-label="Etapas de la presentacion">
-                <div class="coach-progress-step is-active" role="listitem"><span>1</span><strong>Conecta</strong></div>
-                <div class="coach-progress-step" role="listitem"><span>2</span><strong>Descubre</strong></div>
-                <div class="coach-progress-step" role="listitem"><span>3</span><strong>Demuestra</strong></div>
-                <div class="coach-progress-step" role="listitem"><span>4</span><strong>Cierra</strong></div>
-              </div>
-
               <div class="coach-compact-actions">
                 <button class="secondary-button" type="button" data-coach-new-client data-telemarketing-hide>↻ Nuevo cliente</button>
                 <button class="nav-button" type="button" data-coach-open-messages data-telemarketing-hide>
@@ -98,20 +82,12 @@
             </div>
           </div>
 
-          <div class="coach-compact-strip coach-compact-strip-slim" data-telemarketing-hide>
-            <div class="coach-live-context" data-coach-health-survey-context>
-              <strong data-coach-health-survey-name>El widget flotante sigue siendo tu apoyo principal.</strong>
-              <span data-coach-health-survey-close>Marca el paso correcto y usa Mensajes para ver boletines o pedir soporte.</span>
-            </div>
-          </div>
-
         </div>
 
         <aside class="coach-sidebar">
           <div class="coach-workspace-switch">
             <div class="coach-section-heading">
               <div>
-                <div class="eyebrow">Ruta guiada</div>
                 <h2 data-coach-workspace-title>Cierre</h2>
               </div>
               <span class="coach-focus-chip">Enfoque actual</span>
@@ -125,6 +101,7 @@
               >
                 Cierre
               </button>
+              <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="actividad" aria-selected="false">Mi actividad</button>
               <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="mapa" aria-selected="false">
                 Mapa
               </button>
@@ -205,15 +182,6 @@
                 Torre
               </a>
             </div>
-            <div class="coach-journey" aria-label="Camino del cierre">
-              <div class="coach-journey-step is-active"><span>1</span><strong>Conexion</strong></div>
-              <div class="coach-journey-step"><span>2</span><strong>Descubrimiento</strong></div>
-              <div class="coach-journey-step"><span>3</span><strong>Demostracion</strong></div>
-              <div class="coach-journey-step"><span>4</span><strong>Decision</strong></div>
-            </div>
-            <p class="mini-note" data-coach-workspace-copy>
-              Sigue el orden de la visita y activa el paso donde te encuentras.
-            </p>
             <p class="tec-sr-only" data-coach-stage-notice role="status" aria-live="polite"></p>
           </div>
 
@@ -296,10 +264,7 @@
             <div class="form-result coach-demo-recorder-status" data-demo-recorder-status>
               Confirma el consentimiento para comenzar. Maximo 90 minutos.
             </div>
-            <p class="mini-note coach-demo-launcher-note">
-              El audio solo se usa para transcribir. El reporte y la transcripcion quedan privados en tu cuenta.
-            </p>
-            <p class="mini-note">Si el dictado u otra aplicación interrumpe el micrófono, TEC pausará la demo e intentará continuar cuando vuelva el audio. Si no puede, toca «Reanudar». Lo hablado durante la pausa no se graba.</p>
+<p class="mini-note">Si el dictado u otra aplicación interrumpe el micrófono, TEC pausará la demo e intentará continuar cuando vuelva el audio. Si no puede, toca «Reanudar». Lo hablado durante la pausa no se graba.</p>
           </article>
 
           <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="sheet" hidden>
@@ -4815,7 +4780,7 @@
 
           <article
             class="dashboard-card health-survey-folder-card"
-            data-coach-workspace-section="cierre"
+            data-coach-workspace-section="actividad" hidden
             style="--coach-flow-order: 55"
           >
             <div class="eyebrow">Carpeta privada</div>
@@ -4872,12 +4837,9 @@
           >
             <div class="coach-step-intro">
               <div class="coach-step-copy">
-                <div class="eyebrow">Paso 7 · Cierre</div>
-                <h3>Momento de cerrar con apoyo</h3>
-                <p>
-                  Aqui ya puedes llamar al jefe, negociar, usar encuesta, calculadora, balance, descuentos y regalos.
-                  Desde este punto todo empuja a decision.
-                </p>
+                <div class="eyebrow">Paso 7 · Tu elección</div>
+                <h3>Revisemos tu elección</h3>
+                <p>Confirma la opción elegida y resuelve las últimas dudas.</p>
 
                 <div class="dashboard-actions compact-top">
                   <button type="button" class="coach-demo-button" data-coach-stage-activate="cierre_final">Estoy aqui</button>
@@ -4892,22 +4854,6 @@
               </figure>
             </div>
 
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Usa todo lo que ya gano peso</strong>
-                  <span>Encuesta, agua, presupuesto y objeciones reales de esta casa.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>No regreses al inicio</strong>
-                  <span>Si ya llegaron aqui, pide decision y reestructura solo lo necesario.</span>
-                </div>
-              </div>
-            </div>
           </article>
 
           <article
@@ -5324,11 +5270,8 @@
             <div class="coach-step-intro">
               <div class="coach-step-copy">
                 <div class="eyebrow">Paso 8 · Invitacion al negocio</div>
-                <h3>Invitalos a hacer lo que tu haces</h3>
-                <p>
-                  Si viste apertura, este es el momento para ofrecer la oportunidad de negocio sin enredarte ni hablar de
-                  mas.
-                </p>
+                <h3>Comparte la oportunidad</h3>
+                <p>Si hay interés, presenta la oportunidad de formar parte del equipo.</p>
 
                 <div class="dashboard-actions compact-top">
                   <button type="button" class="coach-demo-button" data-coach-stage-activate="invitacion_negocio">
@@ -5345,29 +5288,10 @@
               </figure>
             </div>
 
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Habla de oportunidad</strong>
-                  <span>Solo si viste interes real en crecer, vender o ganar dinero extra.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>No la mezcles temprano</strong>
-                  <span>Es el ultimo paso, despues de la demo y del cierre principal.</span>
-                </div>
-              </div>
-            </div>
-
             <div class="recruitment-card-inline">
               <div class="resource-copy">
                 <strong>Aplicacion express</strong>
-                <span>
-                  Si ves apertura real para el negocio, guarda aqui sus datos sin salirte del paso final de la demo.
-                </span>
+                <span>Guarda sus datos si desea conocer más.</span>
               </div>
 
               <div class="dashboard-actions compact-top">
@@ -5458,10 +5382,7 @@
                 </form>
               </div>
 
-              <p class="mini-note">
-                Usa esta misma aplicacion cuando ya los estas invitando al negocio. Se guarda en la misma carpeta
-                privada de reclutamiento.
-              </p>
+
             </div>
           </article>
 
@@ -5537,7 +5458,7 @@
 
           <article
             class="dashboard-card coach-demo-analysis-center"
-            data-coach-workspace-section="cierre"
+            data-coach-workspace-section="actividad" hidden
             data-demo-analysis-center
             style="--coach-flow-order: 91"
           >
@@ -5561,7 +5482,7 @@
 
           <article
             class="dashboard-card demo-outcome-summary-card"
-            data-coach-workspace-section="cierre"
+            data-coach-workspace-section="actividad" hidden
             style="--coach-flow-order: 92"
           >
             <div class="eyebrow">Marcador</div>
@@ -5605,7 +5526,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 95">
+          <article class="dashboard-card" data-coach-workspace-section="actividad" hidden style="--coach-flow-order: 95">
             <div class="eyebrow">Tu avance</div>
             <h3>Resumen de tu estilo de trabajo</h3>
             <p>
@@ -5703,38 +5624,7 @@
             </div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 97">
-            <div class="eyebrow">Apoyo del Coach</div>
-            <h3>Herramientas para vender con mas seguridad</h3>
-            <p>
-              Usa este espacio para destrabar objeciones, calcular pagos, pensar paquetes y decidir el siguiente
-              movimiento mas fuerte sin hablar de mas.
-            </p>
 
-            <div class="feature-list compact">
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Objeciones y cierres</strong>
-                  <span>Respuestas cortas para hablar claro y cerrar mejor.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Precios y pagos</strong>
-                  <span>Te ayuda a sacar numeros rapidos sin trabarte en la demo.</span>
-                </div>
-              </div>
-              <div class="feature-item">
-                <div class="feature-dot"></div>
-                <div>
-                  <strong>Paquetes y negociacion</strong>
-                  <span>Te ayuda a juntar productos y mover la venta con mas seguridad.</span>
-                </div>
-              </div>
-            </div>
-          </article>
 
           <article class="dashboard-card">
             <div class="eyebrow">Tu cuenta</div>
@@ -5931,6 +5821,6 @@
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>
     <script src="/coach/product-videos-catalog.js?v=20261028-recipes1"></script>
     <script src="/coach/product-videos.js?v=20261028-recipes1"></script>
-    <script src="/coach/app.js?v=20261028-chef1"></script>
+    <script src="/coach/app.js?v=20261028-cierre-simple1"></script>
   </body>
 </html>

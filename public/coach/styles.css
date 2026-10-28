@@ -9215,3 +9215,9 @@ body.coach-login-body::before {
     border-radius: 11px;
   }
 }
+
+/* A compact header keeps the visit tools in front of the representative. */
+html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-progress {
+  gap: 0;
+  padding: 16px;
+}

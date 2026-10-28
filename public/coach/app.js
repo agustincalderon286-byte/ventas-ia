@@ -1229,7 +1229,7 @@ function syncCoachManagerUi(user = null) {
   const statusCopy = isTelemarketing ? "CRM listo" : "Listo";
   const workspaceCopy = isTelemarketing
     ? "Portal operativo para telemarketing. Aqui trabajas tu CRM asignado y el tablero 4 en 14 sin salir del flujo."
-    : "Prepara tu recorrido en Mapa y vuelve a Cierre para seguir la presentación guiada.";
+    : "";
 
   document.documentElement.dataset.coachPortalMode = portalMode;
   document.documentElement.dataset.coachTeamManager = canManageTeam ? "true" : "false";
@@ -1258,8 +1258,8 @@ function syncCoachManagerUi(user = null) {
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
     const focusedTabs = canManageTeam
-      ? [COACH_FOCUSED_WORKSPACE_TAB, "mapa", "equipo"]
-      : [COACH_FOCUSED_WORKSPACE_TAB, "mapa"];
+      ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "equipo"]
+      : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa"];
     node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : !focusedTabs.includes(tabId);
   });
 
@@ -1308,8 +1308,8 @@ function syncCoachManagerUi(user = null) {
     document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
       const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
       const focusedTabs = canManageTeam
-        ? [COACH_FOCUSED_WORKSPACE_TAB, "mapa", "equipo"]
-        : [COACH_FOCUSED_WORKSPACE_TAB, "mapa"];
+        ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "equipo"]
+        : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa"];
       node.hidden = !focusedTabs.includes(tabId);
     });
   }
@@ -1551,6 +1551,10 @@ function initCoachWorkspaceTabs() {
           equipo: {
             label: "Cambio a modo equipo",
             detail: "Entraste al panel para mover subcuentas y revisar produccion del equipo."
+          },
+          actividad: {
+            label: "Cambio a Mi actividad",
+            detail: "Entraste a tus encuestas guardadas, análisis y resultados."
           },
           mapa: {
             label: "Cambio a mapa de propiedades",
@@ -4822,6 +4826,7 @@ function initHealthSurveyTool(user) {
       return;
     }
 
+    setCoachWorkspaceTab("cierre");
     fillForm(survey);
     activateSurvey(survey);
     syncFormToggle(true);
@@ -16941,6 +16946,7 @@ function initCoachDemoRecorder() {
       return;
     }
     analysisNotice.hidden = true;
+    setCoachWorkspaceTab("actividad");
     analysisCenter?.scrollIntoView({ behavior: "smooth", block: "start" });
     await loadAnalysis(id);
   });
