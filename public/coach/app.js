@@ -2066,7 +2066,10 @@ function createOrderCalcProductCard(index) {
       </div>
 
       <figure class="order-calc-product-visual" data-order-calc-visual hidden>
-        <img data-order-calc-visual-image src="" alt="" loading="lazy" />
+        <button type="button" class="order-calc-image-open" data-order-calc-image-open aria-label="Ampliar imagen del producto" aria-haspopup="dialog">
+          <img data-order-calc-visual-image src="" alt="" loading="lazy" />
+          <span class="order-calc-image-hint" aria-hidden="true">⤢ Ampliar</span>
+        </button>
         <figcaption>
           <strong data-order-calc-visual-title>Producto Royal Prestige</strong>
           <span data-order-calc-visual-meta>Imagen del catalogo INNOVE</span>
