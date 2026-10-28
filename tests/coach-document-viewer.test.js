@@ -41,13 +41,14 @@ function viewerHarness({ userAgent = "" } = {}) {
     showModal() { this.open = true; }, close() { this.open = false; }
   };
   const history = {
-    state: { keep: "existing-state" }, backs: 0,
+    state: { keep: "existing-state" }, scrollRestoration: "auto", backs: 0,
     pushState(state) { this.state = state; },
     back() { this.backs++; this.state = { keep: "existing-state" }; queueMicrotask(() => events.popstate()); }
   };
   const win = {
     scrollY: 1234, devicePixelRatio: 3, caches: {},
-    scrollTo(x, y) { lastScroll = [x, y]; },
+    scrollTo(x, y) { lastScroll = typeof x === "object" ? [x.left, x.top] : [x, y]; },
+    requestAnimationFrame(callback) { queueMicrotask(callback); },
     addEventListener(type, callback) { events[type] = callback; }
   };
   const document = {
@@ -143,6 +144,19 @@ test("old iPhone private documents show a safe alternative without requesting PI
     assert.equal(await h.api.open({ documentId: "catalogo" }), true);
     assert.equal(h.libraryLoads, 0);
   }
+});
+
+test("closing a document restores the exact visit position after history and restores browser scroll policy", async () => {
+  const h = viewerHarness();
+  await h.api.open({documentId:"catalogo"});
+  assert.equal(h.history.scrollRestoration,"manual");
+  h.api.close(); await tick();
+  assert.deepEqual(h.lastScroll,[0,1234]);
+  assert.equal(h.history.scrollRestoration,"auto");
+  assert.equal(h.history.backs,1);
+  assert.equal(await h.api.open({documentId:"carpeta"}),true);
+  h.api.close();await tick();
+  assert.deepEqual(h.lastScroll,[0,1234]);
 });
 
 test("private PIN dialog clears the secret and restores focus on submit and cancellation without storing it", async () => {

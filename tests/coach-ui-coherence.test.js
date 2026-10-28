@@ -122,20 +122,22 @@ test("the load gate never exposes restricted UI while initialization is pending 
   assert.match(message.textContent, /no se borraron/);
 });
 
-test("native EWG link remains available when clipboard permission fails and never asserts a completed analysis", async () => {
-  const events = {}, messages = [], input = { value: "60162", setAttribute() {}, removeAttribute() {}, focus() {} };
+test("EWG viewer remains available when clipboard permission fails and only receives a validated ZIP", async () => {
+  const events = {}, messages = [], opened = [], input = { value: "60162", setAttribute() {}, removeAttribute() {}, focus() {} };
   const scope = app.slice(app.indexOf('  const waterOpen = document.querySelector("[data-water-check-open]")'), app.indexOf('  royalOneOpenLink?.addEventListener("click"'));
   vm.runInNewContext(scope, { document: { querySelector: () => ({ addEventListener: (name, fn) => { events.link = fn; } }) },
     waterCheckInput: input, waterCheckFeedback: {}, waterCheckForm: { addEventListener: (name, fn) => { events.submit = fn; } },
     sanitizeZipCode: value => value.replace(/\D/g, "").slice(0, 5), setMessage: (_node, message) => messages.push(message), clearMessage() {},
-    copyTextToClipboard: async () => { throw Error("denied"); }, registerCoachDemoEvent() {} });
+    copyTextToClipboard: async () => { throw Error("denied"); }, registerCoachDemoEvent() {}, window: { TecExternalTools: { openWater: zip => opened.push(zip) } } });
   await events.submit({ preventDefault() {} });
   assert.match(messages.at(-1), /No se pudo copiar/);
-  let blocked = false; events.link({ preventDefault() { blocked = true; } }); assert.equal(blocked, false);
-  assert.match(messages.at(-1), /TEC no realiza un análisis/);
+  let blocked = false; events.link({ preventDefault() { blocked = true; } }); assert.equal(blocked, true);
+  assert.deepEqual(opened, ["60162"]);
+  assert.match(messages.at(-1), /Consulta del ZIP 60162 en EWG/);
   input.value = "12"; events.link({ preventDefault() { blocked = true; } }); assert.equal(blocked, true);
   assert.doesNotMatch(scope, /window\.open\s*\(|Se abrio EWG/);
-  assert.match(html, /data-water-check-open href="https:\/\/www.ewg.org\/tapwater\/" target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, /data-water-check-open href="https:\/\/www.ewg.org\/tapwater\/"/);
+  assert.doesNotMatch(html, /data-water-check-open[^>]*target="_blank"/);
 });
 
 test("balance fields have unique associated labels, and login explains manual recovery without soliciting secrets", () => {

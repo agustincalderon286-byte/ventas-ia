@@ -25,10 +25,10 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261028-demo-resources1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261028-floating-tools1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
     <link rel="stylesheet" href="/coach/property-map.css?v=20261028-address1" />
-    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-demo-resources1" />
+    <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-floating-tools1" />
   </head>
   <body class="coach-app-body">
     <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
@@ -231,40 +231,7 @@
             <div class="tec-property-sources">Datos públicos del <a href="https://datacatalog.cookcountyil.gov/d/3723-97qp" target="_blank" rel="noopener noreferrer">Cook County Assessor</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Reportar un problema del mapa</a></div>
           </article>
 
-          <article
-            class="dashboard-card coach-demo-launcher"
-            data-coach-workspace-section="cierre"
-            data-demo-recorder
-            style="--coach-flow-order: 5"
-          >
-            <div class="coach-demo-launcher-copy">
-              <span class="coach-demo-launcher-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img">
-                  <path d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z" />
-                  <path d="M5.5 11.5v.5a6.5 6.5 0 0 0 13 0v-.5M12 18.5V22M8.5 22h7" />
-                </svg>
-              </span>
-              <div>
-                <div class="eyebrow">Coach con inteligencia artificial</div>
-                <h3>Graba toda tu demostracion</h3>
-                <p>Inicia aqui antes de comenzar. El control te acompanara sin tapar los pasos de la visita.</p>
-              </div>
-            </div>
 
-            <div class="coach-demo-launcher-action">
-              <label class="coach-demo-consent">
-                <input type="checkbox" data-demo-recorder-consent />
-                <span>Todos aceptaron la grabacion para entrenamiento.</span>
-              </label>
-              <button type="button" class="primary-button" data-demo-recorder-start disabled>
-                Iniciar demostracion
-              </button>
-            </div>
-
-            <div class="form-result coach-demo-recorder-status" data-demo-recorder-status>
-              Confirma el consentimiento para comenzar. Maximo 90 minutos.
-            </div>
-          </article>
 
           <article class="dashboard-card" data-coach-workspace-section="crm" data-telemarketing-panel="sheet" hidden>
             <div class="eyebrow">Vista operativa</div>
@@ -1404,7 +1371,7 @@
 <a class="tec-resource-tile" href="/coach/document.html?document=catalogo" data-tec-document="catalogo"><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5zM8 8h7M8 12h8M8 16h5"/></svg></span><strong>Catálogo</strong><span>Productos y colecciones</span></a>
 <a class="tec-resource-tile" href="/coach/document.html?document=carpeta" data-tec-document="carpeta"><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7l2 3h9v11H3zM3 6V4h7l2 2"/></svg></span><strong>Carpeta</strong><span>Presentación</span></a>
 <button type="button" class="tec-resource-tile" data-product-video-library aria-haspopup="dialog"><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span><strong>Videos y recetas</strong><span>Biblioteca oficial</span></button>
-<button type="button" class="tec-resource-tile tec-resource-tile--private" data-private-resource-open="catalogo_privado" disabled><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span><strong>Edición del distribuidor</strong><span>Documento con PIN</span></button>
+<button type="button" class="tec-resource-tile tec-resource-tile--private" data-private-resource-open="catalogo_privado" disabled><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5zM8 9h8M8 13h5M8 17h8"/></svg></span><strong>Edición del distribuidor</strong><span>Tu documento</span></button>
 </div>
 <details class="tec-resource-management"><summary>Administrar mi documento</summary>
 
@@ -1433,18 +1400,7 @@
                     <span>PDF</span>
                     <input type="file" accept="application/pdf" data-private-resource-file="catalogo_privado" required />
                   </label>
-                  <label class="private-resource-field">
-                    <span>PIN de 4 numeros</span>
-                    <input
-                      type="password"
-                      inputmode="numeric"
-                      maxlength="4"
-                      pattern="[0-9]{4}"
-                      placeholder="1234"
-                      data-private-resource-pin="catalogo_privado"
-                      required
-                    />
-                  </label>
+
                   <div class="dashboard-actions">
                     <button type="submit" class="primary-button" data-private-resource-save="catalogo_privado">
                       Guardar catalogo
@@ -1452,11 +1408,9 @@
                   </div>
                 </form>
                 <div class="form-result" data-private-resource-feedback="catalogo_privado" role="status" aria-live="polite"></div>
-                <p class="mini-note">Los PDF privados requieren un navegador compatible; en Apple, Safari/iOS 18 o posterior. En equipos antiguos usa tu misma cuenta y PIN desde una computadora compatible. No publiques tu archivo privado.</p>
+                <p class="mini-note">Este documento se abre dentro de tu cuenta. En Apple, requiere Safari/iOS 18 o posterior.</p>
 
-                <p class="mini-note">
-                  Si olvidas el PIN, solo borra el archivo y vuelve a subirlo con uno nuevo.
-                </p>
+
               </details>
 </article>
 <article id="prueba-agua" class="dashboard-card tec-water-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 61"><div class="eyebrow">Demostración · Agua</div>
@@ -1487,10 +1441,10 @@
                     required
                   />
                   <button type="submit" class="secondary-button water-tool-button">Copiar ZIP</button>
-                  <a class="secondary-button" data-water-check-open href="https://www.ewg.org/tapwater/" target="_blank" rel="noopener noreferrer">Consultar agua en EWG ↗</a>
+                  <a class="secondary-button" data-water-check-open href="https://www.ewg.org/tapwater/">Consultar agua en EWG ↗</a>
                 </form>
 
-                <p class="water-tool-note">Copia el ZIP y consúltalo en EWG. Los resultados los proporciona esa página.</p>
+                <p class="water-tool-note">Ingresa el ZIP para consultar EWG desde TEC. Los resultados los proporciona EWG.</p>
                 <div class="form-result water-tool-feedback" data-water-check-feedback></div>
               </article>
 
@@ -4694,7 +4648,7 @@
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
-                <div class="eyebrow">Herramienta de cierre</div>
+                <div class="eyebrow">Herramienta de apoyo</div>
                 <h3>Calculadora de pedido</h3>
                 <p>
                   Usa esta calculadora para sacar balances, anticipos y pagos estimados sin perder tiempo en plena
@@ -4811,7 +4765,7 @@
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
-                <div class="eyebrow">Herramienta de cierre</div>
+                <div class="eyebrow">Herramienta de apoyo</div>
                 <h3>Balance de decision</h3>
                 <p>
                   Cuando el cliente esta interesado pero indeciso, usa este cierre interactivo para pesar razones,
@@ -5526,6 +5480,36 @@
         </div>
       </div>
 
+      <button type="button" class="tec-audio-float" data-demo-panel-toggle data-telemarketing-hide aria-controls="tec-audio-panel" aria-expanded="false"><span aria-hidden="true">●</span> <span data-demo-launch-label>Audio</span></button>
+<dialog id="tec-audio-panel" class="tec-audio-panel" data-demo-recorder aria-label="Grabación de demostración"><button type="button" class="tec-audio-panel-close" data-demo-panel-close aria-label="Cerrar grabación">×</button>
+            <div class="coach-demo-launcher-copy">
+              <span class="coach-demo-launcher-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <path d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z" />
+                  <path d="M5.5 11.5v.5a6.5 6.5 0 0 0 13 0v-.5M12 18.5V22M8.5 22h7" />
+                </svg>
+              </span>
+              <div>
+                <div class="eyebrow">Audio</div>
+                <h3>Grabar demostración</h3>
+                <p>Inicia la grabación cuando todos hayan dado su consentimiento.</p>
+              </div>
+            </div>
+
+            <div class="coach-demo-launcher-action">
+              <label class="coach-demo-consent">
+                <input type="checkbox" data-demo-recorder-consent />
+                <span>Todos aceptaron la grabacion para entrenamiento.</span>
+              </label>
+              <button type="button" class="primary-button" data-demo-recorder-start disabled>
+                Iniciar demostracion
+              </button>
+            </div>
+
+            <div class="form-result coach-demo-recorder-status" data-demo-recorder-status>
+              Confirma el consentimiento para comenzar. Maximo 90 minutos.
+            </div>
+          </dialog>
       <aside class="coach-demo-recording-dock" data-demo-recording-dock hidden aria-live="polite">
         <div class="coach-demo-recording-main">
           <span class="coach-demo-live-dot" aria-hidden="true"></span>
@@ -5642,8 +5626,9 @@
       </p>
     </div>
 
-    <script src="/coach/external-tools.js?v=20261028-demo-resources1"></script>
-    <script src="/coach/document-viewer.js?v=20261028-demo-resources1"></script>
+    <script src="/coach/demo-recorder-panel.js?v=20261028-floating-tools1"></script>
+    <script src="/coach/external-tools.js?v=20261028-floating-tools1"></script>
+    <script src="/coach/document-viewer.js?v=20261028-floating-tools1"></script>
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261025-native-offline2"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
@@ -5653,6 +5638,6 @@
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>
     <script src="/coach/product-videos-catalog.js?v=20261028-recipes1"></script>
     <script src="/coach/product-videos.js?v=20261028-recipes1"></script>
-    <script src="/coach/app.js?v=20261028-demo-resources1"></script>
+    <script src="/coach/app.js?v=20261028-floating-tools1"></script>
   </body>
 </html>

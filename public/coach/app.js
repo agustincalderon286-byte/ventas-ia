@@ -5138,7 +5138,7 @@ function initCoachPrivateResources() {
 
     if (nodes.status) {
       nodes.status.textContent = resource.hasFile
-        ? `${resource.fileName || "archivo-privado.pdf"} guardado ${formatDateTime(resource.uploadedAt)}. Protegido con PIN.`
+        ? `${resource.fileName || "archivo-privado.pdf"} guardado ${formatDateTime(resource.uploadedAt)}. ${slotId === "catalogo_privado" ? "Disponible en tu cuenta." : "Protegido con PIN."}`
         : defaultCopy;
     }
 
@@ -5169,7 +5169,7 @@ function initCoachPrivateResources() {
     }
 
     const unsupported = window.TecDocuments?.privateSupportMessage?.();
-    if (unsupported) { setMessage(nodes.feedback, unsupported, "info"); return; }
+    if (unsupported) { setMessage(nodes.feedback, slotId === "catalogo_privado" ? unsupported.replace(/ y PIN/g, "") : unsupported, "info"); return; }
 
     clearMessage(nodes.feedback);
     if (!window.TecDocuments?.requestPin) {
@@ -5177,11 +5177,13 @@ function initCoachPrivateResources() {
       return;
     }
 
-    let pin;
-    try { pin = await window.TecDocuments.requestPin(); }
-    catch { setMessage(nodes.feedback, "No se pudo abrir el control de PIN. Vuelve a abrir el Coach e inténtalo otra vez.", "error"); return; }
-    if (pin === null) return;
-    if (!/^\d{4}$/.test(pin || "")) { setMessage(nodes.feedback, "Necesitas un PIN válido de 4 números.", "error"); return; }
+    let pin = "";
+    if (slotId !== "catalogo_privado") {
+      try { pin = await window.TecDocuments.requestPin(); }
+      catch { setMessage(nodes.feedback, "No se pudo abrir el control de PIN. Vuelve a abrir el Coach e inténtalo otra vez.", "error"); return; }
+      if (pin === null) return;
+      if (!/^\d{4}$/.test(pin || "")) { setMessage(nodes.feedback, "Necesitas un PIN válido de 4 números.", "error"); return; }
+    }
 
     await window.TecDocuments.open({
       title: resource.fileName || "Documento privado",
@@ -5202,7 +5204,7 @@ function initCoachPrivateResources() {
           throw new Error(data.error || "No pude abrir ese archivo.");
         }
 
-        // PIN-protected documents stay in memory only; never put them in offline caches.
+        // Account documents stay in memory only; never put them in public offline caches.
         return await response.blob();
       }
     });
@@ -5243,7 +5245,7 @@ function initCoachPrivateResources() {
         return;
       }
 
-      if (!pin || pin.length !== 4) {
+      if (slotId !== "catalogo_privado" && (!pin || pin.length !== 4)) {
         setMessage(nodes.feedback, "El PIN debe tener 4 numeros.", "error");
         return;
       }
@@ -5270,7 +5272,7 @@ function initCoachPrivateResources() {
         nodes.form.reset();
         syncFormVisibility(slotId, false);
         renderSlot(slotId);
-        setMessage(nodes.feedback, "Archivo guardado y protegido con PIN.", "success");
+        setMessage(nodes.feedback, slotId === "catalogo_privado" ? "Documento guardado en tu cuenta." : "Archivo guardado y protegido con PIN.", "success");
       } catch (error) {
         setMessage(nodes.feedback, error.message, "error");
       } finally {
@@ -5286,7 +5288,7 @@ function initCoachPrivateResources() {
       clearMessage(nodes.feedback);
 
       const confirmed = window.confirm(
-        "Si borras este archivo, tambien se borra el PIN. Luego podras subirlo de nuevo con otro PIN. Quieres seguir?"
+        slotId === "catalogo_privado" ? "¿Quieres borrar este documento de tu cuenta?" : "Si borras este archivo, tambien se borra el PIN. Luego podras subirlo de nuevo con otro PIN. Quieres seguir?"
       );
 
       if (!confirmed) {
@@ -5302,7 +5304,7 @@ function initCoachPrivateResources() {
         nodes.form?.reset();
         syncFormVisibility(slotId, false);
         renderSlot(slotId);
-        setMessage(nodes.feedback, "Archivo borrado. Ya puedes subir uno nuevo con otro PIN.", "success");
+        setMessage(nodes.feedback, slotId === "catalogo_privado" ? "Documento borrado. Puedes subir uno nuevo." : "Archivo borrado. Ya puedes subir uno nuevo con otro PIN.", "success");
       } catch (error) {
         setMessage(nodes.feedback, error.message, "error");
       }
@@ -16248,6 +16250,9 @@ function initCoachDemoRecorder() {
 
   const updateControls = () => {
     root.dataset.captureBusy = state.recording || state.processing ? "true" : "false";
+    const launcher = document.querySelector("[data-demo-panel-toggle]");
+    if (launcher) { launcher.hidden = state.recording || document.documentElement?.dataset?.coachPortalMode === "telemarketing"; launcher.disabled = state.processing; }
+    if (state.recording && root.open) { root.close(); launcher?.setAttribute("aria-expanded", "false"); }
     startButton.disabled = state.recording || state.processing || !consent.checked || !emergency.hidden;
     stopButton.disabled = !state.recording || state.processing;
     consent.disabled = state.recording || state.processing;
@@ -18019,11 +18024,13 @@ async function loadCoachAppPage() {
     return zip;
   };
   waterOpen?.addEventListener("click", event => {
+    event.preventDefault();
     const zip = prepareWaterZip();
-    if (!zip) { event.preventDefault(); return; }
-    setMessage(waterCheckFeedback, `Consulta el ZIP ${zip} en EWG. Si no aparece otra pestaña, vuelve a pulsar el enlace. TEC no realiza un análisis del agua.`, "info");
+    if (!zip) return;
+    window.TecExternalTools?.openWater(zip);
+    setMessage(waterCheckFeedback, `Consulta del ZIP ${zip} en EWG.`, "info");
     registerCoachDemoEvent({ id: "water_zip_check", label: "Se solicitó consulta externa de agua", detail: `ZIP ${zip}. Los resultados se consultan en EWG.` });
-    // Native link navigation preserves the user gesture. No delayed window.open.
+    // The external page stays in the TEC viewer; only the requested ZIP is passed.
   });
   waterCheckForm?.addEventListener("submit", async event => {
     event.preventDefault();

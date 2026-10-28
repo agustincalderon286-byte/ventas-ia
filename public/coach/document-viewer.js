@@ -12,6 +12,7 @@
   let dialog;
   let closingHistory = Promise.resolve();
   let finishHistory;
+  let pendingReturn;
   let pinDialog;
   let pinRequest;
   const standalone = location.pathname === "/coach/document.html";
@@ -84,6 +85,24 @@
     dialog.querySelector("[data-document-scale]").textContent = `${Math.round(session.zoom * 100)}%`;
   }
 
+  function restorePosition(session, done) {
+    const restore = () => {
+      session.opener?.focus({ preventScroll: true });
+      const anchor = session.opener?.getBoundingClientRect?.();
+      const top = anchor && typeof session.anchorTop === "number"
+        ? window.scrollY + anchor.top - session.anchorTop : session.scrollY;
+      window.scrollTo({ left: 0, top: Math.max(0, top), behavior: "instant" });
+    };
+    restore();
+    const frame = window.requestAnimationFrame || (callback => setTimeout(callback, 0));
+    // Back/Forward restoration happens after popstate; restore after layout too.
+    frame(() => frame(() => {
+      restore();
+      if (session.historyRestoration) history.scrollRestoration = session.historyRestoration;
+      done?.();
+    }));
+  }
+
   function close({ fromHistory = false } = {}) {
     const session = active;
     if (!session) return;
@@ -91,7 +110,6 @@
     session.abort.abort();
     session.cancelImage?.();
     session.render?.cancel();
-    // Destruction is asynchronous; no PDF resources survive in the UI after closing.
     session.task?.destroy().catch(() => null);
     dialog.close();
     const canvas = dialog.querySelector("canvas");
@@ -99,15 +117,15 @@
     canvas.hidden = true;
     dialog.querySelector("[data-document-image]").replaceChildren();
     document.body.style.cssText = session.bodyStyle;
-    window.scrollTo(0, session.scrollY);
     session.opener?.focus({ preventScroll: true });
     if (standalone) {
-      location.replace("/coach/app/");
+      location.replace("/coach/app/#paso-demostracion");
     } else if (!fromHistory && history.state?.tecDocument === session.id) {
-      // Wait for this pop before permitting another open, avoiding a rapid close/open race.
       closingHistory = new Promise(resolve => { finishHistory = resolve; });
+      pendingReturn = session;
+      window.scrollTo({ left: 0, top: session.scrollY, behavior: "instant" });
       history.back();
-    }
+    } else restorePosition(session);
   }
 
   function ensureDialog() {
@@ -163,8 +181,11 @@
     });
     window.addEventListener("popstate", () => {
       if (active && history.state?.tecDocument !== active.id) close({ fromHistory: true });
-      finishHistory?.();
-      finishHistory = null;
+      if (pendingReturn) {
+        const session = pendingReturn; pendingReturn = null;
+        const done = finishHistory; finishHistory = null;
+        restorePosition(session, done);
+      }
     });
   }
 
@@ -354,9 +375,10 @@
     const session = {
       id: `tec-doc-${Date.now()}-${Math.random()}`, title: resource?.title || title || "Documento privado",
       url: resource?.url, page: 1, zoom: 1, abort: new AbortController(),
-      opener: document.activeElement, scrollY: window.scrollY, bodyStyle: document.body.style.cssText
+      opener: document.activeElement, scrollY: window.scrollY, bodyStyle: document.body.style.cssText, historyRestoration: history.scrollRestoration, anchorTop: document.activeElement?.getBoundingClientRect?.().top
     };
     active = session;
+    history.scrollRestoration = "manual";
     dialog.querySelector("#tec-document-title").textContent = session.title;
     const saveButton = dialog.querySelector("[data-document-save]");
     saveButton.hidden = !resource || !("caches" in window);

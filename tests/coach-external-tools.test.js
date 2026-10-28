@@ -17,5 +17,8 @@ test('Konverta is isolated from TEC data and closing/reopening does not wait on 
  node('[data-konverta-close]').click();assert.equal(dialog.open,false);assert.equal(node('iframe').src,undefined);assert.equal(focused,true);assert.equal(document.body.style.cssText,'color:navy');
  await win.TecExternalTools.openKonverta();assert.equal(dialog.open,true);assert.equal(pushes,1);
  history.state={saved:true};events.popstate();assert.equal(dialog.open,false);
+ assert.equal(win.TecExternalTools.openWater('60406&other=1'),false);assert.equal(dialog.open,false);
+ await win.TecExternalTools.openWater('60406');assert.equal(node('iframe').src,'https://www.ewg.org/tapwater/search-results.php?zip5=60406');
+ node('[data-konverta-close]').click();assert.equal(dialog.open,false);
  assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g,''),/localStorage|fetch\(|postMessage|apiRequest|password|credentials/);
 });

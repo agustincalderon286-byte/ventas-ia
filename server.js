@@ -32213,7 +32213,7 @@ app.post("/api/coach/private-resources/:slot/upload", async (req, res) => {
     return responderCoachError(res, 400, "Archivo privado invalido.");
   }
 
-  if (!pin) {
+  if (slotType !== "catalogo_privado" && !pin) {
     return responderCoachError(res, 400, "El PIN debe tener 4 numeros.");
   }
 
@@ -32238,7 +32238,7 @@ app.post("/api/coach/private-resources/:slot/upload", async (req, res) => {
           fileName,
           mimeType: "application/pdf",
           fileSize: buffer.length,
-          pinHash: construirHashPinCoachPrivateResource(ownerUserId, slotType, pin),
+          pinHash: slotType === "catalogo_privado" ? "" : construirHashPinCoachPrivateResource(ownerUserId, slotType, pin),
           fileData: buffer,
           uploadedAt: now,
           updatedAt: now
@@ -32307,7 +32307,7 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
     return responderCoachError(res, 400, "Archivo privado invalido.");
   }
 
-  if (!pin) {
+  if (slotType !== "catalogo_privado" && !pin) {
     return responderCoachError(res, 400, "Escribe tu PIN de 4 numeros.");
   }
 
@@ -32324,7 +32324,7 @@ app.post("/api/coach/private-resources/:slot/file", async (req, res) => {
 
     const expectedPinHash = construirHashPinCoachPrivateResource(ownerUserId, slotType, pin);
 
-    if (resourceDoc.pinHash !== expectedPinHash) {
+    if (slotType !== "catalogo_privado" && resourceDoc.pinHash !== expectedPinHash) {
       return responderCoachError(res, 403, "Ese PIN no coincide.");
     }
 
