@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-program-gifts1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-program-gifts1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-program-gifts2";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-program-gifts2";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -17,6 +17,7 @@ const TEC_CORE_ASSETS = [
   "/coach/app.js?v=20261028-survey-images1",
   "/coach/product-image-viewer.js?v=20261028-survey-images1",
   "/coach/app.js?v=20261028-program-gifts1",
+  "/coach/app.js?v=20261028-program-gifts2",
   "/coach/product-image-viewer.js?v=20261028-program-gifts1",
   "/coach/product-search.js?v=20261025-alias1",
   "/coach/order-calculator.js?v=20261025-native-offline2",
