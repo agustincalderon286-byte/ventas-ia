@@ -1741,6 +1741,11 @@ function openCoachCrmLinkedTool(tool = "", record = null) {
     return;
   }
 
+  if (safeTool === "program414" && document.querySelector("[data-open-konverta]")) {
+    window.TecExternalTools?.openKonverta();
+    return;
+  }
+
   if (safeTool === "program414") {
     setCoachDemoStageId("programa_4_14");
     const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
@@ -4311,6 +4316,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   });
 
   toggle.addEventListener("click", async () => {
+    if (document.querySelector("[data-open-konverta]")) { window.TecExternalTools?.openKonverta(); return; }
     const willOpen = wrap.hidden;
     syncToggle(willOpen);
 

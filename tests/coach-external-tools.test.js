@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../public/coach/external-tools.js',import.meta.url),'utf8');
+test('Konverta is isolated from TEC data and closing/reopening does not wait on iframe navigation history',async()=>{
+ const events={},nodes=new Map();let focused=false,pushes=0;
+ const node=key=>{if(!nodes.has(key))nodes.set(key,{addEventListener(type,fn){this[type]=fn},removeAttribute(key){delete this[key]}});return nodes.get(key)};
+ const dialog={querySelector:node,setAttribute(){},addEventListener(type,fn){this[type]=fn},showModal(){this.open=true},close(){this.open=false}};
+ const history={state:{saved:true},pushState(state){this.state=state;pushes++},replaceState(state){this.state=state}};
+ const document={body:{style:{cssText:'color:navy'},append(){}},activeElement:{focus(){focused=true}},createElement:()=>dialog,addEventListener(type,fn){events[type]=fn}};
+ const win={scrollY:100,scrollTo(){},addEventListener(type,fn){events[type]=fn}};
+ vm.runInNewContext(source,{window:win,document,history,location:{href:'https://tec.example/coach/app/'}});
+ await win.TecExternalTools.openKonverta();
+ assert.equal(node('iframe').src,'https://dash.konverta.app/signin');assert.equal(dialog.open,true);assert.equal(history.state.saved,true);
+ assert.match(dialog.innerHTML,/sandbox="allow-forms allow-scripts allow-same-origin/);assert.doesNotMatch(dialog.innerHTML,/allow-top-navigation/);
+ node('[data-konverta-close]').click();assert.equal(dialog.open,false);assert.equal(node('iframe').src,undefined);assert.equal(focused,true);assert.equal(document.body.style.cssText,'color:navy');
+ await win.TecExternalTools.openKonverta();assert.equal(dialog.open,true);assert.equal(pushes,1);
+ history.state={saved:true};events.popstate();assert.equal(dialog.open,false);
+ assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g,''),/localStorage|fetch\(|postMessage|apiRequest|password|credentials/);
+});

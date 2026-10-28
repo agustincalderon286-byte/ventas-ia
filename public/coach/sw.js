@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-cierre-simple2";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-cierre-simple2";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-demo-resources1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-demo-resources1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -20,8 +20,8 @@ const TEC_CORE_ASSETS = [
   "/coach/app.js?v=20261028-program-gifts2",
   "/coach/app.js?v=20261028-videos1",
   "/coach/app.js?v=20261028-chef1",
-  "/coach/app.js?v=20261028-cierre-simple2",
-  "/coach/styles.css?v=20261028-cierre-simple2",
+  "/coach/app.js?v=20261028-demo-resources1",
+  "/coach/styles.css?v=20261028-demo-resources1",
   "/coach/product-videos-catalog.js?v=20261028-videos1",
   "/coach/product-videos-catalog.js?v=20261028-videos3",
   "/coach/product-videos-catalog.js?v=20261028-videos4",
@@ -57,6 +57,9 @@ const TEC_CORE_ASSETS = [
   "/coach/address-suggestions.js?v=20261028-address1",
   "/coach/property-visit-helpers.js?v=20261025-native-offline2",
   "/coach/document.html",
+  "/coach/external-tools.js?v=20261028-demo-resources1",
+  "/coach/document-viewer.js?v=20261028-demo-resources1",
+  "/coach/document-viewer.css?v=20261028-demo-resources1",
   "/coach/document-viewer.js?v=20261025-native-offline2",
   "/coach/document-viewer.css?v=20261025-native-offline2",
   "/coach/assets/documents/manifest-v1.json",

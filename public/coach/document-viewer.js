@@ -78,7 +78,10 @@
     input.max = total || 1;
     dialog.querySelector("[data-document-total]").textContent = total ? `de ${total}` : "de …";
     dialog.querySelector("[data-document-zoom]").disabled = !total;
-    dialog.querySelector("[data-document-zoom]").textContent = session.zoom === 1 ? "Ampliar +" : "Ajustar ancho";
+    dialog.querySelector("[data-document-zoom]").textContent = "＋";
+    dialog.querySelector("[data-document-zoom-out]").disabled = !total || session.zoom <= 1;
+    dialog.querySelector("[data-document-fit]").disabled = !total;
+    dialog.querySelector("[data-document-scale]").textContent = `${Math.round(session.zoom * 100)}%`;
   }
 
   function close({ fromHistory = false } = {}) {
@@ -115,7 +118,7 @@
     dialog.innerHTML = `
       <header class="tec-document-header">
         <div class="tec-document-topline">
-          <button type="button" class="tec-document-back" data-document-close autofocus>← Volver al Coach</button>
+          <button type="button" class="tec-document-back" data-document-close aria-label="Volver al Coach" autofocus>← Volver</button>
           <h2 class="tec-document-title" id="tec-document-title"></h2>
         </div>
         <div class="tec-document-controls" aria-label="Controles del documento">
@@ -123,9 +126,9 @@
           <label>Página <input data-document-page type="number" inputmode="numeric" min="1" value="1" aria-label="Número de página"></label>
           <span data-document-total>de …</span>
           <button type="button" data-document-next aria-label="Página siguiente">›</button>
-          <button type="button" data-document-zoom>Ampliar +</button>
+          <button type="button" data-document-zoom-out aria-label="Reducir zoom">−</button><span data-document-scale aria-live="polite">100%</span><button type="button" data-document-zoom aria-label="Ampliar zoom">＋</button><button type="button" data-document-fit>Ajustar</button>
         </div>
-        <button type="button" class="tec-document-save" data-document-save>Guardar sin internet</button>
+        <button type="button" class="tec-document-save" data-document-save aria-label="Guardar sin internet" title="Guardar sin internet">↓ Sin internet</button>
         <button type="button" data-document-retry hidden>Reintentar página</button>
         <p class="tec-document-status" data-document-status role="status" aria-live="polite"></p>
       </header>
@@ -147,11 +150,10 @@
     dialog.querySelector("[data-document-page]").addEventListener("keydown", event => {
       if (event.key === "Enter") { event.preventDefault(); goToPage(event); event.target.blur(); }
     });
-    dialog.querySelector("[data-document-zoom]").addEventListener("click", () => {
-      if (!active) return;
-      active.zoom = active.zoom === 1 ? 2 : 1;
-      render(active);
-    });
+    dialog.querySelector("[data-document-zoom]").addEventListener("click", () => setZoom((active?.zoom || 1) + 1));
+    dialog.querySelector("[data-document-zoom-out]").addEventListener("click", () => setZoom((active?.zoom || 1) - .5));
+    dialog.querySelector("[data-document-fit]").addEventListener("click", () => setZoom(1));
+    installZoomGestures(dialog.querySelector(".tec-document-stage"));
     dialog.querySelector("[data-document-save]").addEventListener("click", () => saveOffline(active));
     dialog.querySelector("[data-document-retry]").addEventListener("click", () => { if (active?.total) render(active); });
     let resizeTimer;
@@ -163,6 +165,54 @@
       if (active && history.state?.tecDocument !== active.id) close({ fromHistory: true });
       finishHistory?.();
       finishHistory = null;
+    });
+  }
+
+  async function setZoom(value, anchor = {}) {
+    const session = active;
+    if (!session?.total) return;
+    const next = Math.max(1, Math.min(4, value));
+    const stage = dialog.querySelector(".tec-document-stage");
+    const x = anchor.x ?? stage.clientWidth / 2, y = anchor.y ?? (stage.clientHeight || 0) / 2;
+    const left = ((stage.scrollLeft || 0) + x) * next / session.zoom - x;
+    const top = ((stage.scrollTop || 0) + y) * next / session.zoom - y;
+    session.zoom = next;
+    await render(session);
+    if (active === session) { stage.scrollLeft = Math.max(0, left); stage.scrollTop = Math.max(0, top); }
+  }
+
+  function installZoomGestures(stage) {
+    let pinch = null;
+    const distance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    stage.addEventListener("touchstart", event => {
+      if (!active?.total || event.touches.length !== 2) return;
+      const rect = stage.getBoundingClientRect?.() || { left: 0, top: 0 };
+      pinch = { session: active, distance: Math.max(1, distance(event.touches)), zoom: active.zoom, next: active.zoom,
+        x: (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left,
+        y: (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top };
+    }, { passive: true });
+    stage.addEventListener("touchmove", event => {
+      if (!pinch || active !== pinch.session || event.touches.length !== 2) return;
+      event.preventDefault();
+      pinch.next = Math.max(1, Math.min(4, pinch.zoom * distance(event.touches) / pinch.distance));
+      const media = active.pages ? dialog.querySelector("[data-document-image]").children?.[0] : dialog.querySelector("canvas");
+      if (!media) return;
+      const width = Math.floor(Math.max(240, stage.clientWidth - 4) * pinch.next);
+      media.style.width = `${width}px`;
+      media.style.height = active.pages ? "auto" : `${width * media.height / media.width}px`;
+    }, { passive: false });
+    const finish = event => {
+      if (!pinch || event.touches.length >= 2) return;
+      const current = pinch; pinch = null;
+      if (active === current.session) setZoom(current.next, current);
+    };
+    stage.addEventListener("touchend", finish);
+    stage.addEventListener("touchcancel", finish);
+    stage.addEventListener("dblclick", event => {
+      if (!active?.total) return;
+      event.preventDefault();
+      const rect = stage.getBoundingClientRect?.() || { left: 0, top: 0 };
+      setZoom(active.zoom > 1 ? 1 : 2, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     });
   }
 
@@ -180,7 +230,7 @@
     image.alt = `${session.title}, página ${session.page} de ${session.total}`;
     image.width = page.width;
     image.height = page.height;
-    image.style.width = `${Math.floor(Math.max(240, stage.clientWidth - 20) * session.zoom)}px`;
+    image.style.width = `${Math.floor(Math.max(240, stage.clientWidth - 4) * session.zoom)}px`;
     image.style.height = "auto";
     image.hidden = true;
     stage.scrollTop = stage.scrollLeft = 0;
@@ -224,7 +274,7 @@
       const stage = dialog.querySelector(".tec-document-stage");
       const canvas = dialog.querySelector("canvas");
       const base = page.getViewport({ scale: 1 });
-      const width = Math.max(240, stage.clientWidth - 20) * session.zoom;
+      const width = Math.max(240, stage.clientWidth - 4) * session.zoom;
       const viewport = page.getViewport({ scale: width / base.width });
       // One canvas only, bounded to 6MP to avoid exhausting iPhone canvas memory.
       const density = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(6_000_000 / (viewport.width * viewport.height)));

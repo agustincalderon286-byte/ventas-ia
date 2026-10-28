@@ -99,7 +99,7 @@ test("expired offers cannot be marked and a failed claim remains active without 
 
 test("private resource feedback is outside the collapsible upload forms", () => {
   const forms = [...html.matchAll(/<form[^>]*data-private-resource-form[^>]*>[\s\S]*?<\/form>/g)].map(match => match[0]);
-  assert.equal(forms.length, 2);
+  assert.equal(forms.length, 1);
   forms.forEach(form => assert.doesNotMatch(form, /data-private-resource-feedback/));
   assert.match(html, /data-private-resource-feedback="catalogo_privado" role="status"/);
 });

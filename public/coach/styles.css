@@ -9221,3 +9221,32 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-p
   gap: 0;
   padding: 16px;
 }
+
+/* Quick resources for a presentation, with one distinct entry for the private edition. */
+.tec-resource-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-top:22px; }
+.tec-resource-tile { box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:9px; min-height:160px; padding:20px 12px; border:1px solid #d8e1ea; border-radius:20px; background:#f7fafc; color:#102f52; text-align:center; text-decoration:none; font:inherit; cursor:pointer; }
+.tec-resource-tile strong { font-size:1rem; line-height:1.35; }
+.tec-resource-tile > span:not(.tec-resource-icon) { font-size:.8rem; line-height:1.4; color:#52657a; }
+.tec-resource-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; background:#e6eef7; color:#103b65; flex-shrink:0; }
+.tec-resource-icon svg { width:30px; height:30px; }
+.tec-resource-tile--private { background:#fff9ed; border-color:#e3c88c; }
+.tec-resource-tile--private .tec-resource-icon { background:#f6e5bb; color:#75500b; }
+.tec-resource-tile:disabled { cursor:default; opacity:.72; }
+.tec-resource-tile:hover:not(:disabled),.tec-resource-tile:focus-visible { border-color:#103b65; background:#edf4fb; }
+.tec-resource-tile:focus-visible { outline:3px solid #087dd4; outline-offset:3px; }
+.tec-resource-management { margin-top:18px; padding:14px 16px; border:1px solid #d8e1ea; border-radius:14px; color:#102f52; background:#fafcfe; }
+.tec-resource-management summary { cursor:pointer; font-weight:700; min-height:28px; }
+.tec-distributor-portal { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.tec-distributor-button { min-height:125px; min-width:210px; }
+.tec-konverta-button { display:inline-flex; align-items:center; gap:10px; }
+.tec-konverta-mark { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:#fff; color:#103b65; font-weight:800; }
+.tec-external-tool { position:fixed; inset:0; width:100%; max-width:none; height:100%; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:#fff; color:#102f52; }
+.tec-external-tool[open] { display:flex; flex-direction:column; }
+.tec-external-tool header { display:flex; align-items:center; gap:12px; padding:max(10px,env(safe-area-inset-top)) 14px 10px; border-bottom:1px solid #d8e1ea; background:#fff; }
+.tec-external-tool header div { display:grid; flex:1; font:700 16px/1.4 system-ui; }
+.tec-external-tool header span { color:#52657a; font:12px/1.4 system-ui; }
+.tec-external-tool button,.tec-external-tool a { padding:12px; border:1px solid #ccd6e2; border-radius:12px; background:#fff; color:#102f52; text-decoration:none; font:600 14px/1.4 system-ui; cursor:pointer; }
+.tec-external-tool iframe { display:block; flex:1; min-height:0; width:100%; border:0; }
+.tec-external-tool > p { margin:0; padding:6px 12px max(6px,env(safe-area-inset-bottom)); background:#f1f5f9; color:#52657a; font:12px/1.4 system-ui; text-align:center; }
+@media(max-width:760px) { .tec-resource-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .tec-resource-tile { min-height:145px; } }
+@media(max-width:520px) { .tec-distributor-portal { flex-direction:column; align-items:stretch; } .tec-external-tool header { flex-wrap:wrap; gap:6px; } .tec-external-tool header div { min-width:100px; } .tec-external-tool button,.tec-external-tool a { padding:10px 8px; font-size:12px; } }

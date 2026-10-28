@@ -62,3 +62,20 @@
 .tec-pin-dialog input { box-sizing: border-box; width: 100%; padding: 14px; border: 1px solid #71839b; border-radius: 12px; font: inherit; color: #102b4e; background: #fff; }
 .tec-pin-dialog button { padding: 12px; margin: 4px; border: 1px solid #71839b; border-radius: 12px; background: #f6f8fb; color: #102b4e; cursor: pointer; font: inherit; }
 .tec-pin-dialog :focus-visible { outline: 3px solid #124d80; outline-offset: 3px; }
+
+/* Edge-to-edge reading surface: compact controls and one page in memory. */
+.tec-document-viewer { background:#f4f6f8; }
+.tec-document-header { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:max(8px,env(safe-area-inset-top)) 10px 8px; box-shadow:none; }
+.tec-document-topline { flex:1 1 280px; }
+.tec-document-title { font-size:14px; }
+.tec-document-controls { margin:0; gap:4px; }
+.tec-document-viewer button,.tec-document-viewer input { min-height:40px; padding:7px 10px; border-radius:9px; font-size:14px; }
+.tec-document-controls input { width:50px; padding:6px 2px; }
+.tec-document-controls [data-document-zoom] { margin-left:0; }
+.tec-document-controls [data-document-scale] { min-width:38px; font-size:12px; text-align:center; }
+.tec-document-controls [data-document-total] { font-size:12px; }
+.tec-document-save { margin:0; font-size:12px!important; }
+.tec-document-status { width:100%; margin:0; font-size:11px; color:#52657a; }
+.tec-document-stage { padding:2px 2px max(2px,env(safe-area-inset-bottom)); touch-action:pan-x pan-y; }
+.tec-document-stage canvas,.tec-document-page-image { margin:0; box-shadow:none; }
+@media(max-width:600px) { .tec-document-topline { flex-basis:calc(100% - 110px); order:0; } .tec-document-save { order:1; } .tec-document-controls { order:2; width:100%; justify-content:center; } .tec-document-status { order:4; } .tec-document-controls label { font-size:0; gap:0; } .tec-document-controls input { font-size:14px; } .tec-document-header { gap:5px; } }

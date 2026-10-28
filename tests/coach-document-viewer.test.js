@@ -180,11 +180,32 @@ test("public documents use one bounded image and never load PDF.js, a worker or 
   const images = h.node("[data-document-image]").children;
   assert.equal(images.length, 1);
   assert.ok(images[0].width * images[0].height <= 2_560_000);
-  assert.equal(images[0].style.width, "710px");
+  assert.equal(images[0].style.width, "742px");
   assert.equal(h.renders.length, 0);
   h.api.close();
   assert.equal(h.node("canvas").width, 0);
   assert.equal(h.node("[data-document-image]").children.length, 0);
+});
+
+test("pinch zoom is bounded, rerenders only at gesture end and can return to fit", async () => {
+  const h = viewerHarness();
+  await h.api.open({ documentId: "catalogo" });
+  const stage=h.node(".tec-document-stage");
+  stage.touchstart({touches:[{clientX:10,clientY:20},{clientX:110,clientY:20}]});
+  let prevented=false;
+  stage.touchmove({touches:[{clientX:0,clientY:20},{clientX:300,clientY:20}],preventDefault(){prevented=true;}});
+  assert.equal(prevented,true);
+  assert.equal(h.node("[data-document-image]").children.length,1);
+  assert.equal(h.node("[data-document-image]").children[0].style.width,"1113px");
+  stage.touchend({touches:[]});await tick();
+  assert.equal(h.node("[data-document-scale]").textContent,"300%");
+  h.node("[data-document-zoom]").click();await tick();
+  h.node("[data-document-zoom]").click();await tick();
+  assert.equal(h.node("[data-document-scale]").textContent,"400%");
+  h.node("[data-document-fit]").click();await tick();
+  assert.equal(h.node("[data-document-scale]").textContent,"100%");
+  assert.equal(h.node("[data-document-image]").children.length,1);
+  assert.equal(h.libraryLoads,0);
 });
 
 test("private PDFs keep their memory-only renderer and release its canvas on close", async () => {
