@@ -1,4 +1,4 @@
-import {createPropertyWalk} from './property-walk.js?v=20261028-walk2';
+import {createPropertyWalk} from './property-walk.js?v=20261029-lab1';
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
 import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-visit-tools2";
 
@@ -43,7 +43,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     const addressSuggestions = initTecAddressSuggestions({ form, request });
     const mapBox = find("map"), list = find("list"), route = find("route"), clear = find("clear");
     const appleRoute = find("apple-route");
-    let routeState = emptyPropertyRoute(), routeBusy = false, walk = null, ownerLoading = false, ownerAttempt = "";
+    let routeState = emptyPropertyRoute(), routeBusy = false, walk = null, lab = null, labOpening = false, ownerLoading = false, ownerAttempt = "";
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
     let visits = new Map(), pendingLeadKeys = new Set(), refreshPromise = null, syncPromise = null, syncRequested = false, editingProperty = null, awaitingSync = false;
     const accountId = String(user.id || user._id || "");
@@ -72,15 +72,32 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       } catch { find('route-status').textContent = 'La ruta está guardada. No pude recuperar algunos nombres; pulsa Reintentar.'; }
       finally { ownerLoading = false; }
     }
-    walk = createPropertyWalk({ getRoute: () => routeState, request, loadLeaflet,
+    const routeTools = { getRoute: () => routeState, request,
       complete: stop => changeRoute(value => completeRouteStop(value, propertyVisitKey(stop.property), new Date().toISOString())),
       followup: async (property, status) => {
         openVisit(property);
         if (status) { visitForm.elements.status.value = status; updateVisitDate(); }
-        if (['not_answered','answered'].includes(status) && await saveVisit()) dialog.close();
+        if (['not_answered','answered'].includes(status)) {
+          const saved = await saveVisit();
+          if (saved) dialog.close();
+          return saved;
+        }
       }
+    };
+    walk = createPropertyWalk({ ...routeTools, loadLeaflet });
+    find('walk').addEventListener('click', () => { lab?.close(); walk.open(); });
+    const labButton = find('lab');
+    labButton?.addEventListener('click', async () => {
+      if (labOpening) return;
+      labOpening = true; labButton.disabled = true;
+      try {
+        const { createPropertyLab } = await import('./property-lab.js?v=20261029-lab1');
+        await walk.close();
+        lab ||= createPropertyLab({ ...routeTools, onFallback: () => walk.open() });
+        await lab.open();
+      } catch { find('route-status').textContent = 'No pude abrir el LAB. Tu recorrido sigue guardado; puedes usar el mapa actual.'; }
+      finally { labOpening = false; syncRoute(); }
     });
-    find('walk').addEventListener('click', () => walk.open());
     const visitMeta = status => PROPERTY_VISIT_STATUSES.find(item => item.value === status);
     const dateLabel = value => value ? new Date(value).toLocaleString("es-US", { dateStyle: "medium", timeStyle: "short" }) : "";
     const uniqueId = prefix => `${prefix}-${crypto.randomUUID()}`;
@@ -358,6 +375,8 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       find("next-owner").textContent = next ? "Propietario registrado: " + ownerText(next.property) : "";
       find("walk").disabled = !routeState.stops.length;
       walk?.update();
+      if (labButton) labButton.disabled = labOpening || !routeState.stops.length || !routeStore.isReady();
+      lab?.update();
       find("mode").value = routeState.travelMode;
       for (const [link, provider] of [[route, "google"], [appleRoute, "apple"]]) {
         const url = routeNavigationUrl(provider, next, routeState.travelMode);
