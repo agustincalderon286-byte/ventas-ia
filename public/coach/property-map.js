@@ -4,7 +4,6 @@ import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-v
 import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl } from "./property-route-state.js?v=20261028-route50-1";
 
 (() => {
-
   let leafletPromise;
   function loadLeaflet() {
     if (window.L) return Promise.resolve(window.L);
@@ -328,7 +327,8 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     function syncRoute() {
       const next = nextRouteStop(routeState), completed = routeState.stops.filter(stop => stop.completedAt).length;
       find("count").textContent = `${selected.length} / ${MAX_STOPS}`;
-      find("progress").textContent = `${completed} visitadas · ${selected.length - completed} pendientes`;
+      const remaining = selected.length - completed;
+      find("progress").textContent = `${completed} ${completed === 1 ? "visitada" : "visitadas"} · ${remaining} ${remaining === 1 ? "pendiente" : "pendientes"}`;
       find("next").textContent = next ? next.property.formattedAddress : selected.length ? "Recorrido terminado" : "Agrega casas para empezar tu recorrido";
       find("mode").value = routeState.travelMode;
       for (const [link, provider] of [[route, "google"], [appleRoute, "apple"]]) {
