@@ -1,7 +1,8 @@
+import {createPropertyWalk} from './property-walk.js?v=20261028-walk1';
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
 import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-visit-tools2";
 
-import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl } from "./property-route-state.js?v=20261028-route50-3";
+import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl, mergeRouteOwners } from "./property-route-state.js?v=20261028-walk1";
 
 (() => {
   let leafletPromise;
@@ -42,14 +43,14 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     const addressSuggestions = initTecAddressSuggestions({ form, request });
     const mapBox = find("map"), list = find("list"), route = find("route"), clear = find("clear");
     const appleRoute = find("apple-route");
-    let routeState = emptyPropertyRoute(), routeBusy = false;
+    let routeState = emptyPropertyRoute(), routeBusy = false, walk = null, ownerLoading = false, ownerAttempt = "";
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
     let visits = new Map(), pendingLeadKeys = new Set(), refreshPromise = null, syncPromise = null, syncRequested = false, editingProperty = null, awaitingSync = false;
     const accountId = String(user.id || user._id || "");
     const email = String(user.email || "").trim().toLowerCase();
     const cacheKey = `property-visits:${accountId}:${email}`;
     const routeStore = createPropertyRouteStore({ accountId, email, request, offline,
-      onChange: value => { routeState = value; selected = value.stops.map(stop => stop.property); syncRoute(); if (selected.length && (!map || results.hidden)) ensureMap(); },
+      onChange: value => { routeState = value; selected = value.stops.map(stop => stop.property); syncRoute(); hydrateOwners(); if (selected.length && (!map || results.hidden)) ensureMap(); },
       onStatus: text => { find("route-status").textContent = text; }
     });
     async function changeRoute(update) {
@@ -60,6 +61,26 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       finally { routeBusy = false; syncRoute(); }
     }
     routeStore.ready.then(() => { syncRoute(); ensureMap(); routeStore.sync(); }).catch(() => {});
+    async function hydrateOwners() {
+      const pins = [...new Set(routeState.stops.filter(s => !s.property.ownerChecked && !s.property.ownerName && !s.property.ownerNames?.length).map(s => s.property.pin))].sort();
+      if (!pins.length || ownerLoading || !navigator.onLine || ownerAttempt === pins.join(',')) return;
+      ownerLoading = true; ownerAttempt = pins.join(',');
+      try {
+        const response = await request('/api/coach/properties/owners?pins=' + encodeURIComponent(pins.join(',')), {timeoutMs:45000});
+        // Merge into the latest state; never restore old progress or removed houses.
+        await routeStore.change(current => mergeRouteOwners(current, response.owners));
+      } catch { find('route-status').textContent = 'La ruta está guardada. No pude recuperar algunos nombres; pulsa Reintentar.'; }
+      finally { ownerLoading = false; }
+    }
+    walk = createPropertyWalk({ getRoute: () => routeState, request, loadLeaflet,
+      complete: stop => changeRoute(value => completeRouteStop(value, propertyVisitKey(stop.property), new Date().toISOString())),
+      followup: async (property, status) => {
+        openVisit(property);
+        if (status) { visitForm.elements.status.value = status; updateVisitDate(); }
+        if (['not_answered','answered'].includes(status) && await saveVisit()) dialog.close();
+      }
+    });
+    find('walk').addEventListener('click', () => walk.open());
     const visitMeta = status => PROPERTY_VISIT_STATUSES.find(item => item.value === status);
     const dateLabel = value => value ? new Date(value).toLocaleString("es-US", { dateStyle: "medium", timeStyle: "short" }) : "";
     const uniqueId = prefix => `${prefix}-${crypto.randomUUID()}`;
@@ -225,7 +246,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         const key = propertyVisitKey(editingProperty);
         if (routeState.stops.some(stop => propertyVisitKey(stop.property) === key && !stop.completedAt)) {
           const saved = await changeRoute(value => completeRouteStop(value, key, new Date().toISOString()));
-          if (!saved) visitMessage("El seguimiento quedó guardado. Falta marcar esta casa como visitada en el recorrido.", true);
+          if (!saved) { visitMessage("El seguimiento quedó guardado. Falta marcar esta casa como visitada en el recorrido.", true); kickSync(); return false; }
         }
         kickSync(); return true;
       } catch (error) { visitMessage(`No pude guardar: ${error.message}. Conserva esta ficha abierta e intenta nuevamente.`, true); return false; }
@@ -334,6 +355,9 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       const remaining = selected.length - completed;
       find("progress").textContent = `${completed} ${completed === 1 ? "visitada" : "visitadas"} · ${remaining} ${remaining === 1 ? "pendiente" : "pendientes"}`;
       find("next").textContent = next ? next.property.formattedAddress : selected.length ? "Recorrido terminado" : "Agrega casas para empezar tu recorrido";
+      find("next-owner").textContent = next ? "Propietario registrado: " + ownerText(next.property) : "";
+      find("walk").disabled = !routeState.stops.length;
+      walk?.update();
       find("mode").value = routeState.travelMode;
       for (const [link, provider] of [[route, "google"], [appleRoute, "apple"]]) {
         const url = routeNavigationUrl(provider, next, routeState.travelMode);
@@ -351,6 +375,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         const li = node("li", stop.completedAt ? "is-completed" : "");
         const title = node("div", "tec-route-stop-title");
         title.append(node("strong", "", `${index + 1}. ${property.address}`), node("span", "", `${property.city}${stop.completedAt ? " · Visitada" : ""}`));
+        title.append(node("span", "tec-property-owner", "Propietario registrado: " + ownerText(property)));
         const actions = node("div", "tec-route-stop-actions");
         const button = (text, label, fn, blocked = false) => {
           const el = node("button", "nav-button", text); el.type = "button"; el.setAttribute("aria-label", label); el.disabled = disabled || blocked; el.addEventListener("click", fn); actions.append(el);
@@ -466,7 +491,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     find("mode").addEventListener("change", event => { const mode = event.target.value; changeRoute(value => ({ ...value, travelMode: mode })); });
     find("complete").addEventListener("click", () => { const next = nextRouteStop(routeState); if (next) changeRoute(value => completeRouteStop(value, propertyVisitKey(next.property), new Date().toISOString())); });
     find("followup").addEventListener("click", () => { const next = nextRouteStop(routeState); if (next) openVisit(next.property); });
-    find("retry").addEventListener("click", () => routeStore.sync());
+    find("retry").addEventListener("click", () => { ownerAttempt = ""; hydrateOwners(); routeStore.sync(); });
     appleRoute.addEventListener("click", event => { if (!appleRoute.hasAttribute("href")) event.preventDefault(); });
     route.addEventListener("click", event => { if (!route.hasAttribute("href")) event.preventDefault(); });
     window.addEventListener("coach:workspace-change", event => {

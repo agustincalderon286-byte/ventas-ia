@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { ownerFields } from '../public/coach/property-route-state.js';
+const routeSnapshot = value => ({ ...validatePropertySnapshot(value), ...ownerFields(value) });
 import { validatePropertySnapshot } from './coach-property-visits.js';
 import { propertyVisitKey } from '../public/coach/property-visit-helpers.js';
 const schema = new mongoose.Schema({
@@ -21,12 +23,12 @@ export function validatePropertyRoute(input, now = Date.now) {
   if (!['walking','driving'].includes(input.travelMode)) throw fail('Selecciona un recorrido a pie o en auto.');
   const seen = new Set();
   const stops = input.stops.map(stop => {
-    const property = validatePropertySnapshot(stop?.property), key = propertyVisitKey(property);
+    const property = routeSnapshot(stop?.property), key = propertyVisitKey(property);
     if (seen.has(key)) throw fail('Una casa no puede aparecer dos veces en la misma ruta.');
     seen.add(key);
     return { property, completedAt: stop.completedAt == null ? null : validTime(stop.completedAt, now) };
   });
-  const anchor = input.anchor ? validatePropertySnapshot(input.anchor) : null;
+  const anchor = input.anchor ? routeSnapshot(input.anchor) : null;
   if (stops.length && !anchor) throw fail('Falta el punto inicial del recorrido.');
   return { anchor, stops, travelMode: input.travelMode, clientUpdatedAt: validTime(input.clientUpdatedAt, now) };
 }

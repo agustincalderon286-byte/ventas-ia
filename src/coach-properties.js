@@ -228,7 +228,17 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
       };
     });
   }
-  return { search, nearby, suggest };
+  async function owners({ pins: input }) {
+    const pins = typeof input === 'string' ? [...new Set(input.split(','))].sort() : [];
+    if (!pins.length || pins.length > 50 || pins.some(pin => !/^\d{14}$/.test(pin))) throw propertyError(400, 'Selecciona hasta 50 propiedades válidas.');
+    return cached(`owners:${pins.join(',')}`, async () => {
+      const years = await request(ADDRESS_DATASET, { $select:'pin,max(year) as year', $group:'pin', $where:`pin in (${pins.map(literal).join(',')})`, $limit:'50' });
+      const valid = years.filter(row => pins.includes(row.pin) && Number.isInteger(Number(row.year)) && Number(row.year) >= 2000 && Number(row.year) <= 2100);
+      const rows = valid.length ? await request(ADDRESS_DATASET, { $select:'pin,owner_address_name', $where:valid.map(row => `(pin = ${literal(row.pin)} AND year = ${Number(row.year)})`).join(' OR '), $limit:'400' }) : [];
+      return { owners:pins.map(pin => ({ pin, ownerNames:[...new Set(rows.filter(row => row.pin === pin).map(row => ownerName(row.owner_address_name)).filter(Boolean))].slice(0,8) })), source:'Cook County Assessor' };
+    }, 60 * 60 * 1000);
+  }
+  return { search, nearby, suggest, owners };
 }
 
 export function registerCoachPropertyRoutes(app, { requireCoachActivo, service = createCoachPropertyService(), now = Date.now }) {
@@ -253,6 +263,7 @@ export function registerCoachPropertyRoutes(app, { requireCoachActivo, service =
     try { res.json(await service[method](req.query)); }
     catch (error) { res.status(error.status || 503).json({ error: error.status ? error.message : "No pude consultar las propiedades. Intenta nuevamente." }); }
   }
+  app.get("/api/coach/properties/owners", (req, res, next) => handle(req, res, "owners").catch(next));
   app.get("/api/coach/properties/search", (req, res, next) => handle(req, res, "search").catch(next));
   app.get("/api/coach/properties/nearby", (req, res, next) => handle(req, res, "nearby").catch(next));
   app.get("/api/coach/properties/suggest", (req, res, next) => handle(req, res, "suggest").catch(next));

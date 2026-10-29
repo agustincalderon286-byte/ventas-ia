@@ -1,8 +1,17 @@
 import { propertyVisitKey } from './property-visit-helpers.js';
 
 export const MAX_ROUTE_STOPS = 50;
+export function ownerFields(value = {}) {
+  const names = [...new Set((Array.isArray(value.ownerNames) ? value.ownerNames : [value.ownerName]).filter(v => typeof v === 'string').map(v => v.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 180)).filter(Boolean))].slice(0, 8);
+  return { ownerName: names[0] || '', ownerNames: names, ...(value.ownerChecked === true ? {ownerChecked:true} : {}) };
+}
+export function mergeRouteOwners(route, owners) {
+  const byPin = new Map(owners.map(item => [item.pin, item]));
+  const merge = property => byPin.has(property.pin) ? { ...property, ...ownerFields(byPin.get(property.pin)), ownerChecked: true } : property;
+  return { ...route, anchor: route.anchor ? merge(route.anchor) : null, stops: route.stops.map(stop => ({ ...stop, property: merge(stop.property) })) };
+}
 export function routeProperty(value) {
-  return Object.fromEntries(['pin','address','city','state','zipCode','formattedAddress','lat','lon'].map(key => [key, value[key]]));
+  return { ...ownerFields(value), ...Object.fromEntries(['pin','address','city','state','zipCode','formattedAddress','lat','lon'].map(key => [key, value[key]])) };
 }
 export function emptyPropertyRoute(anchor = null) {
   return { anchor: anchor ? routeProperty(anchor) : null, stops: [], travelMode: 'walking', clientUpdatedAt: '', requestId: '', pending: false };

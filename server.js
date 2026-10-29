@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import { createCoachBillingSync } from "./src/coach-billing-sync.js";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
+import { registerStreetRoutes } from './src/coach-street-route.js';
 import { registerCoachPropertyRoute } from "./src/coach-property-route.js";
 import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js";
 import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
@@ -30443,6 +30444,7 @@ app.get("/api/coach/catalog-prices", async (req, res) => {
 });
 
 registerCoachPropertyRoutes(app, { requireCoachActivo });
+registerStreetRoutes(app, { requireCoachActivo });
 registerCoachPropertyRoute(app, { requireCoachActivo });
 registerCoachPropertyVisitRoutes(app, {
   requireCoachActivo,

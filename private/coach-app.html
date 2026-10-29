@@ -27,7 +27,7 @@
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261028-visit-tools2" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-route50-1" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-walk1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-visit-tools2" />
   </head>
   <body class="coach-app-body tec-compact-page">
@@ -202,7 +202,8 @@
             <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe el número y las primeras letras de la calle, elige una sugerencia y pulsa Buscar propiedades. La ciudad va por separado.</span></div>
             <section class="tec-property-route-panel" aria-label="Mi recorrido guardado">
               <div class="tec-route-heading"><strong>Mi recorrido <span data-property-count>0 / 50</span></strong><span data-property-progress>0 visitadas · 0 pendientes</span></div>
-              <div class="tec-route-next"><span>Siguiente casa</span><strong data-property-next>Agrega casas para empezar tu recorrido</strong></div>
+              <button class="primary-button" type="button" data-property-walk disabled>Abrir recorrido en TEC</button>
+              <div class="tec-route-next"><span>Siguiente casa</span><strong data-property-next>Agrega casas para empezar tu recorrido</strong><small data-property-next-owner></small></div>
               <div class="tec-property-route-actions"><a class="primary-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Google Maps</a><a class="nav-button" data-property-apple-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Apple Maps</a><label>Recorrido <select data-property-mode aria-label="Tipo de recorrido"><option value="walking">A pie</option><option value="driving">En auto</option></select></label></div>
               <div class="tec-property-route-actions"><button class="primary-button" type="button" data-property-complete disabled>Marcar visitada y continuar</button><button class="nav-button" type="button" data-property-followup disabled>Guardar seguimiento</button></div>
               <details class="tec-route-details"><summary>Ver y organizar las casas</summary><div class="tec-property-route-actions"><button class="nav-button" type="button" data-property-sort disabled>Ordenar por cercanía</button><button class="nav-button" type="button" data-property-clear disabled>Limpiar recorrido</button></div><p class="tec-property-route-note">Orden aproximado desde tu cita o la última casa visitada, sin tráfico ni distancias por calles. También puedes cambiar el orden con las flechas.</p><ol data-property-stops aria-label="Casas del recorrido"></ol></details>
@@ -5637,7 +5638,7 @@
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261025-native-offline2"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
-    <script type="module" src="/coach/property-map.js?v=20261028-radius1000-1"></script>
+    <script type="module" src="/coach/property-map.js?v=20261028-walk1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/product-search.js?v=20261025-alias1"></script>
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>

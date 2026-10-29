@@ -43,7 +43,7 @@ test('server validates limit, geography, duplicates, clock, mode, and strips ext
  assert.throws(()=>validatePropertyRoute({...route(),clientUpdatedAt:'2040-01-01'},now),{status:400});
  assert.throws(()=>validatePropertyRoute({...route(),anchor:null},now),{status:400});
  const unsafe=route(); unsafe.stops[0].property.lat=null; assert.throws(()=>validatePropertyRoute(unsafe,now),{status:400});
- const extra=route(); extra.stops[0].property.ownerName='Not retained'; assert.equal(validatePropertyRoute(extra,now).stops[0].property.ownerName,undefined);
+ const extra=route(); extra.stops[0].property.ownerName='PUBLIC OWNER'; extra.stops[0].property.ssn='private'; const kept=validatePropertyRoute(extra,now).stops[0].property; assert.equal(kept.ownerName,'PUBLIC OWNER'); assert.equal(kept.ssn,undefined);
 });
 test('server keeps one private route per account and old retries cannot erase newer progress or cleared routes',async()=>{
  const {model,service}=fixture(); const old=route();
