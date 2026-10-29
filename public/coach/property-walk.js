@@ -1,6 +1,6 @@
-import {nextRouteStop,routeNavigationUrl} from './property-route-state.js?v=20261028-walk1';
+import {nextRouteStop,routeNavigationUrl} from './property-route-state.js?v=20261028-walk2';
 import {propertyVisitKey} from './property-visit-helpers.js';
-import {navigationFix} from './route-guidance.js?v=20261028-walk1';
+import {navigationFix} from './route-guidance.js?v=20261028-walk2';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
 const owner=p=>(p.ownerNames?.length?p.ownerNames:[p.ownerName]).filter(Boolean).join(' · ')||'Nombre no disponible';
 export function createPropertyWalk({getRoute,request,loadLeaflet,followup,complete}) {
@@ -73,6 +73,7 @@ export function createPropertyWalk({getRoute,request,loadLeaflet,followup,comple
  window.addEventListener('tec:native-route',event=>{if(!dialog.open||!native)return;const v=event.detail;if(v.position){position=v.position;renderPosition();}if(v.plan)paintPlan(v.plan);if(v.message)instruction.textContent=v.message;if(v.active===false){active=false;native=false;updateControls();}});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&active){if(native)window.TecNativeRoute.status().then(v=>window.dispatchEvent(new CustomEvent('tec:native-route',{detail:v}))).catch(()=>{});else navigator.wakeLock?.request('screen').then(v=>wake=v).catch(()=>{});}});
  window.addEventListener('pagehide',()=>{stopGPS();});
+ for(const link of [google,apple])link.addEventListener('click',()=>stopGPS());
  close.addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>{stopGPS();});start.addEventListener('click',startGPS);stop.addEventListener('click',stopGPS);
  center.addEventListener('click',()=>{const p=position||nextRouteStop(getRoute())?.property;if(p&&map){followPosition=true;map.setView([p.lat,p.lon],18);}});
  return {update,async open(){dialog.showModal();update();try{const L=await loadLeaflet();if(!dialog.open)return;if(!map){map=L.map(mapBox);map.on('dragstart',()=>followPosition=false);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map).on('tileerror',()=>status.textContent='No pude cargar las calles. La lista y el seguimiento siguen disponibles.');markers=L.layerGroup().addTo(map);}map.invalidateSize();draw();const points=getRoute().stops.map(s=>[s.property.lat,s.property.lon]);if(points.length)map.fitBounds(points,{padding:[25,25],maxZoom:18});}catch(e){status.textContent=e.message;}}};

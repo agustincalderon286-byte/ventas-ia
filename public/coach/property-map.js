@@ -1,8 +1,8 @@
-import {createPropertyWalk} from './property-walk.js?v=20261028-walk1';
+import {createPropertyWalk} from './property-walk.js?v=20261028-walk2';
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
 import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261028-visit-tools2";
 
-import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl, mergeRouteOwners } from "./property-route-state.js?v=20261028-walk1";
+import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl, mergeRouteOwners } from "./property-route-state.js?v=20261028-walk2";
 
 (() => {
   let leafletPromise;
