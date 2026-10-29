@@ -35,7 +35,7 @@ export function toggleRouteStop(route, property, anchor) {
     return { ...route, stops, anchor: stops.length ? route.anchor : null };
   }
   if (route.stops.length >= MAX_ROUTE_STOPS) throw new Error('Tu recorrido ya tiene 50 casas. Quita una para agregar otra.');
-  return { ...route, anchor: route.anchor || routeProperty(anchor || property), stops: [...route.stops, { property: routeProperty(property), completedAt: null }] };
+  return { ...route, anchor: route.stops.length ? route.anchor : routeProperty(anchor || route.anchor || property), stops: [...route.stops, { property: routeProperty(property), completedAt: null }] };
 }
 export function completeRouteStop(route, key, completedAt) {
   return { ...route, stops: route.stops.map(stop => propertyVisitKey(stop.property) === key ? { ...stop, completedAt } : stop) };

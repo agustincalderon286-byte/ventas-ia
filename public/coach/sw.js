@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-route50-3";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-route50-3";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261028-route50-4";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-route50-4";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,9 +7,9 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
-  "/coach/property-map.js?v=20261028-route50-3",
+  "/coach/property-map.js?v=20261028-route50-4",
   "/coach/property-map.css?v=20261028-route50-1",
-  "/coach/property-route-state.js?v=20261028-route50-2",
+  "/coach/property-route-state.js?v=20261028-route50-3",
   "/coach/property-visit-helpers.js",
   "/coach/property-visit-helpers.js?v=20261023-product-picker2",
   "/coach/app.js?v=20261028-visit-tools2",

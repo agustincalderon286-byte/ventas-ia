@@ -111,4 +111,6 @@ test('removing the final house releases the old starting point before searching 
  let r=toggleRouteStop(emptyPropertyRoute(),house(1),house(0));
  r=toggleRouteStop(r,house(1)); assert.equal(r.stops.length,0); assert.equal(r.anchor,null);
  r=toggleRouteStop(r,house(40),house(30)); assert.equal(r.anchor.address,house(30).address);
+ const legacyEmpty=emptyPropertyRoute(house(0));
+ assert.equal(toggleRouteStop(legacyEmpty,house(40),house(30)).anchor.address,house(30).address);
 });
