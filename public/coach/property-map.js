@@ -375,7 +375,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       find("next-owner").textContent = next ? "Propietario registrado: " + ownerText(next.property) : "";
       find("walk").disabled = !routeState.stops.length;
       walk?.update();
-      if (labButton) labButton.disabled = labOpening || !routeState.stops.length || !routeStore.isReady();
+      if (labButton) labButton.disabled = labOpening || !routeStore.isReady();
       lab?.update();
       find("mode").value = routeState.travelMode;
       for (const [link, provider] of [[route, "google"], [appleRoute, "apple"]]) {

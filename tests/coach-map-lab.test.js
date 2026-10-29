@@ -30,6 +30,9 @@ test('LAB arrival and off-route detection never mark a house visited',()=>{
   assert.equal(labNavigationFix({...point(),lon:-87.64},plan,to,time).phase,'offroute');
   assert.equal(labNavigationFix({...point(),accuracy:90},plan,to,time).phase,'waiting');
 });
+test('an empty route can be previewed but cannot start GPS',()=>{
+  const f=fixture();f.route={anchor:null,stops:[],travelMode:'walking'};f.nav.update();f.nav.start();assert.equal(f.watches,0);assert.equal(f.nav.get().active,false);assert.equal(f.calls.length,0);
+});
 test('opening controller does not start GPS or write routes; start sends only coordinates and mode',async()=>{
   const f=fixture();assert.equal(f.watches,0);f.nav.update();assert.equal(f.watches,0);f.nav.start();assert.equal(f.watches,1);f.fix();await settle();
   assert.equal(f.calls.length,1);assert.equal(f.calls[0].path,'/api/coach/property-navigation');assert.deepEqual(Object.keys(f.calls[0].options.body).sort(),['from','mode','to']);assert.doesNotMatch(JSON.stringify(f.calls),/PROPIETARIO|TEST ST|completedAt/);assert.equal(f.route.stops.length,50);assert.equal(f.route.stops.filter(s=>s.completedAt).length,3);
