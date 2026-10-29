@@ -114,3 +114,34 @@ html[data-coach-team-manager="true"]:not([data-coach-portal-mode="telemarketing"
   .tec-property-route-actions a { width: 100%; }
   .tec-visit-dialog { padding: 18px; }
 }
+
+/* Saved routes remain available before a search and without a street map. */
+.tec-property-workspace .tec-property-route-panel { margin: 18px 0; padding: 20px; border: 1px solid #b8ccdf; border-radius: 18px; background: #f4f8fc; color: #173650; }
+.tec-route-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.tec-route-heading strong { font-size: 1.15rem; }
+.tec-route-heading [data-property-count] { display: inline-block; margin-left: 8px; color: #23577d; }
+.tec-route-next { display: grid; gap: 5px; padding: 16px 0; }
+.tec-route-next > span { color: #425b6f; font-size: .85rem; }
+.tec-route-next > strong { font-size: 1.1rem; overflow-wrap: anywhere; }
+.tec-property-route-panel .tec-property-route-actions { margin: 10px 0; align-items: center; }
+.tec-property-route-panel a[aria-disabled="true"] { opacity: .55; pointer-events: none; }
+.tec-property-route-panel select { padding: 8px; border: 1px solid #aabccd; border-radius: 10px; background: white; color: #173650; }
+.tec-route-details { margin-top: 14px; border-top: 1px solid #cfdae4; padding-top: 14px; }
+.tec-route-details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+.tec-property-route-panel ol { list-style: none; padding: 0; margin: 12px 0; max-height: 440px; overflow-y: auto; }
+.tec-property-route-panel ol li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: white; padding: 12px; margin: 6px 0; border: 1px solid #d6e0e8; border-radius: 12px; }
+.tec-route-stop-title { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.tec-route-stop-title span { color: #425b6f; }
+.tec-property-route-panel li.is-completed { border-left: 4px solid #16704b; background: #edf8f2; }
+.tec-route-stop-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tec-route-stop-actions .nav-button { min-height: 44px; padding: 8px 12px; font-size: .85rem; }
+.tec-route-save { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #cfdae4; margin-top: 12px; padding-top: 10px; }
+.tec-route-save p { margin: 0; font-size: .87rem; color: #31536b; }
+.tec-property-route-panel .tec-property-route-note { display: block; color: #425b6f; font-size: .85rem; line-height: 1.5; margin: 10px 0 0; }
+@media (max-width: 600px) {
+  .tec-property-workspace .tec-property-route-panel { padding: 14px; }
+  .tec-property-route-panel .tec-property-route-actions > a { flex: 1 1 100%; text-align: center; }
+  .tec-property-route-panel .tec-property-route-actions > button { flex: 1 1 auto; }
+  .tec-property-route-panel ol li { display: block; }
+  .tec-route-stop-actions { margin-top: 10px; }
+}

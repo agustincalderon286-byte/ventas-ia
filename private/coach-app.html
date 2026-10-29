@@ -27,7 +27,7 @@
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261028-visit-tools2" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-address1" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-route50-1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-visit-tools2" />
   </head>
   <body class="coach-app-body tec-compact-page">
@@ -200,6 +200,15 @@
               <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
             </form>
             <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe el número y las primeras letras de la calle, elige una sugerencia y pulsa Buscar propiedades. La ciudad va por separado.</span></div>
+            <section class="tec-property-route-panel" aria-label="Mi recorrido guardado">
+              <div class="tec-route-heading"><strong>Mi recorrido <span data-property-count>0 / 50</span></strong><span data-property-progress>0 visitadas · 0 pendientes</span></div>
+              <div class="tec-route-next"><span>Siguiente casa</span><strong data-property-next>Agrega casas para empezar tu recorrido</strong></div>
+              <div class="tec-property-route-actions"><a class="primary-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Google Maps</a><a class="nav-button" data-property-apple-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Apple Maps</a><label>Recorrido <select data-property-mode aria-label="Tipo de recorrido"><option value="walking">A pie</option><option value="driving">En auto</option></select></label></div>
+              <div class="tec-property-route-actions"><button class="primary-button" type="button" data-property-complete disabled>Marcar visitada y continuar</button><button class="nav-button" type="button" data-property-followup disabled>Guardar seguimiento</button></div>
+              <details class="tec-route-details"><summary>Ver y organizar las casas</summary><div class="tec-property-route-actions"><button class="nav-button" type="button" data-property-sort disabled>Ordenar por cercanía</button><button class="nav-button" type="button" data-property-clear disabled>Limpiar recorrido</button></div><p class="tec-property-route-note">Orden aproximado desde tu cita o la última casa visitada, sin tráfico ni distancias por calles. También puedes cambiar el orden con las flechas.</p><ol data-property-stops aria-label="Casas del recorrido"></ol></details>
+              <div class="tec-route-save"><p data-property-route-status role="status" aria-live="polite">Cargando tu recorrido…</p><button class="nav-button" type="button" data-property-retry>Reintentar</button></div>
+              <p class="tec-property-route-note">TEC conserva la ruta y el avance. Cada mapa abre la siguiente casa desde tu ubicación actual; abrirlo no marca la visita. Guarda un seguimiento o toca «Marcar visitada» al terminar.</p>
+            </section>
             <details class="tec-property-saved" data-property-saved><summary>Mis seguimientos por casa <span data-property-saved-count>0</span></summary><p data-property-saved-status>Las fichas y notas son privadas de tu cuenta. Aquí puedes retomarlas incluso sin buscar otra zona.</p><div data-property-saved-list></div></details>
             <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Comienza con la dirección de una cita. La búsqueda y el mapa necesitan internet.</p>
             <div class="tec-property-candidates" data-property-candidates hidden></div>
@@ -211,14 +220,6 @@
                   <p class="tec-property-map-note" data-property-map-note>La distancia indicada es en línea recta. El navegador calcula el recorrido por calles.</p>
                 </div>
                 <div class="tec-property-list-column">
-                  <div class="tec-property-route-panel">
-                    <strong>Tu recorrido <span data-property-count>0 / 4</span></strong>
-                    <p>Selecciona hasta 4 direcciones. Se visitan en el orden que las agregues.</p>
-                    <ol data-property-stops></ol>
-                    <div class="tec-property-route-actions"><a class="primary-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir ruta en Google Maps</a><button class="nav-button" type="button" data-property-clear disabled>Limpiar</button></div>
-                    <div class="tec-property-route-actions"><label>Apple Maps: <select data-property-apple-stop disabled aria-label="Elegir parada para Apple Maps"><option>Agrega una parada</option></select></label><a class="nav-button" data-property-apple-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir parada en Apple Maps</a></div>
-                    <span class="tec-property-route-note">Recorrido a pie, saliendo de la dirección de tu cita. Google abre el recorrido completo; Apple se abre por parada para conservar compatibilidad con iPhone antiguos. Elige la siguiente parada al terminar cada visita.</span>
-                  </div>
                   <div class="tec-property-list" data-property-list aria-label="Lista de propiedades cercanas"></div>
                 </div>
               </div>
@@ -5636,7 +5637,7 @@
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261025-native-offline2"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
-    <script type="module" src="/coach/property-map.js?v=20261028-visit-tools2"></script>
+    <script type="module" src="/coach/property-map.js?v=20261028-route50-1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/product-search.js?v=20261025-alias1"></script>
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>

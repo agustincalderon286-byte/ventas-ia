@@ -2,42 +2,22 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
-const source = readFileSync(new URL("../public/coach/property-map.js", import.meta.url), "utf8");
-const anchor = { formattedAddress: "100 TEST ST, HILLSIDE, IL, 60162" };
-const selected = [1, 2, 3, 4].map(number => ({ formattedAddress: `${100 + number} TEST ST, HILLSIDE, IL, 60162` }));
-test("Google keeps the complete four-stop walking route", () => {
-  const code = source.slice(source.indexOf("  function buildRouteUrl("), source.indexOf("  window.initTecPropertyMap"));
-  const build = vm.runInNewContext(`${code}\nbuildRouteUrl`, { URL });
-  assert.equal(build(null, []), "");
-  const url = new URL(build(anchor, selected));
-  assert.equal(url.searchParams.get("origin"), anchor.formattedAddress);
-  assert.equal(url.searchParams.get("destination"), selected[3].formattedAddress);
-  assert.equal(url.searchParams.get("waypoints").split("|").length, 3);
-  assert.equal(url.searchParams.get("travelmode"), "walking");
-});
-test("Apple walks from the appointment to the first stop and then from each previous stop, with no stale route after clear", () => {
-  const appleStop = { value: "0" }, appleRoute = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value; }, removeAttribute() { delete this.href; } };
-  const start = source.indexOf("    function syncAppleRoute()");
-  const end = source.indexOf('    appleStop?.addEventListener', start);
-  const context = vm.createContext({ appleStop, appleRoute, data: { anchor }, selected: [...selected], URL });
-  vm.runInContext(source.slice(start, end) + "\nsyncAppleRoute();", context);
-  let url = new URL(appleRoute.href);
-  assert.equal(url.origin, "https://maps.apple.com");
-  assert.equal(url.searchParams.get("saddr"), anchor.formattedAddress);
-  assert.equal(url.searchParams.get("daddr"), selected[0].formattedAddress);
-  assert.equal(url.searchParams.get("dirflg"), "w");
-  appleStop.value = "3"; vm.runInContext("syncAppleRoute()", context);
-  url = new URL(appleRoute.href);
-  assert.equal(url.searchParams.get("saddr"), selected[2].formattedAddress);
-  assert.equal(url.searchParams.get("daddr"), selected[3].formattedAddress);
-  context.selected = []; vm.runInContext("syncAppleRoute()", context);
-  assert.equal(appleRoute.href, undefined); assert.equal(appleRoute.attributes["aria-disabled"], "true");
+import { routeNavigationUrl } from "../public/coach/property-route-state.js";
+test("both navigation apps open one destination from the current location, in walking or driving mode", () => {
+ const stop = {property:{formattedAddress:"101 TEST ST, HILLSIDE, IL, 60162"}};
+ for (const provider of ['google','apple']) for (const mode of ['walking','driving']) {
+  const url=new URL(routeNavigationUrl(provider,stop,mode));
+  assert.equal(url.searchParams.get(provider==='apple'?'daddr':'destination'),stop.property.formattedAddress);
+  assert.equal(url.searchParams.get(provider==='apple'?'dirflg':'travelmode'),provider==='apple'?(mode==='walking'?'w':'d'):mode);
+  assert.equal(url.searchParams.has('origin'),false);assert.equal(url.searchParams.has('saddr'),false);assert.equal(url.searchParams.has('waypoints'),false);
+ }
+ assert.equal(routeNavigationUrl('google',null),'');assert.equal(routeNavigationUrl('apple',null),'');
 });
 test("both maps are available in property routes and agenda and PWA updates do not force takeover", () => {
   const html = readFileSync(new URL("../private/coach-app.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../public/coach/app.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../public/coach/sw.js", import.meta.url), "utf8");
-  assert.match(html, /data-property-apple-stop/); assert.match(html, /data-property-apple-route/);
+  assert.match(html, /data-property-complete/); assert.match(html, /data-property-apple-route/);
   assert.match(app, /record\.appleMapsUrl/); assert.match(app, />Google Maps<\/a>/);
   assert.match(app, />Apple Maps<\/a>/);
   const version = html.match(/property-map\.js\?v=([^" ]+)/)?.[1];
