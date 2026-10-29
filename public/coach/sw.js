@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261028-walk2";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261028-walk2";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261029-konverta1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261029-konverta1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -15,8 +15,8 @@ const TEC_CORE_ASSETS = [
   "/coach/property-visit-helpers.js",
   "/coach/property-visit-helpers.js?v=20261023-product-picker2",
   "/coach/app.js?v=20261028-visit-tools2",
-  "/coach/styles.css?v=20261028-visit-tools2",
-  "/coach/external-tools.js?v=20261028-visit-tools2",
+  "/coach/styles.css?v=20261029-konverta1",
+  "/coach/external-tools.js?v=20261029-konverta1",
   "/coach/document-viewer.js?v=20261028-visit-tools2",
   "/coach/document-viewer.css?v=20261028-visit-tools2",
   "/coach/property-map.js?v=20261028-visit-tools2",

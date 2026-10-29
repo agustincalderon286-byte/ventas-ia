@@ -9246,7 +9246,8 @@ html:not([data-coach-portal-mode="telemarketing"]) .coach-app-body .coach-hero-p
 .tec-external-tool header div { display:grid; flex:1; font:700 16px/1.4 system-ui; }
 .tec-external-tool header span { color:#52657a; font:12px/1.4 system-ui; }
 .tec-external-tool button,.tec-external-tool a { padding:12px; border:1px solid #ccd6e2; border-radius:12px; background:#fff; color:#102f52; text-decoration:none; font:600 14px/1.4 system-ui; cursor:pointer; }
-.tec-external-tool iframe { display:block; flex:1; min-height:0; width:100%; border:0; }
+.tec-external-tool-viewport { position:relative; flex:1; min-height:0; width:100%; overflow:hidden; }
+.tec-external-tool iframe { display:block; width:100%; height:100%; border:0; transform-origin:top left; }
 .tec-external-tool > p { margin:0; padding:6px 12px max(6px,env(safe-area-inset-bottom)); background:#f1f5f9; color:#52657a; font:12px/1.4 system-ui; text-align:center; }
 @media(max-width:760px) { .tec-resource-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .tec-resource-tile { min-height:145px; } }
 @media(max-width:520px) { .tec-distributor-portal { flex-direction:column; align-items:stretch; } .tec-external-tool header { flex-wrap:wrap; gap:6px; } .tec-external-tool header div { min-width:100px; } .tec-external-tool button,.tec-external-tool a { padding:10px 8px; font-size:12px; } }
