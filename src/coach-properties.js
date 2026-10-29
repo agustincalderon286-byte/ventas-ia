@@ -183,7 +183,10 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
   async function nearby({ pin, radius: inputRadius = 200 }) {
     if (typeof pin !== "string" || !/^\d{14}$/.test(pin)) throw propertyError(400, "Selecciona primero una dirección encontrada.");
     const radius = Number(inputRadius);
-    if (![100, 200, 300].includes(radius)) throw propertyError(400, "Elige un radio de 100, 200 o 300 metros.");
+    if (![100, 200, 300, 500, 750, 1000].includes(radius)) throw propertyError(400, "Elige un radio de 100, 200, 300, 500, 750 o 1,000 metros.");
+    const parcelLimit = radius > 300 ? 2000 : 500;
+    const addressLimit = radius > 300 ? 200 : 100;
+    const resultLimit = radius > 300 ? 200 : 60;
     return cached(`nearby:${pin}:${radius}`, async () => {
       const [anchorRow] = await request(ADDRESS_DATASET, { $select: ADDRESS_FIELDS, $where: `pin = ${literal(pin)}`, $order: "year DESC", $limit: "1" });
       if (!anchorRow) throw propertyError(404, "No encontré esa propiedad. Busca nuevamente la dirección.");
@@ -194,14 +197,14 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
       const bounds = await request(PARCEL_DATASET, {
         $select: "pin,year,lat,lon",
         $where: `lat between ${anchor.lat - latDelta} and ${anchor.lat + latDelta} AND lon between ${anchor.lon - lonDelta} and ${anchor.lon + lonDelta}`,
-        $limit: "501", $order: "pin"
+        $limit: String(parcelLimit + 1), $order: "pin"
       });
-      const matches = bounds.slice(0, 500).filter(row => row.pin !== pin && /^\d{14}$/.test(row.pin || "") && coordinates(row))
+      const matches = bounds.slice(0, parcelLimit).filter(row => row.pin !== pin && /^\d{14}$/.test(row.pin || "") && coordinates(row))
         .map(row => ({ ...row, distance: propertyDistanceMeters(anchor, coordinates(row)) }))
         .filter(row => row.distance <= radius).sort((a, b) => a.distance - b.distance);
-      const nearest = matches.slice(0, 100);
+      const nearest = matches.slice(0, addressLimit);
       const addressRows = nearest.length ? await request(ADDRESS_DATASET, {
-        $select: ADDRESS_FIELDS, $where: `year = ${Number(anchor.year)} AND pin in (${nearest.map(row => literal(row.pin)).join(",")})`, $limit: "100"
+        $select: ADDRESS_FIELDS, $where: `year = ${Number(anchor.year)} AND pin in (${nearest.map(row => literal(row.pin)).join(",")})`, $limit: String(addressLimit)
       }) : [];
       const byPin = new Map(addressRows.map(row => [row.pin, row]));
       const groups = new Map();
@@ -217,8 +220,8 @@ export function createCoachPropertyService({ fetchImpl = fetch, now = Date.now }
         groups.set(property.formattedAddress, { ...property, distanceMeters: Math.round(row.distance), parcelCount: 1, ownerNames: property.ownerName ? [property.ownerName] : [] });
       }
       return {
-        anchor, properties: [...groups.values()].slice(0, 60), radiusMeters: radius,
-        truncated: bounds.length > 500 || matches.length > 100 || groups.size > 60,
+        anchor, properties: [...groups.values()].slice(0, resultLimit), radiusMeters: radius,
+        truncated: bounds.length > parcelLimit || matches.length > addressLimit || groups.size > resultLimit,
         unavailableAddresses: nearest.filter(row => !byPin.get(row.pin)?.prop_address_full).length,
         year: anchor.year, queriedAt: new Date(now()).toISOString(), source: "Cook County Assessor",
         sources: [`${DATA_ORIGIN}/d/${ADDRESS_DATASET}`, `${DATA_ORIGIN}/d/${PARCEL_DATASET}`]

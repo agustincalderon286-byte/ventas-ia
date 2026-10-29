@@ -121,8 +121,12 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
           const recent = await request("/api/coach/property-visits");
           let zone = [];
           if (data) {
-            const lookup = await request("/api/coach/property-visits/lookup", { method: "POST", body: { keys: [data.anchor, ...data.properties].map(propertyVisitKey) } });
-            zone = lookup.visits || [];
+            // Keep each private-note lookup within the existing 61-house limit.
+            const keys = [data.anchor, ...data.properties].map(propertyVisitKey);
+            const chunks = [];
+            for (let i = 0; i < keys.length; i += 61) chunks.push(keys.slice(i, i + 61));
+            const lookups = await Promise.all(chunks.map(keys => request("/api/coach/property-visits/lookup", { method: "POST", body: { keys } })));
+            zone = lookups.flatMap(lookup => lookup.visits || []);
           }
           const all = new Map([...visits.values(), ...(recent.visits || []), ...zone].map(record => [record.propertyKey, record]));
           const pending = await pendingItems().catch(() => []);

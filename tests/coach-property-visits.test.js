@@ -175,3 +175,23 @@ test("offline sync never sends another account's data and sends a tied visit bef
   assert.deepEqual(sent, ["/visit", "/lead"]);
   assert.deepEqual(removed, ["visit", "lead"]);
 });
+
+test("large map searches load notes for all 200 houses without exceeding the lookup limit", async () => {
+  const source = readFileSync(new URL('../public/coach/property-map.js', import.meta.url), 'utf8');
+  const body = source.slice(source.indexOf('    async function refreshVisits()'), source.indexOf('    function kickSync()'));
+  const keysRequested = [], status = {};
+  const properties = Array.from({length:200}, (_,i)=>({...property,address:`${200+i} TEST ST`,pin:String(i+2).padStart(14,'0')}));
+  const context = vm.createContext({refreshPromise:null,navigator:{onLine:true},accountId:owner,data:{anchor:property,properties},visits:new Map(),pendingLeadKeys:new Set(),editingProperty:null,dialog:{open:false},awaitingSync:false,
+    request:async (url,options)=>{
+      if(url.endsWith('/lookup')) {
+        assert.ok(options.body.keys.length <= 61); keysRequested.push(...options.body.keys);
+        return {visits:options.body.keys.map(key=>({propertyKey:key,clientUpdatedAt:'2026-10-28T12:00:00Z',status:'not_answered',notes:'Saved note'}))};
+      }
+      return {visits:[]};
+    },pendingItems:async()=>[],propertyVisitKey,propertyVisitFromQueuedItem,mergePropertyVisits,find:()=>status,rememberVisits:async()=>{},refreshVisitDecorations:()=>{},syncLeadButton:()=>{}});
+  await vm.runInContext(body+'\nrefreshVisits();',context);
+  assert.equal(keysRequested.length,201); assert.equal(new Set(keysRequested).size,201);
+  assert.equal(context.visits.size,201);
+  assert.equal(context.visits.get(propertyVisitKey(properties[199])).notes,'Saved note');
+  assert.match(status.textContent,/privadas de tu cuenta/);
+});

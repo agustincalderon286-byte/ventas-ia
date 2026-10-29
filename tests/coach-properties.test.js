@@ -195,3 +195,44 @@ test("suggestions enforce their own quota and never consume the final property-s
   assert.equal(limited.headers["Cache-Control"], "private, no-store");
   assert.equal((await run("search")).code, 200);
 });
+
+test("larger radii include houses beyond 300m, still exclude outside the circle, and cache separately", async () => {
+  let calls = 0;
+  const rows = [coordinate('00000000000002',41.874), coordinate('00000000000003',41.876), coordinate('00000000000004',41.878), coordinate('00000000000005',41.88)];
+  const service = createCoachPropertyService({fetchImpl:async url=>{
+    calls++;
+    if(url.pathname.includes('3723-97qp')) {
+      if(url.searchParams.get('$where').startsWith('pin ='))return ok([property(anchorPin)]);
+      assert.equal(url.searchParams.get('$limit'),'200');
+      return ok(rows.map(row=>property(row.pin,`${Number(row.pin)} TEST ST`)));
+    }
+    if(url.searchParams.get('$where').startsWith('pin in')) return ok([coordinate(anchorPin)]);
+    assert.equal(url.searchParams.get('$limit'),'2001');
+    return ok(rows);
+  }});
+  for(const [radius,count] of [[500,1],[750,2],[1000,3]]){
+    const result=await service.nearby({pin:anchorPin,radius});
+    assert.equal(result.radiusMeters,radius);assert.equal(result.properties.length,count);
+    assert.ok(result.properties.every(row=>row.distanceMeters > 300 && row.distanceMeters <= radius));
+    assert.equal(result.truncated,false);
+  }
+  assert.equal(calls,12);
+  await service.nearby({pin:anchorPin,radius:1000});assert.equal(calls,12);
+});
+
+test("1km searches return up to 200 houses and honestly flag a dense truncated area", async () => {
+  const rows=Array.from({length:2001},(_,i)=>coordinate(String(i+2).padStart(14,'0'),41.874));
+  const service=createCoachPropertyService({fetchImpl:async url=>{
+    const where=url.searchParams.get('$where');
+    if(url.pathname.includes('3723-97qp')){
+      if(where.startsWith('pin ='))return ok([property(anchorPin)]);
+      assert.equal(url.searchParams.get('$limit'),'200');
+      return ok(rows.slice(0,200).map(row=>property(row.pin,`${Number(row.pin)} NEARBY ST`)));
+    }
+    if(where.startsWith('pin in'))return ok([coordinate(anchorPin)]);
+    assert.equal(url.searchParams.get('$limit'),'2001'); return ok(rows);
+  }});
+  const result=await service.nearby({pin:anchorPin,radius:'1000'});
+  assert.equal(result.properties.length,200); assert.equal(result.truncated,true);
+  for(const radius of [1001,2000,0,-100,'bad'])await assert.rejects(service.nearby({pin:anchorPin,radius}),{status:400});
+});
