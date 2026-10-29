@@ -30,7 +30,10 @@ export function orderRouteByProximity(route) {
 }
 export function toggleRouteStop(route, property, anchor) {
   const key = propertyVisitKey(property), found = route.stops.some(stop => propertyVisitKey(stop.property) === key);
-  if (found) return { ...route, stops: route.stops.filter(stop => propertyVisitKey(stop.property) !== key) };
+  if (found) {
+    const stops = route.stops.filter(stop => propertyVisitKey(stop.property) !== key);
+    return { ...route, stops, anchor: stops.length ? route.anchor : null };
+  }
   if (route.stops.length >= MAX_ROUTE_STOPS) throw new Error('Tu recorrido ya tiene 50 casas. Quita una para agregar otra.');
   return { ...route, anchor: route.anchor || routeProperty(anchor || property), stops: [...route.stops, { property: routeProperty(property), completedAt: null }] };
 }

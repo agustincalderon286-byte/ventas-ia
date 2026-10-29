@@ -106,3 +106,9 @@ test('pending snapshots are account scoped and late remote responses never reset
  assert.equal(latestPropertyRoute(current,route(),[foreign],'alice','alice@example.test').stops.length,4);
  assert.equal(latestPropertyRoute(current,{...current,pending:undefined},[],'alice','alice@example.test').pending,false);
 });
+
+test('removing the final house releases the old starting point before searching another zone',()=>{
+ let r=toggleRouteStop(emptyPropertyRoute(),house(1),house(0));
+ r=toggleRouteStop(r,house(1)); assert.equal(r.stops.length,0); assert.equal(r.anchor,null);
+ r=toggleRouteStop(r,house(40),house(30)); assert.equal(r.anchor.address,house(30).address);
+});
