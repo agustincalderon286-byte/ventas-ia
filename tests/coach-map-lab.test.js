@@ -71,7 +71,19 @@ test('shared offline store reopens all 50 owners and exact progress after a LAB 
   await store.change(value=>completeRouteStop(value,propertyVisitKey(nextRouteStop(value).property),'2026-10-29T12:00:00.000Z'));
   store=make();await store.ready;assert.equal(store.get().stops.length,50);assert.equal(store.get().stops.filter(s=>s.completedAt).length,4);assert.equal(nextRouteStop(store.get()).property.address,'5 TEST ST');assert.deepEqual(store.get().stops[49].property.ownerNames,['PROPIETARIO 50','COPROPIETARIO 50']);
 });
-test('LAB is opt-in and lazy, uses existing callbacks, and does not force service worker takeover',()=>{
+test('main web route loads lazily, shares visit callbacks and never forces PWA takeover',()=>{
   const read=p=>readFileSync(new URL(p,import.meta.url),'utf8'),html=read('../private/coach-app.html'),map=read('../public/coach/property-map.js'),worker=read('../public/coach/sw.js'),lab=read('../public/coach/property-lab.js');
-  assert.match(html,/data-property-walk/);assert.match(html,/data-property-lab/);assert.match(map,/await import\('\.\/property-lab/);assert.match(map,/createPropertyLab\(\{ \.\.\.routeTools/);assert.doesNotMatch(lab,/localStorage|indexedDB|TecNativeRoute|property-route-v/);assert.doesNotMatch(worker,/self\.skipWaiting\(/);assert.doesNotMatch(worker,/"\/coach\/vendor\/maplibre/);
+  assert.match(map,/find\('walk'\)\.addEventListener\('click', \(\) => openRecorrido\(\)\)/);assert.match(html,/data-property-walk/);assert.match(html,/data-property-lab/);assert.match(map,/await import\('\.\/property-lab/);assert.match(map,/createPropertyLab\(\{ \.\.\.routeTools/);assert.doesNotMatch(lab,/localStorage|indexedDB|TecNativeRoute|property-route-v/);assert.doesNotMatch(worker,/self\.skipWaiting\(/);assert.doesNotMatch(worker,/"\/coach\/vendor\/maplibre/);
+});
+
+// Exercise the actual authenticated page handler: GPS is enabled only after access checks.
+test('Coach document permits its own GPS without broadening other pages',async()=>{
+ const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+ const handler=source.slice(source.indexOf('app.get(["/coach/app", "/coach/app/"],'),source.indexOf('app.get(["/coach/telemarketing",'));
+ const code=handler.slice(handler.indexOf('async (req, res) => {')+'async (req, res) => {'.length,handler.lastIndexOf('});'));
+ const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+ const run=new AsyncFunction('req','res','obtenerCoachAuth','coachTieneAccesoOperativo','construirCoachUserView','path','PRIVATE_DIR',code);
+ for(const allowed of [false,true]){const headers={},response={setHeader(k,v){headers[k]=v;},redirect(){},sendFile(){}};
+ await run({},response,async()=>({user:allowed?{id:'fixture'}:null}),async()=>true,async()=>({portalMode:'coach'}),{join:()=>'/private/coach-app.html'},'/private');
+ assert.equal(headers['Permissions-Policy'],allowed?'camera=(), microphone=(self), geolocation=(self), payment=()':undefined);}
 });

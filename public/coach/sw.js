@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261029-maplab2";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261029-maplab2";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261101-recorrido1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261101-recorrido1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,6 +7,11 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
+  "/coach/address-suggestions.js?v=20261101-recorrido1",
+  "/coach/property-lab.js?v=20261101-recorrido1",
+  "/coach/property-lab-guidance.js?v=20261029-lab1",
+  "/coach/property-map.js?v=20261101-recorrido1",
+  "/coach/property-lab.css?v=20261101-recorrido1",
   "/coach/property-map.js?v=20261029-lab2",
   "/coach/property-map.js?v=20261029-lab1",
   "/coach/property-walk.js?v=20261029-lab1",

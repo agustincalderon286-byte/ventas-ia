@@ -32160,6 +32160,8 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
     return res.redirect("/coach/telemarketing/");
   }
 
+  // Only the authenticated Coach may request foreground GPS for its route.
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(self), geolocation=(self), payment=()");
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
 });
 

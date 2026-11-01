@@ -1,5 +1,5 @@
-import {createPropertyLab} from '/coach/property-lab.js?v=20261029-lab1';
-import {createPropertyWalk} from '/coach/property-walk.js?v=20261029-lab1';
+import {createPropertyLab} from '/coach/property-lab.js?v=20261101-recorrido1';
+import {createPropertyWalk} from '/coach/property-walk.js?v=20261101-recorrido1';
 import {createPropertyRouteStore,completeRouteStop,nextRouteStop} from '/coach/property-route-state.js?v=20261028-walk2';
 import {propertyVisitKey} from '/coach/property-visit-helpers.js';
 const prefix='tec-maplab-fixture-only:',seed=()=>({anchor:{lat:41.8781,lon:-87.6298,address:'Origen de prueba'},travelMode:'walking',stops:Array.from({length:50},(_,i)=>({property:{pin:String(i+1).padStart(14,'0'),address:`Casa de prueba ${i+1}`,formattedAddress:`Casa de prueba ${i+1} · Chicago`,city:'CHICAGO',state:'IL',zipCode:'60601',lat:41.8818+Math.floor(i/10)*.0005,lon:-87.6232+(i%10)*.00045,ownerNames:[`PROPIETARIO DE PRUEBA ${i+1}`],ownerChecked:true},completedAt:i<3?'2026-10-28T12:00:00.000Z':null}))});
@@ -19,7 +19,7 @@ const geolocation={watchPosition(ok){
 function update(){if(!store)return;const r=store.get(),done=r.stops.filter(s=>s.completedAt).length;document.querySelector('#result').textContent=`${r.stops.length} casas · ${done} visitadas · siguiente: ${nextRouteStop(r)?.property.address||'ninguna'}`;lab?.update();walk?.update();}
 store=createPropertyRouteStore({accountId:'lab-demo',email:'demo@example.test',request,offline,online:()=>false,onChange:update});
 await store.ready;if(!store.get().stops.length)await store.change(seed);
-const tools={getRoute:()=>store.get(),request,complete:async stop=>{await store.change(r=>completeRouteStop(r,propertyVisitKey(stop.property),new Date().toISOString()));return true;},followup:async(property,status)=>{
+const tools={setMode:async mode=>{await store.change(r=>({...r,travelMode:mode}));return true;},getRoute:()=>store.get(),request,complete:async stop=>{await store.change(r=>completeRouteStop(r,propertyVisitKey(stop.property),new Date().toISOString()));return true;},followup:async(property,status)=>{
  if(!status){document.querySelector('#status').textContent='Las notas reales se abren en la ficha existente de TEC. Esta demo solo prueba el mapa y el avance.';return true;}
  await store.change(r=>completeRouteStop(r,propertyVisitKey(property),new Date().toISOString()));return true;
 }};

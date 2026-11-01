@@ -181,7 +181,7 @@ test("large map searches load notes for all 200 houses without exceeding the loo
   const body = source.slice(source.indexOf('    async function refreshVisits()'), source.indexOf('    function kickSync()'));
   const keysRequested = [], status = {};
   const properties = Array.from({length:200}, (_,i)=>({...property,address:`${200+i} TEST ST`,pin:String(i+2).padStart(14,'0')}));
-  const context = vm.createContext({refreshPromise:null,navigator:{onLine:true},accountId:owner,data:{anchor:property,properties},visits:new Map(),pendingLeadKeys:new Set(),editingProperty:null,dialog:{open:false},awaitingSync:false,
+  const context = vm.createContext({refreshPromise:null,assertNativeAccount:async()=>{},navigator:{onLine:true},accountId:owner,data:{anchor:property,properties},visits:new Map(),pendingLeadKeys:new Set(),editingProperty:null,dialog:{open:false},awaitingSync:false,
     request:async (url,options)=>{
       if(url.endsWith('/lookup')) {
         assert.ok(options.body.keys.length <= 61); keysRequested.push(...options.body.keys);
