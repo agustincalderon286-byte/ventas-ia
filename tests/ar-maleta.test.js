@@ -100,3 +100,23 @@ test('camera permission remains behind the PIN gate', () => {
     else { assert.equal(response.code, 401); assert.equal(response.headers['Permissions-Policy'], undefined); }
   }
 });
+
+
+test('Power Blender v06 loads privately with the corrected recessed dial and embedded glass materials', async () => {
+  const h = harness('power-blender-max'), viewer = h.get('arViewer');
+  assert.match(viewer.attrs.src, /power-blender-max-v06\.glb$/);
+  assert.equal(viewer.attrs['ar-modes'], 'webxr quick-look');
+  assert.equal(viewer.attrs['ios-src'], undefined);
+  assert.equal(h.get('openArButton').disabled, true);
+  viewer.loaded = true; viewer.fire('load');
+  assert.equal(h.get('openArButton').disabled, false);
+  const buffer = fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/assets/power-blender-max-v06.glb', import.meta.url));
+  assert.equal(buffer.readUInt32LE(8), buffer.length);
+  const gltf = JSON.parse(buffer.toString('utf8', 20, 20 + buffer.readUInt32LE(12)));
+  assert.equal(gltf.scenes.length, 1);
+  assert.ok(gltf.nodes.some(n => n.name.includes('Aro blanco saliente')));
+  assert.ok(gltf.nodes.some(n => n.name.includes('Centro negro hundido')));
+  assert.ok(!gltf.nodes.some(n => /Suelo de estudio/.test(n.name)));
+  assert.ok(gltf.extensionsUsed.includes('KHR_materials_transmission'));
+  assert.ok(gltf.images.every(image => image.bufferView !== undefined));
+});

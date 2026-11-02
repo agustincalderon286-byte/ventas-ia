@@ -558,6 +558,11 @@
           </p>
 
           <div class="product-list" id="productList">
+            <button class="product-card" type="button" data-product-id="power-blender-max">
+              <strong>Power Blender Max</strong>
+              <span>Explora el vaso transparente, la tapa y la perilla con aro blanco saliente y centro negro hundido.</span>
+              <div class="product-tags"><span class="product-tag">3D + AR</span><span class="product-tag">Royal Prestige</span></div>
+            </button>
             <button class="product-card" type="button" data-product-id="chocolatera">
               <strong>Chocolatera Royal Prestige</strong>
               <span>Tapa encajada en el cuello, pico para servir y acabado espejo. Gíralo para ver los reflejos.</span>
@@ -643,6 +648,22 @@
 
     <script>
       const productCatalog = {
+        "power-blender-max": {
+          id: "power-blender-max",
+          title: "Power Blender Max",
+          modeBadge: "Royal Prestige · 3D + AR",
+          copy: "Gira la licuadora para explorar el vaso transparente, el pico para servir, la tapa y la perilla con aro blanco saliente y centro negro hundido.",
+          helper: "En iPhone, abre esta página en Safari y toca Ver en tu espacio. Recreación visual a partir de fotos y video; proporciones aproximadas y graduaciones decorativas.",
+          hasViewer: true,
+          src: "/prototipo-agustin20-chef-ar/assets/power-blender-max-v06.glb",
+          poster: "/prototipo-agustin20-chef-ar/assets/power-blender-max-v06.png",
+          environmentImage: "neutral",
+          arModes: "webxr quick-look",
+          cameraOrbit: "15deg 75deg auto",
+          actionLabel: "Ver en tu espacio",
+          exposure: "1",
+          shadowIntensity: "0.8"
+        },
         chocolatera: {
           id: "chocolatera",
           title: "Chocolatera Royal Prestige",
@@ -790,7 +811,7 @@
         viewer.setAttribute("ar-modes", product.arModes || "webxr scene-viewer quick-look");
         viewer.setAttribute("camera-orbit", product.cameraOrbit || "0deg 75deg auto");
         viewer.setAttribute("alt", product.title);
-        viewer.toggleAttribute("xr-environment", ["maleta", "chocolatera"].includes(product.id));
+        viewer.toggleAttribute("xr-environment", ["maleta", "chocolatera", "power-blender-max"].includes(product.id));
         document.getElementById("reflectionControls").hidden = product.id !== "chocolatera";
         document.getElementById("reflectionEnvironment").value = product.environmentImage || "neutral";
         document.getElementById("showEnvironment").checked = false;
@@ -817,7 +838,7 @@
             quickLookLink.setAttribute("href", "#");
           }
           viewer.setAttribute("poster", product.poster);
-          if (["maleta", "chocolatera"].includes(product.id) && !viewer.loaded) {
+          if (["maleta", "chocolatera", "power-blender-max"].includes(product.id) && !viewer.loaded) {
             viewerStatus.textContent = "Cargando el modelo…";
             openArButton.disabled = true;
           }
@@ -838,7 +859,7 @@
           return;
         }
 
-        if (["maleta", "chocolatera"].includes(activeProduct.id)) {
+        if (["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) {
           await customElements.whenDefined("model-viewer");
           if (!viewer.loaded) {
             viewerStatus.textContent = "Espera a que termine de cargar el modelo antes de abrir la cámara.";
@@ -878,17 +899,17 @@
       }
 
       viewer.addEventListener("load", () => {
-        if (!["maleta", "chocolatera"].includes(activeProduct.id)) return;
+        if (!["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) return;
         openArButton.disabled = false;
         viewerStatus.textContent = "Modelo listo. Gíralo con el dedo o toca Ver en tu espacio.";
       });
       viewer.addEventListener("error", () => {
-        if (!["maleta", "chocolatera"].includes(activeProduct.id)) return;
+        if (!["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) return;
         openArButton.disabled = true;
         viewerStatus.textContent = "No se pudo cargar el modelo. Recarga la página; si tu sesión venció, vuelve a entrar con tu PIN.";
       });
       viewer.addEventListener("ar-status", event => {
-        if (["maleta", "chocolatera"].includes(activeProduct.id) && event.detail.status === "failed") {
+        if (["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id) && event.detail.status === "failed") {
           viewerStatus.textContent = "No se pudo iniciar AR. Revisa los permisos del navegador y la compatibilidad de tu teléfono.";
         }
       });
