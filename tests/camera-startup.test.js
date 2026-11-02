@@ -26,3 +26,8 @@ test('unsupported resolution falls back once, but denial does not request again'
  let calls=0;const stream={};assert.equal(await requestCameraStream({getUserMedia:async()=>{if(++calls===1)throw Object.assign(new Error(),{name:'OverconstrainedError'});return stream;}}),stream);assert.equal(calls,2);
  calls=0;await assert.rejects(requestCameraStream({getUserMedia:async()=>{calls++;throw Object.assign(new Error(),{name:'NotAllowedError'});}}));assert.equal(calls,1);
 });
+
+test('Safari play promise cannot leave startup hanging even after metadata arrives',async()=>{
+ const video=new Video();video.play=()=>new Promise(()=>{});video.frame();
+ await assert.rejects(playCameraVideo(video,{timeoutMs:20}),/no entregó imagen/);
+});
