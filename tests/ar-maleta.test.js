@@ -102,21 +102,27 @@ test('camera permission remains behind the PIN gate', () => {
 });
 
 
-test('Power Blender v06 loads privately with the corrected recessed dial and embedded glass materials', async () => {
+test('Power Blender v07 loads privately with the corrected recessed dial and embedded glass materials', async () => {
   const h = harness('power-blender-max'), viewer = h.get('arViewer');
-  assert.match(viewer.attrs.src, /power-blender-max-v06\.glb$/);
+  assert.match(viewer.attrs.src, /power-blender-max-v07\.glb$/);
   assert.equal(viewer.attrs['ar-modes'], 'webxr quick-look');
   assert.equal(viewer.attrs['ios-src'], undefined);
   assert.equal(h.get('openArButton').disabled, true);
   viewer.loaded = true; viewer.fire('load');
   assert.equal(h.get('openArButton').disabled, false);
-  const buffer = fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/assets/power-blender-max-v06.glb', import.meta.url));
+  const buffer = fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/assets/power-blender-max-v07.glb', import.meta.url));
   assert.equal(buffer.readUInt32LE(8), buffer.length);
   const gltf = JSON.parse(buffer.toString('utf8', 20, 20 + buffer.readUInt32LE(12)));
   assert.equal(gltf.scenes.length, 1);
   assert.ok(gltf.nodes.some(n => n.name.includes('Aro blanco saliente')));
   assert.ok(gltf.nodes.some(n => n.name.includes('Centro negro hundido')));
   assert.ok(!gltf.nodes.some(n => /Suelo de estudio/.test(n.name)));
-  assert.ok(gltf.extensionsUsed.includes('KHR_materials_transmission'));
+  const glass = gltf.materials.find(m => m.name === 'Vidrio transparente');
+  assert.equal(glass.alphaMode, 'BLEND');
+  assert.ok(glass.pbrMetallicRoughness.baseColorFactor[3] > 0 && glass.pbrMetallicRoughness.baseColorFactor[3] < 0.4);
+  assert.equal(glass.extensions.KHR_materials_clearcoat.clearcoatFactor, 1);
+  assert.ok(!glass.extensions.KHR_materials_transmission);
+  const housing = gltf.materials.find(m => m.name.includes('Carcasa'));
+  assert.equal(housing.alphaMode, undefined, 'The housing must remain opaque');
   assert.ok(gltf.images.every(image => image.bufferView !== undefined));
 });
