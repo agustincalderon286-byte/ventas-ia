@@ -11,7 +11,7 @@ const modelUrl='../assets/ollas-v01/olla-3-cuartos.glb';
 function setStatus(text){$('status').textContent=text;}
 function resetAppearance(){startAt=performance.now();}
 function texture(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(210,255,255,1)');g.addColorStop(.16,'rgba(50,235,255,.7)');g.addColorStop(.45,'rgba(0,190,255,.18)');g.addColorStop(1,'rgba(0,190,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
-function fitPreview(){if(!engine||!preview)return;const w=stage.clientWidth,h=stage.clientHeight;engine.renderer.setSize(w,h);const c=engine.camera;c.aspect=w/h;c.fov=42;c.near=.01;c.far=100;c.updateProjectionMatrix();c.position.set(2,1.65,2.85).multiplyScalar(Math.max(1,.72/(w/h)));orbit.target.set(0,.42,0);orbit.update();}
+function fitPreview(){if(!engine||!preview)return;const w=stage.clientWidth,h=stage.clientHeight;engine.renderer.setSize(w,h);const c=engine.camera;c.aspect=w/h;c.fov=42;c.near=.01;c.far=100;c.updateProjectionMatrix();c.position.set(2,1.65,2.85).multiplyScalar(Math.max(1,.72/(w/h)));orbit.target.set(0,.42-document.querySelector(".panel").offsetHeight/h*.7,0);orbit.update();}
 function previewMode(){preview=true;tracked=false;engine.stop();document.body.classList.remove('searching');document.body.dataset.mode='preview';document.body.dataset.tracking='false';world.matrix.identity();world.visible=true;basis.rotation.set(0,0,0);engine.scene.background=new THREE.Color(0x070d18);engine.renderer.setClearAlpha(1);orbit.enabled=true;$('camera').hidden=false;$('stop').hidden=true;$('mode').textContent='VISTA PREVIA · SIN CÁMARA';setStatus('Arrastra para girar. Activa la cámara para proyectarla sobre la tarjeta.');fitPreview();resetAppearance();}
 async function initialize(){
  engine=new SquareTracker({container:stage,onStatus:info=>{document.body.dataset.detectorFrames=info.frames;},onError:()=>{previewMode();$('error').hidden=false;$('error').textContent='El seguimiento se detuvo. Puedes volver a activar la cámara.';}});
@@ -39,3 +39,5 @@ $('camera').addEventListener('click',async()=>{if(!ready||starting)return;starti
  finally{starting=false;$('camera').disabled=false;}});
 $('stop').addEventListener('click',previewMode);$('replay').addEventListener('click',resetAppearance);addEventListener('resize',fitPreview);addEventListener('pagehide',()=>{engine?.stop();engine?.renderer.setAnimationLoop(null);});document.addEventListener('visibilitychange',()=>{if(document.hidden&&!preview&&ready)previewMode();});
 initialize().catch(error=>{console.error(error);$('loading').hidden=true;$('error').hidden=false;$('error').textContent='No se pudo cargar la proyección. Recarga la página o vuelve a entrar con tu PIN.';setStatus('La muestra necesita WebGL y conexión para cargar el modelo.');});
+
+document.querySelector("details").addEventListener("toggle",fitPreview);
