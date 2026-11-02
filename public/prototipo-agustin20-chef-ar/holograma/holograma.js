@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {SquareTracker} from '../shared/square-tracker.js?v=3';
-import {shouldPauseCamera} from '../shared/camera-startup.js';
+import {SquareTracker} from '../shared/square-tracker.js?v=4';
+import {shouldPauseCamera} from '../shared/camera-startup.js?v=2';
 import {hologramFrame} from './hologram-motion.js';
 const $=id=>document.getElementById(id),stage=$('stage');
 let engine,anchor,world,basis,pot,orbit,preview=true,starting=false,tracked=false,startAt=performance.now(),ready=false;
@@ -21,7 +21,7 @@ function setAppearance(holographic){
 function updateArSize(){if(basis)basis.scale.setScalar(preview?1:Number($('size').value));$('size-value').textContent=$('size').value+'×';}
 function texture(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(210,255,255,1)');g.addColorStop(.16,'rgba(50,235,255,.7)');g.addColorStop(.45,'rgba(0,190,255,.18)');g.addColorStop(1,'rgba(0,190,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
 function fitPreview(){if(!engine||!preview)return;const w=stage.clientWidth,h=stage.clientHeight;engine.renderer.setSize(w,h);const c=engine.camera;c.aspect=w/h;c.fov=42;c.near=.01;c.far=100;c.updateProjectionMatrix();c.position.set(2,1.65,2.85).multiplyScalar(Math.max(1,.72/(w/h)));orbit.target.set(0,.42-document.querySelector(".panel").offsetHeight/h*.7,0);orbit.update();}
-function previewMode(){preview=true;tracked=false;engine.stop();document.body.classList.remove('searching');document.body.dataset.mode='preview';document.body.dataset.tracking='false';world.matrix.identity();world.visible=true;basis.rotation.set(0,0,0);updateArSize();engine.scene.background=new THREE.Color(0x070d18);engine.renderer.setClearAlpha(1);orbit.enabled=true;$('camera').hidden=false;$('stop').hidden=true;$('mode').textContent='VISTA PREVIA · SIN CÁMARA';setStatus('Arrastra para girar. Activa la cámara para proyectarla sobre la tarjeta.');fitPreview();resetAppearance();}
+function previewMode(){preview=true;tracked=false;engine.stop();document.body.classList.remove('searching');document.body.dataset.mode='preview';document.body.dataset.tracking='false';world.matrix.identity();world.visible=true;basis.rotation.set(0,0,0);updateArSize();engine.scene.background=new THREE.Color(0x070d18);engine.renderer.setClearAlpha(1);orbit.enabled=true;$('camera').hidden=false;$('resume').hidden=true;$('stop').hidden=true;$('mode').textContent='VISTA PREVIA · SIN CÁMARA';setStatus('Arrastra para girar. Activa la cámara para proyectarla sobre la tarjeta.');fitPreview();resetAppearance();}
 async function initialize(){
  engine=new SquareTracker({container:stage,onStatus:info=>{document.body.dataset.detectorFrames=info.frames;},onError:()=>{previewMode();$('error').hidden=false;$('error').textContent='El seguimiento se detuvo. Puedes volver a activar la cámara.';}});
  const {renderer,scene,camera}=engine;renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
@@ -43,8 +43,11 @@ async function initialize(){
  ready=true;document.body.dataset.loaded='true';$('loading').hidden=true;$('camera').disabled=false;$('replay').disabled=false;previewMode();
 }
 $('camera').addEventListener('click',async()=>{if(!ready||starting)return;starting=true;$('camera').disabled=true;$('error').hidden=true;setStatus('Preparando la cámara…');
- try{preview=false;arAppearanceStarted=false;updateArSize();engine.stop();orbit.enabled=false;world.visible=false;basis.rotation.set(Math.PI/2,0,0);engine.scene.background=null;engine.renderer.setClearAlpha(0);engine.camera.position.set(0,0,0);engine.camera.quaternion.identity();await engine.start();if(!engine.active)throw new Error('La cámara no logró iniciar.');document.body.dataset.mode='ar';document.body.classList.add('searching');$('camera').hidden=true;$('stop').hidden=false;$('mode').textContent='CÁMARA AR · BUSCANDO TARJETA';setStatus('Apunta al cuadrado blanco y negro de la tarjeta. Mantén visibles sus cuatro bordes.');}
- catch(error){previewMode();$('error').hidden=false;$('error').textContent='No pude abrir la cámara. Permite el acceso y vuelve a intentarlo en Safari o Chrome. '+(error.name==='NotAllowedError'?'El permiso está bloqueado.':error.name==='NotReadableError'?'Otra aplicación puede estar usando la cámara. Cierra esa aplicación e intenta otra vez.':error.message||'');}
+ try{preview=false;arAppearanceStarted=false;updateArSize();engine.stop();orbit.enabled=false;world.visible=false;basis.rotation.set(Math.PI/2,0,0);engine.scene.background=null;engine.renderer.setClearAlpha(0);engine.camera.position.set(0,0,0);engine.camera.quaternion.identity();await engine.start();if(!engine.active)throw new Error('La cámara no logró iniciar.');showCameraMode();}
+ catch(error){
+  if(error.name==='CameraPlaybackError'&&engine.pendingPlayback){$('camera').hidden=true;$('resume').hidden=false;$('stop').hidden=false;setStatus(error.message);$('mode').textContent='PERMISO CONCEDIDO · FALTA INICIAR VIDEO';}
+  else{previewMode();$('error').hidden=false;$('error').textContent=error.name==='NotAllowedError'?'Safari bloqueó el permiso de cámara. Permítelo en los ajustes de este sitio.':(error.cameraStage==='capture'?'Safari no pudo iniciar la captura de la cámara. ':'No pude iniciar el video de la cámara. ')+(error.message||'Vuelve a intentarlo.');}
+ }
  finally{starting=false;$('camera').disabled=false;}});
 $('stop').addEventListener('click',previewMode);$('replay').addEventListener('click',resetAppearance);addEventListener('resize',fitPreview);addEventListener('pagehide',()=>{engine?.stop();engine?.renderer.setAnimationLoop(null);});document.addEventListener('visibilitychange',()=>{if(!preview&&ready&&shouldPauseCamera({hidden:document.hidden,starting,active:engine?.active}))previewMode();});
 initialize().catch(error=>{console.error(error);$('loading').hidden=true;$('error').hidden=false;$('error').textContent='No se pudo cargar la proyección. Recarga la página o vuelve a entrar con tu PIN.';setStatus('La muestra necesita WebGL y conexión para cargar el modelo.');});
@@ -52,3 +55,6 @@ initialize().catch(error=>{console.error(error);$('loading').hidden=true;$('erro
 document.querySelector("details").addEventListener("toggle",fitPreview);
 
 $("size").addEventListener("input",updateArSize);
+
+function showCameraMode(){document.body.dataset.mode='ar';document.body.classList.add('searching');$('camera').hidden=true;$('resume').hidden=true;$('stop').hidden=false;$('mode').textContent='CÁMARA AR · BUSCANDO TARJETA';setStatus('Apunta al cuadrado blanco y negro de la tarjeta. Mantén visibles sus cuatro bordes.');}
+$('resume').addEventListener('click',async()=>{if(starting)return;starting=true;$('resume').disabled=true;$('error').hidden=true;try{await engine.resume();showCameraMode();}catch(error){$('error').hidden=false;$('error').textContent=error.message;}finally{starting=false;$('resume').disabled=false;}});

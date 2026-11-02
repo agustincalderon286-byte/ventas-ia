@@ -31,3 +31,15 @@ test('Safari play promise cannot leave startup hanging even after metadata arriv
  const video=new Video();video.play=()=>new Promise(()=>{});video.frame();
  await assert.rejects(playCameraVideo(video,{timeoutMs:20}),/no entregó imagen/);
 });
+test('Safari metadata is ready before play and one transient AbortError is retried',async()=>{
+ const video=new Video();video.srcObject={};let calls=0;video.play=()=>{calls++;if(calls===1)return Promise.reject(Object.assign(new Error('The operation was aborted.'),{name:'AbortError'}));return Promise.resolve();};
+ const started=playCameraVideo(video,{timeoutMs:700});await Promise.resolve();assert.equal(calls,0);video.frame();await started;assert.equal(calls,2);
+});
+test('repeat playback abort preserves a recoverable error for a second user gesture',async()=>{
+ const video=new Video();video.srcObject={};video.frame();video.play=()=>Promise.reject(Object.assign(new Error('The operation was aborted.'),{name:'AbortError'}));
+ await assert.rejects(playCameraVideo(video,{timeoutMs:700}),error=>error.name==='CameraPlaybackError'&&/Continuar cámara/.test(error.message));
+});
+test('cancelled stream is not restarted by automatic playback retry',async()=>{
+ const video=new Video();video.frame();video.srcObject=null;let calls=0;video.play=()=>{calls++;return Promise.reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));};
+ await assert.rejects(playCameraVideo(video,{timeoutMs:200}),error=>error.name==='AbortError');assert.equal(calls,1);
+});
