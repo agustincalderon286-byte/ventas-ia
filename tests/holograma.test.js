@@ -17,3 +17,14 @@ test('demo uses the existing product and a separate reference card',()=>{
  const model=fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.glb',import.meta.url));assert.equal(model.toString('ascii',0,4),'glTF');
  const qr=fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/holograma/qr-holograma.svg',import.meta.url),'utf8');assert.match(qr,/<svg/);
 });
+
+
+test('holographic appearance ends at exactly five seconds and can restart',()=>{
+ assert.equal(hologramFrame(0).holographic,true);
+ assert.equal(hologramFrame(4.999).holographic,true);
+ assert.equal(hologramFrame(5).holographic,false);
+ assert.equal(hologramFrame(60).holographic,false);
+ assert.equal(hologramFrame(0).holographic,true);
+ assert.ok(Math.abs(hologramFrame(5.001).rotation-hologramFrame(4.999).rotation)<.001);
+ assert.ok(hologramFrame(8).height>.1,'The regular product keeps floating');
+});
