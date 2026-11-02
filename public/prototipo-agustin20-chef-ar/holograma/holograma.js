@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {SquareTracker} from '../shared/square-tracker.js?v=2';
+import {SquareTracker} from '../shared/square-tracker.js?v=3';
+import {shouldPauseCamera} from '../shared/camera-startup.js';
 import {hologramFrame} from './hologram-motion.js';
 const $=id=>document.getElementById(id),stage=$('stage');
 let engine,anchor,world,basis,pot,orbit,preview=true,starting=false,tracked=false,startAt=performance.now(),ready=false;
@@ -42,10 +43,10 @@ async function initialize(){
  ready=true;document.body.dataset.loaded='true';$('loading').hidden=true;$('camera').disabled=false;$('replay').disabled=false;previewMode();
 }
 $('camera').addEventListener('click',async()=>{if(!ready||starting)return;starting=true;$('camera').disabled=true;$('error').hidden=true;setStatus('Preparando la cámara…');
- try{preview=false;arAppearanceStarted=false;updateArSize();engine.stop();orbit.enabled=false;world.visible=false;basis.rotation.set(Math.PI/2,0,0);engine.scene.background=null;engine.renderer.setClearAlpha(0);engine.camera.position.set(0,0,0);engine.camera.quaternion.identity();await engine.start();document.body.dataset.mode='ar';document.body.classList.add('searching');$('camera').hidden=true;$('stop').hidden=false;$('mode').textContent='CÁMARA AR · BUSCANDO TARJETA';setStatus('Apunta al cuadrado blanco y negro de la tarjeta. Mantén visibles sus cuatro bordes.');}
- catch(error){previewMode();$('error').hidden=false;$('error').textContent='No pude abrir la cámara. Permite el acceso y vuelve a intentarlo en Safari o Chrome. '+(error.name==='NotAllowedError'?'El permiso está bloqueado.':'');}
+ try{preview=false;arAppearanceStarted=false;updateArSize();engine.stop();orbit.enabled=false;world.visible=false;basis.rotation.set(Math.PI/2,0,0);engine.scene.background=null;engine.renderer.setClearAlpha(0);engine.camera.position.set(0,0,0);engine.camera.quaternion.identity();await engine.start();if(!engine.active)throw new Error('La cámara no logró iniciar.');document.body.dataset.mode='ar';document.body.classList.add('searching');$('camera').hidden=true;$('stop').hidden=false;$('mode').textContent='CÁMARA AR · BUSCANDO TARJETA';setStatus('Apunta al cuadrado blanco y negro de la tarjeta. Mantén visibles sus cuatro bordes.');}
+ catch(error){previewMode();$('error').hidden=false;$('error').textContent='No pude abrir la cámara. Permite el acceso y vuelve a intentarlo en Safari o Chrome. '+(error.name==='NotAllowedError'?'El permiso está bloqueado.':error.name==='NotReadableError'?'Otra aplicación puede estar usando la cámara. Cierra esa aplicación e intenta otra vez.':error.message||'');}
  finally{starting=false;$('camera').disabled=false;}});
-$('stop').addEventListener('click',previewMode);$('replay').addEventListener('click',resetAppearance);addEventListener('resize',fitPreview);addEventListener('pagehide',()=>{engine?.stop();engine?.renderer.setAnimationLoop(null);});document.addEventListener('visibilitychange',()=>{if(document.hidden&&!preview&&ready)previewMode();});
+$('stop').addEventListener('click',previewMode);$('replay').addEventListener('click',resetAppearance);addEventListener('resize',fitPreview);addEventListener('pagehide',()=>{engine?.stop();engine?.renderer.setAnimationLoop(null);});document.addEventListener('visibilitychange',()=>{if(!preview&&ready&&shouldPauseCamera({hidden:document.hidden,starting,active:engine?.active}))previewMode();});
 initialize().catch(error=>{console.error(error);$('loading').hidden=true;$('error').hidden=false;$('error').textContent='No se pudo cargar la proyección. Recarga la página o vuelve a entrar con tu PIN.';setStatus('La muestra necesita WebGL y conexión para cargar el modelo.');});
 
 document.querySelector("details").addEventListener("toggle",fitPreview);

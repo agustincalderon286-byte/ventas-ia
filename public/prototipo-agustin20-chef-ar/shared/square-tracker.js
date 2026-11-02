@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {AR} from '../vendor/js-aruco2/aruco.js';
 import {writeMarkerMatrix,videoProjection} from './marker-pose.js';
 import {POS} from '../vendor/js-aruco2/posit1.js';
+import {requestCameraStream,playCameraVideo} from './camera-startup.js';
 
 // CPU image detector: does not use TensorFlow, GPU compute shaders or WebXR.
 export class SquareTracker {
@@ -18,14 +19,14 @@ export class SquareTracker {
   addAnchor() {const group=new THREE.Group();group.matrixAutoUpdate=false;group.visible=false;this.scene.add(group);return this.anchor={group,visible:false,onTargetFound:null,onTargetLost:null,onTargetUpdate:null};}
   async start() {
     this.stop();const generation=this.generation;
-    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Esta página necesita HTTPS y acceso a Cámara.');
-    const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}});
-    if(generation!==this.generation){stream.getTracks().forEach(t=>t.stop());return;}
-    const video=this.video=document.createElement('video');video.muted=true;video.autoplay=true;video.playsInline=true;video.setAttribute('playsinline','');
+    const stream=await requestCameraStream(navigator.mediaDevices);
+    if(generation!==this.generation){stream.getTracks().forEach(t=>t.stop());throw new DOMException('Inicio de cámara cancelado.','AbortError');}
+    this.stream=stream;
+    const video=this.video=document.createElement('video');video.muted=true;video.autoplay=true;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.setAttribute('muted','');
     Object.assign(video.style,{position:'absolute',inset:'0',width:'100%',height:'100%',objectFit:'cover',zIndex:'0'});this.container.prepend(video);video.srcObject=stream;
-    try{await video.play();if(!video.videoWidth)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('La cámara no entregó una imagen.')),10000);video.addEventListener('loadedmetadata',()=>{clearTimeout(timer);resolve();},{once:true});});}
+    try{await playCameraVideo(video);}
     catch(error){this.stop();throw error;}
-    if(generation!==this.generation)return;
+    if(generation!==this.generation)throw new DOMException('Inicio de cámara cancelado.','AbortError');
     this.active=true;this.frames=0;this.lastSeen=-Infinity;this.lastFrame=-Infinity;this.consecutive=0;this.resize();this.onStatus({phase:'search',frames:0});
   }
   resize() {
@@ -55,7 +56,8 @@ export class SquareTracker {
   }
   stop() {
     this.generation=(this.generation||0)+1;this.active=false;
-    if(this.video){this.video.srcObject?.getTracks().forEach(t=>t.stop());this.video.srcObject=null;this.video.remove();this.video=null;}
+    const stream=this.stream||this.video?.srcObject;this.stream=null;stream?.getTracks().forEach(t=>t.stop());
+    if(this.video){this.video.pause?.();this.video.srcObject=null;this.video.remove();this.video=null;}
     if(this.anchor){const was=this.anchor.visible;this.anchor.visible=this.anchor.group.visible=false;if(was)this.anchor.onTargetLost?.();}
   }
 }
