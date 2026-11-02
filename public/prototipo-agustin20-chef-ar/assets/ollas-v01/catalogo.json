@@ -1,0 +1,154 @@
+[
+  {
+    "id": "olla-1-5-cuartos",
+    "title": "Olla NOVEL 1½ cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.webp",
+    "sha256": "c7a2afb53ea36af3a5089ebc90bb1bf27f00f822b96927a76ba51344e20ef521"
+  },
+  {
+    "id": "olla-2-cuartos",
+    "title": "Olla NOVEL 2 cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.webp",
+    "sha256": "02c97e38b59490e64304654e365a63d1699bfda91a17150c26462de0a692a518"
+  },
+  {
+    "id": "olla-3-cuartos",
+    "title": "Olla NOVEL 3 cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.webp",
+    "sha256": "c12461d4e8255c5848d01deced69c55fb16bac16fa14863afbadb9323bc71e1d"
+  },
+  {
+    "id": "olla-4-cuartos",
+    "title": "Olla NOVEL 4 cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.webp",
+    "sha256": "bfcffef1eb4038fad9417e83427f338321ac363b07c6965f306e1edd081d9680"
+  },
+  {
+    "id": "olla-6-cuartos",
+    "title": "Olla NOVEL 6 cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.webp",
+    "sha256": "aa9c8ac0cb4b9b0f805eea8d5ca667e59d2abe888d278e737ff00e722ab029af"
+  },
+  {
+    "id": "olla-8-cuartos",
+    "title": "Olla NOVEL 8 cuartos",
+    "family": "NOVEL",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.webp",
+    "sha256": "c0f522d3332bd366128f16d2c19bf905d5dfa598b26a1473c8c8b9c7e009aec4"
+  },
+  {
+    "id": "olla-12-cuartos",
+    "title": "Olla grande 12 cuartos",
+    "family": "Ollas grandes",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.webp",
+    "sha256": "cedda799864affea614b59c69d0bedbe73437c66c40c7abaadf23e32fbf73069"
+  },
+  {
+    "id": "olla-20-cuartos",
+    "title": "Olla grande 20 cuartos",
+    "family": "Ollas grandes",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.webp",
+    "sha256": "a8cc38b81f692d6389048dec6093dfe5f0b3c0eabbd5cb1c2fadd13d8bf676b2"
+  },
+  {
+    "id": "olla-30-cuartos",
+    "title": "Olla grande 30 cuartos",
+    "family": "Ollas grandes",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-30-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-30-cuartos.webp",
+    "sha256": "750b8de952fe0f3452829c01ed60b94ebed104f6f2013d98feaffd9754805491"
+  },
+  {
+    "id": "olla-60-cuartos",
+    "title": "Olla grande 60 cuartos",
+    "family": "Ollas grandes",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.webp",
+    "sha256": "7c3873d9ceede94e1db5be2eccf11c1bc2171fbccc5a942e546dbcdcc67a3b14"
+  },
+  {
+    "id": "olla-er-2-cuartos",
+    "title": "Easy Release 2 cuartos",
+    "family": "Easy Release",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.webp",
+    "sha256": "5e17f9f8256f046626b0ebb4c43546b6fd2f56ae2b62364be89844bd5466729c"
+  },
+  {
+    "id": "olla-er-3-cuartos",
+    "title": "Easy Release 3 cuartos",
+    "family": "Easy Release",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.webp",
+    "sha256": "eb3c32a4823cdf0dc54d88234deb3e68f5670fb03df02e4a4718d7c1cabc6e02"
+  },
+  {
+    "id": "olla-er-3-5-cuartos",
+    "title": "Easy Release 3½ cuartos",
+    "family": "Easy Release",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.webp",
+    "sha256": "1dbc45894e04a6f1c753cf2a63265f70c34914a59dc24cabbb30651e83eaf403"
+  },
+  {
+    "id": "olla-presion-6-litros",
+    "title": "Olla de presión 6 litros",
+    "family": "Presion",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.webp",
+    "sha256": "5b7d727965c17e818357efcba4a6367101c58095c6577e5f171995a61fd098f8"
+  },
+  {
+    "id": "olla-presion-10-litros",
+    "title": "Olla de presión 10 litros",
+    "family": "Presion",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.webp",
+    "sha256": "a25434fa6000911d992c798e9039b81aca599c458063b48124d9acc5d85d2c24"
+  },
+  {
+    "id": "olla-paellera-10-pulgadas",
+    "title": "Paellera NOVEL 10 pulgadas",
+    "family": "Paelleras",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-10-pulgadas.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-10-pulgadas.webp",
+    "sha256": "9161c40fa90841317f980c27a6546d2ee49707a40fb5940e8c3907a2201adce9"
+  },
+  {
+    "id": "olla-paellera-14-pulgadas",
+    "title": "Paellera NOVEL 14 pulgadas",
+    "family": "Paelleras",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.webp",
+    "sha256": "34300744ad5686fd4171f3db79a811b6e4581dc9049298a2657a5dc20b3ce563"
+  },
+  {
+    "id": "olla-cacerola-individual",
+    "title": "Royal Prestige Cacerola individual",
+    "family": "Especiales",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-cacerola-individual.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-cacerola-individual.webp",
+    "sha256": "b5b150495ee46fbc68e946c2ba8e04ba5d3585428ac97d6e22fae23af1fbd667"
+  },
+  {
+    "id": "olla-pavera-ovalada",
+    "title": "Royal Prestige Pavera ovalada",
+    "family": "Especiales",
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.webp",
+    "sha256": "aff4083baeb91d5fffaf13dc0c3aca7e93fd45f00aa73e82536b00a655346d19"
+  }
+]

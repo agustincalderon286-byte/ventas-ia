@@ -16,7 +16,7 @@ function harness(product = 'maleta') {
     click() { this.clicked = true; }, scrollIntoView() {},
   });
   const get = id => { if (!elements.has(id)) elements.set(id, node(id)); return elements.get(id); };
-  const cards = ['maleta', 'novel', 'multipan', 'royalprestige', 'revoexample'].map(id => {
+  const cards = [...html.matchAll(/data-product-id="([^"]+)"/g)].map(match => match[1]).map(id => {
     const card = node(id); card.dataset.productId = id; return card;
   });
   const location = new URL(`https://example.test/prototipo-agustin20-chef-ar/?producto=${product}`);
@@ -125,4 +125,31 @@ test('Power Blender v07 loads privately with the corrected recessed dial and emb
   const housing = gltf.materials.find(m => m.name.includes('Carcasa'));
   assert.equal(housing.alphaMode, undefined, 'The housing must remain opaque');
   assert.ok(gltf.images.every(image => image.bufferView !== undefined));
+});
+
+
+test('catalogue pots load through the private AR flow and preserve the existing MultiPan', async () => {
+  const entries = JSON.parse(fs.readFileSync(new URL('../public/prototipo-agustin20-chef-ar/assets/ollas-v01/catalogo.json', import.meta.url), 'utf8'));
+  assert.equal(entries.length, 19);
+  assert.equal(new Set(entries.map(p => p.id)).size, 19);
+  assert.equal((html.match(/data-product-id="multipan"/g) || []).length, 1);
+  for (const entry of entries) {
+    assert.ok(!/multipan/i.test(entry.id));
+    const h = harness(entry.id), viewer = h.get('arViewer');
+    assert.equal(viewer.attrs.src, entry.src);
+    assert.equal(viewer.attrs['ar-modes'], 'webxr quick-look');
+    assert.equal(viewer.attrs['ios-src'], undefined);
+    assert.equal(h.get('openArButton').disabled, true);
+    viewer.loaded = true; viewer.fire('load');
+    assert.equal(h.get('openArButton').disabled, false);
+    viewer.fire('error'); assert.equal(h.get('openArButton').disabled, true);
+    const b = fs.readFileSync(new URL('../public' + entry.src, import.meta.url));
+    assert.equal(b.toString('ascii', 0, 4), 'glTF');
+    assert.equal(b.readUInt32LE(8), b.length);
+    assert.ok(fs.statSync(new URL('../public' + entry.poster, import.meta.url)).size > 1000);
+  }
+  const h = harness(entries[0].id);
+  h.cards.find(c => c.dataset.productId === 'multipan').fire('click');
+  assert.equal(h.get('arViewer').style.display, 'none');
+  assert.match(h.get('quickLookLink').attrs.href, /multipan\.usdz$/);
 });

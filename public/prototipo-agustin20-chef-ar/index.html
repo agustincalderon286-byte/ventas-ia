@@ -282,6 +282,15 @@
         color: var(--navy);
       }
 
+      .pot-catalog-label { font-weight: 800; color: var(--navy); margin: 4px 0; }
+      .pot-family { border: 1px solid rgba(16, 43, 90, .14); border-radius: 16px; padding: 12px; background: #fff; }
+      .pot-family summary { cursor: pointer; font-weight: 800; color: var(--navy); padding: 4px; }
+      .pot-family summary > span { float: right; font-size: .85rem; color: #6a7380; }
+      .pot-family .pot-card { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 12px; width: 100%; margin-top: 10px; }
+      .pot-card img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+      .pot-card > span { min-width: 0; }
+      .pot-card > span > span { display: block; font-size: .82rem; line-height: 1.4; margin-top: 4px; }
+
       [hidden] { display: none !important; }
       .action:disabled { opacity: 0.55; cursor: wait; }
 
@@ -558,6 +567,39 @@
           </p>
 
           <div class="product-list" id="productList">
+
+            <div class="pot-catalog-label">Ollas del catálogo · 19 modelos</div>
+            <details class="pot-family"><summary>NOVEL <span>6</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-1-5-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 1½ cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-2-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 2 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-3-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 3 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-4-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 4 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-6-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 6 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-8-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla NOVEL 8 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
+            <details class="pot-family"><summary>Ollas grandes <span>4</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-12-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla grande 12 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-20-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla grande 20 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-30-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-30-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla grande 30 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-60-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla grande 60 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
+            <details class="pot-family"><summary>Easy Release <span>3</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-er-2-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Easy Release 2 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-er-3-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Easy Release 3 cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-er-3-5-cuartos"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Easy Release 3½ cuartos</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
+            <details class="pot-family"><summary>Presión <span>2</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-presion-6-litros"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla de presión 6 litros</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-presion-10-litros"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Olla de presión 10 litros</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
+            <details class="pot-family"><summary>Paelleras <span>2</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-paellera-10-pulgadas"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-10-pulgadas.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Paellera NOVEL 10 pulgadas</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-paellera-14-pulgadas"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Paellera NOVEL 14 pulgadas</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
+            <details class="pot-family"><summary>Especiales <span>2</span></summary>
+              <button class="product-card pot-card" type="button" data-product-id="olla-cacerola-individual"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-cacerola-individual.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Royal Prestige Cacerola individual</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+              <button class="product-card pot-card" type="button" data-product-id="olla-pavera-ovalada"><img src="/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.webp" alt="" loading="lazy" width="64" height="64"><span><strong>Royal Prestige Pavera ovalada</strong><span>Explorar en 3D y en tu espacio</span></span></button>
+            </details>
             <button class="product-card" type="button" data-product-id="power-blender-max">
               <strong>Power Blender Max</strong>
               <span>Explora el vaso transparente, la tapa y la perilla con aro blanco saliente y centro negro hundido.</span>
@@ -647,7 +689,315 @@
     </main>
 
     <script>
+      const potCatalog = {
+  "olla-1-5-cuartos": {
+    "id": "olla-1-5-cuartos",
+    "title": "Olla NOVEL 1½ cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-2-cuartos": {
+    "id": "olla-2-cuartos",
+    "title": "Olla NOVEL 2 cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-3-cuartos": {
+    "id": "olla-3-cuartos",
+    "title": "Olla NOVEL 3 cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-4-cuartos": {
+    "id": "olla-4-cuartos",
+    "title": "Olla NOVEL 4 cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-6-cuartos": {
+    "id": "olla-6-cuartos",
+    "title": "Olla NOVEL 6 cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-8-cuartos": {
+    "id": "olla-8-cuartos",
+    "title": "Olla NOVEL 8 cuartos",
+    "modeBadge": "NOVEL · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-12-cuartos": {
+    "id": "olla-12-cuartos",
+    "title": "Olla grande 12 cuartos",
+    "modeBadge": "Ollas grandes · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-20-cuartos": {
+    "id": "olla-20-cuartos",
+    "title": "Olla grande 20 cuartos",
+    "modeBadge": "Ollas grandes · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-30-cuartos": {
+    "id": "olla-30-cuartos",
+    "title": "Olla grande 30 cuartos",
+    "modeBadge": "Ollas grandes · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-30-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-30-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-60-cuartos": {
+    "id": "olla-60-cuartos",
+    "title": "Olla grande 60 cuartos",
+    "modeBadge": "Ollas grandes · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-er-2-cuartos": {
+    "id": "olla-er-2-cuartos",
+    "title": "Easy Release 2 cuartos",
+    "modeBadge": "Easy Release · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-er-3-cuartos": {
+    "id": "olla-er-3-cuartos",
+    "title": "Easy Release 3 cuartos",
+    "modeBadge": "Easy Release · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-er-3-5-cuartos": {
+    "id": "olla-er-3-5-cuartos",
+    "title": "Easy Release 3½ cuartos",
+    "modeBadge": "Easy Release · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-presion-6-litros": {
+    "id": "olla-presion-6-litros",
+    "title": "Olla de presión 6 litros",
+    "modeBadge": "Presión · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-presion-10-litros": {
+    "id": "olla-presion-10-litros",
+    "title": "Olla de presión 10 litros",
+    "modeBadge": "Presión · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-paellera-10-pulgadas": {
+    "id": "olla-paellera-10-pulgadas",
+    "title": "Paellera NOVEL 10 pulgadas",
+    "modeBadge": "Paelleras · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-10-pulgadas.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-10-pulgadas.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-paellera-14-pulgadas": {
+    "id": "olla-paellera-14-pulgadas",
+    "title": "Paellera NOVEL 14 pulgadas",
+    "modeBadge": "Paelleras · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-cacerola-individual": {
+    "id": "olla-cacerola-individual",
+    "title": "Royal Prestige Cacerola individual",
+    "modeBadge": "Especiales · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-cacerola-individual.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-cacerola-individual.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  },
+  "olla-pavera-ovalada": {
+    "id": "olla-pavera-ovalada",
+    "title": "Royal Prestige Pavera ovalada",
+    "modeBadge": "Especiales · 3D + AR",
+    "copy": "Gira la pieza para explorar el cuerpo, la tapa y las asas. Acércate para ver sus detalles.",
+    "helper": "Modelo visual con proporciones aproximadas. En iPhone o iPad, abre esta página en Safari y toca Ver en tu espacio. En Android compatible, usa Chrome.",
+    "hasViewer": true,
+    "src": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.glb",
+    "poster": "/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.webp",
+    "environmentImage": "neutral",
+    "arModes": "webxr quick-look",
+    "cameraOrbit": "25deg 65deg auto",
+    "actionLabel": "Ver en tu espacio",
+    "exposure": "1",
+    "shadowIntensity": "0.8"
+  }
+};
+
       const productCatalog = {
+        ...potCatalog,
         "power-blender-max": {
           id: "power-blender-max",
           title: "Power Blender Max",
@@ -769,6 +1119,10 @@
         }
       };
 
+      function usesSessionAr(product) {
+        return product.hasViewer && product.arModes === "webxr quick-look" && !product.iosSrc;
+      }
+
       const viewer = document.getElementById("arViewer");
       const fallbackView = document.getElementById("fallbackView");
       const quickLookLink = document.getElementById("quickLookLink");
@@ -811,7 +1165,7 @@
         viewer.setAttribute("ar-modes", product.arModes || "webxr scene-viewer quick-look");
         viewer.setAttribute("camera-orbit", product.cameraOrbit || "0deg 75deg auto");
         viewer.setAttribute("alt", product.title);
-        viewer.toggleAttribute("xr-environment", ["maleta", "chocolatera", "power-blender-max"].includes(product.id));
+        viewer.toggleAttribute("xr-environment", usesSessionAr(product));
         document.getElementById("reflectionControls").hidden = product.id !== "chocolatera";
         document.getElementById("reflectionEnvironment").value = product.environmentImage || "neutral";
         document.getElementById("showEnvironment").checked = false;
@@ -823,7 +1177,12 @@
         history.replaceState(null, "", shareUrl);
 
         productCards.forEach(card => {
-          card.classList.toggle("active", card.dataset.productId === product.id);
+          const selected = card.dataset.productId === product.id;
+          card.classList.toggle("active", selected);
+          if (selected) {
+            const family = card.closest?.("details");
+            if (family) family.open = true;
+          }
         });
 
         if (product.hasViewer) {
@@ -838,7 +1197,7 @@
             quickLookLink.setAttribute("href", "#");
           }
           viewer.setAttribute("poster", product.poster);
-          if (["maleta", "chocolatera", "power-blender-max"].includes(product.id) && !viewer.loaded) {
+          if (usesSessionAr(product) && !viewer.loaded) {
             viewerStatus.textContent = "Cargando el modelo…";
             openArButton.disabled = true;
           }
@@ -859,7 +1218,7 @@
           return;
         }
 
-        if (["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) {
+        if (usesSessionAr(activeProduct)) {
           await customElements.whenDefined("model-viewer");
           if (!viewer.loaded) {
             viewerStatus.textContent = "Espera a que termine de cargar el modelo antes de abrir la cámara.";
@@ -899,17 +1258,17 @@
       }
 
       viewer.addEventListener("load", () => {
-        if (!["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) return;
+        if (!usesSessionAr(activeProduct)) return;
         openArButton.disabled = false;
         viewerStatus.textContent = "Modelo listo. Gíralo con el dedo o toca Ver en tu espacio.";
       });
       viewer.addEventListener("error", () => {
-        if (!["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id)) return;
+        if (!usesSessionAr(activeProduct)) return;
         openArButton.disabled = true;
         viewerStatus.textContent = "No se pudo cargar el modelo. Recarga la página; si tu sesión venció, vuelve a entrar con tu PIN.";
       });
       viewer.addEventListener("ar-status", event => {
-        if (["maleta", "chocolatera", "power-blender-max"].includes(activeProduct.id) && event.detail.status === "failed") {
+        if (usesSessionAr(activeProduct) && event.detail.status === "failed") {
           viewerStatus.textContent = "No se pudo iniciar AR. Revisa los permisos del navegador y la compatibilidad de tu teléfono.";
         }
       });
