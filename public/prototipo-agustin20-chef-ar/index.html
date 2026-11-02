@@ -650,9 +650,9 @@
           copy: "Explora el cuerpo, el mango, la tapa y el pico para servir. El acero refleja el entorno seleccionado mientras giras la pieza.",
           helper: "En iPhone, abre esta página en Safari y toca Ver en tu espacio. Modelo recreado a partir de fotografías oficiales; sus proporciones son aproximadas y no sirven como medidas de fabricación.",
           hasViewer: true,
-          src: "/prototipo-agustin20-chef-ar/assets/chocolatera-v02.glb",
+          src: "/prototipo-agustin20-chef-ar/assets/chocolatera-v02.glb?v=2",
           poster: "/prototipo-agustin20-chef-ar/assets/chocolatera-v02.png",
-          environmentImage: "/prototipo-agustin20-chef-ar/assets/kitchen/kiara_interior_1k.hdr",
+          environmentImage: "neutral",
           arModes: "webxr quick-look",
           cameraOrbit: "-35deg 65deg auto",
           actionLabel: "Ver en tu espacio",
@@ -794,7 +794,7 @@
         document.getElementById("reflectionControls").hidden = product.id !== "chocolatera";
         document.getElementById("reflectionEnvironment").value = product.environmentImage || "neutral";
         document.getElementById("showEnvironment").checked = false;
-        document.getElementById("showEnvironment").disabled = false;
+        document.getElementById("showEnvironment").disabled = (product.environmentImage || "neutral") === "neutral";
         viewer.removeAttribute("skybox-image");
         viewer.toggleAttribute("auto-rotate", product.id !== "maleta");
         const shareUrl = new URL(location.href);
