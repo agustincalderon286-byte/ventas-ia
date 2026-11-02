@@ -12,6 +12,7 @@
     return /^(paso-[a-z0-9-]+|prueba-agua)$/.test(id) ? document.getElementById(id) : null;
   }
   function initialWorkspace(saved, defaultTab) {
+    if (window.location.hash === '#audiolibros') return 'audiolibros';
     return shouldStartAtFirstStep() || visitAnchor() ? defaultTab : saved || defaultTab;
   }
   function measure() {

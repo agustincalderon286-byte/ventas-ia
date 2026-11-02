@@ -1258,9 +1258,9 @@ function syncCoachManagerUi(user = null) {
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
     const focusedTabs = canManageTeam
-      ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "equipo"]
-      : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa"];
-    node.hidden = isTelemarketing ? !["crm", "program414"].includes(tabId) : !focusedTabs.includes(tabId);
+      ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros", "equipo"]
+      : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros"];
+    node.hidden = isTelemarketing ? !["crm", "program414", "audiolibros"].includes(tabId) : !focusedTabs.includes(tabId);
   });
 
   document.querySelectorAll("[data-telemarketing-hide]").forEach(node => {
@@ -1308,8 +1308,8 @@ function syncCoachManagerUi(user = null) {
     document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
       const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
       const focusedTabs = canManageTeam
-        ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "equipo"]
-        : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa"];
+        ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros", "equipo"]
+        : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros"];
       node.hidden = !focusedTabs.includes(tabId);
     });
   }
@@ -1516,6 +1516,11 @@ function initCoachWorkspaceTabs() {
     });
 
     window.sessionStorage.setItem(COACH_WORKSPACE_TAB_KEY, safeTab);
+    if (safeTab === "audiolibros" || window.location.hash === "#audiolibros") {
+      const url = new URL(window.location.href);
+      url.hash = safeTab === "audiolibros" ? "audiolibros" : "";
+      window.history.replaceState(null, "", url);
+    }
     const workspaceTitle = document.querySelector("[data-coach-workspace-title]");
     if (workspaceTitle) workspaceTitle.textContent = visibleTabButtons.find(button => button.dataset.coachWorkspaceTab === safeTab)?.textContent.trim() || "Cierre";
     const journey = document.querySelector(".coach-journey");

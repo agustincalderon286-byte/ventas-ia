@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261101-recorrido1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261101-recorrido1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261102-audiobooks1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261102-audiobooks1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,6 +7,11 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
+  "/coach/audiobooks.js?v=20261102-library1",
+  "/coach/audiobooks.css?v=20261102-library1",
+  "/coach/assets/audiobooks/como-un-hombre-piensa.svg",
+  "/coach/compact-header.js?v=20261102-audiobooks1",
+  "/coach/app.js?v=20261102-audiobooks1",
   "/coach/address-suggestions.js?v=20261101-recorrido1",
   "/coach/property-lab.js?v=20261101-recorrido1",
   "/coach/property-lab-guidance.js?v=20261029-lab1",
@@ -215,6 +220,9 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) {
     return;
   }
+
+  // Audio, reviews and listening position always use the authenticated network.
+  if (url.pathname.startsWith("/api/coach/audiobooks")) return;
 
   if (url.pathname === "/coach/chef" || url.pathname.startsWith("/coach/chef/")) return;
 

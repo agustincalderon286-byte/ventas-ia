@@ -1,0 +1,73 @@
+[
+  {
+    "id": "como-un-hombre-piensa",
+    "title": "Como un hombre piensa",
+    "author": "James Allen",
+    "originalTitle": "As a Man Thinketh",
+    "language": "Español",
+    "categories": [
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "description": "Un clásico breve sobre la relación entre nuestros pensamientos, el carácter y la forma de vivir. James Allen reflexiona sobre el propósito, las circunstancias, la salud, los ideales y la serenidad.",
+    "edition": "Edición íntegra en español · TEC",
+    "narrator": "Narrador cálido",
+    "voiceDisclosure": "Narración generada con inteligencia artificial. Una misma voz durante todo el libro.",
+    "credits": "Texto de James Allen. Traducción al español asistida por IA y producción de audio: TEC. Esta edición conserva el texto preparado para narración, sin música ni efectos.",
+    "duration": 2891.01,
+    "cover": "/coach/assets/audiobooks/como-un-hombre-piensa.svg",
+    "chapters": [
+      {
+        "title": "Título y epígrafe",
+        "start": 0,
+        "duration": 27.88
+      },
+      {
+        "title": "Prólogo del autor",
+        "start": 27.88,
+        "duration": 49.64
+      },
+      {
+        "title": "Capítulo 1. Pensamiento y carácter",
+        "start": 77.52,
+        "duration": 270.67
+      },
+      {
+        "title": "Capítulo 2. El efecto del pensamiento en las circunstancias",
+        "start": 348.19,
+        "duration": 1084.12
+      },
+      {
+        "title": "Capítulo 3. El efecto del pensamiento en la salud y el cuerpo",
+        "start": 1432.31,
+        "duration": 244.83
+      },
+      {
+        "title": "Capítulo 4. Pensamiento y propósito",
+        "start": 1677.14,
+        "duration": 255.71
+      },
+      {
+        "title": "Capítulo 5. El papel del pensamiento en los logros",
+        "start": 1932.85,
+        "duration": 344.0
+      },
+      {
+        "title": "Capítulo 6. Visiones e ideales",
+        "start": 2276.85,
+        "duration": 415.22
+      },
+      {
+        "title": "Capítulo 7. Serenidad",
+        "start": 2692.07,
+        "duration": 198.94
+      }
+    ],
+    "audio": {
+      "sha256": "d614e63ebc3d519e98a2ed55574a63da6a30d5870821bc425bc5d872ab8905b8",
+      "bytes": 70489653,
+      "contentType": "audio/mp4",
+      "filename": "Como-un-hombre-piensa-BF16-solo-voz.m4b"
+    }
+  }
+]

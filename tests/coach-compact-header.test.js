@@ -32,3 +32,8 @@ test('account menu dismisses on Escape or outside click and restores keyboard fo
  h.events.keydown({key:'Escape'});assert.equal(h.menu.open,false);assert.equal(h.focused,true);assert.equal(h.scrolls.length,0);
  h.menu.open=true;h.events.click({target:'outside'});assert.equal(h.menu.open,false);
 });
+
+test('Audiolibros deep link opens the library instead of resetting to Cierre', () => {
+ const library=fixture({hash:'#audiolibros'});
+ assert.equal(library.api.initialWorkspace('cierre','cierre'),'audiolibros');
+});

@@ -17,6 +17,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
+import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -32376,6 +32377,13 @@ registerTecControlRoutes(app, {
   monthlyPrice: STRIPE_PRICE_ID_MONTHLY, annualPrice: STRIPE_PRICE_ID_ANNUAL,
   cleanAnalysis: limpiarCoachDemoAnalysis, mongoose, stripe
 });
+registerTecAudiobooks(app, {
+  requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
+  ...createAudiobookModels(mongoose),
+  getBucket: () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" }),
+  importGrant: JSON.parse(fs.readFileSync(new URL("./src/knowledge/tec-audiobook-import-grant.json", import.meta.url), "utf8"))
+});
+
 registerTecAudioLab(app, {
   requireAdmin: requireControlTowerAccess,
   // Deliberately NOT all administrators: no other user's audio is archived.

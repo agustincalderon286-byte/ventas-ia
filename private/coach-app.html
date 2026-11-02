@@ -26,6 +26,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261029-konverta1" />
+    <link rel="stylesheet" href="/coach/audiobooks.css?v=20261102-library1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
     <link rel="stylesheet" href="/coach/property-map.css?v=20261028-walk2" />
     <link rel="stylesheet" href="/coach/property-lab.css?v=20261101-recorrido1" />
@@ -91,6 +92,7 @@
               >
                 Cierre
               </button>
+              <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="audiolibros" aria-selected="false">Audiolibros</button>
               <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="actividad" aria-selected="false">Mi actividad</button>
               <button type="button" class="coach-workspace-tab" data-coach-workspace-tab="mapa" aria-selected="false">
                 Mapa
@@ -181,6 +183,56 @@
 
         <aside class="coach-sidebar">
 
+
+          <article class="dashboard-card ab-workspace" data-coach-workspace-section="audiolibros" data-audiobooks hidden>
+            <div data-ab-library>
+              <header class="ab-heading"><div><span class="ab-eyebrow">Biblioteca TEC</span><h2>Audiolibros</h2><p>Ideas para crecer, a tu ritmo.</p></div></header>
+              <p class="ab-status" data-ab-catalog-status role="status" aria-live="polite">Elige un libro para empezar a escuchar.</p>
+              <button class="nav-button" type="button" data-ab-retry hidden>Volver a intentar</button>
+              <div class="ab-catalog" data-ab-catalog></div>
+            </div>
+            <div data-ab-detail hidden>
+              <button class="nav-button" type="button" data-ab-back>← Biblioteca</button>
+              <div class="ab-summary">
+                <img class="ab-cover" data-ab-cover alt="" width="180" height="240" />
+                <div><span class="ab-eyebrow">Audiolibro íntegro</span><h2 data-ab-title tabindex="-1"></h2><p class="ab-author" data-ab-author></p><p class="ab-meta" data-ab-meta></p><p data-ab-description></p><p class="ab-voice" data-ab-voice></p></div>
+              </div>
+              <div class="ab-layout">
+                <section class="ab-player-box" aria-label="Reproductor del audiolibro">
+                  <span class="ab-eyebrow">Estás escuchando</span><h3 data-ab-now-chapter>Inicio del libro</h3>
+                  <audio data-ab-audio controls preload="metadata" aria-label="Escuchar audiolibro"></audio>
+                  <div class="ab-player-controls">
+                    <button class="nav-button" type="button" data-ab-backward aria-label="Retroceder 15 segundos">−15 s</button>
+                    <button class="nav-button" type="button" data-ab-forward aria-label="Avanzar 15 segundos">+15 s</button>
+                    <label>Velocidad <select data-ab-speed aria-label="Velocidad de reproducción"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
+                  </div>
+                  <p data-ab-player-status role="status" aria-live="polite"></p><p data-ab-save-status class="ab-small"></p>
+                </section>
+                <section aria-label="Partes del libro"><h3>Contenido</h3><ol class="ab-chapters" data-ab-chapters></ol></section>
+              </div>
+              <details class="ab-credits"><summary>Acerca de esta edición</summary><p data-ab-credits></p></details>
+              <section class="ab-reviews-section" aria-labelledby="ab-reviews-heading">
+                <h3 id="ab-reviews-heading">Opiniones de los lectores</h3><p data-ab-rating></p>
+                <div class="ab-reviews-grid">
+                  <form class="ab-review-form" data-ab-review-form>
+                    <fieldset><legend>Tu calificación</legend><div class="ab-rating-input">
+                      <label><input type="radio" name="rating" value="1" required aria-label="1 estrella" />1 ★</label>
+                      <label><input type="radio" name="rating" value="2" aria-label="2 estrellas" />2 ★</label>
+                      <label><input type="radio" name="rating" value="3" aria-label="3 estrellas" />3 ★</label>
+                      <label><input type="radio" name="rating" value="4" aria-label="4 estrellas" />4 ★</label>
+                      <label><input type="radio" name="rating" value="5" aria-label="5 estrellas" />5 ★</label>
+                    </div></fieldset>
+                    <label for="ab-review-text">Tu reseña <span class="ab-small">(opcional)</span></label>
+                    <textarea id="ab-review-text" name="text" maxlength="2000" rows="4" placeholder="¿Qué te dejó este libro?"></textarea>
+                    <p class="ab-small">Tu nombre de TEC y tu opinión serán visibles para los demás lectores. Una reseña por cuenta y libro.</p>
+                    <div class="ab-form-actions"><button class="primary-button" type="submit" data-ab-save-review>Publicar mi reseña</button><button class="nav-button" type="button" data-ab-delete-review hidden>Eliminar mi reseña</button></div>
+                    <p data-ab-form-status role="status" aria-live="polite"></p>
+                  </form>
+                  <div><p data-ab-review-status role="status" aria-live="polite"></p><div data-ab-reviews></div><div class="ab-pagination"><button class="nav-button" type="button" data-ab-prev-reviews hidden>← Anteriores</button><button class="nav-button" type="button" data-ab-next-reviews hidden>Siguientes →</button></div></div>
+                </div>
+              </section>
+            </div>
+          </article>
 
           <article class="dashboard-card tec-property-workspace" data-coach-workspace-section="mapa" data-property-workspace hidden>
             <div class="tec-property-heading">
@@ -5646,7 +5698,8 @@
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>
     <script src="/coach/product-videos-catalog.js?v=20261028-recipes1"></script>
     <script src="/coach/product-videos.js?v=20261028-recipes1"></script>
-    <script src="/coach/compact-header.js?v=20261028-compact-header1"></script>
-    <script src="/coach/app.js?v=20261028-visit-tools2"></script>
+    <script src="/coach/compact-header.js?v=20261102-audiobooks1"></script>
+    <script src="/coach/app.js?v=20261102-audiobooks1"></script>
+    <script src="/coach/audiobooks.js?v=20261102-library1"></script>
   </body>
 </html>
