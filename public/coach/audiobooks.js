@@ -4,7 +4,8 @@
   if (!root) return;
   const $ = selector => root.querySelector(selector);
   const audio = $('[data-ab-audio]');
-  const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio, position => seekTo(position, true));
+  const readerRoot = $('[data-ab-reader]');
+  const reader = globalThis.TecBookReader && readerRoot ? new TecBookReader.Reader(readerRoot, audio, position => seekTo(position, true)) : { clear() {}, set() {} };
   const state = { loaded: false, busy: false, book: null, page: 1, generation: 0, saveAt: 0, pendingSeek: null, saveQueue: Promise.resolve() };
   const time = seconds => { const n = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -31,7 +32,7 @@
         const image = el('img'); image.src = book.cover; image.alt = `Portada de ${book.title}`; image.width = 180; image.height = 240;
         const body = el('div', undefined, 'ab-card-body');
         body.append(el('span', book.categories.join(' · '), 'ab-eyebrow'), el('h3', book.title), el('p', book.author, 'ab-author'), el('p', book.description), el('p', `${time(book.duration)} · ${book.language} · Libro íntegro`, 'ab-meta'));
-        const button = el('button', book.available ? 'Escuchar y leer' : 'Próximamente', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
+        const button = el('button', book.available ? (readerRoot ? 'Escuchar y leer' : 'Escuchar el libro') : 'Próximamente', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
         button.addEventListener('click', () => openBook(book.id));
         body.append(button); card.append(image, body); list.append(card);
       }
@@ -91,6 +92,7 @@
     } catch (error) { status('[data-ab-catalog-status]', error.message); status('[data-ab-player-status]', error.message); }
   }
   async function loadText(book, generation) {
+    if (!readerRoot || !globalThis.TecBookReader) return;
     reader.clear();
     if (!book.transcriptUrl) return;
     $('[data-ab-reader]').hidden = false;
@@ -104,7 +106,7 @@
       status('[data-ab-read-status]', 'No se pudo abrir el texto. Revisa tu conexión.'); $('[data-ab-read-retry]').hidden = false;
     }
   }
-  $('[data-ab-read-retry]').addEventListener('click', () => { if (state.book) loadText(state.book, state.generation); });
+  $('[data-ab-read-retry]')?.addEventListener('click', () => { if (state.book) loadText(state.book, state.generation); });
   function updateRating(rating) {
     $('[data-ab-rating]').textContent = rating.count ? `★ ${rating.average.toFixed(1)} de 5 · ${rating.count} ${rating.count === 1 ? 'reseña' : 'reseñas'}` : 'Sé la primera persona en calificar este audiolibro.';
   }

@@ -67,7 +67,8 @@
       "bytes": 70489653,
       "contentType": "audio/mp4",
       "filename": "Como-un-hombre-piensa.m4b"
-    }
+    },
+    "voiceDisclosure": ""
   },
   {
     "id": "acres-de-diamantes",
@@ -133,6 +134,7 @@
       "bytes": 133639279,
       "contentType": "audio/mp4",
       "filename": "Acres-de-diamantes.m4b"
-    }
+    },
+    "voiceDisclosure": ""
   }
 ]
