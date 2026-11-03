@@ -4,8 +4,8 @@
   if (!root) return;
   const $ = selector => root.querySelector(selector);
   const audio = $('[data-ab-audio]');
-  const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio);
-  const state = { loaded: false, busy: false, book: null, page: 1, generation: 0, saveAt: 0, saveQueue: Promise.resolve() };
+  const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio, position => seekTo(position, true));
+  const state = { loaded: false, busy: false, book: null, page: 1, generation: 0, saveAt: 0, pendingSeek: null, saveQueue: Promise.resolve() };
   const time = seconds => { const n = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
   const status = (selector, message) => { $(selector).textContent = message; };
@@ -56,7 +56,7 @@
     try {
       const data = await api(`/api/coach/audiobooks/${encodeURIComponent(id)}`);
       if (generation !== state.generation) return;
-      const book = data.book; state.book = book; state.page = 1;
+      const book = data.book; state.book = book; state.page = 1; state.pendingSeek = null;
       $('[data-ab-library]').hidden = true; $('[data-ab-detail]').hidden = false;
       $('[data-ab-title]').textContent = book.title; $('[data-ab-title]').focus({ preventScroll: true });
       $('[data-ab-author]').textContent = book.author;
@@ -70,7 +70,7 @@
       audio.removeAttribute('src'); audio.load();
       audio.onloadedmetadata = () => {
         if (generation !== state.generation) return;
-        audio.currentTime = Math.min(data.progress.position, Math.max(0, book.duration - 0.1));
+        audio.currentTime = Math.min(state.pendingSeek ?? data.progress.position, Math.max(0, book.duration - 0.1));
         audio.playbackRate = data.progress.speed;
       };
       audio.src = book.audioUrl; audio.load();
@@ -78,13 +78,13 @@
       book.chapters.forEach((chapter, index) => {
         const item = el('li'); const button = el('button', undefined, 'ab-chapter'); button.type = 'button'; button.dataset.chapter = index;
         button.append(el('span', chapter.title), el('span', time(chapter.start), 'ab-chapter-time'));
-        button.addEventListener('click', () => { audio.currentTime = chapter.start; audio.play().catch(() => status('[data-ab-player-status]', 'Toca reproducir para escuchar.')); });
+        button.addEventListener('click', () => { seekTo(chapter.start, true); });
         item.append(button); chapters.append(item);
       });
       loadText(book, generation); updateRating(data.rating); await loadReviews();
       if ('mediaSession' in navigator && 'MediaMetadata' in window) {
         navigator.mediaSession.metadata = new MediaMetadata({ title: book.title, artist: book.author, album: 'Audiolibros TEC', artwork: [{ src: new URL(book.cover, location.href).href, type: 'image/svg+xml', sizes: '600x800' }] });
-        for (const [action, handler] of Object.entries({ play: () => audio.play().catch(() => {}), pause: () => audio.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { audio.currentTime = detail.seekTime; } })) {
+        for (const [action, handler] of Object.entries({ play: () => audio.play().catch(() => {}), pause: () => audio.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { seekTo(detail.seekTime, false); } })) {
           try { navigator.mediaSession.setActionHandler(action, handler); } catch {}
         }
       }
@@ -131,7 +131,12 @@
       status('[data-ab-review-status]', data.reviews.length ? `Página ${state.page}` : 'Todavía no hay reseñas. Comparte tu opinión.');
     } catch (error) { status('[data-ab-review-status]', error.message); }
   }
-  function seek(seconds) { if (state.book) audio.currentTime = Math.max(0, Math.min(state.book.duration, audio.currentTime + seconds)); }
+  function seekTo(position, play = false) {
+    if (!state.book) return;
+    state.pendingSeek = Math.max(0, Math.min(state.book.duration, position)); audio.currentTime = state.pendingSeek;
+    if (play) audio.play().catch(() => status('[data-ab-player-status]', 'Toca reproducir para escuchar.'));
+  }
+  function seek(seconds) { seekTo(audio.currentTime + seconds); }
   $('[data-ab-review-form]').addEventListener('submit', async event => {
     event.preventDefault(); const form = event.currentTarget;
     if (!form.reportValidity() || !state.book) return;

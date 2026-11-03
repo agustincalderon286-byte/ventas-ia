@@ -8,8 +8,8 @@
     return index >= 0 && time < cues[index].end ? index : -1;
   }
   class Reader {
-    constructor(root, audio) {
-      this.root = root; this.audio = audio; this.cues = []; this.nodes = []; this.active = -1; this.fontSize = 19;
+    constructor(root, audio, onSeek) {
+      this.root = root; this.audio = audio; this.onSeek = onSeek || (position => { audio.currentTime = position; audio.play().catch(() => {}); }); this.cues = []; this.nodes = []; this.active = -1; this.fontSize = 19;
       this.body = root.querySelector('[data-ab-reader-text]'); this.follow = root.querySelector('[data-ab-follow]');
       this.follow.addEventListener('change', () => { if (this.follow.checked) this.update(true); });
       for (const event of ['wheel', 'touchmove']) this.body.addEventListener(event, () => { this.follow.checked = false; }, { passive: true });
@@ -28,7 +28,7 @@
         if (cue.separator) fragment.append(document.createTextNode(cue.separator));
         const passage = document.createElement('span'); passage.setAttribute('role', 'button'); passage.tabIndex = 0; passage.className = 'ab-passage'; passage.textContent = cue.text;
         passage.title = 'Escuchar desde este pasaje'; passage.dataset.cue = index;
-        const seek = () => { this.audio.currentTime = cue.start; this.audio.play().catch(() => {}); };
+        const seek = () => this.onSeek(cue.start);
         passage.addEventListener('click', seek); passage.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); seek(); } });
         this.nodes.push(passage); fragment.append(passage);
       }
