@@ -13,3 +13,11 @@ La instalación inicial usa un permiso aleatorio temporal cuyo secreto se conser
 Verificación: `npm test`. Las pruebas de integración cubren autenticación, rangos/HEAD, permisos, carga corrupta/repetida, reseñas concurrentes y ajenas, paginación y progreso. Se verificó la interfaz con Chrome aislado, el M4B real, navegación por capítulos, velocidad, reseñas con HTML inerte y pantalla móvil. Las reseñas de esas pruebas existen sólo en memoria/local y nunca se publican en TEC. La escucha editorial completa sigue pendiente.
 
 Reversión: revertir el commit de interfaz/rutas. Conservar las colecciones y GridFS para no perder reseñas, avance o audio; no ejecutar migraciones destructivas. El cambio es aditivo.
+
+## Lectura y Acres de diamantes — 3 de noviembre de 2026
+
+La biblioteca incluye Acres de diamantes (Russell H. Conwell), versión completa en español de 1:31:35 con narrador, personajes y música instrumental. El audio musical se conserva en una producción independiente del SSD; no se regeneraron ni cambiaron las voces. La ficha pública usa créditos editoriales de TEC, sin notas de producción o estado interno. La procedencia y los límites de revisión permanecen en los informes internos del SSD.
+
+Ambos títulos incluyen texto completo autenticado en `/api/coach/audiobooks/:id/text`. Los pasajes conservan exactamente el maestro español y se alinean a los segmentos de reconocimiento de las tomas originales dentro de la línea de tiempo del libro. La sincronización es por pasajes, no una afirmación de alineación exacta de cada fonema. Al escuchar se resalta y sigue el pasaje; al desplazarse manualmente se desactiva el seguimiento hasta volver a marcarlo. Tocar un pasaje lleva el reproductor a ese punto. La velocidad, capítulos y avance por cuenta usan el mismo audio y reloj; no hay un segundo reproductor. Los textos no entran en la caché compartida de la PWA y la ruta exige el mismo acceso que el audio.
+
+Verificación: 782 pruebas completas correctas, además de revisión de interfaz con archivos de audio reales, salto desde un pasaje, velocidad 1.5×, seguimiento, texto íntegro y pantalla móvil. No se escriben reseñas de prueba en producción.

@@ -4,7 +4,8 @@ import express from 'express';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { Readable, Writable } from 'node:stream';
-import { registerTecAudiobooks, normalizeAudiobookReview, validImportGrant, audiobookCatalog, createAudiobookModels } from '../src/tec-audiobooks.js';
+import { registerTecAudiobooks, normalizeAudiobookReview, validImportGrant, audiobookCatalog, createAudiobookModels, getAudiobookTranscript } from '../src/tec-audiobooks.js';
+import vm from 'node:vm';
 import mongoose from 'mongoose';
 
 function memoryModel() {
@@ -79,11 +80,61 @@ test('catalog manifest has all nine parts, monotonic chapter starts and the exac
   const [book] = audiobookCatalog;
   assert.equal(book.chapters.length, 9); assert.equal(book.duration, 2891.01); assert.equal(book.audio.bytes, 70489653);
   assert.equal(book.audio.sha256, 'd614e63ebc3d519e98a2ed55574a63da6a30d5870821bc425bc5d872ab8905b8');
-  assert.match(book.credits, /sin música ni efectos/);
+  assert.match(book.credits, /Edición en español/);
   let cursor = 0; for (const c of book.chapters) { assert.ok(Math.abs(c.start - cursor) < 0.02); cursor += c.duration; }
   assert.ok(Math.abs(cursor - book.duration) < .02);
   const models = createAudiobookModels(mongoose);
   assert.equal(models.reviews.schema.path('_id').instance, 'String'); // canonical ids enforce account/book uniqueness without relying on a later index build
+});
+
+test('complete read-along texts keep canonical hashes and ordered, bounded audio cues for both books', () => {
+  const expected = {
+    'como-un-hombre-piensa': '2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07',
+    'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647'
+  };
+  assert.equal(audiobookCatalog.length, 2);
+  for (const book of audiobookCatalog) {
+    const text = getAudiobookTranscript(book.id);
+    assert.ok(text.cues.length > 100);
+    const master = text.cues.map(c => c.separator + c.text).join('') + text.trailingSeparator;
+    assert.equal(crypto.createHash('sha256').update(master).digest('hex'), text.textSha256);
+    assert.equal(text.textSha256, expected[book.id]);
+    let end = 0;
+    for (const cue of text.cues) {
+      assert.ok(cue.start >= end - .002 && cue.end > cue.start && cue.end <= book.duration);
+      assert.ok(cue.chapter >= 0 && cue.chapter < book.chapters.length);
+      end = cue.end;
+    }
+    assert.doesNotMatch(JSON.stringify(book), /inteligencia artificial|\bBF16\b|asistida por IA|pendiente|checkpoints/i);
+  }
+  const acres = audiobookCatalog.find(b => b.id === 'acres-de-diamantes');
+  assert.equal(acres.duration, 5495.3); assert.equal(acres.chapters.length, 8);
+  assert.equal(acres.audio.sha256, 'c6e0e8ddcd653e3e4632df91c9e028a98a12e2d4b49ea7f94d6b09d6f6e73e7e');
+  assert.equal(getAudiobookTranscript('../server'), null);
+});
+
+test('read-along endpoint requires an active account and an installed book', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await f.request(f.path + '/text', { user: null })).status, 401);
+    assert.equal((await f.request(f.path + '/text', { user: 'inactive' })).status, 403);
+    assert.equal((await f.request(f.path + '/text')).status, 404);
+    await f.install();
+    const response = await f.request(f.path + '/text');
+    assert.equal(response.status, 200); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    const data = await response.json(); assert.equal(data.bookId, f.book.id); assert.ok(data.cues.length > 100);
+    assert.equal('audio' in data, false);
+    const detail = await (await f.request(f.path)).json(); assert.equal(detail.book.transcriptUrl, f.path + '/text');
+  } finally { await f.close(); }
+});
+
+test('reader follows the media clock after seeking, at boundaries, during silence and at any playback speed', () => {
+  const scope = {}; vm.runInNewContext(fs.readFileSync(new URL('../public/coach/audiobook-reader.js', import.meta.url), 'utf8'), scope);
+  const find = scope.TecBookReader.cueIndexAt;
+  const cues = [{ start: 2, end: 5 }, { start: 5, end: 9 }, { start: 12, end: 16 }];
+  for (const [time, expected] of [[0,-1],[2,0],[4.99,0],[5,1],[9,-1],[11,-1],[12,2],[16,-1],[100,-1],[NaN,-1]]) assert.equal(find(cues, time), expected);
+  assert.equal(find(cues, 3), 0); // jumping backwards must not retain a stale forward cursor
+  assert.equal(find([], 3), -1);
 });
 
 test('import permission is pinned to a book, hash, expiry and a nonempty strong secret', () => {

@@ -32378,6 +32378,7 @@ registerTecControlRoutes(app, {
   cleanAnalysis: limpiarCoachDemoAnalysis, mongoose, stripe
 });
 registerTecAudiobooks(app, {
+  importGrant: fs.existsSync(new URL("./src/knowledge/tec-audiobook-import-grant.json", import.meta.url)) ? JSON.parse(fs.readFileSync(new URL("./src/knowledge/tec-audiobook-import-grant.json", import.meta.url), "utf8")) : null,
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
   ...createAudiobookModels(mongoose),
   getBucket: () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" })

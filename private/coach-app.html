@@ -26,7 +26,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261029-konverta1" />
-    <link rel="stylesheet" href="/coach/audiobooks.css?v=20261102-library1" />
+    <link rel="stylesheet" href="/coach/audiobooks.css?v=20261103-readalong1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
     <link rel="stylesheet" href="/coach/property-map.css?v=20261028-walk2" />
     <link rel="stylesheet" href="/coach/property-lab.css?v=20261101-recorrido1" />
@@ -187,7 +187,7 @@
           <article class="dashboard-card ab-workspace" data-coach-workspace-section="audiolibros" data-audiobooks hidden>
             <div data-ab-library>
               <header class="ab-heading"><div><span class="ab-eyebrow">Biblioteca TEC</span><h2>Audiolibros</h2><p>Ideas para crecer, a tu ritmo.</p></div></header>
-              <p class="ab-status" data-ab-catalog-status role="status" aria-live="polite">Elige un libro para empezar a escuchar.</p>
+              <p class="ab-status" data-ab-catalog-status role="status" aria-live="polite">Elige un libro para escuchar o leer.</p>
               <button class="nav-button" type="button" data-ab-retry hidden>Volver a intentar</button>
               <div class="ab-catalog" data-ab-catalog></div>
             </div>
@@ -210,6 +210,14 @@
                 </section>
                 <section aria-label="Partes del libro"><h3>Contenido</h3><ol class="ab-chapters" data-ab-chapters></ol></section>
               </div>
+              <section class="ab-reader" data-ab-reader hidden aria-labelledby="ab-reader-heading">
+                <header class="ab-reader-header"><div><span class="ab-eyebrow">El libro, a tu ritmo</span><h3 id="ab-reader-heading">Leer mientras escuchas</h3></div>
+                  <button class="nav-button" type="button" data-ab-read-play>Reproducir</button>
+                </header>
+                <div class="ab-reader-tools"><label><input type="checkbox" data-ab-follow checked /> Seguir el audio</label><div><button class="nav-button" type="button" data-ab-font-smaller aria-label="Reducir tamaño del texto">A−</button><button class="nav-button" type="button" data-ab-font-larger aria-label="Aumentar tamaño del texto">A+</button></div></div>
+                <p data-ab-read-status class="ab-small" role="status"></p><button class="nav-button" type="button" data-ab-read-retry hidden>Volver a intentar</button>
+                <div class="ab-reader-text" data-ab-reader-text tabindex="0" role="region" aria-label="Texto completo del libro"></div>
+              </section>
               <details class="ab-credits"><summary>Acerca de esta edición</summary><p data-ab-credits></p></details>
               <section class="ab-reviews-section" aria-labelledby="ab-reviews-heading">
                 <h3 id="ab-reviews-heading">Opiniones de los lectores</h3><p data-ab-rating></p>
@@ -5700,6 +5708,7 @@
     <script src="/coach/product-videos.js?v=20261028-recipes1"></script>
     <script src="/coach/compact-header.js?v=20261102-audiobooks1"></script>
     <script src="/coach/app.js?v=20261102-audiobooks1"></script>
-    <script src="/coach/audiobooks.js?v=20261102-library1"></script>
+    <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
+    <script src="/coach/audiobooks.js?v=20261103-readalong1"></script>
   </body>
 </html>

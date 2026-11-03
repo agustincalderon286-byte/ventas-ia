@@ -1,0 +1,4513 @@
+{
+  "version": 1,
+  "bookId": "como-un-hombre-piensa",
+  "textSha256": "2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07",
+  "duration": 2891.0099999999998,
+  "trailingSeparator": "\n",
+  "cues": [
+    {
+      "id": "001-1",
+      "chapter": 0,
+      "start": 2.0,
+      "end": 9.08,
+      "text": "Como un hombre piensa.\nJames Allen.\n\nEpígrafe\n\nLa mente es el poder maestro que modela y crea,\n",
+      "separator": ""
+    },
+    {
+      "id": "001-2",
+      "chapter": 0,
+      "start": 9.08,
+      "end": 14.48,
+      "text": "y el ser humano es mente; una y otra vez toma\nla herramienta del pensamiento ",
+      "separator": ""
+    },
+    {
+      "id": "001-3",
+      "chapter": 0,
+      "start": 14.48,
+      "end": 20.76,
+      "text": "y, dando forma a lo que desea,\nhace nacer mil alegrías y mil males.\nPiensa en secreto, ",
+      "separator": ""
+    },
+    {
+      "id": "001-4",
+      "chapter": 0,
+      "start": 20.76,
+      "end": 24.88,
+      "text": "y lo pensado se cumple:\nel entorno no es más que su espejo.",
+      "separator": ""
+    },
+    {
+      "id": "002-1",
+      "chapter": 1,
+      "start": 29.88,
+      "end": 36.78,
+      "text": "Prólogo del autor\n\nEste pequeño volumen, fruto de la reflexión y la experiencia, no pretende ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "002-2",
+      "chapter": 1,
+      "start": 36.78,
+      "end": 42.44,
+      "text": "ser un tratado exhaustivo sobre el poder del pensamiento, un tema del que tanto se ha escrito. ",
+      "separator": ""
+    },
+    {
+      "id": "002-3",
+      "chapter": 1,
+      "start": 42.44,
+      "end": 48.6,
+      "text": "Más que explicarlo, busca sugerir caminos y animar a hombres y mujeres a descubrir y ",
+      "separator": ""
+    },
+    {
+      "id": "002-4",
+      "chapter": 1,
+      "start": 48.6,
+      "end": 54.72,
+      "text": "comprender esta verdad:\n\n«Cada persona se construye a sí misma».\n\nLo hace mediante los pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "002-5",
+      "chapter": 1,
+      "start": 54.72,
+      "end": 59.96,
+      "text": "que elige y alimenta. La mente es la tejedora maestra tanto de la vestidura interior del ",
+      "separator": ""
+    },
+    {
+      "id": "002-6",
+      "chapter": 1,
+      "start": 59.96,
+      "end": 64.76,
+      "text": "carácter como de la vestidura exterior de las circunstancias. Y así como hasta ahora ",
+      "separator": ""
+    },
+    {
+      "id": "002-7",
+      "chapter": 1,
+      "start": 64.76,
+      "end": 69.56,
+      "text": "quizá haya tejido en la ignorancia y el dolor, puede comenzar a tejer con comprensión y ",
+      "separator": ""
+    },
+    {
+      "id": "002-8",
+      "chapter": 1,
+      "start": 69.56,
+      "end": 74.52,
+      "text": "felicidad.\n\nJames Allen.\n\nBroad Park Avenue,\n\nIlfracombe,\n\nInglaterra.",
+      "separator": ""
+    },
+    {
+      "id": "003-1",
+      "chapter": 2,
+      "start": 79.52,
+      "end": 86.96,
+      "text": "Capítulo 1. Pensamiento y carácter\n\nEl aforismo «Tal como piensa un hombre en su corazón, así es él» ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "003-2",
+      "chapter": 2,
+      "start": 86.96,
+      "end": 92.92,
+      "text": "no solo abarca la totalidad de su ser, sino que se extiende a todas las condiciones y circunstancias ",
+      "separator": ""
+    },
+    {
+      "id": "003-3",
+      "chapter": 2,
+      "start": 92.92,
+      "end": 99.4,
+      "text": "de su vida. Una persona es, literalmente, lo que piensa: su carácter es la suma completa de ",
+      "separator": ""
+    },
+    {
+      "id": "003-4",
+      "chapter": 2,
+      "start": 99.4,
+      "end": 104.68,
+      "text": "todos sus pensamientos.\n\nAsí como la planta nace de la semilla y no podría existir sin ella, ",
+      "separator": ""
+    },
+    {
+      "id": "003-5",
+      "chapter": 2,
+      "start": 104.68,
+      "end": 110.24,
+      "text": "cada acto humano brota de las semillas ocultas del pensamiento y no habría podido surgir sin ellas. ",
+      "separator": ""
+    },
+    {
+      "id": "003-6",
+      "chapter": 2,
+      "start": 110.24,
+      "end": 116.72,
+      "text": "Esto se aplica por igual a los actos llamados «espontáneos» e «impremeditados» y a los que se ",
+      "separator": ""
+    },
+    {
+      "id": "003-7",
+      "chapter": 2,
+      "start": 116.72,
+      "end": 122.86,
+      "text": "realizan deliberadamente.\n\nLa acción es la flor del pensamiento, y la alegría y el sufrimiento son ",
+      "separator": ""
+    },
+    {
+      "id": "003-8",
+      "chapter": 2,
+      "start": 122.86,
+      "end": 128.48,
+      "text": "sus frutos. De ese modo, cada persona recoge los frutos dulces y amargos de su propio cultivo.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "003-9",
+      "chapter": 2,
+      "start": 128.48,
+      "end": 134.52,
+      "text": "«El pensamiento nos ha formado;\nlo que somos fue forjado y construido por él.\nSi la mente de una ",
+      "separator": ""
+    },
+    {
+      "id": "003-10",
+      "chapter": 2,
+      "start": 134.52,
+      "end": 139.28,
+      "text": "persona alberga malos pensamientos,\nel dolor la sigue como la rueda sigue al ",
+      "separator": ""
+    },
+    {
+      "id": "003-11",
+      "chapter": 2,
+      "start": 139.28,
+      "end": 145.04,
+      "text": "buey…\n\n…Si alguien persevera\nen la pureza del pensamiento,\nla alegría lo sigue, tan ",
+      "separator": ""
+    },
+    {
+      "id": "003-12",
+      "chapter": 2,
+      "start": 145.04,
+      "end": 146.72,
+      "text": "fiel\ncomo su propia sombra».",
+      "separator": ""
+    },
+    {
+      "id": "004-1",
+      "chapter": 2,
+      "start": 147.17,
+      "end": 152.17,
+      "text": "El ser humano se desarrolla conforme a una ley; no es una creación del artificio. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "004-2",
+      "chapter": 2,
+      "start": 152.17,
+      "end": 157.77,
+      "text": "La causa y el efecto actúan de manera tan absoluta e invariable en el reino oculto del ",
+      "separator": ""
+    },
+    {
+      "id": "004-3",
+      "chapter": 2,
+      "start": 157.77,
+      "end": 162.57,
+      "text": "pensamiento como en el mundo de las cosas visibles y materiales. Un carácter noble y ",
+      "separator": ""
+    },
+    {
+      "id": "004-4",
+      "chapter": 2,
+      "start": 162.57,
+      "end": 167.81,
+      "text": "semejante al divino no es producto del favor ni del azar, sino el resultado natural de un ",
+      "separator": ""
+    },
+    {
+      "id": "004-5",
+      "chapter": 2,
+      "start": 167.81,
+      "end": 173.39,
+      "text": "esfuerzo constante por pensar rectamente, el efecto de cultivar durante mucho tiempo pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "004-6",
+      "chapter": 2,
+      "start": 173.39,
+      "end": 179.07,
+      "text": "de naturaleza divina. Por el mismo proceso, un carácter innoble y bestial resulta de ",
+      "separator": ""
+    },
+    {
+      "id": "004-7",
+      "chapter": 2,
+      "start": 179.07,
+      "end": 184.75,
+      "text": "albergar de manera continua pensamientos rastreros.\n\nCada persona se construye o se destruye a ",
+      "separator": ""
+    },
+    {
+      "id": "004-8",
+      "chapter": 2,
+      "start": 184.75,
+      "end": 189.59,
+      "text": "sí misma. En el arsenal del pensamiento forja las armas con las que se destruye; también ",
+      "separator": ""
+    },
+    {
+      "id": "004-9",
+      "chapter": 2,
+      "start": 189.59,
+      "end": 193.95,
+      "text": "fabrica las herramientas con las que levanta para sí moradas celestiales de alegría, ",
+      "separator": ""
+    },
+    {
+      "id": "004-10",
+      "chapter": 2,
+      "start": 193.95,
+      "end": 199.59,
+      "text": "fortaleza y paz. Mediante la elección correcta y la aplicación adecuada del pensamiento, ",
+      "separator": ""
+    },
+    {
+      "id": "004-11",
+      "chapter": 2,
+      "start": 199.59,
+      "end": 202.33,
+      "text": "el ser humano asciende hacia la perfección divina; ",
+      "separator": ""
+    },
+    {
+      "id": "004-12",
+      "chapter": 2,
+      "start": 202.33,
+      "end": 206.53,
+      "text": "mediante su abuso y su aplicación equivocada, desciende por debajo de la bestia.",
+      "separator": ""
+    },
+    {
+      "id": "005-1",
+      "chapter": 2,
+      "start": 206.98,
+      "end": 212.52,
+      "text": "Entre esos dos extremos se encuentran todos los grados del carácter, y el ser humano es ",
+      "separator": " "
+    },
+    {
+      "id": "005-2",
+      "chapter": 2,
+      "start": 212.52,
+      "end": 218.6,
+      "text": "su creador y su dueño.\n\nDe todas las hermosas verdades relativas al alma que se han recuperado ",
+      "separator": ""
+    },
+    {
+      "id": "005-3",
+      "chapter": 2,
+      "start": 218.6,
+      "end": 223.78,
+      "text": "y sacado a la luz en esta época, ninguna alegra tanto ni ofrece mayor promesa divina ",
+      "separator": ""
+    },
+    {
+      "id": "005-4",
+      "chapter": 2,
+      "start": 223.78,
+      "end": 229.28,
+      "text": "y confianza que esta: el ser humano es dueño de su pensamiento, modelador de su carácter ",
+      "separator": ""
+    },
+    {
+      "id": "005-5",
+      "chapter": 2,
+      "start": 229.28,
+      "end": 235.58,
+      "text": "y creador de sus condiciones, su entorno y su destino.\n\nComo ser dotado de poder, inteligencia ",
+      "separator": ""
+    },
+    {
+      "id": "005-6",
+      "chapter": 2,
+      "start": 235.58,
+      "end": 242.18,
+      "text": "y amor, y como dueño de sus propios pensamientos, el ser humano tiene la llave de cada situación. ",
+      "separator": ""
+    },
+    {
+      "id": "005-7",
+      "chapter": 2,
+      "start": 242.18,
+      "end": 246.3,
+      "text": "Lleva dentro de sí la fuerza transformadora y regeneradora con la que puede llegar a ",
+      "separator": ""
+    },
+    {
+      "id": "005-8",
+      "chapter": 2,
+      "start": 246.3,
+      "end": 251.72,
+      "text": "ser lo que se proponga.\n\nEl ser humano siempre es el dueño, incluso en su estado de mayor ",
+      "separator": ""
+    },
+    {
+      "id": "005-9",
+      "chapter": 2,
+      "start": 251.72,
+      "end": 258.14,
+      "text": "debilidad y abandono. Pero, en su debilidad y degradación, es el dueño insensato que gobierna ",
+      "separator": ""
+    },
+    {
+      "id": "005-10",
+      "chapter": 2,
+      "start": 258.14,
+      "end": 264.14,
+      "text": "mal su propia «casa». Cuando empieza a reflexionar sobre su condición y a buscar con diligencia ",
+      "separator": ""
+    },
+    {
+      "id": "005-11",
+      "chapter": 2,
+      "start": 264.14,
+      "end": 269.24,
+      "text": "la ley en la que se funda su ser, se convierte en un dueño sabio: dirige sus energías con ",
+      "separator": ""
+    },
+    {
+      "id": "005-12",
+      "chapter": 2,
+      "start": 269.24,
+      "end": 273.06,
+      "text": "inteligencia y orienta sus pensamientos hacia resultados fructíferos.",
+      "separator": ""
+    },
+    {
+      "id": "006-1",
+      "chapter": 2,
+      "start": 273.51,
+      "end": 279.59,
+      "text": "Ese es el dueño consciente. Solo puede llegar a serlo descubriendo dentro de sí las leyes ",
+      "separator": " "
+    },
+    {
+      "id": "006-2",
+      "chapter": 2,
+      "start": 279.59,
+      "end": 285.15,
+      "text": "del pensamiento, y ese descubrimiento depende enteramente de la dedicación, el examen de ",
+      "separator": ""
+    },
+    {
+      "id": "006-3",
+      "chapter": 2,
+      "start": 285.15,
+      "end": 290.51,
+      "text": "uno mismo y la experiencia.\n\nEl oro y los diamantes solo se obtienen después de mucha ",
+      "separator": ""
+    },
+    {
+      "id": "006-4",
+      "chapter": 2,
+      "start": 290.51,
+      "end": 295.87,
+      "text": "búsqueda y excavación. De igual modo, una persona puede descubrir todas las verdades ",
+      "separator": ""
+    },
+    {
+      "id": "006-5",
+      "chapter": 2,
+      "start": 295.87,
+      "end": 300.91,
+      "text": "relacionadas con su ser si profundiza en la mina de su alma. Puede comprobar sin lugar a ",
+      "separator": ""
+    },
+    {
+      "id": "006-6",
+      "chapter": 2,
+      "start": 300.91,
+      "end": 306.59,
+      "text": "dudas que es la creadora de su carácter, la modeladora de su vida y la constructora de su destino si ",
+      "separator": ""
+    },
+    {
+      "id": "006-7",
+      "chapter": 2,
+      "start": 306.59,
+      "end": 312.55,
+      "text": "observa, controla y modifica sus pensamientos; si sigue sus efectos sobre sí misma, sobre los ",
+      "separator": ""
+    },
+    {
+      "id": "006-8",
+      "chapter": 2,
+      "start": 312.55,
+      "end": 317.35,
+      "text": "demás y sobre su vida y sus circunstancias; si relaciona las causas con los efectos mediante ",
+      "separator": ""
+    },
+    {
+      "id": "006-9",
+      "chapter": 2,
+      "start": 317.35,
+      "end": 322.07,
+      "text": "la práctica y la investigación pacientes, y si aprovecha cada experiencia, hasta el hecho ",
+      "separator": ""
+    },
+    {
+      "id": "006-10",
+      "chapter": 2,
+      "start": 322.07,
+      "end": 326.53,
+      "text": "cotidiano más trivial, para alcanzar ese conocimiento de sí misma que es comprensión, ",
+      "separator": ""
+    },
+    {
+      "id": "006-11",
+      "chapter": 2,
+      "start": 326.53,
+      "end": 332.77,
+      "text": "sabiduría y poder. En este camino, como en ningún otro, se cumple de manera absoluta la ley: ",
+      "separator": ""
+    },
+    {
+      "id": "006-12",
+      "chapter": 2,
+      "start": 332.77,
+      "end": 338.73,
+      "text": "«Quien busca, encuentra; y a quien llama, se le abrirá». Porque solo mediante la paciencia, ",
+      "separator": ""
+    },
+    {
+      "id": "006-13",
+      "chapter": 2,
+      "start": 338.73,
+      "end": 345.19,
+      "text": "la práctica y la insistencia incansable puede una persona cruzar la puerta del templo del conocimiento.",
+      "separator": ""
+    },
+    {
+      "id": "007-1",
+      "chapter": 3,
+      "start": 350.19,
+      "end": 360.19,
+      "text": "Capítulo 2. El efecto del pensamiento en las circunstancias\n\nLa mente humana puede compararse con un jardín que se cultiva con inteligencia o se deja crecer sin cuidado. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "007-2",
+      "chapter": 3,
+      "start": 360.19,
+      "end": 372.19,
+      "text": "Pero, tanto si se cultiva como si se abandona, necesariamente producirá algo. Si no se siembran en él semillas útiles, caerán allí abundantes semillas de malas hierbas, que seguirán reproduciéndose.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "007-3",
+      "chapter": 3,
+      "start": 372.19,
+      "end": 377.39,
+      "text": "Así como el jardinero cultiva su parcela, la mantiene libre de malas hierbas y hace ",
+      "separator": ""
+    },
+    {
+      "id": "007-4",
+      "chapter": 3,
+      "start": 377.39,
+      "end": 381.91,
+      "text": "crecer las flores y los frutos que necesita, cada persona puede cuidar el jardín de su ",
+      "separator": ""
+    },
+    {
+      "id": "007-5",
+      "chapter": 3,
+      "start": 381.91,
+      "end": 387.87,
+      "text": "mente: arrancar los pensamientos equivocados, inútiles e impuros, y cultivar hasta su perfección ",
+      "separator": ""
+    },
+    {
+      "id": "007-6",
+      "chapter": 3,
+      "start": 387.87,
+      "end": 392.55,
+      "text": "las flores y los frutos de pensamientos rectos, útiles y puros. ",
+      "separator": ""
+    },
+    {
+      "id": "007-7",
+      "chapter": 3,
+      "start": 392.55,
+      "end": 397.55,
+      "text": "Quien sigue este proceso descubre, tarde o temprano, que es el jardinero que gobierna ",
+      "separator": ""
+    },
+    {
+      "id": "007-8",
+      "chapter": 3,
+      "start": 397.55,
+      "end": 400.51,
+      "text": "su alma y el director de su vida. También descubre ",
+      "separator": ""
+    },
+    {
+      "id": "007-9",
+      "chapter": 3,
+      "start": 400.51,
+      "end": 405.13,
+      "text": "en su interior las leyes del pensamiento y comprende, con precisión cada ",
+      "separator": ""
+    },
+    {
+      "id": "007-10",
+      "chapter": 3,
+      "start": 405.13,
+      "end": 410.15,
+      "text": "vez mayor, cómo las fuerzas del pensamiento y los elementos de la mente intervienen en ",
+      "separator": ""
+    },
+    {
+      "id": "007-11",
+      "chapter": 3,
+      "start": 410.15,
+      "end": 413.79,
+      "text": "la formación de su carácter, sus circunstancias y su destino.",
+      "separator": ""
+    },
+    {
+      "id": "008-1",
+      "chapter": 3,
+      "start": 414.24,
+      "end": 420.44,
+      "text": "El pensamiento y el carácter son una misma cosa. Como el carácter solo puede manifestarse ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "008-2",
+      "chapter": 3,
+      "start": 420.44,
+      "end": 425.68,
+      "text": "y revelarse mediante el entorno y las circunstancias, las condiciones externas de la vida de una ",
+      "separator": ""
+    },
+    {
+      "id": "008-3",
+      "chapter": 3,
+      "start": 425.68,
+      "end": 430.52,
+      "text": "persona siempre guardan correspondencia con su estado interior. Esto no significa que ",
+      "separator": ""
+    },
+    {
+      "id": "008-4",
+      "chapter": 3,
+      "start": 430.52,
+      "end": 435.68,
+      "text": "sus circunstancias, en un momento determinado, reflejen la totalidad de su carácter, sino ",
+      "separator": ""
+    },
+    {
+      "id": "008-5",
+      "chapter": 3,
+      "start": 435.68,
+      "end": 440.52,
+      "text": "que están tan íntimamente ligadas a algún elemento esencial de su pensamiento que, por el ",
+      "separator": ""
+    },
+    {
+      "id": "008-6",
+      "chapter": 3,
+      "start": 440.52,
+      "end": 446.36,
+      "text": "momento, resultan indispensables para su desarrollo.\n\nCada persona se encuentra donde está por la ley ",
+      "separator": ""
+    },
+    {
+      "id": "008-7",
+      "chapter": 3,
+      "start": 446.36,
+      "end": 452.24,
+      "text": "de su propio ser. Los pensamientos que ha incorporado a su carácter la han llevado hasta allí. En la ",
+      "separator": ""
+    },
+    {
+      "id": "008-8",
+      "chapter": 3,
+      "start": 452.24,
+      "end": 458.12,
+      "text": "disposición de su vida no interviene el azar: todo es resultado de una ley que no puede equivocarse. ",
+      "separator": ""
+    },
+    {
+      "id": "008-9",
+      "chapter": 3,
+      "start": 458.12,
+      "end": 462.76,
+      "text": "Esto es tan cierto para quienes se sienten en desacuerdo con su entorno como para quienes ",
+      "separator": ""
+    },
+    {
+      "id": "008-10",
+      "chapter": 3,
+      "start": 462.76,
+      "end": 467.84,
+      "text": "están satisfechos con él.\n\nComo ser que progresa y evoluciona, el ser humano se encuentra donde ",
+      "separator": ""
+    },
+    {
+      "id": "008-11",
+      "chapter": 3,
+      "start": 467.84,
+      "end": 472.54,
+      "text": "está para aprender y crecer. Cuando aprende la lección espiritual que una circunstancia ",
+      "separator": ""
+    },
+    {
+      "id": "008-12",
+      "chapter": 3,
+      "start": 472.54,
+      "end": 477.76,
+      "text": "encierra para él, esa circunstancia desaparece y deja lugar a otras.",
+      "separator": ""
+    },
+    {
+      "id": "009-1",
+      "chapter": 3,
+      "start": 478.21,
+      "end": 484.21,
+      "text": "Las circunstancias golpean a la persona mientras cree que es una criatura de las condiciones externas. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "009-2",
+      "chapter": 3,
+      "start": 484.21,
+      "end": 490.21,
+      "text": "Pero cuando comprende que posee una fuerza creadora y que puede gobernar la tierra y las semillas ocultas de su ser, ",
+      "separator": ""
+    },
+    {
+      "id": "009-3",
+      "chapter": 3,
+      "start": 490.21,
+      "end": 496.21,
+      "text": "de las cuales brotan las circunstancias, se convierte en legítima dueña de sí misma.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "009-4",
+      "chapter": 3,
+      "start": 496.21,
+      "end": 503.21,
+      "text": "Quien ha practicado durante algún tiempo el dominio y la purificación de sí mismo sabe que las circunstancias nacen del pensamiento, ",
+      "separator": ""
+    },
+    {
+      "id": "009-5",
+      "chapter": 3,
+      "start": 503.21,
+      "end": 509.21,
+      "text": "pues habrá observado que sus cambios se han correspondido exactamente con la transformación de su estado mental. ",
+      "separator": ""
+    },
+    {
+      "id": "009-6",
+      "chapter": 3,
+      "start": 509.21,
+      "end": 515.21,
+      "text": "Esto es tan cierto que, cuando alguien se dedica con empeño a corregir los defectos de su carácter ",
+      "separator": ""
+    },
+    {
+      "id": "009-7",
+      "chapter": 3,
+      "start": 515.21,
+      "end": 521.21,
+      "text": "y avanza de manera rápida y notable, atraviesa en poco tiempo una sucesión de cambios de fortuna.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "009-8",
+      "chapter": 3,
+      "start": 521.21,
+      "end": 526.21,
+      "text": "El alma atrae aquello que alberga en secreto: lo que ama y también lo que teme. ",
+      "separator": ""
+    },
+    {
+      "id": "009-9",
+      "chapter": 3,
+      "start": 526.21,
+      "end": 532.21,
+      "text": "Se eleva hasta la altura de sus aspiraciones más queridas y desciende hasta el nivel de sus deseos indisciplinados. ",
+      "separator": ""
+    },
+    {
+      "id": "009-10",
+      "chapter": 3,
+      "start": 532.21,
+      "end": 536.77,
+      "text": "Las circunstancias son el medio por el que recibe lo que le corresponde.",
+      "separator": ""
+    },
+    {
+      "id": "010-1",
+      "chapter": 3,
+      "start": 537.22,
+      "end": 543.5,
+      "text": "Cada semilla de pensamiento que se siembra, o que se deja caer y echar raíces en la mente, ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "010-2",
+      "chapter": 3,
+      "start": 543.5,
+      "end": 546.14,
+      "text": "produce según su naturaleza. ",
+      "separator": ""
+    },
+    {
+      "id": "010-3",
+      "chapter": 3,
+      "start": 546.14,
+      "end": 551.46,
+      "text": "Tarde o temprano florece en una acción y da sus propios frutos de oportunidad y circunstancia. ",
+      "separator": ""
+    },
+    {
+      "id": "010-4",
+      "chapter": 3,
+      "start": 551.46,
+      "end": 557.34,
+      "text": "Los buenos pensamientos producen buenos frutos; los malos pensamientos, malos frutos.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "010-5",
+      "chapter": 3,
+      "start": 557.34,
+      "end": 561.62,
+      "text": "El mundo exterior de las circunstancias se amolda al mundo interior del pensamiento. ",
+      "separator": ""
+    },
+    {
+      "id": "010-6",
+      "chapter": 3,
+      "start": 561.62,
+      "end": 566.5,
+      "text": "Tanto las condiciones externas agradables como las desagradables contribuyen al bien ",
+      "separator": ""
+    },
+    {
+      "id": "010-7",
+      "chapter": 3,
+      "start": 566.5,
+      "end": 572.26,
+      "text": "último del individuo. Al recoger su propia cosecha, el ser humano aprende tanto mediante ",
+      "separator": ""
+    },
+    {
+      "id": "010-8",
+      "chapter": 3,
+      "start": 572.26,
+      "end": 578.62,
+      "text": "el sufrimiento como mediante la dicha.\n\nCuando una persona sigue los deseos, las aspiraciones ",
+      "separator": ""
+    },
+    {
+      "id": "010-9",
+      "chapter": 3,
+      "start": 578.62,
+      "end": 583.22,
+      "text": "y los pensamientos más íntimos por los que se deja dominar —ya sea persiguiendo los ",
+      "separator": ""
+    },
+    {
+      "id": "010-10",
+      "chapter": 3,
+      "start": 583.22,
+      "end": 588.38,
+      "text": "fuegos fatuos de imaginaciones impuras o recorriendo con firmeza el camino del esfuerzo intenso ",
+      "separator": ""
+    },
+    {
+      "id": "010-11",
+      "chapter": 3,
+      "start": 588.38,
+      "end": 593.26,
+      "text": "y elevado—, termina por verlos fructificar y realizarse en las condiciones externas de ",
+      "separator": ""
+    },
+    {
+      "id": "010-12",
+      "chapter": 3,
+      "start": 593.26,
+      "end": 597.54,
+      "text": "su vida. Las leyes del crecimiento y del ajuste actúan en todas partes.",
+      "separator": ""
+    },
+    {
+      "id": "011-1",
+      "chapter": 3,
+      "start": 597.99,
+      "end": 603.99,
+      "text": "Una persona no llega al asilo de pobres o a la cárcel por la tiranía del destino o de las circunstancias, ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "011-2",
+      "chapter": 3,
+      "start": 603.99,
+      "end": 608.99,
+      "text": "sino por el camino de los pensamientos rastreros y los deseos bajos. ",
+      "separator": ""
+    },
+    {
+      "id": "011-3",
+      "chapter": 3,
+      "start": 608.99,
+      "end": 614.99,
+      "text": "Tampoco alguien de mente pura cae de pronto en el delito por la presión de una simple fuerza externa: ",
+      "separator": ""
+    },
+    {
+      "id": "011-4",
+      "chapter": 3,
+      "start": 614.99,
+      "end": 619.99,
+      "text": "el pensamiento criminal llevaba mucho tiempo alimentándose en secreto en su corazón, ",
+      "separator": ""
+    },
+    {
+      "id": "011-5",
+      "chapter": 3,
+      "start": 619.99,
+      "end": 622.99,
+      "text": "y la oportunidad reveló el poder que había acumulado. ",
+      "separator": ""
+    },
+    {
+      "id": "011-6",
+      "chapter": 3,
+      "start": 622.99,
+      "end": 626.99,
+      "text": "Las circunstancias no hacen a la persona; la revelan ante sí ",
+      "separator": ""
+    },
+    {
+      "id": "011-7",
+      "chapter": 3,
+      "start": 626.99,
+      "end": 632.33,
+      "text": "misma. No es posible descender al vicio y a los sufrimientos que lo acompañan sin inclinaciones ",
+      "separator": ""
+    },
+    {
+      "id": "011-8",
+      "chapter": 3,
+      "start": 632.33,
+      "end": 638.51,
+      "text": "viciosas, ni ascender a la virtud y a su felicidad pura sin cultivar de manera continua aspiraciones ",
+      "separator": ""
+    },
+    {
+      "id": "011-9",
+      "chapter": 3,
+      "start": 638.51,
+      "end": 644.19,
+      "text": "virtuosas. Por eso, como dueño y señor del pensamiento, el ser humano se crea a sí mismo ",
+      "separator": ""
+    },
+    {
+      "id": "011-10",
+      "chapter": 3,
+      "start": 644.19,
+      "end": 650.51,
+      "text": "y modela y origina su entorno. Incluso al nacer, el alma recibe lo que le corresponde, ",
+      "separator": ""
+    },
+    {
+      "id": "011-11",
+      "chapter": 3,
+      "start": 650.51,
+      "end": 656.03,
+      "text": "y a cada paso de su peregrinación terrenal atrae combinaciones de condiciones que la revelan ",
+      "separator": ""
+    },
+    {
+      "id": "011-12",
+      "chapter": 3,
+      "start": 656.03,
+      "end": 660.51,
+      "text": "y reflejan su pureza e impureza, su fuerza y su debilidad.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "011-13",
+      "chapter": 3,
+      "start": 660.51,
+      "end": 663.43,
+      "text": "Las personas no atraen lo que quieren, sino lo que son.",
+      "separator": ""
+    },
+    {
+      "id": "012-1",
+      "chapter": 3,
+      "start": 663.88,
+      "end": 670.1,
+      "text": "Sus caprichos, fantasías y ambiciones encuentran obstáculos a cada paso, pero sus pensamientos ",
+      "separator": " "
+    },
+    {
+      "id": "012-2",
+      "chapter": 3,
+      "start": 670.1,
+      "end": 676.58,
+      "text": "y deseos más íntimos reciben el alimento que les corresponde, sea limpio o impuro. ",
+      "separator": ""
+    },
+    {
+      "id": "012-3",
+      "chapter": 3,
+      "start": 676.58,
+      "end": 682.52,
+      "text": "La «divinidad que da forma a nuestros fines» está en nosotros; somos nosotros mismos. ",
+      "separator": ""
+    },
+    {
+      "id": "012-4",
+      "chapter": 3,
+      "start": 682.52,
+      "end": 684.72,
+      "text": "Solo la propia persona se encadena: ",
+      "separator": ""
+    },
+    {
+      "id": "012-5",
+      "chapter": 3,
+      "start": 684.72,
+      "end": 690.32,
+      "text": "el pensamiento y la acción son los carceleros del destino cuando son bajos, pues aprisionan; ",
+      "separator": ""
+    },
+    {
+      "id": "012-6",
+      "chapter": 3,
+      "start": 690.32,
+      "end": 694.44,
+      "text": "también son los ángeles de la libertad cuando son nobles, pues liberan. ",
+      "separator": ""
+    },
+    {
+      "id": "012-7",
+      "chapter": 3,
+      "start": 694.44,
+      "end": 698.72,
+      "text": "Una persona no obtiene lo que desea y pide en sus oraciones, sino lo que se gana con ",
+      "separator": ""
+    },
+    {
+      "id": "012-8",
+      "chapter": 3,
+      "start": 698.72,
+      "end": 699.88,
+      "text": "justicia. ",
+      "separator": ""
+    },
+    {
+      "id": "012-9",
+      "chapter": 3,
+      "start": 699.88,
+      "end": 704.56,
+      "text": "Sus deseos y oraciones solo se satisfacen y reciben respuesta cuando armonizan con sus ",
+      "separator": ""
+    },
+    {
+      "id": "012-10",
+      "chapter": 3,
+      "start": 704.56,
+      "end": 706.24,
+      "text": "pensamientos y acciones.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "012-11",
+      "chapter": 3,
+      "start": 706.24,
+      "end": 712.24,
+      "text": "A la luz de esta verdad, ¿qué significa entonces «luchar contra las circunstancias»? ",
+      "separator": ""
+    },
+    {
+      "id": "012-12",
+      "chapter": 3,
+      "start": 712.24,
+      "end": 716.32,
+      "text": "Significa que una persona se rebela sin cesar contra un efecto externo mientras alimenta ",
+      "separator": ""
+    },
+    {
+      "id": "012-13",
+      "chapter": 3,
+      "start": 716.32,
+      "end": 718.8,
+      "text": "y conserva su causa en el corazón. Esa ",
+      "separator": ""
+    },
+    {
+      "id": "012-14",
+      "chapter": 3,
+      "start": 718.8,
+      "end": 723.6,
+      "text": "causa puede adoptar la forma de un vicio consciente o de una debilidad inconsciente. ",
+      "separator": ""
+    },
+    {
+      "id": "012-15",
+      "chapter": 3,
+      "start": 723.6,
+      "end": 728.44,
+      "text": "Sea cual sea, entorpece obstinadamente sus esfuerzos y reclama a gritos una solución.",
+      "separator": ""
+    },
+    {
+      "id": "013-1",
+      "chapter": 3,
+      "start": 728.89,
+      "end": 734.89,
+      "text": "Las personas desean mejorar sus circunstancias, pero no están dispuestas a mejorarse a sí mismas; ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "013-2",
+      "chapter": 3,
+      "start": 734.89,
+      "end": 736.89,
+      "text": "por eso siguen atadas. ",
+      "separator": ""
+    },
+    {
+      "id": "013-3",
+      "chapter": 3,
+      "start": 736.89,
+      "end": 743.89,
+      "text": "Quien no retrocede ante la crucifixión de su propio yo no puede dejar de alcanzar el objetivo en el que ha puesto el corazón. ",
+      "separator": ""
+    },
+    {
+      "id": "013-4",
+      "chapter": 3,
+      "start": 743.89,
+      "end": 747.89,
+      "text": "Esto vale tanto para lo terrenal como para lo celestial. ",
+      "separator": ""
+    },
+    {
+      "id": "013-5",
+      "chapter": 3,
+      "start": 747.89,
+      "end": 754.89,
+      "text": "Incluso quien solo busca adquirir riqueza debe estar dispuesto a hacer grandes sacrificios personales antes de lograrlo. ",
+      "separator": ""
+    },
+    {
+      "id": "013-6",
+      "chapter": 3,
+      "start": 754.89,
+      "end": 760.37,
+      "text": "¡Cuánto más deberá hacerlo quien aspire a una vida fuerte y equilibrada!\n\nHe ",
+      "separator": ""
+    },
+    {
+      "id": "013-7",
+      "chapter": 3,
+      "start": 760.37,
+      "end": 765.13,
+      "text": "aquí un hombre sumido en la pobreza. Desea con enorme ansiedad mejorar su entorno y ",
+      "separator": ""
+    },
+    {
+      "id": "013-8",
+      "chapter": 3,
+      "start": 765.13,
+      "end": 770.45,
+      "text": "las comodidades de su hogar, pero al mismo tiempo evita trabajar y cree que está justificado ",
+      "separator": ""
+    },
+    {
+      "id": "013-9",
+      "chapter": 3,
+      "start": 770.45,
+      "end": 775.73,
+      "text": "engañar a su empleador porque su salario es insuficiente. Este hombre no comprende ni ",
+      "separator": ""
+    },
+    {
+      "id": "013-10",
+      "chapter": 3,
+      "start": 775.73,
+      "end": 781.09,
+      "text": "los fundamentos más sencillos de los principios en que se apoya la verdadera prosperidad. ",
+      "separator": ""
+    },
+    {
+      "id": "013-11",
+      "chapter": 3,
+      "start": 781.09,
+      "end": 785.59,
+      "text": "No solo carece por completo de la preparación necesaria para salir de su miseria, sino que ",
+      "separator": ""
+    },
+    {
+      "id": "013-12",
+      "chapter": 3,
+      "start": 785.59,
+      "end": 791.25,
+      "text": "atrae una miseria aún mayor al vivir inmerso en pensamientos de pereza, engaño y falta ",
+      "separator": ""
+    },
+    {
+      "id": "013-13",
+      "chapter": 3,
+      "start": 791.25,
+      "end": 793.53,
+      "text": "de entereza, y actuar conforme a ellos.",
+      "separator": ""
+    },
+    {
+      "id": "014-1",
+      "chapter": 3,
+      "start": 793.98,
+      "end": 800.18,
+      "text": "He aquí un hombre rico que padece una enfermedad dolorosa y persistente a causa de la glotonería. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "014-2",
+      "chapter": 3,
+      "start": 800.18,
+      "end": 804.58,
+      "text": "Está dispuesto a dar grandes sumas de dinero para librarse de ella, pero no a renunciar ",
+      "separator": ""
+    },
+    {
+      "id": "014-3",
+      "chapter": 3,
+      "start": 804.58,
+      "end": 809.46,
+      "text": "a sus deseos glotones. Quiere satisfacer su gusto por manjares muy sustanciosos y ",
+      "separator": ""
+    },
+    {
+      "id": "014-4",
+      "chapter": 3,
+      "start": 809.46,
+      "end": 814.26,
+      "text": "contrarios a lo natural, y al mismo tiempo conservar la salud. Este hombre no está en ",
+      "separator": ""
+    },
+    {
+      "id": "014-5",
+      "chapter": 3,
+      "start": 814.26,
+      "end": 818.46,
+      "text": "condiciones de tener salud porque todavía no ha aprendido los principios elementales ",
+      "separator": ""
+    },
+    {
+      "id": "014-6",
+      "chapter": 3,
+      "start": 818.46,
+      "end": 822.66,
+      "text": "de una vida saludable.\n\nHe aquí un empleador que recurre a maniobras deshonestas ",
+      "separator": ""
+    },
+    {
+      "id": "014-7",
+      "chapter": 3,
+      "start": 822.66,
+      "end": 828.7,
+      "text": "para no pagar el salario establecido y que, con la esperanza de aumentar sus ganancias, ",
+      "separator": ""
+    },
+    {
+      "id": "014-8",
+      "chapter": 3,
+      "start": 828.7,
+      "end": 833.46,
+      "text": "reduce el sueldo de sus trabajadores. Este hombre carece por completo de las condiciones ",
+      "separator": ""
+    },
+    {
+      "id": "014-9",
+      "chapter": 3,
+      "start": 833.46,
+      "end": 839.54,
+      "text": "necesarias para prosperar. Cuando se ve arruinado, tanto en su reputación como en su riqueza, ",
+      "separator": ""
+    },
+    {
+      "id": "014-10",
+      "chapter": 3,
+      "start": 839.54,
+      "end": 845.1,
+      "text": "culpa a las circunstancias sin comprender que él es el único autor de su situación.\n\nHe ",
+      "separator": ""
+    },
+    {
+      "id": "014-11",
+      "chapter": 3,
+      "start": 845.1,
+      "end": 850.42,
+      "text": "presentado estos tres casos únicamente para ilustrar la verdad de que cada persona causa ",
+      "separator": ""
+    },
+    {
+      "id": "014-12",
+      "chapter": 3,
+      "start": 850.42,
+      "end": 854.86,
+      "text": "sus propias circunstancias, aunque casi siempre lo haga de manera inconsciente.",
+      "separator": ""
+    },
+    {
+      "id": "015-1",
+      "chapter": 3,
+      "start": 855.31,
+      "end": 863.31,
+      "text": "Mientras persigue un buen fin, impide continuamente su realización al alimentar pensamientos y deseos que no pueden armonizar con él. ",
+      "separator": " "
+    },
+    {
+      "id": "015-2",
+      "chapter": 3,
+      "start": 863.31,
+      "end": 869.31,
+      "text": "Los ejemplos podrían multiplicarse y variar casi indefinidamente, pero no hace falta: ",
+      "separator": ""
+    },
+    {
+      "id": "015-3",
+      "chapter": 3,
+      "start": 869.31,
+      "end": 876.31,
+      "text": "el lector puede, si se lo propone, seguir la acción de las leyes del pensamiento en su propia mente y en su vida. ",
+      "separator": ""
+    },
+    {
+      "id": "015-4",
+      "chapter": 3,
+      "start": 876.31,
+      "end": 882.31,
+      "text": "Hasta que no lo haga, los simples hechos externos no bastarán como fundamento ",
+      "separator": ""
+    },
+    {
+      "id": "015-5",
+      "chapter": 3,
+      "start": 882.31,
+      "end": 888.75,
+      "text": "para razonar.\n\nSin embargo, las circunstancias son tan complejas, el pensamiento está tan ",
+      "separator": ""
+    },
+    {
+      "id": "015-6",
+      "chapter": 3,
+      "start": 888.75,
+      "end": 893.39,
+      "text": "profundamente arraigado y las condiciones de la felicidad varían tanto de una persona ",
+      "separator": ""
+    },
+    {
+      "id": "015-7",
+      "chapter": 3,
+      "start": 893.39,
+      "end": 898.35,
+      "text": "a otra, que nadie puede juzgar el estado completo del alma de otra persona —aunque ella misma ",
+      "separator": ""
+    },
+    {
+      "id": "015-8",
+      "chapter": 3,
+      "start": 898.35,
+      "end": 902.31,
+      "text": "lo conozca— solo por el aspecto externo de su vida. ",
+      "separator": ""
+    },
+    {
+      "id": "015-9",
+      "chapter": 3,
+      "start": 902.31,
+      "end": 908.17,
+      "text": "Alguien puede ser honrado en ciertos aspectos y, aun así, sufrir privaciones; otro puede ",
+      "separator": ""
+    },
+    {
+      "id": "015-10",
+      "chapter": 3,
+      "start": 908.17,
+      "end": 912.59,
+      "text": "ser deshonesto en determinados aspectos y, aun así, adquirir riqueza.",
+      "separator": ""
+    },
+    {
+      "id": "016-1",
+      "chapter": 3,
+      "start": 913.04,
+      "end": 918.24,
+      "text": "Pero la conclusión habitual de que el primero fracasa por su particular honradez y el segundo ",
+      "separator": " "
+    },
+    {
+      "id": "016-2",
+      "chapter": 3,
+      "start": 918.24,
+      "end": 923.84,
+      "text": "prospera por su particular deshonestidad nace de un juicio superficial: supone que ",
+      "separator": ""
+    },
+    {
+      "id": "016-3",
+      "chapter": 3,
+      "start": 923.84,
+      "end": 929.16,
+      "text": "el deshonesto es casi enteramente corrupto y el honrado casi enteramente virtuoso. Un ",
+      "separator": ""
+    },
+    {
+      "id": "016-4",
+      "chapter": 3,
+      "start": 929.16,
+      "end": 934.28,
+      "text": "conocimiento más profundo y una experiencia más amplia muestran que ese juicio es erróneo. ",
+      "separator": ""
+    },
+    {
+      "id": "016-5",
+      "chapter": 3,
+      "start": 934.28,
+      "end": 939.24,
+      "text": "El deshonesto puede poseer virtudes admirables que el otro no tiene; el honrado puede tener ",
+      "separator": ""
+    },
+    {
+      "id": "016-6",
+      "chapter": 3,
+      "start": 939.24,
+      "end": 944.88,
+      "text": "vicios reprobables que no existen en el otro. La persona honrada recoge los buenos resultados de ",
+      "separator": ""
+    },
+    {
+      "id": "016-7",
+      "chapter": 3,
+      "start": 944.88,
+      "end": 949.96,
+      "text": "sus pensamientos y actos honestos, pero también se acarrea los sufrimientos que producen sus vicios. ",
+      "separator": ""
+    },
+    {
+      "id": "016-8",
+      "chapter": 3,
+      "start": 949.96,
+      "end": 955.6,
+      "text": "Del mismo modo, la persona deshonesta cosecha su propio sufrimiento y su propia felicidad.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "016-9",
+      "chapter": 3,
+      "start": 955.6,
+      "end": 960.8,
+      "text": "A la vanidad humana le agrada creer que uno sufre por su virtud. Pero solo cuando una ",
+      "separator": ""
+    },
+    {
+      "id": "016-10",
+      "chapter": 3,
+      "start": 960.8,
+      "end": 965.4,
+      "text": "persona haya arrancado de su mente todo pensamiento enfermizo, amargo e impuro ",
+      "separator": ""
+    },
+    {
+      "id": "016-11",
+      "chapter": 3,
+      "start": 965.4,
+      "end": 971.08,
+      "text": "y haya limpiado su alma de toda mancha de pecado estará en condiciones de saber y afirmar que sus ",
+      "separator": ""
+    },
+    {
+      "id": "016-12",
+      "chapter": 3,
+      "start": 971.08,
+      "end": 974.56,
+      "text": "sufrimientos proceden de sus buenas cualidades y no de las malas.",
+      "separator": ""
+    },
+    {
+      "id": "017-1",
+      "chapter": 3,
+      "start": 975.01,
+      "end": 980.97,
+      "text": "Y en el camino hacia esa perfección suprema, mucho antes de alcanzarla, habrá descubierto ",
+      "separator": " "
+    },
+    {
+      "id": "017-2",
+      "chapter": 3,
+      "start": 980.97,
+      "end": 987.29,
+      "text": "que en su mente y en su vida actúa la gran ley, que es absolutamente justa y, por tanto, ",
+      "separator": ""
+    },
+    {
+      "id": "017-3",
+      "chapter": 3,
+      "start": 987.29,
+      "end": 992.61,
+      "text": "no puede devolver bien por mal ni mal por bien. Con ese conocimiento, al mirar atrás ",
+      "separator": ""
+    },
+    {
+      "id": "017-4",
+      "chapter": 3,
+      "start": 992.61,
+      "end": 998.09,
+      "text": "y contemplar su antigua ignorancia y ceguera, comprenderá que su vida está, y siempre estuvo, ",
+      "separator": ""
+    },
+    {
+      "id": "017-5",
+      "chapter": 3,
+      "start": 998.09,
+      "end": 1004.05,
+      "text": "ordenada con justicia, y que todas sus experiencias pasadas, buenas y malas, fueron la manifestación ",
+      "separator": ""
+    },
+    {
+      "id": "017-6",
+      "chapter": 3,
+      "start": 1004.05,
+      "end": 1009.49,
+      "text": "equitativa de su propio ser, que evolucionaba aunque aún no hubiera completado su evolución.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "017-7",
+      "chapter": 3,
+      "start": 1009.49,
+      "end": 1014.33,
+      "text": "Los buenos pensamientos y las buenas acciones nunca pueden producir malos resultados; los ",
+      "separator": ""
+    },
+    {
+      "id": "017-8",
+      "chapter": 3,
+      "start": 1014.33,
+      "end": 1019.45,
+      "text": "malos pensamientos y las malas acciones nunca pueden producir buenos resultados. Esto equivale ",
+      "separator": ""
+    },
+    {
+      "id": "017-9",
+      "chapter": 3,
+      "start": 1019.45,
+      "end": 1026.01,
+      "text": "a decir que del cereal solo puede brotar cereal, y de las ortigas, ortigas. Las personas comprenden ",
+      "separator": ""
+    },
+    {
+      "id": "017-10",
+      "chapter": 3,
+      "start": 1026.01,
+      "end": 1031.33,
+      "text": "esta ley en el mundo natural y trabajan de acuerdo con ella, pero pocas la comprenden ",
+      "separator": ""
+    },
+    {
+      "id": "017-11",
+      "chapter": 3,
+      "start": 1031.33,
+      "end": 1037.13,
+      "text": "en el mundo mental y moral, aunque allí actúa de manera igualmente sencilla e invariable. ",
+      "separator": ""
+    },
+    {
+      "id": "017-12",
+      "chapter": 3,
+      "start": 1037.13,
+      "end": 1038.77,
+      "text": "Por eso no colaboran con ella.",
+      "separator": ""
+    },
+    {
+      "id": "018-1",
+      "chapter": 3,
+      "start": 1039.22,
+      "end": 1044.22,
+      "text": "El sufrimiento siempre es efecto de un pensamiento equivocado en algún aspecto. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "018-2",
+      "chapter": 3,
+      "start": 1044.22,
+      "end": 1048.22,
+      "text": "Indica que el individuo no está en armonía consigo mismo ni con la ley de su ser. ",
+      "separator": ""
+    },
+    {
+      "id": "018-3",
+      "chapter": 3,
+      "start": 1048.22,
+      "end": 1055.22,
+      "text": "La única y suprema utilidad del sufrimiento es purificar, quemar todo lo inútil e impuro. ",
+      "separator": ""
+    },
+    {
+      "id": "018-4",
+      "chapter": 3,
+      "start": 1055.22,
+      "end": 1057.22,
+      "text": "El sufrimiento cesa para quien es puro. ",
+      "separator": ""
+    },
+    {
+      "id": "018-5",
+      "chapter": 3,
+      "start": 1057.22,
+      "end": 1062.22,
+      "text": "No tendría sentido seguir sometiendo el oro al fuego una vez eliminada la escoria, ",
+      "separator": ""
+    },
+    {
+      "id": "018-6",
+      "chapter": 3,
+      "start": 1062.22,
+      "end": 1065.22,
+      "text": "y un ser perfectamente puro e iluminado no podría sufrir.\n\nLas ",
+      "separator": ""
+    },
+    {
+      "id": "018-7",
+      "chapter": 3,
+      "start": 1065.22,
+      "end": 1070.66,
+      "text": "circunstancias que una persona vive con sufrimiento son resultado de su propia falta de ",
+      "separator": ""
+    },
+    {
+      "id": "018-8",
+      "chapter": 3,
+      "start": 1070.66,
+      "end": 1075.94,
+      "text": "armonía mental. Las que vive con dicha son resultado de su armonía mental. La medida ",
+      "separator": ""
+    },
+    {
+      "id": "018-9",
+      "chapter": 3,
+      "start": 1075.94,
+      "end": 1081.18,
+      "text": "del pensamiento recto es la dicha, no las posesiones materiales; la medida del pensamiento ",
+      "separator": ""
+    },
+    {
+      "id": "018-10",
+      "chapter": 3,
+      "start": 1081.18,
+      "end": 1085.86,
+      "text": "equivocado es la desdicha, no la falta de posesiones materiales. Una persona puede ser ",
+      "separator": ""
+    },
+    {
+      "id": "018-11",
+      "chapter": 3,
+      "start": 1085.86,
+      "end": 1091.54,
+      "text": "rica y desdichada, o pobre y dichosa. La dicha y la riqueza solo se unen cuando la riqueza ",
+      "separator": ""
+    },
+    {
+      "id": "018-12",
+      "chapter": 3,
+      "start": 1091.54,
+      "end": 1097.0,
+      "text": "se utiliza de manera correcta y sabia. Y quien es pobre solo cae en la desdicha cuando considera ",
+      "separator": ""
+    },
+    {
+      "id": "018-13",
+      "chapter": 3,
+      "start": 1097.0,
+      "end": 1102.66,
+      "text": "su suerte una carga impuesta injustamente.\n\nLa indigencia y la entrega a los excesos son ",
+      "separator": ""
+    },
+    {
+      "id": "018-14",
+      "chapter": 3,
+      "start": 1102.66,
+      "end": 1104.1,
+      "text": "los dos extremos de la desdicha.",
+      "separator": ""
+    },
+    {
+      "id": "019-1",
+      "chapter": 3,
+      "start": 1104.55,
+      "end": 1109.39,
+      "text": "Ambas son igualmente contrarias a lo natural y resultado del desorden mental. ",
+      "separator": " "
+    },
+    {
+      "id": "019-2",
+      "chapter": 3,
+      "start": 1109.39,
+      "end": 1115.55,
+      "text": "Una persona no se encuentra en condiciones adecuadas hasta que es feliz, saludable y próspera; ",
+      "separator": ""
+    },
+    {
+      "id": "019-3",
+      "chapter": 3,
+      "start": 1115.55,
+      "end": 1122.63,
+      "text": "y la felicidad, la salud y la prosperidad resultan de un ajuste armonioso entre lo interior y lo exterior, ",
+      "separator": ""
+    },
+    {
+      "id": "019-4",
+      "chapter": 3,
+      "start": 1122.63,
+      "end": 1124.79,
+      "text": "entre la persona y su entorno.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "019-5",
+      "chapter": 3,
+      "start": 1124.79,
+      "end": 1130.27,
+      "text": "El ser humano solo empieza a realizarse como tal cuando deja de quejarse y de insultar, ",
+      "separator": ""
+    },
+    {
+      "id": "019-6",
+      "chapter": 3,
+      "start": 1130.27,
+      "end": 1133.51,
+      "text": "y comienza a buscar la justicia oculta que rige su vida. ",
+      "separator": ""
+    },
+    {
+      "id": "019-7",
+      "chapter": 3,
+      "start": 1133.51,
+      "end": 1138.43,
+      "text": "A medida que ajusta su mente a ese principio regulador, deja de acusar a los demás de ",
+      "separator": ""
+    },
+    {
+      "id": "019-8",
+      "chapter": 3,
+      "start": 1138.43,
+      "end": 1143.75,
+      "text": "ser la causa de su situación y se fortalece mediante pensamientos firmes y nobles. ",
+      "separator": ""
+    },
+    {
+      "id": "019-9",
+      "chapter": 3,
+      "start": 1143.75,
+      "end": 1148.59,
+      "text": "Deja de rebelarse contra las circunstancias y empieza a utilizarlas como ayudas para avanzar ",
+      "separator": ""
+    },
+    {
+      "id": "019-10",
+      "chapter": 3,
+      "start": 1148.59,
+      "end": 1153.47,
+      "text": "con mayor rapidez y como medios para descubrir sus poderes y posibilidades ocultos.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "019-11",
+      "chapter": 3,
+      "start": 1153.47,
+      "end": 1158.87,
+      "text": "La ley, y no la confusión, es el principio dominante del universo; ",
+      "separator": ""
+    },
+    {
+      "id": "019-12",
+      "chapter": 3,
+      "start": 1158.87,
+      "end": 1163.99,
+      "text": "la justicia, y no la injusticia, es el alma y la sustancia de la vida; ",
+      "separator": ""
+    },
+    {
+      "id": "019-13",
+      "chapter": 3,
+      "start": 1163.99,
+      "end": 1166.79,
+      "text": "la rectitud, y no la corrupción, ",
+      "separator": ""
+    },
+    {
+      "id": "019-14",
+      "chapter": 3,
+      "start": 1166.79,
+      "end": 1170.15,
+      "text": "es la fuerza que modela y mueve el gobierno espiritual del mundo.",
+      "separator": ""
+    },
+    {
+      "id": "020-1",
+      "chapter": 3,
+      "start": 1170.6,
+      "end": 1176.08,
+      "text": "Si esto es así, basta con que el ser humano se corrija a sí mismo para descubrir que el ",
+      "separator": " "
+    },
+    {
+      "id": "020-2",
+      "chapter": 3,
+      "start": 1176.08,
+      "end": 1181.44,
+      "text": "universo está en orden. Mientras se corrige, comprobará que, al cambiar sus pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "020-3",
+      "chapter": 3,
+      "start": 1181.44,
+      "end": 1186.52,
+      "text": "respecto de las cosas y de las otras personas, también cambiará la relación de esas cosas ",
+      "separator": ""
+    },
+    {
+      "id": "020-4",
+      "chapter": 3,
+      "start": 1186.52,
+      "end": 1191.48,
+      "text": "y esas personas con él.\n\nLa prueba de esta verdad se encuentra en cada persona y, por ",
+      "separator": ""
+    },
+    {
+      "id": "020-5",
+      "chapter": 3,
+      "start": 1191.48,
+      "end": 1196.32,
+      "text": "eso, puede investigarse con facilidad mediante la introspección y el análisis sistemático ",
+      "separator": ""
+    },
+    {
+      "id": "020-6",
+      "chapter": 3,
+      "start": 1196.32,
+      "end": 1201.38,
+      "text": "de uno mismo. Si alguien cambia radicalmente sus pensamientos, se asombrará de la rápida ",
+      "separator": ""
+    },
+    {
+      "id": "020-7",
+      "chapter": 3,
+      "start": 1201.38,
+      "end": 1205.58,
+      "text": "transformación que ese cambio producirá en las condiciones materiales de su vida. ",
+      "separator": ""
+    },
+    {
+      "id": "020-8",
+      "chapter": 3,
+      "start": 1205.58,
+      "end": 1210.92,
+      "text": "Las personas imaginan que el pensamiento puede mantenerse en secreto, pero no es así: pronto ",
+      "separator": ""
+    },
+    {
+      "id": "020-9",
+      "chapter": 3,
+      "start": 1210.92,
+      "end": 1216.56,
+      "text": "cristaliza en hábitos, y los hábitos se consolidan en circunstancias. Los pensamientos bestiales ",
+      "separator": ""
+    },
+    {
+      "id": "020-10",
+      "chapter": 3,
+      "start": 1216.56,
+      "end": 1221.48,
+      "text": "cristalizan en hábitos de embriaguez y sensualidad, que se consolidan en circunstancias de indigencia ",
+      "separator": ""
+    },
+    {
+      "id": "020-11",
+      "chapter": 3,
+      "start": 1221.48,
+      "end": 1226.72,
+      "text": "y enfermedad. Los pensamientos impuros de toda clase cristalizan en hábitos que debilitan ",
+      "separator": ""
+    },
+    {
+      "id": "020-12",
+      "chapter": 3,
+      "start": 1226.72,
+      "end": 1230.84,
+      "text": "y confunden, y estos se consolidan en circunstancias perturbadoras y adversas.",
+      "separator": ""
+    },
+    {
+      "id": "021-1",
+      "chapter": 3,
+      "start": 1231.29,
+      "end": 1237.95,
+      "text": "Los pensamientos de miedo, duda e indecisión cristalizan en hábitos débiles, faltos de entereza ",
+      "separator": " "
+    },
+    {
+      "id": "021-2",
+      "chapter": 3,
+      "start": 1237.95,
+      "end": 1243.95,
+      "text": "e irresolutos, que se consolidan en circunstancias de fracaso, pobreza y dependencia ",
+      "separator": ""
+    },
+    {
+      "id": "021-3",
+      "chapter": 3,
+      "start": 1243.95,
+      "end": 1244.95,
+      "text": "servil. ",
+      "separator": ""
+    },
+    {
+      "id": "021-4",
+      "chapter": 3,
+      "start": 1244.95,
+      "end": 1250.19,
+      "text": "Los pensamientos perezosos cristalizan en hábitos de suciedad y deshonestidad, que ",
+      "separator": ""
+    },
+    {
+      "id": "021-5",
+      "chapter": 3,
+      "start": 1250.19,
+      "end": 1254.03,
+      "text": "se consolidan en circunstancias de inmundicia y mendicidad. ",
+      "separator": ""
+    },
+    {
+      "id": "021-6",
+      "chapter": 3,
+      "start": 1254.03,
+      "end": 1259.03,
+      "text": "Los pensamientos de odio y condena cristalizan en hábitos de acusación y violencia, ",
+      "separator": ""
+    },
+    {
+      "id": "021-7",
+      "chapter": 3,
+      "start": 1259.03,
+      "end": 1262.03,
+      "text": "que se consolidan en circunstancias de daño y persecución. ",
+      "separator": ""
+    },
+    {
+      "id": "021-8",
+      "chapter": 3,
+      "start": 1262.03,
+      "end": 1267.35,
+      "text": "Los pensamientos egoístas de toda clase cristalizan en hábitos de búsqueda del provecho propio, ",
+      "separator": ""
+    },
+    {
+      "id": "021-9",
+      "chapter": 3,
+      "start": 1267.35,
+      "end": 1270.79,
+      "text": "que se consolidan en circunstancias más o menos penosas. ",
+      "separator": ""
+    },
+    {
+      "id": "021-10",
+      "chapter": 3,
+      "start": 1270.79,
+      "end": 1275.47,
+      "text": "Por el contrario, los pensamientos hermosos de toda clase cristalizan en hábitos de gracia ",
+      "separator": ""
+    },
+    {
+      "id": "021-11",
+      "chapter": 3,
+      "start": 1275.47,
+      "end": 1280.15,
+      "text": "y bondad, que se consolidan en circunstancias amables y luminosas. ",
+      "separator": ""
+    },
+    {
+      "id": "021-12",
+      "chapter": 3,
+      "start": 1280.15,
+      "end": 1284.99,
+      "text": "Los pensamientos puros cristalizan en hábitos de templanza y dominio de uno mismo, que se ",
+      "separator": ""
+    },
+    {
+      "id": "021-13",
+      "chapter": 3,
+      "start": 1284.99,
+      "end": 1287.79,
+      "text": "consolidan en circunstancias de reposo y paz. ",
+      "separator": ""
+    },
+    {
+      "id": "021-14",
+      "chapter": 3,
+      "start": 1287.79,
+      "end": 1291.31,
+      "text": "Los pensamientos de valor, confianza en uno mismo y decisión ",
+      "separator": ""
+    },
+    {
+      "id": "021-15",
+      "chapter": 3,
+      "start": 1291.31,
+      "end": 1293.55,
+      "text": "cristalizan en hábitos de entereza, ",
+      "separator": ""
+    },
+    {
+      "id": "021-16",
+      "chapter": 3,
+      "start": 1293.55,
+      "end": 1295.95,
+      "text": "que se consolidan en circunstancias de éxito, ",
+      "separator": ""
+    },
+    {
+      "id": "021-17",
+      "chapter": 3,
+      "start": 1295.95,
+      "end": 1297.37,
+      "text": "abundancia y libertad.",
+      "separator": ""
+    },
+    {
+      "id": "022-1",
+      "chapter": 3,
+      "start": 1297.82,
+      "end": 1305.82,
+      "text": "Los pensamientos enérgicos cristalizan en hábitos de limpieza y laboriosidad, que se consolidan en circunstancias agradables. ",
+      "separator": " "
+    },
+    {
+      "id": "022-2",
+      "chapter": 3,
+      "start": 1305.82,
+      "end": 1314.82,
+      "text": "Los pensamientos amables y dispuestos al perdón cristalizan en hábitos de dulzura, que se consolidan en circunstancias de protección y conservación. ",
+      "separator": ""
+    },
+    {
+      "id": "022-3",
+      "chapter": 3,
+      "start": 1314.82,
+      "end": 1325.82,
+      "text": "Los pensamientos amorosos y desinteresados cristalizan en hábitos de entrega a los demás, que se consolidan en circunstancias de prosperidad segura y duradera y de verdadera riqueza.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "022-4",
+      "chapter": 3,
+      "start": 1325.82,
+      "end": 1331.42,
+      "text": "Una línea de pensamiento sostenida, sea buena o mala, produce necesariamente sus resultados ",
+      "separator": ""
+    },
+    {
+      "id": "022-5",
+      "chapter": 3,
+      "start": 1331.42,
+      "end": 1334.3,
+      "text": "en el carácter y en las circunstancias. ",
+      "separator": ""
+    },
+    {
+      "id": "022-6",
+      "chapter": 3,
+      "start": 1334.3,
+      "end": 1338.9,
+      "text": "Una persona no puede elegir directamente sus circunstancias, pero sí puede elegir sus ",
+      "separator": ""
+    },
+    {
+      "id": "022-7",
+      "chapter": 3,
+      "start": 1338.9,
+      "end": 1344.1,
+      "text": "pensamientos y, de ese modo, dar forma a sus circunstancias de manera indirecta, aunque ",
+      "separator": ""
+    },
+    {
+      "id": "022-8",
+      "chapter": 3,
+      "start": 1344.1,
+      "end": 1345.1,
+      "text": "segura.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "022-9",
+      "chapter": 3,
+      "start": 1345.1,
+      "end": 1349.96,
+      "text": "La naturaleza ayuda a cada persona a realizar los pensamientos que más alimenta y le presenta ",
+      "separator": ""
+    },
+    {
+      "id": "022-10",
+      "chapter": 3,
+      "start": 1349.96,
+      "end": 1355.62,
+      "text": "las oportunidades que harán aflorar con mayor rapidez tanto los buenos como los malos.\n\nQue ",
+      "separator": ""
+    },
+    {
+      "id": "022-11",
+      "chapter": 3,
+      "start": 1355.62,
+      "end": 1360.6,
+      "text": "una persona abandone sus pensamientos pecaminosos, y el mundo entero se volverá más amable ",
+      "separator": ""
+    },
+    {
+      "id": "022-12",
+      "chapter": 3,
+      "start": 1360.6,
+      "end": 1362.78,
+      "text": "con ella y estará dispuesto a ayudarla.",
+      "separator": ""
+    },
+    {
+      "id": "023-1",
+      "chapter": 3,
+      "start": 1363.23,
+      "end": 1369.53,
+      "text": "Que deje atrás sus pensamientos débiles y enfermizos, y surgirán por todas partes oportunidades ",
+      "separator": " "
+    },
+    {
+      "id": "023-2",
+      "chapter": 3,
+      "start": 1369.53,
+      "end": 1372.47,
+      "text": "para apoyar sus firmes resoluciones. ",
+      "separator": ""
+    },
+    {
+      "id": "023-3",
+      "chapter": 3,
+      "start": 1372.47,
+      "end": 1377.51,
+      "text": "Que alimente buenos pensamientos, y ningún destino adverso podrá mantenerla atada a ",
+      "separator": ""
+    },
+    {
+      "id": "023-4",
+      "chapter": 3,
+      "start": 1377.51,
+      "end": 1379.59,
+      "text": "la miseria y la vergüenza. ",
+      "separator": ""
+    },
+    {
+      "id": "023-5",
+      "chapter": 3,
+      "start": 1379.59,
+      "end": 1384.43,
+      "text": "El mundo es tu caleidoscopio, y las combinaciones cambiantes de colores que te muestra a cada ",
+      "separator": ""
+    },
+    {
+      "id": "023-6",
+      "chapter": 3,
+      "start": 1384.43,
+      "end": 1391.27,
+      "text": "instante son las imágenes, finamente ajustadas, de tus pensamientos en movimiento continuo.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "023-7",
+      "chapter": 3,
+      "start": 1391.27,
+      "end": 1396.67,
+      "text": "«Así serás lo que quieras llegar a ser;\nque el fracaso busque su falso consuelo\nen esa ",
+      "separator": ""
+    },
+    {
+      "id": "023-8",
+      "chapter": 3,
+      "start": 1396.67,
+      "end": 1399.19,
+      "text": "pobre palabra, “entorno”;\n",
+      "separator": ""
+    },
+    {
+      "id": "023-9",
+      "chapter": 3,
+      "start": 1399.19,
+      "end": 1401.91,
+      "text": "el espíritu la desdeña y es libre.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "023-10",
+      "chapter": 3,
+      "start": 1401.91,
+      "end": 1404.51,
+      "text": "»Domina el tiempo y conquista el espacio;\n",
+      "separator": ""
+    },
+    {
+      "id": "023-11",
+      "chapter": 3,
+      "start": 1404.51,
+      "end": 1410.47,
+      "text": "intimida al fanfarrón embaucador llamado Azar,\ny ordena a la tirana Circunstancia\nque ",
+      "separator": ""
+    },
+    {
+      "id": "023-12",
+      "chapter": 3,
+      "start": 1410.47,
+      "end": 1413.39,
+      "text": "deje su corona y ocupe el lugar de un servidor.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "023-13",
+      "chapter": 3,
+      "start": 1413.39,
+      "end": 1418.67,
+      "text": "»La voluntad humana, esa fuerza invisible,\nhija de un alma inmortal,\npuede abrirse camino ",
+      "separator": ""
+    },
+    {
+      "id": "023-14",
+      "chapter": 3,
+      "start": 1418.67,
+      "end": 1421.81,
+      "text": "hacia cualquier meta,\naunque se interpongan muros de granito.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "023-15",
+      "chapter": 3,
+      "start": 1421.81,
+      "end": 1423.93,
+      "text": "»No te impacientes ante las demoras;\n",
+      "separator": ""
+    },
+    {
+      "id": "023-16",
+      "chapter": 3,
+      "start": 1423.93,
+      "end": 1425.73,
+      "text": "espera como quien comprende.\n",
+      "separator": ""
+    },
+    {
+      "id": "023-17",
+      "chapter": 3,
+      "start": 1425.73,
+      "end": 1429.31,
+      "text": "Cuando el espíritu se alza y manda,\nlos dioses están dispuestos a obedecer».",
+      "separator": ""
+    },
+    {
+      "id": "024-1",
+      "chapter": 4,
+      "start": 1434.31,
+      "end": 1441.31,
+      "text": "Capítulo 3. El efecto del pensamiento en la salud y el cuerpo\n\nEl cuerpo es servidor de la mente. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "024-2",
+      "chapter": 4,
+      "start": 1441.31,
+      "end": 1448.31,
+      "text": "Obedece a la actividad de la mente, tanto cuando esta se dirige deliberadamente como cuando se manifiesta de forma automática. ",
+      "separator": ""
+    },
+    {
+      "id": "024-3",
+      "chapter": 4,
+      "start": 1448.31,
+      "end": 1455.31,
+      "text": "Bajo el mandato de pensamientos contrarios a la ley, el cuerpo se hunde con rapidez en la enfermedad y el deterioro; ",
+      "separator": ""
+    },
+    {
+      "id": "024-4",
+      "chapter": 4,
+      "start": 1455.31,
+      "end": 1460.31,
+      "text": "bajo el mandato de pensamientos alegres y hermosos, se reviste de juventud y belleza.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "024-5",
+      "chapter": 4,
+      "start": 1460.31,
+      "end": 1466.75,
+      "text": "La enfermedad y la salud, al igual que las circunstancias, tienen sus raíces en el pensamiento. ",
+      "separator": ""
+    },
+    {
+      "id": "024-6",
+      "chapter": 4,
+      "start": 1466.75,
+      "end": 1470.55,
+      "text": "Los pensamientos enfermizos se expresarán mediante un cuerpo enfermizo. ",
+      "separator": ""
+    },
+    {
+      "id": "024-7",
+      "chapter": 4,
+      "start": 1470.55,
+      "end": 1475.47,
+      "text": "Se sabe de pensamientos de miedo que han matado a una persona tan rápidamente como una bala, ",
+      "separator": ""
+    },
+    {
+      "id": "024-8",
+      "chapter": 4,
+      "start": 1475.47,
+      "end": 1480.03,
+      "text": "y siguen matando a miles con igual certeza, aunque con menor rapidez. ",
+      "separator": ""
+    },
+    {
+      "id": "024-9",
+      "chapter": 4,
+      "start": 1480.03,
+      "end": 1483.67,
+      "text": "Quienes viven temiendo la enfermedad son quienes la contraen. ",
+      "separator": ""
+    },
+    {
+      "id": "024-10",
+      "chapter": 4,
+      "start": 1483.67,
+      "end": 1488.35,
+      "text": "La ansiedad debilita pronto todo el cuerpo y lo deja expuesto a la enfermedad; los ",
+      "separator": ""
+    },
+    {
+      "id": "024-11",
+      "chapter": 4,
+      "start": 1488.35,
+      "end": 1493.03,
+      "text": "pensamientos impuros, aunque no se lleven a la práctica físicamente, no tardan en ",
+      "separator": ""
+    },
+    {
+      "id": "024-12",
+      "chapter": 4,
+      "start": 1493.03,
+      "end": 1494.87,
+      "text": "quebrantar el sistema nervioso.",
+      "separator": ""
+    },
+    {
+      "id": "025-1",
+      "chapter": 4,
+      "start": 1495.32,
+      "end": 1501.52,
+      "text": "Los pensamientos fuertes, puros y felices fortalecen el cuerpo y le dan vigor y gracia. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "025-2",
+      "chapter": 4,
+      "start": 1501.52,
+      "end": 1506.08,
+      "text": "El cuerpo es un instrumento delicado y moldeable que responde con facilidad a los pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "025-3",
+      "chapter": 4,
+      "start": 1506.08,
+      "end": 1510.92,
+      "text": "que dejan su huella en él. Los hábitos de pensamiento producirán en él sus propios ",
+      "separator": ""
+    },
+    {
+      "id": "025-4",
+      "chapter": 4,
+      "start": 1510.92,
+      "end": 1517.02,
+      "text": "efectos, buenos o malos.\n\nLas personas seguirán teniendo la sangre impura y envenenada mientras ",
+      "separator": ""
+    },
+    {
+      "id": "025-5",
+      "chapter": 4,
+      "start": 1517.02,
+      "end": 1521.9,
+      "text": "alimenten pensamientos impuros. De un corazón limpio nacen una vida limpia y un cuerpo ",
+      "separator": ""
+    },
+    {
+      "id": "025-6",
+      "chapter": 4,
+      "start": 1521.9,
+      "end": 1527.22,
+      "text": "limpio. De una mente mancillada proceden una vida mancillada y un cuerpo corrompido. El ",
+      "separator": ""
+    },
+    {
+      "id": "025-7",
+      "chapter": 4,
+      "start": 1527.22,
+      "end": 1532.02,
+      "text": "pensamiento es la fuente de la acción, de la vida y de su manifestación: purifica la ",
+      "separator": ""
+    },
+    {
+      "id": "025-8",
+      "chapter": 4,
+      "start": 1532.02,
+      "end": 1537.94,
+      "text": "fuente y todo será puro.\n\nCambiar de alimentación no ayudará a quien no quiera cambiar sus pensamientos. ",
+      "separator": ""
+    },
+    {
+      "id": "025-9",
+      "chapter": 4,
+      "start": 1537.94,
+      "end": 1542.98,
+      "text": "Cuando una persona purifica sus pensamientos, deja de desear alimentos impuros.\n\nLos pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "025-10",
+      "chapter": 4,
+      "start": 1542.98,
+      "end": 1548.54,
+      "text": "limpios crean hábitos limpios. El supuesto santo que no lava su cuerpo no es un santo. Quien ha ",
+      "separator": ""
+    },
+    {
+      "id": "025-11",
+      "chapter": 4,
+      "start": 1548.54,
+      "end": 1553.48,
+      "text": "fortalecido y purificado sus pensamientos no necesita preocuparse por el microbio dañino.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "025-12",
+      "chapter": 4,
+      "start": 1553.48,
+      "end": 1555.64,
+      "text": "Si quieres proteger tu cuerpo, cuida tu mente.",
+      "separator": ""
+    },
+    {
+      "id": "026-1",
+      "chapter": 4,
+      "start": 1556.09,
+      "end": 1562.93,
+      "text": "Si quieres renovar tu cuerpo, embellece tu mente. Los pensamientos de malicia, envidia, ",
+      "separator": " "
+    },
+    {
+      "id": "026-2",
+      "chapter": 4,
+      "start": 1562.93,
+      "end": 1569.69,
+      "text": "decepción y desaliento le roban al cuerpo su salud y su gracia. Un rostro amargado no aparece ",
+      "separator": ""
+    },
+    {
+      "id": "026-3",
+      "chapter": 4,
+      "start": 1569.69,
+      "end": 1575.19,
+      "text": "por casualidad: lo forman pensamientos amargos. Las arrugas que afean son trazadas por la ",
+      "separator": ""
+    },
+    {
+      "id": "026-4",
+      "chapter": 4,
+      "start": 1575.19,
+      "end": 1581.85,
+      "text": "insensatez, la pasión y el orgullo.\n\nConozco a una mujer de noventa y seis años que tiene el rostro luminoso ",
+      "separator": ""
+    },
+    {
+      "id": "026-5",
+      "chapter": 4,
+      "start": 1581.85,
+      "end": 1586.75,
+      "text": "e inocente de una niña. Conozco a un hombre que aún está lejos de la mediana edad cuyo ",
+      "separator": ""
+    },
+    {
+      "id": "026-6",
+      "chapter": 4,
+      "start": 1586.75,
+      "end": 1592.53,
+      "text": "rostro se ha contraído en facciones sin armonía. En ella, es el resultado de un temperamento ",
+      "separator": ""
+    },
+    {
+      "id": "026-7",
+      "chapter": 4,
+      "start": 1592.53,
+      "end": 1597.59,
+      "text": "dulce y alegre; en él, es la consecuencia de la pasión y el descontento.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "026-8",
+      "chapter": 4,
+      "start": 1597.59,
+      "end": 1601.79,
+      "text": "Así como no puedes tener un hogar agradable y saludable si no dejas entrar libremente ",
+      "separator": ""
+    },
+    {
+      "id": "026-9",
+      "chapter": 4,
+      "start": 1601.79,
+      "end": 1607.23,
+      "text": "el aire y la luz del sol en las habitaciones, un cuerpo fuerte y un rostro luminoso, feliz o ",
+      "separator": ""
+    },
+    {
+      "id": "026-10",
+      "chapter": 4,
+      "start": 1607.23,
+      "end": 1612.21,
+      "text": "sereno solo pueden resultar de permitir que entren libremente en la mente pensamientos de ",
+      "separator": ""
+    },
+    {
+      "id": "026-11",
+      "chapter": 4,
+      "start": 1612.21,
+      "end": 1614.73,
+      "text": "alegría, buena voluntad y serenidad.",
+      "separator": ""
+    },
+    {
+      "id": "027-1",
+      "chapter": 4,
+      "start": 1615.18,
+      "end": 1620.56,
+      "text": "En el rostro de las personas mayores hay arrugas nacidas de la compasión, otras de pensamientos ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "027-2",
+      "chapter": 4,
+      "start": 1620.56,
+      "end": 1626.82,
+      "text": "firmes y puros, y otras talladas por la pasión: ¿quién no sabe distinguirlas? Para quienes ",
+      "separator": ""
+    },
+    {
+      "id": "027-3",
+      "chapter": 4,
+      "start": 1626.82,
+      "end": 1633.06,
+      "text": "han vivido con rectitud, la vejez es tranquila, apacible y suavemente templada, como el sol ",
+      "separator": ""
+    },
+    {
+      "id": "027-4",
+      "chapter": 4,
+      "start": 1633.06,
+      "end": 1638.7,
+      "text": "al ponerse. Hace poco vi a un filósofo en su lecho de muerte. No era viejo, salvo por ",
+      "separator": ""
+    },
+    {
+      "id": "027-5",
+      "chapter": 4,
+      "start": 1638.7,
+      "end": 1643.42,
+      "text": "sus años. Murió con la misma dulzura y paz con las que había vivido.\n\nNo hay médico ",
+      "separator": ""
+    },
+    {
+      "id": "027-6",
+      "chapter": 4,
+      "start": 1643.42,
+      "end": 1647.58,
+      "text": "como el pensamiento alegre para disipar los males del cuerpo, ni consuelo comparable a ",
+      "separator": ""
+    },
+    {
+      "id": "027-7",
+      "chapter": 4,
+      "start": 1647.58,
+      "end": 1652.14,
+      "text": "la buena voluntad para dispersar las sombras de la pena y el dolor. Vivir continuamente ",
+      "separator": ""
+    },
+    {
+      "id": "027-8",
+      "chapter": 4,
+      "start": 1652.14,
+      "end": 1657.14,
+      "text": "entre pensamientos de mala voluntad, cinismo, sospecha y envidia equivale a encerrarse ",
+      "separator": ""
+    },
+    {
+      "id": "027-9",
+      "chapter": 4,
+      "start": 1657.14,
+      "end": 1661.62,
+      "text": "en una celda construida por uno mismo. En cambio, pensar bien de todos, mostrarse alegre ",
+      "separator": ""
+    },
+    {
+      "id": "027-10",
+      "chapter": 4,
+      "start": 1661.62,
+      "end": 1666.98,
+      "text": "con todos y aprender con paciencia a encontrar lo bueno en todos: esos pensamientos desinteresados ",
+      "separator": ""
+    },
+    {
+      "id": "027-11",
+      "chapter": 4,
+      "start": 1666.98,
+      "end": 1671.02,
+      "text": "son las puertas mismas del cielo. Y vivir día tras día con pensamientos de paz hacia ",
+      "separator": ""
+    },
+    {
+      "id": "027-12",
+      "chapter": 4,
+      "start": 1671.02,
+      "end": 1674.14,
+      "text": "cada criatura traerá una paz abundante a quien los albergue.",
+      "separator": ""
+    },
+    {
+      "id": "028-1",
+      "chapter": 5,
+      "start": 1679.14,
+      "end": 1685.26,
+      "text": "Capítulo 4. Pensamiento y propósito\n\nHasta que el pensamiento se vincula con un ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "028-2",
+      "chapter": 5,
+      "start": 1685.26,
+      "end": 1690.82,
+      "text": "propósito, no hay realización inteligente. La mayoría permite que la barca de su pensamiento ",
+      "separator": ""
+    },
+    {
+      "id": "028-3",
+      "chapter": 5,
+      "start": 1690.82,
+      "end": 1696.7,
+      "text": "vaya «a la deriva» por el océano de la vida. La falta de rumbo es un vicio, y quien quiera ",
+      "separator": ""
+    },
+    {
+      "id": "028-4",
+      "chapter": 5,
+      "start": 1696.7,
+      "end": 1701.66,
+      "text": "evitar la catástrofe y la destrucción debe dejar de navegar así.\n\nQuienes no tienen un ",
+      "separator": ""
+    },
+    {
+      "id": "028-5",
+      "chapter": 5,
+      "start": 1701.66,
+      "end": 1707.1,
+      "text": "propósito central en la vida caen fácilmente en pequeñas preocupaciones, temores, dificultades ",
+      "separator": ""
+    },
+    {
+      "id": "028-6",
+      "chapter": 5,
+      "start": 1707.1,
+      "end": 1713.58,
+      "text": "y autocompasión. Todos ellos son signos de debilidad que conducen al fracaso, la infelicidad ",
+      "separator": ""
+    },
+    {
+      "id": "028-7",
+      "chapter": 5,
+      "start": 1713.58,
+      "end": 1718.58,
+      "text": "y la pérdida con tanta certeza como las faltas deliberadamente planeadas, aunque por otro ",
+      "separator": ""
+    },
+    {
+      "id": "028-8",
+      "chapter": 5,
+      "start": 1718.58,
+      "end": 1725.02,
+      "text": "camino. Porque la debilidad no puede persistir en un universo que desarrolla su poder.\n\nUna ",
+      "separator": ""
+    },
+    {
+      "id": "028-9",
+      "chapter": 5,
+      "start": 1725.02,
+      "end": 1731.3,
+      "text": "persona debe concebir en su corazón un propósito legítimo y ponerse en marcha para realizarlo. ",
+      "separator": ""
+    },
+    {
+      "id": "028-10",
+      "chapter": 5,
+      "start": 1731.3,
+      "end": 1736.5,
+      "text": "Debe convertirlo en el centro de sus pensamientos. Según su naturaleza en ese momento, puede ",
+      "separator": ""
+    },
+    {
+      "id": "028-11",
+      "chapter": 5,
+      "start": 1736.5,
+      "end": 1742.38,
+      "text": "tomar la forma de un ideal espiritual o de un objetivo terrenal. Sea cual sea, debe ",
+      "separator": ""
+    },
+    {
+      "id": "028-12",
+      "chapter": 5,
+      "start": 1742.38,
+      "end": 1745.94,
+      "text": "concentrar de manera constante las fuerzas de su pensamiento en el objetivo que se ha ",
+      "separator": ""
+    },
+    {
+      "id": "028-13",
+      "chapter": 5,
+      "start": 1745.94,
+      "end": 1746.42,
+      "text": "fijado.",
+      "separator": ""
+    },
+    {
+      "id": "029-1",
+      "chapter": 5,
+      "start": 1746.87,
+      "end": 1752.45,
+      "text": "Ha de hacer de ese propósito su deber supremo y dedicarse a alcanzarlo, sin permitir que ",
+      "separator": " "
+    },
+    {
+      "id": "029-2",
+      "chapter": 5,
+      "start": 1752.45,
+      "end": 1758.39,
+      "text": "sus pensamientos se extravíen en fantasías, anhelos e imaginaciones pasajeros. Este es ",
+      "separator": ""
+    },
+    {
+      "id": "029-3",
+      "chapter": 5,
+      "start": 1758.39,
+      "end": 1764.07,
+      "text": "el camino principal hacia el dominio de uno mismo y la verdadera concentración del pensamiento. ",
+      "separator": ""
+    },
+    {
+      "id": "029-4",
+      "chapter": 5,
+      "start": 1764.07,
+      "end": 1768.91,
+      "text": "Aunque fracase una y otra vez en el intento —como necesariamente ocurrirá hasta que supere ",
+      "separator": ""
+    },
+    {
+      "id": "029-5",
+      "chapter": 5,
+      "start": 1768.91,
+      "end": 1774.51,
+      "text": "su debilidad—, la fortaleza de carácter que adquiera será la medida de su verdadero éxito. Esa ",
+      "separator": ""
+    },
+    {
+      "id": "029-6",
+      "chapter": 5,
+      "start": 1774.51,
+      "end": 1779.37,
+      "text": "fortaleza será un nuevo punto de partida para su poder y sus triunfos futuros.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "029-7",
+      "chapter": 5,
+      "start": 1779.37,
+      "end": 1783.23,
+      "text": "Quienes todavía no estén preparados para concebir un gran propósito deben concentrar ",
+      "separator": ""
+    },
+    {
+      "id": "029-8",
+      "chapter": 5,
+      "start": 1783.23,
+      "end": 1788.15,
+      "text": "sus pensamientos en cumplir su deber de manera impecable, por insignificante que parezca ",
+      "separator": ""
+    },
+    {
+      "id": "029-9",
+      "chapter": 5,
+      "start": 1788.15,
+      "end": 1789.35,
+      "text": "su tarea. ",
+      "separator": ""
+    },
+    {
+      "id": "029-10",
+      "chapter": 5,
+      "start": 1789.35,
+      "end": 1794.67,
+      "text": "Solo así pueden reunir y enfocar sus pensamientos y desarrollar resolución y energía. ",
+      "separator": ""
+    },
+    {
+      "id": "029-11",
+      "chapter": 5,
+      "start": 1794.67,
+      "end": 1798.73,
+      "text": "Una vez logrado esto, no habrá nada que no puedan realizar.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "029-12",
+      "chapter": 5,
+      "start": 1798.73,
+      "end": 1803.77,
+      "text": "El alma más débil, si reconoce su debilidad y cree en la verdad de que la fuerza solo ",
+      "separator": ""
+    },
+    {
+      "id": "029-13",
+      "chapter": 5,
+      "start": 1803.77,
+      "end": 1809.11,
+      "text": "puede desarrollarse mediante el esfuerzo y la práctica, comenzará de inmediato a esforzarse.",
+      "separator": ""
+    },
+    {
+      "id": "030-1",
+      "chapter": 5,
+      "start": 1809.56,
+      "end": 1815.6,
+      "text": "Y sumando esfuerzo al esfuerzo, paciencia a la paciencia y fuerza a la fuerza, no dejará ",
+      "separator": " "
+    },
+    {
+      "id": "030-2",
+      "chapter": 5,
+      "start": 1815.6,
+      "end": 1821.24,
+      "text": "de desarrollarse hasta alcanzar, finalmente, una fortaleza divina.\n\nAsí como una persona ",
+      "separator": ""
+    },
+    {
+      "id": "030-3",
+      "chapter": 5,
+      "start": 1821.24,
+      "end": 1826.48,
+      "text": "físicamente débil puede fortalecerse mediante un entrenamiento cuidadoso y paciente, quien ",
+      "separator": ""
+    },
+    {
+      "id": "030-4",
+      "chapter": 5,
+      "start": 1826.48,
+      "end": 1831.8,
+      "text": "tiene pensamientos débiles puede fortalecerlos ejercitándose en pensar rectamente.\n\nDejar ",
+      "separator": ""
+    },
+    {
+      "id": "030-5",
+      "chapter": 5,
+      "start": 1831.8,
+      "end": 1836.8,
+      "text": "atrás la falta de rumbo y la debilidad, y empezar a pensar con un propósito, es incorporarse ",
+      "separator": ""
+    },
+    {
+      "id": "030-6",
+      "chapter": 5,
+      "start": 1836.8,
+      "end": 1841.8,
+      "text": "a las filas de quienes son fuertes: aquellos que solo ven en el fracaso uno de los caminos ",
+      "separator": ""
+    },
+    {
+      "id": "030-7",
+      "chapter": 5,
+      "start": 1841.8,
+      "end": 1846.48,
+      "text": "hacia la realización, que ponen todas las condiciones a su servicio, que piensan con ",
+      "separator": ""
+    },
+    {
+      "id": "030-8",
+      "chapter": 5,
+      "start": 1846.48,
+      "end": 1852.44,
+      "text": "firmeza, emprenden sin miedo y realizan con maestría.\n\nUna vez concebido su propósito, ",
+      "separator": ""
+    },
+    {
+      "id": "030-9",
+      "chapter": 5,
+      "start": 1852.44,
+      "end": 1856.84,
+      "text": "la persona debe trazar mentalmente un camino recto hacia su realización, sin mirar a ",
+      "separator": ""
+    },
+    {
+      "id": "030-10",
+      "chapter": 5,
+      "start": 1856.84,
+      "end": 1862.24,
+      "text": "la derecha ni a la izquierda. Las dudas y los temores deben excluirse con rigor: son ",
+      "separator": ""
+    },
+    {
+      "id": "030-11",
+      "chapter": 5,
+      "start": 1862.24,
+      "end": 1867.36,
+      "text": "elementos que desintegran la línea recta del esfuerzo y la vuelven tortuosa, ineficaz ",
+      "separator": ""
+    },
+    {
+      "id": "030-12",
+      "chapter": 5,
+      "start": 1867.36,
+      "end": 1873.12,
+      "text": "e inútil. Los pensamientos de duda y miedo nunca han logrado nada, ni pueden lograrlo. ",
+      "separator": ""
+    },
+    {
+      "id": "030-13",
+      "chapter": 5,
+      "start": 1873.12,
+      "end": 1874.36,
+      "text": "Siempre conducen al fracaso.",
+      "separator": ""
+    },
+    {
+      "id": "031-1",
+      "chapter": 5,
+      "start": 1874.81,
+      "end": 1881.13,
+      "text": "El propósito, la energía, la capacidad de actuar y todos los pensamientos fuertes cesan ",
+      "separator": " "
+    },
+    {
+      "id": "031-2",
+      "chapter": 5,
+      "start": 1881.13,
+      "end": 1886.23,
+      "text": "cuando se infiltran la duda y el miedo.\n\nLa voluntad de actuar nace de saber que podemos ",
+      "separator": ""
+    },
+    {
+      "id": "031-3",
+      "chapter": 5,
+      "start": 1886.23,
+      "end": 1891.71,
+      "text": "hacerlo. La duda y el miedo son los grandes enemigos del conocimiento; quien los alimenta ",
+      "separator": ""
+    },
+    {
+      "id": "031-4",
+      "chapter": 5,
+      "start": 1891.71,
+      "end": 1896.47,
+      "text": "y no los elimina se obstaculiza a sí mismo a cada paso.\n\nQuien ha vencido la duda y el ",
+      "separator": ""
+    },
+    {
+      "id": "031-5",
+      "chapter": 5,
+      "start": 1896.47,
+      "end": 1901.37,
+      "text": "miedo ha vencido el fracaso. Cada uno de sus pensamientos está unido al poder, y afronta ",
+      "separator": ""
+    },
+    {
+      "id": "031-6",
+      "chapter": 5,
+      "start": 1901.37,
+      "end": 1905.95,
+      "text": "todas las dificultades con valentía y las supera con sabiduría. Sus propósitos se ",
+      "separator": ""
+    },
+    {
+      "id": "031-7",
+      "chapter": 5,
+      "start": 1905.95,
+      "end": 1910.59,
+      "text": "siembran en la estación adecuada, florecen y dan frutos que no caen al suelo antes de ",
+      "separator": ""
+    },
+    {
+      "id": "031-8",
+      "chapter": 5,
+      "start": 1910.59,
+      "end": 1915.97,
+      "text": "tiempo.\n\nEl pensamiento unido sin temor a un propósito se convierte en fuerza creadora. ",
+      "separator": ""
+    },
+    {
+      "id": "031-9",
+      "chapter": 5,
+      "start": 1915.97,
+      "end": 1920.93,
+      "text": "Quien lo sabe está preparado para ser algo más elevado y fuerte que un simple conjunto ",
+      "separator": ""
+    },
+    {
+      "id": "031-10",
+      "chapter": 5,
+      "start": 1920.93,
+      "end": 1926.31,
+      "text": "de pensamientos vacilantes y sensaciones cambiantes. Quien lo pone en práctica se ha convertido ",
+      "separator": ""
+    },
+    {
+      "id": "031-11",
+      "chapter": 5,
+      "start": 1926.31,
+      "end": 1929.85,
+      "text": "en el dueño consciente e inteligente de sus facultades mentales.",
+      "separator": ""
+    },
+    {
+      "id": "032-1",
+      "chapter": 6,
+      "start": 1934.85,
+      "end": 1941.97,
+      "text": "Capítulo 5. El papel del pensamiento en los logros\n\nTodo lo que una persona logra y todo lo que no ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "032-2",
+      "chapter": 6,
+      "start": 1941.97,
+      "end": 1947.89,
+      "text": "logra es resultado directo de sus propios pensamientos. En un universo ordenado con justicia, ",
+      "separator": ""
+    },
+    {
+      "id": "032-3",
+      "chapter": 6,
+      "start": 1947.89,
+      "end": 1953.77,
+      "text": "donde la pérdida del equilibrio significaría la destrucción total, la responsabilidad individual ",
+      "separator": ""
+    },
+    {
+      "id": "032-4",
+      "chapter": 6,
+      "start": 1953.77,
+      "end": 1960.33,
+      "text": "debe ser absoluta. La debilidad y la fuerza de una persona, su pureza y su impureza, le pertenecen a ",
+      "separator": ""
+    },
+    {
+      "id": "032-5",
+      "chapter": 6,
+      "start": 1960.33,
+      "end": 1967.01,
+      "text": "ella, no a otra; ella las produce, no otra, y solo ella puede modificarlas. Su condición ",
+      "separator": ""
+    },
+    {
+      "id": "032-6",
+      "chapter": 6,
+      "start": 1967.01,
+      "end": 1973.25,
+      "text": "también es suya, no de otra persona. Su sufrimiento y su felicidad se desarrollan desde dentro. ",
+      "separator": ""
+    },
+    {
+      "id": "032-7",
+      "chapter": 6,
+      "start": 1973.25,
+      "end": 1979.05,
+      "text": "Tal como piensa, así es; mientras siga pensando de la misma manera, así seguirá siendo.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "032-8",
+      "chapter": 6,
+      "start": 1979.05,
+      "end": 1983.81,
+      "text": "Una persona fuerte no puede ayudar a otra más débil a menos que esta quiera recibir ",
+      "separator": ""
+    },
+    {
+      "id": "032-9",
+      "chapter": 6,
+      "start": 1983.81,
+      "end": 1989.45,
+      "text": "ayuda. Incluso entonces, la persona débil debe fortalecerse por sí misma: mediante ",
+      "separator": ""
+    },
+    {
+      "id": "032-10",
+      "chapter": 6,
+      "start": 1989.45,
+      "end": 1993.97,
+      "text": "sus propios esfuerzos debe desarrollar la fuerza que admira en la otra. Nadie más ",
+      "separator": ""
+    },
+    {
+      "id": "032-11",
+      "chapter": 6,
+      "start": 1993.97,
+      "end": 1999.85,
+      "text": "que ella puede cambiar su condición.\n\nHa sido habitual pensar y decir: «Muchos son esclavos ",
+      "separator": ""
+    },
+    {
+      "id": "032-12",
+      "chapter": 6,
+      "start": 1999.85,
+      "end": 2002.21,
+      "text": "porque uno es opresor; odiemos al opresor».",
+      "separator": ""
+    },
+    {
+      "id": "033-1",
+      "chapter": 6,
+      "start": 2002.66,
+      "end": 2008.3,
+      "text": "Ahora, sin embargo, entre una minoría cada vez mayor existe la tendencia a invertir ",
+      "separator": " "
+    },
+    {
+      "id": "033-2",
+      "chapter": 6,
+      "start": 2008.3,
+      "end": 2015.02,
+      "text": "ese juicio y decir: «Uno es opresor porque muchos son esclavos; despreciemos a los esclavos».\n\n",
+      "separator": ""
+    },
+    {
+      "id": "033-3",
+      "chapter": 6,
+      "start": 2015.02,
+      "end": 2019.94,
+      "text": "La verdad es que el opresor y el esclavo colaboran en la ignorancia y, aunque parecen ",
+      "separator": ""
+    },
+    {
+      "id": "033-4",
+      "chapter": 6,
+      "start": 2019.94,
+      "end": 2025.38,
+      "text": "hacerse sufrir mutuamente, en realidad se hacen sufrir a sí mismos. El conocimiento ",
+      "separator": ""
+    },
+    {
+      "id": "033-5",
+      "chapter": 6,
+      "start": 2025.38,
+      "end": 2030.02,
+      "text": "perfecto percibe la acción de la ley tanto en la debilidad del oprimido como en el poder ",
+      "separator": ""
+    },
+    {
+      "id": "033-6",
+      "chapter": 6,
+      "start": 2030.02,
+      "end": 2035.78,
+      "text": "mal empleado del opresor. El amor perfecto, al ver el sufrimiento que ambas condiciones ",
+      "separator": ""
+    },
+    {
+      "id": "033-7",
+      "chapter": 6,
+      "start": 2035.78,
+      "end": 2042.46,
+      "text": "entrañan, no condena a ninguno. La compasión perfecta abraza tanto al opresor como al oprimido.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "033-8",
+      "chapter": 6,
+      "start": 2042.46,
+      "end": 2047.38,
+      "text": "Quien ha vencido la debilidad y ha abandonado todo pensamiento egoísta no pertenece ni ",
+      "separator": ""
+    },
+    {
+      "id": "033-9",
+      "chapter": 6,
+      "start": 2047.38,
+      "end": 2054.18,
+      "text": "a los opresores ni a los oprimidos. Es libre.\n\nUna persona solo puede elevarse, vencer y alcanzar ",
+      "separator": ""
+    },
+    {
+      "id": "033-10",
+      "chapter": 6,
+      "start": 2054.18,
+      "end": 2059.66,
+      "text": "sus metas elevando sus pensamientos. Solo puede permanecer débil, abatida y desdichada ",
+      "separator": ""
+    },
+    {
+      "id": "033-11",
+      "chapter": 6,
+      "start": 2059.66,
+      "end": 2061.18,
+      "text": "si se niega a elevarlos.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "033-12",
+      "chapter": 6,
+      "start": 2061.18,
+      "end": 2064.86,
+      "text": "Antes de lograr cualquier cosa, incluso en los asuntos terrenales, ",
+      "separator": ""
+    },
+    {
+      "id": "033-13",
+      "chapter": 6,
+      "start": 2064.86,
+      "end": 2070.1,
+      "text": "una persona debe elevar sus pensamientos por encima de la sumisión servil a los apetitos animales.",
+      "separator": ""
+    },
+    {
+      "id": "034-1",
+      "chapter": 6,
+      "start": 2070.55,
+      "end": 2077.87,
+      "text": "Para tener éxito no necesita, en modo alguno, abandonar toda su animalidad y todo su egoísmo, ",
+      "separator": " "
+    },
+    {
+      "id": "034-2",
+      "chapter": 6,
+      "start": 2077.87,
+      "end": 2080.87,
+      "text": "pero sí debe sacrificar al menos una parte. ",
+      "separator": ""
+    },
+    {
+      "id": "034-3",
+      "chapter": 6,
+      "start": 2080.87,
+      "end": 2085.63,
+      "text": "Quien piensa ante todo en satisfacer sus apetitos bestiales no puede pensar con claridad ",
+      "separator": ""
+    },
+    {
+      "id": "034-4",
+      "chapter": 6,
+      "start": 2085.63,
+      "end": 2087.43,
+      "text": "ni planear con método; ",
+      "separator": ""
+    },
+    {
+      "id": "034-5",
+      "chapter": 6,
+      "start": 2087.43,
+      "end": 2092.59,
+      "text": "no puede descubrir y desarrollar sus recursos latentes, y fracasa en cualquier empresa. ",
+      "separator": ""
+    },
+    {
+      "id": "034-6",
+      "chapter": 6,
+      "start": 2092.59,
+      "end": 2097.03,
+      "text": "Como todavía no ha empezado a controlar sus pensamientos con firmeza, no está en condiciones ",
+      "separator": ""
+    },
+    {
+      "id": "034-7",
+      "chapter": 6,
+      "start": 2097.03,
+      "end": 2102.39,
+      "text": "de dirigir asuntos ni de asumir responsabilidades importantes. No está preparado para actuar ",
+      "separator": ""
+    },
+    {
+      "id": "034-8",
+      "chapter": 6,
+      "start": 2102.39,
+      "end": 2107.73,
+      "text": "con independencia y sostenerse por sí mismo. Pero sus únicas limitaciones son los pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "034-9",
+      "chapter": 6,
+      "start": 2107.73,
+      "end": 2113.09,
+      "text": "que elige.\n\nNo puede haber progreso ni realización sin sacrificio. El éxito terrenal de una ",
+      "separator": ""
+    },
+    {
+      "id": "034-10",
+      "chapter": 6,
+      "start": 2113.09,
+      "end": 2118.31,
+      "text": "persona será proporcional a la medida en que sacrifique sus pensamientos animales y confusos, ",
+      "separator": ""
+    },
+    {
+      "id": "034-11",
+      "chapter": 6,
+      "start": 2118.31,
+      "end": 2122.63,
+      "text": "y concentre su mente en desarrollar sus planes y fortalecer su resolución y su confianza ",
+      "separator": ""
+    },
+    {
+      "id": "034-12",
+      "chapter": 6,
+      "start": 2122.63,
+      "end": 2128.31,
+      "text": "en sí misma. Cuanto más eleve sus pensamientos y más firme, íntegra y recta se vuelva, mayor ",
+      "separator": ""
+    },
+    {
+      "id": "034-13",
+      "chapter": 6,
+      "start": 2128.31,
+      "end": 2131.51,
+      "text": "será su éxito y más dichosos y duraderos serán sus logros.",
+      "separator": ""
+    },
+    {
+      "id": "035-1",
+      "chapter": 6,
+      "start": 2131.96,
+      "end": 2138.04,
+      "text": "El universo no favorece a los codiciosos, a los deshonestos ni a los viciosos, aunque ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "035-2",
+      "chapter": 6,
+      "start": 2138.04,
+      "end": 2141.08,
+      "text": "a veces pueda parecerlo a simple vista. ",
+      "separator": ""
+    },
+    {
+      "id": "035-3",
+      "chapter": 6,
+      "start": 2141.08,
+      "end": 2145.12,
+      "text": "Ayuda a los honrados, a los generosos y a los virtuosos. ",
+      "separator": ""
+    },
+    {
+      "id": "035-4",
+      "chapter": 6,
+      "start": 2145.12,
+      "end": 2150.72,
+      "text": "Todos los grandes maestros de las distintas épocas lo han declarado de diversas maneras. ",
+      "separator": ""
+    },
+    {
+      "id": "035-5",
+      "chapter": 6,
+      "start": 2150.72,
+      "end": 2156.44,
+      "text": "Para comprobarlo y conocerlo, basta con perseverar en hacerse cada vez más virtuoso mediante ",
+      "separator": ""
+    },
+    {
+      "id": "035-6",
+      "chapter": 6,
+      "start": 2156.44,
+      "end": 2158.64,
+      "text": "la elevación de los pensamientos.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "035-7",
+      "chapter": 6,
+      "start": 2158.64,
+      "end": 2164.2,
+      "text": "Los logros intelectuales son fruto del pensamiento consagrado a buscar el conocimiento o lo bello ",
+      "separator": ""
+    },
+    {
+      "id": "035-8",
+      "chapter": 6,
+      "start": 2164.2,
+      "end": 2169.6,
+      "text": "y verdadero en la vida y en la naturaleza. A veces pueden estar asociados con la vanidad ",
+      "separator": ""
+    },
+    {
+      "id": "035-9",
+      "chapter": 6,
+      "start": 2169.6,
+      "end": 2174.88,
+      "text": "y la ambición, pero no nacen de ellas: son el resultado natural de un esfuerzo largo ",
+      "separator": ""
+    },
+    {
+      "id": "035-10",
+      "chapter": 6,
+      "start": 2174.88,
+      "end": 2180.64,
+      "text": "y arduo y de pensamientos puros y desinteresados.\n\nLos logros espirituales son la culminación ",
+      "separator": ""
+    },
+    {
+      "id": "035-11",
+      "chapter": 6,
+      "start": 2180.64,
+      "end": 2186.44,
+      "text": "de aspiraciones sagradas. Quien vive concibiendo constantemente pensamientos nobles y elevados, ",
+      "separator": ""
+    },
+    {
+      "id": "035-12",
+      "chapter": 6,
+      "start": 2186.44,
+      "end": 2192.26,
+      "text": "quien se concentra en todo lo puro y desinteresado, llegará a tener un carácter sabio y noble ",
+      "separator": ""
+    },
+    {
+      "id": "035-13",
+      "chapter": 6,
+      "start": 2192.26,
+      "end": 2197.0,
+      "text": "y ascenderá a una posición de influencia y dicha, con la misma certeza con que el sol ",
+      "separator": ""
+    },
+    {
+      "id": "035-14",
+      "chapter": 6,
+      "start": 2197.0,
+      "end": 2199.96,
+      "text": "alcanza su cenit y la luna llega a su plenitud.",
+      "separator": ""
+    },
+    {
+      "id": "036-1",
+      "chapter": 6,
+      "start": 2200.41,
+      "end": 2207.95,
+      "text": "El logro, de cualquier clase que sea, es la corona del esfuerzo, la diadema del pensamiento. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "036-2",
+      "chapter": 6,
+      "start": 2207.95,
+      "end": 2213.91,
+      "text": "Con la ayuda del dominio de uno mismo, la resolución, la pureza, la rectitud y el pensamiento bien ",
+      "separator": ""
+    },
+    {
+      "id": "036-3",
+      "chapter": 6,
+      "start": 2213.91,
+      "end": 2216.81,
+      "text": "dirigido, la persona asciende. ",
+      "separator": ""
+    },
+    {
+      "id": "036-4",
+      "chapter": 6,
+      "start": 2216.81,
+      "end": 2223.25,
+      "text": "Mediante la animalidad, la pereza, la impureza, la corrupción y la confusión del pensamiento, ",
+      "separator": ""
+    },
+    {
+      "id": "036-5",
+      "chapter": 6,
+      "start": 2223.25,
+      "end": 2224.25,
+      "text": "desciende.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "036-6",
+      "chapter": 6,
+      "start": 2224.25,
+      "end": 2228.53,
+      "text": "Una persona puede alcanzar un gran éxito en el mundo e incluso alturas elevadas en ",
+      "separator": ""
+    },
+    {
+      "id": "036-7",
+      "chapter": 6,
+      "start": 2228.53,
+      "end": 2233.77,
+      "text": "el ámbito espiritual, y volver a caer en la debilidad y la desdicha si permite que pensamientos ",
+      "separator": ""
+    },
+    {
+      "id": "036-8",
+      "chapter": 6,
+      "start": 2233.77,
+      "end": 2238.01,
+      "text": "arrogantes, egoístas y corruptos se apoderen de ella.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "036-9",
+      "chapter": 6,
+      "start": 2238.01,
+      "end": 2243.57,
+      "text": "Las victorias alcanzadas mediante el pensamiento recto solo pueden conservarse con vigilancia. ",
+      "separator": ""
+    },
+    {
+      "id": "036-10",
+      "chapter": 6,
+      "start": 2243.57,
+      "end": 2248.33,
+      "text": "Muchos se abandonan cuando el éxito está asegurado y vuelven rápidamente al fracaso.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "036-11",
+      "chapter": 6,
+      "start": 2248.33,
+      "end": 2253.85,
+      "text": "Todos los logros, ya pertenezcan al mundo de los negocios, al intelectual o al espiritual, resultan ",
+      "separator": ""
+    },
+    {
+      "id": "036-12",
+      "chapter": 6,
+      "start": 2253.85,
+      "end": 2259.39,
+      "text": "de un pensamiento dirigido con precisión, están gobernados por la misma ley y siguen ",
+      "separator": ""
+    },
+    {
+      "id": "036-13",
+      "chapter": 6,
+      "start": 2259.39,
+      "end": 2264.87,
+      "text": "el mismo método. La única diferencia reside en el objetivo que se persigue.\n\nQuien quiera ",
+      "separator": ""
+    },
+    {
+      "id": "036-14",
+      "chapter": 6,
+      "start": 2264.87,
+      "end": 2270.55,
+      "text": "lograr poco debe sacrificar poco; quien quiera lograr mucho debe sacrificar mucho; quien ",
+      "separator": ""
+    },
+    {
+      "id": "036-15",
+      "chapter": 6,
+      "start": 2270.55,
+      "end": 2273.85,
+      "text": "aspire a lo más alto debe hacer grandes sacrificios.",
+      "separator": ""
+    },
+    {
+      "id": "037-1",
+      "chapter": 7,
+      "start": 2278.85,
+      "end": 2286.51,
+      "text": "Capítulo 6. Visiones e ideales\n\nLos soñadores son los salvadores del mundo. Así como el ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "037-2",
+      "chapter": 7,
+      "start": 2286.51,
+      "end": 2292.83,
+      "text": "mundo visible se sostiene en el invisible, las personas, en medio de todas sus pruebas, sus faltas ",
+      "separator": ""
+    },
+    {
+      "id": "037-3",
+      "chapter": 7,
+      "start": 2292.83,
+      "end": 2299.05,
+      "text": "y sus ocupaciones mezquinas, se alimentan de las hermosas visiones de sus soñadores solitarios. La ",
+      "separator": ""
+    },
+    {
+      "id": "037-4",
+      "chapter": 7,
+      "start": 2299.05,
+      "end": 2304.17,
+      "text": "humanidad no puede olvidar a sus soñadores; no puede dejar que sus ideales se desvanezcan ",
+      "separator": ""
+    },
+    {
+      "id": "037-5",
+      "chapter": 7,
+      "start": 2304.17,
+      "end": 2309.93,
+      "text": "y mueran. Vive en ellos y los reconoce como las realidades que algún día verá y conocerá.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "037-6",
+      "chapter": 7,
+      "start": 2309.93,
+      "end": 2316.25,
+      "text": "El compositor, el escultor, el pintor, el poeta, el profeta y el sabio son los creadores del ",
+      "separator": ""
+    },
+    {
+      "id": "037-7",
+      "chapter": 7,
+      "start": 2316.25,
+      "end": 2322.09,
+      "text": "mundo por venir, los arquitectos del cielo. El mundo es hermoso porque ellos han vivido; ",
+      "separator": ""
+    },
+    {
+      "id": "037-8",
+      "chapter": 7,
+      "start": 2322.09,
+      "end": 2327.81,
+      "text": "sin ellos, la humanidad que trabaja y lucha perecería.\n\nQuien guarda en el corazón una ",
+      "separator": ""
+    },
+    {
+      "id": "037-9",
+      "chapter": 7,
+      "start": 2327.81,
+      "end": 2332.53,
+      "text": "visión hermosa, un ideal elevado, algún día lo realizará. ",
+      "separator": ""
+    },
+    {
+      "id": "037-10",
+      "chapter": 7,
+      "start": 2332.53,
+      "end": 2337.29,
+      "text": "Colón alimentó la visión de otro mundo y lo descubrió; Copérnico cultivó la visión ",
+      "separator": ""
+    },
+    {
+      "id": "037-11",
+      "chapter": 7,
+      "start": 2337.29,
+      "end": 2342.49,
+      "text": "de múltiples mundos y de un universo más amplio, y lo reveló; Buda contempló la visión ",
+      "separator": ""
+    },
+    {
+      "id": "037-12",
+      "chapter": 7,
+      "start": 2342.49,
+      "end": 2348.13,
+      "text": "de un mundo espiritual de belleza sin mancha y de paz perfecta, y entró en él.\n\nCuida ",
+      "separator": ""
+    },
+    {
+      "id": "037-13",
+      "chapter": 7,
+      "start": 2348.13,
+      "end": 2350.29,
+      "text": "tus visiones; cuida tus ideales.",
+      "separator": ""
+    },
+    {
+      "id": "038-1",
+      "chapter": 7,
+      "start": 2350.74,
+      "end": 2356.46,
+      "text": "Cuida la música que se agita en tu corazón, la belleza que toma forma en tu mente y la ",
+      "separator": " "
+    },
+    {
+      "id": "038-2",
+      "chapter": 7,
+      "start": 2356.46,
+      "end": 2361.62,
+      "text": "hermosura que reviste tus pensamientos más puros. De ellos nacerán todas las condiciones ",
+      "separator": ""
+    },
+    {
+      "id": "038-3",
+      "chapter": 7,
+      "start": 2361.62,
+      "end": 2367.82,
+      "text": "dichosas y todo entorno celestial. Con ellos, si les permaneces fiel, terminarás construyendo ",
+      "separator": ""
+    },
+    {
+      "id": "038-4",
+      "chapter": 7,
+      "start": 2367.82,
+      "end": 2374.78,
+      "text": "tu mundo.\n\nDesear es obtener; aspirar es alcanzar. ¿Habrán de recibir los deseos más bajos del ",
+      "separator": ""
+    },
+    {
+      "id": "038-5",
+      "chapter": 7,
+      "start": 2374.78,
+      "end": 2379.42,
+      "text": "ser humano la satisfacción más completa, mientras sus aspiraciones más puras mueren ",
+      "separator": ""
+    },
+    {
+      "id": "038-6",
+      "chapter": 7,
+      "start": 2379.42,
+      "end": 2385.38,
+      "text": "de hambre por falta de sustento? Esa no es la ley; tal estado de cosas no puede prevalecer: ",
+      "separator": ""
+    },
+    {
+      "id": "038-7",
+      "chapter": 7,
+      "start": 2385.38,
+      "end": 2391.62,
+      "text": "«Pide y recibe».\n\nSueña con ideales elevados y, conforme sueñes, así llegarás a ser. Tu ",
+      "separator": ""
+    },
+    {
+      "id": "038-8",
+      "chapter": 7,
+      "start": 2391.62,
+      "end": 2396.6,
+      "text": "visión es la promesa de lo que serás algún día; tu ideal es la profecía de lo que finalmente ",
+      "separator": ""
+    },
+    {
+      "id": "038-9",
+      "chapter": 7,
+      "start": 2396.6,
+      "end": 2402.26,
+      "text": "revelarás.\n\nEl mayor logro fue, al principio y durante algún tiempo, un sueño. El roble ",
+      "separator": ""
+    },
+    {
+      "id": "038-10",
+      "chapter": 7,
+      "start": 2402.26,
+      "end": 2407.06,
+      "text": "duerme en la bellota; el ave espera en el huevo; y en la visión más elevada del alma ",
+      "separator": ""
+    },
+    {
+      "id": "038-11",
+      "chapter": 7,
+      "start": 2407.06,
+      "end": 2413.3,
+      "text": "se agita un ángel que despierta. Los sueños son los primeros brotes de lo que llegará a ser realidad.",
+      "separator": ""
+    },
+    {
+      "id": "039-1",
+      "chapter": 7,
+      "start": 2413.75,
+      "end": 2419.17,
+      "text": "Tus circunstancias pueden ser desfavorables, pero no seguirán siéndolo mucho tiempo si ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "039-2",
+      "chapter": 7,
+      "start": 2419.17,
+      "end": 2424.85,
+      "text": "percibes un ideal y te esfuerzas por alcanzarlo. No puedes avanzar por dentro y permanecer ",
+      "separator": ""
+    },
+    {
+      "id": "039-3",
+      "chapter": 7,
+      "start": 2424.85,
+      "end": 2430.51,
+      "text": "inmóvil por fuera. He aquí un joven agobiado por la pobreza y el trabajo, encerrado durante ",
+      "separator": ""
+    },
+    {
+      "id": "039-4",
+      "chapter": 7,
+      "start": 2430.51,
+      "end": 2435.99,
+      "text": "largas horas en un taller insalubre, sin educación y sin los recursos del refinamiento. ",
+      "separator": ""
+    },
+    {
+      "id": "039-5",
+      "chapter": 7,
+      "start": 2435.99,
+      "end": 2440.87,
+      "text": "Pero sueña con cosas mejores; piensa en la inteligencia, el refinamiento, la gracia y ",
+      "separator": ""
+    },
+    {
+      "id": "039-6",
+      "chapter": 7,
+      "start": 2440.87,
+      "end": 2446.17,
+      "text": "la belleza. Concibe y construye mentalmente una forma ideal de vivir. La visión de una ",
+      "separator": ""
+    },
+    {
+      "id": "039-7",
+      "chapter": 7,
+      "start": 2446.17,
+      "end": 2451.49,
+      "text": "libertad más amplia y de un horizonte mayor se apodera de él. La inquietud lo impulsa ",
+      "separator": ""
+    },
+    {
+      "id": "039-8",
+      "chapter": 7,
+      "start": 2451.49,
+      "end": 2456.85,
+      "text": "a actuar, y emplea todo su tiempo libre y sus recursos, por escasos que sean, en desarrollar ",
+      "separator": ""
+    },
+    {
+      "id": "039-9",
+      "chapter": 7,
+      "start": 2456.85,
+      "end": 2461.69,
+      "text": "sus facultades y capacidades latentes. Muy pronto su mente ha cambiado tanto que el ",
+      "separator": ""
+    },
+    {
+      "id": "039-10",
+      "chapter": 7,
+      "start": 2461.69,
+      "end": 2466.91,
+      "text": "taller ya no puede retenerlo. La distancia entre aquel lugar y su mentalidad es tan grande ",
+      "separator": ""
+    },
+    {
+      "id": "039-11",
+      "chapter": 7,
+      "start": 2466.91,
+      "end": 2470.99,
+      "text": "que el taller se desprende de su vida como una prenda que se deja a un lado. ",
+      "separator": ""
+    },
+    {
+      "id": "039-12",
+      "chapter": 7,
+      "start": 2470.99,
+      "end": 2475.23,
+      "text": "A medida que aumentan las oportunidades acordes con sus facultades en expansión, ",
+      "separator": ""
+    },
+    {
+      "id": "039-13",
+      "chapter": 7,
+      "start": 2475.23,
+      "end": 2476.55,
+      "text": "sale de allí para siempre.",
+      "separator": ""
+    },
+    {
+      "id": "040-1",
+      "chapter": 7,
+      "start": 2477.0,
+      "end": 2484.32,
+      "text": "Años después, vemos a ese joven convertido en un hombre plenamente desarrollado. Lo encontramos ",
+      "separator": " "
+    },
+    {
+      "id": "040-2",
+      "chapter": 7,
+      "start": 2484.32,
+      "end": 2488.76,
+      "text": "dueño de ciertas fuerzas de la mente que ejerce con influencia mundial y con un poder ",
+      "separator": ""
+    },
+    {
+      "id": "040-3",
+      "chapter": 7,
+      "start": 2488.76,
+      "end": 2494.64,
+      "text": "casi sin igual. En sus manos sostiene las riendas de enormes responsabilidades; habla ",
+      "separator": ""
+    },
+    {
+      "id": "040-4",
+      "chapter": 7,
+      "start": 2494.64,
+      "end": 2501.64,
+      "text": "y, he aquí, las vidas cambian. Hombres y mujeres están pendientes de sus palabras y remodelan ",
+      "separator": ""
+    },
+    {
+      "id": "040-5",
+      "chapter": 7,
+      "start": 2501.64,
+      "end": 2507.1,
+      "text": "su carácter. Como el sol, se convierte en el centro fijo y luminoso alrededor del cual ",
+      "separator": ""
+    },
+    {
+      "id": "040-6",
+      "chapter": 7,
+      "start": 2507.1,
+      "end": 2512.44,
+      "text": "giran innumerables destinos. Ha realizado la visión de su juventud. Se ha hecho uno ",
+      "separator": ""
+    },
+    {
+      "id": "040-7",
+      "chapter": 7,
+      "start": 2512.44,
+      "end": 2518.56,
+      "text": "con su ideal.\n\nY tú también, joven lector, realizarás la visión de tu corazón —no el ",
+      "separator": ""
+    },
+    {
+      "id": "040-8",
+      "chapter": 7,
+      "start": 2518.56,
+      "end": 2524.96,
+      "text": "deseo ocioso—, sea baja o hermosa, o una mezcla de ambas, porque siempre gravitarás hacia ",
+      "separator": ""
+    },
+    {
+      "id": "040-9",
+      "chapter": 7,
+      "start": 2524.96,
+      "end": 2529.68,
+      "text": "aquello que más amas en secreto. En tus manos se pondrán los resultados exactos de ",
+      "separator": ""
+    },
+    {
+      "id": "040-10",
+      "chapter": 7,
+      "start": 2529.68,
+      "end": 2534.44,
+      "text": "tus propios pensamientos: recibirás lo que te hayas ganado, ni más ni menos. ",
+      "separator": ""
+    },
+    {
+      "id": "040-11",
+      "chapter": 7,
+      "start": 2534.44,
+      "end": 2539.84,
+      "text": "Sea cual sea tu entorno actual, caerás, permanecerás o ascenderás con tus ",
+      "separator": ""
+    },
+    {
+      "id": "040-12",
+      "chapter": 7,
+      "start": 2539.84,
+      "end": 2544.88,
+      "text": "pensamientos, tu visión y tu ideal. Llegarás a ser tan pequeño como el deseo ",
+      "separator": ""
+    },
+    {
+      "id": "040-13",
+      "chapter": 7,
+      "start": 2544.88,
+      "end": 2547.8,
+      "text": "que te gobierne y tan grande como tu aspiración dominante.",
+      "separator": ""
+    },
+    {
+      "id": "041-1",
+      "chapter": 7,
+      "start": 2548.25,
+      "end": 2551.25,
+      "text": "Como dijo bellamente Stanton Kirkham Davis: ",
+      "separator": " "
+    },
+    {
+      "id": "041-2",
+      "chapter": 7,
+      "start": 2551.25,
+      "end": 2556.69,
+      "text": "«Quizá estés llevando cuentas y, de pronto, salgas por la puerta que durante tanto tiempo ",
+      "separator": ""
+    },
+    {
+      "id": "041-3",
+      "chapter": 7,
+      "start": 2556.69,
+      "end": 2561.41,
+      "text": "te pareció la barrera de tus ideales y te encuentres ante un público, todavía con la ",
+      "separator": ""
+    },
+    {
+      "id": "041-4",
+      "chapter": 7,
+      "start": 2561.41,
+      "end": 2566.45,
+      "text": "pluma detrás de la oreja y manchas de tinta en los dedos; y allí mismo derrames el torrente ",
+      "separator": ""
+    },
+    {
+      "id": "041-5",
+      "chapter": 7,
+      "start": 2566.45,
+      "end": 2568.57,
+      "text": "de tu inspiración. ",
+      "separator": ""
+    },
+    {
+      "id": "041-6",
+      "chapter": 7,
+      "start": 2568.57,
+      "end": 2573.57,
+      "text": "Quizá estés pastoreando ovejas y te dirijas a la ciudad, campesino y boquiabierto; ",
+      "separator": ""
+    },
+    {
+      "id": "041-7",
+      "chapter": 7,
+      "start": 2573.57,
+      "end": 2578.81,
+      "text": "quizá, bajo la guía intrépida del espíritu, entres en el estudio del maestro y, al cabo ",
+      "separator": ""
+    },
+    {
+      "id": "041-8",
+      "chapter": 7,
+      "start": 2578.81,
+      "end": 2583.33,
+      "text": "de un tiempo, él te diga: “No tengo nada más que enseñarte”. ",
+      "separator": ""
+    },
+    {
+      "id": "041-9",
+      "chapter": 7,
+      "start": 2583.33,
+      "end": 2585.89,
+      "text": "Y ahora te has convertido en el maestro, ",
+      "separator": ""
+    },
+    {
+      "id": "041-10",
+      "chapter": 7,
+      "start": 2585.89,
+      "end": 2590.33,
+      "text": "tú que hace tan poco soñabas con grandes cosas mientras cuidabas ovejas. ",
+      "separator": ""
+    },
+    {
+      "id": "041-11",
+      "chapter": 7,
+      "start": 2590.33,
+      "end": 2595.25,
+      "text": "Dejarás la sierra y el cepillo de carpintero para asumir la regeneración del mundo».\n\n",
+      "separator": ""
+    },
+    {
+      "id": "041-12",
+      "chapter": 7,
+      "start": 2595.25,
+      "end": 2600.53,
+      "text": "Los irreflexivos, los ignorantes y los perezosos, que solo ven los efectos aparentes de las ",
+      "separator": ""
+    },
+    {
+      "id": "041-13",
+      "chapter": 7,
+      "start": 2600.53,
+      "end": 2606.53,
+      "text": "cosas y no las cosas mismas, hablan de suerte, de fortuna y de azar. Al ver que alguien se ",
+      "separator": ""
+    },
+    {
+      "id": "041-14",
+      "chapter": 7,
+      "start": 2606.53,
+      "end": 2609.13,
+      "text": "enriquece, dicen: «¡Qué suerte tiene!».",
+      "separator": ""
+    },
+    {
+      "id": "042-1",
+      "chapter": 7,
+      "start": 2609.58,
+      "end": 2615.1,
+      "text": "Al observar que otro se convierte en una persona de gran capacidad intelectual, exclaman: ",
+      "separator": " "
+    },
+    {
+      "id": "042-2",
+      "chapter": 7,
+      "start": 2615.1,
+      "end": 2617.94,
+      "text": "«¡Qué favorecido ha sido!». ",
+      "separator": ""
+    },
+    {
+      "id": "042-3",
+      "chapter": 7,
+      "start": 2617.94,
+      "end": 2621.82,
+      "text": "Y al advertir el carácter santo y la amplia influencia de otro, comentan: ",
+      "separator": ""
+    },
+    {
+      "id": "042-4",
+      "chapter": 7,
+      "start": 2621.82,
+      "end": 2624.5,
+      "text": "«¡Cómo lo ayuda el azar a cada paso!». ",
+      "separator": ""
+    },
+    {
+      "id": "042-5",
+      "chapter": 7,
+      "start": 2624.5,
+      "end": 2629.7,
+      "text": "No ven las pruebas, los fracasos y las luchas que esas personas han afrontado voluntariamente ",
+      "separator": ""
+    },
+    {
+      "id": "042-6",
+      "chapter": 7,
+      "start": 2629.7,
+      "end": 2631.66,
+      "text": "para adquirir experiencia. ",
+      "separator": ""
+    },
+    {
+      "id": "042-7",
+      "chapter": 7,
+      "start": 2631.66,
+      "end": 2635.98,
+      "text": "No conocen los sacrificios que han hecho, los esfuerzos intrépidos que han realizado ",
+      "separator": ""
+    },
+    {
+      "id": "042-8",
+      "chapter": 7,
+      "start": 2635.98,
+      "end": 2640.62,
+      "text": "ni la fe que han ejercido para superar lo que parecía insuperable y realizar la visión ",
+      "separator": ""
+    },
+    {
+      "id": "042-9",
+      "chapter": 7,
+      "start": 2640.62,
+      "end": 2646.14,
+      "text": "de su corazón. No conocen la oscuridad ni las penas: solo ven la luz y la alegría y ",
+      "separator": ""
+    },
+    {
+      "id": "042-10",
+      "chapter": 7,
+      "start": 2646.14,
+      "end": 2652.5,
+      "text": "las llaman «suerte». No ven el largo y arduo viaje, sino únicamente la meta agradable, y ",
+      "separator": ""
+    },
+    {
+      "id": "042-11",
+      "chapter": 7,
+      "start": 2652.5,
+      "end": 2657.9,
+      "text": "la llaman «buena fortuna». No comprenden el proceso; solo perciben el resultado y lo llaman ",
+      "separator": ""
+    },
+    {
+      "id": "042-12",
+      "chapter": 7,
+      "start": 2657.9,
+      "end": 2663.64,
+      "text": "azar.\n\nEn todos los asuntos humanos hay esfuerzos y hay resultados, y la intensidad del esfuerzo ",
+      "separator": ""
+    },
+    {
+      "id": "042-13",
+      "chapter": 7,
+      "start": 2663.64,
+      "end": 2665.34,
+      "text": "es la medida del resultado. ",
+      "separator": ""
+    },
+    {
+      "id": "042-14",
+      "chapter": 7,
+      "start": 2665.34,
+      "end": 2666.38,
+      "text": "El azar no existe.",
+      "separator": ""
+    },
+    {
+      "id": "043-1",
+      "chapter": 7,
+      "start": 2666.83,
+      "end": 2672.59,
+      "text": "Los dones, las facultades y las posesiones materiales, intelectuales y espirituales son ",
+      "separator": " "
+    },
+    {
+      "id": "043-2",
+      "chapter": 7,
+      "start": 2672.59,
+      "end": 2678.95,
+      "text": "frutos del esfuerzo: son pensamientos llevados a su término, objetivos alcanzados y visiones ",
+      "separator": ""
+    },
+    {
+      "id": "043-3",
+      "chapter": 7,
+      "start": 2678.95,
+      "end": 2685.63,
+      "text": "realizadas.\n\nLa visión que exaltas en tu mente, el ideal que entronizas en tu corazón: con eso ",
+      "separator": ""
+    },
+    {
+      "id": "043-4",
+      "chapter": 7,
+      "start": 2685.63,
+      "end": 2689.07,
+      "text": "construirás tu vida; en eso te convertirás.",
+      "separator": ""
+    },
+    {
+      "id": "044-1",
+      "chapter": 8,
+      "start": 2694.07,
+      "end": 2700.59,
+      "text": "Capítulo 7. Serenidad\n\nLa calma de la mente es una de las hermosas joyas de la sabiduría. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "044-2",
+      "chapter": 8,
+      "start": 2700.59,
+      "end": 2706.23,
+      "text": "Es fruto de un esfuerzo largo y paciente por dominarse a uno mismo. Su presencia indica una ",
+      "separator": ""
+    },
+    {
+      "id": "044-3",
+      "chapter": 8,
+      "start": 2706.23,
+      "end": 2711.63,
+      "text": "experiencia madura y un conocimiento, superior al común, de las leyes y del funcionamiento del ",
+      "separator": ""
+    },
+    {
+      "id": "044-4",
+      "chapter": 8,
+      "start": 2711.63,
+      "end": 2716.59,
+      "text": "pensamiento.\n\nUna persona adquiere calma en la medida en que se comprende como un ser formado ",
+      "separator": ""
+    },
+    {
+      "id": "044-5",
+      "chapter": 8,
+      "start": 2716.59,
+      "end": 2721.79,
+      "text": "por el pensamiento, pues ese conocimiento exige comprender también a los demás como resultado ",
+      "separator": ""
+    },
+    {
+      "id": "044-6",
+      "chapter": 8,
+      "start": 2721.79,
+      "end": 2726.95,
+      "text": "del pensamiento. A medida que desarrolla una comprensión correcta y ve con mayor claridad ",
+      "separator": ""
+    },
+    {
+      "id": "044-7",
+      "chapter": 8,
+      "start": 2726.95,
+      "end": 2731.49,
+      "text": "las relaciones internas de las cosas mediante la acción de la causa y el efecto, deja de ",
+      "separator": ""
+    },
+    {
+      "id": "044-8",
+      "chapter": 8,
+      "start": 2731.49,
+      "end": 2738.45,
+      "text": "agitarse, enfurecerse, preocuparse y afligirse, y permanece equilibrada, firme y serena.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "044-9",
+      "chapter": 8,
+      "start": 2738.45,
+      "end": 2744.63,
+      "text": "La persona tranquila, que ha aprendido a gobernarse, sabe adaptarse a los demás. Ellos, a su vez, ",
+      "separator": ""
+    },
+    {
+      "id": "044-10",
+      "chapter": 8,
+      "start": 2744.63,
+      "end": 2748.47,
+      "text": "respetan su fortaleza espiritual y sienten que pueden aprender de ella y confiar en ella. ",
+      "separator": ""
+    },
+    {
+      "id": "044-11",
+      "chapter": 8,
+      "start": 2748.47,
+      "end": 2754.87,
+      "text": "Cuanto más tranquila se vuelve una persona, mayores son su éxito, su influencia y su poder para hacer el bien.",
+      "separator": ""
+    },
+    {
+      "id": "045-1",
+      "chapter": 8,
+      "start": 2755.32,
+      "end": 2762.32,
+      "text": "Incluso un comerciante común verá aumentar la prosperidad de su negocio al desarrollar mayor dominio de sí mismo y ecuanimidad, ",
+      "separator": " "
+    },
+    {
+      "id": "045-2",
+      "chapter": 8,
+      "start": 2762.32,
+      "end": 2767.32,
+      "text": "porque las personas siempre preferirán tratar con alguien de comportamiento firme y equilibrado.\n\n",
+      "separator": ""
+    },
+    {
+      "id": "045-3",
+      "chapter": 8,
+      "start": 2767.32,
+      "end": 2771.32,
+      "text": "La persona fuerte y tranquila siempre es amada y respetada. ",
+      "separator": ""
+    },
+    {
+      "id": "045-4",
+      "chapter": 8,
+      "start": 2771.32,
+      "end": 2776.32,
+      "text": "Es como un árbol que da sombra en una tierra sedienta o como una roca que ofrece refugio durante una tormenta. ",
+      "separator": ""
+    },
+    {
+      "id": "045-5",
+      "chapter": 8,
+      "start": 2776.32,
+      "end": 2778.32,
+      "text": "«¿Quién no ama un corazón tranquilo, ",
+      "separator": ""
+    },
+    {
+      "id": "045-6",
+      "chapter": 8,
+      "start": 2778.32,
+      "end": 2781.32,
+      "text": "una vida de temperamento amable y equilibrado? ",
+      "separator": ""
+    },
+    {
+      "id": "045-7",
+      "chapter": 8,
+      "start": 2781.32,
+      "end": 2785.8,
+      "text": "No importa si llueve o brilla el sol, ni qué cambios lleguen a quienes poseen esas ",
+      "separator": ""
+    },
+    {
+      "id": "045-8",
+      "chapter": 8,
+      "start": 2785.8,
+      "end": 2792.02,
+      "text": "bendiciones: siempre se mantienen amables, serenos y tranquilos. Ese exquisito equilibrio ",
+      "separator": ""
+    },
+    {
+      "id": "045-9",
+      "chapter": 8,
+      "start": 2792.02,
+      "end": 2797.32,
+      "text": "del carácter que llamamos serenidad es la lección culminante de la formación interior, ",
+      "separator": ""
+    },
+    {
+      "id": "045-10",
+      "chapter": 8,
+      "start": 2797.32,
+      "end": 2802.84,
+      "text": "el fruto del alma. Es precioso como la sabiduría y más deseable que el oro, incluso que el ",
+      "separator": ""
+    },
+    {
+      "id": "045-11",
+      "chapter": 8,
+      "start": 2802.84,
+      "end": 2807.44,
+      "text": "oro más fino. ¡Qué insignificante parece la mera búsqueda de dinero frente a una vida ",
+      "separator": ""
+    },
+    {
+      "id": "045-12",
+      "chapter": 8,
+      "start": 2807.44,
+      "end": 2812.8,
+      "text": "serena, una vida que habita en el océano de la verdad, bajo las olas, fuera del alcance ",
+      "separator": ""
+    },
+    {
+      "id": "045-13",
+      "chapter": 8,
+      "start": 2812.8,
+      "end": 2815.08,
+      "text": "de las tempestades, en la calma eterna!",
+      "separator": ""
+    },
+    {
+      "id": "046-1",
+      "chapter": 8,
+      "start": 2815.53,
+      "end": 2820.69,
+      "text": "»¡Cuántas personas conocemos que amargan su vida, que arruinan todo lo dulce y hermoso ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "046-2",
+      "chapter": 8,
+      "start": 2820.69,
+      "end": 2825.05,
+      "text": "con un temperamento explosivo, que destruyen el equilibrio de su carácter y siembran ",
+      "separator": ""
+    },
+    {
+      "id": "046-3",
+      "chapter": 8,
+      "start": 2825.05,
+      "end": 2830.01,
+      "text": "resentimiento! Cabe preguntarse si la gran mayoría no arruina su vida y malogra su ",
+      "separator": ""
+    },
+    {
+      "id": "046-4",
+      "chapter": 8,
+      "start": 2830.01,
+      "end": 2834.57,
+      "text": "felicidad por falta de dominio de sí misma. ¡Qué pocas personas encontramos que sean ",
+      "separator": ""
+    },
+    {
+      "id": "046-5",
+      "chapter": 8,
+      "start": 2834.57,
+      "end": 2839.89,
+      "text": "verdaderamente equilibradas y posean ese exquisito aplomo propio de un carácter plenamente ",
+      "separator": ""
+    },
+    {
+      "id": "046-6",
+      "chapter": 8,
+      "start": 2839.89,
+      "end": 2846.45,
+      "text": "formado!».\n\nSí, la humanidad se agita con pasiones descontroladas, se alborota con penas sin gobierno ",
+      "separator": ""
+    },
+    {
+      "id": "046-7",
+      "chapter": 8,
+      "start": 2846.45,
+      "end": 2851.61,
+      "text": "y es arrastrada por la ansiedad y la duda. Solo la persona sabia, solo aquella cuyos ",
+      "separator": ""
+    },
+    {
+      "id": "046-8",
+      "chapter": 8,
+      "start": 2851.61,
+      "end": 2856.33,
+      "text": "pensamientos están dominados y purificados, consigue que los vientos y las tormentas del ",
+      "separator": ""
+    },
+    {
+      "id": "046-9",
+      "chapter": 8,
+      "start": 2856.33,
+      "end": 2861.65,
+      "text": "alma la obedezcan.\n\nAlmas sacudidas por la tempestad, dondequiera que estén y cualesquiera ",
+      "separator": ""
+    },
+    {
+      "id": "046-10",
+      "chapter": 8,
+      "start": 2861.65,
+      "end": 2866.33,
+      "text": "que sean sus condiciones de vida, sepan esto: en el océano de la vida sonríen las islas ",
+      "separator": ""
+    },
+    {
+      "id": "046-11",
+      "chapter": 8,
+      "start": 2866.33,
+      "end": 2871.57,
+      "text": "de la dicha, y la orilla soleada de su ideal espera su llegada. Mantengan la mano firme ",
+      "separator": ""
+    },
+    {
+      "id": "046-12",
+      "chapter": 8,
+      "start": 2871.57,
+      "end": 2876.93,
+      "text": "en el timón del pensamiento. En la barca de su alma descansa el Maestro que la gobierna; ",
+      "separator": ""
+    },
+    {
+      "id": "046-13",
+      "chapter": 8,
+      "start": 2876.93,
+      "end": 2882.49,
+      "text": "solo duerme: despiértenlo. El dominio de uno mismo es fortaleza; el pensamiento recto es ",
+      "separator": ""
+    },
+    {
+      "id": "046-14",
+      "chapter": 8,
+      "start": 2882.49,
+      "end": 2888.01,
+      "text": "maestría; la calma es poder. Díganle a su corazón: «¡Paz, aquiétate!».",
+      "separator": ""
+    }
+  ]
+}

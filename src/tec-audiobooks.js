@@ -5,6 +5,15 @@ import { pipeline } from 'node:stream/promises';
 import { parseAudioRange } from './tec-audio-lab.js';
 
 export const audiobookCatalog = JSON.parse(fs.readFileSync(new URL('./knowledge/tec-audiobooks.json', import.meta.url), 'utf8'));
+const transcripts = new Map();
+export function getAudiobookTranscript(id) {
+  if (!audiobookCatalog.some(book => book.id === id)) return null;
+  if (!transcripts.has(id)) {
+    const file = new URL(`./knowledge/audiobook-texts/${id}.json`, import.meta.url);
+    transcripts.set(id, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
+  }
+  return transcripts.get(id);
+}
 export function createAudiobookModels(mongoose) {
   const schema = fields => new mongoose.Schema(fields, { timestamps: true });
   const media = schema({ _id: String, state: String, fileId: mongoose.Schema.Types.ObjectId, sha256: String, bytes: Number, leaseUntil: Date });
@@ -28,7 +37,7 @@ export function validImportGrant(req, grant, bookId, now = Date.now()) {
   if (!/^Bearer [A-Za-z0-9_-]{40,150}$/.test(value) || !/^[a-f0-9]{64}$/.test(grant.tokenHash || '')) return false;
   return crypto.timingSafeEqual(crypto.createHash('sha256').update(value.slice(7)).digest(), Buffer.from(grant.tokenHash, 'hex'));
 }
-export function registerTecAudiobooks(app, { requireActive, requireAdmin, media, reviews, progress, getBucket, catalog = audiobookCatalog, importGrant = null }) {
+export function registerTecAudiobooks(app, { requireActive, requireAdmin, media, reviews, progress, getBucket, catalog = audiobookCatalog, importGrant = null, getTranscript = getAudiobookTranscript }) {
   const byId = new Map(catalog.map(book => [book.id, book]));
   const privateHeaders = res => res.set({ 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Robots-Tag': 'noindex, nofollow' });
   const wrap = handler => async (req, res) => {
@@ -50,7 +59,8 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
   const reviewKey = (id, user) => `${id}:${user._id}`;
   const publicBook = (book, ready = false) => {
     const { audio, ...info } = book;
-    return { ...info, available: ready, audioUrl: ready ? `/api/coach/audiobooks/${book.id}/audio` : null };
+    return { ...info, available: ready, audioUrl: ready ? `/api/coach/audiobooks/${book.id}/audio` : null,
+      transcriptUrl: ready && getTranscript(book.id) ? `/api/coach/audiobooks/${book.id}/text` : null };
   };
   const publicReview = (row, user) => ({ author: row.author || 'Lector TEC', rating: row.rating, text: row.text || '', updatedAt: row.updatedAt, mine: row.userId === String(user._id) });
   async function readyBook(req, res) {
@@ -74,6 +84,13 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
     const found = await readyBook(req, res); if (!found) return;
     const [rating, saved] = await Promise.all([stats(found.book.id), progress.findOne({ _id: reviewKey(found.book.id, auth.user) }).lean()]);
     res.json({ book: publicBook(found.book, true), rating, progress: { position: saved?.position || 0, speed: saved?.speed || 1 } });
+  }));
+  app.get('/api/coach/audiobooks/:id/text', wrap(async (req, res) => {
+    const auth = await requireActive(req, res); if (!auth) return;
+    const found = await readyBook(req, res); if (!found) return;
+    const text = getTranscript(found.book.id);
+    if (!text) return res.status(404).json({ error: 'El texto no está disponible.' });
+    res.json({ bookId: found.book.id, title: found.book.title, cues: text.cues, trailingSeparator: text.trailingSeparator });
   }));
   // Express also handles HEAD here; metadata and permissions are checked before opening any stream.
   app.get('/api/coach/audiobooks/:id/audio', wrap(async (req, res) => {

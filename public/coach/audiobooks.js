@@ -4,6 +4,7 @@
   if (!root) return;
   const $ = selector => root.querySelector(selector);
   const audio = $('[data-ab-audio]');
+  const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio);
   const state = { loaded: false, busy: false, book: null, page: 1, generation: 0, saveAt: 0, saveQueue: Promise.resolve() };
   const time = seconds => { const n = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -30,7 +31,7 @@
         const image = el('img'); image.src = book.cover; image.alt = `Portada de ${book.title}`; image.width = 180; image.height = 240;
         const body = el('div', undefined, 'ab-card-body');
         body.append(el('span', book.categories.join(' · '), 'ab-eyebrow'), el('h3', book.title), el('p', book.author, 'ab-author'), el('p', book.description), el('p', `${time(book.duration)} · ${book.language} · Libro íntegro`, 'ab-meta'));
-        const button = el('button', book.available ? 'Escuchar el libro' : 'Preparando el audio', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
+        const button = el('button', book.available ? 'Escuchar y leer' : 'Próximamente', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
         button.addEventListener('click', () => openBook(book.id));
         body.append(button); card.append(image, body); list.append(card);
       }
@@ -49,7 +50,7 @@
     return state.saveQueue;
   }
   async function openBook(id) {
-    audio.pause(); await saveProgress();
+    audio.pause(); await saveProgress(); reader.clear();
     const generation = ++state.generation;
     status('[data-ab-catalog-status]', 'Abriendo audiolibro…');
     try {
@@ -62,7 +63,7 @@
       $('[data-ab-cover]').src = book.cover; $('[data-ab-cover]').alt = `Portada de ${book.title}`;
       $('[data-ab-description]').textContent = book.description;
       $('[data-ab-meta]').textContent = `${time(book.duration)} · ${book.language} · ${book.chapters.length} partes · Edición íntegra`;
-      $('[data-ab-voice]').textContent = `${book.narrator}. ${book.voiceDisclosure}`;
+      $('[data-ab-voice]').textContent = book.narrator || 'Producción TEC';
       $('[data-ab-credits]').textContent = book.credits;
       $('[data-ab-speed]').value = String(data.progress.speed);
       status('[data-ab-player-status]', 'Listo para escuchar.'); status('[data-ab-save-status]', data.progress.position > 0 ? `Continuarás desde ${time(data.progress.position)}.` : 'Tu avance se guarda mientras escuchas.');
@@ -80,7 +81,7 @@
         button.addEventListener('click', () => { audio.currentTime = chapter.start; audio.play().catch(() => status('[data-ab-player-status]', 'Toca reproducir para escuchar.')); });
         item.append(button); chapters.append(item);
       });
-      updateRating(data.rating); await loadReviews();
+      loadText(book, generation); updateRating(data.rating); await loadReviews();
       if ('mediaSession' in navigator && 'MediaMetadata' in window) {
         navigator.mediaSession.metadata = new MediaMetadata({ title: book.title, artist: book.author, album: 'Audiolibros TEC', artwork: [{ src: new URL(book.cover, location.href).href, type: 'image/svg+xml', sizes: '600x800' }] });
         for (const [action, handler] of Object.entries({ play: () => audio.play().catch(() => {}), pause: () => audio.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { audio.currentTime = detail.seekTime; } })) {
@@ -89,6 +90,21 @@
       }
     } catch (error) { status('[data-ab-catalog-status]', error.message); status('[data-ab-player-status]', error.message); }
   }
+  async function loadText(book, generation) {
+    reader.clear();
+    if (!book.transcriptUrl) return;
+    $('[data-ab-reader]').hidden = false;
+    status('[data-ab-read-status]', 'Abriendo el libro…'); $('[data-ab-read-retry]').hidden = true;
+    try {
+      const text = await api(book.transcriptUrl);
+      if (generation !== state.generation || state.book?.id !== book.id) return;
+      reader.set(text); status('[data-ab-read-status]', 'Toca un pasaje para escucharlo.');
+    } catch (error) {
+      if (generation !== state.generation) return;
+      status('[data-ab-read-status]', 'No se pudo abrir el texto. Revisa tu conexión.'); $('[data-ab-read-retry]').hidden = false;
+    }
+  }
+  $('[data-ab-read-retry]').addEventListener('click', () => { if (state.book) loadText(state.book, state.generation); });
   function updateRating(rating) {
     $('[data-ab-rating]').textContent = rating.count ? `★ ${rating.average.toFixed(1)} de 5 · ${rating.count} ${rating.count === 1 ? 'reseña' : 'reseñas'}` : 'Sé la primera persona en calificar este audiolibro.';
   }
@@ -154,7 +170,7 @@
   audio.addEventListener('error', () => { if (audio.getAttribute('src')) status('[data-ab-player-status]', 'No pude cargar el audio. Revisa tu conexión y vuelve a abrir el libro.'); });
   window.addEventListener('pagehide', saveProgress);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
-  document.querySelectorAll('[data-coach-logout], [data-coach-return-session]').forEach(button => button.addEventListener('click', () => { audio.pause(); state.book = null; state.generation++; audio.removeAttribute('src'); audio.load(); }));
+  document.querySelectorAll('[data-coach-logout], [data-coach-return-session]').forEach(button => button.addEventListener('click', () => { audio.pause(); state.book = null; state.generation++; audio.removeAttribute('src'); audio.load(); reader.clear(); }));
   window.addEventListener('coach:workspace-change', event => { if (event.detail?.workspace === 'audiolibros') loadCatalog(); });
   window.addEventListener('hashchange', () => { if (location.hash === '#audiolibros') document.querySelector('[data-coach-workspace-tab="audiolibros"]')?.click(); });
   if (!root.hidden) loadCatalog();
