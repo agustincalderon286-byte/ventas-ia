@@ -13,7 +13,22 @@ async function api(url, options = {}) {
 }
 function message(selector, text, error = false) { $(selector).textContent = text; $(selector).dataset.error = String(error); }
 const metric = (value, label) => `<article class="metric"><strong>${escape(value)}</strong><span>${escape(label)}</span></article>`;
+const usageLabels = { page_view: "Vistas de páginas", workspace_view: "Cambios de sección", calculator_open: "Abrir calculadora", survey_open: "Abrir encuesta", survey_submit_requested: "Intentos de enviar encuesta", catalog_open: "Abrir catálogo", video_open: "Abrir videos", coach_open: "Abrir Coach IA", route_open: "Abrir recorrido", recording_open: "Abrir grabador", checkout_start_requested: "Intentos de iniciar pago", login_submit_requested: "Intentos de ingreso", registration_submit_requested: "Intentos de registro" };
+let usageRequest = 0;
+async function loadUsage() {
+  const ticket = ++usageRequest;
+  message("#usage-status", "Consultando estadísticas opcionales…");
+  $("#usage-metrics").replaceChildren();
+  try {
+    const days = $("#days").value === "all" ? "90" : $("#days").value;
+    const data = await api(`/api/control/tec/usage?days=${days}`);
+    if (ticket !== usageRequest) return;
+    $("#usage-metrics").innerHTML = data.events.map(row => metric(row.count, usageLabels[row.name] || "Acción")).join("");
+    message("#usage-status", data.events.length ? `Contadores de TEC · últimos ${data.days} días · ${date(data.updatedAt)}` : "Todavía no hay acciones registradas en este período. Solo se mide después de aceptar estadísticas.");
+  } catch { if (ticket === usageRequest) message("#usage-status", "Estadísticas temporalmente no disponibles. El resto de la Torre sigue funcionando.", true); }
+}
 async function loadOverview() {
+  loadUsage();
   const ticket = ++overviewRequest;
   $("#dashboard").hidden = true;
   message("#feedback", "Consultando actividad registrada…");

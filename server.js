@@ -16,6 +16,7 @@ import { registerCoachPropertyVisitRoutes } from "./src/coach-property-visits.js
 import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
+import { createUsageModel, registerTecUsage } from "./src/tec-usage.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
@@ -2379,6 +2380,7 @@ const CoachMarketingAutomationRun =
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+registerTecUsage(app, { model: createUsageModel(mongoose), requireAdmin: requireControlTowerAccess });
 registerTecChef(app, {
   requireAdmin: requireControlTowerAccess, getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
   privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
