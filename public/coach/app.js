@@ -17037,6 +17037,59 @@ function initCoachDemoRecorder() {
   });
 }
 
+// Keep the chat in the browser's top layer; contain gestures without fixing body.
+function createFloatingCoachSurface(panel) {
+  let open = false, savedPosition = null, lastTouchY = null;
+  const syncViewport = () => {
+    if (!open || !panel) return;
+    const viewport = window.visualViewport;
+    panel.style.setProperty("--tec-chat-viewport-height", `${viewport?.height || window.innerHeight}px`);
+    panel.style.setProperty("--tec-chat-viewport-top", `${Math.max(0, viewport?.offsetTop || 0)}px`);
+  };
+  const canScroll = (target, delta) => {
+    const scroller = target?.closest?.(".coach-float-messages, textarea");
+    if (!scroller || !panel?.contains(scroller)) return false;
+    return delta > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : delta < 0 && scroller.scrollTop > 1;
+  };
+  document.addEventListener("touchstart", event => {
+    if (open) lastTouchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+  }, { passive: true });
+  document.addEventListener("touchmove", event => {
+    if (!open || event.touches.length !== 1 || lastTouchY === null) return;
+    const y = event.touches[0].clientY, delta = lastTouchY - y;
+    lastTouchY = y;
+    if (delta && !canScroll(event.target, delta) && event.cancelable) event.preventDefault();
+  }, { passive: false });
+  document.addEventListener("wheel", event => {
+    if (open && event.deltaY && !canScroll(event.target, event.deltaY) && event.cancelable) event.preventDefault();
+  }, { passive: false });
+  window.visualViewport?.addEventListener("resize", syncViewport);
+  window.visualViewport?.addEventListener("scroll", syncViewport);
+  window.addEventListener("resize", syncViewport);
+  return {
+    syncViewport,
+    setOpen(value) {
+      if (!panel || open === value) return;
+      open = value;
+      if (open) {
+        savedPosition = { left: window.scrollX, top: window.scrollY };
+        panel.hidden = false;
+        syncViewport();
+        if (typeof panel.showModal === "function" && !panel.open) panel.showModal();
+      } else {
+        const restore = savedPosition;
+        savedPosition = null;
+        panel.querySelector("textarea")?.blur();
+        if (panel.open && typeof panel.close === "function") panel.close();
+        panel.hidden = true;
+        lastTouchY = null;
+        // iOS can pan the page while revealing its keyboard. Restore this visit.
+        if (restore) window.scrollTo({ ...restore, behavior: "instant" });
+      }
+    }
+  };
+}
+
 async function initCoachAppPage() {
   const appPage = document.querySelector("[data-coach-app-page]");
   if (!appPage) return;
@@ -17409,15 +17462,7 @@ async function loadCoachAppPage() {
     }
   };
 
-  const syncFloatingCoachViewport = () => {
-    if (floatingCoachPanel?.hidden) return;
-    const viewport = window.visualViewport;
-    floatingCoachPanel?.style.setProperty("--tec-chat-viewport-height", `${viewport?.height || window.innerHeight}px`);
-    floatingCoachPanel?.style.setProperty("--tec-chat-viewport-top", `${viewport?.offsetTop || 0}px`);
-  };
-  window.visualViewport?.addEventListener("resize", syncFloatingCoachViewport);
-  window.visualViewport?.addEventListener("scroll", syncFloatingCoachViewport);
-  window.addEventListener("resize", syncFloatingCoachViewport);
+  const floatingCoachSurface = createFloatingCoachSurface(floatingCoachPanel);
 
   const syncFloatingCoachDock = nextMode => {
     if (!floatingCoachToggle || !floatingCoachPanel) {
@@ -17429,12 +17474,12 @@ async function loadCoachAppPage() {
 
     floatingCoachToggle.classList.toggle("is-armed", nextMode === "armed");
     floatingCoachToggle.classList.toggle("is-open", nextMode === "open");
-    floatingCoachPanel.hidden = nextMode !== "open";
+    floatingCoachSurface.setOpen(nextMode === "open");
     floatingCoachPanel.closest("[data-coach-float-dock]")?.classList.toggle("is-chat-open", nextMode === "open");
     floatingCoachToggle.setAttribute("aria-expanded", nextMode === "open" ? "true" : "false");
 
     if (nextMode === "open") {
-      syncFloatingCoachViewport();
+      floatingCoachSurface.syncViewport();
       floatingCoachToggle.textContent = "Coach activo";
       window.requestAnimationFrame(() => {
         if (floatingChatMessages) {
@@ -17856,6 +17901,15 @@ async function loadCoachAppPage() {
     }
 
     syncFloatingCoachDock("armed");
+  });
+
+  floatingCoachPanel?.addEventListener("cancel", event => {
+    event.preventDefault();
+    syncFloatingCoachDock("idle");
+    floatingCoachToggle?.focus({ preventScroll: true });
+  });
+  floatingCoachPanel?.addEventListener("close", () => {
+    if (floatingCoachMode === "open") syncFloatingCoachDock("idle");
   });
 
   floatingCoachClose?.addEventListener("click", () => {

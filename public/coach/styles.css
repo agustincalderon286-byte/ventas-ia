@@ -9334,6 +9334,12 @@ html .coach-app-body.tec-compact-page .coach-float-panel {
   --chat-top-gap: max(12px, env(safe-area-inset-top, 0px));
   --chat-bottom-gap: max(12px, env(safe-area-inset-bottom, 0px));
   position: fixed;
+  margin: 0;
+  left: auto;
+  bottom: auto;
+  max-width: none;
+  max-height: none;
+  overscroll-behavior: contain;
   top: calc(var(--tec-chat-viewport-top, 0px) + var(--chat-top-gap));
   right: max(12px, env(safe-area-inset-right, 0px));
   width: min(460px, calc(100% - max(12px, env(safe-area-inset-left, 0px)) - max(12px, env(safe-area-inset-right, 0px))));
@@ -9389,4 +9395,10 @@ html .coach-app-body.tec-compact-page .coach-float-note { display: none; }
   html .coach-app-body.tec-compact-page .coach-float-panel { gap: 6px; padding: 10px; }
   html .coach-app-body.tec-compact-page .coach-float-header .eyebrow { display: none; }
   html .coach-app-body.tec-compact-page .coach-float-header h3 { margin: 0; }
+}
+
+html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
+  background: #071f3b38;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
