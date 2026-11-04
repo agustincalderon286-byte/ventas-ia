@@ -17409,6 +17409,16 @@ async function loadCoachAppPage() {
     }
   };
 
+  const syncFloatingCoachViewport = () => {
+    if (floatingCoachPanel?.hidden) return;
+    const viewport = window.visualViewport;
+    floatingCoachPanel?.style.setProperty("--tec-chat-viewport-height", `${viewport?.height || window.innerHeight}px`);
+    floatingCoachPanel?.style.setProperty("--tec-chat-viewport-top", `${viewport?.offsetTop || 0}px`);
+  };
+  window.visualViewport?.addEventListener("resize", syncFloatingCoachViewport);
+  window.visualViewport?.addEventListener("scroll", syncFloatingCoachViewport);
+  window.addEventListener("resize", syncFloatingCoachViewport);
+
   const syncFloatingCoachDock = nextMode => {
     if (!floatingCoachToggle || !floatingCoachPanel) {
       return;
@@ -17420,15 +17430,17 @@ async function loadCoachAppPage() {
     floatingCoachToggle.classList.toggle("is-armed", nextMode === "armed");
     floatingCoachToggle.classList.toggle("is-open", nextMode === "open");
     floatingCoachPanel.hidden = nextMode !== "open";
+    floatingCoachPanel.closest("[data-coach-float-dock]")?.classList.toggle("is-chat-open", nextMode === "open");
     floatingCoachToggle.setAttribute("aria-expanded", nextMode === "open" ? "true" : "false");
 
     if (nextMode === "open") {
+      syncFloatingCoachViewport();
       floatingCoachToggle.textContent = "Coach activo";
       window.requestAnimationFrame(() => {
         if (floatingChatMessages) {
           floatingChatMessages.scrollTop = floatingChatMessages.scrollHeight;
         }
-        floatingChatInput?.focus();
+        floatingCoachClose?.focus({ preventScroll: true });
       });
       return;
     }
@@ -17847,7 +17859,9 @@ async function loadCoachAppPage() {
   });
 
   floatingCoachClose?.addEventListener("click", () => {
+    floatingChatInput?.blur();
     syncFloatingCoachDock("idle");
+    floatingCoachToggle?.focus({ preventScroll: true });
   });
 
   chefShareButtons.forEach(button => {
