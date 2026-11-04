@@ -6,6 +6,7 @@ async function apiRequest(url, options = {}) {
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(requestId ? { "X-TEC-Request-ID": requestId } : {}),
+      ...(options.body?.accountId ? { "X-TEC-Account-ID": String(options.body.accountId) } : {}),
       ...(options.headers || {})
     }
   };
@@ -63,6 +64,7 @@ async function apiRequest(url, options = {}) {
 
 const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
+const COACH_CHAT_OWNER_KEY = "tec-coach-chat-account-v1";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 
@@ -245,6 +247,7 @@ async function cacheTecViewer(value = null) {
   if (!value?.authenticated || !value?.user?.email) {
     return;
   }
+  resetCoachChatForAccount(value.user.id || value.user._id);
   await tecOfflinePut("cache", {
     key: TEC_VIEWER_CACHE_KEY,
     value,
@@ -254,11 +257,16 @@ async function cacheTecViewer(value = null) {
 }
 
 async function clearTecCachedViewer() {
+  resetCoachChatForAccount("");
   await tecOfflineDelete("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
 }
 
 async function queueTecOfflineRequest(item = {}) {
   const viewer = await getTecCachedViewer().catch(() => null);
+  const accountId = String(viewer?.user?.id || viewer?.user?._id || "");
+  if (item.body?.accountId && String(item.body.accountId) !== accountId) {
+    throw new Error("La cuenta cambió. Conserva el formulario y entra con la cuenta que lo creó.");
+  }
   const entry = {
     id: item.id || createTecOfflineId(item.kind || "request"),
     kind: item.kind || "request",
@@ -268,6 +276,7 @@ async function queueTecOfflineRequest(item = {}) {
     body: item.body || null,
     formSnapshot: item.formSnapshot || null,
     ownerEmail: String(viewer?.user?.email || "").trim().toLowerCase(),
+    ownerAccountId: accountId,
     attempts: 0,
     lastError: "",
     createdAt: new Date().toISOString()
@@ -465,7 +474,8 @@ async function flushTecOfflineOutbox() {
           headers: {
             ...(item.body ? { "Content-Type": "application/json" } : {}),
             ...(item.headers || {}),
-            "X-TEC-Request-ID": item.id
+            "X-TEC-Request-ID": item.id,
+            "X-TEC-Account-ID": String(item.body?.accountId || item.ownerAccountId || viewer.user.id || viewer.user._id || "")
           },
           ...(item.body ? { body: JSON.stringify(item.body) } : {})
         });
@@ -1110,6 +1120,17 @@ function buildCoachId(prefix) {
   }
 
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function resetCoachChatForAccount(accountId = "") {
+  try {
+    const owner = String(accountId || "");
+    if (!owner || window.sessionStorage.getItem(COACH_CHAT_OWNER_KEY) !== owner) {
+      window.sessionStorage.removeItem(COACH_CHAT_SESSION_KEY);
+      if (owner) window.sessionStorage.setItem(COACH_CHAT_OWNER_KEY, owner);
+      else window.sessionStorage.removeItem(COACH_CHAT_OWNER_KEY);
+    }
+  } catch { /* Storage denial must not block login or saving a form. */ }
 }
 
 function getCoachChatSessionId() {
@@ -4418,7 +4439,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
     try {
       const data = nativeOfflineForm ? await nativeOfflineForm.submit() : await apiRequest("/api/coach/program-4-in-14", {
         method: "POST",
-        body: payload,
+        body: { ...payload, accountId: String(user.id || user._id) },
         offlineQueue: true,
         offlineKind: "programa-4-en-14",
         offlineFallback: {
@@ -5774,7 +5795,7 @@ function initCoachLeadWorkspace(user) {
     try {
       const data = nativeOfflineForm ? await nativeOfflineForm.submit() : await apiRequest("/api/coach/leads", {
         method: "POST",
-        body: payload,
+        body: { ...payload, accountId: String(user.id || user._id) },
         offlineQueue: true,
         offlineKind: "lead",
         offlineFallback: {

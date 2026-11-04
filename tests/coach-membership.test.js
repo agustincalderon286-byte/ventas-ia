@@ -61,14 +61,14 @@ test("construye Checkout de suscripcion sin prueba gratis", () => {
   assert.equal(checkoutConfig.success_url, "https://totalelitecoaching.com/coach/success/?session_id={CHECKOUT_SESSION_ID}");
 });
 
-test("un lider enlazado recibe acceso administrativo completo", () => {
+test("el administrador compartido designado conserva su acceso completo", () => {
   const ownerUserId = "671000000000000000000001";
   const leaderUser = {
     _id: "671000000000000000000002",
     accountType: "leader",
     teamOwnerUserId: ownerUserId,
     subscriptionActive: false,
-    email: "admin@example.com"
+    email: "calderonrigoberto51@gmail.com"
   };
 
   assert.equal(coachTieneAccesoTotal(leaderUser), true);
@@ -85,4 +85,8 @@ test("una cuenta de prueba normal no recibe acceso a la Torre", () => {
     }),
     false
   );
+});
+
+test("un líder comercial ajeno a la lista de administradores no obtiene Torre", () => {
+  assert.equal(usuarioPuedeVerTorreControl({_id:"leader-synthetic",accountType:"leader",teamOwnerUserId:"owner-synthetic",email:"unapproved@example.test"}), false);
 });

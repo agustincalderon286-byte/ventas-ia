@@ -1,5 +1,8 @@
 import "dotenv/config";
 import express from "express";
+import "express-async-errors";
+import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
+import { secureWebhookFetch, validateDestination } from "./src/secure-outbound.js";
 import cors from "cors";
 import crypto from "crypto";
 import fs from "fs";
@@ -17,6 +20,7 @@ import { createCoachFormWriteGuard } from "./src/coach-form-write-guard.js";
 import { installGracefulShutdown } from "./src/graceful-shutdown.js";
 import { registerTecControlRoutes } from "./src/tec-control.js";
 import { createUsageModel, registerTecUsage } from "./src/tec-usage.js";
+import { createAdminPasskeyModels, registerAdminPasskeys } from "./src/tec-admin-passkeys.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
@@ -56,6 +60,7 @@ const CoachFormWriteReceipt = mongoose.models.CoachFormWriteReceipt || mongoose.
 const guardCoachFormWrite = createCoachFormWriteGuard({ model: CoachFormWriteReceipt, requireAuth: requireCoachActivo });
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+app.use(securityHeaders);
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -209,7 +214,7 @@ const REDIS_COACH_WORKSPACE_VERSION_TTL_SECONDS = Math.max(
 );
 const COACH_TEST_ACCESS_EMAILS = parseCoachEmailList(process.env.COACH_TEST_ACCESS_EMAILS || "");
 const CONTROL_TOWER_ACCESS_EMAILS = parseCoachEmailList(
-  process.env.CONTROL_TOWER_ACCESS_EMAILS || "agustincalderon286@gmail.com"
+  [process.env.CONTROL_TOWER_ACCESS_EMAILS || "agustincalderon286@gmail.com", "calderonrigoberto51@gmail.com"].join(",")
 );
 const CONTROL_TOWER_TRACKED_EMAILS = parseCoachEmailList(process.env.CONTROL_TOWER_TRACKED_EMAILS || "");
 const COACH_ACCOUNT_PRESETS_JSON = String(process.env.COACH_ACCOUNT_PRESETS_JSON || "").trim();
@@ -932,6 +937,7 @@ const coachSessionSchema = new mongoose.Schema({
   tokenHash: { type: String, required: true, unique: true },
   ipAddress: String,
   userAgent: String,
+  adminVerifiedAt: Date,
   expiresAt: { type: Date, required: true },
   lastSeenAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
@@ -2380,7 +2386,14 @@ const CoachMarketingAutomationRun =
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+app.use(["/api/coach", "/api/control", "/chat"], createCoachRequestGuard({ requireActive: requireCoachActivo, publicOrigin: process.env.APP_BASE_URL }));
 registerTecUsage(app, { model: createUsageModel(mongoose), requireAdmin: requireControlTowerAccess });
+const coachAdminPasskeys = registerAdminPasskeys(app, {
+  ...createAdminPasskeyModels(mongoose), getAuth: obtenerCoachAuth,
+  isAdmin: usuarioPuedeVerTorreControl, verifyPassword: verificarPasswordSeguro,
+  origin: process.env.APP_BASE_URL || "https://totalelitecoaching.com"
+});
+
 registerTecChef(app, {
   requireAdmin: requireControlTowerAccess, getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
   privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
@@ -3826,22 +3839,22 @@ function hidratarEstadoConversacion(sessionId, profile = null, lead = null) {
 }
 
 function passwordEsValido(password = "") {
-  return typeof password === "string" && password.trim().length >= COACH_PASSWORD_MIN;
+  return typeof password === "string" && password.trim().length >= COACH_PASSWORD_MIN && password.length <= 128;
 }
 
-function crearPasswordSeguro(password) {
+async function crearPasswordSeguro(password) {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const hash = (await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (error, result) => error ? reject(error) : resolve(result)))).toString("hex");
 
   return { salt, hash };
 }
 
-function verificarPasswordSeguro(password, salt, hashGuardado) {
+async function verificarPasswordSeguro(password, salt, hashGuardado) {
   if (!password || !salt || !hashGuardado) {
     return false;
   }
 
-  const hashCalculado = crypto.scryptSync(password, salt, 64);
+  const hashCalculado = await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (error, result) => error ? reject(error) : resolve(result)));
   const hashOriginal = Buffer.from(hashGuardado, "hex");
 
   if (hashCalculado.length !== hashOriginal.length) {
@@ -3860,22 +3873,16 @@ function hashTokenSeguro(token) {
 }
 
 function parsearCookies(header = "") {
-  return header
-    .split(";")
-    .map(fragmento => fragmento.trim())
-    .filter(Boolean)
-    .reduce((acumulado, fragmento) => {
-      const indiceSeparador = fragmento.indexOf("=");
-
-      if (indiceSeparador === -1) {
-        return acumulado;
-      }
-
-      const key = fragmento.slice(0, indiceSeparador).trim();
-      const value = decodeURIComponent(fragmento.slice(indiceSeparador + 1).trim());
-      acumulado[key] = value;
-      return acumulado;
-    }, {});
+  const cookies = Object.create(null);
+  for (const fragment of String(header).split(";")) {
+    const at = fragment.indexOf("=");
+    if (at < 1) continue;
+    const name = fragment.slice(0, at).trim();
+    if (!/^[!#$%&'*+.^_`|~a-zA-Z0-9-]+$/.test(name)) continue;
+    try { cookies[name] = decodeURIComponent(fragment.slice(at + 1).trim()); }
+    catch { /* Ignore only this malformed cookie. Never crash the auth route. */ }
+  }
+  return cookies;
 }
 
 function requestEsSeguro(req) {
@@ -4131,17 +4138,14 @@ function esCoachAdministradorCompartido(userDoc = null) {
 
   return (
     normalizarCoachAccountType(userDoc.accountType || "owner") === "leader" &&
-    String(userDoc.teamOwnerUserId) !== String(userDoc._id)
+    String(userDoc.teamOwnerUserId) !== String(userDoc._id) &&
+    CONTROL_TOWER_ACCESS_EMAILS.includes(normalizarEmail(userDoc.email))
   );
 }
 
 function usuarioPuedeVerTorreControl(userDoc = null) {
   if (!userDoc) {
     return false;
-  }
-
-  if (esCoachAdministradorCompartido(userDoc)) {
-    return true;
   }
 
   const email = normalizarEmail(userDoc.email);
@@ -13581,7 +13585,7 @@ async function enviarCoachLeadAAjusteDestino(userDoc = null, destination = null,
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(safeDestination.url, {
+    const response = await secureWebhookFetch(safeDestination.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(construirCoachLeadDeliveryPayload(userDoc, lead, safeDestination)),
@@ -13685,7 +13689,7 @@ async function enviarCoachRecruitmentApplicationADestino(userDoc = null, profile
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(destination.url, {
+    const response = await secureWebhookFetch(destination.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(construirCoachRecruitmentApplicationDeliveryPayload(userDoc, application, destination)),
@@ -13799,7 +13803,7 @@ async function enviarCoachProgramSheetAAjusteDestino(
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(safeDestination.url, {
+    const response = await secureWebhookFetch(safeDestination.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(construirCoachProgramSheetDeliveryPayload(userDoc, sheetDoc, safeDestination, createdLeads)),
@@ -19864,6 +19868,9 @@ async function obtenerMemoriaLeadRelacionada({
   profileDoc = null,
   coachUser = null
 }) {
+  if (mode !== "coach" || !coachUser || !usuarioPuedeVerTorreControl(coachUser) || process.env.COACH_LEGACY_LEAD_MEMORY_ENABLED !== "true") {
+    return { leadContext: null, repLeadSummary: null };
+  }
   const collections = obtenerLeadMemoryCollections();
 
   if (!collections) {
@@ -20283,7 +20290,7 @@ function clearCoachReturnCookie(res, req) {
 }
 
 async function obtenerCoachAuthPorToken(token = "", options = {}) {
-  if (!token) {
+  if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
     return { session: null, user: null };
   }
 
@@ -20371,7 +20378,7 @@ async function obtenerCoachReturnAuth(req) {
 }
 
 async function requireCoachUser(req, res) {
-  const auth = await obtenerCoachAuth(req);
+  const auth = req.tecRequestAuth || await obtenerCoachAuth(req);
 
   if (!auth.user) {
     responderCoachError(res, 401, "Necesitas iniciar sesion.");
@@ -20453,6 +20460,10 @@ async function requireControlTowerAccess(req, res) {
     return null;
   }
 
+  if (await coachAdminPasskeys.needsVerification(auth)) {
+    res.status(403).json({ error: "Verifica tu llave de acceso en Seguridad de la Torre para continuar.", mfaRequired: true, securityUrl: "/coach/seguridad/" });
+    return null;
+  }
   return auth;
 }
 
@@ -25203,6 +25214,10 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     );
   }
 
+  if (CONTROL_TOWER_ACCESS_EMAILS.includes(email) || accesoDePrueba) {
+    return responderCoachError(res, 403, "Las cuentas administrativas o de prueba se entregan directamente por administración. Si ya tienes cuenta, entra por login.");
+  }
+
   const existente = await CoachUser.findOne({ email });
 
   if (existente) {
@@ -25214,7 +25229,7 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
   }
 
   try {
-    const passwordSeguro = crearPasswordSeguro(password);
+    const passwordSeguro = await crearPasswordSeguro(password);
     let userDoc = await CoachUser.create({
       name,
       email,
@@ -25281,7 +25296,7 @@ app.post("/api/coach/login", async (req, res) => {
   try {
     let userDoc = await CoachUser.findOne({ email });
 
-    if (!userDoc || !verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash)) {
+    if (!userDoc || !(await verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash))) {
       const failedAttempt = registrarCoachLoginFallido(req, email);
       if (failedAttempt.blocked) {
         res.set("Retry-After", String(failedAttempt.retryAfterSeconds));
@@ -25332,7 +25347,7 @@ app.get("/api/coach/me", async (req, res) => {
     const [profileDocRaw, analyticsDoc, networkSummary, leadMemory, returnAuth] = await Promise.all([
       CoachDistributorProfile.findOne({ userId: userDoc._id }),
       CoachDistributorAnalytics.findOne({ userId: userDoc._id }).lean(),
-      coachTieneAccesoTotal(userDoc) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
+      usuarioPuedeVerTorreControl(userDoc) ? obtenerCoachNetworkSummary() : Promise.resolve(null),
       coachTieneAccesoTotal(userDoc)
         ? obtenerMemoriaLeadRelacionada({
             mode: "coach",
@@ -28987,7 +29002,7 @@ app.post("/api/coach/team/seats", async (req, res) => {
     }
 
     const temporaryPassword = requestedPassword || generarCoachSeatPasswordTemporal();
-    const passwordSeguro = crearPasswordSeguro(temporaryPassword);
+    const passwordSeguro = await crearPasswordSeguro(temporaryPassword);
     const now = new Date();
     const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
     const seatDoc = await CoachUser.create({
@@ -29158,7 +29173,7 @@ app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
     }
 
     const temporaryPassword = generarCoachSeatPasswordTemporal();
-    const passwordSeguro = crearPasswordSeguro(temporaryPassword);
+    const passwordSeguro = await crearPasswordSeguro(temporaryPassword);
 
     seatDoc.passwordHash = passwordSeguro.hash;
     seatDoc.passwordSalt = passwordSeguro.salt;
@@ -30273,7 +30288,11 @@ app.put("/api/coach/lead-destination", async (req, res) => {
 
   const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
   const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
-  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  let nextUrl = limpiarUrlExterna(req.body?.url || "");
+  if (["google_sheets", "webhook_crm"].includes(nextType) && nextUrl) {
+    try { nextUrl = validateDestination(nextUrl).href; }
+    catch { return responderCoachError(res, 400, "Usa una dirección HTTPS pública válida para tu destino."); }
+  }
   const nextEmail = normalizarEmail(req.body?.email || "");
 
   if (nextType === "correo_personal" && !nextEmail) {
@@ -30314,7 +30333,11 @@ app.put("/api/coach/program-414-destination", async (req, res) => {
 
   const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
   const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
-  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  let nextUrl = limpiarUrlExterna(req.body?.url || "");
+  if (["google_sheets", "webhook_crm"].includes(nextType) && nextUrl) {
+    try { nextUrl = validateDestination(nextUrl).href; }
+    catch { return responderCoachError(res, 400, "Usa una dirección HTTPS pública válida para tu destino."); }
+  }
   const nextEmail = normalizarEmail(req.body?.email || "");
 
   if (nextType === "correo_personal" && !nextEmail) {
@@ -30355,7 +30378,11 @@ app.put("/api/coach/recruitment-destination", async (req, res) => {
 
   const nextType = normalizarCoachLeadDestinationType(req.body?.type || "carpeta_privada");
   const nextLabel = String(req.body?.label || "").trim().slice(0, 80);
-  const nextUrl = limpiarUrlExterna(req.body?.url || "");
+  let nextUrl = limpiarUrlExterna(req.body?.url || "");
+  if (["google_sheets", "webhook_crm"].includes(nextType) && nextUrl) {
+    try { nextUrl = validateDestination(nextUrl).href; }
+    catch { return responderCoachError(res, 400, "Usa una dirección HTTPS pública válida para tu destino."); }
+  }
   const nextEmail = normalizarEmail(req.body?.email || "");
 
   if (nextType === "correo_personal" && !nextEmail) {
@@ -32404,6 +32431,9 @@ app.get(["/control", "/control/", "/control/app", "/control/app/"], async (req, 
     return res.redirect("/coach/app/");
   }
 
+  if (await coachAdminPasskeys.needsVerification(auth)) {
+    return res.redirect("/coach/seguridad/?volver=torre");
+  }
   res.set("Cache-Control", "private, no-store");
   res.sendFile(path.join(PRIVATE_DIR, "tec-control-tower.html"));
 });
@@ -33420,7 +33450,8 @@ app.use(express.static(PUBLIC_DIR));
 // CHAT
 // =============================
 app.post("/chat", async (req, res) => {
-  const { pregunta, sessionId, visitorId, mode } = req.body;
+  const { pregunta, sessionId: clientSessionId, visitorId, mode } = req.body || {};
+  let sessionId = typeof clientSessionId === "string" ? clientSessionId.trim() : "";
   const chefSlug = typeof req.body?.chefSlug === "string" ? req.body.chefSlug.trim() : "";
   const modoChat = normalizarModoChat(mode);
   const preguntaLimpia = typeof pregunta === "string" ? pregunta.trim() : "";
@@ -33443,7 +33474,7 @@ app.post("/chat", async (req, res) => {
   let activeOrderCalcContext = limpiarCoachOrderCalcContext(req.body?.activeOrderCalcContext);
   let activeDecisionContext = limpiarCoachDecisionContext(req.body?.activeDecisionContext);
   let activeDemoOutcomeContext = limpiarCoachDemoOutcomeContext(req.body?.activeDemoOutcomeContext);
-  const visitorIdLimpio =
+  let visitorIdLimpio =
     typeof visitorId === "string" && visitorId.trim() ? visitorId.trim() : sessionId;
   let coachAuth = null;
   let coachUsage = null;
@@ -33501,8 +33532,14 @@ app.post("/chat", async (req, res) => {
     return res.status(400).json({ error: "pregunta requerida" });
   }
 
-  if (!sessionId) {
-    return res.status(400).json({ error: "sessionId requerido" });
+  if (!/^[a-zA-Z0-9:_-]{8,160}$/.test(sessionId)) {
+    return res.status(400).json({ error: "La sesión de chat no es válida. Vuelve a abrir el Coach." });
+  }
+  if (modoChat === "coach") {
+    coachAuth = await requireCoachActivo(req, res);
+    if (!coachAuth) return;
+    sessionId = scopeCoachChat(coachAuth.user._id, sessionId);
+    visitorIdLimpio = scopeCoachChat(coachAuth.user._id, String(visitorIdLimpio).slice(0,160));
   }
 
   await asegurarSesionRedisCargada(sessionId);
@@ -33538,12 +33575,6 @@ app.post("/chat", async (req, res) => {
   }
 
   if (modoChat === "coach") {
-    coachAuth = await requireCoachActivo(req, res);
-
-    if (!coachAuth) {
-      return;
-    }
-
     coachUsage = await validarLimiteUsoCoach(coachAuth.user);
 
     if (!coachUsage.allowed) {
@@ -34224,6 +34255,9 @@ CONSULTA DEL COACH:
     return failChatResponse(500, { error: "Error servidor" });
   }
 });
+
+// Central Express 4 async error boundary; mounted after every route.
+app.use(securityErrorHandler);
 
 // =============================
 const PORT = process.env.PORT || 3000;
