@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="/coach/styles.css?v=20261104-chat-scroll2" />
     <link rel="stylesheet" href="/coach/audiobooks.css?v=20261103-readalong1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
-    <link rel="stylesheet" href="/coach/property-map.css?v=20261028-walk2" />
+    <link rel="stylesheet" href="/coach/property-map.css?v=20261104-map-design1" />
     <link rel="stylesheet" href="/coach/property-lab.css?v=20261101-recorrido1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-visit-tools2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
@@ -244,52 +244,54 @@
           </article>
 
           <article class="dashboard-card tec-property-workspace" data-coach-workspace-section="mapa" data-property-workspace hidden>
-            <div class="tec-property-heading">
-              <div><div class="eyebrow">Explora tu próxima zona</div><h2>Propiedades cerca de tu cita</h2>
-                <p>Encuentra una dirección, revisa sus alrededores y prepara tus próximas paradas.</p></div>
-              <span class="tec-property-coverage">Cook County · Illinois</span>
-            </div>
-            <form class="coach-form tec-property-search" data-property-search>
-              <div class="tec-property-address-field">
-                <label for="tec-property-address">Dirección de la cita<input id="tec-property-address" name="address" type="text" placeholder="Empieza con el número y la calle" maxlength="160" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tec-address-options" aria-expanded="false" required /></label>
-                <div class="tec-address-popup" data-address-popup hidden>
-                  <p class="tec-address-status" data-address-status role="status" aria-live="polite"></p>
-                  <div id="tec-address-options" data-address-options role="listbox" aria-label="Direcciones sugeridas"></div>
+            <header class="tec-property-heading">
+              <div><div class="eyebrow">TEC · Territorio</div><h2>Tu próxima visita empieza aquí</h2><p>Explora la zona, elige tus casas y sal con un recorrido preparado.</p></div>
+              <span class="tec-property-coverage"><span aria-hidden="true">●</span> Cook County, Illinois</span>
+            </header>
+            <section class="tec-property-search-panel" aria-label="Buscar una zona">
+              <form class="coach-form tec-property-search" data-property-search>
+                <div class="tec-property-address-field">
+                  <label for="tec-property-address">Dirección de la cita<input id="tec-property-address" name="address" type="text" placeholder="Ej. 4415 Harrison St, Hillside" maxlength="160" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tec-address-options" aria-expanded="false" required /></label>
+                  <div class="tec-address-popup" data-address-popup hidden><p class="tec-address-status" data-address-status role="status" aria-live="polite"></p><div id="tec-address-options" data-address-options role="listbox" aria-label="Direcciones sugeridas"></div></div>
                 </div>
-              </div>
-              <label>Ciudad<input name="city" type="text" placeholder="Escribe la ciudad de tu cita" maxlength="60" autocomplete="address-level2" required /></label>
-              <label>Buscar alrededor<select name="radius"><option value="100">100 metros</option><option value="200" selected>200 metros</option><option value="300">300 metros</option><option value="500">500 metros</option><option value="750">750 metros</option><option value="1000">1,000 metros (1 km)</option></select></label>
-              <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
-            </form>
-            <div class="tec-property-search-tools"><button class="nav-button" type="button" data-property-use-appointment>Usar dirección del cliente activo</button><span>Escribe el número y las primeras letras de la calle, elige una sugerencia y pulsa Buscar propiedades. La ciudad va por separado.</span></div>
-            <section class="tec-property-route-panel" aria-label="Mi recorrido guardado">
-              <div class="tec-route-heading"><strong>Mi recorrido <span data-property-count>0 / 50</span></strong><span data-property-progress>0 visitadas · 0 pendientes</span></div>
-              <button class="primary-button" type="button" data-property-walk disabled>Abrir recorrido en TEC</button>
-              <button class="nav-button" type="button" data-property-lab disabled>Probar Mapa LAB</button>
-              <div class="tec-route-next"><span>Siguiente casa</span><strong data-property-next>Agrega casas para empezar tu recorrido</strong><small data-property-next-owner></small></div>
-              <div class="tec-property-route-actions"><a class="primary-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Google Maps</a><a class="nav-button" data-property-apple-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Ir con Apple Maps</a><label>Recorrido <select data-property-mode aria-label="Tipo de recorrido"><option value="walking">A pie</option><option value="driving">En auto</option></select></label></div>
-              <div class="tec-property-route-actions"><button class="primary-button" type="button" data-property-complete disabled>Marcar visitada y continuar</button><button class="nav-button" type="button" data-property-followup disabled>Guardar seguimiento</button></div>
-              <details class="tec-route-details"><summary>Ver y organizar las casas</summary><div class="tec-property-route-actions"><button class="nav-button" type="button" data-property-sort disabled>Ordenar por cercanía</button><button class="nav-button" type="button" data-property-clear disabled>Limpiar recorrido</button></div><p class="tec-property-route-note">Orden aproximado desde tu cita o la última casa visitada, sin tráfico ni distancias por calles. También puedes cambiar el orden con las flechas.</p><ol data-property-stops aria-label="Casas del recorrido"></ol></details>
-              <div class="tec-route-save"><p data-property-route-status role="status" aria-live="polite">Cargando tu recorrido…</p><button class="nav-button" type="button" data-property-retry>Reintentar</button></div>
-              <p class="tec-property-route-note">TEC conserva la ruta y el avance. Cada mapa abre la siguiente casa desde tu ubicación actual; abrirlo no marca la visita. Guarda un seguimiento o toca «Marcar visitada» al terminar.</p>
+                <label>Ciudad<input name="city" type="text" placeholder="Ciudad" maxlength="60" autocomplete="address-level2" required /></label>
+                <label>Radio de búsqueda<select name="radius"><option value="100">100 metros</option><option value="200" selected>200 metros</option><option value="300">300 metros</option><option value="500">500 metros</option><option value="750">750 metros</option><option value="1000">1 km</option></select></label>
+                <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
+              </form>
+              <div class="tec-property-search-tools"><button class="tec-property-text-button" type="button" data-property-use-appointment>Usar dirección del cliente activo ↗</button><span>Calle y ciudad en un solo campo. Elige una sugerencia y busca alrededor.</span></div>
             </section>
-            <details class="tec-property-saved" data-property-saved><summary>Mis seguimientos por casa <span data-property-saved-count>0</span></summary><p data-property-saved-status>Las fichas y notas son privadas de tu cuenta. Aquí puedes retomarlas incluso sin buscar otra zona.</p><div data-property-saved-list></div></details>
-            <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Comienza con la dirección de una cita. La búsqueda y el mapa necesitan internet.</p>
+            <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Busca una dirección para explorar sus alrededores. Tu recorrido guardado sigue disponible.</p>
             <div class="tec-property-candidates" data-property-candidates hidden></div>
-            <div class="tec-property-results" data-property-results hidden>
-              <div class="tec-property-summary" data-property-summary></div>
-              <div class="tec-property-layout">
-                <div class="tec-property-map-column">
-                  <div class="tec-property-map" data-property-map role="region" aria-label="Mapa de propiedades cercanas"></div>
-                  <p class="tec-property-map-note" data-property-map-note>La distancia indicada es en línea recta. El navegador calcula el recorrido por calles.</p>
+            <div class="tec-property-dashboard">
+              <section class="tec-property-explore" aria-label="Explorar propiedades">
+                <div class="tec-property-empty-state" data-property-empty>
+                  <svg viewBox="0 0 220 140" fill="none" aria-hidden="true"><path d="M20 38 78 18l63 21 59-20v100l-59 20-63-21-58 20Z" fill="#eaf1f7" stroke="#c4d4e2" stroke-width="2"/><path d="M78 18v100m63-79v100" stroke="#c4d4e2" stroke-width="2"/><path d="m51 85 45-25 38 29 42-33" stroke="#267c78" stroke-width="4" stroke-dasharray="6 7"/><path d="M128 51c0 16-17 32-17 32S94 67 94 51a17 17 0 1 1 34 0Z" fill="#bd2945"/><circle cx="111" cy="51" r="6" fill="white"/></svg>
+                  <h3>Una zona. Muchas oportunidades.</h3><p>Busca la dirección de tu cita para ver las casas cercanas y elegir tus próximas paradas.</p>
+                  <ol><li><span>1</span> Encuentra tu zona</li><li><span>2</span> Agrega casas</li><li><span>3</span> Inicia tu recorrido</li></ol>
                 </div>
-                <div class="tec-property-list-column">
-                  <div class="tec-property-list" data-property-list aria-label="Lista de propiedades cercanas"></div>
+                <div class="tec-property-results" data-property-results data-view="map" hidden>
+                  <div class="tec-property-summary" data-property-summary></div>
+                  <div class="tec-property-viewbar"><h3>Explora la zona</h3><div class="tec-property-view-switch" role="group" aria-label="Vista de propiedades"><button type="button" data-property-view="map" aria-pressed="true">Mapa</button><button type="button" data-property-view="list" aria-pressed="false">Casas <span data-property-result-count></span></button></div></div>
+                  <div class="tec-property-layout">
+                    <div class="tec-property-map-column"><div class="tec-property-map-frame"><div class="tec-property-map" data-property-map role="region" aria-label="Mapa de propiedades cercanas"></div><button class="tec-property-fit" type="button" data-property-fit aria-label="Mostrar todas las casas en el mapa">Ver toda la zona <span aria-hidden="true">⤢</span></button></div><div class="tec-property-legend" aria-label="Leyenda del mapa"><span><i class="is-anchor"></i> Tu cita</span><span><i></i> Disponible</span><span><i class="is-route"></i> En tu ruta</span><span><i class="is-completed"></i> Visitada</span></div><p class="tec-property-map-note" data-property-map-note>Distancias en línea recta. El recorrido se calcula por calles.</p></div>
+                    <div class="tec-property-list-column"><div class="tec-property-list" data-property-list aria-label="Casas de la zona"></div></div>
+                  </div>
                 </div>
-              </div>
+              </section>
+              <aside class="tec-property-route-panel" aria-label="Mi recorrido">
+                <div class="tec-route-heading"><div><span class="tec-route-eyebrow">Tu plan de visita</span><h3>Mi recorrido</h3></div><span class="tec-route-capacity" data-property-count>0 / 50</span></div>
+                <p data-property-progress>0 visitadas · 0 pendientes</p><progress class="tec-route-progress" data-property-progress-bar value="0" max="1" aria-label="Casas visitadas del recorrido"></progress>
+                <div class="tec-route-next"><span>PRÓXIMA CASA</span><strong data-property-next>Agrega casas para empezar tu recorrido</strong><small data-property-next-owner></small></div>
+                <button class="primary-button tec-route-start" type="button" data-property-walk disabled>Iniciar recorrido <span aria-hidden="true">→</span></button><button class="nav-button" type="button" data-property-lab hidden disabled>Probar Mapa LAB</button>
+                <div class="tec-property-route-actions tec-route-visit-actions"><button class="nav-button" type="button" data-property-complete disabled>Marcar visitada</button><button class="nav-button" type="button" data-property-followup disabled>Seguimiento</button></div>
+                <label class="tec-route-mode">Cómo te mueves<select data-property-mode aria-label="Tipo de recorrido"><option value="walking">A pie</option><option value="driving">En auto</option></select></label>
+                <details class="tec-route-details"><summary>Organizar casas</summary><div class="tec-property-route-actions"><button class="nav-button" type="button" data-property-sort disabled>Ordenar por cercanía</button><button class="nav-button tec-route-clear" type="button" data-property-clear disabled>Limpiar recorrido</button></div><p class="tec-property-route-note">Orden aproximado, sin tráfico ni distancias por calles. Usa las flechas para ajustar tus paradas.</p><ol data-property-stops aria-label="Casas del recorrido"></ol></details>
+                <details class="tec-route-details"><summary>Abrir en otro mapa</summary><div class="tec-property-route-actions"><a class="nav-button" data-property-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Google Maps ↗</a><a class="nav-button" data-property-apple-route target="_blank" rel="noopener noreferrer" aria-disabled="true">Apple Maps ↗</a></div><p class="tec-property-route-note">Abre la siguiente casa desde tu ubicación. Abrir el mapa no marca la visita.</p></details>
+                <div class="tec-route-save"><p data-property-route-status role="status" aria-live="polite">Cargando tu recorrido…</p><button class="tec-property-text-button" type="button" data-property-retry>Reintentar</button></div>
+              </aside>
             </div>
-            <p class="tec-property-disclaimer">El propietario registrado puede no vivir en la propiedad y los datos pueden estar desactualizados. Una dirección puede reunir varias parcelas.</p>
-            <div class="tec-property-sources">Datos públicos del <a href="https://datacatalog.cookcountyil.gov/d/3723-97qp" target="_blank" rel="noopener noreferrer">Cook County Assessor</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Reportar un problema del mapa</a></div>
+            <details class="tec-property-saved" data-property-saved><summary>Mis seguimientos <span data-property-saved-count>0</span></summary><p data-property-saved-status>Tus fichas y notas son privadas. Puedes retomarlas sin buscar otra vez.</p><div data-property-saved-list></div></details>
+            <footer class="tec-property-data-note"><p class="tec-property-disclaimer">El propietario registrado puede no vivir en la propiedad. Los datos pueden estar desactualizados; una dirección puede reunir varias parcelas.</p><div class="tec-property-sources">Datos del <a href="https://datacatalog.cookcountyil.gov/d/3723-97qp" target="_blank" rel="noopener noreferrer">Cook County Assessor ↗</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Reportar un problema del mapa</a></div></footer>
           </article>
 
 
@@ -5701,7 +5703,7 @@
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261025-native-offline2"></script>
     <script src="/coach/pwa-safety.js?v=20261025-native-offline2"></script>
-    <script type="module" src="/coach/property-map.js?v=20261101-recorrido1"></script>
+    <script type="module" src="/coach/property-map.js?v=20261104-map-design1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/product-search.js?v=20261025-alias1"></script>
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>

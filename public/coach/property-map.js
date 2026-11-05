@@ -49,6 +49,24 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     const email = String(user.email || "").trim().toLowerCase();
     const cacheKey = `property-visits:${accountId}:${email}`;
     const addressSuggestions = initTecAddressSuggestions({ form, request });
+    function setView(view, focusMap = false) {
+      results.dataset.view = view;
+      root.querySelectorAll('[data-property-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.propertyView === view)));
+      if (view === 'map') requestAnimationFrame(() => { map?.invalidateSize(); if (focusMap) mapBox.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); });
+    }
+    root.querySelectorAll('[data-property-view]').forEach(button => button.addEventListener('click', () => setView(button.dataset.propertyView)));
+    find('fit')?.addEventListener('click', () => ensureMap());
+    let savedListSignature = null;
+    function syncResultList() {
+      if (find('empty')) find('empty').hidden = !results.hidden;
+      const properties = data?.properties || selected;
+      if (find('result-count')) find('result-count').textContent = String(properties.length);
+      if (!data) {
+        find('summary').replaceChildren(node('strong', '', 'Tu recorrido guardado'), node('span', '', 'Estas casas siguen disponibles aunque todavía no hayas buscado otra zona.'));
+        const signature = JSON.stringify(properties);
+        if (signature !== savedListSignature) { savedListSignature = signature; renderList(properties); refreshVisitDecorations(); }
+      }
+    }
     let savePromise = null, leadPromise = null, closePromise = null, visitRevision = 0;
     async function assertNativeAccount() {
       const readViewer = offline?.viewer || window.getTecCachedViewer;
@@ -124,7 +142,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
 
     function refreshVisitDecorations() {
       for (const card of list.children) {
-        const property = data?.properties.find(item => item.pin === card.dataset.pin);
+        const property = (data?.properties || selected).find(item => item.pin === card.dataset.pin);
         const badge = card.querySelector("[data-visit-badge]");
         if (!property || !badge) continue;
         const record = visits.get(propertyVisitKey(property));
@@ -373,6 +391,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       const anchor = data?.anchor || routeState.anchor;
       if (root.hidden || !anchor || (!data && !selected.length)) return;
       results.hidden = false;
+      syncResultList();
       try {
         const L = await loadLeaflet();
         if (!map) {
@@ -426,6 +445,9 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
 
     function syncRoute() {
       const next = nextRouteStop(routeState), completed = routeState.stops.filter(stop => stop.completedAt).length;
+      const progressBar = find('progress-bar');
+      if (progressBar) { progressBar.max = Math.max(1, selected.length); progressBar.value = completed; progressBar.setAttribute('aria-valuetext', `${completed} de ${selected.length} casas visitadas`); }
+      if (!data && !results.hidden) syncResultList();
       find("count").textContent = `${selected.length} / ${MAX_STOPS}`;
       const remaining = selected.length - completed;
       find("progress").textContent = `${completed} ${completed === 1 ? "visitada" : "visitadas"} · ${remaining} ${remaining === 1 ? "pendiente" : "pendientes"}`;
@@ -474,6 +496,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         card.classList.toggle("is-selected", index >= 0);
       }
       if (!data && !selected.length) results.hidden = true;
+      if (find('empty')) find('empty').hidden = !results.hidden;
       drawMarkers();
     }
     function toggleStop(property) {
@@ -481,34 +504,40 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       return changeRoute(value => toggleRouteStop(value, property, data?.anchor));
     }
 
-    function renderList() {
+    function renderList(properties = data?.properties || []) {
       list.replaceChildren();
-      for (const property of data.properties) {
+      for (const property of properties) {
         const card = node("article", "tec-property-card"); card.dataset.pin = property.pin; card.dataset.propertyKey = propertyVisitKey(property);
         const heading = node("div", "tec-property-card-head");
-        heading.append(node("h3", "", property.address), node("span", "tec-property-distance", `${property.distanceMeters} m`));
+        heading.append(node("h3", "", property.address), node("span", "tec-property-distance", Number.isFinite(property.distanceMeters) ? `${property.distanceMeters} m` : "En tu recorrido"));
         card.append(heading, node("p", "tec-property-owner-label", "Propietario registrado"), node("p", "tec-property-owner", ownerText(property)), node("p", "tec-property-city", `${property.city}, IL ${property.zipCode}`));
         if (property.parcelCount > 1) card.append(node("span", "tec-property-parcel-note", `${property.parcelCount} parcelas en esta dirección`));
         const actions = node("div", "tec-property-card-actions");
         const select = node("button", "nav-button", "Agregar a mi ruta");
         select.type = "button"; select.dataset.selectStop = "true";
+        const routeIndex = selected.findIndex(item => propertyVisitKey(item) === propertyVisitKey(property));
+        select.textContent = routeIndex >= 0 ? `Parada ${routeIndex + 1} · Quitar` : "Agregar a mi ruta";
+        select.setAttribute('aria-pressed', String(routeIndex >= 0));
+        select.disabled = routeBusy || !routeStore.isReady() || loading || (routeIndex < 0 && selected.length >= MAX_STOPS);
+        card.classList.toggle('is-selected', routeIndex >= 0);
         select.addEventListener("click", () => toggleStop(property));
         const locate = node("button", "tec-property-locate", "Ver en mapa"); locate.type = "button";
         locate.addEventListener("click", () => {
+          setView("map", true);
           if (!map) { ensureMap(); return; }
           map.setView([property.lat, property.lon], 18); markers.get(property.pin)?.openPopup();
-          mapBox.scrollIntoView({ behavior: "smooth", block: "center" });
+          mapBox.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
         });
         const followup = node("button", "nav-button", "Seguimiento"); followup.type = "button"; followup.addEventListener("click", () => openVisit(property));
         const badge = node("div", "tec-visit-card-details"); badge.dataset.visitBadge = "true";
         actions.append(select, locate, followup); card.append(badge, actions); list.append(card);
       }
-      if (!data.properties.length) list.append(node("p", "tec-property-empty", "No encontré propiedades con dirección disponible en este radio. Prueba ampliar la distancia."));
+      if (!properties.length) list.append(node("p", "tec-property-empty", "No encontré propiedades con dirección disponible en este radio. Prueba ampliar la distancia."));
     }
 
     async function loadNearby(candidate) {
       const payload = await request(`/api/coach/properties/nearby?${new URLSearchParams({ pin: candidate.pin, radius: form.elements.radius.value })}`);
-      data = payload; candidatesBox.hidden = true; results.hidden = false;
+      data = payload; candidatesBox.hidden = true; results.hidden = false; setView("map"); syncResultList();
       const summary = find("summary"); summary.replaceChildren();
       summary.append(node("strong", "", `Tu cita: ${data.anchor.formattedAddress}`), node("span", "", `${data.properties.length} direcciones · radio de ${data.radiusMeters} m · registros ${data.year}`));
       const anchorFollowup = node("button", "nav-button tec-visit-anchor-button", "Seguimiento de esta cita"); anchorFollowup.type = "button"; anchorFollowup.addEventListener("click", () => openVisit(data.anchor)); summary.append(anchorFollowup);
