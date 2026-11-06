@@ -151,6 +151,8 @@ const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
+const AUDIO_RESEND_API_KEY = String(process.env.AUDIO_RESEND_API_KEY || "").trim();
+const AUDIO_RESEND_FROM_EMAIL = String(process.env.AUDIO_RESEND_FROM_EMAIL || "").trim();
 const HIGHLEVEL_API_BASE_URL = "https://services.leadconnectorhq.com";
 const HIGHLEVEL_API_VERSION = String(process.env.HIGHLEVEL_API_VERSION || "2021-07-28").trim() || "2021-07-28";
 const HIGHLEVEL_SYNC_ENABLED = String(process.env.HIGHLEVEL_SYNC_ENABLED || "").toLowerCase() === "true";
@@ -32419,13 +32421,13 @@ registerAudioMembership(app, {
   portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
   publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
     ? "https://totalelitecoaching.com" : `http://localhost:${process.env.PORT || 3000}`),
-  sendSignIn: RESEND_API_KEY && RESEND_FROM_EMAIL ? async (email, url) => {
+  sendSignIn: AUDIO_RESEND_API_KEY && AUDIO_RESEND_FROM_EMAIL ? async (email, url) => {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${AUDIO_RESEND_API_KEY}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
-        from: RESEND_FROM_EMAIL, to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
+        from: AUDIO_RESEND_FROM_EMAIL, to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
         text: `Abre este enlace para entrar a tu biblioteca TEC:\n\n${url}\n\nEl enlace caduca en 15 minutos y solo se puede usar una vez.`
       })
     });
