@@ -37,6 +37,20 @@ export function validImportGrant(req, grant, bookId, now = Date.now()) {
   if (!/^Bearer [A-Za-z0-9_-]{40,150}$/.test(value) || !/^[a-f0-9]{64}$/.test(grant.tokenHash || '')) return false;
   return crypto.timingSafeEqual(crypto.createHash('sha256').update(value.slice(7)).digest(), Buffer.from(grant.tokenHash, 'hex'));
 }
+export async function streamAudiobook(req, res, bucket, book, record) {
+  const [file] = await bucket.find({ _id: record.fileId, 'metadata.bookId': book.id, 'metadata.sha256': book.audio.sha256 }).limit(1).toArray();
+  if (!file || file.length !== book.audio.bytes) return res.status(404).end();
+  let range;
+  try { range = parseAudioRange(req.get('Range'), file.length); }
+  catch { return res.status(416).set('Content-Range', `bytes */${file.length}`).end(); }
+  res.set({ 'Content-Type': 'audio/mp4', 'Accept-Ranges': 'bytes', 'Content-Disposition': `inline; filename="${book.audio.filename}"` });
+  if (range) res.status(206).set({ 'Content-Range': `bytes ${range.start}-${range.end}/${file.length}`, 'Content-Length': String(range.end - range.start + 1) });
+  else res.set('Content-Length', String(file.length));
+  if (req.method === 'HEAD') return res.end();
+  const stream = bucket.openDownloadStream(file._id, range ? { start: range.start, end: range.end + 1 } : {});
+  res.once('close', () => stream.destroy());
+  await pipeline(stream, res);
+}
 export function registerTecAudiobooks(app, { requireActive, requireAdmin, media, reviews, progress, getBucket, catalog = audiobookCatalog, importGrant = null, getTranscript = getAudiobookTranscript }) {
   const byId = new Map(catalog.map(book => [book.id, book]));
   const privateHeaders = res => res.set({ 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Robots-Tag': 'noindex, nofollow' });
@@ -96,19 +110,7 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
   app.get('/api/coach/audiobooks/:id/audio', wrap(async (req, res) => {
     const auth = await requireActive(req, res); if (!auth) return;
     const found = await readyBook(req, res); if (!found) return;
-    const bucket = getBucket();
-    const [file] = await bucket.find({ _id: found.file.fileId, 'metadata.bookId': found.book.id, 'metadata.sha256': found.book.audio.sha256 }).limit(1).toArray();
-    if (!file || file.length !== found.book.audio.bytes) return res.status(404).end();
-    let range;
-    try { range = parseAudioRange(req.get('Range'), file.length); }
-    catch { return res.status(416).set('Content-Range', `bytes */${file.length}`).end(); }
-    res.set({ 'Content-Type': 'audio/mp4', 'Accept-Ranges': 'bytes', 'Content-Disposition': `inline; filename="${found.book.audio.filename}"` });
-    if (range) res.status(206).set({ 'Content-Range': `bytes ${range.start}-${range.end}/${file.length}`, 'Content-Length': String(range.end - range.start + 1) });
-    else res.set('Content-Length', String(file.length));
-    if (req.method === 'HEAD') return res.end();
-    const stream = bucket.openDownloadStream(file._id, range ? { start: range.start, end: range.end + 1 } : {});
-    res.once('close', () => stream.destroy());
-    await pipeline(stream, res);
+    await streamAudiobook(req, res, getBucket(), found.book, found.file);
   }));
   app.get('/api/coach/audiobooks/:id/reviews', wrap(async (req, res) => {
     const auth = await requireActive(req, res); if (!auth) return;

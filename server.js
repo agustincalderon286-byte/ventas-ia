@@ -23,6 +23,7 @@ import { createUsageModel, registerTecUsage } from "./src/tec-usage.js";
 import { createAdminPasskeyModels, registerAdminPasskeys } from "./src/tec-admin-passkeys.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
+import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -150,6 +151,8 @@ const CALENDLY_CHEF_URL = String(process.env.CALENDLY_CHEF_URL || "").trim();
 const CALENDLY_COACH_URL = String(process.env.CALENDLY_COACH_URL || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM_EMAIL = String(process.env.RESEND_FROM_EMAIL || "").trim();
+const AUDIO_RESEND_API_KEY = String(process.env.AUDIO_RESEND_API_KEY || "").trim();
+const AUDIO_RESEND_FROM_EMAIL = String(process.env.AUDIO_RESEND_FROM_EMAIL || "").trim();
 const HIGHLEVEL_API_BASE_URL = "https://services.leadconnectorhq.com";
 const HIGHLEVEL_API_VERSION = String(process.env.HIGHLEVEL_API_VERSION || "2021-07-28").trim() || "2021-07-28";
 const HIGHLEVEL_SYNC_ENABLED = String(process.env.HIGHLEVEL_SYNC_ENABLED || "").toLowerCase() === "true";
@@ -32406,10 +32409,30 @@ registerTecControlRoutes(app, {
   monthlyPrice: STRIPE_PRICE_ID_MONTHLY, annualPrice: STRIPE_PRICE_ID_ANNUAL,
   cleanAnalysis: limpiarCoachDemoAnalysis, mongoose, stripe
 });
+const audiobookModels = createAudiobookModels(mongoose);
+const getAudiobookBucket = () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" });
 registerTecAudiobooks(app, {
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
-  ...createAudiobookModels(mongoose),
-  getBucket: () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" })
+  ...audiobookModels, getBucket: getAudiobookBucket
+});
+registerAudioMembership(app, {
+  ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, stripe,
+  priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
+  portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
+  publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
+    ? "https://totalelitecoaching.com" : `http://localhost:${process.env.PORT || 3000}`),
+  sendSignIn: AUDIO_RESEND_API_KEY && AUDIO_RESEND_FROM_EMAIL ? async (email, url) => {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${AUDIO_RESEND_API_KEY}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({
+        from: AUDIO_RESEND_FROM_EMAIL, to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
+        text: `Abre este enlace para entrar a tu biblioteca TEC:\n\n${url}\n\nEl enlace caduca en 15 minutos y solo se puede usar una vez.`
+      })
+    });
+    if (!response.ok) throw new Error(`Resend HTTP ${response.status}`);
+  } : null
 });
 
 registerTecAudioLab(app, {
