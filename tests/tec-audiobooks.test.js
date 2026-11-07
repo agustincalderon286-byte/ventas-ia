@@ -88,14 +88,19 @@ test('catalog manifest has all nine parts, monotonic chapter starts and the exac
   assert.equal(models.reviews.schema.path('_id').instance, 'String'); // canonical ids enforce account/book uniqueness without relying on a later index build
 });
 
-test('complete read-along texts keep canonical hashes and ordered, bounded audio cues for both books', () => {
+test('every catalog book has complete canonical text and ordered, bounded audio cues', () => {
   const expected = {
     'como-un-hombre-piensa': '2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07',
-    'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647'
+    'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647',
+    'el-arte-de-la-guerra': 'f45d62adf38f0e0831497653ed3799f5eb172c070f3c3e15fbfa699a722abbe9',
+    'ayudate': 'a57c5e7ce784e246e48ad8c1b183571b8491992577de8c67027463813b135860',
+    'genesis-rv1909': '0deef6bfdeb8a6eb956eff60ed5a406118f1b0c8c98fe8c3477027967ab85137',
+    'exodo-rv1909': '274b832933d19f3c14fd8ab2caf479190e146cb180eca93f783396a7111a509a',
+    'la-ciencia-de-hacerse-rico': '22083a1444018fff22927a867ee50468f0a8073bba9a991c0d9e007cbb91ff80'
   };
-  for (const id of Object.keys(expected)) {
-    const book = audiobookCatalog.find(b => b.id === id);
+  for (const book of audiobookCatalog) {
     const text = getAudiobookTranscript(book.id);
+    assert.ok(text, book.title + ' needs read-along text');
     assert.ok(text.cues.length > 100);
     const master = text.cues.map(c => c.separator + c.text).join('') + text.trailingSeparator;
     assert.equal(crypto.createHash('sha256').update(master).digest('hex'), text.textSha256);
@@ -106,7 +111,7 @@ test('complete read-along texts keep canonical hashes and ordered, bounded audio
       assert.ok(cue.chapter >= 0 && cue.chapter < book.chapters.length);
       end = cue.end;
     }
-    assert.doesNotMatch(JSON.stringify(book), /inteligencia artificial|\bBF16\b|asistida por IA|pendiente|checkpoints/i);
+    assert.doesNotMatch(JSON.stringify({ ...book, audio: undefined }), /inteligencia artificial|\bBF16\b|asistida por IA|pendiente|checkpoints/i);
   }
   const acres = audiobookCatalog.find(b => b.id === 'acres-de-diamantes');
   assert.equal(acres.duration, 5495.3); assert.equal(acres.chapters.length, 8);
