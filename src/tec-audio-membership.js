@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { audiobookCatalog, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
+import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
 
 const api = '/api/audiolibros';
 const cookie = 'tec_audio_session';
@@ -35,7 +35,7 @@ export function hasAudioMembership(subscription, priceId) {
 }
 
 export function registerAudioMembership(app, {
-  accounts, grants, sessions, listening, media, getBucket, stripe, priceId, portalId,
+  accounts, grants, sessions, listening, media, getBucket, r2, stripe, priceId, portalId,
   publicOrigin, sendSignIn, secure = process.env.NODE_ENV === 'production',
   catalog = audiobookCatalog, getTranscript = getAudiobookTranscript
 }) {
@@ -58,7 +58,7 @@ export function registerAudioMembership(app, {
     try {
       await handler(req, res);
     } catch (error) {
-      if (error.code !== 'ERR_STREAM_PREMATURE_CLOSE') console.error('TEC audio membership request failed', { route: suffix, code: error.code, type: error.name });
+      if (!res.destroyed && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') console.error('TEC audio membership request failed', { route: suffix, code: error.code, type: error.name });
       if (!res.headersSent && !res.destroyed) reply(res, 503, 'El servicio está temporalmente ocupado. Inténtalo de nuevo.');
       else if (!res.destroyed) res.destroy();
     }
@@ -112,13 +112,9 @@ export function registerAudioMembership(app, {
     return user;
   }
 
-  async function ready(book) {
-    return media.findOne({ _id: book.id, state: 'ready', sha256: book.audio.sha256 }).lean();
-  }
-
   async function bookFor(req, res) {
     const book = byId.get(req.params.id);
-    const file = book && await ready(book);
+    const file = book && await findReadyAudiobook(book, media, r2);
     if (!file) { reply(res, 404, 'Este audiolibro todavía no está disponible.'); return null; }
     return { book, file };
   }
@@ -230,7 +226,10 @@ export function registerAudioMembership(app, {
     res.json({ url: portal.url });
   });
 
-  route('get', '/catalogo', (_req, res) => res.json({ books: catalog.map(publicBook) }));
+  route('get', '/catalogo', async (_req, res) => {
+    const books = await Promise.all(catalog.map(async book => book.audio.r2Key && !await r2?.ready(book.audio) ? null : publicBook(book)));
+    res.json({ books: books.filter(Boolean) });
+  });
 
   route('get', '/libros/:id', async (req, res) => {
     const user = await member(req, res);
@@ -248,7 +247,7 @@ export function registerAudioMembership(app, {
   route('get', '/libros/:id/audio', async (req, res) => {
     if (!await member(req, res)) return;
     const found = await bookFor(req, res);
-    if (found) await streamAudiobook(req, res, getBucket(), found.book, found.file);
+    if (found) await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
   });
 
   route('get', '/libros/:id/texto', async (req, res) => {

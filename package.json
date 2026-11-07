@@ -18,6 +18,7 @@
     "whatsapp:send-template": "node scripts/send-whatsapp-template.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.3",
     "cors": "^2.8.5",

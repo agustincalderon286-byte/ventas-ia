@@ -44,10 +44,11 @@ function memoryModel() {
     async aggregate(stages) { const records = [...rows.values()].filter(r => match(r, stages[0].$match)); return records.length ? [{ count: records.length, average: records.reduce((n, r) => n + r.rating, 0) / records.length }] : []; }
   };
 }
-async function fixture() {
+async function fixture(r2) {
   const media = memoryModel(), reviews = memoryModel(), progress = memoryModel(), files = new Map();
   const bytes = Buffer.from('0000ftypM4B audiolibro fixture bytes only');
-  const book = { ...audiobookCatalog[0], audio: { ...audiobookCatalog[0].audio, bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') } };
+  const sourceBook = r2 ? audiobookCatalog.find(b => b.audio.r2Key) : audiobookCatalog[0];
+  const book = { ...sourceBook, audio: { ...sourceBook.audio, bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') } };
   let sequence = 0, downloads = 0;
   const bucket = {
     find(q) { return { limit() { return this; }, async toArray() { return [...files.values()].filter(f => f._id === q._id && f.metadata.bookId === q['metadata.bookId'] && f.metadata.sha256 === q['metadata.sha256']); } }; },
@@ -67,7 +68,7 @@ async function fixture() {
     return { user: { _id: role, name: role === 'a' ? 'Ana' : 'Bruno', email: 'never-expose@example.test' } };
   };
   const app = express(); app.use(express.json());
-  registerTecAudiobooks(app, { requireActive: auth, requireAdmin: (r, s) => auth(r, s, true), media, reviews, progress, getBucket: () => bucket, catalog: [book], importGrant: grant });
+  registerTecAudiobooks(app, { requireActive: auth, requireAdmin: (r, s) => auth(r, s, true), media, reviews, progress, getBucket: () => bucket, catalog: [book], importGrant: grant, r2 });
   const server = await new Promise(resolve => { const instance = app.listen(0, '127.0.0.1', () => resolve(instance)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const path = `/api/coach/audiobooks/${book.id}`;
@@ -92,8 +93,8 @@ test('complete read-along texts keep canonical hashes and ordered, bounded audio
     'como-un-hombre-piensa': '2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07',
     'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647'
   };
-  assert.equal(audiobookCatalog.length, 2);
-  for (const book of audiobookCatalog) {
+  for (const id of Object.keys(expected)) {
+    const book = audiobookCatalog.find(b => b.id === id);
     const text = getAudiobookTranscript(book.id);
     assert.ok(text.cues.length > 100);
     const master = text.cues.map(c => c.separator + c.text).join('') + text.trailingSeparator;
@@ -111,6 +112,36 @@ test('complete read-along texts keep canonical hashes and ordered, bounded audio
   assert.equal(acres.duration, 5495.3); assert.equal(acres.chapters.length, 8);
   assert.equal(acres.audio.sha256, 'c6e0e8ddcd653e3e4632df91c9e028a98a12e2d4b49ea7f94d6b09d6f6e73e7e');
   assert.equal(getAudiobookTranscript('../server'), null);
+});
+
+test('private R2 audio is listed after verification and streams exact chapter seek ranges for active accounts', async () => {
+  let verified = false;
+  let reads = 0;
+  const f = await fixture({
+    ready: async () => verified,
+    open: async (_audio, range) => {
+      reads++;
+      return Readable.from(f.bytes.subarray(range.start, range.end + 1));
+    }
+  });
+  try {
+    const listing = () => f.request('/api/coach/audiobooks').then(r => r.json());
+    assert.equal((await listing()).books[0].available, false);
+    assert.equal((await f.request(f.path + '/audio')).status, 404);
+    verified = true;
+    assert.equal((await listing()).books[0].available, true);
+    assert.equal((await f.request(f.path + '/audio', { user: null })).status, 401);
+    assert.equal((await f.request(f.path + '/audio', { user: 'inactive' })).status, 403);
+    assert.equal((await f.request(f.path + '/audio', { method: 'HEAD' })).status, 200);
+    assert.equal(reads, 0);
+    const response = await f.request(f.path + '/audio', { headers: { Range: 'bytes=-4' } });
+    assert.equal(response.status, 206);
+    assert.equal(response.headers.get('content-type'), 'audio/mp4');
+    assert.equal(response.headers.get('content-range'), `bytes ${f.bytes.length - 4}-${f.bytes.length - 1}/${f.bytes.length}`);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), f.bytes.subarray(-4));
+    assert.equal(reads, 1);
+    assert.equal(f.downloads(), 0);
+  } finally { await f.close(); }
 });
 
 test('read-along endpoint requires an active account and an installed book', async () => {

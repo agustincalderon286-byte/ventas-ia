@@ -136,5 +136,96 @@
       "filename": "Acres-de-diamantes.m4b"
     },
     "voiceDisclosure": ""
+  },
+  {
+    "id": "el-arte-de-la-guerra",
+    "title": "El arte de la guerra",
+    "author": "Sun Tzu",
+    "language": "Español",
+    "categories": [
+      "Estrategia",
+      "Clásicos"
+    ],
+    "description": "Trece capítulos sobre estrategia, preparación y toma de decisiones. Sun Tzu examina cómo conocer el terreno, aprovechar la información y elegir cuándo actuar.",
+    "edition": "Edición íntegra en español · TEC",
+    "narrator": "Narración de TEC",
+    "credits": "Sun Tzu. Edición en español y producción sonora de TEC.",
+    "duration": 4009.15,
+    "cover": "/coach/assets/audiobooks/el-arte-de-la-guerra.svg",
+    "chapters": [
+      {
+        "title": "Capítulo 1. La elaboración de los planes",
+        "start": 0.0,
+        "duration": 246.09
+      },
+      {
+        "title": "Capítulo 2. La conducción de la guerra",
+        "start": 246.09,
+        "duration": 227.05
+      },
+      {
+        "title": "Capítulo 3. El ataque mediante la estrategia",
+        "start": 473.14,
+        "duration": 247.75
+      },
+      {
+        "title": "Capítulo 4. Las disposiciones tácticas",
+        "start": 720.89,
+        "duration": 195.95
+      },
+      {
+        "title": "Capítulo 5. La energía",
+        "start": 916.84,
+        "duration": 245.35
+      },
+      {
+        "title": "Capítulo 6. Los puntos débiles y fuertes",
+        "start": 1162.19,
+        "duration": 368.57
+      },
+      {
+        "title": "Capítulo 7. Las maniobras",
+        "start": 1530.76,
+        "duration": 332.51
+      },
+      {
+        "title": "Capítulo 8. La variación de las tácticas",
+        "start": 1863.27,
+        "duration": 163.71
+      },
+      {
+        "title": "Capítulo 9. El ejército en marcha",
+        "start": 2026.98,
+        "duration": 442.77
+      },
+      {
+        "title": "Capítulo 10. El terreno",
+        "start": 2469.75,
+        "duration": 377.07
+      },
+      {
+        "title": "Capítulo 11. Las nueve situaciones",
+        "start": 2846.82,
+        "duration": 693.91
+      },
+      {
+        "title": "Capítulo 12. El ataque con fuego",
+        "start": 3540.73,
+        "duration": 202.35
+      },
+      {
+        "title": "Capítulo 13. El empleo de los espías",
+        "start": 3743.08,
+        "duration": 266.07
+      }
+    ],
+    "audio": {
+      "sha256": "ebd2562ebf986a901d8830be00b9614015e123d500681086923161f96716e948",
+      "bytes": 94279913,
+      "contentType": "audio/mp4",
+      "filename": "El-arte-de-la-guerra.m4b",
+      "r2Key": "El-arte-de-la-guerra-BF16-solo-voz.m4b",
+      "r2ETag": "\"a94097fa16400e7664624b90bd858f5e\""
+    }
   }
 ]

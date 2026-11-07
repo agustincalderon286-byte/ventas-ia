@@ -23,6 +23,7 @@ import { createUsageModel, registerTecUsage } from "./src/tec-usage.js";
 import { createAdminPasskeyModels, registerAdminPasskeys } from "./src/tec-admin-passkeys.js";
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
+import { createAudiobookR2 } from "./src/tec-audiobook-r2.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
@@ -32410,13 +32411,14 @@ registerTecControlRoutes(app, {
   cleanAnalysis: limpiarCoachDemoAnalysis, mongoose, stripe
 });
 const audiobookModels = createAudiobookModels(mongoose);
+const audiobookR2 = createAudiobookR2();
 const getAudiobookBucket = () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" });
 registerTecAudiobooks(app, {
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
-  ...audiobookModels, getBucket: getAudiobookBucket
+  ...audiobookModels, getBucket: getAudiobookBucket, r2: audiobookR2
 });
 registerAudioMembership(app, {
-  ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, stripe,
+  ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,
   priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
   portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
   publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
