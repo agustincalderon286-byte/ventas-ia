@@ -12,6 +12,8 @@ Las colecciones `TecAudiobookReview` y `TecAudiobookProgress` usan identificador
 
 La instalación inicial usa un permiso aleatorio temporal cuyo secreto se conserva exclusivamente en el SSD. El servidor conoce sólo su hash y caducidad; permite importar exclusivamente los bytes y hash del libro fijado y no puede reemplazar un libro listo, leer cuentas ni modificar el catálogo. Se elimina ese permiso del despliegue después de la carga. La ruta de importación restante requiere administración de TEC y sigue verificando tamaño y SHA-256. Una carga fallida no publica el audio ni borra las ediciones locales.
 
+Para la pantalla de bloqueo en `/audiolibros/`, añade al libro un campo `mediaArtwork` con su portada cuadrada PNG de 512 × 512 píxeles en `public/audiolibros/portadas/`. La página envía esa imagen al teléfono durante la reproducción de la muestra y del libro completo.
+
 Verificación: `npm test`. Las pruebas de integración cubren autenticación, rangos/HEAD, permisos, carga corrupta/repetida, reseñas concurrentes y ajenas, paginación y progreso. Se verificó la interfaz con Chrome aislado, el M4B real, navegación por capítulos, velocidad, reseñas con HTML inerte y pantalla móvil. Las reseñas de esas pruebas existen sólo en memoria/local y nunca se publican en TEC. La escucha editorial completa sigue pendiente.
 
 Reversión: revertir el commit de interfaz/rutas. Conservar las colecciones y GridFS para no perder reseñas, avance o audio; no ejecutar migraciones destructivas. El cambio es aditivo.

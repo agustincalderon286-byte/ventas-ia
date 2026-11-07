@@ -265,9 +265,12 @@
 
   function setMediaSession(book) {
     if (!('mediaSession' in navigator) || !('MediaMetadata' in window)) return;
+    const artwork = book.mediaArtwork
+      ? { src: book.mediaArtwork, type: 'image/png', sizes: '512x512' }
+      : { src: book.cover };
     navigator.mediaSession.metadata = new MediaMetadata({
       title: book.title, artist: book.author, album: 'Audiolibros TEC',
-      artwork: [{ src: new URL(book.cover, location.href).href, type: 'image/svg+xml' }]
+      artwork: [{ ...artwork, src: new URL(artwork.src, location.href).href }]
     });
     const actions = {
       play: () => audio.play().catch(() => {}), pause: () => audio.pause(),
