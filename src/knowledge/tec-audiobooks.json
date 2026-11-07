@@ -15,6 +15,7 @@
     "credits": "James Allen. Edición en español y producción sonora de TEC.",
     "duration": 2891.01,
     "cover": "/coach/assets/audiobooks/como-un-hombre-piensa.svg",
+    "mediaArtwork": "/audiolibros/portadas/como-un-hombre-piensa.png",
     "chapters": [
       {
         "title": "Título y epígrafe",
@@ -87,6 +88,7 @@
     "credits": "Russell H. Conwell. Edición en español y producción sonora y musical de TEC. Incluye la introducción del autor y la conferencia completa.",
     "duration": 5495.3,
     "cover": "/coach/assets/audiobooks/acres-de-diamantes.svg",
+    "mediaArtwork": "/audiolibros/portadas/acres-de-diamantes.png",
     "chapters": [
       {
         "title": "Introducción y los diamantes de Golconda",
@@ -152,6 +154,7 @@
     "credits": "Sun Tzu. Edición en español y producción sonora de TEC.",
     "duration": 4009.15,
     "cover": "/coach/assets/audiobooks/el-arte-de-la-guerra.svg",
+    "mediaArtwork": "/audiolibros/portadas/el-arte-de-la-guerra.png",
     "chapters": [
       {
         "title": "Capítulo 1. La elaboración de los planes",
@@ -243,6 +246,7 @@
     "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
     "duration": 13599.01,
     "cover": "/coach/assets/audiobooks/genesis-rv1909.svg",
+    "mediaArtwork": "/audiolibros/portadas/genesis-rv1909.png",
     "chapters": [
       {
         "title": "Capítulo 1",
@@ -519,6 +523,7 @@
     "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
     "duration": 10635.28,
     "cover": "/coach/assets/audiobooks/exodo-rv1909.svg",
+    "mediaArtwork": "/audiolibros/portadas/exodo-rv1909.png",
     "chapters": [
       {
         "title": "Capítulo 1",
@@ -746,6 +751,7 @@
     "credits": "Samuel Smiles. Edición en español y producción sonora de TEC.",
     "duration": 53836.13,
     "cover": "/coach/assets/audiobooks/ayudate.svg",
+    "mediaArtwork": "/audiolibros/portadas/ayudate.png",
     "chapters": [
       {
         "title": "Advertencia del traductor",
