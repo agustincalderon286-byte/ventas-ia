@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261104-map-design1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261104-map-design1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261107-portadas1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261107-portadas1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -12,10 +12,10 @@ const TEC_CORE_ASSETS = [
   "/coach/styles.css?v=20261104-chat-scroll2",
   "/coach/app.js?v=20261104-chat-scroll2",
   "/coach/audiobook-reader.js?v=20261103-readalong1",
-  "/coach/assets/audiobooks/acres-de-diamantes.svg",
-  "/coach/audiobooks.js?v=20261103-readalong1",
+  "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
+  "/coach/audiobooks.js?v=20261107-portadas1",
   "/coach/audiobooks.css?v=20261103-readalong1",
-  "/coach/assets/audiobooks/como-un-hombre-piensa.svg",
+  "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
   "/coach/compact-header.js?v=20261103-readalong1",
   "/coach/app.js?v=20261103-readalong1",
   "/coach/analytics.js?v=20261104-analytics1",

@@ -14,8 +14,8 @@
     "narrator": "Narración de TEC",
     "credits": "James Allen. Edición en español y producción sonora de TEC.",
     "duration": 2891.01,
-    "cover": "/coach/assets/audiobooks/como-un-hombre-piensa.svg",
-    "mediaArtwork": "/audiolibros/portadas/como-un-hombre-piensa.png",
+    "cover": "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/como-un-hombre-piensa-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Título y epígrafe",
@@ -87,8 +87,8 @@
     "narrator": "Narración y personajes de TEC · Música instrumental",
     "credits": "Russell H. Conwell. Edición en español y producción sonora y musical de TEC. Incluye la introducción del autor y la conferencia completa.",
     "duration": 5495.3,
-    "cover": "/coach/assets/audiobooks/acres-de-diamantes.svg",
-    "mediaArtwork": "/audiolibros/portadas/acres-de-diamantes.png",
+    "cover": "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/acres-de-diamantes-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Introducción y los diamantes de Golconda",
@@ -153,8 +153,8 @@
     "narrator": "Narración de TEC",
     "credits": "Sun Tzu. Edición en español y producción sonora de TEC.",
     "duration": 4009.15,
-    "cover": "/coach/assets/audiobooks/el-arte-de-la-guerra.svg",
-    "mediaArtwork": "/audiolibros/portadas/el-arte-de-la-guerra.png",
+    "cover": "/coach/assets/audiobooks/el-arte-de-la-guerra-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/el-arte-de-la-guerra-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Capítulo 1. La elaboración de los planes",
@@ -245,8 +245,8 @@
     "narrator": "Narración y voces de TEC",
     "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
     "duration": 13599.01,
-    "cover": "/coach/assets/audiobooks/genesis-rv1909.svg",
-    "mediaArtwork": "/audiolibros/portadas/genesis-rv1909.png",
+    "cover": "/coach/assets/audiobooks/genesis-rv1909-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/genesis-rv1909-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Capítulo 1",
@@ -522,8 +522,8 @@
     "narrator": "Narración y voces de TEC",
     "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
     "duration": 10635.28,
-    "cover": "/coach/assets/audiobooks/exodo-rv1909.svg",
-    "mediaArtwork": "/audiolibros/portadas/exodo-rv1909.png",
+    "cover": "/coach/assets/audiobooks/exodo-rv1909-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/exodo-rv1909-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Capítulo 1",
@@ -750,8 +750,8 @@
     "narrator": "Narración y voces de TEC",
     "credits": "Samuel Smiles. Edición en español y producción sonora de TEC.",
     "duration": 53836.13,
-    "cover": "/coach/assets/audiobooks/ayudate.svg",
-    "mediaArtwork": "/audiolibros/portadas/ayudate.png",
+    "cover": "/coach/assets/audiobooks/ayudate-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/ayudate-ilustrada-v2.png",
     "chapters": [
       {
         "title": "Advertencia del traductor",
@@ -842,5 +842,125 @@
       "r2Key": "Ayudate-BF16-solo-voz.m4b",
       "r2ETag": "\"fac7a079ea98a72a20ecaa0fbce1ee90-39\""
     }
+  },
+  {
+    "id": "la-ciencia-de-hacerse-rico",
+    "title": "La ciencia de hacerse rico",
+    "author": "Wallace D. Wattles",
+    "originalTitle": "The Science of Getting Rich",
+    "language": "Español",
+    "categories": [
+      "Desarrollo personal",
+      "Prosperidad",
+      "Clásicos"
+    ],
+    "description": "Wallace D. Wattles expone sus ideas sobre el pensamiento, el propósito y la acción orientada a la prosperidad. Edición íntegra en español con el prefacio y los diecisiete capítulos.",
+    "edition": "Edición íntegra en español · TEC",
+    "narrator": "Narración de TEC",
+    "credits": "Wallace D. Wattles. Traducción al español y producción sonora de TEC.",
+    "duration": 8568.86,
+    "cover": "/coach/assets/audiobooks/la-ciencia-de-hacerse-rico-ilustrada-v2.jpg",
+    "mediaArtwork": "/audiolibros/portadas/la-ciencia-de-hacerse-rico-ilustrada-v2.png",
+    "chapters": [
+      {
+        "title": "PREFACIO",
+        "start": 0.0,
+        "duration": 182.79
+      },
+      {
+        "title": "CAPÍTULO I. El derecho a ser rico",
+        "start": 182.79,
+        "duration": 365.09
+      },
+      {
+        "title": "CAPÍTULO II. Existe una Ciencia de hacerse rico",
+        "start": 547.88,
+        "duration": 443.05
+      },
+      {
+        "title": "CAPÍTULO III. ¿Está la oportunidad monopolizada?",
+        "start": 990.9300000000001,
+        "duration": 467.59
+      },
+      {
+        "title": "CAPÍTULO IV. El Primer Principio en la Ciencia de Hacerse Rico",
+        "start": 1458.52,
+        "duration": 649.25
+      },
+      {
+        "title": "CAPÍTULO V. Aumentar la Vida",
+        "start": 2107.77,
+        "duration": 651.33
+      },
+      {
+        "title": "CAPÍTULO VI. Cómo llegan las riquezas a ti",
+        "start": 2759.1,
+        "duration": 586.35
+      },
+      {
+        "title": "CAPÍTULO VII. Gratitud",
+        "start": 3345.45,
+        "duration": 423.03
+      },
+      {
+        "title": "CAPÍTULO VIII. Pensar de la manera correcta",
+        "start": 3768.4799999999996,
+        "duration": 493.37
+      },
+      {
+        "title": "CAPÍTULO IX. Cómo usar la voluntad",
+        "start": 4261.849999999999,
+        "duration": 539.67
+      },
+      {
+        "title": "CAPÍTULO X. Uso adicional de la Voluntad",
+        "start": 4801.5199999999995,
+        "duration": 593.87
+      },
+      {
+        "title": "CAPÍTULO XI. Actuar de la Manera Correcta",
+        "start": 5395.389999999999,
+        "duration": 592.37
+      },
+      {
+        "title": "CAPÍTULO XII. Acción Eficiente",
+        "start": 5987.759999999999,
+        "duration": 503.39
+      },
+      {
+        "title": "CAPÍTULO XIII. Entrar en el Negocio Adecuado",
+        "start": 6491.15,
+        "duration": 440.25
+      },
+      {
+        "title": "CAPÍTULO XIV. La Impresión de Aumento",
+        "start": 6931.4,
+        "duration": 452.25
+      },
+      {
+        "title": "CAPÍTULO XV. El hombre que progresa",
+        "start": 7383.65,
+        "duration": 456.49
+      },
+      {
+        "title": "CAPÍTULO XVI. Algunas advertencias y observaciones finales",
+        "start": 7840.139999999999,
+        "duration": 527.45
+      },
+      {
+        "title": "CAPÍTULO XVII. Resumen de la Ciencia de Hacerse Rico",
+        "start": 8367.59,
+        "duration": 201.27
+      }
+    ],
+    "audio": {
+      "sha256": "5e694f84df299fca67c6e81ff4932963f8eb768e54cada72e9d8bb23ee58a28c",
+      "bytes": 198419434,
+      "contentType": "audio/mp4",
+      "filename": "La-ciencia-de-hacerse-rico.m4b",
+      "r2Key": "La-ciencia-de-hacerse-rico-BF16-solo-voz.m4b",
+      "r2ETag": "\"46d49372188644da9b66270f96183309\""
+    },
+    "voiceDisclosure": ""
   }
 ]

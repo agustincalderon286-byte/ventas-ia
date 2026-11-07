@@ -84,7 +84,13 @@
       });
       loadText(book, generation); updateRating(data.rating); await loadReviews();
       if ('mediaSession' in navigator && 'MediaMetadata' in window) {
-        navigator.mediaSession.metadata = new MediaMetadata({ title: book.title, artist: book.author, album: 'Audiolibros TEC', artwork: [{ src: new URL(book.cover, location.href).href, type: 'image/svg+xml', sizes: '600x800' }] });
+        const artwork = book.mediaArtwork
+          ? { src: book.mediaArtwork, type: 'image/png', sizes: '512x512' }
+          : { src: book.cover };
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: book.title, artist: book.author, album: 'Audiolibros TEC',
+          artwork: [{ ...artwork, src: new URL(artwork.src, location.href).href }]
+        });
         for (const [action, handler] of Object.entries({ play: () => audio.play().catch(() => {}), pause: () => audio.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { seekTo(detail.seekTime, false); } })) {
           try { navigator.mediaSession.setActionHandler(action, handler); } catch {}
         }
