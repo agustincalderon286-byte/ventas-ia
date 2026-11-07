@@ -505,6 +505,232 @@
     }
   },
   {
+    "id": "exodo-rv1909",
+    "title": "Éxodo",
+    "author": "Biblia · Reina-Valera 1909",
+    "language": "Español",
+    "categories": [
+      "Biblia",
+      "Antiguo Testamento"
+    ],
+    "description": "El segundo libro de la Biblia narra la salida de Egipto, el camino de Israel por el desierto y la alianza en el monte Sinaí. Incluye los 40 capítulos de la edición Reina-Valera 1909.",
+    "edition": "Reina-Valera 1909 · Edición íntegra",
+    "narrator": "Narración y voces de TEC",
+    "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
+    "duration": 10635.28,
+    "cover": "/coach/assets/audiobooks/exodo-rv1909.svg",
+    "chapters": [
+      {
+        "title": "Capítulo 1",
+        "start": 0.0,
+        "duration": 172.99
+      },
+      {
+        "title": "Capítulo 2",
+        "start": 172.99,
+        "duration": 223.65
+      },
+      {
+        "title": "Capítulo 3",
+        "start": 396.64,
+        "duration": 262.25
+      },
+      {
+        "title": "Capítulo 4",
+        "start": 658.89,
+        "duration": 297.31
+      },
+      {
+        "title": "Capítulo 5",
+        "start": 956.2,
+        "duration": 234.43
+      },
+      {
+        "title": "Capítulo 6",
+        "start": 1190.63,
+        "duration": 265.48
+      },
+      {
+        "title": "Capítulo 7",
+        "start": 1456.11,
+        "duration": 221.18
+      },
+      {
+        "title": "Capítulo 8",
+        "start": 1677.29,
+        "duration": 322.81
+      },
+      {
+        "title": "Capítulo 9",
+        "start": 2000.1,
+        "duration": 313.2
+      },
+      {
+        "title": "Capítulo 10",
+        "start": 2313.3,
+        "duration": 305.71
+      },
+      {
+        "title": "Capítulo 11",
+        "start": 2619.01,
+        "duration": 99.91
+      },
+      {
+        "title": "Capítulo 12",
+        "start": 2718.92,
+        "duration": 458.43
+      },
+      {
+        "title": "Capítulo 13",
+        "start": 3177.35,
+        "duration": 196.78
+      },
+      {
+        "title": "Capítulo 14",
+        "start": 3374.13,
+        "duration": 305.23
+      },
+      {
+        "title": "Capítulo 15",
+        "start": 3679.36,
+        "duration": 234.92
+      },
+      {
+        "title": "Capítulo 16",
+        "start": 3914.28,
+        "duration": 336.14
+      },
+      {
+        "title": "Capítulo 17",
+        "start": 4250.42,
+        "duration": 168.0
+      },
+      {
+        "title": "Capítulo 18",
+        "start": 4418.42,
+        "duration": 244.65
+      },
+      {
+        "title": "Capítulo 19",
+        "start": 4663.07,
+        "duration": 236.03
+      },
+      {
+        "title": "Capítulo 20",
+        "start": 4899.1,
+        "duration": 188.59
+      },
+      {
+        "title": "Capítulo 21",
+        "start": 5087.69,
+        "duration": 261.49
+      },
+      {
+        "title": "Capítulo 22",
+        "start": 5349.18,
+        "duration": 236.53
+      },
+      {
+        "title": "Capítulo 23",
+        "start": 5585.71,
+        "duration": 255.97
+      },
+      {
+        "title": "Capítulo 24",
+        "start": 5841.68,
+        "duration": 162.14
+      },
+      {
+        "title": "Capítulo 25",
+        "start": 6003.82,
+        "duration": 284.03
+      },
+      {
+        "title": "Capítulo 26",
+        "start": 6287.85,
+        "duration": 298.17
+      },
+      {
+        "title": "Capítulo 27",
+        "start": 6586.02,
+        "duration": 185.64
+      },
+      {
+        "title": "Capítulo 28",
+        "start": 6771.66,
+        "duration": 361.93
+      },
+      {
+        "title": "Capítulo 29",
+        "start": 7133.59,
+        "duration": 409.4
+      },
+      {
+        "title": "Capítulo 30",
+        "start": 7542.99,
+        "duration": 302.28
+      },
+      {
+        "title": "Capítulo 31",
+        "start": 7845.27,
+        "duration": 149.03
+      },
+      {
+        "title": "Capítulo 32",
+        "start": 7994.3,
+        "duration": 360.25
+      },
+      {
+        "title": "Capítulo 33",
+        "start": 8354.55,
+        "duration": 228.62
+      },
+      {
+        "title": "Capítulo 34",
+        "start": 8583.17,
+        "duration": 332.48
+      },
+      {
+        "title": "Capítulo 35",
+        "start": 8915.65,
+        "duration": 279.1
+      },
+      {
+        "title": "Capítulo 36",
+        "start": 9194.75,
+        "duration": 308.89
+      },
+      {
+        "title": "Capítulo 37",
+        "start": 9503.64,
+        "duration": 230.31
+      },
+      {
+        "title": "Capítulo 38",
+        "start": 9733.95,
+        "duration": 271.3
+      },
+      {
+        "title": "Capítulo 39",
+        "start": 10005.25,
+        "duration": 360.86
+      },
+      {
+        "title": "Capítulo 40",
+        "start": 10366.11,
+        "duration": 269.17
+      }
+    ],
+    "audio": {
+      "sha256": "bd86684aab9086b8afc0d58bd28ac09182aeab17e8ca9285ee3f906e9d591737",
+      "bytes": 242049372,
+      "contentType": "audio/mp4",
+      "filename": "Exodo-RV1909.m4b",
+      "r2Key": "Exodo-RV1909-BF16-voces.m4b",
+      "r2ETag": "\"25d072bb05de324b77f59de2cdbd26f0\""
+    }
+  },
+  {
     "id": "ayudate",
     "title": "¡Ayúdate!",
     "author": "Samuel Smiles",

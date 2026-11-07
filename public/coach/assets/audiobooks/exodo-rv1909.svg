@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-labelledby="title">
+  <title id="title">Éxodo, Biblia Reina-Valera 1909</title>
+  <defs><linearGradient id="sky" x2=".75" y2="1"><stop stop-color="#335058"/><stop offset="1" stop-color="#122931"/></linearGradient></defs>
+  <rect width="600" height="800" rx="16" fill="url(#sky)"/>
+  <rect x="28" y="28" width="544" height="744" rx="4" stroke="#e2bd79" fill="none" opacity=".7"/>
+  <text x="62" y="98" fill="#e2bd79" font-family="sans-serif" font-size="20" letter-spacing="5">BIBLIOTECA TEC</text>
+  <text x="60" y="244" fill="#fff1d8" font-family="Georgia,serif" font-size="95">Éxodo</text>
+  <text x="65" y="298" fill="#e2bd79" font-family="sans-serif" font-size="22" letter-spacing="4">ANTIGUO TESTAMENTO</text>
+  <circle cx="300" cy="440" r="58" fill="#e2bd79"/>
+  <path d="M95 576l121-101 51 54 73-64 165 111z" fill="#122931" stroke="#e2bd79" stroke-width="3"/>
+  <path d="M121 603h358m-308 24h258" fill="none" stroke="#e2bd79" stroke-width="3" opacity=".65"/>
+  <text x="62" y="689" fill="#f5e3bd" font-family="sans-serif" font-size="25" letter-spacing="3">REINA-VALERA 1909</text>
+  <text x="62" y="736" fill="#e2bd79" font-family="sans-serif" font-size="17" letter-spacing="2">40 CAPÍTULOS · ESPAÑOL</text>
+</svg>
