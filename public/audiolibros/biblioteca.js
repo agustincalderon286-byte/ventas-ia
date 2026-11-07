@@ -3,6 +3,9 @@
   const $ = selector => document.querySelector(selector);
   const audio = $('#audio');
   const player = $('#player');
+  const seekBar = $('#seek-bar');
+  const search = $('#catalog-search');
+  const miniPlayer = $('#mini-player');
   const accountDialog = $('#account');
   const apiRoot = '/api/audiolibros';
   let account = {};
@@ -14,6 +17,7 @@
   let timerHandle;
   let deadline = 0;
   let stopAt = 0;
+  let scrubbing = false;
   let signInToken = new URLSearchParams(location.hash.slice(1)).get('entrar');
   const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio, position => seek(position, true));
 
@@ -49,15 +53,19 @@
   }
 
   function renderBooks() {
-    const cards = books.map(book => {
+    if (!books.length) return;
+    const searchable = value => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    const query = searchable(search.value.trim());
+    const matches = books.filter(book => searchable(book.title + ' ' + book.author).includes(query));
+    const cards = matches.map(book => {
       const card = element('article', undefined, 'book');
       const image = element('img');
       Object.assign(image, { src: book.cover, alt: '', width: 600, height: 800 });
       const copy = element('div');
       copy.append(
         element('p', book.categories.join(' · '), 'eyebrow'), element('h3', book.title),
-        element('p', book.author, 'author'), element('p', book.description),
-        element('p', book.language + ' · ' + time(book.duration))
+        element('p', book.author, 'author'), element('p', book.description, 'book-description'),
+        element('p', book.language + ' · ' + time(book.duration), 'book-duration')
       );
       const actions = element('div', undefined, 'actions');
       if (account.member) actions.append(button('Escuchar y leer', () => openBook(book, false), 'primary'));
@@ -67,6 +75,7 @@
       return card;
     });
     $('#books').replaceChildren(...cards);
+    $('#catalog-status').textContent = matches.length ? '' : 'No encontramos títulos para esta búsqueda.';
   }
 
   async function refreshAccount() {
@@ -101,6 +110,8 @@
   }
 
   $('#account-button').addEventListener('click', showAccount);
+  $('#phone-account').addEventListener('click', showAccount);
+  search.addEventListener('input', renderBooks);
   $('#sign-in').addEventListener('submit', busy($('#sign-in button'), '#account-status', async () => {
     await api('/entrar', 'POST', { email: $('#email').value });
     $('#account-status').textContent = 'Revisa tu correo. El enlace caduca en 15 minutos.';
@@ -117,6 +128,8 @@
     location.assign((await api('/portal', 'POST')).url);
   }));
   $('#logout').addEventListener('click', busy($('#logout'), '#account-status', async () => {
+    stopPlayback();
+    await saveQueue.catch(() => {});
     await api('/salir', 'POST');
     accountDialog.close();
     await refreshAccount();
@@ -146,8 +159,43 @@
 
   function seek(position, play = false) {
     if (!selected || audio.readyState === 0) return;
-    audio.currentTime = Math.max(0, Math.min(selected.duration, position));
-    if (play) audio.play().catch(() => { $('#player-status').textContent = 'Toca reproducir para escuchar.'; });
+    audio.currentTime = Math.max(0, Math.min(Number(seekBar.max), position));
+    if (play) startPlayback();
+    updatePlayback();
+  }
+
+  function startPlayback() {
+    const book = selected;
+    if (!book) return;
+    audio.play().catch(error => {
+      if (selected !== book || error.name === 'AbortError') return;
+      $('#player-status').textContent = 'No se pudo reproducir el audio. Inténtalo de nuevo.';
+      $('#mini-status').textContent = 'Abre el reproductor para reintentar.';
+    });
+  }
+
+  function togglePlayback() {
+    if (audio.paused) startPlayback();
+    else audio.pause();
+  }
+
+  function updatePlayback() {
+    const playing = Boolean(selected) && !audio.paused && !audio.ended;
+    const label = playing ? 'Pausar' : 'Reproducir';
+    for (const control of [$('#play'), $('#mini-play')]) {
+      if (control.getAttribute('aria-label') === label) continue;
+      control.setAttribute('aria-label', label);
+      control.textContent = playing ? '❚❚' : '▶';
+    }
+    if (!selected) return;
+    const duration = Number(seekBar.max);
+    const elapsed = scrubbing ? Number(seekBar.value) : Math.min(duration, audio.currentTime);
+    if (!scrubbing) seekBar.value = String(elapsed);
+    seekBar.style.setProperty('--seek-progress', (duration > 0 ? elapsed / duration * 100 : 0) + '%');
+    seekBar.setAttribute('aria-valuetext', time(elapsed) + ' de ' + time(duration));
+    $('#elapsed').textContent = time(elapsed);
+    $('#duration').textContent = time(duration);
+    $('#mini-status').textContent = (selected.full ? 'Audiolibro' : 'Muestra') + ' · ' + time(audio.currentTime) + ' / ' + time(duration);
   }
 
   function resetTimer(message = '') {
@@ -233,15 +281,21 @@
   }
 
   async function openBook(book, preview) {
-    const request = ++generation;
     const full = !preview;
+    if (selected?.id === book.id && selected.full === full && !audio.error) {
+      expandPlayer();
+      return;
+    }
+    stopPlayback();
+    const request = generation;
     $('#player-controls').hidden = true;
     $('#player-status').textContent = full ? 'Cargando audiolibro…' : '';
     $('#book-mode').textContent = full ? 'Edición íntegra' : 'Muestra gratuita · 10 %';
     $('#book-title').textContent = book.title;
     $('#book-author').textContent = book.author;
     $('#book-cover').src = book.cover;
-    if (!player.open) player.showModal();
+    expandPlayer();
+    player.scrollTop = 0;
     try {
       const data = full
         ? await api('/libros/' + encodeURIComponent(book.id))
@@ -249,10 +303,16 @@
       if (request !== generation) return;
       selected = { ...data.book, full, marks: data.progress.marks };
       lastSave = Date.now();
+      $('#mini-cover').src = book.cover;
+      $('#mini-title').textContent = book.title;
+      $('#mini-open').setAttribute('aria-label', 'Abrir reproductor de ' + book.title);
+      seekBar.max = String(selected.duration);
+      seekBar.value = '0';
       $('#speed').value = String(data.progress.speed).replace(/^0\./, '.');
       $('#timer option[value="chapter"]').disabled = !full;
       $('#preview-upsell').hidden = full || account.member;
       $('#chapter-list').hidden = !full;
+      $('#chapter-shortcut').hidden = !full;
       $('#bookmark-list').hidden = !full;
       $('#chapters').replaceChildren(...(selected.chapters || []).map(chapter => {
         const row = element('li');
@@ -264,11 +324,15 @@
       $('#player-controls').hidden = false;
       audio.onloadedmetadata = () => {
         if (request !== generation) return;
+        seekBar.max = String(Number.isFinite(audio.duration) ? Math.min(selected.duration, audio.duration) : selected.duration);
+        seekBar.disabled = false;
         audio.playbackRate = Number($('#speed').value) || 1;
         if (data.progress.position) seek(Math.min(data.progress.position, Math.max(0, audio.duration - .1)));
         updateChapter();
+        updatePlayback();
       };
       audio.src = selected.audioUrl;
+      updatePlayback();
       setMediaSession(book);
       if (full) { renderMarks(); renderReader(selected, request); }
     } catch (error) {
@@ -276,22 +340,54 @@
     }
   }
 
-  player.addEventListener('close', () => {
+  function expandPlayer() {
+    miniPlayer.hidden = true;
+    if (!player.open) player.showModal();
+  }
+
+  function stopPlayback() {
     saveProgress();
     ++generation;
     selected = null;
+    scrubbing = false;
+    seekBar.disabled = true;
     audio.pause();
+    audio.onloadedmetadata = null;
     audio.removeAttribute('src');
     audio.load();
+    miniPlayer.hidden = true;
     reader.clear();
     $('#reader-panel').hidden = true;
     for (const panel of player.querySelectorAll('details')) panel.open = false;
     resetTimer();
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+  }
+
+  player.addEventListener('close', () => {
+    if (player.open) return;
+    if (!selected) { ++generation; return; }
+    saveProgress();
+    miniPlayer.hidden = false;
+    updatePlayback();
   });
   for (const control of document.querySelectorAll('[data-close]')) {
     control.addEventListener('click', () => control.closest('dialog').close());
   }
+  $('#player-stop').addEventListener('click', () => { stopPlayback(); player.close(); });
+  $('#mini-stop').addEventListener('click', stopPlayback);
+  $('#mini-open').addEventListener('click', expandPlayer);
+  $('#mini-play').addEventListener('click', togglePlayback);
+  $('#play').addEventListener('click', togglePlayback);
+  seekBar.addEventListener('input', () => { scrubbing = true; updatePlayback(); });
+  seekBar.addEventListener('change', () => { scrubbing = false; seek(Number(seekBar.value)); saveProgress(); });
+  for (const event of ['blur', 'pointercancel']) {
+    seekBar.addEventListener(event, () => { scrubbing = false; updatePlayback(); });
+  }
+  $('#chapter-shortcut').addEventListener('click', () => {
+    const panel = $('#chapter-list');
+    panel.open = true;
+    panel.querySelector('summary').focus();
+  });
   $('#back').addEventListener('click', () => seek(audio.currentTime - 15));
   $('#forward').addEventListener('click', () => seek(audio.currentTime + 15));
   $('#speed').addEventListener('change', () => { audio.playbackRate = Number($('#speed').value); saveProgress(); });
@@ -315,9 +411,11 @@
   audio.addEventListener('timeupdate', () => {
     checkTimer();
     updateChapter();
+    updatePlayback();
     if (!audio.paused && Date.now() - lastSave > 15000) saveProgress();
   });
   audio.addEventListener('pause', saveProgress);
+  for (const event of ['play', 'pause', 'ended', 'seeked']) audio.addEventListener(event, updatePlayback);
   audio.addEventListener('ended', () => {
     if (!selected) return;
     $('#player-status').textContent = selected.full ? 'Llegaste al final del audiolibro.' : 'Llegaste al final de la muestra.';
@@ -337,6 +435,7 @@
   api('/catalogo').then(data => {
     books = data.books;
     $('#catalog-status').textContent = '';
+    search.closest('label').hidden = !books.length;
     renderBooks();
   }).catch(error => { $('#catalog-status').textContent = error.message; });
 
