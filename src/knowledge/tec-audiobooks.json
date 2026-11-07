@@ -503,5 +503,112 @@
       "r2Key": "Genesis-RV1909-BF16-voces.m4b",
       "r2ETag": "\"1bc0c6796c26b665bbc2835255781992\""
     }
+  },
+  {
+    "id": "ayudate",
+    "title": "¡Ayúdate!",
+    "author": "Samuel Smiles",
+    "originalTitle": "Self-Help",
+    "language": "Español",
+    "categories": [
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "description": "Samuel Smiles reúne historias sobre el esfuerzo, la iniciativa y la perseverancia. Esta edición incluye los trece capítulos y los textos de apertura.",
+    "edition": "Edición íntegra en español · TEC",
+    "narrator": "Narración y voces de TEC",
+    "credits": "Samuel Smiles. Edición en español y producción sonora de TEC.",
+    "duration": 53836.13,
+    "cover": "/coach/assets/audiobooks/ayudate.svg",
+    "chapters": [
+      {
+        "title": "Advertencia del traductor",
+        "start": 0.0,
+        "duration": 70.16
+      },
+      {
+        "title": "Prólogo",
+        "start": 70.16,
+        "duration": 393.08
+      },
+      {
+        "title": "Introducción",
+        "start": 463.24,
+        "duration": 399.53
+      },
+      {
+        "title": "Capítulo 1. Ayuda propia. Nacional e individual.",
+        "start": 862.77,
+        "duration": 3419.38
+      },
+      {
+        "title": "Capítulo 2. Corifeos de la industria. Inventores y productores.",
+        "start": 4282.15,
+        "duration": 5018.36
+      },
+      {
+        "title": "Capítulo 3. Tres grandes alfareros: Palissy, Böttcher y Wedgwood.",
+        "start": 9300.51,
+        "duration": 3349.12
+      },
+      {
+        "title": "Capítulo 4. Aplicación y perseverancia.",
+        "start": 12649.63,
+        "duration": 3170.7
+      },
+      {
+        "title": "Capítulo 5. Ayudas y oportunidades. Ocupaciones científicas.",
+        "start": 15820.33,
+        "duration": 4716.78
+      },
+      {
+        "title": "Capítulo 6. Trabajadores en el arte.",
+        "start": 20537.11,
+        "duration": 6194.65
+      },
+      {
+        "title": "Capítulo 7. La industria y la nobleza.",
+        "start": 26731.76,
+        "duration": 2670.49
+      },
+      {
+        "title": "Capítulo 8. La energía y el valor.",
+        "start": 29402.25,
+        "duration": 5353.15
+      },
+      {
+        "title": "Capítulo 9. Los hombres de negocios.",
+        "start": 34755.4,
+        "duration": 3437.0
+      },
+      {
+        "title": "Capítulo 10. El dinero. Su uso y su abuso.",
+        "start": 38192.4,
+        "duration": 3126.76
+      },
+      {
+        "title": "Capítulo 11. Cultura propia. Facilidades y dificultades.",
+        "start": 41319.16,
+        "duration": 6101.07
+      },
+      {
+        "title": "Capítulo 12. El ejemplo. Los modelos.",
+        "start": 47420.23,
+        "duration": 2903.12
+      },
+      {
+        "title": "Capítulo 13. El carácter. El verdadero caballero.",
+        "start": 50323.35,
+        "duration": 3512.78
+      }
+    ],
+    "audio": {
+      "sha256": "c5506670d5cca3b0751389607ee756875262217a3507595188a4792b9b18bada",
+      "bytes": 1300714226,
+      "contentType": "audio/mp4",
+      "filename": "Ayudate.m4b",
+      "r2Key": "Ayudate-BF16-solo-voz.m4b",
+      "r2ETag": "\"fac7a079ea98a72a20ecaa0fbce1ee90-39\""
+    }
   }
 ]
