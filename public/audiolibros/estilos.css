@@ -183,6 +183,39 @@ summary{font-weight:650;margin-bottom:8px}
 [data-ab-reader-text]{white-space:pre-wrap;max-height:42vh;overflow:auto;overscroll-behavior:contain;padding:14px;background:var(--bg);border-radius:7px;font:var(--ab-reading-size,19px)/1.7 var(--serif)}
 .ab-passage{cursor:pointer;border-radius:3px}
 .ab-passage[aria-current=true]{background:var(--gold);color:#182720}
+.reader-view-heading{display:flex;align-items:center;gap:16px;flex:none;padding-bottom:12px}
+.reader-view-heading h2{font-size:1.2rem;line-height:1.25;letter-spacing:0;padding:0;margin:0;min-width:0}
+.reader-view-heading .button{flex:none}
+.reader-font-controls{display:inline-flex;gap:8px}
+#player.reading-fullscreen {
+  position:fixed; inset:0; width:100%; max-width:none; height:100%; height:100dvh;
+  max-height:none; margin:0; padding:0; border:0; border-radius:0; overflow:hidden;
+  background:var(--bg);
+}
+.reading-fullscreen > :not(#player-controls),
+.reading-fullscreen #player-controls > :not(#reader-panel),
+.reading-fullscreen #reader-panel > summary{display:none!important}
+.reading-fullscreen #player-controls{height:100%;min-height:0}
+.reading-fullscreen #reader-panel {
+  height:100%; margin:0; padding:0; border:0;
+}
+.reading-fullscreen .reader-content {
+  position:absolute; inset:0; display:flex; flex-direction:column; min-height:0;
+  padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right))
+    max(8px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+}
+.reading-fullscreen #reader-status{flex:none;margin:0 0 10px}
+.reading-fullscreen [data-ab-reader]{display:flex;flex-direction:column;flex:1;min-height:0}
+.reading-fullscreen [data-ab-reader-text] {
+  flex:1; min-height:0; max-height:none; width:100%; padding:20px max(8px,calc((100% - 68ch)/2));
+  border-radius:0; scrollbar-gutter:stable;
+}
+.reading-fullscreen .transport {
+  flex:none; order:1; justify-content:center; gap:8px;
+  padding-top:10px; margin:0; border-top:1px solid var(--line);
+}
+.reading-fullscreen .transport label{min-height:44px;font-size:.9rem}
+.reading-fullscreen [data-ab-read-play]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 @media(max-width:900px){.wrap{width:calc(100% - 42px)}.hero{gap:25px}.shelf{min-height:320px}.book{grid-template-columns:82px 1fr;gap:13px}.membership{gap:28px}}
 @media(max-width:660px) {
   html{scroll-padding-bottom:calc(126px + env(safe-area-inset-bottom))}
