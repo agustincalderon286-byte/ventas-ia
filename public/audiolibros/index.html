@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Audiolibros en español de Total Elite Coaching. Escucha gratis el 10 % de cada título o suscríbete a toda la biblioteca por $20 USD al mes.">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="max-image-preview:large">
@@ -40,9 +40,9 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="/audiolibros/estilos.css">
+  <link rel="stylesheet" href="/audiolibros/estilos.css?v=2">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
-  <script defer src="/audiolibros/biblioteca.js"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=2"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -73,6 +73,10 @@
     <section class="catalog" id="catalogo">
       <div class="wrap">
         <div class="section-head"><div><p class="eyebrow">01 / Explora</p><h2>Encuentra tu próxima escucha</h2></div><p>Abre un título y prueba su muestra antes de suscribirte.</p></div>
+        <label class="catalog-search" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg>
+          <input type="search" id="catalog-search" placeholder="Buscar por título o autor" aria-label="Buscar por título o autor" autocomplete="off">
+        </label>
         <p id="catalog-status" class="status" role="status">Cargando audiolibros…</p>
         <div class="books" id="books"></div>
       </div>
@@ -99,6 +103,31 @@
   </main>
   <footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="#catalogo">Volver al catálogo ↑</a></footer>
 
+  <div class="app-dock">
+    <section class="mini-player" id="mini-player" aria-label="Minirreproductor" hidden>
+      <button id="mini-open" type="button" class="mini-open">
+        <img id="mini-cover" alt="" width="36" height="48">
+        <span><strong id="mini-title"></strong><small id="mini-status"></small></span>
+      </button>
+      <button id="mini-play" type="button" class="media-button" aria-label="Reproducir">▶</button>
+      <button id="mini-stop" type="button" class="media-button" aria-label="Cerrar y detener el audio">×</button>
+    </section>
+    <nav class="phone-nav" aria-label="Navegación del teléfono">
+      <a href="#catalogo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 5.5h6l2.5 2 2.5-2h6V19h-6l-2.5 2-2.5-2h-6zM12 7.5V21"/></svg>
+        Explorar
+      </a>
+      <a href="#membresia">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9 7 4.5h10L20.5 9 12 20 3.5 9zm0 0h17M9 9l3 11 3-11"/></svg>
+        Membresía
+      </a>
+      <button type="button" id="phone-account">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1.5a7 5 0 0 1 14 0V20"/></svg>
+        Cuenta
+      </button>
+    </nav>
+  </div>
+
   <dialog id="account" aria-labelledby="account-title">
     <button type="button" class="close" data-close aria-label="Cerrar">×</button>
     <p class="eyebrow">Tu biblioteca TEC</p>
@@ -118,15 +147,28 @@
   </dialog>
 
   <dialog id="player" aria-labelledby="book-title">
-    <button type="button" class="close" data-close aria-label="Cerrar">×</button>
-    <div class="player-book"><img id="book-cover" alt="" width="90" height="120"><div><p class="eyebrow" id="book-mode"></p><h2 id="book-title"></h2><p id="book-author"></p></div></div>
+    <div class="player-heading">
+      <button type="button" class="media-button" data-close aria-label="Minimizar reproductor">⌄</button>
+      <p class="eyebrow" id="book-mode"></p>
+      <button type="button" class="media-button" id="player-stop" aria-label="Cerrar y detener el audio">×</button>
+    </div>
+    <div class="player-book">
+      <div class="player-art"><img id="book-cover" alt="" width="180" height="240"></div>
+      <div><h2 id="book-title"></h2><p id="book-author"></p></div>
+    </div>
     <p id="player-status" class="status" role="status"></p>
     <div id="player-controls" hidden>
-      <p id="current-chapter" class="fine"></p>
-      <audio id="audio" controls controlslist="nodownload" preload="metadata" aria-label="Reproductor de audiolibro"></audio>
-      <div class="transport">
-        <button class="button outline" id="back" type="button" aria-label="Retroceder quince segundos">−15 s</button>
-        <button class="button outline" id="forward" type="button" aria-label="Avanzar quince segundos">+15 s</button>
+      <p id="current-chapter" class="player-chapter"></p>
+      <audio id="audio" preload="metadata" hidden></audio>
+      <input type="range" id="seek-bar" min="0" max="1" value="0" step="0.1" aria-label="Posición de escucha" disabled>
+      <div class="player-times" aria-hidden="true"><span id="elapsed">0:00</span><span id="duration">0:00</span></div>
+      <div class="playback-buttons">
+        <button class="media-button skip-button" id="back" type="button" aria-label="Retroceder quince segundos">−15<span> s</span></button>
+        <button class="media-button main-play" id="play" type="button" aria-label="Reproducir">▶</button>
+        <button class="media-button skip-button" id="forward" type="button" aria-label="Avanzar quince segundos">+15<span> s</span></button>
+      </div>
+      <div class="player-tools">
+        <button class="button outline" id="chapter-shortcut" type="button" hidden>Capítulos</button>
         <label>Velocidad <select id="speed"><option value=".5">0.5×</option><option value=".75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
         <label>Temporizador <select id="timer"><option value="0">Desactivado</option><option value="5">5 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="chapter">Fin del capítulo</option></select></label>
       </div>
