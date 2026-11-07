@@ -962,5 +962,120 @@
       "r2ETag": "\"46d49372188644da9b66270f96183309\""
     },
     "voiceDisclosure": ""
+  },
+  {
+    "id": "el-kybalion",
+    "title": "El Kybalión",
+    "author": "Tres Iniciados",
+    "originalTitle": "The Kybalion",
+    "language": "Español",
+    "categories": [
+      "Filosofía",
+      "Hermetismo",
+      "Clásicos"
+    ],
+    "description": "Una exposición de la filosofía hermética y sus siete principios: mentalismo, correspondencia, vibración, polaridad, ritmo, causa y efecto, y género. Incluye la introducción y los quince capítulos completos, en español actual.",
+    "edition": "Edición íntegra en español actual · TEC",
+    "narrator": "Narración de TEC",
+    "credits": "Tres Iniciados. Traducción al español actual y producción sonora de TEC.",
+    "duration": 13055.77,
+    "cover": "/coach/assets/audiobooks/el-kybalion-ilustrada-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/el-kybalion-ilustrada-v1.png",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Epígrafe y dedicatoria",
+        "start": 0.0,
+        "duration": 26.81
+      },
+      {
+        "title": "INTRODUCCIÓN",
+        "start": 26.81,
+        "duration": 453.87
+      },
+      {
+        "title": "CAPÍTULO I · LA FILOSOFÍA HERMÉTICA",
+        "start": 480.68,
+        "duration": 605.13
+      },
+      {
+        "title": "CAPÍTULO II · LOS SIETE PRINCIPIOS HERMÉTICOS",
+        "start": 1085.81,
+        "duration": 1047.63
+      },
+      {
+        "title": "CAPÍTULO III · TRANSMUTACIÓN MENTAL",
+        "start": 2133.44,
+        "duration": 515.65
+      },
+      {
+        "title": "CAPÍTULO IV · EL TODO",
+        "start": 2649.09,
+        "duration": 718.65
+      },
+      {
+        "title": "CAPÍTULO V · EL UNIVERSO MENTAL",
+        "start": 3367.74,
+        "duration": 734.49
+      },
+      {
+        "title": "CAPÍTULO VI · LA PARADOJA DIVINA",
+        "start": 4102.23,
+        "duration": 1119.83
+      },
+      {
+        "title": "CAPÍTULO VII · \"EL TODO\" en TODO",
+        "start": 5222.06,
+        "duration": 1019.59
+      },
+      {
+        "title": "CAPÍTULO VIII · PLANOS DE CORRESPONDENCIA",
+        "start": 6241.65,
+        "duration": 1446.23
+      },
+      {
+        "title": "CAPÍTULO IX · VIBRACIÓN",
+        "start": 7687.88,
+        "duration": 720.11
+      },
+      {
+        "title": "CAPÍTULO X · POLARIDAD",
+        "start": 8407.99,
+        "duration": 649.07
+      },
+      {
+        "title": "CAPÍTULO XI · RITMO",
+        "start": 9057.06,
+        "duration": 741.71
+      },
+      {
+        "title": "CAPÍTULO XII · CAUSALIDAD",
+        "start": 9798.77,
+        "duration": 774.39
+      },
+      {
+        "title": "CAPÍTULO XIII · GÉNERO",
+        "start": 10573.16,
+        "duration": 622.03
+      },
+      {
+        "title": "CAPÍTULO XIV · GÉNERO MENTAL",
+        "start": 11195.19,
+        "duration": 1181.33
+      },
+      {
+        "title": "CAPÍTULO XV · AXIOMAS HERMÉTICOS",
+        "start": 12376.52,
+        "duration": 679.25
+      }
+    ],
+    "audio": {
+      "sha256": "824cd816d8b01334825f8fb7503958d6c54855cecf92f97d4eb9cee6bf306cd6",
+      "bytes": 255751084,
+      "contentType": "audio/mp4",
+      "filename": "El-Kybalion.m4b",
+      "r2Key": "El-Kybalion-BF16-solo-voz-web.m4b",
+      "r2ETag": "\"6060d571e6b358d0fb49341398408ca3\""
+    }
   }
 ]

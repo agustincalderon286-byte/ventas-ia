@@ -1,5 +1,13 @@
 # Audiolibros TEC
 
+## El Kybalión — 7 de noviembre de 2026
+
+Se añade *El Kybalión*, de Tres Iniciados, en español actual: epígrafe y dedicatoria, introducción y quince capítulos; duración total 13.055,77 segundos. La lectura conserva exactamente el maestro cotejado mediante 633 pasajes sincronizados, SHA-256 `dbae31de57200c1b4066b095e5037c51656df77062a4d8d7eb9671eac6697401`.
+
+La copia web completa se sirve desde el objeto privado R2 `El-Kybalion-BF16-solo-voz-web.m4b`, de 255.751.084 bytes, SHA-256 `824cd816d8b01334825f8fb7503958d6c54855cecf92f97d4eb9cee6bf306cd6` y ETag `6060d571e6b358d0fb49341398408ca3`, verificado desde el servicio. Conserva los 17 capítulos y la duración del maestro del SSD; el maestro original permanece intacto. El catálogo y la muestra pública usan la misma edición. La muestra comprende el primer 10 %: 1.305,58 segundos, sin capítulos incrustados. Incluye portada ilustrada y arte para los controles multimedia.
+
+La incorporación es aditiva y conserva los siete títulos anteriores, sus cuentas, pagos, reseñas y avances. Las comprobaciones técnicas y automáticas no sustituyen una escucha editorial íntegra.
+
 La pestaña Audiolibros usa las sesiones y el acceso operativo existente de TEC. El enlace directo es `/coach/app/#audiolibros`. Incluye catálogo, ficha, reproducción por capítulos, velocidad, avance privado por cuenta y una reseña de 1–5 estrellas por cuenta y libro. La función no crea suscripciones ni cobros adicionales.
 
 El catálogo editorial está fijado en `src/knowledge/tec-audiobooks.json`. El primer título es *Como un hombre piensa*, de James Allen: nueve partes, 48:11, español, voz BF16 fija y sin fondos. El SHA-256 del M4B es `d614e63ebc3d519e98a2ed55574a63da6a30d5870821bc425bc5d872ab8905b8`. El archivo original y la revisión técnica se conservan en el SSD. No se regeneró audio ni se cambió la biblioteca de pruebas de Sites.
