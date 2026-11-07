@@ -227,5 +227,281 @@
       "r2Key": "El-arte-de-la-guerra-BF16-solo-voz.m4b",
       "r2ETag": "\"a94097fa16400e7664624b90bd858f5e\""
     }
+  },
+  {
+    "id": "genesis-rv1909",
+    "title": "Génesis",
+    "author": "Biblia · Reina-Valera 1909",
+    "language": "Español",
+    "categories": [
+      "Biblia",
+      "Antiguo Testamento"
+    ],
+    "description": "El primer libro de la Biblia, desde la creación hasta la historia de José en Egipto. Narración de los 50 capítulos de la edición Reina-Valera 1909.",
+    "edition": "Reina-Valera 1909 · Edición íntegra",
+    "narrator": "Narración y voces de TEC",
+    "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
+    "duration": 13599.01,
+    "cover": "/coach/assets/audiobooks/genesis-rv1909.svg",
+    "chapters": [
+      {
+        "title": "Capítulo 1",
+        "start": 0.0,
+        "duration": 277.64
+      },
+      {
+        "title": "Capítulo 2",
+        "start": 277.64,
+        "duration": 193.92
+      },
+      {
+        "title": "Capítulo 3",
+        "start": 471.56,
+        "duration": 227.55
+      },
+      {
+        "title": "Capítulo 4",
+        "start": 699.11,
+        "duration": 224.25
+      },
+      {
+        "title": "Capítulo 5",
+        "start": 923.36,
+        "duration": 200.28
+      },
+      {
+        "title": "Capítulo 6",
+        "start": 1123.64,
+        "duration": 188.42
+      },
+      {
+        "title": "Capítulo 7",
+        "start": 1312.06,
+        "duration": 203.78
+      },
+      {
+        "title": "Capítulo 8",
+        "start": 1515.84,
+        "duration": 194.34
+      },
+      {
+        "title": "Capítulo 9",
+        "start": 1710.18,
+        "duration": 220.55
+      },
+      {
+        "title": "Capítulo 10",
+        "start": 1930.73,
+        "duration": 203.61
+      },
+      {
+        "title": "Capítulo 11",
+        "start": 2134.34,
+        "duration": 228.16
+      },
+      {
+        "title": "Capítulo 12",
+        "start": 2362.5,
+        "duration": 173.65
+      },
+      {
+        "title": "Capítulo 13",
+        "start": 2536.15,
+        "duration": 151.8
+      },
+      {
+        "title": "Capítulo 14",
+        "start": 2687.95,
+        "duration": 223.44
+      },
+      {
+        "title": "Capítulo 15",
+        "start": 2911.39,
+        "duration": 170.92
+      },
+      {
+        "title": "Capítulo 16",
+        "start": 3082.31,
+        "duration": 150.96
+      },
+      {
+        "title": "Capítulo 17",
+        "start": 3233.27,
+        "duration": 233.81
+      },
+      {
+        "title": "Capítulo 18",
+        "start": 3467.08,
+        "duration": 315.16
+      },
+      {
+        "title": "Capítulo 19",
+        "start": 3782.24,
+        "duration": 367.82
+      },
+      {
+        "title": "Capítulo 20",
+        "start": 4150.06,
+        "duration": 184.94
+      },
+      {
+        "title": "Capítulo 21",
+        "start": 4335.0,
+        "duration": 260.2
+      },
+      {
+        "title": "Capítulo 22",
+        "start": 4595.2,
+        "duration": 227.28
+      },
+      {
+        "title": "Capítulo 23",
+        "start": 4822.48,
+        "duration": 178.81
+      },
+      {
+        "title": "Capítulo 24",
+        "start": 5001.29,
+        "duration": 619.73
+      },
+      {
+        "title": "Capítulo 25",
+        "start": 5621.02,
+        "duration": 266.21
+      },
+      {
+        "title": "Capítulo 26",
+        "start": 5887.23,
+        "duration": 313.04
+      },
+      {
+        "title": "Capítulo 27",
+        "start": 6200.27,
+        "duration": 430.79
+      },
+      {
+        "title": "Capítulo 28",
+        "start": 6631.06,
+        "duration": 203.69
+      },
+      {
+        "title": "Capítulo 29",
+        "start": 6834.75,
+        "duration": 314.58
+      },
+      {
+        "title": "Capítulo 30",
+        "start": 7149.33,
+        "duration": 380.07
+      },
+      {
+        "title": "Capítulo 31",
+        "start": 7529.4,
+        "duration": 522.31
+      },
+      {
+        "title": "Capítulo 32",
+        "start": 8051.71,
+        "duration": 294.25
+      },
+      {
+        "title": "Capítulo 33",
+        "start": 8345.96,
+        "duration": 186.6
+      },
+      {
+        "title": "Capítulo 34",
+        "start": 8532.56,
+        "duration": 273.0
+      },
+      {
+        "title": "Capítulo 35",
+        "start": 8805.56,
+        "duration": 243.61
+      },
+      {
+        "title": "Capítulo 36",
+        "start": 9049.17,
+        "duration": 336.69
+      },
+      {
+        "title": "Capítulo 37",
+        "start": 9385.86,
+        "duration": 341.93
+      },
+      {
+        "title": "Capítulo 38",
+        "start": 9727.79,
+        "duration": 291.39
+      },
+      {
+        "title": "Capítulo 39",
+        "start": 10019.18,
+        "duration": 208.07
+      },
+      {
+        "title": "Capítulo 40",
+        "start": 10227.25,
+        "duration": 203.35
+      },
+      {
+        "title": "Capítulo 41",
+        "start": 10430.6,
+        "duration": 496.13
+      },
+      {
+        "title": "Capítulo 42",
+        "start": 10926.73,
+        "duration": 353.44
+      },
+      {
+        "title": "Capítulo 43",
+        "start": 11280.17,
+        "duration": 349.25
+      },
+      {
+        "title": "Capítulo 44",
+        "start": 11629.42,
+        "duration": 303.15
+      },
+      {
+        "title": "Capítulo 45",
+        "start": 11932.57,
+        "duration": 260.03
+      },
+      {
+        "title": "Capítulo 46",
+        "start": 12192.6,
+        "duration": 288.37
+      },
+      {
+        "title": "Capítulo 47",
+        "start": 12480.97,
+        "duration": 349.74
+      },
+      {
+        "title": "Capítulo 48",
+        "start": 12830.71,
+        "duration": 250.48
+      },
+      {
+        "title": "Capítulo 49",
+        "start": 13081.19,
+        "duration": 274.51
+      },
+      {
+        "title": "Capítulo 50",
+        "start": 13355.7,
+        "duration": 243.31
+      }
+    ],
+    "audio": {
+      "sha256": "077d5899a497d0b708de703e142c0b7be2f9200c37e5462fd89662a8d89bafc6",
+      "bytes": 296009225,
+      "contentType": "audio/mp4",
+      "filename": "Genesis-RV1909.m4b",
+      "r2Key": "Genesis-RV1909-BF16-voces.m4b",
+      "r2ETag": "\"1bc0c6796c26b665bbc2835255781992\""
+    }
   }
 ]
