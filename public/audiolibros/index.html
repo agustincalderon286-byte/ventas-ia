@@ -40,9 +40,9 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="/audiolibros/estilos.css?v=2">
+  <link rel="stylesheet" href="/audiolibros/estilos.css?v=3">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=4"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=5"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -175,16 +175,25 @@
       </div>
       <p id="timer-status" class="fine" role="status"></p>
       <details id="reader-panel" hidden><summary>Lectura sincronizada</summary>
+        <div class="reader-content">
+        <div class="reader-view-heading" id="reader-view-heading" hidden>
+          <button type="button" class="button outline" id="reader-return">‹ Volver</button>
+          <h2 id="reader-view-title"></h2>
+        </div>
         <p id="reader-status" class="fine" role="status"></p>
         <section data-ab-reader hidden>
           <div class="transport">
+            <button class="button outline" type="button" id="reader-fullscreen" aria-pressed="false">Pantalla completa</button>
             <button class="button outline" type="button" data-ab-read-play>Reproducir</button>
-            <button class="button outline" type="button" data-ab-font-smaller aria-label="Reducir tamaño de texto">A−</button>
-            <button class="button outline" type="button" data-ab-font-larger aria-label="Aumentar tamaño de texto">A+</button>
+            <span class="reader-font-controls">
+              <button class="button outline" type="button" data-ab-font-smaller aria-label="Reducir tamaño de texto">A−</button>
+              <button class="button outline" type="button" data-ab-font-larger aria-label="Aumentar tamaño de texto">A+</button>
+            </span>
             <label><input type="checkbox" data-ab-follow checked> Seguir lectura</label>
           </div>
           <div data-ab-reader-text tabindex="0" aria-label="Texto del audiolibro"></div>
         </section>
+        </div>
       </details>
       <div id="preview-upsell" hidden><p>Escucha el 10 % inicial gratis. Con la membresía puedes seguir desde aquí.</p><button class="button primary" id="unlock" type="button">Desbloquear la biblioteca</button></div>
       <details id="chapter-list" hidden><summary>Capítulos</summary><ol id="chapters" class="jump-list"></ol></details>

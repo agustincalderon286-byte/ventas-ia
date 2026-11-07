@@ -298,6 +298,7 @@
     $('#player-status').textContent = full ? 'Cargando audiolibro…' : '';
     $('#book-mode').textContent = full ? 'Edición íntegra' : 'Muestra gratuita · 10 %';
     $('#book-title').textContent = book.title;
+    $('#reader-view-title').textContent = book.title;
     $('#book-author').textContent = book.author;
     $('#book-cover').src = book.cover;
     expandPlayer();
@@ -352,8 +353,33 @@
     if (!player.open) player.showModal();
   }
 
+  function setReadingFullscreen(enabled) {
+    const text = $('[data-ab-reader-text]');
+    const scrollable = text.scrollHeight - text.clientHeight;
+    const progress = scrollable > 0 ? text.scrollTop / scrollable : 0;
+    player.classList.toggle('reading-fullscreen', enabled);
+    $('#reader-view-heading').hidden = !enabled;
+    $('#reader-fullscreen').textContent = enabled ? 'Reducir lectura' : 'Pantalla completa';
+    $('#reader-fullscreen').setAttribute('aria-pressed', String(enabled));
+    if (enabled) {
+      $('#reader-panel').open = true;
+      reader.fontSize = Math.max(22, reader.fontSize);
+      reader.resize(0);
+    }
+    text.scrollTop = progress * Math.max(0, text.scrollHeight - text.clientHeight);
+    player.scrollTop = 0;
+    reader.update(true);
+  }
+
+  function toggleReadingFullscreen() {
+    const enabled = !player.classList.contains('reading-fullscreen');
+    setReadingFullscreen(enabled);
+    (enabled ? $('[data-ab-reader-text]') : $('#reader-shortcut')).focus({ preventScroll: true });
+  }
+
   function stopPlayback() {
     saveProgress();
+    setReadingFullscreen(false);
     ++generation;
     selected = null;
     scrubbing = false;
@@ -373,6 +399,7 @@
 
   player.addEventListener('close', () => {
     if (player.open) return;
+    setReadingFullscreen(false);
     if (!selected) { ++generation; return; }
     saveProgress();
     miniPlayer.hidden = false;
@@ -404,6 +431,13 @@
   });
   $('#reader-panel').addEventListener('toggle', event => {
     $('#reader-shortcut').setAttribute('aria-expanded', String(event.currentTarget.open));
+  });
+  $('#reader-fullscreen').addEventListener('click', toggleReadingFullscreen);
+  $('#reader-return').addEventListener('click', toggleReadingFullscreen);
+  player.addEventListener('cancel', event => {
+    if (!player.classList.contains('reading-fullscreen')) return;
+    event.preventDefault();
+    toggleReadingFullscreen();
   });
   $('#back').addEventListener('click', () => seek(audio.currentTime - 15));
   $('#forward').addEventListener('click', () => seek(audio.currentTime + 15));
