@@ -121,7 +121,9 @@ export function registerAudioMembership(app, {
 
   function publicBook(book) {
     const { audio, chapters, ...info } = book;
-    return { ...info, previewDuration: previewSeconds(book), previewUrl: sampleIds.has(book.id) ? `/audiolibros/muestras/${book.id}.m4a` : null };
+    return { ...info, previewDuration: previewSeconds(book),
+      previewUrl: sampleIds.has(book.id) ? `/audiolibros/muestras/${book.id}.m4a` : null,
+      previewTranscriptUrl: sampleIds.has(book.id) && getTranscript(book.id) ? `${api}/libros/${book.id}/muestra/texto` : null };
   }
 
   function throttleMail(ip, now) {
@@ -242,6 +244,14 @@ export function registerAudioMembership(app, {
     res.json({ book: { ...publicBook(book), chapters: book.chapters, audioUrl: `${base}/audio`,
       transcriptUrl: getTranscript(book.id) ? `${base}/texto` : null },
     progress: { position: saved?.position || 0, speed: saved?.speed || 1, marks: saved?.marks || [] } });
+  });
+
+  route('get', '/libros/:id/muestra/texto', async (req, res) => {
+    const book = byId.get(req.params.id);
+    const text = book && sampleIds.has(book.id) && getTranscript(book.id);
+    if (!text) return reply(res, 404, 'El texto de esta muestra no está disponible.');
+    const limit = previewSeconds(book);
+    res.json({ cues: text.cues.filter(cue => cue.start < limit && cue.end <= limit), trailingSeparator: '' });
   });
 
   route('get', '/libros/:id/audio', async (req, res) => {

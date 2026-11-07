@@ -42,7 +42,7 @@
   </script>
   <link rel="stylesheet" href="/audiolibros/estilos.css?v=2">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=3"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=4"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -168,15 +168,13 @@
         <button class="media-button skip-button" id="forward" type="button" aria-label="Avanzar quince segundos">+15<span> s</span></button>
       </div>
       <div class="player-tools">
+        <button class="button outline" id="reader-shortcut" type="button" aria-controls="reader-panel" aria-expanded="false" hidden>Leer y escuchar</button>
         <button class="button outline" id="chapter-shortcut" type="button" hidden>Capítulos</button>
         <label>Velocidad <select id="speed"><option value=".5">0.5×</option><option value=".75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
         <label>Temporizador <select id="timer"><option value="0">Desactivado</option><option value="5">5 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="chapter">Fin del capítulo</option></select></label>
       </div>
       <p id="timer-status" class="fine" role="status"></p>
-      <div id="preview-upsell" hidden><p>Escucha el 10 % inicial gratis. Con la membresía puedes seguir desde aquí.</p><button class="button primary" id="unlock" type="button">Desbloquear la biblioteca</button></div>
-      <details id="chapter-list" hidden><summary>Capítulos</summary><ol id="chapters" class="jump-list"></ol></details>
-      <details id="bookmark-list" hidden><summary>Marcadores</summary><button class="button outline" id="add-mark" type="button">Guardar este punto</button><ul class="jump-list" id="marks"></ul></details>
-      <details id="reader-panel" hidden><summary>Leer junto con el audio</summary>
+      <details id="reader-panel" hidden><summary>Lectura sincronizada</summary>
         <p id="reader-status" class="fine" role="status"></p>
         <section data-ab-reader hidden>
           <div class="transport">
@@ -188,6 +186,9 @@
           <div data-ab-reader-text tabindex="0" aria-label="Texto del audiolibro"></div>
         </section>
       </details>
+      <div id="preview-upsell" hidden><p>Escucha el 10 % inicial gratis. Con la membresía puedes seguir desde aquí.</p><button class="button primary" id="unlock" type="button">Desbloquear la biblioteca</button></div>
+      <details id="chapter-list" hidden><summary>Capítulos</summary><ol id="chapters" class="jump-list"></ol></details>
+      <details id="bookmark-list" hidden><summary>Marcadores</summary><button class="button outline" id="add-mark" type="button">Guardar este punto</button><ul class="jump-list" id="marks"></ul></details>
     </div>
   </dialog>
 </body>

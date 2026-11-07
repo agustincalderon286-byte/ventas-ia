@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
 import express from 'express';
-import { audiobookCatalog } from '../src/tec-audiobooks.js';
+import { audiobookCatalog, getAudiobookTranscript } from '../src/tec-audiobooks.js';
 import { hasAudioMembership, isAudioMembershipPrice, registerAudioMembership } from '../src/tec-audio-membership.js';
 
 const audience = 'tec-audiolibros';
@@ -88,7 +88,17 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
     assert.ok(publicBook.previewUrl);
     assert.ok(Math.abs(publicBook.previewDuration - audiobookCatalog[index].duration * .1) < .001);
     for (const field of ['audio', 'audioUrl', 'transcriptUrl', 'chapters']) assert.equal(field in publicBook, false);
+    const previewText = await fetch('http://127.0.0.1:' + server.address().port + publicBook.previewTranscriptUrl);
+    assert.equal(previewText.status, 200);
+    const excerpt = await previewText.json();
+    const expected = getAudiobookTranscript(publicBook.id).cues.filter(cue =>
+      cue.start < publicBook.previewDuration && cue.end <= publicBook.previewDuration);
+    assert.ok(excerpt.cues.length);
+    assert.deepEqual(excerpt.cues, expected);
+    assert.ok(excerpt.cues.length < getAudiobookTranscript(publicBook.id).cues.length);
+    assert.equal(excerpt.trailingSeparator, '');
   }
+  assert.equal((await request('/libros/unknown/muestra/texto')).status, 404);
   for (const suffix of ['', '/audio', '/texto']) assert.equal((await request(path + suffix)).status, 401);
 
   assert.equal((await post('/entrar', { email: 'listener@example.test' }, null, 'https://other.test')).status, 403);

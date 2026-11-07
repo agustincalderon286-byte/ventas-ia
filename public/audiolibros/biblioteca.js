@@ -225,14 +225,17 @@
   }
 
   async function renderReader(book, request) {
-    $('#reader-panel').hidden = !book.transcriptUrl;
+    const panel = $('#reader-panel');
+    panel.hidden = !book.transcriptUrl;
+    $('#reader-shortcut').hidden = !book.transcriptUrl;
     if (!book.transcriptUrl) return;
+    panel.open = true;
     $('#reader-status').textContent = 'Abriendo el texto…';
     try {
       const text = await api(book.transcriptUrl.slice(apiRoot.length));
       if (request !== generation) return;
       reader.set(text);
-      $('#reader-status').textContent = 'Toca un pasaje para escuchar desde ahí.';
+      $('#reader-status').textContent = (book.full ? '' : 'Texto de la muestra gratuita. ') + 'Toca un pasaje para escuchar desde ahí.';
     } catch (error) {
       if (request === generation) $('#reader-status').textContent = error.message;
     }
@@ -302,7 +305,7 @@
     try {
       const data = full
         ? await api('/libros/' + encodeURIComponent(book.id))
-        : { book: { ...book, duration: book.previewDuration, audioUrl: book.previewUrl }, progress: { position: 0, speed: 1, marks: [] } };
+        : { book: { ...book, duration: book.previewDuration, audioUrl: book.previewUrl, transcriptUrl: book.previewTranscriptUrl }, progress: { position: 0, speed: 1, marks: [] } };
       if (request !== generation) return;
       selected = { ...data.book, full, marks: data.progress.marks };
       lastSave = Date.now();
@@ -337,7 +340,8 @@
       audio.src = selected.audioUrl;
       updatePlayback();
       setMediaSession(book);
-      if (full) { renderMarks(); renderReader(selected, request); }
+      if (full) renderMarks();
+      renderReader(selected, request);
     } catch (error) {
       if (request === generation) $('#player-status').textContent = error.message;
     }
@@ -361,6 +365,7 @@
     miniPlayer.hidden = true;
     reader.clear();
     $('#reader-panel').hidden = true;
+    $('#reader-shortcut').hidden = true;
     for (const panel of player.querySelectorAll('details')) panel.open = false;
     resetTimer();
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
@@ -390,6 +395,15 @@
     const panel = $('#chapter-list');
     panel.open = true;
     panel.querySelector('summary').focus();
+  });
+  $('#reader-shortcut').addEventListener('click', () => {
+    const panel = $('#reader-panel');
+    panel.open = true;
+    panel.querySelector('summary').focus();
+    panel.scrollIntoView({ block: 'start' });
+  });
+  $('#reader-panel').addEventListener('toggle', event => {
+    $('#reader-shortcut').setAttribute('aria-expanded', String(event.currentTarget.open));
   });
   $('#back').addEventListener('click', () => seek(audio.currentTime - 15));
   $('#forward').addEventListener('click', () => seek(audio.currentTime + 15));
