@@ -1,0 +1,26 @@
+{
+  "id": "/audiolibros/",
+  "name": "Audiolibros TEC",
+  "short_name": "Audio TEC",
+  "description": "La biblioteca sonora en español de Total Elite Coaching.",
+  "lang": "es",
+  "start_url": "/audiolibros/",
+  "scope": "/audiolibros/",
+  "display": "browser",
+  "background_color": "#102421",
+  "theme_color": "#102421",
+  "icons": [
+    {
+      "src": "/audiolibros/identidad/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/audiolibros/identidad/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
