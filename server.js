@@ -24,6 +24,7 @@ import { createAdminPasskeyModels, registerAdminPasskeys } from "./src/tec-admin
 import { registerTecAudioLab } from "./src/tec-audio-lab.js";
 import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audiobooks.js";
 import { createAudiobookR2 } from "./src/tec-audiobook-r2.js";
+import { registerAudiobookSeo } from "./src/tec-audiobook-seo.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
@@ -32413,6 +32414,11 @@ registerTecControlRoutes(app, {
 const audiobookModels = createAudiobookModels(mongoose);
 const audiobookR2 = createAudiobookR2();
 const getAudiobookBucket = () => new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "tec_audiobooks" });
+registerAudiobookSeo(app, {
+  publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",
+  googleVerification: process.env.GOOGLE_SITE_VERIFICATION || "",
+  bingVerification: process.env.BING_SITE_VERIFICATION || ""
+});
 registerTecAudiobooks(app, {
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
   ...audiobookModels, getBucket: getAudiobookBucket, r2: audiobookR2

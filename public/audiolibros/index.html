@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Audiolibros en español de Total Elite Coaching. Escucha gratis el 10 % de cada título o suscríbete a toda la biblioteca por $20 USD al mes.">
   <meta name="referrer" content="no-referrer">
-  <meta name="robots" content="max-image-preview:large">
   <meta name="theme-color" content="#102421">
   <meta name="apple-mobile-web-app-title" content="Audio TEC">
-  <title>Audiolibros TEC · Clásicos en español</title>
-  <link rel="canonical" href="https://totalelitecoaching.com/audiolibros/">
   <link rel="icon" href="/audiolibros/identidad/favicon-96.png" type="image/png" sizes="96x96">
   <link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png" sizes="180x180">
   <link rel="manifest" href="/audiolibros/site.webmanifest">
+  <!-- seo:head:start -->
+  <meta name="description" content="Escucha audiolibros en español de desarrollo personal, estrategia, filosofía y la Biblia. Prueba gratis el 10 % de cada libro, con lectura sincronizada. Membresía: $20 USD al mes.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <title>Audiolibros en español: clásicos y Biblia | Audiolibros TEC</title>
+  <link rel="canonical" href="https://totalelitecoaching.com/audiolibros/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Total Elite Coaching">
   <meta property="og:url" content="https://totalelitecoaching.com/audiolibros/">
@@ -40,11 +41,12 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="/audiolibros/estilos.css?v=3">
+  <!-- seo:head:end -->
+  <link rel="stylesheet" href="/audiolibros/estilos.css?v=4">
   <link rel="stylesheet" href="/audiolibros/compartir.css?v=20261107">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
   <script defer src="/audiolibros/compartir.js?v=20261107"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=6"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=7"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -58,9 +60,9 @@
   <main>
     <section class="hero wrap">
       <div>
-        <p class="eyebrow"><span class="signal"></span> La biblioteca sonora de TEC</p>
+        <p class="eyebrow"><span class="signal"></span> Audiolibros en español</p>
         <h1>Grandes ideas,<br><em>a tu ritmo.</em></h1>
-        <p class="intro">Escucha clásicos en español, sigue el texto mientras suenan y retoma cada historia justo donde la dejaste.</p>
+        <p class="intro">Escucha audiolibros de desarrollo personal, estrategia, filosofía y la Biblia. Sigue el texto mientras suenan y retoma cada historia donde la dejaste.</p>
         <div class="actions"><a class="button primary" href="#catalogo">Explorar audiolibros <span aria-hidden="true">↓</span></a><a class="button outline" href="#membresia">Ver membresía</a></div>
         <p class="fine">Escucha el primer 10 % de cada libro gratis.</p>
       </div>
@@ -74,7 +76,7 @@
     </section>
     <section class="catalog" id="catalogo">
       <div class="wrap">
-        <div class="section-head"><div><p class="eyebrow">01 / Explora</p><h2>Encuentra tu próxima escucha</h2></div><p>Abre un título y prueba su muestra antes de suscribirte.</p></div>
+        <div class="section-head"><div><p class="eyebrow">01 / Explora</p><h2>Encuentra tu próximo audiolibro</h2></div><p>Abre un título y prueba su muestra antes de suscribirte.</p></div>
         <label class="catalog-search" hidden>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg>
           <input type="search" id="catalog-search" placeholder="Buscar por título o autor" aria-label="Buscar por título o autor" autocomplete="off">
@@ -102,8 +104,15 @@
         <p id="billing-status" class="status" role="status"></p>
       </aside>
     </section>
+    <section class="wrap audiobook-faq" aria-labelledby="faq-title">
+      <p class="eyebrow">Antes de escuchar</p><h2 id="faq-title">Tu biblioteca, sin complicaciones</h2>
+      <details><summary>¿Puedo escuchar audiolibros gratis?</summary><p>Sí. Puedes escuchar el primer 10 % de cada título sin registrarte. Para continuar con el libro completo, activa la membresía de Audiolibros TEC.</p></details>
+      <details><summary>¿Qué incluye la membresía?</summary><p>Por $20 USD al mes tienes acceso al catálogo completo de Audiolibros TEC, con renovación mensual. Puedes cancelar desde tu cuenta. Esta membresía es independiente de la aplicación Coach de TEC.</p></details>
+      <details><summary>¿Puedo leer mientras escucho?</summary><p>Sí. Abre un libro y elige «Leer y escuchar» para seguir el texto sincronizado. Puedes ajustar el tamaño de letra y la velocidad de reproducción.</p></details>
+      <details><summary>¿Puedo compartir una cita o un fragmento?</summary><p>Sí. Desde el reproductor, toca «Compartir cita o audio». Crea una tarjeta con el pasaje o un fragmento de audio de 15, 30 o 45 segundos. También puedes preparar un video vertical. Los enlaces y códigos QR llevan de regreso a TEC.</p></details>
+    </section>
   </main>
-  <footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="#catalogo">Volver al catálogo ↑</a></footer>
+  <footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="#catalogo">Volver al catálogo ↑</a><a href="/coach/contacto/">Contacto</a></footer>
 
   <div class="app-dock">
     <section class="mini-player" id="mini-player" aria-label="Minirreproductor" hidden>

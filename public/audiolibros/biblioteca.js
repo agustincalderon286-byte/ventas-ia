@@ -63,16 +63,24 @@
     const cards = matches.map(book => {
       const card = element('article', undefined, 'book');
       const image = element('img');
-      Object.assign(image, { src: book.cover, alt: '', width: 600, height: 800 });
+      Object.assign(image, { src: book.cover, alt: 'Portada de ' + book.title, width: 600, height: 800, loading: 'lazy', decoding: 'async' });
       const copy = element('div');
+      const detailUrl = '/audiolibros/libros/' + encodeURIComponent(book.id) + '/';
+      const titleLink = element('a', book.title);
+      titleLink.href = detailUrl;
+      const heading = element('h3');
+      heading.append(titleLink);
       copy.append(
-        element('p', book.categories.join(' · '), 'eyebrow'), element('h3', book.title),
+        element('p', book.categories.join(' · '), 'eyebrow'), heading,
         element('p', book.author, 'author'), element('p', book.description, 'book-description'),
         element('p', book.language + ' · ' + time(book.duration), 'book-duration')
       );
       const actions = element('div', undefined, 'actions');
       if (account.member) actions.append(button('Escuchar y leer', () => openBook(book, false), 'primary'));
       if (book.previewUrl) actions.append(button('▶ Muestra · ' + time(book.previewDuration), () => openBook(book, true)));
+      const details = element('a', 'Ver libro', 'book-link');
+      details.href = detailUrl;
+      actions.append(details);
       copy.append(actions);
       card.append(image, copy);
       return card;

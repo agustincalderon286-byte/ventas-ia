@@ -1,5 +1,17 @@
 # Audiolibros TEC
 
+## Descubrimiento y SEO — 7 de noviembre de 2026
+
+`registerAudiobookSeo` prepara una vez al iniciar el servidor la portada HTML completa y una ficha pública por libro en `/audiolibros/libros/:id/`. El catálogo, las descripciones, las muestras y los enlaces se pueden leer sin ejecutar JavaScript. Las fichas incluyen capítulos, créditos, portada, muestra pública sin precarga de audio y enlace al reproductor existente. El precio de 20 USD al mes se identifica como membresía; nunca como compra individual ni libro completo gratuito. La sesión y Stripe siguen resolviéndose únicamente mediante los endpoints privados existentes.
+
+Se generan canonical, Open Graph/Twitter, JSON-LD `CollectionPage`, `ItemList`, `Audiobook`, muestra `AudioObject` y `BreadcrumbList`; `/sitemap.xml` incluye únicamente la biblioteca y las ocho fichas canónicas, sin inventar fechas de actualización. `/robots.txt` permite el catálogo y sus portadas, y excluye las rutas internas de Coach/control/API del rastreo. Esto no sustituye la autorización del servidor. `/llms.txt` y `/audiolibros/llms.txt` ofrecen una guía pública complementaria con los libros y condiciones reales, sin textos completos, rutas de R2 ni información de cuentas. No se agregan trackers ni se modifican los consentimientos de Analytics.
+
+Los archivos públicos `googlee19e7e608fd653e9.html` y `BingSiteAuth.xml` permiten verificar la propiedad en las cuentas de Google/Bing autorizadas por Agustin. Deben conservarse para mantener la verificación. Son comprobantes públicos de propiedad, no credenciales de sesión. Las verificaciones y envíos del sitemap se completan después de que el despliegue esté activo. Las variables opcionales `GOOGLE_SITE_VERIFICATION` y `BING_SITE_VERIFICATION` sirven si se elige el método de metaetiqueta; no se requieren con los archivos actuales.
+
+Pruebas: 855 correctas. La nueva cobertura verifica HTML sin JavaScript, las ocho fichas, muestras e imágenes existentes, datos estructurados válidos como JSON, límites de exposición, escape de HTML, sitemap/canonical y redirecciones sin bucles, respuestas 404 y ausencia de cookies en páginas públicas. El registro en buscadores permite supervisar el rastreo; no garantiza indexación, posición ni citas de una IA. Referencias: [Google: funciones de IA y SEO](https://developers.google.com/search/docs/appearance/ai-features), [sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Schema.org Audiobook](https://schema.org/Audiobook).
+
+Reversión: revertir únicamente este cambio de interfaz/SEO; no requiere cambios en datos, pagos, archivos de audio ni membresías. Conservar los archivos de verificación si se desea mantener los registros externos.
+
 ## Compartir citas y audio — 7 de noviembre de 2026
 
 La biblioteca pública incluye «Compartir cita o audio» en el reproductor y «Compartir» en la lectura de pantalla completa. Se puede usar el pasaje actual o una selección de pasajes consecutivos, ampliarla o acortarla y elegir tarjeta 4:5 o 9:16. Las citas conservan texto canónico y autor, con un máximo de seis pasajes y 600 caracteres. El audio admite 15, 30 o 45 segundos y se exporta como MP3 o como video vertical H264/AAC para Instagram y TikTok. La aplicación prepara el archivo antes del gesto que abre el menú nativo de compartir. También ofrece descarga, enlace, Facebook y SMS. Instagram y TikTok deciden si admiten texto/enlace junto con el archivo; la tarjeta incorpora un QR al fragmento público en TEC.
