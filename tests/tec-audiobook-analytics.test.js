@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import * as events from '../public/audiolibros/analytics-events.js';
 import { audiobookCatalog } from '../src/tec-audiobooks.js';
 import { audioCollections } from '../src/knowledge/audiobook-editorial.js';
+import { audiobookGuides } from '../src/knowledge/audiobook-guides.js';
 
 const source = readFileSync(new URL('../public/audiolibros/analytics.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/, '');
 function browser({ choice = '', online = true, gpc = false, dnt = false, native = false, brokenStorage = false, origin = 'https://totalelitecoaching.com', pathname = '/audiolibros/' } = {}) {
@@ -25,6 +26,7 @@ function browser({ choice = '', online = true, gpc = false, dnt = false, native 
 test('analytics vocabulary covers the public catalog and collections but rejects unknown or private paths',()=>{
   assert.deepEqual([...events.BOOK_IDS].sort(),audiobookCatalog.map(b=>b.id).sort());
   assert.deepEqual([...events.COLLECTION_IDS].sort(),audioCollections.map(c=>c.id).sort());
+  assert.deepEqual([...events.GUIDE_IDS].sort(),audiobookGuides.map(g=>g.id).sort());
   for(const path of ['/coach/app/','/api/audiolibros/cuenta','/audiolibros/privacidad/','/audiolibros/compartir/secret','/audiolibros/libros/email@example.test/']) assert.equal(events.pageContext(path),null);
   const params=events.safeAudioEvent('page_view',{path:'/audiolibros/',type:'PRIVATE@example.test',email:'SECRET'});
   assert.equal(params.page_title,'Audiolibros TEC · biblioteca'); assert.ok(!JSON.stringify(params).includes('PRIVATE'));
@@ -67,4 +69,20 @@ test('blocked storage, a failed Google download and consent revoked during loadi
   const broken=browser({brokenStorage:true});broken.accept();broken.load();assert.equal(broken.events().length,1);
   const error=browser({choice:'accepted'});error.scripts[0].onerror();error.sample(events.BOOK_IDS[0]);assert.equal(error.events().length,0);
   const race=browser();race.accept();race.reject();race.load();assert.equal(race.events().length,0);
+});
+
+test('guide analytics accepts only public canonical slugs and respects the same consent rules',()=>{
+  assert.equal(events.pageContext('/audiolibros/guias/').type,'guias');
+  for(const g of audiobookGuides){
+    const pathname='/audiolibros/guias/'+g.id+'/';
+    assert.equal(events.pageContext(pathname).type,'guia');
+    assert.equal(events.pageContext(pathname+'PRIVATE@example.test'),null);
+    const rejected=browser({pathname,choice:'rejected'});assert.equal(rejected.scripts.length,0);
+    const accepted=browser({pathname,choice:'accepted'});accepted.load();
+    assert.equal(accepted.events().length,1);
+    assert.equal(accepted.events()[0][2].page_location,'https://totalelitecoaching.com'+pathname);
+    assert.equal(accepted.events()[0][2].page_title,'Audiolibros TEC · guia');
+    assert.ok(!JSON.stringify(accepted.events()).includes('PRIVATE'));
+  }
+  assert.equal(events.pageContext('/audiolibros/guias/not-a-guide/'),null);
 });

@@ -1,12 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { audiobookCatalog } from './tec-audiobooks.js';
 import { bookEditorial, audioCollections } from './knowledge/audiobook-editorial.js';
+import { audiobookGuides } from './knowledge/audiobook-guides.js';
 
 const publicRoot = new URL('../public/', import.meta.url);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const json = value => JSON.stringify(value).replace(/</g, '\\u003c');
 export const bookPath = book => `/audiolibros/libros/${book.id}/`;
 export const collectionPath = collection => `/audiolibros/colecciones/${collection.id}/`;
+export const guidePath = guide => `/audiolibros/guias/${guide.id}/`;
 export const sampleDuration = book => Math.floor(book.duration * 100) / 1000;
 export const isoDuration = value => `PT${Math.round(value)}S`;
 const time = value => {
@@ -22,7 +24,17 @@ export function buildAudiobookSeo({
   const origin = new URL(publicOrigin).origin;
   const absolute = path => new URL(path, origin).href;
   const library = absolute('/audiolibros/');
+  const guideHub = '/audiolibros/guias/';
+  const guides = audiobookGuides.map(g => {
+    const books = g.bookIds.map(id => catalog.find(b => b.id === id)).filter(Boolean);
+    return { ...g, books, cover: books.find(b => b.id === g.coverBookId) || books[0] };
+  }).filter(g => g.books.length);
   const collections = audioCollections.map(c => ({ ...c, books: c.bookIds.map(id => catalog.find(b => b.id === id)).filter(Boolean) })).filter(c => c.books.length);
+  const guideWords = g => [g.title, g.intro, ...g.sections.flatMap(s => [s.title, ...s.paragraphs, ...(s.bullets || [])])].join(' ').trim().split(/\s+/).length;
+  const readingTime = g => Math.max(1, Math.ceil(guideWords(g) / 180));
+  const guideCards = (items, headingTag = 'h3') => `<div class="guide-grid">${items.map(g => `<article class="guide-card"><a class="guide-card-cover" href="${guidePath(g)}" aria-label="Leer: ${escape(g.title)}"><img src="${escape(g.cover.cover)}" alt="Portada de ${escape(g.cover.title)}" width="600" height="800" loading="lazy" decoding="async"></a><div><p class="eyebrow">${escape(g.label)}</p><${headingTag}><a href="${guidePath(g)}">${escape(g.title)}</a></${headingTag}><p>${escape(g.description)}</p><span class="fine">${readingTime(g)} min de lectura aprox.</span><a class="guide-read-link" href="${guidePath(g)}">Leer la guía →</a></div></article>`).join('')}</div>`;
+  const guideRecommendations = (items, wrapped = true) => items.length ? `<section class="${wrapped ? 'wrap ' : ''}detail-section"><p class="eyebrow">Para seguir explorando</p><h2>Guías para esta lectura</h2>${guideCards(items)}<p><a href="${guideHub}">Ver todas las guías y lecturas →</a></p></section>` : '';
+  const guideTeaser = `<section class="wrap audio-guides" id="guias" aria-labelledby="guides-title"><p class="eyebrow">Encuentra tu próxima idea</p><h2 id="guides-title">Guías y lecturas</h2><p class="intro">Recomendaciones para elegir, conocer los libros y aprovechar cada escucha.</p>${guideCards(guides)}<p><a class="button outline" href="${guideHub}">Explorar Guías y lecturas →</a></p></section>`;
   const collectionLinks = items => `<div class="collection-links">${items.map(c => `<a href="${collectionPath(c)}">${escape(c.label)}</a>`).join('')}</div>`;
   const collectionCards = `<section class="wrap audio-collections" id="colecciones" aria-labelledby="collections-title"><p class="eyebrow">Elige tu camino</p><h2 id="collections-title">Colecciones para cada curiosidad</h2><div class="collection-grid">${collections.map(c => `<a class="collection-card" href="${collectionPath(c)}"><span class="eyebrow">${c.books.length} audiolibros</span><h3>${escape(c.label)}</h3><p>${escape(c.description)}</p><span class="collection-cta">Explorar colección →</span></a>`).join('')}</div></section>`;
   const organization = { '@type': 'Organization', '@id': library + '#organization', name: 'Audiolibros TEC', url: library,
@@ -75,12 +87,13 @@ export function buildAudiobookSeo({
   const landing = template.replace(/<!-- seo:head:start -->[\s\S]*?<!-- seo:head:end -->/, landingHead)
     .replace('<div class="books" id="books"></div>', `<div class="books" id="books">${catalog.map(card).join('')}</div>`)
     .replace('<!-- audio:collections -->', collectionCards)
+    .replace('<!-- audio:guides -->', guideTeaser)
     .replace('Cargando audiolibros…', 'Elige un libro para conocerlo y escuchar su muestra.');
   const baseHead = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#102421">
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
-    <link rel="stylesheet" href="/audiolibros/estilos.css?v=5"><script type="module" src="/audiolibros/analytics.js?v=20261107"></script>`;
-  const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
-  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/#colecciones">Colecciones</a><a href="/audiolibros/privacidad/">Privacidad</a></footer>`;
+    <link rel="stylesheet" href="/audiolibros/estilos.css?v=6"><script type="module" src="/audiolibros/analytics.js?v=20261107-guides"></script>`;
+  const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
+  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a></footer>`;
   const pages = new Map(catalog.map(book => {
     const path = bookPath(book), url = absolute(path), sample = hasSample(book);
     const description = `${book.title}, de ${book.author}: audiolibro en español. ${book.description}`;
@@ -110,7 +123,7 @@ export function buildAudiobookSeo({
       ${editorial ? `<section class="detail-section book-faq"><h2>Antes de empezar</h2>${editorial.questions.map(([q, a]) => `<details><summary>${escape(q)}</summary><p>${escape(a)}</p></details>`).join('')}</section>` : ''}</article>
       ${bookCollections.length ? `<section class="detail-section"><h2>Encuéntralo en estas colecciones</h2>${collectionLinks(bookCollections)}</section>` : ''}
       ${related.length ? `<section class="detail-section"><h2>También puedes escuchar</h2><ul class="related-books">${related.map(item => `<li><a href="${bookPath(item)}">${escape(item.title)}</a><span>${escape(item.author)}</span></li>`).join('')}</ul></section>` : ''}
-      <p><a href="/audiolibros/#catalogo">← Ver todos los audiolibros en español</a></p></main>${footer}</body></html>`];
+      <p><a href="/audiolibros/#catalogo">← Ver todos los audiolibros en español</a></p>${guideRecommendations(guides.filter(g => g.bookIds.includes(book.id)), false)}</main>${footer}</body></html>`];
   }));
   const collectionPages = new Map(collections.map(c => {
     const url = absolute(collectionPath(c));
@@ -123,13 +136,34 @@ export function buildAudiobookSeo({
       <div class="collection-cover-stack" aria-hidden="true">${c.books.slice(0, 3).map(b => `<img src="${escape(b.cover)}" alt="" width="600" height="800">`).join('')}</div></section>
       <section class="wrap detail-section"><h2>Un recorrido por ${escape(c.label.toLowerCase())}</h2><p>${escape(c.intro)}</p><ul class="editorial-ideas">${c.ideas.map(idea => `<li>${escape(idea)}</li>`).join('')}</ul><aside class="collection-route"><h3>¿Por dónde empezar?</h3><p>${escape(c.route)}</p></aside></section>
       <section class="catalog" id="libros"><div class="wrap"><div class="section-head"><h2>Los libros de esta colección</h2><p>Prueba gratis el primer 10 % de cada título.</p></div><div class="books">${c.books.map(card).join('')}</div></div></section>
-      <section class="wrap detail-section"><h2>Más caminos para explorar</h2>${collectionLinks(collections.filter(item => item.id !== c.id))}<p class="fine">La membresía de Audiolibros TEC incluye el catálogo completo por $20 USD al mes, con renovación mensual.</p><p><a href="/audiolibros/#membresia">Conocer la membresía →</a></p></section></main>${footer}</body></html>`];
+      <section class="wrap detail-section"><h2>Más caminos para explorar</h2>${collectionLinks(collections.filter(item => item.id !== c.id))}<p class="fine">La membresía de Audiolibros TEC incluye el catálogo completo por $20 USD al mes, con renovación mensual.</p><p><a href="/audiolibros/#membresia">Conocer la membresía →</a></p></section>${guideRecommendations(guides.filter(g => g.collectionIds.includes(c.id)))}</main>${footer}</body></html>`];
   }));
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, ...catalog.map(book => absolute(bookPath(book))), ...collections.map(c => absolute(collectionPath(c)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
+  const guideList = { '@type': 'ItemList', '@id': absolute(guideHub) + '#articulos', name: 'Guías y lecturas de Audiolibros TEC', numberOfItems: guides.length,
+    itemListElement: guides.map((g, i) => ({ '@type': 'ListItem', position: i + 1, url: absolute(guidePath(g)), name: g.title })) };
+  const guideIndex = `<!doctype html><html lang="es"><head>${baseHead}${head({ title: 'Guías y lecturas de audiolibros en español | TEC', description: 'Elige tu próximo audiolibro con las guías de TEC: desarrollo personal, Biblia en audio, autores clásicos y lectura sincronizada.', url: absolute(guideHub), image: absolute('/audiolibros/identidad/portada-social.jpg'),
+    graph: [organization, website, { '@type': 'CollectionPage', '@id': absolute(guideHub) + '#webpage', name: 'Guías y lecturas', url: absolute(guideHub), inLanguage: 'es', mainEntity: { '@id': guideList['@id'] }, isPartOf: { '@id': website['@id'] } }, guideList] })}</head><body>${nav}<main class="wrap guide-index"><p class="eyebrow">La biblioteca, un poco más cerca</p><h1>Guías y lecturas</h1><p class="intro">Ideas para elegir tu próxima escucha, conocer dos perspectivas y encontrar tu forma de leer con audio.</p>${guideCards(guides, 'h2')}<section class="detail-section"><h2>Del artículo al audiolibro</h2><p>Las guías son de acceso público. Cada una enlaza con los libros y las colecciones de TEC para que puedas conocer su edición y escuchar una muestra gratuita.</p>${collectionLinks(collections)}</section></main>${footer}</body></html>`;
+  const guidePages = new Map(guides.map(g => {
+    const url = absolute(guidePath(g));
+    const articleSchema = { '@type': 'BlogPosting', '@id': url + '#articulo', headline: g.title, description: g.description, url, inLanguage: 'es',
+      datePublished: g.date, dateModified: g.date, author: { '@id': organization['@id'] }, publisher: { '@id': organization['@id'] },
+      image: g.books.slice(0, 3).map(b => absolute(b.cover)), wordCount: guideWords(g), isAccessibleForFree: true,
+      mainEntityOfPage: { '@id': url + '#webpage' }, isPartOf: { '@id': absolute(guideHub) + '#webpage' },
+      about: g.books.map(b => ({ '@type': 'Audiobook', name: b.title, url: absolute(bookPath(b)) })) };
+    const articleBody = g.sections.map(s => `<section id="${s.id}" class="guide-section"><h2>${escape(s.title)}</h2>${s.paragraphs.map(p => `<p>${escape(p)}</p>`).join('')}${s.bullets ? `<ul>${s.bullets.map(b => `<li>${escape(b)}</li>`).join('')}</ul>` : ''}${s.bookIds ? `<div class="guide-book-links">${s.bookIds.map(id => catalog.find(b => b.id === id)).filter(Boolean).map(b => `<a href="${bookPath(b)}">Conocer ${escape(b.title)} →</a>`).join('')}</div>` : ''}</section>`).join('');
+    return [g.id, `<!doctype html><html lang="es"><head>${baseHead}${head({ title: g.title + ' | Audiolibros TEC', description: g.description, url, image: absolute(g.cover.cover), type: 'article', graph: [organization, website, articleSchema,
+      { '@type': 'WebPage', '@id': url + '#webpage', name: g.title, url, inLanguage: 'es', mainEntity: { '@id': articleSchema['@id'] } },
+      { '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Audiolibros TEC', item: library }, { '@type': 'ListItem', position: 2, name: 'Guías y lecturas', item: absolute(guideHub) }, { '@type': 'ListItem', position: 3, name: g.title, item: url }] }] })}</head>
+      <body>${nav}<main><header class="wrap guide-hero"><nav class="breadcrumbs" aria-label="Ruta de navegación"><a href="/audiolibros/">Audiolibros TEC</a> / <a href="${guideHub}">Guías y lecturas</a></nav><p class="eyebrow">${escape(g.label)}</p><h1>${escape(g.title)}</h1><p class="intro">${escape(g.intro)}</p><p class="guide-byline">Por Audiolibros TEC · <time datetime="${g.date}">7 de noviembre de 2026</time> · ${readingTime(g)} min de lectura aprox.</p></header>
+      <div class="wrap guide-layout"><aside><details class="guide-toc" open><summary>En esta guía</summary><nav aria-label="Contenido del artículo"><ol>${g.sections.map(s => `<li><a href="#${s.id}">${escape(s.title)}</a></li>`).join('')}</ol></nav></details></aside><article class="guide-copy" aria-label="${escape(g.title)}">${articleBody}<p class="guide-editorial-note">Guía editorial de Audiolibros TEC, basada en las ediciones y funciones disponibles en nuestra biblioteca.</p></article></div>
+      <section class="catalog"><div class="wrap"><div class="section-head"><h2>De esta guía a tu próxima escucha</h2><p>Conoce cada libro y prueba gratis el primer 10 %.</p></div><div class="books">${g.books.map(card).join('')}</div></div></section>
+      <section class="wrap detail-section"><h2>Colecciones para continuar</h2>${collectionLinks(collections.filter(c => g.collectionIds.includes(c.id)))}<p class="fine">Los libros completos están incluidos en la membresía de Audiolibros TEC por $20 USD al mes, con renovación mensual.</p><a class="button outline" href="/audiolibros/#membresia">Ver membresía</a></section>${guideRecommendations(guides.filter(item => item.id !== g.id).slice(0, 2))}</main>${footer}</body></html>`];
+  }));
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, ...catalog.map(book => absolute(bookPath(book))), ...collections.map(c => absolute(collectionPath(c))), absolute(guideHub), ...guides.map(g => absolute(guidePath(g)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
   const robots = `User-agent: *\nAllow: /audiolibros/\nAllow: /coach/assets/audiobooks/\nAllow: /coach/audiobook-reader.js\nDisallow: /api/\nDisallow: /coach/\nDisallow: /control\nDisallow: /admin\nDisallow: /chat\nDisallow: /ar/\n\nSitemap: ${absolute('/sitemap.xml')}\n`;
   const llms = `# Audiolibros TEC\n\n> Biblioteca de audiolibros en español de Total Elite Coaching.\n\n## Acceso\n\nEl primer 10 % de cada título se puede escuchar gratis. La membresía de Audiolibros TEC cuesta 20 USD al mes con renovación mensual y da acceso al catálogo completo. Es una membresía separada de la aplicación Coach. El texto de lectura completa y los audios completos requieren acceso autorizado. Las páginas públicas incluyen descripciones, duración, autor, capítulos y muestras. No se requiere registrarse para conocer los libros ni escuchar las muestras.\n\n## Páginas públicas\n\n- [Biblioteca y membresía](${library}): catálogo, lectura sincronizada, muestras y suscripción.\n${catalog.map(book => `- [${book.title}](${absolute(bookPath(book))}): ${book.author}. ${book.categories.join(', ')}. Audiolibro en español.`).join('\n')}\n\n## Descubrimiento\n\n- [Sitemap](${absolute('/sitemap.xml')})\n\nLos enlaces de fragmentos compartidos llevan al libro y al punto de escucha. El contenido privado de cuentas, pagos, grabaciones de ventas y Coach no forma parte de este catálogo público. Este archivo es una guía complementaria; las fichas públicas son la fuente de información de cada libro.\n`;
   const discovery = llms.replace('## Descubrimiento', `## Colecciones por tema\n\n${collections.map(c => `- [${c.title}](${absolute(collectionPath(c))}): ${c.description}`).join('\n')}\n\n## Descubrimiento`);
-  return { landing, pages, collectionPages, sitemap, robots, llms: discovery };
+  const guideDiscovery = discovery.replace('## Descubrimiento', `## Guías y lecturas\n\n- [Todas las guías](${absolute(guideHub)})\n${guides.map(g => `- [${g.title}](${absolute(guidePath(g))}): ${g.description}`).join('\n')}\n\n## Descubrimiento`);
+  return { landing, pages, collectionPages, guideIndex, guidePages, sitemap, robots, llms: guideDiscovery };
 }
 
 export function registerAudiobookSeo(app, options = {}) {
@@ -151,6 +185,14 @@ export function registerAudiobookSeo(app, options = {}) {
     const page = rendered.collectionPages.get(req.params.id);
     if (!page) return res.status(404).type('html').set('X-Robots-Tag', 'noindex').send('<!doctype html><html lang="es"><title>Colección no encontrada · TEC</title><h1>No encontramos esta colección</h1><a href="/audiolibros/#colecciones">Ver las colecciones de Audiolibros TEC</a></html>');
     if (!req.path.endsWith('/')) return res.redirect(301, collectionPath({ id: req.params.id }));
+    return send('html', page)(req, res);
+  });
+  app.get(/^\/audiolibros\/guias$/, (_req, res) => res.redirect(301, '/audiolibros/guias/'));
+  app.get('/audiolibros/guias/', send('html', rendered.guideIndex));
+  app.get('/audiolibros/guias/:id', (req, res) => {
+    const page = rendered.guidePages.get(req.params.id);
+    if (!page) return res.status(404).type('html').set('X-Robots-Tag', 'noindex').send('<!doctype html><html lang="es"><title>Guía no encontrada · TEC</title><h1>No encontramos esta guía</h1><a href="/audiolibros/guias/">Volver a Guías y lecturas</a></html>');
+    if (!req.path.endsWith('/')) return res.redirect(301, guidePath({ id: req.params.id }));
     return send('html', page)(req, res);
   });
   return rendered;

@@ -1,4 +1,4 @@
-import { MEASUREMENT_ID, pageContext, safeAudioEvent, safeReferrer } from './analytics-events.js?v=20261107';
+import { MEASUREMENT_ID, pageContext, safeAudioEvent, safeReferrer } from './analytics-events.js?v=20261107-guides';
 
 const KEY = 'tec.audiobooks.analytics.choice.v1';
 const disableKey = 'ga-disable-' + MEASUREMENT_ID;

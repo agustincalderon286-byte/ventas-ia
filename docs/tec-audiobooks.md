@@ -1,5 +1,17 @@
 # Audiolibros TEC
 
+## Guías y lecturas — 7 de noviembre de 2026
+
+Se publica `/audiolibros/guias/` con cuatro artículos originales: elegir un audiolibro de desarrollo personal; comenzar por Génesis o Éxodo; comparar a James Allen y Samuel Smiles; y usar la lectura sincronizada. El contenido está en `src/knowledge/audiobook-guides.js` y se prepara como HTML al iniciar el servidor, sin nuevas solicitudes de IA, audio o base de datos. Cada artículo tiene índice de secciones, lectura estimada, fecha visible y atribución editorial a Audiolibros TEC, sin inventar una firma personal.
+
+Las páginas enlazan a las fichas, muestras y colecciones pertinentes; las fichas y colecciones incluyen enlaces de regreso a sus guías. El inicio incorpora acceso visible en navegación, cabecera móvil, sección editorial y pie. Se usan portadas de los libros correspondientes. Las guías son públicas; los libros completos y sus textos siguen usando las autorizaciones existentes.
+
+El marcado `BlogPosting` incluye título, descripción, imágenes, fecha de publicación/modificación fija, autor/editor como organización, idioma y página canónica. El índice utiliza `CollectionPage` e `ItemList`; cada artículo incluye migas de pan. El sitemap y `llms.txt` incorporan el índice y los cuatro artículos: 18 páginas canónicas en total. No se generan fechas nuevas en cada visita ni se promete indexación. Referencia: [Google: marcado de artículos](https://developers.google.com/search/docs/appearance/structured-data/article).
+
+Analytics mantiene su consentimiento y protección anteriores. La lista `GUIDE_IDS` admite únicamente estos cuatro slugs públicos y añade los tipos genéricos «guias» y «guia». No se envían el texto leído, selecciones, consultas ni fragmentos de URL. Al añadir una futura guía se deben revisar el contenido, sus identificadores de libros/colecciones y la lista pública de Analytics.
+
+Pruebas: 866 correctas. Se comprobaron los cuatro artículos, enlaces recíprocos, índices internos, datos estructurados/atribución, canonical, rutas 200/301/404, sitemap sin duplicados, privacidad y consentimiento en las nuevas páginas. Se revisó el diseño en marcos de 320 y 768 píxeles y el flujo guía → ficha → reproductor. La reversión consiste en revertir interfaz/datos editoriales/rutas; no requiere modificar cuentas, pagos, grabaciones ni archivos de audio.
+
 ## Fichas editoriales, colecciones y Analytics — 7 de noviembre de 2026
 
 Las ocho fichas incorporan introducciones originales basadas en los maestros españoles y los índices de TEC: resumen en dos párrafos, tres ideas, público, propuesta de escucha y tres preguntas específicas por obra. `src/knowledge/audiobook-editorial.js` conserva ese material separado del audio y del texto completo de miembros. No se solicitan respuestas a OpenAI al visitar una ficha. Las notas describen las ideas de cada autor sin presentar sus tesis filosóficas como hechos científicos ni atribuir una identidad individual confirmada a Tres Iniciados.
