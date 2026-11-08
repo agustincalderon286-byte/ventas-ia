@@ -30,6 +30,7 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   const rows = new Map();
   const members = new Map();
   const grants = new Map();
+  const shared = new Map();
   const lean = value => ({ async lean() { return value; } });
   let link;
   let eligible = false;
@@ -47,6 +48,7 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   const app = express();
   app.use(express.json());
   registerAudioMembership(app, {
+    shares: { async create(row) { shared.set(row._id, row); }, findById(id) { return lean(shared.get(id)); } },
     stripe, priceId, portalId: 'bpc_audio', publicOrigin: 'https://totalelitecoaching.com',
     sendSignIn: async (_email, url) => { link = url; },
     accounts: {
@@ -100,6 +102,8 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   }
   assert.equal((await request('/libros/unknown/muestra/texto')).status, 404);
   for (const suffix of ['', '/audio', '/texto']) assert.equal((await request(path + suffix)).status, 401);
+  assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 5, end: 20 })).status, 201);
+  assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 })).status, 401);
 
   assert.equal((await post('/entrar', { email: 'listener@example.test' }, null, 'https://other.test')).status, 403);
   assert.equal((await post('/entrar', { email: 'Listener@example.test' })).status, 200);
@@ -111,6 +115,7 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   const cookie = confirmed.headers.get('set-cookie').split(';')[0];
   const headers = { Cookie: cookie, Range: 'bytes=4-7' };
   assert.equal((await request(path + '/audio', { headers })).status, 403);
+  assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie)).status, 403);
 
   assert.equal((await post('/checkout', {}, cookie)).status, 200);
   assert.equal(checkoutData.mode, 'subscription');
@@ -121,6 +126,9 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   assert.equal((await request(path + '/audio', { headers })).status, 403);
 
   eligible = true;
+  const memberShare = await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie);
+  assert.equal(memberShare.status, 201);
+  assert.equal(shared.get((await memberShare.json()).id).start, 1000);
   assert.equal((await post('/checkout', {}, cookie)).status, 409);
   const detail = await request(path, { headers }).then(res => res.json());
   assert.deepEqual(detail.progress, { position: 12, speed: 1.5, marks: [7] });

@@ -20,6 +20,9 @@
   let scrubbing = false;
   let signInToken = new URLSearchParams(location.hash.slice(1)).get('entrar');
   const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio, position => seek(position, true));
+  const sharing = new TecAudioSharing.Controller({ audio, reader, context: () => selected });
+  $('#share-open').addEventListener('click', () => sharing.open());
+  $('#reader-share').addEventListener('click', () => sharing.open());
 
   function element(tag, text, className) {
     const node = document.createElement(tag);
@@ -286,10 +289,11 @@
     }
   }
 
-  async function openBook(book, preview) {
+  async function openBook(book, preview, startAt = null) {
     const full = !preview;
     if (selected?.id === book.id && selected.full === full && !audio.error) {
       expandPlayer();
+      if (Number.isFinite(startAt)) seek(startAt);
       return;
     }
     stopPlayback();
@@ -334,7 +338,8 @@
         seekBar.max = String(Number.isFinite(audio.duration) ? Math.min(selected.duration, audio.duration) : selected.duration);
         seekBar.disabled = false;
         audio.playbackRate = Number($('#speed').value) || 1;
-        if (data.progress.position) seek(Math.min(data.progress.position, Math.max(0, audio.duration - .1)));
+        const position = Number.isFinite(startAt) ? startAt : data.progress.position;
+        if (position) seek(Math.min(position, Math.max(0, audio.duration - .1)));
         updateChapter();
         updatePlayback();
       };
@@ -483,7 +488,7 @@
     history.replaceState(null, '', location.pathname + location.search);
     showAccount();
   }
-  api('/catalogo').then(data => {
+  const catalogReady = api('/catalogo').then(data => {
     books = data.books;
     $('#catalog-status').textContent = '';
     search.closest('label').hidden = !books.length;
@@ -491,7 +496,7 @@
   }).catch(error => { $('#catalog-status').textContent = error.message; });
 
   const checkoutReturn = new URLSearchParams(location.search).get('membresia') === 'confirmada';
-  refreshAccount().then(async () => {
+  const accountReady = refreshAccount().then(async () => {
     if (!checkoutReturn) return;
     history.replaceState(null, '', location.pathname + '#membresia');
     $('#membresia').scrollIntoView();
@@ -502,4 +507,12 @@
     }
     $('#billing-status').textContent = account.member ? 'Membresía activa. Ya puedes escuchar el catálogo completo.' : 'Stripe está confirmando el pago. Vuelve a cargar la página en unos minutos.';
   }).catch(error => { $('#billing-status').textContent = error.message; });
+  Promise.all([catalogReady, accountReady]).then(() => {
+    const params = new URLSearchParams(location.search);
+    const book = books.find(item => item.id === params.get('libro'));
+    if (!book) return;
+    const requested = Number(params.get('t') || 0);
+    const position = Number.isFinite(requested) && requested >= 0 && requested < (account.member ? book.duration : book.previewDuration) ? requested : 0;
+    openBook(book, !account.member, position);
+  });
 })();

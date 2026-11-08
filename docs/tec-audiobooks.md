@@ -1,5 +1,15 @@
 # Audiolibros TEC
 
+## Compartir citas y audio — 7 de noviembre de 2026
+
+La biblioteca pública incluye «Compartir cita o audio» en el reproductor y «Compartir» en la lectura de pantalla completa. Se puede usar el pasaje actual o una selección de pasajes consecutivos, ampliarla o acortarla y elegir tarjeta 4:5 o 9:16. Las citas conservan texto canónico y autor, con un máximo de seis pasajes y 600 caracteres. El audio admite 15, 30 o 45 segundos y se exporta como MP3 o como video vertical H264/AAC para Instagram y TikTok. La aplicación prepara el archivo antes del gesto que abre el menú nativo de compartir. También ofrece descarga, enlace, Facebook y SMS. Instagram y TikTok deciden si admiten texto/enlace junto con el archivo; la tarjeta incorpora un QR al fragmento público en TEC.
+
+`TecAudiobookShare` guarda únicamente el identificador aleatorio, libro, texto canónico, intervalo y fecha. Crear fragmentos fuera de la muestra gratuita exige la membresía existente. Los receptores acceden al fragmento mediante un enlace público no enumerable; no reciben sesiones, identificadores de usuarios, claves de R2 ni acceso al libro completo. El enlace «Seguir escuchando» abre el libro y su posición si la cuenta tiene acceso, o la muestra si todavía no tiene membresía.
+
+Los archivos se generan con Sharp y FFmpeg, sin llamadas adicionales a IA ni nuevas credenciales de R2. El renderizado permite un trabajo de audio/video simultáneo, deduplica solicitudes en curso y conserva una caché temporal limitada. FFmpeg lee por rangos a través de un servidor efímero accesible sólo por loopback, con ruta aleatoria, límite de transferencia de 32 MB y tiempo máximo de 90 segundos. Las creaciones tienen límite por IP. El almacenamiento original del libro y la reproducción habitual permanecen independientes.
+
+Pruebas: 850 pruebas correctas, incluidas autorización real de membresía/muestra, origen, parámetros y límites, atribución, HTML seguro, rangos HTTP, tarjetas PNG, extracción MP3 y video MP4 con audio real, caché y lectura parcial. Revisión visual del cierre y del desbordamiento en seis tamaños desde 320×568 hasta tableta horizontal. La selección de aplicaciones concretas en el menú nativo debe comprobarse en el teléfono del usuario. La reversión no requiere borrar `TecAudiobookShare` ni los libros.
+
 ## El Kybalión — 7 de noviembre de 2026
 
 Se añade *El Kybalión*, de Tres Iniciados, en español actual: epígrafe y dedicatoria, introducción y quince capítulos; duración total 13.055,77 segundos. La lectura conserva exactamente el maestro cotejado mediante 633 pasajes sincronizados, SHA-256 `dbae31de57200c1b4066b095e5037c51656df77062a4d8d7eb9671eac6697401`.

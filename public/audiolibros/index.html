@@ -41,8 +41,10 @@
     }
   </script>
   <link rel="stylesheet" href="/audiolibros/estilos.css?v=3">
+  <link rel="stylesheet" href="/audiolibros/compartir.css?v=20261107">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=5"></script>
+  <script defer src="/audiolibros/compartir.js?v=20261107"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=6"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -168,6 +170,7 @@
         <button class="media-button skip-button" id="forward" type="button" aria-label="Avanzar quince segundos">+15<span> s</span></button>
       </div>
       <div class="player-tools">
+        <button class="button outline" type="button" id="share-open">↗ Compartir cita o audio</button>
         <button class="button outline" id="reader-shortcut" type="button" aria-controls="reader-panel" aria-expanded="false" hidden>Leer y escuchar</button>
         <button class="button outline" id="chapter-shortcut" type="button" hidden>Capítulos</button>
         <label>Velocidad <select id="speed"><option value=".5">0.5×</option><option value=".75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
@@ -185,6 +188,7 @@
           <div class="transport">
             <button class="button outline" type="button" id="reader-fullscreen" aria-pressed="false">Pantalla completa</button>
             <button class="button outline" type="button" data-ab-read-play>Reproducir</button>
+            <button class="button outline" type="button" id="reader-share">↗ Compartir</button>
             <span class="reader-font-controls">
               <button class="button outline" type="button" data-ab-font-smaller aria-label="Reducir tamaño de texto">A−</button>
               <button class="button outline" type="button" data-ab-font-larger aria-label="Aumentar tamaño de texto">A+</button>
@@ -198,6 +202,38 @@
       <div id="preview-upsell" hidden><p>Escucha el 10 % inicial gratis. Con la membresía puedes seguir desde aquí.</p><button class="button primary" id="unlock" type="button">Desbloquear la biblioteca</button></div>
       <details id="chapter-list" hidden><summary>Capítulos</summary><ol id="chapters" class="jump-list"></ol></details>
       <details id="bookmark-list" hidden><summary>Marcadores</summary><button class="button outline" id="add-mark" type="button">Guardar este punto</button><ul class="jump-list" id="marks"></ul></details>
+    </div>
+  </dialog>
+  <dialog id="share-fragment" aria-labelledby="share-title">
+    <header class="share-heading"><h2 id="share-title">Comparte una buena idea</h2><button class="share-close" type="button" data-share-close aria-label="Cerrar compartir">×</button></header>
+    <div class="share-content">
+      <div class="share-fields">
+        <label>Compartir <select data-share-kind><option value="quote">Cita de texto</option><option value="audio">Fragmento de audio</option></select></label>
+        <label>Tarjeta <select data-share-layout><option value="feed">Publicación · 4:5</option><option value="story">Historia · 9:16</option></select></label>
+      </div>
+      <div class="share-controls" data-share-quote-controls>
+        <p class="share-note">Usa el pasaje actual o selecciona texto en la lectura antes de tocar Compartir.</p>
+        <div class="share-actions"><button class="button outline" type="button" data-share-prev>‹ Pasaje anterior</button><button class="button outline" type="button" data-share-next>Pasaje siguiente ›</button><button class="button outline" type="button" data-share-more>+ Añadir pasaje</button><button class="button outline" type="button" data-share-less>− Acortar</button></div>
+        <p class="fine" data-share-count></p>
+      </div>
+      <div class="share-fields" data-share-audio-controls hidden>
+        <label>Inicio <input data-share-start inputmode="numeric" maxlength="10" aria-label="Inicio del fragmento" placeholder="02:15"></label>
+        <label>Duración <select data-share-duration><option value="15">15 segundos</option><option value="30" selected>30 segundos</option><option value="45">45 segundos</option></select></label>
+      </div>
+      <div class="quote-preview" data-share-preview>
+        <p>AUDIOLIBROS TEC</p><blockquote data-share-quote></blockquote>
+        <div class="quote-credit"><img data-share-cover alt="" width="55" height="74"><div><strong data-share-book></strong><span data-share-author></span></div></div>
+        <small>totalelitecoaching.com/audiolibros · La tarjeta final incluye un código QR.</small>
+      </div>
+      <button class="button primary" type="button" data-share-generate>Preparar para compartir</button>
+      <p class="status" role="status" aria-live="polite" data-share-status></p>
+      <section class="share-results" data-share-results hidden aria-label="Archivos y enlaces para compartir">
+        <audio controls preload="none" data-share-audio-preview hidden aria-label="Vista previa del fragmento"></audio>
+        <label class="share-note">Enlace al fragmento<input readonly data-share-link aria-label="Enlace al fragmento"></label>
+        <div class="share-actions"><button type="button" data-share-system>Compartir enlace…</button><button type="button" data-share-copy>Copiar enlace</button><a data-share-facebook target="_blank" rel="noopener noreferrer">Facebook</a><a data-share-sms>Mensaje de texto</a></div>
+        <div class="share-actions"><button type="button" data-share-native>Compartir archivo…</button><a data-share-download download>Guardar archivo</a><button type="button" data-share-video hidden>Crear video para Instagram y TikTok</button></div>
+        <p class="share-note">En Instagram o TikTok, adjunta la tarjeta o el video y copia su enlace. Las fotos incluyen un QR para llegar a TEC.</p>
+      </section>
     </div>
   </dialog>
 </body>

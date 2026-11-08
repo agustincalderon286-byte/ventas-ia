@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
+import { createAudiobookShareModel, registerAudiobookSharing } from './tec-audiobook-sharing.js';
 
 const api = '/api/audiolibros';
 const cookie = 'tec_audio_session';
@@ -16,6 +17,7 @@ export function createAudioMembershipModels(mongoose) {
   const model = (name, fields) => mongoose.models[name] || mongoose.model(name, new mongoose.Schema(fields));
   const expiresAt = { type: Date, expires: 0 };
   return {
+    shares: createAudiobookShareModel(mongoose),
     accounts: model('TecAudioMember', { _id: String, stripeCustomerId: String }),
     grants: model('TecAudioGrant', { _id: String, email: String, digest: { type: String, index: true }, expiresAt, requestedAt: Date }),
     sessions: model('TecAudioSession', { _id: String, email: String, expiresAt }),
@@ -35,7 +37,7 @@ export function hasAudioMembership(subscription, priceId) {
 }
 
 export function registerAudioMembership(app, {
-  accounts, grants, sessions, listening, media, getBucket, r2, stripe, priceId, portalId,
+  accounts, grants, sessions, listening, shares, media, getBucket, r2, stripe, priceId, portalId,
   publicOrigin, sendSignIn, secure = process.env.NODE_ENV === 'production',
   catalog = audiobookCatalog, getTranscript = getAudiobookTranscript
 }) {
@@ -125,6 +127,14 @@ export function registerAudioMembership(app, {
       previewUrl: sampleIds.has(book.id) ? `/audiolibros/muestras/${book.id}.m4a` : null,
       previewTranscriptUrl: sampleIds.has(book.id) && getTranscript(book.id) ? `${api}/libros/${book.id}/muestra/texto` : null };
   }
+
+  if (shares) registerAudiobookSharing(app, {
+    shares, publicOrigin: origin, media, getBucket, r2, catalog, getTranscript,
+    authorize: async (req, res, book, fragment) => {
+      if (sampleIds.has(book.id) && fragment.end <= previewSeconds(book)) return true;
+      return Boolean(await member(req, res));
+    }
+  });
 
   function throttleMail(ip, now) {
     const period = 15 * 60_000;

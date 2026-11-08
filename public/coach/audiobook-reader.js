@@ -28,7 +28,11 @@
         if (cue.separator) fragment.append(document.createTextNode(cue.separator));
         const passage = document.createElement('span'); passage.setAttribute('role', 'button'); passage.tabIndex = 0; passage.className = 'ab-passage'; passage.textContent = cue.text;
         passage.title = 'Escuchar desde este pasaje'; passage.dataset.cue = index;
-        const seek = () => this.onSeek(cue.start);
+        const seek = () => {
+          const selection = globalThis.getSelection?.();
+          if (selection && !selection.isCollapsed && this.body.contains(selection.anchorNode)) return;
+          this.onSeek(cue.start);
+        };
         passage.addEventListener('click', seek); passage.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); seek(); } });
         this.nodes.push(passage); fragment.append(passage);
       }
