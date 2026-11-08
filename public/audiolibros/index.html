@@ -46,7 +46,9 @@
   <link rel="stylesheet" href="/audiolibros/compartir.css?v=20261107">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
   <script defer src="/audiolibros/compartir.js?v=20261107"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=8"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=9"></script>
+  <link rel="stylesheet" href="/audiolibros/logros.css?v=1">
+  <script type="module" src="/audiolibros/logros.js?v=1"></script>
   <script type="module" src="/audiolibros/analytics.js?v=20261107-guides"></script>
 </head>
 <body>
@@ -55,7 +57,7 @@
       <svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true"><rect x="1" y="1" width="34" height="34" rx="10" fill="none" stroke="currentColor"/><path d="M8 18h2m3-5v10m5-15v20m5-15v10m3-5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span>
     </a>
-    <nav aria-label="Navegación principal"><a href="#catalogo">Catálogo</a><a href="#colecciones">Colecciones</a><a href="/audiolibros/guias/">Guías</a><a href="#membresia">Membresía</a></nav>
+    <nav aria-label="Navegación principal"><a href="#catalogo">Catálogo</a><a href="#colecciones">Colecciones</a><a href="/audiolibros/guias/">Guías</a><a href="#logros">Logros</a><a href="#membresia">Membresía</a></nav>
     <button class="button outline" type="button" id="account-button">Ingresar</button>
   </header>
   <main>
@@ -89,6 +91,13 @@
     </section>
     <!-- audio:collections -->
     <!-- audio:guides -->
+    <section class="wrap audio-logros" id="logros" aria-labelledby="logros-title">
+      <div class="logros-banner"><div><p class="eyebrow">Pequeños pasos, grandes historias</p><h2 id="logros-title">Cada escucha deja huella.</h2><p>Descubre 25 insignias por explorar, escuchar y completar tus audiolibros. Una colección que crece contigo.</p></div><div class="logros-meter"><strong data-badge-count>0 de 25</strong><span>insignias desbloqueadas</span><progress value="0" max="25" aria-label="Insignias desbloqueadas"></progress><span data-badge-summary>Tu próxima historia empieza aquí.</span></div></div>
+      <p class="logros-notice" data-badge-notice role="status" aria-live="polite"></p><p class="logros-status" data-badge-status>Los logros comienzan a contar con esta actualización.</p>
+      <details class="logros-details"><summary>Ver mis 25 insignias</summary><p class="logros-rules">El tiempo cuenta los fragmentos reproducidos, sin duplicar repeticiones. Un libro se completa al escuchar al menos el 90 % y llegar a su final. Las muestras también suman tiempo y descubrimientos. El avance anterior del reproductor se conserva; las insignias empiezan a contar desde esta actualización.</p><div class="badge-grid" data-badge-grid></div></details>
+      <p class="fine logros-login"><button type="button" class="button outline" data-badge-login>Ingresar a mi cuenta</button> Los logros de invitado se quedan en este dispositivo. Al ingresar verás los de tu cuenta.</p>
+      <noscript><p>Activa JavaScript para ver y registrar tus insignias.</p></noscript>
+    </section>
     <section class="membership wrap" id="membresia">
       <div>
         <p class="eyebrow">02 / Membresía</p>
@@ -132,6 +141,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 5.5h6l2.5 2 2.5-2h6V19h-6l-2.5 2-2.5-2h-6zM12 7.5V21"/></svg>
         Explorar
       </a>
+      <a href="#logros"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v7a5 5 0 0 1-10 0V3Zm0 2H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4M12 15v6m-4 0h8"/></svg>Logros</a>
       <a href="#membresia">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9 7 4.5h10L20.5 9 12 20 3.5 9zm0 0h17M9 9l3 11 3-11"/></svg>
         Membresía
@@ -159,6 +169,7 @@
       <button id="logout" class="button outline" type="button">Cerrar sesión</button>
     </div>
     <p id="account-status" class="status" role="status"></p>
+    <p><a class="button outline" href="#logros" id="account-badges">Ver mis logros</a></p>
     <p class="fine">¿Tienes problemas para entrar? <a href="/audiolibros/contacto/">Pide ayuda a soporte</a>.</p>
   </dialog>
 

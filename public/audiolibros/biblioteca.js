@@ -24,6 +24,14 @@
   $('#share-open').addEventListener('click', () => sharing.open());
   $('#reader-share').addEventListener('click', () => sharing.open());
 
+  function achievementsContext() {
+    const original = selected && books.find(book => book.id === selected.id);
+    document.dispatchEvent(new CustomEvent('tec-audio-account-context', { detail: {
+      account, catalog: books, book: original ? { id: original.id, duration: original.duration, previewDuration: original.previewDuration, full: selected.full } : null
+    } }));
+  }
+  document.addEventListener('tec-audio-achievements-ready', achievementsContext);
+
   function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -87,6 +95,7 @@
     });
     $('#books').replaceChildren(...cards);
     $('#catalog-status').textContent = matches.length ? '' : 'No encontramos títulos para esta búsqueda.';
+    achievementsContext();
   }
 
   async function refreshAccount() {
@@ -121,6 +130,7 @@
   }
 
   $('#account-button').addEventListener('click', showAccount);
+  $('#account-badges')?.addEventListener('click', () => accountDialog.close());
   $('#phone-account').addEventListener('click', showAccount);
   search.addEventListener('input', renderBooks);
   $('#sign-in').addEventListener('submit', busy($('#sign-in button'), '#account-status', async () => {
@@ -352,6 +362,7 @@
         updatePlayback();
       };
       audio.src = selected.audioUrl;
+      achievementsContext();
       updatePlayback();
       setMediaSession(book);
       if (full) renderMarks();
@@ -395,6 +406,7 @@
     setReadingFullscreen(false);
     ++generation;
     selected = null;
+    achievementsContext();
     scrubbing = false;
     seekBar.disabled = true;
     audio.pause();
