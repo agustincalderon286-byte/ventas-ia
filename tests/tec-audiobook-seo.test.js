@@ -56,7 +56,7 @@ test('each indexable book describes the actual edition, keeps prices truthful an
 
 test('sitemap and crawler guide list only canonical public pages with no invented update dates or private URLs', () => {
   const urls = [...generated.sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(x => x[1]);
-  assert.equal(urls.length, audiobookCatalog.length + audioCollections.length + audiobookGuides.length + 2);
+  assert.equal(urls.length, audiobookCatalog.length + audioCollections.length + audiobookGuides.length + 3);
   assert.equal(new Set(urls).size, urls.length);
   assert.ok(!generated.sitemap.includes('lastmod'));
   for (const url of urls) assert.ok(url.startsWith(origin + '/audiolibros/') && !url.includes('?'));
@@ -84,7 +84,7 @@ test('HTTP pages, redirects and crawlers work without database or user sessions 
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
   const base = 'http://127.0.0.1:' + server.address().port;
-  for (const url of ['/audiolibros/', ...audiobookCatalog.map(bookPath), ...audioCollections.map(collectionPath), '/audiolibros/guias/', ...audiobookGuides.map(guidePath), '/robots.txt', '/sitemap.xml', '/llms.txt']) {
+  for (const url of ['/audiolibros/', '/audiolibros/nuestra-historia/', ...audiobookCatalog.map(bookPath), ...audioCollections.map(collectionPath), '/audiolibros/guias/', ...audiobookGuides.map(guidePath), '/robots.txt', '/sitemap.xml', '/llms.txt']) {
     const r = await fetch(base + url); assert.equal(r.status, 200, url);
     assert.match(r.headers.get('cache-control'), /^public/);
     assert.equal(r.headers.get('set-cookie'), null);

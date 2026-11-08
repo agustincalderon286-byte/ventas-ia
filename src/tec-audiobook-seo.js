@@ -94,7 +94,17 @@ export function buildAudiobookSeo({
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
     <link rel="stylesheet" href="/audiolibros/estilos.css?v=6"><script type="module" src="/audiolibros/analytics.js?v=20261107-guides"></script>`;
   const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
-  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
+  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/nuestra-historia/">Nuestra historia</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
+  const storyUrl = absolute('/audiolibros/nuestra-historia/');
+  const story = readFileSync(new URL('audiolibros/nuestra-historia/index.html', publicRoot), 'utf8')
+    .replace(/<!-- seo:head:start -->[\s\S]*?<!-- seo:head:end -->/, head({
+      title: 'Nuestra historia y misión | Audiolibros TEC',
+      description: 'Los audiolibros cambiaron mi vida. Conoce por qué nació Audiolibros TEC y su misión de acercar los clásicos en español cotidiano a quienes buscan salir adelante.',
+      url: storyUrl, image: absolute('/audiolibros/identidad/portada-social.jpg'),
+      graph: [organization, website, { '@type': 'AboutPage', '@id': storyUrl + '#webpage', url: storyUrl,
+        name: 'Nuestra historia y misión · Audiolibros TEC', inLanguage: 'es', isPartOf: { '@id': website['@id'] },
+        about: { '@id': organization['@id'] }, author: { '@type': 'Person', name: 'Agustín Calderón Pizana' } }]
+    }));
   const pages = new Map(catalog.map(book => {
     const path = bookPath(book), url = absolute(path), sample = hasSample(book);
     const description = `${book.title}, de ${book.author}: audiolibro en español. ${book.description}`;
@@ -159,12 +169,13 @@ export function buildAudiobookSeo({
       <section class="catalog"><div class="wrap"><div class="section-head"><h2>De esta guía a tu próxima escucha</h2><p>Conoce cada libro y prueba gratis el primer 10 %.</p></div><div class="books">${g.books.map(card).join('')}</div></div></section>
       <section class="wrap detail-section"><h2>Colecciones para continuar</h2>${collectionLinks(collections.filter(c => g.collectionIds.includes(c.id)))}<p class="fine">Los libros completos están incluidos en la membresía de Audiolibros TEC por $20 USD al mes, con renovación mensual.</p><a class="button outline" href="/audiolibros/#membresia">Ver membresía</a></section>${guideRecommendations(guides.filter(item => item.id !== g.id).slice(0, 2))}</main>${footer}</body></html>`];
   }));
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, ...catalog.map(book => absolute(bookPath(book))), ...collections.map(c => absolute(collectionPath(c))), absolute(guideHub), ...guides.map(g => absolute(guidePath(g)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, storyUrl, ...catalog.map(book => absolute(bookPath(book))), ...collections.map(c => absolute(collectionPath(c))), absolute(guideHub), ...guides.map(g => absolute(guidePath(g)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
   const robots = `User-agent: *\nAllow: /audiolibros/\nAllow: /coach/assets/audiobooks/\nAllow: /coach/audiobook-reader.js\nDisallow: /api/\nDisallow: /coach/\nDisallow: /control\nDisallow: /admin\nDisallow: /chat\nDisallow: /ar/\n\nSitemap: ${absolute('/sitemap.xml')}\n`;
   const llms = `# Audiolibros TEC\n\n> Biblioteca de audiolibros en español de Total Elite Coaching.\n\n## Acceso\n\nEl primer 10 % de cada título se puede escuchar gratis. La membresía de Audiolibros TEC cuesta 20 USD al mes con renovación mensual y da acceso al catálogo completo. Es una membresía separada de la aplicación Coach. El texto de lectura completa y los audios completos requieren acceso autorizado. Las páginas públicas incluyen descripciones, duración, autor, capítulos y muestras. No se requiere registrarse para conocer los libros ni escuchar las muestras.\n\n## Páginas públicas\n\n- [Biblioteca y membresía](${library}): catálogo, lectura sincronizada, muestras y suscripción.\n${catalog.map(book => `- [${book.title}](${absolute(bookPath(book))}): ${book.author}. ${book.categories.join(', ')}. Audiolibro en español.`).join('\n')}\n\n## Descubrimiento\n\n- [Sitemap](${absolute('/sitemap.xml')})\n\nLos enlaces de fragmentos compartidos llevan al libro y al punto de escucha. El contenido privado de cuentas, pagos, grabaciones de ventas y Coach no forma parte de este catálogo público. Este archivo es una guía complementaria; las fichas públicas son la fuente de información de cada libro.\n`;
   const discovery = llms.replace('## Descubrimiento', `## Colecciones por tema\n\n${collections.map(c => `- [${c.title}](${absolute(collectionPath(c))}): ${c.description}`).join('\n')}\n\n## Descubrimiento`);
   const guideDiscovery = discovery.replace('## Descubrimiento', `## Guías y lecturas\n\n- [Todas las guías](${absolute(guideHub)})\n${guides.map(g => `- [${g.title}](${absolute(guidePath(g))}): ${g.description}`).join('\n')}\n\n## Descubrimiento`);
-  return { landing, pages, collectionPages, guideIndex, guidePages, sitemap, robots, llms: guideDiscovery };
+  const missionDiscovery = guideDiscovery.replace('## Acceso', `## Origen y misión\n\n- [Nuestra historia y misión](${storyUrl}): testimonio de Agustín Calderón Pizana, fundador. Los audiolibros cambiaron su vida y motivaron esta biblioteca para quienes buscan salir adelante.\n\nTEC busca acercar clásicos con ediciones en español cotidiano, audio, lectura sincronizada y dramatizaciones en algunas obras. Su aspiración es ampliar el acceso gratuito; actualmente son gratis las muestras del 10 % y la membresía de 20 USD al mes ayuda a sostener la producción y la infraestructura. El catálogo publicado es la referencia de disponibilidad: Don Quijote y Marco Aurelio forman parte de la visión futura y todavía no están disponibles.\n\n## Acceso`);
+  return { landing, story, pages, collectionPages, guideIndex, guidePages, sitemap, robots, llms: missionDiscovery };
 }
 
 export function registerAudiobookSeo(app, options = {}) {
@@ -177,6 +188,8 @@ export function registerAudiobookSeo(app, options = {}) {
   app.get(['/llms.txt', '/audiolibros/llms.txt'], send('text/plain', rendered.llms));
   app.get([/^\/audiolibros$/, '/audiolibros/index.html'], (req, res) => res.redirect(301, '/audiolibros/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '')));
   app.get('/audiolibros/', send('html', rendered.landing));
+  app.get([/^\/audiolibros\/nuestra-historia$/, '/audiolibros/nuestra-historia/index.html'], (_req, res) => res.redirect(301, '/audiolibros/nuestra-historia/'));
+  app.get('/audiolibros/nuestra-historia/', send('html', rendered.story));
   app.get('/audiolibros/libros/:id', (req, res) => {
     const page = rendered.pages.get(req.params.id);
     if (!page) return res.status(404).type('html').set('X-Robots-Tag', 'noindex').send('<!doctype html><html lang="es"><title>Audiolibro no encontrado · TEC</title><h1>No encontramos este audiolibro</h1><a href="/audiolibros/">Volver al catálogo de Audiolibros TEC</a></html>');

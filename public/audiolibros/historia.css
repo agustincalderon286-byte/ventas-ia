@@ -1,0 +1,31 @@
+.mission-teaser{padding-block:54px;border-block:1px solid var(--line);margin-block:36px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center}
+.mission-teaser h2{font-size:clamp(2rem,4vw,3.2rem);max-width:15ch;margin-bottom:22px}
+.mission-teaser blockquote{margin:0;font:italic clamp(1.3rem,2.4vw,1.8rem)/1.4 var(--serif);color:var(--gold);max-width:28ch}
+.mission-teaser blockquote p{margin-bottom:14px}
+.mission-teaser cite{display:block;font:normal .85rem/1.5 var(--sans);color:var(--soft)}
+.mission-teaser .mission-copy{color:var(--soft)}
+.mission-teaser .button{white-space:normal;text-align:center}
+.story-top{flex-wrap:wrap;padding-block:14px}
+.story-page{padding-block:64px 24px}
+.story-heading{max-width:900px;margin-bottom:56px}
+.story-heading h1{font-size:clamp(2.7rem,6vw,5.6rem);line-height:1.06;margin-bottom:24px}
+.story-heading h1 em{color:var(--gold)}
+.story-heading .intro{max-width:38ch}
+.story-byline{font-size:.9rem;color:var(--soft);margin-top:22px}
+.story-copy{max-width:720px;margin-inline:auto;font-size:1.06rem;line-height:1.8}
+.story-copy section{margin-bottom:44px}
+.story-copy h2{font-size:clamp(1.7rem,3vw,2.3rem);line-height:1.16;margin-bottom:20px;text-wrap:balance}
+.story-copy p{color:var(--soft)}
+.story-copy strong{color:var(--ink)}
+.story-copy a{color:var(--gold);text-underline-offset:4px}
+.story-quote{margin:40px 0 48px;padding:28px 30px;border-left:3px solid var(--gold);background:var(--panel);border-radius:0 14px 14px 0;font:italic clamp(1.5rem,3vw,2rem)/1.45 var(--serif)}
+.story-quote p{color:var(--gold);margin:0}
+.story-copy .story-signature{font:1.5rem/1.4 var(--serif);color:var(--ink);padding-top:12px}
+.story-signature span{display:block;font:.85rem/1.6 var(--sans);color:var(--soft);margin-top:7px}
+.story-next{margin-top:64px;padding:36px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.story-next h2{font-size:clamp(1.9rem,3.5vw,3rem);max-width:24ch}
+.story-next p{color:var(--soft)}
+.story-next .eyebrow{color:var(--gold)}
+.story-next .actions{flex-wrap:wrap}
+.story-next .button{white-space:normal;text-align:center}
+@media(max-width:700px){.mission-teaser{grid-template-columns:1fr;padding-block:32px;gap:26px;margin-block:24px}.mission-teaser h2{max-width:none}.mission-teaser blockquote{max-width:none}.story-page{padding-top:34px}.story-heading{margin-bottom:40px}.story-copy{font-size:1rem}.story-copy section{margin-bottom:34px}.story-quote{padding:22px 20px}.story-next{padding:24px 20px;margin-top:40px}.story-page+.wrap{padding-bottom:30px}}
