@@ -1,4 +1,6 @@
 import {BADGES,ListeningTracker,evaluateBadges} from './logros-core.js?v=1';
+import {badgeSvg} from './insignias-art.js?v=2';
+import {BadgeSharingController} from './insignias-compartir.js?v=2';
 import {AchievementStore} from './logros-store.js?v=1';
 
 const root=document.querySelector('#logros'),audio=document.querySelector('#audio');
@@ -16,12 +18,11 @@ if(root&&audio){
   let storage;try{storage=window.localStorage;}catch{storage={getItem(){return null;},setItem(){throw new Error('storage unavailable');}};}
   const store=new AchievementStore({storage,request,onChange:()=>{if(!renderTimer)renderTimer=setTimeout(()=>{renderTimer=null;render();},1000);},onStatus:text=>{status.textContent=text;}});
   const tracker=new ListeningTracker((a,b,reading)=>{if(context)store.record(context,a,b,reading);});
+  const shareDialog=document.querySelector('#badge-share');
+  const sharing=shareDialog?new BadgeSharingController({dialog:shareDialog,eligible:id=>evaluateBadges(store.state,catalog).badges.some(b=>b.id===id&&b.earned)}):null;
   function medal(badge){
-    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 100 110');svg.setAttribute('aria-hidden','true');svg.classList.add('badge-medal');
-    const shape=document.createElementNS(ns,'path');shape.setAttribute('d','M50 3 88 18v36c0 24-22 42-38 51C34 96 12 78 12 54V18Z');shape.setAttribute('class','badge-shield');
-    const circle=document.createElementNS(ns,'circle');circle.setAttribute('cx','50');circle.setAttribute('cy','45');circle.setAttribute('r','26');circle.setAttribute('class','badge-ring');
-    const text=document.createElementNS(ns,'text');text.setAttribute('x','50');text.setAttribute('y','52');text.setAttribute('text-anchor','middle');text.setAttribute('class','badge-stamp');text.textContent=badge.stamp;
-    const star=document.createElementNS(ns,'path');star.setAttribute('d','m50 77 2.5 5 5.5.8-4 4 .9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-4 5.5-.8Z');star.setAttribute('class','badge-star');svg.append(shape,circle,text,star);return svg;
+    const svg=new DOMParser().parseFromString(badgeSvg(badge.id,badge.earned),'image/svg+xml').documentElement;
+    const element=document.importNode(svg,true);element.setAttribute('aria-hidden','true');element.classList.add('badge-medal');return element;
   }
   function render(){
     if(!catalog.length)return;
@@ -31,12 +32,23 @@ if(root&&audio){
     root.querySelector('[data-badge-count]').textContent=view.earned+' de '+view.total;
     const progress=root.querySelector('progress');progress.value=view.earned;progress.max=view.total;
     root.querySelector('[data-badge-summary]').textContent=Math.floor(view.seconds/60)+' min de contenido · '+view.completed+' '+(view.completed===1?'libro completado':'libros completados');
-    const cards=view.badges.map(b=>{
-      const card=node('article',undefined,'badge-card '+(b.earned?'is-earned':'is-locked'));card.dataset.group=b.group;card.dataset.badge=b.id;
-      card.append(medal(b),node('span',b.earned?'Desbloqueada':'Por descubrir','badge-state'),node('h3',b.name),node('p',b.description));
+    for(const b of view.badges){
+      let card=grid.querySelector('[data-badge="'+b.id+'"]');
+      if(!card){
+        card=node('article');card.dataset.group=b.group;card.dataset.badge=b.id;
+        card.append(medal(b),node('span',undefined,'badge-state'),node('h3',b.name),node('p',b.description),node('span',undefined,'badge-amount'));grid.append(card);
+      }
+      const state=b.earned?'earned':'locked';
+      if(card.dataset.state!==state){card.querySelector('.badge-medal').replaceWith(medal(b));card.dataset.state=state;}
+      card.className='badge-card '+(b.earned?'is-earned':'is-locked');
+      card.querySelector('.badge-state').textContent=b.earned?'Desbloqueada':'Por descubrir';
       const amount=b.group==='tiempo'||b.group==='lectura'?Math.floor(b.current/60)+' / '+b.target/60+' min':Math.floor(b.current)+' / '+b.target;
-      card.append(node('span',b.earned?'✓ Logro conseguido':amount,'badge-amount'));return card;
-    });grid.replaceChildren(...cards);
+      card.querySelector('.badge-amount').textContent=b.earned?'✓ Logro conseguido':amount;
+      let share=card.querySelector('.badge-share-button');
+      if(b.earned&&sharing&&!share){share=node('button','Compartir insignia','button outline badge-share-button');share.type='button';share.setAttribute('aria-label','Compartir '+b.name);share.addEventListener('click',()=>sharing.open(b.id,share));card.append(share);}
+      if(!b.earned&&share)share.remove();
+    }
+    sharing?.eligibilityChanged();
   }
   function tick(playingOverride){
     if(!context)return;

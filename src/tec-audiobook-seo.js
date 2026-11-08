@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { audiobookCatalog } from './tec-audiobooks.js';
 import { bookEditorial, audioCollections } from './knowledge/audiobook-editorial.js';
 import { audiobookGuides } from './knowledge/audiobook-guides.js';
+import { registerBadgeSharePages } from './tec-badge-sharing.js';
 
 const publicRoot = new URL('../public/', import.meta.url);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -169,6 +170,7 @@ export function buildAudiobookSeo({
 export function registerAudiobookSeo(app, options = {}) {
   // Public metadata only: generated once, without Stripe, MongoDB, R2 or AI requests.
   const rendered = buildAudiobookSeo(options);
+  registerBadgeSharePages(app, options);
   const send = (type, value) => (_req, res) => res.type(type).set('Cache-Control', 'public, max-age=300').send(value);
   app.get('/robots.txt', send('text/plain', rendered.robots));
   app.get('/sitemap.xml', send('application/xml', rendered.sitemap));
