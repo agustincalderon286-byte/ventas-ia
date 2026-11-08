@@ -108,7 +108,7 @@ test('HTTP pages, redirects and crawlers work without database or user sessions 
 });
 
 test('all eight books have original complete editorial notes, unique questions and collection links', () => {
-  assert.equal(Object.keys(bookEditorial).length, 8);
+  assert.equal(Object.keys(bookEditorial).length, audiobookCatalog.length);
   const questions = new Set();
   for (const book of audiobookCatalog) {
     const notes = bookEditorial[book.id], html = generated.pages.get(book.id);

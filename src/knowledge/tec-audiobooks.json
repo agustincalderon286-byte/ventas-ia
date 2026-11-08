@@ -1077,5 +1077,95 @@
       "r2Key": "El-Kybalion-BF16-solo-voz-web.m4b",
       "r2ETag": "\"6060d571e6b358d0fb49341398408ca3\""
     }
+  },
+  {
+    "id": "el-hombre-mas-rico-de-babilonia",
+    "title": "El hombre más rico de Babilonia",
+    "author": "George S. Clason",
+    "originalTitle": "The Richest Man in Babylon",
+    "language": "Español",
+    "categories": [
+      "Desarrollo personal",
+      "Prosperidad",
+      "Clásicos"
+    ],
+    "description": "Arkad, Bansir y otros habitantes de la antigua Babilonia comparten relatos sobre ahorro, deudas, trabajo y oportunidades. Edición íntegra en español actual, con el prólogo, once capítulos y voces distintas para los diálogos.",
+    "edition": "Edición íntegra en español actual · TEC",
+    "narrator": "Iván y reparto de voces de TEC",
+    "credits": "George S. Clason. Traducción propia al español actual y producción sonora de Biblioteca TEC. Narración de Iván y reparto fijo para los diálogos. Sin música ni efectos.",
+    "duration": 14563.69,
+    "cover": "/coach/assets/audiobooks/babilonia-ilustrada-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/babilonia-ilustrada-v1.png",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Prólogo",
+        "start": 0.0,
+        "duration": 135.11
+      },
+      {
+        "title": "1. El hombre que deseaba oro",
+        "start": 135.11,
+        "duration": 813.29
+      },
+      {
+        "title": "2. El hombre más rico de Babilonia",
+        "start": 948.4,
+        "duration": 1394.35
+      },
+      {
+        "title": "3. Siete curas para una bolsa vacía",
+        "start": 2342.75,
+        "duration": 2173.31
+      },
+      {
+        "title": "4. Conoce a la Diosa de la Buena Suerte",
+        "start": 4516.06,
+        "duration": 1754.7
+      },
+      {
+        "title": "5. Las cinco leyes del oro",
+        "start": 6270.76,
+        "duration": 1452.84
+      },
+      {
+        "title": "6. El prestamista de oro de Babilonia",
+        "start": 7723.6,
+        "duration": 1605.17
+      },
+      {
+        "title": "7. Las murallas de Babilonia",
+        "start": 9328.77,
+        "duration": 468.42
+      },
+      {
+        "title": "8. El comerciante de camellos de Babilonia",
+        "start": 9797.19,
+        "duration": 1430.44
+      },
+      {
+        "title": "9. Las Tablillas de Arcilla de Babilonia",
+        "start": 11227.63,
+        "duration": 738.0
+      },
+      {
+        "title": "10. El hombre más afortunado de Babilonia",
+        "start": 11965.63,
+        "duration": 2054.49
+      },
+      {
+        "title": "11. Un esbozo histórico de Babilonia",
+        "start": 14020.12,
+        "duration": 543.57
+      }
+    ],
+    "audio": {
+      "sha256": "91b1247ecdf99f9894d84daa0f81fe300360733ae3af672a2c91a3a0a741b9f4",
+      "bytes": 282622892,
+      "contentType": "audio/mp4",
+      "filename": "El-hombre-mas-rico-de-Babilonia.m4b",
+      "r2Key": "El-hombre-mas-rico-de-Babilonia-BF16-solo-voz-web.m4b",
+      "r2ETag": "\"7ccee1354459eea9749d3b45afd1d888\""
+    }
   }
 ]

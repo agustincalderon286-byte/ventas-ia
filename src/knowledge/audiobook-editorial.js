@@ -1,6 +1,20 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  'el-hombre-mas-rico-de-babilonia': {
+    summary: [
+      'George S. Clason presenta sus ideas sobre el dinero a través de relatos ambientados en la antigua Babilonia. Bansir y Kobbi buscan comprender por qué su trabajo no les ha permitido prosperar; Arkad comparte lo que aprendió sobre reservar una parte de los ingresos y administrar lo que queda. Otras historias exploran las deudas, la prudencia al prestar, el trabajo y las oportunidades que se dejan pasar.',
+      'Los personajes aprenden, se equivocan y cuentan sus experiencias. La edición de Biblioteca TEC ofrece una traducción propia al español actual y voces distintas para los diálogos, con Iván como narrador. Incluye el prólogo y los once capítulos completos, hasta el esbozo histórico de Babilonia, con lectura sincronizada y navegación por apartados.'
+    ],
+    ideas: ['Reservar una parte de lo que se gana y observar los gastos cotidianos.', 'Las historias de Dabasir sobre las deudas y de Mathon sobre la prudencia al prestar.', 'El trabajo, la preparación y la decisión de aprovechar una oportunidad.'],
+    audience: 'Para quienes disfrutan aprender mediante historias y desean conocer un clásico sobre ahorro, trabajo y prosperidad. Sus diálogos y relatos permiten distribuir la escucha en varias sesiones.',
+    tip: 'Comienza con «El hombre que deseaba oro» y continúa con la historia de Arkad. Después vuelve a «El prestamista de oro de Babilonia» y «Las tablillas de arcilla» para comparar cómo los personajes enfrentan préstamos y deudas.',
+    questions: [
+      ['¿Es un resumen del libro?', 'No. Esta edición incluye el prólogo y los once capítulos completos de la edición histórica utilizada, traducidos por TEC al español actual.'],
+      ['¿Se escuchan distintas voces?', 'Sí. Iván narra la obra y un reparto fijo interpreta los diálogos de los personajes. La producción se presenta sólo con voces, sin música ni efectos.'],
+      ['¿Puedo probarlo antes de continuar con el libro completo?', 'Sí. Puedes escuchar gratis el primer 10 % y seguir su lectura sincronizada. El acceso al audiolibro completo utiliza la membresía de Audiolibros TEC.']
+    ]
+  },
   'como-un-hombre-piensa': {
     summary: [
       'James Allen propone observar la relación entre el pensamiento cotidiano y la manera de actuar. A lo largo de siete capítulos, vincula el carácter con los hábitos de la mente y recorre temas como las circunstancias, el propósito, los ideales y la serenidad. El hilo conductor es la responsabilidad personal: reconocer qué pensamientos cultivamos y cómo se expresan en nuestras decisiones.',
@@ -118,11 +132,11 @@ export const bookEditorial = {
 export const audioCollections = [
   {
     id: 'desarrollo-personal', title: 'Audiolibros de desarrollo personal', label: 'Desarrollo personal',
-    description: 'Explora pensamiento, propósito, perseverancia y oportunidades con James Allen, Samuel Smiles, Russell H. Conwell y Wallace D. Wattles.',
-    intro: 'Esta colección reúne cuatro maneras de abordar la formación personal. Allen se concentra en pensamiento y carácter; Conwell mira las oportunidades cercanas; Smiles recurre a historias de esfuerzo, y Wattles desarrolla su propuesta de prosperidad. Puedes empezar con una obra breve o elegir un recorrido más largo por capítulos.',
+    description: 'Explora pensamiento, propósito, perseverancia, ahorro y oportunidades con James Allen, Samuel Smiles, Russell H. Conwell, Wallace D. Wattles y George S. Clason.',
+    intro: 'Esta colección reúne cinco maneras de abordar la formación personal. Allen se concentra en pensamiento y carácter; Conwell mira las oportunidades cercanas; Smiles recurre a historias de esfuerzo; Wattles desarrolla su propuesta de prosperidad, y Clason utiliza relatos sobre el ahorro, las deudas y el trabajo. Puedes empezar con una obra breve o elegir un recorrido más largo por capítulos.',
     ideas: ['Pensamiento, ideales y serenidad.', 'Iniciativa, trabajo y perseverancia.', 'Oportunidades cercanas y acción con propósito.'],
     route: 'Para una primera escucha breve, empieza con Como un hombre piensa. Sigue con Acres de diamantes si prefieres relatos y ejemplos. ¡Ayúdate! permite ampliar el recorrido, y La ciencia de hacerse rico ofrece otra perspectiva sobre propósito y acción.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'ayudate', 'la-ciencia-de-hacerse-rico']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-hombre-mas-rico-de-babilonia']
   },
   {
     id: 'biblia-en-audio', title: 'Biblia en audio en español', label: 'Biblia en audio',
@@ -135,10 +149,10 @@ export const audioCollections = [
   {
     id: 'clasicos-en-espanol', title: 'Audiolibros clásicos en español', label: 'Clásicos en español',
     description: 'Clásicos de estrategia, desarrollo personal y filosofía para escuchar en español. Conoce sus autores, capítulos y muestras gratuitas en TEC.',
-    intro: 'Una puerta de entrada a seis obras que plantean preguntas sobre la conducta, el trabajo, la estrategia y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
+    intro: 'Una puerta de entrada a siete obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',
