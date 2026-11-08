@@ -47,11 +47,11 @@
   <link rel="stylesheet" href="/audiolibros/compartir.css?v=20261107">
   <script defer src="/coach/audiobook-reader.js?v=20261103"></script>
   <script defer src="/audiolibros/compartir.js?v=20261107"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=9"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=test-accounts-9"></script>
   <link rel="stylesheet" href="/audiolibros/logros.css?v=2">
   <link rel="stylesheet" href="/audiolibros/insignias-compartir.css?v=2">
   <script type="module" src="/audiolibros/logros.js?v=2"></script>
-  <script type="module" src="/audiolibros/analytics.js?v=20261107-guides"></script>
+  <script type="module" src="/audiolibros/analytics.js?v=20261108-test-accounts"></script>
 </head>
 <body>
   <header class="top wrap">
@@ -169,6 +169,17 @@
       <button class="button primary" type="submit">Enviarme un enlace</button>
       <p class="fine">Recibirás un enlace de un solo uso para entrar a tu cuenta.</p>
     </form>
+    <details id="test-access">
+      <summary>Acceso con usuario y contraseña</summary>
+      <form id="test-sign-in">
+        <label for="test-username">Usuario</label>
+        <input id="test-username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" required>
+        <label for="test-password">Contraseña</label>
+        <input id="test-password" type="password" autocomplete="current-password" maxlength="128" required>
+        <button class="button primary" type="submit">Entrar a la biblioteca</button>
+        <p class="fine">Para cuentas de prueba habilitadas por TEC. Sin activación por correo ni pagos.</p>
+      </form>
+    </details>
     <button id="confirm" class="button primary" type="button" hidden>Confirmar e ingresar</button>
     <div id="account-actions" class="actions" hidden>
       <button id="portal" class="button primary" type="button" hidden>Gestionar suscripción</button>

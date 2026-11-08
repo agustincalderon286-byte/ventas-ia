@@ -20,3 +20,13 @@ Para incorporar otra muestra, toma la edición con el hash del catálogo, recór
 ## Verificación local
 
 Ejecuta `npm test` con Node 24. La prueba de membresía usa correo, base y Stripe simulados para verificar el flujo HTTP sin cobros ni mensajes externos.
+
+## Cuentas de prueba privadas (8 de noviembre de 2026)
+
+Las cuentas de prueba viven sólo en `TecAudioMember`, con `_id=test:<usuario>`, `isTest=true`, `analyticsExcluded=true`, `accessType=test` y `testAccessEnabled=true`. No crean clientes, suscripciones ni facturas en Stripe y no dan acceso al Coach ni a la Torre. No existe un endpoint público para crearlas. Los informes comerciales que consulten miembros deben usar `{isTest: {$ne: true}}`; contar documentos de miembros nunca equivale a contar suscriptores de pago.
+
+El operador prepara contraseñas aleatorias en el SSD, fuera del repositorio: `node scripts/manage-audio-test-accounts.mjs prepare <carpeta-privada>`. Entregar los mensajes individuales de esa carpeta. Subir únicamente los registros con hashes al servidor mediante la entrada estándar base64 de `node scripts/manage-audio-test-accounts.mjs apply`, ejecutado en la consola autenticada de Render; la URI de Mongo permanece en el entorno del servidor. El comando es idempotente para los mismos registros y rechaza sobrescribir cuentas distintas. No guardar contraseñas en Git ni en variables públicas. La base guarda únicamente scrypt con sal aleatoria; las sesiones siguen siendo tokens aleatorios HttpOnly, Secure y SameSite=Lax, de 30 días.
+
+El enlace compartible `/audiolibros/?acceso=prueba` abre el formulario de usuario/contraseña y excluye la entrada de Analytics antes del inicio de sesión. Tras entrar, un marcador `tec_audio_test=1` sin identidad mantiene la exclusión en todas las páginas de audiolibros, incluso con consentimiento previo. Ese marcador no concede acceso: cada petición protegida verifica la sesión, la cuenta, la habilitación y la versión de credencial. El progreso y las insignias personales se guardan para funcionar; no son métricas comerciales. Los registros técnicos de servidor/CDN siguen existiendo.
+
+Para retirar acceso: `node scripts/manage-audio-test-accounts.mjs disable <usuario>` desde Render. Deshabilita el permiso y cambia la versión de credencial, invalidando las sesiones existentes sin afectar las demás cuentas. Cualquier recuperación de contraseña debe hacerse por el operador, sin habilitar cobros ni convertirla en cuenta de pago.

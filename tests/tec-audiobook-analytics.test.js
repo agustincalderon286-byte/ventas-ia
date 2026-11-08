@@ -8,13 +8,13 @@ import { audioCollections } from '../src/knowledge/audiobook-editorial.js';
 import { audiobookGuides } from '../src/knowledge/audiobook-guides.js';
 
 const source = readFileSync(new URL('../public/audiolibros/analytics.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/, '');
-function browser({ choice = '', online = true, gpc = false, dnt = false, native = false, brokenStorage = false, origin = 'https://totalelitecoaching.com', pathname = '/audiolibros/' } = {}) {
+function browser({ choice = '', online = true, gpc = false, dnt = false, native = false, brokenStorage = false, origin = 'https://totalelitecoaching.com', pathname = '/audiolibros/', search = '', testAccount = false } = {}) {
   const handlers = {}, docHandlers = {}, scripts = [], writes = [], cookies = [], elements = new Map();
   function node(tag) { return { tag, hidden: false, disabled: false, children: [], setAttribute(){}, append(...items){ this.children.push(...items); if(tag === 'head') scripts.push(...items); }, addEventListener(type, fn){this[type] = fn;}, querySelector(selector){if(!elements.has(selector)) elements.set(selector,node(selector));return elements.get(selector);} }; }
   const footer = node('footer');
   const document = { head:node('head'), body:node('body'), referrer:'https://www.google.com/search?q=PRIVATE+PERSON', createElement:node, querySelector:s=>s==='footer'?footer:null, addEventListener(type,fn){docHandlers[type]=fn;} };
-  Object.defineProperty(document,'cookie',{get(){return 'tec_audio_ga=1; tec_audio_ga_DZCX3RMST7=2; _ga=COACH; tec_audio_session=LOGIN; draft=SAVED';},set(value){cookies.push(value);}});
-  const context = { ...events, document, location:{origin,pathname,href:origin+pathname+'?email=PRIVATE@example.test&libro=SECRET#TOKEN'}, navigator:{onLine:online,globalPrivacyControl:gpc,doNotTrack:dnt?'1':undefined}, localStorage:{getItem(){if(brokenStorage)throw Error('denied');return choice;},setItem(k,v){if(brokenStorage)throw Error('denied');writes.push([k,v]);}}, URL, Object, Set, Date };
+  Object.defineProperty(document,'cookie',{get(){return (testAccount ? 'tec_audio_test=1; ' : '') + 'tec_audio_ga=1; tec_audio_ga_DZCX3RMST7=2; _ga=COACH; tec_audio_session=LOGIN; draft=SAVED';},set(value){cookies.push(value);}});
+  const context = { ...events, document, location:{origin,pathname,search,href:origin+pathname+'?email=PRIVATE@example.test&libro=SECRET#TOKEN'}, navigator:{onLine:online,globalPrivacyControl:gpc,doNotTrack:dnt?'1':undefined}, localStorage:{getItem(){if(brokenStorage)throw Error('denied');return choice;},setItem(k,v){if(brokenStorage)throw Error('denied');writes.push([k,v]);}}, URL, URLSearchParams, Object, Set, Date };
   context.window={...(native?{TecNative:{}}:{}),addEventListener(type,fn){handlers[type]=fn;}};
   vm.runInNewContext(source, context);
   return {context,scripts,writes,cookies,footer,elements,handlers,docHandlers,
@@ -85,4 +85,17 @@ test('guide analytics accepts only public canonical slugs and respects the same 
     assert.ok(!JSON.stringify(accepted.events()).includes('PRIVATE'));
   }
   assert.equal(events.pageContext('/audiolibros/guias/not-a-guide/'),null);
+});
+
+
+test('test accounts never load Google or send events, including previously accepted consent',()=>{
+  for (const opts of [{testAccount:true},{search:'?acceso=prueba'}]) {
+    const f=browser({choice:'accepted',...opts}); f.sample(events.BOOK_IDS[0]);
+    assert.equal(f.scripts.length,0); assert.equal(f.events().length,0);
+    assert.equal(f.footer.children.length,0);
+  }
+  const f=browser({choice:'accepted'});f.load();
+  f.docHandlers['tec-audio-test-account'](); f.sample(events.BOOK_IDS[0]);
+  assert.equal(f.context.window['ga-disable-'+events.MEASUREMENT_ID],true);
+  assert.equal(f.events().length,0);
 });

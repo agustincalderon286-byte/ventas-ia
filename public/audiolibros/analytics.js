@@ -6,10 +6,13 @@ const context = pageContext(location.pathname);
 const native = Boolean(window.webkit?.messageHandlers?.tecNative || window.TecNativeOffline || window.TecNative || window.TECNative || window.Capacitor);
 const protectedChoice = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1';
 const production = ['https://totalelitecoaching.com', 'https://www.totalelitecoaching.com'].includes(location.origin);
+// A test entry is excluded even before sign-in; the marker contains no identity or entitlement.
+let testAccount = /(?:^|;\s*)tec_audio_test=1(?:;|$)/.test(document.cookie || '') ||
+  new URLSearchParams(location.search || '').get('acceso') === 'prueba';
 let choice = '', loading = false, loaded = false, pageSent = false;
 const samplesSent = new Set();
 try { choice = localStorage.getItem(KEY) || ''; } catch {}
-const allowed = () => context && production && !native && !protectedChoice && choice === 'accepted' && navigator.onLine !== false;
+const allowed = () => context && production && !testAccount && !native && !protectedChoice && choice === 'accepted' && navigator.onLine !== false;
 function store(value) { choice = value; try { localStorage.setItem(KEY, value); } catch {} }
 function command() { window.dataLayer.push(arguments); }
 function emit(name, bookId) {
@@ -57,7 +60,11 @@ window.TecAudiobookAnalytics = Object.freeze({
     if (emit('audio_sample_play', bookId)) samplesSent.add(bookId);
   }
 });
-if (context && !native) {
+document.addEventListener('tec-audio-test-account', () => {
+  testAccount = true; window[disableKey] = true;
+  if (window.dataLayer) window.dataLayer.length = 0;
+});
+if (context && !native && !testAccount) {
   window[disableKey] = true;
   const footer = document.querySelector('footer') || document.body;
   const panel = document.createElement('aside');

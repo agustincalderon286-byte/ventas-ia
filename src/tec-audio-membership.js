@@ -1,3 +1,4 @@
+import { hasTestAudioAccess, normalizeTestUsername, validTestUsername, verifyTestPassword } from './tec-audio-test-accounts.js';
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
@@ -19,9 +20,11 @@ export function createAudioMembershipModels(mongoose) {
   const expiresAt = { type: Date, expires: 0 };
   return {
     shares: createAudiobookShareModel(mongoose),
-    accounts: model('TecAudioMember', { _id: String, stripeCustomerId: String }),
+    accounts: model('TecAudioMember', { _id: String, stripeCustomerId: String, username: String, displayName: String,
+      isTest: Boolean, analyticsExcluded: Boolean, accessType: String, testAccessEnabled: Boolean,
+      passwordHash: String, passwordSalt: String, credentialVersion: String, createdAt: Date, updatedAt: Date }),
     grants: model('TecAudioGrant', { _id: String, email: String, digest: { type: String, index: true }, expiresAt, requestedAt: Date }),
-    sessions: model('TecAudioSession', { _id: String, email: String, expiresAt }),
+    sessions: model('TecAudioSession', { _id: String, email: String, credentialVersion: String, expiresAt }),
     achievements: model('TecAudioAchievements', { _id: String, revision: Number, state: mongoose.Schema.Types.Mixed }),
     listening: model('TecAudioListening', { _id: String, position: Number, speed: Number, marks: [Number] })
   };
@@ -50,6 +53,7 @@ export function registerAudioMembership(app, {
   const cookieOptions = { httpOnly: true, secure, sameSite: 'lax', path: api };
   const accessCache = new Map();
   const mailAttempts = new Map();
+  const passwordAttempts = new Map();
   const billingReady = Boolean(stripe && priceId && portalId);
   const reply = (res, status, error) => res.status(status).json({ error });
 
@@ -77,7 +81,10 @@ export function registerAudioMembership(app, {
     const id = sessionId(req);
     if (!id) return null;
     const session = await sessions.findOne({ _id: id, expiresAt: { $gt: new Date() } }).lean();
-    return session ? accounts.findById(session.email).lean() : null;
+    if (!session) return null;
+    const user = await accounts.findById(session.email).lean();
+    if (user?.isTest && session.credentialVersion !== user.credentialVersion) return null;
+    return user;
   }
 
   async function findSubscriptions(user) {
@@ -90,6 +97,7 @@ export function registerAudioMembership(app, {
   }
 
   async function isMember(user) {
+    if (user?.isTest) return hasTestAudioAccess(user);
     if (!stripe || !priceId || !user?.stripeCustomerId) return false;
     const id = user.stripeCustomerId;
     const cached = accessCache.get(id);
@@ -148,6 +156,33 @@ export function registerAudioMembership(app, {
     return false;
   }
 
+  route('post', '/pruebas/entrar', async (req, res) => {
+    const now = Date.now();
+    for (const [ip, slot] of passwordAttempts) if (slot.until <= now) passwordAttempts.delete(ip);
+    let slot = passwordAttempts.get(req.ip);
+    if (!slot) {
+      if (passwordAttempts.size >= 5000) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+      slot = { count: 0, until: now + 15 * 60_000 };
+      passwordAttempts.set(req.ip, slot);
+    }
+    if (++slot.count > 8) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+    const username = normalizeTestUsername(req.body?.username);
+    const password = req.body?.password;
+    if (!validTestUsername(username) || typeof password !== 'string' || password.length < 12 || password.length > 128) {
+      return reply(res, 401, 'Usuario o contraseña incorrectos.');
+    }
+    const user = await accounts.findById('test:' + username).lean();
+    if (!await verifyTestPassword(password, user)) return reply(res, 401, 'Usuario o contraseña incorrectos.');
+    const fresh = token();
+    await sessions.create({ _id: hash(fresh), email: user._id, credentialVersion: user.credentialVersion,
+      expiresAt: new Date(Date.now() + sessionMs) });
+    const old = sessionId(req);
+    if (old) await sessions.deleteOne({ _id: old });
+    // Non-identifying opt-out marker. It never grants access; the server checks the account and session.
+    res.cookie('tec_audio_test', '1', { secure, sameSite: 'lax', path: '/audiolibros', maxAge: sessionMs });
+    res.cookie(cookie, fresh, { ...cookieOptions, maxAge: sessionMs }).json({ authenticated: true, testAccount: true });
+  });
+
   route('post', '/entrar', async (req, res) => {
     if (!sendSignIn) return reply(res, 503, 'El acceso por correo se está preparando.');
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
@@ -190,6 +225,7 @@ export function registerAudioMembership(app, {
   route('post', '/salir', async (req, res) => {
     const id = sessionId(req);
     if (id) await sessions.deleteOne({ _id: id });
+    res.clearCookie('tec_audio_test', { secure, sameSite: 'lax', path: '/audiolibros' });
     res.clearCookie(cookie, cookieOptions).json({ ok: true });
   });
 
@@ -197,13 +233,14 @@ export function registerAudioMembership(app, {
 
   route('get', '/cuenta', async (req, res) => {
     const user = await account(req);
-    res.json({ authenticated: Boolean(user), achievementKey: user ? hash('tec-audio-achievements:' + user._id) : null, member: await isMember(user), billingReady, signInReady: Boolean(sendSignIn), customer: Boolean(user?.stripeCustomerId) });
+    res.json({ authenticated: Boolean(user), testAccount: Boolean(user?.isTest), analyticsExcluded: Boolean(user?.analyticsExcluded), displayName: user?.isTest ? user.displayName : null, achievementKey: user ? hash('tec-audio-achievements:' + user._id) : null, member: await isMember(user), billingReady, signInReady: Boolean(sendSignIn), customer: Boolean(user?.stripeCustomerId) });
   });
 
   route('post', '/checkout', async (req, res) => {
     if (!billingReady) return reply(res, 503, 'Las suscripciones se están preparando.');
     const user = await account(req);
     if (!user) return reply(res, 401, 'Ingresa con tu correo para suscribirte.');
+    if (user.isTest) return reply(res, 403, 'Esta cuenta de prueba no utiliza cobros ni suscripciones.');
     const [price, portal] = await Promise.all([
       stripe.prices.retrieve(priceId), stripe.billingPortal.configurations.retrieve(portalId)
     ]);
@@ -237,6 +274,7 @@ export function registerAudioMembership(app, {
 
   route('post', '/portal', async (req, res) => {
     const user = await account(req);
+    if (user?.isTest) return reply(res, 403, 'Esta cuenta de prueba no utiliza cobros ni suscripciones.');
     if (!billingReady || !user?.stripeCustomerId) return reply(res, 404, 'Todavía no hay una suscripción para gestionar.');
     const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, configuration: portalId, return_url: landing });
     res.json({ url: portal.url });
