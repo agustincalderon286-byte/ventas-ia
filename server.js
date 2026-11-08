@@ -26,6 +26,7 @@ import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audioboo
 import { createAudiobookR2 } from "./src/tec-audiobook-r2.js";
 import { registerAudiobookSeo } from "./src/tec-audiobook-seo.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
+import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobook-support.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -32422,6 +32423,10 @@ registerAudiobookSeo(app, {
 registerTecAudiobooks(app, {
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
   ...audiobookModels, getBucket: getAudiobookBucket, r2: audiobookR2
+});
+registerAudiobookSupport(app, {
+  publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",
+  sendSupport: createSupportMailer({ apiKey: AUDIO_RESEND_API_KEY, from: AUDIO_RESEND_FROM_EMAIL })
 });
 registerAudioMembership(app, {
   ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,

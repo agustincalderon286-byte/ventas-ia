@@ -93,7 +93,7 @@ export function buildAudiobookSeo({
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
     <link rel="stylesheet" href="/audiolibros/estilos.css?v=6"><script type="module" src="/audiolibros/analytics.js?v=20261107-guides"></script>`;
   const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
-  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a></footer>`;
+  const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
   const pages = new Map(catalog.map(book => {
     const path = bookPath(book), url = absolute(path), sample = hasSample(book);
     const description = `${book.title}, de ${book.author}: audiolibro en español. ${book.description}`;
