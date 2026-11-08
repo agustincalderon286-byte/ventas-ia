@@ -478,6 +478,9 @@
     updatePlayback();
     if (!audio.paused && Date.now() - lastSave > 15000) saveProgress();
   });
+  audio.addEventListener('play', () => {
+    if (selected && !selected.full) window.TecAudiobookAnalytics?.samplePlayed(selected.id);
+  });
   audio.addEventListener('pause', saveProgress);
   for (const event of ['play', 'pause', 'ended', 'seeked']) audio.addEventListener(event, updatePlayback);
   audio.addEventListener('ended', () => {

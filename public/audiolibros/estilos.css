@@ -59,6 +59,39 @@ h3{font-size:1.7rem;letter-spacing:-.025em;margin-bottom:7px}
 .audiobook-faq summary{font-size:1rem;font-weight:650;min-height:32px}
 .audiobook-faq details p{max-width:75ch;color:var(--soft);margin:12px 0 0}
 .book-detail{padding-bottom:45px}
+.audio-collections{padding-block:48px 58px}
+.collection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:25px}
+.collection-card{display:flex;flex-direction:column;padding:28px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(140deg,#25483d,#153029);text-decoration:none}
+.collection-card:hover{border-color:var(--gold)}
+.collection-card h3{font-size:1.9rem;line-height:1.15}
+.collection-card p{color:var(--soft);font-size:.95rem}
+.collection-card .eyebrow{font-size:.7rem}
+.collection-cta{margin-top:auto;color:var(--gold);font-weight:650;font-size:.9rem}
+.collection-links{display:flex;flex-wrap:wrap;gap:10px;margin-block:20px}
+.collection-links a{display:inline-flex;align-items:center;min-height:44px;padding:9px 16px;border:1px solid var(--line);border-radius:30px;color:var(--gold);text-decoration:none}
+.collection-links a:hover{border-color:var(--gold)}
+.collection-hero{display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center;padding-block:65px}
+.collection-hero h1{font-size:clamp(2.8rem,5.6vw,5.2rem);letter-spacing:-.045em;line-height:1.08}
+.collection-cover-stack{display:flex;justify-content:center;align-items:center;min-height:260px;padding:24px}
+.collection-cover-stack img{width:38%;height:auto;max-width:170px;border-radius:7px;box-shadow:0 12px 25px #06191499}
+.collection-cover-stack img+img{margin-left:-12%}
+.collection-cover-stack img:first-child{transform:rotate(-9deg)}
+.collection-cover-stack img:last-child{transform:rotate(9deg)}
+.editorial-ideas{max-width:75ch;color:var(--soft);padding-left:22px}
+.editorial-ideas li{margin:10px 0;padding-left:7px}
+.editorial-audience{display:grid;grid-template-columns:1.2fr 1fr;gap:35px}
+.editorial-audience p,.collection-route p{color:var(--soft)}
+.editorial-audience aside,.collection-route{background:var(--panel);padding:25px;border-radius:10px;border:1px solid var(--line)}
+.editorial-audience h3,.collection-route h3{font-size:1.65rem;line-height:1.15}
+.collection-route{max-width:80ch;margin-block:25px}
+.book-faq details{padding:17px 0;border-bottom:1px solid var(--line)}
+.book-faq summary{min-height:30px;font-weight:650}
+.book-faq details p{margin:12px 0 0;max-width:80ch;color:var(--soft)}
+.audio-analytics-choice{flex-basis:100%;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:.88rem}
+.audio-analytics-choice p{max-width:85ch;color:var(--soft);margin:10px 0 16px}
+.audio-analytics-choice .actions{align-items:center}
+.audio-analytics-settings{border:0;background:none;color:var(--soft);min-height:44px;font:inherit;font-size:.82rem;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+@media(max-width:700px){.collection-grid,.collection-hero,.editorial-audience{grid-template-columns:1fr}.collection-hero{gap:15px;padding-block:35px}.collection-hero h1{font-size:2.8rem}.collection-cover-stack{min-height:210px}.collection-cover-stack img{max-width:130px}.collection-card{padding:22px}.editorial-audience{gap:15px}.audio-analytics-choice .actions{align-items:stretch;flex-direction:column}.audio-analytics-choice .button{white-space:normal}.collection-links{gap:8px}}
 .breadcrumbs{padding-block:25px;color:var(--soft);font-size:.86rem;overflow-wrap:anywhere}
 .book-detail-hero{display:grid;grid-template-columns:minmax(160px,270px) minmax(0,1fr);gap:45px;align-items:center;padding-block:20px 40px}
 .detail-cover{width:100%;height:auto;border-radius:9px;box-shadow:0 15px 35px #07181180}
@@ -92,7 +125,7 @@ h3{font-size:1.7rem;letter-spacing:-.025em;margin-bottom:7px}
 .price span{color:var(--gold)}
 .plan .price+p{margin-top:17px;color:var(--soft)}
 .plan .button{width:100%}
-footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;padding-block:22px;font-size:.82rem;color:var(--soft)}
+footer{border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-block:22px;font-size:.82rem;color:var(--soft)}
 dialog{width:min(92vw,480px);max-height:90dvh;padding:27px;background:var(--panel);border:1px solid #729085;border-radius:14px;color:var(--ink)}
 dialog::backdrop{background:#071510bc}
 dialog h2{font-size:2.25rem;padding-right:16px}

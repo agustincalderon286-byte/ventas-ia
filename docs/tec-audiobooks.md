@@ -1,5 +1,19 @@
 # Audiolibros TEC
 
+## Fichas editoriales, colecciones y Analytics — 7 de noviembre de 2026
+
+Las ocho fichas incorporan introducciones originales basadas en los maestros españoles y los índices de TEC: resumen en dos párrafos, tres ideas, público, propuesta de escucha y tres preguntas específicas por obra. `src/knowledge/audiobook-editorial.js` conserva ese material separado del audio y del texto completo de miembros. No se solicitan respuestas a OpenAI al visitar una ficha. Las notas describen las ideas de cada autor sin presentar sus tesis filosóficas como hechos científicos ni atribuir una identidad individual confirmada a Tres Iniciados.
+
+Cuatro colecciones indexables en `/audiolibros/colecciones/:id/` reúnen desarrollo personal, Biblia en audio, clásicos en español y filosofía/estrategia. Cada una tiene contexto, recorrido sugerido, tarjetas de sus libros y enlaces a otras colecciones. La colección bíblica indica que contiene Génesis y Éxodo, no la Biblia completa. Las fichas enlazan de vuelta a las colecciones. El sitemap y la guía pública incluyen ahora 13 páginas canónicas y mantienen las ocho fichas existentes.
+
+Analytics usa la propiedad existente `562322027`, flujo `16271808920`, identificador público `G-DZCX3RMST7`. Se comprobó en el panel que Enhanced Measurement está desactivado; no se crean secretos API ni nuevas cuentas. `public/audiolibros/analytics.js` solo carga Google después de consentimiento específico para la biblioteca y en el dominio de producción. No comparte la decisión con el Coach. Las cookies llevan prefijo `tec_audio`, ruta `/audiolibros` y duración de 30 días; su eliminación se limita a `tec_audio_ga*`, preservando expresamente `tec_audio_session` y las cookies del Coach.
+
+Los eventos permitidos son `page_view`, `audio_sample_play`, `audio_membership_click` y `audio_share_open`. Las rutas y los identificadores de libro proceden de listas públicas cerradas; se excluyen consultas, fragmentos, búsquedas, correos, contenido de citas, posiciones y audios. Las referencias de buscadores/redes reconocidos se reducen a su origen. No se registran pagos con un clic, ni se añaden estadísticas a las colas de sincronización. Se respeta GPC/DNT y se omiten contenedores nativos detectados y el modo sin conexión. La privacidad específica está en `/audiolibros/privacidad/`; rechazar no afecta escuchar ni la membresía.
+
+Pruebas: 862 correctas. Se amplió la cobertura para datos editoriales de las ocho obras, enlaces recíprocos y cobertura real de colecciones, índices/canonical, escape HTML y rutas inexistentes, consentimiento, carga fallida de Google, almacenamiento bloqueado, carreras de rechazo durante la carga, señales de privacidad y ausencia de eliminación de cookies de acceso. En navegador se comprobó la navegación ficha → muestra, las preguntas desplegables, reproducción activa tras rechazar estadísticas y diseños en marcos de 390 y 768 px sin desbordamiento. La cifra de clics no sustituye las suscripciones verificadas por Stripe.
+
+Referencias de implementación: [configuración GA4](https://developers.google.com/analytics/devguides/collection/ga4/reference/config), [privacidad de Google tag](https://developers.google.com/tag-platform/security/concepts/privacy) y [mediciones automáticas](https://support.google.com/analytics/answer/9216061?hl=en).
+
 ## Descubrimiento y SEO — 7 de noviembre de 2026
 
 `registerAudiobookSeo` prepara una vez al iniciar el servidor la portada HTML completa y una ficha pública por libro en `/audiolibros/libros/:id/`. El catálogo, las descripciones, las muestras y los enlaces se pueden leer sin ejecutar JavaScript. Las fichas incluyen capítulos, créditos, portada, muestra pública sin precarga de audio y enlace al reproductor existente. El precio de 20 USD al mes se identifica como membresía; nunca como compra individual ni libro completo gratuito. La sesión y Stripe siguen resolviéndose únicamente mediante los endpoints privados existentes.
