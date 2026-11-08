@@ -8,6 +8,7 @@
   const miniPlayer = $('#mini-player');
   const accountDialog = $('#account');
   const apiRoot = '/api/audiolibros';
+  const testEntry = new URLSearchParams(location.search).get('acceso') === 'prueba';
   let account = {};
   let books = [];
   let selected = null;
@@ -108,12 +109,12 @@
 
   function showAccount() {
     const confirming = Boolean(signInToken);
-    $('#sign-in').hidden = confirming || Boolean(account.authenticated);
+    $('#sign-in').hidden = confirming || Boolean(account.authenticated) || testEntry;
     $('#test-access').hidden = confirming || Boolean(account.authenticated);
     $('#account-actions').hidden = confirming || !account.authenticated;
     $('#portal').hidden = !account.customer || account.testAccount;
     $('#confirm').hidden = !confirming;
-    $('#account-title').textContent = confirming ? 'Confirma tu acceso' : account.authenticated ? 'Mi cuenta' : 'Ingresa con tu correo';
+    $('#account-title').textContent = confirming ? 'Confirma tu acceso' : account.authenticated ? 'Mi cuenta' : testEntry ? 'Ingresa a tu biblioteca' : 'Ingresa con tu correo';
     $('#account-status').textContent = account.testAccount ? 'Hola, ' + account.displayName + '. Acceso gratuito de prueba activo. Tu actividad queda fuera de las estadísticas comerciales.' : '';
     if (!accountDialog.open) accountDialog.showModal();
   }
@@ -526,7 +527,6 @@
     renderBooks();
   }).catch(error => { $('#catalog-status').textContent = error.message; });
 
-  const testEntry = new URLSearchParams(location.search).get('acceso') === 'prueba';
   const checkoutReturn = new URLSearchParams(location.search).get('membresia') === 'confirmada';
   const accountReady = refreshAccount().then(async () => {
     if (testEntry) { showAccount(); $('#test-access').open = !account.authenticated; }
