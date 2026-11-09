@@ -27,6 +27,7 @@ import { createAudiobookR2 } from "./src/tec-audiobook-r2.js";
 import { registerAudiobookSeo } from "./src/tec-audiobook-seo.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
 import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobook-support.js";
+import { createTecMailer } from "./src/tec-mail.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -32424,9 +32425,13 @@ registerTecAudiobooks(app, {
   requireActive: requireCoachActivo, requireAdmin: requireControlTowerAccess,
   ...audiobookModels, getBucket: getAudiobookBucket, r2: audiobookR2
 });
+const tecSendMail = createTecMailer({
+  hostingerToken: String(process.env.TEC_HOSTINGER_MAIL_TOKEN || "").trim(),
+  resendApiKey: AUDIO_RESEND_API_KEY, resendFrom: AUDIO_RESEND_FROM_EMAIL
+});
 registerAudiobookSupport(app, {
   publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",
-  sendSupport: createSupportMailer({ apiKey: AUDIO_RESEND_API_KEY, from: AUDIO_RESEND_FROM_EMAIL })
+  sendSupport: createSupportMailer({ sendMail: tecSendMail })
 });
 registerAudioMembership(app, {
   ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,
@@ -32434,17 +32439,11 @@ registerAudioMembership(app, {
   portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
   publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
     ? "https://totalelitecoaching.com" : `http://localhost:${process.env.PORT || 3000}`),
-  sendSignIn: AUDIO_RESEND_API_KEY && AUDIO_RESEND_FROM_EMAIL ? async (email, url) => {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${AUDIO_RESEND_API_KEY}`, "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(10_000),
-      body: JSON.stringify({
-        from: AUDIO_RESEND_FROM_EMAIL, to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
-        text: `Abre este enlace para entrar a tu biblioteca TEC:\n\n${url}\n\nEl enlace caduca en 15 minutos y solo se puede usar una vez.`
-      })
+  sendSignIn: tecSendMail ? async (email, url) => {
+    await tecSendMail({
+      to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
+      text: `Abre este enlace para entrar a tu biblioteca TEC:\n\n${url}\n\nEl enlace caduca en 15 minutos y solo se puede usar una vez.`
     });
-    if (!response.ok) throw new Error(`Resend HTTP ${response.status}`);
   } : null
 });
 

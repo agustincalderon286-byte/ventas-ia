@@ -1,24 +1,23 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-export const SUPPORT_EMAIL = 'agustincalderon286@gmail.com';
+import { createTecMailer, TEC_CONTACT_EMAIL } from './tec-mail.js';
+
+export const SUPPORT_EMAIL = TEC_CONTACT_EMAIL;
 export const SUPPORT_TOPICS = Object.freeze({
   acceso: 'Acceso a mi cuenta', membresia: 'Membresía o cobros',
   audio: 'Audio o lectura', tecnico: 'Problema técnico', otro: 'Otra consulta'
 });
 
 // The recipient and sender are server-controlled. User text is sent as plain text only.
-export function createSupportMailer({ apiKey, from, fetchImpl = fetch }) {
-  if (!apiKey || !from) return null;
-  return async ({ name, email, topic, message, service, reference }) => {
-    const response = await fetchImpl('https://api.resend.com/emails', {
-      method: 'POST', signal: AbortSignal.timeout(10_000),
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `tec-support-${reference}` },
-      body: JSON.stringify({ from, to: [SUPPORT_EMAIL], reply_to: email,
-        subject: `[Soporte TEC] ${SUPPORT_TOPICS[topic]} · ${reference.slice(0, 8)}`,
-        text: `Nueva consulta de soporte de ${service === 'coach' ? 'TEC Coach' : 'Audiolibros TEC'}\nReferencia: ${reference}\nNombre: ${name || 'No indicado'}\nCorreo para responder: ${email}\nTema: ${SUPPORT_TOPICS[topic]}\n\n${message}` })
-    });
-    if (!response.ok) throw new Error('support_delivery_failed');
-  };
+export function createSupportMailer({ apiKey, from, fetchImpl = fetch, sendMail } = {}) {
+  const deliver = sendMail || createTecMailer({ resendApiKey: apiKey, resendFrom: from, fetchImpl });
+  if (!deliver) return null;
+  return async ({ name, email, topic, message, service, reference }) => deliver({
+    to: [SUPPORT_EMAIL], replyTo: email,
+    idempotencyKey: `tec-support-${reference}`,
+    subject: `[Soporte TEC] ${SUPPORT_TOPICS[topic]} · ${reference.slice(0, 8)}`,
+    text: `Nueva consulta de soporte de ${service === 'coach' ? 'TEC Coach' : 'Audiolibros TEC'}\nReferencia: ${reference}\nNombre: ${name || 'No indicado'}\nCorreo para responder: ${email}\nTema: ${SUPPORT_TOPICS[topic]}\n\n${message}`
+  });
 }
 
 export function registerAudiobookSupport(app, { publicOrigin, sendSupport, now = Date.now }) {

@@ -59,7 +59,7 @@ test('provider failures and missing configuration never claim successful deliver
   for (const sendSupport of [null, async () => { throw new Error('secret provider info'); }]) {
     const { post } = await fixture(t, { sendSupport });
     const res = await post(valid); assert.equal(res.status, 503);
-    const body = await res.text(); assert.match(body, /agustincalderon286@gmail.com/); assert.doesNotMatch(body, /secret provider info/);
+    const body = await res.text(); assert.match(body, /agustin@totalelitecoaching.com/); assert.doesNotMatch(body, /secret provider info/);
   }
 });
 
@@ -94,7 +94,7 @@ test('form retains text on failed or offline send; success resets it and enables
 test('public contact is reachable from login/membership and does not load analytics or store private drafts', async () => {
   const html = await fs.readFile(new URL('../public/audiolibros/contacto/index.html', import.meta.url), 'utf8');
   const main = await fs.readFile(new URL('../public/audiolibros/index.html', import.meta.url), 'utf8');
-  assert.match(html, /mailto:agustincalderon286@gmail.com/); assert.match(html, /No necesitas iniciar sesión/);
+  assert.match(html, /mailto:agustin@totalelitecoaching.com/); assert.match(html, /No necesitas iniciar sesión/);
   assert.doesNotMatch(html, /analytics\.js|googletagmanager|gtag\(/);
   assert.match(main, /Pide ayuda a soporte/); assert.match(main, /Contactar a soporte/);
 });

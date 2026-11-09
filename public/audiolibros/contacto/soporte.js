@@ -19,7 +19,7 @@ for (const form of document.querySelectorAll('[data-support-form]')) {
       form.reset(); say(`Consulta enviada${data.reference ? ` · Referencia ${data.reference}` : ''}. Te responderemos por correo.`);
     } catch (error) {
       say(error.name === 'TimeoutError' || error.name === 'TypeError' || error instanceof SyntaxError
-        ? 'No pudimos confirmar el envío. Tu texto sigue aquí; reintenta o escribe a agustincalderon286@gmail.com.' : error.message, true);
+        ? 'No pudimos confirmar el envío. Tu texto sigue aquí; reintenta o escribe a agustin@totalelitecoaching.com.' : error.message, true);
     } finally { button.disabled = false; button.textContent = 'Enviar consulta'; }
   });
 }
