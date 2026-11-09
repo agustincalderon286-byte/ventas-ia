@@ -22,6 +22,25 @@ Analytics usa la propiedad existente `562322027`, flujo `16271808920`, identific
 
 Los eventos permitidos son `page_view`, `audio_sample_play`, `audio_membership_click` y `audio_share_open`. Las rutas y los identificadores de libro proceden de listas públicas cerradas; se excluyen consultas, fragmentos, búsquedas, correos, contenido de citas, posiciones y audios. Las referencias de buscadores/redes reconocidos se reducen a su origen. No se registran pagos con un clic, ni se añaden estadísticas a las colas de sincronización. Se respeta GPC/DNT y se omiten contenedores nativos detectados y el modo sin conexión. La privacidad específica está en `/audiolibros/privacidad/`; rechazar no afecta escuchar ni la membresía.
 
+### Atribución de anuncios — 8 de noviembre de 2026
+
+Los dos anuncios activos ya incluyen UTMs en Meta. La integración anterior eliminaba la consulta de `page_location` por privacidad, pero no trasladaba las etiquetas de campaña a los campos de GA4. Además, la elección inicial de estadísticas aparecía sólo al final de la biblioteca. No se puede recuperar retroactivamente la atribución que no se envió a Google.
+
+`safeCampaign` conserva sólo estas combinaciones revisadas como `campaign_source`, `campaign_medium`, `campaign_name` y, cuando corresponde, `campaign_content`:
+
+| Fuente | Medio | Campaña | Pieza |
+| --- | --- | --- | --- |
+| meta | paid_social | audiolibros_chicago_es | clasicos_15s |
+| instagram | paid_social | audiolibros_instagram_chicago_es | clasicos_15s |
+| facebook | organic_group | clasicos_es | Se omite el identificador del grupo |
+| tec_test | qa | verificacion_analytics | conexion_20261108 |
+
+La última combinación identifica exclusivamente la comprobación técnica, no visitas reales de anuncios. Las campañas nuevas requieren revisar y ampliar esta lista. No se transmiten `fbclid`, otros identificadores de clic, términos de búsqueda, valores desconocidos, consultas completas ni fragmentos. `page_location` sigue siendo la ruta pública canónica. Estas etiquetas sólo salen después del consentimiento, y tampoco se envían para cuentas de prueba, GPC/DNT o usuarios que rechacen estadísticas.
+
+El aviso inicial ahora se muestra bajo la cabecera, en el flujo normal, sin superponer controles. La decisión sigue siendo opcional y puede cambiarse desde el pie. La página pública Nuestra historia también tiene un contexto permitido. Las cuentas de prueba conservan su exclusión.
+
+Validación: `npm test` pasa 906 pruebas, incluidas dos nuevas sobre atribución de ambos anuncios, datos privados, parámetros desconocidos/duplicados y rechazo/exclusión. Revisado el aviso a 390 × 844 y su cierre al elegir. Para verificar producción, abrir una visita anónima deliberada etiquetada `tec_test / qa`, aceptar estadísticas y comprobar `/audiolibros/` en Google Realtime. En informes de adquisición usar fuente/medio y campaña de la sesión; el área del Coach comparte propiedad pero tiene rutas distintas. Los números de Meta y GA no tienen por qué coincidir, por consentimiento, bloqueadores y procesamiento.
+
 Pruebas: 862 correctas. Se amplió la cobertura para datos editoriales de las ocho obras, enlaces recíprocos y cobertura real de colecciones, índices/canonical, escape HTML y rutas inexistentes, consentimiento, carga fallida de Google, almacenamiento bloqueado, carreras de rechazo durante la carga, señales de privacidad y ausencia de eliminación de cookies de acceso. En navegador se comprobó la navegación ficha → muestra, las preguntas desplegables, reproducción activa tras rechazar estadísticas y diseños en marcos de 390 y 768 px sin desbordamiento. La cifra de clics no sustituye las suscripciones verificadas por Stripe.
 
 Referencias de implementación: [configuración GA4](https://developers.google.com/analytics/devguides/collection/ga4/reference/config), [privacidad de Google tag](https://developers.google.com/tag-platform/security/concepts/privacy) y [mediciones automáticas](https://support.google.com/analytics/answer/9216061?hl=en).

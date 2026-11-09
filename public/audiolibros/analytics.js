@@ -1,8 +1,9 @@
-import { MEASUREMENT_ID, pageContext, safeAudioEvent, safeReferrer } from './analytics-events.js?v=20261107-guides';
+import { MEASUREMENT_ID, pageContext, safeAudioEvent, safeReferrer, safeCampaign } from './analytics-events.js?v=20261108-campaigns';
 
 const KEY = 'tec.audiobooks.analytics.choice.v1';
 const disableKey = 'ga-disable-' + MEASUREMENT_ID;
 const context = pageContext(location.pathname);
+const campaign = safeCampaign(location.search);
 const native = Boolean(window.webkit?.messageHandlers?.tecNative || window.TecNativeOffline || window.TecNative || window.TECNative || window.Capacitor);
 const protectedChoice = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1';
 const production = ['https://totalelitecoaching.com', 'https://www.totalelitecoaching.com'].includes(location.origin);
@@ -19,7 +20,7 @@ function emit(name, bookId) {
   if (!loaded || !allowed()) return false;
   const params = safeAudioEvent(name, context, bookId);
   if (!params) return false;
-  command('event', name, { ...params, send_to: MEASUREMENT_ID, page_referrer: safeReferrer(document.referrer) });
+  command('event', name, { ...params, ...campaign, send_to: MEASUREMENT_ID, page_referrer: safeReferrer(document.referrer) });
   return true;
 }
 function pageView() { if (!pageSent && emit('page_view')) pageSent = true; }
@@ -30,7 +31,7 @@ function start() {
   loading = true;
   window.dataLayer = window.dataLayer || [];
   command('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
-  const metadata = { page_location: 'https://totalelitecoaching.com' + context.path, page_title: 'Audiolibros TEC · ' + context.type, page_referrer: safeReferrer(document.referrer), allow_google_signals: false, allow_ad_personalization_signals: false };
+  const metadata = { ...campaign, page_location: 'https://totalelitecoaching.com' + context.path, page_title: 'Audiolibros TEC · ' + context.type, page_referrer: safeReferrer(document.referrer), allow_google_signals: false, allow_ad_personalization_signals: false };
   command('set', { ...metadata, ads_data_redaction: true, url_passthrough: false });
   command('js', new Date());
   command('config', MEASUREMENT_ID, { ...metadata, send_page_view: false, cookie_prefix: 'tec_audio', cookie_path: '/audiolibros', cookie_expires: 2592000, cookie_update: false, cookie_flags: 'SameSite=Lax;Secure' });
@@ -69,14 +70,17 @@ if (context && !native && !testAccount) {
   const footer = document.querySelector('footer') || document.body;
   const panel = document.createElement('aside');
   panel.className = 'audio-analytics-choice'; panel.setAttribute('aria-label', 'Estadísticas opcionales de audiolibros');
-  panel.innerHTML = '<strong>¿Nos ayudas a mejorar la biblioteca?</strong><p>Si aceptas, Google Analytics medirá visitas a páginas públicas, muestras reproducidas y clics de membresía. Google recibe datos técnicos, como IP y navegador. No enviamos correos, búsquedas, citas seleccionadas, audios ni datos de pago. Es opcional.</p><div class="actions"><button type="button" class="button primary" data-audio-analytics-accept>Aceptar estadísticas</button><button type="button" class="button outline" data-audio-analytics-reject>Rechazar</button><a href="/audiolibros/privacidad/">Privacidad</a></div>';
+  panel.innerHTML = '<strong>¿Nos ayudas a mejorar la biblioteca?</strong><p>Si aceptas, Google Analytics medirá visitas, muestras y clics de membresía, y qué anuncios o enlaces públicos las originan. Google recibe datos técnicos como IP y navegador. No enviamos correos, búsquedas, citas, audios ni datos de pago. Es opcional.</p><div class="actions"><button type="button" class="button primary" data-audio-analytics-accept>Aceptar estadísticas</button><button type="button" class="button outline" data-audio-analytics-reject>Rechazar</button><a href="/audiolibros/privacidad/">Privacidad</a></div>';
   panel.hidden = Boolean(choice) || protectedChoice;
   panel.querySelector('[data-audio-analytics-accept]').disabled = protectedChoice;
   panel.querySelector('[data-audio-analytics-accept]').addEventListener('click', () => { if (!protectedChoice) { store('accepted'); start(); } panel.hidden = true; });
   panel.querySelector('[data-audio-analytics-reject]').addEventListener('click', () => { reject(); panel.hidden = true; });
   const preferences = document.createElement('button'); preferences.type = 'button'; preferences.className = 'audio-analytics-settings'; preferences.textContent = 'Estadísticas opcionales';
-  preferences.addEventListener('click', () => { panel.hidden = !panel.hidden; });
-  footer.append(panel, preferences);
+  preferences.addEventListener('click', () => { panel.hidden = !panel.hidden; if (!panel.hidden) panel.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); });
+  // Visible on arrival, in the document flow: never cover playback or reading controls.
+  const header = document.querySelector('header');
+  if (header) header.after(panel); else document.body.prepend(panel);
+  footer.append(preferences);
   if (protectedChoice) reject(); else start();
   window.addEventListener('offline', () => { window[disableKey] = true; });
   window.addEventListener('online', () => { if (allowed()) start(); });

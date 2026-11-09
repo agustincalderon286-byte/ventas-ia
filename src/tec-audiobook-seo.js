@@ -92,7 +92,7 @@ export function buildAudiobookSeo({
     .replace('Cargando audiolibros…', 'Elige un libro para conocerlo y escuchar su muestra.');
   const baseHead = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#102421">
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
-    <link rel="stylesheet" href="/audiolibros/estilos.css?v=6"><script type="module" src="/audiolibros/analytics.js?v=20261108-test-accounts"></script>`;
+    <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script type="module" src="/audiolibros/analytics.js?v=20261108-campaigns"></script>`;
   const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
   const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/nuestra-historia/">Nuestra historia</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
   const storyUrl = absolute('/audiolibros/nuestra-historia/');

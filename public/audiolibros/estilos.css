@@ -122,7 +122,8 @@ h3{font-size:1.7rem;letter-spacing:-.025em;margin-bottom:7px}
 .book-faq details{padding:17px 0;border-bottom:1px solid var(--line)}
 .book-faq summary{min-height:30px;font-weight:650}
 .book-faq details p{margin:12px 0 0;max-width:80ch;color:var(--soft)}
-.audio-analytics-choice{flex-basis:100%;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:.88rem}
+.audio-analytics-choice{width:calc(100% - 40px);max-width:1180px;margin:16px auto;padding:18px 22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:.88rem;line-height:1.5}
+.audio-analytics-choice[hidden]{display:none}
 .audio-analytics-choice p{max-width:85ch;color:var(--soft);margin:10px 0 16px}
 .audio-analytics-choice .actions{align-items:center}
 .audio-analytics-settings{border:0;background:none;color:var(--soft);min-height:44px;font:inherit;font-size:.82rem;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
