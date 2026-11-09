@@ -1167,5 +1167,95 @@
       "r2Key": "El-hombre-mas-rico-de-Babilonia-BF16-solo-voz-web.m4b",
       "r2ETag": "\"7ccee1354459eea9749d3b45afd1d888\""
     }
+  },
+  {
+    "id": "meditaciones-marco-aurelio",
+    "title": "Meditaciones",
+    "author": "Marco Aurelio",
+    "originalTitle": "Τὰ εἰς ἑαυτόν",
+    "language": "Español",
+    "categories": [
+      "Filosofía",
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "description": "Las reflexiones de Marco Aurelio sobre la serenidad, el carácter, el cambio y la vida en comunidad. Escucha sus doce libros completos con la voz de Iván y sigue cada pasaje con lectura sincronizada.",
+    "edition": "Doce libros completos · Español modernizado a partir de la traducción de Jacinto Díaz de Miranda (1888) · TEC",
+    "narrator": "Iván · Narración de TEC",
+    "credits": "Marco Aurelio. Versión española basada en la traducción de Jacinto Díaz de Miranda de 1888, revisada y modernizada por TEC. Incluye los doce libros; notas críticas y preliminares editoriales fuera de la narración. Producción sonora de TEC.",
+    "duration": 16985.6,
+    "cover": "/coach/assets/audiobooks/meditaciones-ilustrada-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/meditaciones-ilustrada-v1.png",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Libro primero",
+        "start": 0.0,
+        "duration": 1173.01
+      },
+      {
+        "title": "Libro segundo",
+        "start": 1173.01,
+        "duration": 920.31
+      },
+      {
+        "title": "Libro tercero",
+        "start": 2093.32,
+        "duration": 1064.37
+      },
+      {
+        "title": "Libro cuarto",
+        "start": 3157.69,
+        "duration": 1756.69
+      },
+      {
+        "title": "Libro quinto",
+        "start": 4914.38,
+        "duration": 1635.53
+      },
+      {
+        "title": "Libro sexto",
+        "start": 6549.91,
+        "duration": 1607.27
+      },
+      {
+        "title": "Libro séptimo",
+        "start": 8157.18,
+        "duration": 1614.57
+      },
+      {
+        "title": "Libro octavo",
+        "start": 9771.75,
+        "duration": 1584.49
+      },
+      {
+        "title": "Libro noveno",
+        "start": 11356.24,
+        "duration": 1491.63
+      },
+      {
+        "title": "Libro décimo",
+        "start": 12847.87,
+        "duration": 1629.17
+      },
+      {
+        "title": "Libro undécimo",
+        "start": 14477.04,
+        "duration": 1387.91
+      },
+      {
+        "title": "Libro duodécimo",
+        "start": 15864.95,
+        "duration": 1120.65
+      }
+    ],
+    "audio": {
+      "sha256": "042fc77b9206e58717fcd6b61b1558158715b1ce4e0ef9c368a438832a1ea142",
+      "bytes": 214691741,
+      "contentType": "audio/mp4",
+      "filename": "Meditaciones-Marco-Aurelio.m4b",
+      "r2Key": "Meditaciones-Marco-Aurelio-web-v1.m4b",
+      "r2ETag": "\"97f7f83d5b47eab3f448b9ee6f9d427b\""
+    }
   }
 ]

@@ -1,6 +1,20 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  'meditaciones-marco-aurelio': {
+    summary: [
+      'Marco Aurelio reúne reflexiones sobre la conducta, el paso del tiempo, la convivencia y aquello que depende de nuestras decisiones. Escritas como ejercicios personales, sus notas vuelven una y otra vez a la atención, la justicia y la aceptación de los cambios. No siguen una trama: cada pasaje ofrece un punto de partida para observar los propios juicios y actuar con mayor serenidad.',
+      'La edición de TEC incluye los doce libros de Meditaciones, con narración de Iván y lectura sincronizada. Parte de la traducción histórica de Jacinto Díaz de Miranda publicada en 1888, revisada y modernizada en español. La navegación por libros permite escuchar el recorrido completo o retomar una reflexión en otra sesión; el texto acompaña la voz para volver con calma a las ideas del autor.'
+    ],
+    ideas: ['Distinguir nuestras decisiones de los acontecimientos que no controlamos.', 'La justicia y la responsabilidad al convivir con otras personas.', 'El paso del tiempo, el cambio y la atención a la acción presente.'],
+    audience: 'Para quienes desean conocer las reflexiones de Marco Aurelio y disfrutan una escucha pausada sobre carácter, convivencia y serenidad. Puedes acompañar el audio con el texto y distribuir los doce libros en varias sesiones.',
+    tip: 'Comienza por el Libro primero, donde Marco Aurelio recuerda lo aprendido de otras personas. Continúa en orden y utiliza la lectura sincronizada para detenerte en una reflexión antes de avanzar al siguiente pasaje.',
+    questions: [
+      ['¿Qué contienen los doce libros de Meditaciones?', 'Son notas y ejercicios de reflexión de Marco Aurelio sobre la conducta, los juicios, la vida en comunidad y el cambio. Esta edición conserva el recorrido de los doce libros.'],
+      ['¿En qué traducción se basa la edición de TEC de Marco Aurelio?', 'Se basa en la traducción española de Jacinto Díaz de Miranda publicada en 1888, revisada y modernizada por TEC. No se presenta como una traducción nueva directamente del griego.'],
+      ['¿Quién narra Meditaciones y cómo puedo seguir el texto?', 'Iván narra los doce libros. Puedes seguir la lectura sincronizada, navegar por libros y escuchar gratis el primer 10 %; la membresía permite continuar con la obra completa.']
+    ]
+  },
   'el-hombre-mas-rico-de-babilonia': {
     summary: [
       'George S. Clason presenta sus ideas sobre el dinero a través de relatos ambientados en la antigua Babilonia. Bansir y Kobbi buscan comprender por qué su trabajo no les ha permitido prosperar; Arkad comparte lo que aprendió sobre reservar una parte de los ingresos y administrar lo que queda. Otras historias exploran las deudas, la prudencia al prestar, el trabajo y las oportunidades que se dejan pasar.',
@@ -149,17 +163,17 @@ export const audioCollections = [
   {
     id: 'clasicos-en-espanol', title: 'Audiolibros clásicos en español', label: 'Clásicos en español',
     description: 'Clásicos de estrategia, desarrollo personal y filosofía para escuchar en español. Conoce sus autores, capítulos y muestras gratuitas en TEC.',
-    intro: 'Una puerta de entrada a siete obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
+    intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',
-    description: 'Tres lecturas para explorar pensamiento, carácter y decisiones: Como un hombre piensa, El arte de la guerra y El Kybalión, en español.',
-    intro: 'Estas tres obras permiten explorar enfoques distintos sobre pensar y actuar. James Allen reflexiona sobre la vida interior y el carácter; Sun Tzu examina decisiones en un contexto militar, y Tres Iniciados expone su propuesta hermética. La colección invita a comparar sus preguntas sin presentar sus ideas como si pertenecieran a una sola teoría.',
+    description: 'Explora pensamiento, carácter y decisiones con Marco Aurelio, James Allen, Sun Tzu y El Kybalión, en español y con lectura sincronizada.',
+    intro: 'Estas obras permiten explorar enfoques distintos sobre pensar y actuar. Marco Aurelio ejercita la atención a los propios juicios y a la convivencia; James Allen reflexiona sobre la vida interior y el carácter; Sun Tzu examina decisiones en un contexto militar, y Tres Iniciados expone su propuesta hermética. La colección invita a comparar sus preguntas sin presentar sus ideas como si pertenecieran a una sola teoría.',
     ideas: ['Pensamiento y serenidad en James Allen.', 'Preparación, información y adaptación en Sun Tzu.', 'Los siete principios de El Kybalión dentro de la filosofía hermética.'],
     route: 'Comienza con la pregunta que más te interese: hábitos y carácter, decisiones estratégicas o filosofía hermética. Usa las muestras para conocer el tono y la forma de cada texto antes de continuar con la edición completa.',
-    bookIds: ['como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion']
+    bookIds: ['meditaciones-marco-aurelio', 'como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion']
   }
 ];

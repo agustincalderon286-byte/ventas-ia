@@ -98,7 +98,8 @@ test('every catalog book has complete canonical text and ordered, bounded audio 
     'exodo-rv1909': '274b832933d19f3c14fd8ab2caf479190e146cb180eca93f783396a7111a509a',
     'la-ciencia-de-hacerse-rico': '22083a1444018fff22927a867ee50468f0a8073bba9a991c0d9e007cbb91ff80',
     'el-kybalion': 'dbae31de57200c1b4066b095e5037c51656df77062a4d8d7eb9671eac6697401',
-    'el-hombre-mas-rico-de-babilonia': '7c8573e41fe7b2037ced20f7197fed8601778ce2b7dbd999bf4687730caa6423'
+    'el-hombre-mas-rico-de-babilonia': '7c8573e41fe7b2037ced20f7197fed8601778ce2b7dbd999bf4687730caa6423',
+    'meditaciones-marco-aurelio': '14693106831aec08839d3a68f6c2715aa35cbe7032a95fc344e08b0ebdf8cf46'
   };
   for (const book of audiobookCatalog) {
     const text = getAudiobookTranscript(book.id);
