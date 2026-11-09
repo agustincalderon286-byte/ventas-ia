@@ -68,7 +68,7 @@ export const bookEditorial = {
     questions: [
       ['¿Qué versión de la Biblia se escucha?', 'La narración y el texto de esta edición corresponden a la Reina-Valera 1909. No es una paráfrasis ni una adaptación al español contemporáneo.'],
       ['¿Incluye los cincuenta capítulos?', 'Sí. Génesis está publicado completo, desde el capítulo 1 hasta el 50. La muestra gratuita permite escuchar el 10 % inicial.'],
-      ['¿Qué libro sigue después de Génesis?', 'Éxodo continúa el recorrido del catálogo bíblico de TEC con la vida de Israel en Egipto, la salida y el camino por el desierto.']
+      ['¿Qué libro sigue después de Génesis?', 'Éxodo continúa el recorrido del catálogo bíblico de TEC con la vida de Israel en Egipto, la salida y el camino por el desierto. La colección seguirá creciendo con nuevos libros y capítulos, incluidos en la membresía.']
     ]
   },
   'exodo-rv1909': {
@@ -82,7 +82,7 @@ export const bookEditorial = {
     questions: [
       ['¿Necesito escuchar Génesis primero?', 'Puedes comenzar por Éxodo, pero Génesis aporta el contexto de la familia de Jacob y José y de su llegada a Egipto. Ambos libros están disponibles en TEC.'],
       ['¿Esta edición incluye solo la salida de Egipto?', 'No. Incluye los cuarenta capítulos completos: también el recorrido por el desierto, la alianza, las leyes y las instrucciones del tabernáculo.'],
-      ['¿Se usa la misma versión que en Génesis?', 'Sí. Los dos audiolibros de la colección bíblica de TEC utilizan la Reina-Valera 1909.']
+      ['¿Continuarán agregando libros y capítulos de la Biblia?', 'Sí. La Biblia de TEC se publica por entregas. Génesis y Éxodo ya están completos en la versión Reina-Valera 1909; incorporaremos nuevos libros y capítulos conforme estén listos. Las nuevas entregas estarán incluidas en la membresía.']
     ]
   },
   ayudate: {
@@ -140,8 +140,8 @@ export const audioCollections = [
   },
   {
     id: 'biblia-en-audio', title: 'Biblia en audio en español', label: 'Biblia en audio',
-    description: 'Escucha Génesis y Éxodo completos en la versión Reina-Valera 1909, con capítulos y lectura sincronizada en Audiolibros TEC.',
-    intro: 'El recorrido bíblico disponible en TEC comienza con Génesis y continúa con Éxodo. Ambos libros utilizan la Reina-Valera 1909 y conservan su lenguaje. La organización por capítulos permite distribuir la escucha y retomar el texto, desde los relatos de los orígenes hasta la salida de Egipto y la alianza en el Sinaí.',
+    description: 'Biblia en crecimiento: Génesis y Éxodo completos en Reina-Valera 1909, con lectura sincronizada. Seguiremos incorporando nuevos libros y capítulos.',
+    intro: 'El recorrido bíblico disponible en TEC comienza con Génesis y continúa con Éxodo. Ambos libros utilizan la Reina-Valera 1909 y conservan su lenguaje. La organización por capítulos permite distribuir la escucha y retomar el texto, desde los relatos de los orígenes hasta la salida de Egipto y la alianza en el Sinaí. La Biblia de TEC es una edición por entregas: seguiremos incorporando nuevos libros y capítulos conforme estén listos, con acceso incluido en la membresía.',
     ideas: ['Génesis: creación, patriarcas e historia de José.', 'Éxodo: Moisés, salida de Egipto y camino por el desierto.', 'La misma versión bíblica en los dos libros disponibles.'],
     route: 'Escucha primero Génesis y después Éxodo para seguir la continuidad del relato. Esta colección contiene estos dos libros; no presenta todavía la Biblia completa.',
     bookIds: ['genesis-rv1909', 'exodo-rv1909']
