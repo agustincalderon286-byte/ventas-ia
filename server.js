@@ -2408,6 +2408,7 @@ const coachAdminPasskeys = registerAdminPasskeys(app, {
 
 registerTecChef(app, {
   requireAdmin: requireControlTowerAccess, getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
+  needsVerification: auth => coachAdminPasskeys.needsVerification(auth),
   privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
   sendLeadMail: message => tecSendMail ? tecSendMail(message) : Promise.reject(new Error("tec_mail_configuration_failed")),
   mailConfigured: () => Boolean(tecSendMail),

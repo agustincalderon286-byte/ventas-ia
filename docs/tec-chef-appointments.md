@@ -1,6 +1,6 @@
 # TEC Chef: private appointment-request pilot
 
-Release: `tec-chef-20261110-robot2`.
+Release: `tec-chef-20261110-access1`.
 
 ## User scope
 
@@ -8,6 +8,21 @@ Keep `/coach/chef/` restricted to TEC administrators during testing. The existin
 administrator/passkey guard still protects the API and Chef assets. Nothing
 enables WhatsApp, public lead intake, automatic campaigns or confirmed calendar
 bookings.
+
+The HTML route checks the same passkey assurance before sending its page, just
+like the Torre route. An enrolled administrator whose verification expired is
+redirected to `/coach/seguridad/?volver=chef`. Previously the HTML loaded while
+CSS and JavaScript returned 403, leaving the original full-size TEC logo on an
+unstyled page. A regression test now requests the actual stylesheet, scripts and
+mascot after verification and checks their MIME types. The logo also has intrinsic
+dimensions and small critical fallback styles so a failed asset cannot enlarge it
+to its original size. A loading recovery panel provides direct access and retry
+links even if JavaScript fails to load.
+
+If assurance expires during an already open appointment review, the client shows
+a verification link in a separate tab and preserves the current request in memory;
+it does not navigate away with an unsent contact. Server authorization for private
+assets, data and submissions remains in place.
 
 The robot illustration and virtual-phone layout accompany the existing Spanish
 recipe, product, care and warranty assistant. The WebP mascot is approximately

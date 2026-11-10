@@ -67,7 +67,7 @@ export async function completeChef(messages,{apiKey=process.env.OPENAI_API_KEY,f
  if(choice?.finish_reason!=='stop'||typeof choice.message?.content!=='string'||!choice.message.content.trim())throw Error('ai_incomplete');
  return choice.message.content.trim();
 }
-export function registerTecChef(app,{requireAdmin,getAuth,isAdmin,privateDir,publicDir,conversations,leads,notifications,sendLeadMail=null,mailConfigured=()=>Boolean(sendLeadMail),syncCrm=async()=>{},completion=completeChef,isChefMode=mode=>String(mode||'').trim().toLowerCase()!=='coach'}) {
+export function registerTecChef(app,{requireAdmin,getAuth,isAdmin,needsVerification=async()=>false,privateDir,publicDir,conversations,leads,notifications,sendLeadMail=null,mailConfigured=()=>Boolean(sendLeadMail),syncCrm=async()=>{},completion=completeChef,isChefMode=mode=>String(mode||'').trim().toLowerCase()!=='coach'}) {
  const busy=new Set(),rates=new Map();
  const headers=res=>res.set({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Vary':'Cookie','X-TEC-Chef-Version':CHEF_VERSION});
  const wrap=handler=>async(req,res,next)=>{try{await handler(req,res,next);}catch(e){console.error('TEC Chef request failed',{name:e.name,code:e.code||''});if(!res.headersSent)res.status(503).json({error:'No pude completar la solicitud. Conserva tus datos e inténtalo de nuevo.'});}};
@@ -83,6 +83,9 @@ export function registerTecChef(app,{requireAdmin,getAuth,isAdmin,privateDir,pub
   headers(res);const auth=await getAuth(req);
   if(!auth?.user)return res.redirect('/coach/login/');
   if(!isAdmin(auth.user))return res.status(403).type('html').send('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chef privado · TEC</title><body style="font-family:system-ui;max-width:560px;margin:70px auto;padding:24px;color:#102f52"><h1>Chef en prueba privada</h1><p>Por ahora esta herramienta solo está disponible para administradores de TEC.</p><a href="/coach/app/">Volver al Coach</a></body></html>');
+  // Apply the same passkey assurance as the API and assets before delivering
+  // their HTML. Otherwise an expired admin session sees unstyled, unusable UI.
+  if(await needsVerification(auth))return res.redirect('/coach/seguridad/?volver=chef');
   res.sendFile(path.join(privateDir,'tec-chef.html'));
  });
  app.get(['/coach/chef','/coach/chef/'],page);
