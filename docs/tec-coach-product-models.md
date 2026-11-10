@@ -1,6 +1,6 @@
 # Modelos 3D en la calculadora del Coach
 
-Preparado el 10 de noviembre de 2026 sobre producción `8d140fc`. Estado: implementación y 933 pruebas automáticas completas; pendiente revisión visual en navegador y AR en dispositivos físicos. No se ha publicado esta integración.
+Preparado el 10 de noviembre de 2026 sobre producción `8d140fc`. Estado: implementación y 933 pruebas automáticas completas. Publicación autorizada por el usuario; pendiente revisión visual en navegador y AR en dispositivos físicos.
 
 ## Comportamiento
 
@@ -49,4 +49,4 @@ Pasaron 933 pruebas: códigos/nombres exactos y negativos entre familias, integr
 
 Vista local: `http://127.0.0.1:4198/`. Usa el componente real de calculadora y un servidor independiente ligado solo a loopback, con una sesión sintética local. No lee ni modifica cuentas de producción. Se verificaron HTTP, tipos de archivo y sintaxis del JavaScript servido; no se afirma revisión visual.
 
-Para continuar: revisar los 18 modelos, especialmente transparencia de Power Blender v08 y asas/cierre de presión v02; comprobar teléfono vertical/horizontal, cerrar y regresar sin mover la calculadora; probar Quick Look en iPhone/iPad y WebXR en Android. Después integrar la última producción y publicar.
+Para continuar: revisar los 18 modelos, especialmente transparencia de Power Blender v08 y asas/cierre de presión v02; comprobar teléfono vertical/horizontal, cerrar y regresar sin mover la calculadora; probar Quick Look en iPhone/iPad y WebXR en Android. La publicación está autorizada con esas comprobaciones visuales pendientes; registrar por separado la verificación HTTP del despliegue.
