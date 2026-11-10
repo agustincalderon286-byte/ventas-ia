@@ -1,6 +1,6 @@
 # TEC Chef: private appointment-request pilot
 
-Release: `tec-chef-20261110-robot1`.
+Release: `tec-chef-20261110-robot2`.
 
 ## User scope
 
