@@ -1,6 +1,33 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  "mitos-y-heroes-de-grecia": {
+  "summary": [
+    "El nacimiento del Olimpo, el recorrido de Perséfone y las hazañas de Hércules abren esta colección de mitos. Thomas Bulfinch reúne relatos sobre dioses y héroes, encuentros con fuerzas extraordinarias y decisiones cuyas consecuencias atraviesan familias y reinos. La traducción de TEC conserva el recorrido narrativo de las secciones seleccionadas y presenta los nombres y las historias en español para acompañar la escucha con el texto.",
+    "Esta primera entrega reúne tres capítulos en un solo audiolibro de unos 55 minutos: Zeus y el nacimiento del Olimpo, Hades y Perséfone, y Hércules: trabajos, hazañas y apoteosis. La colección está prevista en ocho capítulos; los otros cinco se incorporarán a esta misma ficha. Puedes navegar entre los capítulos disponibles y seguir sus pasajes sincronizados. El reparto mantiene una voz fija por personaje y la muestra permite conocer el comienzo antes de continuar con la membresía."
+  ],
+  "ideas": [
+    "El mundo de los dioses y el nacimiento del orden olímpico.",
+    "Las relaciones entre el mundo humano, la naturaleza y el reino de los muertos.",
+    "Las pruebas de Hércules y el lugar de los héroes en los relatos míticos."
+  ],
+  "audience": "Para quienes quieren acercarse a la mitología mediante relatos y disfrutan escuchar personajes con distintas voces. La navegación por capítulos permite repartir estas historias en varias sesiones y volver a un pasaje con su texto.",
+  "tip": "Comienza por Zeus y el nacimiento del Olimpo para situarte en el mundo de los dioses. Después sigue con Hades y Perséfone y las hazañas de Hércules; utiliza el índice para retomar cualquiera de los tres capítulos disponibles.",
+  "questions": [
+    [
+      "¿Están disponibles los ocho capítulos de Mitos y héroes de Grecia?",
+      "Por ahora están publicados los capítulos 1, 2 y 3, reunidos en un solo audiolibro. Los cinco restantes se añadirán a esta misma ficha conforme estén listos."
+    ],
+    [
+      "¿Esta colección contiene todo The Age of Fable de Bulfinch?",
+      "La colección reúne una selección de ocho relatos traducidos por TEC al español. No se presenta como el volumen completo de The Age of Fable; esta entrega ofrece sus tres primeros capítulos seleccionados."
+    ],
+    [
+      "¿Cómo puedo probar estos relatos de mitología?",
+      "Puedes escuchar gratis el primer 10 % de la edición disponible y seguir la lectura sincronizada. La membresía de Audiolibros TEC permite continuar con los tres capítulos publicados."
+    ]
+  ]
+},
   'meditaciones-marco-aurelio': {
     summary: [
       'Marco Aurelio reúne reflexiones sobre la conducta, el paso del tiempo, la convivencia y aquello que depende de nuestras decisiones. Escritas como ejercicios personales, sus notas vuelven una y otra vez a la atención, la justicia y la aceptación de los cambios. No siguen una trama: cada pasaje ofrece un punto de partida para observar los propios juicios y actuar con mayor serenidad.',
@@ -166,7 +193,7 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',

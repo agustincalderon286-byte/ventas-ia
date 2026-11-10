@@ -1,5 +1,12 @@
 # Audiolibros TEC
 
+## Mitos y héroes de Grecia — 9 de noviembre de 2026
+
+Primera entrega autorizada: tres de ocho capítulos en una sola ficha y un solo audio privado de R2. Duración 3.309,38 segundos, 204 pasajes sincronizados y muestra del primer 10 %. La descripción identifica expresamente los capítulos disponibles y los cinco que se añadirán. Selección de Thomas Bulfinch traducida por TEC; no es todo The Age of Fable.
+
+Objeto: `Mitos-y-heroes-de-Grecia-capitulos-01-03-v1.m4b`, 43319690 bytes, SHA-256 `12d234f817a2a98d1554fd5d4d60e54e892c902be29533c4821c753fd24dca4f`. Verificado en R2 antes de publicar. La ampliación debe conservar el ID `mitos-y-heroes-de-grecia`, los capítulos iniciales y el avance de las cuentas; usar un nuevo objeto versionado, verificarlo primero y luego actualizar audio, duración, muestra y lectura. No cambiar el objeto anterior mientras atiende sesiones existentes. La revisión técnica no equivale a una escucha editorial íntegra.
+
+
 ## Guías y lecturas — 7 de noviembre de 2026
 
 Se publica `/audiolibros/guias/` con cuatro artículos originales: elegir un audiolibro de desarrollo personal; comenzar por Génesis o Éxodo; comparar a James Allen y Samuel Smiles; y usar la lectura sincronizada. El contenido está en `src/knowledge/audiobook-guides.js` y se prepara como HTML al iniciar el servidor, sin nuevas solicitudes de IA, audio o base de datos. Cada artículo tiene índice de secciones, lectura estimada, fecha visible y atribución editorial a Audiolibros TEC, sin inventar una firma personal.

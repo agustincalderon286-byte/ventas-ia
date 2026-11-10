@@ -1,0 +1,1641 @@
+{
+  "version": 1,
+  "bookId": "mitos-y-heroes-de-grecia",
+  "textSha256": "214ee846a603b4f5271943092c7fd26b5ead5c9a38f5e072070112876ed8b7cc",
+  "duration": 3309.38,
+  "trailingSeparator": "\n",
+  "cues": [
+    {
+      "id": "C01-001",
+      "chapter": 0,
+      "start": 0.15,
+      "end": 3.51,
+      "text": "1. Zeus y el nacimiento del Olimpo",
+      "separator": ""
+    },
+    {
+      "id": "C01-002",
+      "chapter": 0,
+      "start": 4.51,
+      "end": 18.67,
+      "text": "Los poetas griegos creían que la tierra era plana y circular y que su propio país ocupaba el centro de ella. El punto central era el monte Olimpo, morada de los dioses, o Delfos, tan famosa por su oráculo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-003",
+      "chapter": 0,
+      "start": 19.22,
+      "end": 30.5,
+      "text": "El disco circular de la tierra estaba atravesado de oeste a este y dividido en dos partes iguales por el MAR, como llamaban al Mediterráneo y a su prolongación, el Euxino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-004",
+      "chapter": 0,
+      "start": 31.05,
+      "end": 50.89,
+      "text": "Alrededor de la tierra fluía el RÍO OCÉANO, cuyo curso iba de sur a norte por el lado occidental de la tierra y en dirección contraria por el oriental. Su corriente era constante y uniforme, sin que la perturbaran tormentas ni tempestades. El mar y todos los ríos de la tierra recibían sus aguas de él.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-005",
+      "chapter": 0,
+      "start": 51.44,
+      "end": 78.64,
+      "text": "Se suponía que la región norte de la tierra estaba habitada por un pueblo feliz llamado los hiperbóreos [esta palabra significa «quienes viven más allá del norte», de «hyper», más allá, y boreas, el viento del norte], que vivían en eterna felicidad y primavera, más allá de las altas montañas de cuyas cavernas, según se creía, salían las ráfagas penetrantes del viento del norte que helaban a los habitantes de la Hélade (Grecia).",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-006",
+      "chapter": 0,
+      "start": 78.82,
+      "end": 91.78,
+      "text": "Su país era inaccesible por tierra o por mar. Vivían libres de enfermedades y de vejez, de trabajos y de guerras. Moore nos ha dado el «Canto de un hiperbóreo», que comienza así:",
+      "separator": " "
+    },
+    {
+      "id": "C01-007",
+      "chapter": 0,
+      "start": 92.33,
+      "end": 104.41,
+      "text": "«Vengo de una tierra del mar bañado por el sol,\nDonde resplandecen jardines dorados,\nDonde los vientos del norte, dormidos y en calma,\nJamás hacen sonar sus caracolas».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-008",
+      "chapter": 0,
+      "start": 104.96,
+      "end": 122.08,
+      "text": "Al sur de la tierra, junto a la corriente del Océano, vivía un pueblo tan feliz y virtuoso como los hiperbóreos. Se llamaban los etíopes. Los dioses los favorecían tanto que a veces abandonaban sus moradas olímpicas para ir a compartir sus sacrificios y banquetes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-009",
+      "chapter": 0,
+      "start": 122.63,
+      "end": 144.79,
+      "text": "En el extremo occidental de la tierra, junto a la corriente del Océano, había un lugar feliz llamado la llanura elísea. Hasta allí eran transportados, sin probar la muerte, los mortales favorecidos por los dioses, para disfrutar de una inmortalidad dichosa. Esta región feliz recibía también los nombres de «campos afortunados» e «Islas de los Bienaventurados».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-010",
+      "chapter": 0,
+      "start": 145.34,
+      "end": 157.34,
+      "text": "Vemos así que los griegos de los primeros tiempos sabían poco de los pueblos reales, salvo de aquellos que se encontraban al este y al sur de su país o cerca de la costa del Mediterráneo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-011",
+      "chapter": 0,
+      "start": 157.52,
+      "end": 176.16,
+      "text": "Entretanto, su imaginación poblaba la parte occidental de ese mar con gigantes, monstruos y hechiceras, mientras situaba alrededor del disco de la tierra, que probablemente no consideraban muy ancho, naciones que gozaban del favor especial de los dioses y de la bendición de la felicidad y la longevidad.",
+      "separator": " "
+    },
+    {
+      "id": "C01-012",
+      "chapter": 0,
+      "start": 176.71,
+      "end": 196.55,
+      "text": "Se creía que la Aurora, el Sol y la Luna salían del Océano por el lado oriental y recorrían el aire, dando luz a dioses y hombres. También las estrellas, salvo las que formaban el Carro Mayor o la Osa y otras cercanas a ellas, surgían de la corriente del Océano y se hundían en ella.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-013",
+      "chapter": 0,
+      "start": 196.73,
+      "end": 209.21,
+      "text": "Allí el dios del sol embarcaba en una nave alada que lo llevaba rodeando la parte norte de la tierra, de regreso a su lugar de salida en el este. Milton alude a esto en su «Comus».",
+      "separator": " "
+    },
+    {
+      "id": "C01-014",
+      "chapter": 0,
+      "start": 209.76,
+      "end": 225.52,
+      "text": "«Ahora el dorado carro del día\nSumerge su eje de oro\nEn la profunda corriente del Atlántico;\nY el sol inclinado lanza su rayo ascendente\nContra el polo sombrío,\nMientras avanza hacia la otra meta:\nSu cámara en el oriente».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-015",
+      "chapter": 0,
+      "start": 226.07,
+      "end": 243.83,
+      "text": "La morada de los dioses estaba en la cima del monte Olimpo, en Tesalia. Una puerta de nubes, custodiada por las diosas llamadas las Estaciones, se abría para permitir el paso de los seres celestiales a la tierra y recibirlos a su regreso. Los dioses tenían sus propias viviendas;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-016",
+      "chapter": 0,
+      "start": 244.01,
+      "end": 259.61,
+      "text": "pero todos, cuando eran convocados, acudían al palacio de Júpiter [O Zeus. La relación entre estos nombres se explicará en la página siguiente], al igual que las deidades cuya morada habitual era la tierra, las aguas o el inframundo.",
+      "separator": " "
+    },
+    {
+      "id": "C01-017",
+      "chapter": 0,
+      "start": 259.79,
+      "end": 276.27,
+      "text": "También en el gran salón del palacio del rey olímpico los dioses celebraban cada día sus banquetes de ambrosía y néctar, su alimento y su bebida; la hermosa diosa Hebe servía esta última. Allí conversaban sobre los asuntos del cielo y de la tierra;",
+      "separator": " "
+    },
+    {
+      "id": "C01-018",
+      "chapter": 0,
+      "start": 276.45,
+      "end": 292.77,
+      "text": "y mientras bebían su néctar, Apolo, el dios de la música, los deleitaba con los sonidos de su lira, a los que las musas respondían cantando. Cuando el sol se ponía, los dioses se retiraban a dormir a sus respectivas viviendas.",
+      "separator": " "
+    },
+    {
+      "id": "C01-019",
+      "chapter": 0,
+      "start": 293.32,
+      "end": 298.92,
+      "text": "Los siguientes versos de la Odisea mostrarán cómo concebía Homero el Olimpo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-020",
+      "chapter": 0,
+      "start": 299.47,
+      "end": 323.23,
+      "text": "«Dicho esto, Minerva, la diosa de ojos azules,\nSe elevó al Olimpo, considerado la morada\nEterna de los dioses, que nunca perturban\nLas tormentas, ni empapan las lluvias, ni invade la nieve;\nLa extensión serena y sin nubes brilla con la luz más pura.\nAllí los habitantes divinos se regocijan\nPor siempre».\nCowper",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-021",
+      "chapter": 0,
+      "start": 323.78,
+      "end": 340.82,
+      "text": "Así eran las moradas de los dioses según las concebían los griegos. Los romanos, antes de conocer la poesía griega, no parecen haber tenido una imagen definida de semejante asamblea divina. Pero los pueblos romano y etrusco estaban lejos de carecer de religión.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-022",
+      "chapter": 0,
+      "start": 341.0,
+      "end": 367.48,
+      "text": "Veneraban a sus antepasados difuntos, y en cada familia el culto a estos antepasados era un deber importante. Sus imágenes se guardaban en un lugar sagrado; cada familia celebraba, en fechas determinadas, ritos en su memoria, y para estas y otras prácticas religiosas se consagraba el hogar familiar. Se supone que los ritos más antiguos del culto romano estaban relacionados con esas devociones familiares.",
+      "separator": " "
+    },
+    {
+      "id": "C01-023",
+      "chapter": 0,
+      "start": 368.03,
+      "end": 384.59,
+      "text": "A medida que los griegos y los romanos conocían otras naciones, incorporaban sus prácticas de culto, incluso desde tiempos remotos. Se recordará que todavía en tiempos de san Pablo este encontró en Atenas un altar «a un dios desconocido».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-024",
+      "chapter": 0,
+      "start": 384.77,
+      "end": 404.77,
+      "text": "Tanto griegos como romanos estaban dispuestos a recibir de otras naciones las leyendas acerca de sus dioses y a integrarlas, lo mejor que podían, con las suyas. Por eso, en la mitología poética de esas naciones, que ahora vamos a estudiar, encontramos a menudo un nombre latino y otro griego para una misma divinidad imaginada.",
+      "separator": " "
+    },
+    {
+      "id": "C01-025",
+      "chapter": 0,
+      "start": 404.95,
+      "end": 422.87,
+      "text": "Así, el Zeus de los griegos se convierte en latín, con la adición de la palabra pater, padre, en Júpiter [El lector observará que father es una de las palabras derivadas de una raíz aria. Hágase que p y t se vuelvan ásperas, como dicen los gramáticos:",
+      "separator": " "
+    },
+    {
+      "id": "C01-026",
+      "chapter": 0,
+      "start": 423.05,
+      "end": 441.13,
+      "text": "que p se convierta en ph y t en th, y se obtendrá phather o father]; el Hephaistos de los griegos aparece como «Vulcanus» entre los latinos; el «Ares» de los griegos es el «Mars» o Mavors de los latinos; el «Poseidon» de los griegos es el «Neptunus» de los latinos;",
+      "separator": " "
+    },
+    {
+      "id": "C01-027",
+      "chapter": 0,
+      "start": 441.31,
+      "end": 458.99,
+      "text": "la «Aphrodite» de los griegos es la «Venus» de los latinos. Esta variación no debe confundirse con una simple traducción, como cuando el «Paulos» griego se convierte en «Paulus» en latín, u «Odysseus» en «Ulysses», o como cuando el «Pierre» francés se convierte en «Peter» en inglés.",
+      "separator": " "
+    },
+    {
+      "id": "C01-028",
+      "chapter": 0,
+      "start": 459.17,
+      "end": 483.17,
+      "text": "Lo que realmente ocurrió fue que los romanos, más cultos que sus antepasados, encontraron en la literatura griega un dios del fuego y de la herrería y trasladaron su nombre, «Hephaistos», a su antiguo dios «Vulcanus», que tenía las mismas funciones. En su literatura posterior, el nombre latino se utilizó para los relatos de origen tanto griego como latino.",
+      "separator": " "
+    },
+    {
+      "id": "C01-029",
+      "chapter": 0,
+      "start": 483.72,
+      "end": 499.24,
+      "text": "Dado que la literatura inglesa se formó en gran medida sobre modelos franceses y latinos, y que el francés no es sino un latín degradado que conserva muchas raíces latinas, nuestros poetas ingleses más antiguos suelen utilizar las formas latinas de estos nombres.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-030",
+      "chapter": 0,
+      "start": 499.42,
+      "end": 511.82,
+      "text": "En nuestra propia generación, con la precisión que ahora tanto se busca, se ha puesto de moda designar a Marte por su nombre griego de «Ares», a Venus por el de «Afrodita», y así sucesivamente.",
+      "separator": " "
+    },
+    {
+      "id": "C01-031",
+      "chapter": 0,
+      "start": 512.0,
+      "end": 532.08,
+      "text": "Pero en este libro, como nuestro propósito es dar a conocer el caudal de la literatura inglesa general que alude a estos temas, conservaremos, por lo común, los nombres latinos, y solo llamaremos la atención del lector sobre los nombres griegos tal como aparecen en los autores griegos y en muchos escritores de las escuelas inglesas más recientes.",
+      "separator": " "
+    },
+    {
+      "id": "C01-032",
+      "chapter": 0,
+      "start": 532.63,
+      "end": 550.55,
+      "text": "El verdadero monarca de los cielos en la mitología tanto griega como romana es Júpiter (Zeus-pater, padre-Jove) [Jove parece ser una palabra derivada de la misma raíz que Zeus, que aparece también en la raíz dev del sánscrito, donde los devas son dioses de distintas formas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-033",
+      "chapter": 0,
+      "start": 550.73,
+      "end": 571.69,
+      "text": "Nuestra palabra inglesa devil probablemente procede del francés diable, del italiano diavolo, del latín diabolus, el que divide: literalmente, el que separa pelotas o las lanza de un lado a otro, en lugar de lanzarlas de manera franca y certera al bateador. No debe hacerse derivar del sánscrito deva].",
+      "separator": " "
+    },
+    {
+      "id": "C01-034",
+      "chapter": 0,
+      "start": 572.24,
+      "end": 581.36,
+      "text": "En el sistema mitológico que estamos siguiendo, el propio Zeus es padre de muchos de los dioses, y a menudo se le llama padre de dioses y hombres.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-035",
+      "chapter": 0,
+      "start": 581.54,
+      "end": 607.06,
+      "text": "Es padre de Vulcano [en griego, Hefesto], de Venus [en griego, Afrodita], de Minerva [en griego, Palas Atenea, o cualquiera de estos nombres por separado], de Apolo [o Febo], de Diana [en griego, Artemisa] y de Mercurio [en griego, Hermes], que figuran entre los doce dioses superiores, así como de muchas deidades menores.",
+      "separator": " "
+    },
+    {
+      "id": "C01-036",
+      "chapter": 0,
+      "start": 607.24,
+      "end": 623.96,
+      "text": "Pero el propio Júpiter no es la deidad original de estos sistemas. Es hijo de Saturno, del mismo modo que, en el sistema griego, Zeus es hijo de Cronos. Aun así, surgía inevitablemente la pregunta de dónde procedían Saturno o Cronos.",
+      "separator": " "
+    },
+    {
+      "id": "C01-037",
+      "chapter": 0,
+      "start": 624.14,
+      "end": 643.42,
+      "text": "Y, con formas y afirmaciones cada vez más vagas, se respondía que había nacido de Uranus o Ouranos, nombre del Cielo que se extendía sobre todo y parecía abarcar todas las cosas. El nombre griego de Saturno se escribía Kronos. El nombre griego del Tiempo se escribía Chronos.",
+      "separator": " "
+    },
+    {
+      "id": "C01-038",
+      "chapter": 0,
+      "start": 643.6,
+      "end": 663.12,
+      "text": "Se imaginó una semejanza entre ambos. Y toda esta explicación, reducida a un lenguaje racionalista, vendría a decir que de Urano, lo infinito, nació Chronos, el Tiempo; que del Tiempo nació Zeus o Júpiter, y que él es el único hijo del Tiempo que tiene pleno dominio sobre mortales e inmortales.",
+      "separator": " "
+    },
+    {
+      "id": "C01-039",
+      "chapter": 0,
+      "start": 663.67,
+      "end": 672.47,
+      "text": "«Reconozco la voluntad de Júpiter,\nEl único que gobierna a mortales e inmortales».\nHomero, II.xii",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-040",
+      "chapter": 0,
+      "start": 673.02,
+      "end": 687.18,
+      "text": "Júpiter era hijo de Saturno (Kronos) [Los nombres entre paréntesis son los griegos; los otros son los nombres romanos o latinos] y de Ops (Rea en griego, a veces confundida con la Cibeles frigia).",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-041",
+      "chapter": 0,
+      "start": 687.73,
+      "end": 699.09,
+      "text": "Saturno y Rea pertenecían a la raza de los titanes, hijos de la Tierra y el Cielo, que surgieron del Caos, del cual daremos una explicación más amplia en el capítulo siguiente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-042",
+      "chapter": 0,
+      "start": 699.64,
+      "end": 709.16,
+      "text": "Aludiendo al destronamiento de Urano por Cronos, y al de Cronos o Saturno por Zeus o Júpiter, Prometeo dice en la tragedia de Esquilo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-043",
+      "chapter": 0,
+      "start": 709.71,
+      "end": 717.23,
+      "text": "«Pueden considerar\nSus torres inexpugnables; pero ¿no he visto ya\nA dos monarcas arrojados de ellas?».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-044",
+      "chapter": 0,
+      "start": 717.78,
+      "end": 740.42,
+      "text": "Existe otra cosmogonía, o relato de la creación, según la cual la Tierra, Érebo y el Amor fueron los primeros seres. El Amor (Eros) salió del huevo de la Noche, que flotaba sobre el Caos. Con sus flechas y su antorcha penetró todas las cosas y les infundió vida, produciendo vida y alegría.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-045",
+      "chapter": 0,
+      "start": 740.97,
+      "end": 766.41,
+      "text": "Saturno y Rea no eran los únicos titanes. Había otros: Océano, Hiperión, Jápeto y Ofión, entre los varones; y Temis, Mnemósine y Eurínome, entre las mujeres. Se habla de ellos como los dioses antiguos, cuyo dominio pasó después a otros. Saturno cedió su lugar a Júpiter; Océano, a Neptuno; Hiperión, a Apolo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-046",
+      "chapter": 0,
+      "start": 766.59,
+      "end": 778.03,
+      "text": "Hiperión era padre del Sol, la Luna y la Aurora. Es, por tanto, el dios solar original, y se lo representa con el esplendor y la belleza que más tarde se atribuyeron a Apolo.",
+      "separator": " "
+    },
+    {
+      "id": "C01-047",
+      "chapter": 0,
+      "start": 778.58,
+      "end": 784.26,
+      "text": "«Los rizos de Hiperión, la frente del mismísimo Júpiter».\nShakespeare",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-048",
+      "chapter": 0,
+      "start": 784.81,
+      "end": 799.93,
+      "text": "Ofión y Eurínome reinaron en el Olimpo hasta que Saturno y Rea los destronaron. Milton alude a ellos en El paraíso perdido. Dice que los paganos parecen haber tenido algún conocimiento de la tentación y de la caída del hombre:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-049",
+      "chapter": 0,
+      "start": 800.48,
+      "end": 816.48,
+      "text": "«Y contaban cómo la serpiente a la que llamaban\nOfión, junto con Eurínome —tal vez aquella Eva\nQue todo lo invadía—, había reinado primero\nEn el alto Olimpo, de donde Saturno la expulsó».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-050",
+      "chapter": 0,
+      "start": 817.03,
+      "end": 825.91,
+      "text": "Las representaciones de Saturno no son muy coherentes: por una parte, se dice que su reinado fue la edad de oro de la inocencia y la pureza;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-051",
+      "chapter": 0,
+      "start": 826.09,
+      "end": 844.25,
+      "text": "por otra, se lo describe como un monstruo que devoraba a sus propios hijos [Esta contradicción nace de identificar al Saturno de los romanos con la divinidad griega Chronos, el Tiempo, que, al poner fin a todo cuanto ha tenido un principio, puede decirse que devora a su propia descendencia].",
+      "separator": " "
+    },
+    {
+      "id": "C01-052",
+      "chapter": 0,
+      "start": 844.43,
+      "end": 873.39,
+      "text": "Júpiter, sin embargo, escapó a ese destino y, al crecer, se casó con Metis, la Prudencia, quien administró a Saturno una bebida que lo hizo vomitar a sus hijos. Entonces Júpiter, con sus hermanos y hermanas, se rebeló contra su padre Saturno y contra los hermanos de este, los titanes. Los vencieron y encerraron a algunos en el Tártaro, imponiendo a otros distintos castigos. Atlas fue condenado a sostener los cielos sobre los hombros.",
+      "separator": " "
+    },
+    {
+      "id": "C01-053",
+      "chapter": 0,
+      "start": 873.94,
+      "end": 906.66,
+      "text": "Tras el destronamiento de Saturno, Júpiter y sus hermanos Neptuno (Poseidón) y Plutón (Dis) se repartieron sus dominios. A Júpiter le correspondieron los cielos; a Neptuno, el océano; y a Plutón, los reinos de los muertos. La Tierra y el Olimpo eran propiedad común. Júpiter era rey de dioses y hombres. El trueno era su arma, y llevaba un escudo llamado Égida, que Vulcano había fabricado para él. El águila era su ave predilecta y llevaba sus rayos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-054",
+      "chapter": 0,
+      "start": 907.21,
+      "end": 923.29,
+      "text": "Juno (Hera) [pronúnciese He-re, en dos sílabas] era esposa de Júpiter y reina de los dioses. Iris, la diosa del arcoíris, era su acompañante y mensajera. El pavo real era su ave predilecta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-055",
+      "chapter": 0,
+      "start": 923.84,
+      "end": 942.32,
+      "text": "Vulcano (Hefesto), el artista celestial, era hijo de Júpiter y Juno. Nació cojo, y su madre se disgustó tanto al verlo que lo arrojó del cielo. Otros relatos dicen que Júpiter lo echó de una patada por haber tomado partido por su madre en una disputa entre ambos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-056",
+      "chapter": 0,
+      "start": 942.5,
+      "end": 959.46,
+      "text": "Según esta versión, la cojera de Vulcano fue consecuencia de su caída. Estuvo cayendo un día entero y al fin llegó a la isla de Lemnos, que desde entonces le quedó consagrada. Milton alude a este relato en El paraíso perdido, libro I:",
+      "separator": " "
+    },
+    {
+      "id": "C01-057",
+      "chapter": 0,
+      "start": 960.01,
+      "end": 976.09,
+      "text": "«Desde la mañana\nHasta el mediodía cayó, y de allí hasta el atardecer cubierto de rocío,\nUn día de verano; y con el sol poniente\nSe desplomó desde el cenit, como una estrella fugaz,\nSobre Lemnos, la isla del Egeo».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-058",
+      "chapter": 0,
+      "start": 976.64,
+      "end": 1002.4,
+      "text": "Marte (Ares), el dios de la guerra, era hijo de Júpiter y Juno. Febo Apolo [este es el nombre griego de una divinidad griega que, al parecer, no tuvo equivalente romano], dios del tiro con arco, la profecía y la música, era hijo de Júpiter y Latona, y hermano de Diana (Artemisa). Era dios del sol, así como Diana, su hermana, era diosa de la luna.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-059",
+      "chapter": 0,
+      "start": 1002.95,
+      "end": 1022.39,
+      "text": "Venus (Afrodita), diosa del amor y la belleza, era hija de Júpiter y Dione. Otros dicen que Venus nació de la espuma del mar. El céfiro la llevó sobre las olas hasta la isla de Chipre, donde las Estaciones la recibieron, la vistieron y la condujeron a la asamblea de los dioses.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-060",
+      "chapter": 0,
+      "start": 1022.57,
+      "end": 1051.29,
+      "text": "Todos quedaron encantados con su belleza y cada uno la pidió por esposa. Júpiter la entregó a Vulcano en agradecimiento por el servicio de haberle forjado los rayos. Así, la más hermosa de las diosas se convirtió en esposa del menos agraciado de los dioses. Venus poseía un cinturón bordado llamado el Cesto, que tenía el poder de inspirar amor. Sus aves favoritas eran los cisnes y las palomas; las plantas que le estaban consagradas, la rosa y el mirto.",
+      "separator": " "
+    },
+    {
+      "id": "C01-061",
+      "chapter": 0,
+      "start": 1051.84,
+      "end": 1076.88,
+      "text": "Cupido (Eros), dios del amor, era hijo de Venus. Era su compañero constante y, armado de arco y flechas, disparaba los dardos del deseo al pecho tanto de dioses como de hombres. Había una divinidad llamada Anteros, representada a veces como vengador del amor despreciado y otras como símbolo del amor correspondido. De él se cuenta la siguiente leyenda:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-062",
+      "chapter": 0,
+      "start": 1077.43,
+      "end": 1095.19,
+      "text": "Venus se quejó ante Temis de que su hijo Eros seguía siendo siempre un niño. Temis le respondió que era porque estaba solo y que, si tuviera un hermano, crecería de prisa. Poco después nació Anteros, y enseguida se vio a Eros crecer rápidamente en tamaño y en fuerza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-063",
+      "chapter": 0,
+      "start": 1095.74,
+      "end": 1111.58,
+      "text": "Minerva (Palas Atenea), diosa de la sabiduría, era hija de Júpiter y no tenía madre. Brotó de su cabeza completamente armada. Su ave predilecta era el búho, y su planta sagrada, el olivo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-064",
+      "chapter": 0,
+      "start": 1112.13,
+      "end": 1117.17,
+      "text": "Byron, en «Childe Harold», alude así al nacimiento de Minerva:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-065",
+      "chapter": 0,
+      "start": 1117.72,
+      "end": 1148.6,
+      "text": "«¿Solo pueden ser vencidos los tiranos por tiranos,\nY no hallará la libertad campeón ni hijo,\nComo el que Columbia vio surgir cuando ella\nBrotó cual Palas, armada y sin mancha?\n¿O deben criarse tales espíritus en lo agreste,\nEn lo profundo del bosque sin podar, entre el estruendo\nDe las cataratas, donde la Naturaleza, como nodriza,\nSonrió al pequeño Washington? ¿Ya no guarda la tierra\nTales semillas en su seno, ni tiene Europa semejante costa?».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-066",
+      "chapter": 0,
+      "start": 1149.15,
+      "end": 1173.87,
+      "text": "Mercurio (Hermes) era hijo de Júpiter y Maya. Presidía el comercio, la lucha y otros ejercicios gimnásticos; incluso el robo y, en suma, todo cuanto exigiera habilidad y destreza. Era mensajero de Júpiter y llevaba un gorro y unos zapatos alados. En la mano portaba una vara rodeada por dos serpientes, llamada Caduceo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-067",
+      "chapter": 0,
+      "start": 1174.42,
+      "end": 1197.94,
+      "text": "Se dice que Mercurio inventó la lira. Cuatro horas después de nacer encontró el caparazón de una tortuga, hizo agujeros en sus bordes opuestos y pasó por ellos cuerdas de lino; con eso el instrumento quedó terminado [Por este origen del instrumento, la palabra inglesa «shell», concha o caparazón, se usa a menudo como sinónimo de «lira» y, en sentido figurado, de música y poesía.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-068",
+      "chapter": 0,
+      "start": 1198.12,
+      "end": 1224.28,
+      "text": "Así, Gray dice en su oda «El progreso de la poesía»: «¡Oh, soberana del alma dispuesta, madre de melodías dulces y de solemne aliento, concha encantadora! Las sombrías Preocupaciones y las Pasiones frenéticas escuchan tu suave gobierno»]. Las cuerdas eran nueve en honor de las nueve musas. Mercurio entregó la lira a Apolo y recibió de él, a cambio, el caduceo.",
+      "separator": " "
+    },
+    {
+      "id": "C01-069",
+      "chapter": 0,
+      "start": 1224.83,
+      "end": 1239.71,
+      "text": "Ceres (Deméter) era hija de Saturno y Rea. Tenía una hija llamada Proserpina (Perséfone), que se convirtió en esposa de Plutón y reina de los dominios de los muertos. Ceres presidía la agricultura.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-070",
+      "chapter": 0,
+      "start": 1240.26,
+      "end": 1259.22,
+      "text": "Baco (Dioniso), el dios del vino, era hijo de Júpiter y Sémele. Representa tanto el poder embriagador del vino como sus influencias sociales y benéficas; por eso se lo considera promotor de la civilización, legislador y amante de la paz.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-071",
+      "chapter": 0,
+      "start": 1259.77,
+      "end": 1281.05,
+      "text": "Las musas eran hijas de Júpiter y Mnemósine, la Memoria. Presidían el canto y estimulaban la memoria. Eran nueve, y a cada una se le había asignado una rama particular de la literatura, el arte o la ciencia. Calíope era musa de la poesía épica; Clío, de la historia;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-072",
+      "chapter": 0,
+      "start": 1281.23,
+      "end": 1304.83,
+      "text": "Euterpe, de la poesía lírica; Melpómene, de la tragedia; Terpsícore, de la danza y el canto corales; Erato, de la poesía amorosa; Polimnia, de la poesía sagrada; Urania, de la astronomía; y Talía [pronunciado Tha-lei-a, con el acento en la segunda sílaba], de la comedia.",
+      "separator": " "
+    },
+    {
+      "id": "C01-073",
+      "chapter": 0,
+      "start": 1305.38,
+      "end": 1309.22,
+      "text": "Spenser describió así la función de las Gracias:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-074",
+      "chapter": 0,
+      "start": 1309.77,
+      "end": 1341.05,
+      "text": "«Estas tres otorgan a los hombres todos los dones amables\nQue engalanan el cuerpo o adornan el espíritu,\nPara hacerlos encantadores o de aspecto agraciado:\nEl porte elegante, la acogida bondadosa,\nEl semblante dulce, los servicios amistosos que unen\nY todas las atenciones de la cortesía.\nNos enseñan cómo debemos comportarnos\nCon cada rango y condición, con humildes y poderosos,\nCon amigos y enemigos: arte que los hombres llaman Urbanidad».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-075",
+      "chapter": 0,
+      "start": 1341.6,
+      "end": 1359.36,
+      "text": "Las Parcas eran también tres: Cloto, Láquesis y Átropos. Su oficio era hilar el hilo del destino humano, y estaban provistas de tijeras con las que lo cortaban cuando les placía. Eran hijas de Temis, la Ley, que se sienta junto a Júpiter en su trono para aconsejarlo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-076",
+      "chapter": 0,
+      "start": 1359.91,
+      "end": 1378.71,
+      "text": "Las Erinias, o Furias, eran tres diosas que castigaban los crímenes con sus aguijones secretos. Sus cabezas estaban rodeadas de serpientes y todo su aspecto era terrible y espantoso. Se llamaban Alecto, Tisífone y Megera. También recibían el nombre de Euménides.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-077",
+      "chapter": 0,
+      "start": 1379.26,
+      "end": 1388.54,
+      "text": "Némesis era también una diosa vengadora. Representa la justa ira de los dioses, en especial contra los orgullosos y los insolentes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-078",
+      "chapter": 0,
+      "start": 1389.09,
+      "end": 1404.45,
+      "text": "Pan [el nombre Pan significa todo, y a veces se habla de él como del dios de toda la naturaleza] era dios de los rebaños y de los pastores. Su residencia predilecta, según la describen los griegos, estaba en Arcadia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-079",
+      "chapter": 0,
+      "start": 1405.0,
+      "end": 1417.24,
+      "text": "Los sátiros eran divinidades de los bosques y de los campos. Se los imaginaba cubiertos de pelo erizado, con pequeños cuernos que asomaban en la cabeza y con pies como los de las cabras.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C01-080",
+      "chapter": 0,
+      "start": 1417.79,
+      "end": 1422.67,
+      "text": "Momo era el dios de la risa y Pluto, el dios de la riqueza.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-001",
+      "chapter": 1,
+      "start": 1424.17,
+      "end": 1427.37,
+      "text": "2. Hades y Perséfone",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-002",
+      "chapter": 1,
+      "start": 1428.37,
+      "end": 1429.81,
+      "text": "PERSÉFONE",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-003",
+      "chapter": 1,
+      "start": 1430.36,
+      "end": 1448.44,
+      "text": "Bajo la isla de Etna yace el titán Tifoeo, castigado por haber participado en la rebelión de los gigantes contra Zeus. Dos montañas le oprimen las manos, una la derecha y otra la izquierda, mientras el Etna descansa sobre su cabeza. Cuando Tifoeo se mueve, la tierra tiembla;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-004",
+      "chapter": 1,
+      "start": 1448.62,
+      "end": 1472.38,
+      "text": "cuando respira, del Etna salen humo y cenizas. Hades se aterroriza con las sacudidas de la tierra y teme que su reino quede expuesto a la luz del día. Sube a su carro de cuatro caballos negros, sale a la superficie y mira a su alrededor. Mientras lo hace, Afrodita, que está sentada en el monte Érix jugando con su hijo Eros, lo ve y dice:",
+      "separator": " "
+    },
+    {
+      "id": "C02-005",
+      "chapter": 1,
+      "start": 1472.56,
+      "end": 1490.0,
+      "text": "«Hijo mío, toma esos dardos con los que vences a todos, incluso al propio Zeus, y clava uno en el pecho de aquel sombrío monarca que gobierna el reino del Tártaro. ¿Por qué ha de escapar él solo? Aprovecha la ocasión para extender tu imperio y el mío.",
+      "separator": " "
+    },
+    {
+      "id": "C02-006",
+      "chapter": 1,
+      "start": 1490.18,
+      "end": 1508.58,
+      "text": "¿No ves que incluso en el cielo algunos desprecian nuestro poder? Atenea la sabia y Artemisa la cazadora nos desafían; y ahí está esa hija de Deméter, que amenaza con seguir su ejemplo. Pues bien, si te importan tus intereses o los míos, une a esos dos en uno»",
+      "separator": " "
+    },
+    {
+      "id": "C02-007",
+      "chapter": 1,
+      "start": 1508.76,
+      "end": 1523.72,
+      "text": ". El muchacho se desató el carcaj y escogió su flecha más aguda y certera; luego, doblando el arco contra la rodilla, le puso la cuerda y, cuando estuvo listo, disparó la flecha de punta barbada directamente al corazón de Hades.",
+      "separator": ""
+    },
+    {
+      "id": "C02-008",
+      "chapter": 1,
+      "start": 1524.27,
+      "end": 1545.87,
+      "text": "En el valle de Ena hay un lago rodeado de bosques que lo protegen de los ardientes rayos del sol, mientras el suelo húmedo está cubierto de flores y reina una primavera perpetua. Allí jugaba Perséfone con sus compañeras, recogiendo lirios y violetas y llenando con ellos su canasta y su delantal, cuando Hades la vio desde su carro, la amó y se la llevó.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-009",
+      "chapter": 1,
+      "start": 1546.05,
+      "end": 1560.37,
+      "text": "Ella gritó pidiendo ayuda a su madre y a sus compañeras; y cuando, asustada, soltó las puntas del delantal y dejó caer las flores, sintió, con la inocencia de una niña, que perderlas aumentaba su dolor.",
+      "separator": " "
+    },
+    {
+      "id": "C02-010",
+      "chapter": 1,
+      "start": 1560.55,
+      "end": 1578.47,
+      "text": "El raptor azuzó a sus caballos, llamando a cada uno por su nombre y soltando sobre sus cabezas y cuellos las riendas de color de hierro. Al llegar al río Cíane, que le impedía el paso, golpeó la orilla con su tridente; la tierra se abrió y le dio acceso al Tártaro.",
+      "separator": " "
+    },
+    {
+      "id": "C02-011",
+      "chapter": 1,
+      "start": 1579.02,
+      "end": 1594.78,
+      "text": "Deméter buscó a su hija por todo el mundo. La Aurora de cabellos brillantes, cuando salía por la mañana, y Héspero, cuando guiaba a las estrellas al atardecer, la encontraban todavía entregada a la búsqueda. Pero todo era inútil.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-012",
+      "chapter": 1,
+      "start": 1594.96,
+      "end": 1613.52,
+      "text": "Al fin, cansada y triste, se sentó sobre una piedra y allí permaneció nueve días y nueve noches, a la intemperie, bajo la luz del sol y de la luna y bajo los aguaceros. Era el lugar donde hoy se alza la ciudad de Eleusis, entonces morada de un anciano llamado Céleo.",
+      "separator": " "
+    },
+    {
+      "id": "C02-013",
+      "chapter": 1,
+      "start": 1613.7,
+      "end": 1627.54,
+      "text": "Este se encontraba en el campo recogiendo bellotas, moras y leña para el fuego. Su pequeña hija llevaba a casa sus dos cabras y, al pasar junto a la diosa, que tenía el aspecto de una anciana, le dijo:",
+      "separator": " "
+    },
+    {
+      "id": "C02-014",
+      "chapter": 1,
+      "start": 1627.72,
+      "end": 1628.76,
+      "text": "«Madre»",
+      "separator": " "
+    },
+    {
+      "id": "C02-015",
+      "chapter": 1,
+      "start": 1628.94,
+      "end": 1632.7,
+      "text": "—y aquel nombre fue dulce a los oídos de Deméter—,",
+      "separator": " "
+    },
+    {
+      "id": "C02-016",
+      "chapter": 1,
+      "start": 1632.88,
+      "end": 1637.36,
+      "text": "«¿por qué estás aquí sola, sentada entre las rocas?»",
+      "separator": " "
+    },
+    {
+      "id": "C02-017",
+      "chapter": 1,
+      "start": 1637.54,
+      "end": 1648.1,
+      "text": ". El anciano también se detuvo, a pesar de su pesada carga, y le rogó que fuera a su cabaña, por humilde que fuera. Ella se negó, pero él insistió.",
+      "separator": ""
+    },
+    {
+      "id": "C02-018",
+      "chapter": 1,
+      "start": 1648.28,
+      "end": 1649.56,
+      "text": "«Vete en paz",
+      "separator": " "
+    },
+    {
+      "id": "C02-019",
+      "chapter": 1,
+      "start": 1649.74,
+      "end": 1651.18,
+      "text": "—respondió—",
+      "separator": " "
+    },
+    {
+      "id": "C02-020",
+      "chapter": 1,
+      "start": 1651.36,
+      "end": 1654.96,
+      "text": "y sé feliz con tu hija; yo he perdido a la mía»",
+      "separator": " "
+    },
+    {
+      "id": "C02-021",
+      "chapter": 1,
+      "start": 1655.14,
+      "end": 1669.3,
+      "text": ". Mientras hablaba, lágrimas —o algo semejante a lágrimas, pues los dioses nunca lloran— le bajaron por las mejillas hasta el pecho. El compasivo anciano y su hija lloraron con ella. Entonces él dijo:",
+      "separator": ""
+    },
+    {
+      "id": "C02-022",
+      "chapter": 1,
+      "start": 1669.48,
+      "end": 1676.52,
+      "text": "«Ven con nosotros y no desprecies nuestro humilde techo; ojalá así te sea devuelta tu hija sana y salva»",
+      "separator": " "
+    },
+    {
+      "id": "C02-023",
+      "chapter": 1,
+      "start": 1676.7,
+      "end": 1681.42,
+      "text": "«Guíame —dijo ella—; ¡no puedo resistirme a esa súplica!»",
+      "separator": ". "
+    },
+    {
+      "id": "C02-024",
+      "chapter": 1,
+      "start": 1681.6,
+      "end": 1695.92,
+      "text": ". Se levantó de la piedra y fue con ellos. Mientras caminaban, él le contó que su único hijo varón, un niño pequeño, estaba muy enfermo, con fiebre y sin poder dormir. Ella se inclinó y recogió unas amapolas.",
+      "separator": ""
+    },
+    {
+      "id": "C02-025",
+      "chapter": 1,
+      "start": 1696.1,
+      "end": 1717.22,
+      "text": "Cuando entraron en la cabaña, encontraron a todos sumidos en gran angustia, pues el niño parecía no tener esperanza de recuperarse. Metanira, su madre, la recibió con bondad, y la diosa se inclinó y besó los labios del niño enfermo. Al instante desapareció la palidez de su rostro y volvió a su cuerpo el vigor de la salud.",
+      "separator": " "
+    },
+    {
+      "id": "C02-026",
+      "chapter": 1,
+      "start": 1717.4,
+      "end": 1737.24,
+      "text": "Toda la familia se alegró: es decir, el padre, la madre y la niña, pues no había nadie más; no tenían sirvientes. Prepararon la mesa y pusieron en ella cuajada y crema, manzanas y miel en su panal. Mientras comían, Deméter mezcló jugo de amapola en la leche del niño.",
+      "separator": " "
+    },
+    {
+      "id": "C02-027",
+      "chapter": 1,
+      "start": 1737.42,
+      "end": 1759.02,
+      "text": "Cuando llegó la noche y todo quedó en silencio, se levantó, tomó al pequeño dormido, le modeló los miembros con las manos y pronunció sobre él tres veces un conjuro solemne; luego fue a depositarlo entre las cenizas. Su madre, que había estado observando lo que hacía la visitante, se lanzó hacia delante con un grito y arrebató al niño del fuego.",
+      "separator": " "
+    },
+    {
+      "id": "C02-028",
+      "chapter": 1,
+      "start": 1759.2,
+      "end": 1769.12,
+      "text": "Entonces Deméter recobró su verdadera forma y un resplandor divino iluminó cuanto la rodeaba. Mientras ellos quedaban sobrecogidos de asombro, dijo:",
+      "separator": " "
+    },
+    {
+      "id": "C02-029",
+      "chapter": 1,
+      "start": 1769.3,
+      "end": 1786.18,
+      "text": "«Madre, has sido cruel en tu cariño por tu hijo. Lo habría hecho inmortal, pero has frustrado mi intento. Sin embargo, será grande y útil. Enseñará a los hombres a usar el arado y las recompensas que el trabajo puede obtener de la tierra cultivada»",
+      "separator": " "
+    },
+    {
+      "id": "C02-030",
+      "chapter": 1,
+      "start": 1786.36,
+      "end": 1791.96,
+      "text": ". Dicho esto, se envolvió en una nube, subió a su carro y se alejó.",
+      "separator": ""
+    },
+    {
+      "id": "C02-031",
+      "chapter": 1,
+      "start": 1792.51,
+      "end": 1809.15,
+      "text": "Deméter continuó buscando a su hija, pasando de una tierra a otra y atravesando mares y ríos, hasta que al fin regresó a Sicilia, de donde había partido, y se detuvo junto a las orillas del río Cíane, allí donde Hades se había abierto paso hacia sus dominios con su presa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-032",
+      "chapter": 1,
+      "start": 1809.7,
+      "end": 1832.66,
+      "text": "La ninfa del río habría querido contar a la diosa todo lo que había presenciado, pero no se atrevía por miedo a Hades; solo osó recoger el cinturón que Perséfone había dejado caer durante el rapto y hacerlo flotar hasta los pies de la madre. Al verlo, Deméter dejó de tener dudas sobre su pérdida, aunque todavía ignoraba la causa y culpó a la inocente tierra.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-033",
+      "chapter": 1,
+      "start": 1832.84,
+      "end": 1834.36,
+      "text": "«Suelo ingrato",
+      "separator": " "
+    },
+    {
+      "id": "C02-034",
+      "chapter": 1,
+      "start": 1834.54,
+      "end": 1835.66,
+      "text": "—dijo—",
+      "separator": " "
+    },
+    {
+      "id": "C02-035",
+      "chapter": 1,
+      "start": 1835.84,
+      "end": 1842.24,
+      "text": ", al que he dado fertilidad y he vestido de hierba y de grano nutritivo: ya no disfrutarás de mis favores»",
+      "separator": ""
+    },
+    {
+      "id": "C02-036",
+      "chapter": 1,
+      "start": 1842.42,
+      "end": 1859.78,
+      "text": ". Entonces murió el ganado, el arado se rompió en el surco y las semillas no brotaron; había demasiado sol o demasiada lluvia; las aves robaban las semillas, y solo crecían cardos y zarzas. Al ver aquello, la fuente Aretusa intercedió por la tierra.",
+      "separator": ""
+    },
+    {
+      "id": "C02-037",
+      "chapter": 1,
+      "start": 1859.96,
+      "end": 1861.08,
+      "text": "«Diosa",
+      "separator": " "
+    },
+    {
+      "id": "C02-038",
+      "chapter": 1,
+      "start": 1861.26,
+      "end": 1862.38,
+      "text": "—dijo—",
+      "separator": " "
+    },
+    {
+      "id": "C02-039",
+      "chapter": 1,
+      "start": 1862.56,
+      "end": 1880.0,
+      "text": ", no culpes al suelo; se abrió contra su voluntad para dar paso a tu hija. Puedo hablarte de su destino, porque la he visto. Esta no es mi tierra natal; vine desde Élide. Yo era una ninfa de los bosques y me deleitaba con la caza.",
+      "separator": ""
+    },
+    {
+      "id": "C02-040",
+      "chapter": 1,
+      "start": 1880.18,
+      "end": 1899.3,
+      "text": "Elogiaban mi belleza, pero yo no le daba importancia y prefería enorgullecerme de mis hazañas de cazadora. Un día regresaba del bosque, acalorada por el ejercicio, cuando llegué a una corriente que fluía en silencio, tan clara que se podían contar las piedrecitas del fondo.",
+      "separator": " "
+    },
+    {
+      "id": "C02-041",
+      "chapter": 1,
+      "start": 1899.48,
+      "end": 1928.28,
+      "text": "Los sauces le daban sombra y la orilla cubierta de hierba descendía hasta el borde del agua. Me acerqué y toqué el agua con el pie. Entré hasta las rodillas y, no contenta con eso, dejé la ropa sobre los sauces y me metí. Mientras jugaba en el agua, oí un murmullo confuso que parecía subir desde las profundidades de la corriente y me apresuré a escapar hacia la orilla más cercana. La voz dijo:",
+      "separator": " "
+    },
+    {
+      "id": "C02-042",
+      "chapter": 1,
+      "start": 1928.46,
+      "end": 1933.18,
+      "text": "“¿Por qué huyes, Aretusa? Soy Alfeo, el dios de esta corriente”",
+      "separator": " "
+    },
+    {
+      "id": "C02-043",
+      "chapter": 1,
+      "start": 1933.36,
+      "end": 1962.0,
+      "text": ". Yo corría y él me perseguía; no era más rápido que yo, pero sí más fuerte, y me iba alcanzando a medida que mis fuerzas flaqueaban. Al fin, agotada, pedí ayuda a Artemisa. “¡Ayúdame, diosa! ¡Ayuda a tu devota!”. La diosa me oyó y de pronto me envolvió en una nube espesa. El dios del río miraba a un lado y a otro y dos veces pasó muy cerca de mí, pero no pudo encontrarme.",
+      "separator": ""
+    },
+    {
+      "id": "C02-044",
+      "chapter": 1,
+      "start": 1962.18,
+      "end": 1964.66,
+      "text": "“¡Aretusa! ¡Aretusa!”",
+      "separator": " "
+    },
+    {
+      "id": "C02-045",
+      "chapter": 1,
+      "start": 1964.84,
+      "end": 1984.76,
+      "text": ", gritaba. ¡Cómo temblaba yo, igual que un cordero que oye al lobo gruñir fuera del redil! Un sudor frío me cubrió, mi cabello se deshizo en corrientes y donde apoyaba el pie se formaba un charco. En fin, en menos tiempo del que se tarda en contarlo, me convertí en una fuente.",
+      "separator": ""
+    },
+    {
+      "id": "C02-046",
+      "chapter": 1,
+      "start": 1984.94,
+      "end": 2006.62,
+      "text": "Pero Alfeo me reconoció bajo esa forma e intentó mezclar su corriente con la mía. Artemisa abrió la tierra y yo, procurando escapar de él, me arrojé a la caverna y, a través de las entrañas de la tierra, salí aquí, en Sicilia. Mientras pasaba por las regiones inferiores de la tierra vi a tu Perséfone.",
+      "separator": " "
+    },
+    {
+      "id": "C02-047",
+      "chapter": 1,
+      "start": 2006.8,
+      "end": 2019.44,
+      "text": "Estaba triste, pero su rostro ya no mostraba temor. Su aspecto era el propio de una reina: la reina de Érebo, la poderosa esposa del monarca de los dominios de los muertos»",
+      "separator": " "
+    },
+    {
+      "id": "C02-048",
+      "chapter": 1,
+      "start": 2019.99,
+      "end": 2038.79,
+      "text": "Al oír aquello, Deméter permaneció un momento como aturdida; después dirigió su carro hacia el cielo y se apresuró a presentarse ante el trono de Zeus. Le contó la pérdida que había sufrido y le suplicó que interviniera para conseguir que le devolvieran a su hija. Zeus accedió con una condición:",
+      "separator": ".\n\n"
+    },
+    {
+      "id": "C02-049",
+      "chapter": 1,
+      "start": 2038.97,
+      "end": 2056.49,
+      "text": "que Perséfone no hubiera probado alimento alguno durante su estancia en el mundo inferior; de lo contrario, las Parcas prohibían liberarla. Por ello fue enviado Hermes, acompañado de la Primavera, para exigir a Hades la entrega de Perséfone. El astuto monarca aceptó;",
+      "separator": " "
+    },
+    {
+      "id": "C02-050",
+      "chapter": 1,
+      "start": 2056.67,
+      "end": 2076.67,
+      "text": "pero, ¡ay!, la joven había tomado una granada que Hades le ofreció y había sorbido la dulce pulpa de unas cuantas semillas. Aquello bastaba para impedir su liberación completa. Sin embargo, se llegó a un acuerdo por el cual pasaría la mitad del tiempo con su madre y el resto con su esposo Hades.",
+      "separator": " "
+    },
+    {
+      "id": "C02-051",
+      "chapter": 1,
+      "start": 2077.22,
+      "end": 2093.38,
+      "text": "Deméter aceptó apaciguarse con ese acuerdo y devolvió su favor a la tierra. Entonces recordó a Céleo y a su familia, y la promesa que había hecho a su pequeño hijo Triptólemo. Cuando el muchacho creció, le enseñó a usar el arado y a sembrar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-052",
+      "chapter": 1,
+      "start": 2093.56,
+      "end": 2119.4,
+      "text": "Lo llevó en su carro tirado por dragones alados por todos los países de la tierra, enseñando a la humanidad cereales valiosos y los conocimientos de la agricultura. A su regreso, Triptólemo construyó en Eleusis un magnífico templo a Deméter e instituyó el culto a la diosa con el nombre de misterios eleusinos, cuyas celebraciones superaban en esplendor y solemnidad a todas las demás celebraciones religiosas de los griegos.",
+      "separator": " "
+    },
+    {
+      "id": "C02-053",
+      "chapter": 1,
+      "start": 2119.95,
+      "end": 2142.59,
+      "text": "Pocas dudas puede haber de que esta historia de Deméter y Perséfone es una alegoría. Perséfone representa el grano de siembra, que, al ser arrojado a la tierra, queda oculto en ella: es decir, se lo lleva el dios del inframundo. Vuelve a aparecer: es decir, Perséfone es devuelta a su madre. La Primavera la conduce de nuevo a la luz del día.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-054",
+      "chapter": 1,
+      "start": 2143.14,
+      "end": 2149.14,
+      "text": "Milton alude a la historia de Perséfone en El paraíso perdido, libro IV:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-055",
+      "chapter": 1,
+      "start": 2149.69,
+      "end": 2169.93,
+      "text": "«Ni aquel hermoso campo\nDe Ena, donde Perséfone recogía flores,\nElla misma flor aún más hermosa, fue por el sombrío Dis —nombre de Plutón—\nRecogida, lo que costó a Deméter tanto dolor\nAl buscarla por el mundo,\n… podría con este paraíso\nDel Edén competir».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-056",
+      "chapter": 1,
+      "start": 2170.48,
+      "end": 2176.0,
+      "text": "Hood, en su Oda a la melancolía, emplea bellamente la misma alusión:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-057",
+      "chapter": 1,
+      "start": 2176.55,
+      "end": 2187.27,
+      "text": "«Perdona si a veces olvido,\nPor penas venideras, la dicha presente;\nComo Perséfone, asustada, dejó caer\nSus flores al ver a Hades».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-058",
+      "chapter": 1,
+      "start": 2187.82,
+      "end": 2205.58,
+      "text": "El río Alfeo desaparece en efecto bajo tierra durante una parte de su curso y se abre camino por canales subterráneos hasta volver a la superficie. Se decía que la fuente siciliana Aretusa era esa misma corriente, que, después de pasar por debajo del mar, surgía de nuevo en Sicilia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-059",
+      "chapter": 1,
+      "start": 2205.76,
+      "end": 2218.32,
+      "text": "De ahí nació el relato de que una copa arrojada al Alfeo volvía a aparecer en Aretusa. A esta fábula del curso subterráneo del Alfeo alude Coleridge en su poema Kubla Khan:",
+      "separator": " "
+    },
+    {
+      "id": "C02-060",
+      "chapter": 1,
+      "start": 2218.87,
+      "end": 2232.55,
+      "text": "«En Xanadú mandó Kubla Khan\nAlzar una majestuosa cúpula de placer,\nDonde Alf, el río sagrado, corría\nPor cavernas que el hombre no podía medir,\nHasta un mar sin sol».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-061",
+      "chapter": 1,
+      "start": 2233.1,
+      "end": 2248.7,
+      "text": "En uno de sus poemas de juventud, Moore alude a la misma historia y a la costumbre de arrojar guirnaldas u otros objetos ligeros a la corriente para que esta los lleve hacia abajo y después los devuelva cuando el río sale de nuevo a la luz.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-062",
+      "chapter": 1,
+      "start": 2249.25,
+      "end": 2277.49,
+      "text": "«¡Oh, amada mía, qué divinamente dulce\nEs la alegría pura de dos almas afines que se encuentran!\nComo aquel dios del río, cuyas aguas fluyen,\nCon el amor por única luz, por cavernas subterráneas,\nLlevando triunfantes todas las trenzas de flores\nY los festivos aros con que las doncellas de Olimpia\nHan adornado su corriente, como ofrenda digna\nDe depositar a los pies resplandecientes de Aretusa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-063",
+      "chapter": 1,
+      "start": 2277.67,
+      "end": 2295.19,
+      "text": "Piensa, cuando por fin encuentra a su esposa, la fuente,\n¡Qué amor perfecto ha de estremecer las aguas mezcladas!\nCada cual perdido en el otro hasta fundirse en uno,\nCon igual destino a la sombra o bajo el sol,\nImagen del amor verdadero, corren hacia el mar profundo».",
+      "separator": "\n"
+    },
+    {
+      "id": "C02-064",
+      "chapter": 1,
+      "start": 2295.74,
+      "end": 2305.26,
+      "text": "El siguiente pasaje de Rimas del camino, de Moore, describe un célebre cuadro de Albano que se encuentra en Milán, titulado Una danza de Amores:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-065",
+      "chapter": 1,
+      "start": 2305.81,
+      "end": 2323.65,
+      "text": "«Por el robo de la flor de Ena a la tierra\nEstos chiquillos celebran su danza de alegría\nAlrededor del árbol verde, como hadas en un brezal;\nLos más cercanos se enlazan en brillante orden,\nMejilla junto a mejilla, como capullos de rosa en una guirnalda;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C02-066",
+      "chapter": 1,
+      "start": 2323.83,
+      "end": 2343.03,
+      "text": "Y los más lejanos muestran, por debajo\nDe las alas de los otros, sus ojitos de luz.\n¡Y miren! Entre las nubes, su hermano mayor,\nQue acaba de elevarse, cuenta con sonrisa dichosa\nLa travesura de Hades a su madre encantada,\nQue se vuelve a recibir la noticia con un beso».\n",
+      "separator": "\n"
+    },
+    {
+      "id": "C03-001",
+      "chapter": 2,
+      "start": 2344.53,
+      "end": 2348.93,
+      "text": "3. Hércules: trabajos, hazañas y apoteosis",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-002",
+      "chapter": 2,
+      "start": 2349.93,
+      "end": 2370.81,
+      "text": "Hércules —en griego, Heracles— era hijo de Zeus y Alcmena. Como Hera era siempre hostil a los hijos que su esposo tenía con madres mortales, declaró la guerra a Hércules desde su nacimiento. Envió dos serpientes para matarlo cuando aún estaba en la cuna, pero el precoz niño las estranguló con sus propias manos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-003",
+      "chapter": 2,
+      "start": 2370.99,
+      "end": 2388.99,
+      "text": "(Por este motivo, el doctor Franklin y los artistas franceses que empleó durante la Revolución estadounidense convirtieron al Hércules niño en símbolo de la naciente América. Horatio Greenough colocó un bajorrelieve del Hércules niño en el pedestal de su estatua de Washington, que se encuentra frente al Capitolio).",
+      "separator": " "
+    },
+    {
+      "id": "C03-004",
+      "chapter": 2,
+      "start": 2389.17,
+      "end": 2410.61,
+      "text": "Sin embargo, las artes de Hera lo sometieron a su primo Euristeo y lo obligaron a cumplir todas sus órdenes. Euristeo le impuso una serie de aventuras desesperadas, conocidas como los doce «trabajos de Hércules». El primero fue luchar contra el león de Nemea. El valle de Nemea estaba asolado por un león terrible.",
+      "separator": " "
+    },
+    {
+      "id": "C03-005",
+      "chapter": 2,
+      "start": 2410.79,
+      "end": 2434.95,
+      "text": "Euristeo ordenó a Hércules que le llevara la piel del monstruo. Después de emplear inútilmente su maza y sus flechas contra el león, Hércules lo estranguló con las manos. Regresó cargando al león muerto sobre los hombros; pero Euristeo se asustó tanto al verlo y ante aquella prueba de la prodigiosa fuerza del héroe, que le ordenó que, en adelante, le diera cuenta de sus hazañas fuera de la ciudad.",
+      "separator": " "
+    },
+    {
+      "id": "C03-006",
+      "chapter": 2,
+      "start": 2435.5,
+      "end": 2455.66,
+      "text": "Su siguiente trabajo fue matar a la Hidra. Este monstruo devastaba el territorio de Argos y vivía en un pantano cercano a la fuente de Amimone. Se cuenta que, cuando el país sufría una sequía, Poseidón, que amaba a Amimone, le había permitido tocar la roca con su tridente, y de ella brotó una fuente de tres salidas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-007",
+      "chapter": 2,
+      "start": 2455.84,
+      "end": 2481.28,
+      "text": "Allí se había instalado la Hidra, y Hércules fue enviado a destruirla. Tenía nueve cabezas, de las cuales la central era inmortal. Hércules le cortaba una cabeza con la maza, pero en lugar de cada cabeza derribada surgían dos nuevas. Al fin, con ayuda de su fiel servidor Yolao, quemó las cabezas de la Hidra y enterró la novena, la inmortal, bajo una enorme roca.",
+      "separator": " "
+    },
+    {
+      "id": "C03-008",
+      "chapter": 2,
+      "start": 2481.83,
+      "end": 2499.03,
+      "text": "Otro trabajo fue limpiar los establos de Augías. Augías, rey de Élide, tenía un rebaño de tres mil bueyes cuyos establos no se habían limpiado en treinta años. Hércules hizo pasar por ellos los ríos Alfeo y Peneo y los dejó completamente limpios en un solo día.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-009",
+      "chapter": 2,
+      "start": 2499.58,
+      "end": 2523.26,
+      "text": "Su siguiente trabajo era de naturaleza más delicada. Admeta, hija de Euristeo, deseaba obtener el cinturón de la reina de las amazonas, y Euristeo ordenó a Hércules que fuera a buscarlo. Las amazonas eran una nación de mujeres. Eran muy guerreras y poseían varias ciudades florecientes. Tenían por costumbre criar solo a las niñas;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-010",
+      "chapter": 2,
+      "start": 2523.44,
+      "end": 2540.88,
+      "text": "a los niños los enviaban a las naciones vecinas o les daban muerte. Hércules partió acompañado de un grupo de voluntarios y, después de diversas aventuras, llegó al país de las amazonas. Hipólita, la reina, lo recibió amablemente y accedió a entregarle su cinturón;",
+      "separator": " "
+    },
+    {
+      "id": "C03-011",
+      "chapter": 2,
+      "start": 2541.06,
+      "end": 2561.06,
+      "text": "pero Hera, tomando la forma de una amazona, se mezcló con las demás y las convenció de que los extranjeros se llevaban a su reina. Las amazonas se armaron al instante y bajaron en gran número hasta la nave. Hércules, creyendo que Hipólita lo había traicionado, la mató, tomó su cinturón y emprendió el regreso por mar.",
+      "separator": " "
+    },
+    {
+      "id": "C03-012",
+      "chapter": 2,
+      "start": 2561.61,
+      "end": 2582.41,
+      "text": "Otra tarea que le impusieron fue llevar a Euristeo los bueyes de Gerión, un monstruo de tres cuerpos que vivía en la isla de Eritía, la roja, llamada así porque se encontraba al oeste, bajo los rayos del sol poniente. Se cree que esta descripción corresponde a España, de la cual se decía que Gerión era rey.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-013",
+      "chapter": 2,
+      "start": 2582.59,
+      "end": 2600.83,
+      "text": "Tras recorrer varios países, Hércules llegó por fin a los límites de Libia y Europa, donde levantó las montañas de Calpe y Ábila como monumentos de su avance; o, según otra versión, partió una montaña en dos y dejó una mitad a cada lado, formando el estrecho de Gibraltar.",
+      "separator": " "
+    },
+    {
+      "id": "C03-014",
+      "chapter": 2,
+      "start": 2601.01,
+      "end": 2615.89,
+      "text": "Las dos montañas recibieron el nombre de columnas de Hércules. Los bueyes estaban custodiados por el gigante Euritión y su perro de dos cabezas, pero Hércules mató a ambos y llevó los animales sanos y salvos a Euristeo.",
+      "separator": " "
+    },
+    {
+      "id": "C03-015",
+      "chapter": 2,
+      "start": 2616.44,
+      "end": 2634.2,
+      "text": "El trabajo más difícil de todos fue conseguir las manzanas de oro de las Hespérides, pues Hércules no sabía dónde encontrarlas. Eran las manzanas que Hera había recibido de la diosa de la Tierra el día de su boda y cuya custodia había confiado a las hijas de Hespéride, ayudadas por un dragón vigilante.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-016",
+      "chapter": 2,
+      "start": 2634.38,
+      "end": 2650.86,
+      "text": "Después de diversas aventuras, Hércules llegó al monte Atlas, en África. Atlas era uno de los titanes que habían combatido contra los dioses; tras la derrota de aquellos, había sido condenado a sostener sobre los hombros el peso de los cielos.",
+      "separator": " "
+    },
+    {
+      "id": "C03-017",
+      "chapter": 2,
+      "start": 2651.04,
+      "end": 2669.76,
+      "text": "Era padre de las Hespérides y Hércules pensó que, si alguien podía encontrar las manzanas y llevárselas, era él. Pero ¿cómo apartar a Atlas de su puesto o sostener los cielos durante su ausencia? Hércules tomó la carga sobre sus propios hombros y envió a Atlas a buscar las manzanas.",
+      "separator": " "
+    },
+    {
+      "id": "C03-018",
+      "chapter": 2,
+      "start": 2669.94,
+      "end": 2692.9,
+      "text": "Este volvió con ellas y, aunque de mala gana, cargó de nuevo el peso sobre los hombros y dejó que Hércules regresara con las manzanas a Euristeo. (Hércules era descendiente de Perseo. Perseo había convertido a Atlas en piedra. ¿Cómo podía Hércules ocupar su lugar? Este no es sino uno de los muchos anacronismos de la mitología antigua).",
+      "separator": " "
+    },
+    {
+      "id": "C03-019",
+      "chapter": 2,
+      "start": 2693.45,
+      "end": 2701.21,
+      "text": "Milton, en su Comus, presenta a las Hespérides como hijas de Héspero y sobrinas de Atlas:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-020",
+      "chapter": 2,
+      "start": 2701.76,
+      "end": 2709.04,
+      "text": "«… entre los hermosos jardines\nDe Héspero y de sus tres hijas,\nQue cantan alrededor del árbol de oro».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-021",
+      "chapter": 2,
+      "start": 2709.59,
+      "end": 2735.99,
+      "text": "Los poetas, guiados por la analogía con el hermoso aspecto del cielo occidental al atardecer, veían el oeste como una región de brillo y gloria. Por eso situaron allí las Islas de los Bienaventurados, la rojiza isla de Eritía, donde pastaban los relucientes bueyes de Gerión, y la isla de las Hespérides. Algunos suponen que las manzanas eran las naranjas de España, de las que los griegos habían oído noticias vagas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-022",
+      "chapter": 2,
+      "start": 2736.54,
+      "end": 2760.38,
+      "text": "Una célebre hazaña de Hércules fue su victoria sobre Anteo. Anteo, hijo de Gea, la Tierra, era un gigante y luchador poderoso, de fuerza invencible mientras permaneciera en contacto con su madre Tierra. Obligaba a todos los extranjeros que llegaban a su país a luchar con él, con la condición de que, si eran vencidos —como les ocurría a todos—, debían morir.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-023",
+      "chapter": 2,
+      "start": 2760.56,
+      "end": 2772.48,
+      "text": "Hércules se enfrentó a él y, al ver que no servía de nada derribarlo, porque tras cada caída se levantaba con fuerzas renovadas, lo alzó del suelo y lo estranguló en el aire.",
+      "separator": " "
+    },
+    {
+      "id": "C03-024",
+      "chapter": 2,
+      "start": 2773.03,
+      "end": 2788.55,
+      "text": "Caco era un gigante enorme que vivía en una cueva del monte Aventino, una de las siete colinas de Roma, y saqueaba la región. Cuando Hércules llevaba de regreso los bueyes de Gerión, Caco robó una parte del ganado mientras el héroe dormía.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-025",
+      "chapter": 2,
+      "start": 2788.73,
+      "end": 2815.45,
+      "text": "Para que las huellas no revelaran hacia dónde los había conducido, los arrastró hacia atrás por las colas hasta su cueva; así, los rastros parecían indicar que habían ido en dirección contraria. Hércules cayó en el engaño y no habría encontrado a sus bueyes si, al conducir el resto del rebaño junto a la cueva donde estaban ocultos los robados, estos no hubieran empezado a mugir y se hubieran descubierto. Hércules mató a Caco.",
+      "separator": " "
+    },
+    {
+      "id": "C03-026",
+      "chapter": 2,
+      "start": 2816.0,
+      "end": 2831.2,
+      "text": "La última hazaña que contaremos fue traer a Cerbero del mundo inferior. Hércules descendió al Hades acompañado de Hermes y Atenea. Obtuvo del dios Hades permiso para llevar a Cerbero al mundo de arriba, siempre que pudiera hacerlo sin usar armas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-027",
+      "chapter": 2,
+      "start": 2831.38,
+      "end": 2852.82,
+      "text": "A pesar de los forcejeos del monstruo, lo sujetó, lo mantuvo firmemente agarrado y lo llevó ante Euristeo; después lo devolvió a su lugar. Mientras se encontraba en el Hades consiguió la libertad de Teseo, su admirador e imitador, a quien habían retenido prisionero por un intento fallido de llevarse a Perséfone.",
+      "separator": " "
+    },
+    {
+      "id": "C03-028",
+      "chapter": 2,
+      "start": 2853.37,
+      "end": 2868.81,
+      "text": "En un arrebato de locura, Hércules mató a su amigo Ífito y, por esa falta, fue condenado a servir como esclavo de la reina Ónfale durante tres años. Durante ese servicio, la naturaleza del héroe pareció transformarse.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-029",
+      "chapter": 2,
+      "start": 2868.99,
+      "end": 2885.47,
+      "text": "Llevaba una vida afeminada, a veces vestía ropa de mujer e hilaba lana con las criadas de Ónfale, mientras la reina se ponía su piel de león. Terminado aquel servicio, se casó con Deyanira y vivió en paz con ella durante tres años.",
+      "separator": " "
+    },
+    {
+      "id": "C03-030",
+      "chapter": 2,
+      "start": 2885.65,
+      "end": 2901.89,
+      "text": "En cierta ocasión, mientras viajaba con su esposa, llegaron a un río que el centauro Neso ayudaba a cruzar a los viajeros por una tarifa fija. Hércules vadeó el río por sí mismo, pero confió a Deyanira a Neso para que la llevara a la otra orilla.",
+      "separator": " "
+    },
+    {
+      "id": "C03-031",
+      "chapter": 2,
+      "start": 2902.07,
+      "end": 2917.59,
+      "text": "Neso intentó huir con ella, pero Hércules oyó sus gritos y le disparó una flecha al corazón. El centauro moribundo dijo a Deyanira que recogiera un poco de su sangre y la guardara, pues podía emplearse como hechizo para conservar el amor de su esposo.",
+      "separator": " "
+    },
+    {
+      "id": "C03-032",
+      "chapter": 2,
+      "start": 2918.14,
+      "end": 2932.22,
+      "text": "Deyanira lo hizo y no tardó en creer que tenía ocasión de usarla. En una de sus conquistas, Hércules había tomado prisionera a una hermosa joven llamada Yole, por quien parecía sentir más afecto del que Deyanira aprobaba.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-033",
+      "chapter": 2,
+      "start": 2932.4,
+      "end": 2948.64,
+      "text": "Cuando Hércules se disponía a ofrecer sacrificios a los dioses en honor de su victoria, mandó pedir a su esposa una túnica blanca para la ocasión. Deyanira, creyendo que era una buena oportunidad para probar su hechizo de amor, empapó la prenda en la sangre de Neso.",
+      "separator": " "
+    },
+    {
+      "id": "C03-034",
+      "chapter": 2,
+      "start": 2948.82,
+      "end": 2970.1,
+      "text": "Debemos suponer que tuvo cuidado de lavar todo rastro de ella; pero el poder mágico permaneció y, apenas la túnica se calentó sobre el cuerpo de Hércules, el veneno penetró en todos sus miembros y le causó una agonía intensísima. En su furor tomó a Licas, que le había llevado la túnica fatal, y lo arrojó al mar.",
+      "separator": " "
+    },
+    {
+      "id": "C03-035",
+      "chapter": 2,
+      "start": 2970.28,
+      "end": 2985.72,
+      "text": "Intentó arrancarse la prenda, pero esta estaba pegada a la carne y al quitársela se llevó trozos enteros de su cuerpo. En ese estado subió a una nave y fue llevado a casa. Deyanira, al ver lo que había hecho sin saberlo, se ahorcó.",
+      "separator": " "
+    },
+    {
+      "id": "C03-036",
+      "chapter": 2,
+      "start": 2985.9,
+      "end": 3013.9,
+      "text": "Hércules, dispuesto a morir, ascendió al monte Eta, donde levantó una pira funeraria con árboles, entregó su arco y sus flechas a Filoctetes y se acostó sobre la pira, apoyando la cabeza en la maza y cubriéndose con la piel del león. Con el rostro tan sereno como si fuera a ocupar su lugar en un banquete, ordenó a Filoctetes que acercara la antorcha. Las llamas se extendieron rápidamente y pronto envolvieron toda la pira.",
+      "separator": " "
+    },
+    {
+      "id": "C03-037",
+      "chapter": 2,
+      "start": 3014.45,
+      "end": 3017.73,
+      "text": "Milton alude así al frenesí de Hércules:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-038",
+      "chapter": 2,
+      "start": 3018.28,
+      "end": 3036.2,
+      "text": "«Como cuando Alcides —nombre de Hércules que significa\n“Descendiente de Alceo”—, de Ecalia coronado\nDe victorias, sintió la túnica envenenada y arrancó,\nPor el dolor, de raíz los pinos de Tesalia,\nY a Licas desde la cima del Eta arrojó\nAl mar Euboico».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-039",
+      "chapter": 2,
+      "start": 3036.75,
+      "end": 3046.19,
+      "text": "Los propios dioses se inquietaron al ver que el campeón de la tierra llegaba de ese modo a su fin; pero Zeus, con semblante alegre, les habló así:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-040",
+      "chapter": 2,
+      "start": 3046.37,
+      "end": 3063.41,
+      "text": "«Me complace ver su preocupación, príncipes míos, y me alegra comprobar que gobierno a un pueblo leal y que mi hijo disfruta de su favor. Pues, aunque su interés por él nace de sus nobles hazañas, no por ello deja de ser grato para mí. Pero ahora les digo:",
+      "separator": " "
+    },
+    {
+      "id": "C03-041",
+      "chapter": 2,
+      "start": 3063.59,
+      "end": 3089.27,
+      "text": "no teman. Aquel que ha vencido todo lo demás no será vencido por esas llamas que ven arder en el monte Eta. Solo puede perecer la parte que recibió de su madre; lo que heredó de mí es inmortal. Muerto para la tierra, lo llevaré a las orillas celestiales y les pido a todos que lo reciban con bondad. Si a alguno le disgusta que alcance este honor, nadie podrá negar, sin embargo, que lo ha merecido»",
+      "separator": " "
+    },
+    {
+      "id": "C03-042",
+      "chapter": 2,
+      "start": 3089.45,
+      "end": 3115.37,
+      "text": ". Todos los dioses dieron su asentimiento. Solo Hera escuchó las últimas palabras con cierto disgusto por verse señalada tan claramente, aunque no lo bastante como para lamentar la decisión de su esposo. Así, cuando las llamas consumieron la parte materna de Hércules, la parte divina, lejos de sufrir daño, pareció surgir con nuevo vigor, adquirir un porte más elevado y una dignidad más imponente.",
+      "separator": ""
+    },
+    {
+      "id": "C03-043",
+      "chapter": 2,
+      "start": 3115.55,
+      "end": 3126.99,
+      "text": "Zeus lo envolvió en una nube y lo llevó en un carro de cuatro caballos a vivir entre las estrellas. Cuando ocupó su lugar en el cielo, Atlas sintió el peso añadido.",
+      "separator": " "
+    },
+    {
+      "id": "C03-044",
+      "chapter": 2,
+      "start": 3127.54,
+      "end": 3133.14,
+      "text": "Hera, ya reconciliada con él, le dio a su hija Hebe por esposa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-045",
+      "chapter": 2,
+      "start": 3133.69,
+      "end": 3146.81,
+      "text": "El poeta Schiller, en una de sus composiciones titulada El ideal y la vida, ilustra el contraste entre lo práctico y lo imaginativo en unas hermosas estrofas, cuyas dos últimas pueden traducirse así:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-046",
+      "chapter": 2,
+      "start": 3147.36,
+      "end": 3167.12,
+      "text": "«Hondamente degradado a esclavo de un cobarde,\nIncesantes combates soportó el valiente Alcides,\nConducido por la espinosa senda del sufrimiento;\nMató a la Hidra, quebrantó la fuerza del león,\nY para devolver a su amigo a la luz se arrojó,\nVivo, a la barca que transporta a los muertos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-047",
+      "chapter": 2,
+      "start": 3167.3,
+      "end": 3189.7,
+      "text": "Todos los tormentos, todos los trabajos de la tierra\nQue el odio de Hera pudo imponerle,\nBien los soportó desde su nacimiento señalado por el destino\nHasta el grandiosamente triste final de su vida.\nHasta que el dios, abandonada la parte terrestre,\nSeparado del hombre entre las llamas,\nRespiró el aliento más puro del éter celestial.",
+      "separator": "\n"
+    },
+    {
+      "id": "C03-048",
+      "chapter": 2,
+      "start": 3189.88,
+      "end": 3214.76,
+      "text": "Gozoso de su nueva e insólita ligereza,\nSe elevó hacia el resplandor del cielo,\nPerdida en la muerte la oscura y pesada carga de la tierra.\nEl alto Olimpo ofrece armoniosa bienvenida\nEn el salón donde reina su adorado padre;\nLa radiante diosa de la juventud, ruborizada al encontrarlo,\nEntrega el néctar a su señor».\nS. G. Bulfinch",
+      "separator": "\n"
+    },
+    {
+      "id": "C03-049",
+      "chapter": 2,
+      "start": 3215.31,
+      "end": 3217.71,
+      "text": "HEBE Y GANIMEDES",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-050",
+      "chapter": 2,
+      "start": 3218.26,
+      "end": 3239.22,
+      "text": "Hebe, hija de Hera y diosa de la juventud, era copera de los dioses. Según el relato habitual, renunció a su cargo al convertirse en esposa de Hércules. Pero existe otra versión que nuestro compatriota Crawford, el escultor, adoptó en su grupo de Hebe y Ganimedes, hoy en la galería del Ateneo de Boston.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-051",
+      "chapter": 2,
+      "start": 3239.4,
+      "end": 3259.72,
+      "text": "Según esta, Hebe fue destituida a consecuencia de una caída que sufrió un día mientras atendía a los dioses. Su sucesor fue Ganimedes, un muchacho troyano al que Zeus, bajo la forma de un águila, arrebató de entre sus compañeros de juegos en el monte Ida, llevó al cielo e instaló en el puesto vacante.",
+      "separator": " "
+    },
+    {
+      "id": "C03-052",
+      "chapter": 2,
+      "start": 3260.27,
+      "end": 3269.55,
+      "text": "Tennyson, en su Palacio del arte, describe, entre las decoraciones de las paredes, un cuadro que representa esta leyenda:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-053",
+      "chapter": 2,
+      "start": 3270.1,
+      "end": 3283.38,
+      "text": "«Allí también, sonrojado Ganimedes, su muslo rosado\nMedio hundido en el plumón del águila,\nSolitario como una estrella fugaz cruzaba el cielo\nSobre la ciudad de columnas».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-054",
+      "chapter": 2,
+      "start": 3283.93,
+      "end": 3288.89,
+      "text": "Y en el Prometeo de Shelley, Zeus llama así a su copero:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-055",
+      "chapter": 2,
+      "start": 3289.44,
+      "end": 3292.8,
+      "text": "«Sirve el vino del cielo, Ganimedes",
+      "separator": "\n\n"
+    },
+    {
+      "id": "C03-055b",
+      "chapter": 2,
+      "start": 3292.98,
+      "end": 3293.86,
+      "text": "del Ida,",
+      "separator": " "
+    },
+    {
+      "id": "C03-055c",
+      "chapter": 2,
+      "start": 3294.04,
+      "end": 3297.72,
+      "text": "Y que llene como fuego las copas de esmerada labor»",
+      "separator": "\n"
+    },
+    {
+      "id": "C03-056",
+      "chapter": 2,
+      "start": 3298.27,
+      "end": 3308.83,
+      "text": "La hermosa leyenda de La elección de Hércules puede encontrarse en el Tatler, número 97. La misma historia se cuenta en las Memorables de Jenofonte.",
+      "separator": ".\n\n"
+    }
+  ]
+}

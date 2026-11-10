@@ -1257,5 +1257,50 @@
       "r2Key": "Meditaciones-Marco-Aurelio-web-v1.m4b",
       "r2ETag": "\"97f7f83d5b47eab3f448b9ee6f9d427b\""
     }
+  },
+  {
+    "id": "mitos-y-heroes-de-grecia",
+    "title": "Mitos y héroes de Grecia",
+    "author": "Thomas Bulfinch",
+    "originalTitle": "The Age of Fable · Selección de relatos",
+    "language": "Español",
+    "categories": [
+      "Mitología",
+      "Clásicos",
+      "Narrativa"
+    ],
+    "description": "Dioses, héroes y destinos extraordinarios en una selección de relatos de Thomas Bulfinch traducida por TEC al español. Un solo audiolibro con voces para los personajes y lectura sincronizada. Ya puedes escuchar los capítulos 1–3 de ocho: Zeus y el nacimiento del Olimpo, Hades y Perséfone, y Hércules. Los cinco capítulos restantes se añadirán a este mismo libro.",
+    "edition": "Entrega 1 · Capítulos 1–3 de 8 · Traducción propia al español · TEC",
+    "narrator": "Narrador y reparto fijo de voces de TEC",
+    "credits": "Thomas Bulfinch, The Age of Fable. Selección de ocho relatos y traducción propia al español de TEC; no comprende todo el volumen original. Esta entrega contiene los tres primeros capítulos. Producción sonora con voces sintéticas de TEC, una voz fija por personaje. Sin música ni efectos.",
+    "duration": 3309.38,
+    "cover": "/coach/assets/audiobooks/mitos-y-heroes-de-grecia-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/mitos-y-heroes-de-grecia-v1.png",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Zeus y el nacimiento del Olimpo",
+        "start": 0,
+        "duration": 1424.02
+      },
+      {
+        "title": "Hades y Perséfone",
+        "start": 1424.02,
+        "duration": 920.36
+      },
+      {
+        "title": "Hércules: trabajos, hazañas y apoteosis",
+        "start": 2344.38,
+        "duration": 965.0
+      }
+    ],
+    "audio": {
+      "filename": "Mitos-y-heroes-de-Grecia-capitulos-01-03-v1.m4b",
+      "r2Key": "Mitos-y-heroes-de-Grecia-capitulos-01-03-v1.m4b",
+      "bytes": 43319690,
+      "sha256": "12d234f817a2a98d1554fd5d4d60e54e892c902be29533c4821c753fd24dca4f",
+      "contentType": "audio/mp4",
+      "r2ETag": "\"d9fac94fc7ac74f41b285ab9b473f6b3\""
+    }
   }
 ]
