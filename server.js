@@ -12,6 +12,7 @@ import { createClient } from "redis";
 import Stripe from "stripe";
 import { createCoachBillingSync } from "./src/coach-billing-sync.js";
 import { registerMetalworksCrm } from "./src/metalworks-crm.js";
+import { registerCoachProductModels } from "./src/coach-product-models.js";
 import { registerCoachPropertyRoutes } from "./src/coach-properties.js";
 import { registerStreetRoutes } from './src/coach-street-route.js';
 import { registerCoachPropertyRoute } from "./src/coach-property-route.js";
@@ -32183,6 +32184,8 @@ app.get("/api/coach/checkout-session", async (req, res) => {
   }
 });
 
+registerCoachProductModels(app, { requireActive: requireCoachActivo });
+
 app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
 
@@ -32199,8 +32202,8 @@ app.get(["/coach/app", "/coach/app/"], async (req, res) => {
     return res.redirect("/coach/telemarketing/");
   }
 
-  // Only the authenticated Coach may request foreground GPS for its route.
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(self), geolocation=(self), payment=()");
+  // Spatial tracking starts only from the product viewer after a user gesture.
+  res.setHeader("Permissions-Policy", "camera=(self), xr-spatial-tracking=(self), microphone=(self), geolocation=(self), payment=()");
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
 });
 
@@ -32215,6 +32218,7 @@ app.get(["/coach/telemarketing", "/coach/telemarketing/"], async (req, res) => {
     return res.redirect("/coach/planes/");
   }
 
+  res.setHeader("Permissions-Policy", "camera=(self), xr-spatial-tracking=(self), microphone=(self), geolocation=(self), payment=()");
   res.sendFile(path.join(PRIVATE_DIR, "coach-app.html"));
 });
 

@@ -1,0 +1,20 @@
+.order-calc-media-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.order-calc-media-actions>div{min-width:0}
+.tec-product-model-button{min-height:46px;cursor:pointer}
+.tec-model-dialog{box-sizing:border-box;width:min(1080px,calc(100vw - 32px));height:min(820px,calc(100dvh - 32px));max-width:none;max-height:none;margin:auto;padding:0;border:1px solid #d5e1eb;border-radius:20px;background:#f3f7fa;color:#102f52;overflow:hidden}
+.tec-model-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.tec-model-dialog::backdrop{background:#071c39d9}
+.tec-model-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid #d5e1eb;background:#fff}
+.tec-model-header h2{font-size:clamp(18px,2.5vw,26px);line-height:1.25;margin:0;color:#102f52;overflow-wrap:anywhere}
+.tec-model-eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#a71932;margin:0 0 5px}
+.tec-model-close{flex:none;min-height:48px;border:0;border-radius:11px;padding:10px 14px;color:#fff;background:#ab1833;font:650 14px/1.3 system-ui,sans-serif;cursor:pointer}
+.tec-model-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px 22px 24px}
+.tec-model-stage{position:relative;width:100%;height:min(57dvh,560px);min-height:230px;background:radial-gradient(ellipse at 50% 35%,#fff,#e7edf2);border:1px solid #d5e1eb;border-radius:14px;overflow:hidden}
+.tec-model-stage model-viewer{display:block;width:100%;height:100%;--poster-color:transparent;--progress-bar-color:#b51d37;--progress-bar-height:4px}
+.tec-model-ar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);min-height:48px;max-width:90%;padding:12px 20px;white-space:nowrap;background:#102f52;color:white;border:0;border-radius:30px;box-shadow:0 4px 16px #102f5233;font:650 15px system-ui,sans-serif;cursor:pointer}
+.tec-model-status{min-height:24px;font-size:14px;line-height:1.55;color:#3f5c73;margin:14px 0 10px}
+.tec-model-note{font-size:12px;line-height:1.5;color:#607386;margin:15px 0 0}
+.tec-model-tools{display:flex;flex-wrap:wrap;gap:10px}
+.tec-model-dialog [hidden],.order-calc-media-actions>[hidden]{display:none!important}
+@media(max-width:660px){.tec-model-dialog{inset:0;width:100%;height:100%;height:100dvh;margin:0;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}.tec-model-header{padding:12px 14px;gap:10px}.tec-model-close{max-width:130px;padding:10px 12px}.tec-model-body{padding:14px 14px 25px}.tec-model-stage{height:54dvh}.order-calc-media-actions{gap:8px}.order-calc-media-actions .secondary-button{white-space:normal}}
+@media(max-height:480px){.tec-model-stage{height:65dvh;min-height:190px}.tec-model-header{padding-block:8px}.tec-model-status{font-size:13px}}

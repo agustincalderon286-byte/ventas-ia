@@ -77,7 +77,7 @@ test('main web route loads lazily, shares visit callbacks and never forces PWA t
 });
 
 // Exercise the actual authenticated page handler: GPS is enabled only after access checks.
-test('Coach document permits its own GPS without broadening other pages',async()=>{
+test('authenticated Coach permits its own GPS and product AR without broadening guest pages',async()=>{
  const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
  const handler=source.slice(source.indexOf('app.get(["/coach/app", "/coach/app/"],'),source.indexOf('app.get(["/coach/telemarketing",'));
  const code=handler.slice(handler.indexOf('async (req, res) => {')+'async (req, res) => {'.length,handler.lastIndexOf('});'));
@@ -85,5 +85,5 @@ test('Coach document permits its own GPS without broadening other pages',async()
  const run=new AsyncFunction('req','res','obtenerCoachAuth','coachTieneAccesoOperativo','construirCoachUserView','path','PRIVATE_DIR',code);
  for(const allowed of [false,true]){const headers={},response={setHeader(k,v){headers[k]=v;},redirect(){},sendFile(){}};
  await run({},response,async()=>({user:allowed?{id:'fixture'}:null}),async()=>true,async()=>({portalMode:'coach'}),{join:()=>'/private/coach-app.html'},'/private');
- assert.equal(headers['Permissions-Policy'],allowed?'camera=(), microphone=(self), geolocation=(self), payment=()':undefined);}
+ assert.equal(headers['Permissions-Policy'],allowed?'camera=(self), xr-spatial-tracking=(self), microphone=(self), geolocation=(self), payment=()':undefined);}
 });

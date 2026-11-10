@@ -1,0 +1,273 @@
+[
+  {
+    "id": "olla-1-5-cuartos",
+    "title": "Olla NOVEL 1½ cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9550"
+    ],
+    "names": [
+      "OLLA DE 1 1/2 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-1-5-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "c7a2afb53ea36af3a5089ebc90bb1bf27f00f822b96927a76ba51344e20ef521"
+  },
+  {
+    "id": "olla-2-cuartos",
+    "title": "Olla NOVEL 2 cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9555"
+    ],
+    "names": [
+      "OLLA DE 2 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-2-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "02c97e38b59490e64304654e365a63d1699bfda91a17150c26462de0a692a518"
+  },
+  {
+    "id": "olla-3-cuartos",
+    "title": "Olla NOVEL 3 cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9560"
+    ],
+    "names": [
+      "OLLA DE 3 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-3-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "c12461d4e8255c5848d01deced69c55fb16bac16fa14863afbadb9323bc71e1d"
+  },
+  {
+    "id": "olla-4-cuartos",
+    "title": "Olla NOVEL 4 cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9565"
+    ],
+    "names": [
+      "OLLA DE 4 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-4-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "bfcffef1eb4038fad9417e83427f338321ac363b07c6965f306e1edd081d9680"
+  },
+  {
+    "id": "olla-6-cuartos",
+    "title": "Olla NOVEL 6 cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9570"
+    ],
+    "names": [
+      "OLLA DE 6 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-6-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "aa9c8ac0cb4b9b0f805eea8d5ca667e59d2abe888d278e737ff00e722ab029af"
+  },
+  {
+    "id": "olla-8-cuartos",
+    "title": "Olla NOVEL 8 cuartos",
+    "family": "NOVEL",
+    "codes": [
+      "CO9575"
+    ],
+    "names": [
+      "OLLA DE 8 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-8-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "c0f522d3332bd366128f16d2c19bf905d5dfa598b26a1473c8c8b9c7e009aec4"
+  },
+  {
+    "id": "olla-12-cuartos",
+    "title": "Olla grande 12 cuartos",
+    "family": "Ollas grandes",
+    "codes": [
+      "CO9660"
+    ],
+    "names": [
+      "OLLA DE 12 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-12-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "cedda799864affea614b59c69d0bedbe73437c66c40c7abaadf23e32fbf73069"
+  },
+  {
+    "id": "olla-20-cuartos",
+    "title": "Olla grande 20 cuartos",
+    "family": "Ollas grandes",
+    "codes": [
+      "CO9675"
+    ],
+    "names": [
+      "OLLA DE 20 CUARTOS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-20-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "a8cc38b81f692d6389048dec6093dfe5f0b3c0eabbd5cb1c2fadd13d8bf676b2"
+  },
+  {
+    "id": "olla-60-cuartos",
+    "title": "Olla grande 60 cuartos",
+    "family": "Ollas grandes",
+    "codes": [
+      "CO9144"
+    ],
+    "names": [
+      "OLLA DE 60 CUARTOS Y PARRILLA"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-60-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "note": "Esta vista representa la olla; la parrilla no está incluida en el modelo.",
+    "sha256": "7c3873d9ceede94e1db5be2eccf11c1bc2171fbccc5a942e546dbcdcc67a3b14"
+  },
+  {
+    "id": "olla-er-2-cuartos",
+    "title": "Easy Release 2 cuartos",
+    "family": "Easy Release",
+    "codes": [
+      "CO9777"
+    ],
+    "names": [
+      "OLLA DE 2 CUARTOS ER"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-2-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "5e17f9f8256f046626b0ebb4c43546b6fd2f56ae2b62364be89844bd5466729c"
+  },
+  {
+    "id": "olla-er-3-cuartos",
+    "title": "Easy Release 3 cuartos",
+    "family": "Easy Release",
+    "codes": [
+      "CO9778"
+    ],
+    "names": [
+      "OLLA DE 3 CUARTOS ER"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "eb3c32a4823cdf0dc54d88234deb3e68f5670fb03df02e4a4718d7c1cabc6e02"
+  },
+  {
+    "id": "olla-er-3-5-cuartos",
+    "title": "Easy Release 3½ cuartos",
+    "family": "Easy Release",
+    "codes": [
+      "CO9779"
+    ],
+    "names": [
+      "OLLA DE 3.5 CUARTOS ER"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-er-3-5-cuartos.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "1dbc45894e04a6f1c753cf2a63265f70c34914a59dc24cabbb30651e83eaf403"
+  },
+  {
+    "id": "olla-presion-6-litros",
+    "title": "Olla de presión 6 litros",
+    "family": "Presion",
+    "codes": [
+      "CO1253"
+    ],
+    "names": [
+      "OLLA DE PRESION DE 6 LITROS"
+    ],
+    "file": "private/coach-product-models/presion-6-litros-v02.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-6-litros.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "f4318f6453eb47d5b90f44071340d29926beca079511f427f2859644fc8ced65"
+  },
+  {
+    "id": "olla-presion-10-litros",
+    "title": "Olla de presión 10 litros",
+    "family": "Presion",
+    "codes": [
+      "CO1258"
+    ],
+    "names": [
+      "OLLA DE PRESION DE 10 LITROS"
+    ],
+    "file": "private/coach-product-models/presion-10-litros-v02.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-presion-10-litros.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "bb2ae327119042f60d2d1f052b059212dc3a87ba47000c2ab1e4b1e327ba70cd"
+  },
+  {
+    "id": "olla-paellera-14-pulgadas",
+    "title": "Paellera NOVEL 14 pulgadas",
+    "family": "Paelleras",
+    "codes": [
+      "CO9598"
+    ],
+    "names": [
+      "PAELLERA DE 14 PULGADAS"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-paellera-14-pulgadas.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "34300744ad5686fd4171f3db79a811b6e4581dc9049298a2657a5dc20b3ce563"
+  },
+  {
+    "id": "olla-pavera-ovalada",
+    "title": "Royal Prestige Pavera ovalada",
+    "family": "Especiales",
+    "codes": [
+      "CO6589"
+    ],
+    "names": [
+      "PAVERA OVALADA"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/ollas-v01/olla-pavera-ovalada.webp",
+    "orbit": "25deg 65deg auto",
+    "sha256": "aff4083baeb91d5fffaf13dc0c3aca7e93fd45f00aa73e82536b00a655346d19"
+  },
+  {
+    "id": "power-blender-max",
+    "title": "Power Blender Max",
+    "family": "Royal Prestige",
+    "codes": [
+      "ES0082"
+    ],
+    "names": [
+      "POWER BLENDER MAX"
+    ],
+    "file": "private/coach-product-models/power-blender-max-v08.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/power-blender-max-v06.png",
+    "orbit": "15deg 75deg auto",
+    "sha256": "0dfa25900e0cec85ae0e8b4969a2c11fedd9d8c6967cf88e710d39b334f2ea6f"
+  },
+  {
+    "id": "chocolatera",
+    "title": "Chocolatera Royal Prestige",
+    "family": "Royal Prestige",
+    "codes": [
+      "CO0101"
+    ],
+    "names": [
+      "CHOCOLATERA"
+    ],
+    "file": "public/prototipo-agustin20-chef-ar/assets/chocolatera-v03.glb",
+    "poster": "public/prototipo-agustin20-chef-ar/assets/chocolatera-v03.png",
+    "orbit": "-35deg 65deg auto",
+    "sha256": "ea6cd52bfd51c2c6831ca8cf23b2ddb8ee0011ec98b092bd13b4592ee4774372"
+  }
+]

@@ -2116,7 +2116,10 @@ function createOrderCalcProductCard(index) {
         </figcaption>
       </figure>
 
-      <div data-order-calc-videos hidden></div>
+      <div class="order-calc-media-actions">
+        <div data-order-calc-videos hidden></div>
+        <div data-order-calc-model hidden></div>
+      </div>
       <div class="order-calc-grid">
         <label class="order-calc-field order-calc-field-name">
           <span>Nombre del producto</span>
@@ -2372,6 +2375,7 @@ function initOrderCalculator() {
   const clearCatalogVisual = card => {
     const { visualNode, visualImage } = getProductNodes(card);
     globalThis.TecProductVideos?.mount(card.querySelector("[data-order-calc-videos]"), null);
+    globalThis.TecProductModels?.mount(card.querySelector("[data-order-calc-model]"), null);
 
     if (visualImage) {
       visualImage.removeAttribute("src");
@@ -2456,6 +2460,7 @@ function initOrderCalculator() {
     card.dataset.orderCalcCatalogName = String(match.nombre_producto || "").trim();
     renderCatalogVisual(card, match);
     globalThis.TecProductVideos?.mount(card.querySelector("[data-order-calc-videos]"), match, { origin: "la calculadora" });
+    globalThis.TecProductModels?.mount(card.querySelector("[data-order-calc-model]"), match);
 
     setMatchMessage(
       card,

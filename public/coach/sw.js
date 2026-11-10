@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261107-portadas1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261107-portadas1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261110-product3d1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261110-product3d1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,6 +7,10 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
+  "/coach/app.js?v=20261110-product3d1",
+  "/coach/product-models-catalog.js?v=20261110-product3d1",
+  "/coach/product-models.js?v=20261110-product3d1",
+  "/coach/product-models.css?v=20261110-product3d1",
   "/coach/property-map.css?v=20261104-map-design1",
   "/coach/property-map.js?v=20261104-map-design1",
   "/coach/styles.css?v=20261104-chat-scroll2",
@@ -229,6 +233,9 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) {
     return;
   }
+
+  // Models remain authenticated network-only files; never pre-cache GLBs.
+  if (url.pathname.startsWith("/api/coach/product-models/")) return;
 
   // Audio, reviews and listening position always use the authenticated network.
   if (url.pathname.startsWith("/api/coach/audiobooks")) return;
