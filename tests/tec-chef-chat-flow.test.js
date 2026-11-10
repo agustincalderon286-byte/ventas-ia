@@ -24,7 +24,7 @@ async function fixture({failFirst=false}={}){
   if(url==='/api/chef/admin')data={user:{id:'synthetic-admin',name:'Prueba'},leadEmailReady:true,manifest:{recipes:262,products:64}};
   else if(url.startsWith('/api/chef/admin/conversation'))data={messages:[]};
   else if(url==='/api/chef/admin/leads'&&!body)data={leads:[]};
-  else if(url==='/api/chef/admin/leads'){attempts++;ok=!(failFirst&&attempts===1);data=ok?{ok:true,emailStatus:'sent'}:failFirst==='mfa'?{error:'Verifica tu llave para continuar.',mfaRequired:true,securityUrl:'/coach/seguridad/'}:{error:'Error de prueba; conserva tus datos.'};}
+  else if(url==='/api/chef/admin/leads'){attempts++;ok=!(failFirst&&attempts===1);data=ok?{ok:true,emailStatus:'sent'}:failFirst==='session'?{error:'Inicia sesión en TEC para continuar.'}:{error:'Error de prueba; conserva tus datos.'};}
   else if(url==='/api/chef/admin/chat')data={respuesta:'Pregunta de prueba',appointmentSuggested:true};
   else throw Error('Unexpected URL '+url);
   return {ok,json:async()=>data};
@@ -57,12 +57,12 @@ test('an uncertain request retains the review and idempotency key for a retry; c
  assert.equal(f.get('#appointment-review').hidden,true);assert.equal(f.requests.filter(r=>r.body).length,2);
  await f.answer('Dame una receta con arroz');const last=f.requests.filter(r=>r.body).at(-1);assert.equal(last.url,'/api/chef/admin/chat');assert.equal(last.body.pregunta,'Dame una receta con arroz');assert.ok(!JSON.stringify(last.body).includes('Otro contacto'));
 });
-test('passkey expiry while reviewing a contact exposes verification without navigating away or losing the draft',async()=>{
- const f=await fixture({failFirst:'mfa'});f.get('#chef-security-action').hidden=true;
+test('session expiry while reviewing a contact preserves the draft and never asks for a passkey',async()=>{
+ const f=await fixture({failFirst:'session'});
  await f.complete();f.get('#appointment-consent').checked=true;await f.get('#appointment-submit').emit('click');
- assert.equal(f.get('#chef-security-action').hidden,false);assert.equal(f.get('#appointment-review').hidden,false);assert.match(f.get('#appointment-status').textContent,/Verifica tu llave/);
+ assert.equal(f.get('#appointment-review').hidden,false);assert.match(f.get('#appointment-status').textContent,/Inicia sesión/);
  const original=f.requests.find(r=>r.url==='/api/chef/admin/leads'&&r.body);
  await f.get('#appointment-submit').emit('click');const retries=f.requests.filter(r=>r.url==='/api/chef/admin/leads'&&r.body);
  assert.equal(retries.length,2);assert.equal(retries[1].body.requestId,original.body.requestId);assert.equal(retries[1].body.fullName,'Persona sintética');
- const html=readFileSync(new URL('../private/tec-chef.html',import.meta.url),'utf8');assert.match(html,/id="chef-security-action"[^>]*href="\/coach\/seguridad\/\?volver=chef"[^>]*target="_blank"/);
+ const html=readFileSync(new URL('../private/tec-chef.html',import.meta.url),'utf8');assert.doesNotMatch(html,/coach\/seguridad|Verificar llave/);
 });

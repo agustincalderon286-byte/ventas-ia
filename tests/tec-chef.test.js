@@ -7,12 +7,11 @@ import {registerTecChef,completeChef,normalizeChefLead,CHEF_LEAD_EMAIL} from '..
 import {chefManifest,searchChefKnowledge,buildChefContext,chefDirectReply,CHEF_PROMPT} from '../src/knowledge/chef-knowledge.js';
 import {chefMemoryModel}from './helpers/chef-memory-model.js';
 const root=new URL('../',import.meta.url).pathname;
-async function fixture(fn,{completion=async()=> 'Respuesta de prueba.',sendLeadMail=null,needsVerification=async()=>false}={}){
+async function fixture(fn,{completion=async()=> 'Respuesta de prueba.',sendLeadMail=null}={}){
  const app=express();app.use(express.json());const conversations=chefMemoryModel(),leads=chefMemoryModel(),notifications=chefMemoryModel();let syncs=0;
- const getAuth=async req=>({user:req.get('x-role')==='admin'?{_id:req.get('x-user')||'admin-a',name:'Administrador',email:'admin@example.invalid'}:req.get('x-role')==='member'?{_id:'member',name:'Miembro'}:null});
+ const getAuth=async req=>({session:{adminVerifiedAt:null},user:req.get('x-role')==='admin'?{_id:req.get('x-user')||'admin-a',name:'Administrador',email:'admin@example.invalid'}:req.get('x-role')==='member'?{_id:'member',name:'Miembro'}:null});
  const isAdmin=user=>user?._id.startsWith('admin-');
- const requireAdmin=async(req,res)=>{const auth=await getAuth(req);if(!auth.user){res.status(401).json({error:'Sesión requerida'});return null;}if(!isAdmin(auth.user)){res.status(403).json({error:'Solo administradores'});return null;}if(await needsVerification(auth)){res.status(403).json({error:'Verifica tu llave de acceso para continuar.',mfaRequired:true,securityUrl:'/coach/seguridad/'});return null;}return auth;};
- registerTecChef(app,{requireAdmin,getAuth,isAdmin,needsVerification,conversations,leads,notifications,sendLeadMail,completion,privateDir:root+'private',publicDir:root+'public',syncCrm:async()=>{syncs++;}});
+ registerTecChef(app,{getAuth,isAdmin,conversations,leads,notifications,sendLeadMail,completion,privateDir:root+'private',publicDir:root+'public',syncCrm:async()=>{syncs++;}});
  app.post('/chat',(req,res)=>res.json({coachRoute:true}));
  app.use(express.static(root+'public'));
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
@@ -47,23 +46,21 @@ test('chat stores only authenticated account history and retries do not duplicat
  assert.equal((await request('/api/chef/admin/chat',{body,headers:{Origin:'https://evil.invalid'}})).status,403);
  },{completion:async messages=>{calls++;lastMessages=messages;return 'Una receta de prueba.';}});
 });
-test('Chef redirects an administrator with expired passkey assurance before HTML, then serves every private asset after verification',async()=>{
- let verificationRequired=true;
- await fixture(async({request,leads,conversations})=>{
-  let page=await request('/coach/chef/');assert.equal(page.status,302);assert.equal(page.headers.get('location'),'/coach/seguridad/?volver=chef');assert.ok(!page.data.includes('tec-chef-robot'));
-  for(const path of ['/chef/tec-chef.css','/chef/tec-chef.js','/chef/chef-appointment-flow.js','/chef/assets/tec-chef-robot-v1.webp','/api/chef/admin']){
-   const response=await request(path);assert.equal(response.status,403,path);assert.equal(response.data.mfaRequired,true);
-  }
-  const blocked=await request('/api/chef/admin/leads',{body:{requestId:randomUUID(),fullName:'Not saved',email:'test@example.invalid',consentGiven:true}});assert.equal(blocked.status,403);assert.equal(leads.docs.length,0);assert.equal(conversations.docs.length,0);
-  assert.equal((await request('/coach/chef/',{role:'member'})).status,403);
-  verificationRequired=false;
-  page=await request('/coach/chef/');assert.equal(page.status,200);assert.match(page.data,/alt="TEC Total Elite Coaching" width="170" height="62"/);assert.match(page.data,/id="access-panel"/);
+test('an administrator with no verified passkey can use Chef, while public visitors and ordinary members stay blocked',async()=>{
+ await fixture(async({request,leads})=>{
+  const page=await request('/coach/chef/');assert.equal(page.status,200);assert.match(page.data,/alt="TEC Total Elite Coaching" width="170" height="62"/);assert.match(page.data,/id="access-panel"/);assert.doesNotMatch(page.data,/coach\/seguridad|Verificar llave/);
   const assets=[...page.data.matchAll(/(?:src|href)="(\/chef\/[^"?]+)(?:\?[^\"]*)?"/g)].map(m=>m[1]);assert.ok(assets.length>=5);
   for(const path of new Set(assets)){const asset=await request(path);assert.equal(asset.status,200,path);assert.match(asset.headers.get('content-type'),/javascript|css|image\/webp/,path);assert.match(asset.headers.get('cache-control'),/no-store/,path);}
   assert.equal((await request('/api/chef/admin')).status,200);
-  verificationRequired=true;assert.equal((await request('/coach/chef/')).headers.get('location'),'/coach/seguridad/?volver=chef');
- },{needsVerification:async()=>verificationRequired});
- const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');assert.match(server,/needsVerification: auth => coachAdminPasskeys\.needsVerification\(auth\)/);
+  const chat=await request('/api/chef/admin/chat',{body:{sessionId:randomUUID(),requestId:randomUUID(),pregunta:'Quiero una cita'}});assert.equal(chat.status,200);
+  const lead=await request('/api/chef/admin/leads',{body:{requestId:randomUUID(),fullName:'Demo sin passkey',email:'test@example.invalid',consentGiven:true}});assert.equal(lead.status,200);assert.equal(leads.docs.length,1);
+  for(const role of ['', 'member']){
+   const status=role?403:401;assert.equal((await request('/api/chef/admin',{role})).status,status);
+   for(const path of new Set(assets))assert.equal((await request(path,{role})).status,status,path);
+  }
+ });
+ const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');const chefRegistration=server.slice(server.indexOf('registerTecChef(app,'),server.indexOf('app.use("/api/public/metalworks"'));
+ assert.doesNotMatch(chefRegistration,/requireControlTowerAccess|coachAdminPasskeys/);assert.match(chefRegistration,/isAdmin: usuarioPuedeVerTorreControl/);
 });
 test('lead capture is explicit, idempotent, account-scoped and never takes ownership or consent from AI',async()=>fixture(async context=>{const{request,leads}=context;const body={requestId:randomUUID(),fullName:'Contacto de prueba',email:'chef-test@example.invalid',phone:'',interest:'MultiPan',notes:'Prueba local',consentGiven:true,ownerUserId:'victim'};
  const a=await request('/api/chef/admin/leads',{body});assert.equal(a.status,200);assert.equal(a.data.crmSynced,true);const b=await request('/api/chef/admin/leads',{body});assert.equal(b.data.id,a.data.id);assert.equal(leads.docs.length,1);assert.equal(leads.docs[0].ownerUserId,'admin-a');assert.equal(leads.docs[0].source,'chef_personal');assert.equal(leads.docs[0].sourceDetail,'TEC Chef · prueba privada');

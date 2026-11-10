@@ -4,7 +4,7 @@
  let userId='',sessionId='',busy=false,pendingChat=null,appointment=null,emailReady=false;
  const id=()=>crypto.randomUUID();
  const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
- async function api(url,body){const response=await fetch(url,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)});const data=await response.json().catch(()=>({}));if(!response.ok){if(data.mfaRequired===true)$('#chef-security-action').hidden=false;throw Error(data.error||'No pude completar la solicitud. Inténtalo de nuevo.');}return data;}
+ async function api(url,body){const response=await fetch(url,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'No pude completar la solicitud. Inténtalo de nuevo.');return data;}
  function status(target,value,error=false){target.textContent=value;target.dataset.error=String(error);}
  function scrollChat(){const area=$('.phone-conversation');area.scrollTop=area.scrollHeight;}
  function safeSource(url){try{const u=new URL(url);return u.protocol==='https:'&&['www.royalprestige.com','royalprestige.com','www.youtube.com','youtube.com'].includes(u.hostname)?u.href:'';}catch{return '';}}
