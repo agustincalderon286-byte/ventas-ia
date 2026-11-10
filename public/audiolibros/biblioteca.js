@@ -248,6 +248,8 @@
     stopAt = 0;
     $('#timer').value = '0';
     $('#timer-status').textContent = message;
+    $('#timer-badge').hidden = true;
+    $('#timer-shortcut').removeAttribute('data-active');
   }
 
   function checkTimer() {
@@ -273,7 +275,7 @@
     panel.hidden = !book.transcriptUrl;
     $('#reader-shortcut').hidden = !book.transcriptUrl;
     if (!book.transcriptUrl) return;
-    panel.open = true;
+    panel.open = false;
     $('#reader-status').textContent = 'Abriendo el texto…';
     try {
       const text = await api(book.transcriptUrl.slice(apiRoot.length));
@@ -347,7 +349,7 @@
     $('#book-author').textContent = book.author;
     $('#book-cover').src = book.cover;
     expandPlayer();
-    player.scrollTop = 0;
+    $('.player-body').scrollTop = 0;
     try {
       const data = full
         ? await api('/libros/' + encodeURIComponent(book.id))
@@ -368,7 +370,11 @@
       $('#bookmark-list').hidden = !full;
       $('#chapters').replaceChildren(...(selected.chapters || []).map(chapter => {
         const row = element('li');
-        row.append(button(chapter.title + ' · ' + time(chapter.start), () => seek(chapter.start, true)));
+        row.append(button(chapter.title + ' · ' + time(chapter.start), () => {
+          seek(chapter.start, true);
+          closeToolPanels();
+          $('#chapter-shortcut').focus({ preventScroll: true });
+        }));
         return row;
       }));
       $('#current-chapter').textContent = full ? '' : 'Duración de la muestra · ' + time(book.previewDuration);
@@ -405,6 +411,7 @@
     const scrollable = text.scrollHeight - text.clientHeight;
     const progress = scrollable > 0 ? text.scrollTop / scrollable : 0;
     player.classList.toggle('reading-fullscreen', enabled);
+    if (!enabled) $('#reader-panel').open = false;
     $('#reader-view-heading').hidden = !enabled;
     $('#reader-fullscreen').textContent = enabled ? 'Reducir lectura' : 'Pantalla completa';
     $('#reader-fullscreen').setAttribute('aria-pressed', String(enabled));
@@ -414,7 +421,7 @@
       reader.resize(0);
     }
     text.scrollTop = progress * Math.max(0, text.scrollHeight - text.clientHeight);
-    player.scrollTop = 0;
+    $('.player-body').scrollTop = 0;
     reader.update(true);
   }
 
@@ -441,6 +448,7 @@
     $('#reader-panel').hidden = true;
     $('#reader-shortcut').hidden = true;
     for (const panel of player.querySelectorAll('details')) panel.open = false;
+    closeToolPanels();
     resetTimer();
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
   }
@@ -466,16 +474,37 @@
   for (const event of ['blur', 'pointercancel']) {
     seekBar.addEventListener(event, () => { scrubbing = false; updatePlayback(); });
   }
-  $('#chapter-shortcut').addEventListener('click', () => {
-    const panel = $('#chapter-list');
-    panel.open = true;
-    panel.querySelector('summary').focus();
+  function closeToolPanels() {
+    for (const id of ['timer-settings', 'playback-settings']) $('#' + id).hidden = true;
+    $('#chapter-list').open = false;
+    for (const id of ['timer-shortcut', 'settings-shortcut', 'chapter-shortcut']) $('#' + id).setAttribute('aria-expanded', 'false');
+  }
+  function toggleTool(id, control) {
+    const panel = $('#' + id);
+    const expanded = panel.tagName === 'DETAILS' ? panel.open : !panel.hidden;
+    closeToolPanels();
+    if (expanded) return;
+    if (panel.tagName === 'DETAILS') panel.open = true;
+    else panel.hidden = false;
+    control.setAttribute('aria-expanded', 'true');
+    panel.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  }
+  for (const [control, panel] of [['chapter-shortcut', 'chapter-list'], ['timer-shortcut', 'timer-settings'], ['settings-shortcut', 'playback-settings']]) {
+    $('#' + control).addEventListener('click', event => toggleTool(panel, event.currentTarget));
+  }
+  $('#chapter-list').addEventListener('toggle', event => {
+    $('#chapter-shortcut').setAttribute('aria-expanded', String(event.currentTarget.open));
   });
+  for (const control of document.querySelectorAll('[data-tool-close]')) {
+    control.addEventListener('click', () => {
+      const id = control.closest('.player-option-panel').id;
+      closeToolPanels();
+      $(id === 'timer-settings' ? '#timer-shortcut' : '#settings-shortcut').focus({ preventScroll: true });
+    });
+  }
   $('#reader-shortcut').addEventListener('click', () => {
-    const panel = $('#reader-panel');
-    panel.open = true;
-    panel.querySelector('summary').focus();
-    panel.scrollIntoView({ block: 'start' });
+    closeToolPanels();
+    toggleReadingFullscreen();
   });
   $('#reader-panel').addEventListener('toggle', event => {
     $('#reader-shortcut').setAttribute('aria-expanded', String(event.currentTarget.open));
@@ -502,6 +531,13 @@
       timerHandle = setTimeout(checkTimer, Number(value) * 60_000);
       $('#timer-status').textContent = 'Pausa programada en ' + value + ' minutos.';
     }
+    if (value !== '0') {
+      $('#timer-badge').textContent = value === 'chapter' ? 'Capítulo' : value + ' min';
+      $('#timer-badge').hidden = false;
+      $('#timer-shortcut').dataset.active = 'true';
+    }
+    closeToolPanels();
+    $('#timer-shortcut').focus({ preventScroll: true });
   });
   $('#add-mark').addEventListener('click', () => {
     if (audio.readyState > 0) updateMarks([...new Set([...selected.marks, Math.floor(audio.currentTime)])]);

@@ -17,3 +17,11 @@ Los diez audiolibros publicados reutilizan íntegramente sus textos aprobados. L
 `NODE_ENV=test node --test` pasó 914 pruebas. Las pruebas de lectura verifican integridad respecto a los textos aprobados, portadas, 50 capítulos de Génesis, 40 de Éxodo, 300 aforismos, cinco actos de Hamlet, páginas públicas sin texto protegido, acceso, revocación, aislamiento del avance y rechazo de escrituras entre orígenes.
 
 Se comprobó en navegador la búsqueda sin acentos, ingreso y retorno al lector, cambio de capítulo, letra, fondos y recuperación del avance, con tamaños de teléfono, tableta y escritorio. Las fuentes originales del SSD y los audios no se modifican.
+
+## Pestañas y reproductor — 9 de noviembre
+
+Audiolibros y Libros para leer tienen pestañas con paneles independientes. Los enlaces `#catalogo` y `#libros` siguen funcionando, al igual que volver/avanzar y el teclado. El cambio se realiza sin recargar la página ni tocar el audio activo; el minirreproductor permanece disponible. Las fichas públicas y el sitemap se conservan.
+
+El reproductor agrupa Leer, Capítulos, Compartir, Dormir y Más en una fila de herramientas con iconos y nombres breves. Leer abre la vista completa; Capítulos cierra la lista al elegir uno; Dormir muestra el temporizador y un indicador de la pausa elegida. Más reúne velocidad y marcadores. El texto sincronizado se carga como antes, sin desplegarse automáticamente debajo del reproductor.
+
+Se verificaron manualmente reproducción, continuidad al cambiar de pestaña, compartir y volver, lectura completa y regreso, temporizador/cancelación, velocidad, selección de capítulo y guardado de marcadores. Se probaron escritorio, teléfono y orientación horizontal. Tres pruebas adicionales cubren navegación, enlaces directos/teclado/historial y pausa por tiempo o fin de capítulo, junto con las 914 pruebas existentes.
