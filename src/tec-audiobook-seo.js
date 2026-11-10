@@ -3,6 +3,7 @@ import { audiobookCatalog } from './tec-audiobooks.js';
 import { bookEditorial, audioCollections } from './knowledge/audiobook-editorial.js';
 import { audiobookGuides } from './knowledge/audiobook-guides.js';
 import { registerBadgeSharePages } from './tec-badge-sharing.js';
+import { readingCatalog, readingPath, readingSection, registerReadingPages } from './tec-reading-books.js';
 
 const publicRoot = new URL('../public/', import.meta.url);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -89,11 +90,12 @@ export function buildAudiobookSeo({
     .replace('<div class="books" id="books"></div>', `<div class="books" id="books">${catalog.map(card).join('')}</div>`)
     .replace('<!-- audio:collections -->', collectionCards)
     .replace('<!-- audio:guides -->', guideTeaser)
+    .replace('<!-- audio:reading-books -->', readingSection())
     .replace('Cargando audiolibros…', 'Elige un libro para conocerlo y escuchar su muestra.');
   const baseHead = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#102421">
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
     <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script type="module" src="/audiolibros/analytics.js?v=20261108-campaigns"></script>`;
-  const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Catálogo</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
+  const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Audiolibros</a><a href="/audiolibros/#libros">Libros</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
   const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/nuestra-historia/">Nuestra historia</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
   const storyUrl = absolute('/audiolibros/nuestra-historia/');
   const story = readFileSync(new URL('audiolibros/nuestra-historia/index.html', publicRoot), 'utf8')
@@ -169,19 +171,20 @@ export function buildAudiobookSeo({
       <section class="catalog"><div class="wrap"><div class="section-head"><h2>De esta guía a tu próxima escucha</h2><p>Conoce cada libro y prueba gratis el primer 10 %.</p></div><div class="books">${g.books.map(card).join('')}</div></div></section>
       <section class="wrap detail-section"><h2>Colecciones para continuar</h2>${collectionLinks(collections.filter(c => g.collectionIds.includes(c.id)))}<p class="fine">Los libros completos están incluidos en la membresía de Audiolibros TEC por $20 USD al mes, con renovación mensual.</p><a class="button outline" href="/audiolibros/#membresia">Ver membresía</a></section>${guideRecommendations(guides.filter(item => item.id !== g.id).slice(0, 2))}</main>${footer}</body></html>`];
   }));
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, storyUrl, ...catalog.map(book => absolute(bookPath(book))), ...collections.map(c => absolute(collectionPath(c))), absolute(guideHub), ...guides.map(g => absolute(guidePath(g)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[library, storyUrl, ...catalog.map(book => absolute(bookPath(book))), ...readingCatalog.map(book => absolute(readingPath(book))), ...collections.map(c => absolute(collectionPath(c))), absolute(guideHub), ...guides.map(g => absolute(guidePath(g)))].map(url => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`;
   const robots = `User-agent: *\nAllow: /audiolibros/\nAllow: /coach/assets/audiobooks/\nAllow: /coach/audiobook-reader.js\nDisallow: /api/\nDisallow: /coach/\nDisallow: /control\nDisallow: /admin\nDisallow: /chat\nDisallow: /ar/\n\nSitemap: ${absolute('/sitemap.xml')}\n`;
   const llms = `# Audiolibros TEC\n\n> Biblioteca de audiolibros en español de Total Elite Coaching.\n\n## Acceso\n\nEl primer 10 % de cada título se puede escuchar gratis. La membresía de Audiolibros TEC cuesta 20 USD al mes con renovación mensual y da acceso al catálogo completo. Es una membresía separada de la aplicación Coach. El texto de lectura completa y los audios completos requieren acceso autorizado. Las páginas públicas incluyen descripciones, duración, autor, capítulos y muestras. No se requiere registrarse para conocer los libros ni escuchar las muestras.\n\n## Páginas públicas\n\n- [Biblioteca y membresía](${library}): catálogo, lectura sincronizada, muestras y suscripción.\n${catalog.map(book => `- [${book.title}](${absolute(bookPath(book))}): ${book.author}. ${book.categories.join(', ')}. Audiolibro en español.`).join('\n')}\n\n## Descubrimiento\n\n- [Sitemap](${absolute('/sitemap.xml')})\n\nLos enlaces de fragmentos compartidos llevan al libro y al punto de escucha. El contenido privado de cuentas, pagos, grabaciones de ventas y Coach no forma parte de este catálogo público. Este archivo es una guía complementaria; las fichas públicas son la fuente de información de cada libro.\n`;
   const discovery = llms.replace('## Descubrimiento', `## Colecciones por tema\n\n${collections.map(c => `- [${c.title}](${absolute(collectionPath(c))}): ${c.description}`).join('\n')}\n\n## Descubrimiento`);
   const guideDiscovery = discovery.replace('## Descubrimiento', `## Guías y lecturas\n\n- [Todas las guías](${absolute(guideHub)})\n${guides.map(g => `- [${g.title}](${absolute(guidePath(g))}): ${g.description}`).join('\n')}\n\n## Descubrimiento`);
   const missionDiscovery = guideDiscovery.replace('## Acceso', `## Origen y misión\n\n- [Nuestra historia y misión](${storyUrl}): testimonio de Agustín Calderón Pizana, fundador. Los audiolibros cambiaron su vida y motivaron esta biblioteca para quienes buscan salir adelante.\n\nTEC busca acercar clásicos con ediciones en español cotidiano, audio, lectura sincronizada y dramatizaciones en algunas obras. Su aspiración es ampliar el acceso gratuito; actualmente son gratis las muestras del 10 % y la membresía de 20 USD al mes ayuda a sostener la producción y la infraestructura. El catálogo publicado es la referencia de disponibilidad: Meditaciones de Marco Aurelio ya está disponible con sus doce libros y lectura sincronizada; Don Quijote forma parte de la visión futura y todavía no está disponible.\n\n## Acceso`);
-  return { landing, story, pages, collectionPages, guideIndex, guidePages, sitemap, robots, llms: missionDiscovery };
+  return { landing, story, pages, collectionPages, guideIndex, guidePages, sitemap, robots, llms: missionDiscovery + `\n## Libros para leer\n\nLa misma membresía de 20 USD al mes incluye ${readingCatalog.length} libros completos en español para leer sin audio. Las portadas y fichas son públicas; los capítulos completos requieren una sesión y membresía activas.\n${readingCatalog.map(b => `- [${b.title}](${absolute(readingPath(b))}): ${b.author}. ${b.edition}`).join('\n')}\n` };
 }
 
 export function registerAudiobookSeo(app, options = {}) {
   // Public metadata only: generated once, without Stripe, MongoDB, R2 or AI requests.
   const rendered = buildAudiobookSeo(options);
   registerBadgeSharePages(app, options);
+  registerReadingPages(app, options);
   const send = (type, value) => (_req, res) => res.type(type).set('Cache-Control', 'public, max-age=300').send(value);
   app.get('/robots.txt', send('text/plain', rendered.robots));
   app.get('/sitemap.xml', send('application/xml', rendered.sitemap));

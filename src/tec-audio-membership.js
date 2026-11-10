@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
 import { createAudiobookShareModel, registerAudiobookSharing } from './tec-audiobook-sharing.js';
 import { registerAudioAchievements } from './tec-audio-achievements.js';
+import { registerReadingApi } from './tec-reading-books.js';
 
 const api = '/api/audiolibros';
 const cookie = 'tec_audio_session';
@@ -26,7 +27,8 @@ export function createAudioMembershipModels(mongoose) {
     grants: model('TecAudioGrant', { _id: String, email: String, digest: { type: String, index: true }, expiresAt, requestedAt: Date }),
     sessions: model('TecAudioSession', { _id: String, email: String, credentialVersion: String, expiresAt }),
     achievements: model('TecAudioAchievements', { _id: String, revision: Number, state: mongoose.Schema.Types.Mixed }),
-    listening: model('TecAudioListening', { _id: String, position: Number, speed: Number, marks: [Number] })
+    listening: model('TecAudioListening', { _id: String, position: Number, speed: Number, marks: [Number] }),
+    readingProgress: model('TecReadingProgress', { _id: String, bookId: String, chapter: Number, paragraph: Number, updatedAt: Date })
   };
 }
 
@@ -42,7 +44,7 @@ export function hasAudioMembership(subscription, priceId) {
 }
 
 export function registerAudioMembership(app, {
-  accounts, grants, sessions, listening, achievements, shares, media, getBucket, r2, stripe, priceId, portalId,
+  accounts, grants, sessions, listening, readingProgress, achievements, shares, media, getBucket, r2, stripe, priceId, portalId,
   publicOrigin, sendSignIn, secure = process.env.NODE_ENV === 'production',
   catalog = audiobookCatalog, getTranscript = getAudiobookTranscript
 }) {
@@ -230,6 +232,7 @@ export function registerAudioMembership(app, {
   });
 
   if (achievements) registerAudioAchievements({ route, account, isMember, model: achievements, catalog });
+  registerReadingApi({ route, authorize: member, progressModel: readingProgress });
 
   route('get', '/cuenta', async (req, res) => {
     const user = await account(req);

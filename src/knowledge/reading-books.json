@@ -1,0 +1,319 @@
+[
+  {
+    "id": "como-un-hombre-piensa",
+    "title": "Como un hombre piensa",
+    "author": "James Allen",
+    "cover": "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
+    "description": "Un clásico breve sobre la relación entre nuestros pensamientos, el carácter y la forma de vivir. James Allen reflexiona sobre el propósito, las circunstancias, la salud, los ideales y la serenidad.",
+    "edition": "Edición íntegra en español · TEC",
+    "categories": [
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "credits": "James Allen. Edición en español y producción sonora de TEC.",
+    "audioId": "como-un-hombre-piensa",
+    "sources": [],
+    "chapterCount": 9,
+    "wordCount": 7762,
+    "language": "Español"
+  },
+  {
+    "id": "acres-de-diamantes",
+    "title": "Acres de diamantes",
+    "author": "Russell H. Conwell",
+    "cover": "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
+    "description": "Una invitación a descubrir las oportunidades que tenemos cerca. A través de anécdotas y conversaciones, Russell H. Conwell reflexiona sobre el trabajo, la iniciativa, la honradez y el servicio a los demás.",
+    "edition": "Edición íntegra en español · TEC",
+    "categories": [
+      "Prosperidad",
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "credits": "Russell H. Conwell. Edición en español y producción sonora y musical de TEC. Incluye la introducción del autor y la conferencia completa.",
+    "audioId": "acres-de-diamantes",
+    "sources": [],
+    "chapterCount": 8,
+    "wordCount": 15048,
+    "language": "Español"
+  },
+  {
+    "id": "el-arte-de-la-guerra",
+    "title": "El arte de la guerra",
+    "author": "Sun Tzu",
+    "cover": "/coach/assets/audiobooks/el-arte-de-la-guerra-ilustrada-v2.jpg",
+    "description": "Trece capítulos sobre estrategia, preparación y toma de decisiones. Sun Tzu examina cómo conocer el terreno, aprovechar la información y elegir cuándo actuar.",
+    "edition": "Edición íntegra en español · TEC",
+    "categories": [
+      "Estrategia",
+      "Clásicos"
+    ],
+    "credits": "Sun Tzu. Edición en español y producción sonora de TEC.",
+    "audioId": "el-arte-de-la-guerra",
+    "sources": [],
+    "chapterCount": 13,
+    "wordCount": 10253,
+    "language": "Español"
+  },
+  {
+    "id": "genesis-rv1909",
+    "title": "Génesis",
+    "author": "Biblia · Reina-Valera 1909",
+    "cover": "/coach/assets/audiobooks/genesis-rv1909-ilustrada-v2.jpg",
+    "description": "El primer libro de la Biblia, desde la creación hasta la historia de José en Egipto. Narración de los 50 capítulos de la edición Reina-Valera 1909. Parte de la Biblia en crecimiento: iremos agregando nuevos libros y capítulos.",
+    "edition": "Reina-Valera 1909 · Edición íntegra",
+    "categories": [
+      "Biblia",
+      "Antiguo Testamento"
+    ],
+    "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
+    "audioId": "genesis-rv1909",
+    "sources": [],
+    "chapterCount": 50,
+    "wordCount": 35044,
+    "language": "Español"
+  },
+  {
+    "id": "exodo-rv1909",
+    "title": "Éxodo",
+    "author": "Biblia · Reina-Valera 1909",
+    "cover": "/coach/assets/audiobooks/exodo-rv1909-ilustrada-v2.jpg",
+    "description": "El segundo libro de la Biblia narra la salida de Egipto, el camino de Israel por el desierto y la alianza en el monte Sinaí. Incluye los 40 capítulos de la edición Reina-Valera 1909. Parte de la Biblia en crecimiento: iremos agregando nuevos libros y capítulos.",
+    "edition": "Reina-Valera 1909 · Edición íntegra",
+    "categories": [
+      "Biblia",
+      "Antiguo Testamento"
+    ],
+    "credits": "Texto de la Biblia Reina-Valera 1909. Producción sonora de TEC.",
+    "audioId": "exodo-rv1909",
+    "sources": [],
+    "chapterCount": 40,
+    "wordCount": 28697,
+    "language": "Español"
+  },
+  {
+    "id": "ayudate",
+    "title": "¡Ayúdate!",
+    "author": "Samuel Smiles",
+    "cover": "/coach/assets/audiobooks/ayudate-ilustrada-v2.jpg",
+    "description": "Samuel Smiles reúne historias sobre el esfuerzo, la iniciativa y la perseverancia. Esta edición incluye los trece capítulos y los textos de apertura.",
+    "edition": "Edición íntegra en español · TEC",
+    "categories": [
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "credits": "Samuel Smiles. Edición en español y producción sonora de TEC.",
+    "audioId": "ayudate",
+    "sources": [],
+    "chapterCount": 16,
+    "wordCount": 144105,
+    "language": "Español"
+  },
+  {
+    "id": "la-ciencia-de-hacerse-rico",
+    "title": "La ciencia de hacerse rico",
+    "author": "Wallace D. Wattles",
+    "cover": "/coach/assets/audiobooks/la-ciencia-de-hacerse-rico-ilustrada-v2.jpg",
+    "description": "Wallace D. Wattles expone sus ideas sobre el pensamiento, el propósito y la acción orientada a la prosperidad. Edición íntegra en español con el prefacio y los diecisiete capítulos.",
+    "edition": "Edición íntegra en español · TEC",
+    "categories": [
+      "Desarrollo personal",
+      "Prosperidad",
+      "Clásicos"
+    ],
+    "credits": "Wallace D. Wattles. Traducción al español y producción sonora de TEC.",
+    "audioId": "la-ciencia-de-hacerse-rico",
+    "sources": [],
+    "chapterCount": 18,
+    "wordCount": 22342,
+    "language": "Español"
+  },
+  {
+    "id": "el-kybalion",
+    "title": "El Kybalión",
+    "author": "Tres Iniciados",
+    "cover": "/coach/assets/audiobooks/el-kybalion-ilustrada-v1.jpg",
+    "description": "Una exposición de la filosofía hermética y sus siete principios: mentalismo, correspondencia, vibración, polaridad, ritmo, causa y efecto, y género. Incluye la introducción y los quince capítulos completos, en español actual.",
+    "edition": "Edición íntegra en español actual · TEC",
+    "categories": [
+      "Filosofía",
+      "Hermetismo",
+      "Clásicos"
+    ],
+    "credits": "Tres Iniciados. Traducción al español actual y producción sonora de TEC.",
+    "audioId": "el-kybalion",
+    "sources": [],
+    "chapterCount": 17,
+    "wordCount": 35023,
+    "language": "Español"
+  },
+  {
+    "id": "el-hombre-mas-rico-de-babilonia",
+    "title": "El hombre más rico de Babilonia",
+    "author": "George S. Clason",
+    "cover": "/coach/assets/audiobooks/babilonia-ilustrada-v1.jpg",
+    "description": "Arkad, Bansir y otros habitantes de la antigua Babilonia comparten relatos sobre ahorro, deudas, trabajo y oportunidades. Edición íntegra en español actual, con el prólogo, once capítulos y voces distintas para los diálogos.",
+    "edition": "Edición íntegra en español actual · TEC",
+    "categories": [
+      "Desarrollo personal",
+      "Prosperidad",
+      "Clásicos"
+    ],
+    "credits": "George S. Clason. Traducción propia al español actual y producción sonora de Biblioteca TEC. Narración de Iván y reparto fijo para los diálogos. Sin música ni efectos.",
+    "audioId": "el-hombre-mas-rico-de-babilonia",
+    "sources": [],
+    "chapterCount": 12,
+    "wordCount": 37664,
+    "language": "Español"
+  },
+  {
+    "id": "meditaciones-marco-aurelio",
+    "title": "Meditaciones",
+    "author": "Marco Aurelio",
+    "cover": "/coach/assets/audiobooks/meditaciones-ilustrada-v1.jpg",
+    "description": "Las reflexiones de Marco Aurelio sobre la serenidad, el carácter, el cambio y la vida en comunidad. Escucha sus doce libros completos con la voz de Iván y sigue cada pasaje con lectura sincronizada.",
+    "edition": "Doce libros completos · Español modernizado a partir de la traducción de Jacinto Díaz de Miranda (1888) · TEC",
+    "categories": [
+      "Filosofía",
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "credits": "Marco Aurelio. Versión española basada en la traducción de Jacinto Díaz de Miranda de 1888, revisada y modernizada por TEC. Incluye los doce libros; notas críticas y preliminares editoriales fuera de la narración. Producción sonora de TEC.",
+    "audioId": "meditaciones-marco-aurelio",
+    "sources": [],
+    "chapterCount": 12,
+    "wordCount": 49322,
+    "language": "Español"
+  },
+  {
+    "id": "hamlet",
+    "title": "Hamlet",
+    "author": "William Shakespeare",
+    "cover": "/audiolibros/libros-portadas/hamlet.jpg",
+    "description": "El príncipe de Dinamarca afronta la muerte de su padre, la sospecha y la venganza en esta tragedia de cinco actos.",
+    "edition": "Traducción histórica de Leandro Fernández de Moratín · Casa Editorial Maucci",
+    "categories": [
+      "Teatro",
+      "Clásicos"
+    ],
+    "credits": "William Shakespeare. Traducción histórica de Leandro Fernández de Moratín · Casa Editorial Maucci. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Edición histórica digitalizada",
+        "url": "https://www.gutenberg.org/ebooks/56454"
+      }
+    ],
+    "chapterCount": 6,
+    "wordCount": 34467,
+    "language": "Español"
+  },
+  {
+    "id": "el-monte-de-las-animas",
+    "title": "El monte de las ánimas",
+    "author": "Gustavo Adolfo Bécquer",
+    "cover": "/audiolibros/libros-portadas/el-monte-de-las-animas.jpg",
+    "description": "Una leyenda de misterio ambientada en Soria, donde una promesa y una noche de difuntos despiertan un antiguo temor.",
+    "edition": "Texto histórico en español · Obras de Bécquer, tomo II, 1885",
+    "categories": [
+      "Cuentos",
+      "Clásicos"
+    ],
+    "credits": "Gustavo Adolfo Bécquer. Texto histórico en español · Obras de Bécquer, tomo II, 1885. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Texto histórico de referencia",
+        "url": "https://es.wikisource.org/wiki/El_monte_de_las_%C3%A1nimas"
+      }
+    ],
+    "chapterCount": 1,
+    "wordCount": 2752,
+    "language": "Español"
+  },
+  {
+    "id": "apologia-de-socrates",
+    "title": "Apología de Sócrates",
+    "author": "Platón",
+    "cover": "/audiolibros/libros-portadas/apologia-de-socrates.jpg",
+    "description": "Platón presenta la defensa de Sócrates ante sus acusadores y una reflexión sobre la verdad, la virtud y la vida examinada.",
+    "edition": "Traducción histórica de Patricio de Azcárate · Madrid, 1871",
+    "categories": [
+      "Filosofía",
+      "Clásicos"
+    ],
+    "credits": "Platón. Traducción histórica de Patricio de Azcárate · Madrid, 1871. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Edición histórica de referencia",
+        "url": "https://www.filosofia.org/cla/pla/azc01049.htm"
+      }
+    ],
+    "chapterCount": 1,
+    "wordCount": 11755,
+    "language": "Español"
+  },
+  {
+    "id": "criton",
+    "title": "Critón o el deber",
+    "author": "Platón",
+    "cover": "/audiolibros/libros-portadas/criton.jpg",
+    "description": "Sócrates y Critón dialogan sobre la justicia, las leyes y la responsabilidad de actuar conforme a las propias convicciones.",
+    "edition": "Traducción histórica de Patricio de Azcárate · Madrid, 1871",
+    "categories": [
+      "Filosofía",
+      "Clásicos"
+    ],
+    "credits": "Platón. Traducción histórica de Patricio de Azcárate · Madrid, 1871. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Edición histórica de referencia",
+        "url": "https://www.filosofia.org/cla/pla/azc01091.htm"
+      }
+    ],
+    "chapterCount": 1,
+    "wordCount": 5268,
+    "language": "Español"
+  },
+  {
+    "id": "oraculo-manual",
+    "title": "Oráculo manual y arte de prudencia",
+    "author": "Baltasar Gracián",
+    "cover": "/audiolibros/libros-portadas/oraculo-manual.jpg",
+    "description": "Trescientos aforismos sobre el juicio, la prudencia, las relaciones y el arte de conducirse en la vida.",
+    "edition": "Texto histórico en español · 1647",
+    "categories": [
+      "Filosofía",
+      "Desarrollo personal"
+    ],
+    "credits": "Baltasar Gracián. Texto histórico en español · 1647. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Texto histórico de referencia",
+        "url": "https://es.wikisource.org/wiki/Or%C3%A1culo_manual_y_arte_de_prudencia"
+      }
+    ],
+    "chapterCount": 13,
+    "wordCount": 31813,
+    "language": "Español"
+  },
+  {
+    "id": "el-camino-a-la-riqueza",
+    "title": "El camino a la riqueza",
+    "author": "Benjamin Franklin",
+    "cover": "/audiolibros/libros-portadas/el-camino-a-la-riqueza.jpg",
+    "description": "Un ensayo breve sobre la diligencia, el ahorro y la independencia económica a través de los consejos del Pobre Ricardo.",
+    "edition": "Traducción histórica española de 1825 · Ortografía revisada por TEC",
+    "categories": [
+      "Prosperidad",
+      "Clásicos"
+    ],
+    "credits": "Benjamin Franklin. Traducción histórica española de 1825 · Ortografía revisada por TEC. Preparación para lectura: TEC.",
+    "sources": [
+      {
+        "label": "Facsímil histórico de referencia",
+        "url": "https://archive.org/details/miscelaneadeeco00frangoog"
+      }
+    ],
+    "chapterCount": 1,
+    "wordCount": 3799,
+    "language": "Español"
+  }
+]

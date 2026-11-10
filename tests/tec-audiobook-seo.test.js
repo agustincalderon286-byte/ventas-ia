@@ -6,6 +6,7 @@ import { buildAudiobookSeo, registerAudiobookSeo, bookPath, collectionPath, guid
 import { audioCollections, bookEditorial } from '../src/knowledge/audiobook-editorial.js';
 import { audiobookGuides } from '../src/knowledge/audiobook-guides.js';
 import { audiobookCatalog } from '../src/tec-audiobooks.js';
+import { readingCatalog } from '../src/tec-reading-books.js';
 
 const origin = 'https://totalelitecoaching.com';
 const schemas = html => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));
@@ -56,7 +57,7 @@ test('each indexable book describes the actual edition, keeps prices truthful an
 
 test('sitemap and crawler guide list only canonical public pages with no invented update dates or private URLs', () => {
   const urls = [...generated.sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(x => x[1]);
-  assert.equal(urls.length, audiobookCatalog.length + audioCollections.length + audiobookGuides.length + 3);
+  assert.equal(urls.length, audiobookCatalog.length + audioCollections.length + audiobookGuides.length + readingCatalog.length + 3);
   assert.equal(new Set(urls).size, urls.length);
   assert.ok(!generated.sitemap.includes('lastmod'));
   for (const url of urls) assert.ok(url.startsWith(origin + '/audiolibros/') && !url.includes('?'));

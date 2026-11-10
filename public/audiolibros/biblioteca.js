@@ -20,6 +20,17 @@
   let stopAt = 0;
   let scrubbing = false;
   let signInToken = new URLSearchParams(location.hash.slice(1)).get('entrar');
+  const readingRequest = new URLSearchParams(location.search).get('lectura');
+  const validReadingId = value => typeof value === 'string' && /^[a-z0-9-]{1,80}$/.test(value);
+  if (validReadingId(readingRequest)) { try { localStorage.setItem('tec.reading.return.v1', JSON.stringify({ id: readingRequest, at: Date.now() })); } catch {} }
+  function resumeReading() {
+    if (!account.member) return false;
+    let pending = validReadingId(readingRequest) ? { id: readingRequest, at: Date.now() } : null;
+    if (!pending) { try { pending = JSON.parse(localStorage.getItem('tec.reading.return.v1')); } catch {} }
+    if (!validReadingId(pending?.id) || !Number.isFinite(pending.at) || Date.now() - pending.at > 3600000 || pending.at > Date.now()) return false;
+    try { localStorage.removeItem('tec.reading.return.v1'); } catch {}
+    location.assign('/audiolibros/leer/' + pending.id + '/'); return true;
+  }
   const reader = new TecBookReader.Reader($('[data-ab-reader]'), audio, position => seek(position, true));
   const sharing = new TecAudioSharing.Controller({ audio, reader, context: () => selected });
   $('#share-open').addEventListener('click', () => sharing.open());
@@ -144,6 +155,7 @@
     $('#test-password').value = '';
     document.dispatchEvent(new CustomEvent('tec-audio-test-account'));
     await refreshAccount();
+    if (resumeReading()) return;
     showAccount();
   }));
   $('#confirm').addEventListener('click', busy($('#confirm'), '#account-status', async () => {
@@ -151,6 +163,7 @@
     catch (error) { signInToken = null; showAccount(); throw error; }
     signInToken = null;
     await refreshAccount();
+    if (resumeReading()) return;
     showAccount();
     $('#account-status').textContent = account.member ? 'Tu membresía está activa.' : 'Ya ingresaste a tu biblioteca.';
   }));
@@ -161,6 +174,7 @@
     stopPlayback();
     await saveQueue.catch(() => {});
     await api('/salir', 'POST');
+    try { localStorage.setItem('tec.reading.signed-out', String(Date.now())); } catch {}
     accountDialog.close();
     await refreshAccount();
   }));
@@ -529,6 +543,10 @@
 
   const checkoutReturn = new URLSearchParams(location.search).get('membresia') === 'confirmada';
   const accountReady = refreshAccount().then(async () => {
+    if (validReadingId(readingRequest)) {
+      if (resumeReading()) return;
+      if (!account.authenticated && location.hash !== '#membresia') showAccount();
+    }
     if (testEntry) { showAccount(); $('#test-access').open = !account.authenticated; }
     if (!checkoutReturn) return;
     history.replaceState(null, '', location.pathname + '#membresia');
@@ -539,6 +557,7 @@
       await refreshAccount();
     }
     $('#billing-status').textContent = account.member ? 'Membresía activa. Ya puedes escuchar el catálogo completo.' : 'Stripe está confirmando el pago. Vuelve a cargar la página en unos minutos.';
+    if (account.member) resumeReading();
   }).catch(error => { $('#billing-status').textContent = error.message; });
   Promise.all([catalogReady, accountReady]).then(() => {
     const params = new URLSearchParams(location.search);
