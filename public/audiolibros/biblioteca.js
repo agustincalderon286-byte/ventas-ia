@@ -343,7 +343,7 @@
     const request = generation;
     $('#player-controls').hidden = true;
     $('#player-status').textContent = full ? 'Cargando audiolibro…' : '';
-    $('#book-mode').textContent = full ? 'Edición íntegra' : 'Muestra gratuita · 10 %';
+    $('#book-mode').textContent = full ? (book.releaseLabel || 'Edición íntegra') : 'Muestra gratuita · 10 %';
     $('#book-title').textContent = book.title;
     $('#reader-view-title').textContent = book.title;
     $('#book-author').textContent = book.author;
