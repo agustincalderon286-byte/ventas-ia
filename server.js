@@ -975,6 +975,9 @@ const coachLeadInboxSchema = new mongoose.Schema({
   email: String,
   address: String,
   city: String,
+  appointmentRequested: Boolean,
+  appointmentPreferredTime: String,
+  appointmentStatus: String,
   zipCode: String,
   birthday: String,
   childrenCount: { type: Number, default: null },
@@ -2406,6 +2409,8 @@ const coachAdminPasskeys = registerAdminPasskeys(app, {
 registerTecChef(app, {
   requireAdmin: requireControlTowerAccess, getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
   privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
+  sendLeadMail: message => tecSendMail ? tecSendMail(message) : Promise.reject(new Error("tec_mail_configuration_failed")),
+  mailConfigured: () => Boolean(tecSendMail),
   syncCrm: sincronizarCoachLeadInboxACrmRecord, isChefMode: mode => normalizarModoChat(mode) !== "coach"
 });
 app.use("/api/public/metalworks", limitarSolicitudesPublicasMetalworks);
