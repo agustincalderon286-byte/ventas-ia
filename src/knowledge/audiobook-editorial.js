@@ -1,6 +1,33 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  "viaje-al-oeste": {
+  "summary": [
+    "Un mono nacido de una piedra descubre un mundo de montañas, palacios submarinos y funcionarios celestiales. Su ambición de vencer a la muerte lo lleva en busca de un maestro y de poderes que pronto pondrán a prueba el orden del Cielo. Sun Wukong combina ingenio, impaciencia y una fuerza extraordinaria: sus decisiones convierten su aprendizaje en una cadena de aventuras y enfrentamientos.",
+    "Esta primera entrega reúne los cinco capítulos iniciales, desde el nacimiento del Rey Mono hasta el alboroto de la fiesta de los duraznos y la movilización de los dioses para capturarlo. Son unas tres horas y media de narración y diálogos, con los poemas de estos capítulos traducidos al español. La obra original tiene cien capítulos; esta ficha irá reuniendo nuevas entregas conforme estén listas. El índice permite retomar cualquiera de los cinco capítulos publicados y la lectura sincronizada acompaña cada intervención."
+  ],
+  "ideas": [
+    "El deseo de inmortalidad y el aprendizaje de Sun Wukong.",
+    "El ingenio del Rey Mono ante los poderes del mar, el mundo de los muertos y el Cielo.",
+    "La ambición, las jerarquías y las consecuencias de desafiar al orden celestial."
+  ],
+  "audience": "Para quienes disfrutan las aventuras fantásticas, los personajes ingeniosos y los clásicos de otras tradiciones. Puedes repartir los cinco capítulos disponibles entre varias sesiones y volver a sus poemas y diálogos con la lectura sincronizada.",
+  "tip": "Comienza por el nacimiento del Rey Mono y sigue el orden del índice para conocer su aprendizaje y sus primeros desafíos. Guarda tu avance para retomar la escucha; la muestra gratuita ofrece el primer diez por ciento de esta entrega.",
+  "questions": [
+    [
+      "¿Está disponible todo Viaje al Oeste?",
+      "Por ahora están publicados los capítulos 1–5 de los 100 de la obra, reunidos en un solo audiolibro. Los capítulos posteriores se incorporarán más adelante a esta misma ficha."
+    ],
+    [
+      "¿En qué texto se basa esta edición en español?",
+      "TEC realiza una traducción propia directamente del original chino, cotejado con los testimonios de Wikisource y Project Gutenberg. Esta entrega conserva el relato, los diálogos y los poemas de los cinco capítulos publicados."
+    ],
+    [
+      "¿Cómo puedo escuchar y seguir el texto?",
+      "Puedes probar gratis el primer diez por ciento de la entrega con su lectura sincronizada. La membresía de Audiolibros TEC permite continuar con los cinco capítulos publicados y navegar por su índice."
+    ]
+  ]
+},
   "mitos-y-heroes-de-grecia": {
   "summary": [
     "El nacimiento del Olimpo, el recorrido de Perséfone y las hazañas de Hércules abren esta colección de mitos. Thomas Bulfinch reúne relatos sobre dioses y héroes, encuentros con fuerzas extraordinarias y decisiones cuyas consecuencias atraviesan familias y reinos. La traducción de TEC conserva el recorrido narrativo de las secciones seleccionadas y presenta los nombres y las historias en español para acompañar la escucha con el texto.",
@@ -193,7 +220,7 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',

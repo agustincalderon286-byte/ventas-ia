@@ -1303,5 +1303,62 @@
       "r2ETag": "\"d9fac94fc7ac74f41b285ab9b473f6b3\""
     },
     "releaseLabel": "Capítulos 1–3 de 8"
+  },
+  {
+    "id": "viaje-al-oeste",
+    "title": "Viaje al Oeste",
+    "author": "Wu Cheng’en",
+    "originalTitle": "西遊記 · Xiyou ji",
+    "language": "Español",
+    "categories": [
+      "Clásicos",
+      "Aventura",
+      "Literatura china"
+    ],
+    "description": "El nacimiento del Rey Mono, su búsqueda de la inmortalidad y su desafío al orden celestial abren este clásico de aventuras de la literatura china. Traducción propia de TEC directamente del chino, con narrador, voces para los personajes y lectura sincronizada. Esta entrega reúne los capítulos 1–5 de los 100 de la obra en un solo audiolibro; los demás capítulos se incorporarán más adelante a esta misma ficha.",
+    "edition": "Entrega parcial · Capítulos 1–5 de 100 · Traducción propia del chino · TEC",
+    "narrator": "Narrador y reparto fijo de voces de TEC",
+    "credits": "Wu Cheng’en, atribución tradicional de Viaje al Oeste. Traducción propia de TEC directamente del original chino cotejado en Wikisource y Project Gutenberg, libro 23962. Esta entrega contiene únicamente los capítulos 1–5 de los 100 de la obra, con sus relatos y poemas. Producción con voces sintéticas de TEC, una referencia fija por personaje. Sin música ni efectos.",
+    "duration": 12583.035,
+    "cover": "/coach/assets/audiobooks/viaje-al-oeste-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/viaje-al-oeste-v1.png",
+    "voiceDisclosure": "",
+    "releaseLabel": "Capítulos 1–5 de 100",
+    "chapters": [
+      {
+        "title": "Capítulo 1. La raíz espiritual se gesta y surge la fuente; al cultivar la mente y la naturaleza, nace el Gran Camino.",
+        "start": 0,
+        "duration": 2753.985
+      },
+      {
+        "title": "Capítulo 2. Comprende a fondo los verdaderos y maravillosos principios del Despertar; al vencer al demonio y volver al origen, se une al espíritu primordial.",
+        "start": 2753.985,
+        "duration": 2478.785
+      },
+      {
+        "title": "Capítulo 3. Los Cuatro Mares y las mil montañas se inclinan ante él; en las Nueve Profundidades borra los nombres de las diez clases de seres.",
+        "start": 5232.77,
+        "duration": 2577.15
+      },
+      {
+        "title": "Capítulo 4. El cargo de Protector de los Caballos no satisface su corazón; el título de Igual al Cielo no aquieta sus deseos.",
+        "start": 7809.92,
+        "duration": 2463.935
+      },
+      {
+        "title": "Capítulo 5. El Gran Sabio alborota la fiesta de los duraznos y roba el elixir; se rebela contra el palacio celestial y los dioses salen a capturarlo.",
+        "start": 10273.855,
+        "duration": 2309.18
+      }
+    ],
+    "audio": {
+      "filename": "Viaje-al-Oeste-capitulos-001-005-v1.m4b",
+      "r2Key": "Viaje-al-Oeste-capitulos-001-005-v1.m4b",
+      "bytes": 164260157,
+      "sha256": "f37bf8ca66eef8dc358c9014ca492b98419d234f09d6f464b4b13b84e80c6429",
+      "contentType": "audio/mp4",
+      "md5": "40c8c22219cb8261c9a62c2c49bb2050",
+      "r2ETag": "\"40c8c22219cb8261c9a62c2c49bb2050\""
+    }
   }
 ]

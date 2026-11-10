@@ -1,5 +1,12 @@
 # Audiolibros TEC
 
+## Viaje al Oeste — 10 de noviembre de 2026
+
+Corte expresamente autorizado: publicar solo los capítulos 1–5 con audio terminado. El capítulo 6 queda pausado con sus fragmentos conservados; los demás textos y planes se conservan para reanudar después. Esta entrega se identifica como cinco de cien capítulos, nunca como obra completa. ID estable: viaje-al-oeste. Una ficha, un audio privado de R2, cinco capítulos navegables, 1151 pasajes sincronizados y muestra del primer diez por ciento. Traducción propia directa del chino, incluidos los poemas.
+
+Objeto versionado: Viaje-al-Oeste-capitulos-001-005-v1.m4b. SHA-256: f37bf8ca66eef8dc358c9014ca492b98419d234f09d6f464b4b13b84e80c6429. R2 verificado antes de incorporar al catálogo. Las ampliaciones deben usar nuevos objetos, conservar el ID y los capítulos iniciales, y actualizar en conjunto duración, índice, muestra y lectura. No reemplazar objetos que atienden sesiones existentes. Las comprobaciones técnicas y de transcripción no equivalen a una escucha humana integral de interpretación.
+
+
 ## Mitos y héroes de Grecia — 9 de noviembre de 2026
 
 Primera entrega autorizada: tres de ocho capítulos en una sola ficha y un solo audio privado de R2. Duración 3.309,38 segundos, 204 pasajes sincronizados y muestra del primer 10 %. La descripción identifica expresamente los capítulos disponibles y los cinco que se añadirán. Selección de Thomas Bulfinch traducida por TEC; no es todo The Age of Fable.
