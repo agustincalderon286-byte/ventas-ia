@@ -46,7 +46,7 @@ export function hasAudioMembership(subscription, priceId) {
 export function registerAudioMembership(app, {
   accounts, grants, sessions, listening, readingProgress, achievements, shares, media, getBucket, r2, stripe, priceId, portalId,
   publicOrigin, sendSignIn, secure = process.env.NODE_ENV === 'production',
-  catalog = audiobookCatalog, getTranscript = getAudiobookTranscript
+  catalog = audiobookCatalog, getTranscript = getAudiobookTranscript, paymentAnalytics
 }) {
   const origin = new URL(publicOrigin).origin;
   const landing = `${origin}/audiolibros/`;
@@ -257,6 +257,10 @@ export function registerAudioMembership(app, {
       await accounts.updateOne({ _id: user._id, stripeCustomerId: { $exists: false } }, { $set: { stripeCustomerId: created.id } });
       customer = (await accounts.findById(user._id).lean()).stripeCustomerId;
     }
+    // Optional measurement must never prevent or alter a customer's payment.
+    if (paymentAnalytics) {
+      try { await paymentAnalytics.saveContext({ ...user, stripeCustomerId: customer }, req.body?.analytics); } catch {}
+    }
     const previous = await stripe.checkout.sessions.list({ customer, limit: 1 });
     const subscriptions = await findSubscriptions({ stripeCustomerId: customer });
     if (subscriptions.some(sub => !['canceled', 'incomplete_expired'].includes(sub.status))) {
@@ -273,6 +277,17 @@ export function registerAudioMembership(app, {
       locale: 'es'
     }, { idempotencyKey: `${audience}-checkout-${customer}-${last?.id || 'first'}` });
     res.json({ url: checkout.url });
+  });
+
+  route('post', '/estadisticas/contexto', async (req, res) => {
+    const user = await account(req);
+    if (paymentAnalytics && user) await paymentAnalytics.saveContext(user, req.body?.analytics);
+    res.json({ ok: true });
+  });
+  route('delete', '/estadisticas/consentimiento', async (req, res) => {
+    const user = await account(req);
+    if (paymentAnalytics && user) await paymentAnalytics.revoke(user);
+    res.json({ ok: true });
   });
 
   route('post', '/portal', async (req, res) => {

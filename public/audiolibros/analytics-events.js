@@ -4,13 +4,16 @@ export const BOOK_IDS = Object.freeze(['como-un-hombre-piensa', 'acres-de-diaman
 export const COLLECTION_IDS = Object.freeze(['desarrollo-personal', 'biblia-en-audio', 'clasicos-en-espanol', 'filosofia-y-estrategia']);
 export const GUIDE_IDS = Object.freeze(['con-que-audiolibro-de-desarrollo-personal-empezar', 'genesis-o-exodo-por-donde-empezar-biblia-audio', 'james-allen-y-samuel-smiles-desarrollo-personal', 'como-aprovechar-audiolibro-con-lectura-sincronizada']);
 export const EVENT_NAMES = Object.freeze(['page_view', 'audio_sample_play', 'audio_membership_click', 'audio_share_open']);
+export const CAMPAIGN_KEY = 'tec.audiobooks.analytics.campaign.v2';
+export const CAMPAIGN_TTL = 30 * 86400000;
 // Campaign labels are public, reviewed constants, never free-form URL input.
 // Keep access tokens, click identifiers, search terms and unknown labels out of GA.
 const CAMPAIGNS = Object.freeze({
-  audiolibros_chicago_es: { sources: ['meta'], media: ['paid_social'], content: ['clasicos_15s'] },
+  audiolibros_chicago_es: { sources: ['meta', 'facebook'], media: ['paid_social'], content: ['clasicos_15s'] },
   audiolibros_instagram_chicago_es: { sources: ['instagram'], media: ['paid_social'], content: ['clasicos_15s'] },
   clasicos_es: { sources: ['facebook'], media: ['organic_group'], content: [] },
-  verificacion_analytics: { sources: ['tec_test'], media: ['qa'], content: ['conexion_20261108'] }
+  verificacion_analytics: { sources: ['tec_test'], media: ['qa'], content: ['conexion_20261108'] },
+  tec_clasicos_es: { sources: ['chatgpt'], media: ['cpc'], content: ['james_allen_muestra'] }
 });
 export function safeCampaign(search = '') {
   const params = new URLSearchParams(search);
@@ -22,6 +25,23 @@ export function safeCampaign(search = '') {
   const content = one('utm_content');
   return { campaign_source: source, campaign_medium: medium, campaign_name: name,
     ...(rule.content.includes(content) ? { campaign_content: content } : {}) };
+}
+// Revalidate stored/server values against the same reviewed public vocabulary.
+export function safeCampaignFields(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const params = new URLSearchParams();
+  for (const [field, key] of [['campaign_source', 'utm_source'], ['campaign_medium', 'utm_medium'],
+    ['campaign_name', 'utm_campaign'], ['campaign_content', 'utm_content']]) {
+    if (typeof value[field] === 'string' && value[field].length <= 100) params.set(key, value[field]);
+  }
+  return safeCampaign(params.toString());
+}
+export function savedCampaign(value, now = Date.now()) {
+  try {
+    const record = JSON.parse(value);
+    if (!Number.isFinite(record.at) || record.at > now || now - record.at >= CAMPAIGN_TTL) return {};
+    return safeCampaignFields(record.campaign);
+  } catch { return {}; }
 }
 export function pageContext(pathname) {
   if (['/audiolibros', '/audiolibros/', '/audiolibros/index.html'].includes(pathname)) return { type: 'biblioteca', path: '/audiolibros/' };
@@ -36,7 +56,7 @@ export function safeReferrer(value) {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:') return '';
-    if (['www.google.com', 'www.google.com.mx', 'www.bing.com', 'bing.com', 'duckduckgo.com', 'www.facebook.com', 'm.facebook.com', 'l.facebook.com', 'lm.facebook.com', 'www.instagram.com', 'l.instagram.com', 'www.tiktok.com', 'tiktok.com', 't.co'].includes(url.hostname)) return url.origin + '/';
+    if (['www.google.com', 'www.google.com.mx', 'www.bing.com', 'bing.com', 'duckduckgo.com', 'www.facebook.com', 'm.facebook.com', 'l.facebook.com', 'lm.facebook.com', 'www.instagram.com', 'l.instagram.com', 'www.tiktok.com', 'tiktok.com', 't.co', 'chatgpt.com', 'www.chatgpt.com'].includes(url.hostname)) return url.origin + '/';
   } catch {}
   return '';
 }

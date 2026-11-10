@@ -26,6 +26,7 @@ import { createAudiobookModels, registerTecAudiobooks } from "./src/tec-audioboo
 import { createAudiobookR2 } from "./src/tec-audiobook-r2.js";
 import { registerAudiobookSeo } from "./src/tec-audiobook-seo.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
+import { createAudioPaymentAnalytics, createAudioPaymentAnalyticsModels } from "./src/tec-audio-payment-analytics.js";
 import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobook-support.js";
 import { createTecMailer } from "./src/tec-mail.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
@@ -20670,6 +20671,7 @@ async function manejarWebhookStripe(req, res) {
         break;
     }
 
+    await audioPaymentAnalytics.handleStripeEvent(event);
     res.json({ received: true });
   } catch (error) {
     console.error("Error procesando webhook Stripe:", error.message);
@@ -32433,8 +32435,14 @@ registerAudiobookSupport(app, {
   publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",
   sendSupport: createSupportMailer({ sendMail: tecSendMail })
 });
+const audioMembershipModels = createAudioMembershipModels(mongoose);
+const audioPaymentAnalytics = createAudioPaymentAnalytics({ ...createAudioPaymentAnalyticsModels(mongoose),
+  accounts: audioMembershipModels.accounts, stripe,
+  priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
+  apiSecret: String(process.env.TEC_AUDIO_GA_API_SECRET || "").trim() });
 registerAudioMembership(app, {
-  ...createAudioMembershipModels(mongoose), media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,
+  ...audioMembershipModels, paymentAnalytics: audioPaymentAnalytics,
+  media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,
   priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
   portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
   publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"

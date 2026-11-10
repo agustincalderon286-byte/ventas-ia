@@ -189,7 +189,11 @@
       $('#account-status').textContent = 'Ingresa con tu correo para activar tu membresía.';
       return;
     }
-    location.assign((await api('/checkout', 'POST')).url);
+    let analytics;
+    try { analytics = await window.TecAudiobookAnalytics?.checkoutContext?.(); } catch {}
+    const checkout = await api('/checkout', 'POST', analytics ? { analytics } : {});
+    window.TecAudiobookAnalytics?.checkoutStarted?.();
+    location.assign(checkout.url);
   }));
 
   function saveProgress() {

@@ -35,6 +35,7 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   let link;
   let eligible = false;
   let checkoutData;
+  const measurementCalls = [];
   const stripe = {
     subscriptions: { async *list() { if (eligible) yield subscription; } },
     prices: { async retrieve() { return price; } },
@@ -48,6 +49,8 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   const app = express();
   app.use(express.json());
   registerAudioMembership(app, {
+    paymentAnalytics: { async saveContext(user, analytics) { measurementCalls.push({ user, analytics }); },
+      async revoke(user) { measurementCalls.push({ revoked: user.stripeCustomerId }); } },
     shares: { async create(row) { shared.set(row._id, row); }, findById(id) { return lean(shared.get(id)); } },
     stripe, priceId, portalId: 'bpc_audio', publicOrigin: 'https://totalelitecoaching.com',
     sendSignIn: async (_email, url) => { link = url; },
@@ -117,7 +120,21 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   assert.equal((await request(path + '/audio', { headers })).status, 403);
   assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie)).status, 403);
 
-  assert.equal((await post('/checkout', {}, cookie)).status, 200);
+  const analytics = { consentVersion: 2, clientId: '123.1794310000', sessionId: '1794310000', campaign: {} };
+  assert.equal((await post('/checkout', { analytics }, cookie)).status, 200);
+  assert.equal(measurementCalls.at(-1).user.stripeCustomerId, 'cus_audio');
+  assert.deepEqual(measurementCalls.at(-1).analytics, analytics);
+  assert.equal((await post('/estadisticas/contexto', { analytics }, cookie, 'https://other.test')).status, 403);
+  const beforeGuest = measurementCalls.length;
+  assert.equal((await post('/estadisticas/contexto', { analytics })).status, 200);
+  assert.equal(measurementCalls.length, beforeGuest);
+  assert.equal((await post('/estadisticas/contexto', { analytics }, cookie)).status, 200);
+  assert.deepEqual(measurementCalls.at(-1).analytics, analytics);
+  assert.equal((await request('/estadisticas/consentimiento', { method: 'DELETE',
+    headers: { Origin: 'https://other.test', Cookie: cookie } })).status, 403);
+  assert.equal((await request('/estadisticas/consentimiento', { method: 'DELETE',
+    headers: { Origin: 'https://totalelitecoaching.com', Cookie: cookie } })).status, 200);
+  assert.equal(measurementCalls.at(-1).revoked, 'cus_audio');
   assert.equal(checkoutData.mode, 'subscription');
   assert.equal(checkoutData.line_items[0].price, priceId);
   assert.equal(checkoutData.customer, 'cus_audio');
