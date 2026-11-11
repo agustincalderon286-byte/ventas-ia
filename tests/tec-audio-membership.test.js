@@ -28,6 +28,8 @@ test('audio entitlement accepts only the active independent plan at the advertis
 
 test('guest previews, paid-only activation, password access and recovery work through HTTP', async t => {
   const [book] = audiobookCatalog;
+  let links = 0;
+  const lease = { url: 'https://example.test/private-audio', expiresAt: Date.now() + 300000 };
   const rows = new Map();
   const accountStore = audioAccountStore();
   const members = accountStore.rows;
@@ -62,6 +64,7 @@ test('guest previews, paid-only activation, password access and recovery work th
     paymentAnalytics: { async saveContext(user, analytics) { measurementCalls.push({ user, analytics }); },
       async revoke(user) { measurementCalls.push({ revoked: user.stripeCustomerId }); } },
     shares: { async create(row) { shared.set(row._id, row); }, findById(id) { return lean(shared.get(id)); } },
+    r2: { ready: async () => true, delivery: async () => { links++; return lease; }, open: async () => { throw new Error('must not proxy'); } },
     stripe, priceId, portalId: 'bpc_audio', publicOrigin: 'https://totalelitecoaching.com',
     sendAccountMail: async message => { if (message.url) link = message.url; },
     accounts: accountStore.model, checkoutIntents: intents.model,
@@ -89,7 +92,7 @@ test('guest previews, paid-only activation, password access and recovery work th
   const server = await new Promise(resolve => { const instance = app.listen(0, '127.0.0.1', () => resolve(instance)); });
   t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
   const base = 'http://127.0.0.1:' + server.address().port + '/api/audiolibros';
-  const request = (url, options) => fetch(base + url, options);
+  const request = (url, options) => fetch(base + url, { redirect: 'manual', ...options });
   const post = (url, body, cookie, origin = 'https://totalelitecoaching.com') => request(url, {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...(cookie && { Cookie: cookie }) }, body: JSON.stringify(body)
   });
@@ -111,7 +114,12 @@ test('guest previews, paid-only activation, password access and recovery work th
     assert.equal(excerpt.trailingSeparator, '');
   }
   assert.equal((await request('/libros/unknown/muestra/texto')).status, 404);
-  for (const suffix of ['', '/audio', '/texto']) assert.equal((await request(path + suffix)).status, 401);
+  for (const suffix of ['', '/audio', '/audio?delivery=1', '/texto']) assert.equal((await request(path + suffix)).status, 401);
+  assert.equal(links, 0);
+  for (const publicBook of catalog.books) {
+    const sample = await fetch('http://127.0.0.1:' + server.address().port + publicBook.previewUrl + '?delivery=1').then(r => r.json());
+    assert.deepEqual(sample, lease);
+  }
   assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 5, end: 20 })).status, 201);
   assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 })).status, 401);
 
@@ -155,7 +163,7 @@ test('guest previews, paid-only activation, password access and recovery work th
   assert.equal(checkoutData.customer, 'cus_audio');
   assert.equal(checkoutData.subscription_data.metadata.audience, audience);
   assert.match(checkoutData.success_url, /^https:\/\/totalelitecoaching\.com\/audiolibros\//);
-  assert.equal((await request(path + '/audio', { headers })).status, 206);
+  assert.equal((await request(path + '/audio', { headers })).status, 307);
 
   eligible = true;
   const memberShare = await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie);
@@ -165,10 +173,11 @@ test('guest previews, paid-only activation, password access and recovery work th
   const detail = await request(path, { headers }).then(res => res.json());
   assert.deepEqual(detail.progress, { position: 12, speed: 1.5, marks: [7] });
   const audio = await request(path + '/audio', { headers });
-  assert.equal(audio.status, 206);
+  assert.equal(audio.status, 307);
   assert.equal(audio.headers.get('cache-control'), 'private, no-store');
-  assert.equal(audio.headers.get('content-range'), 'bytes 4-7/' + book.audio.bytes);
-  assert.equal(await audio.text(), 'AAAA');
+  assert.equal(audio.headers.get('location'), lease.url);
+  assert.equal(await audio.text(), '');
+  assert.deepEqual(await request(path + '/audio?delivery=1', { headers }).then(r => r.json()), lease);
   const text = await request(path + '/texto', { headers }).then(res => res.json());
   assert.ok(text.cues.length > 100);
   const unknownRecovery = await post('/recuperar', { email: 'unknown@example.test' }).then(res => res.json());
@@ -183,7 +192,7 @@ test('guest previews, paid-only activation, password access and recovery work th
   assert.equal(loggedIn.status, 200);
   cookie = loggedIn.headers.getSetCookie().find(value => value.startsWith('tec_audio_session=')).split(';')[0];
   headers.Cookie = cookie;
-  assert.equal((await request(path + '/audio', { headers })).status, 206);
+  assert.equal((await request(path + '/audio', { headers })).status, 307);
   assert.equal((await post('/salir', {}, cookie)).status, 200);
   assert.equal((await request(path + '/audio', { headers })).status, 401);
 });

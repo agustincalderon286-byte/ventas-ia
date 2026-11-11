@@ -1,4 +1,7 @@
 import { GetObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+export const AUDIO_LINK_SECONDS = 300;
 
 export function createAudiobookR2(env = process.env) {
   const accountId = env.TEC_AUDIO_R2_ACCOUNT_ID?.trim();
@@ -12,12 +15,24 @@ export function createAudiobookR2(env = process.env) {
     credentials: { accessKeyId, secretAccessKey },
     forcePathStyle: true,
     maxAttempts: 1,
+    requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED',
     requestHandler: { connectionTimeout: 2000, socketTimeout: 12000 }
   });
   const checks = new Map();
   const object = audio => ({ Bucket: 'tec-audiolibros', Key: audio.r2Key, IfMatch: audio.r2ETag });
 
   return {
+    async delivery(audio) {
+      // No If-Match or Range in the signed headers: HTML media players cannot
+      // set If-Match and must be able to request their own byte ranges.
+      // ready() verifies the immutable, manifest-pinned object before issuance.
+      const url = await getSignedUrl(client, new GetObjectCommand({
+        Bucket: 'tec-audiolibros', Key: audio.r2Key,
+        ResponseContentType: 'audio/mp4', ResponseCacheControl: 'private, no-store',
+        ResponseContentDisposition: 'inline; filename="' + audio.filename.replace(/[^a-z0-9._ -]/gi, '_') + '"'
+      }), { expiresIn: AUDIO_LINK_SECONDS });
+      return { url, expiresAt: Date.now() + AUDIO_LINK_SECONDS * 1000 };
+    },
     ready(audio) {
       const cached = checks.get(audio.r2Key);
       if (cached?.until > Date.now()) return cached.result;

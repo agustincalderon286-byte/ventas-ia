@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { parseAudioRange } from './tec-audio-lab.js';
+import { sendDirectAudio } from './tec-audio-delivery.js';
 
 export const audiobookCatalog = JSON.parse(fs.readFileSync(new URL('./knowledge/tec-audiobooks.json', import.meta.url), 'utf8'));
 const transcripts = new Map();
@@ -135,6 +136,7 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
   app.get('/api/coach/audiobooks/:id/audio', wrap(async (req, res) => {
     const auth = await requireActive(req, res); if (!auth) return;
     const found = await readyBook(req, res); if (!found) return;
+    if (found.file.storage === 'r2') return sendDirectAudio(req, res, found.book.audio, r2);
     await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
   }));
   app.get('/api/coach/audiobooks/:id/reviews', wrap(async (req, res) => {

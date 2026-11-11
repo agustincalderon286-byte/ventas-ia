@@ -48,3 +48,12 @@ El operador prepara contraseñas aleatorias en el SSD, fuera del repositorio: `n
 El enlace compartible `/audiolibros/?acceso=prueba` abre el formulario de usuario/contraseña y excluye la entrada de Analytics antes del inicio de sesión. Tras entrar, un marcador `tec_audio_test=1` sin identidad mantiene la exclusión en todas las páginas de audiolibros, incluso con consentimiento previo. Ese marcador no concede acceso: cada petición protegida verifica la sesión, la cuenta, la habilitación y la versión de credencial. El progreso y las insignias personales se guardan para funcionar; no son métricas comerciales. Los registros técnicos de servidor/CDN siguen existiendo.
 
 Para retirar acceso: `node scripts/manage-audio-test-accounts.mjs disable <usuario>` desde Render. Deshabilita el permiso y cambia la versión de credencial, invalidando las sesiones existentes sin afectar las demás cuentas. Cualquier recuperación de contraseña debe hacerse por el operador, sin habilitar cobros ni convertirla en cuenta de pago.
+
+
+## Audio directo desde R2 (11 noviembre 2026)
+
+Las rutas de reproducción autorizan la membresía y verifican el objeto privado antes de emitir una URL firmada GET de 300 segundos. `?delivery=1` devuelve `{url, expiresAt}`; las peticiones de audio tradicionales reciben 307 sin bytes de audio. HEAD solo devuelve metadatos. El navegador hace sus propias solicitudes Range a R2; no se firman encabezados If-Match ni Range. El reproductor renueva enlaces caducados conservando posición y velocidad. R2 permanece privado; nunca se publican claves de servidor. Un enlace temporal puede utilizarse hasta que caduque.
+
+Las muestras son archivos recortados independientes definidos en `tec-audio-previews.json`; sus rutas se atienden antes de express.static y también entregan directamente desde R2. Todos los libros publicados tienen claves R2 inmutables. No reemplazar objetos activos: subir otra clave con versión/hash y actualizar bytes, SHA256 y ETag verificados. CORS permite GET/HEAD desde totalelitecoaching.com y www.totalelitecoaching.com, con Range y los encabezados de respuesta de medios.
+
+El generador interno de fragmentos mantiene su lector acotado de 32 MB; no sigue redirecciones que evadan ese límite. Las páginas, API y fragmentos generados breves siguen usando Render.

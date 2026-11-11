@@ -105,7 +105,7 @@ El catálogo editorial está fijado en `src/knowledge/tec-audiobooks.json`. El p
 
 El audio se guarda una sola vez en MongoDB GridFS, bucket `tec_audiobooks`, separado de las pruebas privadas de usuarios. No se incluye el binario en Git ni en la carpeta pública. `TecAudiobookMedia` publica únicamente archivos cuyo hash coincide con el manifiesto. La descarga exige una cuenta activa, admite HEAD y rangos HTTP para móviles y no se almacena en la caché compartida de la PWA.
 
-Las entradas con `audio.r2Key` se leen del bucket privado `tec-audiolibros` de Cloudflare R2. En Render se configuran `TEC_AUDIO_R2_ACCOUNT_ID`, `TEC_AUDIO_R2_ACCESS_KEY_ID` y `TEC_AUDIO_R2_SECRET_ACCESS_KEY` con una credencial Object Read only limitada a ese bucket. TEC verifica el tamaño y ETag fijados en el catálogo y sirve los rangos desde el propio dominio después de verificar el acceso. Los archivos completos de estas entradas se gestionan en R2.
+Las entradas con `audio.r2Key` se leen del bucket privado `tec-audiolibros` de Cloudflare R2. En Render se configuran `TEC_AUDIO_R2_ACCOUNT_ID`, `TEC_AUDIO_R2_ACCESS_KEY_ID` y `TEC_AUDIO_R2_SECRET_ACCESS_KEY` con una credencial Object Read only limitada a ese bucket. TEC verifica el tamaño y ETag fijados en el catálogo y autoriza enlaces temporales para que el navegador solicite los rangos directamente a R2. Los archivos completos de estas entradas se gestionan en R2.
 
 Las colecciones `TecAudiobookReview` y `TecAudiobookProgress` usan identificadores canónicos de libro y usuario para evitar duplicados concurrentes. La identidad siempre viene de la sesión. Las respuestas de reseñas no exponen IDs de usuario ni correos. Los comentarios se insertan como texto, nunca HTML. Las escrituras rechazan orígenes ajenos.
 
@@ -124,3 +124,12 @@ La biblioteca incluye Acres de diamantes (Russell H. Conwell), versión completa
 Ambos títulos incluyen texto completo autenticado en `/api/coach/audiobooks/:id/text`. Los pasajes conservan exactamente el maestro español y se alinean a los segmentos de reconocimiento de las tomas originales dentro de la línea de tiempo del libro. La sincronización es por pasajes, no una afirmación de alineación exacta de cada fonema. Al escuchar se resalta y sigue el pasaje; al desplazarse manualmente se desactiva el seguimiento hasta volver a marcarlo. Tocar un pasaje lleva el reproductor a ese punto. La velocidad, capítulos y avance por cuenta usan el mismo audio y reloj; no hay un segundo reproductor. Los textos no entran en la caché compartida de la PWA y la ruta exige el mismo acceso que el audio.
 
 Verificación: 782 pruebas completas correctas, además de revisión de interfaz con archivos de audio reales, salto desde un pasaje, velocidad 1.5×, seguimiento, texto íntegro y pantalla móvil. No se escriben reseñas de prueba en producción.
+
+
+## Audio directo desde R2 (11 noviembre 2026)
+
+Las rutas de reproducción autorizan la membresía y verifican el objeto privado antes de emitir una URL firmada GET de 300 segundos. `?delivery=1` devuelve `{url, expiresAt}`; las peticiones de audio tradicionales reciben 307 sin bytes de audio. HEAD solo devuelve metadatos. El navegador hace sus propias solicitudes Range a R2; no se firman encabezados If-Match ni Range. El reproductor renueva enlaces caducados conservando posición y velocidad. R2 permanece privado; nunca se publican claves de servidor. Un enlace temporal puede utilizarse hasta que caduque.
+
+Las muestras son archivos recortados independientes definidos en `tec-audio-previews.json`; sus rutas se atienden antes de express.static y también entregan directamente desde R2. Todos los libros publicados tienen claves R2 inmutables. No reemplazar objetos activos: subir otra clave con versión/hash y actualizar bytes, SHA256 y ETag verificados. CORS permite GET/HEAD desde totalelitecoaching.com y www.totalelitecoaching.com, con Range y los encabezados de respuesta de medios.
+
+El generador interno de fragmentos mantiene su lector acotado de 32 MB; no sigue redirecciones que evadan ese límite. Las páginas, API y fragmentos generados breves siguen usando Render.

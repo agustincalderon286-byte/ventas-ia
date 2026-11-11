@@ -48,7 +48,7 @@ async function fixture(r2) {
   const media = memoryModel(), reviews = memoryModel(), progress = memoryModel(), files = new Map();
   const bytes = Buffer.from('0000ftypM4B audiolibro fixture bytes only');
   const sourceBook = r2 ? audiobookCatalog.find(b => b.audio.r2Key) : audiobookCatalog[0];
-  const book = { ...sourceBook, audio: { ...sourceBook.audio, bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') } };
+  const book = { ...sourceBook, audio: { ...sourceBook.audio, ...(!r2 && { r2Key: undefined, r2ETag: undefined }), bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') } };
   let sequence = 0, downloads = 0;
   const bucket = {
     find(q) { return { limit() { return this; }, async toArray() { return [...files.values()].filter(f => f._id === q._id && f.metadata.bookId === q['metadata.bookId'] && f.metadata.sha256 === q['metadata.sha256']); } }; },
@@ -126,33 +126,27 @@ test('every catalog book has complete canonical text and ordered, bounded audio 
   assert.equal(getAudiobookTranscript('../server'), null);
 });
 
-test('private R2 audio is listed after verification and streams exact chapter seek ranges for active accounts', async () => {
-  let verified = false;
-  let reads = 0;
-  const f = await fixture({
-    ready: async () => verified,
-    open: async (_audio, range) => {
-      reads++;
-      return Readable.from(f.bytes.subarray(range.start, range.end + 1));
-    }
-  });
+test('private R2 audio authorizes every link and redirects without streaming through the server', async () => {
+  let verified = false, reads = 0, links = 0;
+  const lease = { url: 'https://example.test/private-audio', expiresAt: Date.now() + 300000 };
+  const f = await fixture({ ready: async () => verified, delivery: async () => { links++; return lease; },
+    open: async () => { reads++; throw new Error('public playback must not proxy audio'); } });
   try {
-    const listing = () => f.request('/api/coach/audiobooks').then(r => r.json());
-    assert.equal((await listing()).books[0].available, false);
+    assert.equal((await (await f.request('/api/coach/audiobooks')).json()).books[0].available, false);
     assert.equal((await f.request(f.path + '/audio')).status, 404);
     verified = true;
-    assert.equal((await listing()).books[0].available, true);
-    assert.equal((await f.request(f.path + '/audio', { user: null })).status, 401);
-    assert.equal((await f.request(f.path + '/audio', { user: 'inactive' })).status, 403);
-    assert.equal((await f.request(f.path + '/audio', { method: 'HEAD' })).status, 200);
-    assert.equal(reads, 0);
-    const response = await f.request(f.path + '/audio', { headers: { Range: 'bytes=-4' } });
-    assert.equal(response.status, 206);
-    assert.equal(response.headers.get('content-type'), 'audio/mp4');
-    assert.equal(response.headers.get('content-range'), `bytes ${f.bytes.length - 4}-${f.bytes.length - 1}/${f.bytes.length}`);
-    assert.deepEqual(Buffer.from(await response.arrayBuffer()), f.bytes.subarray(-4));
-    assert.equal(reads, 1);
-    assert.equal(f.downloads(), 0);
+    for (const [user, status] of [[null,401], ['inactive',403]]) {
+      assert.equal((await f.request(f.path + '/audio?delivery=1', { user })).status, status);
+    }
+    assert.equal(links, 0);
+    const head = await f.request(f.path + '/audio', { method: 'HEAD', headers: { Range: 'bytes=-4' } });
+    assert.equal(head.status, 206); assert.equal(head.headers.get('content-length'), '4'); assert.equal(links, 0);
+    const response = await f.request(f.path + '/audio', { redirect: 'manual', headers: { Range: 'bytes=-4' } });
+    assert.equal(response.status, 307); assert.equal(response.headers.get('location'), lease.url);
+    assert.equal(await response.text(), ''); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await (await f.request(f.path + '/audio?delivery=1')).json(), lease);
+    assert.equal((await f.request(f.path + '/audio?delivery=1', { headers: { Range: 'bytes=999999-' } })).status, 416);
+    assert.equal(links, 2); assert.equal(reads, 0); assert.equal(f.downloads(), 0);
   } finally { await f.close(); }
 });
 

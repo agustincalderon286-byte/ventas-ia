@@ -1,0 +1,100 @@
+{
+  "como-un-hombre-piensa": {
+    "filename": "como-un-hombre-piensa-d3a9621bc878d227.m4a",
+    "r2Key": "direct-audio-v1/como-un-hombre-piensa-d3a9621bc878d227.m4a",
+    "bytes": 2372925,
+    "sha256": "d3a9621bc878d227a344d3032905b4345259c90ea918f2af071a53acf5c3b591",
+    "r2ETag": "\"fc9bef52f73fc360073dbb8819d818db\""
+  },
+  "acres-de-diamantes": {
+    "filename": "acres-de-diamantes-57d86e4d153fe5f3.m4a",
+    "r2Key": "direct-audio-v1/acres-de-diamantes-57d86e4d153fe5f3.m4a",
+    "bytes": 5837226,
+    "sha256": "57d86e4d153fe5f309e47a729180b110016a388ec66661b5b128963d96b821ef",
+    "r2ETag": "\"6cf115fadce89b7e8588aea708d8884e\""
+  },
+  "el-arte-de-la-guerra": {
+    "filename": "el-arte-de-la-guerra-c7bc2d7aa9282e21.m4a",
+    "r2Key": "direct-audio-v1/el-arte-de-la-guerra-c7bc2d7aa9282e21.m4a",
+    "bytes": 4214634,
+    "sha256": "c7bc2d7aa9282e21676125b24959e4e38f0df65d98b63c9f1aea1b265bd4a048",
+    "r2ETag": "\"54fc3f065d9fdca6ecd026fe6f07df39\""
+  },
+  "genesis-rv1909": {
+    "filename": "genesis-rv1909-9d8358d2702e92f6.m4a",
+    "r2Key": "direct-audio-v1/genesis-rv1909-9d8358d2702e92f6.m4a",
+    "bytes": 14081216,
+    "sha256": "9d8358d2702e92f6ef2fe203e0694071c9c76f7ce294a7facce28a8cc208eec6",
+    "r2ETag": "\"73fb33eeb2965d565d81af9bec064e66\""
+  },
+  "exodo-rv1909": {
+    "filename": "exodo-rv1909-c9b57243f8070fdf.m4a",
+    "r2Key": "direct-audio-v1/exodo-rv1909-c9b57243f8070fdf.m4a",
+    "bytes": 10890703,
+    "sha256": "c9b57243f8070fdfc948ae76a9e3454a2e01ffe9bed1452fdc325e35543dc02e",
+    "r2ETag": "\"687033217ba02b0b7aa7d38e6b4563a8\""
+  },
+  "ayudate": {
+    "filename": "ayudate-a57d47c277b33074.m4a",
+    "r2Key": "direct-audio-v1/ayudate-a57d47c277b33074.m4a",
+    "bytes": 39007981,
+    "sha256": "a57d47c277b330740e6635bb05bbcb6cd98f4496812d6a6dca671cddde9b5ea3",
+    "r2ETag": "\"9fd78bbd5a09cff5a5a5525cf2a387e6\""
+  },
+  "la-ciencia-de-hacerse-rico": {
+    "filename": "la-ciencia-de-hacerse-rico-beb67c1ccebd9903.m4a",
+    "r2Key": "direct-audio-v1/la-ciencia-de-hacerse-rico-beb67c1ccebd9903.m4a",
+    "bytes": 10744604,
+    "sha256": "beb67c1ccebd9903fda5a31da7d49bc37ad3e0ea68caf2ad410eefd0f174250c",
+    "r2ETag": "\"d342e8ffe878e5997401adc600bde5d0\""
+  },
+  "el-kybalion": {
+    "filename": "el-kybalion-51435ef86597c3f0.m4a",
+    "r2Key": "direct-audio-v1/el-kybalion-51435ef86597c3f0.m4a",
+    "bytes": 25257297,
+    "sha256": "51435ef86597c3f0d269fad0701b6281079ec1eeae3eabd5289e8861fc6747dd",
+    "r2ETag": "\"0cc604b3ac89e5d804692e9b69bb7739\""
+  },
+  "el-hombre-mas-rico-de-babilonia": {
+    "filename": "el-hombre-mas-rico-de-babilonia-efdfeed38d76c0fc.m4a",
+    "r2Key": "direct-audio-v1/el-hombre-mas-rico-de-babilonia-efdfeed38d76c0fc.m4a",
+    "bytes": 28271802,
+    "sha256": "efdfeed38d76c0fce872db73c539a473ac7c7833c53d22d17e90031279abc6d2",
+    "r2ETag": "\"d010d8041323803120d67ff75f61326a\""
+  },
+  "meditaciones-marco-aurelio": {
+    "filename": "meditaciones-marco-aurelio-15658b183f34e75d.m4a",
+    "r2Key": "direct-audio-v1/meditaciones-marco-aurelio-15658b183f34e75d.m4a",
+    "bytes": 14360299,
+    "sha256": "15658b183f34e75d6c83bc893123845978002c7675b9fd6160f0d540327b28a8",
+    "r2ETag": "\"a062a627c945c875638fd575f1e199cd\""
+  },
+  "mitos-y-heroes-de-grecia": {
+    "filename": "mitos-y-heroes-de-grecia-7035b23d876aecdb.m4a",
+    "r2Key": "direct-audio-v1/mitos-y-heroes-de-grecia-7035b23d876aecdb.m4a",
+    "bytes": 4368930,
+    "sha256": "7035b23d876aecdb9ab740ff87dd811c39aad6320238b5678b5d412e60e52afe",
+    "r2ETag": "\"50a56dba6515ad68f0cf708b7804cb9b\""
+  },
+  "viaje-al-oeste": {
+    "filename": "viaje-al-oeste-d3e6d5d4f4a95ec7.m4a",
+    "r2Key": "direct-audio-v1/viaje-al-oeste-d3e6d5d4f4a95ec7.m4a",
+    "bytes": 16590582,
+    "sha256": "d3e6d5d4f4a95ec7e5e8e87f6502ed1b5e4125168608cd963ad0cec7e6627c0c",
+    "r2ETag": "\"a2ce7013b13be439d6f6e6a6a02aff3e\""
+  },
+  "la-epopeya-de-gilgamesh": {
+    "filename": "la-epopeya-de-gilgamesh-bf6b34c9df0b14a1.m4a",
+    "r2Key": "direct-audio-v1/la-epopeya-de-gilgamesh-bf6b34c9df0b14a1.m4a",
+    "bytes": 7586236,
+    "sha256": "bf6b34c9df0b14a1ad9e28be1863f27c4f495393342cf95d6992831a70b25d5f",
+    "r2ETag": "\"7a8cc4785e51d1096480435502b860d9\""
+  },
+  "don-quijote-de-la-mancha": {
+    "filename": "don-quijote-de-la-mancha-01246cc21b6cbff4.m4a",
+    "r2Key": "direct-audio-v1/don-quijote-de-la-mancha-01246cc21b6cbff4.m4a",
+    "bytes": 10155732,
+    "sha256": "01246cc21b6cbff4e303adc928f9f9c40e4fc80d08e2c7574e34246224c2f20e",
+    "r2ETag": "\"1969a94866030155f93b8ec5c002044c\""
+  }
+}

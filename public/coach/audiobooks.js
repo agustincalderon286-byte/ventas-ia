@@ -4,6 +4,7 @@
   if (!root) return;
   const $ = selector => root.querySelector(selector);
   const audio = $('[data-ab-audio]');
+  const delivery = new TecAudioDelivery.Controller(audio, { onFailure: text => status('[data-ab-player-status]', text) });
   const readerRoot = $('[data-ab-reader]');
   const reader = globalThis.TecBookReader && readerRoot ? new TecBookReader.Reader(readerRoot, audio, position => seekTo(position, true)) : { clear() {}, set() {} };
   const state = { loaded: false, busy: false, book: null, page: 1, generation: 0, saveAt: 0, pendingSeek: null, saveQueue: Promise.resolve() };
@@ -15,7 +16,7 @@
       headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if ([401, 403].includes(response.status)) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+      if ([401, 403].includes(response.status)) { delivery.stop(); }
       throw new Error(data.error || (response.status === 401 ? 'Tu sesión terminó. Vuelve a entrar a TEC.' : 'No pude completar la solicitud. Inténtalo de nuevo.'));
     }
     return data;
@@ -68,13 +69,8 @@
       $('[data-ab-credits]').textContent = book.credits;
       $('[data-ab-speed]').value = String(data.progress.speed);
       status('[data-ab-player-status]', 'Listo para escuchar.'); status('[data-ab-save-status]', data.progress.position > 0 ? `Continuarás desde ${time(data.progress.position)}.` : 'Tu avance se guarda mientras escuchas.');
-      audio.removeAttribute('src'); audio.load();
-      audio.onloadedmetadata = () => {
-        if (generation !== state.generation) return;
-        audio.currentTime = Math.min(state.pendingSeek ?? data.progress.position, Math.max(0, book.duration - 0.1));
-        audio.playbackRate = data.progress.speed;
-      };
-      audio.src = book.audioUrl; audio.load();
+      await delivery.load(book.audioUrl, { position: state.pendingSeek ?? data.progress.position, rate: data.progress.speed });
+      if (generation !== state.generation) return;
       const chapters = $('[data-ab-chapters]'); chapters.replaceChildren();
       book.chapters.forEach((chapter, index) => {
         const item = el('li'); const button = el('button', undefined, 'ab-chapter'); button.type = 'button'; button.dataset.chapter = index;
@@ -91,7 +87,7 @@
           title: book.title, artist: book.author, album: 'Audiolibros TEC',
           artwork: [{ ...artwork, src: new URL(artwork.src, location.href).href }]
         });
-        for (const [action, handler] of Object.entries({ play: () => audio.play().catch(() => {}), pause: () => audio.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { seekTo(detail.seekTime, false); } })) {
+        for (const [action, handler] of Object.entries({ play: () => delivery.play(), pause: () => delivery.pause(), seekbackward: () => seek(-15), seekforward: () => seek(15), seekto: detail => { seekTo(detail.seekTime, false); } })) {
           try { navigator.mediaSession.setActionHandler(action, handler); } catch {}
         }
       }
@@ -141,8 +137,8 @@
   }
   function seekTo(position, play = false) {
     if (!state.book) return;
-    state.pendingSeek = Math.max(0, Math.min(state.book.duration, position)); audio.currentTime = state.pendingSeek;
-    if (play) audio.play().catch(() => status('[data-ab-player-status]', 'Toca reproducir para escuchar.'));
+    state.pendingSeek = Math.max(0, Math.min(state.book.duration, position));
+    delivery.seek(state.pendingSeek, play);
   }
   function seek(seconds) { seekTo(audio.currentTime + seconds); }
   $('[data-ab-review-form]').addEventListener('submit', async event => {
@@ -180,10 +176,10 @@
   audio.addEventListener('play', () => status('[data-ab-player-status]', 'Reproduciendo'));
   audio.addEventListener('pause', () => { status('[data-ab-player-status]', 'En pausa'); saveProgress(); });
   audio.addEventListener('ended', () => { status('[data-ab-player-status]', 'Libro terminado'); saveProgress(); });
-  audio.addEventListener('error', () => { if (audio.getAttribute('src')) status('[data-ab-player-status]', 'No pude cargar el audio. Revisa tu conexión y vuelve a abrir el libro.'); });
+
   window.addEventListener('pagehide', saveProgress);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
-  document.querySelectorAll('[data-coach-logout], [data-coach-return-session]').forEach(button => button.addEventListener('click', () => { audio.pause(); state.book = null; state.generation++; audio.removeAttribute('src'); audio.load(); reader.clear(); }));
+  document.querySelectorAll('[data-coach-logout], [data-coach-return-session]').forEach(button => button.addEventListener('click', () => { delivery.stop(); state.book = null; state.generation++; reader.clear(); }));
   window.addEventListener('coach:workspace-change', event => { if (event.detail?.workspace === 'audiolibros') loadCatalog(); });
   window.addEventListener('hashchange', () => { if (location.hash === '#audiolibros') document.querySelector('[data-coach-workspace-tab="audiolibros"]')?.click(); });
   if (!root.hidden) loadCatalog();

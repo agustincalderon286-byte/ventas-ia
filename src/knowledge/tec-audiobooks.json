@@ -67,7 +67,9 @@
       "sha256": "d614e63ebc3d519e98a2ed55574a63da6a30d5870821bc425bc5d872ab8905b8",
       "bytes": 70489653,
       "contentType": "audio/mp4",
-      "filename": "Como-un-hombre-piensa.m4b"
+      "filename": "Como-un-hombre-piensa.m4b",
+      "r2Key": "direct-audio-v1/como-un-hombre-piensa-d614e63ebc3d519e.m4b",
+      "r2ETag": "\"4ea006f9defe81cd66db25b84999c521\""
     },
     "voiceDisclosure": ""
   },
@@ -135,7 +137,9 @@
       "sha256": "c6e0e8ddcd653e3e4632df91c9e028a98a12e2d4b49ea7f94d6b09d6f6e73e7e",
       "bytes": 133639279,
       "contentType": "audio/mp4",
-      "filename": "Acres-de-diamantes.m4b"
+      "filename": "Acres-de-diamantes.m4b",
+      "r2Key": "direct-audio-v1/acres-de-diamantes-c6e0e8ddcd653e3e.m4b",
+      "r2ETag": "\"98d2b18fd425a42e64b7315c3db255d3\""
     },
     "voiceDisclosure": ""
   },

@@ -3,6 +3,7 @@
   const $ = selector => document.querySelector(selector);
   const audio = $('#audio');
   const player = $('#player');
+  const delivery = new TecAudioDelivery.Controller(audio, { onFailure: text => { if (selected) $('#player-status').textContent = text; } });
   const seekBar = $('#seek-bar');
   const search = $('#catalog-search');
   const miniPlayer = $('#mini-player');
@@ -255,20 +256,11 @@
 
   function seek(position, play = false) {
     if (!selected || audio.readyState === 0) return;
-    audio.currentTime = Math.max(0, Math.min(Number(seekBar.max), position));
-    if (play) startPlayback();
+    delivery.seek(Math.max(0, Math.min(Number(seekBar.max), position)), play);
     updatePlayback();
   }
 
-  function startPlayback() {
-    const book = selected;
-    if (!book) return;
-    audio.play().catch(error => {
-      if (selected !== book || error.name === 'AbortError') return;
-      $('#player-status').textContent = 'No se pudo reproducir el audio. Inténtalo de nuevo.';
-      $('#mini-status').textContent = 'Abre el reproductor para reintentar.';
-    });
-  }
+  function startPlayback() { if (selected) delivery.play(); }
 
   function togglePlayback() {
     if (audio.paused) startPlayback();
@@ -374,7 +366,7 @@
       artwork: [{ ...artwork, src: new URL(artwork.src, location.href).href }]
     });
     const actions = {
-      play: () => audio.play().catch(() => {}), pause: () => audio.pause(),
+      play: () => delivery.play(), pause: () => delivery.pause(),
       seekbackward: detail => seek(audio.currentTime - (detail.seekOffset || 15)),
       seekforward: detail => seek(audio.currentTime + (detail.seekOffset || 15)),
       seekto: detail => seek(detail.seekTime)
@@ -432,17 +424,14 @@
       $('#current-chapter').textContent = full ? '' : 'Duración de la muestra · ' + time(book.previewDuration);
       $('#player-status').textContent = data.progress.position ? 'Continúa en ' + time(data.progress.position) + '.' : '';
       $('#player-controls').hidden = false;
-      audio.onloadedmetadata = () => {
+      const position = Number.isFinite(startAt) ? startAt : data.progress.position;
+      await delivery.load(selected.audioUrl, { position, rate: Number($('#speed').value) || 1, onReady: () => {
         if (request !== generation) return;
         seekBar.max = String(Number.isFinite(audio.duration) ? Math.min(selected.duration, audio.duration) : selected.duration);
         seekBar.disabled = false;
-        audio.playbackRate = Number($('#speed').value) || 1;
-        const position = Number.isFinite(startAt) ? startAt : data.progress.position;
-        if (position) seek(Math.min(position, Math.max(0, audio.duration - .1)));
-        updateChapter();
-        updatePlayback();
-      };
-      audio.src = selected.audioUrl;
+        updateChapter(); updatePlayback();
+      } });
+      if (request !== generation) return;
       achievementsContext();
       updatePlayback();
       setMediaSession(book);
@@ -491,10 +480,7 @@
     achievementsContext();
     scrubbing = false;
     seekBar.disabled = true;
-    audio.pause();
-    audio.onloadedmetadata = null;
-    audio.removeAttribute('src');
-    audio.load();
+    delivery.stop();
     miniPlayer.hidden = true;
     reader.clear();
     $('#reader-panel').hidden = true;
@@ -612,9 +598,7 @@
     resetTimer();
     saveProgress();
   });
-  audio.addEventListener('error', () => {
-    if (selected) $('#player-status').textContent = 'No se pudo cargar el audio. Vuelve a abrir el libro para intentarlo.';
-  });
+
   window.addEventListener('pagehide', saveProgress);
   document.addEventListener('visibilitychange', () => { checkTimer(); if (document.hidden) saveProgress(); });
 

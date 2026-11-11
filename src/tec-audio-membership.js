@@ -6,6 +6,10 @@ import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAud
 import { createAudiobookShareModel, registerAudiobookSharing } from './tec-audiobook-sharing.js';
 import { registerAudioAchievements } from './tec-audio-achievements.js';
 import { registerReadingApi } from './tec-reading-books.js';
+import fs from 'node:fs';
+import { sendDirectAudio } from './tec-audio-delivery.js';
+
+const audioPreviews = JSON.parse(fs.readFileSync(new URL('./knowledge/tec-audio-previews.json', import.meta.url), 'utf8'));
 
 const api = '/api/audiolibros';
 const cookie = 'tec_audio_session';
@@ -372,7 +376,23 @@ export function registerAudioMembership(app, {
   route('get', '/libros/:id/audio', async (req, res) => {
     if (!await member(req, res)) return;
     const found = await bookFor(req, res);
-    if (found) await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
+    if (!found) return;
+    if (found.file.storage === 'r2') return sendDirectAudio(req, res, found.book.audio, r2);
+    await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
+  });
+
+  // Installed before express.static: these public URLs now deliver only the
+  // separate 10% excerpt from private R2, never a signed full-book URL.
+  app.get('/audiolibros/muestras/:filename', async (req, res) => {
+    res.set({ 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+    const name = req.params.filename;
+    const id = name.endsWith('.m4a') ? name.slice(0, -4) : '';
+    const sample = Object.hasOwn(audioPreviews, id) && byId.has(id) ? audioPreviews[id] : null;
+    if (!sample) return res.status(404).end();
+    try {
+      if (!await r2?.ready(sample)) return res.status(503).json({ error: 'La muestra está temporalmente ocupada. Inténtalo de nuevo.' });
+      return await sendDirectAudio(req, res, sample, r2);
+    } catch { return res.status(503).json({ error: 'La muestra está temporalmente ocupada. Inténtalo de nuevo.' }); }
   });
 
   route('get', '/libros/:id/texto', async (req, res) => {

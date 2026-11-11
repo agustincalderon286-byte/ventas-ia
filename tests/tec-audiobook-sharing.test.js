@@ -101,7 +101,7 @@ test('public share pages and media expose only approved excerpts, retain canonic
 test('real FFmpeg extracts a bounded MP3 and vertical H264 video using range requests without copying the book', async t => {
   const sample = new URL('../public/audiolibros/muestras/como-un-hombre-piensa.m4a', import.meta.url);
   const bytes = fs.statSync(sample).size;
-  const fixtureBook = { ...book, audio: { ...book.audio, bytes } };
+  const fixtureBook = { ...book, audio: { ...book.audio, r2Key: undefined, r2ETag: undefined, bytes } };
   const cacheDir = await mkdtemp(path.join(os.tmpdir(), 'tec-sharing-test-'));
   t.after(() => rm(cacheDir, { recursive: true, force: true }));
   let transferred = 0;
