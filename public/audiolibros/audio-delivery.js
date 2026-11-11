@@ -5,7 +5,7 @@
     : 'No se pudo cargar el audio. Revisa tu conexión e inténtalo de nuevo.';
   class Controller {
     constructor(audio, { onFailure = () => {}, fetchImpl = fetch, now = () => Date.now() } = {}) {
-      this.audio = audio; this.onFailure = onFailure; this.fetch = fetchImpl; this.now = now;
+      this.audio = audio; this.onFailure = onFailure; this.fetch = fetchImpl.bind(window); this.now = now;
       this.generation = 0; this.source = ''; this.position = 0; this.rate = 1; this.lastRetry = -Infinity;
       this.native = Boolean(window.webkit?.messageHandlers?.tecNative || window.TecNativeOffline || window.TecNative || window.TECNative || window.Capacitor);
       audio.addEventListener('loadedmetadata', () => {

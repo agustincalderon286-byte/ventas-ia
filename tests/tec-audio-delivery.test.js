@@ -69,3 +69,11 @@ test('switching books discards stale link responses and rejects foreign delivery
   const bad = fixture(async () => ({ ok: true, json: async () => ({ url: 'https://other.test/book', expiresAt: 1300000 }) }));
   await assert.rejects(bad.controller.load('/audio')); assert.equal(bad.audio.getAttribute('src'), null);
 });
+
+test('browser fetch keeps the Window receiver required by native Chrome fetch', async () => {
+  const scope = { window: {}, navigator: { onLine: true }, location: new URL('https://totalelitecoaching.com/audiolibros/'), URL, AbortController, setTimeout, clearTimeout };
+  scope.fetch = function () { assert.equal(this, scope.window); return Promise.resolve({ ok: true, json: async () => ({ url: `https://${host}/tec-audiolibros/book`, expiresAt: Date.now() + 300000 }) }); };
+  vm.runInNewContext(code, scope);
+  const audio = new Audio(); const controller = new scope.window.TecAudioDelivery.Controller(audio);
+  await controller.load('/audio'); assert.equal(new URL(audio.src).hostname, host);
+});
