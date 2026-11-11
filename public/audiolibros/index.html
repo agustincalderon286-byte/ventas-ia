@@ -51,7 +51,7 @@
   <script defer src="/audiolibros/compartir.js?v=20261107"></script>
   <link rel="stylesheet" href="/audiolibros/interfaz.css?v=20261109">
   <script defer src="/audiolibros/navegacion.js?v=20261109"></script>
-  <script defer src="/audiolibros/biblioteca.js?v=20261110-payments"></script>
+  <script defer src="/audiolibros/biblioteca.js?v=20261110-paid-accounts"></script>
   <link rel="stylesheet" href="/audiolibros/logros.css?v=2">
   <link rel="stylesheet" href="/audiolibros/insignias-compartir.css?v=2">
   <script type="module" src="/audiolibros/logros.js?v=2"></script>
@@ -179,25 +179,58 @@
   <dialog id="account" aria-labelledby="account-title">
     <button type="button" class="close" data-close aria-label="Cerrar">×</button>
     <p class="eyebrow">Tu biblioteca TEC</p>
-    <h2 id="account-title">Ingresa con tu correo</h2>
+    <h2 id="account-title">Ingresa a tu cuenta</h2>
+    <div id="paid-confirmation" hidden>
+      <p>Te enviamos un correo de <strong>Audiolibros TEC</strong> a la dirección que usaste al pagar.</p>
+      <p>Abre el enlace para confirmar tu email y elegir tu usuario y contraseña. Después podrás ingresar y disfrutar tu membresía.</p>
+      <p class="fine">El enlace caduca en 24 horas. Revisa también Spam o Correo no deseado.</p>
+      <button id="resend-activation" class="button outline" type="button">Reenviar correo de confirmación</button>
+    </div>
     <form id="sign-in">
-      <label for="email">Correo electrónico</label>
-      <input id="email" type="email" autocomplete="email" maxlength="254" required placeholder="tu@correo.com">
-      <button class="button primary" type="submit">Enviarme un enlace</button>
-      <p class="fine">Recibirás un enlace de un solo uso para entrar a tu cuenta.</p>
+      <label for="login-identifier">Usuario o correo electrónico</label>
+      <input id="login-identifier" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254" required>
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" type="password" autocomplete="current-password" maxlength="128" required>
+      <button class="button primary" type="submit">Ingresar</button>
+      <button id="forgot-password" class="button outline" type="button">Olvidé mi contraseña</button>
+      <p class="fine">¿Todavía no tienes membresía? Prueba el 10 % gratis o <a href="#membresia" id="account-subscribe">suscríbete para crear tu cuenta después del pago</a>.</p>
     </form>
-    <details id="test-access">
-      <summary>Acceso con usuario y contraseña</summary>
+    <form id="recovery" hidden>
+      <p>Escribe el correo que usaste para pagar. Si aún no terminaste de crear tu cuenta, también puedes pedir aquí un nuevo enlace de confirmación.</p>
+      <label for="recovery-email">Correo de tu membresía</label>
+      <input id="recovery-email" type="email" autocomplete="email" maxlength="254" required>
+      <button class="button primary" type="submit">Enviarme un enlace</button>
+      <button class="button outline" type="button" data-account-login>Volver a ingresar</button>
+    </form>
+    <form id="credentials" hidden>
+      <p id="credentials-explanation"></p>
+      <div id="credentials-username-field">
+        <label for="credentials-username">Elige tu usuario</label>
+        <input id="credentials-username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9_-]{2,31}">
+        <p class="fine">De 3 a 32 caracteres. Empieza con una letra; usa letras sin acentos, números, guion o guion bajo.</p>
+      </div>
+      <label for="new-password">Nueva contraseña</label>
+      <input id="new-password" type="password" autocomplete="new-password" minlength="15" maxlength="128" required>
+      <label for="new-password-confirmation">Repite la contraseña</label>
+      <input id="new-password-confirmation" type="password" autocomplete="new-password" minlength="15" maxlength="128" required>
+      <p class="fine">Usa al menos 15 caracteres. Una frase de varias palabras es fácil de recordar. Puedes pegarla desde tu gestor de contraseñas.</p>
+      <button id="credentials-submit" class="button primary" type="submit">Confirmar correo y crear mi cuenta</button>
+    </form>
+    <div id="continue-membership" hidden>
+      <p>Tu correo está confirmado. Puedes continuar el pago de la membresía que habías iniciado. Después de pagar crearás tu usuario y contraseña.</p>
+      <button id="continue-membership-submit" class="button primary" type="button">Continuar al pago seguro</button>
+    </div>
+    <details id="test-access" hidden>
+      <summary>Acceso de prueba de TEC</summary>
       <form id="test-sign-in">
-        <label for="test-username">Usuario</label>
+        <label for="test-username">Usuario de prueba</label>
         <input id="test-username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" required>
         <label for="test-password">Contraseña</label>
         <input id="test-password" type="password" autocomplete="current-password" maxlength="128" required>
         <button class="button primary" type="submit">Entrar a la biblioteca</button>
-        <p class="fine">Para cuentas de prueba habilitadas por TEC. Sin activación por correo ni pagos.</p>
+        <p class="fine">Para cuentas de prueba habilitadas por TEC. Sin cobros ni suscripciones.</p>
       </form>
     </details>
-    <button id="confirm" class="button primary" type="button" hidden>Confirmar e ingresar</button>
     <div id="account-actions" class="actions" hidden>
       <button id="portal" class="button primary" type="button" hidden>Gestionar suscripción</button>
       <button id="logout" class="button outline" type="button">Cerrar sesión</button>
@@ -205,6 +238,22 @@
     <p id="account-status" class="status" role="status"></p>
     <p><a class="button outline" href="#logros" id="account-badges">Ver mis logros</a></p>
     <p class="fine">¿Tienes problemas para entrar? <a href="/audiolibros/contacto/">Pide ayuda a soporte</a>.</p>
+  </dialog>
+
+  <dialog id="checkout-dialog" aria-labelledby="checkout-title">
+    <button type="button" class="close" data-close aria-label="Cerrar">×</button>
+    <p class="eyebrow">Membresía Audiolibros TEC</p>
+    <h2 id="checkout-title">Tu biblioteca por $20 USD al mes</h2>
+    <p>Renovación mensual. Puedes cancelar desde tu cuenta. Las muestras del primer 10 % siguen siendo gratuitas.</p>
+    <form id="checkout-form">
+      <label for="checkout-email">Correo de tu membresía</label>
+      <input id="checkout-email" type="email" autocomplete="email" maxlength="254" required>
+      <p class="fine">Después de pagar recibirás un correo de Audiolibros TEC para confirmar tu email y elegir tu usuario y contraseña. Tu cuenta se crea después del pago.</p>
+      <button class="button primary" type="submit">Continuar al pago seguro</button>
+      <p class="fine">¿Ya tienes una cuenta? <button id="checkout-login" class="button outline" type="button">Ingresar o recuperar acceso</button></p>
+    </form>
+    <p id="checkout-status" class="status" role="status" aria-live="polite"></p>
+    <p class="fine"><a href="/audiolibros/privacidad/">Privacidad</a> · <a href="/audiolibros/contacto/">Ayuda de TEC</a></p>
   </dialog>
 
   <dialog id="player" aria-labelledby="book-title">

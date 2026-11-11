@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
 import express from 'express';
+import { audioAccountStore } from './helpers/audio-account-store.js';
 import { audiobookCatalog, getAudiobookTranscript } from '../src/tec-audiobooks.js';
 import { hasAudioMembership, isAudioMembershipPrice, registerAudioMembership } from '../src/tec-audio-membership.js';
 
@@ -10,7 +11,7 @@ const audience = 'tec-audiolibros';
 const priceId = 'price_audio';
 const price = { active: true, currency: 'usd', unit_amount: 2000,
   recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } };
-const subscription = { status: 'active', metadata: { audience }, items: { data: [{ price: { id: priceId } }] } };
+const subscription = { id: 'sub_audio', customer: 'cus_audio', status: 'active', metadata: { audience }, items: { data: [{ price: { id: priceId } }] } };
 
 test('audio entitlement accepts only the active independent plan at the advertised monthly price', () => {
   assert.ok(isAudioMembershipPrice(price));
@@ -25,10 +26,12 @@ test('audio entitlement accepts only the active independent plan at the advertis
   assert.equal(hasAudioMembership({ ...subscription, pause_collection: {} }, priceId), false);
 });
 
-test('guest preview, one-use sign in, member-only media and dedicated Checkout work through HTTP', async t => {
+test('guest previews, paid-only activation, password access and recovery work through HTTP', async t => {
   const [book] = audiobookCatalog;
   const rows = new Map();
-  const members = new Map();
+  const accountStore = audioAccountStore();
+  const members = accountStore.rows;
+  const intents = audioAccountStore();
   const grants = new Map();
   const shared = new Map();
   const lean = value => ({ async lean() { return value; } });
@@ -36,14 +39,21 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   let eligible = false;
   let checkoutData;
   const measurementCalls = [];
+  const completedCheckout = { id: 'cs_live_audio_checkout_test_123456789', mode: 'subscription', status: 'open',
+    livemode: true, payment_status: 'unpaid', currency: 'usd', amount_total: 2000, customer: 'cus_audio',
+    subscription: 'sub_audio', invoice: 'in_audio', customer_details: { email: 'listener@example.test' },
+    metadata: { audience, account_flow: 'paid-account-v1' } };
   const stripe = {
-    subscriptions: { async *list() { if (eligible) yield subscription; } },
+    subscriptions: { async *list() { if (eligible) yield subscription; }, async retrieve() { return subscription; } },
+    invoices: { async retrieve() { return { id: 'in_audio', customer: 'cus_audio', subscription: 'sub_audio', livemode: true,
+      status: 'paid', paid_out_of_band: false, currency: 'usd', amount_paid: 2000 }; } },
     prices: { async retrieve() { return price; } },
     billingPortal: { configurations: { async retrieve() { return { active: true, features: { subscription_cancel: { enabled: true } } }; } } },
     customers: { async create() { return { id: 'cus_audio' }; } },
     checkout: { sessions: {
       async list() { return { data: [] }; },
-      async create(data) { checkoutData = data; return { url: 'https://checkout.stripe.com/test' }; }
+      async retrieve() { return completedCheckout; },
+      async create(data) { checkoutData = data; return { id: completedCheckout.id, url: 'https://checkout.stripe.com/test' }; }
     } }
   };
   const app = express();
@@ -53,11 +63,8 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
       async revoke(user) { measurementCalls.push({ revoked: user.stripeCustomerId }); } },
     shares: { async create(row) { shared.set(row._id, row); }, findById(id) { return lean(shared.get(id)); } },
     stripe, priceId, portalId: 'bpc_audio', publicOrigin: 'https://totalelitecoaching.com',
-    sendSignIn: async (_email, url) => { link = url; },
-    accounts: {
-      findById(id) { return lean(members.get(id)); },
-      async updateOne({ _id }, { $set, $setOnInsert }) { members.set(_id, { ...members.get(_id), ...$setOnInsert, ...$set }); }
-    },
+    sendAccountMail: async message => { if (message.url) link = message.url; },
+    accounts: accountStore.model, checkoutIntents: intents.model,
     grants: {
       async findOneAndUpdate({ _id }, { $set }) { grants.set(_id, $set); },
       findOneAndDelete({ digest, expiresAt }) {
@@ -108,22 +115,30 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 5, end: 20 })).status, 201);
   assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 })).status, 401);
 
-  assert.equal((await post('/entrar', { email: 'listener@example.test' }, null, 'https://other.test')).status, 403);
-  assert.equal((await post('/entrar', { email: 'Listener@example.test' })).status, 200);
-  const token = new URLSearchParams(new URL(link).hash.slice(1)).get('entrar');
-  assert.equal([...grants.values()][0].digest, crypto.createHash('sha256').update(token).digest('hex'));
-  const confirmed = await post('/confirmar', { token });
-  assert.equal(confirmed.status, 200);
-  assert.equal((await post('/confirmar', { token })).status, 400);
-  const cookie = confirmed.headers.get('set-cookie').split(';')[0];
-  const headers = { Cookie: cookie, Range: 'bytes=4-7' };
-  assert.equal((await request(path + '/audio', { headers })).status, 403);
-  assert.equal((await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie)).status, 403);
-
+  assert.equal((await post('/checkout', { email: 'listener@example.test' }, null, 'https://other.test')).status, 403);
+  assert.equal((await post('/entrar', { email: 'listener@example.test' })).status, 401);
+  assert.equal((await post('/confirmar', { token: 'old-link' })).status, 410);
+  assert.equal(members.size, 0);
   const analytics = { consentVersion: 2, clientId: '123.1794310000', sessionId: '1794310000', campaign: {} };
-  assert.equal((await post('/checkout', { analytics }, cookie)).status, 200);
+  assert.equal((await post('/checkout', { email: 'Listener@example.test', analytics })).status, 200);
+  assert.equal(members.size, 0, 'an unpaid checkout never creates a library account');
   assert.equal(measurementCalls.at(-1).user.stripeCustomerId, 'cus_audio');
   assert.deepEqual(measurementCalls.at(-1).analytics, analytics);
+  assert.equal((await post('/alta/estado', { sessionId: completedCheckout.id })).status, 200);
+  assert.equal(members.size, 0);
+  eligible = true; completedCheckout.status = 'complete'; completedCheckout.payment_status = 'paid';
+  assert.deepEqual(await post('/alta/estado', { sessionId: completedCheckout.id }).then(res => res.json()), { paid: true });
+  assert.equal(members.size, 1);
+  assert.equal((await request(path + '/audio')).status, 401);
+  const token = new URLSearchParams(new URL(link).hash.slice(1)).get('cuenta');
+  assert.equal(members.get('listener@example.test').authGrantDigest, crypto.createHash('sha256').update(token).digest('hex'));
+  assert.equal((await post('/credenciales/estado', { token })).status, 200);
+  const password = 'Una frase para leer libros 2026';
+  const confirmed = await post('/credenciales', { token, username: 'lector_tec', password, passwordConfirmation: password });
+  assert.equal(confirmed.status, 200);
+  assert.equal((await post('/credenciales', { token, username: 'lector_tec', password, passwordConfirmation: password })).status, 400);
+  let cookie = confirmed.headers.getSetCookie().find(value => value.startsWith('tec_audio_session=')).split(';')[0];
+  const headers = { Cookie: cookie, Range: 'bytes=4-7' };
   assert.equal((await post('/estadisticas/contexto', { analytics }, cookie, 'https://other.test')).status, 403);
   const beforeGuest = measurementCalls.length;
   assert.equal((await post('/estadisticas/contexto', { analytics })).status, 200);
@@ -140,7 +155,7 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   assert.equal(checkoutData.customer, 'cus_audio');
   assert.equal(checkoutData.subscription_data.metadata.audience, audience);
   assert.match(checkoutData.success_url, /^https:\/\/totalelitecoaching\.com\/audiolibros\//);
-  assert.equal((await request(path + '/audio', { headers })).status, 403);
+  assert.equal((await request(path + '/audio', { headers })).status, 206);
 
   eligible = true;
   const memberShare = await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie);
@@ -156,6 +171,19 @@ test('guest preview, one-use sign in, member-only media and dedicated Checkout w
   assert.equal(await audio.text(), 'AAAA');
   const text = await request(path + '/texto', { headers }).then(res => res.json());
   assert.ok(text.cues.length > 100);
+  const unknownRecovery = await post('/recuperar', { email: 'unknown@example.test' }).then(res => res.json());
+  const knownRecovery = await post('/recuperar', { email: 'listener@example.test' }).then(res => res.json());
+  assert.deepEqual(knownRecovery, unknownRecovery);
+  const resetToken = new URLSearchParams(new URL(link).hash.slice(1)).get('cuenta');
+  const nextPassword = 'Una nueva frase para los libros 2026';
+  assert.equal((await post('/credenciales', { token: resetToken, password: nextPassword, passwordConfirmation: nextPassword })).status, 200);
+  assert.equal((await request(path + '/audio', { headers })).status, 401);
+  assert.equal((await post('/entrar', { identifier: 'lector_tec', password })).status, 401);
+  const loggedIn = await post('/entrar', { identifier: 'LECTOR_TEC', password: nextPassword });
+  assert.equal(loggedIn.status, 200);
+  cookie = loggedIn.headers.getSetCookie().find(value => value.startsWith('tec_audio_session=')).split(';')[0];
+  headers.Cookie = cookie;
+  assert.equal((await request(path + '/audio', { headers })).status, 206);
   assert.equal((await post('/salir', {}, cookie)).status, 200);
   assert.equal((await request(path + '/audio', { headers })).status, 401);
 });

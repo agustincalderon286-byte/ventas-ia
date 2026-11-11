@@ -65,14 +65,14 @@ test('provider failures and missing configuration never claim successful deliver
 
 test('Resend receives fixed owner recipient and validated Reply-To, with no HTML or credentials in content', async () => {
   let delivery;
-  const send = createSupportMailer({ apiKey: 'test-secret', from: 'TEC <support@tec.example>', fetchImpl: async (url, opts) => { delivery = { url, opts }; return { ok: true }; } });
+  const send = createSupportMailer({ apiKey: 'test-secret', from: 'TEC <agustin@totalelitecoaching.com>', fetchImpl: async (url, opts) => { delivery = { url, opts }; return { ok: true }; } });
   await send({ ...valid, reference: 'abcd1234-reference', to: 'ignored@example.com' });
   const body = JSON.parse(delivery.opts.body);
   assert.deepEqual(body.to, [SUPPORT_EMAIL]); assert.equal(body.reply_to, valid.email);
   assert.equal(body.html, undefined); assert.match(body.text, /El audio se detiene/); assert.doesNotMatch(delivery.opts.body, /test-secret|ignored@example/);
   assert.equal(delivery.opts.headers['Idempotency-Key'], 'tec-support-abcd1234-reference');
   assert.equal(createSupportMailer({}), null);
-  await assert.rejects(createSupportMailer({ apiKey: 'x', from: 'y', fetchImpl: async () => ({ ok: false }) })({ ...valid, reference: 'x' }));
+  await assert.rejects(createSupportMailer({ apiKey: 'x', from: 'agustin@totalelitecoaching.com', fetchImpl: async () => ({ ok: false }) })({ ...valid, reference: 'x' }));
 });
 
 test('form retains text on failed or offline send; success resets it and enables the button', async () => {

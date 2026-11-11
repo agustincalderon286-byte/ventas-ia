@@ -1,12 +1,16 @@
 export const TEC_CONTACT_EMAIL = 'agustin@totalelitecoaching.com';
-export const TEC_SENDER_NAME = 'Agustin Calderon | Audiolibros TEC';
+export const TEC_SENDER_NAME = 'Audiolibros TEC';
 
 // Credentials stay on the server. A mailbox is selected by its exact verified
 // address, never by a recipient or resource ID supplied by a website visitor.
 export function createTecMailer({
   hostingerToken = '', resendApiKey = '', resendFrom = '', fetchImpl = fetch
 } = {}) {
-  if (!hostingerToken && (!resendApiKey || !resendFrom)) return null;
+  const fromAddress = typeof resendFrom === 'string' && !/[\r\n]/.test(resendFrom)
+    ? (resendFrom.match(/<([^<>]+)>\s*$/)?.[1] || resendFrom.trim()) : '';
+  const companySender = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[a-z0-9-]+\.)*totalelitecoaching\.com$/i.test(fromAddress);
+  // Never send account or support messages from a personal fallback mailbox.
+  if (!hostingerToken && (!resendApiKey || !companySender)) return null;
   let mailboxPromise;
   async function mailbox() {
     if (!mailboxPromise) {
@@ -57,7 +61,7 @@ export function createTecMailer({
           ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
         },
         body: JSON.stringify({
-          from: resendFrom, to, subject, reply_to: replyTo,
+          from: `${TEC_SENDER_NAME} <${fromAddress}>`, to, subject, reply_to: replyTo,
           ...(text !== undefined ? { text } : {}), ...(html !== undefined ? { html } : {})
         })
       });
@@ -66,5 +70,31 @@ export function createTecMailer({
     // either could send a second copy of a sign-in link or support message.
     if (!response.ok) throw new Error('tec_mail_delivery_failed');
     return { accepted: true, provider: hostingerToken ? 'hostinger' : 'resend' };
+  };
+}
+
+export function createAudioAccountMailer(sendMail) {
+  if (!sendMail) return null;
+  return async ({ email, purpose, url }) => {
+    const messages = {
+      checkout: {
+        subject: 'Confirma tu correo para continuar tu membresía de Audiolibros TEC',
+        text: `Ya habías iniciado una suscripción con este correo. Confírmalo para continuar al pago seguro:\n\n${url}\n\nEl enlace es de un solo uso y caduca en 30 minutos. No activa una cuenta ni completa un cobro. Después de pagar podrás elegir usuario y contraseña.\n\nAyuda: ${TEC_CONTACT_EMAIL}`
+      },
+      activation: {
+        subject: 'Confirma tu correo y crea tu cuenta de Audiolibros TEC',
+        text: `Tu pago de la membresía de Audiolibros TEC está confirmado.\n\nAbre este enlace para confirmar tu correo y elegir tu usuario y contraseña:\n\n${url}\n\nEl enlace es de un solo uso y caduca en 24 horas. Si caducó, usa Recuperar acceso en la biblioteca.\n\nAyuda: ${TEC_CONTACT_EMAIL}`
+      },
+      reset: {
+        subject: 'Restablece tu contraseña de Audiolibros TEC',
+        text: `Recibimos una solicitud para restablecer tu contraseña.\n\nElige una nueva contraseña aquí:\n\n${url}\n\nEl enlace es de un solo uso y caduca en 30 minutos. Si no lo solicitaste, ignora este correo; tu contraseña no cambia hasta que completes el formulario.\n\nAyuda: ${TEC_CONTACT_EMAIL}`
+      },
+      password_changed: {
+        subject: 'Se cambió tu contraseña de Audiolibros TEC',
+        text: `La contraseña de tu cuenta de Audiolibros TEC fue restablecida. Por seguridad cerramos las sesiones anteriores.\n\nIngresa con tu usuario o correo y tu nueva contraseña en https://totalelitecoaching.com/audiolibros/\n\nSi no reconoces este cambio, contacta a ${TEC_CONTACT_EMAIL}.`
+      }
+    };
+    if (!Object.hasOwn(messages, purpose)) throw new Error('tec_mail_invalid_purpose');
+    return sendMail({ to: [email], ...messages[purpose] });
   };
 }

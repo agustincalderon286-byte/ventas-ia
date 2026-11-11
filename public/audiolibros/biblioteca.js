@@ -19,7 +19,11 @@
   let deadline = 0;
   let stopAt = 0;
   let scrubbing = false;
-  let signInToken = new URLSearchParams(location.hash.slice(1)).get('entrar');
+  const accountParams = new URLSearchParams(location.hash.slice(1));
+  let credentialToken = accountParams.get('cuenta');
+  const legacyEmailLink = accountParams.has('entrar');
+  const checkoutSessionId = new URLSearchParams(location.search).get('sesion');
+  let credentialPurpose = '', accountView = 'login';
   const readingRequest = new URLSearchParams(location.search).get('lectura');
   const validReadingId = value => typeof value === 'string' && /^[a-z0-9-]{1,80}$/.test(value);
   if (validReadingId(readingRequest)) { try { localStorage.setItem('tec.reading.return.v1', JSON.stringify({ id: readingRequest, at: Date.now() })); } catch {} }
@@ -119,15 +123,27 @@
   }
 
   function showAccount() {
-    const confirming = Boolean(signInToken);
-    $('#sign-in').hidden = confirming || Boolean(account.authenticated) || testEntry;
-    $('#test-access').hidden = confirming || Boolean(account.authenticated);
-    $('#account-actions').hidden = confirming || !account.authenticated;
+    const credentials = Boolean(credentialToken);
+    const paid = accountView === 'paid';
+    const authenticated = Boolean(account.authenticated) && !credentials && !paid && accountView !== 'recovery';
+    $('#sign-in').hidden = credentials || authenticated || paid || testEntry || accountView === 'recovery';
+    $('#paid-confirmation').hidden = !paid || credentials;
+    $('#recovery').hidden = credentials || authenticated || accountView !== 'recovery';
+    $('#credentials').hidden = !credentials || !credentialPurpose || credentialPurpose === 'checkout';
+    $('#continue-membership').hidden = !credentials || credentialPurpose !== 'checkout';
+    $('#test-access').hidden = credentials || authenticated || paid || !testEntry || accountView === 'recovery';
+    $('#account-actions').hidden = credentials || !authenticated;
     $('#portal').hidden = !account.customer || account.testAccount;
-    $('#confirm').hidden = !confirming;
-    $('#account-title').textContent = confirming ? 'Confirma tu acceso' : account.authenticated ? 'Mi cuenta' : testEntry ? 'Ingresa a tu biblioteca' : 'Ingresa con tu correo';
-    $('#account-status').textContent = account.testAccount ? 'Hola, ' + account.displayName + '. Acceso gratuito de prueba activo. Tu actividad queda fuera de las estadísticas comerciales.' : '';
+    $('#account-title').textContent = credentials ? (credentialPurpose === 'checkout' ? 'Continúa tu membresía' : credentialPurpose === 'reset' ? 'Elige una nueva contraseña' : 'Confirma tu correo y crea tu cuenta')
+      : paid ? 'Pago confirmado' : authenticated ? 'Mi cuenta' : accountView === 'recovery' ? 'Recupera tu acceso' : testEntry ? 'Acceso de prueba de TEC' : 'Ingresa a tu cuenta';
+    $('#account-badges').hidden = !authenticated;
+    $('#account-status').textContent = account.testAccount && !credentials ? 'Hola, ' + account.displayName + '. Acceso gratuito de prueba activo. Tu actividad queda fuera de las estadísticas comerciales.' : '';
     if (!accountDialog.open) accountDialog.showModal();
+  }
+  function showRecovery() {
+    credentialToken = null; credentialPurpose = ''; accountView = 'recovery';
+    $('#new-password').value = ''; $('#new-password-confirmation').value = '';
+    showAccount();
   }
 
   function busy(control, status, action) {
@@ -142,13 +158,42 @@
     };
   }
 
-  $('#account-button').addEventListener('click', showAccount);
+  $('#account-button').addEventListener('click', () => { accountView = 'login'; showAccount(); });
   $('#account-badges')?.addEventListener('click', () => accountDialog.close());
-  $('#phone-account').addEventListener('click', showAccount);
+  $('#phone-account').addEventListener('click', () => { accountView = 'login'; showAccount(); });
   search.addEventListener('input', renderBooks);
   $('#sign-in').addEventListener('submit', busy($('#sign-in button'), '#account-status', async () => {
-    await api('/entrar', 'POST', { email: $('#email').value });
-    $('#account-status').textContent = 'Revisa tu correo. El enlace caduca en 15 minutos.';
+    try { await api('/entrar', 'POST', { identifier: $('#login-identifier').value, password: $('#login-password').value }); }
+    finally { $('#login-password').value = ''; }
+    await refreshAccount();
+    if (resumeReading()) return;
+    showAccount();
+    $('#account-status').textContent = account.member ? 'Tu membresía está activa.' : 'Ingresaste a tu cuenta. Puedes gestionar o renovar tu membresía.';
+  }));
+  $('#forgot-password').addEventListener('click', () => {
+    if ($('#login-identifier').value.includes('@')) $('#recovery-email').value = $('#login-identifier').value;
+    showRecovery();
+  });
+  $('#resend-activation').addEventListener('click', showRecovery);
+  document.querySelectorAll('[data-account-login]').forEach(control => control.addEventListener('click', () => {
+    accountView = 'login'; showAccount();
+  }));
+  $('#recovery').addEventListener('submit', busy($('#recovery button'), '#account-status', async () => {
+    await api('/recuperar', 'POST', { email: $('#recovery-email').value });
+    $('#account-status').textContent = 'Si el correo corresponde a una membresía, recibirás un enlace de TEC. Revisa también Spam y espera un minuto antes de pedir otro. Por seguridad, esta pantalla no confirma si existe una cuenta.';
+  }));
+  $('#credentials').addEventListener('submit', busy($('#credentials-submit'), '#account-status', async () => {
+    const result = await api('/credenciales', 'POST', { token: credentialToken, username: $('#credentials-username').value,
+      password: $('#new-password').value, passwordConfirmation: $('#new-password-confirmation').value });
+    credentialToken = null; credentialPurpose = ''; accountView = 'login';
+    $('#new-password').value = ''; $('#new-password-confirmation').value = '';
+    $('#login-identifier').value = result.username;
+    await refreshAccount();
+    if (result.authenticated && resumeReading()) return;
+    showAccount();
+    $('#account-status').textContent = result.purpose === 'activation'
+      ? 'Correo confirmado y cuenta creada. Tu membresía está lista.'
+      : 'Contraseña actualizada. Ingresa con tu usuario o correo y la nueva contraseña.';
   }));
   $('#test-sign-in').addEventListener('submit', busy($('#test-sign-in button'), '#account-status', async () => {
     await api('/pruebas/entrar', 'POST', { username: $('#test-username').value, password: $('#test-password').value });
@@ -158,15 +203,7 @@
     if (resumeReading()) return;
     showAccount();
   }));
-  $('#confirm').addEventListener('click', busy($('#confirm'), '#account-status', async () => {
-    try { await api('/confirmar', 'POST', { token: signInToken }); }
-    catch (error) { signInToken = null; showAccount(); throw error; }
-    signInToken = null;
-    await refreshAccount();
-    if (resumeReading()) return;
-    showAccount();
-    $('#account-status').textContent = account.member ? 'Tu membresía está activa.' : 'Ya ingresaste a tu biblioteca.';
-  }));
+  $('#account-subscribe').addEventListener('click', () => accountDialog.close());
   $('#portal').addEventListener('click', busy($('#portal'), '#account-status', async () => {
     location.assign((await api('/portal', 'POST')).url);
   }));
@@ -178,22 +215,33 @@
     accountDialog.close();
     await refreshAccount();
   }));
+  async function startCheckout(email, ownershipToken) {
+    let analytics;
+    try { analytics = await window.TecAudiobookAnalytics?.checkoutContext?.(); } catch {}
+    const checkout = await api('/checkout', 'POST', { ...(email ? { email } : {}), ...(ownershipToken ? { ownershipToken } : {}), ...(analytics ? { analytics } : {}) });
+    window.TecAudiobookAnalytics?.checkoutStarted?.();
+    location.assign(checkout.url);
+  }
   $('#subscribe').addEventListener('click', busy($('#subscribe'), '#billing-status', async () => {
     if (account.member) { location.hash = 'catalogo'; return; }
     if (!account.billingReady || !account.signInReady) {
       await refreshAccount();
       if (!account.billingReady || !account.signInReady) return;
     }
-    if (!account.authenticated) {
-      showAccount();
-      $('#account-status').textContent = 'Ingresa con tu correo para activar tu membresía.';
-      return;
-    }
-    let analytics;
-    try { analytics = await window.TecAudiobookAnalytics?.checkoutContext?.(); } catch {}
-    const checkout = await api('/checkout', 'POST', analytics ? { analytics } : {});
-    window.TecAudiobookAnalytics?.checkoutStarted?.();
-    location.assign(checkout.url);
+    if (account.authenticated) { await startCheckout(); return; }
+    $('#checkout-status').textContent = '';
+    $('#checkout-dialog').showModal();
+  }));
+  $('#checkout-form').addEventListener('submit', busy($('#checkout-form button'), '#checkout-status', async () => {
+    await startCheckout($('#checkout-email').value);
+  }));
+  $('#checkout-login').addEventListener('click', () => {
+    $('#checkout-dialog').close();
+    $('#login-identifier').value = $('#checkout-email').value;
+    showAccount();
+  });
+  $('#continue-membership-submit').addEventListener('click', busy($('#continue-membership-submit'), '#account-status', async () => {
+    await startCheckout(undefined, credentialToken);
   }));
 
   function saveProgress() {
@@ -570,9 +618,27 @@
   window.addEventListener('pagehide', saveProgress);
   document.addEventListener('visibilitychange', () => { checkTimer(); if (document.hidden) saveProgress(); });
 
-  if (signInToken) {
+  if (credentialToken || legacyEmailLink) {
     history.replaceState(null, '', location.pathname + location.search);
-    showAccount();
+    if (legacyEmailLink) {
+      showRecovery();
+      $('#account-status').textContent = 'Ahora ingresas con usuario y contraseña. Si ya pagaste, pide un enlace para configurar tu cuenta.';
+    } else {
+      showAccount();
+      $('#account-status').textContent = 'Comprobando tu enlace…';
+      api('/credenciales/estado', 'POST', { token: credentialToken }).then(info => {
+        credentialPurpose = info.purpose;
+        const activation = info.purpose === 'activation';
+        $('#credentials-username-field').hidden = !activation;
+        $('#credentials-username').required = activation;
+        $('#credentials-username').disabled = !activation;
+        $('#credentials-explanation').textContent = activation
+          ? 'Tu pago ya fue confirmado. Al completar este formulario confirmas tu correo y creas tu cuenta.'
+          : 'Elige una contraseña nueva. Después deberás ingresar otra vez.';
+        $('#credentials-submit').textContent = activation ? 'Confirmar correo y crear mi cuenta' : 'Guardar nueva contraseña';
+        showAccount();
+      }).catch(error => { showRecovery(); $('#account-status').textContent = error.message; });
+    }
   }
   const catalogReady = api('/catalogo').then(data => {
     books = data.books;
@@ -591,13 +657,18 @@
     if (!checkoutReturn) return;
     history.replaceState(null, '', location.pathname + '#membresia');
     $('#membresia').scrollIntoView();
-    if (!account.member) {
-      $('#billing-status').textContent = 'Confirmando tu acceso con Stripe…';
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      await refreshAccount();
+    $('#billing-status').textContent = 'Confirmando tu pago con Stripe…';
+    const confirmation = await api('/alta/estado', 'POST', { sessionId: checkoutSessionId });
+    await refreshAccount();
+    if (account.member) {
+      $('#billing-status').textContent = 'Membresía activa. Ya puedes escuchar el catálogo completo.';
+      resumeReading();
+    } else if (confirmation.paid) {
+      credentialToken = null; credentialPurpose = ''; accountView = 'paid'; showAccount();
+      $('#billing-status').textContent = 'Pago confirmado. Termina de crear tu cuenta desde el correo de Audiolibros TEC.';
+    } else {
+      $('#billing-status').textContent = 'Stripe todavía no confirma el pago. No se habilitó una cuenta. Revisa tu correo o contacta a TEC.';
     }
-    $('#billing-status').textContent = account.member ? 'Membresía activa. Ya puedes escuchar el catálogo completo.' : 'Stripe está confirmando el pago. Vuelve a cargar la página en unos minutos.';
-    if (account.member) resumeReading();
   }).catch(error => { $('#billing-status').textContent = error.message; });
   Promise.all([catalogReady, accountReady]).then(() => {
     const params = new URLSearchParams(location.search);

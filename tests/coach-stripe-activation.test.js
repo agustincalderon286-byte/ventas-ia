@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import express from 'express';
 import Stripe from 'stripe';
 import { createCoachBillingSync } from '../src/coach-billing-sync.js';
+import { createPaidAudioAuth } from '../src/tec-audio-auth.js';
 import { createAudioPaymentAnalytics } from '../src/tec-audio-payment-analytics.js';
 
 // Local integration checks: real production handlers and Stripe signature
@@ -60,6 +61,7 @@ async function harness(run) {
   const context = vm.createContext({
     stripe, CoachUser: model, Date, Boolean, String, createCoachBillingSync,
     audioPaymentAnalytics: createAudioPaymentAnalytics({}),
+    audioMembership: createPaidAudioAuth({}),
     process: { env: { STRIPE_WEBHOOK_SECRET: secret, STRIPE_SECRET_KEY: 'sk_test_local_fixture' } },
     STRIPE_PRICE_ID_MONTHLY: 'price_tec_monthly_fixture',
     STRIPE_PRICE_ID_ANNUAL: 'price_tec_annual_fixture',

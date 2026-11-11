@@ -29,7 +29,7 @@ import { registerAudiobookSeo } from "./src/tec-audiobook-seo.js";
 import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-audio-membership.js";
 import { createAudioPaymentAnalytics, createAudioPaymentAnalyticsModels } from "./src/tec-audio-payment-analytics.js";
 import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobook-support.js";
-import { createTecMailer } from "./src/tec-mail.js";
+import { createTecMailer, createAudioAccountMailer } from "./src/tec-mail.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -20677,7 +20677,11 @@ async function manejarWebhookStripe(req, res) {
         break;
     }
 
+    let audioActivationError;
+    try { await audioMembership.handleStripeEvent(event); }
+    catch (error) { audioActivationError = error; }
     await audioPaymentAnalytics.handleStripeEvent(event);
+    if (audioActivationError) throw audioActivationError;
     res.json({ received: true });
   } catch (error) {
     console.error("Error procesando webhook Stripe:", error.message);
@@ -32449,19 +32453,15 @@ const audioPaymentAnalytics = createAudioPaymentAnalytics({ ...createAudioPaymen
   accounts: audioMembershipModels.accounts, stripe,
   priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
   apiSecret: String(process.env.TEC_AUDIO_GA_API_SECRET || "").trim() });
-registerAudioMembership(app, {
+const audioMembership = registerAudioMembership(app, {
   ...audioMembershipModels, paymentAnalytics: audioPaymentAnalytics,
   media: audiobookModels.media, getBucket: getAudiobookBucket, r2: audiobookR2, stripe,
   priceId: String(process.env.STRIPE_AUDIO_PRICE_ID || "").trim(),
   portalId: String(process.env.STRIPE_AUDIO_PORTAL_CONFIG_ID || "").trim(),
   publicOrigin: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
     ? "https://totalelitecoaching.com" : `http://localhost:${process.env.PORT || 3000}`),
-  sendSignIn: tecSendMail ? async (email, url) => {
-    await tecSendMail({
-      to: [email], subject: "Tu enlace para entrar a Audiolibros TEC",
-      text: `Abre este enlace para entrar a tu biblioteca TEC:\n\n${url}\n\nEl enlace caduca en 15 minutos y solo se puede usar una vez.`
-    });
-  } : null
+  liveMode: /^(sk|rk)_live_/.test(String(process.env.STRIPE_SECRET_KEY || '')),
+  sendAccountMail: createAudioAccountMailer(tecSendMail)
 });
 
 registerTecAudioLab(app, {

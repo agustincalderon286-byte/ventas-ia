@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTecMailer, TEC_CONTACT_EMAIL, TEC_SENDER_NAME } from '../src/tec-mail.js';
+import { createTecMailer, createAudioAccountMailer, TEC_CONTACT_EMAIL, TEC_SENDER_NAME } from '../src/tec-mail.js';
 
 const address = 'lector@example.com';
 const message = { to: [address], subject: 'Tu enlace para entrar a Audiolibros TEC', text: 'Enlace de acceso de prueba.' };
@@ -64,8 +64,28 @@ test('legacy Resend configuration remains usable before Hostinger token activati
   assert.equal(call.url, 'https://api.resend.com/emails');
   const body = JSON.parse(call.options.body);
   assert.equal(body.reply_to, TEC_CONTACT_EMAIL);
+  assert.equal(body.from, 'Audiolibros TEC <biblioteca@acceso.totalelitecoaching.com>');
   assert.equal(call.options.headers['Idempotency-Key'], 'request-1');
   assert.equal(createTecMailer(), null);
+});
+
+test('personal mailboxes cannot be configured as the fallback sender for TEC accounts', () => {
+  assert.equal(createTecMailer({ resendApiKey: 'secret', resendFrom: 'Agustin <personal@gmail.com>' }), null);
+  assert.equal(createTecMailer({ resendApiKey: 'secret', resendFrom: 'fake@totalelitecoaching.com.evil.test' }), null);
+});
+
+test('account confirmation and password recovery use TEC branding and never email a password', async () => {
+  const messages = [];
+  const send = createAudioAccountMailer(async value => { messages.push(value); });
+  await send({ email: address, purpose: 'activation', url: 'https://totalelitecoaching.com/audiolibros/#cuenta=opaque' });
+  await send({ email: address, purpose: 'reset', url: 'https://totalelitecoaching.com/audiolibros/#cuenta=opaque2' });
+  await send({ email: address, purpose: 'password_changed', password: 'NEVER-SEND-THIS' });
+  assert.match(messages[0].subject, /Confirma tu correo/); assert.match(messages[0].text, /pago.*confirmado/);
+  assert.match(messages[0].text, /24 horas/); assert.match(messages[1].text, /30 minutos/);
+  assert.match(messages[2].text, /cerramos las sesiones anteriores/);
+  assert.ok(messages.every(value => value.to[0] === address && value.text.includes(TEC_CONTACT_EMAIL)));
+  assert.doesNotMatch(JSON.stringify(messages), /NEVER-SEND-THIS|gmail/);
+  assert.equal(createAudioAccountMailer(null), null);
 });
 
 test('header injection is rejected before contacting any provider', async () => {

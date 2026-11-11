@@ -1,3 +1,4 @@
+import { createPaidAudioAuth, AUDIO_ACCOUNT_FLOW, normalizeAudioEmail, validAudioEmail } from './tec-audio-auth.js';
 import { hasTestAudioAccess, normalizeTestUsername, validTestUsername, verifyTestPassword } from './tec-audio-test-accounts.js';
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -13,7 +14,6 @@ const sessionMs = 30 * 86400000;
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const token = () => crypto.randomBytes(32).toString('base64url');
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const previewSeconds = book => Math.floor(book.duration * 100) / 1000;
 
 export function createAudioMembershipModels(mongoose) {
@@ -23,7 +23,14 @@ export function createAudioMembershipModels(mongoose) {
     shares: createAudiobookShareModel(mongoose),
     accounts: model('TecAudioMember', { _id: String, stripeCustomerId: String, username: String, displayName: String,
       isTest: Boolean, analyticsExcluded: Boolean, accessType: String, testAccessEnabled: Boolean,
-      passwordHash: String, passwordSalt: String, credentialVersion: String, createdAt: Date, updatedAt: Date }),
+      passwordHash: String, passwordSalt: String, passwordScheme: String, credentialVersion: String,
+      usernameCanonical: { type: String, unique: true, sparse: true }, emailVerifiedAt: Date,
+      paidAt: Date, paidCheckoutId: String,
+      authGrantDigest: { type: String, unique: true, sparse: true }, authGrantPurpose: String,
+      authGrantExpiresAt: Date, authGrantRequestedAt: Date, authGrantCredentialVersion: String,
+      activationMailCheckoutId: String, activationMailState: String, activationMailLeaseUntil: Date,
+      createdAt: Date, updatedAt: Date }),
+    checkoutIntents: model('TecAudioCheckoutIntent', { _id: String, stripeCustomerId: String, expiresAt }),
     grants: model('TecAudioGrant', { _id: String, email: String, digest: { type: String, index: true }, expiresAt, requestedAt: Date }),
     sessions: model('TecAudioSession', { _id: String, email: String, credentialVersion: String, expiresAt }),
     achievements: model('TecAudioAchievements', { _id: String, revision: Number, state: mongoose.Schema.Types.Mixed }),
@@ -44,8 +51,8 @@ export function hasAudioMembership(subscription, priceId) {
 }
 
 export function registerAudioMembership(app, {
-  accounts, grants, sessions, listening, readingProgress, achievements, shares, media, getBucket, r2, stripe, priceId, portalId,
-  publicOrigin, sendSignIn, secure = process.env.NODE_ENV === 'production',
+  accounts, grants, checkoutIntents, sessions, listening, readingProgress, achievements, shares, media, getBucket, r2, stripe, priceId, portalId,
+  publicOrigin, sendAccountMail, liveMode = true, secure = process.env.NODE_ENV === 'production',
   catalog = audiobookCatalog, getTranscript = getAudiobookTranscript, paymentAnalytics
 }) {
   const origin = new URL(publicOrigin).origin;
@@ -56,7 +63,8 @@ export function registerAudioMembership(app, {
   const accessCache = new Map();
   const mailAttempts = new Map();
   const passwordAttempts = new Map();
-  const billingReady = Boolean(stripe && priceId && portalId);
+  const billingReady = Boolean(stripe && priceId && portalId && sendAccountMail);
+  const paidAuth = createPaidAudioAuth({ accounts, stripe, priceId, publicOrigin, sendAccountMail, liveMode });
   const reply = (res, status, error) => res.status(status).json({ error });
 
   const route = (method, suffix, handler) => app[method](api + suffix, async (req, res) => {
@@ -85,7 +93,8 @@ export function registerAudioMembership(app, {
     const session = await sessions.findOne({ _id: id, expiresAt: { $gt: new Date() } }).lean();
     if (!session) return null;
     const user = await accounts.findById(session.email).lean();
-    if (user?.isTest && session.credentialVersion !== user.credentialVersion) return null;
+    if (user?.paidCheckoutId && !user.emailVerifiedAt) return null;
+    if (user?.credentialVersion && session.credentialVersion !== user.credentialVersion) return null;
     return user;
   }
 
@@ -121,7 +130,7 @@ export function registerAudioMembership(app, {
 
   async function member(req, res) {
     const user = await account(req);
-    if (!user) { reply(res, 401, 'Ingresa con tu correo para continuar.'); return null; }
+    if (!user) { reply(res, 401, 'Ingresa con tu usuario y contraseña para continuar.'); return null; }
     if (!await isMember(user)) { reply(res, 403, 'El libro completo está disponible con la membresía de audiolibros.'); return null; }
     return user;
   }
@@ -185,43 +194,59 @@ export function registerAudioMembership(app, {
     res.cookie(cookie, fresh, { ...cookieOptions, maxAge: sessionMs }).json({ authenticated: true, testAccount: true });
   });
 
+  async function openSession(req, res, user) {
+    const old = sessionId(req);
+    if (old) await sessions.deleteOne({ _id: old });
+    const fresh = token();
+    await sessions.create({ _id: hash(fresh), email: user._id, credentialVersion: user.credentialVersion,
+      expiresAt: new Date(Date.now() + sessionMs) });
+    res.clearCookie('tec_audio_test', { secure, sameSite: 'lax', path: '/audiolibros' });
+    res.cookie(cookie, fresh, { ...cookieOptions, maxAge: sessionMs });
+  }
   route('post', '/entrar', async (req, res) => {
-    if (!sendSignIn) return reply(res, 503, 'El acceso por correo se está preparando.');
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    if (email.length > 254 || !emailPattern.test(email)) return reply(res, 400, 'Escribe un correo válido.');
-    const now = Date.now();
-    if (throttleMail(req.ip, now)) return reply(res, 429, 'Espera unos minutos antes de solicitar otro enlace.');
-    const secret = token();
-    const digest = hash(secret);
+    const identifier = typeof req.body?.identifier === 'string' ? req.body.identifier.trim().toLowerCase().slice(0, 254) : '';
+    if (throttleMail('login:' + req.ip, Date.now()) || throttleMail('login-user:' + hash(identifier), Date.now())) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
     try {
-      await grants.findOneAndUpdate({ _id: hash(email), requestedAt: { $lte: new Date(now - 60_000) } }, {
-        $set: { email, digest, requestedAt: new Date(now), expiresAt: new Date(now + 15 * 60_000) }
-      }, { upsert: true });
-    } catch (error) {
-      if (error.code === 11000) return res.json({ sent: true });
-      throw error;
-    }
-    try {
-      await sendSignIn(email, `${landing}#entrar=${secret}`);
-    } catch (error) {
-      await grants.deleteOne({ _id: hash(email), digest });
-      throw error;
-    }
+      const user = await paidAuth.login(req.body?.identifier, req.body?.password);
+      await openSession(req, res, user);
+      res.json({ authenticated: true });
+    } catch (error) { if (error.status) return reply(res, error.status, error.message); throw error; }
+  });
+  // Old email links cannot create accounts or bypass the password flow.
+  route('post', '/confirmar', async (_req, res) => reply(res, 410, 'Usa Ingresar o Recuperar acceso para continuar.'));
+  route('post', '/recuperar', async (req, res) => {
+    if (throttleMail('recovery:' + req.ip, Date.now())) return reply(res, 429, 'Espera unos minutos antes de solicitar otro enlace.');
+    const email = normalizeAudioEmail(req.body?.email);
+    if (!validAudioEmail(email)) return reply(res, 400, 'Escribe un correo válido.');
+    // Delivery continues independently of the fixed public response time: a slow
+    // mailbox or Stripe lookup must not reveal whether this email has an account.
+    void paidAuth.requestRecovery(email).catch(() => { console.warn('TEC audio: recovery delivery could not be completed'); });
+    await new Promise(resolve => setTimeout(resolve, 700));
     res.json({ sent: true });
   });
-
-  route('post', '/confirmar', async (req, res) => {
-    const secret = req.body?.token;
-    if (typeof secret !== 'string' || !tokenPattern.test(secret)) return reply(res, 400, 'El enlace no es válido.');
-    const grant = await grants.findOneAndDelete({ digest: hash(secret), expiresAt: { $gt: new Date() } }).lean();
-    if (!grant) return reply(res, 400, 'Este enlace caducó o ya se usó. Solicita otro.');
-    try { await accounts.updateOne({ _id: grant.email }, { $setOnInsert: { _id: grant.email } }, { upsert: true }); }
-    catch (error) { if (error.code !== 11000) throw error; }
-    const oldSession = sessionId(req);
-    if (oldSession) await sessions.deleteOne({ _id: oldSession });
-    const fresh = token();
-    await sessions.create({ _id: hash(fresh), email: grant.email, expiresAt: new Date(Date.now() + sessionMs) });
-    res.cookie(cookie, fresh, { ...cookieOptions, maxAge: sessionMs }).json({ authenticated: true });
+  route('post', '/credenciales/estado', async (req, res) => {
+    if (throttleMail('grant:' + req.ip, Date.now())) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+    try { res.json(await paidAuth.grantInfo(req.body?.token)); }
+    catch (error) { if (error.status) return reply(res, error.status, error.message); throw error; }
+  });
+  route('post', '/credenciales', async (req, res) => {
+    if (throttleMail('credentials:' + req.ip, Date.now())) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+    try {
+      const result = await paidAuth.completeCredentials(req.body);
+      if (result.purpose === 'activation') await openSession(req, res, result.user);
+      res.json({ ok: true, purpose: result.purpose, username: result.user.username, authenticated: result.purpose === 'activation' });
+    } catch (error) { if (error.status) return reply(res, error.status, error.message); throw error; }
+  });
+  route('post', '/alta/estado', async (req, res) => {
+    if (throttleMail('checkout-status:' + req.ip, Date.now())) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+    try {
+      const paid = await paidAuth.fulfillCheckout(req.body?.sessionId);
+      res.json({ paid });
+    } catch (error) {
+      if (error.status) return reply(res, error.status, error.message);
+      if (error.type === 'StripeInvalidRequestError') return reply(res, 400, 'No pudimos confirmar ese pago. Revisa tu correo o contacta a TEC.');
+      throw error;
+    }
   });
 
   route('post', '/salir', async (req, res) => {
@@ -236,46 +261,66 @@ export function registerAudioMembership(app, {
 
   route('get', '/cuenta', async (req, res) => {
     const user = await account(req);
-    res.json({ authenticated: Boolean(user), testAccount: Boolean(user?.isTest), analyticsExcluded: Boolean(user?.analyticsExcluded), displayName: user?.isTest ? user.displayName : null, achievementKey: user ? hash('tec-audio-achievements:' + user._id) : null, member: await isMember(user), billingReady, signInReady: Boolean(sendSignIn), customer: Boolean(user?.stripeCustomerId) });
+    res.json({ authenticated: Boolean(user), testAccount: Boolean(user?.isTest), analyticsExcluded: Boolean(user?.analyticsExcluded), displayName: user?.isTest ? user.displayName : null, achievementKey: user ? hash('tec-audio-achievements:' + user._id) : null, member: await isMember(user), billingReady, signInReady: Boolean(sendAccountMail), customer: Boolean(user?.stripeCustomerId) });
   });
 
   route('post', '/checkout', async (req, res) => {
+    let user = await account(req);
+    if (user?.isTest) return reply(res, 403, 'Esta cuenta de prueba no utiliza cobros ni suscripciones.');
     if (!billingReady) return reply(res, 503, 'Las suscripciones se están preparando.');
-    const user = await account(req);
-    if (!user) return reply(res, 401, 'Ingresa con tu correo para suscribirte.');
-    if (user.isTest) return reply(res, 403, 'Esta cuenta de prueba no utiliza cobros ni suscripciones.');
+    if (throttleMail('checkout:' + req.ip, Date.now())) return reply(res, 429, 'Espera unos minutos antes de intentarlo de nuevo.');
+    if (req.body?.ownershipToken) {
+      try { user = await paidAuth.checkoutOwner(req.body.ownershipToken); }
+      catch (error) { if (error.status) return reply(res, error.status, error.message); throw error; }
+    }
+    const email = user ? user._id : normalizeAudioEmail(req.body?.email);
+    if (!validAudioEmail(email)) return reply(res, 400, 'Escribe el correo que usarás para tu membresía.');
+    if (!user) {
+      const existing = await accounts.findById(email).lean();
+      if (existing?.stripeCustomerId || existing?.passwordScheme) return reply(res, 409, 'Usa Ingresar o Recuperar acceso para continuar con ese correo.');
+    }
     const [price, portal] = await Promise.all([
       stripe.prices.retrieve(priceId), stripe.billingPortal.configurations.retrieve(portalId)
     ]);
     if (!isAudioMembershipPrice(price) || !portal.active || !portal.features?.subscription_cancel?.enabled || portal.features?.subscription_update?.enabled) {
       return reply(res, 503, 'Las suscripciones se están preparando.');
     }
-    let customer = user.stripeCustomerId;
+    const intentKey = hash(email);
+    let customer = user?.stripeCustomerId;
     if (!customer) {
-      const key = hash(user._id);
-      const created = await stripe.customers.create({ email: user._id, metadata: { audience, account: key } }, { idempotencyKey: `${audience}-customer-${key}` });
-      await accounts.updateOne({ _id: user._id, stripeCustomerId: { $exists: false } }, { $set: { stripeCustomerId: created.id } });
-      customer = (await accounts.findById(user._id).lean()).stripeCustomerId;
+      const intent = await checkoutIntents.findById(intentKey).lean();
+      customer = intent?.stripeCustomerId;
+      if (!customer) {
+        const created = await stripe.customers.create({ email, metadata: { audience } },
+          { idempotencyKey: audience + '-guest-' + intentKey + '-' + new Date().toISOString().slice(0, 7) });
+        customer = created.id;
+        await checkoutIntents.updateOne({ _id: intentKey }, { $set: { stripeCustomerId: customer,
+          expiresAt: new Date(Date.now() + 30 * 86400000) } }, { upsert: true });
+      }
     }
-    // Optional measurement must never prevent or alter a customer's payment.
+    // A pending checkout is not a TEC account and never grants full-library access.
     if (paymentAnalytics) {
-      try { await paymentAnalytics.saveContext({ ...user, stripeCustomerId: customer }, req.body?.analytics); } catch {}
+      try { await paymentAnalytics.saveContext({ stripeCustomerId: customer }, req.body?.analytics); } catch {}
     }
     const previous = await stripe.checkout.sessions.list({ customer, limit: 1 });
     const subscriptions = await findSubscriptions({ stripeCustomerId: customer });
     if (subscriptions.some(sub => !['canceled', 'incomplete_expired'].includes(sub.status))) {
-      return reply(res, 409, 'Ya tienes una suscripción. Revísala desde Gestionar suscripción.');
+      return reply(res, 409, 'Ya existe una suscripción. Usa Ingresar o Recuperar acceso para continuar.');
     }
     const last = previous.data[0];
-    if (last?.status === 'open' && last.url) return res.json({ url: last.url });
+    if (last?.status === 'open' && last.url && last.metadata?.account_flow === AUDIO_ACCOUNT_FLOW) {
+      if (req.body?.ownershipToken) await paidAuth.consumeCheckoutOwner(req.body.ownershipToken);
+      return res.json({ url: last.url });
+    }
     const checkout = await stripe.checkout.sessions.create({
       customer, mode: 'subscription', payment_method_types: ['card'],
-      metadata: { audience },
+      metadata: { audience, account_flow: AUDIO_ACCOUNT_FLOW },
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: { metadata: { audience } },
-      success_url: `${landing}?membresia=confirmada`, cancel_url: landing,
+      success_url: landing + '?membresia=confirmada&sesion={CHECKOUT_SESSION_ID}', cancel_url: landing + '#membresia',
       locale: 'es'
-    }, { idempotencyKey: `${audience}-checkout-${customer}-${last?.id || 'first'}` });
+    }, { idempotencyKey: audience + '-paid-account-checkout-' + customer + '-' + (last?.id || 'first') });
+    if (req.body?.ownershipToken) await paidAuth.consumeCheckoutOwner(req.body.ownershipToken);
     res.json({ url: checkout.url });
   });
 
@@ -368,4 +413,5 @@ export function registerAudioMembership(app, {
     catch (error) { if (error.code !== 11000) throw error; await listening.updateOne(key, update); }
     res.json({ marks: update.$set.marks });
   });
+  return { handleStripeEvent: paidAuth.handleStripeEvent };
 }
