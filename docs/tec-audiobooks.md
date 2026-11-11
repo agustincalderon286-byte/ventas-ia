@@ -1,5 +1,9 @@
 # Audiolibros TEC
 
+## La epopeya de Gilgamesh — 10 de noviembre de 2026
+
+Publicación expresamente autorizada por Agustin. Doce tablillas, 6112,59 segundos y 629 pasajes sincronizados. Versión propia TEC al español desde la edición inglesa de Thompson de 1928, con lagunas conservadas; no traducción directa del acadio o sumerio. Portada existente de TEC, muestra del primer diez por ciento, índice completo, ficha editorial y acceso de miembros. Audio privado R2: Gilgamesh-Completo-TEC-v1.m4b. SHA-256: ed23de258f21c2dfafe767d4a1e077b6b37c329d93a5983816678ca2d803b8d3. Objeto y portada verificados en R2 antes del catálogo. No se sustituye ninguna grabación ni se modifican cuentas o pagos. La verificación técnica no sustituye escucha humana integral de actuación.
+
 ## Viaje al Oeste — 10 de noviembre de 2026
 
 Corte expresamente autorizado: publicar solo los capítulos 1–5 con audio terminado. El capítulo 6 queda pausado con sus fragmentos conservados; los demás textos y planes se conservan para reanudar después. Esta entrega se identifica como cinco de cien capítulos, nunca como obra completa. ID estable: viaje-al-oeste. Una ficha, un audio privado de R2, cinco capítulos navegables, 1151 pasajes sincronizados y muestra del primer diez por ciento. Traducción propia directa del chino, incluidos los poemas.

@@ -1360,5 +1360,96 @@
       "md5": "40c8c22219cb8261c9a62c2c49bb2050",
       "r2ETag": "\"40c8c22219cb8261c9a62c2c49bb2050\""
     }
+  },
+  {
+    "id": "la-epopeya-de-gilgamesh",
+    "title": "La epopeya de Gilgamesh",
+    "author": "Tradición mesopotámica",
+    "originalTitle": "The Epic of Gilgamish · Edición de R. Campbell Thompson (1928)",
+    "language": "Español",
+    "categories": [
+      "Clásicos",
+      "Mitología",
+      "Aventura"
+    ],
+    "description": "Gilgamesh, rey de Uruk, encuentra en Enkidu un compañero de aventuras y una amistad que transformará su vida. La pérdida, el duelo y la búsqueda de la vida eterna atraviesan esta epopeya de la tradición mesopotámica. La edición de TEC reúne las doce tablillas del texto conservado en Thompson (1928), en una versión propia al español, con narrador, voces para los personajes y lectura sincronizada.",
+    "edition": "Doce tablillas · Versión española de TEC desde Thompson (1928)",
+    "narrator": "Narrador y reparto fijo de voces de TEC",
+    "credits": "Tradición mesopotámica. Versión propia al español de Audiolibros TEC a partir de la traducción inglesa de R. Campbell Thompson, The Epic of Gilgamish, Londres, Luzac & Co., 1928. No es una traducción directa del acadio o sumerio. Incluye las doce tablillas conforme al texto conservado en esa edición, con sus lagunas señaladas. Producción con voces sintéticas de TEC, con referencia fija por personaje. Sin música ni efectos.",
+    "duration": 6112.59,
+    "cover": "/coach/assets/audiobooks/gilgamesh-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/gilgamesh-v1.jpg",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Tablilla primera",
+        "start": 0.0,
+        "duration": 824.34
+      },
+      {
+        "title": "Tablilla segunda",
+        "start": 824.34,
+        "duration": 342.41
+      },
+      {
+        "title": "Tablilla tercera",
+        "start": 1166.75,
+        "duration": 747.22
+      },
+      {
+        "title": "Tablilla cuarta",
+        "start": 1913.97,
+        "duration": 226.85
+      },
+      {
+        "title": "Tablilla quinta",
+        "start": 2140.82,
+        "duration": 317.6
+      },
+      {
+        "title": "Tablilla sexta",
+        "start": 2458.42,
+        "duration": 505.4
+      },
+      {
+        "title": "Tablilla séptima. La muerte de Enkidu.",
+        "start": 2963.82,
+        "duration": 366.13
+      },
+      {
+        "title": "Tablilla octava. El duelo de Gilgamesh y lo que de él resultó.",
+        "start": 3329.95,
+        "duration": 206.11
+      },
+      {
+        "title": "Tablilla novena. Gilgamesh, aterrorizado por la muerte, busca la vida eterna.",
+        "start": 3536.06,
+        "duration": 294.8
+      },
+      {
+        "title": "Tablilla décima. Cómo llegó Gilgamesh hasta Uta-Napishtim.",
+        "start": 3830.86,
+        "duration": 880.66
+      },
+      {
+        "title": "Tablilla undécima. El diluvio.",
+        "start": 4711.52,
+        "duration": 988.48
+      },
+      {
+        "title": "Tablilla duodécima. Gilgamesh, desesperado, interroga a los muertos.",
+        "start": 5700.0,
+        "duration": 412.59
+      }
+    ],
+    "audio": {
+      "filename": "Gilgamesh-Completo-TEC-v1.m4b",
+      "r2Key": "Gilgamesh-Completo-TEC-v1.m4b",
+      "bytes": 77305039,
+      "sha256": "ed23de258f21c2dfafe767d4a1e077b6b37c329d93a5983816678ca2d803b8d3",
+      "md5": "a20d0353e5cba3e3596589dec351e132",
+      "contentType": "audio/mp4",
+      "r2ETag": "\"a20d0353e5cba3e3596589dec351e132\""
+    }
   }
 ]

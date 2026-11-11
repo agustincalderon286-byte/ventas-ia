@@ -1,6 +1,33 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  "la-epopeya-de-gilgamesh": {
+  "summary": [
+    "Gilgamesh gobierna Uruk con una fuerza que inquieta a sus habitantes. La llegada de Enkidu, criado lejos de la ciudad, abre un encuentro decisivo: del enfrentamiento nace una amistad y un camino de aventuras compartidas. El bosque, sus guardianes y los desafíos de los dioses ponen a prueba a ambos compañeros. Sus hazañas dan paso a preguntas sobre el poder, la responsabilidad y el valor de lo que se hace junto a otro.",
+    "La muerte de Enkidu cambia el rumbo del rey. El duelo lo lleva a atravesar lugares remotos en busca de una respuesta a la mortalidad y de quien sobrevivió al diluvio. Esta edición de TEC reúne las doce tablillas conforme al texto conservado en la versión de Thompson de 1928, con las lagunas identificadas. La narración y los diálogos mantienen voces fijas, y la lectura sincronizada permite seguir el texto y retomar cualquiera de las doce partes."
+  ],
+  "ideas": [
+    "La amistad entre Gilgamesh y Enkidu y su efecto en el rey de Uruk.",
+    "El duelo, la mortalidad y la búsqueda de una vida que perdure.",
+    "Las hazañas, el diluvio y los límites humanos ante los dioses."
+  ],
+  "audience": "Para quienes disfrutan los relatos de aventuras, la mitología y los clásicos que exploran la amistad y la muerte. Las doce tablillas permiten repartir la escucha en sesiones breves o seguir el recorrido completo.",
+  "tip": "Escucha las tablillas en orden para seguir el cambio de Gilgamesh desde sus primeras hazañas hasta el duelo y la búsqueda de la vida eterna. La muestra gratuita incluye el primer diez por ciento y permite probar la lectura sincronizada.",
+  "questions": [
+    [
+      "¿Qué incluye esta edición de Gilgamesh?",
+      "Reúne las doce tablillas conforme al texto conservado en la edición de R. Campbell Thompson de 1928. Las partes perdidas se señalan como lagunas y no se completan con episodios inventados."
+    ],
+    [
+      "¿De dónde procede la versión española de Gilgamesh en TEC?",
+      "Es una versión propia de Audiolibros TEC a partir de la traducción inglesa de Thompson de 1928. Los créditos explican esa procedencia; no se presenta como traducción directa del acadio o sumerio."
+    ],
+    [
+      "¿Puedo probar el audio y la lectura de Gilgamesh?",
+      "Sí. La muestra gratuita ofrece el primer diez por ciento con lectura sincronizada. La membresía de Audiolibros TEC permite continuar con las doce tablillas y navegar por su índice."
+    ]
+  ]
+},
   "viaje-al-oeste": {
   "summary": [
     "Un mono nacido de una piedra descubre un mundo de montañas, palacios submarinos y funcionarios celestiales. Su ambición de vencer a la muerte lo lleva en busca de un maestro y de poderes que pronto pondrán a prueba el orden del Cielo. Sun Wukong combina ingenio, impaciencia y una fuerza extraordinaria: sus decisiones convierten su aprendizaje en una cadena de aventuras y enfrentamientos.",
@@ -220,7 +247,7 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',

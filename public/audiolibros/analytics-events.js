@@ -1,6 +1,6 @@
 // Public, fixed vocabulary. Never send input values, query strings, quotes or audio.
 export const MEASUREMENT_ID = 'G-DZCX3RMST7';
-export const BOOK_IDS = Object.freeze(['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'genesis-rv1909', 'exodo-rv1909', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste']);
+export const BOOK_IDS = Object.freeze(['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'genesis-rv1909', 'exodo-rv1909', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh']);
 export const COLLECTION_IDS = Object.freeze(['desarrollo-personal', 'biblia-en-audio', 'clasicos-en-espanol', 'filosofia-y-estrategia']);
 export const GUIDE_IDS = Object.freeze(['con-que-audiolibro-de-desarrollo-personal-empezar', 'genesis-o-exodo-por-donde-empezar-biblia-audio', 'james-allen-y-samuel-smiles-desarrollo-personal', 'como-aprovechar-audiolibro-con-lectura-sincronizada']);
 export const EVENT_NAMES = Object.freeze(['page_view', 'audio_sample_play', 'audio_membership_click', 'audio_share_open']);

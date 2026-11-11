@@ -1,0 +1,5041 @@
+{
+  "version": 1,
+  "bookId": "la-epopeya-de-gilgamesh",
+  "textSha256": "03604ddad5f4ca557b57a3ccb9ee68d9e6774579155a9a55e6e1205090f2c868",
+  "duration": 6112.59,
+  "trailingSeparator": "\n",
+  "cues": [
+    {
+      "id": "T01-0001",
+      "chapter": 0,
+      "start": 0.4,
+      "end": 2.48,
+      "text": "La epopeya de Gilgamesh",
+      "separator": ""
+    },
+    {
+      "id": "T01-0002",
+      "chapter": 0,
+      "start": 2.83,
+      "end": 4.59,
+      "text": "Tablilla primera",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0003",
+      "chapter": 0,
+      "start": 4.94,
+      "end": 8.54,
+      "text": "La tiranía de Gilgamesh y la creación de Enkidu",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0004",
+      "chapter": 0,
+      "start": 8.89,
+      "end": 24.89,
+      "text": "Que aquel que ha probado el corazón de todas las cosas instruya a la nación;\nque aquel que posee todo conocimiento enseñe con él a los pueblos.\nQue comunique su sabiduría, y que todos la compartan.\nGilgamesh: maestro de sabiduría, conocedor de todas las cosas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0005",
+      "chapter": 0,
+      "start": 25.24,
+      "end": 38.28,
+      "text": "Él descubrió el secreto oculto...\nTransmitió la tradición de los tiempos anteriores al Diluvio.\nEmprendió un viaje lejano, fatigado, agotado por sus trabajos.\nGrabó en una tablilla de piedra todas sus penas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0006",
+      "chapter": 0,
+      "start": 38.63,
+      "end": 57.19,
+      "text": "De Uruk, la de altas murallas,\nél levantó las defensas; él afirmó los cimientos,\nfirmes como el bronce, del sagrado Eanna, el tesoro consagrado.\nReforzó su base para no conceder paso a nadie...\n... el umbral que desde antiguo...\n... Eanna...\n... para no conceder paso a nadie...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0007",
+      "chapter": 0,
+      "start": 57.54,
+      "end": 63.78,
+      "text": "Aquí faltan unas treinta líneas. La descripción de Gilgamesh continúa después de esta laguna.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0008",
+      "chapter": 0,
+      "start": 64.13,
+      "end": 72.85,
+      "text": "Dos terceras partes de él eran divinas; una tercera parte, humana.\nLa forma de su cuerpo...\nHa obligado a tomar...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0009",
+      "chapter": 0,
+      "start": 73.2,
+      "end": 75.2,
+      "text": "Faltan unas tres líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0010",
+      "chapter": 0,
+      "start": 75.55,
+      "end": 78.35,
+      "text": "La queja de Uruk contra Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0011",
+      "chapter": 0,
+      "start": 78.7,
+      "end": 97.26,
+      "text": "—... de Uruk, él se ha llevado...\n... su cabeza se yergue como la de un uro.\nEl choque de sus armas no tiene igual; sus compañeros\nson arrastrados a la trampa, mientras los héroes de Uruk se acobardan...\nGilgamesh no deja el hijo a su padre; su arrogancia crece\ndía y noche. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0012",
+      "chapter": 0,
+      "start": 97.36,
+      "end": 111.84,
+      "text": "Sí, él es el pastor de Uruk, la de altas murallas.\nEs nuestro pastor... imperioso, dominante, astuto...\nGilgamesh no deja la doncella a su madre, ni la hija al guerrero,\nni la esposa a su marido.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0013",
+      "chapter": 0,
+      "start": 112.19,
+      "end": 119.31,
+      "text": "Los Inmortales escucharon sus lamentos.\nLos dioses del alto cielo se dirigieron a Anu,\nseñor de Uruk:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0014",
+      "chapter": 0,
+      "start": 119.66,
+      "end": 139.9,
+      "text": "—Tú has engendrado a un hijo\ntiránico en extremo, cuya cabeza se yergue como la de un uro.\nEl choque de sus armas no tiene igual; sus compañeros\nson arrastrados a la trampa, mientras los héroes de Uruk se acobardan...\nGilgamesh no deja el hijo a su padre; su arrogancia crece\ndía y noche. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0015",
+      "chapter": 0,
+      "start": 140.0,
+      "end": 155.36,
+      "text": "Sí, él es el pastor de Uruk, la de altas murallas.\nEs su pastor... imperioso, dominante, astuto...\nGilgamesh no deja la doncella a su madre, ni la hija al guerrero,\nni la esposa a su marido.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0016",
+      "chapter": 0,
+      "start": 155.71,
+      "end": 159.39,
+      "text": "Anu escuchó sus lamentos y llamó a la señora Aruru:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0017",
+      "chapter": 0,
+      "start": 159.74,
+      "end": 175.1,
+      "text": "—Tú, Aruru, creaste la semilla primera de la humanidad.\nCrea ahora a su semejante,\npara que salga al encuentro de Gilgamesh en el día de su placer;\nque luchen entre sí, y que Uruk encuentre descanso.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0018",
+      "chapter": 0,
+      "start": 175.45,
+      "end": 177.53,
+      "text": "La creación de Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0019",
+      "chapter": 0,
+      "start": 177.88,
+      "end": 197.48,
+      "text": "Cuando la diosa Aruru oyó estas palabras,\nformó en su pensamiento aquella imagen de Anu.\nAruru se lavó las manos;\ntomó arcilla con los dedos y la modeló en el desierto.\nAllí creó a Enkidu, un guerrero, como nacido y engendrado,\ndoble de Ninurta. Todo su cuerpo estaba cubierto de pelo.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0020",
+      "chapter": 0,
+      "start": 197.58,
+      "end": 209.34,
+      "text": "Como una mujer, sujetaba sus cabellos con una cinta;\nle crecían abundantes, como las aristas de la cebada.\nNo conocía a la gente ni al país; su vestidura era como la de Sumuqan.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0021",
+      "chapter": 0,
+      "start": 209.69,
+      "end": 218.17,
+      "text": "Con las gacelas se alimentaba de hierba;\njunto al ganado bebía hasta saciarse.\nCon las bestias se alegraba su corazón al llegar al agua.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0022",
+      "chapter": 0,
+      "start": 218.52,
+      "end": 221.32,
+      "text": "El encuentro de Enkidu con el cazador.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0023",
+      "chapter": 0,
+      "start": 221.67,
+      "end": 239.11,
+      "text": "Un cazador, un trampero, se encontró cara a cara con él.\nLo vio un día, dos días, tres días, en el lugar donde los animales bebían.\nCuando el cazador lo divisó, su rostro se cubrió de terror.\nÉl y su ganado regresaron a su morada, consternados y temerosos.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0024",
+      "chapter": 0,
+      "start": 239.21,
+      "end": 248.81,
+      "text": "Lanzaba gritos; tenía el corazón angustiado y el rostro sombrío.\n... dolor en sus entrañas...\nSu cara era como la de quien ha hecho un largo viaje.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0025",
+      "chapter": 0,
+      "start": 249.16,
+      "end": 252.12,
+      "text": "El cazador abrió la boca y habló a su padre:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0026",
+      "chapter": 0,
+      "start": 252.47,
+      "end": 269.75,
+      "text": "—Padre, de las montañas ha salido un hombre enorme.\nSu fuerza es la mayor en toda la extensión del país;\ncomo un doble del propio Anu, su poder es inmenso.\nAnda libre por las montañas,\ncon el ganado se alimenta de hierba\ny acude una y otra vez al agua.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0027",
+      "chapter": 0,
+      "start": 269.85,
+      "end": 286.73,
+      "text": "Por eso tengo miedo de acercarme.\nHa vuelto a llenar las fosas que yo mismo cavé con mis manos;\nha arrancado las trampas que coloqué.\nHa ayudado a escapar de mis manos a todo el ganado,\na las bestias del desierto. ¡No me deja ejercer mi oficio de cazador!",
+      "separator": ""
+    },
+    {
+      "id": "T01-0028",
+      "chapter": 0,
+      "start": 287.08,
+      "end": 290.36,
+      "text": "Su padre abrió la boca y respondió al cazador:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0029",
+      "chapter": 0,
+      "start": 290.71,
+      "end": 314.15,
+      "text": "—Hijo mío, en Uruk vive Gilgamesh, a quien nadie ha vencido.\nSu fuerza es la mayor en toda la extensión del país;\ncomo un doble del propio Anu, su poder es inmenso.\nPonte en camino hacia Uruk. Cuando oiga hablar del monstruo,\nte dirá: «Ve, cazador; lleva contigo a una cortesana,\na una hetaira...\n... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0030",
+      "chapter": 0,
+      "start": 314.25,
+      "end": 332.09,
+      "text": "como un hombre fuerte.\nCuando el ganado vuelva a reunirse en el lugar donde bebe,\nella se quitará el manto y mostrará su belleza.\nEntonces él la verá y la abrazará;\ndesde ese momento, el ganado criado en su propio desierto lo rechazará».",
+      "separator": ""
+    },
+    {
+      "id": "T01-0031",
+      "chapter": 0,
+      "start": 332.44,
+      "end": 336.2,
+      "text": "Cómo Gilgamesh oyó hablar de Enkidu por primera vez.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0032",
+      "chapter": 0,
+      "start": 336.55,
+      "end": 346.39,
+      "text": "El cazador escuchó el consejo de su padre\ny se puso en camino hacia Gilgamesh.\nTomó el camino de Uruk;\nllegó ante Gilgamesh y le habló de este modo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0033",
+      "chapter": 0,
+      "start": 346.74,
+      "end": 366.42,
+      "text": "—De las montañas ha salido un hombre enorme.\nSu fuerza es la mayor en toda la extensión del país;\ncomo un doble del propio Anu, su poder es inmenso.\nAnda libre por las montañas,\ncon el ganado se alimenta de hierba\ny acude una y otra vez al agua.\nPor eso tengo miedo de acercarme.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0034",
+      "chapter": 0,
+      "start": 366.52,
+      "end": 381.08,
+      "text": "Ha vuelto a llenar las fosas que yo mismo cavé con mis manos;\nha arrancado las trampas que coloqué.\nHa ayudado a escapar de mis manos a todo el ganado,\na las bestias del desierto. ¡No me deja ejercer mi oficio de cazador!",
+      "separator": ""
+    },
+    {
+      "id": "T01-0035",
+      "chapter": 0,
+      "start": 381.43,
+      "end": 383.91,
+      "text": "Gilgamesh respondió al cazador:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0036",
+      "chapter": 0,
+      "start": 384.26,
+      "end": 401.78,
+      "text": "—Ve, buen cazador; lleva contigo a una cortesana, a una hetaira.\nCuando el ganado vuelva a reunirse en el lugar donde bebe,\nella se quitará el manto y mostrará su belleza.\nEntonces él la verá y la abrazará;\ndesde ese momento, el ganado criado en su propio desierto lo rechazará.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0037",
+      "chapter": 0,
+      "start": 402.13,
+      "end": 404.21,
+      "text": "La seducción de Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0038",
+      "chapter": 0,
+      "start": 404.56,
+      "end": 423.44,
+      "text": "El cazador partió y llevó consigo a una cortesana, una hetaira.\nLos dos emprendieron juntos el viaje\ny, al término de tres días, llegaron al lugar acordado.\nEl cazador y la cortesana se sentaron al acecho.\nUn día, dos días, aguardaron junto al lugar donde bebían los animales.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0039",
+      "chapter": 0,
+      "start": 423.54,
+      "end": 426.58,
+      "text": "Por fin llegó el ganado para saciar su sed.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0040",
+      "chapter": 0,
+      "start": 426.93,
+      "end": 447.09,
+      "text": "Allí acudieron los animales para alegrar su corazón en el agua.\nTambién estaba Enkidu, aquel a quien habían engendrado las montañas.\nCon las gacelas se alimentaba de hierba;\njunto al ganado bebía hasta saciarse.\nCon las bestias se alegraba su corazón al llegar al agua.\nLa cortesana lo vio: aquel hombre vigoroso y enorme,\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0041",
+      "chapter": 0,
+      "start": 447.19,
+      "end": 451.99,
+      "text": "¡una criatura enteramente salvaje, venida de lo más hondo del desierto!",
+      "separator": ""
+    },
+    {
+      "id": "T01-0042",
+      "chapter": 0,
+      "start": 452.34,
+      "end": 476.26,
+      "text": "—¡Es él, mujer! Descubre tu belleza; muéstrale tu hermosura,\npara que pueda poseer tus encantos. No sientas vergüenza.\nCautiva su alma. En cuanto sus ojos se posen en ti,\nse acercará. Tú, entonces, afloja tu manto\npara que te abrace; atráelo con tus artes de mujer.\nAsí, los animales criados en su desierto lo rechazarán,\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0043",
+      "chapter": 0,
+      "start": 476.36,
+      "end": 479.0,
+      "text": "porque te habrá estrechado contra su pecho.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0044",
+      "chapter": 0,
+      "start": 479.35,
+      "end": 499.51,
+      "text": "La mujer descubrió su seno\ny mostró su hermosura, de modo que él gozó de su belleza.\nNo sintió vergüenza; cautivó su alma, aflojando su manto\npara que él la abrazara. Lo atrajo con sus artes de mujer,\nmientras él la estrechaba contra su pecho.\nAsí se unió Enkidu con la cortesana,\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0045",
+      "chapter": 0,
+      "start": 499.61,
+      "end": 502.25,
+      "text": "durante seis días y siete noches.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0046",
+      "chapter": 0,
+      "start": 502.6,
+      "end": 506.68,
+      "text": "Cómo Enkidu fue atraído a Uruk para luchar con Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0047",
+      "chapter": 0,
+      "start": 507.03,
+      "end": 526.23,
+      "text": "Saciado por fin de sus encantos, volvió el rostro hacia su ganado.\n¡Cómo huyeron las gacelas en cuanto lo vieron!\n¡Cómo escaparon de su presencia las bestias del desierto!\nEnkidu había perdido su inocencia. Cuando el ganado huyó de él,\nle fallaron las rodillas; ya no corría como antes.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0048",
+      "chapter": 0,
+      "start": 526.33,
+      "end": 532.65,
+      "text": "Sin embargo, había alcanzado su pleno desarrollo\ny su sabiduría se había ensanchado.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0049",
+      "chapter": 0,
+      "start": 533.0,
+      "end": 541.8,
+      "text": "Volvió a sentarse a los pies de la mujer.\nElla contemplaba su rostro;\ny, mientras hablaba, sus oídos escuchaban sus palabras:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0050",
+      "chapter": 0,
+      "start": 542.15,
+      "end": 562.07,
+      "text": "—Hermoso eres, Enkidu; serás como un dios.\n¿Por qué vagas siempre por el desierto con las bestias del campo?\n¡Levántate! Yo te llevaré a Uruk, la de altas murallas,\nal templo sagrado, morada de Anu e Ishtar,\ndonde Gilgamesh, el más poderoso,\ndomina a los hombres como un uro.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0051",
+      "chapter": 0,
+      "start": 562.42,
+      "end": 570.82,
+      "text": "El consejo de la mujer le agradó en cuanto lo oyó,\npues sentía el deseo de encontrar un compañero.\nY así habló a la cortesana:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0052",
+      "chapter": 0,
+      "start": 571.17,
+      "end": 584.69,
+      "text": "—¡Levántate, mujer! Invítame a entrar en el templo santo y sagrado,\nen la morada de Anu e Ishtar,\ndonde Gilgamesh, el más poderoso,\ndomina a los hombres como un uro. Porque yo también...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0053",
+      "chapter": 0,
+      "start": 585.04,
+      "end": 600.96,
+      "text": "—¡Yo lo llamaré! Lo desafiaré sin miedo y gritaré por Uruk:\n«¡Yo también soy poderoso!».\n¡Yo, sí, yo cambiaré el destino!\n¡El nacido en el desierto es el de mayor vigor!\n... yo te agradaré...\n... cuanto haya, eso querría saber.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0054",
+      "chapter": 0,
+      "start": 601.31,
+      "end": 626.91,
+      "text": "—Ven, Enkidu, a Uruk, la de altas murallas,\ndonde la gente se viste con espléndidos trajes de fiesta\ny cada día es una celebración.\nLos sacerdotes eunucos hacen chocar sus címbalos,\ny las danzarinas...\n... entregadas al gozo, alegres, mantienen a los nobles\nlejos de sus lechos.\n¡Enkidu, saborearás plenamente la alegría de vivir!\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0055",
+      "chapter": 0,
+      "start": 627.01,
+      "end": 648.77,
+      "text": "Te mostraré a un hombre dichoso: ¡Gilgamesh!\nMíralo; contempla su rostro, ¡qué hermosa es su virilidad!\nEstá dotado de vigor; todo su cuerpo rebosa poder.\nSu fuerza supera a la tuya; no descansa ni de día ni de noche.\nEnkidu, modera tu arrogancia.\nShamash ama a Gilgamesh;\n",
+      "separator": ""
+    },
+    {
+      "id": "T01-0056",
+      "chapter": 0,
+      "start": 648.87,
+      "end": 654.87,
+      "text": "Anu, Enlil y Ea le han concedido sabiduría en abundancia.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0057",
+      "chapter": 0,
+      "start": 655.22,
+      "end": 657.3,
+      "text": "Los sueños de Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0058",
+      "chapter": 0,
+      "start": 657.65,
+      "end": 664.61,
+      "text": "—Antes de que salieras de tus montañas,\nGilgamesh ya te había visto en un sueño, allá en Uruk.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0059",
+      "chapter": 0,
+      "start": 664.96,
+      "end": 668.88,
+      "text": "Gilgamesh fue a hablar con su madre para revelarle el sueño:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0060",
+      "chapter": 0,
+      "start": 669.23,
+      "end": 687.31,
+      "text": "—Madre mía, tuve una visión durante la noche.\nHabía estrellas en el cielo,\ncuando algo semejante al propio Anu cayó sobre mis hombros.\nIntenté levantarlo, pero era demasiado fuerte para mí.\nAunque solté su abrazo, no pude apartarlo de encima.\nMientras tanto, la gente de Uruk estaba reunida a su alrededor;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0061",
+      "chapter": 0,
+      "start": 687.41,
+      "end": 702.21,
+      "text": "los artesanos se apretaban detrás de él\ny los héroes lo rodeaban.\nMis propios compañeros le besaban los pies.\nYo lo estreché contra mi pecho como se abraza a una mujer.\nDespués lo presenté a tus pies\npara que lo reconocieras como mi igual.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0062",
+      "chapter": 0,
+      "start": 702.56,
+      "end": 709.52,
+      "text": "La que conoce toda sabiduría respondió a su señor;\nla que conoce toda sabiduría respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0063",
+      "chapter": 0,
+      "start": 709.87,
+      "end": 728.83,
+      "text": "—Las estrellas del cielo representan a tus compañeros.\nAquello semejante al propio Anu que cayó sobre tus hombros,\nque intentaste levantar, pero era demasiado fuerte para ti;\naquello cuyo abrazo soltaste sin poder apartarlo de encima,\ny que presentaste a mis pies para que lo reconociera como tu igual;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0064",
+      "chapter": 0,
+      "start": 728.93,
+      "end": 733.09,
+      "text": "aquello que estrechaste contra tu pecho como a una mujer...",
+      "separator": ""
+    },
+    {
+      "id": "T01-0065",
+      "chapter": 0,
+      "start": 733.44,
+      "end": 751.84,
+      "text": "—Es un hombre de corazón valeroso, un amigo,\nalguien dispuesto a permanecer al lado de su compañero.\nSu fuerza es la mayor en toda la extensión del país;\ncomo un doble del propio Anu, su poder es inmenso.\nEl que lo estrecharas contra tu pecho como a una mujer\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0066",
+      "chapter": 0,
+      "start": 751.94,
+      "end": 758.02,
+      "text": "es señal de que nunca te abandonará.\nEste es el significado de tu sueño.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0067",
+      "chapter": 0,
+      "start": 758.37,
+      "end": 760.61,
+      "text": "De nuevo habló a su madre:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0068",
+      "chapter": 0,
+      "start": 760.96,
+      "end": 780.56,
+      "text": "—Madre, vi un segundo sueño.\nUn hacha irrumpió en Uruk, la de altas murallas,\ny la gente se reunió a su alrededor.\nLos habitantes de Uruk estaban junto a ella,\ntodos se agolpaban delante;\nlos artesanos se apretaban detrás.\nYo la presenté a tus pies.\nLa estreché contra mí como a una mujer\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0069",
+      "chapter": 0,
+      "start": 780.66,
+      "end": 783.14,
+      "text": "para que la reconocieras como mi igual.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0070",
+      "chapter": 0,
+      "start": 783.49,
+      "end": 791.17,
+      "text": "La sabia que conoce toda sabiduría respondió a su hijo;\nla sabia que conoce toda sabiduría respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0071",
+      "chapter": 0,
+      "start": 791.52,
+      "end": 810.0,
+      "text": "—Esa hacha que viste es un hombre.\nLo estrechaste contra tu pecho como a una mujer,\npara que yo lo reconociera como tu igual.\nEs un hombre de corazón valeroso, un amigo,\nalguien dispuesto a permanecer al lado de su compañero.\nSu fuerza es la mayor en toda la extensión del país;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0072",
+      "chapter": 0,
+      "start": 810.1,
+      "end": 814.98,
+      "text": "como un doble del propio Anu, su poder es inmenso.",
+      "separator": ""
+    },
+    {
+      "id": "T01-0073",
+      "chapter": 0,
+      "start": 815.33,
+      "end": 819.41,
+      "text": "Gilgamesh abrió la boca y, dirigiéndose a su madre, dijo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T01-0074",
+      "chapter": 0,
+      "start": 819.76,
+      "end": 823.04,
+      "text": "—Aunque sobrevenga un gran peligro, tendré un amigo...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0001",
+      "chapter": 1,
+      "start": 824.74,
+      "end": 826.34,
+      "text": "Tablilla segunda",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0002",
+      "chapter": 1,
+      "start": 826.69,
+      "end": 829.49,
+      "text": "El encuentro de Gilgamesh y Enkidu",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0003",
+      "chapter": 1,
+      "start": 829.84,
+      "end": 846.32,
+      "text": "Mientras Gilgamesh revela su visión,\nEnkidu está sentado ante la cortesana.\nElla descubre su seno y muestra su belleza;\nél olvida el lugar de su nacimiento.\nAsí permaneció Enkidu unido a la cortesana\ndurante seis días y siete noches.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0004",
+      "chapter": 1,
+      "start": 846.67,
+      "end": 849.15,
+      "text": "Entonces la mujer habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0005",
+      "chapter": 1,
+      "start": 849.5,
+      "end": 875.82,
+      "text": "—Al contemplarte, Enkidu, veo que serás como un dios.\n¿Por qué vagas siempre por el desierto con las bestias del campo?\n¡Levántate! Te llevaré a Uruk, la de amplios mercados,\nal templo sagrado, morada de Anu.\nVen, Enkidu; déjame guiarte\nhasta Eanna, la morada de Anu, donde vive Gilgamesh,\nel más excelso de la creación.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0006",
+      "chapter": 1,
+      "start": 875.92,
+      "end": 885.12,
+      "text": "Lo abrazarás como a una mujer\ny lo amarás como a ti mismo.\n¡Levántate del suelo, que no es más que un lecho de pastor!",
+      "separator": ""
+    },
+    {
+      "id": "T02-0007",
+      "chapter": 1,
+      "start": 885.47,
+      "end": 901.39,
+      "text": "Él escuchó sus palabras y acogió su consejo;\nel consejo de la mujer penetró en su pecho.\nElla se quitó una prenda para vestirlo\ny se puso la otra.\nLo tomó de la mano como a un hermano\ny lo condujo a las chozas de los pastores, al lugar de los rediles.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0008",
+      "chapter": 1,
+      "start": 901.49,
+      "end": 903.97,
+      "text": "Los pastores se reunieron al verlo.",
+      "separator": ""
+    },
+    {
+      "id": "T02-0009",
+      "chapter": 1,
+      "start": 904.32,
+      "end": 907.04,
+      "text": "Faltan cuatro o cinco líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0010",
+      "chapter": 1,
+      "start": 907.39,
+      "end": 910.19,
+      "text": "Cómo la cortesana instruyó a Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0011",
+      "chapter": 1,
+      "start": 910.54,
+      "end": 923.26,
+      "text": "Antes estaba acostumbrado a mamar la leche de los animales salvajes.\nPartió el pan que ella le puso delante, pero lo miraba con asombro.\nEnkidu no sabía comer pan;\ntampoco sabía beber hidromiel.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0012",
+      "chapter": 1,
+      "start": 923.61,
+      "end": 926.01,
+      "text": "La mujer le dijo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0013",
+      "chapter": 1,
+      "start": 926.36,
+      "end": 934.76,
+      "text": "—Prueba el pan, Enkidu, pues es el sustento de la vida.\nBebe también la hidromiel: esa es la costumbre del país.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0014",
+      "chapter": 1,
+      "start": 935.11,
+      "end": 952.71,
+      "text": "Enkidu comió pan hasta quedar saciado.\nBebió siete copas colmadas de hidromiel.\nSe le levantó el ánimo y se llenó de júbilo;\nsu corazón estaba alegre y su rostro, risueño.\nSe frotó el cuerpo;\nungió con aceite el pelo que lo cubría,\ny así se volvió humano.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0015",
+      "chapter": 1,
+      "start": 952.81,
+      "end": 970.89,
+      "text": "Se puso una vestidura para parecerse a un hombre\ny tomó su arma.\nCazó los leones que acosaban a los pastores por la noche\ny atrapó los chacales.\nUna vez que hubo dominado a los leones, los pastores pudieron dormir tranquilos.\nEnkidu era su guardián;\nse convirtió en un hombre de pleno vigor.",
+      "separator": ""
+    },
+    {
+      "id": "T02-0016",
+      "chapter": 1,
+      "start": 971.24,
+      "end": 974.68,
+      "text": "Ahora uno de los héroes está hablando a Gilgamesh...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0017",
+      "chapter": 1,
+      "start": 975.03,
+      "end": 977.59,
+      "text": "Faltan unas trece líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0018",
+      "chapter": 1,
+      "start": 977.94,
+      "end": 984.82,
+      "text": "Mientras se entregaba al placer, Enkidu alzó los ojos\ny, al observar a aquel hombre, habló a la mujer:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0019",
+      "chapter": 1,
+      "start": 985.17,
+      "end": 991.17,
+      "text": "—Mujer, tráeme a ese hombre.\n¿Por qué ha venido? Quiero conocer su intención.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0020",
+      "chapter": 1,
+      "start": 991.52,
+      "end": 995.04,
+      "text": "La mujer lo llamó para que se acercara y pudieran verlo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0021",
+      "chapter": 1,
+      "start": 995.39,
+      "end": 1000.43,
+      "text": "—Señor, ¿qué busca usted?\n¿Hacia dónde queda su alojamiento?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0022",
+      "chapter": 1,
+      "start": 1000.78,
+      "end": 1002.86,
+      "text": "El hombre habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0023",
+      "chapter": 1,
+      "start": 1003.21,
+      "end": 1019.45,
+      "text": "—Gilgamesh te llama a la Casa de la Comunidad.\nEsta es la costumbre de los hombres\ny un homenaje a los grandes.\nVen a amontonar las ofrendas que se deben a la ciudad;\nven a traer, por el bien común, los alimentos de la ciudad.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0024a",
+      "chapter": 1,
+      "start": 1019.55,
+      "end": 1024.83,
+      "text": "El rey de Uruk, la de amplios mercados, debe ver tu saludo;\n",
+      "separator": ""
+    },
+    {
+      "id": "T02-0024b",
+      "chapter": 1,
+      "start": 1024.95,
+      "end": 1040.23,
+      "text": "Gilgamesh, rey de Uruk, la de amplios mercados, debe ver tu saludo.\nPrimero se une a la mujer que el destino le ha asignado;\ndespués habla siguiendo el consejo del dios\ny, según la forma de los presagios,\n",
+      "separator": ""
+    },
+    {
+      "id": "T02-0025",
+      "chapter": 1,
+      "start": 1040.33,
+      "end": 1042.81,
+      "text": "declara el designio de su destino.",
+      "separator": ""
+    },
+    {
+      "id": "T02-0026",
+      "chapter": 1,
+      "start": 1043.16,
+      "end": 1047.16,
+      "text": "Al oír las palabras del hombre,\nse adelantaron ante él.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0027",
+      "chapter": 1,
+      "start": 1047.51,
+      "end": 1049.67,
+      "text": "Faltan unas nueve líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0028",
+      "chapter": 1,
+      "start": 1050.02,
+      "end": 1052.42,
+      "text": "La entrada de Enkidu en Uruk.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0029",
+      "chapter": 1,
+      "start": 1052.77,
+      "end": 1069.09,
+      "text": "Enkidu marchaba delante, y la cortesana iba detrás.\nEntraron en Uruk, la de amplios mercados;\nla gente se reunió a su espalda.\nCuando se detuvo en una calle de Uruk, la de amplios mercados,\nla multitud que se agolpaba detrás de él exclamó:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0030",
+      "chapter": 1,
+      "start": 1069.44,
+      "end": 1088.56,
+      "text": "—¡En verdad se parece a Gilgamesh!\nEs un poco más bajo, pero de constitución más fuerte.\n... antes mamaba la leche de los animales salvajes como un niño desvalido.\n¡Los panes de Uruk dan espléndida plenitud al vigor del hombre!\nAquel que era un salvaje se ha convertido en un héroe de noble aspecto.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0031",
+      "chapter": 1,
+      "start": 1088.66,
+      "end": 1092.42,
+      "text": "Ahora su constitución iguala a la del divino Gilgamesh.",
+      "separator": ""
+    },
+    {
+      "id": "T02-0032",
+      "chapter": 1,
+      "start": 1092.77,
+      "end": 1096.21,
+      "text": "Cómo Enkidu luchó con Gilgamesh por la cortesana.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0033",
+      "chapter": 1,
+      "start": 1096.56,
+      "end": 1109.36,
+      "text": "Está preparado el lecho para los ritos del amor.\nDe noche llega Gilgamesh a dormir, a gozar de la mujer.\nPero Enkidu sale al camino\ny le cierra el paso a Gilgamesh,\namenazándolo con su fuerza...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0034",
+      "chapter": 1,
+      "start": 1109.71,
+      "end": 1112.27,
+      "text": "Faltan siete u ocho líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0035",
+      "chapter": 1,
+      "start": 1112.62,
+      "end": 1134.22,
+      "text": "Gilgamesh... detrás de él...\nSu furia creció y se lanzó a atacarlo.\nSe encontraron en el camino.\nEnkidu cerró la puerta con el pie\ny no permitió entrar a Gilgamesh.\nSe trabaron y resoplaron como toros;\nel umbral se hizo pedazos y el propio muro tembló.\nGilgamesh y Enkidu se trabaron,\nresoplando como toros;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0036",
+      "chapter": 1,
+      "start": 1134.32,
+      "end": 1138.4,
+      "text": "hicieron pedazos el umbral, y el propio muro tembló.",
+      "separator": ""
+    },
+    {
+      "id": "T02-0037",
+      "chapter": 1,
+      "start": 1138.75,
+      "end": 1140.99,
+      "text": "El nacimiento de la amistad.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0038",
+      "chapter": 1,
+      "start": 1141.34,
+      "end": 1151.5,
+      "text": "Gilgamesh dobló la pierna hasta el suelo.\nAsí se apaciguó su furia y se calmó su ardor.\nEn cuanto su ardor se hubo calmado,\nEnkidu dijo a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T02-0039",
+      "chapter": 1,
+      "start": 1151.85,
+      "end": 1165.45,
+      "text": "—En verdad tu madre te dio a luz único, sin igual.\nAquella escogida vaca de los rediles,\nNinsun, alzó tu cabeza por encima de los héroes;\ny Enlil te concedió la realeza sobre los hombres.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0001",
+      "chapter": 2,
+      "start": 1167.15,
+      "end": 1168.83,
+      "text": "Tablilla tercera",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0002",
+      "chapter": 2,
+      "start": 1169.18,
+      "end": 1172.62,
+      "text": "La expedición al Bosque de los Cedros contra Humbaba",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0003",
+      "chapter": 2,
+      "start": 1172.97,
+      "end": 1176.49,
+      "text": "El comienzo de esta parte del poema está muy dañado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0004",
+      "chapter": 2,
+      "start": 1176.84,
+      "end": 1178.92,
+      "text": "El relato del combate.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0005",
+      "chapter": 2,
+      "start": 1179.27,
+      "end": 1190.15,
+      "text": "—Alzó el pie hacia la puerta...\nSe enfurecieron...\nEnkidu no tiene igual...\n... su cabellera está enmarañada...\nNació en el desierto, y nadie puede igualar su presencia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0006",
+      "chapter": 2,
+      "start": 1190.5,
+      "end": 1193.7,
+      "text": "El dolor de Enkidu por la pérdida de su amada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0007",
+      "chapter": 2,
+      "start": 1194.05,
+      "end": 1212.61,
+      "text": "Enkidu, de pie, escuchó aquellas palabras, afligido.\nSentado en su tristeza, se le llenaron los ojos de lágrimas;\nsus brazos perdieron fuerza y su vigor se debilitó.\nCada uno estrechó la mano del otro,\nsujetándola como hermanos...\nEnkidu respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0008",
+      "chapter": 2,
+      "start": 1212.96,
+      "end": 1221.28,
+      "text": "—Amigo, mi amada me ha rodeado el cuello con sus brazos para despedirse.\nPor eso mis brazos pierden fuerza y mi vigor se debilita.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0009",
+      "chapter": 2,
+      "start": 1221.63,
+      "end": 1223.87,
+      "text": "La ambición de Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0010",
+      "chapter": 2,
+      "start": 1224.22,
+      "end": 1227.74,
+      "text": "Gilgamesh abrió la boca y habló a Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0011",
+      "chapter": 2,
+      "start": 1228.09,
+      "end": 1230.01,
+      "text": "Faltan unas dos líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0012",
+      "chapter": 2,
+      "start": 1230.36,
+      "end": 1239.16,
+      "text": "—Amigo mío, estoy decidido a ir al Bosque de los Cedros.\nVenceré al feroz Humbaba y destruiré el mal.\nDespués cortaré el cedro...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0013",
+      "chapter": 2,
+      "start": 1239.51,
+      "end": 1242.55,
+      "text": "Enkidu abrió la boca y habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0014",
+      "chapter": 2,
+      "start": 1242.9,
+      "end": 1260.5,
+      "text": "—Has de saber, amigo, que cuando vagaba con el ganado por las montañas,\nme internaba en el bosque hasta dos horas de marcha desde sus lindes.\nEl rugido de Humbaba era un torbellino;\nhabía fuego en sus fauces y su mismo aliento era la Muerte.\n¿Por qué deseas llevar a cabo esta empresa?\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0015",
+      "chapter": 2,
+      "start": 1260.6,
+      "end": 1263.72,
+      "text": "¡Enfrentarse con Humbaba sería una lucha sin igual!",
+      "separator": ""
+    },
+    {
+      "id": "T03-0016",
+      "chapter": 2,
+      "start": 1264.07,
+      "end": 1267.43,
+      "text": "Gilgamesh abrió la boca y habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0017",
+      "chapter": 2,
+      "start": 1267.78,
+      "end": 1271.3,
+      "text": "—Voy al bosque porque necesito la rica cosecha de sus montañas...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0018",
+      "chapter": 2,
+      "start": 1271.65,
+      "end": 1285.41,
+      "text": "Siguen siete líneas dañadas del parlamento de Gilgamesh.\nEn ellas se mencionan la morada de los dioses\ny el hacha para cortar los cedros.\nDe tres breves líneas solo quedan estos finales:\n«... la madera...», «...», «... lo abriré».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0019",
+      "chapter": 2,
+      "start": 1285.76,
+      "end": 1288.8,
+      "text": "Enkidu abrió la boca y habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0020",
+      "chapter": 2,
+      "start": 1289.15,
+      "end": 1297.39,
+      "text": "—Cuando vayamos al Bosque de los Cedros...\nsu guardián es un guerrero, fuerte, que nunca duerme.\n¡Gilgamesh...!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0021",
+      "chapter": 2,
+      "start": 1297.74,
+      "end": 1299.9,
+      "text": "Hay tres líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0022",
+      "chapter": 2,
+      "start": 1300.25,
+      "end": 1317.21,
+      "text": "—Enlil lo ha puesto a custodiar el Bosque de los Cedros,\ncomo terror de los mortales.\nEl rugido de Humbaba es un torbellino;\nhay fuego en sus fauces y su mismo aliento es la Muerte.\nSi en el bosque oye una pisada en el camino:\n«¿Quién es este que ha bajado a su bosque?».\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0023",
+      "chapter": 2,
+      "start": 1317.31,
+      "end": 1325.79,
+      "text": "Enlil lo ha puesto a custodiar el Bosque de los Cedros,\ncomo terror de los mortales;\ny la desgracia caerá sobre quien descienda a su bosque.",
+      "separator": ""
+    },
+    {
+      "id": "T03-0024",
+      "chapter": 2,
+      "start": 1326.14,
+      "end": 1329.5,
+      "text": "Gilgamesh abrió la boca y habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0025",
+      "chapter": 2,
+      "start": 1329.85,
+      "end": 1346.65,
+      "text": "—Amigo mío, ¿quién no ha sido vencido por la muerte?\nLos dioses viven para siempre a la luz del día;\npero los días de los mortales están contados,\ny cuanto hacen no es más que viento.\nAhora tú temes la muerte,\ny tu valor no te ofrece nada firme.\n¡Yo iré delante de ti!\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0026",
+      "chapter": 2,
+      "start": 1346.75,
+      "end": 1363.15,
+      "text": "Tu propia boca contará que tuviste miedo del asalto de la batalla.\nSi caigo, habré establecido mi nombre para siempre:\n«¡Fue Gilgamesh quien luchó con el feroz Humbaba!».\nEn el futuro, cuando nazcan hijos en mi casa\ny se trepen sobre ti diciendo:\n«Cuéntanos todo lo que sabes...».",
+      "separator": ""
+    },
+    {
+      "id": "T03-0027",
+      "chapter": 2,
+      "start": 1363.5,
+      "end": 1365.82,
+      "text": "Hay cuatro líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0028",
+      "chapter": 2,
+      "start": 1366.17,
+      "end": 1373.69,
+      "text": "—Cuando hablas así, afliges mi corazón.\nEstoy decidido a derribar el cedro\npara alcanzar una fama que dure para siempre.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0029",
+      "chapter": 2,
+      "start": 1374.04,
+      "end": 1376.76,
+      "text": "Se funden las armas de la expedición.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0030",
+      "chapter": 2,
+      "start": 1377.11,
+      "end": 1382.95,
+      "text": "—Ahora, amigo mío, quiero dar instrucciones a los artesanos\npara que fundan nuestras armas en nuestra presencia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0031",
+      "chapter": 2,
+      "start": 1383.3,
+      "end": 1405.38,
+      "text": "Dieron sus instrucciones a los artesanos.\nLos trabajadores prepararon el molde y fundieron hachas enormes;\nfundieron las hachas, cada una de tres talentos.\nFundieron también espadas enormes,\ncon empuñaduras de dos talentos cada una\ny hojas a su medida, de treinta minas cada una;\nlas incrustaciones de oro eran de treinta minas por espada.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0032",
+      "chapter": 2,
+      "start": 1405.48,
+      "end": 1410.76,
+      "text": "Así quedaron cargados Gilgamesh y Enkidu,\ncada uno con diez talentos.",
+      "separator": ""
+    },
+    {
+      "id": "T03-0033",
+      "chapter": 2,
+      "start": 1411.11,
+      "end": 1413.91,
+      "text": "Gilgamesh consulta a los ancianos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0034",
+      "chapter": 2,
+      "start": 1414.26,
+      "end": 1432.42,
+      "text": "En la Puerta de los Siete Cerrojos de Uruk,\nlos artesanos acudieron al oír el rumor.\nEl pueblo se reunió en las calles de Uruk, la de amplios mercados,\nen honor de Gilgamesh.\nLos ancianos de Uruk, la de amplios mercados,\ntomaron asiento delante de él.\nGilgamesh habló:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0035",
+      "chapter": 2,
+      "start": 1432.77,
+      "end": 1450.05,
+      "text": "—¡Escúchenme, ancianos de Uruk, la de amplios mercados!\nVoy contra el feroz Humbaba, quien, al oír hablar de mí, dirá:\n«Déjenme ver a ese Gilgamesh de quien la gente habla,\naquel cuya fama llena los países».\nYo lo aplastaré allá, en el Bosque de los Cedros.\n¡Haré que el país escuche\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0036",
+      "chapter": 2,
+      "start": 1450.15,
+      "end": 1457.51,
+      "text": "cómo es un gigante el vástago de Uruk!\nEstoy decidido a derribar los cedros\npara alcanzar una fama que dure para siempre.",
+      "separator": ""
+    },
+    {
+      "id": "T03-0037",
+      "chapter": 2,
+      "start": 1457.86,
+      "end": 1463.22,
+      "text": "Los ancianos de Uruk, la de amplios mercados, respondieron a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0038",
+      "chapter": 2,
+      "start": 1463.57,
+      "end": 1482.21,
+      "text": "—Gilgamesh, eres joven y tu valor te enaltece demasiado.\nNo comprendes del todo lo que buscas emprender.\nHemos oído hablar de Humbaba: su apariencia es doble.\n¿Quién querría ir voluntariamente a enfrentarse con sus armas?\n¿Quién se internaría en el bosque hasta dos horas de marcha desde sus lindes?\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0039",
+      "chapter": 2,
+      "start": 1482.31,
+      "end": 1494.79,
+      "text": "El rugido de Humbaba es un torbellino;\nhay fuego en sus fauces y su mismo aliento es la Muerte.\n¿Por qué deseas llevar a cabo esta empresa?\n¡Enfrentarse con Humbaba sería una lucha sin igual!",
+      "separator": ""
+    },
+    {
+      "id": "T03-0040",
+      "chapter": 2,
+      "start": 1495.14,
+      "end": 1501.62,
+      "text": "Gilgamesh escuchó el consejo de sus consejeros y lo meditó.\nEntonces exclamó hacia su amigo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0041",
+      "chapter": 2,
+      "start": 1501.97,
+      "end": 1507.97,
+      "text": "—Ahora, amigo mío, diré lo que pienso.\nEn verdad le tengo miedo,\npero aun así me internaré en el bosque...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0042",
+      "chapter": 2,
+      "start": 1508.32,
+      "end": 1511.36,
+      "text": "Faltan o están dañadas unas siete líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0043",
+      "chapter": 2,
+      "start": 1511.71,
+      "end": 1518.83,
+      "text": "—... que tu dios te proteja\ny te devuelva sano y salvo a las murallas de Uruk, la de amplios mercados.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0044",
+      "chapter": 2,
+      "start": 1519.18,
+      "end": 1523.5,
+      "text": "Gilgamesh se arrodilló ante Shamash para hablar en su presencia:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0045",
+      "chapter": 2,
+      "start": 1523.85,
+      "end": 1533.85,
+      "text": "—Aquí me presento, Shamash, y alzo mis manos en súplica.\n¡Que después de esto se me conserve la vida!\nDevuélveme a las murallas de Uruk;\nextiende tu protección sobre mí.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0046",
+      "chapter": 2,
+      "start": 1534.2,
+      "end": 1537.72,
+      "text": "Shamash respondió, pronunciando su oráculo...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0047",
+      "chapter": 2,
+      "start": 1538.07,
+      "end": 1540.95,
+      "text": "Faltan o están dañadas unas seis líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0048",
+      "chapter": 2,
+      "start": 1541.3,
+      "end": 1544.66,
+      "text": "Las lágrimas corrían por las mejillas de Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0049",
+      "chapter": 2,
+      "start": 1545.01,
+      "end": 1554.45,
+      "text": "—Voy por un camino que nunca he recorrido,\npor un paso que no conozco.\nSi conservo la vida,\nvolveré contento y te rendiré el homenaje que te corresponde.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0050",
+      "chapter": 2,
+      "start": 1554.8,
+      "end": 1559.92,
+      "text": "Quedan dos líneas dañadas, con las palabras «en asientos» y «su equipo».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0051",
+      "chapter": 2,
+      "start": 1560.27,
+      "end": 1577.47,
+      "text": "Trajeron las hachas enormes;\npusieron el arco y la aljaba en sus manos.\nTomó un hacha y se colgó la aljaba;\nempuñó otra hacha y sujetó la espada a su tahalí.\nPero antes de que ambos emprendieran su viaje,\nofrecieron presentes al dios Sol\npara que los devolviera sanos y salvos a Uruk.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0052",
+      "chapter": 2,
+      "start": 1577.82,
+      "end": 1580.14,
+      "text": "La partida de los dos héroes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0053",
+      "chapter": 2,
+      "start": 1580.49,
+      "end": 1586.25,
+      "text": "Los ancianos lo despidieron con bendiciones,\ndando a Gilgamesh consejos sobre el camino:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0054",
+      "chapter": 2,
+      "start": 1586.6,
+      "end": 1606.28,
+      "text": "—Gilgamesh, no confíes solamente en tu propio poder.\nDeja, al menos, que alguien recorra el camino delante de ti;\ncuida tu persona y permite que Enkidu vaya a la vanguardia.\nÉl ha descubierto la ruta; él ha recorrido ese camino.\nTodos los pasos del bosque están bajo el dominio de Humbaba.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0055",
+      "chapter": 2,
+      "start": 1606.38,
+      "end": 1622.94,
+      "text": "Quien marcha a la vanguardia puede proteger a su compañero.\n¡Que el dios Sol te conceda realizar tu propósito!\n¡Que tus ojos vean cumplidas las palabras de tu boca!\n¡Que allane el sendero bloqueado,\nque abra una ruta para tus pasos\ny parta la montaña bajo tus pies!\n",
+      "separator": ""
+    },
+    {
+      "id": "T03-0056",
+      "chapter": 2,
+      "start": 1623.04,
+      "end": 1642.64,
+      "text": "Que el dios Lugalbanda te traiga durante la noche\nun mensaje que te alegre\ny te ayude en tu propósito;\npues, como un muchacho, has puesto tu empeño\nen derribar a Humbaba, conforme a tu decisión.\nLávate los pies; cuando te detengas, cava una poza\npara que el agua de tu odre esté siempre pura\n",
+      "separator": ""
+    },
+    {
+      "id": "T03-0057",
+      "chapter": 2,
+      "start": 1642.74,
+      "end": 1649.3,
+      "text": "y esté fresca el agua que derrames para el dios Sol.\nAsí harás que Lugalbanda se acuerde de ti.",
+      "separator": ""
+    },
+    {
+      "id": "T03-0058",
+      "chapter": 2,
+      "start": 1649.65,
+      "end": 1652.69,
+      "text": "Enkidu abrió la boca y habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0059",
+      "chapter": 2,
+      "start": 1653.04,
+      "end": 1660.4,
+      "text": "—Gilgamesh, ¿estás de veras preparado para esta incursión?\nNo tengas miedo en tu corazón. Confía en mí.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0060",
+      "chapter": 2,
+      "start": 1660.75,
+      "end": 1666.03,
+      "text": "Se echó el manto sobre el hombro\ny ambos emprendieron juntos el camino hacia Humbaba.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0061",
+      "chapter": 2,
+      "start": 1666.38,
+      "end": 1668.7,
+      "text": "Hay cinco líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0062",
+      "chapter": 2,
+      "start": 1669.05,
+      "end": 1673.21,
+      "text": "—... fueron conmigo...\n... te diré...\n... con alegría en el corazón.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0063",
+      "chapter": 2,
+      "start": 1673.56,
+      "end": 1677.56,
+      "text": "Cuando oyó estas palabras, el hombre lo orientó en su camino:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0064",
+      "chapter": 2,
+      "start": 1677.91,
+      "end": 1686.23,
+      "text": "—Ve, Gilgamesh...\n... deja que tu hermano vaya delante de ti...\n... y en tu propósito...\n¡Que el dios Sol te muestre el éxito!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0065",
+      "chapter": 2,
+      "start": 1686.58,
+      "end": 1696.02,
+      "text": "La versión babilónica antigua se interrumpe tras otras tres líneas fragmentarias.\nLa versión asiria conserva también estos consejos de los ancianos:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0066",
+      "chapter": 2,
+      "start": 1696.37,
+      "end": 1714.93,
+      "text": "—Gilgamesh, no deposites tu confianza solamente en la fuerza de tu persona.\nRefrena el deseo de confiar demasiado en tu destreza para golpear.\nQuien marcha a la vanguardia puede proteger a su compañero;\nquien sabe guiar ha protegido a su amigo.\nDeja, pues, que Enkidu vaya delante de ti:\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0067",
+      "chapter": 2,
+      "start": 1715.03,
+      "end": 1736.63,
+      "text": "él conoce el camino hacia el Bosque de los Cedros;\nél ansía la batalla y amenaza con el combate.\nEnkidu velaría por un amigo y protegería a su compañero;\nlo libraría de las trampas.\nRey, en nuestra asamblea hemos atendido cuidadosamente a tu bienestar.\nRey, a cambio, tú debes correspondernos con igual atención.",
+      "separator": ""
+    },
+    {
+      "id": "T03-0068",
+      "chapter": 2,
+      "start": 1736.98,
+      "end": 1740.34,
+      "text": "Gilgamesh abrió la boca y habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0069",
+      "chapter": 2,
+      "start": 1740.69,
+      "end": 1755.25,
+      "text": "—Amigo, vamos al Palacio del Esplendor,\na presentarnos ante Ninsun, la gloriosa reina;\nsí, ante Ninsun, la más sabia de todas las mujeres prudentes,\nque todo lo conoce.\nElla dispondrá para nuestros pies un camino bien trazado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0070",
+      "chapter": 2,
+      "start": 1755.6,
+      "end": 1766.64,
+      "text": "Se estrecharon las manos\ny fueron al Palacio del Esplendor, Gilgamesh y Enkidu.\nGilgamesh llegó ante Ninsun, la gloriosa reina,\ny entró en su presencia:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0071",
+      "chapter": 2,
+      "start": 1766.99,
+      "end": 1782.83,
+      "text": "—Ninsun, quisiera contarte que emprendo un viaje lejano,\na la morada de Humbaba, para afrontar una lucha que no conozco\ny seguir un camino que no conozco.\nDesde el día de mi partida hasta mi regreso,\nhasta que llegue al Bosque de los Cedros,\nhasta que derribe al feroz Humbaba\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0072",
+      "chapter": 2,
+      "start": 1782.93,
+      "end": 1786.69,
+      "text": "y destruya en el país todos los males que el dios Sol aborrece...",
+      "separator": ""
+    },
+    {
+      "id": "T03-0073",
+      "chapter": 2,
+      "start": 1787.04,
+      "end": 1790.72,
+      "text": "El resto de su discurso se ha perdido hasta este fragmento:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0074",
+      "chapter": 2,
+      "start": 1791.07,
+      "end": 1793.31,
+      "text": "—... vístete...\n... en tu presencia...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0075",
+      "chapter": 2,
+      "start": 1793.66,
+      "end": 1810.06,
+      "text": "Ninsun escuchó a su hijo Gilgamesh...\nEntró en su cámara\ny se adornó con las flores de Tulal...\nSe puso las vestiduras de fiesta de su cuerpo...\nSe puso las vestiduras de fiesta de su pecho...\nCoronó su cabeza con una diadema...\n... el suelo... ipirani...\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0076",
+      "chapter": 2,
+      "start": 1810.16,
+      "end": 1822.48,
+      "text": "Subió la escalera, ascendió a la azotea y se alzó sobre el parapeto.\nOfreció incienso a Shamash y presentó a Shamash su sacrificio.\nDespués alzó las manos hacia Shamash, orando:",
+      "separator": ""
+    },
+    {
+      "id": "T03-0077",
+      "chapter": 2,
+      "start": 1822.83,
+      "end": 1841.23,
+      "text": "—¿Por qué le diste esa inquietud de espíritu\ncon que dotaste a Gilgamesh, mi hijo?\nAhora lo tocas y él parte de inmediato\nen un viaje lejano hacia la morada de Humbaba,\npara afrontar una lucha que no conoce\ny seguir un camino que no conoce.\nDesde el mismo día en que parte\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0078",
+      "chapter": 2,
+      "start": 1841.33,
+      "end": 1861.41,
+      "text": "hasta que regrese,\nhasta que llegue al Bosque de los Cedros,\nhasta que derribe al feroz Humbaba\ny destruya en el país todos los males que tú aborreces;\nel día que has fijado como término\nde aquel hombre fuerte que te teme,\nque Aa, tu esposa, te lo recuerde.\nÉl, las vigilias nocturnas...",
+      "separator": ""
+    },
+    {
+      "id": "T03-0079",
+      "chapter": 2,
+      "start": 1861.76,
+      "end": 1882.96,
+      "text": "El texto siguiente se conserva muy dañado.\nQuedan menciones a «las montañas», «el ganado del campo»\ny a cómo «él esperaba»;\nal «cadáver» de Humbaba y a los Anunnaki,\ny de nuevo a «aquel hombre fuerte que te teme».\nHay referencias al viaje y a derribar al feroz Humbaba,\nya transcurran días, meses o años;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0080",
+      "chapter": 2,
+      "start": 1883.06,
+      "end": 1895.22,
+      "text": "a alguien que «amontona incienso» ante un dios,\ny a Enkidu hablando con alguien.\nLa relación entre esos fragmentos no está clara.\nMás adelante se repiten las palabras de los ancianos:",
+      "separator": ""
+    },
+    {
+      "id": "T03-0081",
+      "chapter": 2,
+      "start": 1895.57,
+      "end": 1905.65,
+      "text": "—Lo libraría de las trampas.\nRey, en nuestra asamblea hemos atendido cuidadosamente a tu bienestar.\nRey, ahora debes correspondernos con igual atención.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0082",
+      "chapter": 2,
+      "start": 1906.0,
+      "end": 1909.04,
+      "text": "Enkidu abrió la boca y habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T03-0083",
+      "chapter": 2,
+      "start": 1909.39,
+      "end": 1912.67,
+      "text": "—Vuélvete, amigo mío...\n... un camino no...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0001",
+      "chapter": 3,
+      "start": 1914.37,
+      "end": 1916.13,
+      "text": "Tablilla cuarta",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0002",
+      "chapter": 3,
+      "start": 1916.48,
+      "end": 1918.8,
+      "text": "La llegada a la puerta del bosque",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0003",
+      "chapter": 3,
+      "start": 1919.15,
+      "end": 1929.79,
+      "text": "El comienzo está dañado o perdido.\nSolo se conservan los inicios de dieciséis líneas.\nCuando el relato vuelve a ser legible,\nlos héroes han llegado a la puerta del bosque.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0004",
+      "chapter": 3,
+      "start": 1930.14,
+      "end": 1932.46,
+      "text": "Enkidu se dirige a la puerta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0005",
+      "chapter": 3,
+      "start": 1932.81,
+      "end": 1937.37,
+      "text": "Enkidu alzó los ojos...\ny habló a la puerta como si fuera humana:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0006",
+      "chapter": 3,
+      "start": 1937.72,
+      "end": 1955.48,
+      "text": "—¡Puerta del bosque, que no tienes entendimiento...!\n¡Conciencia que no posees...!\nDurante cuarenta leguas he admirado tu maravillosa madera,\nhasta que vi el cedro que se alza sobre todo.\nTu madera no tiene igual en el país...\nSeis gar es tu altura y dos gar tu anchura...\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0007",
+      "chapter": 3,
+      "start": 1955.58,
+      "end": 1975.82,
+      "text": "Tu puntal, tu alojamiento, tu pivote, tu cerrojo y tu hoja,\ntodo debió de ser labrado para ti en la ciudad de Nippur.\n¡Si hubiera sabido, puerta, que tal era tu grandeza,\ny tal la gracia de tu estructura,\nhabría levantado un hacha,\no habría... o atado juntos...!",
+      "separator": ""
+    },
+    {
+      "id": "T04-0008",
+      "chapter": 3,
+      "start": 1976.17,
+      "end": 1996.49,
+      "text": "Los fragmentos siguientes hablan de terror, de un sueño y de tristeza.\nSe leen las palabras:\n«... déjame rogar a los dioses...\n... que tu dios sea...\n... el padre de los dioses...».\nHay también menciones a Gilgamesh, al bosque y a Enkidu.\nSe ha perdido por completo otro pasaje.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0009",
+      "chapter": 3,
+      "start": 1996.59,
+      "end": 1999.63,
+      "text": "Más adelante se conserva esta exhortación:",
+      "separator": ""
+    },
+    {
+      "id": "T04-0010",
+      "chapter": 3,
+      "start": 1999.98,
+      "end": 2011.26,
+      "text": "—¡Apresúrate! ¡Hazle frente! No te perseguirá...\nBajaremos juntos al bosque, sin temor...\n... te pondrás siete vestiduras...\n... al ponerse, y seis...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0011",
+      "chapter": 3,
+      "start": 2011.61,
+      "end": 2020.57,
+      "text": "Él, como un poderoso toro salvaje...\nabrió de par en par la puerta;\nsu boca se llenó de desafío\ny gritó al Guardián del Bosque:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0012",
+      "chapter": 3,
+      "start": 2020.92,
+      "end": 2025.08,
+      "text": "—¡Levántate...!\n¡Yo desafiaré a Humbaba como a un...!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0013",
+      "chapter": 3,
+      "start": 2025.43,
+      "end": 2027.51,
+      "text": "Hay una pequeña laguna.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0014",
+      "chapter": 3,
+      "start": 2027.86,
+      "end": 2029.54,
+      "text": "Enkidu habla:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0015",
+      "chapter": 3,
+      "start": 2029.89,
+      "end": 2035.65,
+      "text": "—Presiento dificultades adondequiera que vaya...\nAmigo mío, he visto un sueño que...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0016",
+      "chapter": 3,
+      "start": 2036.0,
+      "end": 2039.92,
+      "text": "El día... el sueño que había visto... cumplido...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0017",
+      "chapter": 3,
+      "start": 2040.27,
+      "end": 2043.31,
+      "text": "Enkidu siente miedo al pensar en el combate.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0018",
+      "chapter": 3,
+      "start": 2043.66,
+      "end": 2065.42,
+      "text": "Enkidu permaneció acostado un día y un segundo día.\nSiguió tendido en su lecho un tercero y un cuarto...\nun quinto, un sexto y un séptimo;\nun octavo, un noveno y un décimo.\nMientras Enkidu yacía enfermo...\nel undécimo...\nhasta el duodécimo...\nEnkidu seguía tendido en su lecho.\nLlamó a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0019",
+      "chapter": 3,
+      "start": 2065.77,
+      "end": 2074.41,
+      "text": "—¡Compañero mío...!\n... me odia... porque en Uruk...\nTuve miedo del combate, y...\n... mi amigo, que en la batalla...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0020",
+      "chapter": 3,
+      "start": 2074.76,
+      "end": 2080.28,
+      "text": "Hay una pequeña laguna.\nEnkidu abrió la boca y respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0021",
+      "chapter": 3,
+      "start": 2080.63,
+      "end": 2089.67,
+      "text": "—No, amigo mío, no bajemos de ningún modo a lo hondo del bosque.\nMis manos se han debilitado\ny la parálisis ha herido mis brazos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0022",
+      "chapter": 3,
+      "start": 2090.02,
+      "end": 2093.38,
+      "text": "Gilgamesh abrió la boca y habló a Enkidu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0023",
+      "chapter": 3,
+      "start": 2093.73,
+      "end": 2105.57,
+      "text": "—Amigo, ¿vamos a comportarnos como cobardes...?\n... los superarás a todos...\nAmigo mío, eres hábil en la guerra, diestro en el combate.\nTocarás el...\ny no sentirás terror de la muerte...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0024",
+      "chapter": 3,
+      "start": 2105.92,
+      "end": 2108.8,
+      "text": "Hay dos líneas difíciles y dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0025",
+      "chapter": 3,
+      "start": 2109.15,
+      "end": 2128.27,
+      "text": "—¡Que se aparte la parálisis de tus brazos\ny pase la debilidad de tus manos!\n¡Sé valiente y resiste, compañero mío!\nBajaremos juntos:\n¡que el combate no disminuya tu valor!\nOlvida la muerte y no temas a nada...\n... pues el valiente, prudente y cuidadoso,\nque al marchar delante protege su propio cuerpo,\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T04-0026",
+      "chapter": 3,
+      "start": 2128.37,
+      "end": 2130.53,
+      "text": "protegerá también a su compañero.",
+      "separator": ""
+    },
+    {
+      "id": "T04-0027",
+      "chapter": 3,
+      "start": 2130.88,
+      "end": 2139.52,
+      "text": "Establecerán un nombre por su valor...\nY ahora llegan juntos a la barrera;\nsus palabras se apagan en el silencio\ny ambos se detienen.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0001",
+      "chapter": 4,
+      "start": 2141.22,
+      "end": 2142.66,
+      "text": "Tablilla quinta",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0002",
+      "chapter": 4,
+      "start": 2143.01,
+      "end": 2144.93,
+      "text": "La lucha con Humbaba",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0003",
+      "chapter": 4,
+      "start": 2145.28,
+      "end": 2147.44,
+      "text": "Las maravillas del bosque.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0004",
+      "chapter": 4,
+      "start": 2147.79,
+      "end": 2167.47,
+      "text": "Se detuvieron a contemplar el bosque;\nmiraron la altura de los cedros\ny examinaron la avenida que se adentraba entre los árboles.\nPor donde caminaba Humbaba había una senda;\nsus huellas eran rectas y bueno el paso.\nContemplaron el Monte del Cedro, hogar de los Inmortales,\nsantuario de Irnini.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0005",
+      "chapter": 4,
+      "start": 2167.57,
+      "end": 2180.05,
+      "text": "El cedro alzaba su orgullo frente a la montaña.\nHermosa era su sombra, llena de deleite;\nse extendían los arbustos,\nse extendía también...\n... el cedro... el incienso...",
+      "separator": ""
+    },
+    {
+      "id": "T05-0006",
+      "chapter": 4,
+      "start": 2180.4,
+      "end": 2186.8,
+      "text": "El texto se interrumpe.\nHay unas veinte líneas muy dañadas antes del pasaje siguiente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0007",
+      "chapter": 4,
+      "start": 2187.15,
+      "end": 2189.95,
+      "text": "Gilgamesh cuenta sus sueños.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0008",
+      "chapter": 4,
+      "start": 2190.3,
+      "end": 2204.14,
+      "text": "—Después tuve otro sueño, compañero.\nEsta segunda visión que vi fue agradable:\nlos dos estábamos juntos en lo alto de una cumbre;\nentonces la cumbre de la montaña se desplomó,\ny nos dejó a los dos como...\n... los que nacen en el desierto...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0009",
+      "chapter": 4,
+      "start": 2204.49,
+      "end": 2207.93,
+      "text": "Enkidu habló a su compañero para interpretar el sueño:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0010",
+      "chapter": 4,
+      "start": 2208.28,
+      "end": 2226.2,
+      "text": "—Compañero, esa visión tuya nos anuncia buena fortuna.\nHas visto un sueño de gran provecho.\nLa montaña que contemplaste debe de ser Humbaba.\nCapturaremos a Humbaba y derribaremos su cuerpo;\ndejaremos su cadáver humillado.\n¡Mañana te mostraré el resultado!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0011",
+      "chapter": 4,
+      "start": 2226.55,
+      "end": 2239.67,
+      "text": "Al cumplir cuarenta leguas, rompieron el ayuno con un bocado.\nAl cumplir sesenta, descansaron y cavaron un hoyo al sol.\nGilgamesh se colocó encima\ny derramó su harina para la montaña:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0012",
+      "chapter": 4,
+      "start": 2240.02,
+      "end": 2243.78,
+      "text": "—Montaña, concédeme un sueño...\n... sopla sobre él...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0013",
+      "chapter": 4,
+      "start": 2244.13,
+      "end": 2256.29,
+      "text": "La montaña concedió un sueño...\nsopló sobre él...\nSe levantó una fría ráfaga de viento;\nuna racha que pasó sobre él lo hizo encogerse,\ny se balanceó como el grano de las montañas...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0014",
+      "chapter": 4,
+      "start": 2256.64,
+      "end": 2268.48,
+      "text": "Gilgamesh se puso en cuclillas, con las rodillas dobladas,\ny el sueño que desciende sobre los hombres lo venció.\nA medianoche su sueño terminó de repente;\nfue a hablar con su compañero:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0015",
+      "chapter": 4,
+      "start": 2268.83,
+      "end": 2277.87,
+      "text": "—¿No me llamaste, amigo?\n¿Por qué he despertado?\n¿No me tocaste?\n¿Por qué tengo miedo?\n¿Ha pasado algún espíritu junto a mí?\n¿Por qué tiembla toda mi carne?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0016",
+      "chapter": 4,
+      "start": 2278.22,
+      "end": 2280.22,
+      "text": "El sueño del volcán.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0017",
+      "chapter": 4,
+      "start": 2280.57,
+      "end": 2299.93,
+      "text": "—He visto un tercer sueño, compañero,\npero este sueño que he visto era aterrador.\nEl firmamento rugía y la tierra resonaba con su eco.\nEl día se oscureció; se alzaron las tinieblas y relampaguearon los rayos.\nSe encendieron llamas;\nla Pestilencia se llenó hasta desbordarse\ny la Muerte quedó saciada.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0018",
+      "chapter": 4,
+      "start": 2300.03,
+      "end": 2310.83,
+      "text": "Después se apagó el resplandor, se apagaron los fuegos;\nal caer, los tizones se convirtieron en ceniza.\nVen, bajemos al desierto\npara que podamos deliberar juntos.",
+      "separator": ""
+    },
+    {
+      "id": "T05-0019",
+      "chapter": 4,
+      "start": 2311.18,
+      "end": 2314.7,
+      "text": "Enkidu habló a Gilgamesh para interpretar su sueño.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0020",
+      "chapter": 4,
+      "start": 2315.05,
+      "end": 2321.29,
+      "text": "El resto del pasaje se ha perdido.\nOtra versión conserva estos fragmentos del sueño:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0021",
+      "chapter": 4,
+      "start": 2321.64,
+      "end": 2340.84,
+      "text": "—Además de mi primer sueño, un segundo...\nEn mi sueño, amigo, una montaña...\n... me derribó, me sujetó los pies...\nEl resplandor aumentó...\n... un hombre... el más hermoso de toda la tierra...\nMe sacó de debajo de la montaña\ny me dio agua para beber.\nMi deseo quedó satisfecho;\npuso mis pies en tierra...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0022",
+      "chapter": 4,
+      "start": 2341.19,
+      "end": 2345.51,
+      "text": "Enkidu... a este dios...\n... a Gilgamesh habló:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0023",
+      "chapter": 4,
+      "start": 2345.86,
+      "end": 2353.38,
+      "text": "—Amigo mío, iremos...\n... cuanto sea hostil...\n... no la montaña...\nVen, deja a un lado el miedo...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0024",
+      "chapter": 4,
+      "start": 2353.73,
+      "end": 2364.61,
+      "text": "Tras unas siete líneas dañadas, el resto está perdido.\nEl relato de la gran lucha casi ha desaparecido en la versión asiria.\nLa versión hitita conserva lo siguiente:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0025",
+      "chapter": 4,
+      "start": 2364.96,
+      "end": 2366.88,
+      "text": "La lucha con Humbaba.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0026",
+      "chapter": 4,
+      "start": 2367.23,
+      "end": 2377.47,
+      "text": "De la siguiente manera...\n... el dios Sol en el cielo... los árboles...\nVio a Gilgamesh...\n... del dios Sol en el cielo...\nY le mostró el dique de las acequias.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0027",
+      "chapter": 4,
+      "start": 2377.82,
+      "end": 2381.74,
+      "text": "Gilgamesh habló en oración al dios Sol del cielo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0028",
+      "chapter": 4,
+      "start": 2382.09,
+      "end": 2390.89,
+      "text": "—He aquí que aquel día, a la ciudad...\n... lo que está en la ciudad...\nEn verdad ruego al dios Sol del cielo.\nHe emprendido un camino...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0029",
+      "chapter": 4,
+      "start": 2391.24,
+      "end": 2410.04,
+      "text": "El dios Sol del cielo escuchó la súplica de Gilgamesh\ny levantó contra Humbaba poderosos vientos:\nun gran viento,\nun viento del norte,\nun viento del sur,\nun vendaval,\nun viento de tormenta,\nun viento frío,\nun torbellino\ny un viento de todo mal.\nFueron ocho los vientos que levantó.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0030",
+      "chapter": 4,
+      "start": 2410.14,
+      "end": 2418.86,
+      "text": "Sujetaron a Humbaba por delante y por detrás,\nde modo que no podía avanzar ni retroceder.\nEntonces Humbaba se rindió.",
+      "separator": ""
+    },
+    {
+      "id": "T05-0031",
+      "chapter": 4,
+      "start": 2419.21,
+      "end": 2421.45,
+      "text": "Humbaba habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0032",
+      "chapter": 4,
+      "start": 2421.8,
+      "end": 2436.52,
+      "text": "—¡Gilgamesh, detén tu mano, te lo ruego!\nSé mi señor y yo seré tu servidor.\nNo tengas en cuenta todas las palabras\nque dije jactanciosamente contra ti.\nPesado...\n... me tendería...\n... y el palacio...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0033",
+      "chapter": 4,
+      "start": 2436.87,
+      "end": 2439.51,
+      "text": "Enkidu habló entonces a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0034",
+      "chapter": 4,
+      "start": 2439.86,
+      "end": 2446.34,
+      "text": "—No debes aceptar de ningún modo\nel consejo que Humbaba te ofrece.\n¡Humbaba no debe seguir vivo...!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0035",
+      "chapter": 4,
+      "start": 2446.69,
+      "end": 2454.53,
+      "text": "Aquí se interrumpe la versión hitita.\nLa versión asiria termina con seis líneas muy dañadas.\nLa última dice:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T05-0036",
+      "chapter": 4,
+      "start": 2454.88,
+      "end": 2457.12,
+      "text": "... cortaron la cabeza de Humbaba.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0001",
+      "chapter": 5,
+      "start": 2458.82,
+      "end": 2460.42,
+      "text": "Tablilla sexta",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0002",
+      "chapter": 5,
+      "start": 2460.77,
+      "end": 2464.93,
+      "text": "La diosa Ishtar se enamora del héroe tras su hazaña contra Humbaba",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0003",
+      "chapter": 5,
+      "start": 2465.28,
+      "end": 2468.4,
+      "text": "Gilgamesh se limpia las huellas del combate.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0004",
+      "chapter": 5,
+      "start": 2468.75,
+      "end": 2486.27,
+      "text": "Se lava las manchas y limpia sus ropas desgarradas.\nTrenza los cabellos para que caigan sueltos sobre los hombros.\nAparta sus vestidos sucios y se pone otros limpios;\nse coloca los brazaletes y se ciñe el tahalí.\nGilgamesh se ata la cinta de la cabeza\ny se ciñe el tahalí.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0005",
+      "chapter": 5,
+      "start": 2486.62,
+      "end": 2489.98,
+      "text": "Ishtar lo contempla y desea casarse con él.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0006",
+      "chapter": 5,
+      "start": 2490.33,
+      "end": 2494.57,
+      "text": "La señora Ishtar contempla la belleza de Gilgamesh y dice:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0007",
+      "chapter": 5,
+      "start": 2494.92,
+      "end": 2513.32,
+      "text": "—Ven, Gilgamesh, sé mi esposo.\nDame con generosidad el fruto de tu cuerpo.\nTú serás mi marido y yo seré tu consorte.\nTe daré un carro de azur y oro;\nde oro será su rueda y de piedras preciosas su yugo.\nCada día se le uncirán grandes mulas.\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0008",
+      "chapter": 5,
+      "start": 2513.42,
+      "end": 2535.74,
+      "text": "Entra en nuestra casa entre la fragancia del cedro.\nCuando entres, el umbral y el estrado besarán tus pies.\nReyes, príncipes y gobernantes te rendirán homenaje,\ntrayendo como tributo las cosechas de montañas y llanuras.\nTus cabras parirán en abundancia y tus ovejas tendrán gemelos;\ntus asnos alcanzarán el tamaño de mulas,\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0009",
+      "chapter": 5,
+      "start": 2535.84,
+      "end": 2542.24,
+      "text": "tus caballos del carro ganarán fama por su galope\ny tus mulas uncidas no tendrán rival.",
+      "separator": ""
+    },
+    {
+      "id": "T06-0010",
+      "chapter": 5,
+      "start": 2542.59,
+      "end": 2546.43,
+      "text": "Gilgamesh abrió la boca para responder a la señora Ishtar:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0011",
+      "chapter": 5,
+      "start": 2546.78,
+      "end": 2567.02,
+      "text": "—Pero ¿qué tendría que darte si te tomara por esposa?\nDebería proveerte de aceite para el cuerpo y de vestidos;\ndarte pan y alimento abundante, digno de una divinidad;\ndarte también bebida adecuada para la realeza.\n... quedaré ligado...\n... amontonemos...\n... vestir con una prenda...\n¿Qué ventaja obtendré si me caso contigo?\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0012",
+      "chapter": 5,
+      "start": 2567.12,
+      "end": 2582.88,
+      "text": "No eres más que una ruina que no protege al hombre de la intemperie;\nuna puerta trasera que no resiste las ráfagas ni las tormentas;\nun palacio que hace pedazos a los héroes que entran en él;\nuna trampa cuya cubierta cede traicioneramente;\nbrea que mancha al hombre que la lleva;\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0013",
+      "chapter": 5,
+      "start": 2582.98,
+      "end": 2599.38,
+      "text": "una vasija que gotea sobre quien la carga;\npiedra caliza que hace desmoronarse los muros;\ncalcedonia que no protege en tierra enemiga;\nuna sandalia que hace tropezar a su dueño en el camino.\n¿A qué esposo has amado fielmente para siempre?\n¿Qué señor tuyo ha obtenido ventaja sobre ti?\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0014",
+      "chapter": 5,
+      "start": 2599.48,
+      "end": 2602.92,
+      "text": "Ven, te contaré la interminable historia de tus esposos.",
+      "separator": ""
+    },
+    {
+      "id": "T06-0015",
+      "chapter": 5,
+      "start": 2603.27,
+      "end": 2622.87,
+      "text": "—Tú podrás dar fe de la verdad de esta lista.\nA Tammuz, compañero de tu juventud,\ncada año lo conviertes en motivo de llanto.\nAmaste después al ave carraca de vistoso plumaje;\nsin embargo, la golpeaste y le rompiste un ala.\nAhora permanece en la arboleda, gritando:\n«¡Kappi! ¡Mi ala!».\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0016",
+      "chapter": 5,
+      "start": 2622.97,
+      "end": 2642.33,
+      "text": "Amaste también a un león en la plenitud de su fuerza,\npero cavaste para él siete y siete profundas fosas.\nAmaste a un semental magnífico en la batalla,\npero fuiste para él causa de freno, espuela y látigo;\ncausa de su galope de cincuenta millas,\ncausa de agotamiento y sudor.\nY a su madre, Silili,\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0017",
+      "chapter": 5,
+      "start": 2642.43,
+      "end": 2661.15,
+      "text": "le diste motivo para un profundo lamento.\nAmaste también a un pastor, un vaquero,\nque sin cesar amontonaba carbón para ti\ny te sacrificaba cada día crías del rebaño.\nPero lo golpeaste y lo transformaste en chacal;\nsu propio zagal lo ahuyentó\ny sus perros le desgarraron las nalgas.\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0018",
+      "chapter": 5,
+      "start": 2661.25,
+      "end": 2679.81,
+      "text": "Amaste a Ishullanu, jardinero de tu padre,\nque te traía delicias sin descanso\ny cada día adornaba tu fuente.\nBastó que pusieras los ojos en él para enamorarte.\nLe dijiste: «Ishullanu mío, ven;\ndéjame probar tu vigor.\nExtiende también tu mano...».\nPero Ishullanu te respondió:\n«¿Qué me pides? ",
+      "separator": ""
+    },
+    {
+      "id": "T06-0019",
+      "chapter": 5,
+      "start": 2679.91,
+      "end": 2697.43,
+      "text": "Solo he comido lo que mi madre ha horneado.\nLo que comiera ahora sería pan de transgresión y de iniquidad.\nAdemás, los juncos son un manto contra el invierno».\nOíste su respuesta, lo golpeaste y lo convertiste en una araña.\nLo hiciste habitar a media altura de una vivienda,\n",
+      "separator": ""
+    },
+    {
+      "id": "T06-0020",
+      "chapter": 5,
+      "start": 2697.53,
+      "end": 2707.05,
+      "text": "sin poder subir, para que no le cayera el agua,\nni bajar, para que no lo aplastaran.\nTambién a mí me amarías por un tiempo\ny después me tratarías como a ellos.",
+      "separator": ""
+    },
+    {
+      "id": "T06-0021",
+      "chapter": 5,
+      "start": 2707.4,
+      "end": 2716.76,
+      "text": "Ishtar oyó estas palabras, estalló en cólera y subió al cielo.\nFue ante Anu, su padre, y Antu, su madre, para decirles:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0022",
+      "chapter": 5,
+      "start": 2717.11,
+      "end": 2725.03,
+      "text": "—¡Padre, Gilgamesh me ha colmado de insultos!\n¡Gilgamesh cuenta mis pecados, mis pecados y mis iniquidades!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0023",
+      "chapter": 5,
+      "start": 2725.38,
+      "end": 2727.86,
+      "text": "Anu respondió a la señora Ishtar:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0024",
+      "chapter": 5,
+      "start": 2728.21,
+      "end": 2737.57,
+      "text": "—Tú le pediste que te diera con generosidad el fruto de su cuerpo.\nPor eso cuenta tus pecados, tus pecados y tus iniquidades.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0025",
+      "chapter": 5,
+      "start": 2737.92,
+      "end": 2740.32,
+      "text": "La creación del Toro Celeste.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0026",
+      "chapter": 5,
+      "start": 2740.67,
+      "end": 2743.07,
+      "text": "Ishtar respondió a su padre Anu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0027",
+      "chapter": 5,
+      "start": 2743.42,
+      "end": 2757.9,
+      "text": "—¡Padre, crea para mí un Toro Celeste\nque venza a Gilgamesh!\n¡Llena de fuego su cuerpo...!\nSi no creas ese toro, entonces...\n... golpearé...\n... pondré...\n... haré...\n... más que los...\n... serán los...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0028",
+      "chapter": 5,
+      "start": 2758.25,
+      "end": 2760.73,
+      "text": "Anu respondió a la señora Ishtar:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0029",
+      "chapter": 5,
+      "start": 2761.08,
+      "end": 2772.44,
+      "text": "—Si creo el Toro Celeste que me pides,\ndespués de su ataque vendrán siete años de espigas vacías.\n¿Reunirás grano para la humanidad\ny harás crecer forraje para el ganado?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0030",
+      "chapter": 5,
+      "start": 2772.79,
+      "end": 2775.19,
+      "text": "Ishtar respondió a su padre Anu:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0031",
+      "chapter": 5,
+      "start": 2775.54,
+      "end": 2790.34,
+      "text": "—He almacenado grano para la humanidad\ny he hecho crecer forraje para el ganado.\nSi después de su ataque deben venir siete años de espigas vacías,\nreuniré grano para los hombres\ny aumentaré el forraje del ganado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0032",
+      "chapter": 5,
+      "start": 2790.69,
+      "end": 2808.61,
+      "text": "El texto presenta una pequeña laguna.\nHay unas siete líneas tan dañadas\nque apenas dejan ver el comienzo de la lucha con el Toro Celeste en Uruk.\nDespués se abalanzan cien hombres sobre el Toro,\npero su aliento de fuego los aniquila.\nLlegan otros doscientos, con el mismo resultado;\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0033",
+      "chapter": 5,
+      "start": 2808.71,
+      "end": 2812.55,
+      "text": "y después otros trescientos, que también son vencidos.",
+      "separator": ""
+    },
+    {
+      "id": "T06-0034",
+      "chapter": 5,
+      "start": 2812.9,
+      "end": 2824.42,
+      "text": "Enkidu se ciñó la cintura y saltó;\nsujetó al Toro Celeste por los cuernos\ny lo arrojó de cabeza delante de sí,\ntendido en toda su longitud...\n... por la parte gruesa de la cola...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0035",
+      "chapter": 5,
+      "start": 2824.77,
+      "end": 2827.09,
+      "text": "Hay trece líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0036",
+      "chapter": 5,
+      "start": 2827.44,
+      "end": 2833.84,
+      "text": "Enkidu lo persiguió...\n... el Toro Celeste...\nLo sujetó por la parte gruesa de su cola...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0037",
+      "chapter": 5,
+      "start": 2834.19,
+      "end": 2836.99,
+      "text": "Hay unas catorce líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0038",
+      "chapter": 5,
+      "start": 2837.34,
+      "end": 2848.46,
+      "text": "Cuando hubieron matado al Toro Celeste,\nle sacaron el corazón y lo ofrecieron en sacrificio al dios Sol.\nDespués de verter la libación ante el Sol,\nlos dos hermanos se sentaron.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0039",
+      "chapter": 5,
+      "start": 2848.81,
+      "end": 2850.73,
+      "text": "La furia de Ishtar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0040",
+      "chapter": 5,
+      "start": 2851.08,
+      "end": 2857.24,
+      "text": "Ishtar subió a lo alto de las murallas de Uruk;\nascendió a la azotea y allí alzó su lamento:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0041",
+      "chapter": 5,
+      "start": 2857.59,
+      "end": 2863.43,
+      "text": "—¡Ay de Gilgamesh!\n¡Al matar al Toro Celeste me ha hecho llorar!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0042",
+      "chapter": 5,
+      "start": 2863.78,
+      "end": 2870.18,
+      "text": "Cuando Enkidu oyó los gritos de Ishtar,\narrancó un miembro del Toro\ny lo arrojó delante de ella:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0043",
+      "chapter": 5,
+      "start": 2870.53,
+      "end": 2881.09,
+      "text": "—¡Si hubiera podido alcanzarte, te habría tratado de la misma manera!\n¡Habría dejado colgar sus entrañas por tus costados,\ncomo un cinturón alrededor de ti!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0044",
+      "chapter": 5,
+      "start": 2881.44,
+      "end": 2889.92,
+      "text": "Ishtar reunió a las devotas, a las cortesanas y a las prostitutas;\ny ante el miembro arrancado del Toro\ndirigió sus lamentaciones.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0045",
+      "chapter": 5,
+      "start": 2890.27,
+      "end": 2892.43,
+      "text": "El triunfo de Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0046",
+      "chapter": 5,
+      "start": 2892.78,
+      "end": 2913.98,
+      "text": "Gilgamesh llamó a todos los maestros artesanos y artistas,\npara que todos los gremios alabaran el tamaño de los cuernos.\nEl engaste de cada uno pesaba treinta minas de azur.\nDos dedos su...\nAmbos contenían seis medidas de aceite.\nGilgamesh los dedicó como unción a su dios Lugalbanda;\nlos llevó y los dejó colgados\n",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0047",
+      "chapter": 5,
+      "start": 2914.08,
+      "end": 2917.44,
+      "text": "en el santuario de sus antepasados.",
+      "separator": ""
+    },
+    {
+      "id": "T06-0048",
+      "chapter": 5,
+      "start": 2917.79,
+      "end": 2932.43,
+      "text": "Se lavaron las manos en el río Éufrates\ny emprendieron su marcha hacia la ciudad.\nCaminaban por la gran vía de Uruk,\ny los héroes de Uruk se agolpaban para verlos.\nGilgamesh propuso entonces una adivinanza a los notables:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0049",
+      "chapter": 5,
+      "start": 2932.78,
+      "end": 2944.06,
+      "text": "—¿Quién es el más espléndido de los héroes?\n¿Quién es el más famoso de los gigantes?\nGilgamesh es el más espléndido de los héroes;\nEnkidu es el más famoso de los gigantes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0050",
+      "chapter": 5,
+      "start": 2944.41,
+      "end": 2946.57,
+      "text": "Hay tres líneas dañadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T06-0051",
+      "chapter": 5,
+      "start": 2946.92,
+      "end": 2962.52,
+      "text": "Gilgamesh celebró una gran fiesta en su palacio.\nDespués, cuando todos los héroes dormían en sus lechos nocturnos,\nEnkidu también estaba dormido y tuvo una visión.\nEnkidu acudió a revelar su sueño;\ny así habló a su compañero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0001",
+      "chapter": 6,
+      "start": 2964.22,
+      "end": 2967.82,
+      "text": "Tablilla séptima. La muerte de Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0002",
+      "chapter": 6,
+      "start": 2968.17,
+      "end": 2970.09,
+      "text": "El sueño de Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0003",
+      "chapter": 6,
+      "start": 2970.44,
+      "end": 2974.68,
+      "text": "—¿Por qué, amigo mío, los grandes dioses se reúnen ahora en consejo?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0004",
+      "chapter": 6,
+      "start": 2975.03,
+      "end": 2981.83,
+      "text": "El resto de este pasaje se ha perdido en la versión asiria. La versión hitita conserva parte del sueño.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0005",
+      "chapter": 6,
+      "start": 2982.18,
+      "end": 2986.5,
+      "text": "Llegó entonces el día... Enkidu respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0006",
+      "chapter": 6,
+      "start": 2986.85,
+      "end": 3009.89,
+      "text": "—Gilgamesh, escucha el sueño que vi durante la noche. Enlil, Ea y el dios Sol del cielo... el dios Sol... Enlil habló en respuesta: «Estos que han matado al Toro Celeste y han abatido a Humbaba... que ayudó junto al cedro...». Enlil ha dicho: «Enkidu morirá, pero Gilgamesh no morirá». ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0007",
+      "chapter": 6,
+      "start": 3009.99,
+      "end": 3029.27,
+      "text": "Entonces Enlil respondió con firmeza: «Dios Sol, por tu mandato mataron al Toro Celeste y a Humbaba. Pero ahora Enkidu morirá». Enlil se volvió airado hacia el dios Sol: «¿Qué haces tú... con ellos, como corresponde...? Cada día salías con su compañero».",
+      "separator": ""
+    },
+    {
+      "id": "T07-0008",
+      "chapter": 6,
+      "start": 3029.62,
+      "end": 3035.7,
+      "text": "Enkidu se tendió a descansar ante Gilgamesh. Junto al dique... a él... la zanja...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0009",
+      "chapter": 6,
+      "start": 3036.05,
+      "end": 3039.09,
+      "text": "—Hermano mío, de gran importancia es mi sueño...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0010",
+      "chapter": 6,
+      "start": 3039.44,
+      "end": 3051.12,
+      "text": "Después de unas pocas líneas mutiladas, el relato se interrumpe. Se ha perdido por completo el pasaje siguiente. Los fragmentos que quedan muestran a Enkidu maldiciendo a la cortesana.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0011",
+      "chapter": 6,
+      "start": 3051.47,
+      "end": 3061.95,
+      "text": "«Destruir su poder, debilitar su fuerza...». Faltan tres líneas. Luego se conserva: «La cortesana... que ha traído una maldición...».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0012",
+      "chapter": 6,
+      "start": 3062.3,
+      "end": 3079.26,
+      "text": "—Cortesana, decretaré para ti tu destino. Tus penas... no acabarán jamás, por toda la eternidad. Ven, te maldeciré con una amarga maldición... Con desolación caerá sobre ti su maldición. ¡Que nunca se satisfaga tu deseo!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0013",
+      "chapter": 6,
+      "start": 3079.61,
+      "end": 3083.45,
+      "text": "Se conservan solo los finales rotos de seis líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0014",
+      "chapter": 6,
+      "start": 3083.8,
+      "end": 3097.4,
+      "text": "—¡Que... caiga sobre tu casa! ¡Que el... de la calle sea tu morada! ¡Que la sombra del muro sea tu habitación!... para tus pies... ¡Que el calor abrasador y la sed golpeen tu fuerza!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0015",
+      "chapter": 6,
+      "start": 3097.75,
+      "end": 3104.63,
+      "text": "El resto de la maldición está muy dañado. A este pasaje parecen pertenecer los fragmentos siguientes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0016",
+      "chapter": 6,
+      "start": 3104.98,
+      "end": 3108.5,
+      "text": "El final de la maldición de Enkidu contra la cortesana.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0017",
+      "chapter": 6,
+      "start": 3108.85,
+      "end": 3115.73,
+      "text": "—De la necesidad... pues a mí es a quien... ha... Y la fiebre me ha tendido de espaldas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0018",
+      "chapter": 6,
+      "start": 3116.08,
+      "end": 3118.0,
+      "text": "La respuesta de Shamash.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0019",
+      "chapter": 6,
+      "start": 3118.35,
+      "end": 3122.91,
+      "text": "El dios Sol lo oyó, abrió la boca y lo llamó desde los cielos:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0020",
+      "chapter": 6,
+      "start": 3123.26,
+      "end": 3136.62,
+      "text": "—Enkidu, ¿por qué maldices a la cortesana? Ella te hizo comer pan digno de los dioses; también te hizo beber vino digno de los reyes. Te puso un manto generoso y te dio por compañero al espléndido Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0021",
+      "chapter": 6,
+      "start": 3136.97,
+      "end": 3152.65,
+      "text": "—Ahora tu amigo y hermano Gilgamesh te hará yacer en un lecho de gran tamaño; en un hermoso lecho te dará descanso. Te hará sentar en un trono de gran comodidad, un trono a su izquierda, para que los príncipes del inframundo besen tus pies en homenaje. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0022",
+      "chapter": 6,
+      "start": 3152.75,
+      "end": 3167.07,
+      "text": "Hará que todo el pueblo de Uruk se lamente en tu honor, que te llore; pondrá a doncellas y héroes a tu servicio. Él mismo, por ti, llevará el cuerpo manchado, se vestirá con la piel de un león y recorrerá el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T07-0023",
+      "chapter": 6,
+      "start": 3167.42,
+      "end": 3174.38,
+      "text": "Enkidu escuchó las palabras del valiente Shamash... su ira se apaciguó. Faltan una o dos líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0024",
+      "chapter": 6,
+      "start": 3174.73,
+      "end": 3178.81,
+      "text": "Enkidu se arrepiente de su maldición y bendice a la cortesana.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0025",
+      "chapter": 6,
+      "start": 3179.16,
+      "end": 3200.04,
+      "text": "—¡Que... te devuelva a tu lugar! ¡Que monarcas, príncipes y jefes se enamoren de ti! Que ninguno se golpee las nalgas con disgusto contra ti. Que el héroe peine sus cabellos por ti... el que quiera abrazarte. Que se desate el cinturón... y que tu lecho sea de azur y oro. Que... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0026",
+      "chapter": 6,
+      "start": 3200.14,
+      "end": 3209.34,
+      "text": "te trate con bondad... amontonados están sus ishshikku... Que los dioses te hagan entrar... Que quedes como madre de siete novias...",
+      "separator": ""
+    },
+    {
+      "id": "T07-0027",
+      "chapter": 6,
+      "start": 3209.69,
+      "end": 3214.49,
+      "text": "Enkidu, afligido por su fin cercano, duerme solo y sueña.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0028",
+      "chapter": 6,
+      "start": 3214.84,
+      "end": 3222.2,
+      "text": "Enkidu... dolor en su vientre... durmiendo solo. Por la noche vino a descubrir su pesadumbre a su compañero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0029",
+      "chapter": 6,
+      "start": 3222.55,
+      "end": 3245.35,
+      "text": "—Amigo, he visto un sueño durante la noche. Rugía el firmamento y la tierra le hacía eco. Yo estaba solo... Entonces vi a un hombre... oscuro era todo su rostro, y se parecía... su cara... Sus uñas eran como garras de león. Me venció... subiéndose... me oprimió... Sobre mí... mi cuerpo...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0030",
+      "chapter": 6,
+      "start": 3245.7,
+      "end": 3251.78,
+      "text": "Aquí faltan quizá tres líneas. El sueño parece continuar con una visión del mundo de los muertos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0031",
+      "chapter": 6,
+      "start": 3252.13,
+      "end": 3269.17,
+      "text": "—...como pájaros mis manos; él me apresó. Me condujo a la Morada de las Tinieblas, la casa de Irkalla, a la morada de la que jamás sale quien entra. Por el camino cuyo recorrido no tiene regreso, a la morada cuyos habitantes están privados de la luz del día. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0032",
+      "chapter": 6,
+      "start": 3269.27,
+      "end": 3280.07,
+      "text": "Allí su alimento es el polvo, y el barro es su sustento. Como las aves, llevan vestidos de plumas; sentados en las tinieblas, nunca verán la luz.",
+      "separator": ""
+    },
+    {
+      "id": "T07-0033",
+      "chapter": 6,
+      "start": 3280.42,
+      "end": 3297.3,
+      "text": "—En la Puerta... cuando entré en la casa... fue humillada la corona... aquellos que llevaban coronas, que antaño gobernaban el país... de Anu y Enlil, ellos disponían los alimentos horneados... servían fresca el agua de los odres. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T07-0034",
+      "chapter": 6,
+      "start": 3297.4,
+      "end": 3315.4,
+      "text": "Cuando entré en esta Casa del Polvo, estaban sentados el sumo sacerdote y el acólito, el adivino y el mago, el sacerdote que ungía el Mar de los grandes dioses. Allí estaban sentados Etana y Sumuqan. También estaba Ereshkigal, la reina del mundo de los muertos. ",
+      "separator": ""
+    },
+    {
+      "id": "T07-0035",
+      "chapter": 6,
+      "start": 3315.5,
+      "end": 3326.14,
+      "text": "Ante ella se inclinaba la escriba del inframundo, Belit-seri, que leía en su presencia. Ella levantó la cabeza, me vio... y tomó esto...",
+      "separator": ""
+    },
+    {
+      "id": "T07-0036",
+      "chapter": 6,
+      "start": 3326.49,
+      "end": 3328.65,
+      "text": "Aquí se interrumpe el texto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0001",
+      "chapter": 7,
+      "start": 3330.35,
+      "end": 3335.31,
+      "text": "Tablilla octava. El duelo de Gilgamesh y lo que de él resultó.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0002",
+      "chapter": 7,
+      "start": 3335.66,
+      "end": 3350.06,
+      "text": "El comienzo está muy mutilado. Se conserva que, en cuanto despuntó algo de la mañana, Gilgamesh se dirigió a Enkidu, lo comparó con una gacela y prometió glorificarlo. Después parece recordar sus hazañas juntos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0003",
+      "chapter": 7,
+      "start": 3350.41,
+      "end": 3358.41,
+      "text": "—Montañas ascendimos... Llegamos al Bosque de los Cedros, viajando de noche y de día... con fieras que se acercaban detrás de nosotros...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0004",
+      "chapter": 7,
+      "start": 3358.76,
+      "end": 3365.96,
+      "text": "Enkidu yace moribundo o muerto. Ante los ancianos de Uruk, Gilgamesh entona su lamento por su amigo muerto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0005",
+      "chapter": 7,
+      "start": 3366.31,
+      "end": 3383.75,
+      "text": "—¡Escuchadme, ancianos! ¡A mí, sí, a mí debéis escuchar! Lloro a mi compañero Enkidu, gritando amargamente como una mujer que se lamenta. Se afloja mi mano sobre el hacha que cuelga junto a mi muslo; la espada de mi cinturón desaparece de mi vista. Mi vestido de fiesta no me sirve de consuelo. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0006",
+      "chapter": 7,
+      "start": 3383.85,
+      "end": 3387.77,
+      "text": "A mí, a mí me ha asaltado el dolor y me ha derribado en la aflicción.",
+      "separator": ""
+    },
+    {
+      "id": "T08-0007",
+      "chapter": 7,
+      "start": 3388.12,
+      "end": 3409.72,
+      "text": "—Compañero y servidor, que perseguías al asno salvaje, al leopardo del desierto. Compañero y servidor, que perseguías al asno salvaje, al leopardo del desierto. Enkidu, nosotros que superamos toda adversidad, que ascendimos las montañas, capturamos al Toro Celeste y lo destruimos; derribamos a Humbaba, que habitaba en el Bosque de los Cedros. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0008",
+      "chapter": 7,
+      "start": 3409.82,
+      "end": 3414.7,
+      "text": "¿Qué sueño es este que ahora te ha vencido? Estás en tinieblas y no puedes oírme.",
+      "separator": ""
+    },
+    {
+      "id": "T08-0009",
+      "chapter": 7,
+      "start": 3415.05,
+      "end": 3425.05,
+      "text": "Pero él no levantó los ojos. Cuando Gilgamesh le palpó el corazón, no dio ningún latido. Entonces cubrió con un velo a su amigo, como a una novia...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0010",
+      "chapter": 7,
+      "start": 3425.4,
+      "end": 3439.0,
+      "text": "Alzó la voz como un león... Rugió como una leona a la que han quitado sus cachorros. Ante su compañero iba y venía, arrancándose los rizos y arrojándolos; arrancando y tirando toda la gracia de su...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0011",
+      "chapter": 7,
+      "start": 3439.35,
+      "end": 3442.95,
+      "text": "Cuando despuntó algo de la mañana, Gilgamesh...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0012",
+      "chapter": 7,
+      "start": 3443.3,
+      "end": 3454.42,
+      "text": "El pasaje se interrumpe. El lamento continúa con la promesa de Gilgamesh. Las primeras palabras se completan en esta edición a partir del discurso de Shamash en la tablilla anterior.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0013",
+      "chapter": 7,
+      "start": 3454.77,
+      "end": 3456.85,
+      "text": "El lamento de Gilgamesh.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0014",
+      "chapter": 7,
+      "start": 3457.2,
+      "end": 3471.44,
+      "text": "—En un lecho de gran tamaño yo, tu amigo y hermano Gilgamesh, te haré yacer. En un hermoso lecho te daré descanso; te haré sentar en un gran trono, un trono a mi izquierda, para que los príncipes del inframundo besen tus pies en homenaje. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0015",
+      "chapter": 7,
+      "start": 3471.54,
+      "end": 3484.66,
+      "text": "Haré que todo el pueblo de Uruk se lamente en tu honor, que te llore. Pondré a doncellas y héroes a tu servicio. Yo mismo, por ti, llevaré el cuerpo manchado, me vestiré con la piel de un león y recorreré el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T08-0016",
+      "chapter": 7,
+      "start": 3485.01,
+      "end": 3490.21,
+      "text": "Cuando despuntó algo de la mañana, Gilgamesh... desatándose el cinturón...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0017",
+      "chapter": 7,
+      "start": 3490.56,
+      "end": 3505.12,
+      "text": "Del pasaje siguiente quedan solo cinco líneas fragmentarias al final. En ellas se leen: «A mi amigo, mi amigo»; «tu espada»; «semejanza»; y «al dios Bibbu». Después se conservan apenas una docena de líneas rotas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0018",
+      "chapter": 7,
+      "start": 3505.47,
+      "end": 3507.39,
+      "text": "«...Juez de los Anunnaki...».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0019",
+      "chapter": 7,
+      "start": 3507.74,
+      "end": 3512.06,
+      "text": "Cuando Gilgamesh oyó esto, concibió una imagen de la matanza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0020",
+      "chapter": 7,
+      "start": 3512.41,
+      "end": 3528.65,
+      "text": "Al despuntar la mañana, Gilgamesh modeló un... Sacó también una enorme bandeja de madera de las tierras altas. Llenó de miel un cuenco de brillante rubí; también llenó de crema un cuenco de azur. Adornó el... y Shamash dio instrucciones...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T08-0021",
+      "chapter": 7,
+      "start": 3529.0,
+      "end": 3534.76,
+      "text": "Falta una línea al final. El último pasaje de la tablilla se ha perdido por completo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0001",
+      "chapter": 8,
+      "start": 3536.46,
+      "end": 3542.62,
+      "text": "Tablilla novena. Gilgamesh, aterrorizado por la muerte, busca la vida eterna.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0002",
+      "chapter": 8,
+      "start": 3542.97,
+      "end": 3546.17,
+      "text": "Gilgamesh decide buscar la vida eterna.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0003",
+      "chapter": 8,
+      "start": 3546.52,
+      "end": 3552.04,
+      "text": "Gilgamesh lloraba amargamente a su compañero Enkidu mientras vagaba por el desierto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0004",
+      "chapter": 8,
+      "start": 3552.39,
+      "end": 3565.11,
+      "text": "—¿No moriré yo también como Enkidu? El dolor ha entrado en mi corazón. Temo a la muerte mientras recorro el desierto. Me pondré en camino hacia Uta-Napishtim, descendiente de Ubara-Tutu, y viajaré con rapidez. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0005",
+      "chapter": 8,
+      "start": 3565.21,
+      "end": 3578.89,
+      "text": "Si llego en las tinieblas a las Puertas de las Montañas y, al encontrarme con leones, el terror cae sobre mí, levantaré la cabeza al cielo. Ofreceré mi plegaria al dios Luna, o que mi oración llegue a los dioses... ¡Líbrame!",
+      "separator": ""
+    },
+    {
+      "id": "T09-0006",
+      "chapter": 8,
+      "start": 3579.24,
+      "end": 3592.2,
+      "text": "Durmió... y un sueño... Vio... que se regocijaban en la vida. Empuñó su hacha... y sacó la espada del tahalí. Como una lanza saltó en medio de ellos... golpeando... y aplastando.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0007",
+      "chapter": 8,
+      "start": 3592.55,
+      "end": 3595.35,
+      "text": "El resto del pasaje está mutilado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0008",
+      "chapter": 8,
+      "start": 3595.7,
+      "end": 3598.5,
+      "text": "El héroe llega a las Montañas de Mashu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0009",
+      "chapter": 8,
+      "start": 3598.85,
+      "end": 3613.41,
+      "text": "Mashu es el nombre de los montes. Llegó a las Montañas de Mashu, donde cada día vigilan la salida y la puesta del dios Sol. Sus cumbres se elevan hasta el cenit del cielo y sus pechos descienden hasta lo profundo del mundo de los muertos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0010",
+      "chapter": 8,
+      "start": 3613.76,
+      "end": 3628.96,
+      "text": "A sus puertas montan guardia los hombres escorpión. Terrible es su espanto; su sola mirada es la Muerte. Su magnificencia es tremenda y hace temblar las montañas. Son los guardianes de Shamash, tanto a su salida como a su puesta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0011",
+      "chapter": 8,
+      "start": 3629.31,
+      "end": 3637.95,
+      "text": "En cuanto Gilgamesh los vio, el miedo y el desconcierto hicieron palidecer su rostro. Sin sentido, se postró ante ellos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0012",
+      "chapter": 8,
+      "start": 3638.3,
+      "end": 3641.66,
+      "text": "El hombre escorpión dijo a su esposa:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0013",
+      "chapter": 8,
+      "start": 3642.01,
+      "end": 3647.05,
+      "text": "—Mira al que viene hacia nosotros: su cuerpo es carne de los dioses.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0014",
+      "chapter": 8,
+      "start": 3647.4,
+      "end": 3650.44,
+      "text": "Su esposa respondió al hombre escorpión:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0015",
+      "chapter": 8,
+      "start": 3650.79,
+      "end": 3655.83,
+      "text": "—Dos partes de él son divinas; solo una tercera parte es humana.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0016",
+      "chapter": 8,
+      "start": 3656.18,
+      "end": 3673.38,
+      "text": "Quedan ocho líneas rotas. En ellas, el hombre escorpión parece preguntar a Gilgamesh por qué ha emprendido un viaje tan lejano y le dice cuán difícil es la travesía. En el fragmento siguiente, Gilgamesh parece explicar que quiere preguntar a Uta-Napishtim por la muerte y por la vida.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0017",
+      "chapter": 8,
+      "start": 3673.73,
+      "end": 3685.33,
+      "text": "El hombre escorpión le dice que nadie ha hecho antes ese viaje, que nadie ha cruzado las montañas. La travesía sigue el Camino del Sol durante veinticuatro horas y comienza en profundas tinieblas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0018",
+      "chapter": 8,
+      "start": 3685.68,
+      "end": 3695.68,
+      "text": "Se ha perdido una gran parte del pasaje. Parece que el hombre escorpión describe el viaje hora por hora y que Gilgamesh acepta poner a prueba sus fuerzas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0019",
+      "chapter": 8,
+      "start": 3696.03,
+      "end": 3701.55,
+      "text": "—Aunque sea con dolor... aunque mi rostro sufra el frío y el calor... y con pena vaya...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0020",
+      "chapter": 8,
+      "start": 3701.9,
+      "end": 3709.02,
+      "text": "Tras unas últimas palabras sobre las Montañas de Mashu, el hombre escorpión se despide de él y le desea éxito.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0021",
+      "chapter": 8,
+      "start": 3709.37,
+      "end": 3716.41,
+      "text": "Cuando Gilgamesh oyó esto, partió siguiendo la indicación del hombre escorpión. Tomó el Camino del Sol...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0022",
+      "chapter": 8,
+      "start": 3716.76,
+      "end": 3732.68,
+      "text": "Las primeras dos horas transcurren en profundas tinieblas, sin luz, que no le permiten ver... detrás de él. Cada período siguiente de dos horas es igual hasta alcanzar y dejar atrás el octavo. En el noveno parece llegar a los primeros destellos de luz.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0023",
+      "chapter": 8,
+      "start": 3733.03,
+      "end": 3744.15,
+      "text": "Finalmente, al completar la duodécima hora doble, llega al pleno resplandor del sol. Allí contempla el Árbol de los Dioses. De su descripción quedan estas líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0024",
+      "chapter": 8,
+      "start": 3744.5,
+      "end": 3755.62,
+      "text": "Sus frutos eran todos de rubí y lo rodeaban sus zarcillos. Hermoso de contemplar, el follaje que llevaba era de azur. Daba frutos deseables a los ojos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0025",
+      "chapter": 8,
+      "start": 3755.97,
+      "end": 3767.97,
+      "text": "El pasaje asirio siguiente se ha perdido casi por completo. No está claro qué papel desempeña el árbol. En este punto, una versión babilónica antigua conserva la compasión del dios Sol por el héroe.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0026",
+      "chapter": 8,
+      "start": 3768.32,
+      "end": 3772.08,
+      "text": "Él ha preparado las pieles de las fieras y come su carne.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0027",
+      "chapter": 8,
+      "start": 3772.43,
+      "end": 3779.15,
+      "text": "—Gilgamesh, nunca habrá una travesía donde nunca la ha habido, no mientras el vendaval arrastre el agua.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0028",
+      "chapter": 8,
+      "start": 3779.5,
+      "end": 3784.06,
+      "text": "Shamash se conmovió y lo llamó. Así habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0029",
+      "chapter": 8,
+      "start": 3784.41,
+      "end": 3788.73,
+      "text": "—Gilgamesh, ¿por qué corres, si no encontrarás la vida que buscas?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0030",
+      "chapter": 8,
+      "start": 3789.08,
+      "end": 3792.2,
+      "text": "Gilgamesh respondió al guerrero Shamash:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0031",
+      "chapter": 8,
+      "start": 3792.55,
+      "end": 3806.15,
+      "text": "—¿Acaso, después de recorrer el desierto de un lado a otro como un vagabundo, he de apoyar la cabeza en las entrañas de la tierra y dormir por los años, por siempre y para siempre? ¡Que mis ojos vean el Sol y se sacien de claridad! ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T09-0032",
+      "chapter": 8,
+      "start": 3806.25,
+      "end": 3813.05,
+      "text": "Pues las tinieblas se apartan cuando se extiende el resplandor. ¿Cuándo volverá el hombre muerto a contemplar la luz del Sol?",
+      "separator": ""
+    },
+    {
+      "id": "T09-0033",
+      "chapter": 8,
+      "start": 3813.4,
+      "end": 3829.56,
+      "text": "Aquí termina el texto seguido que se conserva de este pasaje. La versión asiria concluye con alrededor de una docena de líneas mutiladas que mencionan minerales y piedras. Gilgamesh parece haber llegado ya ante Siduri, la joven proveedora de bebidas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0001",
+      "chapter": 9,
+      "start": 3831.26,
+      "end": 3835.9,
+      "text": "Tablilla décima. Cómo llegó Gilgamesh hasta Uta-Napishtim.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0002",
+      "chapter": 9,
+      "start": 3836.25,
+      "end": 3838.89,
+      "text": "Gilgamesh encuentra a Siduri.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0003",
+      "chapter": 9,
+      "start": 3839.24,
+      "end": 3848.2,
+      "text": "Allí habitaba Siduri, la hacedora de vino... El vino era su oficio, su oficio era... Estaba cubierta con un velo y...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0004",
+      "chapter": 9,
+      "start": 3848.55,
+      "end": 3860.87,
+      "text": "Gilgamesh erraba hacia ella... Vestía pieles... Su cuerpo poseía carne de los dioses, pero en su vientre había dolor. Su rostro era como el de un hombre que ha hecho un largo viaje.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0005",
+      "chapter": 9,
+      "start": 3861.22,
+      "end": 3865.06,
+      "text": "La hacedora de vino miró a lo lejos y se dijo en su interior:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0006",
+      "chapter": 9,
+      "start": 3865.41,
+      "end": 3870.29,
+      "text": "—Este es uno que querría violentar a una mujer... ¿Adónde avanza en...?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0007",
+      "chapter": 9,
+      "start": 3870.64,
+      "end": 3883.92,
+      "text": "En cuanto lo vio, la hacedora de vino atrancó su puerta trasera, atrancó su puerta interior, atrancó su habitación. Gilgamesh oyó que cerraba, levantó la barbilla y fijó su atención en ella.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0008",
+      "chapter": 9,
+      "start": 3884.27,
+      "end": 3887.15,
+      "text": "Gilgamesh habló a la hacedora de vino:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0009",
+      "chapter": 9,
+      "start": 3887.5,
+      "end": 3896.54,
+      "text": "—Hacedora de vino, ¿qué has visto para atrancar tu puerta trasera, atrancar tu puerta interior, atrancar tu habitación? ¡Golpearé tu portal y romperé el cerrojo...!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0010",
+      "chapter": 9,
+      "start": 3896.89,
+      "end": 3902.97,
+      "text": "Unas nueve líneas están mutiladas. A continuación, la edición reconstruye el diálogo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0011",
+      "chapter": 9,
+      "start": 3903.32,
+      "end": 3906.44,
+      "text": "La hacedora de vino respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0012",
+      "chapter": 9,
+      "start": 3906.79,
+      "end": 3922.79,
+      "text": "—¿Por qué se ha consumido tu vigor? ¿Por qué está hundido tu rostro? ¿Por qué hay pena en tu espíritu y ha cesado tu alegría? ¡Hay dolor en tu vientre! Tu cara es la de alguien que ha hecho un largo viaje; el frío y el calor han castigado tu rostro... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0013",
+      "chapter": 9,
+      "start": 3922.89,
+      "end": 3925.29,
+      "text": "para que así recorras el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0014",
+      "chapter": 9,
+      "start": 3925.64,
+      "end": 3928.6,
+      "text": "Gilgamesh respondió a la hacedora de vino:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0015",
+      "chapter": 9,
+      "start": 3928.95,
+      "end": 3939.27,
+      "text": "—Hacedora de vino, no se ha consumido mi vigor ni está hundido mi rostro. No hay pena en mi espíritu ni ha cesado mi alegría. No, no hay dolor en mi vientre. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0016",
+      "chapter": 9,
+      "start": 3939.37,
+      "end": 3948.01,
+      "text": "Mi cara no se parece a la de alguien que ha hecho un largo viaje; tampoco el frío ni el calor han castigado mi rostro... para que así recorra el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0017",
+      "chapter": 9,
+      "start": 3948.36,
+      "end": 3970.12,
+      "text": "—Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Enkidu, nosotros que superamos toda adversidad, ascendimos las montañas, capturamos al Toro Celeste y lo destruimos; derribamos a Humbaba, que habitaba en el Bosque de los Cedros. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0018",
+      "chapter": 9,
+      "start": 3970.22,
+      "end": 3983.74,
+      "text": "Matamos a los leones allí, en las Puertas de las Montañas. Soportando conmigo toda dificultad, Enkidu era mi compañero. Matamos juntos a los leones, soportando toda dificultad; y a él lo ha alcanzado su destino.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0019",
+      "chapter": 9,
+      "start": 3984.09,
+      "end": 4002.49,
+      "text": "—Lo lloré seis días, sí, una semana, hasta que pude entregarlo a la sepultura... Entonces tuve miedo... Temí a la Muerte y por eso recorro el desierto. El destino de mi compañero pesaba sobre mí. ¡Largo es el camino que recorro por el desierto! Enkidu... el destino de mi compañero pesaba sobre mí. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0020",
+      "chapter": 9,
+      "start": 4002.59,
+      "end": 4018.11,
+      "text": "¡Largo es el camino que recorro por el desierto! ¿Cómo guardar silencio? ¿Cómo dar voz al dolor? Mi compañero, a quien tanto amaba, se ha convertido en polvo. Enkidu era mi compañero; aquel a quien amaba se ha convertido en polvo. ",
+      "separator": ""
+    },
+    {
+      "id": "T10-0021",
+      "chapter": 9,
+      "start": 4018.21,
+      "end": 4022.93,
+      "text": "¿No habré de acostarme yo también como él, para no regresar por toda la eternidad?",
+      "separator": ""
+    },
+    {
+      "id": "T10-0022",
+      "chapter": 9,
+      "start": 4023.28,
+      "end": 4027.76,
+      "text": "La edición incluye aquí la versión babilónica antigua de este episodio.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0023",
+      "chapter": 9,
+      "start": 4028.11,
+      "end": 4045.39,
+      "text": "—Aquel que soportó conmigo toda dificultad, a quien amaba entrañablemente, Enkidu, que soportó conmigo toda dificultad, ha perecido. ¡Ha ido al destino común de la humanidad! Lo he llorado de día y de noche y no lo he entregado a la tumba. Mi amigo no viene a mi llamada. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0024",
+      "chapter": 9,
+      "start": 4045.49,
+      "end": 4059.01,
+      "text": "Seis días, sí, una semana ha yacido boca abajo como un gusano. Por eso no encuentro vida y debo errar por el desierto como un cazador. Ahora, hacedora de vino, que por fin veo tu rostro, ¡no quiero ver la Muerte que temo!",
+      "separator": ""
+    },
+    {
+      "id": "T10-0025",
+      "chapter": 9,
+      "start": 4059.36,
+      "end": 4061.92,
+      "text": "La filosofía de la hacedora de vino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0026",
+      "chapter": 9,
+      "start": 4062.27,
+      "end": 4065.39,
+      "text": "La hacedora de vino respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0027",
+      "chapter": 9,
+      "start": 4065.74,
+      "end": 4085.66,
+      "text": "—Gilgamesh, ¿por qué corres, si no puedes encontrar la vida que buscas? Cuando los dioses crearon a los mortales, asignaron la muerte al hombre y guardaron la vida en sus propias manos. Gilgamesh, ¡que tu vientre esté lleno! ¡Alégrate cada día y cada noche! Celebra fiesta todos los días. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0028",
+      "chapter": 9,
+      "start": 4085.76,
+      "end": 4102.08,
+      "text": "Cada día y cada noche danza y regocíjate. Que tus vestidos estén limpios, que tu cabeza esté bien lavada; báñate en el agua. Ama al pequeño que te lleva de la mano. Que tu esposa sea feliz en tu abrazo, pues esa es la porción del hombre...",
+      "separator": ""
+    },
+    {
+      "id": "T10-0029",
+      "chapter": 9,
+      "start": 4102.43,
+      "end": 4110.27,
+      "text": "Aquí se interrumpe la versión babilónica antigua. Volvemos a la versión asiria. Gilgamesh quiere buscar más allá.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0030",
+      "chapter": 9,
+      "start": 4110.62,
+      "end": 4113.98,
+      "text": "Gilgamesh siguió hablando a la hacedora de vino:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0031",
+      "chapter": 9,
+      "start": 4114.33,
+      "end": 4129.21,
+      "text": "—Dime, te lo ruego, hacedora de vino: ¿cuál es el camino hacia Uta-Napishtim? ¿Cuál es su señal? ¡Muéstramela, muéstrame su señal! Si es posible, atravesaré el Océano mismo; pero, si no es posible, seguiré recorriendo el desierto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0032",
+      "chapter": 9,
+      "start": 4129.56,
+      "end": 4133.0,
+      "text": "La hacedora de vino intentó disuadirlo y respondió:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0033",
+      "chapter": 9,
+      "start": 4133.35,
+      "end": 4154.23,
+      "text": "—Nunca ha habido una travesía, Gilgamesh. Nadie que haya llegado hasta aquí ha podido antes cruzar el Océano. El guerrero Shamash lo cruza, es verdad; pero ¿quién, además de Shamash, hace la travesía? Difícil es el paso y más difícil su recorrido. Profundas son las Aguas de la Muerte, que cierran sus accesos. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0034",
+      "chapter": 9,
+      "start": 4154.33,
+      "end": 4160.25,
+      "text": "Gilgamesh, si logras atravesar el Océano, ¿qué harás cuando llegues a las Aguas de la Muerte?",
+      "separator": ""
+    },
+    {
+      "id": "T10-0035",
+      "chapter": 9,
+      "start": 4160.6,
+      "end": 4176.76,
+      "text": "—Gilgamesh, allí está Ur-Shanabi, el barquero de Uta-Napishtim. Él tiene las velas... cuyo urnu recoge en el bosque. Que vea tu presencia. Si con él es posible, cruza; si no lo es, vuelve sobre tus pasos a casa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0036",
+      "chapter": 9,
+      "start": 4177.11,
+      "end": 4182.15,
+      "text": "Gilgamesh, al oírlo, tomó el hacha y sacó la espada de su tahalí.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0037",
+      "chapter": 9,
+      "start": 4182.5,
+      "end": 4200.5,
+      "text": "Lo que sigue está tan mutilado que apenas se puede comprender. Gilgamesh encuentra a Ur-Shanabi y, por una razón que no se conserva, destruye las velas de la embarcación. La lectura «velas» es incierta en esta edición. Sigue un fragmento de la versión babilónica antigua.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0038",
+      "chapter": 9,
+      "start": 4200.85,
+      "end": 4203.57,
+      "text": "Ur-Shanabi habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0039",
+      "chapter": 9,
+      "start": 4203.92,
+      "end": 4209.84,
+      "text": "—Dime cómo te llamas, pues yo soy Ur-Shanabi, servidor del lejano Uta-Napishtim.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0040",
+      "chapter": 9,
+      "start": 4210.19,
+      "end": 4212.35,
+      "text": "Gilgamesh le respondió:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0041",
+      "chapter": 9,
+      "start": 4212.7,
+      "end": 4226.54,
+      "text": "—Gilgamesh es mi nombre. He venido de Uruk, de Eanna. He atravesado las montañas en un fatigoso viaje hacia la salida del Sol. Ahora que veo tu rostro, Ur-Shanabi, ¡déjame ver también a Uta-Napishtim, el Lejano!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0042",
+      "chapter": 9,
+      "start": 4226.89,
+      "end": 4228.89,
+      "text": "Ur-Shanabi respondió:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0043",
+      "chapter": 9,
+      "start": 4229.24,
+      "end": 4231.16,
+      "text": "—Gilgamesh...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0044",
+      "chapter": 9,
+      "start": 4231.51,
+      "end": 4242.71,
+      "text": "En la versión asiria, Ur-Shanabi expresa el mismo asombro que Siduri ante su aspecto castigado por la intemperie. La edición restituye por repetición la pregunta y la respuesta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0045",
+      "chapter": 9,
+      "start": 4243.06,
+      "end": 4245.78,
+      "text": "Ur-Shanabi habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0046",
+      "chapter": 9,
+      "start": 4246.13,
+      "end": 4260.69,
+      "text": "—¿Por qué se ha consumido tu vigor? ¿Por qué está hundido tu rostro? ¿Por qué hay pena en tu espíritu y ha cesado tu alegría? ¡Hay dolor en tu vientre! Tu cara es la de alguien que ha hecho un largo viaje; el frío y el calor han castigado tu rostro... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0047",
+      "chapter": 9,
+      "start": 4260.79,
+      "end": 4262.87,
+      "text": "para que así recorras el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0048",
+      "chapter": 9,
+      "start": 4263.22,
+      "end": 4265.38,
+      "text": "Gilgamesh le respondió:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0049",
+      "chapter": 9,
+      "start": 4265.73,
+      "end": 4281.65,
+      "text": "—No se ha consumido mi vigor ni está hundido mi rostro. No hay pena en mi espíritu ni ha cesado mi alegría. No, no hay dolor en mi vientre. Mi cara no se parece a la de alguien que ha hecho un largo viaje; tampoco el frío ni el calor han castigado mi rostro... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0050",
+      "chapter": 9,
+      "start": 4281.75,
+      "end": 4284.07,
+      "text": "para que así recorra el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0051",
+      "chapter": 9,
+      "start": 4284.42,
+      "end": 4306.18,
+      "text": "—Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Enkidu, nosotros que superamos toda adversidad, ascendimos las montañas, capturamos al Toro Celeste y lo destruimos; derribamos a Humbaba, que habitaba en el Bosque de los Cedros. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0052",
+      "chapter": 9,
+      "start": 4306.28,
+      "end": 4319.8,
+      "text": "Matamos a los leones allí, en las Puertas de las Montañas. Soportando conmigo toda dificultad, Enkidu era mi compañero. Matamos juntos a los leones, soportando toda dificultad; y a él lo ha alcanzado su destino.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0053",
+      "chapter": 9,
+      "start": 4320.15,
+      "end": 4338.55,
+      "text": "—Lo lloré seis días, sí, una semana, hasta que pude entregarlo a la sepultura... Entonces tuve miedo... Temí a la Muerte y por eso recorro el desierto. El destino de mi compañero pesaba sobre mí. ¡Largo es el camino que recorro por el desierto! Enkidu... el destino de mi compañero pesaba sobre mí. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0054",
+      "chapter": 9,
+      "start": 4338.65,
+      "end": 4354.17,
+      "text": "¡Largo es el camino que recorro por el desierto! ¿Cómo guardar silencio? ¿Cómo dar voz al dolor? Mi compañero, a quien tanto amaba, se ha convertido en polvo. Enkidu era mi compañero; aquel a quien amaba se ha convertido en polvo. ",
+      "separator": ""
+    },
+    {
+      "id": "T10-0055",
+      "chapter": 9,
+      "start": 4354.27,
+      "end": 4358.99,
+      "text": "¿No habré de acostarme yo también como él, para no regresar por toda la eternidad?",
+      "separator": ""
+    },
+    {
+      "id": "T10-0056",
+      "chapter": 9,
+      "start": 4359.34,
+      "end": 4363.1,
+      "text": "Gilgamesh siguió hablando a Ur-Shanabi:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0057",
+      "chapter": 9,
+      "start": 4363.45,
+      "end": 4378.81,
+      "text": "—Dime, te lo ruego, Ur-Shanabi: ¿cuál es el camino hacia Uta-Napishtim? ¿Cuál es su señal? ¡Muéstramela, muéstrame su señal! Si es posible, atravesaré el Océano mismo; pero, si no es posible, seguiré recorriendo el desierto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0058",
+      "chapter": 9,
+      "start": 4379.16,
+      "end": 4381.88,
+      "text": "Ur-Shanabi respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0059",
+      "chapter": 9,
+      "start": 4382.23,
+      "end": 4402.79,
+      "text": "—Gilgamesh, tu propia mano ha impedido que cruces el Océano. Has destruido las velas y has perforado el... Ahora las velas están destruidas y el urnu no... Gilgamesh, toma tu hacha y baja al bosque. Haz pértigas de cinco gar de longitud cada una. Hazles nudos de betún, añádeles casquillos y tráemelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0060",
+      "chapter": 9,
+      "start": 4403.14,
+      "end": 4417.14,
+      "text": "Cuando Gilgamesh oyó esto, tomó el hacha, sacó la espada del tahalí y fue al bosque. Hizo pértigas de cinco gar de longitud cada una, les puso nudos de betún y les añadió sus casquillos. Luego las llevó...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0061",
+      "chapter": 9,
+      "start": 4417.49,
+      "end": 4432.37,
+      "text": "Gilgamesh y Ur-Shanabi partieron en su embarcación. Botaron la barca sobre las olas y ellos mismos subieron a bordo. Un trayecto de un mes y medio lo recorrieron en tres días; vio que Ur-Shanabi había llegado a las Aguas de la Muerte.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0062",
+      "chapter": 9,
+      "start": 4432.72,
+      "end": 4435.44,
+      "text": "Ur-Shanabi habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0063",
+      "chapter": 9,
+      "start": 4435.79,
+      "end": 4458.51,
+      "text": "—Gilgamesh, aparta el... No dejes que las Aguas de la Muerte toquen tu mano... Gilgamesh, toma una segunda, una tercera y una cuarta pértiga para impulsarte. Gilgamesh, toma una quinta, una sexta y una séptima. Gilgamesh, toma una octava, una novena y una décima pértiga. Gilgamesh, ¡toma una undécima, una duodécima pértiga!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0064",
+      "chapter": 9,
+      "start": 4458.86,
+      "end": 4469.34,
+      "text": "Dejó de impulsarse con las pértigas después de dos veces sesenta empujes. Entonces Gilgamesh se desató la cintura... y colocó el mástil en su encaje.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0065",
+      "chapter": 9,
+      "start": 4469.69,
+      "end": 4472.57,
+      "text": "Llega ante Uta-Napishtim.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0066",
+      "chapter": 9,
+      "start": 4472.92,
+      "end": 4477.8,
+      "text": "Uta-Napishtim miró a lo lejos y, pensando en su interior, se dijo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0067",
+      "chapter": 9,
+      "start": 4478.15,
+      "end": 4491.75,
+      "text": "—¿Por qué están destruidas las velas de la embarcación? ¿Por qué viaja en ella alguien que no es de mi...? El que viene no es un mortal; ni... Miro, pero este no es un mortal... Miro, pero... Miro, pero...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0068",
+      "chapter": 9,
+      "start": 4492.1,
+      "end": 4502.58,
+      "text": "El resto del pasaje se ha perdido. Después vuelve a aparecer la misma pregunta sobre el vigor consumido, seguida de la respuesta de Gilgamesh acerca de Enkidu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0069",
+      "chapter": 9,
+      "start": 4502.93,
+      "end": 4505.57,
+      "text": "Uta-Napishtim preguntó a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0070",
+      "chapter": 9,
+      "start": 4505.92,
+      "end": 4521.28,
+      "text": "—¿Por qué se ha consumido tu vigor? ¿Por qué está hundido tu rostro? ¿Por qué hay pena en tu espíritu y ha cesado tu alegría? ¡Hay dolor en tu vientre! Tu cara es la de alguien que ha hecho un largo viaje; el frío y el calor han castigado tu rostro... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0071",
+      "chapter": 9,
+      "start": 4521.38,
+      "end": 4523.7,
+      "text": "para que así recorras el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0072",
+      "chapter": 9,
+      "start": 4524.05,
+      "end": 4526.21,
+      "text": "Gilgamesh le respondió:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0073",
+      "chapter": 9,
+      "start": 4526.56,
+      "end": 4542.48,
+      "text": "—No se ha consumido mi vigor ni está hundido mi rostro. No hay pena en mi espíritu ni ha cesado mi alegría. No, no hay dolor en mi vientre. Mi cara no se parece a la de alguien que ha hecho un largo viaje; tampoco el frío ni el calor han castigado mi rostro... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0074",
+      "chapter": 9,
+      "start": 4542.58,
+      "end": 4544.9,
+      "text": "para que así recorra el desierto.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0075",
+      "chapter": 9,
+      "start": 4545.25,
+      "end": 4567.01,
+      "text": "—Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Compañero y servidor, que perseguía al asno salvaje, al leopardo del desierto. Enkidu, nosotros que superamos toda adversidad, ascendimos las montañas, capturamos al Toro Celeste y lo destruimos; derribamos a Humbaba, que habitaba en el Bosque de los Cedros. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0076",
+      "chapter": 9,
+      "start": 4567.11,
+      "end": 4580.63,
+      "text": "Matamos a los leones allí, en las Puertas de las Montañas. Soportando conmigo toda dificultad, Enkidu era mi compañero. Matamos juntos a los leones, soportando toda dificultad; y a él lo ha alcanzado su destino.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0077",
+      "chapter": 9,
+      "start": 4580.98,
+      "end": 4599.38,
+      "text": "—Lo lloré seis días, sí, una semana, hasta que pude entregarlo a la sepultura... Entonces tuve miedo... Temí a la Muerte y por eso recorro el desierto. El destino de mi compañero pesaba sobre mí. ¡Largo es el camino que recorro por el desierto! Enkidu... el destino de mi compañero pesaba sobre mí. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0078",
+      "chapter": 9,
+      "start": 4599.48,
+      "end": 4615.0,
+      "text": "¡Largo es el camino que recorro por el desierto! ¿Cómo guardar silencio? ¿Cómo dar voz al dolor? Mi compañero, a quien tanto amaba, se ha convertido en polvo. Enkidu era mi compañero; aquel a quien amaba se ha convertido en polvo. ",
+      "separator": ""
+    },
+    {
+      "id": "T10-0079",
+      "chapter": 9,
+      "start": 4615.1,
+      "end": 4619.82,
+      "text": "¿No habré de acostarme yo también como él, para no regresar por toda la eternidad?",
+      "separator": ""
+    },
+    {
+      "id": "T10-0080",
+      "chapter": 9,
+      "start": 4620.17,
+      "end": 4623.77,
+      "text": "Gilgamesh siguió hablando a Uta-Napishtim:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0081",
+      "chapter": 9,
+      "start": 4624.12,
+      "end": 4642.04,
+      "text": "—Entonces pensé: iré a ver qué dice sobre esto el lejano Uta-Napishtim. Así volví a pasar por todos los países, viajé por difíciles montañas y atravesé todos los mares. Mi rostro nunca se ha saciado de un sueño apacible. Las penalidades me han agotado y he cargado mi carne de dolor. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0082",
+      "chapter": 9,
+      "start": 4642.14,
+      "end": 4657.02,
+      "text": "Antes de llegar a la Casa de la Hacedora de Vino, mis vestidos se habían gastado... Búho, murciélago, león, leopardo, gato montés, ciervo, íbice y... He comido la carne de todos ellos y me he vestido con sus pieles.",
+      "separator": ""
+    },
+    {
+      "id": "T10-0083",
+      "chapter": 9,
+      "start": 4657.37,
+      "end": 4667.93,
+      "text": "El resto está mutilado. Se menciona: «Que atranquen su puerta... con brea y betún...». Después no vuelve a haber un sentido continuo hasta el pasaje siguiente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0084",
+      "chapter": 9,
+      "start": 4668.28,
+      "end": 4689.16,
+      "text": "—¿Acaso construiremos casas para siempre? ¿Para siempre pondremos el sello en los contratos? ¿Los hermanos seguirán repartiendo, o habrá siempre odio entre enemigos? ¿El arroyo crecido traerá por siempre su torrente? El ave Kulilu al ave Kirippu... El rostro que mira la luz del sol... pronto no será... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T10-0085",
+      "chapter": 9,
+      "start": 4689.26,
+      "end": 4710.22,
+      "text": "Dormido y muerto se parecen; no los distingue la Muerte. Siervo y señor, cuando han cumplido todo el plazo que se les asignó... Entonces los Anunnaki, los grandes dioses... Mammetum, la Hacedora del Destino, establece con ellos el destino. Determinan la Muerte y la Vida; el día de la Muerte no se revela.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0001",
+      "chapter": 10,
+      "start": 4711.92,
+      "end": 4714.8,
+      "text": "Tablilla undécima. El diluvio.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0002",
+      "chapter": 10,
+      "start": 4715.15,
+      "end": 4717.15,
+      "text": "La causa del diluvio.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0003",
+      "chapter": 10,
+      "start": 4717.5,
+      "end": 4721.58,
+      "text": "Gilgamesh habló a Uta-Napishtim, el Lejano:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0004",
+      "chapter": 10,
+      "start": 4721.93,
+      "end": 4738.81,
+      "text": "—Uta-Napishtim, te miro y tu presencia no me resulta extraña. Eres como yo, no eres distinto de mí. Eres como yo; el ánimo para la lucha te hace perfecto, y para descansar te tiendes de espaldas. Dime: ¿cómo pudiste presentarte en la Asamblea de los Dioses para pedir la vida eterna?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0005",
+      "chapter": 10,
+      "start": 4739.16,
+      "end": 4742.12,
+      "text": "Uta-Napishtim respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0006",
+      "chapter": 10,
+      "start": 4742.47,
+      "end": 4760.15,
+      "text": "—Gilgamesh, te descubriré toda la historia oculta; te contaré el designio de los dioses. La ciudad de Shurippak, una ciudad que conoces, está a orillas del Éufrates. Antigua es esa ciudad y en ella habitan los dioses. Los grandes dioses decidieron traer un diluvio... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0007",
+      "chapter": 10,
+      "start": 4760.25,
+      "end": 4777.69,
+      "text": "Allí estaba Anu, su padre; su consejero, el guerrero Enlil; Ninurta, su heraldo; Ennugi, su guía. Nin-igi-azag, es decir, Ea, aunque había tomado parte en el consejo, reveló su decisión a una choza de juncos.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0008",
+      "chapter": 10,
+      "start": 4778.04,
+      "end": 4802.52,
+      "text": "—«¡Choza de juncos, choza de juncos! ¡Muro, muro! ¡Escucha, choza de juncos! ¡Atiende, muro! Mortal de Shurippak, descendiente de Ubara-Tutu: derriba una casa y construye con ella una embarcación. Abandona tus posesiones, busca la vida, desprecia tus riquezas y salva la vida. Haz que toda criatura suba a la embarcación. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0009",
+      "chapter": 10,
+      "start": 4802.62,
+      "end": 4812.54,
+      "text": "La nave que construirás ha de tener medidas apropiadas; su anchura y su longitud deberán corresponderse. Después bótala en las aguas profundas».",
+      "separator": ""
+    },
+    {
+      "id": "T11-0010",
+      "chapter": 10,
+      "start": 4812.89,
+      "end": 4824.65,
+      "text": "—Yo comprendí y hablé así a Ea, mi señor: «Mira, señor: honro tus palabras y las cumpliré. Pero ¿qué he de explicar a la ciudad, al pueblo y a los ancianos?». ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0011",
+      "chapter": 10,
+      "start": 4824.75,
+      "end": 4840.67,
+      "text": "Ea me respondió, a mí, su servidor: «Mortal, les hablarás de este modo: Enlil me odia tanto que ya no puedo vivir en vuestra ciudad ni volver el rostro a la tierra que pertenece a Enlil. Bajaré a las Profundidades y viviré allí con Ea, mi soberano. ",
+      "separator": ""
+    },
+    {
+      "id": "T11-0012",
+      "chapter": 10,
+      "start": 4840.77,
+      "end": 4852.45,
+      "text": "Sobre vosotros él hará llover abundancia, aves en gran número, una cosecha de peces... y una gran recolección... hará caer sobre vosotros una lluvia abundante...».",
+      "separator": ""
+    },
+    {
+      "id": "T11-0013",
+      "chapter": 10,
+      "start": 4852.8,
+      "end": 4857.6,
+      "text": "Cuando despuntó algo de la mañana... Cinco líneas están mutiladas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0014",
+      "chapter": 10,
+      "start": 4857.95,
+      "end": 4876.83,
+      "text": "—Los niños proporcionaban brea y los fuertes traían todo lo necesario. Al quinto día tracé la forma de mi embarcación. Diez gar era la altura de cada uno de sus costados, conforme al plano; diez gar medía también su cubierta. Dibujé la forma de su parte delantera y así la construí. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0015",
+      "chapter": 10,
+      "start": 4876.93,
+      "end": 4890.13,
+      "text": "Seis veces la sujeté con travesaños; la dividí en siete partes... y por dentro la dividí en nueve. Martillé el calafateado de su interior, me procuré una pértiga y añadí todo lo necesario.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0016",
+      "chapter": 10,
+      "start": 4890.48,
+      "end": 4908.72,
+      "text": "—Unté el casco con seis shar de betún y el interior con tres shar de brea. Unos hombres trajeron un recipiente de grasa: tres shar. De esa grasa dejé un shar, que consumieron los aparejos, y el barquero guardó dos shar. Sacrifiqué bueyes para el... Cada día mataba corderos. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0017",
+      "chapter": 10,
+      "start": 4908.82,
+      "end": 4917.38,
+      "text": "Los trabajadores bebían hidromiel, cerveza, aceite y vino como si fueran agua; hicieron una gran fiesta como la del Año Nuevo.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0018",
+      "chapter": 10,
+      "start": 4917.73,
+      "end": 4932.85,
+      "text": "Siguen cinco líneas mutiladas. Se conserva: «Añadí ungüento para las manos»; «la embarcación estaba terminada... Shamash el grande»; «era difícil»; «hice traer arriba y abajo...»; «dos tercios de ella...».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0019",
+      "chapter": 10,
+      "start": 4933.2,
+      "end": 4953.84,
+      "text": "—Cargué a bordo todo lo que poseía. Toda mi plata la cargué a bordo; todo mi oro lo cargué a bordo. Toda la simiente de cuanto vive que poseía, la cargué a bordo. Hice subir conmigo a todos mis parientes y a mi familia. Embarqué ganado, bestias del campo y a todos los artesanos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0020",
+      "chapter": 10,
+      "start": 4954.19,
+      "end": 4974.75,
+      "text": "—Shamash señaló la hora: «...Por la noche hará caer una lluvia abundante... Entonces entra en la embarcación y cierra de inmediato tu escotilla». Llegó la hora señalada... Por la noche hizo caer una lluvia abundante... Miré el aspecto del día: contemplarlo daba horror. Entré en la nave y cerré mi escotilla. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0021",
+      "chapter": 10,
+      "start": 4974.85,
+      "end": 4981.65,
+      "text": "Para cerrar la embarcación entregué a Puzur-Amurri, el barquero, la popa de la nave y sus pertrechos.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0022",
+      "chapter": 10,
+      "start": 4982.0,
+      "end": 5001.84,
+      "text": "—Cuando apareció algo del alba, una nube oscura se alzó desde el horizonte. Dentro de ella retumbaba Adad, el dios de la tormenta. Nabu y Sharru guiaban la vanguardia y avanzaban como heraldos por montes y llanuras. Irragal arrancó los postes de amarre; Ninurta desató la devastación a su paso. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0023",
+      "chapter": 10,
+      "start": 5001.94,
+      "end": 5013.7,
+      "text": "Los Anunnaki blandían sus antorchas y abrasaban la tierra con sus llamas. La desolación de Adad alcanzó los altos cielos. Todo lo que era luminoso se convirtió en tinieblas.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0024",
+      "chapter": 10,
+      "start": 5014.05,
+      "end": 5024.69,
+      "text": "Cuatro líneas están mutiladas. Quedan las palabras: «La tierra como...»; «durante un día la tormenta...»; «sopló ferozmente...»; «como una batalla...».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0025",
+      "chapter": 10,
+      "start": 5025.04,
+      "end": 5043.28,
+      "text": "—Un hermano no podía distinguir a su hermano; desde el cielo no se divisaba a los mortales. Los dioses se aterrorizaron ante el Diluvio. Huyeron y subieron al Cielo de Anu; se agazaparon en sus confines. Como perros se encogían de miedo los dioses. Ishtar gritaba como una mujer de parto. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0026",
+      "chapter": 10,
+      "start": 5043.38,
+      "end": 5045.54,
+      "text": "La Señora de dulce voz clamaba:",
+      "separator": ""
+    },
+    {
+      "id": "T11-0027",
+      "chapter": 10,
+      "start": 5045.89,
+      "end": 5057.17,
+      "text": "—«¡Que aquel día se convierta en polvo, porque hablé el mal en la Asamblea de los Dioses! ¿Cómo pude pronunciar tal mal en la Asamblea de los Dioses, decretar la devastación para borrar a mi pueblo? ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0028",
+      "chapter": 10,
+      "start": 5057.27,
+      "end": 5063.67,
+      "text": "¿He de dar a luz a mi propio pueblo solo para colmar el Mar con sus cuerpos, como si fueran crías de peces?».",
+      "separator": ""
+    },
+    {
+      "id": "T11-0029",
+      "chapter": 10,
+      "start": 5064.02,
+      "end": 5079.62,
+      "text": "—Los dioses Anunnaki lloraban con ella. Los dioses estaban sentados, abatidos, llorando, con los labios cerrados en la asamblea. Seis días, sí, una semana, el huracán, el diluvio y la tempestad barrieron la tierra. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0030",
+      "chapter": 10,
+      "start": 5079.72,
+      "end": 5092.92,
+      "text": "Cuando llegó el séptimo día, cesaron la batalla, la tempestad y el diluvio que habían luchado como un ejército dispuesto para el combate. Se aquietó el mar, se agotó el vendaval y se apaciguó el diluvio.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0031",
+      "chapter": 10,
+      "start": 5093.27,
+      "end": 5111.83,
+      "text": "—Miré el día: todo sonido había cesado. Toda la humanidad había vuelto a su barro, y el pantano llegaba a la altura de los tejados. Abrí una escotilla y la luz del sol cayó sobre mi mejilla. Incliné la cabeza y me senté a llorar; las lágrimas corrían por mis mejillas. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0032",
+      "chapter": 10,
+      "start": 5111.93,
+      "end": 5123.93,
+      "text": "Miré a lo lejos, hasta los últimos límites del Océano. La tierra se alzaba en doce puntos. El arca encalló en el Monte Nisir. El Monte Nisir la retuvo y no le permitió moverse.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0033",
+      "chapter": 10,
+      "start": 5124.28,
+      "end": 5142.6,
+      "text": "—Un día, dos días, Nisir la retuvo y no le permitió moverse. Tres días, cuatro días, Nisir la retuvo y no le permitió moverse. Cinco días, seis días, Nisir la retuvo y no le permitió moverse. Al despuntar el séptimo día saqué una paloma y la solté. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0034",
+      "chapter": 10,
+      "start": 5142.7,
+      "end": 5158.3,
+      "text": "La paloma fue de un lado a otro y regresó, pues no había lugar donde posarse. Saqué una golondrina y la solté. La golondrina fue de un lado a otro y también regresó, pues no había lugar donde posarse. Saqué un cuervo y lo solté. ",
+      "separator": ""
+    },
+    {
+      "id": "T11-0035",
+      "chapter": 10,
+      "start": 5158.4,
+      "end": 5165.2,
+      "text": "El cuervo vio que las aguas habían bajado; comió, vadeó y chapoteó, y no regresó a mí.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0036",
+      "chapter": 10,
+      "start": 5165.55,
+      "end": 5179.55,
+      "text": "—Liberé a todos los animales hacia los cuatro vientos del cielo. Hice un sacrificio y vertí una libación en la cima del monte. Dispuse dos veces siete cántaros, y debajo amontoné caña aromática, cedro y mirto. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0037",
+      "chapter": 10,
+      "start": 5179.65,
+      "end": 5187.89,
+      "text": "Los dioses olieron el aroma, los dioses olieron el dulce aroma; como moscas se reunieron en torno al que hacía la ofrenda.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0038",
+      "chapter": 10,
+      "start": 5188.24,
+      "end": 5202.24,
+      "text": "—Cuando llegó la Reina de los Dioses, alzó las magníficas joyas que Anu había hecho según sus deseos: «¡Dioses! Antes olvidaría este collar de zafiros que dejar de recordar estos días. ¡Nunca los olvidaré! ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0039",
+      "chapter": 10,
+      "start": 5202.34,
+      "end": 5212.26,
+      "text": "Los demás dioses pueden presentarse a la ofrenda, pero Enlil no debe venir, porque, sin reflexión, trajo el diluvio y condenó a mi pueblo a la destrucción».",
+      "separator": ""
+    },
+    {
+      "id": "T11-0040",
+      "chapter": 10,
+      "start": 5212.61,
+      "end": 5234.05,
+      "text": "—Al llegar, Enlil vio la embarcación y estalló en cólera. Lleno de ira contra los dioses Igigi, dijo: «¿Ha escapado algún mortal? ¡Ningún hombre debía haber sobrevivido a la ruina!». Ninurta respondió al guerrero Enlil: «¿Quién, sino Ea, podría haber concebido tal plan? Ea conoce todos los designios».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0041",
+      "chapter": 10,
+      "start": 5234.4,
+      "end": 5252.72,
+      "text": "—Ea habló al guerrero Enlil: «¡Jefe de los dioses, guerrero! ¿Cómo, cómo pudiste traer un diluvio sin haberlo meditado? Haz recaer su pecado sobre el pecador, su culpa sobre el culpable; pero ten misericordia para que no sea aniquilado. Sé clemente para que no perezca. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0042",
+      "chapter": 10,
+      "start": 5252.82,
+      "end": 5266.26,
+      "text": "En vez de traer un diluvio, que venga un león a reducir a los hombres. En vez de traer un diluvio, que venga un chacal a reducir a los hombres. En vez de traer un diluvio, que haya hambre y el país sea devorado. ",
+      "separator": ""
+    },
+    {
+      "id": "T11-0043",
+      "chapter": 10,
+      "start": 5266.36,
+      "end": 5271.32,
+      "text": "En vez de traer un diluvio, que venga el dios de la Peste y abrume al pueblo».",
+      "separator": ""
+    },
+    {
+      "id": "T11-0044",
+      "chapter": 10,
+      "start": 5271.67,
+      "end": 5284.79,
+      "text": "—«En verdad, no fui yo quien reveló el secreto de los grandes dioses. Concedí un sueño al Abundante en Sabiduría y así él oyó el secreto de los dioses. Considera ahora su consejo».",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0045",
+      "chapter": 10,
+      "start": 5285.14,
+      "end": 5301.06,
+      "text": "—Entonces Enlil subió al arca. Me tomó de la mano y me hizo subir; también hizo subir a mi esposa y la hizo arrodillarse a mi lado. De pie entre nosotros, tocó nuestras frentes y nos bendijo: «Hasta ahora Uta-Napishtim solo ha sido mortal. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0046",
+      "chapter": 10,
+      "start": 5301.16,
+      "end": 5315.4,
+      "text": "Desde ahora Uta-Napishtim y su esposa serán iguales a nosotros, los dioses. Uta-Napishtim habitará a lo lejos, en la desembocadura de los ríos». Así me llevaron y me hicieron vivir a lo lejos, en la desembocadura de los ríos.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0047",
+      "chapter": 10,
+      "start": 5315.75,
+      "end": 5326.63,
+      "text": "—Pero tú, dime: ¿quién reunirá a los dioses por ti, para que encuentres la vida que buscas? ¡Vamos, no te duermas durante seis días, sí, una semana!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0048",
+      "chapter": 10,
+      "start": 5326.98,
+      "end": 5330.34,
+      "text": "Gilgamesh no puede resistir ni siquiera el sueño.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0049",
+      "chapter": 10,
+      "start": 5330.69,
+      "end": 5338.29,
+      "text": "Mientras estaba sentado en cuclillas, el sueño sopló sobre él como una brisa. Uta-Napishtim dijo a su esposa:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0050",
+      "chapter": 10,
+      "start": 5338.64,
+      "end": 5344.64,
+      "text": "—¡Míralo! ¡Al hombre fuerte que pide la vida, el sueño lo ha rozado como una brisa!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0051",
+      "chapter": 10,
+      "start": 5344.99,
+      "end": 5348.83,
+      "text": "Su esposa respondió a Uta-Napishtim, el Lejano:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0052",
+      "chapter": 10,
+      "start": 5349.18,
+      "end": 5358.06,
+      "text": "—Tócalo y deja que despierte. Que vuelva en paz por el camino que ha recorrido, que regrese a su tierra por la puerta de la que salió.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0053",
+      "chapter": 10,
+      "start": 5358.41,
+      "end": 5361.05,
+      "text": "Uta-Napishtim dijo a su esposa:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0054",
+      "chapter": 10,
+      "start": 5361.4,
+      "end": 5370.68,
+      "text": "—¡Cómo te afligen también las penas de los mortales! Cuece su harina y colócala junto a su cabeza. Marca en el muro de la casa el tiempo que duerme.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0055",
+      "chapter": 10,
+      "start": 5371.03,
+      "end": 5391.91,
+      "text": "Ella coció su harina y la puso junto a su cabeza. Anotó en el muro el tiempo que dormía. Primero recogió la harina; en segundo lugar, la cernió; en tercero, la humedeció; en cuarto, amasó la masa; en quinto, añadió levadura; en sexto, la coció; y en séptimo, él lo tocó de pronto. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0056",
+      "chapter": 10,
+      "start": 5392.01,
+      "end": 5394.41,
+      "text": "Así despertó el hombre de su sueño.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0057",
+      "chapter": 10,
+      "start": 5394.76,
+      "end": 5398.84,
+      "text": "Gilgamesh habló a Uta-Napishtim, el Lejano:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0058",
+      "chapter": 10,
+      "start": 5399.19,
+      "end": 5405.43,
+      "text": "—Dime, te lo ruego: ¿fuiste tú quien, apenas cayó el sueño sobre mí, me tocó de pronto y me despertó?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0059",
+      "chapter": 10,
+      "start": 5405.78,
+      "end": 5408.74,
+      "text": "Uta-Napishtim respondió a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0060",
+      "chapter": 10,
+      "start": 5409.09,
+      "end": 5431.89,
+      "text": "—Gilgamesh, se contó el proceso de tu harina... y después te desperté. Uno: se recogió tu harina. Dos: se cernió. Tercero: se humedeció. Cuarto: ella amasó tu masa. Quinto: añadió la levadura. Sexto: se coció. Y séptimo: yo te toqué de pronto y despertaste.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0061",
+      "chapter": 10,
+      "start": 5432.24,
+      "end": 5436.4,
+      "text": "Gilgamesh respondió a Uta-Napishtim, el Lejano:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0062",
+      "chapter": 10,
+      "start": 5436.75,
+      "end": 5446.11,
+      "text": "—¿Qué he de hacer? ¿Adónde iré, Uta-Napishtim? Un ladrón me ha arrebatado el valor. La Muerte acecha en mi alcoba; dondequiera que escucho está la Muerte.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0063",
+      "chapter": 10,
+      "start": 5446.46,
+      "end": 5449.74,
+      "text": "Uta-Napishtim habló al barquero Ur-Shanabi:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0064",
+      "chapter": 10,
+      "start": 5450.09,
+      "end": 5468.97,
+      "text": "—Tú, Ur-Shanabi... la travesía te odiará. A todos los que llegan a su orilla, su orilla les pone un límite. Este hombre a quien guiaste, ¿ha de llevar el cuerpo cubierto de manchas? ¿Ha de ocultar una piel la gracia de sus miembros? Ur-Shanabi, llévalo adonde pueda bañarse. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0065",
+      "chapter": 10,
+      "start": 5469.07,
+      "end": 5483.23,
+      "text": "Que se lave las manchas en el agua hasta quedar blanco como la nieve. Que arroje sus pieles para que el mar se las lleve. Que su cuerpo aparezca hermoso; que renueve la cinta de su cabeza. Que vista un manto para cubrir su desnudez. ",
+      "separator": ""
+    },
+    {
+      "id": "T11-0066",
+      "chapter": 10,
+      "start": 5483.33,
+      "end": 5490.85,
+      "text": "Que ese manto, hasta que llegue a su ciudad y termine su viaje, no muestre señal de vejez y conserve toda su frescura.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0067",
+      "chapter": 10,
+      "start": 5491.2,
+      "end": 5507.76,
+      "text": "Ur-Shanabi lo llevó adonde podía bañarse. Lavó en el agua sus manchas, quedando como la nieve. Se quitó las pieles para que el mar se las llevara. Su cuerpo apareció hermoso; renovó la cinta de su cabeza y se vistió con un manto para cubrir su desnudez. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0068",
+      "chapter": 10,
+      "start": 5507.86,
+      "end": 5514.58,
+      "text": "Hasta llegar a su ciudad y terminar su viaje, el manto no mostraría vejez y conservaría toda su frescura.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0069",
+      "chapter": 10,
+      "start": 5514.93,
+      "end": 5523.25,
+      "text": "Gilgamesh y Ur-Shanabi subieron a su embarcación. Botaron la nave sobre las olas y ellos mismos viajaron a bordo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0070",
+      "chapter": 10,
+      "start": 5523.6,
+      "end": 5526.72,
+      "text": "El don mágico de la juventud restaurada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0071",
+      "chapter": 10,
+      "start": 5527.07,
+      "end": 5531.07,
+      "text": "La esposa de Uta-Napishtim, el Lejano, le dijo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0072",
+      "chapter": 10,
+      "start": 5531.42,
+      "end": 5537.18,
+      "text": "—Gilgamesh vino hasta aquí fatigado de remar. ¿Qué le darás para que vuelva a su tierra?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0073",
+      "chapter": 10,
+      "start": 5537.53,
+      "end": 5545.45,
+      "text": "Entretanto, Gilgamesh alzaba la pértiga e impulsaba la barca junto a la orilla. Uta-Napishtim habló a Gilgamesh:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0074",
+      "chapter": 10,
+      "start": 5545.8,
+      "end": 5565.0,
+      "text": "—Gilgamesh, viniste hasta aquí fatigado de remar. ¿Qué puedo darte como regalo para que vuelvas a tu país? Gilgamesh, te revelaré un secreto... Te lo diré: hay una planta semejante a un espino, con la raíz en lo profundo del Océano. Sus púas, como las de la zarza, te arañarán. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0075",
+      "chapter": 10,
+      "start": 5565.1,
+      "end": 5570.22,
+      "text": "Pero, si tu mano alcanza esa planta, sin duda encontrarás la vida eterna.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0076",
+      "chapter": 10,
+      "start": 5570.57,
+      "end": 5586.89,
+      "text": "Al oírlo, Gilgamesh se aflojó el cinturón. Ató pesadas piedras a sus pies y estas lo arrastraron a las profundidades del mar. Encontró la planta; al tomarla, sus púas lo arañaron. Cortó las pesadas piedras de sus pies para volver a la orilla.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0077",
+      "chapter": 10,
+      "start": 5587.24,
+      "end": 5590.28,
+      "text": "Gilgamesh habló al barquero Ur-Shanabi:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0078",
+      "chapter": 10,
+      "start": 5590.63,
+      "end": 5604.95,
+      "text": "—Esta planta es una planta de gran maravilla, Ur-Shanabi; con ella un hombre puede alcanzar su deseo. La llevaré a Uruk, la de altos muros, y se la daré a comer a... Su nombre es «El anciano que vuelve a ser un hombre en la plenitud de sus años». ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0079",
+      "chapter": 10,
+      "start": 5605.05,
+      "end": 5607.61,
+      "text": "Yo mismo la comeré para recuperar mi juventud.",
+      "separator": ""
+    },
+    {
+      "id": "T11-0080",
+      "chapter": 10,
+      "start": 5607.96,
+      "end": 5610.44,
+      "text": "La búsqueda termina en tragedia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0081",
+      "chapter": 10,
+      "start": 5610.79,
+      "end": 5619.75,
+      "text": "Comieron a la hora cuadragésima; a la sexagésima descansaron. Gilgamesh vio una poza de agua fresca, bajó a ella y se bañó.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0082",
+      "chapter": 10,
+      "start": 5620.1,
+      "end": 5629.7,
+      "text": "Había allí una serpiente que olfateó el aroma de la planta. Surgió veloz del agua y arrebató la planta; al retirarse, pronunció una maldición.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0083",
+      "chapter": 10,
+      "start": 5630.05,
+      "end": 5637.65,
+      "text": "Gilgamesh se sentó y rompió a llorar. Las lágrimas corrían por sus mejillas. Habló al barquero Ur-Shanabi:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0084",
+      "chapter": 10,
+      "start": 5638.0,
+      "end": 5657.92,
+      "text": "—Dime, Ur-Shanabi: ¿para quién han trabajado mis brazos? ¿Para quién se ha gastado la sangre de mi corazón? No he logrado la recompensa para mí mismo. Solo para un león de tierra he conseguido la recompensa; ahora, a la hora cuadragésima, uno así me la arrebata. Cuando abrí la compuerta y... el aparejo... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0085",
+      "chapter": 10,
+      "start": 5658.02,
+      "end": 5665.3,
+      "text": "vi la señal que se me había dado como advertencia. ¡Ojalá me hubiera vuelto y hubiera abandonado la barca junto a la orilla del Océano!",
+      "separator": ""
+    },
+    {
+      "id": "T11-0086",
+      "chapter": 10,
+      "start": 5665.65,
+      "end": 5673.81,
+      "text": "Comieron a la hora cuadragésima; a la sexagésima descansaron. Por fin llegaron al centro de Uruk, la de altos muros.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0087",
+      "chapter": 10,
+      "start": 5674.16,
+      "end": 5676.24,
+      "text": "El orgullo del arquitecto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0088",
+      "chapter": 10,
+      "start": 5676.59,
+      "end": 5679.63,
+      "text": "Gilgamesh habló al barquero Ur-Shanabi:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T11-0089",
+      "chapter": 10,
+      "start": 5679.98,
+      "end": 5698.7,
+      "text": "—Ur-Shanabi, sube y recorre las murallas de Uruk. Mira sus cimientos, examina sus ladrillos: ¿no están cocidos en horno? ¿No es de betún su base, de siete hiladas? Un shar la ciudad, un shar los jardines, un shar el... el Templo de Ishtar... reuní tres shar y... de Uruk.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0001",
+      "chapter": 11,
+      "start": 5700.4,
+      "end": 5706.32,
+      "text": "Tablilla duodécima. Gilgamesh, desesperado, interroga a los muertos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0002",
+      "chapter": 11,
+      "start": 5706.67,
+      "end": 5709.39,
+      "text": "Cómo los muertos rondan a los vivos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0003",
+      "chapter": 11,
+      "start": 5709.74,
+      "end": 5716.78,
+      "text": "Cuando la red de arrastre hubo pasado por la morada del Arquitecto y la red hubo cobrado su tributo... dijo:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0004",
+      "chapter": 11,
+      "start": 5717.13,
+      "end": 5725.85,
+      "text": "—Señor, ¿qué puedo hacer?... Ahora que la red de arrastre ha pasado por la morada del Arquitecto y la red ha cobrado su tributo...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0005",
+      "chapter": 11,
+      "start": 5726.2,
+      "end": 5728.28,
+      "text": "Gilgamesh le habló:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0006",
+      "chapter": 11,
+      "start": 5728.63,
+      "end": 5729.75,
+      "text": "—Si hacia...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0007",
+      "chapter": 11,
+      "start": 5730.1,
+      "end": 5738.02,
+      "text": "Faltan unas dos líneas. La pregunta de Gilgamesh parece referirse a cómo hacer que los muertos se presenten ante quien está de duelo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0008",
+      "chapter": 11,
+      "start": 5738.37,
+      "end": 5739.97,
+      "text": "—Gilgamesh...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0009",
+      "chapter": 11,
+      "start": 5740.32,
+      "end": 5742.32,
+      "text": "El deber del doliente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0010",
+      "chapter": 11,
+      "start": 5742.67,
+      "end": 5757.07,
+      "text": "—Si al... te acercas, al templo... No te pongas ropas limpias, sino que, como un habitante de la ciudad... No te unjas con el aceite perfumado de la vasija, no sea que, atraídos por su aroma, se reúnan a tu alrededor. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0011",
+      "chapter": 11,
+      "start": 5757.17,
+      "end": 5771.33,
+      "text": "No apoyes el arco en la tierra, no sea que te rodeen los abatidos por el arco. No lleves un bastón en la mano, no sea que los espectros golpeados griten contra ti. No pongas calzado en tus pies ni hagas resonar con fuerza el suelo.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0012",
+      "chapter": 11,
+      "start": 5771.68,
+      "end": 5782.24,
+      "text": "—No beses a la esposa que amas ni castigues a la esposa que odias. No beses al hijo que amas ni castigues al hijo que odias, pues el duelo de la tierra te mantiene cautivo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0013",
+      "chapter": 11,
+      "start": 5782.59,
+      "end": 5794.75,
+      "text": "La que yace muerta,\nla que yace muerta,\nmadre de Ninazu,\nla que yace muerta.\nYa no cubre un manto\nsus hermosos hombros.\nYa no se exprime su seno\ncomo una vasija de grasa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0014",
+      "chapter": 11,
+      "start": 5795.1,
+      "end": 5800.06,
+      "text": "Gilgamesh intenta hacer subir a Enkidu infringiendo estas costumbres.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0015",
+      "chapter": 11,
+      "start": 5800.41,
+      "end": 5821.53,
+      "text": "Acercó el... al... y vino al templo. Se puso ropas limpias y, como un habitante de la ciudad... Se ungió con el aceite perfumado de la vasija. Atraídos por su aroma, se reunieron a su alrededor. Apoyó el arco en la tierra; los espíritus lo rodearon. Los abatidos por el arco gritaron contra él. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0016",
+      "chapter": 11,
+      "start": 5821.63,
+      "end": 5825.95,
+      "text": "Llevó un bastón en la mano y los espectros golpeados gritaron contra él.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0017",
+      "chapter": 11,
+      "start": 5826.3,
+      "end": 5840.7,
+      "text": "Puso calzado en sus pies e hizo resonar con fuerza el suelo. Besó a la esposa que amaba y castigó a la esposa que odiaba. Besó al hijo que amaba y castigó al hijo que odiaba. En verdad, el duelo de la tierra lo mantenía cautivo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0018",
+      "chapter": 11,
+      "start": 5841.05,
+      "end": 5853.21,
+      "text": "La que yace muerta,\nla que yace muerta,\nmadre de Ninazu,\nla que yace muerta.\nYa no cubre un manto\nsus hermosos hombros.\nYa no se exprime su seno\ncomo una vasija de grasa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0019",
+      "chapter": 11,
+      "start": 5853.56,
+      "end": 5856.6,
+      "text": "Clamó para que Enkidu subiera de la tierra:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0020",
+      "chapter": 11,
+      "start": 5856.95,
+      "end": 5874.23,
+      "text": "—No lo ha apresado Namtar, el dios de la Peste, ni la fiebre, sino solo la tierra. Tampoco lo ha apresado Nergal, el Agazapado, el implacable, sino solo la tierra. No cayó donde luchaban los mortales; solo la tierra lo ha apresado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0021",
+      "chapter": 11,
+      "start": 5874.58,
+      "end": 5881.7,
+      "text": "El descendiente de Ninsun lloraba a su servidor Enkidu. Fue solo a Ekur, el templo de Enlil:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0022",
+      "chapter": 11,
+      "start": 5882.05,
+      "end": 5898.05,
+      "text": "—Enlil, padre mío, ahora la red de arrastre también me ha golpeado contra la tierra. La red también me ha golpeado contra la tierra. Te ruego que hagas subir de la tierra a Enkidu. No lo ha apresado Namtar, el dios de la Peste, ni la fiebre, sino solo la tierra. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0023",
+      "chapter": 11,
+      "start": 5898.15,
+      "end": 5908.47,
+      "text": "Tampoco lo ha apresado Nergal, el Agazapado, el implacable, sino solo la tierra. No cayó donde luchaban los mortales; solo la tierra lo ha apresado.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0024",
+      "chapter": 11,
+      "start": 5908.82,
+      "end": 5914.82,
+      "text": "Pero Enlil, el padre, no le concedió respuesta. Acudió al dios Luna:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0025",
+      "chapter": 11,
+      "start": 5915.17,
+      "end": 5931.17,
+      "text": "—Dios Luna, padre mío, ahora la red de arrastre también me ha golpeado contra la tierra. La red también me ha golpeado contra la tierra. Te ruego que hagas subir de la tierra a Enkidu. No lo ha apresado Namtar, el dios de la Peste, ni la fiebre, sino solo la tierra. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0026",
+      "chapter": 11,
+      "start": 5931.27,
+      "end": 5941.59,
+      "text": "Tampoco lo ha apresado Nergal, el Agazapado, el implacable, sino solo la tierra. No cayó donde luchaban los mortales; solo la tierra lo ha apresado.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0027",
+      "chapter": 11,
+      "start": 5941.94,
+      "end": 5946.98,
+      "text": "Pero el dios Luna no le concedió respuesta. Entonces acudió a Ea:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0028",
+      "chapter": 11,
+      "start": 5947.33,
+      "end": 5962.93,
+      "text": "—Ea, padre mío, ahora la red de arrastre también me ha golpeado contra la tierra. La red también me ha golpeado contra la tierra. Te ruego que hagas subir de la tierra a Enkidu. No lo ha apresado Namtar, el dios de la Peste, ni la fiebre, sino solo la tierra. ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0029",
+      "chapter": 11,
+      "start": 5963.03,
+      "end": 5973.35,
+      "text": "Tampoco lo ha apresado Nergal, el Agazapado, el implacable, sino solo la tierra. No cayó donde luchaban los mortales; solo la tierra lo ha apresado.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0030",
+      "chapter": 11,
+      "start": 5973.7,
+      "end": 5979.14,
+      "text": "Ea, el padre, escuchó. Habló al héroe guerrero Nergal:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0031",
+      "chapter": 11,
+      "start": 5979.49,
+      "end": 5988.93,
+      "text": "—Nergal, héroe guerrero, ¡escucha mis palabras! Abre ahora un agujero en la tierra para que el espíritu de Enkidu pueda salir y hablar con su hermano.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0032",
+      "chapter": 11,
+      "start": 5989.28,
+      "end": 6003.12,
+      "text": "Nergal, el héroe guerrero, escuchó las palabras de Ea. Abrió un agujero en la tierra y el espíritu de Enkidu salió de la tierra como un viento. Se abrazaron y... hablaron juntos, lamentándose.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0033",
+      "chapter": 11,
+      "start": 6003.47,
+      "end": 6010.11,
+      "text": "—Dime, amigo mío, dime, amigo mío, te lo ruego: ¿qué has visto de las leyes del mundo de los muertos?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0034",
+      "chapter": 11,
+      "start": 6010.46,
+      "end": 6019.82,
+      "text": "—No, compañero, no te lo diré, no te lo diré. Si te contara lo que he visto de las leyes del mundo de los muertos, ¡te sentarías a llorar!",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0035",
+      "chapter": 11,
+      "start": 6020.17,
+      "end": 6022.09,
+      "text": "—Pues déjame sentarme a llorar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0036",
+      "chapter": 11,
+      "start": 6022.44,
+      "end": 6025.56,
+      "text": "El desdichado destino de quienes deben morir.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0037",
+      "chapter": 11,
+      "start": 6025.91,
+      "end": 6044.07,
+      "text": "—Así sea. El amigo a quien acariciabas, con quien te regocijabas... en su cuerpo ha entrado el gusano como en un manto viejo. La novia a quien acariciabas, con quien te regocijabas... su cuerpo está lleno de polvo... Él ha hablado y se ha hundido en la tierra... ",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0038",
+      "chapter": 11,
+      "start": 6044.17,
+      "end": 6046.97,
+      "text": "Él ha hablado y se ha hundido en la tierra.",
+      "separator": ""
+    },
+    {
+      "id": "T12-0039",
+      "chapter": 11,
+      "start": 6047.32,
+      "end": 6049.64,
+      "text": "—El que cayó en... ¿lo viste?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0040",
+      "chapter": 11,
+      "start": 6049.99,
+      "end": 6051.91,
+      "text": "—Sí, lo vi...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0041",
+      "chapter": 11,
+      "start": 6052.26,
+      "end": 6054.74,
+      "text": "Faltan unas diecisiete líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0042",
+      "chapter": 11,
+      "start": 6055.09,
+      "end": 6059.01,
+      "text": "—Como un hermoso pilar... sostiene un pórtico interior...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0043",
+      "chapter": 11,
+      "start": 6059.36,
+      "end": 6062.0,
+      "text": "Faltan unas veinticinco líneas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0044",
+      "chapter": 11,
+      "start": 6062.35,
+      "end": 6064.67,
+      "text": "—El que cae de un poste, ¿lo viste?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0045",
+      "chapter": 11,
+      "start": 6065.02,
+      "end": 6069.98,
+      "text": "—Sí, lo vi. En seguida para... al quitar un tapón...",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0046",
+      "chapter": 11,
+      "start": 6070.33,
+      "end": 6072.65,
+      "text": "—Aquel a quien la muerte... ¿lo viste?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0047",
+      "chapter": 11,
+      "start": 6073.0,
+      "end": 6077.72,
+      "text": "—Sí, lo vi. Descansa en un lecho y bebe agua límpida.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0048",
+      "chapter": 11,
+      "start": 6078.07,
+      "end": 6081.03,
+      "text": "—El héroe muerto en combate, ¿lo viste?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0049",
+      "chapter": 11,
+      "start": 6081.38,
+      "end": 6089.38,
+      "text": "—Sí, lo vi. Su padre y su madre le alzan la cabeza; su esposa se inclina sobre él con amarga pena.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0050",
+      "chapter": 11,
+      "start": 6089.73,
+      "end": 6093.01,
+      "text": "—Aquel cuyo cadáver yace en el desierto, ¿lo has visto?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0051",
+      "chapter": 11,
+      "start": 6093.36,
+      "end": 6097.76,
+      "text": "—Sí, lo vi. Su espíritu no descansa en la tierra.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0052",
+      "chapter": 11,
+      "start": 6098.11,
+      "end": 6102.27,
+      "text": "—Aquel cuyo espíritu no tiene a nadie que lo atienda, ¿lo viste?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0053",
+      "chapter": 11,
+      "start": 6102.62,
+      "end": 6109.26,
+      "text": "—Sí, lo vi. Come los posos de la copa y los mendrugos de pan que arrojan a la calle.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "T12-0054",
+      "chapter": 11,
+      "start": 6109.61,
+      "end": 6112.09,
+      "text": "Fin de la epopeya de Gilgamesh.",
+      "separator": "\n\n"
+    }
+  ]
+}
