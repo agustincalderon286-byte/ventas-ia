@@ -1451,5 +1451,87 @@
       "contentType": "audio/mp4",
       "r2ETag": "\"a20d0353e5cba3e3596589dec351e132\""
     }
+  },
+  {
+    "id": "don-quijote-de-la-mancha",
+    "title": "Don Quijote de la Mancha",
+    "author": "Miguel de Cervantes Saavedra",
+    "originalTitle": "El ingenioso hidalgo don Quijote de la Mancha · Primera parte (1605)",
+    "language": "Español",
+    "categories": [
+      "Clásicos",
+      "Novela",
+      "Aventura"
+    ],
+    "description": "Un hidalgo de la Mancha decide convertirse en caballero andante y salir a reparar agravios. Sus primeras aventuras, la llegada de Sancho Panza y el encuentro con los molinos de viento abren esta novela de Miguel de Cervantes. Edición propia de TEC en español actual, con narrador, voces fijas para los personajes y lectura sincronizada. Esta entrega parcial reúne los capítulos 1–10 de la primera parte; la obra completa tiene 126 capítulos en dos partes. Los capítulos posteriores todavía no están disponibles.",
+    "edition": "Entrega parcial · Primera parte, capítulos 1–10 · Español actual · TEC",
+    "releaseLabel": "Capítulos 1–10 de 126",
+    "narrator": "Narrador y reparto fijo de voces de TEC",
+    "credits": "Miguel de Cervantes Saavedra. Edición propia en español actual de Audiolibros TEC desde el original español conservado en Project Gutenberg, libro 2000. Esta entrega contiene únicamente los capítulos 1–10 de la primera parte, completos en su contenido, con vocabulario y sintaxis actualizados y conservando escenas, personajes, diálogos y orden. No incluye todavía los capítulos posteriores ni los preliminares del autor. Producción con voces sintéticas de TEC, una referencia fija por personaje. Sin música ni efectos.",
+    "duration": 7615.35,
+    "cover": "/coach/assets/audiobooks/don-quijote-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/don-quijote-v1.jpg",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Parte 1 · Capítulo 1",
+        "start": 0.0,
+        "duration": 642.17
+      },
+      {
+        "title": "Parte 1 · Capítulo 2",
+        "start": 642.17,
+        "duration": 755.63
+      },
+      {
+        "title": "Parte 1 · Capítulo 3",
+        "start": 1397.8,
+        "duration": 766.96
+      },
+      {
+        "title": "Parte 1 · Capítulo 4",
+        "start": 2164.76,
+        "duration": 868.97
+      },
+      {
+        "title": "Parte 1 · Capítulo 5",
+        "start": 3033.73,
+        "duration": 563.19
+      },
+      {
+        "title": "Parte 1 · Capítulo 6",
+        "start": 3596.92,
+        "duration": 949.33
+      },
+      {
+        "title": "Parte 1 · Capítulo 7",
+        "start": 4546.25,
+        "duration": 690.05
+      },
+      {
+        "title": "Parte 1 · Capítulo 8",
+        "start": 5236.3,
+        "duration": 1060.4
+      },
+      {
+        "title": "Parte 1 · Capítulo 9",
+        "start": 6296.7,
+        "duration": 634.11
+      },
+      {
+        "title": "Parte 1 · Capítulo 10",
+        "start": 6930.81,
+        "duration": 684.54
+      }
+    ],
+    "audio": {
+      "filename": "Don-Quijote-capitulos-001-010-es-actual-v1.m4b",
+      "r2Key": "Don-Quijote-capitulos-001-010-es-actual-v1.m4b",
+      "bytes": 98268151,
+      "sha256": "d605b1e03618cf91c36d2bbe907f1137da7ea1d15a1c83a997a9d44945afc36c",
+      "md5": "314c1148d5ceef4be4539c3d49fa44ac",
+      "contentType": "audio/mp4",
+      "r2ETag": "\"314c1148d5ceef4be4539c3d49fa44ac\""
+    }
   }
 ]

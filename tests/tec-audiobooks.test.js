@@ -102,7 +102,8 @@ test('every catalog book has complete canonical text and ordered, bounded audio 
     'meditaciones-marco-aurelio': '14693106831aec08839d3a68f6c2715aa35cbe7032a95fc344e08b0ebdf8cf46',
     'mitos-y-heroes-de-grecia': '214ee846a603b4f5271943092c7fd26b5ead5c9a38f5e072070112876ed8b7cc',
     'viaje-al-oeste': '8d13b23a280a06d8df986b2a6cabf951b079b6e1d9cfb862f6c854ce6def4a80',
-    'la-epopeya-de-gilgamesh': '03604ddad5f4ca557b57a3ccb9ee68d9e6774579155a9a55e6e1205090f2c868'
+    'la-epopeya-de-gilgamesh': '03604ddad5f4ca557b57a3ccb9ee68d9e6774579155a9a55e6e1205090f2c868',
+    'don-quijote-de-la-mancha': 'd5b0eea386666de16df6d7a6de59fc7ad3b3803bc016700c6fca22df3cf7fc06'
   };
   for (const book of audiobookCatalog) {
     const text = getAudiobookTranscript(book.id);

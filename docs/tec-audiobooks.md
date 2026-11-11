@@ -1,5 +1,11 @@
 # Audiolibros TEC
 
+## Don Quijote, entrega parcial — 11 de noviembre de 2026
+
+Publicación expresamente solicitada por Agustin del audio disponible. Primera parte, capítulos 1–10 de los 126 de la obra, en español actual. No se presenta como obra completa; no incluye todavía preliminares ni capítulos posteriores. Una ficha y un objeto privado versionado de R2, con diez capítulos, portada existente de TEC, muestra del primer diez por ciento y lectura sincronizada exacta. Duración: 7615.35 segundos; 704 pasajes.
+
+Objeto: Don-Quijote-capitulos-001-010-es-actual-v1.m4b. SHA-256: d605b1e03618cf91c36d2bbe907f1137da7ea1d15a1c83a997a9d44945afc36c. Verificado en R2 antes de publicar. Las ampliaciones conservarán el ID y los capítulos iniciales, usando otro objeto versionado y actualizando duración, muestra, índice y lectura en conjunto. Voces nuevas en pausa y fuera de esta publicación. Las comprobaciones técnicas y de transcripción no equivalen a audición humana integral de actuación.
+
 ## La epopeya de Gilgamesh — 10 de noviembre de 2026
 
 Publicación expresamente autorizada por Agustin. Doce tablillas, 6112,59 segundos y 629 pasajes sincronizados. Versión propia TEC al español desde la edición inglesa de Thompson de 1928, con lagunas conservadas; no traducción directa del acadio o sumerio. Portada existente de TEC, muestra del primer diez por ciento, índice completo, ficha editorial y acceso de miembros. Audio privado R2: Gilgamesh-Completo-TEC-v1.m4b. SHA-256: ed23de258f21c2dfafe767d4a1e077b6b37c329d93a5983816678ca2d803b8d3. Objeto y portada verificados en R2 antes del catálogo. No se sustituye ninguna grabación ni se modifican cuentas o pagos. La verificación técnica no sustituye escucha humana integral de actuación.

@@ -1,6 +1,33 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  "don-quijote-de-la-mancha": {
+  "summary": [
+    "Las lecturas de caballerías llevan a un hidalgo de la Mancha a ponerse una armadura, dar nombre a su caballo y salir al camino como don Quijote. Una venta se convierte a sus ojos en castillo, y los encuentros cotidianos adquieren la forma de grandes desafíos. Su deseo de reparar injusticias y la distancia entre sus ideales y lo que sucede producen humor, ternura y consecuencias inesperadas.",
+    "Esta entrega reúne los primeros diez capítulos de la primera parte. Incluye la primera salida, el examen de la biblioteca, la incorporación de Sancho Panza, los molinos de viento y la aventura del vizcaíno. La versión de TEC actualiza el español para la escucha, conservando el contenido de cada capítulo. El índice y la lectura sincronizada permiten seguir la narración y volver a sus escenas."
+  ],
+  "ideas": [
+    "La imaginación de don Quijote transforma el mundo que encuentra en el camino.",
+    "Sancho Panza aporta otra mirada a las aventuras de su amo.",
+    "El humor y las primeras desventuras muestran la tensión entre los ideales y la realidad."
+  ],
+  "audience": "Para quienes quieran comenzar Don Quijote en español actual y seguir sus primeras aventuras con narración, diálogos y lectura sincronizada. Esta edición disponible es parcial: capítulos 1–10 de los 126 de la obra.",
+  "tip": "Escucha los capítulos en orden para conocer la salida de don Quijote y la llegada de Sancho. La muestra gratuita ofrece el primer diez por ciento; la membresía permite continuar con los diez capítulos de esta entrega.",
+  "questions": [
+    [
+      "¿Está completo Don Quijote en esta edición?",
+      "No. Esta entrega incluye únicamente los capítulos 1–10 de la primera parte. La obra completa tiene 126 capítulos en dos partes. Los capítulos posteriores y los preliminares del autor todavía no están disponibles."
+    ],
+    [
+      "¿Qué significa Don Quijote en español actual?",
+      "Es una edición propia de TEC desde el original español. Actualiza palabras y giros para facilitar la escucha, conservando las escenas, personajes, diálogos y el orden de los capítulos publicados."
+    ],
+    [
+      "¿Puedo escuchar y leer los capítulos de Don Quijote?",
+      "Sí. Hay voces fijas para los personajes, índice de capítulos y lectura sincronizada con el mismo texto narrado. La muestra gratuita incluye el primer diez por ciento y la membresía da acceso a esta entrega de diez capítulos."
+    ]
+  ]
+},
   "la-epopeya-de-gilgamesh": {
   "summary": [
     "Gilgamesh gobierna Uruk con una fuerza que inquieta a sus habitantes. La llegada de Enkidu, criado lejos de la ciudad, abre un encuentro decisivo: del enfrentamiento nace una amistad y un camino de aventuras compartidas. El bosque, sus guardianes y los desafíos de los dioses ponen a prueba a ambos compañeros. Sus hazañas dan paso a preguntas sobre el poder, la responsabilidad y el valor de lo que se hace junto a otro.",
@@ -247,7 +274,7 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',
