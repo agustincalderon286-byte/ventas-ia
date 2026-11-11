@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
+import { canReadDownline, downlineScope, analysisViewerIds } from "./src/tec-team-supervision.js";
 import { secureWebhookFetch, validateDestination } from "./src/secure-outbound.js";
 import cors from "cors";
 import crypto from "crypto";
@@ -824,6 +825,7 @@ const coachUserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   passwordSalt: { type: String, required: true },
   accountType: { type: String, default: "owner" },
+  teamSupervisionEnabled: { type: Boolean, default: false },
   parentUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
   billingOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
   teamOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
@@ -5420,6 +5422,7 @@ function limpiarCoachUser(userDoc) {
     officeId: userDoc.officeId || "",
     territoryId: userDoc.territoryId || "",
     managesTeam: accountType === "owner" || accountType === "leader",
+    canViewTeam: canReadDownline(userDoc),
     canViewControlTower: usuarioPuedeVerTorreControl(userDoc),
     subscriptionStatus: obtenerCoachStatusVisible(userDoc),
     subscriptionActive: coachTieneAccesoTotal(userDoc),
@@ -12476,23 +12479,7 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
 }
 
 async function listarCoachDemoAnalysisUserIds(userDoc = null) {
-  if (!userDoc?._id) {
-    return [];
-  }
-
-  if (!esCoachTeamManager(userDoc)) {
-    return [userDoc._id];
-  }
-
-  const ownerUserId = resolverCoachOwnerUserId(userDoc);
-  const seatIds = await CoachUser.find({
-    teamOwnerUserId: ownerUserId,
-    accountType: "seat"
-  }).distinct("_id");
-
-  return Array.from(
-    new Map([ownerUserId, userDoc._id, ...seatIds].filter(Boolean).map(userId => [String(userId), userId])).values()
-  );
+  return analysisViewerIds(userDoc, CoachUser);
 }
 
 function extraerCoachDemoResponseText(data = null) {
@@ -20414,6 +20401,17 @@ async function requireCoachActivo(req, res) {
     return null;
   }
 
+  return auth;
+}
+
+async function requireCoachTeamViewer(req, res) {
+  res.set("X-TEC-Network-Scope", "downline-v1");
+  const auth = await requireCoachActivo(req, res);
+  if (!auth) return null;
+  if (!canReadDownline(auth.user)) {
+    responderCoachError(res, 403, "Esta área solo está disponible para supervisar tu propia red.");
+    return null;
+  }
   return auth;
 }
 
@@ -28794,26 +28792,22 @@ app.get("/api/coach/marketing/events", async (req, res) => {
 });
 
 app.get("/api/coach/team", async (req, res) => {
-  const auth = await requireCoachTeamManager(req, res);
+  const auth = await requireCoachTeamViewer(req, res);
 
   if (!auth) {
     return;
   }
 
   try {
-    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
-    const seatDocs = await CoachUser.find({
-      teamOwnerUserId: managerOwnerUserId,
-      accountType: "seat"
-    })
-      .sort({ createdAt: -1, name: 1 })
-      .lean();
+    const scope = await downlineScope(auth.user, CoachUser);
+    const seatDocs = scope.members.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
 
     const seatIds = seatDocs.map(seat => seat._id).filter(Boolean);
 
     if (!seatIds.length) {
       return res.json({
         summary: construirCoachTeamSummary([]),
+        permissions: { canManageSeats: scope.canManageSeats, scope: "downline" },
         seats: []
       });
     }
@@ -28823,39 +28817,35 @@ app.get("/api/coach/team", async (req, res) => {
       CoachLeadInbox.aggregate([
         {
           $match: {
-            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
         { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
       ]),
-      CoachHealthSurvey.aggregate([
+      scope.canManageSeats ? CoachHealthSurvey.aggregate([
         {
           $match: {
-            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
         { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
-      ]),
+      ]) : Promise.resolve([]),
       CoachProgramSheet.aggregate([
         {
           $match: {
-            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
         { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
       ]),
-      CoachRecruitmentApplication.aggregate([
+      scope.canManageSeats ? CoachRecruitmentApplication.aggregate([
         {
           $match: {
-            ownerUserId: managerOwnerUserId,
             generatedByUserId: { $in: seatIds }
           }
         },
         { $group: { _id: "$generatedByUserId", total: { $sum: 1 } } }
-      ]),
+      ]) : Promise.resolve([]),
       CoachDemoAnalysis.aggregate([
         {
           $match: {
@@ -28888,7 +28878,11 @@ app.get("/api/coach/team", async (req, res) => {
 
     res.json({
       summary: construirCoachTeamSummary(seats),
-      seats
+      permissions: { canManageSeats: scope.canManageSeats, scope: "downline" },
+      seats: seats.map(seat => {
+        if (!scope.canManageSeats) { delete seat.chef; delete seat.contactShare; }
+        return seat;
+      })
     });
   } catch (error) {
     console.error("Error cargando equipo del Coach:", error.message);
@@ -28897,7 +28891,7 @@ app.get("/api/coach/team", async (req, res) => {
 });
 
 app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
-  const auth = await requireCoachTeamManager(req, res);
+  const auth = await requireCoachTeamViewer(req, res);
 
   if (!auth) {
     return;
@@ -28910,12 +28904,8 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
   }
 
   try {
-    const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
-    const seatDoc = await CoachUser.findOne({
-      _id: userId,
-      teamOwnerUserId: managerOwnerUserId,
-      accountType: "seat"
-    }).lean();
+    const scope = await downlineScope(auth.user, CoachUser);
+    const seatDoc = await CoachUser.findOne({ $and: [scope.query, { _id: userId }] }).lean();
 
     if (!seatDoc) {
       return responderCoachError(res, 404, "No encontre esa subcuenta dentro de tu equipo.");
@@ -28923,7 +28913,7 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
 
     const seatObjectId = seatDoc._id;
     const ownerQuery = {
-      ownerUserId: managerOwnerUserId,
+      ownerUserId: resolverCoachOwnerUserId(seatDoc),
       generatedByUserId: seatObjectId
     };
 
@@ -28946,16 +28936,16 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(30)
         .lean(),
-      CoachHealthSurvey.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean(),
-      CoachRecruitmentApplication.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean(),
+      scope.canManageSeats ? CoachHealthSurvey.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean() : Promise.resolve([]),
+      scope.canManageSeats ? CoachRecruitmentApplication.find(ownerQuery).sort({ updatedAt: -1, createdAt: -1 }).limit(30).lean() : Promise.resolve([]),
       CoachDemoAnalysis.find({ ownerUserId: seatObjectId })
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(30)
         .lean(),
       CoachLeadInbox.countDocuments(ownerQuery),
       CoachProgramSheet.countDocuments({ ...ownerQuery, programType: "4_en_14" }),
-      CoachHealthSurvey.countDocuments(ownerQuery),
-      CoachRecruitmentApplication.countDocuments(ownerQuery),
+      scope.canManageSeats ? CoachHealthSurvey.countDocuments(ownerQuery) : Promise.resolve(0),
+      scope.canManageSeats ? CoachRecruitmentApplication.countDocuments(ownerQuery) : Promise.resolve(0),
       CoachDemoAnalysis.countDocuments({ ownerUserId: seatObjectId, status: "completed" })
     ]);
 
@@ -28967,9 +28957,12 @@ app.get("/api/coach/team/seats/:userId/activity", async (req, res) => {
       demoAnalyses: Number(analysisCount || 0)
     };
 
+    const visibleSeat = limpiarCoachTeamSeat(seatDoc, profileDoc, counts);
+    if (!scope.canManageSeats) { delete visibleSeat.chef; delete visibleSeat.contactShare; }
     res.json({
-      seat: limpiarCoachTeamSeat(seatDoc, profileDoc, counts),
+      seat: visibleSeat,
       counts,
+      permissions: { canManageSeats: scope.canManageSeats, canViewForms: scope.canManageSeats, scope: "downline" },
       leads: leadDocs.map(limpiarCoachInboxLead).filter(Boolean),
       programSheets: programDocs.map(limpiarCoachProgramSheet).filter(Boolean),
       surveys: surveyDocs.map(limpiarCoachHealthSurvey).filter(Boolean),
@@ -29102,11 +29095,12 @@ app.patch("/api/coach/team/seats/:userId", async (req, res) => {
 
   try {
     const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
-    const seatDoc = await CoachUser.findOne({
+    const scope = await downlineScope(auth.user, CoachUser);
+    const seatDoc = await CoachUser.findOne({ $and: [scope.query, {
       _id: userId,
       teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
-    });
+    }] });
 
     if (!seatDoc) {
       return responderCoachError(res, 404, "No encontre esa subcuenta.");
@@ -29181,11 +29175,12 @@ app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
 
   try {
     const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
-    const seatDoc = await CoachUser.findOne({
+    const scope = await downlineScope(auth.user, CoachUser);
+    const seatDoc = await CoachUser.findOne({ $and: [scope.query, {
       _id: userId,
       teamOwnerUserId: managerOwnerUserId,
       accountType: "seat"
-    });
+    }] });
 
     if (!seatDoc) {
       return responderCoachError(res, 404, "No encontre esa subcuenta.");
@@ -29239,12 +29234,13 @@ app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
     }
 
     const managerOwnerUserId = resolverCoachOwnerUserId(auth.user);
-    const seatDoc = await CoachUser.findOne({
+    const scope = await downlineScope(auth.user, CoachUser);
+    const seatDoc = await CoachUser.findOne({ $and: [scope.query, {
       _id: userId,
       teamOwnerUserId: managerOwnerUserId,
       accountType: "seat",
       seatStatus: "active"
-    });
+    }] });
 
     if (!seatDoc) {
       return responderCoachError(res, 404, "No encontre esa subcuenta activa.");

@@ -1239,6 +1239,7 @@ function getCoachEffectiveOwnerId(user = null) {
 
 function syncCoachManagerUi(user = null) {
   const canManageTeam = Boolean(user?.managesTeam);
+  const canViewTeam = Boolean(user?.canViewTeam || canManageTeam);
   const canUseTerritory = Boolean(user && user.accountType !== "seat");
   const canViewControlTower = Boolean(user?.canViewControlTower);
   const portalMode = getCoachPortalMode(user);
@@ -1254,6 +1255,7 @@ function syncCoachManagerUi(user = null) {
 
   document.documentElement.dataset.coachPortalMode = portalMode;
   document.documentElement.dataset.coachTeamManager = canManageTeam ? "true" : "false";
+  document.documentElement.dataset.coachTeamViewer = canViewTeam ? "true" : "false";
   document.title = isTelemarketing ? "Telemarketing | TEC" : "Coach Privado | TEC Total Elite Coaching";
 
   document.querySelectorAll("[data-coach-home-link]").forEach(node => {
@@ -1278,7 +1280,7 @@ function syncCoachManagerUi(user = null) {
 
   document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
     const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
-    const focusedTabs = canManageTeam
+    const focusedTabs = canViewTeam
       ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros", "equipo"]
       : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros"];
     node.hidden = isTelemarketing ? !["crm", "program414", "audiolibros"].includes(tabId) : !focusedTabs.includes(tabId);
@@ -1300,6 +1302,10 @@ function syncCoachManagerUi(user = null) {
     }
 
     node.hidden = false;
+  });
+
+  document.querySelectorAll("[data-team-viewer-only]").forEach(node => {
+    node.hidden = isTelemarketing || !canViewTeam || Boolean(node.dataset.coachWorkspaceSection);
   });
 
   document.querySelectorAll("[data-territory-access-only]").forEach(node => {
@@ -1328,7 +1334,7 @@ function syncCoachManagerUi(user = null) {
   if (!isTelemarketing) {
     document.querySelectorAll("[data-coach-workspace-tab]").forEach(node => {
       const tabId = String(node.dataset.coachWorkspaceTab || "").trim();
-      const focusedTabs = canManageTeam
+      const focusedTabs = canViewTeam
         ? [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros", "equipo"]
         : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros"];
       node.hidden = !focusedTabs.includes(tabId);
@@ -1533,7 +1539,9 @@ function initCoachWorkspaceTabs() {
     });
 
     workspaceSections.forEach(section => {
-      section.hidden = section.dataset.coachWorkspaceSection !== safeTab;
+      const managerOnly = section.hasAttribute("data-team-manager-only") && document.documentElement.dataset.coachTeamManager !== "true";
+      const viewerOnly = section.hasAttribute("data-team-viewer-only") && document.documentElement.dataset.coachTeamViewer !== "true";
+      section.hidden = section.dataset.coachWorkspaceSection !== safeTab || managerOnly || viewerOnly;
     });
 
     window.sessionStorage.setItem(COACH_WORKSPACE_TAB_KEY, safeTab);
@@ -9617,7 +9625,7 @@ function renderCoachTeamCreatedCredentials(credentials = null) {
   wrap.hidden = false;
 }
 
-function renderCoachTeamSeats(seats = []) {
+function renderCoachTeamSeats(seats = [], canManageSeats = false) {
   const list = document.querySelector("[data-team-seat-list]");
 
   if (!list) {
@@ -9627,7 +9635,7 @@ function renderCoachTeamSeats(seats = []) {
   const safeSeats = Array.isArray(seats) ? seats : [];
 
   if (!safeSeats.length) {
-    list.innerHTML = '<div class="team-seat-empty">Todavia no has creado subcuentas en este equipo.</div>';
+    list.innerHTML = '<div class="team-seat-empty">Todavía no hay vendedores vinculados a tu red.</div>';
     return;
   }
 
@@ -9738,6 +9746,9 @@ function renderCoachTeamSeats(seats = []) {
       }
     )
     .join("");
+  if (!canManageSeats) {
+    list.querySelectorAll("[data-team-seat-reset-password], [data-team-seat-toggle], [data-team-seat-switch-session], [data-team-seat-open-chef-share], a").forEach(node => node.remove());
+  }
 }
 
 function formatCoachTeamActivityType(type = "") {
@@ -9935,6 +9946,8 @@ function renderCoachTeamActivity(payload = null, activeTab = "summary") {
       : renderCoachTeamActivityEmpty(`${personName} todavia no tiene analisis de audio guardados.`);
   }
 
+  const formsTab = panel.querySelector('[data-team-activity-tab="forms"]');
+  if (formsTab) formsTab.hidden = payload?.permissions?.canViewForms === false;
   const formList = panel.querySelector("[data-team-activity-form-list]");
   if (formList) {
     const forms = [
@@ -10018,7 +10031,7 @@ function initCoachTeamWorkspace(user = null) {
     return;
   }
 
-  if (!user?.managesTeam) {
+  if (!user?.managesTeam && !user?.canViewTeam) {
     renderCoachTeamCreatedCredentials(null);
     renderCoachTeamSummary(null);
     renderCoachTeamSeats([]);
@@ -10038,7 +10051,7 @@ function initCoachTeamWorkspace(user = null) {
   const loadTeam = async () => {
     const data = await apiRequest("/api/coach/team");
     renderCoachTeamSummary(data.summary || null);
-    renderCoachTeamSeats(data.seats || []);
+    renderCoachTeamSeats(data.seats || [], Boolean(user.managesTeam && data.permissions?.canManageSeats));
   };
 
   const setActivityTab = nextTab => {
@@ -10154,6 +10167,7 @@ function initCoachTeamWorkspace(user = null) {
 
   form.addEventListener("submit", async event => {
     event.preventDefault();
+    if (!user.managesTeam) return;
     clearMessage(feedbackNode);
     setButtonLoading(submitButton, true, "Creando...");
 
@@ -10208,6 +10222,7 @@ function initCoachTeamWorkspace(user = null) {
       return;
     }
 
+    if (!user.managesTeam) return;
     const shareButton = event.target.closest("[data-team-seat-open-chef-share]");
 
     if (shareButton) {
