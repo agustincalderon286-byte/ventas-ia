@@ -1,4 +1,4 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261111-members1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261112-editorial1";
 const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261111-upline1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
@@ -17,8 +17,8 @@ const TEC_CORE_ASSETS = [
   "/coach/app.js?v=20261104-chat-scroll2",
   "/coach/audiobook-reader.js?v=20261103-readalong1",
   "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
-  "/audiolibros/audio-delivery.js?v=20261111-members1",
-  "/coach/audiobooks.js?v=20261111-members1",
+  "/audiolibros/audio-delivery.js?v=20261112-editorial1",
+  "/coach/audiobooks.js?v=20261112-editorial1",
   "/coach/audiobooks.css?v=20261103-readalong1",
   "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
   "/coach/compact-header.js?v=20261103-readalong1",

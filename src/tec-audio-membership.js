@@ -2,7 +2,7 @@ import { createPaidAudioAuth, AUDIO_ACCOUNT_FLOW, normalizeAudioEmail, validAudi
 import { hasTestAudioAccess, normalizeTestUsername, validTestUsername, verifyTestPassword } from './tec-audio-test-accounts.js';
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook } from './tec-audiobooks.js';
+import { audiobookCatalog, findReadyAudiobook, getAudiobookTranscript, streamAudiobook, retiredAudiobookResponse } from './tec-audiobooks.js';
 import { createAudiobookShareModel, registerAudiobookSharing } from './tec-audiobook-sharing.js';
 import { registerAudioAchievements } from './tec-audio-achievements.js';
 import { registerReadingApi } from './tec-reading-books.js';
@@ -59,6 +59,7 @@ export function registerAudioMembership(app, {
   publicOrigin, sendAccountMail, liveMode = true, secure = process.env.NODE_ENV === 'production',
   catalog = audiobookCatalog, getTranscript = getAudiobookTranscript, paymentAnalytics
 }) {
+  app.use(api + '/libros/el-criterio', retiredAudiobookResponse);
   const origin = new URL(publicOrigin).origin;
   const landing = `${origin}/audiolibros/`;
   const byId = new Map(catalog.map(book => [book.id, book]));

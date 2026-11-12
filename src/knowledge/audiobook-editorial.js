@@ -55,21 +55,6 @@ export const bookEditorial = {
     ]
   ]
 },
-  "el-criterio": {
-    summary: [
-      "Aprender a pensar bien no consiste solamente en acumular información. En El criterio, Jaime Balmes propone observar con atención, distinguir los hechos de las apariencias y examinar las razones que sostienen una opinión. Sus ejemplos recorren situaciones de la vida cotidiana para mostrar cómo el hábito, la imaginación, los afectos y los prejuicios pueden influir en nuestros juicios.",
-      "La obra avanza desde la atención y la elección de carrera hacia el testimonio de los sentidos, la autoridad humana, la historia, la enseñanza y el entendimiento práctico. Esta grabación íntegra de LibriVox reúne veintidós capítulos repartidos en veintisiete pistas y conserva el lenguaje de la edición original. Desde la biblioteca de TEC puedes escuchar el libro completo con tu membresía, elegir un capítulo y guardar tu avance."
-    ],
-    ideas: ["La atención como punto de partida para comprender la realidad.", "El examen de los testimonios y de las razones que damos por ciertas.", "La relación entre el entendimiento, las emociones y las decisiones prácticas."],
-    audience: "Para quienes quieran acercarse a un clásico de filosofía práctica y reflexionar sobre su manera de observar, razonar y decidir. La grabación conserva el español histórico y la perspectiva religiosa del autor.",
-    tip: "Comienza por los capítulos de la atención y el juicio. Puedes repartir las ocho horas y media entre varias sesiones; el índice y el guardado de avance te permiten retomar el recorrido con tu membresía.",
-    questions: [
-      ["¿Qué versión de El criterio se escucha en TEC?", "Es la grabación íntegra en español publicada por LibriVox en 2024, leída por Odal y mpinedag. Conserva el lenguaje original del libro y se reproduce directamente desde Internet Archive."],
-      ["¿El criterio está incluido en la membresía?", "Sí. El acceso al libro completo desde la biblioteca de TEC está incluido en la membresía de Audiolibros TEC de $20 USD al mes. La ficha y la portada pueden consultarse sin iniciar sesión."],
-      ["¿Esta grabación de El criterio tiene lectura sincronizada?", "Todavía no. Puedes escuchar el audio completo, elegir capítulos, cambiar la velocidad y guardar tu avance. La lectura sincronizada requiere preparar y verificar el texto de esta narración."]
-    ]
-  },
-
   "don-quijote-de-la-mancha": {
   "summary": [
     "Las lecturas de caballerías llevan a un hidalgo de la Mancha a ponerse una armadura, dar nombre a su caballo y salir al camino como don Quijote. Una venta se convierte a sus ojos en castillo, y los encuentros cotidianos adquieren la forma de grandes desafíos. Su deseo de reparar injusticias y la distancia entre sus ideales y lo que sucede producen humor, ternura y consecuencias inesperadas.",
@@ -343,7 +328,7 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha', 'el-criterio', 'el-libro-de-los-cinco-anillos', 'la-psicologia-de-las-ventas']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha', 'el-libro-de-los-cinco-anillos', 'la-psicologia-de-las-ventas']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',
@@ -351,6 +336,6 @@ export const audioCollections = [
     intro: 'Estas obras permiten explorar enfoques distintos sobre pensar y actuar. Marco Aurelio ejercita la atención a los propios juicios y a la convivencia; James Allen reflexiona sobre la vida interior y el carácter; Sun Tzu examina decisiones en un contexto militar; Musashi desarrolla su camino de la estrategia, y Tres Iniciados expone su propuesta hermética. La colección invita a comparar sus preguntas sin presentar sus ideas como si pertenecieran a una sola teoría.',
     ideas: ['Pensamiento y serenidad en James Allen.', 'Preparación, información y adaptación en Sun Tzu.', 'Los siete principios de El Kybalión dentro de la filosofía hermética.'],
     route: 'Comienza con la pregunta que más te interese: hábitos y carácter, decisiones estratégicas o filosofía hermética. Usa las muestras para conocer el tono y la forma de cada texto antes de continuar con la edición completa.',
-    bookIds: ['meditaciones-marco-aurelio', 'como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion', 'el-criterio', 'el-libro-de-los-cinco-anillos']
+    bookIds: ['meditaciones-marco-aurelio', 'como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion', 'el-libro-de-los-cinco-anillos']
   }
 ];

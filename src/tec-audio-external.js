@@ -1,7 +1,7 @@
 // Only curated catalogue media may leave TEC. Never accept a URL from a request.
-const sources = new Map([
-  ['el-criterio', 'https://archive.org/download/criterio_2408_librivox/Criterio_librivox.m4b']
-]);
+// No external recordings are currently approved for the TEC catalogue.
+// The LibriVox pilot was retired by editorial decision on 2026-11-12.
+const sources = new Map();
 
 export function externalAudioReady(book) {
   return book?.audio?.provider === 'internet-archive' &&

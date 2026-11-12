@@ -88,7 +88,7 @@ test('catalog manifest has all nine parts, monotonic chapter starts and the exac
   assert.equal(models.reviews.schema.path('_id').instance, 'String'); // canonical ids enforce account/book uniqueness without relying on a later index build
 });
 
-test('TEC editions keep exact canonical text; external narration never fabricates synchronized cues', () => {
+test('all active TEC editions keep exact canonical text and bounded synchronized cues', () => {
   const expected = {
     'el-libro-de-los-cinco-anillos': '6d2c143b7f74ae432d1724884deab84ebaf9101299891054d13802c71722a044',
     'la-psicologia-de-las-ventas': 'd535883fd202115e76592a561097afda6b4995ea06fb56372bcd8325249cc255',
@@ -109,11 +109,6 @@ test('TEC editions keep exact canonical text; external narration never fabricate
   };
   for (const book of audiobookCatalog) {
     const text = getAudiobookTranscript(book.id);
-    if (book.id === 'el-criterio') {
-      assert.equal(book.synchronizedText, false);
-      assert.equal(text, null);
-      continue;
-    }
     assert.ok(text, book.title + ' needs read-along text');
     assert.ok(text.cues.length > 100);
     const master = text.cues.map(c => c.separator + c.text).join('') + text.trailingSeparator;

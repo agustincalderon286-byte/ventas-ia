@@ -30,11 +30,6 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 test('all published full books and separate clipped samples use private R2 keys', () => {
   const samples = JSON.parse(fs.readFileSync(new URL('../src/knowledge/tec-audio-previews.json', import.meta.url)));
   for (const book of audiobookCatalog) {
-    if (book.id === 'el-criterio') {
-      assert.equal(book.audio.provider, 'internet-archive');
-      assert.equal(samples[book.id], undefined);
-      continue;
-    }
     assert.ok(book.audio.r2Key); assert.ok(book.audio.r2ETag);
     const sample = samples[book.id]; assert.ok(sample.r2Key); assert.ok(sample.r2ETag);
     assert.notEqual(sample.r2Key, book.audio.r2Key); assert.ok(sample.bytes < book.audio.bytes);
@@ -84,15 +79,12 @@ test('browser fetch keeps the Window receiver required by native Chrome fetch', 
 });
 
 const archiveURL = 'https://archive.org/download/criterio_2408_librivox/Criterio_librivox.m4b';
-test('curated external narration keeps the normal player, chapter seeking and membership refresh', async () => {
+test('cached links cannot reactivate a retired external recording', async () => {
   const f = fixture(async () => ({ ok: true, json: async () => ({ provider: 'internet-archive', url: archiveURL, expiresAt: 1300000 }) }));
-  f.audio.duration = 30859;
-  await f.controller.load('/api/audiolibros/libros/el-criterio/audio', { external: true, position: 12500, rate: 1.25 });
-  f.audio.metadata(); assert.equal(f.audio.src, archiveURL); assert.equal(f.audio.currentTime, 12500);
-  assert.equal(f.audio.playbackRate, 1.25); assert.equal(f.audio.getAttribute('crossorigin'), null);
-  f.controller.seek(600, true); await flush(); assert.equal(f.audio.currentTime, 600); assert.equal(f.audio.paused, false);
-  assert.equal(f.requests[0].options.credentials, 'same-origin');
-  f.advance(301); assert.equal(f.controller.expired(), true);
+  await assert.rejects(f.controller.load('/api/audiolibros/libros/el-criterio/audio', { external: true }));
+  assert.equal(f.audio.src, undefined);
+  const gone = fixture(async () => ({ ok: false, status: 410 }));
+  await assert.rejects(gone.controller.load('/api/audiolibros/libros/el-criterio/audio', { external: true }), /ya no está disponible/);
 });
 test('external playback rejects other Archive files, disguised hosts and mismatched book routes', async () => {
   for (const url of [archiveURL + '?download=1', archiveURL.replace('archive.org', 'archive.org.evil.test'), archiveURL.replace('Criterio_librivox.m4b', 'other.mp3'), 'http:' + archiveURL.slice(6)]) {

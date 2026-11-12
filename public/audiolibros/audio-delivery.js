@@ -2,6 +2,7 @@
   'use strict';
   const message = status => status === 401 ? 'Tu sesión terminó. Vuelve a ingresar a TEC.'
     : status === 403 ? 'Necesitas una membresía activa para escuchar el audiolibro completo.'
+    : status === 410 ? 'Esta grabación ya no está disponible en TEC. Elige otro audiolibro.'
     : 'No se pudo cargar el audio. Revisa tu conexión e inténtalo de nuevo.';
   class Controller {
     constructor(audio, { onFailure = () => {}, fetchImpl = fetch, now = () => Date.now() } = {}) {
@@ -71,9 +72,7 @@
           if (generation !== this.generation) return;
           let target;
           try { target = new URL(delivery.url); } catch { throw new Error(message()); }
-          const archive = this.external && delivery.provider === 'internet-archive' &&
-            /^\/api\/(?:audiolibros\/libros|coach\/audiobooks)\/el-criterio\/audio$/.test(new URL(this.source).pathname) &&
-            target.href === 'https://archive.org/download/criterio_2408_librivox/Criterio_librivox.m4b';
+          const archive = false; // External recordings require a new editorial approval.
           const r2 = /^[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(target.hostname) &&
             target.pathname.startsWith('/tec-audiolibros/');
           if (target.protocol !== 'https:' || (this.external ? !archive : !r2) || !Number.isFinite(delivery.expiresAt) ||

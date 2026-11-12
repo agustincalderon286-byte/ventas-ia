@@ -18,6 +18,27 @@ Para la persona común que habla español cotidiano y quiere aprender, superarse
 - Mantener audio y lectura sincronizada como opciones complementarias. Facilitar el consumo durante actividades compatibles y para personas con dificultades de lectura. Hablar de accesibilidad como objetivo y trabajo continuo, sin afirmar una certificación que no se haya verificado.
 - Cuidar la calidad de voces, narraciones y dramatizaciones. Identificar en la ficha las características reales de cada edición y mantener sus créditos.
 
+## Aprendizaje editorial de la prueba LibriVox del 12 de noviembre de 2026
+
+Agustín escuchó las muestras de la selección de LibriVox y consideró que esas voces no le daban ganas de seguir escuchando. Decidió retirar de TEC la grabación de **El criterio** y descartar la tanda de 50 grabaciones propuestas. La decisión se refiere a esas grabaciones; las obras y referencias pueden seguir siendo candidatas para producciones propias, con sus permisos y aprobación correspondientes.
+
+La intención que Agustín expresó es hacer que los libros que parecen aburridos suenen muy interesantes.
+
+La prueba confirmó que es posible organizar e integrar un catálogo externo. También dejó una distinción decisiva: disponibilidad, decodificación y pruebas de software no certifican una interpretación atractiva. La aprobación editorial necesita escuchar la narración y valorar si invita a continuar.
+
+TEC busca acercar a la persona común las ideas y la imaginación de los clásicos, con un español comprensible y una experiencia de escucha que despierte interés. Su aportación reúne selección, traducción o adaptación cuando corresponda, dirección de voces, ritmo e intención narrativa. La biblioteca debe crecer conservando esa experiencia.
+
+### Criterios que aplicaremos
+
+- Preparar una muestra representativa de 3–5 minutos antes de producir o incorporar un libro completo. Agustín debe aprobar voz, pronunciación, ritmo e interés; una prueba técnica no sustituye esa aprobación.
+- Ajustar la interpretación al género. Una reflexión necesita intención y claridad; una historia puede requerir personajes y ambientes. Conservar las referencias y voces aprobadas por personaje cuando haya reparto.
+- Cuidar el español cotidiano y la fidelidad a la edición. Identificar adaptaciones y créditos reales; no inventar citas ni atribuir al autor contenido añadido.
+- Usar música y efectos cuando ayuden a la obra y mantengan clara la voz.
+- Revisar la producción resultante y probar el reproductor, los capítulos, el avance y la lectura que incluya la edición antes de publicarla.
+- Conservar el importador y sus pruebas como aprendizaje técnico. No reanudar la importación de las grabaciones descartadas sin una nueva instrucción explícita de Agustín.
+
+Esta experiencia recoge la preferencia editorial de TEC respecto de las muestras escuchadas. No pretende calificar todas las grabaciones de LibriVox ni el valor del trabajo voluntario. Los documentos de la decisión se conservan en `TEC-Aprendizaje-editorial-2026-11-12/Aprendizaje-editorial-TEC.json` dentro del espacio de trabajo del proyecto.
+
 ## Sostenibilidad y aspiración
 
 El sueño de Agustín es llevar el conocimiento a cada rincón y llegar a ofrecer acceso gratuito. Es una aspiración, no la condición actual del servicio ni una fecha prometida. Hoy el primer 10 % de cada libro es gratis sin registro. La membresía de $20 USD al mes abre el catálogo completo, con renovación mensual y cancelación desde la cuenta. Su propósito es ayudar a sostener producción, alojamiento, tecnología y mantenimiento, y hacer posible el crecimiento de la biblioteca. No presentarla como donativo deducible, organización sin fines de lucro ni garantía contable de destinar cada dólar exclusivamente a un gasto específico.

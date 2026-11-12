@@ -45,15 +45,9 @@ test('each indexable book describes the actual edition, keeps prices truthful an
     assert.equal(audio.isAccessibleForFree, false);
     assert.equal(audio.offers.price, '20.00');
     assert.equal(audio.offers.priceSpecification.billingDuration, 'P1M');
-    if (book.id === 'el-criterio') {
-      assert.equal(audio.hasPart, undefined);
-      assert.ok(!html.includes('Escucha gratis el primer 10 %'));
-      assert.ok(!html.includes('pruebas/el-criterio'));
-    } else {
     assert.equal(audio.hasPart.isAccessibleForFree, true);
     assert.equal(audio.hasPart.duration, isoDuration(sampleDuration(book)));
     assert.ok(existsSync(new URL('../public' + new URL(audio.hasPart.contentUrl).pathname, import.meta.url)));
-    }
     assert.ok(existsSync(new URL('../public' + new URL(audio.image).pathname, import.meta.url)));
     for (const name of ['r2Key', 'sha256', 'fileId', 'stripeCustomerId', 'cloudflarestorage.com', `/api/audiolibros/libros/${book.id}/audio`]) assert.ok(!html.includes(name), name);
     const decoded = html.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');

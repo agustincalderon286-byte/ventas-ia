@@ -6,6 +6,12 @@ import { parseAudioRange } from './tec-audio-lab.js';
 import { externalAudioReady } from './tec-audio-external.js';
 import { sendDirectAudio } from './tec-audio-delivery.js';
 
+// Explicit retirement also protects old bookmarks and cached library entries.
+export function retiredAudiobookResponse(_req, res) {
+  return res.status(410).set({ 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow' })
+    .json({ error: 'Esta grabación ya no está disponible en TEC. Elige otro audiolibro de la biblioteca.' });
+}
+
 export const audiobookCatalog = JSON.parse(fs.readFileSync(new URL('./knowledge/tec-audiobooks.json', import.meta.url), 'utf8'));
 const transcripts = new Map();
 export function getAudiobookTranscript(id) {
@@ -78,6 +84,7 @@ export async function streamAudiobook(req, res, getBucket, book, record, r2) {
   }
 }
 export function registerTecAudiobooks(app, { requireActive, requireAdmin, media, reviews, progress, getBucket, r2, catalog = audiobookCatalog, importGrant = null, getTranscript = getAudiobookTranscript }) {
+  app.use('/api/coach/audiobooks/el-criterio', retiredAudiobookResponse);
   const byId = new Map(catalog.map(book => [book.id, book]));
   const privateHeaders = res => res.set({ 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Robots-Tag': 'noindex, nofollow' });
   const wrap = handler => async (req, res) => {
