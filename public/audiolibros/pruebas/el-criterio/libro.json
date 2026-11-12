@@ -1,0 +1,203 @@
+{
+  "id": "el-criterio-librivox",
+  "title": "El criterio",
+  "author": "Jaime Balmes",
+  "language": "Español",
+  "provider": "LibriVox",
+  "archiveItem": "criterio_2408_librivox",
+  "sourceUrl": "https://librivox.org/criterio-by-jaime-balmes/",
+  "archiveUrl": "https://archive.org/details/criterio_2408_librivox",
+  "duration": 30858.68,
+  "publishedDuration": "08:34:19",
+  "chapters": [
+    {
+      "number": 1,
+      "title": "Cap. 1 - Consideraciones preliminares",
+      "duration": 536.4,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_01_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 2,
+      "title": "Cap. 2 - La atención",
+      "duration": 354.98,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_02_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 3,
+      "title": "Cap. 3 - Elección de carrera",
+      "duration": 309.03,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_03_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 4,
+      "title": "Cap. 4 - Cuestiones de posibilidad",
+      "duration": 997.69,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_04_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 5,
+      "title": "Cap. 5 - Cuestiones de existencia, conocimiento adquirido por el testimonio inmediato de los sentidos",
+      "duration": 895.16,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_05_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 6,
+      "title": "Cap. 6 - Conocimiento de la existencia de las cosas adquirido mediatamente por los sentidos",
+      "duration": 1152.68,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_06_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 7,
+      "title": "Cap. 7 - La lógica acorde con la caridad",
+      "duration": 885.34,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_07_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 8,
+      "title": "Cap. 8 - De la autoridad humana en general",
+      "duration": 1175.88,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_08_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 9,
+      "title": "Cap. 9 - Los periódicos",
+      "duration": 454.92,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_09_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 10,
+      "title": "Cap. 10 - Relaciones de viajes",
+      "duration": 633.18,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_10_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 11,
+      "title": "Cap. 11 - Historia",
+      "duration": 1033.43,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_11_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 12,
+      "title": "Cap. 12 - Consideraciones generales sobre el modo de conocer la naturaleza, propiedades y relaciones de los seres",
+      "duration": 1154.9,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_12_balmes_128kb.mp3",
+      "reader": "Odal"
+    },
+    {
+      "number": 13,
+      "title": "Cap. 13 - La Buena Percepción",
+      "duration": 1327.8,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_13_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 14,
+      "title": "Cap. 14 - El Juicio",
+      "duration": 1746.1,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_14_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 15,
+      "title": "Cap. 15 - El Raciocinio",
+      "duration": 1578.92,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_15_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 16,
+      "title": "Cap. 16 - No Todo lo Hace el Discurso",
+      "duration": 1169.42,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_16_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 17,
+      "title": "Cap. 17 - La Enseñanza",
+      "duration": 985.57,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_17_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 18,
+      "title": "Cap. 18 - La Invención",
+      "duration": 584.62,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_18_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 19,
+      "title": "Cap. 19 - El Entendimiento, el Corazón, y la Imaginación, parte 1",
+      "duration": 1479.29,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_19_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 20,
+      "title": "Cap. 19 - El Entendimiento, el Corazón, y la Imaginación, parte 2",
+      "duration": 1519.57,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_20_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 21,
+      "title": "Cap. 20 - Filosofía de la Historia",
+      "duration": 616.05,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_21_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 22,
+      "title": "Cap. 21 - Religión",
+      "duration": 1708.46,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_22_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 23,
+      "title": "Cap. 22 - El Entendimiento Práctico, parte 1",
+      "duration": 1771.57,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_23_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 24,
+      "title": "Cap. 22 - El Entendimiento Práctico, parte 2",
+      "duration": 1695.14,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_24_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 25,
+      "title": "Cap. 22 - El Entendimiento Práctico, parte 3",
+      "duration": 1778.63,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_25_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 26,
+      "title": "Cap. 22 - El Entendimiento Práctico, parte 4",
+      "duration": 1795.19,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_26_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    },
+    {
+      "number": 27,
+      "title": "Cap. 22 - El Entendimiento Práctico, parte 5",
+      "duration": 1518.76,
+      "url": "https://archive.org/download/criterio_2408_librivox/criterio_27_balmes_128kb.mp3",
+      "reader": "mpinedag"
+    }
+  ]
+}

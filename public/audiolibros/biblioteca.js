@@ -85,6 +85,9 @@
     const searchable = value => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     const query = searchable(search.value.trim());
     const matches = books.filter(book => searchable(book.title + ' ' + book.author).includes(query));
+    const invited = document.querySelector('[data-librivox-pilot]');
+    const invitedMatches = Boolean(invited && searchable(invited.dataset.search || '').includes(query));
+    if (invited) invited.hidden = !invitedMatches;
     const cards = matches.map(book => {
       const card = element('article', undefined, 'book');
       const image = element('img');
@@ -111,7 +114,7 @@
       return card;
     });
     $('#books').replaceChildren(...cards);
-    $('#catalog-status').textContent = matches.length ? '' : 'No encontramos títulos para esta búsqueda.';
+    $('#catalog-status').textContent = matches.length || invitedMatches ? '' : 'No encontramos títulos para esta búsqueda.';
     achievementsContext();
   }
 
