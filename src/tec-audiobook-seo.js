@@ -75,7 +75,7 @@ export function buildAudiobookSeo({
     return `<article class="book"><a href="${path}" aria-label="${escape(book.title)}: ver audiolibro"><img src="${escape(book.cover)}" alt="Portada de ${escape(book.title)}" loading="lazy" decoding="async" width="600" height="800"></a><div>
       <p class="eyebrow">${escape(book.categories.join(' · '))}</p><h3><a href="${path}">${escape(book.title)}</a></h3><p class="author">${escape(book.author)}</p>
       <p class="book-description">${escape(book.description)}</p><p class="book-duration">Español · ${time(book.duration)}</p>
-      <div class="actions"><a class="button outline" href="${path}">Ver libro</a>${hasSample(book) ? `<a class="button primary"${sample ? ` data-audio-sample="${book.id}"` : ''} href="/audiolibros/?libro=${book.id}">▶ Muestra · ${time(sampleDuration(book))}</a>` : ''}</div>
+      <div class="actions"><a class="button outline" href="${path}">Ver libro</a>${hasSample(book) ? `<a class="button primary" data-audio-sample="${book.id}" href="/audiolibros/?libro=${book.id}">▶ Muestra · ${time(sampleDuration(book))}</a>` : ''}</div>
       </div></article>`;
   }
   const list = { '@type': 'ItemList', '@id': library + '#catalogo', name: 'Catálogo de audiolibros en español', numberOfItems: catalog.length,
