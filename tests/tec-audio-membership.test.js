@@ -100,6 +100,12 @@ test('guest previews, paid-only activation, password access and recovery work th
 
   const catalog = await request('/catalogo').then(res => res.json());
   for (const [index, publicBook] of catalog.books.entries()) {
+    if (publicBook.id === 'el-criterio') {
+      assert.equal(publicBook.previewUrl, null);
+      assert.equal(publicBook.previewTranscriptUrl, null);
+      for (const field of ['audio', 'audioUrl', 'transcriptUrl', 'chapters']) assert.equal(field in publicBook, false);
+      continue;
+    }
     assert.ok(publicBook.previewUrl);
     assert.ok(Math.abs(publicBook.previewDuration - audiobookCatalog[index].duration * .1) < .001);
     for (const field of ['audio', 'audioUrl', 'transcriptUrl', 'chapters']) assert.equal(field in publicBook, false);
@@ -115,8 +121,9 @@ test('guest previews, paid-only activation, password access and recovery work th
   }
   assert.equal((await request('/libros/unknown/muestra/texto')).status, 404);
   for (const suffix of ['', '/audio', '/audio?delivery=1', '/texto']) assert.equal((await request(path + suffix)).status, 401);
+  for (const suffix of ['', '/audio', '/audio?delivery=1', '/texto']) assert.equal((await request('/libros/el-criterio' + suffix)).status, 401);
   assert.equal(links, 0);
-  for (const publicBook of catalog.books) {
+  for (const publicBook of catalog.books.filter(book => book.previewUrl)) {
     const sample = await fetch('http://127.0.0.1:' + server.address().port + publicBook.previewUrl + '?delivery=1').then(r => r.json());
     assert.deepEqual(sample, lease);
   }
@@ -166,6 +173,19 @@ test('guest previews, paid-only activation, password access and recovery work th
   assert.equal((await request(path + '/audio', { headers })).status, 307);
 
   eligible = true;
+  const externalDetail = await request('/libros/el-criterio', { headers }).then(r => r.json());
+  assert.equal(externalDetail.book.id, 'el-criterio');
+  assert.equal(externalDetail.book.chapters.length, 27);
+  assert.equal(externalDetail.book.transcriptUrl, null);
+  assert.deepEqual(externalDetail.progress, { position: 12, speed: 1.5, marks: [7] });
+  const externalAudio = await request('/libros/el-criterio/audio', { headers });
+  assert.equal(externalAudio.status, 307);
+  assert.equal(externalAudio.headers.get('location'), audiobookCatalog.find(b => b.id === 'el-criterio').audio.url);
+  assert.equal(externalAudio.headers.get('cache-control'), 'private, no-store');
+  const externalLease = await request('/libros/el-criterio/audio?delivery=1', { headers }).then(r => r.json());
+  assert.equal(externalLease.provider, 'internet-archive');
+  assert.equal(externalLease.url, externalAudio.headers.get('location'));
+  assert.equal((await request('/libros/el-criterio/texto', { headers })).status, 404);
   const memberShare = await post('/compartir', { bookId: book.id, kind: 'audio', start: 1000, end: 1020 }, cookie);
   assert.equal(memberShare.status, 201);
   assert.equal(shared.get((await memberShare.json()).id).start, 1000);

@@ -33,7 +33,7 @@
         const image = el('img'); image.src = book.cover; image.alt = `Portada de ${book.title}`; image.width = 180; image.height = 240;
         const body = el('div', undefined, 'ab-card-body');
         body.append(el('span', book.categories.join(' · '), 'ab-eyebrow'), el('h3', book.title), el('p', book.author, 'ab-author'), el('p', book.description), el('p', `${time(book.duration)} · ${book.language} · Libro íntegro`, 'ab-meta'));
-        const button = el('button', book.available ? (readerRoot ? 'Escuchar y leer' : 'Escuchar el libro') : 'Próximamente', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
+        const button = el('button', book.available ? (readerRoot && book.synchronizedText !== false ? 'Escuchar y leer' : 'Escuchar el libro') : 'Próximamente', 'primary-button'); button.type = 'button'; button.disabled = !book.available;
         button.addEventListener('click', () => openBook(book.id));
         body.append(button); card.append(image, body); list.append(card);
       }
@@ -69,7 +69,7 @@
       $('[data-ab-credits]').textContent = book.credits;
       $('[data-ab-speed]').value = String(data.progress.speed);
       status('[data-ab-player-status]', 'Listo para escuchar.'); status('[data-ab-save-status]', data.progress.position > 0 ? `Continuarás desde ${time(data.progress.position)}.` : 'Tu avance se guarda mientras escuchas.');
-      await delivery.load(book.audioUrl, { position: state.pendingSeek ?? data.progress.position, rate: data.progress.speed });
+      await delivery.load(book.audioUrl, { position: state.pendingSeek ?? data.progress.position, rate: data.progress.speed, external: book.externalPlayback === true });
       if (generation !== state.generation) return;
       const chapters = $('[data-ab-chapters]'); chapters.replaceChildren();
       book.chapters.forEach((chapter, index) => {

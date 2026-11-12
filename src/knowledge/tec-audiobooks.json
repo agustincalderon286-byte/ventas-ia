@@ -1537,5 +1537,171 @@
       "contentType": "audio/mp4",
       "r2ETag": "\"314c1148d5ceef4be4539c3d49fa44ac\""
     }
+  },
+  {
+    "id": "el-criterio",
+    "title": "El criterio",
+    "author": "Jaime Balmes",
+    "originalTitle": "El criterio",
+    "language": "Español",
+    "categories": [
+      "Filosofía",
+      "Desarrollo personal",
+      "Clásicos"
+    ],
+    "description": "Un clásico para aprender a pensar con claridad, prestar atención y distinguir los hechos de las apariencias. Balmes reúne ejemplos sobre el juicio, el razonamiento, la educación y las decisiones de la vida diaria.",
+    "edition": "Edición íntegra en español · LibriVox",
+    "narrator": "Odal y mpinedag · Voluntarios de LibriVox",
+    "credits": "Obra de Jaime Balmes (1810–1848). Narración original de los voluntarios Odal y mpinedag para LibriVox, publicada en 2024 y alojada en Internet Archive. TEC aporta la portada, la ficha y su experiencia de biblioteca para miembros. Esta grabación conserva el español de la edición original; no es una adaptación al español actual.",
+    "duration": 30859.273288,
+    "cover": "/coach/assets/audiobooks/el-criterio-TEC.jpg",
+    "mediaArtwork": "/coach/assets/audiobooks/el-criterio-TEC.jpg",
+    "synchronizedText": false,
+    "externalPlayback": true,
+    "chapters": [
+      {
+        "title": "Cap. 1 - Consideraciones preliminares",
+        "start": 0.0,
+        "duration": 536.009683
+      },
+      {
+        "title": "Cap. 2 - La atención",
+        "start": 536.009683,
+        "duration": 355.000226
+      },
+      {
+        "title": "Cap. 3 - Elección de carrera",
+        "start": 891.009909,
+        "duration": 309.001315
+      },
+      {
+        "title": "Cap. 4 - Cuestiones de posibilidad",
+        "start": 1200.011224,
+        "duration": 997.994059
+      },
+      {
+        "title": "Cap. 5 - Cuestiones de existencia, conocimiento adquirido por el testimonio inmediato de los sentidos",
+        "start": 2198.005283,
+        "duration": 895.004513
+      },
+      {
+        "title": "Cap. 6 - Conocimiento de la existencia de las cosas adquirido mediatamente por los sentidos",
+        "start": 3093.009796,
+        "duration": 1152.993379
+      },
+      {
+        "title": "Cap. 7 - La lógica acorde con la caridad",
+        "start": 4246.003175,
+        "duration": 885.008548
+      },
+      {
+        "title": "Cap. 8 - De la autoridad humana en general",
+        "start": 5131.011723,
+        "duration": 1175.997846
+      },
+      {
+        "title": "Cap. 9 - Los periódicos",
+        "start": 6307.009569,
+        "duration": 454.998844
+      },
+      {
+        "title": "Cap. 10 - Relaciones de viajes",
+        "start": 6762.008413,
+        "duration": 633.004716
+      },
+      {
+        "title": "Cap. 11 - Historia",
+        "start": 7395.013129,
+        "duration": 1033.988073
+      },
+      {
+        "title": "Cap. 12 - Consideraciones generales sobre el modo de conocer la naturaleza, propiedades y relaciones de los seres",
+        "start": 8429.001202,
+        "duration": 1154.021247
+      },
+      {
+        "title": "Cap. 13 - La Buena Percepción",
+        "start": 9583.022449,
+        "duration": 1327.995692
+      },
+      {
+        "title": "Cap. 14 - El Juicio",
+        "start": 10911.018141,
+        "duration": 1746.002131
+      },
+      {
+        "title": "Cap. 15 - El Raciocinio",
+        "start": 12657.020272,
+        "duration": 1578.999025
+      },
+      {
+        "title": "Cap. 16 - No Todo lo Hace el Discurso",
+        "start": 14236.019297,
+        "duration": 1169.986463
+      },
+      {
+        "title": "Cap. 17 - La Enseñanza",
+        "start": 15406.00576,
+        "duration": 985.013469
+      },
+      {
+        "title": "Cap. 18 - La Invención",
+        "start": 16391.019229,
+        "duration": 584.9922
+      },
+      {
+        "title": "Cap. 19 - El Entendimiento, el Corazón, y la Imaginación, parte 1",
+        "start": 16976.011429,
+        "duration": 1479.006712
+      },
+      {
+        "title": "Cap. 19 - El Entendimiento, el Corazón, y la Imaginación, parte 2",
+        "start": 18455.018141,
+        "duration": 1519.991088
+      },
+      {
+        "title": "Cap. 20 - Filosofía de la Historia",
+        "start": 19975.009229,
+        "duration": 616.001633
+      },
+      {
+        "title": "Cap. 21 - Religión",
+        "start": 20591.010862,
+        "duration": 1708.01136
+      },
+      {
+        "title": "Cap. 22 - El Entendimiento Práctico, parte 1",
+        "start": 22299.022222,
+        "duration": 1771.987007
+      },
+      {
+        "title": "Cap. 22 - El Entendimiento Práctico, parte 2",
+        "start": 24071.009229,
+        "duration": 1695.003923
+      },
+      {
+        "title": "Cap. 22 - El Entendimiento Práctico, parte 3",
+        "start": 25766.013152,
+        "duration": 1778.992562
+      },
+      {
+        "title": "Cap. 22 - El Entendimiento Práctico, parte 4",
+        "start": 27545.005714,
+        "duration": 1795.005148
+      },
+      {
+        "title": "Cap. 22 - El Entendimiento Práctico, parte 5",
+        "start": 29340.010862,
+        "duration": 1519.262426
+      }
+    ],
+    "audio": {
+      "provider": "internet-archive",
+      "url": "https://archive.org/download/criterio_2408_librivox/Criterio_librivox.m4b",
+      "bytes": 246432109,
+      "contentType": "audio/mp4",
+      "filename": "Criterio_librivox.m4b"
+    },
+    "voiceDisclosure": ""
   }
 ]

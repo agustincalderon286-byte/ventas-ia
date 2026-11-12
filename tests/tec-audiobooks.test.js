@@ -88,7 +88,7 @@ test('catalog manifest has all nine parts, monotonic chapter starts and the exac
   assert.equal(models.reviews.schema.path('_id').instance, 'String'); // canonical ids enforce account/book uniqueness without relying on a later index build
 });
 
-test('every catalog book has complete canonical text and ordered, bounded audio cues', () => {
+test('TEC editions keep exact canonical text; external narration never fabricates synchronized cues', () => {
   const expected = {
     'como-un-hombre-piensa': '2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07',
     'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647',
@@ -107,6 +107,11 @@ test('every catalog book has complete canonical text and ordered, bounded audio 
   };
   for (const book of audiobookCatalog) {
     const text = getAudiobookTranscript(book.id);
+    if (book.id === 'el-criterio') {
+      assert.equal(book.synchronizedText, false);
+      assert.equal(text, null);
+      continue;
+    }
     assert.ok(text, book.title + ' needs read-along text');
     assert.ok(text.cues.length > 100);
     const master = text.cues.map(c => c.separator + c.text).join('') + text.trailingSeparator;

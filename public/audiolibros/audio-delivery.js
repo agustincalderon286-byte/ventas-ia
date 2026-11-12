@@ -32,18 +32,18 @@
         this.refresh(this.position, this.playWanted).catch(error => this.fail(error));
       });
     }
-    expired() { return !this.native && (!this.expiresAt || this.expiresAt <= this.now() + 5000); }
+    expired() { return (!this.native || this.external) && (!this.expiresAt || this.expiresAt <= this.now() + 5000); }
     fail(error) { if (error.name !== 'AbortError' && this.source) this.onFailure(error.message || message()); }
     stop() {
       ++this.generation; this.request?.abort(); this.source = ''; this.url = ''; this.onReady = null;
       this.loading = false; this.playWanted = false; this.position = 0; this.task = null;
       this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load();
     }
-    async load(source, { position = 0, rate = 1, onReady } = {}) {
+    async load(source, { position = 0, rate = 1, onReady, external = false } = {}) {
       this.stop();
       const canonical = new URL(source, location.href);
       if (canonical.origin !== location.origin) throw new Error(message());
-      this.source = canonical.href; this.onReady = onReady; this.rate = rate;
+      this.external = external; this.source = canonical.href; this.onReady = onReady; this.rate = rate;
       this.lastRetry = -Infinity;
       await this.refresh(position, false);
     }
@@ -53,7 +53,7 @@
       const generation = this.generation;
       this.loading = true; this.audio.pause();
       const task = (async () => {
-        if (this.native) {
+        if (this.native && !this.external) {
           // Native offline storage owns the canonical media URL. Online requests
           // still follow the server's authorized redirect straight to R2.
           this.url = this.source; this.expiresAt = Infinity;
@@ -71,13 +71,19 @@
           if (generation !== this.generation) return;
           let target;
           try { target = new URL(delivery.url); } catch { throw new Error(message()); }
-          if (target.protocol !== 'https:' || !/^[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(target.hostname) ||
-            !target.pathname.startsWith('/tec-audiolibros/') || !Number.isFinite(delivery.expiresAt) ||
+          const archive = this.external && delivery.provider === 'internet-archive' &&
+            /^\/api\/(?:audiolibros\/libros|coach\/audiobooks)\/el-criterio\/audio$/.test(new URL(this.source).pathname) &&
+            target.href === 'https://archive.org/download/criterio_2408_librivox/Criterio_librivox.m4b';
+          const r2 = /^[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(target.hostname) &&
+            target.pathname.startsWith('/tec-audiolibros/');
+          if (target.protocol !== 'https:' || (this.external ? !archive : !r2) || !Number.isFinite(delivery.expiresAt) ||
             delivery.expiresAt <= this.now() || delivery.expiresAt > this.now() + 600000) throw new Error(message());
           this.url = delivery.url; this.expiresAt = delivery.expiresAt;
         }
         if (generation !== this.generation || !this.source) return;
-        this.audio.crossOrigin = 'anonymous'; this.audio.src = this.url; this.audio.load();
+        if (this.external) this.audio.removeAttribute('crossorigin');
+        else this.audio.crossOrigin = 'anonymous';
+        this.audio.src = this.url; this.audio.load();
       })();
       this.task = task;
       try { await task; }

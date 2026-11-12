@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { parseAudioRange } from './tec-audio-lab.js';
+import { externalAudioReady } from './tec-audio-external.js';
 import { sendDirectAudio } from './tec-audio-delivery.js';
 
 export const audiobookCatalog = JSON.parse(fs.readFileSync(new URL('./knowledge/tec-audiobooks.json', import.meta.url), 'utf8'));
@@ -39,6 +40,8 @@ export function validImportGrant(req, grant, bookId, now = Date.now()) {
   return crypto.timingSafeEqual(crypto.createHash('sha256').update(value.slice(7)).digest(), Buffer.from(grant.tokenHash, 'hex'));
 }
 export async function findReadyAudiobook(book, media, r2) {
+  if (externalAudioReady(book)) return { storage: 'internet-archive' };
+  if (book.audio.provider) return null;
   if (book.audio.r2Key) return await r2?.ready(book.audio) ? { storage: 'r2' } : null;
   return media.findOne({ _id: book.id, state: 'ready', sha256: book.audio.sha256 }).lean();
 }
@@ -114,9 +117,9 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
   app.get('/api/coach/audiobooks', wrap(async (req, res) => {
     const auth = await requireActive(req, res); if (!auth) return;
     const files = await media.find({ state: 'ready', _id: { $in: catalog.map(b => b.id) } }).lean();
-    const books = await Promise.all(catalog.map(async book => publicBook(book, book.audio.r2Key
+    const books = await Promise.all(catalog.map(async book => publicBook(book, externalAudioReady(book) || (book.audio.r2Key
       ? Boolean(await r2?.ready(book.audio))
-      : files.some(f => f._id === book.id && f.sha256 === book.audio.sha256))));
+      : files.some(f => f._id === book.id && f.sha256 === book.audio.sha256)))));
     res.json({ books });
   }));
   app.get('/api/coach/audiobooks/:id', wrap(async (req, res) => {
@@ -136,7 +139,7 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
   app.get('/api/coach/audiobooks/:id/audio', wrap(async (req, res) => {
     const auth = await requireActive(req, res); if (!auth) return;
     const found = await readyBook(req, res); if (!found) return;
-    if (found.file.storage === 'r2') return sendDirectAudio(req, res, found.book.audio, r2);
+    if (['r2', 'internet-archive'].includes(found.file.storage)) return sendDirectAudio(req, res, found.book.audio, r2);
     await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
   }));
   app.get('/api/coach/audiobooks/:id/reviews', wrap(async (req, res) => {
@@ -189,7 +192,7 @@ export function registerTecAudiobooks(app, { requireActive, requireAdmin, media,
     if (!validImportGrant(req, importGrant, book.id)) {
       if (!await requireAdmin(req, res) || !sameOrigin(req, res)) return;
     }
-    if (book.audio.r2Key) return res.status(409).json({ error: 'Este libro se administra en el almacenamiento de audiolibros.' });
+    if (book.audio.r2Key || book.audio.provider) return res.status(409).json({ error: 'Este libro se administra en el almacenamiento de audiolibros.' });
     if (!['audio/mp4', 'audio/x-m4b'].includes((req.get('Content-Type') || '').split(';')[0])) return res.status(415).json({ error: 'Se requiere el archivo M4B aprobado.' });
     if (Number(req.get('Content-Length')) !== book.audio.bytes) return res.status(400).json({ error: 'El tamaño no coincide con la edición aprobada.' });
     const now = new Date();

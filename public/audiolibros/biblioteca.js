@@ -85,9 +85,6 @@
     const searchable = value => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
     const query = searchable(search.value.trim());
     const matches = books.filter(book => searchable(book.title + ' ' + book.author).includes(query));
-    const invited = document.querySelector('[data-librivox-pilot]');
-    const invitedMatches = Boolean(invited && searchable(invited.dataset.search || '').includes(query));
-    if (invited) invited.hidden = !invitedMatches;
     const cards = matches.map(book => {
       const card = element('article', undefined, 'book');
       const image = element('img');
@@ -104,7 +101,7 @@
         element('p', book.language + ' · ' + time(book.duration), 'book-duration')
       );
       const actions = element('div', undefined, 'actions');
-      if (account.member) actions.append(button('Escuchar y leer', () => openBook(book, false), 'primary'));
+      if (account.member) actions.append(button(book.synchronizedText === false ? 'Escuchar' : 'Escuchar y leer', () => openBook(book, false), 'primary'));
       if (book.previewUrl) actions.append(button('▶ Muestra · ' + time(book.previewDuration), () => openBook(book, true)));
       const details = element('a', 'Ver libro', 'book-link');
       details.href = detailUrl;
@@ -114,7 +111,7 @@
       return card;
     });
     $('#books').replaceChildren(...cards);
-    $('#catalog-status').textContent = matches.length || invitedMatches ? '' : 'No encontramos títulos para esta búsqueda.';
+    $('#catalog-status').textContent = matches.length ? '' : 'No encontramos títulos para esta búsqueda.';
     achievementsContext();
   }
 
@@ -380,6 +377,11 @@
   }
 
   async function openBook(book, preview, startAt = null) {
+    if (preview && !book.previewUrl) {
+      showAccount();
+      $('#account-status').textContent = 'Ingresa con tu membresía para escuchar ' + book.title + '.';
+      return;
+    }
     const full = !preview;
     if (selected?.id === book.id && selected.full === full && !audio.error) {
       expandPlayer();
@@ -428,13 +430,14 @@
       $('#player-status').textContent = data.progress.position ? 'Continúa en ' + time(data.progress.position) + '.' : '';
       $('#player-controls').hidden = false;
       const position = Number.isFinite(startAt) ? startAt : data.progress.position;
-      await delivery.load(selected.audioUrl, { position, rate: Number($('#speed').value) || 1, onReady: () => {
+      await delivery.load(selected.audioUrl, { position, external: selected.externalPlayback === true, rate: Number($('#speed').value) || 1, onReady: () => {
         if (request !== generation) return;
         seekBar.max = String(Number.isFinite(audio.duration) ? Math.min(selected.duration, audio.duration) : selected.duration);
         seekBar.disabled = false;
         updateChapter(); updatePlayback();
       } });
       if (request !== generation) return;
+      $('#share-open').hidden = selected.synchronizedText === false;
       achievementsContext();
       updatePlayback();
       setMediaSession(book);
@@ -661,8 +664,8 @@
     const params = new URLSearchParams(location.search);
     const book = books.find(item => item.id === params.get('libro'));
     if (!book) return;
-    const requested = Number(params.get('t') || 0);
-    const position = Number.isFinite(requested) && requested >= 0 && requested < (account.member ? book.duration : book.previewDuration) ? requested : 0;
+    const requested = params.has('t') ? Number(params.get('t')) : null;
+    const position = requested !== null && Number.isFinite(requested) && requested >= 0 && requested < (account.member ? book.duration : book.previewDuration) ? requested : null;
     openBook(book, !account.member, position);
   });
 })();

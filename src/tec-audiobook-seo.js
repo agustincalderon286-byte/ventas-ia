@@ -44,7 +44,7 @@ export function buildAudiobookSeo({
   const website = { '@type': 'WebSite', '@id': library + '#website', name: 'Audiolibros TEC', alternateName: 'Biblioteca de audiolibros de Total Elite Coaching',
     url: library, inLanguage: 'es', publisher: { '@id': organization['@id'] } };
   const offer = { '@type': 'Offer', name: 'Membresía mensual Audiolibros TEC', url: library + '#membresia',
-    price: '20.00', priceCurrency: 'USD', description: 'Acceso al catálogo completo por 20 USD al mes, con renovación mensual. La muestra inicial del 10 % es gratuita.',
+    price: '20.00', priceCurrency: 'USD', description: 'Acceso al catálogo completo por 20 USD al mes, con renovación mensual. Hay muestras gratuitas del 10 % en los títulos que las incluyen.',
     priceSpecification: { '@type': 'UnitPriceSpecification', price: '20.00', priceCurrency: 'USD', billingDuration: 'P1M' } };
   const audiobook = book => ({
     '@type': 'Audiobook', '@id': absolute(bookPath(book)) + '#audiobook', url: absolute(bookPath(book)),
@@ -75,13 +75,13 @@ export function buildAudiobookSeo({
     return `<article class="book"><a href="${path}" aria-label="${escape(book.title)}: ver audiolibro"><img src="${escape(book.cover)}" alt="Portada de ${escape(book.title)}" loading="lazy" decoding="async" width="600" height="800"></a><div>
       <p class="eyebrow">${escape(book.categories.join(' · '))}</p><h3><a href="${path}">${escape(book.title)}</a></h3><p class="author">${escape(book.author)}</p>
       <p class="book-description">${escape(book.description)}</p><p class="book-duration">Español · ${time(book.duration)}</p>
-      <div class="actions"><a class="button outline" href="${path}">Ver libro</a>${hasSample(book) ? `<a class="button primary" data-audio-sample="${book.id}" href="/audiolibros/?libro=${book.id}">▶ Muestra · ${time(sampleDuration(book))}</a>` : ''}</div>
+      <div class="actions"><a class="button outline" href="${path}">Ver libro</a>${hasSample(book) ? `<a class="button primary"${sample ? ` data-audio-sample="${book.id}"` : ''} href="/audiolibros/?libro=${book.id}">▶ Muestra · ${time(sampleDuration(book))}</a>` : ''}</div>
       </div></article>`;
   }
   const list = { '@type': 'ItemList', '@id': library + '#catalogo', name: 'Catálogo de audiolibros en español', numberOfItems: catalog.length,
     itemListElement: catalog.map((book, index) => ({ '@type': 'ListItem', position: index + 1, url: absolute(bookPath(book)), item: audiobook(book) })) };
   const landingHead = head({ title: 'Audiolibros en español: clásicos y Biblia | Audiolibros TEC',
-    description: 'Escucha audiolibros en español de desarrollo personal, estrategia, filosofía y la Biblia. Prueba gratis el 10 % de cada libro, con lectura sincronizada. Membresía: $20 USD al mes.',
+    description: 'Escucha audiolibros en español de desarrollo personal, estrategia, filosofía y la Biblia. Descubre muestras gratuitas y títulos con lectura sincronizada. Membresía: $20 USD al mes.',
     url: library, image: absolute('/audiolibros/identidad/portada-social.jpg'),
     graph: [organization, website, { '@type': 'CollectionPage', '@id': library + '#webpage', url: library, name: 'Audiolibros en español · Audiolibros TEC',
       inLanguage: 'es', isPartOf: { '@id': website['@id'] }, mainEntity: { '@id': list['@id'] } }, list] });
@@ -94,7 +94,7 @@ export function buildAudiobookSeo({
     .replace('Cargando audiolibros…', 'Elige un libro para conocerlo y escuchar su muestra.');
   const baseHead = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#102421">
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
-    <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script defer src="/audiolibros/audio-delivery.js?v=20261111-r2fix1"></script><script defer src="/audiolibros/preview.js?v=20261111-r2"></script><script type="module" src="/audiolibros/analytics.js?v=20261110-payments"></script>`;
+    <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script defer src="/audiolibros/audio-delivery.js?v=20261111-members1"></script><script defer src="/audiolibros/preview.js?v=20261111-r2"></script><script type="module" src="/audiolibros/analytics.js?v=20261111-members1"></script>`;
   const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Audiolibros</a><a href="/audiolibros/#libros">Libros</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
   const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/nuestra-historia/">Nuestra historia</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
   const storyUrl = absolute('/audiolibros/nuestra-historia/');
@@ -125,14 +125,14 @@ export function buildAudiobookSeo({
       <article><div class="book-detail-hero"><img class="detail-cover" src="${escape(book.cover)}" alt="Portada de ${escape(book.title)}" width="600" height="800" fetchpriority="high">
       <div><p class="eyebrow">${escape(book.categories.join(' · '))}</p><h1>${escape(book.title)}</h1><p class="intro">${escape(book.author)}</p>
       <p>${escape(book.description)}</p><p class="fine">Audiolibro en español · Duración ${time(book.duration)}<br>${escape(book.edition)}</p>
-      <div class="actions"><a class="button primary" data-audio-sample="${book.id}" href="/audiolibros/?libro=${book.id}">${sample ? 'Escuchar y leer la muestra gratis' : 'Abrir en la biblioteca'}</a><a class="button outline" href="/audiolibros/#membresia">Ver membresía</a></div>
-      <p class="fine">${book.releaseLabel ? 'Escucha gratis el primer 10 % de los capítulos publicados. La membresía incluye esta entrega y sus próximas ampliaciones por $20 USD al mes, con renovación mensual.' : 'Escucha gratis el primer 10 %. El libro completo está incluido en la membresía de $20 USD al mes, con renovación mensual.'}</p></div></div>
+      <div class="actions"><a class="button primary"${sample ? ` data-audio-sample="${book.id}"` : ''} href="/audiolibros/?libro=${book.id}">${sample ? 'Escuchar y leer la muestra gratis' : 'Abrir en la biblioteca'}</a><a class="button outline" href="/audiolibros/#membresia">Ver membresía</a></div>
+      <p class="fine">${!sample ? 'El libro completo está incluido en la membresía de $20 USD al mes, con renovación mensual.' : book.releaseLabel ? 'Escucha gratis el primer 10 % de los capítulos publicados. La membresía incluye esta entrega y sus próximas ampliaciones por $20 USD al mes, con renovación mensual.' : 'Escucha gratis el primer 10 %. El libro completo está incluido en la membresía de $20 USD al mes, con renovación mensual.'}</p></div></div>
       ${sample ? `<section class="detail-section" aria-labelledby="sample-title"><h2 id="sample-title">Escucha una muestra</h2><p>Primer 10 % del libro · ${time(sampleDuration(book))}. También puedes seguir la lectura sincronizada al abrirlo en la biblioteca.</p><audio controls preload="none" data-audio-preview="${book.id}" src="/audiolibros/muestras/${book.id}.m4a" aria-label="Muestra gratuita de ${escape(book.title)}"></audio></section>` : ''}
       ${editorial ? `<section class="detail-section"><p class="eyebrow">Una mirada al libro</p><h2>¿De qué trata ${escape(book.title)}?</h2>${editorial.summary.map(p => `<p>${escape(p)}</p>`).join('')}${book.originalTitle ? `<p class="fine">Título original: ${escape(book.originalTitle)}</p>` : ''}</section>
       <section class="detail-section"><h2>Ideas que encontrarás</h2><ul class="editorial-ideas">${editorial.ideas.map(idea => `<li>${escape(idea)}</li>`).join('')}</ul></section>
       <section class="detail-section editorial-audience"><div><h2>¿Para quién es?</h2><p>${escape(editorial.audience)}</p></div><aside><h3>Una forma de escucharlo</h3><p>${escape(editorial.tip)}</p></aside></section>` : ''}
       <section class="detail-section"><h2>Qué encontrarás en este audiolibro</h2><ol class="detail-chapters">${book.chapters.map(chapter => `<li>${escape(chapter.title)}</li>`).join('')}</ol></section>
-      <section class="detail-section"><h2>La edición de TEC</h2><p>${escape(book.credits)}</p>${book.voiceDisclosure ? `<p>${escape(book.voiceDisclosure)}</p>` : ''}<p>Escucha a tu ritmo, ajusta la velocidad, sigue el texto sincronizado y comparte citas o fragmentos de audio de 15, 30 o 45 segundos con un enlace al libro.</p></section>
+      <section class="detail-section"><h2>${book.externalPlayback ? 'Créditos de la grabación' : 'La edición de TEC'}</h2><p>${escape(book.credits)}</p>${book.voiceDisclosure ? `<p>${escape(book.voiceDisclosure)}</p>` : ''}<p>${book.synchronizedText === false ? 'Escucha a tu ritmo, ajusta la velocidad, elige un capítulo y guarda tu avance en tu cuenta. Esta grabación aún no incluye lectura sincronizada.' : 'Escucha a tu ritmo, ajusta la velocidad, sigue el texto sincronizado y comparte citas o fragmentos de audio de 15, 30 o 45 segundos con un enlace al libro.'}</p></section>
       ${editorial ? `<section class="detail-section book-faq"><h2>Antes de empezar</h2>${editorial.questions.map(([q, a]) => `<details><summary>${escape(q)}</summary><p>${escape(a)}</p></details>`).join('')}</section>` : ''}</article>
       ${bookCollections.length ? `<section class="detail-section"><h2>Encuéntralo en estas colecciones</h2>${collectionLinks(bookCollections)}</section>` : ''}
       ${related.length ? `<section class="detail-section"><h2>También puedes escuchar</h2><ul class="related-books">${related.map(item => `<li><a href="${bookPath(item)}">${escape(item.title)}</a><span>${escape(item.author)}</span></li>`).join('')}</ul></section>` : ''}
@@ -148,7 +148,7 @@ export function buildAudiobookSeo({
       <section class="wrap collection-hero"><div><p class="eyebrow">${c.books.length} libros · En español</p><h1>${escape(c.title)}</h1><p class="intro">${escape(c.description)}</p><a class="button primary" href="#libros">Elegir mi próxima escucha ↓</a></div>
       <div class="collection-cover-stack" aria-hidden="true">${c.books.slice(0, 3).map(b => `<img src="${escape(b.cover)}" alt="" width="600" height="800">`).join('')}</div></section>
       <section class="wrap detail-section"><h2>Un recorrido por ${escape(c.label.toLowerCase())}</h2><p>${escape(c.intro)}</p><ul class="editorial-ideas">${c.ideas.map(idea => `<li>${escape(idea)}</li>`).join('')}</ul><aside class="collection-route"><h3>¿Por dónde empezar?</h3><p>${escape(c.route)}</p></aside></section>
-      <section class="catalog" id="libros"><div class="wrap"><div class="section-head"><h2>Los libros de esta colección</h2><p>Prueba gratis el primer 10 % de cada título.</p></div><div class="books">${c.books.map(card).join('')}</div></div></section>
+      <section class="catalog" id="libros"><div class="wrap"><div class="section-head"><h2>Los libros de esta colección</h2><p>Descubre cada título y las muestras gratuitas disponibles.</p></div><div class="books">${c.books.map(card).join('')}</div></div></section>
       <section class="wrap detail-section"><h2>Más caminos para explorar</h2>${collectionLinks(collections.filter(item => item.id !== c.id))}<p class="fine">La membresía de Audiolibros TEC incluye el catálogo completo por $20 USD al mes, con renovación mensual.</p><p><a href="/audiolibros/#membresia">Conocer la membresía →</a></p></section>${guideRecommendations(guides.filter(g => g.collectionIds.includes(c.id)))}</main>${footer}</body></html>`];
   }));
   const guideList = { '@type': 'ItemList', '@id': absolute(guideHub) + '#articulos', name: 'Guías y lecturas de Audiolibros TEC', numberOfItems: guides.length,
@@ -183,6 +183,8 @@ export function buildAudiobookSeo({
 export function registerAudiobookSeo(app, options = {}) {
   // Public metadata only: generated once, without Stripe, MongoDB, R2 or AI requests.
   const rendered = buildAudiobookSeo(options);
+  app.get(['/audiolibros/pruebas/el-criterio', '/audiolibros/pruebas/el-criterio/index.html'], (_req, res) => res.redirect(301, '/audiolibros/libros/el-criterio/'));
+  app.get('/audiolibros/pruebas/el-criterio/*', (_req, res) => res.status(410).set('Cache-Control', 'no-store').end());
   registerBadgeSharePages(app, options);
   registerReadingPages(app, options);
   const send = (type, value) => (_req, res) => res.type(type).set('Cache-Control', 'public, max-age=300').send(value);

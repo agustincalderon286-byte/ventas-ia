@@ -377,7 +377,7 @@ export function registerAudioMembership(app, {
     if (!await member(req, res)) return;
     const found = await bookFor(req, res);
     if (!found) return;
-    if (found.file.storage === 'r2') return sendDirectAudio(req, res, found.book.audio, r2);
+    if (['r2', 'internet-archive'].includes(found.file.storage)) return sendDirectAudio(req, res, found.book.audio, r2);
     await streamAudiobook(req, res, getBucket, found.book, found.file, r2);
   });
 
