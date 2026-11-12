@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261112-editorial1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261111-upline1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261112-phone1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261112-phone1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,12 +7,12 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
-  "/coach/app.js?v=20261111-upline1",
+  "/coach/app.js?v=20261112-phone1",
   "/coach/product-models-catalog.js?v=20261110-product3d1",
   "/coach/product-models.js?v=20261110-product3d1",
   "/coach/product-models.css?v=20261110-product3d1",
   "/coach/property-map.css?v=20261104-map-design1",
-  "/coach/property-map.js?v=20261104-map-design1",
+  "/coach/property-map.js?v=20261112-phone1",
   "/coach/styles.css?v=20261104-chat-scroll2",
   "/coach/app.js?v=20261104-chat-scroll2",
   "/coach/audiobook-reader.js?v=20261103-readalong1",
@@ -81,8 +81,8 @@ const TEC_CORE_ASSETS = [
   "/coach/product-image-viewer.js?v=20261028-program-gifts1",
   "/coach/product-search.js?v=20261025-alias1",
   "/coach/order-calculator.js?v=20261025-native-offline2",
-  "/coach/offline-forms.js?v=20261025-native-offline2",
-  "/coach/pwa-safety.js?v=20261025-native-offline2",
+  "/coach/offline-forms.js?v=20261112-phone1",
+  "/coach/pwa-safety.js?v=20261112-phone1",
   "/coach/ui-coherence.js?v=20261025-native-offline2",
   "/coach/styles.css?v=20261025-native-offline2",
   "/coach/styles.css?v=20261028-password-eye1",
@@ -423,7 +423,7 @@ async function flushOutboxInServiceWorker() {
     return;
   }
   const viewer = await viewerResponse.json().catch(() => ({}));
-  const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+  const viewerEmail = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   const items = (await getAllOutboxItems()).sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead"));
   let synced = 0;
 

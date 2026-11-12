@@ -1,3 +1,4 @@
+import { parseCoachLogin } from './tec-coach-login.js';
 import crypto from 'node:crypto';
 const unsafe = new Set(['POST','PUT','PATCH','DELETE']);
 const pendingPath = /^\/api\/coach\/(?:leads|program-4-in-14|health-surveys|recruitment-applications|demo-outcomes|property-route|property-visits(?:\/lead)?)\/?$/;
@@ -24,7 +25,7 @@ export function createCoachRequestGuard({ requireActive, publicOrigin = 'https:/
     if(!origin&&!['same-origin','none'].includes(site)&&!json&&!binary&&!req.get('X-TEC-Request-ID'))return res.status(403).json({error:'Vuelve a abrir TEC antes de continuar.'});
     if(['/api/coach/login','/api/coach/signup-checkout'].includes(pathname)){
       if(!json)return res.status(415).json({error:'Inicia sesión desde el formulario de TEC.'});
-      if(typeof req.body?.email!=='string'||req.body.email.length>254||!/^\S+@\S+\.\S+$/.test(req.body.email.trim())||typeof req.body?.password!=='string'||req.body.password.length>128)return res.status(400).json({error:'Revisa el correo y la contraseña (máximo 128 caracteres).'});
+      if(!(pathname.endsWith('login') ? parseCoachLogin(req.body?.username ?? req.body?.email) : (typeof req.body?.email==='string' && req.body.email.length<=254 && /^\S+@\S+\.\S+$/.test(req.body.email.trim())))||typeof req.body?.password!=='string'||req.body.password.length>128)return res.status(400).json({error:'Revisa tu correo o teléfono y la contraseña (máximo 128 caracteres).'});
       if(pathname.endsWith('signup-checkout')&&(!consume('ip:'+req.ip,60,res)||!consume('email:'+req.body.email.toLowerCase().trim(),5,res)))return;
     }
     if(pendingPath.test(pathname)){

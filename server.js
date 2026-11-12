@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
@@ -821,7 +822,8 @@ const coachDailyRollupSchema = new mongoose.Schema(
 
 const coachUserSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  email: { type: String, required() { return !this.username; }, trim: true, lowercase: true },
+  username: { type: String, trim: true, match: /^[2-9]\d{2}[2-9]\d{6}$/ },
   passwordHash: { type: String, required: true },
   passwordSalt: { type: String, required: true },
   accountType: { type: String, default: "owner" },
@@ -2221,6 +2223,9 @@ messageSchema.index({ visitorId: 1, createdAt: -1 });
 messageSchema.index({ sessionId: 1, createdAt: -1 });
 messageSchema.index({ intent: 1, role: 1, createdAt: -1 });
 messageSchema.index({ coachOwnerUserId: 1, chefSlug: 1, createdAt: -1 });
+// Email uniqueness is preserved for actual emails; phone-only seats omit email.
+coachUserSchema.index({ email: 1 }, { name: "coach_email_present_unique", unique: true, partialFilterExpression: { email: { $type: "string" } } });
+coachUserSchema.index({ username: 1 }, { name: "coach_username_unique", unique: true, partialFilterExpression: { username: { $type: "string" } } });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachUserSchema.index({ parentUserId: 1, seatStatus: 1 });
@@ -5411,6 +5416,8 @@ function limpiarCoachUser(userDoc) {
     id: String(userDoc._id),
     name: userDoc.name || "",
     email: userDoc.email || "",
+    username: userDoc.username || "",
+    storageIdentity: userDoc.username ? `coach-id:${userDoc._id}` : (userDoc.email || ""),
     accountType,
     parentUserId: userDoc.parentUserId ? String(userDoc.parentUserId) : "",
     billingOwnerUserId: userDoc.billingOwnerUserId ? String(userDoc.billingOwnerUserId) : "",
@@ -9863,6 +9870,7 @@ function limpiarCoachTeamSeat(userDoc = null, profileDoc = null, stats = {}) {
     id: String(userDoc._id),
     name: userDoc.name || "",
     email: userDoc.email || "",
+    username: userDoc.username || "",
     accountType: normalizarCoachAccountType(userDoc.accountType || "seat"),
     seatStatus: normalizarCoachSeatStatus(userDoc.seatStatus || "active"),
     seatLabel: profileDoc?.seatLabel || "",
@@ -25297,7 +25305,8 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
 });
 
 app.post("/api/coach/login", async (req, res) => {
-  const email = normalizarEmail(req.body?.email || "");
+  const identity = parseCoachLogin(req.body?.username ?? req.body?.email);
+  const email = identity?.value || "";
   const password = String(req.body?.password || "");
   const throttle = obtenerCoachLoginThrottle(req, email);
 
@@ -25306,12 +25315,12 @@ app.post("/api/coach/login", async (req, res) => {
     return responderCoachError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
   }
 
-  if (!email || !password) {
-    return responderCoachError(res, 400, "Correo y contrasena son requeridos.");
+  if (!identity || !password) {
+    return responderCoachError(res, 400, "Correo o teléfono y contraseña son requeridos.");
   }
 
   try {
-    let userDoc = await CoachUser.findOne({ email });
+    let userDoc = await CoachUser.findOne({ [identity.field]: identity.value });
 
     if (!userDoc || !(await verificarPasswordSeguro(password, userDoc.passwordSalt, userDoc.passwordHash))) {
       const failedAttempt = registrarCoachLoginFallido(req, email);
@@ -25319,7 +25328,7 @@ app.post("/api/coach/login", async (req, res) => {
         res.set("Retry-After", String(failedAttempt.retryAfterSeconds));
         return responderCoachError(res, 429, "Demasiados intentos. Intenta de nuevo en unos minutos.");
       }
-      return responderCoachError(res, 401, "Correo o contrasena incorrectos.");
+      return responderCoachError(res, 401, "Correo, teléfono o contraseña incorrectos.");
     }
 
     userDoc = await asegurarCoachUserBase(userDoc);
@@ -29202,6 +29211,7 @@ app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
       seat: limpiarCoachTeamSeat(seatDoc.toObject(), seatProfile?.toObject ? seatProfile.toObject() : seatProfile, {}),
       credentials: {
         email: seatDoc.email || "",
+        username: seatDoc.username || "",
         temporaryPassword
       },
       forcedSignOut: true

@@ -46,7 +46,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     let data = null, selected = [], markers = new Map(), map = null, layers = null, loading = false;
     let visits = new Map(), pendingLeadKeys = new Set(), refreshPromise = null, syncPromise = null, syncRequested = false, editingProperty = null, awaitingSync = false;
     const accountId = String(user.id || user._id || "");
-    const email = String(user.email || "").trim().toLowerCase();
+    const email = String(user.storageIdentity || user.email || "").trim().toLowerCase();
     const cacheKey = `property-visits:${accountId}:${email}`;
     const addressSuggestions = initTecAddressSuggestions({ form, request });
     function setView(view, focusMap = false) {
@@ -72,7 +72,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       const readViewer = offline?.viewer || window.getTecCachedViewer;
       if (typeof readViewer !== 'function') throw new Error('No pude verificar la cuenta local. Reabre TEC para guardar.');
       const viewer = await readViewer();
-      if (String(viewer?.user?.id || viewer?.user?._id || '') !== accountId || String(viewer?.user?.email || '').trim().toLowerCase() !== email) {
+      if (String(viewer?.user?.id || viewer?.user?._id || '') !== accountId || String(viewer?.user?.storageIdentity || viewer?.user?.email || '').trim().toLowerCase() !== email) {
         throw new Error('La cuenta cambió. Conserva esta ficha y vuelve a entrar con la cuenta que la abrió.');
       }
     }

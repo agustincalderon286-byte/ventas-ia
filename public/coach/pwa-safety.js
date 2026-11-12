@@ -84,7 +84,7 @@
 
   function offlineViewerAllowed(viewer, now = Date.now()) {
     const verified = new Date(viewer?.offlineVerifiedAt || "").getTime();
-    if (!viewer?.authenticated || !viewer?.user?.email || !Number.isFinite(verified) ||
+    if (!viewer?.authenticated || !(viewer?.user?.storageIdentity || viewer?.user?.email) || !Number.isFinite(verified) ||
         now < verified || now - verified > 24 * 60 * 60 * 1000) return false;
     if (!(viewer.user.accessGranted || viewer.user.subscriptionActive)) return false;
     const end = new Date(viewer.user.subscriptionCurrentPeriodEnd || "").getTime();

@@ -17,7 +17,7 @@
   };
 
   function attach(form, { user, kind, slot = "main", collect, contextFields = [], beforeRestore, onRestore, onSynced, storage }) {
-    const email = String(user.email || "").trim().toLowerCase();
+    const email = String(user.storageIdentity || user.email || "").trim().toLowerCase();
     const accountId = String(user.id || user._id || "");
     const draftKey = `form-draft:${email}:${accountId}:${kind}:${slot}`;
     const status = document.createElement("p");
@@ -167,7 +167,7 @@
         await ready;
         await chain;
         const viewer = await storage.viewer();
-        if (String(viewer?.user?.email || "").toLowerCase() !== email || String(viewer?.user?.id || viewer?.user?._id || "") !== accountId) {
+        if (String(viewer?.user?.storageIdentity || viewer?.user?.email || "").toLowerCase() !== email || String(viewer?.user?.id || viewer?.user?._id || "") !== accountId) {
           throw new Error("La cuenta cambió. Tu borrador sigue aquí; entra con la cuenta que lo creó antes de enviarlo.");
         }
         const snapshot = serialize();

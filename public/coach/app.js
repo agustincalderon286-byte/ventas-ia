@@ -192,7 +192,7 @@ function appendTecNativeAudioControl(card, chunks, label, filename, urls, playab
 async function verifyTecNativeSyncOwner(email) {
   if (!globalThis.window?.TecNativeOffline) return;
   const live = await apiRequest("/api/coach/me", { timeoutMs: 10000 });
-  if (!live.authenticated || String(live.user?.email || "").trim().toLowerCase() !== email) {
+  if (!live.authenticated || String(live.user?.storageIdentity || live.user?.email || "").trim().toLowerCase() !== email) {
     throw Object.assign(new Error("Entra con la cuenta que creó los pendientes. Las copias locales se conservan."), { status: 401 });
   }
 }
@@ -200,7 +200,7 @@ async function verifyTecNativeSyncOwner(email) {
 window.prepareTecNativeOffline = async () => {
   if (!globalThis.window?.TecNativeOffline || !navigator.onLine) throw new Error("Necesitas conexión para preparar la app.");
   const viewer = await getTecCachedViewer();
-  await verifyTecNativeSyncOwner(String(viewer?.user?.email || "").toLowerCase());
+  await verifyTecNativeSyncOwner(String(viewer?.user?.storageIdentity || viewer?.user?.email || "").toLowerCase());
   const products = await loadCoachOfflineCatalog({ refresh: true });
   if (!products.length) throw new Error("No pude descargar los productos.");
   await Promise.all(["/api/coach/leads", "/api/coach/program-4-in-14", "/api/coach/health-surveys"].map(tecNativeCachedList));
@@ -221,7 +221,7 @@ window.prepareTecNativeOffline = async () => {
 async function tecNativeCachedList(url) {
   if (!globalThis.window?.TecNativeOffline) return apiRequest(url);
   const viewer = await getTecCachedViewer();
-  const email = String(viewer?.user?.email || "").trim().toLowerCase();
+  const email = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   if (!email) throw new Error("Entra con tu cuenta para consultar los datos guardados.");
   const key = `offline-list:${email}:${url}`;
   try {
@@ -244,7 +244,7 @@ async function getTecCachedViewer() {
 }
 
 async function cacheTecViewer(value = null) {
-  if (!value?.authenticated || !value?.user?.email) {
+  if (!value?.authenticated || !(value?.user?.storageIdentity || value?.user?.email)) {
     return;
   }
   resetCoachChatForAccount(value.user.id || value.user._id);
@@ -275,7 +275,7 @@ async function queueTecOfflineRequest(item = {}) {
     headers: item.headers || {},
     body: item.body || null,
     formSnapshot: item.formSnapshot || null,
-    ownerEmail: String(viewer?.user?.email || "").trim().toLowerCase(),
+    ownerEmail: String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase(),
     ownerAccountId: accountId,
     attempts: 0,
     lastError: "",
@@ -319,7 +319,7 @@ async function getTecOfflinePendingCount() {
     tecOfflineGetAll("recordings").catch(() => [])
   ]);
   const viewer = await getTecCachedViewer();
-  const email = String(viewer?.user?.email || "").trim().toLowerCase();
+  const email = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   if (!email) return 0;
   // Active capture is normal work, not an offline failure or a retryable upload.
   return outbox.filter(item => item.ownerEmail === email).length + recordings.filter(item => item.ownerEmail === email &&
@@ -368,7 +368,7 @@ function initTecNewClient(user) {
     button.disabled = true;
     try {
       const snapshot = scopes.map(selector => ({ selector, fields: Array.from(document.querySelector(selector)?.querySelectorAll("input,select,textarea") || []).filter(field => !["password", "file"].includes(field.type)).map(field => ({ name: field.name || field.id || "", value: field.value, checked: field.checked })) }));
-      const email = String(user.email || "").toLowerCase();
+      const email = String(user.storageIdentity || user.email || "").toLowerCase();
       const archive = { key: `visit-archive:${email}:${createTecOfflineId('visit')}`, ownerEmail: email, savedAt: new Date().toISOString(), value: snapshot };
       await tecOfflinePut("cache", archive);
       const forms = scopes.map(selector => document.querySelector(selector)).filter(node => node?.tagName === "FORM");
@@ -452,7 +452,7 @@ async function flushTecOfflineOutbox() {
 
   tecOutboxFlushPromise = (async () => {
     const viewer = await getTecCachedViewer().catch(() => null);
-    const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+    const viewerEmail = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
     if (globalThis.window?.TecNativeOffline) await verifyTecNativeSyncOwner(viewerEmail);
     const items = (await tecOfflineGetAll("outbox").catch(() => [])).sort((a, b) =>
       String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead")
@@ -654,7 +654,7 @@ async function saveTecOfflineRecording(recording = {}) {
     ...(current || {}),
     ...recording,
     localId: recording.localId || current?.localId || createTecOfflineId("recording"),
-    ownerEmail: recording.ownerEmail || current?.ownerEmail || String(viewer?.user?.email || "").trim().toLowerCase(),
+    ownerEmail: recording.ownerEmail || current?.ownerEmail || String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase(),
     createdAt: current?.createdAt || recording.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -779,7 +779,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
   if (!["ready", "syncing"].includes(recording.status)) return null;
 
   const viewer = await getTecCachedViewer().catch(() => null);
-  const viewerEmail = String(viewer?.user?.email || "").trim().toLowerCase();
+  const viewerEmail = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   if (!recording.ownerEmail || !viewerEmail || recording.ownerEmail !== viewerEmail || recording.consentConfirmed !== true) {
     return null;
   }
@@ -9615,12 +9615,12 @@ function renderCoachTeamCreatedCredentials(credentials = null) {
     return;
   }
 
-  if (!credentials?.email || !credentials?.temporaryPassword) {
+  if (!(credentials?.email || credentials?.username) || !credentials?.temporaryPassword) {
     wrap.hidden = true;
     return;
   }
 
-  emailNode.textContent = credentials.email;
+  emailNode.textContent = credentials.email || credentials.username;
   passwordNode.textContent = credentials.temporaryPassword;
   wrap.hidden = false;
 }
@@ -9652,7 +9652,7 @@ function renderCoachTeamSeats(seats = [], canManageSeats = false) {
           <div class="team-seat-head">
             <div>
               <strong>${escapeHtml(seat.seatLabel || seat.name || "Subcuenta")}</strong>
-              <span>${escapeHtml(seat.name || "Sin nombre")} · ${escapeHtml(seat.email || "Sin correo")}</span>
+              <span>${escapeHtml(seat.name || "Sin nombre")} · ${escapeHtml(seat.email || seat.username || "Sin correo")}</span>
             </div>
             <span class="team-seat-status" data-state="${escapeHtml(seat.seatStatus || "active")}">
               ${escapeHtml(formatTeamSeatStatusLabel(seat.seatStatus))}
@@ -9679,8 +9679,8 @@ function renderCoachTeamSeats(seats = [], canManageSeats = false) {
             >
               Ver actividad
             </button>
-            <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || "")}">
-              Copiar correo
+            <button type="button" class="nav-button" data-team-seat-copy-email="${escapeHtml(seat.email || seat.username || "")}">
+              ${seat.email ? "Copiar correo" : "Copiar usuario"}
             </button>
             <button
               type="button"
@@ -9796,7 +9796,7 @@ function renderCoachTeamActivity(payload = null, activeTab = "summary") {
     nameNode.textContent = seat.seatLabel || seat.name || "Actividad de representante";
   }
   if (copyNode) {
-    copyNode.textContent = `${seat.name || "Representante"} · ${seat.email || "Sin correo"} · ${formatTeamSeatRoleLabel(
+    copyNode.textContent = `${seat.name || "Representante"} · ${seat.email || seat.username || "Sin correo"} · ${formatTeamSeatRoleLabel(
       seat.teamRole
     )}`;
   }
@@ -16601,7 +16601,7 @@ function initCoachDemoRecorder() {
   const renderLocalRecovery = async () => {
     const renderId = ++recoveryRenderId;
     const viewer = await getTecCachedViewer();
-    const email = String(viewer?.user?.email || "").toLowerCase();
+    const email = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").toLowerCase();
     const rows = (await tecOfflineGetAll("recordings")).filter(row => row.ownerEmail === email && !tecActiveRecordingIds.has(row.localId));
     const nextUrls = [];
     const fragment = document.createDocumentFragment();
@@ -16629,7 +16629,7 @@ function initCoachDemoRecorder() {
         connectionResult.textContent = "Consultando TEC sin enviar audio ni solicitar un análisis…";
         try {
           const response = await apiRequest("/api/coach/me", { timeoutMs: 8000 });
-          if (!response.authenticated || String(response.user?.email || "").toLowerCase() !== email) {
+          if (!response.authenticated || String(response.user?.storageIdentity || response.user?.email || "").toLowerCase() !== email) {
             throw Object.assign(new Error("Entra con la misma cuenta que guardó esta grabación."), { status: 401 });
           }
           connectionResult.textContent = "TEC respondió: tienes conexión con el servidor y la sesión es válida. Esto no confirma todavía el envío ni el análisis del audio.";
