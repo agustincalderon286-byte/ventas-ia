@@ -1,0 +1,2569 @@
+{
+  "version": 1,
+  "bookId": "el-libro-de-los-cinco-anillos",
+  "textSha256": "6d2c143b7f74ae432d1724884deab84ebaf9101299891054d13802c71722a044",
+  "duration": 6404.51,
+  "trailingSeparator": "\n",
+  "cues": [
+    {
+      "id": "S01-U0001",
+      "chapter": 0,
+      "start": 2.0,
+      "end": 7.12,
+      "text": "El libro de los cinco anillos.\n\nMiyamoto Musashi.\n\nPrólogo.",
+      "separator": ""
+    },
+    {
+      "id": "S01-U0002",
+      "chapter": 0,
+      "start": 7.67,
+      "end": 30.55,
+      "text": "He pasado muchos años entrenando en el camino de la estrategia de mi escuela, llamada Niten Ichi-ryū. Ahora me propongo escribir por primera vez lo que he aprendido. Al comienzo del décimo mes del vigésimo año de la era Kan'ei, subí al monte Iwato, en Higo, en la isla de Kyūshū. Rendí homenaje al Cielo, reverencié a Kannon y me coloqué ante el Buda.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S01-U0003",
+      "chapter": 0,
+      "start": 30.8,
+      "end": 38.8,
+      "text": "Yo, Shinmen Musashi Fujiwara no Genshin, guerrero nacido en Harima, he llegado a los sesenta años.",
+      "separator": " "
+    },
+    {
+      "id": "S01-U0004",
+      "chapter": 0,
+      "start": 39.35,
+      "end": 62.79,
+      "text": "Desde mi juventud me dediqué al camino de la estrategia. A los trece años combatí por primera vez y vencí a Arima Kihei, un practicante de la escuela Shintō-ryū. A los dieciséis derroté a un guerrero muy fuerte de la provincia de Tajima, llamado Akiyama. A los veintiuno fui a la capital y me enfrenté en varias ocasiones a maestros de distintas partes del país;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S01-U0005",
+      "chapter": 0,
+      "start": 63.04,
+      "end": 80.48,
+      "text": "en todos esos encuentros obtuve la victoria. Después recorrí provincias y lugares diversos, y me medí con practicantes de muchas escuelas. Combatí más de sesenta veces sin perder una sola. Todo esto ocurrió entre mis trece años y mis veintiocho o veintinueve.",
+      "separator": " "
+    },
+    {
+      "id": "S01-U0006",
+      "chapter": 0,
+      "start": 81.03,
+      "end": 102.87,
+      "text": "Al pasar de los treinta y mirar hacia atrás, comprendí que aquellas victorias no se debían a que hubiera alcanzado la plenitud de la estrategia. Quizá poseía una aptitud natural y no me había apartado de los principios del Cielo; quizá las otras escuelas tenían deficiencias. Desde entonces entrené por la mañana y por la noche, buscando una comprensión más profunda.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S01-U0007",
+      "chapter": 0,
+      "start": 103.12,
+      "end": 122.72,
+      "text": "Fue alrededor de los cincuenta años cuando, por mí mismo, llegué a comprender el camino de la estrategia.\n\nDesde entonces he dejado pasar los años sin tener que buscar otro camino. Al aplicar los principios de la estrategia a las diversas artes y habilidades, no he necesitado un maestro en ninguna de ellas.",
+      "separator": " "
+    },
+    {
+      "id": "S01-U0008",
+      "chapter": 0,
+      "start": 123.27,
+      "end": 144.55,
+      "text": "Para escribir este libro no tomo prestadas antiguas sentencias del budismo o del confucianismo, ni utilizo relatos militares o tratados de guerra del pasado. Expongo la verdadera intención de mi propia escuela. Tomando al Cielo y a Kannon como espejos, comienzo a escribir en la noche del décimo día del décimo mes, a la hora del Tigre.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0001",
+      "chapter": 1,
+      "start": 149.65,
+      "end": 164.85,
+      "text": "Rollo de la Tierra.\n\nLa estrategia es el camino de los guerreros. Los comandantes deben dedicarse especialmente a él, y también los soldados deben conocerlo. Sin embargo, en el mundo de hoy no hay guerreros que comprendan con certeza este camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0002",
+      "chapter": 1,
+      "start": 165.4,
+      "end": 192.04000000000002,
+      "text": "Existen muchos caminos reconocidos: el budismo, que ayuda a las personas; el confucianismo, que aclara el camino de las letras; la medicina, que cura las enfermedades; la poesía, cuyos maestros enseñan a componer poemas waka. También hay quienes se dedican al té, al tiro con arco y a las demás artes y habilidades. Cada persona practica según su inclinación y se entrega a lo que le gusta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0003",
+      "chapter": 1,
+      "start": 192.29000000000002,
+      "end": 211.89,
+      "text": "Son pocos los que se sienten atraídos por el camino de la estrategia.\n\nPara el guerrero existen los dos caminos, el de las letras y el de las armas. Su deber es cultivar ambos. Aunque carezca de aptitudes naturales, debe esforzarse en el camino de las armas hasta donde se lo permitan sus capacidades.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0004",
+      "chapter": 1,
+      "start": 212.44,
+      "end": 233.56,
+      "text": "Si se examina lo que suelen pensar los guerreros, parece que se reducen a cultivar la disposición a morir. Pero la decisión de morir no pertenece solamente a los guerreros. Un monje, una mujer o un campesino, cuando conoce su deber y siente vergüenza, puede decidir morir sin vacilar. En esto no hay diferencia entre ellos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0005",
+      "chapter": 1,
+      "start": 234.11,
+      "end": 253.71,
+      "text": "Lo fundamental del camino de la estrategia del guerrero consiste en superar a los demás en cualquier circunstancia: vencer en un combate individual o en una batalla entre muchas personas, alcanzar renombre y afirmarse por el bien de su señor o por el suyo propio. Todo esto se logra mediante la virtud de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0006",
+      "chapter": 1,
+      "start": 254.26,
+      "end": 273.14,
+      "text": "Habrá quienes piensen que, por mucho que aprendan este camino, no les servirá cuando llegue el momento de aplicarlo. Por eso hay que entrenar de manera que resulte útil en cualquier ocasión y enseñarlo para que sirva en todos los asuntos. Ese es el verdadero camino de la estrategia.\n\nEl camino de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0007",
+      "chapter": 1,
+      "start": 273.69,
+      "end": 289.05,
+      "text": "Tanto en China como en Japón se ha llamado maestros de la estrategia a quienes dominan este camino. Ningún guerrero debería dejar de estudiarlo. En tiempos recientes, quienes viven de llamarse estrategas se ocupan únicamente del arte de la espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0008",
+      "chapter": 1,
+      "start": 289.3,
+      "end": 304.98,
+      "text": "Los sacerdotes de los santuarios de Kashima y Katori, en la provincia de Hitachi, fundaron distintas escuelas afirmando que sus enseñanzas provenían de las divinidades, y recorrieron las provincias para transmitirlas. Todo esto es relativamente reciente.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0009",
+      "chapter": 1,
+      "start": 305.53,
+      "end": 329.37,
+      "text": "Desde antiguo se habla de las diez destrezas y las siete artes. Entre ellas se encuentra el conocimiento de los principios y de la ventaja. Precisamente por tratarse de esos principios, su alcance no debe limitarse al manejo de la espada. Si se atiende únicamente a la destreza de la espada, ni siquiera se llegará a comprenderla de verdad; mucho menos se comprenderá el arte de la guerra.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0010",
+      "chapter": 1,
+      "start": 329.92,
+      "end": 352.96000000000004,
+      "text": "Al mirar el mundo, veo que las personas convierten sus artes en mercancías, se ofrecen a sí mismas como mercancías y hasta preparan sus instrumentos pensando en venderlos. Entre la flor y el fruto, abundan las flores y escasean los frutos. Esto ocurre sobre todo en la estrategia: se añaden adornos, se hacen florecer las técnicas y se presume de ellas;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0011a",
+      "chapter": 1,
+      "start": 353.21000000000004,
+      "end": 360.17,
+      "text": "se habla de un dojo o de dos dojos, y se piensa en sacar provecho enseñando y aprendiendo este camino.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0011b",
+      "chapter": 1,
+      "start": 360.47,
+      "end": 366.23,
+      "text": "Alguien dijo que una estrategia aprendida a medias es el origen de grandes heridas.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0011c",
+      "chapter": 1,
+      "start": 366.53,
+      "end": 368.53,
+      "text": "La frase es verdadera.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0011d",
+      "chapter": 1,
+      "start": 368.83000000000004,
+      "end": 373.31,
+      "text": "En general, las personas se ganan la vida por cuatro caminos:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0011e",
+      "chapter": 1,
+      "start": 373.61,
+      "end": 379.77,
+      "text": "el del guerrero, el del agricultor, el del comerciante y el del artesano.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0012",
+      "chapter": 1,
+      "start": 380.32,
+      "end": 396.96000000000004,
+      "text": "El primero que voy a explicar es el de la agricultura. El agricultor prepara sus distintas herramientas y pasa las estaciones sin descuidar los cambios del año. Así transcurren para él la primavera y el otoño. Ese es el camino del agricultor.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0013",
+      "chapter": 1,
+      "start": 397.51,
+      "end": 415.03,
+      "text": "El segundo es el del comercio. Quien elabora sake consigue los instrumentos que necesita, distingue lo bueno de lo malo y obtiene con ello su sustento. En cualquier comercio, cada persona realiza su trabajo y vive de sus ganancias. Ese es el camino del comerciante.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0014",
+      "chapter": 1,
+      "start": 415.58000000000004,
+      "end": 433.1,
+      "text": "El tercero es el del guerrero. El guerrero prepara distintas armas y debe distinguir las cualidades de cada una. Ese es su camino. Quien no se interesa por sus armas ni aprende las ventajas de cada instrumento muestra una preparación muy escasa para ser guerrero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0015",
+      "chapter": 1,
+      "start": 433.65,
+      "end": 451.33000000000004,
+      "text": "El cuarto es el del artesano. El carpintero prepara herramientas de muchas clases, aprende a utilizarlas bien, comprueba sus trazos con la escuadra y vive de trabajar sin descanso en su oficio. Estos son los cuatro caminos de guerreros, agricultores, comerciantes y artesanos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0016",
+      "chapter": 1,
+      "start": 451.88,
+      "end": 472.12,
+      "text": "Voy a explicar la estrategia comparándola con el oficio del carpintero. Esta comparación nace de la idea de una casa. Se habla de las casas de la corte, de las casas guerreras, de las Cuatro Casas, de una casa que cae y de otra que continúa. También se habla de escuelas, estilos y casas de enseñanza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0017",
+      "chapter": 1,
+      "start": 472.37,
+      "end": 489.16999999999996,
+      "text": "Por eso tomo la casa como punto de partida para compararla con el oficio del carpintero. El nombre del gran carpintero expresa la idea de un gran trabajo de planificación; como el camino de la estrategia exige una planificación amplia, lo explicaré mediante esta comparación.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0018",
+      "chapter": 1,
+      "start": 489.72,
+      "end": 505.24,
+      "text": "Si deseas aprender el arte de la guerra, medita sobre este libro. El maestro debe ser la aguja y el discípulo, el hilo: ambos han de seguir unidos, entrenando sin interrupción.\n\nLa estrategia comparada con el oficio del carpintero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0019",
+      "chapter": 1,
+      "start": 505.78999999999996,
+      "end": 534.51,
+      "text": "El general es como un maestro carpintero. Debe comprender las reglas generales, verificar las de su territorio y conocer las de su propia casa. El maestro carpintero domina los trazados de templos, pagodas y monasterios, distingue las características de palacios y grandes edificios, dirige a sus trabajadores y levanta las construcciones. En esto, el maestro de los carpinteros y el jefe de los guerreros cumplen una función semejante.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0020",
+      "chapter": 1,
+      "start": 535.0600000000001,
+      "end": 561.22,
+      "text": "Al construir una casa se debe distribuir la madera. Las piezas rectas, sin nudos y de buen aspecto se destinan a los pilares de la fachada. Las que tienen algunos nudos, pero son rectas y fuertes, se utilizan para los pilares de la parte posterior. La madera de buen aspecto y sin nudos, aunque sea débil, sirve, según el caso, para umbrales, dinteles, puertas y paneles corredizos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0021",
+      "chapter": 1,
+      "start": 561.47,
+      "end": 581.07,
+      "text": "La madera fuerte, aunque tenga nudos o esté torcida, se coloca donde la casa necesita resistencia, después de examinarla bien. Así la construcción durará y será difícil que se derrumbe. Las piezas débiles, torcidas y llenas de nudos se pueden usar en los andamios y, después, como leña.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0022",
+      "chapter": 1,
+      "start": 581.62,
+      "end": 604.82,
+      "text": "Para dirigir a sus carpinteros, el maestro debe conocer quiénes tienen mayor, mediana o menor habilidad. A unos les encarga los acabados del espacio principal; a otros, las puertas, los paneles, los umbrales, los dinteles o los techos. A los menos capaces les manda colocar las vigas del piso y, a los que tienen todavía menos habilidad, tallar cuñas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0023",
+      "chapter": 1,
+      "start": 605.07,
+      "end": 631.95,
+      "text": "Cuando se distingue a las personas y se les asigna el trabajo adecuado, la obra avanza con eficacia y se termina bien.\n\nConseguir que el trabajo avance, mantener el buen orden de todas las tareas, conocer los distintos estados de ánimo de los trabajadores, alentarlos y reconocer las exigencias irrazonables: todo esto debe estar en la mente del maestro carpintero. Lo mismo se aplica a los principios de la estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0024",
+      "chapter": 1,
+      "start": 632.5,
+      "end": 657.46,
+      "text": "En el camino de la estrategia, el soldado se parece al carpintero que afila sus propias herramientas, prepara los distintos instrumentos de trabajo, los guarda en su caja y cumple los encargos del maestro. Con la azuela da forma a pilares y vigas; con el cepillo trabaja pisos y estantes; realiza calados y tallas, comprueba las escuadras y termina con destreza hasta las esquinas y los detalles.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0025",
+      "chapter": 1,
+      "start": 657.71,
+      "end": 660.59,
+      "text": "Ese es el oficio del carpintero.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0026",
+      "chapter": 1,
+      "start": 661.14,
+      "end": 687.6999999999999,
+      "text": "Quien aprende bien el trabajo con sus manos y domina el uso de la escuadra podrá llegar a ser maestro. El carpintero debe tener herramientas que corten bien y afilarlas con frecuencia. Con ellas debe saber fabricar un armario de altar, una biblioteca, una mesa, un escritorio, una lámpara, una tabla de cocina e incluso la tapa de una olla. Hacer bien todo esto pertenece a la especialidad del carpintero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0027",
+      "chapter": 1,
+      "start": 687.9499999999999,
+      "end": 716.03,
+      "text": "Así debe proceder también el soldado. Examina esta comparación con atención.\n\nEn el trabajo del carpintero es fundamental evitar las deformaciones, ajustar bien las uniones, cepillar correctamente, no depender del pulido y conseguir que la obra no se tuerza después. Si deseas aprender este camino, pon el corazón en cada una de las cosas que escribo y estúdialas cuidadosamente.\n\nPor qué este libro de estrategia se divide en cinco rollos.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0028",
+      "chapter": 1,
+      "start": 716.5799999999999,
+      "end": 728.26,
+      "text": "He separado la exposición en cinco partes para que se conozca la diferencia entre ellas. Por eso escribo los cinco rollos de Tierra, Agua, Fuego, Viento y Vacío.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0029",
+      "chapter": 1,
+      "start": 728.81,
+      "end": 751.6899999999999,
+      "text": "En Tierra presento las ideas generales de la estrategia y la perspectiva de mi escuela. Mediante la técnica de la espada por sí sola es difícil alcanzar el verdadero camino. Hay que conocer lo pequeño a partir de lo grande y avanzar de lo superficial a lo profundo. Como primero se prepara y se nivela el terreno de un camino recto, he llamado Tierra a este primer rollo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0030",
+      "chapter": 1,
+      "start": 752.24,
+      "end": 772.16,
+      "text": "El segundo es Agua. Tomo el agua como modelo para que la mente llegue a ser como ella. El agua adopta la forma de un recipiente cuadrado o redondo; puede ser una gota o convertirse en un océano. Tiene el azul de una poza profunda, y tomo su claridad para explicar en este rollo mi escuela.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0031",
+      "chapter": 1,
+      "start": 772.7099999999999,
+      "end": 786.87,
+      "text": "Cuando distingues con certeza los principios de la espada y puedes vencer libremente a un adversario, puedes vencer a cualquier persona del mundo. La intención de vencer a uno es la misma que la de vencer a mil o a diez mil enemigos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0032",
+      "chapter": 1,
+      "start": 787.12,
+      "end": 810.16,
+      "text": "En la estrategia del comandante se trata de convertir lo pequeño en grande, como cuando, a partir de una figura de un shaku, se construye un gran Buda. Es difícil explicar por escrito todos los detalles de algo así. Comprender diez mil cosas a partir de una sola: ese es un principio de la estrategia. En el rollo del Agua expongo las enseñanzas de mi escuela.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0033",
+      "chapter": 1,
+      "start": 810.7099999999999,
+      "end": 833.59,
+      "text": "El tercero es Fuego. En él escribo sobre el combate. El fuego puede ser grande o pequeño y tiene un carácter impetuoso; por eso lo tomo para hablar de la batalla. El camino del combate es el mismo en una lucha de uno contra uno que en una batalla de diez mil contra diez mil. Debes ampliar tu mente y examinarlo con una perspectiva que no sea estrecha.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0034",
+      "chapter": 1,
+      "start": 834.14,
+      "end": 853.34,
+      "text": "Lo grande es fácil de ver; lo pequeño es difícil. La razón es que una gran cantidad de personas no cambia de dirección de inmediato, mientras que una sola persona depende de una sola mente y puede cambiar con rapidez. Por eso resulta difícil conocer los detalles pequeños. Estudia este punto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0035",
+      "chapter": 1,
+      "start": 853.59,
+      "end": 868.31,
+      "text": "Como los asuntos del rollo del Fuego ocurren en instantes, es esencial entrenarlos todos los días hasta que se vuelvan habituales y la mente no pierda su estabilidad. Por eso he dedicado el rollo del Fuego al combate y a la victoria.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0036",
+      "chapter": 1,
+      "start": 868.86,
+      "end": 890.6999999999999,
+      "text": "El cuarto es Viento. Este rollo no trata de mi escuela, sino de las diferentes escuelas de estrategia que existen en el mundo. La palabra viento abarca también los estilos del pasado, los de hoy y las maneras de cada casa. Por eso describo con claridad las prácticas de las diversas escuelas y doy a este rollo el nombre de Viento.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0037",
+      "chapter": 1,
+      "start": 891.25,
+      "end": 910.53,
+      "text": "Si no conoces bien a los demás, difícilmente podrás comprenderte a ti mismo. En cualquier actividad es posible seguir un camino desviado. Aunque alguien se dedique a él todos los días y crea que es bueno, si su mente se aparta de lo correcto, al mirarlo desde un punto de vista recto se verá que no es el verdadero camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0038",
+      "chapter": 1,
+      "start": 910.78,
+      "end": 924.3,
+      "text": "Sin llegar al fondo de ese camino, una pequeña desviación de la mente termina convirtiéndose en una desviación muy grande. En cualquier cosa, excederse equivale a quedarse corto. Examina esto cuidadosamente.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0039",
+      "chapter": 1,
+      "start": 924.85,
+      "end": 943.49,
+      "text": "Es comprensible que el público piense que las otras enseñanzas de estrategia se reducen al arte de la espada. Los principios y las técnicas de mi estrategia tienen un carácter distinto. Para dar a conocer las enseñanzas de estrategia que existen, describo las otras escuelas en el rollo del Viento.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0040",
+      "chapter": 1,
+      "start": 944.04,
+      "end": 972.12,
+      "text": "El quinto es Vacío. Si hablamos del vacío, ¿qué podrá llamarse enseñanza oculta y qué enseñanza de entrada? Cuando comprendes los principios, dejas de estar atado a ellos. Te mueves libremente por el camino de la estrategia y alcanzas por ti mismo una eficacia extraordinaria. Te ajustas al momento, reconoces el ritmo, golpeas espontáneamente y aciertas espontáneamente. Todo esto pertenece al camino del vacío.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0041",
+      "chapter": 1,
+      "start": 972.37,
+      "end": 981.73,
+      "text": "En este último rollo escribo cómo entrar, por uno mismo, en el verdadero camino.\n\nPor qué esta escuela se llama la escuela de las dos espadas.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0042",
+      "chapter": 1,
+      "start": 982.28,
+      "end": 1007.72,
+      "text": "Hablo de dos espadas porque todos los guerreros, tanto los comandantes como los soldados, tienen el deber de llevar dos espadas al cinto. Antiguamente se llamaban tachi y katana; ahora se llaman katana y wakizashi. No hace falta explicar con detalle que un guerrero lleva estas dos armas. En nuestro país, las conozca bien o no, llevarlas al cinto forma parte de su condición.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0043",
+      "chapter": 1,
+      "start": 1007.97,
+      "end": 1021.09,
+      "text": "Llamo a mi escuela la escuela de las dos espadas para que se comprendan las ventajas de ambas. Las lanzas y las naginatas pertenecen también a los instrumentos del guerrero, aunque sean armas de otra clase.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0044",
+      "chapter": 1,
+      "start": 1021.64,
+      "end": 1047.72,
+      "text": "En mi escuela, quien comienza a aprender debe practicar llevando una espada en cada mano. Cuando uno arriesga la vida, desea aprovechar todos sus instrumentos. No debería morir dejando un arma sin usar, guardada en su cintura. Sin embargo, al tener un arma en cada mano, al principio cuesta mover libremente ambos brazos. La finalidad es aprender a manejar la espada larga con una sola mano.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0045",
+      "chapter": 1,
+      "start": 1047.97,
+      "end": 1058.69,
+      "text": "Las grandes armas, como la lanza y la naginata, son otra cuestión; la katana y el wakizashi son instrumentos que se deben poder manejar con una mano.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0046",
+      "chapter": 1,
+      "start": 1059.24,
+      "end": 1083.64,
+      "text": "Sujetar la espada larga con las dos manos resulta inconveniente al montar a caballo, al correr, en pantanos, sobre piedras, en caminos difíciles y en medio de una multitud. Si llevas un arco, una lanza o cualquier otra arma en la mano izquierda, tienes que manejar la espada con una sola mano. Por eso, hacer de la postura a dos manos una regla fija no es el verdadero camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0047",
+      "chapter": 1,
+      "start": 1083.89,
+      "end": 1106.05,
+      "text": "Si en alguna ocasión no puedes abatir al adversario con una mano, utiliza las dos. No debe ser algo que te haga perder tiempo.\n\nPracticamos con dos espadas para aprender primero a mover la larga con una sola mano. Cuando se toma una espada por primera vez, parece pesada y difícil de manejar. Ocurre lo mismo al comenzar a tensar un arco o a mover una naginata.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0048",
+      "chapter": 1,
+      "start": 1106.3,
+      "end": 1123.9,
+      "text": "Pero, al familiarizarte con cada arma, adquieres fuerza para el arco y, al acostumbrarte a mover la espada, obtienes la fuerza propia de su manejo y puedes usarla bien. El camino de la espada no consiste en moverla deprisa. Esto se comprenderá en el segundo rollo, Agua.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0049",
+      "chapter": 1,
+      "start": 1124.45,
+      "end": 1146.13,
+      "text": "La espada larga se emplea en lugares amplios; el wakizashi, en lugares estrechos. Esta es una intención fundamental del camino. En mi escuela se vence con un arma larga y se vence con una corta. Por eso no establezco una longitud fija para la espada. El camino de mi escuela consiste en poder vencer con cualquier arma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0050",
+      "chapter": 1,
+      "start": 1146.38,
+      "end": 1171.02,
+      "text": "Llevar dos espadas ofrece ventajas frente a llevar solamente una cuando una persona combate contra muchos adversarios o se enfrenta a alguien que se ha atrincherado. No hace falta escribir aquí todos los detalles. A partir de una cosa, debes comprender diez mil. Cuando domines el camino de la estrategia, no habrá nada que seas incapaz de advertir. Examínalo cuidadosamente.\n\nEl sentido de los dos caracteres de estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0051",
+      "chapter": 1,
+      "start": 1171.57,
+      "end": 1195.8100000000002,
+      "text": "La gente llama estratega a quien ha aprendido a manejar la espada. Pero, en las artes del guerrero, quien dispara bien el arco se llama arquero; quien domina el arcabuz, tirador; quien domina la lanza, lancero; y quien ha aprendido la naginata recibe el nombre de practicante de esa arma. Según esto, a quien domina la espada larga o el wakizashi se le podría llamar simplemente espadachín.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0052",
+      "chapter": 1,
+      "start": 1196.3600000000001,
+      "end": 1219.0800000000002,
+      "text": "El arco, el arcabuz, la naginata y la lanza son instrumentos del guerrero y, por tanto, pertenecen todos al camino de la estrategia. Aun así, hay una razón para que ese nombre se relacione especialmente con la espada. Por la virtud de la espada se gobierna el mundo y se gobierna uno mismo. Por eso la espada es el origen de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0053",
+      "chapter": 1,
+      "start": 1219.63,
+      "end": 1242.19,
+      "text": "Si adquieres esa virtud, una persona podrá vencer con certeza a diez. Si una persona vence a diez, cien podrán vencer a mil y mil podrán vencer a diez mil. Por eso, en la estrategia de mi escuela, una persona y diez mil se rigen por los mismos principios, y todo el camino del guerrero, sin dejar nada fuera, recibe el nombre de estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0054",
+      "chapter": 1,
+      "start": 1242.74,
+      "end": 1268.26,
+      "text": "Los caminos del confuciano, del budista, del aficionado al té, del maestro de conducta y del bailarín no son el camino del guerrero. Sin embargo, aunque un camino sea distinto del tuyo, conocer ampliamente los caminos te permite encontrar lo que tienen en común. Para cualquier persona es esencial perfeccionar bien su propio camino.\n\nConocer las ventajas de las armas en la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0055",
+      "chapter": 1,
+      "start": 1268.8100000000002,
+      "end": 1287.13,
+      "text": "Para comprender las ventajas de las armas hay que saber que cada una resulta apropiada según la ocasión y las circunstancias. El wakizashi ofrece muchas ventajas en un espacio estrecho o cuando te acercas al cuerpo del adversario. La espada larga resulta útil en casi cualquier lugar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0056",
+      "chapter": 1,
+      "start": 1287.68,
+      "end": 1313.52,
+      "text": "En el campo de batalla, la naginata tiene cierta desventaja frente a la lanza: la lanza permite tomar la iniciativa, mientras que la naginata tiende a quedar en una posición de respuesta. Con un grado semejante de preparación, la lanza ofrece algo más de fuerza. Pero tanto la lanza como la naginata tienen poca utilidad en espacios cerrados, y tampoco son apropiadas contra alguien atrincherado en un lugar estrecho.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0057",
+      "chapter": 1,
+      "start": 1313.77,
+      "end": 1329.6100000000001,
+      "text": "Son principalmente armas del campo de batalla. Aunque allí resultan importantes, si uno aprende sus técnicas pensando solamente en una sala de práctica y se pierde en detalles, olvidando el verdadero camino, no podrá utilizarlas cuando corresponda.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0058",
+      "chapter": 1,
+      "start": 1330.16,
+      "end": 1349.6000000000001,
+      "text": "El arco es adecuado para avanzar y retirarse en batalla. Permite entrar rápidamente en acción junto a las lanzas y en los flancos de las formaciones, por lo que resulta especialmente útil en combates a campo abierto. En cambio, tiene limitaciones al atacar un castillo o cuando el enemigo está a más de veinte ken.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0059",
+      "chapter": 1,
+      "start": 1349.8500000000001,
+      "end": 1361.93,
+      "text": "Hoy, tanto en el tiro con arco como en muchas otras artes, hay muchas flores y pocos frutos. Ese tipo de habilidad ornamental difícilmente sirve cuando llega un momento decisivo.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0060",
+      "chapter": 1,
+      "start": 1362.48,
+      "end": 1383.44,
+      "text": "Para la defensa dentro de un castillo, nada iguala al arcabuz. También ofrece muchas ventajas a campo abierto antes de comenzar el choque, pero, una vez trabada la batalla, su utilidad disminuye. Una ventaja del arco es que se puede ver la flecha que se dispara; una limitación del arcabuz es que no se puede ver la bala. Examina bien este punto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0061",
+      "chapter": 1,
+      "start": 1383.99,
+      "end": 1405.75,
+      "text": "El caballo debe ser resistente y carecer de malos hábitos. En general, las armas y los instrumentos del guerrero deben cumplir su función con seguridad: el caballo debe marchar bien; la katana y el wakizashi, cortar bien; la lanza y la naginata, penetrar bien; el arco y el arcabuz, ser fuertes y no fallar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0062",
+      "chapter": 1,
+      "start": 1406.3000000000002,
+      "end": 1428.14,
+      "text": "No debes tener una preferencia exclusiva por un arma ni por otro instrumento. El exceso equivale a la insuficiencia. En lugar de imitar a los demás, procura que tus armas se adapten a ti y a tus manos. Para comandantes y soldados es malo aferrarse al gusto por unas cosas y al rechazo de otras. Hay que reflexionar y practicar.\n\nEl ritmo en la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0063",
+      "chapter": 1,
+      "start": 1428.69,
+      "end": 1446.2900000000002,
+      "text": "Todo tiene un ritmo, pero, en particular, es difícil dominar el ritmo de la estrategia sin entrenamiento. Hay ritmos que se manifiestan con claridad, como los de la danza y los de los instrumentos de cuerda y de viento que tocan los músicos: todos dependen de una buena coordinación.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0064",
+      "chapter": 1,
+      "start": 1446.5400000000002,
+      "end": 1460.6200000000001,
+      "text": "En las artes del guerrero también hay ritmo y medida al disparar el arco o el arcabuz y al montar a caballo. En ninguna de las artes y habilidades se puede actuar en contra del ritmo. También lo que no tiene forma visible posee un ritmo.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0065",
+      "chapter": 1,
+      "start": 1461.17,
+      "end": 1485.0900000000001,
+      "text": "En la vida del guerrero hay un ritmo para ascender en el servicio y otro para descender, un ritmo en el que las cosas encajan y otro en el que no encajan. En el comercio hay un ritmo para adquirir una fortuna y otro por el que incluso una fortuna se pierde. Cada camino presenta sus diferencias de ritmo. Hay ritmos de prosperidad y de decadencia en todas las cosas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0066",
+      "chapter": 1,
+      "start": 1485.3400000000001,
+      "end": 1508.14,
+      "text": "Debes distinguirlos con cuidado.\n\nEn la estrategia existen muchas clases de ritmo. Primero hay que conocer el ritmo que encaja y distinguir el que difiere. Entre los ritmos grandes y pequeños, lentos y rápidos, hay que reconocer el momento para actuar, el ritmo de los intervalos y el que rompe el ritmo de otro. Todo esto es esencial en la estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0067",
+      "chapter": 1,
+      "start": 1508.39,
+      "end": 1530.71,
+      "text": "Sin distinguir ese ritmo que rompe el del adversario, no es posible dominar este camino con certeza.\n\nEn el combate debes reconocer el ritmo de cada enemigo y emplear un ritmo que no espere. Vences al actuar desde un ritmo verdadero. En todos los rollos doy una importancia especial al ritmo. Examina lo que escribo y entrénalo cuidadosamente.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0068",
+      "chapter": 1,
+      "start": 1531.26,
+      "end": 1558.22,
+      "text": "Al practicar cada mañana y cada noche la estrategia de mi escuela, la mente se amplía por sí misma. Lo que transmito al mundo como estrategia para muchos y para uno queda escrito por primera vez en estos cinco rollos: Tierra, Agua, Fuego, Viento y Vacío.\n\nQuien desee aprender mi estrategia debe seguir estos principios:\n\nPrimero: piensa con rectitud.\n\nSegundo: entrénate en el camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0069",
+      "chapter": 1,
+      "start": 1558.77,
+      "end": 1584.93,
+      "text": "Tercero: entra en contacto con las diversas artes.\n\nCuarto: conoce los caminos de los distintos oficios.\n\nQuinto: distingue el beneficio y el perjuicio de cada cosa.\n\nSexto: desarrolla tu criterio para juzgar todas las cosas.\n\nSéptimo: percibe y comprende lo que no se ve.\n\nOctavo: presta atención incluso a lo más pequeño.\n\nNoveno: no hagas lo que no sirve de nada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0070",
+      "chapter": 1,
+      "start": 1585.48,
+      "end": 1607.0,
+      "text": "En términos generales, estos son los principios. Tenlos presentes y entrena el camino de la estrategia. Si te limitas a un solo ámbito y no contemplas ampliamente lo que es correcto, será difícil que llegues a dominarlo. Una vez que aprendas este método, no deberías ser derrotado, ni siquiera al enfrentarte solo a veinte o treinta adversarios.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0071",
+      "chapter": 1,
+      "start": 1607.5500000000002,
+      "end": 1628.0300000000002,
+      "text": "Si mantienes viva la estrategia en tu ánimo y practicas el camino recto, vencerás con las manos y también con la mirada. Si el entrenamiento te da libertad en todo el cuerpo, vencerás con el cuerpo; y, si tu mente está familiarizada con este camino, vencerás también con la mente. Llegado a ese punto, ¿cómo podrías ser derrotado?",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0072",
+      "chapter": 1,
+      "start": 1628.5800000000002,
+      "end": 1651.46,
+      "text": "En la estrategia a gran escala sobresaldrás al reunir personas capaces, al dirigir a tus hombres, al conducirte correctamente, al gobernar el territorio, al sostener a la población y al cumplir las normas de la sociedad. Saber cómo no ser superado en ninguno de estos caminos, sostenerte a ti mismo y elevar tu nombre: ese es el camino provechoso de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0073a",
+      "chapter": 1,
+      "start": 1652.01,
+      "end": 1656.17,
+      "text": "Día doce del quinto mes del segundo año de la era Shōhō.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S02-U0073b",
+      "chapter": 1,
+      "start": 1656.47,
+      "end": 1660.63,
+      "text": "Shinmen Musashi no Kami Genshin, con su sello.",
+      "separator": " "
+    },
+    {
+      "id": "S02-U0073c",
+      "chapter": 1,
+      "start": 1660.93,
+      "end": 1663.0900000000001,
+      "text": "A Terao Magonojō.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0001",
+      "chapter": 2,
+      "start": 1668.19,
+      "end": 1670.1100000000001,
+      "text": "Rollo del Agua.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0002",
+      "chapter": 2,
+      "start": 1670.66,
+      "end": 1696.26,
+      "text": "La estrategia de Niten Ichi-ryū toma el agua como fundamento de su espíritu y aplica sus métodos según las circunstancias. Por eso, en este rollo del Agua expongo las trayectorias de la espada de mi escuela. Es difícil describir todos los detalles de este camino tal como los concibo. Aunque las palabras resulten insuficientes, sus principios deben poder comprenderse. Reflexiona sobre cada expresión y cada carácter de lo escrito aquí.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0003",
+      "chapter": 2,
+      "start": 1696.51,
+      "end": 1719.63,
+      "text": "Si te limitas a una idea general, te apartarás muchas veces del camino.\n\nAunque explique los principios de la estrategia como un combate entre dos personas, debes comprenderlos también como una batalla entre diez mil hombres de cada lado. Es esencial que los contemples a gran escala. En este camino, una pequeña equivocación en la orientación puede extraviarte y llevarte por un mal camino.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0004",
+      "chapter": 2,
+      "start": 1720.18,
+      "end": 1744.66,
+      "text": "La lectura de estas páginas, por sí sola, no te hará alcanzar la estrategia. Debes incorporar a tu propia persona lo que aquí está escrito. No lo consideres simplemente algo que lees o aprendes. No hagas una imitación: convierte sus principios en algo descubierto por tu propia mente. Hazlos siempre parte de ti y trabájalos a fondo.\n\nLa disposición de la mente en la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0005",
+      "chapter": 2,
+      "start": 1745.21,
+      "end": 1768.49,
+      "text": "En el camino de la estrategia, tu disposición mental no debe diferir de la habitual. Tanto en la vida corriente como en el combate, mantén una mente amplia y recta, sin tensarla demasiado ni dejarla floja. Colócala en el centro, sin inclinarla hacia un lado. Déjala moverse serenamente y examina con cuidado cómo mantener ese movimiento sin que se detenga ni por un instante.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0006",
+      "chapter": 2,
+      "start": 1769.04,
+      "end": 1788.48,
+      "text": "Cuando estés quieto, no dejes que tu mente se estanque; cuando actúes con rapidez, no dejes que tu mente se precipite. La mente no debe dejarse arrastrar por el cuerpo, ni el cuerpo por la mente. Presta atención a la mente sin quedar pendiente del cuerpo. Que nada le falte a tu disposición, pero tampoco le sobre.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0007",
+      "chapter": 2,
+      "start": 1788.73,
+      "end": 1813.21,
+      "text": "Aunque la superficie parezca apacible, mantén firme el fondo y no permitas que otros descubran tu intención.\n\nSi eres pequeño de cuerpo, conoce a fondo las cosas grandes; si eres grande, conoce con precisión las pequeñas. Tanto unos como otros deben mantener una mente recta y evitar el favoritismo hacia sus propias condiciones. Es esencial conservar esa disposición.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0008",
+      "chapter": 2,
+      "start": 1813.76,
+      "end": 1838.4,
+      "text": "Mantén la mente despejada y amplia, y coloca la sabiduría en esa amplitud. Dedícate a pulir tanto la sabiduría como la mente. Afina tu juicio, distingue lo correcto de lo incorrecto en el mundo y reconoce lo bueno y lo malo de cada cosa. Recorre los caminos de las distintas artes y habilidades hasta que nadie pueda engañarte. Entonces esa disposición se convertirá en la sabiduría de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0009",
+      "chapter": 2,
+      "start": 1838.65,
+      "end": 1856.49,
+      "text": "Esta sabiduría posee características que la distinguen de las demás. Incluso en el campo de batalla, cuando todo sea agitación, profundiza en sus principios y examina con cuidado cómo conservar una mente que no se altere.\n\nLa postura del cuerpo en la estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0010",
+      "chapter": 2,
+      "start": 1857.04,
+      "end": 1880.0,
+      "text": "Mantén la cabeza sin bajarla ni levantarla, sin inclinarla ni torcerla. No abras los ojos desmesuradamente ni arrugues la frente. Recoge ligeramente el entrecejo, procura que los ojos no se muevan y piensa en no parpadear. Entorna un poco los ojos y mantén una expresión serena. Conserva recta la línea de la nariz y adelanta apenas la barbilla.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0011",
+      "chapter": 2,
+      "start": 1880.5500000000002,
+      "end": 1901.75,
+      "text": "Endereza la parte posterior del cuello y afirma la nuca. Siente el cuerpo entero en equilibrio desde los hombros, baja ambos hombros, endereza la espalda y no saques las nalgas. Afirma las piernas desde las rodillas hasta los pies y da firmeza al abdomen para que la cintura no se doble. Existe una enseñanza llamada apretar la cuña:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0012",
+      "chapter": 2,
+      "start": 1902.0,
+      "end": 1921.2,
+      "text": "apoya el vientre contra la vaina del wakizashi y evita que el cinturón se afloje.\n\nEn toda postura de estrategia, lo esencial es convertir tu postura habitual en la postura del combate y hacer de la postura del combate tu postura habitual. Examínalo con atención.\n\nLa mirada en la estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0013",
+      "chapter": 2,
+      "start": 1921.75,
+      "end": 1946.63,
+      "text": "Dirige la mirada de manera amplia y abarcadora. Hay dos maneras de mirar: percibir y observar. Fortalece la percepción y reduce el apego a lo que observas de cerca. En la estrategia es fundamental ver lo lejano como si estuviera cerca y lo cercano como si estuviera lejos. También es esencial conocer la espada del enemigo sin fijar la vista en ella. Debes trabajar esta cuestión.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0014",
+      "chapter": 2,
+      "start": 1947.18,
+      "end": 1969.98,
+      "text": "Esta manera de mirar es la misma en la estrategia de un solo combatiente y en la de grandes ejércitos. Es importante ver ambos lados sin mover los ojos. Resulta difícil aprender de repente estas cosas en medio de la agitación. Recuerda lo aquí escrito, acostúmbrate a esta mirada todos los días y examina cómo conservarla en cualquier circunstancia.\n\nCómo sujetar la espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0015",
+      "chapter": 2,
+      "start": 1970.53,
+      "end": 1990.8500000000001,
+      "text": "Sujeta la espada con la sensación de que el pulgar y el índice flotan ligeramente. El dedo medio no debe estar tenso ni flojo; afirma el anular y el meñique. No conviene que quede holgura dentro de la mano. Tampoco basta con sujetar la espada pensando únicamente en sujetarla: tómala con la intención de cortar al enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0016",
+      "chapter": 2,
+      "start": 1991.4,
+      "end": 2015.0,
+      "text": "Al cortar, no cambies el agarre ni dejes que la mano se deslice hacia delante. Incluso si apartas, recibes, golpeas o presionas la espada enemiga, afloja apenas el pulgar y el índice. Sea cual sea la acción, sujeta la espada pensando en cortar. El agarre con el que cortas un blanco de prueba no difiere del que empleas en combate para cortar a una persona.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0017",
+      "chapter": 2,
+      "start": 2015.5500000000002,
+      "end": 2028.27,
+      "text": "Tanto en la espada como en la mano hay que evitar quedar fijado. Una mano inmovilizada está muerta; una mano que no se fija está viva. Compréndelo bien.\n\nEl uso de los pies.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0018",
+      "chapter": 2,
+      "start": 2028.8200000000002,
+      "end": 2050.58,
+      "text": "Al desplazarte, eleva un poco las puntas de los pies y pisa con firmeza sobre los talones. Según las circunstancias, los pasos serán grandes o pequeños, lentos o rápidos, pero deben ser como el caminar habitual. Evita tres formas de pisar: los saltos, los pasos que flotan y los pies clavados en el suelo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0019",
+      "chapter": 2,
+      "start": 2051.13,
+      "end": 2074.33,
+      "text": "Una enseñanza esencial de este camino es el paso de yin y yang. Consiste en no mover solamente un pie. Tanto al cortar como al retroceder o recibir un ataque, los pies deben alternarse: derecho e izquierdo, izquierdo y derecho. Nunca repitas el movimiento de un solo pie dejando el otro atrás. Examínalo con cuidado.\n\nLas cinco guardias.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0020",
+      "chapter": 2,
+      "start": 2074.88,
+      "end": 2099.6,
+      "text": "Las cinco guardias son la alta, la media, la baja, la del costado derecho y la del costado izquierdo. Aunque las divida en cinco, todas existen para cortar al enemigo. No hay guardias fuera de estas cinco. Cualquiera que adoptes, no pienses en tomar una postura: piensa en realizar el corte. Su amplitud debe ajustarse a la ventaja que permitan las circunstancias.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0021",
+      "chapter": 2,
+      "start": 2100.15,
+      "end": 2118.39,
+      "text": "Las guardias alta, media y baja son las fundamentales; las dos laterales se emplean según la necesidad. Las del costado derecho o izquierdo sirven, por ejemplo, donde el espacio está limitado por arriba y por uno de los lados. Debes escoger el lado de acuerdo con el lugar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0022",
+      "chapter": 2,
+      "start": 2118.94,
+      "end": 2139.7400000000002,
+      "text": "Una enseñanza esencial de este camino es reconocer la guardia media como el centro de las guardias. Es la guardia principal. Míralo en la estrategia de grandes ejércitos: la guardia media es el puesto del comandante; las otras cuatro se ordenan en torno a él. Examínalo a fondo.\n\nEl recorrido de la espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0023",
+      "chapter": 2,
+      "start": 2140.29,
+      "end": 2161.65,
+      "text": "Conocer el recorrido de la espada significa que, si conoces bien su trayectoria, puedes mover libremente incluso la espada que llevas al cinto tomándola con dos dedos. Cuando intentas blandirla a toda velocidad, te opones a su recorrido y se vuelve difícil moverla. Debes llevarla con calma, a una velocidad que permita manejarla bien.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0024",
+      "chapter": 2,
+      "start": 2162.2,
+      "end": 2186.84,
+      "text": "Si pretendes agitarla rápidamente como un abanico o una espada corta, te opondrás a su recorrido y te resultará difícil blandirla. Eso es picotear con una espada corta; así no puedes cortar a una persona con una espada larga. Después de bajarla en un corte, levántala de nuevo por su trayectoria adecuada. Si la has llevado de lado, hazla regresar de lado por el camino correcto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0025",
+      "chapter": 2,
+      "start": 2187.09,
+      "end": 2205.09,
+      "text": "En todos los casos, extiende ampliamente los codos y blándela con fuerza. Ese es el recorrido de la espada.\n\nCuando aprendas y practiques las cinco formas de mi estrategia, su trayectoria se asentará y podrás manejarla con facilidad. Entrena con atención.\n\nLa primera de las cinco formas.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0026",
+      "chapter": 2,
+      "start": 2205.6400000000003,
+      "end": 2230.12,
+      "text": "En la primera guardia, coloca la espada en posición media con la punta dirigida al rostro del enemigo y sal a su encuentro. Cuando ataque con su espada, desvía la tuya hacia la derecha y domina su acción. Si vuelve a atacar, invierte la punta y golpea. Mantén la espada donde quedó después de bajarla; cuando ataque otra vez, golpea sus manos desde abajo. Esta es la primera forma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0027",
+      "chapter": 2,
+      "start": 2230.67,
+      "end": 2255.79,
+      "text": "En general, estas cinco formas son difíciles de comprender sin practicarlas con la espada en la mano. Hay que ejercitar su recorrido mediante la práctica directa. Sus cinco trayectorias permiten conocer tanto la propia espada como las distintas maneras de atacar del enemigo. Así comprenderás que las guardias de la escuela de las dos espadas no se encuentran fuera de estas cinco. Entrena.\n\nLa segunda forma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0028",
+      "chapter": 2,
+      "start": 2256.34,
+      "end": 2273.94,
+      "text": "Coloca la espada en guardia alta y golpea al enemigo al mismo tiempo que él ataca. Si tu golpe no lo alcanza, deja la espada en esa posición y, cuando vuelva a atacar, recógela desde abajo y golpea hacia arriba. Si realiza otro ataque, haz lo mismo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0029",
+      "chapter": 2,
+      "start": 2274.49,
+      "end": 2290.81,
+      "text": "Esta forma contiene distintas disposiciones de la mente y diversos ritmos. Si entrenas en ella según mi escuela, conocerás en detalle los cinco recorridos de la espada y encontrarás cómo vencer en cualquier situación. Practica.\n\nLa tercera forma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0030",
+      "chapter": 2,
+      "start": 2291.36,
+      "end": 2310.88,
+      "text": "Sujeta la espada en guardia baja, con la sensación de dejarla colgar. Cuando el enemigo ataque, golpea sus manos desde abajo. Al golpear sus manos, si intenta abatir tu espada, pasa por encima de su acción aprovechando el ritmo y corta horizontalmente la parte superior de sus brazos después de su golpe.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0031",
+      "chapter": 2,
+      "start": 2311.4300000000003,
+      "end": 2327.99,
+      "text": "Desde la guardia baja puedes detener el ataque enemigo al mismo tiempo que se produce. En el recorrido de esta guardia encontrarás ocasiones para actuar con rapidez y otras para hacerlo con lentitud. Toma la espada y entrena.\n\nLa cuarta forma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0032",
+      "chapter": 2,
+      "start": 2328.54,
+      "end": 2354.06,
+      "text": "Coloca la espada horizontalmente junto al costado izquierdo y golpea desde abajo las manos con las que el enemigo ataca. Si intenta derribar el golpe ascendente, mantén la intención de golpear sus manos, recibe la trayectoria de su espada y corta en diagonal por encima de tu hombro. Ese es el recorrido de la espada. También cuando vuelva a atacar debes recibir su trayectoria y vencer. Examínalo a fondo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0033",
+      "chapter": 2,
+      "start": 2354.61,
+      "end": 2378.37,
+      "text": "La quinta forma.\n\nColoca la espada horizontalmente junto al costado derecho. Al recibir el ataque enemigo, levántala en diagonal desde abajo y por un lado hasta la guardia alta; desde allí corta directamente hacia abajo. También esto tiene por objeto que conozcas bien el recorrido de la espada. Cuando te acostumbres a blandirla mediante esta forma, podrás manejar libremente incluso una espada pesada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0034",
+      "chapter": 2,
+      "start": 2378.92,
+      "end": 2396.6800000000003,
+      "text": "No es posible describir aquí todos los detalles de estas cinco formas. Primero conoce el conjunto de los recorridos de la espada de mi escuela, aprende de manera general los ritmos y distingue los ataques del enemigo. Para ello debes ejercitar sin descanso tus manos en estas cinco formas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0035",
+      "chapter": 2,
+      "start": 2397.23,
+      "end": 2412.91,
+      "text": "También durante el combate, haz tuyas estas trayectorias, comprende la intención enemiga y, mediante distintos ritmos, encuentra cómo vencer en cualquier situación. Reflexiona con cuidado.\n\nLa enseñanza de tener guardia y no tenerla.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0036",
+      "chapter": 2,
+      "start": 2413.46,
+      "end": 2434.58,
+      "text": "Tener guardia y no tenerla no significa colocar la espada en una postura determinada. Sin embargo, puesto que existen cinco posiciones, también puede hablarse de guardias. Debes sostener la espada de modo que puedas cortar con facilidad al adversario, esté donde esté, de acuerdo con el enemigo, el lugar y la situación.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0037",
+      "chapter": 2,
+      "start": 2435.13,
+      "end": 2458.8900000000003,
+      "text": "Si bajas un poco la guardia alta según las circunstancias, se convierte en media; si elevas un poco la media según la necesidad, se convierte en alta. La baja, al elevarse un poco cuando hace falta, se vuelve media. También las guardias laterales, si llevas la espada algo hacia el centro, pueden convertirse en media o baja. De ahí el principio de tener guardia sin tener una guardia fija.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0038",
+      "chapter": 2,
+      "start": 2459.44,
+      "end": 2487.28,
+      "text": "Cuando tomas la espada, sea cual sea su posición, tu intención es cortar al enemigo. Aunque recibas su golpe, apartes su espada, choques con ella, te adhieras o la toques, comprende que todo sirve como ocasión para cortarlo. Si piensas únicamente en recibir, apartar, adherirte, tocar o chocar, el corte será insuficiente. Lo esencial es considerar cada acción como una oportunidad para cortar. Examínalo bien.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0039",
+      "chapter": 2,
+      "start": 2487.83,
+      "end": 2502.55,
+      "text": "En la estrategia de grandes ejércitos, las formaciones de tropas también son guardias. Todas sirven para ganar la batalla. Quedar fijado es perjudicial. Trabaja esta cuestión a fondo.\n\nGolpear en un solo tiempo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0040",
+      "chapter": 2,
+      "start": 2503.1,
+      "end": 2524.86,
+      "text": "El golpe de un solo tiempo consiste en colocarte a la distancia desde la que puedes alcanzar al enemigo, reconocer el instante en que aún no se ha dado cuenta y golpear muy rápida y directamente, sin mover el cuerpo para prepararte ni fijar la mente en la acción. Golpeas antes de que el enemigo haya pensado en retirar la espada, atacar o esquivar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0041",
+      "chapter": 2,
+      "start": 2525.11,
+      "end": 2535.11,
+      "text": "Ese es el golpe de un solo tiempo. Aprende bien este ritmo y entrena para golpear con rapidez en el intervalo oportuno.\n\nEl ritmo del segundo impulso.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0042",
+      "chapter": 2,
+      "start": 2535.66,
+      "end": 2561.58,
+      "text": "Si, cuando vas a atacar, el enemigo retrocede o aparta rápidamente tu espada, aparenta que vas a golpearlo. Atácalo cuando se relaje después de apartar tu golpe o después de retirarse. Ese es el golpe del segundo impulso. Es muy difícil dominarlo únicamente con esta explicación escrita; al recibir instrucción directa, se comprende de inmediato.\n\nEl golpe sin intención ni pensamiento.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0043",
+      "chapter": 2,
+      "start": 2562.13,
+      "end": 2583.9700000000003,
+      "text": "Cuando el enemigo se dispone a atacar y tú también estás por hacerlo, el cuerpo entero se convierte en el cuerpo del golpe y la mente entera en la mente del golpe. Entonces la mano golpea con fuerza desde el vacío, sin que adviertas el momento, acelerándose al final. Esto se llama golpear sin intención ni pensamiento y es un golpe de gran importancia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0044",
+      "chapter": 2,
+      "start": 2584.2200000000003,
+      "end": 2593.02,
+      "text": "Se presenta con frecuencia durante los encuentros. Apréndelo bien y entrénalo.\n\nEl golpe del agua que fluye.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0045",
+      "chapter": 2,
+      "start": 2593.57,
+      "end": 2620.77,
+      "text": "Cuando las espadas se enfrentan y forcejean, si el enemigo intenta retirarse deprisa, eludirte o apartar rápidamente tu espada, amplía tu cuerpo y tu mente. Lleva la espada detrás del movimiento de tu cuerpo y golpea con amplitud y fuerza, tan pausadamente como si el agua se remansara. Ese es el golpe del agua que fluye. Una vez aprendido, permite golpear con certeza. Es esencial reconocer la situación del enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0046",
+      "chapter": 2,
+      "start": 2621.32,
+      "end": 2649.96,
+      "text": "Golpear según la ocasión.\n\nCuando atacas y el enemigo intenta detener o apartar tu golpe, con una sola acción puedes alcanzar su cabeza, sus manos o sus piernas: mediante una misma trayectoria de la espada golpeas donde se presente la ocasión. Ese es el golpe según la ocasión. Apréndelo cuidadosamente, porque aparece a cada momento en los encuentros. Cruza las espadas muchas veces para comprenderlo.\n\nEl golpe de la chispa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0047",
+      "chapter": 2,
+      "start": 2650.51,
+      "end": 2675.63,
+      "text": "El golpe de la chispa se produce cuando tu espada y la del enemigo están en contacto. Sin levantar la tuya ni un poco, golpea con toda la fuerza. Actúa rápidamente con tres elementos juntos: pies firmes, cuerpo firme y manos firmes. Es difícil ejecutarlo sin haberlo practicado muchas veces. Si entrenas bien, el impacto será poderoso.\n\nEl golpe de las hojas de otoño.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0048",
+      "chapter": 2,
+      "start": 2676.1800000000003,
+      "end": 2700.26,
+      "text": "Este golpe busca abatir la espada del enemigo y hacer que se le escape de las manos. Cuando tenga la espada delante de él y piense en atacar, apartar o recibir, golpea con fuerza su arma empleando el golpe sin intención ni pensamiento o el de la chispa. Después, mantén la sensación de adherirte a ella y golpea con tu punta hacia abajo. Así su espada caerá.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0049",
+      "chapter": 2,
+      "start": 2700.51,
+      "end": 2708.3500000000004,
+      "text": "Cuando hayas entrenado este golpe, te será fácil desarmarlo. Practica.\n\nEl cuerpo en lugar de la espada.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0050",
+      "chapter": 2,
+      "start": 2708.9,
+      "end": 2730.66,
+      "text": "También podría llamarse la espada en lugar del cuerpo. En general, al atacar al enemigo, no se golpea con cuerpo y espada al mismo tiempo. Según el ataque que él realice, haz que el cuerpo entre primero con la intención de golpear y deja que la espada golpee sin depender de él. En ocasiones, el cuerpo permanece quieto mientras golpea la espada;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0051",
+      "chapter": 2,
+      "start": 2730.91,
+      "end": 2740.59,
+      "text": "pero lo habitual es que entre primero el cuerpo y que la espada golpee después. Examínalo bien y practícalo.\n\nGolpear y hacer contacto.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0052",
+      "chapter": 2,
+      "start": 2741.1400000000003,
+      "end": 2764.98,
+      "text": "Golpear y hacer contacto son dos cosas distintas. Golpear significa que, sea cual sea el golpe, te has dispuesto a ejecutarlo y lo realizas con certeza. Hacer contacto significa llegar a tocar al adversario. Aunque el contacto sea tan fuerte que lo mate en el acto, sigue siendo contacto. Golpear implica comprender y decidir el golpe. Examina esta diferencia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0053",
+      "chapter": 2,
+      "start": 2765.5299999999997,
+      "end": 2785.37,
+      "text": "Cuando haces contacto con las manos o los pies del enemigo, ese contacto es una acción previa: sirve para que después puedas asestar un golpe fuerte. El contacto tiene el sentido de tocar. Si lo aprendes bien, verás que la diferencia es considerable. Trabájala.\n\nEl cuerpo del mono de otoño.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0054",
+      "chapter": 2,
+      "start": 2785.92,
+      "end": 2806.4,
+      "text": "El cuerpo del mono de otoño consiste en no extender las manos. Al entrar hacia el enemigo, no pienses en sacar las manos ni un poco: introduce rápidamente el cuerpo antes de que él golpee. Si intentas extender las manos, el cuerpo se alejará necesariamente. Por eso debes entrar con rapidez con todo el cuerpo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0055",
+      "chapter": 2,
+      "start": 2806.65,
+      "end": 2817.21,
+      "text": "A una distancia desde la que puedes recibir el ataque con las manos, también es fácil introducir el cuerpo. Examínalo con atención.\n\nEl cuerpo de laca y cola.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0056",
+      "chapter": 2,
+      "start": 2817.76,
+      "end": 2842.32,
+      "text": "La laca y la cola expresan la intención de adherirte estrechamente al entrar, sin separarte. Cuando te pegues al cuerpo del enemigo, acerca también la cabeza, el cuerpo y los pies, y mantén una unión firme. La gente suele adelantar el rostro y los pies, pero deja el cuerpo atrás. Pega bien todo tu cuerpo al suyo, sin permitir que quede un espacio entre ambos. Examínalo con cuidado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0057",
+      "chapter": 2,
+      "start": 2842.87,
+      "end": 2868.23,
+      "text": "Comparar la estatura.\n\nComparar la estatura significa que, al entrar hacia el enemigo, no debes encoger el cuerpo. Extiende las piernas, la cintura y el cuello, y entra con firmeza. Pon tu rostro a la altura del suyo y estírate con la intención de vencerlo al comparar sus estaturas. Lo esencial es entrar con fuerza de esa manera. Trabájalo con atención.\n\nAdherir la espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0058",
+      "chapter": 2,
+      "start": 2868.7799999999997,
+      "end": 2889.02,
+      "text": "Cuando ambos atacan y el enemigo recibe tu espada, entra manteniendo la tuya pegada a la suya, como si se adhiriera a ella. Adherirse significa que las espadas no se separan fácilmente. Debes entrar sin aplicar una fuerza excesiva. Si mantienes esta adhesión al entrar, no importa que avances con mucha calma.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0059",
+      "chapter": 2,
+      "start": 2889.57,
+      "end": 2915.49,
+      "text": "Hay que distinguir entre adherirse y quedar enredado. La adhesión es fuerte; el enredo es débil. Comprende esa diferencia.\n\nEl golpe con el cuerpo.\n\nConsiste en entrar muy cerca del enemigo y golpearlo con el cuerpo. Gira un poco el rostro, adelanta el hombro izquierdo y choca contra su pecho. Hazte tan firme como puedas y entra con un impulso que coordine la respiración y el ritmo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0060",
+      "chapter": 2,
+      "start": 2916.04,
+      "end": 2937.56,
+      "text": "Una vez aprendido, este movimiento puede tener tanta fuerza que lance al enemigo dos o tres ken, o que lo deje sin sentido. Entrénalo con cuidado.\n\nLas tres formas de recibir.\n\nLa primera consiste en entrar hacia el enemigo y recibir su ataque dirigiendo tu espada como si fueras a atravesarle los ojos. Desvía su espada hacia tu derecha al recibirla.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0061",
+      "chapter": 2,
+      "start": 2938.11,
+      "end": 2947.4700000000003,
+      "text": "La segunda se llama recibir con una estocada. Recibe su ataque lanzando la punta hacia su ojo derecho, con la intención de encerrar su cuello.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0062",
+      "chapter": 2,
+      "start": 2948.02,
+      "end": 2970.1800000000003,
+      "text": "La tercera se emplea cuando el enemigo golpea y tú entras con una espada corta. No te preocupes demasiado por la espada con la que recibes: entra como si fueras a golpearle la cara con la mano izquierda. Cierra esa mano y piensa en lanzar el puño contra su rostro.\n\nEstas son las tres formas de recibir. Debes entrenarlas con atención.\n\nApuntar al rostro.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0063",
+      "chapter": 2,
+      "start": 2970.73,
+      "end": 2993.61,
+      "text": "Cuando cruzas las espadas con el enemigo, es esencial mantener la intención de atravesarle el rostro con la punta, en el espacio que hay entre su espada y la tuya. Si conservas esa intención, su rostro y su cuerpo tenderán a echarse hacia atrás. Al obligarlo a retroceder de ese modo, surgen muchas oportunidades de vencer. Trabaja esta cuestión a fondo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0064",
+      "chapter": 2,
+      "start": 2994.16,
+      "end": 3008.88,
+      "text": "Si durante el combate su cuerpo ya ha comenzado a inclinarse hacia atrás, la victoria está al alcance. Por eso no debes olvidar apuntar al rostro. Entrena este principio en la práctica de la estrategia.\n\nApuntar al corazón.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0065",
+      "chapter": 2,
+      "start": 3009.4300000000003,
+      "end": 3036.31,
+      "text": "Cuando durante el combate el espacio está limitado por arriba o por los lados y resulta difícil cortar, lanza una estocada. Para eludir la espada enemiga, muestra directamente al adversario el lomo de tu hoja y retírala sin desviar la punta; después atraviésale el pecho. Esta técnica resulta especialmente útil si estás agotado o si tu espada ya no corta. Compréndela con cuidado.\n\nKatsu y totsu.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0066",
+      "chapter": 2,
+      "start": 3036.86,
+      "end": 3057.42,
+      "text": "Cuando atacas y arrinconas al enemigo, si él intenta devolverte el golpe, eleva tu espada desde abajo como para darle una estocada y golpea al volver. Hazlo todo con un ritmo rápido: eleva la punta con un katsu y golpea con un totsu. Esta secuencia aparece constantemente al cruzar las espadas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0067",
+      "chapter": 2,
+      "start": 3057.9700000000003,
+      "end": 3072.45,
+      "text": "La manera de realizarla es levantar la punta con intención de dar una estocada y, al mismo tiempo que la elevas, entrar en el ritmo del golpe. Practica con atención y examina su ejecución.\n\nRecibir desviando.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0068",
+      "chapter": 2,
+      "start": 3073.0,
+      "end": 3094.12,
+      "text": "Cuando cruzas golpes con el enemigo y los ataques adquieren un ritmo de choques sucesivos, encuentra su golpe con tu espada y desvía mientras golpeas. No se trata de apartar su arma con excesiva fuerza, ni simplemente de bloquear. Responde a su ataque, desvía la espada que viene hacia ti y golpéalo antes de que haya terminado la desviación.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0069",
+      "chapter": 2,
+      "start": 3094.67,
+      "end": 3112.75,
+      "text": "Es esencial tomar la iniciativa tanto al desviar como al golpear. Si el ritmo de la desviación encaja bien, por fuerte que ataque el enemigo, basta un pequeño movimiento para que la punta de tu espada no caiga. Aprende bien esta acción y examínala.\n\nEnfrentarse a varios adversarios.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0070",
+      "chapter": 2,
+      "start": 3113.3,
+      "end": 3136.5,
+      "text": "Esto se refiere al combate de una persona contra muchos. Desenvaina la katana y el wakizashi y coloca ambas espadas horizontalmente, extendidas hacia la derecha y hacia la izquierda. Aunque los enemigos ataquen desde los cuatro lados, procura empujarlos y conducirlos hacia una sola dirección. Distingue el orden en que se aproximan y sal rápidamente al encuentro del que avance primero.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0071",
+      "chapter": 2,
+      "start": 3137.05,
+      "end": 3161.69,
+      "text": "Mantén una mirada amplia, reconoce el momento en que atacan y cruza alternadamente el movimiento de las dos espadas. Corta al enemigo con la espada que va hacia él y, al regresar, corta al que avanza por el otro costado. Es perjudicial quedarte esperando con las espadas cruzadas. Llévalas pronto a las guardias de ambos lados, corta con fuerza por donde salga un enemigo y desorganízalos al empujarlos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0072",
+      "chapter": 2,
+      "start": 3161.94,
+      "end": 3168.1000000000004,
+      "text": "Enseguida dirígete hacia el siguiente lugar de donde avancen y vuelve a romper su orden con tus golpes.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0073",
+      "chapter": 2,
+      "start": 3168.65,
+      "end": 3192.8900000000003,
+      "text": "Actúa de tal manera que los enemigos queden en una sola fila, como peces ensartados. Cuando veas que se amontonan unos detrás de otros, entra de inmediato con un barrido fuerte, sin dejarles un intervalo. Si solo persigues a los adversarios donde se agrupan, será difícil progresar. También será difícil si te limitas a esperar, pensando de qué lado saldrá el siguiente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0074",
+      "chapter": 2,
+      "start": 3193.1400000000003,
+      "end": 3216.66,
+      "text": "Vence reconociendo su ritmo y el momento en que pierden el orden.\n\nReúne de vez en cuando más compañeros de práctica de los que puedas manejar con facilidad y acostúmbrate a perseguirlos y arrinconarlos. Cuando hayas aprendido bien esta disposición, te resultará sencillo afrontar a uno, a diez o a veinte adversarios. Practica y examínalo con atención.\n\nEl principio de cruzar los golpes.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0075",
+      "chapter": 2,
+      "start": 3217.21,
+      "end": 3240.25,
+      "text": "Este principio consiste en comprender cómo se obtiene la victoria con la espada en la estrategia. No puedo describirlo aquí en detalle. Practica con atención y aprende dónde se encuentra la victoria. En términos generales, esta es la espada que manifiesta el verdadero camino de la estrategia. Es una enseñanza de transmisión oral.\n\nEl golpe único.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0076",
+      "chapter": 2,
+      "start": 3240.8,
+      "end": 3260.8,
+      "text": "Mediante la disposición del golpe único se alcanza una victoria segura. Es difícil comprenderla sin haber estudiado bien la estrategia. Si la entrenas a fondo, la estrategia responderá a tu voluntad y encontrarás el camino para vencer de acuerdo con tu intención. Practica con atención.\n\nLa posición del camino directo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0077",
+      "chapter": 2,
+      "start": 3261.3500000000004,
+      "end": 3275.91,
+      "text": "La disposición del camino directo consiste en recibir y transmitir el verdadero camino de mi escuela de las dos espadas. Es esencial entrenar con cuidado hasta que tu propia persona encarne esta estrategia. Es una enseñanza de transmisión oral.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0078",
+      "chapter": 2,
+      "start": 3276.46,
+      "end": 3293.1800000000003,
+      "text": "En este rollo he dejado descrito, en términos generales, el arte de la espada de mi escuela. Para aprender a vencer con la espada, empieza por las cinco formas: conoce las cinco guardias, aprende el recorrido de la espada y vuelve flexible y libre todo el cuerpo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0079",
+      "chapter": 2,
+      "start": 3293.4300000000003,
+      "end": 3310.71,
+      "text": "Cuando la mente despierte y conozca el ritmo del camino, la espada y las manos adquirirán destreza por sí mismas, y el cuerpo y los pies actuarán libremente según tu intención. Así vencerás a uno y después a dos, y llegarás a reconocer lo bueno y lo malo de la estrategia.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0080",
+      "chapter": 2,
+      "start": 3311.26,
+      "end": 3335.9,
+      "text": "Practica uno por uno los artículos de este escrito y combate con tus adversarios. Poco a poco comprenderás los principios del camino. Tenlos siempre presentes, sin impacientarte. Toma la espada de vez en cuando y reconoce el fruto de la práctica. Cruza las armas con personas de toda clase y comprende su disposición. Incluso un camino de mil ri se recorre paso a paso.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0081",
+      "chapter": 2,
+      "start": 3336.45,
+      "end": 3363.33,
+      "text": "Avanza con calma, comprendiendo que practicar este método es el deber del guerrero. Hoy debes superar al que eras ayer; mañana, vencer a quienes tienen menos habilidad; más adelante, a quienes te superan. Sigue lo escrito en este libro y no dejes que la mente se desvíe hacia otros caminos. Aunque derrotes a numerosos enemigos, si actúas en contra de estas enseñanzas, no estarás en el verdadero camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0082",
+      "chapter": 2,
+      "start": 3363.88,
+      "end": 3386.12,
+      "text": "Cuando estos principios se hayan asentado en tu mente, comprenderás cómo una sola persona puede vencer a varias decenas. Entonces, mediante la sabiduría del arte de la espada, deberás alcanzar también el camino de la estrategia de muchos y de uno. Mil días de práctica forjan; diez mil días de práctica refinan. Examínalo con el mayor cuidado.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0083a",
+      "chapter": 2,
+      "start": 3386.67,
+      "end": 3390.83,
+      "text": "Día doce del quinto mes del segundo año de la era Shōhō.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S03-U0083b",
+      "chapter": 2,
+      "start": 3391.13,
+      "end": 3395.29,
+      "text": "Shinmen Musashi no Kami Genshin, con su sello.",
+      "separator": " "
+    },
+    {
+      "id": "S03-U0083c",
+      "chapter": 2,
+      "start": 3395.59,
+      "end": 3397.75,
+      "text": "A Terao Magonojō.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0001",
+      "chapter": 3,
+      "start": 3402.8500000000004,
+      "end": 3423.6500000000005,
+      "text": "Rollo del Fuego.\n\nEn la estrategia de mi escuela de las dos espadas, tomo el fuego como imagen del combate. Por eso expongo en este rollo las cuestiones de la lucha y de la victoria o la derrota. La gente suele entender la estrategia de una manera demasiado pequeña: unos estudian ventajas de tres o cinco sun en el movimiento de los dedos y las muñecas;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0002",
+      "chapter": 3,
+      "start": 3423.9000000000005,
+      "end": 3439.5000000000005,
+      "text": "otros toman un abanico y distinguen quién se adelanta en movimientos que apenas llegan del codo a la mano. Otros practican con espadas flexibles, aprenden pequeñas ventajas de velocidad, ejercitan manos y pies y se concentran en la rapidez de acciones menores.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0003",
+      "chapter": 3,
+      "start": 3440.05,
+      "end": 3462.6100000000006,
+      "text": "En mi estrategia he cruzado las armas muchas veces poniendo la vida en juego. He distinguido los principios de la vida y la muerte, aprendido el recorrido de la espada, reconocido la fuerza y la debilidad de los ataques enemigos y comprendido el uso del filo y del lomo de la hoja. Al entrenar para abatir al adversario, no he atendido a cosas pequeñas o débiles.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0004",
+      "chapter": 3,
+      "start": 3462.8600000000006,
+      "end": 3486.3,
+      "text": "Mucho menos pueden servir esas pequeñas sutilezas cuando se combate revestido de armadura.\n\nLa estrategia de mi camino consiste en conocer con certeza cómo vencer cuando una sola persona lucha a vida o muerte contra cinco o diez. ¿Qué diferencia hay, entonces, entre el principio por el que uno vence a diez y aquel por el que mil vencen a diez mil? Examínalo a fondo.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0005",
+      "chapter": 3,
+      "start": 3486.8500000000004,
+      "end": 3510.4500000000003,
+      "text": "Sin embargo, en el entrenamiento habitual no es posible reunir a mil o diez mil personas para practicar este camino. Incluso si tomas la espada a solas, calcula los planes de cada posible enemigo, conoce sus fuerzas, debilidades y recursos, y profundiza en cómo vencer a muchos mediante la sabiduría y las virtudes de la estrategia. Conviértete en un experto de este camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0006",
+      "chapter": 3,
+      "start": 3510.7000000000003,
+      "end": 3535.34,
+      "text": "Decide con firmeza quién podrá alcanzar o llevar hasta el extremo el camino directo de mi estrategia. Entrena por la mañana y refina por la noche hasta pulirlo por completo. Entonces alcanzarás una libertad propia y surgirán por sí mismas capacidades extraordinarias, un poder que parece prodigioso. Ese es el camino de poner en práctica la estrategia como guerrero.\n\nLa disposición del lugar.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0007",
+      "chapter": 3,
+      "start": 3535.8900000000003,
+      "end": 3558.8500000000004,
+      "text": "Debes reconocer las condiciones del terreno. En un lugar abierto, toma posición con el sol a la espalda. Si no puedes hacerlo, procura que quede a tu derecha. En una habitación, coloca igualmente la luz detrás o a tu derecha. Evita quedar encerrado por la espalda: deja libre el espacio de tu izquierda y toma posición con el costado derecho más próximo a un límite.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0008a",
+      "chapter": 3,
+      "start": 3559.1000000000004,
+      "end": 3566.6200000000003,
+      "text": "También de noche, si puedes ver al enemigo, dispón el fuego detrás de ti o la luz a tu derecha.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0008b",
+      "chapter": 3,
+      "start": 3566.9200000000005,
+      "end": 3574.5200000000004,
+      "text": "Ten presente la idea de mirar al enemigo desde arriba y sitúate, aunque solo sea un poco, en un lugar más alto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0008c",
+      "chapter": 3,
+      "start": 3574.82,
+      "end": 3580.34,
+      "text": "Dentro de una habitación, considera el lugar de honor como la posición elevada.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0009",
+      "chapter": 3,
+      "start": 3580.8900000000003,
+      "end": 3606.4900000000002,
+      "text": "Cuando empiece el combate, procura empujar y conducir al enemigo hacia tu izquierda. Haz que tenga un terreno difícil a su espalda y persíguelo hacia ese obstáculo. Allí debes impedirle examinar el lugar: no lo dejes volver la cara y presiónalo sin descuidarte. Lo mismo se aplica si, dentro de una casa, lo arrinconas hacia umbrales, dinteles, puertas, mamparas, corredores o pilares.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0010",
+      "chapter": 3,
+      "start": 3607.0400000000004,
+      "end": 3624.2400000000002,
+      "text": "Sea cual sea el lugar hacia donde lo empujes, utiliza el mal apoyo del suelo o los obstáculos de los lados. Lo fundamental es aprovechar las ventajas del terreno para obtener la victoria por medio del lugar. Examínalo bien y entrénalo.\n\nLas tres iniciativas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0011",
+      "chapter": 3,
+      "start": 3624.7900000000004,
+      "end": 3649.8300000000004,
+      "text": "Hay tres maneras de tomar la iniciativa. Una surge cuando atacas al enemigo: es la iniciativa del ataque. Otra aparece cuando él viene contra ti: es la iniciativa de la espera. La tercera se da cuando ambos atacan a la vez: es la iniciativa del encuentro mutuo. Al comenzar cualquier combate no hay más que estas tres. Mediante su aplicación puedes obtener pronto la victoria.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0012",
+      "chapter": 3,
+      "start": 3650.0800000000004,
+      "end": 3667.2000000000003,
+      "text": "La iniciativa es lo primero en la estrategia.\n\nAunque existen muchos detalles, debes anteponer el principio que corresponda a cada momento, comprender la intención del enemigo y vencer con la sabiduría de tu estrategia. Por eso es difícil describirlo todo con precisión.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0013",
+      "chapter": 3,
+      "start": 3667.7500000000005,
+      "end": 3689.7500000000005,
+      "text": "Primero, la iniciativa del ataque. Cuando decidas atacar, puedes permanecer sereno y lanzarte de repente con rapidez. También puedes mostrar fuerza y rapidez en la superficie conservando una reserva en el fondo. O afirmar mucho tu intención, caminar apenas más deprisa de lo habitual y, al llegar cerca del enemigo, acosarlo enérgicamente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0014",
+      "chapter": 3,
+      "start": 3690.0000000000005,
+      "end": 3703.0400000000004,
+      "text": "También puedes liberar por completo tu mente y aplastarlo con la misma decisión desde el principio hasta el final, manteniendo la fuerza hasta el fondo. Todas estas son formas de la iniciativa del ataque.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0015",
+      "chapter": 3,
+      "start": 3703.59,
+      "end": 3722.63,
+      "text": "Segundo, la iniciativa de la espera. Cuando el enemigo venga contra ti, aparenta despreocupación y debilidad. Cuando se acerque, sepárate con fuerza de repente y haz como si fueras a saltar sobre él. Observa cuándo se relaja y vence entonces de manera directa y firme.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0016",
+      "chapter": 3,
+      "start": 3722.88,
+      "end": 3735.4400000000005,
+      "text": "Otra manera consiste en salir con más fuerza a su encuentro, reconocer el intervalo en que cambia el ritmo de su ataque y aprovecharlo para vencer. Ese es el principio de la iniciativa de la espera.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0017",
+      "chapter": 3,
+      "start": 3735.9900000000002,
+      "end": 3763.1900000000005,
+      "text": "Tercero, la iniciativa del encuentro mutuo. Si el enemigo ataca rápidamente, avanza con calma y fuerza. Cuando esté cerca, adopta una resolución tajante y, al ver que cede, vence de inmediato con fuerza. Si avanza con calma, ve hacia él con el cuerpo ligero y algo más deprisa. Al acercarse, presiónalo con energía y vence de acuerdo con su reacción. Esa es la iniciativa del encuentro mutuo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0018",
+      "chapter": 3,
+      "start": 3763.7400000000002,
+      "end": 3791.9800000000005,
+      "text": "Es difícil separar por escrito todos sus detalles. Reflexiona sobre estas explicaciones generales. Las tres iniciativas dependen del momento y de la ventaja disponible. No siempre debes ser quien empiece el ataque, aunque, en igualdad de condiciones, conviene atacar desde tu lado y hacer que el enemigo responda a tu acción. Cualquiera que sea la iniciativa, entrena para alcanzar la victoria mediante la sabiduría de la estrategia.\n\nSujetar la almohada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0019",
+      "chapter": 3,
+      "start": 3792.53,
+      "end": 3817.7300000000005,
+      "text": "Sujetar la almohada significa no dejar que el enemigo levante la cabeza. En el camino del combate es perjudicial dejar que otro te conduzca y limitarte a seguirlo. Debes procurar que sea él quien responda a tu voluntad. Aunque ambos deseen lo mismo, no podrás conseguirlo si no reconoces lo que está haciendo. En la estrategia esto significa detener su golpe, contener su estocada y deshacer su intento de sujetarte.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0020",
+      "chapter": 3,
+      "start": 3818.28,
+      "end": 3840.1200000000003,
+      "text": "Cuando hayas alcanzado el verdadero camino y te enfrentes al enemigo, percibe el indicio de lo que se propone antes de que lo ejecute. Sujeta el comienzo de su golpe e impide que continúe. Eso es sujetar la almohada. Del mismo modo, detén el ataque antes de que se desarrolle, el salto antes de que se inicie y el corte antes de que se realice.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0021",
+      "chapter": 3,
+      "start": 3840.3700000000003,
+      "end": 3859.3300000000004,
+      "text": "La intención es la misma en todos los casos.\n\nDeja que el enemigo haga lo que no le sirve, pero contén lo que le permitiría obtener una ventaja e impide que lo lleve a cabo. Esto es esencial en la estrategia. Aun así, si solo piensas en ir deteniendo lo que hace, seguirás actuando después de él.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0022",
+      "chapter": 3,
+      "start": 3859.5800000000004,
+      "end": 3878.7000000000003,
+      "text": "Lo que debes hacer es ejecutar tus propias acciones según el camino y, al mismo tiempo, contener el comienzo de sus iniciativas, de manera que nada le resulte útil. Dominarlo así es fruto de la maestría y del entrenamiento. Examina con cuidado esta enseñanza.\n\nCruzar un paso difícil.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0023",
+      "chapter": 3,
+      "start": 3879.2500000000005,
+      "end": 3894.13,
+      "text": "Cruzar un paso difícil puede referirse, por ejemplo, a atravesar un estrecho en el mar o a cubrir una larga distancia de cuarenta o cincuenta ri sobre el agua. También al recorrer la vida encontramos muchos pasos de esa clase.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0024",
+      "chapter": 3,
+      "start": 3894.6800000000003,
+      "end": 3918.84,
+      "text": "En una travesía, conoce el punto que debes cruzar, las condiciones de tu embarcación y el estado del tiempo. Aunque los otros barcos no salgan, reconoce la oportunidad, aprovecha un viento de través o de popa y hazte a la mar. Debes saber que, aunque el viento cambie, podrás llegar al puerto remando las últimas dos o tres ri. Toma el control de la embarcación y cruza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0025",
+      "chapter": 3,
+      "start": 3919.09,
+      "end": 3943.4100000000003,
+      "text": "Con esa misma disposición, al recorrer la vida, piensa en atravesar los pasos decisivos cuando afrontes algo importante.\n\nTambién en combate es esencial cruzar el paso difícil. Reconoce la situación del enemigo, conoce tu propia capacidad y utiliza esos principios para cruzar, igual que un buen piloto atraviesa el mar. Una vez superado el paso, las cosas se vuelven más fáciles.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0026",
+      "chapter": 3,
+      "start": 3943.9600000000005,
+      "end": 3961.0800000000004,
+      "text": "Cruzar significa poner al enemigo en desventaja y adelantarte tú. En términos generales, ahí se encuentra ya la victoria. Tanto en la estrategia de uno como en la de muchos, esta disposición es esencial. Examínala con atención.\n\nConocer la situación.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0027",
+      "chapter": 3,
+      "start": 3961.63,
+      "end": 3985.7900000000004,
+      "text": "En la estrategia de grandes ejércitos, conocer la situación significa distinguir si el enemigo prospera o decae, reconocer la disposición de sus tropas, comprender el terreno y observar con cuidado sus condiciones. Debes entender cómo disponer tus propias fuerzas, por qué principio podrás vencer con certeza y dónde está la oportunidad de tomar la iniciativa al combatir.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0028",
+      "chapter": 3,
+      "start": 3986.34,
+      "end": 4005.2200000000003,
+      "text": "En el combate individual, reconoce la escuela del enemigo, observa su carácter, descubre sus puntos fuertes y débiles y actúa de una manera que contradiga sus expectativas. Es esencial conocer sus intenciones, reconocer bien el ritmo de los intervalos y tomar la iniciativa.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0029",
+      "chapter": 3,
+      "start": 4005.7700000000004,
+      "end": 4022.4900000000002,
+      "text": "Si tu juicio es firme, podrás percibir la situación de cada cosa. Cuando la estrategia se haya vuelto parte de ti y actúes con libertad, comprenderás bien la mente enemiga y encontrarás muchos caminos hacia la victoria. Trabaja esta cuestión.\n\nPisar la espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0030",
+      "chapter": 3,
+      "start": 4023.0400000000004,
+      "end": 4045.3600000000006,
+      "text": "Pisar la espada es un principio que se emplea de manera especial en la estrategia. En una gran batalla, cuando el enemigo dispara sus arcos o arcabuces e inicia una acción, si atacas después de que haya terminado de disparar, encontrará tiempo para preparar otra flecha o recargar, y será difícil entrar. Debes avanzar rápidamente mientras todavía dispara.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0031",
+      "chapter": 3,
+      "start": 4045.6100000000006,
+      "end": 4056.9700000000003,
+      "text": "Si lo haces, no podrá colocar otra flecha ni disparar de nuevo el arcabuz. En toda acción, reconoce lo que el enemigo inicia, pisa su iniciativa y vence.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0032",
+      "chapter": 3,
+      "start": 4057.5200000000004,
+      "end": 4075.4400000000005,
+      "text": "En el combate individual, si golpeas solo después del golpe enemigo, ambos caerán en un intercambio de choques que no permite avanzar. Piensa en pisar con el pie la espada que viene contra ti: domina el mismo momento en que sale y no permitas que el adversario ejecute un segundo ataque.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0033",
+      "chapter": 3,
+      "start": 4075.9900000000002,
+      "end": 4099.51,
+      "text": "Pisar no se limita al pie. Puedes pisar con el cuerpo, con la mente y, por supuesto, con la espada. En cualquier caso, impide que el enemigo realice su siguiente acción. Esa es la disposición de adelantarse en todas las cosas. No se trata de chocar con él al mismo tiempo, sino de seguir de inmediato su acción y dominarla. Examínalo con cuidado.\n\nReconocer el derrumbe.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0034",
+      "chapter": 3,
+      "start": 4100.06,
+      "end": 4122.06,
+      "text": "Todo puede derrumbarse: una casa, un cuerpo o un enemigo. El derrumbe se produce cuando llega su momento y se pierde el ritmo. En la estrategia de grandes ejércitos, reconoce el instante en que el enemigo pierde su cohesión y presiónalo sin dejar pasar la oportunidad. Si permites que respire en medio del derrumbe, podrá recuperarse.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0035",
+      "chapter": 3,
+      "start": 4122.610000000001,
+      "end": 4140.530000000001,
+      "text": "También en el combate individual, cuando su ritmo se altera, aparece una grieta en su disposición. Si te descuidas entonces, se recompondrá, recobrará sus fuerzas y será difícil progresar. Sigue esa grieta y persíguelo con certeza para que no pueda levantar de nuevo la cabeza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0036",
+      "chapter": 3,
+      "start": 4141.08,
+      "end": 4159.56,
+      "text": "Perseguir significa actuar con un impulso directo y firme. Remátalo de tal manera que no logre rehacerse. Distingue bien lo que significa descargar el golpe hasta el final: si no lo haces, tu acción quedará incompleta y sin vigor. Trabaja esta cuestión.\n\nConvertirse en el enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0037",
+      "chapter": 3,
+      "start": 4160.110000000001,
+      "end": 4183.55,
+      "text": "Convertirse en el enemigo significa ponerte en su lugar al pensar. En el mundo se suele considerar muy fuerte incluso a un ladrón que se encierra en una casa. Pero, si piensas desde su posición, verás a alguien que ha huido, tiene a todos en contra y ya no sabe qué hacer. Quien está encerrado es el faisán; quien va a abatirlo es el halcón. Reflexiona bien sobre ello.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0038",
+      "chapter": 3,
+      "start": 4184.1,
+      "end": 4200.02,
+      "text": "En una gran batalla también se suele imaginar al enemigo como una fuerza poderosa y actuar con excesiva cautela. Si cuentas con buenas tropas, conoces bien los principios de la estrategia y comprendes cómo vencerlo, no hay motivo para temer.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0039",
+      "chapter": 3,
+      "start": 4200.570000000001,
+      "end": 4216.17,
+      "text": "En el combate individual también debes pensar desde su lugar. Ante alguien que conoce bien la estrategia, tiene firmes sus principios y domina su camino, el adversario pensará que será derrotado. Examínalo con atención.\n\nSoltar las cuatro manos.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0040",
+      "chapter": 3,
+      "start": 4216.72,
+      "end": 4242.320000000001,
+      "text": "Si tú y el enemigo quedan empeñados en la misma intención y se oponen con la misma fuerza, el combate no avanzará. Cuando reconozcas ese estado, abandona de inmediato aquella disposición y aprende a vencer mediante otro principio.\n\nEn una gran batalla, si se produce este bloqueo, no debes permanecer atrapado en él. Cambia rápidamente de disposición y vence con una ventaja que el enemigo no espere.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0041",
+      "chapter": 3,
+      "start": 4242.870000000001,
+      "end": 4259.67,
+      "text": "También en el combate individual, si adviertes que las cuatro manos han quedado trabadas, cambia tu intención en el acto, reconoce la situación enemiga y busca la victoria por un medio completamente distinto. Compréndelo con cuidado.\n\nMover la sombra.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0042",
+      "chapter": 3,
+      "start": 4260.22,
+      "end": 4278.06,
+      "text": "Mover la sombra se aplica cuando no puedes ver con claridad la intención enemiga. En una gran batalla, si no distingues su disposición, aparenta que vas a lanzar un ataque enérgico y observa sus recursos. Una vez que revele su respuesta, será fácil vencer mediante un principio distinto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0043",
+      "chapter": 3,
+      "start": 4278.610000000001,
+      "end": 4302.93,
+      "text": "En el combate individual, si el enemigo mantiene la espada detrás de él o junto a un costado, haz como si fueras a golpear de repente. Mostrará entonces su intención mediante la espada. Cuando la veas y la comprendas, aprovecha de inmediato la ventaja y reconoce cómo vencer con certeza. Si te descuidas, perderás el momento. Examínalo con atención.\n\nSujetar la sombra.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0044",
+      "chapter": 3,
+      "start": 4303.4800000000005,
+      "end": 4325.16,
+      "text": "Sujetar la sombra se aplica cuando ya ves que el enemigo está a punto de iniciar una acción. En una gran batalla, muéstrale con firmeza que tienes dominado el recurso que pretende emplear. Al sentirse contenido por esa fuerza, cambiará de intención. Cambia tú también de disposición y, desde una mente libre de fijaciones, toma la iniciativa y vence.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0045",
+      "chapter": 3,
+      "start": 4325.71,
+      "end": 4349.950000000001,
+      "text": "En el combate individual, detén el fuerte indicio de su ataque mediante el ritmo adecuado. En el momento en que se interrumpa, reconoce tu oportunidad de victoria y toma la iniciativa. Trabájalo con cuidado.\n\nContagiar una disposición.\n\nEl contagio se presenta en muchas cosas. Se contagia el sueño, se contagia el bostezo e incluso puede contagiarse el ánimo de un momento.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0046",
+      "chapter": 3,
+      "start": 4350.5,
+      "end": 4370.900000000001,
+      "text": "En una gran batalla, si ves que el enemigo está agitado y se apresura, aparenta que no te afecta en absoluto y muéstrate completamente tranquilo. Él tenderá a imitar esa calma y relajará su vigilancia. Cuando notes que la disposición se ha transmitido, ataca con rapidez y fuerza desde una mente libre, y obtén la victoria.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0047",
+      "chapter": 3,
+      "start": 4371.450000000001,
+      "end": 4394.41,
+      "text": "En el combate individual, mantén también tranquilos el cuerpo y la mente. Aprovecha el intervalo en que el adversario se relaja para tomar la iniciativa con fuerza y rapidez.\n\nExiste una acción semejante llamada debilitar: puedes provocar aburrimiento, distracción o pérdida de ánimo. Examina con atención estas posibilidades.\n\nDesconcertar al enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0048",
+      "chapter": 3,
+      "start": 4394.96,
+      "end": 4419.76,
+      "text": "Hay diversas causas de desconcierto: sentirse en peligro inmediato, verse sometido a algo desmedido y encontrarse con algo inesperado. Examínalas con cuidado.\n\nEn la estrategia de grandes ejércitos es esencial desconcertar. Ataca con ímpetu por un lugar que el enemigo no espere y, antes de que su mente recupere una decisión firme, aprovecha tu ventaja, toma la iniciativa y vence.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0049",
+      "chapter": 3,
+      "start": 4420.31,
+      "end": 4439.030000000001,
+      "text": "En el combate individual, empieza mostrándote tranquilo y ataca de repente con fuerza. Actúa de acuerdo con la dirección de su atención y la reacción de su mente, sin darle tiempo a respirar; aprovecha de inmediato la ventaja para alcanzar la victoria. Examínalo bien.\n\nSobresaltar al enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0050",
+      "chapter": 3,
+      "start": 4439.58,
+      "end": 4462.620000000001,
+      "text": "El sobresalto aparece en muchas circunstancias: las personas se asustan ante lo que no esperan. En una gran batalla, puedes sobresaltar al enemigo por medios que no tiene delante de los ojos. Puedes hacerlo con un sonido, haciendo que algo pequeño parezca grande o surgiendo de repente por un flanco. Reconoce el instante del sobresalto y aprovecha esa ventaja para vencer.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0051",
+      "chapter": 3,
+      "start": 4463.17,
+      "end": 4480.450000000001,
+      "text": "En el combate individual puedes sobresaltarlo con el cuerpo, con la espada o con la voz. Es esencial iniciar de repente algo que no haya previsto y obtener la victoria aprovechando la oportunidad que produce su sobresalto. Examínalo con atención.\n\nMezclarse con el enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0052",
+      "chapter": 3,
+      "start": 4481.0,
+      "end": 4495.320000000001,
+      "text": "Si tú y el enemigo están cerca, se oponen con fuerza y ves que el combate no avanza, métete en su acción hasta formar una sola mezcla con él. Es esencial vencer aprovechando la ventaja que se presenta dentro de esa proximidad.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0053",
+      "chapter": 3,
+      "start": 4495.870000000001,
+      "end": 4518.91,
+      "text": "Tanto en la estrategia de muchos como en la de uno, si ambos bandos permanecen separados, trabados en una oposición sin resultado, entra en medio del enemigo hasta que ya no puedan distinguirse claramente las partes. Encuentra la ventaja y la posibilidad de victoria en esa situación, y vence con fuerza. Examínalo cuidadosamente.\n\nAtacar las esquinas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0054",
+      "chapter": 3,
+      "start": 4519.46,
+      "end": 4543.38,
+      "text": "Cuando empujas algo fuerte, es difícil desplazarlo presionando directamente de frente. En una gran batalla, observa las tropas enemigas y ataca una esquina de su parte más saliente y fuerte. Obtén allí la ventaja. Cuando una esquina cede, el resto empieza también a ceder. Incluso durante ese derrumbe, sigue pensando en atacar las esquinas para alcanzar la victoria.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0055",
+      "chapter": 3,
+      "start": 4543.93,
+      "end": 4560.97,
+      "text": "En el combate individual, causa daño en los extremos del cuerpo enemigo. Si su cuerpo se debilita aunque sea un poco y empieza a descomponerse su postura, será fácil vencer. Examina bien esta cuestión y comprende dónde está la victoria.\n\nHacer vacilar al enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0056",
+      "chapter": 3,
+      "start": 4561.52,
+      "end": 4583.120000000001,
+      "text": "Consiste en impedir que el enemigo mantenga una disposición firme. En el campo de una gran batalla, comprende su intención y emplea la sabiduría de la estrategia para llevar su mente de un lado a otro: que piense en esto o en aquello, que espere lentitud o rapidez. Reconoce el ritmo en que empieza a vacilar y encuentra cómo vencer con certeza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0057",
+      "chapter": 3,
+      "start": 4583.67,
+      "end": 4604.63,
+      "text": "En el combate individual, inicia distintas acciones según el momento. Haz como si fueras a cortar, aparenta una estocada o dale a entender que vas a entrar con el cuerpo. Descubre el indicio de su vacilación y vence con libertad. Esto es esencial en el combate. Examínalo con cuidado.\n\nLas tres voces.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0058",
+      "chapter": 3,
+      "start": 4605.18,
+      "end": 4621.820000000001,
+      "text": "Las tres voces son la del principio, la del medio y la del final. Es importante emplear la voz de acuerdo con la ocasión. La voz expresa ímpetu: por eso se grita ante un incendio o en medio del viento y las olas. Hace visible la fuerza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0059",
+      "chapter": 3,
+      "start": 4622.370000000001,
+      "end": 4639.650000000001,
+      "text": "En una gran batalla, el grito anterior al combate debe ser tan poderoso como sea posible. Durante la lucha, la voz debe ser grave, sostenida y salir del fondo. Después de vencer, se lanza de nuevo una voz grande y fuerte. Esas son las tres voces.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0060",
+      "chapter": 3,
+      "start": 4640.200000000001,
+      "end": 4660.6,
+      "text": "En el combate individual, para hacer que el enemigo se mueva, aparenta un golpe y lanza primero un ei; después del grito, haz salir la espada. También puedes gritar después de haberlo golpeado, para anunciar la victoria. Estas son las voces de antes y de después. No se lanza un gran grito al mismo tiempo que el golpe de espada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0061",
+      "chapter": 3,
+      "start": 4660.85,
+      "end": 4669.97,
+      "text": "Si empleas la voz durante el combate, debe seguir el ritmo y ser grave. Examínalo con atención.\n\nAbrirse paso en zigzag.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0062",
+      "chapter": 3,
+      "start": 4670.52,
+      "end": 4690.6,
+      "text": "En una gran batalla, cuando ambos ejércitos están frente a frente y el enemigo es fuerte, abrirse paso significa atacar una de sus partes y, cuando empiece a desmoronarse, dejarla para dirigirse hacia otra que aún conserve su fuerza. En términos generales, se avanza como por un camino de curvas sucesivas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0063",
+      "chapter": 3,
+      "start": 4691.150000000001,
+      "end": 4713.790000000001,
+      "text": "En el combate individual, cuando te cercan muchos adversarios, esta disposición también es esencial. Ataca por distintos lados; si unos huyen, dirígete hacia los que siguen fuertes. Reconoce el ritmo enemigo, actúa con un ritmo oportuno y piensa en ese recorrido de curvas hacia la izquierda y la derecha, atacando según las reacciones que observes.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0064",
+      "chapter": 3,
+      "start": 4714.34,
+      "end": 4736.1,
+      "text": "Cuando reconozcas su posición y te abras paso golpeando, vence con fuerza, sin la menor intención de retroceder. También al entrar con el cuerpo contra un solo adversario fuerte debes conservar esta disposición. Abrirse paso significa avanzar entre ellos sin que los pies aprendan a retirarse. Compréndelo bien.\n\nAplastar al enemigo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0065",
+      "chapter": 3,
+      "start": 4736.650000000001,
+      "end": 4763.370000000001,
+      "text": "Aplastar significa reconocer la debilidad del enemigo, afirmarte en tu fuerza y actuar con la intención de abatirlo por completo. En una gran batalla, considera la situación de una fuerza enemiga pequeña. Incluso si es numerosa, cuando vacila y muestra debilidad, domina su cabeza y aplástala desde arriba. Si tu acción es débil, podrá recuperarse. Comprende bien la intención de encerrarlo en tu mano y aplastarlo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0066",
+      "chapter": 3,
+      "start": 4763.92,
+      "end": 4783.200000000001,
+      "text": "En el combate individual, si el adversario es inferior a ti, o si pierde el ritmo y comienza a retroceder, no le concedas ni un respiro ni tiempo para mirarte de frente. Lo esencial es abatirlo directamente, sin permitirle que se recomponga. Examínalo con atención.\n\nEl cambio de montaña y mar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0067",
+      "chapter": 3,
+      "start": 4783.75,
+      "end": 4794.2300000000005,
+      "text": "El cambio de montaña y mar significa que es perjudicial repetir una misma acción muchas veces durante el combate. Una segunda vez puede ser inevitable; no debe haber una tercera.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0068",
+      "chapter": 3,
+      "start": 4794.780000000001,
+      "end": 4821.740000000001,
+      "text": "Si una técnica no funciona al primer intento, puedes insistir una vez más. Si tampoco obtienes la ventaja, inicia de repente algo completamente distinto. Si eso tampoco permite avanzar, cambia de nuevo a otra acción. Cuando el enemigo piense montaña, actúa como mar; cuando piense mar, actúa como montaña. Esa es la disposición del camino de la estrategia. Examínala con cuidado.\n\nQuitar el fondo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0069",
+      "chapter": 3,
+      "start": 4822.290000000001,
+      "end": 4848.610000000001,
+      "text": "Cuando combates, puede parecer que has vencido mediante los principios del camino y, sin embargo, el ánimo del enemigo no se ha extinguido. Está derrotado en la superficie, pero en el fondo de su mente no acepta la derrota. En ese caso debes cambiar de disposición de repente, extinguir su resistencia y observar cómo llega a sentirse vencido desde el fondo. Eso es esencial.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0070",
+      "chapter": 3,
+      "start": 4849.16,
+      "end": 4873.72,
+      "text": "Puedes quitar el fondo mediante la espada, mediante el cuerpo o mediante la mente. No debes comprenderlo de una sola manera. Cuando el enemigo se haya derrumbado desde el fondo, no tendrás que dejar una parte de tu atención pendiente de él. Mientras no sea así, debes mantener esa atención. Si todavía queda algo que exige esa reserva, será difícil que el enemigo se derrumbe por completo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0071",
+      "chapter": 3,
+      "start": 4873.97,
+      "end": 4894.13,
+      "text": "Tanto en la estrategia de muchos como en la de uno, entrena cuidadosamente cómo quitar el fondo.\n\nEmpezar de nuevo.\n\nSi durante el combate tú y el enemigo quedan enredados y no pueden avanzar, desecha tu disposición anterior y considera que todo empieza otra vez. Reconoce ese nuevo ritmo y encuentra la victoria.",
+      "separator": " "
+    },
+    {
+      "id": "S04-U0072",
+      "chapter": 3,
+      "start": 4894.68,
+      "end": 4916.68,
+      "text": "Siempre que sientas que ambos han quedado trabados, cambia de inmediato tu intención y vence mediante un principio completamente distinto. También en la estrategia de grandes ejércitos es esencial comprender cómo empezar de nuevo. La sabiduría de la estrategia permite verlo en un instante. Examínalo con atención.\n\nCabeza de ratón y cuello de buey.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0073",
+      "chapter": 3,
+      "start": 4917.2300000000005,
+      "end": 4939.070000000001,
+      "text": "Cuando en combate ambos se concentran en detalles pequeños y quedan enredados en ellos, recuerda siempre en el camino de la estrategia: cabeza de ratón y cuello de buey. En medio de lo diminuto, cambia de repente a una disposición grande y abarcadora. Alternar entre lo pequeño y lo grande es una intención esencial de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0074",
+      "chapter": 3,
+      "start": 4939.620000000001,
+      "end": 4953.22,
+      "text": "Incluso en la vida cotidiana, el guerrero debe conservar esta disposición. No debes apartarte de ella ni en la estrategia de muchos ni en la de uno. Examínala cuidadosamente.\n\nConocer al comandante y a los soldados.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0075",
+      "chapter": 3,
+      "start": 4953.77,
+      "end": 4977.93,
+      "text": "Cuando llegues al combate y hayas alcanzado el camino de la lucha, practica sin cesar la estrategia y obtén su sabiduría. Considera a todos tus adversarios como si fueran tus propios soldados. Comprende que debes hacerlos actuar según tu intención y procura conducirlos con libertad. Tú eres el comandante; el enemigo es el soldado. Trabaja esta cuestión.\n\nSoltar la empuñadura.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0076",
+      "chapter": 3,
+      "start": 4978.4800000000005,
+      "end": 5007.280000000001,
+      "text": "Soltar la empuñadura encierra varias disposiciones. Existe la de vencer sin espada y también la de no poder vencer con la espada. Los distintos sentidos que alcanza esta enseñanza no se describen por escrito. Debes entrenar con atención.\n\nEl cuerpo de roca.\n\nAl alcanzar el camino de la estrategia, te vuelves de inmediato como una roca firme: nada consigue golpearte ni moverte. Esta es una enseñanza de transmisión oral.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0077",
+      "chapter": 3,
+      "start": 5007.83,
+      "end": 5029.91,
+      "text": "En lo que he escrito he expuesto únicamente las ideas que acuden sin cesar a mi mente dentro del arte de la espada de esta escuela. Como es la primera vez que pongo por escrito estos principios, a veces se mezclan lo anterior y lo posterior, y resulta difícil explicarlos en todos sus detalles. Aun así, servirán de orientación a quienes quieran aprender este camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0078",
+      "chapter": 3,
+      "start": 5030.46,
+      "end": 5056.3,
+      "text": "Desde joven me he dedicado al camino de la estrategia. Incluso para aprender el arte de la espada, he agotado el cuerpo y las manos y he probado disposiciones muy diversas. Al examinar otras escuelas, he encontrado explicaciones que lo justifican todo con palabras, técnicas pequeñas y acciones que buscan parecer buenas ante los ojos ajenos. Ninguna de esas cosas constituye el verdadero camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0079",
+      "chapter": 3,
+      "start": 5056.85,
+      "end": 5073.570000000001,
+      "text": "Aunque al practicarlas creas que estás ejercitando el cuerpo y formando una mente hábil, se convierten en enfermedades del camino, difíciles de abandonar incluso mucho después. Son el origen de que el camino directo de la estrategia se corrompa en el mundo y termine decayendo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S04-U0080",
+      "chapter": 3,
+      "start": 5074.120000000001,
+      "end": 5098.360000000001,
+      "text": "Seguir el verdadero camino del arte de la espada consiste en combatir y vencer al enemigo. Este principio no debe alterarse ni un poco. Si obtienes la sabiduría de mi estrategia y actúas de manera recta, no deberías dudar de la victoria.\n\nDía doce del quinto mes del segundo año de la era Shōhō. Shinmen Musashi no Kami Genshin, con su sello. A Terao Magonojō.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0001",
+      "chapter": 4,
+      "start": 5103.46,
+      "end": 5116.66,
+      "text": "Rollo del Viento.\n\nPara conocer los caminos de otras escuelas de estrategia, los describo en este rollo del Viento. Sin conocer sus caminos, es difícil comprender con certeza los principios de mi propia escuela.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0002",
+      "chapter": 4,
+      "start": 5117.21,
+      "end": 5135.05,
+      "text": "Al examinar otras estrategias, encuentro escuelas que toman espadas grandes y hacen de la fuerza su propósito principal. Otras practican con espadas cortas. Algunas elaboran numerosas técnicas y transmiten su camino mediante guardias que distinguen como enseñanzas exteriores y secretas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0003",
+      "chapter": 4,
+      "start": 5135.3,
+      "end": 5146.42,
+      "text": "En las páginas de este rollo explicaré con claridad por qué estas cosas no constituyen el verdadero camino, para que puedas distinguir lo bueno de lo malo y lo correcto de lo incorrecto.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0004",
+      "chapter": 4,
+      "start": 5146.97,
+      "end": 5173.37,
+      "text": "Los principios de mi escuela son distintos. Puede que otras escuelas, al convertir su arte en un medio de vida, lo adornen y lo hagan florecer como mercancía, apartándose así del verdadero camino. También puede que la estrategia del mundo se haya reducido al manejo de la espada y que se considere suficiente practicar sus movimientos, ejercitar el cuerpo y adquirir destreza de manos para comprender cómo vencer.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0005",
+      "chapter": 4,
+      "start": 5173.62,
+      "end": 5191.14,
+      "text": "Nada de eso constituye por sí mismo un camino seguro.\n\nEn este escrito expondré uno por uno los puntos insuficientes de otras escuelas. Examínalos con atención y comprende los principios de mi escuela de las dos espadas.\n\nLas espadas grandes en otras escuelas.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0006",
+      "chapter": 4,
+      "start": 5191.69,
+      "end": 5213.45,
+      "text": "Hay escuelas que prefieren espadas grandes. Desde el punto de vista de la estrategia del combate, las considero débiles. La razón es que, sin comprender el principio de vencer en cualquier circunstancia, confían en la longitud de la espada y desean imponerse desde una distancia en la que el enemigo quede lejos. De ahí su preferencia por las hojas largas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0007",
+      "chapter": 4,
+      "start": 5214.0,
+      "end": 5230.64,
+      "text": "La expresión un sun más de alcance es cosa de quienes no conocen la estrategia. Si, sin poseer sus principios, pretendes vencer desde lejos gracias a la longitud, manifiestas una disposición débil. Por eso lo considero una estrategia débil.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0008",
+      "chapter": 4,
+      "start": 5231.19,
+      "end": 5249.19,
+      "text": "Si el enemigo se aproxima hasta entrar en la distancia del forcejeo, cuanto más larga sea tu espada, menos eficaz será el golpe y más difícil resultará recuperar su posición. El arma se convertirá en una carga y quedarás por debajo de quien maneja con destreza un pequeño wakizashi.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0009",
+      "chapter": 4,
+      "start": 5249.74,
+      "end": 5275.42,
+      "text": "Quien prefiere una espada larga puede tener sus razones, pero serán ventajas particulares de su persona. Desde el verdadero camino del mundo, no constituyen un principio general. Pensar que, sin una espada larga, necesariamente perderás al usar una corta es un error. Según el lugar, el espacio puede estar limitado por arriba o a los lados, o puedes encontrarte sentado llevando únicamente el wakizashi.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0010",
+      "chapter": 4,
+      "start": 5275.67,
+      "end": 5298.63,
+      "text": "Preferir todavía la hoja larga en esas condiciones es una duda perjudicial para la estrategia.\n\nAlgunas personas llevan una espada pequeña y otras, por sus condiciones físicas, no pueden ceñirse una larga. Desde antiguo se dice que lo grande contiene a lo pequeño. Por eso no rechazo sin razón las espadas largas: rechazo la inclinación exclusiva hacia la longitud.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0011",
+      "chapter": 4,
+      "start": 5299.18,
+      "end": 5325.9,
+      "text": "En una gran batalla, una espada larga corresponde a muchas tropas y una corta a pocas. ¿Acaso no puede librarse una batalla entre una fuerza pequeña y otra grande? Vencer con pocos es precisamente una virtud de la estrategia. Desde antiguo abundan los ejemplos de fuerzas pequeñas que derrotaron a grandes ejércitos. En mi escuela rechazo una mente estrecha y parcial. Examínalo bien.\n\nLa llamada espada fuerte de otras escuelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0012",
+      "chapter": 4,
+      "start": 5326.45,
+      "end": 5350.05,
+      "text": "No debería hablarse de una espada fuerte y una espada débil. La espada que se blande con una intención de fuerza excesiva se vuelve tosca, y la mera tosquedad no basta para vencer. Si al cortar intentas forzar el golpe para hacerlo más fuerte, la espada no cortará como debe. También al cortar un blanco de prueba es perjudicial empeñarse en usar demasiada fuerza.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0013",
+      "chapter": 4,
+      "start": 5350.6,
+      "end": 5366.76,
+      "text": "Cuando dos personas combaten, ninguna piensa en cortar débil o fuertemente. Si lo que buscas es abatir al enemigo, no existe una intención particular de fuerza ni, por supuesto, de debilidad. Lo que importa es que el golpe baste para matarlo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0014",
+      "chapter": 4,
+      "start": 5367.31,
+      "end": 5384.35,
+      "text": "Si con esa llamada espada fuerte apartas con violencia la espada enemiga, te excederás en el movimiento y caerás en una mala situación. Si chocas con excesiva fuerza contra su arma, tu propia espada puede romperse. Por eso no hay lugar para una doctrina de la espada fuerte.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0015",
+      "chapter": 4,
+      "start": 5384.9,
+      "end": 5406.42,
+      "text": "También en una gran batalla, si cuentas con tropas fuertes y pretendes vencer por la fuerza, el enemigo puede tener tropas fuertes y querer combatir de la misma manera. Ambas partes estarán haciendo lo mismo. En cualquier cosa, sin el principio que permite vencer no se alcanza la victoria. En mi camino no busco imponer nada a la fuerza:",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0016",
+      "chapter": 4,
+      "start": 5406.67,
+      "end": 5417.39,
+      "text": "mediante la sabiduría de la estrategia, encuentro cómo vencer en cualquier circunstancia. Trabájalo con atención.\n\nLas espadas cortas en otras escuelas.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0017",
+      "chapter": 4,
+      "start": 5417.9400000000005,
+      "end": 5441.86,
+      "text": "Pensar que vencerás únicamente con una espada corta no es el verdadero camino. Desde antiguo se habla de tachi y katana para distinguir las armas largas de las cortas. Hay personas de gran fuerza que manejan con ligereza una espada grande; no tienen por qué preferir a toda costa una corta. La razón es que también se emplean armas largas, como la lanza y la naginata.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0018",
+      "chapter": 4,
+      "start": 5442.41,
+      "end": 5459.21,
+      "text": "Pensar solo en aprovechar los huecos de la espada enemiga con una hoja corta, saltar hacia dentro o agarrar al adversario es una disposición parcial y perjudicial. Buscar únicamente una abertura te coloca siempre después del otro y favorece el enredo. Lo rechazo por eso.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0019",
+      "chapter": 4,
+      "start": 5459.76,
+      "end": 5481.36,
+      "text": "Si con un arma corta intentas entrar a forcejear y sujetar a un enemigo, esa intención no servirá entre muchos adversarios. Quien se ha habituado a ella puede imaginar que apartará a todos, saltará con libertad y se aferrará a ellos; pero terminará recurriendo a una espada defensiva y quedará confundido. Ese no es un camino seguro.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0020",
+      "chapter": 4,
+      "start": 5481.91,
+      "end": 5505.27,
+      "text": "En igualdad de condiciones, mantente firme y recto, conduce al enemigo, oblígalo a saltar y moverse, hazlo vacilar y busca ante todo vencer con certeza. Este principio también existe en la estrategia de grandes ejércitos. Si dispones de una fuerza superior, úsala para presionar al enemigo de inmediato y aplastarlo sin demora. Eso es esencial.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0021",
+      "chapter": 4,
+      "start": 5505.82,
+      "end": 5530.22,
+      "text": "Si en tu práctica cotidiana solo aprendes a recibir, responder, esquivar y escabullirte, la mente será arrastrada por ese hábito y terminarás dejándote conducir por otros. El camino de la estrategia es directo y correcto. Es esencial emplear principios rectos para conducir al adversario y hacer que responda a tu voluntad. Examínalo con cuidado.\n\nLa abundancia de técnicas en otras escuelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0022",
+      "chapter": 4,
+      "start": 5530.77,
+      "end": 5552.93,
+      "text": "Transmitir un gran número de técnicas de espada puede servir para convertir el camino en una mercancía y hacer que el principiante crea que quien conoce muchas técnicas posee una enseñanza profunda. Esa disposición debe evitarse en la estrategia. La razón es que imaginar muchas maneras esencialmente distintas de cortar a una persona es extraviarse.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0023",
+      "chapter": 4,
+      "start": 5553.48,
+      "end": 5573.96,
+      "text": "El acto de cortar no cambia de camino según quien lo haga. Tanto quien sabe como quien no sabe, e incluso una mujer o un niño, cuentan con pocas maneras fundamentales de golpear y cortar. Como variantes, están la estocada y el tajo. Puesto que el camino empieza por cortar, no hay razón para multiplicarlo indefinidamente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0024",
+      "chapter": 4,
+      "start": 5574.51,
+      "end": 5599.15,
+      "text": "Sin embargo, según el lugar y las circunstancias, cuando hay obstáculos por arriba o a los lados, debes sostener la espada de manera que no tropiece. Por eso existen las cinco posiciones. Fuera de ellas, retorcer las manos, girar el cuerpo, saltar y abrirse para cortar no constituyen el verdadero camino. No cortas por retorcerte, por girar, por saltar ni por abrirte.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0025",
+      "chapter": 4,
+      "start": 5599.4,
+      "end": 5618.36,
+      "text": "Esas acciones, por sí mismas, no sirven de nada.\n\nEn mi estrategia, lo esencial es mantener rectos el cuerpo y la mente, deformar la posición enemiga y vencer cuando su mente se retuerza y pierda el equilibrio. Examínalo con atención.\n\nLas guardias de otras escuelas.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0026",
+      "chapter": 4,
+      "start": 5618.91,
+      "end": 5636.1900000000005,
+      "text": "Hacer de la guardia lo más importante es un error. Una guardia fija solo puede existir cuando no hay enemigo. No debes convertir los ejemplos antiguos ni las costumbres actuales en reglas rígidas para el combate. Debes disponer las cosas de tal manera que perjudiquen al adversario.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0027",
+      "chapter": 4,
+      "start": 5636.74,
+      "end": 5659.9400000000005,
+      "text": "En general, establecer una posición implica que no se mueva. Cuando se construye un castillo o se dispone un campamento, se busca que permanezcan firmes aunque alguien los ataque. Eso es lo habitual. Pero en el camino del combate hay que pensar siempre en adelantarse. Aferrarte a una guardia expresa la intención de esperar que otro tome la iniciativa. Examina bien esta cuestión.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0028a",
+      "chapter": 4,
+      "start": 5660.49,
+      "end": 5670.33,
+      "text": "En combate debes mover la guardia del enemigo, hacer lo que no espera, desconcertarlo o sobresaltarlo y vencer al reconocer el ritmo de su confusión.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0028b",
+      "chapter": 4,
+      "start": 5670.63,
+      "end": 5674.87,
+      "text": "Por eso rechazo la disposición tardía de permanecer en guardia.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0028c",
+      "chapter": 4,
+      "start": 5675.17,
+      "end": 5679.57,
+      "text": "De ahí que mi camino enseñe a tener guardia y no tenerla:",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0028d",
+      "chapter": 4,
+      "start": 5679.87,
+      "end": 5683.87,
+      "text": "existen posiciones, pero ninguna debe fijarte.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0029",
+      "chapter": 4,
+      "start": 5684.42,
+      "end": 5705.86,
+      "text": "En una gran batalla, reconoce cuántas tropas tiene el enemigo, comprende el campo de combate, conoce la situación de tus propias fuerzas y dispón a los hombres de acuerdo con ella para iniciar la lucha. Esto es esencial. La disposición cuando el enemigo toma primero la iniciativa y la disposición cuando tú atacas son completamente distintas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0030",
+      "chapter": 4,
+      "start": 5706.41,
+      "end": 5727.61,
+      "text": "Creer que basta con colocar bien la espada, recibir bien el arma enemiga y apartarla bien es como tomar lanzas y naginatas y convertirlas en una cerca. Cuando llegue el momento de atacar, será como arrancar los postes de esa cerca para volver a emplearlos como armas. Examina esta comparación con atención.\n\nLa mirada en otras escuelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0031",
+      "chapter": 4,
+      "start": 5728.16,
+      "end": 5744.72,
+      "text": "Según la escuela, se enseña a fijar los ojos en la espada enemiga, en sus manos, en el rostro o en los pies. Si pretendes concentrarte de esa manera en una sola parte, tu mente se confundirá y aparecerá lo que llamo una enfermedad de la estrategia.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0032",
+      "chapter": 4,
+      "start": 5745.27,
+      "end": 5770.95,
+      "text": "Quien practica el juego de la pelota puede mantenerla en movimiento sin mirarla fijamente, incluso al hacer movimientos rápidos y giros. Cuando una actividad se vuelve familiar, no es necesario observar cada cosa de forma deliberada. Lo mismo sucede con los artistas de acrobacias: cuando dominan su oficio, pueden sostener una puerta sobre la nariz o hacer juegos con varias espadas como si fueran pelotas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0033",
+      "chapter": 4,
+      "start": 5771.2,
+      "end": 5793.76,
+      "text": "No necesitan fijar los ojos en cada objeto; por la práctica constante, los perciben de manera natural.\n\nEn el camino de la estrategia, al habituarte a tratar con distintos adversarios, reconocerás el peso y la ligereza de sus intenciones. Cuando domines el camino, podrás ver la distancia de sus espadas y la rapidez o lentitud de sus movimientos.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0034",
+      "chapter": 4,
+      "start": 5794.31,
+      "end": 5820.55,
+      "text": "La mirada de la estrategia se dirige, en conjunto, a la mente del adversario. En las grandes batallas se dirige a la disposición de sus tropas. Entre percibir y observar, fortalece la percepción: comprende la intención enemiga, reconoce las condiciones del lugar, mira de manera amplia el estado del combate y distingue dónde aparece la fuerza o la debilidad en cada momento. Lo esencial es obtener así una victoria correcta.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0035",
+      "chapter": 4,
+      "start": 5821.1,
+      "end": 5840.86,
+      "text": "Ni en la estrategia de uno ni en la de muchos debe estrecharse la mirada. Como ya he escrito, fijarte demasiado en un detalle te hace olvidar lo grande, confunde la mente y te hace perder una victoria segura. Examina este principio y entrénalo con cuidado.\n\nEl uso de los pies en otras escuelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0036",
+      "chapter": 4,
+      "start": 5841.41,
+      "end": 5857.01,
+      "text": "Hay quienes enseñan pasos flotantes, pasos con saltos, pasos que rebotan, pasos que se clavan en el suelo y pasos de cuervo, entre otras formas de desplazamiento. Desde mi estrategia, todas presentan insuficiencias.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0037",
+      "chapter": 4,
+      "start": 5857.56,
+      "end": 5885.24,
+      "text": "Rechazo los pasos flotantes porque en combate los pies ya tienden a perder firmeza. El camino consiste en pisar con certeza. No prefiero los pasos con saltos porque necesitan un impulso para despegar y, después del salto, tienden a fijarse. No puedes seguir saltando indefinidamente. Los pasos que rebotan tampoco permiten avanzar como es debido. Los pasos que se detienen son pasos de espera y los rechazo especialmente.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0038",
+      "chapter": 4,
+      "start": 5885.79,
+      "end": 5907.95,
+      "text": "Además de los pasos de cuervo, existen otras maneras artificiosas de mover los pies. Pero puedes verte obligado a cruzar las armas en pantanos, lodazales, montañas, ríos, pedregales o caminos estrechos. Según el lugar, no podrás saltar ni rebotar, y habrá sitios donde no puedas ejecutar esos pasos particulares.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0039",
+      "chapter": 4,
+      "start": 5908.5,
+      "end": 5927.14,
+      "text": "En mi estrategia no hay una forma extraordinaria de caminar. Muévete como cuando recorres un camino habitual. De acuerdo con el ritmo del enemigo, reconoce la disposición del cuerpo al apresurarte y al moverte con calma. Que los pasos no se queden cortos ni se excedan, y que los pies no pierdan el orden.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0040",
+      "chapter": 4,
+      "start": 5927.6900000000005,
+      "end": 5956.41,
+      "text": "En una gran batalla también es esencial el desplazamiento. Si atacas de prisa sin comprender la intención enemiga, perderás el ritmo y será difícil vencer. Pero si avanzas con demasiada lentitud, no reconocerás cuándo el adversario vacila y empieza a derrumbarse; perderás la victoria y no resolverás pronto el combate. Reconoce el instante de vacilación y derrumbe, y vence sin permitir que el enemigo se recupere. Entrénalo con atención.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0041",
+      "chapter": 4,
+      "start": 5956.96,
+      "end": 5971.92,
+      "text": "La rapidez en las escuelas de estrategia.\n\nHacer de la rapidez un propósito no es el verdadero camino. Llamamos a algo rápido o lento cuando no encaja en el intervalo de su ritmo. Cuando alguien domina un camino, su acción no parece apresurada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0042",
+      "chapter": 4,
+      "start": 5972.47,
+      "end": 5987.51,
+      "text": "Hay mensajeros que recorren cuarenta o cincuenta ri en un día, pero no lo hacen corriendo a toda velocidad desde la mañana hasta la noche. Quien desconoce el camino puede parecer que corre todo el día y, sin embargo, apenas avanzar.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0043",
+      "chapter": 4,
+      "start": 5988.06,
+      "end": 6013.26,
+      "text": "En la danza y el canto, si un principiante intenta seguir el canto de un maestro, siente que se queda atrás y se apresura. También al tocar el tambor: aunque Oimatsu tiene un carácter pausado, el principiante se retrasa o se adelanta. Takasago tiene un carácter vivo, pero tampoco conviene apresurarse. La prisa hace tropezar y perder el intervalo. Por supuesto, retrasarse también es malo.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0044",
+      "chapter": 4,
+      "start": 6013.51,
+      "end": 6029.43,
+      "text": "Lo que hace un maestro parece tranquilo y, sin embargo, no deja escapar ni un solo momento. En cualquier actividad, quien está acostumbrado a ella no parece agitado al realizarla. Comprende el principio del camino mediante estos ejemplos.",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0045",
+      "chapter": 4,
+      "start": 6029.98,
+      "end": 6054.3,
+      "text": "En la estrategia es especialmente perjudicial perseguir la rapidez. Según el terreno, como en un pantano o un lodazal, ni el cuerpo ni los pies pueden moverse deprisa. Con la espada es todavía más importante no intentar cortar precipitadamente. Una espada larga no es un abanico ni una hoja corta: si intentas dar un corte rápido y ligero, apenas cortarás. Compréndelo con atención.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0046",
+      "chapter": 4,
+      "start": 6054.85,
+      "end": 6077.97,
+      "text": "En una gran batalla también es perjudicial apresurarse. Si conservas la disposición de sujetar la almohada, nunca llegarás tarde. Cuando el adversario se precipite sin sentido, es esencial contrariar su ritmo: mantente tranquilo y no te dejes arrastrar por él. Trabaja y entrena esta disposición.\n\nLas enseñanzas exteriores y secretas de otras escuelas.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0047",
+      "chapter": 4,
+      "start": 6078.52,
+      "end": 6099.16,
+      "text": "En la estrategia, ¿qué puede llamarse exterior y qué puede llamarse secreto? En diversas artes y circunstancias se habla de principios últimos o enseñanzas reservadas, y se distingue una entrada de una parte profunda. Pero, según mi principio del combate, no se lucha con lo exterior para después cortar con lo secreto.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0048",
+      "chapter": 4,
+      "start": 6099.71,
+      "end": 6122.59,
+      "text": "Mi manera de enseñar es hacer que el principiante practique aquello que puede ejecutar con facilidad y explicarle primero los principios que comprende más pronto. En cuanto a lo que todavía supera su entendimiento, observo cómo se abre su mente y le enseño gradualmente los principios más profundos. Sin embargo, todo debe aprenderse en relación con las cosas concretas a las que corresponde;",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0049",
+      "chapter": 4,
+      "start": 6122.84,
+      "end": 6145.4,
+      "text": "por eso no existe una separación rígida entre entrada y profundidad.\n\nCuando buscas lo más profundo de una montaña y continúas todavía más allá, vuelves a salir a una entrada. En cualquier camino puedes encontrar algo profundo y también ocasiones en las que conviene mostrar la entrada. En los principios de este combate, ¿qué tendría que ocultar y qué tendría que exhibir?",
+      "separator": " "
+    },
+    {
+      "id": "S05-U0050",
+      "chapter": 4,
+      "start": 6145.95,
+      "end": 6169.79,
+      "text": "Por eso no me gusta transmitir mi camino mediante juramentos escritos ni fórmulas de castigo. Examino la capacidad de comprender de quien lo estudia, le enseño el camino recto y le hago abandonar los malos desvíos de la estrategia. Así entra por sí mismo en el verdadero camino del guerrero y alcanza una mente sin dudas. Ese es el camino de mi estrategia. Entrénalo con atención.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0051",
+      "chapter": 4,
+      "start": 6170.34,
+      "end": 6191.22,
+      "text": "He descrito de manera general la estrategia de otras escuelas en nueve artículos de este rollo del Viento. Podría exponer claramente cada escuela, desde su entrada hasta su enseñanza más profunda, pero he evitado escribir sus nombres o identificar una doctrina particular como perteneciente a una escuela determinada.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0052",
+      "chapter": 4,
+      "start": 6191.77,
+      "end": 6212.09,
+      "text": "La razón es que cada escuela tiene su propia manera de ver y de explicar su camino. Cada persona sostiene su parecer según su disposición; incluso dentro de una misma escuela hay diferencias de intención. Pensando en el futuro, no he indicado los nombres de sus linajes. He dividido sus rasgos generales en nueve cuestiones.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0053",
+      "chapter": 4,
+      "start": 6212.64,
+      "end": 6234.16,
+      "text": "Si los examinas desde el camino del mundo y los principios rectos de las personas, verás que inclinarse exclusivamente por lo largo, convertir lo corto en una doctrina o aferrarse a lo fuerte, lo débil, lo tosco o lo minucioso son caminos parciales. Todos pueden comprenderlo sin que yo revele las enseñanzas exteriores o secretas de cada escuela.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S05-U0054",
+      "chapter": 4,
+      "start": 6234.71,
+      "end": 6255.59,
+      "text": "En mi escuela, la espada no tiene una entrada separada de una enseñanza secreta, ni hay una guardia definitiva. Comprender sus ventajas mediante la mente es lo esencial de la estrategia.\n\nDía doce del quinto mes del segundo año de la era Shōhō. Shinmen Musashi no Kami Genshin, con su sello. A Terao Magonojō.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0001",
+      "chapter": 5,
+      "start": 6260.6900000000005,
+      "end": 6283.490000000001,
+      "text": "Rollo del Vacío.\n\nExpongo aquí el rollo del Vacío del camino de la estrategia de mi escuela de las dos espadas. Se considera vacío aquello donde no hay cosa alguna, aquello que no puede conocerse como una cosa. Por supuesto, el vacío no es una cosa. Al conocer lo que existe, conoces también lo que no existe: eso es el vacío.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0002",
+      "chapter": 5,
+      "start": 6284.040000000001,
+      "end": 6307.88,
+      "text": "Cuando se mira equivocadamente el mundo, se toma por vacío lo que uno no comprende. Eso no es el verdadero vacío, sino una mente extraviada. También en este camino de la estrategia, cuando un guerrero no conoce las normas de su propio oficio y, lleno de confusión, no sabe qué hacer, puede llamar vacío a ese estado. Pero tampoco es el verdadero vacío.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0003",
+      "chapter": 5,
+      "start": 6308.43,
+      "end": 6332.830000000001,
+      "text": "El guerrero debe aprender con certeza el camino de la estrategia y practicar bien las demás artes marciales. No debe quedar en oscuridad ninguna parte del camino que ha de seguir, ni debe haber un lugar donde la mente se extravíe. Cada mañana y a cada momento, sin descuidarse, debe pulir las dos facultades del corazón y la intención, y afinar las dos miradas de la percepción y la observación.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0004",
+      "chapter": 5,
+      "start": 6333.080000000001,
+      "end": 6340.360000000001,
+      "text": "Cuando no quede la menor sombra y se hayan despejado las nubes de la confusión, podrá conocer el verdadero vacío.",
+      "separator": " "
+    },
+    {
+      "id": "S06-U0005",
+      "chapter": 5,
+      "start": 6340.910000000001,
+      "end": 6361.47,
+      "text": "Mientras no conozcas el verdadero camino, tanto en las enseñanzas budistas como en las cosas del mundo, puedes creer que el tuyo es un camino seguro y bueno. Sin embargo, si lo comparas con la gran medida del mundo desde una mente recta, verás que las preferencias personales y las deformaciones de la propia mirada pueden apartarte del verdadero camino.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0006",
+      "chapter": 5,
+      "start": 6362.02,
+      "end": 6389.780000000001,
+      "text": "Reconoce esa disposición. Toma la rectitud como fundamento y la sinceridad de la mente como camino. Practica ampliamente la estrategia, con corrección y claridad, y comprende las cosas desde su amplitud. Haz del vacío el camino y contempla el camino como su principio.\n\nEn el vacío está el bien y no está el mal. Existe la sabiduría. Existe el principio. Existe el camino. La mente es vacío.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0007a",
+      "chapter": 5,
+      "start": 6390.330000000001,
+      "end": 6394.490000000001,
+      "text": "Día doce del quinto mes del segundo año de la era Shōhō.",
+      "separator": "\n\n"
+    },
+    {
+      "id": "S06-U0007b",
+      "chapter": 5,
+      "start": 6394.790000000001,
+      "end": 6398.950000000001,
+      "text": "Shinmen Musashi no Kami Genshin, con su sello.",
+      "separator": " "
+    },
+    {
+      "id": "S06-U0007c",
+      "chapter": 5,
+      "start": 6399.250000000001,
+      "end": 6401.410000000001,
+      "text": "A Terao Magonojō.",
+      "separator": " "
+    }
+  ]
+}

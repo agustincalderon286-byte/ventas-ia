@@ -1,5 +1,13 @@
 # Audiolibros TEC
 
+## Los cinco anillos y La psicología de las ventas — 12 de noviembre de 2026
+
+Publicación expresamente autorizada por Agustin: ambos libros completos, con Bruno aprobado, portadas, muestra del primer diez por ciento y lectura sincronizada. Los cinco anillos incluye prólogo y cinco rollos; traducción propia del asistente desde el japonés, sin revisión de traductor humano. Psicología corresponde a William Walker Atkinson (1912), diez capítulos y citas del original. La comprobación automática de audio no equivale a escucha humana integral.
+
+El libro de los cinco anillos: 6404.51 segundos; 320 pasajes; objeto privado Cinco-anillos-completo-TEC-es-actual-v1.m4b; SHA-256 fc3c0cfcb11675183eac146f2fd95c60b059276ab4ca8d3f6d5ccf3155458924.
+
+La psicología de las ventas: 17394.5 segundos; 620 pasajes; objeto privado Psicologia-de-las-ventas-completo-TEC-web-v1.m4b; SHA-256 4b4a2b5e89da88522ae980b6f3adeaabf2bb3c97f6f59e0b851ac84e62bc4c5a.
+
 ## Don Quijote, entrega parcial — 11 de noviembre de 2026
 
 Publicación expresamente solicitada por Agustin del audio disponible. Primera parte, capítulos 1–10 de los 126 de la obra, en español actual. No se presenta como obra completa; no incluye todavía preliminares ni capítulos posteriores. Una ficha y un objeto privado versionado de R2, con diez capítulos, portada existente de TEC, muestra del primer diez por ciento y lectura sincronizada exacta. Duración: 7615.35 segundos; 704 pasajes.

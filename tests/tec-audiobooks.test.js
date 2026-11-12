@@ -90,6 +90,8 @@ test('catalog manifest has all nine parts, monotonic chapter starts and the exac
 
 test('TEC editions keep exact canonical text; external narration never fabricates synchronized cues', () => {
   const expected = {
+    'el-libro-de-los-cinco-anillos': '6d2c143b7f74ae432d1724884deab84ebaf9101299891054d13802c71722a044',
+    'la-psicologia-de-las-ventas': 'd535883fd202115e76592a561097afda6b4995ea06fb56372bcd8325249cc255',
     'como-un-hombre-piensa': '2fbf8ae9856e53b7992887d06e089712d3060f483bb60fb480edbd37a396ef07',
     'acres-de-diamantes': '0e9f5dc1d4221ac8f9ef6035f4608edfae7779a7fcfeda5a06563598e268b647',
     'el-arte-de-la-guerra': 'f45d62adf38f0e0831497653ed3799f5eb172c070f3c3e15fbfa699a722abbe9',

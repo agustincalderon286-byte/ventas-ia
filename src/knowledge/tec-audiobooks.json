@@ -1703,5 +1703,147 @@
       "filename": "Criterio_librivox.m4b"
     },
     "voiceDisclosure": ""
+  },
+  {
+    "id": "el-libro-de-los-cinco-anillos",
+    "title": "El libro de los cinco anillos",
+    "author": "Miyamoto Musashi",
+    "originalTitle": "五輪書 · Gorin no sho (1645)",
+    "language": "Español",
+    "categories": [
+      "Clásicos",
+      "Filosofía",
+      "Estrategia"
+    ],
+    "description": "Miyamoto Musashi expone su camino de la estrategia a través de Tierra, Agua, Fuego, Viento y Vacío. La práctica, la percepción, el ritmo y la adaptación a las circunstancias recorren este tratado del arte de la espada. Edición completa de TEC en español actual: prólogo del autor y cinco rollos, con narración de Bruno, índice y lectura sincronizada.",
+    "edition": "Prólogo y cinco rollos completos · Español actual · TEC",
+    "narrator": "Bruno · Audiolibros TEC",
+    "credits": "Miyamoto Musashi. Traducción propia del asistente de TEC al español actual desde el original japonés conservado en 武術叢書, 国書刊行会, 1915, NDL945805, páginas 127–142; cotejo auxiliar con la edición japonesa de 1939, NDL1071527. Incluye el prólogo y los cinco rollos completos del autor. Las notas editoriales y anotaciones posteriores del copista se conservan en las fuentes y quedan fuera de la narración. Traducción sin revisión de un traductor humano. Narración con la voz sintética de Bruno aprobada para TEC. Portada original de TEC.",
+    "duration": 6404.51,
+    "cover": "/coach/assets/audiobooks/cinco-anillos-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/cinco-anillos-v1.jpg",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Prólogo",
+        "start": 0.0,
+        "duration": 147.65
+      },
+      {
+        "title": "Rollo de la Tierra",
+        "start": 147.65,
+        "duration": 1518.54
+      },
+      {
+        "title": "Rollo de Agua",
+        "start": 1666.19,
+        "duration": 1734.66
+      },
+      {
+        "title": "Rollo de Fuego",
+        "start": 3400.8500000000004,
+        "duration": 1700.61
+      },
+      {
+        "title": "Rollo de Viento",
+        "start": 5101.46,
+        "duration": 1157.23
+      },
+      {
+        "title": "Rollo de Vacío",
+        "start": 6258.6900000000005,
+        "duration": 145.82
+      }
+    ],
+    "audio": {
+      "filename": "Cinco-anillos-completo-TEC-es-actual-v1.m4b",
+      "r2Key": "Cinco-anillos-completo-TEC-es-actual-v1.m4b",
+      "bytes": 148714946,
+      "sha256": "fc3c0cfcb11675183eac146f2fd95c60b059276ab4ca8d3f6d5ccf3155458924",
+      "md5": "1c8b8e0ab25ff93c9f2bb5578c9a685d",
+      "contentType": "audio/mp4",
+      "r2ETag": "\"1c8b8e0ab25ff93c9f2bb5578c9a685d\""
+    }
+  },
+  {
+    "id": "la-psicologia-de-las-ventas",
+    "title": "La psicología de las ventas",
+    "author": "William Walker Atkinson",
+    "originalTitle": "The Psychology of Salesmanship (1912)",
+    "language": "Español",
+    "categories": [
+      "Desarrollo personal",
+      "Ventas",
+      "Psicología"
+    ],
+    "description": "William Walker Atkinson examina la atención, el interés, el deseo y la confianza en la relación entre vendedor y comprador. Este tratado de 1912 reúne sus ideas sobre la preparación del vendedor, la comunicación y los motivos de compra. Traducción propia de TEC al español actual, con diez capítulos completos narrados por Bruno y lectura sincronizada.",
+    "edition": "Diez capítulos completos · Español actual · TEC",
+    "narrator": "Bruno · Audiolibros TEC",
+    "credits": "William Walker Atkinson, The Psychology of Salesmanship, 1912. Traducción propia de TEC al español actual, cotejada por el asistente con el texto original; incluye los diez capítulos y las citas en verso de la obra. Las ideas se presentan como parte del tratado histórico del autor. Narración con la voz sintética de Bruno aprobada para TEC. Portada original de TEC.",
+    "duration": 17394.5,
+    "cover": "/coach/assets/audiobooks/psicologia-de-las-ventas-v1.jpg",
+    "mediaArtwork": "/audiolibros/portadas/psicologia-de-las-ventas-v1.jpg",
+    "voiceDisclosure": "",
+    "chapters": [
+      {
+        "title": "Capítulo 1. La psicología en los negocios",
+        "start": 0.0,
+        "duration": 1363.06
+      },
+      {
+        "title": "Capítulo 2. La mente del vendedor",
+        "start": 1363.06,
+        "duration": 1336.31
+      },
+      {
+        "title": "Capítulo 3. La mente del vendedor (continuación)",
+        "start": 2699.37,
+        "duration": 1711.12
+      },
+      {
+        "title": "Capítulo 4. La mente del comprador",
+        "start": 4410.49,
+        "duration": 1552.11
+      },
+      {
+        "title": "Capítulo 5. La mente del comprador (continuación)",
+        "start": 5962.599999999999,
+        "duration": 1734.73
+      },
+      {
+        "title": "Capítulo 6. La preparación del acercamiento",
+        "start": 7697.33,
+        "duration": 1607.06
+      },
+      {
+        "title": "Capítulo 7. La psicología de la compra",
+        "start": 9304.39,
+        "duration": 2257.13
+      },
+      {
+        "title": "Capítulo 8. El acercamiento",
+        "start": 11561.52,
+        "duration": 1913.09
+      },
+      {
+        "title": "Capítulo 9. La demostración",
+        "start": 13474.61,
+        "duration": 2122.19
+      },
+      {
+        "title": "Capítulo 10. El cierre",
+        "start": 15596.800000000001,
+        "duration": 1797.7
+      }
+    ],
+    "audio": {
+      "filename": "Psicologia-de-las-ventas-completo-TEC-web-v1.m4b",
+      "r2Key": "Psicologia-de-las-ventas-completo-TEC-web-v1.m4b",
+      "bytes": 296941147,
+      "sha256": "4b4a2b5e89da88522ae980b6f3adeaabf2bb3c97f6f59e0b851ac84e62bc4c5a",
+      "md5": "71762dbd13d35e0b4304bfd0882f29ac",
+      "contentType": "audio/mp4",
+      "r2ETag": "\"71762dbd13d35e0b4304bfd0882f29ac\""
+    }
   }
 ]

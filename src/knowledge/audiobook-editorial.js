@@ -1,6 +1,60 @@
 // Original editorial introductions based on TEC's Spanish masters and chapter lists.
 // These summaries describe each work; they do not reproduce the members-only text.
 export const bookEditorial = {
+  "el-libro-de-los-cinco-anillos": {
+  "summary": [
+    "Musashi organiza su enseñanza en cinco rollos. Tierra presenta el camino de la estrategia; Agua desarrolla la disposición de la mente y el cuerpo; Fuego aborda el combate; Viento examina otras escuelas; y Vacío cierra la reflexión sobre comprender y actuar con claridad. Sus ejemplos nacen del arte de la espada y del mando de tropas.",
+    "El prólogo sitúa estas enseñanzas en la experiencia de Musashi. A lo largo del tratado insiste en la práctica cotidiana, la percepción amplia, el dominio del ritmo y la capacidad de responder a cada circunstancia. La edición de TEC ofrece el texto en español actual, con capítulos y lectura sincronizada para seguirlo durante la escucha."
+  ],
+  "ideas": [
+    "La práctica constante permite incorporar los principios a la acción.",
+    "La mirada amplia y el ritmo ayudan a reconocer cada situación.",
+    "Una preferencia rígida por una técnica o un arma limita la respuesta."
+  ],
+  "audience": "Para quienes quieran conocer el tratado de Musashi en español actual y explorar su reflexión histórica sobre la práctica, la estrategia y la atención.",
+  "tip": "Comienza por el prólogo y Tierra para conocer los términos del autor. Usa el índice para volver a una enseñanza y acompaña la escucha con el texto sincronizado.",
+  "questions": [
+    [
+      "¿Qué incluye esta edición de Los cinco anillos?",
+      "Incluye el prólogo de Musashi y los cinco rollos completos: Tierra, Agua, Fuego, Viento y Vacío."
+    ],
+    [
+      "¿De dónde procede la traducción al español?",
+      "Es una traducción propia del asistente de TEC desde el original japonés de la edición de 1915, con consulta de la edición de 1939 para el cotejo. Está escrita en español actual y no cuenta con revisión de un traductor humano."
+    ],
+    [
+      "¿Puedo escuchar y leer el libro?",
+      "Sí. El audiolibro tiene narración de Bruno, índice y lectura sincronizada. La muestra gratuita ofrece el primer diez por ciento; la membresía permite continuar con el libro completo."
+    ]
+  ]
+},
+  "la-psicologia-de-las-ventas": {
+  "summary": [
+    "William Walker Atkinson estudia la venta a través de la atención, el interés, el deseo y la confianza. Relaciona la preparación y la disposición del vendedor con la forma en que presenta un producto y comprende a quien lo escucha. Sus ejemplos y explicaciones pertenecen al contexto de un tratado publicado en 1912.",
+    "La obra reúne consejos sobre el carácter, la observación, la comunicación y los motivos que intervienen en una decisión de compra. Esta edición conserva los diez capítulos y las citas del original en una traducción propia al español actual. El índice y la lectura sincronizada permiten seguir los argumentos y volver a sus ejemplos."
+  ],
+  "ideas": [
+    "La atención y el interés ocupan un lugar central en la exposición del autor.",
+    "La preparación del vendedor incluye su disposición y su manera de comunicarse.",
+    "Observar al comprador ayuda a comprender sus motivos y sus objeciones."
+  ],
+  "audience": "Para quienes quieran leer o escuchar el tratado histórico de William Walker Atkinson sobre las ventas, la atención y la relación con el comprador.",
+  "tip": "Escucha los capítulos en orden para seguir cómo Atkinson construye su argumento. Puedes volver a los ejemplos con el índice y comparar cada explicación con el texto sincronizado.",
+  "questions": [
+    [
+      "¿Quién escribió La psicología de las ventas de esta biblioteca?",
+      "El autor es William Walker Atkinson. Esta edición traduce al español actual su obra The Psychology of Salesmanship, publicada en 1912."
+    ],
+    [
+      "¿Está completo el libro?",
+      "Sí. Incluye los diez capítulos completos y las citas en verso del original, con narración de Bruno."
+    ],
+    [
+      "¿Tiene muestra y lectura sincronizada?",
+      "Sí. La muestra gratuita contiene el primer diez por ciento. La membresía permite escuchar el libro completo y seguir el mismo texto narrado con lectura sincronizada."
+    ]
+  ]
+},
   "el-criterio": {
     summary: [
       "Aprender a pensar bien no consiste solamente en acumular información. En El criterio, Jaime Balmes propone observar con atención, distinguir los hechos de las apariencias y examinar las razones que sostienen una opinión. Sus ejemplos recorren situaciones de la vida cotidiana para mostrar cómo el hábito, la imaginación, los afectos y los prejuicios pueden influir en nuestros juicios.",
@@ -269,11 +323,11 @@ export const bookEditorial = {
 export const audioCollections = [
   {
     id: 'desarrollo-personal', title: 'Audiolibros de desarrollo personal', label: 'Desarrollo personal',
-    description: 'Explora pensamiento, propósito, perseverancia, ahorro y oportunidades con James Allen, Samuel Smiles, Russell H. Conwell, Wallace D. Wattles y George S. Clason.',
-    intro: 'Esta colección reúne cinco maneras de abordar la formación personal. Allen se concentra en pensamiento y carácter; Conwell mira las oportunidades cercanas; Smiles recurre a historias de esfuerzo; Wattles desarrolla su propuesta de prosperidad, y Clason utiliza relatos sobre el ahorro, las deudas y el trabajo. Puedes empezar con una obra breve o elegir un recorrido más largo por capítulos.',
+    description: 'Explora pensamiento, propósito, perseverancia, ahorro y oportunidades con James Allen, Samuel Smiles, Russell H. Conwell, Wallace D. Wattles, George S. Clason y William Walker Atkinson.',
+    intro: 'Esta colección reúne distintas maneras de abordar la formación personal. Allen se concentra en pensamiento y carácter; Conwell mira las oportunidades cercanas; Smiles recurre a historias de esfuerzo; Wattles desarrolla su propuesta de prosperidad, Clason utiliza relatos sobre el ahorro, las deudas y el trabajo, y Atkinson examina la comunicación y la atención en las ventas. Puedes empezar con una obra breve o elegir un recorrido más largo por capítulos.',
     ideas: ['Pensamiento, ideales y serenidad.', 'Iniciativa, trabajo y perseverancia.', 'Oportunidades cercanas y acción con propósito.'],
     route: 'Para una primera escucha breve, empieza con Como un hombre piensa. Sigue con Acres de diamantes si prefieres relatos y ejemplos. ¡Ayúdate! permite ampliar el recorrido, y La ciencia de hacerse rico ofrece otra perspectiva sobre propósito y acción.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-hombre-mas-rico-de-babilonia']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-hombre-mas-rico-de-babilonia', 'la-psicologia-de-las-ventas']
   },
   {
     id: 'biblia-en-audio', title: 'Biblia en audio en español', label: 'Biblia en audio',
@@ -289,14 +343,14 @@ export const audioCollections = [
     intro: 'Una puerta de entrada a obras que plantean preguntas sobre la conducta, el trabajo, la estrategia, la prosperidad y la mente. Sus contextos y enfoques son distintos: aquí puedes conocer de qué trata cada libro antes de elegir. Las fichas explican las ediciones de TEC y permiten probar el primer 10 % de cada título.',
     ideas: ['Ensayos breves y obras extensas para escuchar por etapas.', 'Estrategia, iniciativa y formación del carácter.', 'Filosofía hermética y diferentes perspectivas sobre el pensamiento.'],
     route: 'Elige Como un hombre piensa para un ensayo breve, El arte de la guerra para estrategia o El Kybalión para filosofía hermética. Para una escucha con muchas historias, explora Acres de diamantes o ¡Ayúdate!.',
-    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha', 'el-criterio']
+    bookIds: ['como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha', 'el-criterio', 'el-libro-de-los-cinco-anillos', 'la-psicologia-de-las-ventas']
   },
   {
     id: 'filosofia-y-estrategia', title: 'Audiolibros de filosofía y estrategia', label: 'Filosofía y estrategia',
-    description: 'Explora pensamiento, carácter y decisiones con Marco Aurelio, James Allen, Sun Tzu y El Kybalión, en español y con lectura sincronizada.',
-    intro: 'Estas obras permiten explorar enfoques distintos sobre pensar y actuar. Marco Aurelio ejercita la atención a los propios juicios y a la convivencia; James Allen reflexiona sobre la vida interior y el carácter; Sun Tzu examina decisiones en un contexto militar, y Tres Iniciados expone su propuesta hermética. La colección invita a comparar sus preguntas sin presentar sus ideas como si pertenecieran a una sola teoría.',
+    description: 'Explora pensamiento, carácter y decisiones con Marco Aurelio, James Allen, Sun Tzu, Miyamoto Musashi y El Kybalión, en español y con lectura sincronizada.',
+    intro: 'Estas obras permiten explorar enfoques distintos sobre pensar y actuar. Marco Aurelio ejercita la atención a los propios juicios y a la convivencia; James Allen reflexiona sobre la vida interior y el carácter; Sun Tzu examina decisiones en un contexto militar; Musashi desarrolla su camino de la estrategia, y Tres Iniciados expone su propuesta hermética. La colección invita a comparar sus preguntas sin presentar sus ideas como si pertenecieran a una sola teoría.',
     ideas: ['Pensamiento y serenidad en James Allen.', 'Preparación, información y adaptación en Sun Tzu.', 'Los siete principios de El Kybalión dentro de la filosofía hermética.'],
     route: 'Comienza con la pregunta que más te interese: hábitos y carácter, decisiones estratégicas o filosofía hermética. Usa las muestras para conocer el tono y la forma de cada texto antes de continuar con la edición completa.',
-    bookIds: ['meditaciones-marco-aurelio', 'como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion', 'el-criterio']
+    bookIds: ['meditaciones-marco-aurelio', 'como-un-hombre-piensa', 'el-arte-de-la-guerra', 'el-kybalion', 'el-criterio', 'el-libro-de-los-cinco-anillos']
   }
 ];

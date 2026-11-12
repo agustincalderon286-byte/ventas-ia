@@ -96,5 +96,19 @@
     "bytes": 10155732,
     "sha256": "01246cc21b6cbff4e303adc928f9f9c40e4fc80d08e2c7574e34246224c2f20e",
     "r2ETag": "\"1969a94866030155f93b8ec5c002044c\""
+  },
+  "el-libro-de-los-cinco-anillos": {
+    "filename": "el-libro-de-los-cinco-anillos-30a818415f78a351.m4a",
+    "r2Key": "direct-audio-v1/el-libro-de-los-cinco-anillos-30a818415f78a351.m4a",
+    "bytes": 14702554,
+    "sha256": "30a818415f78a35151edbfbe9f70c4a8006b50cbb051b56fa310f455bf76b710",
+    "r2ETag": "\"d7b744b8c1685251f1dcffc0978eea6f\""
+  },
+  "la-psicologia-de-las-ventas": {
+    "filename": "la-psicologia-de-las-ventas-91891e718fe5361a.m4a",
+    "r2Key": "direct-audio-v1/la-psicologia-de-las-ventas-91891e718fe5361a.m4a",
+    "bytes": 29632922,
+    "sha256": "91891e718fe5361a3085766afe6dfde5c2704fbbdabd86012b4e4975205574fa",
+    "r2ETag": "\"9d34d602fd0ea4435c6ca9f545928e48\""
   }
 }
