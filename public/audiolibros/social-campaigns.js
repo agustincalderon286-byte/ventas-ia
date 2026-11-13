@@ -541,6 +541,24 @@ export const SOCIAL_PIECES = Object.freeze([
     "availableFrom": null
   },
   {
+    "id": "fb_1767749598684584",
+    "source": "facebook",
+    "format": "reel",
+    "title": "Expediente Medianoche · Área 51 · La base de noche",
+    "bookId": null,
+    "postUrl": "https://www.facebook.com/reel/1767749598684584/",
+    "availableFrom": null
+  },
+  {
+    "id": "fb_991457786818109",
+    "source": "facebook",
+    "format": "reel",
+    "title": "Expediente Medianoche · Área 51 · Conversación con Damián",
+    "bookId": null,
+    "postUrl": "https://www.facebook.com/reel/991457786818109/",
+    "availableFrom": null
+  },
+  {
     "id": "fb_122108253855537880",
     "source": "facebook",
     "format": "reel",
