@@ -1,3 +1,4 @@
+import { registerAudioSocial } from './tec-audio-social.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { audiobookCatalog } from './tec-audiobooks.js';
 import { bookEditorial, audioCollections } from './knowledge/audiobook-editorial.js';
@@ -94,7 +95,7 @@ export function buildAudiobookSeo({
     .replace('Cargando audiolibros…', 'Elige un libro para conocerlo y escuchar su muestra.');
   const baseHead = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#102421">
     <link rel="icon" href="/audiolibros/identidad/favicon-96.png"><link rel="apple-touch-icon" href="/audiolibros/identidad/apple-touch-icon.png">
-    <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script defer src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script><script defer src="/audiolibros/preview.js?v=20261111-r2"></script><script type="module" src="/audiolibros/analytics.js?v=20261112-editorial1"></script>`;
+    <link rel="stylesheet" href="/audiolibros/estilos.css?v=20261108-analytics"><script defer src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script><script defer src="/audiolibros/preview.js?v=20261111-r2"></script><script type="module" src="/audiolibros/analytics.js?v=20261113-social1"></script>`;
   const nav = `<header class="top wrap"><a class="brand" href="/audiolibros/"><span><strong>Audiolibros TEC</strong><small>Total Elite Coaching</small></span></a><nav aria-label="Navegación principal"><a href="/audiolibros/#catalogo">Audiolibros</a><a href="/audiolibros/#libros">Libros</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías</a><a href="/audiolibros/#membresia">Membresía</a></nav></header>`;
   const footer = `<footer class="wrap"><span>Audiolibros TEC · Total Elite Coaching</span><a href="/audiolibros/nuestra-historia/">Nuestra historia</a><a href="/audiolibros/#colecciones">Colecciones</a><a href="${guideHub}">Guías y lecturas</a><a href="/audiolibros/privacidad/">Privacidad</a><a href="/audiolibros/contacto/">Contacto y soporte</a></footer>`;
   const storyUrl = absolute('/audiolibros/nuestra-historia/');
@@ -187,6 +188,7 @@ export function registerAudiobookSeo(app, options = {}) {
     res.status(410).set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' }).type('html').send('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audiolibro retirado · Audiolibros TEC</title><main><h1>Este audiolibro ya no está disponible en TEC</h1><p>Puedes seguir explorando los títulos de nuestra biblioteca.</p><a href="/audiolibros/">Volver a Audiolibros TEC</a></main></html>'));
 
   app.get('/audiolibros/pruebas/el-criterio/*', (_req, res) => res.status(410).set('Cache-Control', 'no-store').end());
+  registerAudioSocial(app, options);
   registerBadgeSharePages(app, options);
   registerReadingPages(app, options);
   const send = (type, value) => (_req, res) => res.type(type).set('Cache-Control', 'public, max-age=300').send(value);

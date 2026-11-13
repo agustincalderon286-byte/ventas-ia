@@ -137,3 +137,18 @@ test('modern invoices require settled Stripe payments and reject manual or incom
     payments: { data: [payment], has_more: false } })), true);
   assert.equal(f.sent.length, 1);
 });
+
+test('paid subscriptions retain the exact public reel and network through checkout context and Stripe invoice delivery', async () => {
+  for (const [source, content] of [['instagram','ig_dfqtbe5ngiy'], ['facebook','fb_1835156844281065'], ['youtube','yt_bbknrqo9uu4'], ['tiktok','tt_7707440558070975775']]) {
+    const f = fixture(); const measurement = { ...analytics, campaign: { campaign_source: source, campaign_medium: 'social', campaign_name: 'tec_redes_es', campaign_content: content } };
+    assert.equal(await f.service.saveContext(user, measurement), true);
+    assert.equal(await f.service.handleStripeEvent(event(invoice)), true);
+    const params = f.sent[0].body.events[0].params;
+    assert.equal(params.tec_audio_source, source); assert.equal(params.tec_audio_content, content);
+    assert.ok(params.tec_audio_piece.length > 0); assert.equal(params.value, 20);
+    assert.equal(params.campaign_source, undefined); assert.equal(params.campaign_content, undefined);
+    assert.equal(await f.service.handleStripeEvent(event(invoice)), false);
+    assert.ok(!JSON.stringify(f.sent[0].body).match(/listener|private|cus_|sub_|in_/));
+    await f.service.revoke(user); assert.equal(await f.service.handleStripeEvent(event({ ...invoice, id: 'in_next' })), false);
+  }
+});

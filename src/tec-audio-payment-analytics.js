@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { MEASUREMENT_ID, CAMPAIGN_TTL, safeCampaignFields } from '../public/audiolibros/analytics-events.js';
+import { MEASUREMENT_ID, CAMPAIGN_TTL, safeCampaignFields, campaignEventParams } from '../public/audiolibros/analytics-events.js';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const id = value => typeof value === 'string' ? value : value?.id;
@@ -88,6 +88,7 @@ export function createAudioPaymentAnalytics({ contexts, deliveries, accounts, st
     const tax = (invoice.total_taxes || invoice.total_tax_amounts || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     const value = Math.max(0, invoice.amount_paid - tax) / 100;
     const campaign = safeCampaignFields(context.campaign);
+    const dimensions = campaignEventParams(campaign);
     const params = { transaction_id: 'tec_audio_' + deliveryId.slice(0, 40), currency: 'USD', value,
       tax: tax / 100, engagement_time_msec: 1, tec_area: 'audiolibros',
       tec_audio_payment_type: invoice.billing_reason === 'subscription_create' ? 'new_subscription' : 'renewal',
@@ -95,7 +96,8 @@ export function createAudioPaymentAnalytics({ contexts, deliveries, accounts, st
       // new campaign interaction on an automatic renewal. GA joins the original
       // online session using client_id/session_id when it is still eligible.
       ...(campaign.campaign_source ? { tec_audio_source: campaign.campaign_source,
-        tec_audio_medium: campaign.campaign_medium, tec_audio_campaign: campaign.campaign_name } : {}),
+        tec_audio_medium: campaign.campaign_medium, tec_audio_campaign: campaign.campaign_name,
+        tec_audio_content: dimensions.tec_audio_content, tec_audio_piece: dimensions.tec_audio_piece } : {}),
       items: [{ item_id: 'tec_audio_monthly', item_name: 'Membresía Audiolibros TEC', price: value, quantity: 1 }] };
     // Never attach a renewal to a month-old online session.
     if (time - Number(context.sessionId) * 1000 < 24 * 3600000 && Number(context.sessionId) * 1000 <= time) {

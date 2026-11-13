@@ -166,3 +166,26 @@ test('checkout context uses Google client/session IDs and becomes unavailable im
   assert.equal(f.events().filter(e=>e[1]==='purchase').length,0);
   f.reject();assert.equal(await f.context.window.TecAudiobookAnalytics.checkoutContext(),null);
 });
+
+test('social reel labels remain on page, sample and checkout events after consent without leaking URL data', async () => {
+  const search = '?utm_source=instagram&utm_medium=social&utm_campaign=tec_redes_es&utm_content=ig_dfqtbe5ngiy&email=PRIVATE@example.test&fbclid=SECRET';
+  const f = browser({ search }); assert.equal(f.scripts.length, 0); f.accept(); f.load();
+  f.sample('el-hombre-mas-rico-de-babilonia'); f.context.window.TecAudiobookAnalytics.checkoutStarted();
+  for (const event of f.events()) {
+    assert.equal(event[2].tec_audio_source, 'instagram'); assert.equal(event[2].tec_audio_content, 'ig_dfqtbe5ngiy');
+    assert.equal(event[2].campaign_content, 'ig_dfqtbe5ngiy'); assert.ok(event[2].tec_audio_piece);
+  }
+  assert.ok(!JSON.stringify(f.events()).match(/PRIVATE|SECRET|fbclid/));
+  const next = browser({ choice: 'accepted', storedCampaign: f.storage.get(events.CAMPAIGN_KEY), pathname: '/audiolibros/libros/el-hombre-mas-rico-de-babilonia/', referrer: 'https://totalelitecoaching.com/audiolibros/' });
+  next.load(); assert.equal(next.events()[0][2].tec_audio_content, 'ig_dfqtbe5ngiy');
+  for (const opts of [{ choice:'rejected' }, { choice:'accepted',gpc:true }, { choice:'accepted',testAccount:true }]) assert.equal(browser({ search, ...opts }).scripts.length,0);
+});
+test('untagged YouTube or TikTok visits retain a generic network label and bio pages do not invent a reel', () => {
+  for (const [referrer, source] of [['https://www.youtube.com/shorts/PRIVATE','youtube'], ['https://www.tiktok.com/@private/video/SECRET','tiktok']]) {
+    const f = browser({ choice:'accepted', referrer }); f.load();
+    assert.equal(f.events()[0][2].tec_audio_source, source); assert.equal(f.events()[0][2].tec_audio_content, 'origen_sin_reel');
+    assert.ok(!JSON.stringify(f.events()).match(/PRIVATE|SECRET/));
+  }
+  const hub = browser({ choice:'accepted', pathname:'/audiolibros/redes/instagram/', search:'?utm_source=instagram&utm_medium=social&utm_campaign=tec_redes_es&utm_content=perfil', referrer:'' });
+  hub.load(); assert.equal(hub.events()[0][2].tec_audio_content, 'perfil'); assert.equal(hub.events()[0][2].page_title, 'Audiolibros TEC · redes');
+});

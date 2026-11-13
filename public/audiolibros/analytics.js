@@ -1,4 +1,4 @@
-import { MEASUREMENT_ID, CAMPAIGN_KEY, pageContext, safeAudioEvent, safeReferrer, safeCampaign, savedCampaign } from './analytics-events.js?v=20261112-editorial1';
+import { MEASUREMENT_ID, CAMPAIGN_KEY, pageContext, safeAudioEvent, safeReferrer, safeCampaign, savedCampaign, socialReferral, campaignEventParams } from './analytics-events.js?v=20261113-social1';
 
 const KEY = 'tec.audiobooks.analytics.choice.v2';
 const disableKey = 'ga-disable-' + MEASUREMENT_ID;
@@ -31,8 +31,9 @@ function resolveCampaign() {
     previous = {};
     try { localStorage.removeItem(CAMPAIGN_KEY); } catch {}
   }
-  campaign = incomingCampaign.campaign_name ? incomingCampaign : previous;
-  if (incomingCampaign.campaign_name) {
+  const referral = newExternalVisit ? socialReferral(document.referrer) : {};
+  campaign = incomingCampaign.campaign_name ? incomingCampaign : referral.campaign_name ? referral : previous;
+  if (incomingCampaign.campaign_name || referral.campaign_name) {
     try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify({ at: Date.now(), campaign })); } catch {}
   }
 }
@@ -66,7 +67,7 @@ function emit(name, bookId) {
   if (!loaded || !allowed()) return false;
   const params = safeAudioEvent(name, context, bookId);
   if (!params) return false;
-  command('event', name, { ...params, ...campaign, send_to: MEASUREMENT_ID, page_referrer: safeReferrer(document.referrer) });
+  command('event', name, { ...params, ...campaignEventParams(campaign), send_to: MEASUREMENT_ID, page_referrer: safeReferrer(document.referrer) });
   return true;
 }
 function pageView() { if (!pageSent && emit('page_view')) pageSent = true; }
@@ -78,7 +79,7 @@ function start() {
   loading = true;
   window.dataLayer = window.dataLayer || [];
   command('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
-  const metadata = { ...campaign, page_location: 'https://totalelitecoaching.com' + context.path, page_title: 'Audiolibros TEC · ' + context.type, page_referrer: safeReferrer(document.referrer), allow_google_signals: false, allow_ad_personalization_signals: false };
+  const metadata = { ...campaignEventParams(campaign), page_location: 'https://totalelitecoaching.com' + context.path, page_title: 'Audiolibros TEC · ' + context.type, page_referrer: safeReferrer(document.referrer), allow_google_signals: false, allow_ad_personalization_signals: false };
   command('set', { ...metadata, ads_data_redaction: true, url_passthrough: false });
   command('js', new Date());
   command('config', MEASUREMENT_ID, { ...metadata, send_page_view: false, cookie_prefix: 'tec_audio', cookie_path: '/audiolibros', cookie_expires: 2592000, cookie_update: false, cookie_flags: 'SameSite=Lax;Secure' });
@@ -109,7 +110,7 @@ window.TecAudiobookAnalytics = Object.freeze({
   checkoutContext: measurementContext,
   checkoutStarted() {
     if (!loaded || !allowed()) return;
-    command('event', 'begin_checkout', { ...safeAudioEvent('page_view', context), ...campaign,
+    command('event', 'begin_checkout', { ...safeAudioEvent('page_view', context), ...campaignEventParams(campaign),
       send_to: MEASUREMENT_ID, page_referrer: safeReferrer(document.referrer), currency: 'USD', value: 20,
       items: [{ item_id: 'tec_audio_monthly', item_name: 'Membresía Audiolibros TEC', price: 20, quantity: 1 }] });
   },

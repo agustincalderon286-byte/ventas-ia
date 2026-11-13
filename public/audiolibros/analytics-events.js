@@ -1,3 +1,5 @@
+import { SOCIAL_CAMPAIGN, META_CAMPAIGN, SOCIAL_NETWORKS, socialPiece, socialCampaign, socialReferral } from './social-campaigns.js?v=20261113-social1';
+export { socialReferral };
 // Public, fixed vocabulary. Never send input values, query strings, quotes or audio.
 export const MEASUREMENT_ID = 'G-DZCX3RMST7';
 export const BOOK_IDS = Object.freeze(['el-libro-de-los-cinco-anillos', 'la-psicologia-de-las-ventas', 'como-un-hombre-piensa', 'acres-de-diamantes', 'el-arte-de-la-guerra', 'genesis-rv1909', 'exodo-rv1909', 'ayudate', 'la-ciencia-de-hacerse-rico', 'el-kybalion', 'el-hombre-mas-rico-de-babilonia', 'meditaciones-marco-aurelio', 'mitos-y-heroes-de-grecia', 'viaje-al-oeste', 'la-epopeya-de-gilgamesh', 'don-quijote-de-la-mancha']);
@@ -19,6 +21,10 @@ export function safeCampaign(search = '') {
   const params = new URLSearchParams(search);
   const one = key => params.getAll(key).length === 1 ? params.get(key) : '';
   const name = one('utm_campaign');
+  if ([SOCIAL_CAMPAIGN, META_CAMPAIGN].includes(name)) {
+    const result = socialCampaign(one('utm_source'), one('utm_content'));
+    return result.campaign_name === name && result.campaign_medium === one('utm_medium') ? result : {};
+  }
   if (!Object.hasOwn(CAMPAIGNS, name)) return {};
   const rule = CAMPAIGNS[name], source = one('utm_source'), medium = one('utm_medium');
   if (!rule.sources.includes(source) || !rule.media.includes(medium)) return {};
@@ -44,6 +50,8 @@ export function savedCampaign(value, now = Date.now()) {
   } catch { return {}; }
 }
 export function pageContext(pathname) {
+  const social = /^\/audiolibros\/redes\/(facebook|instagram|youtube|tiktok)\/$/.exec(pathname);
+  if (social && SOCIAL_NETWORKS.includes(social[1])) return { type: 'redes', path: pathname };
   if (['/audiolibros', '/audiolibros/', '/audiolibros/index.html'].includes(pathname)) return { type: 'biblioteca', path: '/audiolibros/' };
   for (const id of BOOK_IDS) if ([`/audiolibros/libros/${id}`, `/audiolibros/libros/${id}/`].includes(pathname)) return { type: 'libro', path: `/audiolibros/libros/${id}/` };
   for (const id of COLLECTION_IDS) if ([`/audiolibros/colecciones/${id}`, `/audiolibros/colecciones/${id}/`].includes(pathname)) return { type: 'coleccion', path: `/audiolibros/colecciones/${id}/` };
@@ -56,7 +64,7 @@ export function safeReferrer(value) {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:') return '';
-    if (['www.google.com', 'www.google.com.mx', 'www.bing.com', 'bing.com', 'duckduckgo.com', 'www.facebook.com', 'm.facebook.com', 'l.facebook.com', 'lm.facebook.com', 'www.instagram.com', 'l.instagram.com', 'www.tiktok.com', 'tiktok.com', 't.co', 'chatgpt.com', 'www.chatgpt.com'].includes(url.hostname)) return url.origin + '/';
+    if (['www.google.com', 'www.google.com.mx', 'www.bing.com', 'bing.com', 'duckduckgo.com', 'www.facebook.com', 'm.facebook.com', 'l.facebook.com', 'lm.facebook.com', 'www.instagram.com', 'l.instagram.com', 'www.tiktok.com', 'tiktok.com', 't.co', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be', 'vm.tiktok.com', 'vt.tiktok.com', 'chatgpt.com', 'www.chatgpt.com'].includes(url.hostname)) return url.origin + '/';
   } catch {}
   return '';
 }
@@ -65,4 +73,19 @@ export function safeAudioEvent(name, context, bookId) {
   if (!EVENT_NAMES.includes(name) || !page) return null;
   if (name === 'audio_sample_play' && !BOOK_IDS.includes(bookId)) return null;
   return { page_location: 'https://totalelitecoaching.com' + page.path, page_title: 'Audiolibros TEC · ' + page.type, tec_area: 'audiolibros', ...(name === 'audio_sample_play' ? { tec_audio_book: bookId } : {}) };
+}
+
+// Stable reviewed acquisition dimensions are present on visits, checkout and
+// settled purchases, even when GA's session attribution window has ended.
+export function campaignEventParams(value) {
+  const campaign = safeCampaignFields(value);
+  if (!campaign.campaign_source) return {};
+  const content = campaign.campaign_content;
+  const piece = socialPiece(content);
+  const legacy = { clasicos_15s: 'Clásicos en español · Video de 15 segundos', james_allen_muestra: 'Como un hombre piensa · Muestra', conexion_20261108: 'Verificación de Analytics' };
+  const title = piece?.title || (Object.hasOwn(legacy, content || '') ? legacy[content] :
+    content === 'perfil' ? 'Enlace del perfil' : 'Origen sin Reel identificado');
+  return { ...campaign, tec_audio_source: campaign.campaign_source,
+    tec_audio_medium: campaign.campaign_medium, tec_audio_campaign: campaign.campaign_name,
+    tec_audio_content: content || 'origen_sin_reel', tec_audio_piece: title };
 }
