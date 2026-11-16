@@ -2,6 +2,7 @@ import { registerAudioSocial } from './tec-audio-social.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { audiobookCatalog } from './tec-audiobooks.js';
 import { bookEditorial, audioCollections } from './knowledge/audiobook-editorial.js';
+import { audiobookSearchTitle, audiobookSearchDescription } from './knowledge/audiobook-search.js';
 import { audiobookGuides } from './knowledge/audiobook-guides.js';
 import { registerBadgeSharePages } from './tec-badge-sharing.js';
 import { readingCatalog, readingPath, readingSection, registerReadingPages } from './tec-reading-books.js';
@@ -110,7 +111,7 @@ export function buildAudiobookSeo({
     }));
   const pages = new Map(catalog.map(book => {
     const path = bookPath(book), url = absolute(path), sample = hasSample(book);
-    const description = `${book.title}, de ${book.author}: audiolibro en español. ${book.description}`;
+    const description = audiobookSearchDescription(book);
     const breadcrumbs = { '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Audiolibros TEC', item: library },
       { '@type': 'ListItem', position: 2, name: book.title, item: url }
@@ -119,9 +120,9 @@ export function buildAudiobookSeo({
     const editorial = bookEditorial[book.id];
     const bookCollections = collections.filter(c => c.bookIds.includes(book.id));
     const related = catalog.filter(item => item.id !== book.id && item.categories.some(category => book.categories.includes(category))).slice(0, 3);
-    return [book.id, `<!doctype html><html lang="es"><head>${baseHead}${head({ title: `${book.title} en español | Audiolibros TEC`, description, url,
+    return [book.id, `<!doctype html><html lang="es"><head>${baseHead}${head({ title: audiobookSearchTitle(book), description, url,
       image: absolute(book.cover), type: 'book', graph: [organization, website, schemaBook, breadcrumbs,
-        { '@type': 'WebPage', '@id': url + '#webpage', url, name: `${book.title} en español`, inLanguage: 'es', isPartOf: { '@id': website['@id'] }, mainEntity: { '@id': schemaBook['@id'] } }] })}</head>
+        { '@type': 'WebPage', '@id': url + '#webpage', url, name: audiobookSearchTitle(book), inLanguage: 'es', isPartOf: { '@id': website['@id'] }, mainEntity: { '@id': schemaBook['@id'] } }] })}</head>
       <body>${nav}<main class="wrap book-detail"><nav class="breadcrumbs" aria-label="Ruta de navegación"><a href="/audiolibros/">Audiolibros en español</a><span aria-hidden="true"> / </span><span>${escape(book.title)}</span></nav>
       <article><div class="book-detail-hero"><img class="detail-cover" src="${escape(book.cover)}" alt="Portada de ${escape(book.title)}" width="600" height="800" fetchpriority="high">
       <div><p class="eyebrow">${escape(book.categories.join(' · '))}</p><h1>${escape(book.title)}</h1><p class="intro">${escape(book.author)}</p>

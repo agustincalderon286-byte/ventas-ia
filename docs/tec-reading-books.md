@@ -25,3 +25,9 @@ Audiolibros y Libros para leer tienen pestañas con paneles independientes. Los 
 El reproductor agrupa Leer, Capítulos, Compartir, Dormir y Más en una fila de herramientas con iconos y nombres breves. Leer abre la vista completa; Capítulos cierra la lista al elegir uno; Dormir muestra el temporizador y un indicador de la pausa elegida. Más reúne velocidad y marcadores. El texto sincronizado se carga como antes, sin desplegarse automáticamente debajo del reproductor.
 
 Se verificaron manualmente reproducción, continuidad al cambiar de pestaña, compartir y volver, lectura completa y regreso, temporizador/cancelación, velocidad, selección de capítulo y guardado de marcadores. Se probaron escritorio, teléfono y orientación horizontal. Tres pruebas adicionales cubren navegación, enlaces directos/teclado/historial y pausa por tiempo o fin de capítulo, junto con las 914 pruebas existentes.
+
+## Descubrimiento público — 16 de noviembre de 2026
+
+Las 16 fichas de lectura ahora incluyen el índice y un fragmento de hasta 400 caracteres más elipsis, generado desde la edición existente y visible sin JavaScript ni sesión. La API y los capítulos completos conservan la autorización de membresía; nunca se insertan capítulos completos en HTML o JSON-LD. El enlace a la versión en audio apunta a su ficha canónica. Las 16 fichas de audiolibros usan títulos que indican el formato y descripciones específicas, preservando las entregas parciales y sus capítulos publicados.
+
+Verificación: pruebas de SEO, integridad de textos y acceso a la lectura; revisión de la ficha en escritorio y teléfono. La indexación se solicita en Search Console después de verificar la publicación; su aceptación no garantiza incorporación ni posiciones en Google.

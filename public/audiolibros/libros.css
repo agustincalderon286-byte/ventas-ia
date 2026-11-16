@@ -30,3 +30,13 @@
 @media(max-width:700px){.reading-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 15px}.reading-card h3{font-size:1.25rem}.reading-description{font-size:.8rem}.reading-card .button{padding:9px 10px;font-size:.8rem;white-space:normal}.reading-intro{align-items:flex-start;gap:20px;padding-block:25px}.reading-intro>img{width:100px;height:100px}.reading-intro h1{font-size:2rem}.reading-intro p{font-size:.86rem}.reading-intro .eyebrow{font-size:.62rem}.reading-toolbar{gap:8px;padding:10px 12px;justify-content:space-between}.reading-toolbar select[data-reading-chapter]{max-width:46vw}.reading-toolbar label{font-size:.65rem}.reading-toolbar select,.reading-toolbar button{padding:7px 9px;font-size:.8rem}.reading-paper{padding:15px 23px 30px}.reading-paper [data-reading-body]{line-height:1.75}.reading-pager{padding-inline:20px}.reading-top .brand{font-size:.75rem}.reading-back{font-size:.8rem}}
 @media(max-width:390px){.reading-grid{gap:18px 12px}.reading-card h3{font-size:1.18rem}.reading-intro{display:block}.reading-intro>img{float:right;margin:0 0 15px 15px;width:90px;height:90px}.reading-toolbar{justify-content:flex-start}.reading-toolbar select[data-reading-chapter]{max-width:54vw}.reading-toolbar .reading-resume{width:100%}}
 @media(prefers-reduced-motion:reduce){.reading-cover img{transition:none}}
+
+/* Public edition details remain readable before signing in. */
+.reading-discovery{max-width:850px;padding-block:28px 40px;color:var(--paper-ink);overflow-wrap:anywhere}
+.reading-discovery .eyebrow{color:var(--paper-soft)}
+.reading-discovery h2{font-size:clamp(1.45rem,3vw,2rem);line-height:1.2;margin:28px 0 16px}
+.reading-discovery p,.reading-public-index{line-height:1.8}
+.reading-public-index{padding-left:1.5em;columns:2;column-gap:40px}
+.reading-public-index li{break-inside:avoid;padding:3px 0}
+.reading-public-excerpt{margin:20px 0 24px;padding:4px 22px;border-left:3px solid #ad8847;font:1.12rem/1.85 Georgia,'Times New Roman',serif}
+@media(max-width:700px){.reading-public-index{columns:1}.reading-public-excerpt{padding-inline:16px}.reading-discovery{padding-block:16px 28px}}

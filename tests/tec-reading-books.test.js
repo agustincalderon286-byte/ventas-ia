@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import express from 'express';
-import { readingCatalog, getReadingText, readingBookHtml, readingPath } from '../src/tec-reading-books.js';
+import { readingCatalog, getReadingText, readingBookHtml, readingPath, readingPreview } from '../src/tec-reading-books.js';
 import { audiobookCatalog, getAudiobookTranscript } from '../src/tec-audiobooks.js';
 import { registerAudioMembership } from '../src/tec-audio-membership.js';
 import { registerAudiobookSeo } from '../src/tec-audiobook-seo.js';
@@ -43,8 +43,14 @@ test('public cards and reader shells advertise the paid plan without exposing co
   for(const b of readingCatalog){
     const res=await fetch(base+readingPath(b)),html=await res.text();assert.equal(res.status,200);
     assert.ok(html.includes(b.title));assert.ok(html.includes('isAccessibleForFree":false'));
-    const excerpt=getReadingText(b.id).chapters.find(c=>c.paragraphs.some(p=>p.length>120))?.paragraphs.find(p=>p.length>120);
-    if(excerpt)assert.ok(!html.includes(excerpt),b.id+' leaked complete text');
+    const preview=readingPreview(b);
+    assert.ok(preview.excerpt.length > 0 && preview.excerpt.length <= 401);
+    assert.equal(preview.chapters.length,b.chapterCount);
+    const fullChapter=getReadingText(b.id).chapters.find(c=>c.title===preview.chapter);
+    assert.ok(fullChapter.paragraphs.join(' ').length > preview.excerpt.length);
+    assert.ok(!html.includes(fullChapter.paragraphs.at(-1)),b.id+' exposed the chapter ending');
+    assert.ok(html.includes('Índice del libro') && html.includes('Fragmento de '));
+    if(b.audioId)assert.ok(html.includes(`/audiolibros/libros/${b.audioId}/`));
     assert.ok(!html.includes('/Volumes/')&&!html.includes('r2Key'));
   }
   const sitemap=await(await fetch(base+'/sitemap.xml')).text();for(const b of readingCatalog)assert.ok(sitemap.includes(readingPath(b)));
