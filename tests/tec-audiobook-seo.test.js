@@ -140,8 +140,12 @@ test('collections have real books, useful context, reciprocal links and truthful
   assert.ok(bible.includes('Reina-Valera 1909'));
 });
 
-test('four original public guides include meaningful sections, truthful editorial attribution and matching Article data', () => {
-  assert.equal(audiobookGuides.length, 4); assert.equal(generated.guidePages.size, 4);
+test('original public guides include meaningful sections, truthful editorial attribution and matching Article data', () => {
+  assert.equal(generated.guidePages.size, audiobookGuides.length);
+  for (const id of ['el-hombre-mas-rico-de-babilonia-resumen', 'siete-principios-del-kybalion-explicados']) {
+    assert.ok(generated.guidePages.has(id));
+    assert.ok(generated.guidePages.get(id).includes('<time datetime="2026-11-16">16 de noviembre de 2026</time>'));
+  }
   for (const guide of audiobookGuides) {
     const html = generated.guidePages.get(guide.id);
     assert.equal((html.match(/<h1>/g) || []).length, 1);
@@ -163,8 +167,8 @@ test('four original public guides include meaningful sections, truthful editoria
 
 test('guides, books and collections have reciprocal public links and every guide is discoverable in HTML and sitemap', () => {
   assert.ok(generated.landing.includes('/audiolibros/guias/'));
-  assert.equal((generated.guideIndex.match(/<article class="guide-card">/g) || []).length, 4);
-  assert.equal(schemas(generated.guideIndex)[0]['@graph'].find(x => x['@type'] === 'ItemList').numberOfItems, 4);
+  assert.equal((generated.guideIndex.match(/<article class="guide-card">/g) || []).length, audiobookGuides.length);
+  assert.equal(schemas(generated.guideIndex)[0]['@graph'].find(x => x['@type'] === 'ItemList').numberOfItems, audiobookGuides.length);
   for (const guide of audiobookGuides) {
     const path = guidePath(guide), html = generated.guidePages.get(guide.id);
     assert.ok(generated.landing.includes(path)); assert.ok(generated.guideIndex.includes(path));

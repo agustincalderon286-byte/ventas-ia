@@ -90,5 +90,186 @@ export const audiobookGuides = [
       { id: 'un-habito-sencillo', title: 'Una rutina breve para tu próxima escucha',
         paragraphs: ['Elige un capítulo o una sesión que puedas escuchar con calma. Si una idea llama tu atención, pausa, revisa el pasaje y continúa. Al terminar, anota para ti qué quisieras recordar o comparar en la siguiente sesión.', 'Puedes alternar entre solo escuchar y acompañar el audio con el texto. La función está disponible para las muestras y las ediciones del catálogo; escoge el modo que te resulte más cómodo para el libro y el momento.'] }
     ]
+  },
+  {
+    "id": "el-hombre-mas-rico-de-babilonia-resumen",
+    "title": "El hombre más rico de Babilonia: resumen y enseñanzas",
+    "label": "Comprender el libro de Clason",
+    "date": "2026-11-16",
+    "coverBookId": "el-hombre-mas-rico-de-babilonia",
+    "description": "Resumen de El hombre más rico de Babilonia: personajes, siete curas para una bolsa vacía y cinco leyes del oro. Conoce el libro y prueba su audiolibro en TEC.",
+    "intro": "El hombre más rico de Babilonia, de George S. Clason, reúne parábolas sobre la relación con el dinero. Su idea central es que conservar una parte de lo que se gana, observar los gastos y aprender a cuidar lo ahorrado forman un proceso continuo. Este resumen sigue los personajes y capítulos de la edición de TEC para ayudarte a entender cómo se desarrolla esa propuesta antes de escuchar el libro completo.",
+    "bookIds": [
+      "el-hombre-mas-rico-de-babilonia"
+    ],
+    "collectionIds": [
+      "desarrollo-personal",
+      "clasicos-en-espanol"
+    ],
+    "sections": [
+      {
+        "id": "resumen-del-libro",
+        "title": "Resumen: de trabajar por dinero a aprender a conservarlo",
+        "paragraphs": [
+          "La historia comienza con Bansir, un constructor de carros, y Kobbi, su amigo músico. Ambos trabajan y poseen habilidades, pero siguen preocupados por conseguir dinero. Su conversación abre la pregunta que recorre el libro: ¿por qué el esfuerzo cotidiano puede convivir con una bolsa siempre vacía?",
+          "Los personajes buscan a Arkad, un antiguo compañero que ha llegado a ser rico. A través de sus relatos, Clason presenta el aprendizaje de Arkad, sus errores y las costumbres que adopta. El libro avanza mediante conversaciones y ejemplos: cada historia pone a prueba una idea sobre el ahorro, las deudas, la prudencia o las oportunidades."
+        ]
+      },
+      {
+        "id": "personajes-principales",
+        "title": "Los personajes que conviene reconocer",
+        "paragraphs": [
+          "Arkad funciona como maestro de varias lecciones, mientras que Bansir y Kobbi expresan las dudas iniciales. Algamish aparece en el aprendizaje de Arkad y vincula la conservación de una parte de las ganancias con la búsqueda de consejo experimentado.",
+          "Otros relatos amplían el recorrido. Nomasir, hijo de Arkad, aprende después de perder oportunidades; Dabasir, el comerciante de camellos, permite seguir el tema de las deudas y la responsabilidad. Reconocer quién habla ayuda a conservar el contexto cuando una enseñanza reaparece más adelante."
+        ]
+      },
+      {
+        "id": "siete-curas",
+        "title": "Las siete curas para una bolsa vacía, explicadas",
+        "paragraphs": [
+          "En el capítulo «Siete curas para una bolsa vacía», Arkad organiza sus lecciones en siete pasos. Estos son sus temas, resumidos con palabras actuales:"
+        ],
+        "bullets": [
+          "Conservar una parte de lo ganado. Arkad presenta la conocida proporción de una moneda guardada por cada diez recibidas. En el relato, esa reserva constituye el comienzo de un patrimonio.",
+          "Observar los gastos. La segunda cura examina la diferencia entre necesidades y deseos y presenta el presupuesto como una forma de darles un orden.",
+          "Hacer productivo lo acumulado. El tercer tema sigue lo que ocurre después del ahorro: el libro introduce la idea de que las ganancias pueden producir nuevas ganancias.",
+          "Protegerse de las pérdidas. Arkad recuerda un error propio al confiar la compra de joyas a alguien sin experiencia en ese negocio. La historia relaciona la prudencia con el conocimiento de la actividad.",
+          "Considerar la vivienda. La quinta cura propone la casa propia dentro del contexto de la parábola. Leerla junto a las demás permite observar el papel que el autor asigna a la vivienda en la economía familiar.",
+          "Prever el futuro. La sexta cura aborda la vejez y el cuidado de las personas que dependen de los ingresos del personaje.",
+          "Aprender el propio oficio. La última lección conecta el deseo de progresar con adquirir conocimientos y mejorar el trabajo que se sabe hacer."
+        ]
+      },
+      {
+        "id": "cinco-leyes-del-oro",
+        "title": "Qué añaden las cinco leyes del oro",
+        "paragraphs": [
+          "El capítulo «Las cinco leyes del oro» vuelve sobre varias ideas mediante la experiencia de Nomasir. El padre entrega a su hijo recursos y enseñanzas; el relato muestra la distancia entre recibir una oportunidad y saber administrarla.",
+          "Las leyes reúnen la constancia al guardar, el uso productivo de lo acumulado y el consejo de personas con experiencia. También desarrollan las consecuencias de entrar en actividades desconocidas o perseguir ganancias extraordinarias. Mientras las siete curas organizan una primera explicación, este capítulo permite reconocer esas ideas dentro de una historia de errores y aprendizaje."
+        ]
+      },
+      {
+        "id": "suerte-deudas-y-trabajo",
+        "title": "La suerte, las deudas y el trabajo en el resto del libro",
+        "paragraphs": [
+          "Clason dedica un relato a la buena suerte y la relaciona con reconocer oportunidades y actuar ante ellas. En las historias del comerciante de camellos y las tablillas de arcilla, el foco pasa a las obligaciones pendientes y al esfuerzo sostenido para responder por ellas. El cierre del recorrido recupera el valor del trabajo y del aprendizaje.",
+          "Las enseñanzas aparecen en una Babilonia literaria, por medio de personajes y situaciones construidas para explicarlas. El lector puede distinguir la propuesta del autor de sus propias circunstancias actuales: los costes de una vivienda, los riesgos de una actividad y las posibilidades de ahorro requieren su propio contexto."
+        ]
+      },
+      {
+        "id": "como-leerlo-o-escucharlo",
+        "title": "Cómo leer o escuchar el libro con contexto",
+        "paragraphs": [
+          "Una primera ruta consiste en escuchar los dos relatos iniciales, continuar con las siete curas y llegar después a las cinco leyes del oro. Así se reconoce primero el problema de Bansir y Kobbi, luego la explicación de Arkad y finalmente una experiencia que permite contrastarla.",
+          "Al terminar un capítulo, puedes preguntarte quién cuenta la historia, qué decisión toma y qué consecuencia utiliza Clason para sostener su argumento. Este ejercicio ayuda a recordar una lección junto a su ejemplo, en vez de conservar únicamente una frase aislada."
+        ],
+        "bookIds": [
+          "el-hombre-mas-rico-de-babilonia"
+        ]
+      },
+      {
+        "id": "edicion-y-muestra-tec",
+        "title": "La edición en español y la muestra de TEC",
+        "paragraphs": [
+          "La edición de Audiolibros TEC reúne el prólogo y once capítulos, con voces distintas para los diálogos y lectura sincronizada. Su duración publicada es de 4 horas, 2 minutos y 43 segundos. La ficha incluye el índice para encontrar tanto las siete curas como las cinco leyes del oro.",
+          "Puedes escuchar gratis el primer 10 % antes de suscribirte. El audiolibro completo está incluido en la membresía de 20 USD al mes. Esta guía es una síntesis editorial de sus historias; la narración completa conserva las conversaciones, los personajes y el desarrollo de cada enseñanza."
+        ],
+        "bookIds": [
+          "el-hombre-mas-rico-de-babilonia"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "siete-principios-del-kybalion-explicados",
+    "title": "Los 7 principios del Kybalión explicados con ejemplos",
+    "label": "Una primera lectura del hermetismo",
+    "date": "2026-11-16",
+    "coverBookId": "el-kybalion",
+    "description": "Conoce los siete principios del Kybalión, su significado y ejemplos para entenderlos. Una guía de lectura con acceso a la muestra del audiolibro en español.",
+    "intro": "Los siete principios del Kybalión son mentalismo, correspondencia, vibración, polaridad, ritmo, causa y efecto, y género. El libro, firmado por Tres Iniciados, los presenta en su capítulo II y los desarrolla a lo largo de la obra. Esta guía explica su significado dentro del texto y utiliza analogías cotidianas para ayudarte a seguir una primera lectura o escucha.",
+    "bookIds": [
+      "el-kybalion"
+    ],
+    "collectionIds": [
+      "filosofia-y-estrategia",
+      "clasicos-en-espanol"
+    ],
+    "sections": [
+      {
+        "id": "como-entender-los-principios",
+        "title": "Cómo entender los principios en el contexto del libro",
+        "paragraphs": [
+          "El Kybalión construye una interpretación hermética del universo, la mente y el cambio. Sus principios forman parte de esa doctrina y se conectan entre sí. La introducción y el capítulo dedicado a la filosofía hermética ofrecen el marco que después utilizan las explicaciones.",
+          "Los ejemplos de esta guía son analogías editoriales para reconocer cada concepto. La comprensión resulta más clara al distinguir la afirmación que hace el libro del ejemplo elegido para explicarla. En el capítulo II encontrarás la presentación conjunta; los capítulos posteriores amplían los términos que aparecen allí."
+        ]
+      },
+      {
+        "id": "mentalismo",
+        "title": "1. Mentalismo: la naturaleza mental del universo",
+        "paragraphs": [
+          "El primer principio sitúa la mente en el centro de la explicación del universo. El texto utiliza la expresión «El TODO» para referirse a la realidad que sostiene las manifestaciones que percibimos y la describe mediante la idea de una mente universal.",
+          "Como analogía cotidiana, una misma tarea puede parecer una amenaza o una oportunidad según la interpretación de quien la afronta. Ese ejemplo permite observar el papel de la percepción; la afirmación del libro sobre la naturaleza del universo tiene un alcance filosófico más amplio. Leer ambas cosas por separado ayuda a precisar lo que propone el capítulo."
+        ]
+      },
+      {
+        "id": "correspondencia",
+        "title": "2. Correspondencia: relacionar distintos planos",
+        "paragraphs": [
+          "La correspondencia propone relaciones entre los planos que el libro denomina físico, mental y espiritual. Su forma de razonar consiste en utilizar lo conocido como punto de partida para intentar comprender otra escala o plano.",
+          "Una analogía sencilla es comparar cómo se organiza una jornada con cómo se organiza una semana: en ambas puedes reconocer prioridades, pausas y actividades que dependen unas de otras. La semejanza sirve para formular una pregunta. Al avanzar por el libro, conviene observar qué relaciones establece el autor y cómo las desarrolla en «Planos de correspondencia»."
+        ]
+      },
+      {
+        "id": "vibracion",
+        "title": "3. Vibración: comprender el movimiento y el cambio",
+        "paragraphs": [
+          "El tercer principio presenta el movimiento como una característica de las manifestaciones del universo. La obra extiende la idea de vibración a sus explicaciones sobre la materia, la energía y los estados mentales.",
+          "Para orientarte en su vocabulario, imagina la diferencia entre una conversación pausada y una discusión acelerada: cambia el tono, la velocidad y la disposición de los participantes. Es una imagen para seguir la exposición del texto. La vibración entendida como concepto de esta doctrina y una medición física concreta requieren contextos diferentes."
+        ]
+      },
+      {
+        "id": "polaridad",
+        "title": "4. Polaridad: reconocer grados entre extremos",
+        "paragraphs": [
+          "La polaridad explica ciertos opuestos como extremos de una misma escala. El libro recurre a ejemplos como el calor y el frío para mostrar que pueden pensarse como grados de una misma cualidad.",
+          "Un recipiente con agua puede estar más caliente que otro y más frío que un tercero. La comparación ayuda a reconocer la escala y la relación entre sus puntos. En la lectura, este principio prepara la discusión sobre los cambios de estado y la llamada transmutación mental."
+        ]
+      },
+      {
+        "id": "ritmo",
+        "title": "5. Ritmo: observar oscilaciones y ciclos",
+        "paragraphs": [
+          "El ritmo introduce la idea de un movimiento de ida y vuelta entre polos. El texto lo relaciona con la polaridad y emplea imágenes de oscilación para explicar ciclos y compensaciones.",
+          "Las mareas ofrecen una imagen del avance y el retroceso que ayuda a recordar el concepto. En una experiencia cotidiana también puedes reconocer alternancias entre actividad y descanso. Estas analogías permiten distinguir el ritmo del movimiento en general, que aparece bajo el principio de vibración."
+        ]
+      },
+      {
+        "id": "causa-y-efecto",
+        "title": "6. Causa y efecto: seguir las relaciones entre acontecimientos",
+        "paragraphs": [
+          "Este principio sostiene, dentro de la explicación del libro, que los acontecimientos se relacionan mediante causas y efectos. La obra invita a buscar conexiones incluso cuando una causa no resulta evidente para quien observa.",
+          "Por ejemplo, una reunión puede retrasarse porque faltaba un documento que dependía de una revisión anterior. Seguir esa cadena permite reconocer algo más que el retraso final. Al escuchar «Causalidad», puedes prestar atención a cómo el texto utiliza la relación entre lo que una persona conoce y las causas que alcanza a identificar."
+        ]
+      },
+      {
+        "id": "genero",
+        "title": "7. Género: el vocabulario de la generación y la creación",
+        "paragraphs": [
+          "El séptimo principio emplea los términos masculino y femenino para desarrollar una explicación sobre generar, producir y crear. El propio capítulo «Género» distingue ese uso hermético del significado ordinario de sexo físico y lo extiende a los planos que plantea la obra.",
+          "Una analogía de lectura consiste en pensar en la relación entre recibir una idea y darle una forma propia: escuchar una melodía puede abrir paso a una composición distinta. El ejemplo ayuda a entrar en el tema de la creación; para seguir el significado específico que le da el libro, conviene continuar con «Género mental»."
+        ]
+      },
+      {
+        "id": "orden-de-lectura-y-audiolibro",
+        "title": "Cómo continuar la lectura y probar el audiolibro",
+        "paragraphs": [
+          "Puedes empezar por la introducción, seguir con «La filosofía hermética» y escuchar después «Los siete principios herméticos». En una segunda sesión, vuelve a un concepto concreto y acompáñalo con su capítulo de desarrollo: vibración, polaridad, ritmo, causalidad o género. Comparar el resumen inicial con la explicación posterior ayuda a reconocer los matices.",
+          "La edición de TEC contiene la introducción y los quince capítulos completos en español actual, con una duración de 3 horas, 37 minutos y 35 segundos. La lectura sincronizada permite volver sobre los pasajes que contienen un término nuevo. Puedes probar gratis el primer 10 %; la obra completa está incluida en la membresía de 20 USD al mes."
+        ],
+        "bookIds": [
+          "el-kybalion"
+        ]
+      }
+    ]
   }
 ];
