@@ -33553,6 +33553,7 @@ app.post("/chat", async (req, res) => {
   let coachUsage = null;
   let chefUsage = null;
   const shouldStreamResponse = modoChat === "coach" && req.body?.stream === true;
+  const voiceReply = modoChat === "coach" && req.body?.responseMode === "audio";
   let chatStreamStarted = false;
 
   const ensureChatStream = () => {
@@ -34090,6 +34091,7 @@ CONSULTA DEL COACH:
       history: cacheHistory,
       extra: {
         preferFastCoachContext,
+        voiceReply,
         activeLeadContext,
         repLeadSummary,
         activeHealthSurveyContext,
@@ -34128,6 +34130,7 @@ CONSULTA DEL COACH:
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
+          ...(voiceReply ? [{ role: "system", content: "Esta pregunta llegó por audio. Contesta de forma conversacional y natural, en dos o tres frases claras y normalmente hasta 60 palabras. Da la idea útil primero, sin encabezados ni listas. Si el usuario pide una explicación extensa, puedes ampliarla. Conserva las reglas, datos y contexto del Coach." }] : []),
           ...historialPrompt
         ]
       };

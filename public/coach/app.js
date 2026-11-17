@@ -17797,7 +17797,7 @@ async function loadCoachAppPage() {
     const text = String(rawText || "").trim();
 
     if (!text || coachChatBusy) return { ok: false };
-    coachVoice?.pausePlayback();
+    coachVoice?.pausePlayback(null, options.replyMode === "audio");
     const userHandles = addCoachMessage(chatMessages, "user", text);
     if (options.audioUrl) coachVoice?.attachInput(userHandles, options.audioUrl);
     clearCoachChatInputs();
@@ -17809,6 +17809,7 @@ async function loadCoachAppPage() {
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const requestBody = {
         accountId: String(me.user.id),
+        responseMode: options.replyMode === "audio" ? "audio" : "text",
         pregunta: text,
         sessionId: getCoachChatSessionId(),
         visitorId: getCoachVisitorId(),

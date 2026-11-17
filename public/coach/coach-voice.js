@@ -4,14 +4,44 @@
   function recordingMime(Recorder = window.MediaRecorder) {
     return ['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(type => Recorder?.isTypeSupported?.(type)) || '';
   }
+  async function readSpeech(response, onChunk) {
+    if(!response.headers.get('Content-Type')?.includes('application/x-ndjson'))return response.blob();
+    const reader=response.body.getReader(), decoder=new TextDecoder(), chunks=[];
+    let pending='', complete=false, length=0;
+    const line=value=>{
+      if(!value.trim())return;
+      const event=JSON.parse(value);
+      if(event.type==='error')throw new Error(event.error || 'No se completó la voz.');
+      if(event.type==='done')complete=true;
+      if(event.type==='audio'){
+        const raw=atob(event.data), bytes=Uint8Array.from(raw,char=>char.charCodeAt(0));
+        length+=bytes.length;if(length>25*1024*1024)throw new Error('El audio es demasiado grande.');
+        chunks.push(bytes);onChunk?.(bytes);
+      }
+    };
+    try {
+      while(true){const {done,value}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});let end;while((end=pending.indexOf('\n'))>=0){line(pending.slice(0,end));pending=pending.slice(end+1);}}
+      pending+=decoder.decode();if(pending.trim())line(pending);
+      if(!complete || !length || length%2)throw new Error('La voz se interrumpió. Puedes reintentar el audio.');
+    } finally {reader.cancel().catch(()=>{});}
+    const header=new ArrayBuffer(44), view=new DataView(header), write=(at,text)=>[...text].forEach((char,i)=>view.setUint8(at+i,char.charCodeAt(0)));
+    write(0,'RIFF');view.setUint32(4,length+36,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,24000,true);view.setUint32(28,48000,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,length,true);
+    return new Blob([header,...chunks],{type:'audio/wav'});
+  }
   function init({ userId, forms = [], sendMessage }) {
     if (!userId || !forms.length) return null;
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
     let draft = null, previewUrl = '', active = null;
     const controls = [], players = new Set(), urls = new Set();
+    let liveContext = null;const liveStopButtons=new Set();
+    const stopLive = () => {liveStopButtons.forEach(button=>{button.hidden=true;});const previous=liveContext;liveContext=null;previous?.close().catch(()=>{});};
+    function unlockAudio(){
+      if(!liveContext){try{const Context=window.AudioContext || window.webkitAudioContext;if(Context)liveContext=new Context();}catch{}}
+      liveContext?.resume().catch(()=>{});
+    }
     const makeUrl = blob => { const url = URL.createObjectURL(blob); urls.add(url); return url; };
     const release = url => { if(url) { URL.revokeObjectURL(url); urls.delete(url); } };
-    const pausePlayback = except => players.forEach(audio => { if(audio !== except) audio.pause(); });
+    const pausePlayback = (except, preserveContext = false) => {if(!preserveContext)stopLive();players.forEach(audio => { if(audio !== except) audio.pause(); });};
     const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
     const clearTimer = () => { window.clearInterval(timer); timer = null; };
     const notify = text => { if(active) active.status.textContent = text; };
@@ -76,6 +106,7 @@
     }
     async function send() {
       if(!draft || phase !== 'idle' || chatBusy)return;
+      pausePlayback();unlockAudio();
       const audio = draft; phase='sending'; notify('Transcribiendo tu audio…'); render();
       try {
         const response = await request('/api/coach/voice/transcribe',{method:'POST',headers:{'Content-Type':audio.type || 'audio/webm','X-TEC-Account-ID':String(userId)},body:audio});
@@ -116,19 +147,30 @@
       const panels=(handles || []).map(({card})=>{
         const panel=document.createElement('div');panel.className='coach-voice-reply';
         const label=document.createElement('small');label.textContent='Preparando la voz de IA…';
-        const retry=button('Reintentar audio',()=>generate());retry.hidden=true;panel.append(label,retry);card.append(panel);return {panel,label,retry};
+        const retry=button('Reintentar audio',()=>generate());retry.hidden=true;const stop=button('Detener voz',()=>{pausePlayback();label.textContent='Voz generada por IA';});stop.hidden=true;liveStopButtons.add(stop);panel.append(label,stop,retry);card.append(panel);return {panel,label,retry,stop};
       });
       async function generate() {
+        unlockAudio();const context=liveContext;let playhead=0, streamed=false;
         panels.forEach(p=>{p.retry.hidden=true;p.label.textContent='Preparando la voz de IA…';});
         try {
-          const response=await request('/api/coach/voice/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:String(userId),text})});
-          const blob=await response.blob();if(blob.size < 44)throw new Error('No se completó el audio.');
+          const response=await request('/api/coach/voice/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:String(userId),text,stream:true})});
+          const blob=await readSpeech(response,bytes=>{
+            if(document.hidden || !context || context!==liveContext || context.state!=='running' || !panels.some(p=>p.panel.getClientRects().length))return;
+            const samples=Math.floor(bytes.length/2);if(!samples)return;
+            const buffer=context.createBuffer(1,samples,24000), channel=buffer.getChannelData(0), data=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+            for(let i=0;i<samples;i++)channel[i]=data.getInt16(i*2,true)/32768;
+            const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);
+            playhead=Math.max(context.currentTime+.06,playhead);source.start(playhead);playhead+=buffer.duration;streamed=true;
+            panels.forEach(p=>{p.label.textContent='Voz de IA · reproduciendo…';p.stop.hidden=false;});
+          });if(blob.size < 44)throw new Error('No se completó el audio.');
           const url=makeUrl(blob), audios=attachAudio(handles,url,'Escuchar respuesta del Coach');
-          panels.forEach(p=>{p.label.textContent='Voz generada por IA';p.retry.hidden=true;});
+          panels.forEach(p=>{p.label.textContent=streamed && context===liveContext ? 'Voz de IA · reproduciendo…' : 'Voz generada por IA';p.retry.hidden=true;});
+          if(streamed)window.setTimeout(()=>panels.forEach(p=>{p.stop.hidden=true;p.label.textContent='Voz generada por IA';}),Math.max(0,(playhead-(context?.currentTime || 0))*1000));
           const player=document.hidden ? null : audios.find(audio=>audio.getClientRects().length);
-          if(player)await player.play().catch(()=>panels.forEach(p=>{p.label.textContent='Voz de IA lista. Pulsa reproducir para escuchar.';}));
+          if(player && !streamed)await player.play().catch(()=>panels.forEach(p=>{p.label.textContent='Voz de IA lista. Pulsa reproducir para escuchar.';}));
           return true;
         } catch(error) {
+          stopLive();
           panels.forEach(p=>{p.label.textContent=error.message || 'La respuesta escrita está lista. Reintenta el audio.';p.retry.hidden=false;});return false;
         }
       }
@@ -140,5 +182,5 @@
     return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
       attachInput(handles,url){attachAudio(handles,url,'Escuchar mi pregunta de audio');} };
   }
-  window.TecCoachVoice=Object.freeze({init,recordingMime});
+  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech});
 })();

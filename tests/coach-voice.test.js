@@ -36,7 +36,7 @@ async function fixture(t,{provider,maxRequests=40}={}){
  const authorize=async(req,res)=>{const id=req.get('X-Fixture-User');if(!['alice','bob'].includes(id)){res.status(401).json({error:'Sin sesión'});return null;}return{user:{_id:id}};};
  const app=express();app.use(express.json());app.use('/api/coach',createCoachRequestGuard({requireActive:authorize}));registerCoachVoice(app,{requireActive:authorize,provider:implementation,maxRequests});app.use(securityErrorHandler);
  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>{server.closeAllConnections();server.close();});
- const send=(kind,body,{user='alice',account='alice',mime='audio/webm;codecs=opus',origin='https://totalelitecoaching.com'}={})=>fetch(`http://127.0.0.1:${server.address().port}/api/coach/voice/${kind}`,{method:'POST',headers:{Origin:origin,'X-Fixture-User':user,'X-TEC-Account-ID':account,'Content-Type':kind==='speech'?'application/json':mime},body:kind==='speech'?JSON.stringify({accountId:account,text:body}):body});
+ const send=(kind,body,{user='alice',account='alice',mime='audio/webm;codecs=opus',origin='https://totalelitecoaching.com',stream=false}={})=>fetch(`http://127.0.0.1:${server.address().port}/api/coach/voice/${kind}`,{method:'POST',headers:{Origin:origin,'X-Fixture-User':user,'X-TEC-Account-ID':account,'Content-Type':kind==='speech'?'application/json':mime},body:kind==='speech'?JSON.stringify({accountId:account,text:body,stream}):body});
  return{send,calls};
 }
 test('voice endpoints require active account and origin, accept audio, and return private WAV without touching the chat model',async t=>{
@@ -72,4 +72,23 @@ test('text stays text; each audio question requests voice for that reply only, k
  const f=chatFixture();await f.send('Texto');assert.equal(f.spoken.length,0);
  assert.equal((await f.send('Audio transcrito',{replyMode:'audio',audioUrl:'blob:my-question'})).ok,true);assert.deepEqual(f.spoken,['Respuesta completa']);assert.deepEqual(f.inputAudio,['blob:my-question']);
  await f.send('Otra pregunta escrita');assert.equal(f.spoken.length,1);assert.equal(f.messages.at(-1).text,'Respuesta completa');assert.ok(f.sent.every(body=>body.accountId==='alice'));assert.equal(f.busy,false);
+});
+
+test('streamed voice reaches the client before generation ends, followed by an explicit completion',async t=>{
+ let finish;const ended=new Promise(resolve=>{finish=resolve;});
+ const f=await fixture(t,{provider:{transcribe:async()=>'',async speak(text,user,options){options.onChunk(Buffer.from([1,2,3,4]));await ended;return pcmToWav([Buffer.from([1,2,3,4])]);}}});
+ const response=await f.send('speech','Respuesta',{stream:true});assert.ok(response.headers.get('content-type').includes('application/x-ndjson'));
+ const reader=response.body.getReader();const first=await reader.read();assert.ok(Buffer.from(first.value).toString().includes('"type":"audio"'));
+ finish();let tail='';while(true){const item=await reader.read();if(item.done)break;tail+=Buffer.from(item.value).toString();}assert.ok(tail.includes('"type":"done"'));
+});
+test('browser decodes streaming audio before completion and retains every sample in its replay; interrupted streams reject',async()=>{
+ const client=fs.readFileSync(new URL('../public/coach/coach-voice.js',import.meta.url),'utf8'),ctx={window:{},Blob,DataView,ArrayBuffer,Uint8Array,TextDecoder,atob};vm.runInNewContext(client,ctx);
+ const decode=ctx.window.TecCoachVoice.readSpeech,seen=[];let controller;
+ const stream=new ReadableStream({start(c){controller=c;c.enqueue(new TextEncoder().encode(JSON.stringify({type:'audio',data:'AQI='})+'\n'));}});
+ const result=decode(new Response(stream,{headers:{'Content-Type':'application/x-ndjson'}}),bytes=>seen.push(Array.from(bytes)));
+ await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(seen,[[1,2]]);
+ controller.enqueue(new TextEncoder().encode(JSON.stringify({type:'audio',data:'AwQ='})+'\n'+JSON.stringify({type:'done'})+'\n'));controller.close();
+ const blob=await result,bytes=Buffer.from(await blob.arrayBuffer());assert.equal(bytes.readUInt32LE(40),4);assert.deepEqual([...bytes.subarray(44)],[1,2,3,4]);
+ await assert.rejects(decode(new Response(JSON.stringify({type:'audio',data:'AQI='})+'\n',{headers:{'Content-Type':'application/x-ndjson'}})),/interrumpió/);
+ await assert.rejects(decode(new Response(JSON.stringify({type:'error',error:'Voice failed'})+'\n',{headers:{'Content-Type':'application/x-ndjson'}})),/Voice failed/);
 });
