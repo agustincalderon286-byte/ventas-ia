@@ -38,7 +38,7 @@
     const input = make('textarea', 'tec-team-chat__input'); input.rows = 2; input.maxLength = 2000; input.placeholder = 'Escribe a tu equipo…'; input.setAttribute('aria-label', 'Mensaje para mi equipo');
     label.append(input);
     const actions = make('div', 'tec-team-chat__actions');
-    const hint = make('small', '', 'Foto, GIF o audio · Mantén 🎙 para grabar');
+    const hint = make('small', '', 'Foto, GIF o audio · Mantén el micrófono para grabar');
     const send = make('button', 'tec-team-chat__send', 'Enviar'); send.type = 'submit';
     actions.append(hint, send); form.append(label, actions);
     const status = make('p', 'tec-team-chat__status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');

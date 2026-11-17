@@ -23,7 +23,7 @@
   function init({ form, actions, send, input, notify, changed, submit }) {
     const attach = node('button','tec-team-chat__attach'); attach.type = 'button'; icon(attach,'＋','Adjuntar foto, GIF o audio');
     const picker = node('input',''); picker.type = 'file'; picker.accept = 'image/jpeg,image/png,image/webp,image/gif,audio/*'; picker.hidden = true;
-    const mic = node('button','tec-team-chat__mic'); mic.type = 'button'; icon(mic,'🎙','Mantén presionado para grabar. Suelta para enviar; desliza a la izquierda para borrar.'); mic.setAttribute('aria-pressed','false');
+    const mic = node('button','tec-team-chat__mic'); mic.type = 'button'; icon(mic,'','Mantén presionado para grabar. Suelta para enviar; desliza a la izquierda para borrar.'); mic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>'; mic.setAttribute('aria-pressed','false');
     const preview = node('div','tec-team-chat__preview'); preview.hidden = true;
     const activity = node('span','tec-team-chat__recording'); activity.hidden = true; activity.setAttribute('role','status');
     actions.append(attach,mic,picker,activity); form.append(preview);

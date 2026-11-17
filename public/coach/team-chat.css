@@ -34,9 +34,12 @@
 .tec-team-chat .tec-team-chat__actions { flex-wrap: wrap; }
 .tec-team-chat .tec-team-chat__actions small { flex: 1 1 120px; }
 .tec-team-chat .tec-team-chat__attach, .tec-team-chat .tec-team-chat__mic { padding: 8px; font-size: 1.2rem; flex-shrink: 0; }
-.tec-team-chat .tec-team-chat__mic { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.tec-team-chat .tec-team-chat__mic.is-recording { background: #be123c; color: white; border-color: #be123c; box-shadow: 0 0 0 4px #ffe4e6; }
-.tec-team-chat .tec-team-chat__mic.is-cancelling { background: #475569; border-color: #475569; }
+.tec-team-chat .tec-team-chat__mic { display: grid; place-items: center; box-sizing: border-box; width: 48px; height: 48px; min-width: 48px; min-height: 48px; padding: 12px; border: 0; border-radius: 50%; background: #18374f; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.tec-team-chat .tec-team-chat__mic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.tec-team-chat .tec-team-chat__mic:focus-visible { outline: 3px solid #3385c3; outline-offset: 2px; }
+.tec-team-chat .tec-team-chat__mic:disabled { opacity: .45; cursor: default; }
+.tec-team-chat .tec-team-chat__mic.is-recording { background: #bf253d; box-shadow: 0 0 0 5px #bf253d18; }
+.tec-team-chat .tec-team-chat__mic.is-cancelling { background: #94162a; }
 .tec-team-chat .tec-team-chat__recording { color: #9f1239; font-size: .8rem; flex-basis: 100%; text-align: center; font-weight: 650; }
 .tec-team-chat .tec-team-chat__preview { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; background: #f1f5f9; }
 .tec-team-chat .tec-team-chat__preview-media { max-width: min(250px, 75%); max-height: 160px; border-radius: 8px; object-fit: contain; }
