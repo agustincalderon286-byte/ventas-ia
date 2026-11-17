@@ -17682,7 +17682,11 @@ async function loadCoachAppPage() {
     });
   };
 
+  let coachVoice = null;
+  let coachChatBusy = false;
   const toggleCoachChatBusy = loading => {
+    coachChatBusy = loading;
+    coachVoice?.setChatBusy(loading);
     if (chatForm) chatForm.dataset.loading = loading ? "true" : "false";
     chatInputs.forEach(input => {
       input.disabled = loading;
@@ -17789,14 +17793,13 @@ async function loadCoachAppPage() {
     return finalPayload || {};
   };
 
-  const sendCoachMessage = async rawText => {
+  const sendCoachMessage = async (rawText, options = {}) => {
     const text = String(rawText || "").trim();
 
-    if (!text) {
-      return;
-    }
-
-    addCoachMessage(chatMessages, "user", text);
+    if (!text || coachChatBusy) return { ok: false };
+    coachVoice?.pausePlayback();
+    const userHandles = addCoachMessage(chatMessages, "user", text);
+    if (options.audioUrl) coachVoice?.attachInput(userHandles, options.audioUrl);
     clearCoachChatInputs();
     toggleCoachChatBusy(true);
     setCoachChatStatusText("Conectando...");
@@ -17805,6 +17808,7 @@ async function loadCoachAppPage() {
     try {
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const requestBody = {
+        accountId: String(me.user.id),
         pregunta: text,
         sessionId: getCoachChatSessionId(),
         visitorId: getCoachVisitorId(),
@@ -17873,22 +17877,32 @@ async function loadCoachAppPage() {
       if (data.activeDemoOutcomeContext?.resultType) {
         setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext);
       }
+      if (options.replyMode === "audio") {
+        setCoachChatStatusText("Preparando voz…");
+        await coachVoice?.speak(finalReply, assistantMessageHandles);
+      }
+      return { ok: true };
     } catch (error) {
       if (assistantMessageHandles.length) {
         updateCoachMessage(assistantMessageHandles, error.message || "No pude responder en este momento.");
       } else {
         addCoachMessage(chatMessages, "assistant", error.message || "No pude responder en este momento.");
       }
+      return { ok: false };
     } finally {
       toggleCoachChatBusy(false);
 
-      if (floatingCoachMode === "open" && floatingChatInput) {
-        floatingChatInput.focus();
-      } else if (chatInput) {
-        chatInput.focus();
+      if (options.replyMode !== "audio") {
+        if (floatingCoachMode === "open" && floatingChatInput) floatingChatInput.focus();
+        else if (chatInput) chatInput.focus();
       }
     }
   };
+
+  coachVoice = window.TecCoachVoice?.init({
+    userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
+    sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })
+  }) || null;
 
   chatForm?.addEventListener("submit", event => {
     event.preventDefault();

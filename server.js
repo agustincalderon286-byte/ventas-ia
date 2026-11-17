@@ -3,6 +3,7 @@ import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
+import { registerCoachVoice } from "./src/coach-voice.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
 import { canReadDownline, downlineScope, analysisViewerIds } from "./src/tec-team-supervision.js";
@@ -29642,6 +29643,8 @@ app.get("/api/coach/messages/overview", async (req, res) => {
   }
 });
 
+registerCoachVoice(app, { requireActive: requireCoachActivo });
+
 registerCoachAnnouncementRead(app, {
   requireActive: requireCoachActivo,
   getOverview: obtenerCoachMessagesOverview,
@@ -33608,6 +33611,7 @@ app.post("/chat", async (req, res) => {
   if (modoChat === "coach") {
     coachAuth = await requireCoachActivo(req, res);
     if (!coachAuth) return;
+    if (req.body?.accountId && req.body.accountId !== String(coachAuth.user._id)) return res.status(403).json({ error: "La cuenta cambió. Vuelve a abrir el Coach." });
     sessionId = scopeCoachChat(coachAuth.user._id, sessionId);
     visitorIdLimpio = scopeCoachChat(coachAuth.user._id, String(visitorIdLimpio).slice(0,160));
   }
