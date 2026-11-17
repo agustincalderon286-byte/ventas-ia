@@ -54,3 +54,10 @@ test('received audio never autoplays and updating a transcript retains the same 
   f.media.render(row,message);const wrapper=row.children[0],player=wrapper.children[0];assert.equal(player.preload,'none');assert.equal(player.autoplay,undefined);
   message.attachment.transcript='Nos vemos a las seis';f.media.render(row,message);assert.equal(row.children.length,1);assert.equal(wrapper.children[0],player);assert.equal(wrapper.children[1].hidden,false);f.media.destroy();
 });
+
+
+test('locking an account or send cancels recording and disables removal of an uncertain attachment',async()=>{
+  const f=fixture();f.mic.fire('pointerdown');await tick();f.advance(1200);f.mic.fire('pointerup');await tick();
+  const preview=f.form.children[0],remove=preview.children[1];assert.equal(remove.disabled,false);const selected=f.media.selected();f.media.sync(true);assert.equal(remove.disabled,true);remove.fire('click');assert.equal(f.media.selected(),selected);
+  f.media.clear();f.media.sync(false);f.mic.fire('pointerdown');await tick();f.media.sync(true);await tick();assert.equal(f.media.busy(),false);assert.equal(f.submitted,1);f.media.destroy();
+});

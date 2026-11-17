@@ -27,14 +27,17 @@
     const preview = node('div','tec-team-chat__preview'); preview.hidden = true;
     const activity = node('span','tec-team-chat__recording'); activity.hidden = true; activity.setAttribute('role','status');
     actions.append(attach,mic,picker,activity); form.append(preview);
+    let removeButton = null;
     let selected = null, previewUrl = '', locked = true, destroyed = false, recorder = null, stream = null, gesture = null, timer = null, seconds = 0, preparing = false, waiting = false;
     const urls = new Set(), players = new Set(), displays = new Map(), removers = [];
     const listen = (target,type,fn) => { target.addEventListener(type,fn); removers.push(() => target.removeEventListener(type,fn)); };
     const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
     const clearClock = () => { clearInterval(timer); timer = null; };
-    function clear() { selected = null; if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = ''; preview.replaceChildren(); preview.hidden = true; picker.value = ''; changed(); }
+    function clear() { selected = null; if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = ''; preview.replaceChildren(); removeButton = null; preview.hidden = true; picker.value = ''; changed(); }
     function sync(disabled) {
       locked = disabled;
+      if (locked && gesture) cancelRecording();
+      if (removeButton) removeButton.disabled = locked || preparing || Boolean(gesture);
       attach.disabled = locked || preparing || Boolean(gesture);
       mic.disabled = (locked || preparing) && !gesture;
       mic.hidden = Boolean(input.value.trim() || selected) && !gesture;
@@ -58,7 +61,7 @@
         const media = node(file.type.startsWith('audio/') || file.type.startsWith('video/') ? 'audio' : 'img','tec-team-chat__preview-media');
         media.src = previewUrl;
         if (media.tagName === 'AUDIO') { media.controls = true; media.preload = 'metadata'; } else media.alt = 'Archivo listo para enviar';
-        const remove = node('button',''); remove.type = 'button'; icon(remove,'×','Quitar archivo'); listen(remove,'click',clear);
+        const remove = node('button',''); remove.type = 'button'; icon(remove,'×','Quitar archivo'); removeButton = remove; listen(remove,'click',() => { if (!locked && !preparing) clear(); });
         preview.append(media,remove); notify('Archivo listo. Puedes añadir un texto y enviarlo.');
       } catch { notify('No pude abrir el archivo. Vuelve a elegirlo.',true); }
       finally { preparing = false; changed(); }

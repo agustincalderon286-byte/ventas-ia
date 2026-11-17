@@ -65,7 +65,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
     return true;
   }
   async function context(req, res, write = false) {
-    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-media1').vary('Cookie');
+    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-media2').vary('Cookie');
     const auth = await requireActive(req, res);
     if (!auth) return null;
     const accountId = String(auth.user._id);
