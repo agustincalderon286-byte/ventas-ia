@@ -16,11 +16,11 @@ export function pcmToWav(chunks) {
 export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, Socket = WebSocket, timeoutMs = 90000 } = {}) {
   const key = () => { if (!env.OPENAI_API_KEY) throw new Error('Voice service unavailable'); return env.OPENAI_API_KEY; };
   return {
-    async transcribe(buffer, mimeType) {
+    async transcribe(buffer, mimeType, { prompt } = {}) {
       const form = new FormData(); form.append('file',new Blob([buffer],{type:mimeType}),`coach-audio.${formats.get(mimeType)}`);
       form.append('model',env.COACH_VOICE_TRANSCRIPTION_MODEL || env.COACH_DEMO_TRANSCRIPTION_MODEL || 'gpt-transcribe');
       form.append('response_format','json');
-      form.append('prompt','Transcribe fielmente la pregunta al Coach de ventas en español. Royal Prestige, 4 en 14, ollas, filtros, objeciones, pagos y cierre. No inventes palabras si no hay voz.');
+      form.append('prompt',prompt || 'Transcribe fielmente la pregunta al Coach de ventas en español. Royal Prestige, 4 en 14, ollas, filtros, objeciones, pagos y cierre. No inventes palabras si no hay voz.');
       const response = await fetcher('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:`Bearer ${key()}`},body:form,signal:AbortSignal.timeout(timeoutMs)});
       if (!response.ok) throw Object.assign(new Error('Transcription failed'),{code:response.status});
       const data = await response.json(); return typeof data.text === 'string' ? data.text.trim() : '';

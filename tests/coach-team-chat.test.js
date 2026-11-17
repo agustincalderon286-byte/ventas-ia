@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import mongoose from 'mongoose';
+import sharp from 'sharp';
+import { pcmToWav } from '../src/coach-voice.js';
 import { createCoachTeamChatModels, registerCoachTeamChat } from '../src/coach-team-chat.js';
 import { createCoachRequestGuard } from '../src/tec-security.js';
 
@@ -20,7 +22,7 @@ async function fixture(t) {
   let sequence = 0, failed = '', duplicateReceipt = false, at = 1800000000000;
   const check = operation => { if (failed === operation) throw new Error('fixture storage unavailable'); };
   const messages = {
-    findOne(filter) { return { async lean() { check('load'); return rows.find(row => matches(row, filter)) || null; } }; },
+    findOne(filter) { return { select() { return this; }, async lean() { check('load'); return rows.find(row => matches(row, filter)) || null; } }; },
     find(filter) {
       let limit = Infinity;
       return { sort(sort) { assert.deepEqual(sort, { _id: -1 }); return this; }, limit(n) { limit = n; return this; }, async lean() { check('load'); return rows.filter(row => matches(row, filter)).sort((a, b) => b._id.localeCompare(a._id)).slice(0, limit); } };
@@ -54,7 +56,8 @@ async function fixture(t) {
   t.after(() => { server.closeAllConnections(); server.close(); });
   async function request(path = '', { user = 'alice', body, origin = 'https://totalelitecoaching.com', headers = {} } = {}) {
     const response = await fetch(`http://127.0.0.1:${server.address().port}/api/coach/team-chat${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'X-Fixture-User': user, Origin: origin, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-    const json = await response.json(); return { status: response.status, json, headers: response.headers };
+    const json = response.headers.get('content-type')?.includes('json') ? await response.json() : null;
+    const data = json ? null : Buffer.from(await response.arrayBuffer()); return { status: response.status, json, data, headers: response.headers };
   }
   const roomId = (await request()).json.roomId;
   const roomTwo = (await request('', { user: 'carol' })).json.roomId;
@@ -164,4 +167,40 @@ test('rate limits are per account, retry existing sends, and expire after one mi
   let response = await f.send(31); assert.equal(response.status, 429); assert.equal(response.headers.get('retry-after'), '60');
   assert.equal((await f.send(1)).status, 200); assert.equal((await f.send(31, 'Bob', { user: 'bob' })).status, 201);
   f.advance(); assert.equal((await f.send(31)).status, 201);
+});
+
+
+test('media-only messages are atomic, idempotent and private to the authorized room, including ranges', async t => {
+  const f = await fixture(t);
+  const png = await sharp({create:{width:10,height:10,channels:3,background:'blue'}}).png().toBuffer();
+  const media = {mime:'image/png',base64:png.toString('base64')};
+  const sent = await f.send(1,'',{fields:{media,kind:'sale',sale:{amount:999},transcript:'forged'}});
+  assert.equal(sent.status,201); assert.equal(sent.json.message.attachment.kind,'image');
+  assert.equal(sent.json.message.sale,undefined); assert.equal(sent.json.message.attachment.transcript,'');
+  assert.equal(sent.json.message.mediaData,undefined); assert.equal(sent.json.message.attachment.hash,undefined);
+  assert.equal((await f.send(1,'',{fields:{media}})).json.message.id,sent.json.message.id); assert.equal(f.rows.length,1);
+  assert.equal((await f.send(1,'Changed',{fields:{media}})).status,409);
+  const url = sent.json.message.attachment.url.replace('/api/coach/team-chat','');
+  const own = await f.request(url); assert.equal(own.status,200); assert.equal(own.headers.get('content-type'),'image/webp'); assert.equal(own.headers.get('cache-control'),'private, no-store');
+  const teammate = await f.request(url,{user:'bob',headers:{Range:'bytes=0-9'}}); assert.equal(teammate.status,206); assert.equal(teammate.data.length,10); assert.ok(teammate.data.equals(own.data.subarray(0,10)));
+  assert.equal((await f.request(url,{user:'unsigned'})).status,401);
+  assert.equal((await f.request(url,{user:'carol'})).status,403);
+  assert.equal((await f.request(url.replace(encodeURIComponent(f.roomId),encodeURIComponent(f.roomTwo)),{user:'carol'})).status,404);
+  assert.equal((await f.request(url,{headers:{Range:'bytes=99999999-'}})).status,416);
+});
+
+test('invalid media cannot create a message or poison an idempotency key', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.send(1,'',{fields:{media:{mime:'image/png',base64:Buffer.from('bad image').toString('base64')}}})).status,400);
+  assert.equal(f.rows.length,0);
+  assert.equal((await f.send(1,'A valid text retry')).status,201);
+});
+
+
+test('audio-only posting queues transcription after atomic save and serves private playable MP3',async t=>{
+  const f=await fixture(t),data=pcmToWav([Buffer.alloc(48000)]);
+  const sent=await f.send(1,'',{fields:{media:{mime:'audio/wav',base64:data.toString('base64')}}});
+  assert.equal(sent.status,201);assert.equal(sent.json.message.attachment.kind,'audio');assert.equal(sent.json.message.attachment.transcriptionState,'pending');
+  const url=sent.json.message.attachment.url.replace('/api/coach/team-chat','');const audio=await f.request(url,{user:'bob',headers:{Range:'bytes=0-15'}});
+  assert.equal(audio.status,206);assert.equal(audio.headers.get('content-type'),'audio/mpeg');assert.equal(audio.data.length,16);assert.equal(audio.headers.get('x-content-type-options'),'nosniff');
 });

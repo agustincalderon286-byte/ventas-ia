@@ -1,27 +1,39 @@
 # Chat privado del equipo en Coach
 
-En Mensajes, «Chat del equipo» abre una conversación grupal para preguntas, coordinación y reportes de ventas escritos. La primera versión admite texto (hasta 2000 caracteres), historial paginado, mensajes nuevos, borradores y reintentos explícitos. Los mensajes nuevos se consultan aproximadamente cada 3 segundos mientras se usa el área; fuera de ella, cada 30 segundos para el contador. No se consulta en segundo plano. Esta entrega no incluye archivos, audios de grupo ni notificaciones push con TEC cerrado. El audio del Coach AI es una función independiente.
+Mensajes → Chat del equipo admite texto, fotos, GIF animados y notas de voz. El botón ＋ adjunta un archivo; mantener presionado el micrófono graba, soltar envía y deslizar 64 px a la izquierda descarta. Un toque breve, cancelar el permiso, cerrar o pasar al fondo nunca envía una grabación. Al alcanzar el límite se espera a que el usuario suelte. El audio recibido usa controles nativos y no se reproduce automáticamente. Escribir muestra Enviar.
 
-## Equipos y permisos
+## Acceso y persistencia
 
-El grupo utiliza el propietario del espacio de trabajo existente: `owner` conserva su propio grupo; `seat` y `leader` usan `teamOwnerUserId`, aunque su `parentUserId` sea un líder intermedio. No se fusionan por territorio, patrocinador o red de referidos. Una referencia a un propietario inexistente o que no sea `owner` se rechaza; una cuenta delegada sin propietario no crea un grupo alterno.
+`owner` usa su propio grupo; `seat` y `leader` usan `teamOwnerUserId`, validado contra un propietario existente. Patrocinador, territorio y parentesco no mezclan grupos. El servidor deriva el grupo de la sesión; el roomId del navegador solo detecta cambios de cuenta/equipo. Escrituras requieren la cuenta y el grupo coincidentes. Los contadores y el cursor monotónico de lectura conservan el comportamiento existente.
 
-Todas las rutas requieren cuenta operativa. El servidor calcula el grupo; el identificador opaco recibido del navegador solo detecta pestañas antiguas o cambios de equipo. Las escrituras requieren `accountId` y `roomId` coincidentes; las lecturas envían también la cuenta esperada. Nombre y remitente se obtienen de la sesión. Los boletines, privados, soporte, ventas y formularios existentes conservan sus datos y reglas. Escribir «vendí…» en el grupo no crea ni modifica un registro de venta.
+Cada mensaje, incluida su única imagen/audio, se guarda atómicamente en MongoDB. El índice único grupo/remitente/UUID evita duplicados tras perder la respuesta, incluso entre servidores. Los archivos binarios están excluidos por defecto de consultas y serialización; solo una ruta autenticada de ese grupo los entrega, con no-store, nosniff y Range para reproducción. El service worker no almacena chat ni archivos privados. No hay enlaces públicos de adjuntos ni dependencia de esta Mac.
 
-## Persistencia y lectura
+El texto pendiente y su UUID se conservan por cuenta/grupo en localStorage. Los envíos con archivo se guardan primero en IndexedDB, nunca como base64 en localStorage. Si no se puede persistir el archivo, no se intenta enviarlo. Un envío sin confirmación exige reintento explícito con el mismo UUID y archivo. Un rechazo definitivo por formato/tamaño permite corregir el mensaje. Un cambio de cuenta no mueve pendientes a otra cuenta. Si el navegador borra sus datos, no se garantiza recuperar los pendientes.
 
-`CoachTeamChatMessage` guarda mensajes; un índice único de grupo/remitente/UUID impide duplicados incluso si se pierde la respuesta o coinciden reintentos. `CoachTeamChatReader` guarda un cursor monotónico por grupo y cuenta. Los índices se inicializan antes de aceptar peticiones al arrancar el servidor. Se entregan los 50 mensajes más recientes en orden ascendente y se pueden cargar anteriores.
+## Límites y procesamiento
 
-La interfaz guarda borrador y UUID pendiente en una clave local por cuenta y grupo, cuando el navegador permite almacenamiento. Un envío sin confirmar conserva el texto y exige «Reintentar envío» con el mismo UUID. No se reenvía automáticamente al recuperar conexión ni se envía un pendiente a otra cuenta. Si el almacenamiento local falla, el texto sigue en la ventana; no se garantiza conservación tras recargar.
+Un adjunto por mensaje y texto de hasta 2000 caracteres. Fotos/audio de entrada hasta 5 MB; GIF hasta 2 MB y 120 cuadros. Fotos decodificadas, sin EXIF, hasta 1600×1600 y WebP; GIF re-codificado, hasta 800 px de ancho y animación conservada. Las imágenes tienen límite de píxeles y salida de 2 MB. Audio real validado y decodificado con FFmpeg a mono 24 kHz, hasta 90 segundos, convertido a MP3 48 kbps para teléfonos. No se aceptan SVG/HTML, archivos malformados ni URLs remotas. Máximo dos conversiones simultáneas por proceso y una por usuario, con límites de frecuencia.
 
-La lectura automática requiere pestaña visible, historial al final, último mensaje dentro de la pantalla y continuidad de lo que se cargó. Un diálogo del Coach AI sobre el grupo pausa las confirmaciones. Una llegada mientras se leen mensajes anteriores muestra «Ver mensajes nuevos» y conserva la posición. Enviar un mensaje propio no marca como leídos mensajes ajenos aún no recibidos. «Marcar todo como leído» es una acción explícita que incluye el grupo con un cursor recién consultado.
+El archivo permanece en el documento del mensaje; su tamaño ya comprimido cuenta contra el almacenamiento de MongoDB. Un equipo con uso intenso requiere vigilar esa capacidad y trasladar los binarios a almacenamiento de objetos privado cuando el volumen lo justifique. No se configura un bucket nuevo ni se utiliza el bucket de audiolibros para este chat.
 
-El contador de cabecera suma avisos, privados, soporte y grupo. Cada parte actualiza su propio componente; leer un boletín no borra el pendiente del grupo. El acceso rápido a Noticias conserva los avisos originales. Se compactó el resumen y se ajustó la altura móvil para dejar el envío accesible junto a los accesos flotantes.
+## Reportes de Cierre
 
-## Validación y publicación
+Solo un nuevo resultado `venta` genera una tarjeta de venta. El mismo guardado del resultado incluye una bandeja de salida durable (`teamChatPending` y grupo calculado por servidor). Publicar es idempotente con `sale:<outcomeId>`. Una interrupción después de guardar, después de publicar o antes de confirmar se recupera en el trabajador de fondo, sin duplicar el anuncio. Los reintentos del formulario conservan sus recibos existentes. No se publica el historial anterior al despliegue.
 
-Trabajo dividido entre tres subagentes: backend, interfaz y revisión independiente, con integración y publicación centralizadas. 84 pruebas cubren aislamiento entre equipos, sesión/origen/cuenta/grupo, nombres no falsificables, UUID/reintentos, paginación, lecturas monotónicas, historial continuo, mensajes fuera de pantalla, diálogo AI, borradores por cuenta y combinación de contadores. Se ejecutan además las regresiones de voz, tarjetas, navegación y formularios sin conexión.
+La tarjeta incluye vendedor, monto y productos. Una lista explícita excluye notas privadas, resumen, comisión, teléfono y nombre del cliente. No se crea una venta por escribir «vendí» en el grupo. Los montos conservan la unidad usada por Cierre; no se infiere ni convierte una moneda.
 
-La vista local utiliza la plantilla y módulos reales, cuentas ficticias Ana/Beto/Carla y almacenes en memoria. Se probaron envío y recarga, pérdida de confirmación con reintento después de recargar sin duplicados, borradores separados, otro equipo aislado, historial anterior, llegada de compañero sin cambiar la posición y lectura explícita total. La vista de 390×844 mantiene el chat dentro del ancho y el envío accesible.
+## Consulta del Coach AI
 
-Las comprobaciones de producción son de apertura y lectura; no se envían mensajes de prueba a compañeros reales.
+Solo la ruta autenticada `modo=coach` recupera contexto del grupo calculado por el servidor. El Chef público y otras cuentas no reciben este contexto. El Coach obtiene mensajes recientes, búsqueda de texto de ese grupo y agregados de reportes automáticos por vendedor/período. Las respuestas basadas en ese contexto no reutilizan la caché de respuestas. Las preguntas sobre el equipo evitan los atajos estáticos de ayuda.
+
+Al guardar audio se despierta un trabajador con arrendamiento recuperable que transcribe los audios ya guardados usando el proveedor de voz existente. El envío no espera la transcripción; esta puede tardar y se reintenta hasta tres veces. Fallar la transcripción conserva el audio reproducible. No se crea otro mensaje ni otra notificación por transcribir. Fotos/GIF no se interpretan visualmente.
+
+Los mensajes y transcripciones son evidencia no confiable, nunca instrucciones ni autorizaciones. Se citan autor y fecha; para «quién vendió hoy» se cuentan los reportes automáticos, no declaraciones de texto. El día se interpreta en America/Chicago y el contexto comunica esa zona. Se admiten hoy, ayer, anteayer, semana/mes actual o anterior, últimos N días, fechas AAAA-MM-DD y rangos de dos fechas. Períodos ambiguos requieren aclaración. La fecha es la del reporte; no presume cuándo ocurrió la venta.
+
+La consulta tiene límites explícitos: últimos 80 mensajes en preguntas de equipo (15 en otras consultas), hasta 50 coincidencias de texto, hasta 200 vendedores agregados y presupuesto de contexto. No afirma que un mensaje nunca existió por no encontrarlo. No publica respuestas del Coach en el grupo ni ejecuta acciones desde su contenido.
+
+## Verificación de esta ampliación
+
+200 pruebas automáticas aprobadas en esta entrega, incluidas las regresiones de voz, formularios, permisos y Chef. Pruebas de archivos reales: EXIF, redimensionado, animación GIF, audio WAV→MP3, reproducción por rangos, rechazos por duración/formato/tamaño. Pruebas HTTP: permisos, cuenta/grupo, UUID y adjuntos sin texto. Pruebas de interfaz: mantener/soltar, descarte, permisos pendientes, teclado, límite de duración, reproducción estable, persistencia antes de enviar y recuperación tras recarga. Pruebas de Cierre/contexto: handler real con cuentas ficticias, bandeja durable, privacidad, búsqueda por equipo, transcripciones, fechas y caché.
+
+Las comprobaciones de producción son de lectura y de una consulta privada del Coach: no se envían mensajes, archivos ni ventas de prueba a equipos reales. La revisión visual en teléfono no está disponible en esta sesión.

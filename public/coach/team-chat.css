@@ -31,3 +31,22 @@
   .tec-team-chat__actions { align-items: flex-end; }
   .tec-team-chat__actions small { max-width: 210px; font-size: .72rem; }
 }
+.tec-team-chat .tec-team-chat__actions { flex-wrap: wrap; }
+.tec-team-chat .tec-team-chat__actions small { flex: 1 1 120px; }
+.tec-team-chat .tec-team-chat__attach, .tec-team-chat .tec-team-chat__mic { padding: 8px; font-size: 1.2rem; flex-shrink: 0; }
+.tec-team-chat .tec-team-chat__mic { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.tec-team-chat .tec-team-chat__mic.is-recording { background: #be123c; color: white; border-color: #be123c; box-shadow: 0 0 0 4px #ffe4e6; }
+.tec-team-chat .tec-team-chat__mic.is-cancelling { background: #475569; border-color: #475569; }
+.tec-team-chat .tec-team-chat__recording { color: #9f1239; font-size: .8rem; flex-basis: 100%; text-align: center; font-weight: 650; }
+.tec-team-chat .tec-team-chat__preview { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; background: #f1f5f9; }
+.tec-team-chat .tec-team-chat__preview-media { max-width: min(250px, 75%); max-height: 160px; border-radius: 8px; object-fit: contain; }
+.tec-team-chat .tec-team-chat__media { margin-top: 8px; max-width: 100%; }
+.tec-team-chat .tec-team-chat__media-content { display: block; max-width: 100%; width: 300px; border-radius: 9px; }
+.tec-team-chat img.tec-team-chat__media-content { max-height: 340px; object-fit: contain; width: auto; }
+.tec-team-chat .tec-team-chat__transcript { margin-top: 8px; font-size: .82rem; }
+.tec-team-chat .tec-team-chat__transcript summary { cursor: pointer; padding: 8px 0; }
+.tec-team-chat .tec-team-chat__transcript p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tec-team-chat .tec-team-chat__message--sale { border-left: 4px solid #0f766e; }
+.tec-team-chat .tec-team-chat__sale-label { display: block; margin-top: 6px; color: #0f766e; font-size: .7rem; }
+@media (max-width: 520px) { .tec-team-chat .tec-team-chat__actions small { display: none; } .tec-team-chat .tec-team-chat__actions { justify-content: flex-start; } .tec-team-chat .tec-team-chat__send { margin-inline-start: auto; } }
+@media (prefers-reduced-motion: reduce) { .tec-team-chat * { scroll-behavior: auto; } }

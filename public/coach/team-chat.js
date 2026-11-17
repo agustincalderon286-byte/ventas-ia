@@ -16,6 +16,8 @@
     let sending = false, fetching = false, loadingEarlier = false, marking = false, timer = null;
     let pending = null, unread = 0, lastReadId = '', retryReadAt = 0, lastActive = false, noticeCause = '';
     let messages = [], newCount = 0, continuousLatestId = '';
+    let media = null, restoring = false;
+    const rowCache = new Map();
     const listeners = [];
     const make = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
     const listen = (node, type, handler) => { node.addEventListener(type, handler); listeners.push(() => node.removeEventListener(type, handler)); };
@@ -36,7 +38,7 @@
     const input = make('textarea', 'tec-team-chat__input'); input.rows = 2; input.maxLength = 2000; input.placeholder = 'Escribe a tu equipo…'; input.setAttribute('aria-label', 'Mensaje para mi equipo');
     label.append(input);
     const actions = make('div', 'tec-team-chat__actions');
-    const hint = make('small', '', 'Solo texto · Enter envía · Mayús + Enter agrega una línea');
+    const hint = make('small', '', 'Foto, GIF o audio · Mantén 🎙 para grabar');
     const send = make('button', 'tec-team-chat__send', 'Enviar'); send.type = 'submit';
     actions.append(hint, send); form.append(label, actions);
     const status = make('p', 'tec-team-chat__status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
@@ -58,7 +60,7 @@
         rect.right > Math.max(clip.left, left) && rect.left < Math.min(clip.right, right) &&
         rect.bottom <= Math.min(clip.bottom, bottom) + 2;
     }
-    const save = () => { if (roomId) storage.set(key(), { draft: input.value, pending }); };
+    const save = () => { if (roomId) storage.set(key(), { draft: input.value, pending: pending ? { body: pending.body, clientMessageId: pending.clientMessageId, ...(pending.media || pending.mediaPending ? { mediaPending: true } : {}) } : null }); };
     function notice(text, error = false, cause = '') {
       if ((blocked && noticeCause === 'blocked' && cause !== 'blocked') ||
           (pending && noticeCause === 'send' && cause !== 'send' && cause !== 'blocked')) return;
@@ -72,10 +74,12 @@
       try { onUnreadCount(unread); } catch {}
     }
     function controls() {
-      input.disabled = !roomId || sending || Boolean(pending) || blocked;
-      send.disabled = !roomId || sending || Boolean(pending) || blocked || !input.value.trim();
+      input.disabled = !roomId || sending || Boolean(pending) || blocked || restoring;
+      send.disabled = !roomId || sending || Boolean(pending) || blocked || restoring || Boolean(media?.busy()) || (!input.value.trim() && !media?.selected());
       send.textContent = sending ? 'Enviando…' : 'Enviar';
       retry.hidden = !pending || sending || blocked;
+      retry.disabled = restoring || Boolean(pending?.mediaPending && !pending?.media);
+      media?.sync(!roomId || sending || Boolean(pending) || blocked || restoring);
       older.disabled = loadingEarlier || blocked;
       older.hidden = !hasMore || !loaded;
       reload.hidden = blocked || (loaded && status.dataset.error !== 'true');
@@ -97,9 +101,18 @@
         const saved = storage.get(key());
         input.value = typeof saved?.draft === 'string' ? saved.draft.slice(0, 2000) : '';
         if (saved?.pending && typeof saved.pending.body === 'string' && /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(saved.pending.clientMessageId)) {
-          pending = { body: saved.pending.body.slice(0, 2000), clientMessageId: saved.pending.clientMessageId };
+          pending = { body: saved.pending.body.slice(0, 2000), clientMessageId: saved.pending.clientMessageId, ...(saved.pending.mediaPending ? { mediaPending: true } : {}) };
           input.value = pending.body;
           notice('Hay un envío sin confirmar. Reinténtalo para comprobarlo sin duplicarlo.', true, 'send');
+        }
+        if (media) {
+          restoring = true; controls();
+          void media.restore(key()).then(recovered => {
+            if (destroyed || blocked) return;
+            if (recovered?.media && typeof recovered.body === 'string' && typeof recovered.clientMessageId === 'string') { pending = recovered; input.value = pending.body; save(); notice('Hay un archivo sin confirmar. Reinténtalo para comprobarlo sin duplicarlo.',true,'send'); }
+            else if (pending?.mediaPending) notice('No pude recuperar el archivo pendiente. Conserva esta pantalla y vuelve a cargar para comprobar el envío.',true,'send');
+          }).catch(() => { if (!destroyed && pending?.mediaPending) notice('No pude recuperar el archivo pendiente. Vuelve a abrir el chat con este navegador.',true,'send'); })
+            .finally(() => { if (!destroyed) { restoring = false; controls(); } });
         }
       }
       return true;
@@ -115,7 +128,9 @@
     function render({ bottom = false, preserve = false } = {}) {
       const top = list.scrollTop, height = list.scrollHeight;
       const nodes = messages.map(message => {
-        const row = make('div', `tec-team-chat__message${String(message.senderId) === userId ? ' tec-team-chat__message--own' : ''}`);
+        let row = rowCache.get(String(message.id));
+        if (row) { media?.render(row,message); return row; }
+        row = make('div', `tec-team-chat__message${String(message.senderId) === userId ? ' tec-team-chat__message--own' : ''}`);
         row.dataset.messageId = String(message.id);
         const meta = make('div', 'tec-team-chat__meta');
         const name = make('strong', '', String(message.senderId) === userId ? 'Tú' : String(message.senderName || 'Compañero'));
@@ -124,10 +139,15 @@
         if (!Number.isNaN(date.getTime())) { time.dateTime = date.toISOString(); time.textContent = date.toLocaleString('es-MX', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
         meta.append(name, time);
         const body = make('p', 'tec-team-chat__body', String(message.body || ''));
-        row.append(meta, body); return row;
+        row.append(meta, body);
+        if (message.kind === 'sale') { row.classList.add('tec-team-chat__message--sale'); const badge = make('small','tec-team-chat__sale-label','Reporte de Cierre'); row.append(badge); }
+        media?.render(row,message); rowCache.set(String(message.id),row); return row;
       });
       if (!nodes.length) nodes.push(make('p', 'tec-team-chat__empty', 'El chat está listo. Envía el primer mensaje a tu equipo.'));
-      list.replaceChildren(...nodes);
+      if (typeof list.insertBefore === 'function') {
+        if (!messages.length) list.replaceChildren(...nodes);
+        else { if (list.firstElementChild?.classList.contains('tec-team-chat__empty')) list.replaceChildren(); nodes.forEach((node,index) => { if (list.children[index] !== node) list.insertBefore(node,list.children[index] || null); }); }
+      } else list.replaceChildren(...nodes);
       if (bottom) list.scrollTop = list.scrollHeight;
       else list.scrollTop = preserve ? top + list.scrollHeight - height : top;
       controls();
@@ -175,10 +195,11 @@
           incoming = [...olderMessages, ...incoming]; more = Boolean(page.hasMore);
         }
         const wasBottom = nearBottom();
+        const updated = incoming.some(item => { const previous = messages.find(old => String(old.id) === String(item.id)); return previous && JSON.stringify(previous) !== JSON.stringify(item); });
         const added = incoming.filter(item => !messages.some(old => String(old.id) === String(item.id))).length;
         if (!wasLoaded) hasMore = Boolean(data.hasMore);
         merge(incoming); loaded = true; continuousLatestId = String(incoming.at(-1)?.id || '');
-        if (!wasLoaded || added) render({ bottom: !wasLoaded || (wasBottom && active()) });
+        if (!wasLoaded || added || updated) render({ bottom: !wasLoaded || (wasBottom && active()) });
         if (wasLoaded && added && !wasBottom) showNew(added);
         clearNotice('load', '');
         controls();
@@ -221,24 +242,35 @@
       finally { loadingEarlier = false; older.textContent = 'Cargar mensajes anteriores'; controls(); }
     }
     async function submit() {
-      if (destroyed || blocked || sending || !roomId) return;
+      if (destroyed || blocked || sending || !roomId || restoring || media?.busy() || (pending?.mediaPending && !pending.media)) return;
       const body = pending ? pending.body : input.value.trim();
-      if (!body || body.length > 2000) return;
-      try { if (!pending) pending = { body, clientMessageId: uuid() }; }
+      const selected = pending?.media || media?.selected();
+      if ((!body && !selected) || body.length > 2000) return;
+      try { if (!pending) pending = { body, clientMessageId: uuid(), ...(selected ? { media: selected } : {}) }; }
       catch { notice('Este navegador no puede preparar el envío. Actualiza el navegador e inténtalo de nuevo.', true, 'send'); return; }
       // Persist before the first network attempt; every explicit retry reuses this exact identity.
       save(); sending = true; notice('Enviando mensaje…', false, 'send'); controls();
       const attempt = pending, attemptRoom = roomId;
+      let requestAttempted = false;
       try {
-        const data = await request(`${endpoint}/messages`, { method: 'POST', body: { accountId: userId, roomId: attemptRoom, ...attempt }, timeoutMs: 15000 });
+        if (attempt.media) await media.persist(key(),attempt);
+        if (destroyed || blocked) return;
+        requestAttempted = true;
+        const data = await request(`${endpoint}/messages`, { method: 'POST', body: { accountId: userId, roomId: attemptRoom, ...attempt }, timeoutMs: attempt.media ? 60000 : 15000 });
         if (destroyed) return;
         if (String(data.roomId) !== attemptRoom || !data.message?.id) throw Object.assign(new Error('No pude confirmar el mensaje en este equipo.'), { status: data.roomId !== attemptRoom ? 403 : 503 });
         const atBottom = nearBottom();
-        merge([data.message]); pending = null; input.value = ''; save();
+        merge([data.message]); pending = null; input.value = ''; media?.clear(); save();
+        if (attempt.media) void media.forget(key()).catch(() => {});
         render({ bottom: active() && atBottom }); if (!atBottom) showNew(1);
         notice('Mensaje enviado.', false, 'send'); await refresh(); await markRead();
       } catch (error) {
-        if (!destroyed && !freeze(error)) notice(`${error?.message || 'No pude confirmar el envío.'} Tu texto sigue aquí. Usa Reintentar envío.`, true, 'send');
+        if (!destroyed && !freeze(error)) {
+          if (!requestAttempted || [400,413,415,422].includes(Number(error?.status))) {
+            pending = null; save(); if (attempt.media) void media.forget(key()).catch(() => {});
+            notice(`${error?.message || 'No pude preparar el archivo.'} Revisa tu mensaje y vuelve a enviarlo.`,true,'send');
+          } else notice(`${error?.message || 'No pude confirmar el envío.'} Tu mensaje sigue aquí. Usa Reintentar envío.`, true, 'send');
+        }
       } finally { sending = false; if (!destroyed) controls(); }
     }
     function schedule(delay) {
@@ -252,6 +284,7 @@
     }
     function visibilityChanged() {
       const nowActive = active();
+      if (!nowActive) media?.pause();
       if (nowActive && !lastActive) { void refresh(); schedule(3000); }
       lastActive = nowActive;
     }
@@ -270,9 +303,10 @@
     const observer = new MutationObserver(visibilityChanged);
     // Workspace navigation changes hidden/style/class on the section or one of its ancestors.
     for (let node = root; node; node = node.parentElement) observer.observe(node, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+    media = window.TecTeamChatMedia?.init({ form, actions, send, input, notify: (text,error=false) => notice(text,error,'media'), changed: controls, submit });
     current = {
       refresh, markAllRead,
-      destroy() { save(); destroyed = true; window.clearTimeout(timer); observer.disconnect(); listeners.forEach(remove => remove()); }
+      destroy() { save(); destroyed = true; media?.destroy(); rowCache.clear(); window.clearTimeout(timer); observer.disconnect(); listeners.forEach(remove => remove()); }
     };
     controls(); void refresh(); lastActive = active(); schedule(lastActive ? 3000 : 30000);
     return current;

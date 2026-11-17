@@ -21,11 +21,12 @@ class Element {
   get scrollTop() { return this.top; }
   set scrollTop(value) { this.top = Math.min(Math.max(0, value), this.scrollHeight - this.clientHeight); }
 }
-function fixture({ hidden = false, store = new Map(), request } = {}) {
+function fixture({ hidden = false, store = new Map(), request, mediaFactory } = {}) {
   const root = new Element(); root.hidden = hidden;
   const document = new Element('document'); document.hidden = false; document.visibilityState = 'visible'; document.createElement = tag => new Element(tag); document.querySelector = () => root; document.querySelectorAll = () => [];
   const window = new Element('window'); let sequence = 0; const timers = new Map();
   Object.assign(window, { innerHeight: 800, innerWidth: 400, localStorage: { getItem: key => store.get(key), setItem: (key, value) => store.set(key, value) }, crypto: { randomUUID: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}` }, setTimeout: (fn, delay) => { const id = ++sequence; timers.set(id, { fn, delay }); return id; }, clearTimeout: id => timers.delete(id) });
+  if (mediaFactory) window.TecTeamChatMedia = { init: mediaFactory };
   let now = Date.now();
   class Clock extends Date { static now() { return now; } }
   const observers = [];
@@ -287,5 +288,35 @@ test('load and receipt recovery never erase an uncertain-send warning', async ()
   failLoad = false; await f.controller.refresh(); assert.equal(status.textContent, warning);
   await f.controller.markAllRead(); assert.equal(status.textContent, warning);
   assert.equal(input.value, 'Conservar este envío'); assert.equal(f.find('tec-team-chat__retry').hidden, false);
+  f.controller.destroy();
+});
+
+
+test('media is persisted before posting, uncertain delivery restores the same file and UUID after reload', async () => {
+  const drafts=new Map(), order=[], sent=[]; let selected={mime:'image/gif',base64:'R0lGODlh'}; let callbacks;
+  const mediaFactory=options=>{callbacks=options;return {selected:()=>selected,busy:()=>false,sync(){},render(){},pause(){},destroy(){},clear(){selected=null;},async persist(key,value){order.push('persist');drafts.set(key,structuredClone(value));},async restore(key){return drafts.get(key);},async forget(key){drafts.delete(key);}};};
+  let fail=true;
+  const f=fixture({mediaFactory,request:async(url,options={})=>{
+    if(url.endsWith('/messages')){order.push('post');sent.push(structuredClone(options.body));if(fail)throw new Error('lost response');return {roomId:'room-a',message:message(2,'','alice')};}
+    return url.endsWith('/read')?{roomId:'room-a',unreadCount:0}:{roomId:'room-a',messages:[message(1)],unreadCount:0};
+  }});
+  f.start();await turn();f.find('tec-team-chat__form').fire('submit');await turn();
+  assert.deepEqual(order,['persist','post']); assert.equal(sent[0].media.mime,'image/gif');
+  assert.equal(f.find('tec-team-chat__retry').hidden,false); assert.ok(![...f.store.values()].join('').includes('R0lGODlh'),'binary is never written to localStorage');
+  selected=null;f.start();await turn();assert.equal(f.find('tec-team-chat__retry').disabled,false);
+  fail=false;f.find('tec-team-chat__retry').fire('click');await turn();
+  assert.equal(sent.length,2);assert.equal(sent[1].clientMessageId,sent[0].clientMessageId);assert.deepEqual(sent[1].media,sent[0].media);assert.equal(drafts.size,0);
+  f.controller.destroy();
+});
+
+test('a definitely rejected attachment can be removed or edited, while storage failure never sends it', async () => {
+  let selected={mime:'image/png',base64:'eA=='}, failPersist=false, posts=0;
+  const f=fixture({mediaFactory:()=>({selected:()=>selected,busy:()=>false,sync(){},render(){},pause(){},destroy(){},clear(){},restore:async()=>null,forget:async()=>{},persist:async()=>{if(failPersist)throw new Error('storage full');}}),request:async(url,options={})=>{
+    if(url.endsWith('/messages')){posts++;throw Object.assign(new Error('invalid image'),{status:400});}
+    return url.endsWith('/read')?{roomId:'room-a',unreadCount:0}:{roomId:'room-a',messages:[],unreadCount:0};
+  }});
+  f.start();await turn();f.find('tec-team-chat__form').fire('submit');await turn();
+  assert.equal(posts,1);assert.equal(f.find('tec-team-chat__input').disabled,false);assert.equal(f.find('tec-team-chat__retry').hidden,true);
+  failPersist=true;f.find('tec-team-chat__form').fire('submit');await turn();assert.equal(posts,1);assert.equal(f.find('tec-team-chat__input').disabled,false);
   f.controller.destroy();
 });

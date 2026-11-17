@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { decodeChatMedia, prepareChatMedia, chatMediaRange } from './coach-team-chat-media.js';
+export const teamChatRoomId = key => `team-chat:${createHash('sha256').update(key).digest('hex')}`;
 
 const objectId = /^[a-f0-9]{24}$/i;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -10,11 +12,22 @@ export function createCoachTeamChatModels(mongoose) {
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'CoachUser', required: true },
     senderName: { type: String, required: true, maxlength: 160 },
     clientMessageId: { type: String, required: true },
-    body: { type: String, required: true, maxlength: 2000 },
+    body: { type: String, default: '', maxlength: 2000 },
+    kind: { type: String, enum: ['text', 'media', 'sale'], default: 'text' },
+    attachment: { kind: String, mime: String, bytes: Number, duration: Number, width: Number, height: Number, hash: String },
+    mediaData: { type: Buffer, select: false },
+    transcript: { type: String, maxlength: 8000 },
+    transcriptionState: { type: String, enum: ['pending', 'working', 'ready', 'unavailable'] },
+    transcriptionAttempts: { type: Number, default: 0 },
+    transcriptionLeaseUntil: Date,
+    sale: { outcomeId: mongoose.Schema.Types.ObjectId, amount: Number, products: [String], reportedAt: Date },
     createdAt: { type: Date, default: Date.now, required: true }
   });
   messageSchema.index({ roomId: 1, _id: -1 });
   messageSchema.index({ roomId: 1, senderId: 1, clientMessageId: 1 }, { unique: true });
+  messageSchema.index({ body: 'text', transcript: 'text', senderName: 'text' }, { default_language: 'spanish' });
+  messageSchema.index({ roomId: 1, kind: 1, createdAt: -1 });
+  messageSchema.index({ transcriptionState: 1, transcriptionLeaseUntil: 1 });
   const readerSchema = new mongoose.Schema({
     roomId: { type: String, required: true },
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'CoachUser', required: true },
@@ -31,8 +44,8 @@ export function createCoachTeamChatModels(mongoose) {
 
 // The caller installs the shared Coach request guard before registering these routes.
 // A room identifier is only an account-switch check, never an authorization credential.
-export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages, readers, now = Date.now }) {
-  const rates = new Map();
+export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages, readers, onAudioSaved, now = Date.now }) {
+  const rates = new Map(), mediaActive = new Set();
   function consume(accountId, action, max, res) {
     const at = now();
     if (rates.size >= 2000) for (const [key, value] of rates) if (value.until <= at) rates.delete(key);
@@ -52,7 +65,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
     return true;
   }
   async function context(req, res, write = false) {
-    res.set('Cache-Control', 'private, no-store').vary('Cookie');
+    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-media1').vary('Cookie');
     const auth = await requireActive(req, res);
     if (!auth) return null;
     const accountId = String(auth.user._id);
@@ -66,7 +79,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       res.status(403).json({ error: 'Esta cuenta no tiene un equipo disponible.' });
       return null;
     }
-    const roomId = `team-chat:${createHash('sha256').update(teamKey).digest('hex')}`;
+    const roomId = teamChatRoomId(teamKey);
     if ((write && req.body?.roomId !== roomId) || (!write && req.query.roomId !== undefined && req.query.roomId !== roomId)) {
       res.status(403).json({ error: 'El equipo cambió. Vuelve a abrir el chat del equipo.' });
       return null;
@@ -74,7 +87,9 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
     return { accountId, roomId, user: auth.user };
   }
   function serialize(message) {
-    return { id: String(message._id), senderId: String(message.senderId), senderName: message.senderName, body: message.body, createdAt: new Date(message.createdAt).toISOString() };
+    return { id: String(message._id), senderId: String(message.senderId), senderName: message.senderName, body: message.body, createdAt: new Date(message.createdAt).toISOString(),
+      ...(message.attachment?.kind ? { attachment: { kind: message.attachment.kind, mime: message.attachment.mime, bytes: message.attachment.bytes, duration: message.attachment.duration, width: message.attachment.width, height: message.attachment.height, url: `/api/coach/team-chat/media/${message._id}?roomId=${encodeURIComponent(message.roomId)}`, transcript: message.transcript || '', transcriptionState: message.transcriptionState || '' } } : {}),
+      ...(message.kind === 'sale' ? { kind: 'sale', sale: message.sale } : {}) };
   }
   async function unreadCount({ roomId, accountId }) {
     const receipt = await readers.findOne({ roomId, accountId }).lean();
@@ -111,20 +126,28 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       if (!ctx) return;
       const clientMessageId = req.body?.clientMessageId;
       const body = typeof req.body?.body === 'string' ? req.body.body.trim() : '';
-      if (typeof clientMessageId !== 'string' || !uuid.test(clientMessageId) || !body || body.length > 2000) {
+      if (typeof clientMessageId !== 'string' || !uuid.test(clientMessageId) || (!body && !req.body?.media) || body.length > 2000) {
         return res.status(400).json({ error: 'Escribe un mensaje de hasta 2000 caracteres y vuelve a intentar.' });
       }
       if (!consume(ctx.accountId, 'send-attempt', 120, res)) return;
+      const rawMedia = req.body?.media ? decodeChatMedia(req.body.media) : null;
       const filter = { roomId: ctx.roomId, senderId: ctx.accountId, clientMessageId: clientMessageId.toLowerCase() };
       function respond(message, status = 200) {
-        if (message.body !== body) return res.status(409).json({ error: 'Ese envío ya tiene otro texto. Vuelve a abrir el chat para revisarlo.' });
+        if (message.body !== body || (message.attachment?.hash || '') !== (rawMedia?.hash || '')) return res.status(409).json({ error: 'Ese envío ya tiene otro texto. Vuelve a abrir el chat para revisarlo.' });
         return res.status(status).json({ roomId: ctx.roomId, message: serialize(message) });
       }
       const existing = await messages.findOne(filter).lean();
       if (existing) return respond(existing);
       if (!consume(ctx.accountId, 'send-new', 30, res)) return;
+      if (rawMedia && (!consume(ctx.accountId, 'media-new', 8, res) || mediaActive.has(ctx.accountId) || mediaActive.size >= 2)) {
+        if (!res.headersSent) res.status(429).json({ error: 'Espera a que termine el archivo anterior y vuelve a intentar.' });
+        return;
+      }
+      if (rawMedia) mediaActive.add(ctx.accountId);
       try {
-        const message = await messages.create({ ...filter, senderName: typeof ctx.user.name === 'string' && ctx.user.name.trim() ? ctx.user.name.trim().slice(0, 160) : 'Miembro del equipo', body, createdAt: new Date(now()) });
+        const prepared = rawMedia ? await prepareChatMedia(rawMedia) : null;
+        const message = await messages.create({ ...filter, ...(prepared ? { kind: 'media', attachment: prepared.meta, mediaData: prepared.data, ...(prepared.meta.kind === 'audio' ? { transcriptionState: 'pending' } : {}) } : {}), senderName: typeof ctx.user.name === 'string' && ctx.user.name.trim() ? ctx.user.name.trim().slice(0, 160) : 'Miembro del equipo', body, createdAt: new Date(now()) });
+        if (prepared?.meta.kind === 'audio') void Promise.resolve().then(() => onAudioSaved?.()).catch(() => {});
         return respond(message, 201);
       } catch (error) {
         // Concurrent retries are resolved by the unique index, including across servers.
@@ -132,7 +155,23 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
         const duplicate = await messages.findOne(filter).lean();
         if (!duplicate) throw error;
         return respond(duplicate);
-      }
+      } finally { if (rawMedia) mediaActive.delete(ctx.accountId); }
+    } catch (error) { if ([400, 503].includes(error.status)) return res.status(error.status).json({ error: error.message }); return unavailable(res); }
+  });
+
+  app.get('/api/coach/team-chat/media/:id', async (req, res) => {
+    try {
+      const ctx = await context(req, res);
+      if (!ctx || !consume(ctx.accountId, 'media-get', 240, res)) return;
+      if (!objectId.test(req.params.id)) return res.status(404).end();
+      const message = await messages.findOne({ _id: req.params.id, roomId: ctx.roomId }).select('+mediaData').lean();
+      if (!message?.attachment?.kind || !message.mediaData) return res.status(404).end();
+      const data = Buffer.isBuffer(message.mediaData) ? message.mediaData : Buffer.from(message.mediaData.value ? message.mediaData.value(true) : message.mediaData.buffer);
+      res.set({ 'Content-Type': message.attachment.mime, 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox", 'Accept-Ranges': 'bytes', 'Content-Disposition': 'inline; filename="chat.' + (message.attachment.kind === 'audio' ? 'mp3' : message.attachment.kind === 'gif' ? 'gif' : 'webp') + '"' });
+      const range = chatMediaRange(req.get('Range'), data.length);
+      if (range === false) return res.status(416).set('Content-Range', `bytes */${data.length}`).end();
+      if (range) return res.status(206).set('Content-Range', `bytes ${range.start}-${range.end}/${data.length}`).send(data.subarray(range.start, range.end + 1));
+      return res.send(data);
     } catch { return unavailable(res); }
   });
 

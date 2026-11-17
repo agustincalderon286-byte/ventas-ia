@@ -3,7 +3,9 @@ import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
-import { createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
+import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
+import { createCoachVoiceProvider } from "./src/coach-voice.js";
+import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
 import "express-async-errors";
@@ -1288,6 +1290,8 @@ coachDemoAnalysisSchema.index(
 );
 
 const coachDemoOutcomeSchema = new mongoose.Schema({
+  teamChatPending: Boolean,
+  teamChatRoomId: String,
   ownerUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CoachUser",
@@ -2271,6 +2275,7 @@ coachRecruitmentApplicationSchema.index({ ownerUserId: 1, email: 1, updatedAt: -
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, "attribution.source": 1, updatedAt: -1 });
 coachRecruitmentApplicationSchema.index({ ownerUserId: 1, "attribution.campaign": 1, updatedAt: -1 });
 coachPrivateResourceSchema.index({ ownerUserId: 1, slotType: 1 }, { unique: true });
+coachDemoOutcomeSchema.index({ teamChatPending: 1 }, { partialFilterExpression: { teamChatPending: true } });
 coachDemoOutcomeSchema.index({ ownerUserId: 1, createdAt: -1 });
 coachDemoOutcomeSchema.index({ ownerUserId: 1, generatedByUserId: 1, createdAt: -1 });
 coachDemoOutcomeSchema.index({ ownerUserId: 1, resultType: 1, createdAt: -1 });
@@ -2381,6 +2386,7 @@ const CoachDirectThread =
 const CoachDirectMessage =
   mongoose.models.CoachDirectMessage || mongoose.model("CoachDirectMessage", coachDirectMessageSchema);
 const coachTeamChatModels = createCoachTeamChatModels(mongoose);
+const teamChatWorker = createTeamChatWorker({ ...coachTeamChatModels, outcomes: CoachDemoOutcome, transcribe: (buffer,mime) => createCoachVoiceProvider().transcribe(buffer,mime,{ prompt: "Transcribe fielmente este mensaje de voz del equipo TEC en español. Royal Prestige, ventas, productos, horarios y acuerdos. No inventes palabras cuando no haya voz." }) });
 const CoachCrmRecord =
   mongoose.models.CoachCrmRecord || mongoose.model("CoachCrmRecord", coachCrmRecordSchema);
 const CoachCrmActivity =
@@ -29677,6 +29683,7 @@ app.get("/api/coach/messages/overview", async (req, res) => {
 registerCoachTeamChat(app, {
   requireActive: requireCoachActivo,
   getTeamKey: getCoachTeamChatKey,
+  onAudioSaved: () => teamChatWorker.run(),
   ...coachTeamChatModels
 });
 
@@ -32042,7 +32049,9 @@ app.post("/api/coach/demo-outcomes", guardCoachFormWrite, async (req, res) => {
       activeDemoStageLabel
     });
 
+    const saleTeamKey = resultType === "venta" ? await getCoachTeamChatKey(auth.user) : "";
     const outcomeDoc = await CoachDemoOutcome.create({
+      ...(saleTeamKey ? { teamChatPending: true, teamChatRoomId: teamChatRoomId(saleTeamKey) } : {}),
       ownerUserId: ownershipSnapshot.ownerUserId,
       ownerEmail: ownershipSnapshot.ownerEmail || "",
       ownerName: ownershipSnapshot.ownerName || "",
@@ -32081,6 +32090,11 @@ app.post("/api/coach/demo-outcomes", guardCoachFormWrite, async (req, res) => {
       updatedAt: now,
       createdAt: now
     });
+
+    if (outcomeDoc.teamChatPending) {
+      try { await publishSaleAnnouncement({ outcome: outcomeDoc, messages: coachTeamChatModels.messages, outcomes: CoachDemoOutcome }); }
+      catch { console.warn("Team chat: sale saved; announcement will retry"); }
+    }
 
     if (linkedCrmRecordDoc) {
       await vincularCoachCrmConResultadoDemo(linkedCrmRecordDoc, outcomeDoc, auth.user);
@@ -33719,6 +33733,12 @@ app.post("/chat", async (req, res) => {
     let activeHealthSurveyContext = null;
     let activeProgram414Context = null;
     const modoPrompt = construirContextoModoPrompt(modoChat, coachAuth?.user);
+    const teamChatQuestion = modoChat === "coach" && isTeamChatQuestion(preguntaLimpia);
+    let teamChatContext = "";
+    if (modoChat === "coach") {
+      try { teamChatContext = await buildTeamChatContext({ user: coachAuth.user, question: preguntaLimpia, messages: coachTeamChatModels.messages, getTeamKey: getCoachTeamChatKey }) || "Esta cuenta no tiene un chat de equipo disponible. No inventes actividad de otras cuentas."; }
+      catch { teamChatContext = "Consulta del chat del equipo no disponible en este momento. Si la pregunta depende del chat, informa que no puedes verificarla ahora; no inventes personas, ventas ni acuerdos."; }
+    }
     let estadoPrompt = "";
     let perfilPrompt = "";
     let preferFastCoachContext = false;
@@ -33790,7 +33810,7 @@ app.post("/chat", async (req, res) => {
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
 
-      const coachHelpReply = isCoachKnowledgeQuestion(preguntaLimpia) ? null : construirCoachHelpReply({
+      const coachHelpReply = (teamChatQuestion || isCoachKnowledgeQuestion(preguntaLimpia)) ? null : construirCoachHelpReply({
         userDoc: coachAuth.user,
         profileDoc: coachProfileDoc,
         question: preguntaLimpia,
@@ -33893,7 +33913,7 @@ ${construirContextoPerfilCoachPrompt(coachProfileDoc, coachAnalyticsDoc)}
       activeHealthSurveyContext = activeHealthSurveyContextFromBody || null;
       activeProgram414Context = activeProgram414ContextFromBody || null;
 
-      const turboQuickReply = COACH_TURBO_MODE && /(?:dame|quiero|necesito).*guion|que (?:le )?digo/i.test(preguntaLimpia) && !isCoachKnowledgeQuestion(preguntaLimpia)
+      const turboQuickReply = !teamChatQuestion && COACH_TURBO_MODE && /(?:dame|quiero|necesito).*guion|que (?:le )?digo/i.test(preguntaLimpia) && !isCoachKnowledgeQuestion(preguntaLimpia)
         ? construirCoachTurboReply({
             question: preguntaLimpia,
             activeDemoStage,
@@ -34139,8 +34159,8 @@ CONSULTA DEL COACH:
         activeDemoOutcomeContext
       }
     };
-    const directKnowledgeReply = modoChat === "coach" ? getCoachKnowledgeDirectReply(preguntaLimpia, { history: cacheHistory }) : "";
-    const cachedAiReply = directKnowledgeReply ? { reply: directKnowledgeReply } : await obtenerRespuestaAiCacheada(aiCacheOptions);
+    const directKnowledgeReply = modoChat === "coach" && !teamChatQuestion ? getCoachKnowledgeDirectReply(preguntaLimpia, { history: cacheHistory }) : "";
+    const cachedAiReply = directKnowledgeReply ? { reply: directKnowledgeReply } : teamChatContext ? null : await obtenerRespuestaAiCacheada(aiCacheOptions);
     let respuestaIA = null;
     let cacheHit = false;
 
@@ -34168,6 +34188,7 @@ CONSULTA DEL COACH:
           { role: "system", content: contexto },
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
+          ...(teamChatContext ? [{ role: "system", content: teamChatContext }] : []),
           ...(voiceReply ? [{ role: "system", content: "Esta pregunta llegó por audio. Contesta de forma conversacional y natural, en dos o tres frases claras y normalmente hasta 60 palabras. Da la idea útil primero, sin encabezados ni listas. Si el usuario pide una explicación extensa, puedes ampliarla. Conserva las reglas, datos y contexto del Coach." }] : []),
           ...historialPrompt
         ]
@@ -34241,7 +34262,7 @@ CONSULTA DEL COACH:
         respuestaIA = data.choices[0].message;
       }
 
-      programarPersistenciaRedis(
+      if (!teamChatContext) programarPersistenciaRedis(
         () => guardarRespuestaAiCacheada(aiCacheOptions, respuestaIA?.content || ""),
         "cache IA de chat"
       );
@@ -34385,19 +34406,20 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(chefPublicModels),CoachLeadInbox].map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome].map(model => model.init()));
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))
       .catch(() => console.warn("TEC knowledge: using validated bundled snapshot"));
     iniciarCoachAsyncJobWorker();
+    teamChatWorker.start();
 
     const server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => coachAsyncJobWorkerRunning, disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => coachAsyncJobWorkerRunning || teamChatWorker.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

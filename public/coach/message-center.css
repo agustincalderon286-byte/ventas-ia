@@ -7,4 +7,4 @@
 [data-team-chat-root],.coach-news-card{scroll-margin-top:12px}
 @media(max-width:520px){.coach-message-summary .insight-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.coach-message-summary .mini-stat{padding:10px}.coach-message-summary .mini-stat strong{font-size:1.1rem}.coach-message-summary .mini-stat span{font-size:.7rem}}
 
-@media(max-width:520px){.tec-team-chat .tec-team-chat__list{height:30dvh;min-height:180px}.tec-team-chat .tec-team-chat__actions{flex-direction:row-reverse}.tec-team-chat .tec-team-chat__input{padding-right:88px}}
+@media(max-width:520px){.tec-team-chat .tec-team-chat__list{height:30dvh;min-height:180px}.tec-team-chat .tec-team-chat__actions{flex-direction:row;padding-right:80px}.tec-team-chat .tec-team-chat__input{padding-right:88px}}
