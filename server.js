@@ -4,6 +4,8 @@ import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
+import { createCoachPushModels, createCoachTeamPush } from "./src/coach-team-chat-push.js";
+import { resolveTeamChatGroup, listTeamChatGroups } from "./src/coach-team-chat-access.js";
 import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
@@ -2386,6 +2388,18 @@ const CoachDirectThread =
 const CoachDirectMessage =
   mongoose.models.CoachDirectMessage || mongoose.model("CoachDirectMessage", coachDirectMessageSchema);
 const coachTeamChatModels = createCoachTeamChatModels(mongoose);
+const coachPushModels = createCoachPushModels(mongoose);
+const coachTeamPush = createCoachTeamPush({
+  models: coachPushModels, ...coachTeamChatModels, requireActive: requireCoachActivo,
+  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}), roomIdForKey: teamChatRoomId,
+  canDeliver: async (device,target) => {
+    const session = await CoachSession.findOne({_id:device.sessionId,userId:device.accountId,expiresAt:{$gt:new Date()}}).lean();
+    if(!session)return false;
+    const user = await CoachUser.findById(device.accountId).lean();
+    if(!user || !(await coachTieneAccesoOperativo(user)))return false;
+    try { return await resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}) === target; } catch { return false; }
+  }
+});
 const teamChatWorker = createTeamChatWorker({ ...coachTeamChatModels, outcomes: CoachDemoOutcome, transcribe: (buffer,mime) => createCoachVoiceProvider().transcribe(buffer,mime,{ prompt: "Transcribe fielmente este mensaje de voz del equipo TEC en español. Royal Prestige, ventas, productos, horarios y acuerdos. No inventes palabras cuando no haya voz." }) });
 const CoachCrmRecord =
   mongoose.models.CoachCrmRecord || mongoose.model("CoachCrmRecord", coachCrmRecordSchema);
@@ -29680,10 +29694,13 @@ app.get("/api/coach/messages/overview", async (req, res) => {
   }
 });
 
+coachTeamPush.register(app);
 registerCoachTeamChat(app, {
   requireActive: requireCoachActivo,
-  getTeamKey: getCoachTeamChatKey,
+  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}),
+  getRooms: user => listTeamChatGroups(user,{users:CoachUser,getOwnKey:getCoachTeamChatKey}),
   onAudioSaved: () => teamChatWorker.run(),
+  onMessageSaved: () => coachTeamPush.run(),
   ...coachTeamChatModels
 });
 
@@ -33736,7 +33753,7 @@ app.post("/chat", async (req, res) => {
     const teamChatQuestion = modoChat === "coach" && isTeamChatQuestion(preguntaLimpia);
     let teamChatContext = "";
     if (modoChat === "coach") {
-      try { teamChatContext = await buildTeamChatContext({ user: coachAuth.user, question: preguntaLimpia, messages: coachTeamChatModels.messages, getTeamKey: getCoachTeamChatKey }) || "Esta cuenta no tiene un chat de equipo disponible. No inventes actividad de otras cuentas."; }
+      try { teamChatContext = await buildTeamChatContext({ user: coachAuth.user, question: preguntaLimpia, messages: coachTeamChatModels.messages, teamOwnerId: req.body?.teamChatOwnerId, getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}) }) || "Esta cuenta no tiene un chat de equipo disponible. No inventes actividad de otras cuentas."; }
       catch { teamChatContext = "Consulta del chat del equipo no disponible en este momento. Si la pregunta depende del chat, informa que no puedes verificarla ahora; no inventes personas, ventas ni acuerdos."; }
     }
     let estadoPrompt = "";
@@ -34406,20 +34423,22 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome].map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome].map(model => model.init()));
+    await coachTeamPush.initialize();
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))
       .catch(() => console.warn("TEC knowledge: using validated bundled snapshot"));
     iniciarCoachAsyncJobWorker();
     teamChatWorker.start();
+    coachTeamPush.start();
 
     const server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => coachAsyncJobWorkerRunning || teamChatWorker.busy(), disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

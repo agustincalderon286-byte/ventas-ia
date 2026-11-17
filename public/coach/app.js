@@ -83,7 +83,8 @@ function initCoachTeamChatWorkspace(user) {
   coachMessageUnreadState.team = 0;
   renderCoachUnreadBadge();
   coachTeamChatController = window.TecTeamChat?.init({
-    userId: accountId, request: apiRequest,
+    userId: accountId, request: apiRequest, enableTeamRooms: true,
+    teamOwnerId: window.location?.search ? new URLSearchParams(window.location.search).get("teamChatOwnerId") || "" : "",
     onUnreadCount(count) {
       if (coachMessageUnreadState.accountId !== accountId) return;
       coachMessageUnreadState.team = Math.max(0, Number(count) || 0);
@@ -1560,7 +1561,7 @@ function initCoachWorkspaceTabs() {
   const visibleTabButtons = tabButtons.filter(button => !button.hidden);
   const validTabs = new Set(tabButtons.filter(isCoachWorkspaceAvailable).map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
   const defaultTab = visibleTabButtons[0]?.dataset.coachWorkspaceTab || "cierre";
-  const savedTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY);
+  const savedTab = window.location?.search && new URLSearchParams(window.location.search).get("openTeamChat") === "1" ? "mensajes" : window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY);
   let activeTab = window.TecVisitHeader?.initialWorkspace(savedTab, defaultTab) || savedTab || defaultTab;
 
   if (!validTabs.has(activeTab)) {
@@ -17855,7 +17856,8 @@ async function loadCoachAppPage() {
         activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
         activeDecisionContext: getActiveCoachDecisionContext() || null,
         activeDemoOutcomeContext: getActiveCoachDemoOutcomeContext() || null,
-        mode: "coach"
+        mode: "coach",
+        teamChatOwnerId: window.TecTeamChat?.getTeamOwnerId?.() || ""
       };
       assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
       let streamedReply = "";

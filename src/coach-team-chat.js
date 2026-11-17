@@ -21,9 +21,12 @@ export function createCoachTeamChatModels(mongoose) {
     transcriptionAttempts: { type: Number, default: 0 },
     transcriptionLeaseUntil: Date,
     sale: { outcomeId: mongoose.Schema.Types.ObjectId, amount: Number, products: [String], reportedAt: Date },
+    pushState: { type: String, enum: ['pending','working','done'] },
+    pushLeaseUntil: Date, pushLeaseToken: String, pushFanoutAfter: mongoose.Schema.Types.ObjectId,
     createdAt: { type: Date, default: Date.now, required: true }
   });
   messageSchema.index({ roomId: 1, _id: -1 });
+  messageSchema.index({ pushState: 1, createdAt: 1, pushLeaseUntil: 1 });
   messageSchema.index({ roomId: 1, senderId: 1, clientMessageId: 1 }, { unique: true });
   messageSchema.index({ body: 'text', transcript: 'text', senderName: 'text' }, { default_language: 'spanish' });
   messageSchema.index({ roomId: 1, kind: 1, createdAt: -1 });
@@ -44,7 +47,7 @@ export function createCoachTeamChatModels(mongoose) {
 
 // The caller installs the shared Coach request guard before registering these routes.
 // A room identifier is only an account-switch check, never an authorization credential.
-export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages, readers, onAudioSaved, now = Date.now }) {
+export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages, readers, getRooms, onAudioSaved, onMessageSaved, now = Date.now }) {
   const rates = new Map(), mediaActive = new Set();
   function consume(accountId, action, max, res) {
     const at = now();
@@ -65,7 +68,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
     return true;
   }
   async function context(req, res, write = false) {
-    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-media2').vary('Cookie');
+    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-groups1').vary('Cookie');
     const auth = await requireActive(req, res);
     if (!auth) return null;
     const accountId = String(auth.user._id);
@@ -74,7 +77,10 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       res.status(403).json({ error: 'La cuenta cambió. Vuelve a abrir el chat del equipo.' });
       return null;
     }
-    const teamKey = await getTeamKey(auth.user);
+    const selectedOwner = write ? req.body?.teamOwnerId : req.query.teamOwnerId;
+    let teamKey;
+    try { teamKey = await getTeamKey(auth.user, selectedOwner); }
+    catch (error) { if (error.status === 403) { res.status(403).json({ error: error.message }); return null; } throw error; }
     if (typeof teamKey !== 'string' || !teamKey.trim() || teamKey.length > 512) {
       res.status(403).json({ error: 'Esta cuenta no tiene un equipo disponible.' });
       return null;
@@ -84,11 +90,11 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       res.status(403).json({ error: 'El equipo cambió. Vuelve a abrir el chat del equipo.' });
       return null;
     }
-    return { accountId, roomId, user: auth.user };
+    return { accountId, roomId, ownerId: teamKey, user: auth.user };
   }
-  function serialize(message) {
+  function serialize(message, ownerId) {
     return { id: String(message._id), senderId: String(message.senderId), senderName: message.senderName, body: message.body, createdAt: new Date(message.createdAt).toISOString(),
-      ...(message.attachment?.kind ? { attachment: { kind: message.attachment.kind, mime: message.attachment.mime, bytes: message.attachment.bytes, duration: message.attachment.duration, width: message.attachment.width, height: message.attachment.height, url: `/api/coach/team-chat/media/${message._id}?roomId=${encodeURIComponent(message.roomId)}`, transcript: message.transcript || '', transcriptionState: message.transcriptionState || '' } } : {}),
+      ...(message.attachment?.kind ? { attachment: { kind: message.attachment.kind, mime: message.attachment.mime, bytes: message.attachment.bytes, duration: message.attachment.duration, width: message.attachment.width, height: message.attachment.height, url: `/api/coach/team-chat/media/${message._id}?roomId=${encodeURIComponent(message.roomId)}&teamOwnerId=${encodeURIComponent(ownerId)}`, transcript: message.transcript || '', transcriptionState: message.transcriptionState || '' } } : {}),
       ...(message.kind === 'sale' ? { kind: 'sale', sale: message.sale } : {}) };
   }
   async function unreadCount({ roomId, accountId }) {
@@ -100,6 +106,10 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
   function unavailable(res) {
     return res.status(503).json({ error: 'No pude actualizar el chat. Conserva tu mensaje y vuelve a intentar.' });
   }
+
+  app.get('/api/coach/team-chat/rooms', async (req,res) => {
+    try { const ctx=await context(req,res); if(!ctx)return; res.json({rooms:getRooms ? await getRooms(ctx.user) : []}); } catch { return unavailable(res); }
+  });
 
   app.get('/api/coach/team-chat', async (req, res) => {
     try {
@@ -116,7 +126,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       const [rows, unread] = await Promise.all([
         messages.find(filter).sort({ _id: -1 }).limit(pageSize + 1).lean(), unreadCount(ctx)
       ]);
-      return res.json({ roomId: ctx.roomId, messages: rows.slice(0, pageSize).reverse().map(serialize), hasMore: rows.length > pageSize, unreadCount: unread });
+      return res.json({ roomId: ctx.roomId, messages: rows.slice(0, pageSize).reverse().map(message => serialize(message, ctx.ownerId)), hasMore: rows.length > pageSize, unreadCount: unread });
     } catch { return unavailable(res); }
   });
 
@@ -134,7 +144,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       const filter = { roomId: ctx.roomId, senderId: ctx.accountId, clientMessageId: clientMessageId.toLowerCase() };
       function respond(message, status = 200) {
         if (message.body !== body || (message.attachment?.hash || '') !== (rawMedia?.hash || '')) return res.status(409).json({ error: 'Ese envío ya tiene otro texto. Vuelve a abrir el chat para revisarlo.' });
-        return res.status(status).json({ roomId: ctx.roomId, message: serialize(message) });
+        return res.status(status).json({ roomId: ctx.roomId, message: serialize(message, ctx.ownerId) });
       }
       const existing = await messages.findOne(filter).lean();
       if (existing) return respond(existing);
@@ -146,8 +156,9 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
       if (rawMedia) mediaActive.add(ctx.accountId);
       try {
         const prepared = rawMedia ? await prepareChatMedia(rawMedia) : null;
-        const message = await messages.create({ ...filter, ...(prepared ? { kind: 'media', attachment: prepared.meta, mediaData: prepared.data, ...(prepared.meta.kind === 'audio' ? { transcriptionState: 'pending' } : {}) } : {}), senderName: typeof ctx.user.name === 'string' && ctx.user.name.trim() ? ctx.user.name.trim().slice(0, 160) : 'Miembro del equipo', body, createdAt: new Date(now()) });
+        const message = await messages.create({ ...filter, ...(prepared ? { kind: 'media', attachment: prepared.meta, mediaData: prepared.data, ...(prepared.meta.kind === 'audio' ? { transcriptionState: 'pending' } : {}) } : {}), senderName: typeof ctx.user.name === 'string' && ctx.user.name.trim() ? ctx.user.name.trim().slice(0, 160) : 'Miembro del equipo', body, pushState: 'pending', createdAt: new Date(now()) });
         if (prepared?.meta.kind === 'audio') void Promise.resolve().then(() => onAudioSaved?.()).catch(() => {});
+        void Promise.resolve().then(() => onMessageSaved?.()).catch(() => {});
         return respond(message, 201);
       } catch (error) {
         // Concurrent retries are resolved by the unique index, including across servers.

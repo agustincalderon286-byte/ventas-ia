@@ -53,3 +53,12 @@
 .tec-team-chat .tec-team-chat__sale-label { display: block; margin-top: 6px; color: #0f766e; font-size: .7rem; }
 @media (max-width: 520px) { .tec-team-chat .tec-team-chat__actions small { display: none; } .tec-team-chat .tec-team-chat__actions { justify-content: flex-start; } .tec-team-chat .tec-team-chat__send { margin-inline-start: auto; } }
 @media (prefers-reduced-motion: reduce) { .tec-team-chat * { scroll-behavior: auto; } }
+
+.tec-team-chat .tec-team-chat__header { flex-wrap: wrap; }
+.tec-team-chat .tec-team-chat__group { display: grid; gap: 4px; font-size: .75rem; color: #475569; max-width: 100%; }
+.tec-team-chat .tec-team-chat__group-select { min-height: 44px; max-width: min(280px,100%); border: 1px solid #94a3b8; border-radius: 10px; padding: 8px; background: #fff; color: #18374f; font: inherit; font-size: .9rem; }
+
+.tec-team-chat .tec-team-chat__push { display: grid; gap: 5px; max-width: 270px; }
+.tec-team-chat .tec-team-chat__push button { font-size: .8rem; padding: 8px 10px; }
+.tec-team-chat .tec-team-chat__push small { color: #475569; font-size: .73rem; line-height: 1.4; }
+.tec-team-chat .tec-team-chat__push small:empty { display: none; }

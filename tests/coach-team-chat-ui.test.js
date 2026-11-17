@@ -36,7 +36,7 @@ function fixture({ hidden = false, store = new Map(), request, mediaFactory } = 
   let handler = request || (async (url, options = {}) => url.endsWith('/read') ? { roomId: 'room-a', unreadCount: 0, lastMessageId: options.body.lastMessageId } : { roomId: 'room-a', messages: [message(1), message(2)], unreadCount: 2, hasMore: false });
   const sendRequest = async (url, options = {}) => { calls.push({ url, options }); return handler(url, options); };
   let controller;
-  const start = (userId = 'alice') => { controller = window.TecTeamChat.init({ userId, request: sendRequest, root, onUnreadCount: count => counts.push(count) }); return controller; };
+  const start = (userId = 'alice', extra = {}) => { controller = window.TecTeamChat.init({ ...extra, userId, request: sendRequest, root, onUnreadCount: count => counts.push(count) }); return controller; };
   const find = className => { const all = node => [node, ...node.children.flatMap(all)]; return all(root).find(node => node.className.split(' ').includes(className)); };
   return { root, document, window, store, calls, counts, timers, find, start, advance(ms) { now += ms; }, setRequest(fn) { handler = fn; }, observe() { observers.forEach(item => item.fn()); }, get controller() { return controller; } };
 }
@@ -319,4 +319,22 @@ test('a definitely rejected attachment can be removed or edited, while storage f
   assert.equal(posts,1);assert.equal(f.find('tec-team-chat__input').disabled,false);assert.equal(f.find('tec-team-chat__retry').hidden,true);
   failPersist=true;f.find('tec-team-chat__form').fire('submit');await turn();assert.equal(posts,1);assert.equal(f.find('tec-team-chat__input').disabled,false);
   f.controller.destroy();
+});
+
+
+test('supervisors switch group without moving drafts, pending sends or identities into another room',async()=>{
+ const own='000000000000000000000001',david='000000000000000000000002';let sent=[];
+ const f=fixture({request:async(url,options={})=>{
+  if(url.endsWith('/rooms'))return {rooms:[{ownerId:own,name:'Mi equipo'},{ownerId:david,name:'Equipo de David'}]};
+  const other=url.includes('teamOwnerId='+david),roomId=other?'room-david':'room-rigo';
+  if(url.includes('/read'))return {roomId,unreadCount:0};
+  if(url.includes('/messages')){sent.push(options.body);return {roomId,message:message(3,options.body.body,'rigo')};}
+  return {roomId,messages:[],unreadCount:0};
+ }});
+ f.start('rigo',{enableTeamRooms:true});await turn();f.find('tec-team-chat__input').value='Borrador de Rigoberto';f.find('tec-team-chat__input').fire('input');
+ const selector=f.find('tec-team-chat__group-select');assert.equal(f.find('tec-team-chat__group').hidden,false);selector.value=david;selector.fire('change');await turn();
+ assert.equal(f.find('tec-team-chat__input').value,'');assert.equal(f.window.TecTeamChat.getTeamOwnerId(),david);
+ f.find('tec-team-chat__input').value='Respuesta para David';f.find('tec-team-chat__form').fire('submit');await turn();assert.equal(sent[0].accountId,'rigo');assert.equal(sent[0].teamOwnerId,david);assert.equal(sent[0].roomId,'room-david');
+ const back=f.find('tec-team-chat__group-select');back.value=own;back.fire('change');await turn();assert.equal(f.find('tec-team-chat__input').value,'Borrador de Rigoberto');
+ f.window.TecTeamChat.init({userId:'other',request:async()=>({roomId:'other',messages:[],unreadCount:0}),root:f.root});await turn();assert.equal(f.find('tec-team-chat__input').value,'');
 });

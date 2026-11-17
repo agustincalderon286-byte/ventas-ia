@@ -33,8 +33,8 @@ export function chatDateRange(question, now = new Date(), timeZone = 'America/Ch
   return { from: dayStart(from,timeZone), to: dayStart(to,timeZone), label, today, timeZone };
 }
 const stop = new Set('como cómo quien quién que qué los las una unos unas del para por con chat grupo equipo hoy ayer esta este semana mes vendido ventas venta han hay sobre me se de el la en y a mi tu al lo ha un es'.split(' '));
-export async function buildTeamChatContext({ user, question, messages, getTeamKey, now = new Date(), timeZone = 'America/Chicago' }) {
-  const key = await getTeamKey(user);
+export async function buildTeamChatContext({ user, question, messages, getTeamKey, now = new Date(), timeZone = 'America/Chicago', teamOwnerId }) {
+  const key = await getTeamKey(user, teamOwnerId);
   if (typeof key !== 'string' || !key.trim()) return '';
   const roomId = teamChatRoomId(key), focused = isTeamChatQuestion(question);
   const range = chatDateRange(question, now, timeZone);
@@ -65,7 +65,7 @@ export async function publishSaleAnnouncement({ outcome, messages, outcomes }) {
   const amount = Number(outcome.saleAmount) || 0;
   const date = new Date(outcome.createdAt);
   // Whitelist only public sales facts; summary/privateReason/customer fields never leave Cierre.
-  const message = { roomId: outcome.teamChatRoomId, senderId, senderName: name, clientMessageId: `sale:${outcome._id}`, kind: 'sale', body: `Venta reportada · $${amount.toLocaleString('es-MX', { maximumFractionDigits: 2 })}${products.length ? '\n' + products.join(', ') : ''}`.slice(0,2000), sale: { outcomeId: outcome._id, amount, products, reportedAt: date }, createdAt: date };
+  const message = { roomId: outcome.teamChatRoomId, senderId, senderName: name, clientMessageId: `sale:${outcome._id}`, kind: 'sale', pushState: 'pending', body: `Venta reportada · $${amount.toLocaleString('es-MX', { maximumFractionDigits: 2 })}${products.length ? '\n' + products.join(', ') : ''}`.slice(0,2000), sale: { outcomeId: outcome._id, amount, products, reportedAt: date }, createdAt: date };
   await messages.updateOne({ roomId: message.roomId, senderId, clientMessageId: message.clientMessageId }, { $setOnInsert: message }, { upsert: true }).catch(error => { if (error.code !== 11000) throw error; });
   await outcomes.updateOne({ _id: outcome._id, teamChatRoomId: outcome.teamChatRoomId }, { $set: { teamChatPending: false } });
   return true;

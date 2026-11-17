@@ -4,7 +4,7 @@ Mensajes → Chat del equipo admite texto, fotos, GIF animados y notas de voz. E
 
 ## Acceso y persistencia
 
-`owner` usa su propio grupo; `seat` y `leader` usan `teamOwnerUserId`, validado contra un propietario existente. Patrocinador, territorio y parentesco no mezclan grupos. El servidor deriva el grupo de la sesión; el roomId del navegador solo detecta cambios de cuenta/equipo. Escrituras requieren la cuenta y el grupo coincidentes. Los contadores y el cursor monotónico de lectura conservan el comportamiento existente.
+`owner` usa su propio grupo; `seat` y `leader` usan `teamOwnerUserId`, validado contra un propietario existente. Patrocinador y territorio no mezclan grupos. Un supervisor puede elegir los grupos independientes de propietarios que estén debajo de él en la cadena real parentUserId. Esto permite a Rigoberto responder en la rama de David, incluyendo el grupo de Lorena y sus vendedores cuando pertenecen a ese mismo propietario. El servidor comprueba la cadena al leer, escribir, consultar con el Coach y abrir archivos. No da acceso a propietarios de otras ramas ni a grupos de uplines. Cambiar de grupo conserva borradores y pendientes por separado. El servidor deriva el grupo de la sesión; el roomId del navegador solo detecta cambios de cuenta/equipo. Escrituras requieren la cuenta y el grupo coincidentes. Los contadores y el cursor monotónico de lectura conservan el comportamiento existente.
 
 Cada mensaje, incluida su única imagen/audio, se guarda atómicamente en MongoDB. El índice único grupo/remitente/UUID evita duplicados tras perder la respuesta, incluso entre servidores. Los archivos binarios están excluidos por defecto de consultas y serialización; solo una ruta autenticada de ese grupo los entrega, con no-store, nosniff y Range para reproducción. El service worker no almacena chat ni archivos privados. No hay enlaces públicos de adjuntos ni dependencia de esta Mac.
 
@@ -34,6 +34,19 @@ La consulta tiene límites explícitos: últimos 80 mensajes en preguntas de equ
 
 ## Verificación de esta ampliación
 
-201 pruebas automáticas aprobadas en esta entrega, incluidas las regresiones de voz, formularios, permisos y Chef. Pruebas de archivos reales: EXIF, redimensionado, animación GIF, audio WAV→MP3, reproducción por rangos, rechazos por duración/formato/tamaño. Pruebas HTTP: permisos, cuenta/grupo, UUID y adjuntos sin texto. Pruebas de interfaz: mantener/soltar, descarte, permisos pendientes, teclado, límite de duración, reproducción estable, persistencia antes de enviar y recuperación tras recarga. Pruebas de Cierre/contexto: handler real con cuentas ficticias, bandeja durable, privacidad, búsqueda por equipo, transcripciones, fechas y caché.
+223 pruebas automáticas aprobadas en esta entrega, incluidas las regresiones de voz, formularios, permisos y Chef. Pruebas de archivos reales: EXIF, redimensionado, animación GIF, audio WAV→MP3, reproducción por rangos, rechazos por duración/formato/tamaño. Pruebas HTTP: permisos, cuenta/grupo, UUID y adjuntos sin texto. Pruebas de interfaz: mantener/soltar, descarte, permisos pendientes, teclado, límite de duración, reproducción estable, persistencia antes de enviar y recuperación tras recarga. Pruebas de Cierre/contexto: handler real con cuentas ficticias, bandeja durable, privacidad, búsqueda por equipo, transcripciones, fechas y caché.
 
 Las comprobaciones de producción son de lectura y de una consulta privada del Coach: no se envían mensajes, archivos ni ventas de prueba a equipos reales. La revisión visual en teléfono no está disponible en esta sesión.
+
+
+## Notificaciones voluntarias con TEC cerrado
+
+«Activar avisos» pertenece al grupo elegido y a este dispositivo. Nunca se solicita permiso ni se crea una suscripción automáticamente. Se puede activar más de un grupo autorizado y desactivar uno conservando los demás. En iPhone/iPad se necesita TEC añadida a la pantalla de inicio (iOS/iPadOS 16.4 o posterior) y abrirla desde ese icono. Android requiere un navegador compatible y el permiso de notificaciones.
+
+El proveedor Web Push de Apple/Google/Mozilla/Microsoft recibe únicamente el JSON genérico `{"type":"tec-chat"}`; no recibe identificadores de cuenta, grupo o mensaje, nombres, textos, audios ni montos. El dispositivo consulta la información de aviso solamente en la API privada de TEC con su sesión vigente. El aviso visible también es genérico. Al tocarlo se revalida la sesión y se abre Mensajes en un grupo autorizado. Sesiones cerradas, permisos revocados y grupos ajenos no revelan actividad.
+
+Las claves VAPID se generan una vez en el servidor y se guardan en una colección privada de MongoDB, con la clave privada excluida por defecto. No se guardan en el código, archivos de respaldo de esta entrega ni en esta Mac. Se pasan por llamada al transporte y no alteran las claves de Metalworks.
+
+El mensaje guarda una bandeja durable de fanout; las entregas tienen identidad única mensaje/dispositivo, arrendamiento, reintentos y caducidad. Se excluyen autor, mensajes ya leídos, mensajes anteriores a activar avisos y sesiones o membresías revocadas. Las respuestas 404/410 del proveedor desactivan la suscripción caducada. Un reintento incierto puede reemplazar el mismo aviso agrupado; no se promete entrega exactamente una vez ni que el sistema operativo ignore silencio/ahorro de batería/falta de red. Los trabajos antiguos caducan en cinco minutos.
+
+Verificación de mensaje solicitada por el usuario: la cuenta «Verónica Villacís» publicó «Aquí me comunico con quien?» el 17 de noviembre de 2026 a las 15:33:46 America/Chicago. Se consultó sin marcar mensajes como leídos ni publicar pruebas. No se ha probado recepción real en un teléfono, porque requiere activar el permiso en ese dispositivo.

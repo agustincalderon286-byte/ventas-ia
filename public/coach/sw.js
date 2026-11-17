@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261117-chatmic1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-chatmic1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261117-push1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-push1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,15 +7,17 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
-  "/coach/app.js?v=20261117-chef1",
+  "/coach/team-chat-push.js?v=20261117-push1",
+  "/coach/team-chat-push-worker.js?v=20261117-push1",
+  "/coach/app.js?v=20261117-push1",
   "/coach/coach-tutorial.js?v=20261117-help1",
   "/coach/coach-tutorial.css?v=20261117-help1",
   "/coach/coach-voice.js?v=20261117-hold1",
   "/coach/coach-voice.css?v=20261117-hold1",
-  "/coach/team-chat.js?v=20261117-chatmic1",
-  "/coach/team-chat-media.js?v=20261117-chatmic1",
-  "/coach/team-chat.css?v=20261117-chatmic1",
-  "/coach/message-center.css?v=20261117-chatmic1",
+  "/coach/team-chat.js?v=20261117-push1",
+  "/coach/team-chat-media.js?v=20261117-push1",
+  "/coach/team-chat.css?v=20261117-push1",
+  "/coach/message-center.css?v=20261117-push1",
   "/coach/app.js?v=20261117-team1",
   "/coach/app.js?v=20261117-voice2",
   "/coach/coach-voice.js?v=20261117-voice2",
@@ -495,3 +497,5 @@ self.addEventListener("sync", event => {
     event.waitUntil(flushOutboxInServiceWorker().catch(() => null));
   }
 });
+
+if (typeof importScripts === "function") importScripts("/coach/team-chat-push-worker.js?v=20261117-push1");

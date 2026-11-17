@@ -7,16 +7,18 @@
     set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch {} }
   };
   const uuid = () => window.crypto.randomUUID?.() || '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (Number(c) ^ window.crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16));
-  function init({ userId, request, root = document.querySelector('[data-team-chat-root]'), onUnreadCount = () => {} } = {}) {
+  function init({ userId, request, teamOwnerId = '', enableTeamRooms = false, root = document.querySelector('[data-team-chat-root]'), onUnreadCount = () => {} } = {}) {
     current?.destroy();
     current = null;
     if (!root || !userId || typeof request !== 'function') return null;
     userId = String(userId);
+    const transport = request;
+    if (teamOwnerId) request = (url, options = {}) => transport(`${url}${url.includes('?') ? '&' : '?'}teamOwnerId=${encodeURIComponent(teamOwnerId)}`, { ...options, ...(options.body ? { body: { ...options.body, teamOwnerId } } : {}) });
     let destroyed = false, roomId = '', blocked = false, loaded = false, hasMore = false;
     let sending = false, fetching = false, loadingEarlier = false, marking = false, timer = null;
     let pending = null, unread = 0, lastReadId = '', retryReadAt = 0, lastActive = false, noticeCause = '';
     let messages = [], newCount = 0, continuousLatestId = '';
-    let media = null, restoring = false;
+    let media = null, pushControl = null, restoring = false;
     const rowCache = new Map();
     const listeners = [];
     const make = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
@@ -28,6 +30,8 @@
     const title = make('h2', '', 'Chat de mi equipo');
     const description = make('p', 'tec-team-chat__description', 'Un grupo privado para conversar con tu equipo.');
     titleGroup.append(title, description); header.append(titleGroup);
+    const groupLabel = make('label','tec-team-chat__group','Grupo'); groupLabel.hidden = true;
+    const groupSelect = make('select','tec-team-chat__group-select'); groupSelect.setAttribute('aria-label','Grupo del equipo'); groupLabel.append(groupSelect); header.append(groupLabel);
     const unreadLabel = make('span', 'tec-team-chat__unread'); unreadLabel.hidden = true; header.append(unreadLabel);
     const older = make('button', 'tec-team-chat__older', 'Cargar mensajes anteriores'); older.type = 'button'; older.hidden = true;
     const list = make('div', 'tec-team-chat__list'); list.tabIndex = 0; list.setAttribute('role', 'region'); list.setAttribute('aria-label', 'Historial del equipo');
@@ -81,6 +85,7 @@
       retry.disabled = restoring || Boolean(pending?.mediaPending && !pending?.media);
       media?.sync(!roomId || sending || Boolean(pending) || blocked || restoring);
       older.disabled = loadingEarlier || blocked;
+      groupSelect.disabled = sending || Boolean(media?.busy());
       older.hidden = !hasMore || !loaded;
       reload.hidden = blocked || (loaded && status.dataset.error !== 'true');
     }
@@ -304,12 +309,21 @@
     // Workspace navigation changes hidden/style/class on the section or one of its ancestors.
     for (let node = root; node; node = node.parentElement) observer.observe(node, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
     media = window.TecTeamChatMedia?.init({ form, actions, send, input, notify: (text,error=false) => notice(text,error,'media'), changed: controls, submit });
+    pushControl = window.TecTeamChatPush?.init({root:header,userId,request});
+    if (enableTeamRooms) {
+      listen(groupSelect,'change',() => { if (groupSelect.value) init({userId,request:transport,root,onUnreadCount,enableTeamRooms:true,teamOwnerId:groupSelect.value}); });
+      void transport(`${endpoint}/rooms`,{headers:{'X-TEC-Account-ID':userId},timeoutMs:10000}).then(data => {
+        if (destroyed || !Array.isArray(data.rooms) || data.rooms.length < 2) return;
+        for (const room of data.rooms) { const option=make('option','',room.name);option.value=room.ownerId;groupSelect.append(option); }
+        groupSelect.value=teamOwnerId || data.rooms[0].ownerId;groupLabel.hidden=false;
+      }).catch(() => {});
+    }
     current = {
-      refresh, markAllRead,
-      destroy() { save(); destroyed = true; media?.destroy(); rowCache.clear(); window.clearTimeout(timer); observer.disconnect(); listeners.forEach(remove => remove()); }
+      refresh, markAllRead, getTeamOwnerId: () => teamOwnerId,
+      destroy() { save(); destroyed = true; pushControl?.destroy(); media?.destroy(); rowCache.clear(); window.clearTimeout(timer); observer.disconnect(); listeners.forEach(remove => remove()); }
     };
     controls(); void refresh(); lastActive = active(); schedule(lastActive ? 3000 : 30000);
     return current;
   }
-  window.TecTeamChat = { init };
+  window.TecTeamChat = { init, getTeamOwnerId: () => current?.getTeamOwnerId() || '' };
 })();
