@@ -18,7 +18,7 @@
     let sending = false, fetching = false, loadingEarlier = false, marking = false, timer = null;
     let pending = null, unread = 0, lastReadId = '', retryReadAt = 0, lastActive = false, noticeCause = '';
     let messages = [], newCount = 0, continuousLatestId = '';
-    let media = null, pushControl = null, restoring = false;
+    let media = null, pushControl = null, restoring = false, roomChoiceCount = 0;
     const rowCache = new Map();
     const listeners = [];
     const make = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
@@ -85,7 +85,7 @@
       retry.disabled = restoring || Boolean(pending?.mediaPending && !pending?.media);
       media?.sync(!roomId || sending || Boolean(pending) || blocked || restoring);
       older.disabled = loadingEarlier || blocked;
-      groupSelect.disabled = sending || Boolean(media?.busy());
+      groupSelect.disabled = sending || Boolean(media?.busy()) || roomChoiceCount < 2;
       older.hidden = !hasMore || !loaded;
       reload.hidden = blocked || (loaded && status.dataset.error !== 'true');
     }
@@ -313,10 +313,15 @@
     if (enableTeamRooms) {
       listen(groupSelect,'change',() => { if (groupSelect.value) init({userId,request:transport,root,onUnreadCount,enableTeamRooms:true,teamOwnerId:groupSelect.value}); });
       void transport(`${endpoint}/rooms`,{headers:{'X-TEC-Account-ID':userId},timeoutMs:10000}).then(data => {
-        if (destroyed || !Array.isArray(data.rooms) || data.rooms.length < 2) return;
+        if (destroyed || !Array.isArray(data.rooms) || !data.rooms.length) return;
+        const preferred = data.rooms.find(room => room.ownerId === data.preferredOwnerId);
+        if (!teamOwnerId && preferred && !input.value && !pending && !sending && !media?.selected() && !media?.busy()) {
+          init({userId,request:transport,root,onUnreadCount,enableTeamRooms:true,teamOwnerId:preferred.ownerId}); return;
+        }
+        roomChoiceCount = data.rooms.length;
         for (const room of data.rooms) { const option=make('option','',room.name);option.value=room.ownerId;groupSelect.append(option); }
-        groupSelect.value=teamOwnerId || data.rooms[0].ownerId;groupLabel.hidden=false;
-      }).catch(() => {});
+        groupSelect.value=teamOwnerId || data.rooms[0].ownerId;groupLabel.hidden=false;controls();
+      }).catch(() => { if (!destroyed) notice('No pude cargar los otros grupos. Recarga TEC para volver a intentarlo.',true,'groups'); });
     }
     current = {
       refresh, markAllRead, getTeamOwnerId: () => teamOwnerId,

@@ -5,7 +5,7 @@ import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-ord
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
 import { createCoachPushModels, createCoachTeamPush } from "./src/coach-team-chat-push.js";
-import { resolveTeamChatGroup, listTeamChatGroups } from "./src/coach-team-chat-access.js";
+import { resolveTeamChatGroup, listTeamChatGroups, getExplicitChatDelegations } from "./src/coach-team-chat-access.js";
 import { createCoachVoiceProvider } from "./src/coach-voice.js";
 import { teamChatRoomId, createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachTutorial } from "./src/coach-tutorial.js";
@@ -2391,13 +2391,13 @@ const coachTeamChatModels = createCoachTeamChatModels(mongoose);
 const coachPushModels = createCoachPushModels(mongoose);
 const coachTeamPush = createCoachTeamPush({
   models: coachPushModels, ...coachTeamChatModels, requireActive: requireCoachActivo,
-  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}), roomIdForKey: teamChatRoomId,
+  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}), roomIdForKey: teamChatRoomId,
   canDeliver: async (device,target) => {
     const session = await CoachSession.findOne({_id:device.sessionId,userId:device.accountId,expiresAt:{$gt:new Date()}}).lean();
     if(!session)return false;
     const user = await CoachUser.findById(device.accountId).lean();
     if(!user || !(await coachTieneAccesoOperativo(user)))return false;
-    try { return await resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}) === target; } catch { return false; }
+    try { return await resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}) === target; } catch { return false; }
   }
 });
 const teamChatWorker = createTeamChatWorker({ ...coachTeamChatModels, outcomes: CoachDemoOutcome, transcribe: (buffer,mime) => createCoachVoiceProvider().transcribe(buffer,mime,{ prompt: "Transcribe fielmente este mensaje de voz del equipo TEC en español. Royal Prestige, ventas, productos, horarios y acuerdos. No inventes palabras cuando no haya voz." }) });
@@ -5181,6 +5181,10 @@ async function getCoachTeamChatKey(userDoc) {
     if (!owner || normalizarCoachAccountType(owner.accountType || "owner") !== "owner") return "";
   }
   return String(ownerId);
+}
+
+function getCoachChatDelegations(userDoc) {
+  return getExplicitChatDelegations(userDoc, usuarioPuedeVerTorreControl);
 }
 
 function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
@@ -29697,8 +29701,8 @@ app.get("/api/coach/messages/overview", async (req, res) => {
 coachTeamPush.register(app);
 registerCoachTeamChat(app, {
   requireActive: requireCoachActivo,
-  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}),
-  getRooms: user => listTeamChatGroups(user,{users:CoachUser,getOwnKey:getCoachTeamChatKey}),
+  getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}),
+  getRooms: user => listTeamChatGroups(user,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}),
   onAudioSaved: () => teamChatWorker.run(),
   onMessageSaved: () => coachTeamPush.run(),
   ...coachTeamChatModels
@@ -33753,7 +33757,7 @@ app.post("/chat", async (req, res) => {
     const teamChatQuestion = modoChat === "coach" && isTeamChatQuestion(preguntaLimpia);
     let teamChatContext = "";
     if (modoChat === "coach") {
-      try { teamChatContext = await buildTeamChatContext({ user: coachAuth.user, question: preguntaLimpia, messages: coachTeamChatModels.messages, teamOwnerId: req.body?.teamChatOwnerId, getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey}) }) || "Esta cuenta no tiene un chat de equipo disponible. No inventes actividad de otras cuentas."; }
+      try { teamChatContext = await buildTeamChatContext({ user: coachAuth.user, question: preguntaLimpia, messages: coachTeamChatModels.messages, teamOwnerId: req.body?.teamChatOwnerId, getTeamKey: (user,target) => resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}) }) || "Esta cuenta no tiene un chat de equipo disponible. No inventes actividad de otras cuentas."; }
       catch { teamChatContext = "Consulta del chat del equipo no disponible en este momento. Si la pregunta depende del chat, informa que no puedes verificarla ahora; no inventes personas, ventas ni acuerdos."; }
     }
     let estadoPrompt = "";

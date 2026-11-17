@@ -68,7 +68,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
     return true;
   }
   async function context(req, res, write = false) {
-    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-groups1').vary('Cookie');
+    res.set('Cache-Control', 'private, no-store').set('X-TEC-Team-Chat-Version', '20261117-groups2').vary('Cookie');
     const auth = await requireActive(req, res);
     if (!auth) return null;
     const accountId = String(auth.user._id);
@@ -108,7 +108,7 @@ export function registerCoachTeamChat(app, { requireActive, getTeamKey, messages
   }
 
   app.get('/api/coach/team-chat/rooms', async (req,res) => {
-    try { const ctx=await context(req,res); if(!ctx)return; res.json({rooms:getRooms ? await getRooms(ctx.user) : []}); } catch { return unavailable(res); }
+    try { const ctx=await context(req,res); if(!ctx)return; const rooms=getRooms ? await getRooms(ctx.user) : []; res.json({rooms,preferredOwnerId:rooms.find(room=>room.preferred)?.ownerId || ''}); } catch { return unavailable(res); }
   });
 
   app.get('/api/coach/team-chat', async (req, res) => {

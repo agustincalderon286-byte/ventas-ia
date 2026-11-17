@@ -338,3 +338,24 @@ test('supervisors switch group without moving drafts, pending sends or identitie
  const back=f.find('tec-team-chat__group-select');back.value=own;back.fire('change');await turn();assert.equal(f.find('tec-team-chat__input').value,'Borrador de Rigoberto');
  f.window.TecTeamChat.init({userId:'other',request:async()=>({roomId:'other',messages:[],unreadCount:0}),root:f.root});await turn();assert.equal(f.find('tec-team-chat__input').value,'');
 });
+
+
+test('the granted preferred group opens automatically and a single available group is visible instead of hiding the selector',async()=>{
+ const own='000000000000000000000001',shared='6ad94167006e949af1bc026e';
+ const f=fixture({request:async(url,options={})=>{
+  if(url.endsWith('/rooms'))return {rooms:[{ownerId:own,name:'Mi equipo'},{ownerId:shared,name:'Equipo de David Peñaherra'}],preferredOwnerId:shared};
+  const roomId=url.includes('teamOwnerId='+shared)?'shared':'own';return url.includes('/read')?{roomId,unreadCount:0}:{roomId,messages:[],unreadCount:0};
+ }});
+ f.start('rigo',{enableTeamRooms:true});await turn();assert.equal(f.window.TecTeamChat.getTeamOwnerId(),shared);assert.equal(f.find('tec-team-chat__group-select').value,shared);assert.equal(f.find('tec-team-chat__group').hidden,false);
+ f.window.TecTeamChat.init({userId:'seller',request:async(url)=>url.endsWith('/rooms')?{rooms:[{ownerId:shared,name:'Mi equipo'}]}:{roomId:'shared',messages:[],unreadCount:0},root:f.root,enableTeamRooms:true});await turn();
+ assert.equal(f.find('tec-team-chat__group').hidden,false);assert.equal(f.find('tec-team-chat__group-select').disabled,true);
+});
+
+test('a preferred group never moves an existing unsent draft',async()=>{
+ let resolveRooms;const rooms=new Promise(r=>{resolveRooms=r;});
+ const f=fixture({request:async url=>url.endsWith('/rooms')?rooms:{roomId:'own',messages:[],unreadCount:0}});
+ f.start('rigo',{enableTeamRooms:true});await turn();f.find('tec-team-chat__input').value='Mi borrador';f.find('tec-team-chat__input').fire('input');
+ resolveRooms({rooms:[{ownerId:'own',name:'Mi equipo'},{ownerId:'shared',name:'Equipo de David'}],preferredOwnerId:'shared'});await turn();
+ assert.equal(f.window.TecTeamChat.getTeamOwnerId(),'');assert.equal(f.find('tec-team-chat__input').value,'Mi borrador');assert.equal(f.find('tec-team-chat__group').hidden,false);
+ f.controller.destroy();
+});

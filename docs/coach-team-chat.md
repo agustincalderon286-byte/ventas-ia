@@ -34,7 +34,7 @@ La consulta tiene límites explícitos: últimos 80 mensajes en preguntas de equ
 
 ## Verificación de esta ampliación
 
-223 pruebas automáticas aprobadas en esta entrega, incluidas las regresiones de voz, formularios, permisos y Chef. Pruebas de archivos reales: EXIF, redimensionado, animación GIF, audio WAV→MP3, reproducción por rangos, rechazos por duración/formato/tamaño. Pruebas HTTP: permisos, cuenta/grupo, UUID y adjuntos sin texto. Pruebas de interfaz: mantener/soltar, descarte, permisos pendientes, teclado, límite de duración, reproducción estable, persistencia antes de enviar y recuperación tras recarga. Pruebas de Cierre/contexto: handler real con cuentas ficticias, bandeja durable, privacidad, búsqueda por equipo, transcripciones, fechas y caché.
+227 pruebas automáticas aprobadas en esta entrega, incluidas las regresiones de voz, formularios, permisos y Chef. Pruebas de archivos reales: EXIF, redimensionado, animación GIF, audio WAV→MP3, reproducción por rangos, rechazos por duración/formato/tamaño. Pruebas HTTP: permisos, cuenta/grupo, UUID y adjuntos sin texto. Pruebas de interfaz: mantener/soltar, descarte, permisos pendientes, teclado, límite de duración, reproducción estable, persistencia antes de enviar y recuperación tras recarga. Pruebas de Cierre/contexto: handler real con cuentas ficticias, bandeja durable, privacidad, búsqueda por equipo, transcripciones, fechas y caché.
 
 Las comprobaciones de producción son de lectura y de una consulta privada del Coach: no se envían mensajes, archivos ni ventas de prueba a equipos reales. La revisión visual en teléfono no está disponible en esta sesión.
 
@@ -50,3 +50,12 @@ Las claves VAPID se generan una vez en el servidor y se guardan en una colecció
 El mensaje guarda una bandeja durable de fanout; las entregas tienen identidad única mensaje/dispositivo, arrendamiento, reintentos y caducidad. Se excluyen autor, mensajes ya leídos, mensajes anteriores a activar avisos y sesiones o membresías revocadas. Las respuestas 404/410 del proveedor desactivan la suscripción caducada. Un reintento incierto puede reemplazar el mismo aviso agrupado; no se promete entrega exactamente una vez ni que el sistema operativo ignore silencio/ahorro de batería/falta de red. Los trabajos antiguos caducan en cinco minutos.
 
 Verificación de mensaje solicitada por el usuario: la cuenta «Verónica Villacís» publicó «Aquí me comunico con quien?» el 17 de noviembre de 2026 a las 15:33:46 America/Chicago. Se consultó sin marcar mensajes como leídos ni publicar pruebas. No se ha probado recepción real en un teléfono, porque requiere activar el permiso en ese dispositivo.
+
+
+## Corrección del acceso administrativo de Rigoberto
+
+La cuenta administrativa reservada de Rigoberto tiene una delegación explícita, exclusiva del chat, al grupo compartido existente de David/Lorena y a los grupos independientes de propietarios que desciendan de esa raíz. Se exige tanto el correo exacto ya reconocido por la aplicación como el predicado administrativo existente; tener el mismo nombre o ser otro administrador no otorga este permiso. La raíz de destino se verificó en producción contra el espacio de Eric/Lorena y el mensaje real de Verónica antes de aplicar la política.
+
+Esta delegación no modifica parentescos, propiedad de cuentas, facturación ni permisos de otras herramientas. La raíz debe seguir existiendo y ser propietaria. Leer, responder, abrir archivos, consultar al Coach y recibir avisos utilizan el mismo permiso. Los propietarios de otras ramas permanecen excluidos.
+
+Para esa cuenta, el grupo compartido es ahora el destino inicial de la API y la interfaz. El grupo personal anterior sigue disponible al elegirlo explícitamente. El selector Grupo se muestra incluso cuando solo existe una opción y los errores de carga de otros grupos ya no se ocultan. Una selección inicial preferida nunca mueve ni envía un borrador existente. Los avisos siguen siendo voluntarios por grupo: haberlos activado en el grupo personal vacío no activa automáticamente el grupo compartido.
