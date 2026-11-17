@@ -90,7 +90,7 @@ export function registerTecChef(app,{getAuth,isAdmin,privateDir,publicDir,conver
   if(!isAdmin(auth.user))return res.status(403).type('html').send('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chef privado · TEC</title><body style="font-family:system-ui;max-width:560px;margin:70px auto;padding:24px;color:#102f52"><h1>Chef en prueba privada</h1><p>Por ahora esta herramienta solo está disponible para administradores de TEC.</p><a href="/coach/app/">Volver al Coach</a></body></html>');
   res.sendFile(path.join(privateDir,'tec-chef.html'));
  });
- app.get(['/coach/chef','/coach/chef/'],page);
+ app.get(['/coach/chef','/coach/chef/','/coach/chef/admin','/coach/chef/admin/'],page);
  // Acknowledge the old Chef WhatsApp webhook without sending a reply or running AI.
  app.post('/webhooks/twilio/whatsapp',(req,res)=>res.type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>'));
  // Retire only the old Chef worker; it must remain reachable without a login to

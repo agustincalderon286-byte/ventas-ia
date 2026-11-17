@@ -103,8 +103,8 @@ test('the actual navigation opens Equipo for the supervisor while keeping creati
  const billing=node(),tower=node(),chef=node();
  const selectors={'[data-coach-workspace-tab]':tabs,'[data-team-manager-only]':[form,results,billing],'[data-team-viewer-only]':[tabs[4],summary,list],'[data-control-tower-link]':[tower],'[data-tec-chef-admin-link]':[chef],'[data-coach-workspace-section]':[summary,list,form,results]};
  const context={document:{documentElement:{dataset:{}},querySelectorAll:q=>selectors[q]||[],querySelector:()=>null},window:{sessionStorage:{getItem:()=> 'equipo',setItem(){}},location:{hash:''},dispatchEvent(){},addEventListener(){}},getCoachPortalMode:()=> 'coach',COACH_FOCUSED_WORKSPACE_TAB:'cierre',COACH_WORKSPACE_TAB_KEY:'synthetic',CustomEvent:class{}};
- vm.createContext(context);vm.runInContext(extract('syncCoachManagerUi'),context);vm.runInContext(extract('initCoachWorkspaceTabs'),context);
+ vm.createContext(context);vm.runInContext(extract('syncCoachManagerUi'),context);vm.runInContext(extract('isCoachWorkspaceAvailable'),context);vm.runInContext(extract('initCoachWorkspaceTabs'),context);
  context.syncCoachManagerUi({accountType:'seat',managesTeam:false,canViewTeam:true,canViewControlTower:false});
- assert.equal(tabs[4].hidden,false);assert.equal(tower.hidden,true);assert.equal(chef.hidden,true);assert.equal(billing.hidden,true);
+ assert.equal(tabs[4].hidden,false);assert.equal(tower.hidden,true);assert.equal(chef.hidden,false);assert.equal(billing.hidden,true);
  context.initCoachWorkspaceTabs();assert.equal(summary.hidden,false);assert.equal(list.hidden,false);assert.equal(form.hidden,true);assert.equal(results.hidden,true);
 });

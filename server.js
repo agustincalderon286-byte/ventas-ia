@@ -8,7 +8,7 @@ import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
-import { canReadDownline, downlineScope, analysisViewerIds } from "./src/tec-team-supervision.js";
+import { canReadDownline, downlineScope, downlineMembers, analysisViewerIds } from "./src/tec-team-supervision.js";
 import { secureWebhookFetch, validateDestination } from "./src/secure-outbound.js";
 import cors from "cors";
 import crypto from "crypto";
@@ -37,6 +37,7 @@ import { createAudioMembershipModels, registerAudioMembership } from "./src/tec-
 import { createAudioPaymentAnalytics, createAudioPaymentAnalyticsModels } from "./src/tec-audio-payment-analytics.js";
 import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobook-support.js";
 import { createTecMailer, createAudioAccountMailer } from "./src/tec-mail.js";
+import { createPublicChefModels, registerPublicChef } from "./src/tec-chef-public.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
@@ -995,6 +996,7 @@ const coachLeadInboxSchema = new mongoose.Schema({
   interest: String,
   source: { type: String, default: "captura_manual" },
   sourceDetail: String,
+  chefSlug: String,
   landingPageUrl: String,
   referrerUrl: String,
   pageTitle: String,
@@ -2420,6 +2422,20 @@ const coachAdminPasskeys = registerAdminPasskeys(app, {
   origin: process.env.APP_BASE_URL || "https://totalelitecoaching.com"
 });
 
+const chefPublicModels=createPublicChefModels(mongoose);
+registerPublicChef(app, {
+  ...chefPublicModels, requireActive: requireCoachActivo, privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, leads: CoachLeadInbox,
+  getBySlug: resolverCoachChefContextPorSlug, getDefault: resolverCoachChefContextPublicoPredeterminado,
+  getOwnContext: async user => {
+    const profile=await asegurarCoachDistributorProfile(user);
+    return profile?.chefSlug && profile.chefEnabled!==false ? resolverCoachChefContextPorSlug(profile.chefSlug) : null;
+  },
+  // Chef lead visibility follows actual ancestry for every upline. This does
+  // not grant account management or access to other Coach records.
+  hasDownline: async user => Boolean(await CoachUser.exists({parentUserId:user._id})),
+  getDownline: user => downlineMembers({_id:user._id,teamSupervisionEnabled:true},CoachUser),
+  syncCrm: async (user,lead) => {await sincronizarCoachLeadInboxACrmRecord(user,lead);await invalidarCoachWorkspaceCaches(user,lead.ownerUserId);}
+});
 registerTecChef(app, {
   getAuth: obtenerCoachAuth, isAdmin: usuarioPuedeVerTorreControl,
   privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, ...createChefModels(mongoose), leads: CoachLeadInbox,
@@ -34369,7 +34385,7 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    await Promise.all(Object.values(coachTeamChatModels).map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(chefPublicModels),CoachLeadInbox].map(model => model.init()));
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))

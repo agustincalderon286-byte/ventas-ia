@@ -1355,7 +1355,7 @@ function syncCoachManagerUi(user = null) {
     node.hidden = isTelemarketing || !canViewControlTower;
   });
 
-  document.querySelectorAll("[data-tec-chef-admin-link]").forEach(node => { node.hidden = isTelemarketing || !canViewControlTower; });
+  document.querySelectorAll("[data-tec-chef-admin-link]").forEach(node => { node.hidden = false; });
   document.querySelectorAll("[data-open-chef-share], [data-chef-self-open-link]").forEach(node => { node.hidden = true; });
 
   // Equipo y territorio pueden habilitarse segun el rol. Reafirmamos el modo

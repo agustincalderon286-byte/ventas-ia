@@ -1,3 +1,5 @@
+> Actualización del 17 de noviembre de 2026: el nuevo Chef público y el panel de vendedores se describen en [tec-chef-public.md](tec-chef-public.md). La página de este piloto administrativo es ahora `/coach/chef/admin/`; sus APIs siguen siendo privadas. Las restricciones históricas de este documento no impiden el nuevo flujo autorizado por el usuario.
+
 # TEC Chef: private appointment-request pilot
 
 Release: `tec-chef-20261110-demo1`.
