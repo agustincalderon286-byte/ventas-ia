@@ -31,8 +31,11 @@
   function init({ userId, forms = [], sendMessage }) {
     if (!userId || !forms.length) return null;
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
-    let draft = null, previewUrl = '', active = null;
+    let draft = null, previewUrl = '', active = null, gesture = null, seconds = 0, finishAction = 'hold';
     const controls = [], players = new Set(), urls = new Set();
+    const HOLD_LABEL = 'Mantén presionado para grabar. Suelta para enviar. Desliza a la izquierda para borrar.';
+    const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
+    const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null;const liveStopButtons=new Set();
     const stopLive = () => {liveStopButtons.forEach(button=>{button.hidden=true;});const previous=liveContext;liveContext=null;previous?.close().catch(()=>{});};
     function unlockAudio(){
@@ -45,54 +48,85 @@
     const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
     const clearTimer = () => { window.clearInterval(timer); timer = null; };
     const notify = text => { if(active) active.status.textContent = text; };
+    const capturing = () => ['requesting','recording','finishing','ready'].includes(phase);
     function render() {
       const locked = chatBusy || phase !== 'idle';
       for(const item of controls) {
-        item.record.disabled = locked && !(phase === 'recording' && item === active);
-        item.record.textContent = phase === 'recording' && item === active ? 'Terminar grabación' : 'Grabar audio';
-        item.record.setAttribute('aria-pressed',phase === 'recording' && item === active ? 'true' : 'false');
-        item.upload.disabled = locked; item.send.disabled = locked || !draft; item.cancel.disabled = chatBusy || phase === 'sending';
-        item.preview.hidden = !draft || item !== active;
-        item.cancel.hidden = item !== active || (!draft && phase !== 'recording' && phase !== 'requesting');
-        item.form.querySelectorAll('textarea, button[type="submit"]').forEach(node => { node.disabled = locked; });
+        const current = item === active, recording = current && capturing(), cancelled = recording && gesture?.cancelled;
+        const hasText = Boolean(item.form.querySelector('textarea')?.value.trim());
+        item.record.disabled = chatBusy || (!recording && phase !== 'idle') || (Boolean(draft) && !recording);
+        item.record.setAttribute('aria-label', recording ? 'Grabando. Suelta para enviar; desliza a la izquierda o pulsa Escape para borrar.' : HOLD_LABEL);
+        item.record.setAttribute('aria-pressed', recording ? 'true' : 'false');
+        item.record.classList.toggle('is-recording',recording);
+        item.record.classList.toggle('is-cancelling',Boolean(cancelled));
+        item.tools.hidden = (!recording && (hasText || Boolean(draft)) && phase === 'idle') || (Boolean(draft) && phase === 'sending');
+        item.activity.hidden = !recording;
+        item.status.classList.toggle('sr-only',recording);
+        item.activity.classList.toggle('is-cancelling',Boolean(cancelled));
+        item.elapsed.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+        item.slide.textContent = cancelled ? 'Suelta para borrar' : phase === 'requesting' ? 'Preparando micrófono…' : phase === 'ready' ? 'Suelta para enviar' : '← Desliza para borrar';
+        item.hint.hidden = hasText || phase !== 'idle' || (Boolean(draft) && !recording);
+        item.preview.hidden = !draft || !current || phase !== 'idle';
+        item.send.disabled = locked || !draft; item.cancel.disabled = locked;
+        item.form.querySelectorAll('textarea, button[type="submit"]').forEach(node => {
+          node.disabled = locked;
+          if(node.type === 'submit')node.hidden = !hasText || recording || (Boolean(draft) && !recording);
+        });
       }
     }
     function clearDraft() { draft = null; release(previewUrl); previewUrl = ''; controls.forEach(item => {item.audio.removeAttribute('src');}); }
     function setDraft(blob) {
       clearDraft();
-      if(blob.size < 64 || blob.size > MAX_BYTES) { notify(blob.size > MAX_BYTES ? 'El audio supera 8 MB. Usa una grabación más corta.' : 'No se grabó suficiente audio. Vuelve a intentarlo.'); render(); return; }
-      draft = blob; previewUrl = makeUrl(blob); active.audio.src = previewUrl;
-      notify('Audio listo. Puedes escucharlo antes de enviarlo.'); render();
+      if(blob.size < 64 || blob.size > MAX_BYTES) { notify(blob.size > MAX_BYTES ? 'El audio supera 8 MB. Graba uno más corto.' : 'Mantén presionado un poco más para grabar.'); render(); return false; }
+      draft = blob; previewUrl = makeUrl(blob); active.audio.src = previewUrl;return true;
     }
-    function stopRecording() {
-      clearTimer();
-      if(recorder?.state === 'recording') recorder.stop();
+    function stopRecording(action = 'hold') {
+      finishAction = action;clearTimer();
+      if(recorder?.state === 'recording') {phase='finishing';recorder.stop();}
       stopTracks();
     }
-    function cancel() {
-      generation++; clearTimer(); stopRecording(); recorder = null; clearDraft(); phase = 'idle'; notify('Audio descartado.'); render();
+    function resetGesture() {
+      const previous=gesture;gesture=null;
+      if(previous?.pointerId != null){try{previous.item.record.releasePointerCapture(previous.pointerId);}catch{}}
+    }
+    function cancel(message = 'Audio borrado.') {
+      generation++; resetGesture();clearTimer();stopRecording();recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
+    }
+    function finish() {
+      if(!gesture)return;
+      const cancelled=gesture.cancelled;resetGesture();
+      if(cancelled){cancel();return;}
+      if(phase==='requesting'){cancel('Si el navegador pide permiso, acéptalo y mantén presionado otra vez para grabar.');return;}
+      unlockAudio();
+      if(phase==='recording'){stopRecording('send');render();}
+      else if(phase==='finishing')finishAction='send';
+      else if(phase==='ready'){phase='idle';send();}
     }
     async function start(item) {
-      if(chatBusy || phase !== 'idle') return;
-      active = item; pausePlayback();
-      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { notify('Este navegador no permite grabar aquí. Puedes adjuntar un audio.'); return; }
-      const token = ++generation; phase = 'requesting'; notify('Permite usar el micrófono para grabar.'); render();
+      if(chatBusy || phase !== 'idle' || draft)return;
+      active=item;pausePlayback();unlockAudio();seconds=0;
+      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {resetGesture();notify('Este navegador no permite grabar. Puedes escribir tu pregunta.');return;}
+      const token=++generation;phase='requesting';notify('Permite el micrófono y mantén presionado para grabar.');render();
       try {
-        const captured = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
-        if(token !== generation || document.hidden) { captured.getTracks().forEach(track => track.stop()); if(token === generation){phase='idle';render();} return; }
-        stream = captured; const mime = recordingMime(); const chunks = [];
-        const recording = new MediaRecorder(captured,mime ? {mimeType:mime} : {}); recorder = recording;
-        recording.addEventListener('dataavailable',event => { if(event.data.size && token === generation) chunks.push(event.data); });
-        recording.addEventListener('stop',() => {
-          if(token !== generation) return; clearTimer(); stopTracks(); recorder = null; phase = 'idle';
-          setDraft(new Blob(chunks,{type:recording.mimeType || mime || 'audio/webm'}));
+        const captured=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        if(token!==generation || document.hidden || !gesture){captured.getTracks().forEach(track=>track.stop());if(token===generation){phase='idle';render();}return;}
+        stream=captured;const mime=recordingMime(),chunks=[];
+        const recording=new MediaRecorder(captured,mime?{mimeType:mime}:{});recorder=recording;const started=Date.now();
+        recording.addEventListener('dataavailable',event=>{if(event.data.size && token===generation)chunks.push(event.data);});
+        recording.addEventListener('stop',()=>{
+          if(token!==generation)return;clearTimer();stopTracks();recorder=null;
+          if(Date.now()-started<350){phase='idle';resetGesture();notify('Mantén presionado para grabar tu pregunta.');render();return;}
+          const blob=new Blob(chunks,{type:recording.mimeType || mime || 'audio/webm'});
+          phase='idle';if(!setDraft(blob)){resetGesture();render();return;}
+          if(finishAction==='send'){send();}
+          else {phase='ready';notify('Llegaste a 90 segundos. Suelta para enviar o desliza para borrar.');render();}
         });
-        recording.addEventListener('error',() => { if(token === generation) { cancel(); notify('No pude completar la grabación. Puedes adjuntar un audio.'); } });
-        recording.start(500); phase = 'recording'; let seconds = 0; notify('Grabando… 0:00'); render();
-        timer = window.setInterval(()=>{seconds++;notify(`Grabando… ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`);if(seconds >= MAX_SECONDS)stopRecording();},1000);
+        recording.addEventListener('error',()=>{if(token===generation)cancel('No pude completar la grabación. Vuelve a intentarlo.');});
+        recording.start(500);phase='recording';notify('Grabando. Suelta para enviar o desliza a la izquierda para borrar.');render();
+        timer=window.setInterval(()=>{seconds++;render();if(seconds>=MAX_SECONDS)stopRecording();},1000);
       } catch(error) {
-        if(token !== generation)return; stopTracks(); phase='idle';
-        notify(error.name === 'NotAllowedError' ? 'El micrófono está bloqueado. Permítelo en el navegador o adjunta un audio.' : 'No pude abrir el micrófono. Revisa que esté disponible o adjunta un audio.'); render();
+        if(token!==generation)return;stopTracks();resetGesture();phase='idle';
+        notify(error.name==='NotAllowedError' ? 'El micrófono está bloqueado. Permítelo en el navegador para grabar.' : 'No pude abrir el micrófono. Revisa que esté disponible.');render();
       }
     }
     async function request(url, options = {}) {
@@ -113,27 +147,55 @@
         const data = await response.json(); if(!data.text?.trim()) throw new Error('No escuché una pregunta clara. Tu audio sigue aquí.');
         notify('Tu pregunta está lista. El Coach está respondiendo…');
         const result = await sendMessage(data.text,{audioUrl:makeUrl(audio)});
-        if(result?.ok) { clearDraft(); notify('Respuesta lista.'); }
+        if(result?.ok) { clearDraft(); notify(''); }
         else notify('No se completó la respuesta. Conservé tu audio para que puedas reintentar.');
       } catch(error) { notify(error.message || 'No pude enviar el audio. Tu grabación sigue aquí.'); }
       finally {phase='idle';render();}
     }
-    const button = (text,handler) => { const node=document.createElement('button');node.type='button';node.textContent=text;node.addEventListener('click',handler);return node; };
+    const button = (text,handler) => { const node=document.createElement('button');node.type='button';node.textContent=text;if(handler)node.addEventListener('click',handler);return node; };
     for(const form of forms) {
+      form.classList.add('coach-voice-composer');
       const tools=document.createElement('div');tools.className='coach-voice-tools';
-      const item={form};
-      item.record=button('Grabar audio',()=>phase === 'recording' && active === item ? stopRecording() : start(item));
-      item.upload=button('Adjuntar audio',()=>item.file.click());
-      item.file=document.createElement('input');item.file.type='file';item.file.accept='audio/*,video/webm';item.file.hidden=true;
-      item.file.addEventListener('change',()=>{const file=item.file.files?.[0];item.file.value='';if(file && !chatBusy && phase === 'idle'){active=item;setDraft(file);}});
+      const item={form,tools};
+      item.record=button('');item.record.innerHTML=MIC_ICON;item.record.className='coach-voice-hold';item.record.title=HOLD_LABEL;
+      item.record.addEventListener('contextmenu',event=>event.preventDefault());
+      item.record.addEventListener('pointerdown',event=>{
+        if(event.button!==0 || event.isPrimary===false || gesture || chatBusy || phase!=='idle' || draft)return;
+        event.preventDefault();gesture={item,pointerId:event.pointerId,startX:event.clientX,cancelled:false};
+        try{item.record.setPointerCapture(event.pointerId);}catch{}start(item);
+      });
+      item.record.addEventListener('pointermove',event=>{
+        if(gesture?.item!==item || gesture.pointerId!==event.pointerId)return;
+        gesture.cancelled=event.clientX-gesture.startX<=-64;render();
+      });
+      item.record.addEventListener('pointerup',event=>{if(gesture?.item===item && gesture.pointerId===event.pointerId){event.preventDefault();finish();}});
+      for(const type of ['pointercancel','lostpointercapture'])item.record.addEventListener(type,event=>{if(gesture?.item===item && gesture.pointerId===event.pointerId)cancel();});
+      item.record.addEventListener('keydown',event=>{
+        if(event.key==='Escape' && capturing()){event.preventDefault();cancel();return;}
+        if(![' ','Enter'].includes(event.key))return;event.preventDefault();
+        if(!event.repeat && !gesture && phase==='idle' && !chatBusy && !draft){gesture={item,key:event.key,cancelled:false};start(item);}
+      });
+      item.record.addEventListener('keyup',event=>{if(gesture?.item===item && gesture.key===event.key){event.preventDefault();finish();}});
+      // Assistive technologies may activate a button without pointer or key events.
+      item.record.addEventListener('click',event=>{
+        event.preventDefault();if(event.detail!==0)return;
+        if(gesture?.assistive && gesture.item===item)finish();
+        else if(!gesture && phase==='idle' && !chatBusy && !draft){gesture={item,assistive:true,cancelled:false};start(item);}
+      });
       item.status=document.createElement('p');item.status.className='coach-voice-status';item.status.setAttribute('role','status');item.status.setAttribute('aria-live','polite');
+      item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent='Mantén el micrófono para hablar';
+      item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;item.activity.setAttribute('aria-hidden','true');
+      const bin=document.createElement('span');bin.className='coach-voice-bin';bin.innerHTML=BIN_ICON;
+      const meter=document.createElement('span');meter.className='coach-voice-meter';meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
+      item.elapsed=document.createElement('span');item.elapsed.className='coach-voice-elapsed';
+      item.slide=document.createElement('span');item.slide.className='coach-voice-slide';item.activity.append(bin,meter,item.elapsed,item.slide);
       item.preview=document.createElement('div');item.preview.className='coach-voice-preview';item.preview.hidden=true;
-      item.audio=document.createElement('audio');item.audio.controls=true;item.audio.preload='metadata';item.audio.setAttribute('aria-label','Escuchar mi audio antes de enviarlo');
+      item.audio=document.createElement('audio');item.audio.controls=true;item.audio.preload='metadata';item.audio.setAttribute('aria-label','Escuchar el audio pendiente');
       item.audio.addEventListener('play',()=>pausePlayback(item.audio));players.add(item.audio);
-      item.send=button('Enviar audio',send); item.cancel=button('Descartar audio',cancel);
-      item.preview.append(item.audio,item.send);tools.append(item.record,item.upload,item.file,item.cancel,item.preview,item.status);
-      const note=document.createElement('small');note.className='coach-voice-note';note.textContent='Texto → texto · Audio → voz de IA. Audios de hasta 90 s.';tools.append(note);form.append(tools);controls.push(item);
-      form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(phase==='recording')stopRecording();else if(phase==='requesting')cancel();});
+      item.send=button('Reintentar audio',send);item.cancel=button('',()=>cancel());item.cancel.innerHTML=BIN_ICON;item.cancel.setAttribute('aria-label','Borrar audio pendiente');
+      item.preview.append(item.audio,item.send,item.cancel);tools.append(item.record);form.append(tools,item.hint,item.activity,item.preview,item.status);controls.push(item);
+      form.querySelector('textarea')?.addEventListener('input',render);
+      form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(capturing())cancel();});
     }
     function attachAudio(handles,url,label) {
       const audios=[];
@@ -176,8 +238,10 @@
       }
       return generate();
     }
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){if(phase==='recording')stopRecording();else if(phase==='requesting')cancel();pausePlayback();}});
-    window.addEventListener('pagehide',event=>{generation++;clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){if(capturing())cancel();pausePlayback();}});
+    window.addEventListener('blur',()=>{if(capturing())cancel();});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape' && capturing())cancel();});
+    window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
     render();
     return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
       attachInput(handles,url){attachAudio(handles,url,'Escuchar mi pregunta de audio');} };

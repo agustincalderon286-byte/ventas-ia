@@ -4,7 +4,11 @@ La regla se decide por mensaje: texto → respuesta escrita; audio → transcrip
 
 ## Uso
 
-En la ventana Coach, «Grabar audio» pide acceso al micrófono y «Terminar grabación» prepara una vista previa. El usuario puede escuchar, descartar o enviar. Se admiten hasta 90 segundos o un archivo de audio de hasta 8 MB. «Adjuntar audio» permite usar archivos M4A, MP3, WebM, WAV u Ogg sin grabar. El cierre del Coach o el paso a segundo plano detienen la captura; no se graba en el fondo. Un permiso denegado muestra cómo continuar con un archivo.
+En la ventana Coach hay un único micrófono junto al campo vacío. Mantenerlo presionado graba; soltarlo envía automáticamente. Deslizar al menos 64 px a la izquierda muestra la papelera activa y soltar borra sin enviar. Volver hacia el micrófono antes de soltar restaura el envío. Mientras graba se muestran ondas animadas, tiempo y la indicación para cancelar. Al escribir, el botón de texto reemplaza al micrófono. Se retiraron los botones de adjuntar, terminar y confirmar del flujo normal.
+
+Los toques inferiores a 350 ms no envían. Hasta 90 segundos y 8 MB; al llegar al límite se detiene el micrófono y se espera que el usuario suelte para enviar o deslice para borrar. Soltar antes de conceder el permiso invalida la captura: cualquier micrófono tardío se detiene. El cierre del Coach, segundo plano, pérdida de foco, cancelación del puntero o Escape descartan la captura sin enviar. La primera vez el navegador puede pedir permiso; luego hay que mantener presionado de nuevo.
+
+Con teclado se mantiene Espacio o Enter y se suelta para enviar; Escape borra. La activación de tecnología de asistencia sin eventos de teclado/puntero permite iniciar y finalizar con el mismo botón. Si un envío falla aparecen la reproducción del audio pendiente, reintentar y borrar; esos controles solo se muestran para recuperar el error.
 
 El texto transcrito y el audio original aparecen en la pregunta. Solo esa respuesta recibe voz. La respuesta de voz tiene controles de reproducción y la indicación «Voz generada por IA». La reproducción automática se intenta mientras la ventana está visible; si el navegador la bloquea, el usuario pulsa reproducir. La entrada de audio no abre el teclado al terminar. Cerrar el Coach pausa la reproducción.
 
@@ -28,6 +32,10 @@ La vista local usa la plantilla real y el código real del compositor, con un mi
 
 El usuario aclaró que busca una voz claramente masculina, natural como las narraciones BF16, sin exigir la identidad exacta de Damián y con poca espera. Se usa la voz conversacional `ash` del servicio en línea; la Mac no genera la voz de los usuarios ni necesita permanecer encendida. La muestra de la voz del sistema era solo de la prueba local. Una muestra BF16 de Damián quedó aislada como referencia de calidad y no se conectó al servicio.
 
-Las peticiones nuevas de voz reciben PCM por NDJSON y el navegador reproduce los primeros fragmentos con Web Audio mientras se completa el resto. La reproducción se habilita desde el gesto de «Enviar audio», conserva la detección de segundo plano y ofrece «Detener voz». Al finalizar se conserva un WAV completo para escuchar de nuevo; un flujo incompleto no se presenta como archivo terminado. Los clientes anteriores siguen recibiendo WAV. Las respuestas solicitadas por audio usan un estilo conversacional breve y una clave de caché distinta; el texto mantiene su estilo existente.
+Las peticiones nuevas de voz reciben PCM por NDJSON y el navegador reproduce los primeros fragmentos con Web Audio mientras se completa el resto. La reproducción se habilita desde el gesto de soltar el micrófono, conserva la detección de segundo plano y ofrece «Detener voz». Al finalizar se conserva un WAV completo para escuchar de nuevo; un flujo incompleto no se presenta como archivo terminado. Los clientes anteriores siguen recibiendo WAV. Las respuestas solicitadas por audio usan un estilo conversacional breve y una clave de caché distinta; el texto mantiene su estilo existente.
 
 La primera prueba real con la voz anterior tardó unos 13,6 segundos hasta el archivo completo. Esa cifra no es una garantía; la optimización se verifica por el comienzo de reproducción, no por cuánto tarda en terminar el archivo.
+
+## Interacción mínima · 17 noviembre 2026
+
+94 pruebas pasan en conjunto, incluidas diez nuevas de mantener/soltar, cancelar y volver desde la papelera, permisos tardíos o denegados, interrupciones, teclado, límite y reintento. La revisión visual con la plantilla real y micrófono sintético confirmó un solo envío al soltar, ningún envío al deslizar y la interfaz de 390×844. Las pruebas iniciales del apartado de validación corresponden a la interfaz anterior; sus flujos de adjunto y confirmación fueron reemplazados.
