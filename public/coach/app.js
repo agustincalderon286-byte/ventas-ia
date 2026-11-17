@@ -1511,6 +1511,15 @@ function registerCoachDemoEvent(event = null) {
   syncCoachDemoContextBroadcast();
 }
 
+function isCoachWorkspaceAvailable(button) {
+  if (!button) return false;
+  if (!button.hidden) return true;
+  // The compact header replaces the Messages tab in the normal Coach portal.
+  return button.dataset.coachWorkspaceTab === "mensajes" &&
+    document.documentElement.dataset.coachPortalMode !== "telemarketing" &&
+    Boolean(document.querySelector("[data-coach-open-messages]:not([hidden])"));
+}
+
 function initCoachWorkspaceTabs() {
   const tabButtons = Array.from(document.querySelectorAll("[data-coach-workspace-tab]"));
   const workspaceSections = Array.from(document.querySelectorAll("[data-coach-workspace-section]"));
@@ -1520,7 +1529,7 @@ function initCoachWorkspaceTabs() {
   }
 
   const visibleTabButtons = tabButtons.filter(button => !button.hidden);
-  const validTabs = new Set(visibleTabButtons.map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
+  const validTabs = new Set(tabButtons.filter(isCoachWorkspaceAvailable).map(button => button.dataset.coachWorkspaceTab).filter(Boolean));
   const defaultTab = visibleTabButtons[0]?.dataset.coachWorkspaceTab || "cierre";
   const savedTab = window.sessionStorage.getItem(COACH_WORKSPACE_TAB_KEY);
   let activeTab = window.TecVisitHeader?.initialWorkspace(savedTab, defaultTab) || savedTab || defaultTab;
@@ -1551,7 +1560,10 @@ function initCoachWorkspaceTabs() {
       window.history.replaceState(null, "", url);
     }
     const workspaceTitle = document.querySelector("[data-coach-workspace-title]");
-    if (workspaceTitle) workspaceTitle.textContent = visibleTabButtons.find(button => button.dataset.coachWorkspaceTab === safeTab)?.textContent.trim() || "Cierre";
+    if (workspaceTitle) workspaceTitle.textContent = tabButtons.find(button => button.dataset.coachWorkspaceTab === safeTab)?.textContent.trim() || "Cierre";
+    document.querySelectorAll("[data-coach-open-messages]").forEach(button => {
+      button.setAttribute("aria-pressed", safeTab === "mensajes" ? "true" : "false");
+    });
     const journey = document.querySelector(".coach-journey");
     if (journey) journey.hidden = safeTab !== "cierre";
     window.dispatchEvent(new CustomEvent("coach:workspace-change", { detail: { workspace: safeTab } }));
@@ -1622,11 +1634,12 @@ function initCoachWorkspaceTabs() {
 function setCoachWorkspaceTab(nextTab = "cierre") {
   const button = document.querySelector(`[data-coach-workspace-tab="${String(nextTab || "").trim()}"]`);
 
-  if (!button || button.hidden) {
-    return;
+  if (!isCoachWorkspaceAvailable(button)) {
+    return false;
   }
 
   button.click();
+  return true;
 }
 
 function buildCoachActiveCrmContext(record = null) {
@@ -11091,7 +11104,12 @@ function initCoachMessagesWorkspace(user = null) {
 
   quickOpenButtons.forEach(button => {
     button.addEventListener("click", () => {
-      setCoachWorkspaceTab("mensajes");
+      if (!setCoachWorkspaceTab("mensajes")) return;
+      window.scrollTo({ top: 0, behavior: "instant" });
+      clearMessage(summaryFeedback);
+      loadOverview().catch(error => {
+        setMessage(summaryFeedback, error.message || "No pude cargar tus mensajes internos.", "error");
+      });
     });
   });
 
