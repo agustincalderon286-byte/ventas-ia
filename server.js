@@ -2,6 +2,7 @@ import "dotenv/config";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
+import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
 import { canReadDownline, downlineScope, analysisViewerIds } from "./src/tec-team-supervision.js";
@@ -29639,6 +29640,12 @@ app.get("/api/coach/messages/overview", async (req, res) => {
     console.error("Error cargando mensajes del Coach:", error.message);
     responderCoachError(res, 500, "No pude cargar tus mensajes en este momento.");
   }
+});
+
+registerCoachAnnouncementRead(app, {
+  requireActive: requireCoachActivo,
+  getOverview: obtenerCoachMessagesOverview,
+  receipts: CoachAnnouncementReceipt
 });
 
 app.post("/api/coach/messages/read-all", async (req, res) => {

@@ -11099,6 +11099,19 @@ function initCoachMessagesWorkspace(user = null) {
     const data = await apiRequest("/api/coach/messages/overview");
     latestOverview = data || latestOverview;
     refreshOverviewUi();
+    const messagesAreOpen = !document.hidden && Array.from(quickOpenButtons).some(button => button.getAttribute("aria-pressed") === "true");
+    const ids = (latestOverview.announcements || []).filter(item => !item.read).map(item => item.id).filter(Boolean);
+    if (messagesAreOpen && ids.length) {
+      const receipt = await apiRequest("/api/coach/announcements/read", {
+        method: "POST", body: { accountId: String(user.id), ids }
+      });
+      const readIds = new Set(Array.isArray(receipt.readIds) ? receipt.readIds : []);
+      latestOverview.announcements = latestOverview.announcements.map(item => readIds.has(item.id) ? { ...item, read: true } : item);
+      const remaining = latestOverview.announcements.filter(item => !item.read).length;
+      latestOverview.unread = { ...latestOverview.unread, announcements: remaining,
+        total: remaining + Number(latestOverview.unread?.support || 0) + Number(latestOverview.unread?.direct || 0) };
+      refreshOverviewUi();
+    }
     return latestOverview;
   };
 
