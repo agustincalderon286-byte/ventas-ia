@@ -35,6 +35,8 @@
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
     <link rel="stylesheet" href="/coach/card-order.css?v=20261117-order1">
     <link rel="stylesheet" href="/coach/coach-voice.css?v=20261117-voice2">
+    <link rel="stylesheet" href="/coach/team-chat.css?v=20261117-team1">
+    <link rel="stylesheet" href="/coach/message-center.css?v=20261117-team1">
 </head>
   <body class="coach-app-body tec-compact-page">
     <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
@@ -1032,11 +1034,11 @@
             <div class="form-result" data-agenda-feedback></div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+          <article class="dashboard-card coach-message-summary" data-coach-workspace-section="mensajes" hidden>
             <div class="eyebrow">Centro interno</div>
-            <h3>Boletines y soporte del Coach</h3>
+            <h3>Mensajes y avisos</h3>
             <p>
-              Aqui recibes avisos internos del sistema y puedes escribir directo a soporte tecnico sin salir del Coach.
+              Conversa con tu equipo, consulta noticias internas o escribe a soporte sin salir de TEC.
             </p>
 
             <div class="insight-grid">
@@ -1050,15 +1052,19 @@
               </div>
               <div class="mini-stat">
                 <strong data-messages-total-direct>0</strong>
-                <span>Chats</span>
+                <span>Privados</span>
               </div>
               <div class="mini-stat">
                 <strong data-messages-unread-direct>0</strong>
-                <span>Chats nuevos</span>
+                <span>Privados sin leer</span>
               </div>
               <div class="mini-stat">
                 <strong data-messages-unread-support>0</strong>
                 <span>Soporte nuevo</span>
+              </div>
+              <div class="mini-stat">
+                <strong data-team-chat-unread-summary>0</strong>
+                <span>Equipo sin leer</span>
               </div>
               <div class="mini-stat">
                 <strong data-messages-total-unread>0</strong>
@@ -1067,13 +1073,17 @@
             </div>
 
             <div class="dashboard-actions compact-top">
-              <button type="button" class="nav-button" data-messages-mark-read>Marcar todo como leido</button>
+              <button type="button" class="nav-button" data-coach-open-team-chat>Chat del equipo</button>
+              <button type="button" class="nav-button" data-coach-open-news>Noticias</button>
+              <button type="button" class="nav-button" data-messages-mark-read>Marcar todo como leído</button>
             </div>
 
             <div class="form-result" data-messages-feedback></div>
           </article>
 
-          <article class="dashboard-card" data-coach-workspace-section="mensajes" hidden>
+          <article class="dashboard-card" data-coach-workspace-section="mensajes" data-team-chat-root hidden></article>
+
+          <article class="dashboard-card coach-news-card" data-coach-workspace-section="mensajes" data-coach-news-card hidden>
             <div class="eyebrow">Boletines</div>
             <h3>Noticias internas</h3>
             <p>
@@ -5750,7 +5760,8 @@
     <script src="/coach/product-models.js?v=20261110-product3d1"></script>
     <script src="/coach/card-order.js?v=20261117-order1"></script>
     <script src="/coach/coach-voice.js?v=20261117-voice2"></script>
-    <script src="/coach/app.js?v=20261117-voice2"></script>
+    <script src="/coach/team-chat.js?v=20261117-team1"></script>
+    <script src="/coach/app.js?v=20261117-team1"></script>
     <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
     <script src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script>
     <script src="/coach/audiobooks.js?v=20261112-editorial1"></script>

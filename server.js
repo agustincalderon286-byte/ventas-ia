@@ -3,6 +3,7 @@ import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
+import { createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
@@ -2376,6 +2377,7 @@ const CoachDirectThread =
   mongoose.models.CoachDirectThread || mongoose.model("CoachDirectThread", coachDirectThreadSchema);
 const CoachDirectMessage =
   mongoose.models.CoachDirectMessage || mongoose.model("CoachDirectMessage", coachDirectMessageSchema);
+const coachTeamChatModels = createCoachTeamChatModels(mongoose);
 const CoachCrmRecord =
   mongoose.models.CoachCrmRecord || mongoose.model("CoachCrmRecord", coachCrmRecordSchema);
 const CoachCrmActivity =
@@ -5130,6 +5132,18 @@ function resolverCoachOwnerUserId(userDoc = null) {
   return ["seat", "leader"].includes(accountType) && userDoc.teamOwnerUserId
     ? userDoc.teamOwnerUserId
     : userDoc._id;
+}
+
+async function getCoachTeamChatKey(userDoc) {
+  const type = normalizarCoachAccountType(userDoc.accountType || "owner");
+  if (["seat", "leader"].includes(type) && !userDoc.teamOwnerUserId) return "";
+  const ownerId = resolverCoachOwnerUserId(userDoc);
+  if (!ownerId) return "";
+  if (String(ownerId) !== String(userDoc._id)) {
+    const owner = await CoachUser.findById(ownerId).select("_id accountType").lean();
+    if (!owner || normalizarCoachAccountType(owner.accountType || "owner") !== "owner") return "";
+  }
+  return String(ownerId);
 }
 
 function construirCoachWorkspaceQuery(userDoc = null, extra = {}) {
@@ -29643,6 +29657,12 @@ app.get("/api/coach/messages/overview", async (req, res) => {
   }
 });
 
+registerCoachTeamChat(app, {
+  requireActive: requireCoachActivo,
+  getTeamKey: getCoachTeamChatKey,
+  ...coachTeamChatModels
+});
+
 registerCoachVoice(app, { requireActive: requireCoachActivo });
 
 registerCoachAnnouncementRead(app, {
@@ -34347,6 +34367,7 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
+    await Promise.all(Object.values(coachTeamChatModels).map(model => model.init()));
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
       .then(source => console.log("TEC knowledge ready:", source))

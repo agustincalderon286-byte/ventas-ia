@@ -67,6 +67,35 @@ const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_OWNER_KEY = "tec-coach-chat-account-v1";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
+const coachMessageUnreadState = { accountId: "", internal: 0, team: 0 };
+let coachTeamChatController = null;
+function renderCoachUnreadBadge() {
+  const total = coachMessageUnreadState.internal + coachMessageUnreadState.team;
+  document.querySelectorAll("[data-coach-unread-badge]").forEach(node => { node.hidden = !total; node.textContent = String(total); });
+  document.querySelectorAll("[data-messages-total-unread]").forEach(node => { node.textContent = String(total); });
+  document.querySelectorAll("[data-team-chat-unread-summary]").forEach(node => { node.textContent = String(coachMessageUnreadState.team); });
+}
+function initCoachTeamChatWorkspace(user) {
+  coachTeamChatController?.destroy();
+  const accountId = String(user?.id || "");
+  coachMessageUnreadState.accountId = accountId;
+  coachMessageUnreadState.internal = 0;
+  coachMessageUnreadState.team = 0;
+  renderCoachUnreadBadge();
+  coachTeamChatController = window.TecTeamChat?.init({
+    userId: accountId, request: apiRequest,
+    onUnreadCount(count) {
+      if (coachMessageUnreadState.accountId !== accountId) return;
+      coachMessageUnreadState.team = Math.max(0, Number(count) || 0);
+      renderCoachUnreadBadge();
+    }
+  }) || null;
+  for (const [selector, target] of [["[data-coach-open-team-chat]", "[data-team-chat-root]"], ["[data-coach-open-news]", "[data-coach-news-card]"]]) {
+    document.querySelectorAll(selector).forEach(button => button.addEventListener("click", () => {
+      document.querySelector(target)?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }));
+  }
+}
 
 if ("serviceWorker" in navigator && window.location.pathname.startsWith("/coach/")) {
   window.addEventListener("load", () => {
@@ -10779,14 +10808,8 @@ function renderCoachMessagesSummary(data = null) {
     node.textContent = String(unreadSupport || 0);
   });
 
-  document.querySelectorAll("[data-messages-total-unread]").forEach(node => {
-    node.textContent = String(totalUnread || 0);
-  });
-
-  document.querySelectorAll("[data-coach-unread-badge]").forEach(node => {
-    node.hidden = !totalUnread;
-    node.textContent = String(totalUnread || 0);
-  });
+  coachMessageUnreadState.internal = Math.max(0, totalUnread || 0);
+  renderCoachUnreadBadge();
 }
 
 function renderCoachAnnouncements(announcements = []) {
@@ -11134,7 +11157,10 @@ function initCoachMessagesWorkspace(user = null) {
       await apiRequest("/api/coach/messages/read-all", {
         method: "POST"
       });
-      setMessage(summaryFeedback, "Tus boletines, chats y soporte quedaron marcados como leidos.", "success");
+      const teamRead = coachTeamChatController ? await coachTeamChatController.markAllRead() : true;
+      setMessage(summaryFeedback, teamRead
+        ? "Tus boletines, chats y soporte quedaron marcados como leídos."
+        : "Avisos y privados actualizados. No pude confirmar los leídos del equipo; vuelve a intentarlo.", teamRead ? "success" : "error");
       await loadOverview();
     } catch (error) {
       setMessage(summaryFeedback, error.message, "error");
@@ -17285,6 +17311,7 @@ async function loadCoachAppPage() {
     initCoachLeadWorkspace(me.user);
     initCoachAgendaWorkspace(me.user);
     initChefCampaignTool();
+    initCoachTeamChatWorkspace(me.user);
     initCoachMessagesWorkspace(me.user);
     initCoachTeamWorkspace(me.user);
     initCoachTerritoryWorkspace(me.user);
