@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
 import express from "express";
+import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
 import { canReadDownline, downlineScope, analysisViewerIds } from "./src/tec-team-supervision.js";
@@ -821,6 +822,7 @@ const coachDailyRollupSchema = new mongoose.Schema(
 );
 
 const coachUserSchema = new mongoose.Schema({
+  coachCardOrder: { type: [String], default: [] },
   name: { type: String, required: true, trim: true },
   email: { type: String, required() { return !this.username; }, trim: true, lowercase: true },
   username: { type: String, trim: true, match: /^[2-9]\d{2}[2-9]\d{6}$/ },
@@ -25395,6 +25397,7 @@ app.get("/api/coach/me", async (req, res) => {
 
     res.json({
       authenticated: true,
+      cardOrder: readCoachCardOrder(userDoc.coachCardOrder),
       stripeReady: stripeListoParaCheckout(),
       user: await construirCoachUserView(userDoc),
       profile: profilePayload,
@@ -25422,6 +25425,8 @@ app.get("/api/coach/me", async (req, res) => {
     responderCoachError(res, 500, "No pude revisar tu cuenta.");
   }
 });
+
+registerCoachCardOrder(app, { requireActive: requireCoachActivo, users: CoachUser });
 
 app.get("/api/coach/integrations/highlevel", async (req, res) => {
   const auth = await requireCoachActivo(req, res);

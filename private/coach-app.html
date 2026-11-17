@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/coach/property-lab.css?v=20261101-recorrido1" />
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-visit-tools2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
+    <link rel="stylesheet" href="/coach/card-order.css?v=20261117-order1">
 </head>
   <body class="coach-app-body tec-compact-page">
     <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
@@ -184,6 +185,12 @@
 
 
         <aside class="coach-sidebar">
+          <section class="coach-order-toolbar" data-coach-order-toolbar data-coach-workspace-section="cierre" hidden aria-label="Organizar mi presentación">
+            <strong>Tu presentación</strong>
+            <button type="button" class="coach-order-edit-button" data-coach-order-edit aria-haspopup="dialog" hidden>Editar orden</button>
+            <p data-coach-order-feedback role="status" aria-live="polite"></p>
+          </section>
+
 
 
           <article class="dashboard-card ab-workspace" data-coach-workspace-section="audiolibros" data-audiobooks hidden>
@@ -1235,6 +1242,7 @@
             class="dashboard-card coach-step-card coach-step-featured"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 10"
+            data-coach-card-id="paso-conexion"
           >
             <div class="coach-step-copy">
               <div class="eyebrow">Paso 1 · Conexion</div>
@@ -1268,6 +1276,7 @@
             class="dashboard-card coach-step-card coach-step-featured"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 20"
+            data-coach-card-id="paso-regalo"
           >
             <div class="coach-step-copy">
               <div class="eyebrow">Paso 2 · Confianza</div>
@@ -1429,7 +1438,7 @@
             </form>
           </article>
 
-          <article id="paso-demostracion" class="dashboard-card resource-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 60">
+          <article id="paso-demostracion" class="dashboard-card resource-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 60" data-coach-card-id="paso-demostracion">
  <div class="coach-section-heading"><div><div class="eyebrow">Paso 6 · Demo</div><h3>Recursos de la demostración</h3></div><button type="button" class="coach-demo-button" data-coach-stage-activate="demo_producto">Estoy aqui</button></div>
  <div class="tec-resource-grid">
 <a class="tec-resource-tile" href="/coach/document.html?document=catalogo" data-tec-document="catalogo"><span class="tec-resource-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5zM8 8h7M8 12h8M8 16h5"/></svg></span><strong>Catálogo</strong><span>Productos y colecciones</span></a>
@@ -1477,7 +1486,7 @@
 
               </details>
 </article>
-<article id="prueba-agua" class="dashboard-card tec-water-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 61"><div class="eyebrow">Demostración · Agua</div>
+<article id="prueba-agua" class="dashboard-card tec-water-card" data-coach-workspace-section="cierre" style="--coach-flow-order: 61" data-coach-card-id="prueba-agua"><div class="eyebrow">Demostración · Agua</div>
                 <div class="coach-tool-intro coach-tool-intro-compact">
                   <div class="resource-copy">
                     <h3>Prueba de agua</h3>
@@ -1502,6 +1511,7 @@
             class="dashboard-card fourteen-sheet-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 30"
+            data-coach-card-id="paso-4-en-14"
           >
             <div class="coach-step-intro">
               <div class="coach-step-copy">
@@ -1766,7 +1776,7 @@
             </p>
           </article>
 
-          <article id="paso-cita-instantanea" class="dashboard-card tec-instant-appointment" data-coach-workspace-section="cierre" style="--coach-flow-order: 40">
+          <article id="paso-cita-instantanea" class="dashboard-card tec-instant-appointment" data-coach-workspace-section="cierre" style="--coach-flow-order: 40" data-coach-card-id="paso-cita-instantanea">
             <div class="coach-step-intro">
               <div class="coach-step-copy">
                 <div class="eyebrow">Paso 4 · Cita instantánea</div>
@@ -4262,6 +4272,7 @@
             class="dashboard-card health-survey-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 50"
+            data-coach-card-id="paso-encuesta"
           >
             <div class="coach-step-intro">
               <div class="coach-step-copy">
@@ -4691,6 +4702,7 @@
             class="dashboard-card coach-step-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 70"
+            data-coach-card-id="paso-cierre"
           >
             <div class="coach-step-intro">
               <div class="coach-step-copy">
@@ -4717,6 +4729,7 @@
             class="dashboard-card order-calc-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 71"
+            data-coach-card-id="calculadora-pedido"
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
@@ -4834,6 +4847,7 @@
             class="dashboard-card decision-tool-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 72"
+            data-coach-card-id="balance-decision"
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
@@ -4961,6 +4975,7 @@
             class="dashboard-card buyer-profile-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 73"
+            data-coach-card-id="perfil-cliente"
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
@@ -5034,6 +5049,7 @@
             class="dashboard-card daily-prize-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 74"
+            data-coach-card-id="oferta-especial"
           >
             <div class="coach-tool-intro">
               <div class="coach-tool-copy">
@@ -5123,6 +5139,7 @@
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 80"
             data-recruitment-root="cierre"
+            data-coach-card-id="paso-invitacion"
           >
             <div class="coach-step-intro">
               <div class="coach-step-copy">
@@ -5247,6 +5264,7 @@
             class="dashboard-card demo-outcome-card"
             data-coach-workspace-section="cierre"
             style="--coach-flow-order: 90"
+            data-coach-card-id="resultado-visita"
           >
             <div class="eyebrow">Resultado final</div>
             <h3>Reportar resultado</h3>
@@ -5698,6 +5716,22 @@
       </p>
     </div>
 
+
+    <dialog class="coach-order-dialog" data-coach-order-dialog aria-labelledby="coach-order-heading" aria-describedby="coach-order-instructions">
+      <form>
+        <header><h2 id="coach-order-heading">Editar orden</h2><p id="coach-order-instructions">Usa las flechas para subir o bajar las tarjetas. El orden se guarda solo para ti.</p></header>
+        <ol class="coach-order-list" data-coach-order-list aria-label="Orden de las tarjetas"></ol>
+        <footer>
+          <p class="coach-order-message" data-coach-order-message role="status" aria-live="polite"></p>
+          <div class="coach-order-actions">
+            <button type="button" data-coach-order-reset>Restablecer estándar</button>
+            <button type="button" data-coach-order-cancel>Cancelar</button>
+            <button type="submit" data-coach-order-save>Guardar</button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
+
     <script src="/coach/demo-recorder-panel.js?v=20261028-floating-tools1"></script>
     <script src="/coach/external-tools.js?v=20261029-konverta1"></script>
     <script src="/coach/document-viewer.js?v=20261028-visit-tools2"></script>
@@ -5713,7 +5747,8 @@
     <script src="/coach/compact-header.js?v=20261102-audiobooks1"></script>
     <script src="/coach/product-models-catalog.js?v=20261110-product3d1"></script>
     <script src="/coach/product-models.js?v=20261110-product3d1"></script>
-    <script src="/coach/app.js?v=20261112-phone1"></script>
+    <script src="/coach/card-order.js?v=20261117-order1"></script>
+    <script src="/coach/app.js?v=20261117-order1"></script>
     <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
     <script src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script>
     <script src="/coach/audiobooks.js?v=20261112-editorial1"></script>

@@ -1,0 +1,30 @@
+/* Personal presentation order: one quiet entry point, explicit save. */
+.coach-order-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:2px 0 4px;color:#173550}
+.coach-order-toolbar[hidden]{display:none!important}
+.coach-order-toolbar strong{font-size:.95rem}
+.coach-order-toolbar [role=status]{flex-basis:100%;margin:0;font-size:.85rem;color:#31634e}
+.coach-order-toolbar [role=status]:empty{display:none}
+.coach-order-edit-button{min-height:44px;border:1px solid #c4cfd8;border-radius:12px;background:#fff;color:#173550;padding:10px 16px;font:inherit;font-size:.88rem;font-weight:600;cursor:pointer}
+.coach-order-edit-button:hover{background:#edf3f7}
+.coach-order-editing{overflow:hidden}
+.coach-order-dialog{width:min(580px,calc(100% - 28px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #d4dce2;border-radius:20px;background:#fff;color:#19334a;box-shadow:0 24px 80px #071a3540}
+.coach-order-dialog::backdrop{background:#071a3580}
+.coach-order-dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 36px);margin:0}
+.coach-order-dialog header{padding:22px 22px 14px;border-bottom:1px solid #e3e8ec}
+.coach-order-dialog h2{font-size:1.35rem;margin:0 0 8px;color:#173550}
+.coach-order-dialog header p{margin:0;font-size:.9rem;line-height:1.5;color:#526578}
+.coach-order-list{overflow:auto;overscroll-behavior:contain;list-style:none;margin:0;padding:10px 18px;min-height:0}
+.coach-order-list li{display:grid;grid-template-columns:24px minmax(0,1fr) 44px 44px;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #eef1f4}
+.coach-order-list li:last-child{border-bottom:0}
+.coach-order-position{font-size:.8rem;color:#667b8c}
+.coach-order-title{font-size:.94rem;line-height:1.4;overflow-wrap:anywhere}
+.coach-order-move{width:44px;height:44px;border:1px solid #ccd6de;border-radius:10px;background:#f5f8fa;color:#173550;font-size:1.3rem;cursor:pointer}
+.coach-order-dialog button:disabled{opacity:.38;cursor:default}
+.coach-order-dialog button:focus-visible,.coach-order-edit-button:focus-visible{outline:3px solid #3079be;outline-offset:2px}
+.coach-order-dialog footer{border-top:1px solid #e3e8ec;padding:12px 20px 18px}
+.coach-order-message{min-height:1.5em;margin:0 0 10px;font-size:.85rem;line-height:1.45;color:#3f566a}
+.coach-order-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.coach-order-actions button{min-height:44px;padding:10px 14px;border:1px solid #c4cfd8;border-radius:10px;background:#fff;color:#173550;font:inherit;font-size:.87rem;font-weight:600;cursor:pointer}
+.coach-order-actions [data-coach-order-reset]{margin-right:auto;font-weight:400;font-size:.8rem}
+.coach-order-actions [data-coach-order-save]{background:#173f33;color:#fff;border-color:#173f33}
+@media(max-width:480px){.coach-order-dialog header{padding:18px 16px 12px}.coach-order-list{padding:6px 12px}.coach-order-list li{grid-template-columns:20px minmax(0,1fr) 44px 44px;gap:6px}.coach-order-title{font-size:.86rem}.coach-order-dialog footer{padding:10px 14px 14px}.coach-order-actions [data-coach-order-reset]{flex-basis:100%;margin:0 0 3px}}

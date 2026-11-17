@@ -17224,9 +17224,12 @@ async function loadCoachAppPage() {
     renderActiveCoachCrmContext(storedCrmContext);
   }
 
-  initCoachWorkspaceTabs();
   const portalMode = getCoachPortalMode(me.user);
   const isTelemarketingPortal = portalMode === "telemarketing";
+  if (!isTelemarketingPortal) window.TecCardOrder?.init({
+    userId: me.user.id, order: me.cardOrder || [], request: apiRequest, offline: Boolean(me.offline)
+  });
+  initCoachWorkspaceTabs();
 
   if (!isTelemarketingPortal && me.user?.managesTeam) {
     initLeadDestinationSettings(me.profile?.leadDestination || null);
