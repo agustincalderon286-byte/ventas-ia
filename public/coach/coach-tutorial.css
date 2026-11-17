@@ -1,0 +1,31 @@
+html .tec-tutorial{width:min(920px,calc(100vw - 32px));height:min(880px,calc(100dvh - 40px));max-width:100%;max-height:calc(100dvh - 40px);margin:auto;padding:0;border:0;border-radius:20px;background:#fff;color:#18374f;box-shadow:0 24px 80px #071f3b55;overflow:hidden;font-family:inherit;}
+html .tec-tutorial[hidden]{display:none!important}html .tec-tutorial[open]{display:flex;flex-direction:column}
+.tec-tutorial::backdrop{background:#071f3b99}
+.tec-tutorial [hidden]{display:none!important}
+.tec-tutorial .tec-tutorial__header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid #e0e7ef;background:#fff;flex-shrink:0}
+.tec-tutorial .tec-tutorial__header h2{font-size:1.25rem;margin:4px 0 0;line-height:1.3;color:#102e4b}
+.tec-tutorial .tec-tutorial__eyebrow{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#597080;font-weight:650}
+.tec-tutorial button{min-height:44px;border:1px solid #d6e0e9;border-radius:10px;background:#f7f9fc;color:#18374f;font:inherit;font-size:.85rem;padding:8px 12px;cursor:pointer;white-space:nowrap}
+.tec-tutorial button span{margin-left:6px;font-size:1.15rem}
+.tec-tutorial .tec-tutorial__body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:24px;scrollbar-gutter:stable}
+.tec-tutorial h3{margin:0 0 10px;font-size:1.1rem;line-height:1.4;color:#102e4b}
+.tec-tutorial p,.tec-tutorial li{font-size:.9rem;line-height:1.65}
+.tec-tutorial p{margin:0 0 14px}
+.tec-tutorial .tec-tutorial__intro{padding:20px;background:#f2f6fa;border-radius:14px}
+.tec-tutorial .tec-tutorial__intro h3{font-size:1.4rem;margin-top:8px}
+.tec-tutorial video{display:block;width:100%;aspect-ratio:16/9;background:#102034;border-radius:10px;margin:16px 0 12px}
+.tec-tutorial .tec-tutorial__note{font-size:.77rem;line-height:1.55;color:#597080;margin:12px 0 0}
+.tec-tutorial .tec-tutorial__error{color:#a51d35;font-size:.85rem}
+.tec-tutorial .tec-tutorial__section{margin-top:30px}
+.tec-tutorial details{border-bottom:1px solid #dce5ed;margin:0}
+.tec-tutorial summary{padding:16px 24px 16px 0;min-height:48px;cursor:pointer;font-weight:600;font-size:.9rem;line-height:1.5;list-style-position:inside;overflow-wrap:anywhere}
+.tec-tutorial summary::marker{color:#a92036}
+.tec-tutorial .tec-tutorial__answer{padding:0 0 18px}
+.tec-tutorial ol{padding-left:24px;margin:0}.tec-tutorial li{padding:3px 0 5px 4px}
+.tec-tutorial img{display:block;max-width:100%;width:100%;height:auto;border:1px solid #dce5ed;border-radius:10px;margin-top:16px;cursor:zoom-in}
+.tec-tutorial .tec-tutorial__guide:has(img[src$="voz.jpg"]) img{max-height:560px;width:auto;margin-left:auto;margin-right:auto}
+.tec-tutorial .tec-tutorial__search-label{display:block;font-size:.8rem;margin:14px 0 6px;color:#4b6274}
+.tec-tutorial input[type=search]{display:block;width:100%;min-height:46px;border:1px solid #c9d5df;border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;color:#18374f;background:#fff}
+.tec-tutorial input:focus-visible,.tec-tutorial summary:focus-visible,.tec-tutorial button:focus-visible,.tec-tutorial a:focus-visible{outline:3px solid #3385c3;outline-offset:3px}
+.tec-tutorial .tec-tutorial__updated{padding-top:20px;border-top:1px solid #dce5ed;margin-top:28px}
+@media(max-width:520px){html .tec-tutorial{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border-radius:14px}.tec-tutorial .tec-tutorial__header{padding:14px 16px;gap:10px}.tec-tutorial .tec-tutorial__body{padding:16px}.tec-tutorial .tec-tutorial__intro{padding:14px}.tec-tutorial .tec-tutorial__header h2{font-size:1.1rem}.tec-tutorial .tec-tutorial__intro h3{font-size:1.2rem}}

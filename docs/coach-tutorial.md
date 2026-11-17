@@ -1,0 +1,9 @@
+# Tutorial y ayuda
+
+Mi cuenta incluye un botón que abre un diálogo propio con un recorrido de tres minutos, nueve guías con capturas y trece preguntas frecuentes buscables. No cambia el área activa ni envía formularios. Cerrar o Escape pausa el video y devuelve el foco a Mi cuenta. También se pausa al ocultar la página; un evento de reproducción tardío no puede reiniciarlo con el diálogo cerrado.
+
+El video es la versión vigente de TEC Coach con Power Blender Max, de 180 segundos y 1920×1080, sin recodificar. SHA256: `99be143ac51c8faaeac1ec873537f61932a4ccef8c3fb6455c16a312b8b60086`. No se generaron nuevas voces. Las capturas de inicio, orden, encuesta, cálculo, audiolibros, actividad y mapa se extrajeron del recorrido. Las de voz y mensajes corresponden a la interfaz publicada el 17 de noviembre. El recorrido no enseña el gesto nuevo de voz; la guía específica sí lo explica. Los datos e importes de las capturas son ejemplos, no cotizaciones vigentes.
+
+Todos los medios permanecen en `private/coach-tutorial/`. `/api/coach/tutorial/media/:asset` exige acceso activo, permite solo la lista explícita de archivos y devuelve `private, no-store`, `Vary: Cookie` y `noindex`. Express conserva los rangos de bytes para adelantar el MP4. El service worker excluye estos medios de sus cachés; solo se añaden el CSS y JS genéricos al shell. El video usa controles nativos, no se reproduce automáticamente y tiene texto alternativo mediante las guías. Las imágenes se abren en otra pestaña para ampliarlas.
+
+104 pruebas pasan en conjunto, incluidas diez nuevas sobre autenticación de medios, rangos, rutas ajenas, referencias, carga perezosa, cierre/foco, búsqueda con acentos, error de video y pausa en segundo plano. La revisión local con plantilla real y cuenta ficticia comprobó reproducción a 180 s/1080p, pausa al cerrar, menú, búsqueda sin resultados y lectura móvil de 390×844 sin desbordamiento.

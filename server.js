@@ -4,6 +4,7 @@ import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { createCoachTeamChatModels, registerCoachTeamChat } from "./src/coach-team-chat.js";
+import { registerCoachTutorial } from "./src/coach-tutorial.js";
 import { registerCoachVoice } from "./src/coach-voice.js";
 import "express-async-errors";
 import { createCoachRequestGuard, scopeCoachChat, securityHeaders, securityErrorHandler } from "./src/tec-security.js";
@@ -32235,6 +32236,7 @@ app.get("/api/coach/checkout-session", async (req, res) => {
 });
 
 registerCoachProductModels(app, { requireActive: requireCoachActivo });
+registerCoachTutorial(app, { requireActive: requireCoachActivo });
 
 app.get(["/coach/app", "/coach/app/"], async (req, res) => {
   const auth = await obtenerCoachAuth(req);
