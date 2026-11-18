@@ -30,12 +30,19 @@ function convertAudio(data, format, output = false) {
     child.stdin.end(data);
   });
 }
+export async function decodeChatAudioToPcm(data, mime) {
+  const format = audioFormats.get(mime);
+  if (!format) throw invalid('Usa un audio WebM, M4A, MP3, WAV u Ogg.');
+  const pcm = await convertAudio(data, format);
+  const duration = pcm.length / 48000;
+  if (duration < .35 || duration > 90) throw invalid('Graba entre medio segundo y 90 segundos.');
+  return pcm;
+}
 export async function prepareChatMedia(raw) {
   const { data, mime, hash } = raw;
   if (audioFormats.has(mime)) {
-    const pcm = await convertAudio(data, audioFormats.get(mime));
+    const pcm = await decodeChatAudioToPcm(data, mime);
     const duration = pcm.length / 48000;
-    if (duration < .35 || duration > 90) throw invalid('Graba entre medio segundo y 90 segundos.');
     const audio = await convertAudio(pcm, '', true);
     return { data: audio, meta: { kind: 'audio', mime: 'audio/mpeg', bytes: audio.length, duration, hash } };
   }

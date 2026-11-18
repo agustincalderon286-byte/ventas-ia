@@ -2456,7 +2456,7 @@ const coachAdminPasskeys = registerAdminPasskeys(app, {
 
 const chefPublicModels=createPublicChefModels(mongoose);
 registerPublicChef(app, {
-  ...chefPublicModels, requireActive: requireCoachActivo, privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, leads: CoachLeadInbox,
+  ...chefPublicModels, voice: process.env.OPENAI_API_KEY ? createCoachVoiceProvider() : null, requireActive: requireCoachActivo, privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, leads: CoachLeadInbox,
   getBySlug: resolverCoachChefContextPorSlug, getDefault: resolverCoachChefContextPublicoPredeterminado,
   getOwnContext: async user => {
     const profile=await asegurarCoachDistributorProfile(user);

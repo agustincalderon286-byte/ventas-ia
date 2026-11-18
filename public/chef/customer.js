@@ -3,7 +3,7 @@
   const $=selector=>document.querySelector(selector),id=()=>crypto.randomUUID();
   const slug=decodeURIComponent(location.pathname.split('/').filter(Boolean)[1]||'').toLowerCase();
   const suffix=slug?'?chef='+encodeURIComponent(slug):'',key='tec-chef-public:'+slug;
-  let photo='',preparingPhoto=false;
+  let photo='',preparingPhoto=false,voice=null,voiceBusy=false,resetting=false;
   let sessionId='',busy=false,pendingChat=null,sellerName='',contactAvailable=false,leadBusy=false,pendingLead=null;
   const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
   const status=(target,text,error=false)=>{target.textContent=text;target.dataset.error=String(error);};
@@ -20,11 +20,26 @@
     if(sources.length){const links=node('div','message-sources');for(const source of sources){try{const url=new URL(source.url);if(url.protocol!=='https:'||!['royalprestige.com','www.royalprestige.com','youtube.com','www.youtube.com'].includes(url.hostname))continue;const a=node('a','',source.title);a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';links.append(a);}catch{}}card.append(links);}
     $('#messages').append(card);scroll();return card;
   }
-  function syncComposer(){
-    $('#question').disabled=busy;
-    $('#send').disabled=$('#new-chat').disabled=$('#attach-photo').disabled=$('#remove-photo').disabled=busy||preparingPhoto;
+  function syncActions(){
+    const locked = busy || preparingPhoto || voiceBusy || resetting;
+    $('#new-chat').disabled=$('#attach-photo').disabled=$('#remove-photo').disabled=locked;
     $('.chef-prompts').hidden=Boolean(photo);
-    document.querySelectorAll('[data-prompt]').forEach(button=>button.disabled=busy||preparingPhoto);
+    document.querySelectorAll('[data-prompt]').forEach(button=>button.disabled=locked);
+  }
+  function syncComposer(){
+    const locked = busy || preparingPhoto || resetting;
+    if (voice) voice.setChatBusy(locked);
+    else $('#question').disabled=$('#send').disabled=locked;
+    syncActions();
+  }
+  function initVoice(){
+    voice=globalThis.TecCoachVoice?.init({
+      forms:[$('#chat-form')], speaker:'Chef', toolbarSelector:'.composer',
+      hasExtraInput:()=>Boolean(photo), maxBytes:5*1024*1024,
+      voiceApi:{transcription:'/api/chef/public/voice/transcribe'+suffix,speech:'/api/chef/public/voice/speech'+suffix},
+      sendMessage:send,
+      onBusyChange:active=>{voiceBusy=active;syncActions();}
+    });
   }
   function setPhoto(encoded){
     photo=encoded;
@@ -63,7 +78,7 @@
     $(button).addEventListener('click',()=>{$('#photo-picker').close();$(input).click();});
     $(input).addEventListener('change',async event=>{
       const control=event.currentTarget,file=control.files?.[0];control.value='';
-      if(!file||busy||preparingPhoto)return;
+      if(!file||busy||preparingPhoto||voiceBusy||resetting)return;
       preparingPhoto=true;syncComposer();status($('#chat-status'),'Preparando la foto…');
       try{setPhoto(await preparePhoto(file));status($('#chat-status'),'');}
       catch(error){status($('#chat-status'),error.message,true);}
@@ -82,29 +97,49 @@
     if(!data.messages.length)bubble('assistant','¡Hola! Soy TEC Chef. Cuéntame qué tienes a mano o envíame una foto para pensar en un platillo.');
     for(const item of data.messages)bubble(item.role,item.content,item.sources,item.hasPhoto);
   }
-  async function send(question){
+  async function send(question,audio=null){
     question=String(question||'').trim();
-    const uploaded=photo;
-    if(busy||preparingPhoto)return;
-    if(!question&&!uploaded){status($('#chat-status'),'Escribe una pregunta o adjunta una foto.',true);return;}
-    if(navigator.onLine===false){status($('#chat-status'),'Necesitas conexión. Tu mensaje sigue aquí.',true);return;}
-    if(!pendingChat||pendingChat.question!==question||pendingChat.photo!==uploaded)pendingChat={question,photo:uploaded,requestId:id()};
-    busy=true;syncComposer();status($('#chat-status'),uploaded?'El Chef está revisando la foto…':'El Chef está escribiendo…');
+    const uploaded=photo, audioUrl=audio?.audioUrl;
+    if(busy||preparingPhoto||resetting||(voiceBusy&&!audioUrl))return{ok:false};
+    if(!question&&!uploaded){status($('#chat-status'),'Escribe una pregunta o adjunta una foto.',true);return{ok:false};}
+    if(navigator.onLine===false){status($('#chat-status'),'Necesitas conexión. Tu mensaje sigue aquí.',true);return{ok:false};}
+    if(!pendingChat||pendingChat.question!==question||pendingChat.photo!==uploaded||pendingChat.audioUrl!==audioUrl){
+      pendingChat={question,photo:uploaded,audioUrl,requestId:id()};
+    }
+    const {requestId}=pendingChat, target=$('.phone-conversation');
+    if (!audioUrl) voice?.pausePlayback();
+    if(audioUrl&&!pendingChat.voiceCard){
+      const card=bubble('user',question,[],Boolean(uploaded));
+      pendingChat.voiceCard=card;
+      voice.attachInput([{card,target}],audioUrl,audio.audioDuration);
+    }
+    busy=true;syncComposer();status($('#chat-status'),uploaded?'El Chef está revisando la foto…':'El Chef está preparando tu respuesta…');
     try{
-      const data=await api('chat',{pregunta:question,sessionId,requestId:pendingChat.requestId,...(uploaded?{photo:uploaded}:{})});
-      bubble('user',question||(uploaded?'¿Qué platillos puedo preparar con lo que hay en la foto?':''),[],Boolean(uploaded));
+      const data=await api('chat',{pregunta:question,sessionId,requestId,...(audioUrl?{responseMode:'audio'}:{}),...(uploaded?{photo:uploaded}:{})});
+      if(!audioUrl)bubble('user',question||(uploaded?'¿Qué platillos puedo preparar con lo que hay en la foto?':''),[],Boolean(uploaded));
       const reply=bubble('assistant',data.respuesta,data.sources);
       if(data.appointmentSuggested&&contactAvailable){const b=node('button','chef-button compact appointment-action','Solicitar información');b.type='button';b.addEventListener('click',openContact);reply.append(b);}
       pendingChat=null;
       if(uploaded)setPhoto('');
       $('#question').value='';status($('#chat-status'),'');
-    }catch(error){status($('#chat-status'),error.message||'No se completó la respuesta. Tu mensaje sigue aquí.',true);}
-    finally{busy=false;syncComposer();if(!uploaded)$('#question').focus({preventScroll:true});}
+      if(audioUrl)await voice.speak(data.respuesta,[{card:reply,target}],{sessionId,requestId});
+      return{ok:true};
+    }catch(error){status($('#chat-status'),error.message||'No se completó la respuesta. Tu mensaje sigue aquí.',true);return{ok:false};}
+    finally{busy=false;syncComposer();if(!uploaded&&!audioUrl)$('#question').focus({preventScroll:true});}
   }
   $('#chat-form').addEventListener('submit',event=>{event.preventDefault();send($('#question').value);});
   $('#question').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('#chat-form').requestSubmit();}});
   document.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{$('#question').value=button.dataset.prompt;send(button.dataset.prompt);}));
-  $('#new-chat').addEventListener('click',async()=>{if(busy||preparingPhoto)return;sessionId=id();try{sessionStorage.setItem(key,sessionId);}catch{}pendingChat=null;if(photo)setPhoto('');$('#question').value='';try{await history();status($('#chat-status'),'Nueva conversación.');}catch(error){status($('#chat-status'),error.message,true);}});
+  $('#new-chat').addEventListener('click',async()=>{
+    if(busy||preparingPhoto||voiceBusy||resetting)return;
+    resetting=true;syncComposer();
+    voice?.reset();
+    sessionId=id();try{sessionStorage.setItem(key,sessionId);}catch{}
+    pendingChat=null;if(photo)setPhoto('');$('#question').value='';
+    try{await history();status($('#chat-status'),'Nueva conversación.');}
+    catch(error){status($('#chat-status'),error.message,true);}
+    finally{resetting=false;syncComposer();}
+  });
   $('#contact-form').addEventListener('submit',async event=>{
     event.preventDefault();if(leadBusy||!contactAvailable)return;const form=event.currentTarget;
     if(!form.reportValidity())return;
@@ -133,7 +168,9 @@
       $('#recipient-name').textContent=$('#consent-recipient').textContent=sellerName;
       $('#request-information').hidden=!contactAvailable;
       try{sessionId=sessionStorage.getItem(key)||id();sessionStorage.setItem(key,sessionId);}catch{sessionId=id();}
-      $('#customer-content').hidden=false;await history();$('#access-status').hidden=true;
+      $('#customer-content').hidden=false;await history();
+      if(data.canSendVoice) initVoice();
+      $('#access-status').hidden=true;
     }catch(error){status($('#access-status'),error.message||'No pude abrir el Chef. Intenta recargar esta página.',true);}
   }
   init();

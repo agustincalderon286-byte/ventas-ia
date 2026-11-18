@@ -135,6 +135,23 @@ export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, S
     }
   };
 }
+export function sendVoiceError(res, message) {
+  if(!res.headersSent)res.status(503).json({error:message});
+  else if(!res.destroyed){res.write(JSON.stringify({type:'error',error:message})+'\n');res.end();}
+}
+export async function streamVoiceResponse(req,res,provider,text,userId) {
+  const streaming = req.body.stream === true, controller = new AbortController(); let chunks = 0;
+  res.on('close',()=>{if(!res.writableEnded)controller.abort();});
+  const emit = chunk => {
+    if(res.destroyed)return;
+    if(!res.headersSent)res.set({'Cache-Control':'private, no-store, no-transform','X-Accel-Buffering':'no'}).type('application/x-ndjson');
+    chunks++;res.write(JSON.stringify({type:'audio',data:chunk.toString('base64')})+'\n');
+  };
+  const audio = await provider.speak(text,userId,{signal:controller.signal,onChunk:streaming ? emit : undefined});
+  if(streaming){if(!chunks)emit(audio.subarray(44));if(!res.destroyed)res.end(JSON.stringify({type:'done'})+'\n');}
+  else res.set('Cache-Control','private, no-store').type('audio/wav').send(audio);
+}
+
 export function registerCoachVoice(app, { requireActive, provider = createCoachVoiceProvider(), now = Date.now, maxRequests = 40 } = {}) {
   const usage = new Map(), active = new Set();
   const authorize = async (req,res,next) => {
@@ -153,8 +170,7 @@ export function registerCoachVoice(app, { requireActive, provider = createCoachV
     try { await fn(); } catch(error) {
       console.warn('Coach voice unavailable',{phase,code:error.code || error.name});
       const message = phase === 'transcribe' ? 'No pude transcribir el audio. Tu grabación sigue aquí para reintentar.' : 'La respuesta escrita está lista, pero no pude generar la voz. Puedes reintentar el audio.';
-      if(!res.headersSent)res.status(503).json({error:message});
-      else if(!res.destroyed){res.write(JSON.stringify({type:'error',error:message})+'\n');res.end();}
+      sendVoiceError(res,message);
     } finally {active.delete(id);}
   };
   app.post('/api/coach/voice/transcribe',authorize,express.raw({type:['audio/*','video/webm'],limit:VOICE_MAX_BYTES}),async(req,res)=>{
@@ -172,16 +188,7 @@ export function registerCoachVoice(app, { requireActive, provider = createCoachV
     const text = typeof req.body?.text === 'string' ? speechText(req.body.text) : '';
     if(!text || text.length > 12000)return res.status(400).json({error:'La respuesta no tiene un tamaño válido para convertirla en audio.'});
     await run(req,res,'speech',async()=>{
-      const streaming = req.body.stream === true, controller = new AbortController(); let chunks = 0;
-      res.on('close',()=>{if(!res.writableEnded)controller.abort();});
-      const emit = chunk => {
-        if(res.destroyed)return;
-        if(!res.headersSent)res.set({'Cache-Control':'private, no-store, no-transform','X-Accel-Buffering':'no'}).type('application/x-ndjson');
-        chunks++;res.write(JSON.stringify({type:'audio',data:chunk.toString('base64')})+'\n');
-      };
-      const audio = await provider.speak(text,req.coachVoiceUserId,{signal:controller.signal,onChunk:streaming ? emit : undefined});
-      if(streaming){if(!chunks)emit(audio.subarray(44));if(!res.destroyed)res.end(JSON.stringify({type:'done'})+'\n');}
-      else res.set('Cache-Control','private, no-store').type('audio/wav').send(audio);
+      await streamVoiceResponse(req,res,provider,text,req.coachVoiceUserId);
     });
   });
 }

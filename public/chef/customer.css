@@ -15,3 +15,18 @@
 .photo-picker .customer-contact-body p{margin:0 0 12px}
 .photo-picker .chef-button{width:100%;min-height:44px}
 .photo-picker .chef-button.secondary{margin-top:8px;background:white;color:#18374f;border:1px solid #bfcedc}
+
+.chef-customer .coach-voice-tools { flex:none; }
+.chef-customer .coach-voice-composer .coach-voice-hint,
+.chef-customer .coach-voice-status { margin:5px 5px 0; }
+.chef-customer .coach-voice-preview { margin-top:8px; }
+.chef-customer .chef-message .coach-voice-card { white-space:normal; }
+.chef-customer .chef-message.user .coach-voice-card {
+  --voice-card-bg:#102f5260;
+  --voice-card-border:#ffffff55;
+  --voice-card-text:#fff;
+  --voice-card-track:#ffffff65;
+  --voice-card-fill:#fff;
+  --voice-play-bg:#fff;
+  --voice-play-fg:#153c64;
+}

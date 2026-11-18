@@ -1,10 +1,14 @@
 import crypto from 'node:crypto';
+import express from 'express';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import {completeChef,normalizeChefLead} from './tec-chef.js';
 import {CHEF_PROMPT,chefManifest,chefDirectReply,buildChefContext,chefRequestFingerprint,chefAppointmentIntent} from './knowledge/chef-knowledge.js';
 import {canReadDownline} from './tec-team-supervision.js';
 import {decodeChefPhoto,chefPhotoContent,CHEF_PHOTO_PROMPT} from './tec-chef-photo.js';
+
+import {CHAT_MEDIA_MAX_BYTES,decodeChatAudioToPcm} from './coach-team-chat-media.js';
+import {pcmToWav,sendVoiceError,speechText,streamVoiceResponse} from './coach-voice.js';
 
 const COOKIE='tec_chef_visitor';
 const DAY=86400000;
@@ -20,7 +24,7 @@ const publicReply=text=>text.replaceAll('«Solicitar cita»','«Solicitar inform
 export function createPublicChefModels(mongoose){
   const session=new mongoose.Schema({_id:String,createdAt:Date,expiresAt:Date});
   session.index({expiresAt:1},{expireAfterSeconds:0});
-  const conversation=new mongoose.Schema({sellerUserId:{type:mongoose.Schema.Types.ObjectId,default:null},visitorHash:String,sessionId:String,revision:{type:Number,default:0},messages:[{role:String,content:String,hasPhoto:Boolean,sources:[{title:String,url:String}]}],lastRequestId:String,lastFingerprint:String,lastReply:String,lastSources:[{title:String,url:String}],createdAt:Date,updatedAt:Date});
+  const conversation=new mongoose.Schema({sellerUserId:{type:mongoose.Schema.Types.ObjectId,default:null},visitorHash:String,sessionId:String,revision:{type:Number,default:0},messages:[{role:String,content:String,hasPhoto:Boolean,voiceRequestId:String,sources:[{title:String,url:String}]}],lastRequestId:String,lastFingerprint:String,lastReply:String,lastSources:[{title:String,url:String}],createdAt:Date,updatedAt:Date});
   conversation.index({sellerUserId:1,visitorHash:1,sessionId:1},{unique:true});
   conversation.index({updatedAt:1},{expireAfterSeconds:30*86400});
   return {visitors:mongoose.models.TecChefPublicVisitor||mongoose.model('TecChefPublicVisitor',session),conversations:mongoose.models.TecChefPublicConversation||mongoose.model('TecChefPublicConversation',conversation)};
@@ -40,10 +44,10 @@ export function publicChefLeadPayload(ctx,body,visitorHash,now=new Date()){
   };
 }
 
-export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',now=Date.now,limits={}}){
-  const origin=new URL(publicOrigin).origin,rates=new Map(),busy=new Set();
+export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,voice=null,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',now=Date.now,limits={}}){
+  const origin=new URL(publicOrigin).origin,rates=new Map(),busy=new Set(),activeVoice=new Set();
   let activePhotoRequests=0;
-  const headers=res=>res.set({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Vary':'Cookie','X-TEC-Chef-Public-Version':'20261118-photo1'});
+  const headers=res=>res.set({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Vary':'Cookie','X-TEC-Chef-Public-Version':'20261118-voz1'});
   const wrap=fn=>async(req,res,next)=>{try{headers(res);await fn(req,res,next);}catch(error){console.error('TEC public Chef unavailable',{name:error.name,code:error.code||''});if(!res.headersSent)res.status(503).json({error:'No pude completar la solicitud. Conserva tus datos e inténtalo de nuevo.'});}};
   const consume=(key,max,windowMs,res)=>{
     const at=now();if(rates.size>=2000)for(const [id,value] of rates)if(value.until<=at)rates.delete(id);
@@ -52,11 +56,11 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     if(value.count>max){res.set('Retry-After',String(Math.ceil((value.until-at)/1000)));res.status(429).json({error:'Llegaste al límite de consultas por ahora. Intenta de nuevo más tarde.'});return false;}return true;
   };
   const ipKey=req=>hash(String(req.ip||''));
-  const sameOrigin=(req,res)=>{
+  const sameOrigin=(req,res,requireJson=true)=>{
     if(req.get('Sec-Fetch-Site')==='cross-site'){res.status(403).json({error:'Envía tu solicitud desde esta página del Chef.'});return false;}
     const supplied=req.get('Origin');
     if(supplied){let allowed=false;try{const value=new URL(supplied);allowed=value.origin===origin||value.host===req.get('host');}catch{}if(!allowed){res.status(403).json({error:'Envía tu solicitud desde esta página del Chef.'});return false;}}
-    if(!req.is('application/json')){res.status(415).json({error:'Envía tu solicitud desde el formulario del Chef.'});return false;}return true;
+    if(requireJson&&!req.is('application/json')){res.status(415).json({error:'Envía tu solicitud desde el formulario del Chef.'});return false;}return true;
   };
   async function context(req,res){
     const slug=req.query.chef;
@@ -94,7 +98,7 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
 
   app.get('/api/chef/public/bootstrap',wrap(async(req,res)=>{
     const ctx=await context(req,res);if(ctx===undefined)return;if(!await visitor(req,res,true))return;
-    res.json({sellerName:ctx?publicName(ctx):'',contactAvailable:Boolean(ctx),canAttachPhoto:true,manifest:chefManifest});
+    res.json({sellerName:ctx?publicName(ctx):'',contactAvailable:Boolean(ctx),canAttachPhoto:true,canSendVoice:Boolean(voice),manifest:chefManifest});
   }));
   app.get('/api/chef/public/conversation',wrap(async(req,res)=>{
     const ctx=await context(req,res);if(ctx===undefined)return;const visitorHash=await visitor(req,res);if(!visitorHash)return;
@@ -106,6 +110,7 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     if(!sameOrigin(req,res))return;const ctx=await context(req,res);if(ctx===undefined)return;const visitorHash=await visitor(req,res);if(!visitorHash)return;
     const caption=clean(req.body?.pregunta,3000),sessionId=req.body?.sessionId,requestId=req.body?.requestId;
     const hasPhoto=req.body?.photo!==undefined;
+    const voiceReply=Boolean(voice)&&req.body?.responseMode==='audio';
     if((!caption&&!hasPhoto)||!validId(sessionId)||!validId(requestId))return res.status(400).json({error:'Escribe una pregunta o adjunta una foto.'});
     const question=caption||'¿Qué platillos puedo preparar con lo que hay en la foto?';
     if(busy.has(visitorHash))return res.status(409).json({error:'Tienes una consulta en proceso. Espera a que termine.'});
@@ -118,7 +123,10 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
       }
       const scope={sellerUserId:ctx?.userDoc?._id||null,visitorHash,sessionId};
       let doc=await conversations.findOne(scope).lean();
-      const fingerprint=photoBytes?chefRequestFingerprint(JSON.stringify([caption,crypto.createHash('sha256').update(photoBytes).digest('hex')])):chefRequestFingerprint(question);
+      const photoHash=photoBytes?hash(photoBytes):'';
+      const fingerprint=voiceReply
+        ? chefRequestFingerprint(JSON.stringify(['audio',question,photoHash]))
+        : photoHash ? chefRequestFingerprint(JSON.stringify([caption,photoHash])) : chefRequestFingerprint(question);
       const repeat=()=>{
         if(doc?.lastRequestId!==requestId)return false;
         if(doc.lastFingerprint!==fingerprint)res.status(409).json({error:'Este envío contiene otra pregunta. Revisa antes de continuar.'});
@@ -145,16 +153,72 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
       if(!reply){
         const found=image&&!caption?null:buildChefContext(question,history);
         const guidance=[{role:'system',content:PUBLIC_PROMPT}];
+        if(voiceReply)guidance.push({role:'system',content:'La pregunta llegó por audio. Redacta para escuchar: usa oraciones cortas y las cantidades exactas. Conserva todos los pasos e indicaciones de seguridad que requiera el platillo.'});
         if(image)guidance.push({role:'system',content:CHEF_PHOTO_PROMPT});
         if(found){guidance.push({role:'system',content:found.context});sources=found.sources;}
         const content=image?[{type:'text',text:question},image]:question;
         reply=await completion([...guidance,...history,{role:'user',content}]);
       }
       reply=publicReply(reply);
-      const saved=await conversations.findOneAndUpdate({...scope,revision:doc.revision||0},{$push:{messages:{$each:[{role:'user',content:question,...(image?{hasPhoto:true}:{})},{role:'assistant',content:reply,sources}],$slice:-24}},$inc:{revision:1},$set:{updatedAt:new Date(now()),lastRequestId:requestId,lastFingerprint:fingerprint,lastReply:reply,lastSources:sources}},{new:true});
+      const saved=await conversations.findOneAndUpdate({...scope,revision:doc.revision||0},{$push:{messages:{$each:[{role:'user',content:question,...(image?{hasPhoto:true}:{})},{role:'assistant',content:reply,sources,...(voiceReply?{voiceRequestId:requestId}:{})}],$slice:-24}},$inc:{revision:1},$set:{updatedAt:new Date(now()),lastRequestId:requestId,lastFingerprint:fingerprint,lastReply:reply,lastSources:sources}},{new:true});
       if(!saved)return res.status(409).json({error:'La conversación cambió en otra ventana. Vuelve a abrirla antes de continuar.'});
       res.json({respuesta:reply,sources,appointmentSuggested:chefAppointmentIntent(question)});
     }finally{if(photoSlot)activePhotoRequests--;busy.delete(visitorHash);}
+  }));
+  const requireVoiceVisitor = wrap(async (req, res, next) => {
+    if (!sameOrigin(req, res, req.path.endsWith('/speech'))) return;
+    if (!voice) return res.status(503).json({ error: 'La voz del Chef no está disponible.' });
+    const ctx = await context(req, res);
+    if (ctx === undefined) return;
+    const visitorHash = await visitor(req, res);
+    if (!visitorHash) return;
+    req.chefVoiceScope = { sellerUserId: ctx?.userDoc?._id || null, visitorHash };
+    next();
+  });
+  async function withVoiceLimit(req, res, kind, run) {
+    const { visitorHash } = req.chefVoiceScope;
+    if (activeVoice.size >= 4 || activeVoice.has(visitorHash)) {
+      return res.status(429).set('Retry-After','5').json({error:'Hay audios en proceso. Intenta en unos segundos.'});
+    }
+    if (!consume('voice-'+kind+'-visitor:'+visitorHash,limits.voicePerVisitorDay||20,DAY,res) ||
+        !consume('voice-'+kind+'-ip:'+ipKey(req),limits.voicePerIpDay||100,DAY,res)) return;
+    activeVoice.add(visitorHash);
+    try { await run(); }
+    catch (error) {
+      if (error.status === 400 && !res.headersSent) {
+        res.status(400).json({error:error.message});
+      } else {
+        console.warn('TEC public Chef voice unavailable',{kind,code:error.code || error.name});
+        sendVoiceError(res, kind === 'speech'
+          ? 'La respuesta escrita está lista. Puedes reintentar el audio del Chef.'
+          : 'No pude transcribir el audio del Chef. Tu grabación sigue aquí.');
+      }
+    } finally { activeVoice.delete(visitorHash); }
+  }
+  app.post('/api/chef/public/voice/transcribe',requireVoiceVisitor,
+    express.raw({type:['audio/*','video/webm'],limit:CHAT_MEDIA_MAX_BYTES,inflate:false}),wrap(async(req,res)=>{
+      if (!Buffer.isBuffer(req.body) || req.body.length < 64) {
+        return res.status(400).json({error:'Mantén presionado el micrófono un poco más para grabar.'});
+      }
+      const mime = (req.get('Content-Type') || '').split(';')[0].toLowerCase();
+      await withVoiceLimit(req,res,'transcribe',async()=>{
+        const pcm = await decodeChatAudioToPcm(req.body,mime);
+        const text = await voice.transcribe(pcmToWav([pcm]),'audio/wav',{
+          prompt:'Transcribe fielmente la pregunta de cocina para TEC Chef. Respeta los ingredientes, cantidades y marcas: Royal Prestige, Power Blender, Power Blender Max, Power Blender Go y Deluxe Easy Release. Si no hay voz clara, devuelve un texto vacío.'
+        });
+        if (!text || text.length > 3000) return res.status(422).json({error:'No entendí una pregunta breve. Puedes volver a grabarla.'});
+        res.json({text});
+      });
+    }));
+  app.post('/api/chef/public/voice/speech',requireVoiceVisitor,wrap(async(req,res)=>{
+    const {sessionId,requestId}=req.body||{};
+    if (!validId(sessionId)||!validId(requestId)) return res.status(400).json({error:'Respuesta de audio inválida.'});
+    const scope = {...req.chefVoiceScope,sessionId};
+    const conversation = await conversations.findOne(scope).lean();
+    const reply = conversation?.messages.find(message=>message.role==='assistant'&&message.voiceRequestId===requestId);
+    const text = speechText(reply?.content);
+    if (!text || text.length>12000) return res.status(404).json({error:'No encontré esa respuesta en esta conversación.'});
+    await withVoiceLimit(req,res,'speech',()=>streamVoiceResponse(req,res,voice,text,scope.visitorHash));
   }));
   app.post('/api/chef/public/leads',wrap(async(req,res)=>{
     if(!sameOrigin(req,res))return;const ctx=await context(req,res);if(ctx===undefined)return;
