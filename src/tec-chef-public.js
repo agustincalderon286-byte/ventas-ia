@@ -92,6 +92,10 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     const file=assets.get(req.params.asset);if(!file)return res.status(404).end();
     res.set('Cache-Control','public, max-age=3600').sendFile(path.join(publicDir,file));
   });
+  app.get('/chef/alexa/pagina.css',(req,res)=>res.sendFile(path.join(publicDir,'chef/alexa/pagina.css')));
+  app.get(/^\/chef\/alexa\/(privacidad|condiciones)\/?$/,(req,res)=>
+    res.sendFile(path.join(publicDir,'chef/alexa',req.params[0],'index.html')));
+
   app.get(['/chef/alexa/cita','/chef/alexa/cita/'],wrap(async(req,res)=>{
     if(req.query.vendedor===undefined)return res.sendFile(path.join(privateDir,'chef-alexa-cita.html'));
     const reference=clean(req.query.vendedor,180).toLowerCase();

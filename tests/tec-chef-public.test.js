@@ -173,6 +173,11 @@ test('Alexa handoff requires an active seller and only records a consented demon
   const page=await f.request(entry);
   assert.equal(page.status,200);
   assert.match(await page.text(),/Código o enlace de tu vendedor/);
+  for(const [url, title] of [['privacidad/','Aviso de privacidad de Chef TEC'],['condiciones/','Condiciones de uso de Chef TEC'],['pagina.css','border-radius']]){
+    const page=await f.request('/chef/alexa/'+url);
+    assert.equal(page.status,200);
+    assert.ok((await page.text()).includes(title));
+  }
   for(const value of ['eric','https://totalelitecoaching.com/chef/eric/']){
     const r=await f.request(entry+'?vendedor='+encodeURIComponent(value));
     assert.equal(r.status,303);
