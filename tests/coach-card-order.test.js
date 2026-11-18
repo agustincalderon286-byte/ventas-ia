@@ -10,9 +10,9 @@ const source=fs.readFileSync(new URL('../public/coach/card-order.js',import.meta
 const context={window:{}};vm.runInNewContext(source,context);
 const reconcile=(a,b)=>Array.from(context.window.TecCardOrder.reconcile(a,b));
 
-test('the standard list matches all fourteen Cierre cards and every current tool has a stable unique ID',()=>{
+test('the standard list matches all thirteen Cierre cards and every current tool has a stable unique ID',()=>{
  const cards=[...html.matchAll(/<article\b[^>]*data-coach-card-id="([^"]+)"[^>]*>/g)].map(m=>({id:m[1],order:Number(m[0].match(/--coach-flow-order:\s*(\d+)/)[1])})).sort((a,b)=>a.order-b.order);
- assert.deepEqual(cards.map(c=>c.id),COACH_FLOW_CARD_IDS);assert.equal(new Set(cards.map(c=>c.id)).size,14);
+ assert.deepEqual(cards.map(c=>c.id),COACH_FLOW_CARD_IDS);assert.equal(new Set(cards.map(c=>c.id)).size,13);
  assert.ok(cards.some(c=>c.id==='prueba-agua'));assert.ok(cards.some(c=>c.id==='resultado-visita'));
 });
 test('saved order retains valid cards, appends new cards and drops removed or duplicate IDs without mutating the standard order',()=>{
@@ -48,4 +48,20 @@ test('malformed or duplicated card IDs are rejected and storage failure never cl
  const f=await fixture(t);
  for(const order of [null,'prueba-agua',{},['prueba-agua','prueba-agua'],['__proto__'],['paso-conexion',{}],Array(20).fill('paso-regalo')])assert.equal((await f.send({accountId:'alice',order})).status,400);
  f.fail();const response=await f.send({accountId:'alice',order:['prueba-agua']});assert.equal(response.status,503);assert.ok((await response.json()).error.includes('siguen en el editor'));assert.deepEqual(f.records.get('alice').coachCardOrder,[]);
+});
+
+test('calculator belongs only to the final order review, including for existing personalized layouts',async t=>{
+ const finalStep=html.match(/<article\s+id="paso-cierre"[\s\S]*?<\/article>/)[0];
+ assert.match(finalStep,/data-order-calc-toggle/);
+ assert.match(finalStep,/data-order-calc-wrap/);
+ assert.equal((html.match(/data-order-calc-toggle/g)||[]).length,1);
+ assert.ok(!html.includes('data-jump-calculator'));
+ const f=await fixture(t);
+ const old=['paso-regalo','calculadora-pedido','paso-cierre','paso-conexion'];
+ const expected=['paso-regalo','paso-cierre','paso-conexion'];
+ assert.deepEqual(readCoachCardOrder(old),expected);
+ const result=await f.send({accountId:'alice',order:old});
+ assert.equal(result.status,200);
+ assert.deepEqual((await result.json()).order,expected);
+ assert.deepEqual(f.records.get('alice').coachCardOrder,expected);
 });

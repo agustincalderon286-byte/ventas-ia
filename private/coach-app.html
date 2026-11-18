@@ -1258,7 +1258,7 @@
           >
             <div class="coach-step-copy">
               <div class="eyebrow">Paso 1 · Conexion</div>
-              <h3>Rompe el hielo</h3><button type="button" class="tec-calc-shortcut" data-jump-calculator>Calculadora de pedido</button>
+              <h3>Rompe el hielo</h3>
               <p>
                 Aqui solo conectas. Habla de donde son, en que trabajan, cuanto tiempo tienen en Estados Unidos y deja
                 que la casa se afloje primero.
@@ -4719,7 +4719,7 @@
             <div class="coach-step-intro">
               <div class="coach-step-copy">
                 <div class="eyebrow">Paso 7 · Tu elección</div>
-                <h3>Revisemos tu elección</h3><button type="button" class="nav-button" data-jump-calculator>Usar calculadora de pedido</button>
+                <h3>Revisemos tu elección</h3>
                 <p>Confirma la opción elegida y resuelve las últimas dudas.</p>
 
                 <div class="dashboard-actions compact-top">
@@ -4735,44 +4735,20 @@
               </figure>
             </div>
 
-          </article>
-
-          <article
-            class="dashboard-card order-calc-card"
-            data-coach-workspace-section="cierre"
-            style="--coach-flow-order: 71"
-            data-coach-card-id="calculadora-pedido"
-          >
-            <div class="coach-tool-intro">
-              <div class="coach-tool-copy">
-                <div class="eyebrow">Herramienta de apoyo</div>
-                <h3>Calculadora de pedido</h3>
-                <p>
-                  Usa esta calculadora para sacar balances, anticipos y pagos estimados sin perder tiempo en plena
-                  presentacion.
-                </p>
-              </div>
-              <figure class="coach-tool-visual">
-                <img
-                  src="/coach/assets/tools/tool-calculadora-pedido.jpg"
-                  alt="Calculadora visual de productos y pagos durante una demostracion"
-                  loading="lazy"
-                />
-              </figure>
-            </div>
-
+            <h4>Calculadora de pedido</h4>
             <div class="dashboard-actions compact-top">
               <button
                 type="button"
                 class="secondary-button order-calc-toggle"
                 data-order-calc-toggle
+                aria-controls="calculadora-del-pedido"
                 aria-expanded="false"
               >
                 Abrir calculadora
               </button>
             </div>
 
-            <div class="order-calc-wrap" data-order-calc-wrap hidden>
+            <div id="calculadora-del-pedido" class="order-calc-wrap" data-order-calc-wrap hidden>
               <div class="order-calc" data-order-calc>
                 <div class="order-calc-products" data-order-calc-products></div>
 
@@ -5780,7 +5756,7 @@
 <details class="tec-tutorial__guide"><summary>Empezar una visita</summary><div class="tec-tutorial__answer"><ol><li>En Cierre, toca Nuevo cliente cuando vayas a comenzar con otra casa.</li><li>Revisa las tarjetas de la presentación y marca Estoy en este paso para indicar dónde vas.</li><li>Abre las herramientas que necesites durante la conversación. No es necesario usarlas todas.</li></ol><p class="tec-tutorial__note">El botón Nuevo cliente está arriba, junto a Mensajes.</p><a href="/api/coach/tutorial/media/inicio.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Empezar una visita"><img src="/api/coach/tutorial/media/inicio.jpg" alt="Captura de TEC: Empezar una visita" loading="lazy" decoding="async"></a></div></details>
 <details class="tec-tutorial__guide"><summary>Cambiar el orden de las tarjetas</summary><div class="tec-tutorial__answer"><ol><li>En Cierre, toca Editar orden.</li><li>Usa las flechas para subir o bajar las tarjetas.</li><li>Toca Guardar. Cancelar deja el orden anterior; Restablecer estándar prepara el orden original para guardarlo.</li></ol><p class="tec-tutorial__note">El orden se guarda solo para tu cuenta.</p><a href="/api/coach/tutorial/media/orden.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Cambiar el orden de las tarjetas"><img src="/api/coach/tutorial/media/orden.jpg" alt="Captura de TEC: Cambiar el orden de las tarjetas" loading="lazy" decoding="async"></a></div></details>
 <details class="tec-tutorial__guide"><summary>Llenar y retomar una encuesta</summary><div class="tec-tutorial__answer"><ol><li>Busca Encuesta de salud en Cierre y toca Abrir encuesta.</li><li>Completa las respuestas y elige el producto exacto en las opciones de búsqueda.</li><li>Toca Guardar encuesta. Después puedes consultar tus encuestas guardadas desde Mi actividad.</li></ol><p class="tec-tutorial__note">Un borrador recuperado todavía no es una encuesta enviada.</p><a href="/api/coach/tutorial/media/encuesta.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Llenar y retomar una encuesta"><img src="/api/coach/tutorial/media/encuesta.jpg" alt="Captura de TEC: Llenar y retomar una encuesta" loading="lazy" decoding="async"></a></div></details>
-<details class="tec-tutorial__guide"><summary>Calcular un pedido</summary><div class="tec-tutorial__answer"><ol><li>Abre Calculadora de pedido desde Cierre.</li><li>Busca y elige el producto. Revisa cantidades, anticipos y el resumen.</li><li>Confirma precios, impuestos, envío y condiciones finales en RoyalOne antes de cerrar el pedido.</li></ol><p class="tec-tutorial__note">Los números de esta captura son un ejemplo, no una cotización vigente.</p><a href="/api/coach/tutorial/media/calculadora.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Calcular un pedido"><img src="/api/coach/tutorial/media/calculadora.jpg" alt="Captura de TEC: Calcular un pedido" loading="lazy" decoding="async"></a></div></details>
+<details class="tec-tutorial__guide"><summary>Calcular un pedido</summary><div class="tec-tutorial__answer"><ol><li>En Cierre, ve a «Revisemos tu elección» y pulsa «Abrir calculadora».</li><li>Busca y elige el producto. Revisa cantidades, anticipos y el resumen.</li><li>Confirma precios, impuestos, envío y condiciones finales en RoyalOne antes de cerrar el pedido.</li></ol><p class="tec-tutorial__note">Los números de esta captura son un ejemplo, no una cotización vigente.</p><a href="/api/coach/tutorial/media/calculadora.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Calcular un pedido"><img src="/api/coach/tutorial/media/calculadora.jpg" alt="Captura de TEC: Calcular un pedido" loading="lazy" decoding="async"></a></div></details>
 <details class="tec-tutorial__guide"><summary>Escribir o hablar con el Coach</summary><div class="tec-tutorial__answer"><ol><li>Toca Coach y luego Abrir Coach si aparece. Para texto, escribe en el cuadro y pulsa Enviar.</li><li>Para hablar, deja vacío el cuadro y mantén presionado el micrófono. Al soltar, se envía el audio.</li><li>Si no quieres enviarlo, desliza a la izquierda hasta activar la papelera y suelta. La primera vez permite el micrófono y vuelve a mantener presionado.</li></ol><p class="tec-tutorial__note">Texto recibe texto. Audio recibe respuesta escrita y voz de IA. La grabación admite hasta 90 segundos.</p><a href="/api/coach/tutorial/media/voz.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Escribir o hablar con el Coach"><img src="/api/coach/tutorial/media/voz.jpg" alt="Captura de TEC: Escribir o hablar con el Coach" loading="lazy" decoding="async"></a></div></details>
 <details class="tec-tutorial__guide"><summary>Conversar con tu equipo y leer noticias</summary><div class="tec-tutorial__answer"><ol><li>Toca Mensajes, junto a Nuevo cliente.</li><li>Elige Chat del equipo para escribir al grupo de tu equipo. Escribe y pulsa Enviar.</li><li>Consulta Noticias para ver los avisos internos. Para un problema técnico, usa Escribe directo desde el Coach en la sección de soporte.</li></ol><p class="tec-tutorial__note">Usa ＋ para adjuntar una foto, un GIF o un audio. Mantén presionado 🎙 para grabar, suelta para enviar o desliza a la izquierda para borrar. Las ventas reportadas en Cierre aparecen automáticamente, sin tus notas privadas. Puedes preguntar al Coach por las ventas, mensajes y transcripciones de tu equipo.</p><a href="/api/coach/tutorial/media/mensajes.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Conversar con tu equipo y leer noticias"><img src="/api/coach/tutorial/media/mensajes.jpg" alt="Captura de TEC: Conversar con tu equipo y leer noticias" loading="lazy" decoding="async"></a></div></details>
 <details class="tec-tutorial__guide"><summary>Escuchar y leer un audiolibro</summary><div class="tec-tutorial__answer"><ol><li>Entra en Audiolibros y elige un título disponible para tu cuenta.</li><li>Abre Escuchar y leer. Usa reproducir, los capítulos o el control de velocidad.</li><li>Sigue el texto mientras escuchas y vuelve al catálogo para cambiar de libro.</li></ol><p class="tec-tutorial__note">La disponibilidad de cada título depende de tu acceso.</p><a href="/api/coach/tutorial/media/audiolibros.jpg" target="_blank" rel="noopener" aria-label="Ampliar captura: Escuchar y leer un audiolibro"><img src="/api/coach/tutorial/media/audiolibros.jpg" alt="Captura de TEC: Escuchar y leer un audiolibro" loading="lazy" decoding="async"></a></div></details>

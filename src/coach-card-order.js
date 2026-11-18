@@ -1,10 +1,12 @@
 export const COACH_FLOW_CARD_IDS = Object.freeze([
   'paso-conexion', 'paso-regalo', 'paso-4-en-14', 'paso-cita-instantanea',
   'paso-encuesta', 'paso-demostracion', 'prueba-agua', 'paso-cierre',
-  'calculadora-pedido', 'balance-decision', 'perfil-cliente', 'oferta-especial',
+  'balance-decision', 'perfil-cliente', 'oferta-especial',
   'paso-invitacion', 'resultado-visita'
 ]);
 const allowed = new Set(COACH_FLOW_CARD_IDS);
+// Installed clients may still send the calculator as a separate card.
+const accepted = new Set([...allowed, 'calculadora-pedido']);
 export function readCoachCardOrder(value) {
   return Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && allowed.has(id)))] : [];
 }
@@ -18,12 +20,13 @@ export function registerCoachCardOrder(app, { requireActive, users }) {
       if (req.body?.accountId !== accountId) {
         return res.status(403).json({ error: 'La cuenta cambió. Vuelve a abrir Coach antes de guardar este orden.' });
       }
-      const order = req.body?.order;
-      if (!Array.isArray(order) || order.length > allowed.size ||
-          order.some(id => typeof id !== 'string' || !allowed.has(id)) ||
-          new Set(order).size !== order.length) {
+      const submitted = req.body?.order;
+      if (!Array.isArray(submitted) || submitted.length > accepted.size ||
+          submitted.some(id => typeof id !== 'string' || !accepted.has(id)) ||
+          new Set(submitted).size !== submitted.length) {
         return res.status(400).json({ error: 'El orden de las tarjetas no es válido. Vuelve a abrir el editor.' });
       }
+      const order = readCoachCardOrder(submitted);
       const result = await users.updateOne({ _id: auth.user._id }, { $set: { coachCardOrder: order } });
       if (result.matchedCount !== 1) throw new Error('Account unavailable');
       res.set('Cache-Control', 'private, no-store').vary('Cookie').json({ order });
