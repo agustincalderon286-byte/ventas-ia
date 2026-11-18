@@ -5,12 +5,14 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../public/coach/coach-voice.js',import.meta.url),'utf8');
 const turn=async()=>{for(let i=0;i<50;i++)await Promise.resolve();};
 class Element {
- constructor(tag='div'){this.tagName=tag;this.children=[];this.events=new Map();this.attributes={};this.value='';this.hidden=false;this.textContent='';this.classes=new Set();this.classList={add:name=>this.classes.add(name),toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name)};}
+ constructor(tag='div'){this.tagName=tag;this.children=[];this.events=new Map();this.attributes={};this.value='';this.hidden=false;this.paused=true;this.textContent='';this.classes=new Set();this.classList={add:name=>this.classes.add(name),toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name)};}
  append(...nodes){this.children.push(...nodes);}
  addEventListener(type,fn){if(!this.events.has(type))this.events.set(type,[]);this.events.get(type).push(fn);}
  fire(type,event={}){for(const fn of this.events.get(type)||[])fn({preventDefault(){},...event});}
  setAttribute(k,v){this.attributes[k]=v;}
+ getAttribute(k){return this.attributes[k]??null;}
  removeAttribute(k){delete this.attributes[k];}
+ getClientRects(){return this.hidden?[]:[{}];}
  querySelector(selector){return this.querySelectorAll(selector)[0];}
  querySelectorAll(selector){return this.children.flatMap(node=>[...(selector.includes(node.tagName) && (node.tagName!=='button'||node.type==='submit')?[node]:[]),...node.querySelectorAll(selector)]);}
  closest(){return this.dialog;}
@@ -18,8 +20,8 @@ class Element {
  setPointerCapture(id){this.capture=id;}
  releasePointerCapture(id){this.capture=null;this.fire('lostpointercapture',{pointerId:id});}
 }
-function fixture({deferred=false,fail=false,denied=false}={}){
- let now=0,captureResolve,trackStops=0,urlCount=0;const calls=[],sent=[],intervals=new Map();
+function fixture({deferred=false,fail=false,denied=false,speech=false}={}){
+ let now=0,captureResolve,trackStops=0,urlCount=0;const calls=[],sent=[],intervals=new Map(),contexts=[],sources=[];
  const form=new Element('form'),textarea=new Element('textarea'),submit=new Element('button'),dialog=new Element('dialog');submit.type='submit';form.dialog=dialog;form.append(textarea,submit);
  const document=new Element('document');document.createElement=tag=>new Element(tag);document.hidden=false;
  const window=new Element('window');Object.assign(window,{setInterval(fn){intervals.set(1,fn);return 1;},clearInterval(id){intervals.delete(id);},setTimeout(){return 2;},clearTimeout(){}});
@@ -33,12 +35,36 @@ function fixture({deferred=false,fail=false,denied=false}={}){
  }
  class Clock extends Date {static now(){return now;}}
  window.MediaRecorder=Recorder;
- const fetch=async(url,options)=>{calls.push({url,options});if(fail)throw new Error('Sin conexión');return new Response(JSON.stringify({text:'Pregunta grabada'}));};
+ if(speech)window.AudioContext=class {
+  constructor(){this.state='suspended';this.currentTime=0;contexts.push(this);}
+  resume(){if(gestureRunning)this.state='running';return Promise.resolve();}
+  close(){this.state='closed';return Promise.resolve();}
+  createBuffer(channels, samples, rate){return {duration:samples/rate,getChannelData:()=>new Float32Array(samples)};}
+  createBufferSource(){return {connect(){},start(){sources.push(this);}};}
+ };
+ let gestureRunning=false;
+ const fetch=async(url,options)=>{
+   calls.push({url,options});
+   if(fail)throw new Error('Sin conexión');
+   if(url.endsWith('/speech')){
+     const data=Buffer.alloc(24000,4).toString('base64');
+     return new Response(JSON.stringify({type:'audio',data})+'\n'+JSON.stringify({type:'done'})+'\n',{headers:{'Content-Type':'application/x-ndjson'}});
+   }
+   return new Response(JSON.stringify({text:'Pregunta grabada'}));
+ };
  vm.runInNewContext(source,{window,document,navigator,MediaRecorder:Recorder,Blob,DataView,ArrayBuffer,Uint8Array,TextDecoder,atob,AbortController,Date:Clock,fetch,URL:{createObjectURL:()=>`blob:${++urlCount}`,revokeObjectURL(){}},queueMicrotask});
- const controller=window.TecCoachVoice.init({userId:'alice',forms:[form],sendMessage:async(text,options)=>{sent.push({text,options});return{ok:true};}});
+ const question=new Element('article'), transcript=new Element('p'), answer=new Element('article');question.append(transcript);
+ const controller=window.TecCoachVoice.init({userId:'alice',forms:[form],sendMessage:async(text,options)=>{sent.push({text,options});
+   if(speech){
+     transcript.textContent=text;
+     controller.pausePlayback(null,true);
+     controller.attachInput([{card:question,paragraph:transcript}],options.audioUrl);
+     await controller.speak('Respuesta del Coach',[{card:answer}]);
+   }
+   return{ok:true};}});
  const all=node=>[node,...node.children.flatMap(all)],find=name=>all(form).find(n=>n.className===name);
  const record=find('coach-voice-hold');
- return{form,textarea,submit,dialog,document,window,calls,sent,record,find,controller,advance(ms){now+=ms;},get stopped(){return trackStops;},resolveCapture(){captureResolve(stream);},recover(){fail=false;},tick(){intervals.get(1)?.();},down(){record.fire('pointerdown',{button:0,isPrimary:true,pointerId:1,clientX:300});},move(x){record.fire('pointermove',{pointerId:1,clientX:x});},up(){record.fire('pointerup',{pointerId:1});}};
+ return{question,transcript,answer,contexts,sources,form,textarea,submit,dialog,document,window,calls,sent,record,find,controller,advance(ms){now+=ms;},get stopped(){return trackStops;},resolveCapture(){captureResolve(stream);},recover(){fail=false;},tick(){intervals.get(1)?.();},down(){gestureRunning=true;record.fire('pointerdown',{button:0,isPrimary:true,pointerId:1,clientX:300});gestureRunning=false;},move(x){record.fire('pointermove',{pointerId:1,clientX:x});},up(){gestureRunning=true;record.fire('pointerup',{pointerId:1});gestureRunning=false;}};
 }
 test('one microphone replaces the empty text send button; typing switches to text send',()=>{
  const f=fixture();assert.equal(f.submit.hidden,true);assert.equal(f.find('coach-voice-tools').hidden,false);assert.equal(f.form.children.filter(n=>n.tagName==='input').length,0);
@@ -78,4 +104,20 @@ test('90-second cap stops tracks and waits for release; the pending hold can sti
 test('failed transcription retains the recording; only explicit retry resends and success removes recovery buttons',async()=>{
  const f=fixture({fail:true});f.down();await turn();f.advance(1000);f.up();await turn();assert.equal(f.calls.length,1);assert.equal(f.find('coach-voice-preview').hidden,false);assert.equal(f.sent.length,0);
  f.down();f.up();await turn();assert.equal(f.calls.length,1);f.recover();const retry=f.find('coach-voice-preview').children[1];retry.fire('click');await turn();assert.equal(f.calls.length,2);assert.equal(f.sent.length,1);assert.equal(f.find('coach-voice-preview').hidden,true);
+});
+
+test('audio chat keeps the transcription visible and starts playback with the microphone gesture',async()=>{
+ const f=fixture({speech:true});
+ f.down();await turn();f.advance(1250);f.up();await turn();
+ assert.equal(f.contexts.length,1,'sending must retain the context unlocked by the microphone');
+ assert.equal(f.contexts[0].state,'running');
+ assert.equal(f.question.children[0],f.transcript);
+ assert.equal(f.transcript.textContent,'Pregunta grabada');
+ assert.equal(f.question.children[1].className,'coach-voice-card');
+ assert.equal(f.answer.children[0].children[1].className,'coach-voice-card');
+ assert.equal(f.answer.children[0].children[1].hidden,false);
+ assert.equal(f.sources.length,1,'the first audio must play without a second gesture');
+ f.sources[0].onended();
+ assert.equal(f.answer.children[0].children[1].classes.has('is-playing'),false);
+ assert.equal(f.answer.children[0].children[1].children[0].disabled,false,'the complete answer is ready to replay');
 });

@@ -66,7 +66,7 @@
   function init({ userId, forms = [], sendMessage }) {
     if (!userId || !forms.length) return null;
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
-    let draft = null, previewUrl = '', active = null, gesture = null, seconds = 0, finishAction = 'hold';
+    let draft = null, draftDuration = 0, previewUrl = '', active = null, gesture = null, seconds = 0, finishAction = 'hold';
     const controls = [], players = new Set(), urls = new Set();
     const HOLD_LABEL = 'Mantén presionado para grabar. Suelta para enviar. Desliza a la izquierda para borrar.';
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
@@ -146,11 +146,11 @@
         });
       }
     }
-    function clearDraft() { draft = null; release(previewUrl); previewUrl = ''; controls.forEach(item => {item.audio.removeAttribute('src');}); }
-    function setDraft(blob) {
+    function clearDraft() { draft = null; draftDuration = 0; release(previewUrl); previewUrl = ''; controls.forEach(item => item.player.setSource('')); }
+    function setDraft(blob, duration) {
       clearDraft();
       if(blob.size < 64 || blob.size > MAX_BYTES) { notify(blob.size > MAX_BYTES ? 'El audio supera 8 MB. Graba uno más corto.' : 'Mantén presionado un poco más para grabar.'); render(); return false; }
-      draft = blob; previewUrl = makeUrl(blob); active.audio.src = previewUrl;return true;
+      draft = blob; draftDuration = duration; previewUrl = makeUrl(blob); active.player.setSource(previewUrl, duration);return true;
     }
     function stopRecording(action = 'hold') {
       finishAction = action;clearTimer();
@@ -189,7 +189,7 @@
           if(token!==generation)return;clearTimer();stopTracks();recorder=null;
           if(Date.now()-started<350){phase='idle';resetGesture();notify('Mantén presionado para grabar tu pregunta.');render();return;}
           const blob=new Blob(chunks,{type:recording.mimeType || mime || 'audio/webm'});
-          phase='idle';if(!setDraft(blob)){resetGesture();render();return;}
+          phase='idle';if(!setDraft(blob, Math.min(MAX_SECONDS, (Date.now() - started) / 1000))){resetGesture();render();return;}
           if(finishAction==='send'){send();}
           else {phase='ready';notify('Llegaste a 90 segundos. Suelta para enviar o desliza para borrar.');render();}
         });
@@ -212,19 +212,75 @@
     }
     async function send() {
       if(!draft || phase !== 'idle' || chatBusy)return;
-      pausePlayback();unlockAudio();
+      // Keep the AudioContext unlocked by the microphone gesture while awaiting the reply.
+      pausePlayback(null, true);unlockAudio();
       const audio = draft; phase='sending'; notify('Transcribiendo tu audio…'); render();
       try {
         const response = await request('/api/coach/voice/transcribe',{method:'POST',headers:{'Content-Type':audio.type || 'audio/webm','X-TEC-Account-ID':String(userId)},body:audio});
         const data = await response.json(); if(!data.text?.trim()) throw new Error('No escuché una pregunta clara. Tu audio sigue aquí.');
-        notify('Tu pregunta está lista. El Coach está respondiendo…');
-        const result = await sendMessage(data.text,{audioUrl:makeUrl(audio)});
+        notify('');
+        const result = await sendMessage(data.text,{audioUrl:makeUrl(audio), audioDuration:draftDuration});
         if(result?.ok) { clearDraft(); notify(''); }
         else notify('No se completó la respuesta. Conservé tu audio para que puedas reintentar.');
       } catch(error) { notify(error.message || 'No pude enviar el audio. Tu grabación sigue aquí.'); }
       finally {phase='idle';render();}
     }
     const button = (text,handler) => { const node=document.createElement('button');node.type='button';node.textContent=text;if(handler)node.addEventListener('click',handler);return node; };
+    function createPlayer(title, playLabel) {
+      const card = document.createElement('div');
+      card.className = 'coach-voice-card';
+      const audio = document.createElement('audio');
+      audio.hidden = true;
+      audio.preload = 'metadata';
+      const label = document.createElement('span');
+      label.className = 'coach-voice-card-label';
+      label.textContent = title;
+      const time = document.createElement('span');
+      time.className = 'coach-voice-card-time';
+      const track = document.createElement('span');
+      track.className = 'coach-voice-card-track';
+      track.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('span');
+      track.append(fill);
+      let streamToggle = null, streamPlaying = false, recordedDuration = 0;
+      const play = button('', () => {
+        if (streamToggle) return streamToggle();
+        if (!audio.paused) audio.pause();
+        else audio.play().catch(() => { time.textContent = 'Reintentar'; });
+      });
+      play.className = 'coach-voice-play';
+      play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="play" d="M9 5.5v13l10-6.5z"/><path class="pause" d="M8 6h3v12H8zm6 0h3v12h-3z"/></svg>';
+      card.append(play, label, time, track, audio);
+      const formatTime = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+      function update() {
+        const playing = streamToggle ? streamPlaying : !audio.paused && !audio.ended;
+        const duration = Number.isFinite(audio.duration) ? audio.duration : recordedDuration;
+        const knownDuration = Number.isFinite(duration) && duration > 0;
+        const elapsed = audio.currentTime || 0;
+        play.setAttribute('aria-label', playing ? 'Pausar ' + title.toLowerCase() : playLabel);
+        play.disabled = !streamToggle && !audio.getAttribute('src');
+        card.classList.toggle('is-playing', playing);
+        card.classList.toggle('is-streaming', Boolean(streamToggle));
+        time.textContent = streamToggle ? (playing ? 'En curso' : 'En pausa')
+          : knownDuration ? formatTime(playing ? elapsed : duration) : (elapsed ? formatTime(elapsed) : '');
+        fill.setAttribute('style', `width:${knownDuration ? Math.min(100, elapsed / duration * 100) : 0}%`);
+      }
+      for (const event of ['loadedmetadata', 'durationchange', 'play', 'pause', 'ended', 'timeupdate', 'emptied']) {
+        audio.addEventListener(event, update);
+      }
+      audio.addEventListener('play', () => pausePlayback(audio));
+      players.add(audio);
+      update();
+      return { card, audio,
+        setSource(url, duration = 0) {
+          recordedDuration = duration;
+          if (url) audio.setAttribute('src', url); else audio.removeAttribute('src');
+          update();
+        },
+        setStream(toggle, playing = false) { streamToggle = toggle; streamPlaying = playing; update(); }
+      };
+    }
+
     for(const form of forms) {
       form.classList.add('coach-voice-composer');
       const tools=document.createElement('div');tools.className='coach-voice-tools';
@@ -262,41 +318,43 @@
       item.elapsed=document.createElement('span');item.elapsed.className='coach-voice-elapsed';
       item.slide=document.createElement('span');item.slide.className='coach-voice-slide';item.activity.append(bin,meter,item.elapsed,item.slide);
       item.preview=document.createElement('div');item.preview.className='coach-voice-preview';item.preview.hidden=true;
-      item.audio=document.createElement('audio');item.audio.controls=true;item.audio.preload='metadata';item.audio.setAttribute('aria-label','Escuchar el audio pendiente');
-      item.audio.addEventListener('play',()=>pausePlayback(item.audio));players.add(item.audio);
+      item.player = createPlayer('Audio pendiente', 'Escuchar el audio pendiente');
       item.send=button('Reintentar audio',send);item.cancel=button('',()=>cancel());item.cancel.innerHTML=BIN_ICON;item.cancel.setAttribute('aria-label','Borrar audio pendiente');
-      item.preview.append(item.audio,item.send,item.cancel);tools.append(item.record);form.append(tools,item.hint,item.activity,item.preview,item.status);controls.push(item);
+      item.preview.append(item.player.card,item.send,item.cancel);tools.append(item.record);form.append(tools,item.hint,item.activity,item.preview,item.status);controls.push(item);
       form.querySelector('textarea')?.addEventListener('input',render);
       form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(capturing())cancel();});
     }
-    function attachAudio(handles,url,label) {
-      const audios=[];
-      for(const {card} of handles || []) {
-        const player=document.createElement('audio');player.controls=true;player.preload='metadata';player.src=url;player.setAttribute('aria-label',label);player.className='coach-voice-player';
-        player.addEventListener('play',()=>pausePlayback(player));players.add(player);card.append(player);audios.push(player);
-      }
-      return audios;
-    }
     async function speak(text, handles) {
-      const panels = (handles || []).map(({card}) => {
+      const panels = (handles || []).map(({card, target}) => {
         const panel = document.createElement('div');
         panel.className = 'coach-voice-reply';
         const label = document.createElement('small');
         label.setAttribute('role','status');
-        const control = button('Pausar', toggle);
-        const retry = button('Reintentar audio', generate);
-        control.hidden = retry.hidden = true;
-        panel.append(label, control, retry);
+        const player = createPlayer('Voz del Coach', 'Reproducir la respuesta del Coach');
+        const retry = button('Reintentar audio', () => {
+          unlockAudio();
+          generate();
+        });
+        player.card.hidden = retry.hidden = true;
+        panel.append(label, player.card, retry);
+        card.classList.add('coach-message-with-voice');
         card.append(panel);
-        return {panel, label, control, retry};
+        if (target) target.scrollTop = target.scrollHeight;
+        return { panel, label, player, retry, target };
       });
-      let context, paused = false, loading = false, playing = false, audios = [];
-      function status(value) { panels.forEach(p => { p.label.textContent = value; }); }
+      let context, paused = false, loading = false, playing = false;
+      function status(value) {
+        panels.forEach(p => { p.label.textContent = value; p.label.hidden = !value; });
+      }
+      function showPlayer({ player, target }) {
+        const atBottom = target && target.scrollHeight - target.scrollTop - target.clientHeight < 24;
+        player.card.hidden = false;
+        if (atBottom) target.scrollTop = target.scrollHeight;
+      }
       function complete() {
         playing = paused = false;
-        panels.forEach(p => { p.control.hidden = true; });
-        audios.forEach(audio => { audio.hidden = false; });
-        status('Voz del Coach · IA');
+        panels.forEach(p => p.player.setStream(null));
+        status('');
         if (liveFinished === complete) liveFinished = null;
       }
       async function toggle() {
@@ -305,8 +363,7 @@
           if (paused) await context.resume(); else await context.suspend();
           if (context !== liveContext || !playing) return;
           paused = context.state === 'suspended';
-          panels.forEach(p => { p.control.textContent = paused ? 'Continuar' : 'Pausar'; });
-          status(paused ? 'Voz del Coach · En pausa' : 'Voz del Coach · Reproduciendo');
+          panels.forEach(p => p.player.setStream(toggle, !paused));
         } catch { pausePlayback(); }
       }
       async function generate() {
@@ -314,14 +371,13 @@
         loading = true;
         pausePlayback(null, true);
         if (liveFinished) stopLive();
-        unlockAudio();
         context = liveContext;
         const attempt = playbackEpoch;
         const canPlay = () => attempt === playbackEpoch && !document.hidden &&
           context === liveContext && panels.some(p => p.panel.getClientRects().length);
         let skipped = false;
         const queue = context ? createSpeechBuffer(context, complete) : null;
-        panels.forEach(p => { p.retry.hidden = true; p.control.hidden = true; p.control.textContent = 'Pausar'; });
+        panels.forEach(p => { p.retry.hidden = true; p.player.card.hidden = true; });
         status('Preparando la voz del Coach…');
         try {
           const response = await request('/api/coach/voice/speech', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:String(userId),text,stream:true})});
@@ -331,28 +387,27 @@
             if (queue.append(bytes) && !playing) {
               playing = true;
               liveFinished = complete;
-              status('Voz del Coach · Reproduciendo');
-              panels.forEach(p => { p.control.hidden = false; });
+              status('');
+              panels.forEach(p => { p.player.setStream(toggle, true); showPlayer(p); });
             }
           });
-          if (blob.size < 44) throw new Error('No se completó el audio.');
-          audios = attachAudio(panels.map(p => ({card:p.panel})), makeUrl(blob), 'Escuchar o repetir la respuesta del Coach');
-          if (playing && !skipped && canPlay()) {
-            audios.forEach(audio => { audio.hidden = true; });
-            queue.finish();
-          } else {
-            if (playing) stopLive();
+          if (blob.size <= 44) throw new Error('No se completó el audio.');
+          if (playing && (!canPlay() || skipped)) stopLive();
+          const url = makeUrl(blob);
+          panels.forEach(p => { p.player.setSource(url); showPlayer(p); });
+          if (playing) queue.finish();
+          else {
             complete();
             if (canPlay()) {
-              const player = audios.find(audio => audio.getClientRects().length);
-              await player?.play().catch(() => status('Voz del Coach lista · Pulsa reproducir'));
+              const visible = panels.find(p => p.panel.getClientRects().length);
+              await visible?.player.audio.play().catch(() => status('Toca reproducir para escuchar al Coach.'));
             }
           }
           return true;
         } catch (error) {
           if (context === liveContext && attempt === playbackEpoch) stopLive();
           status(error.message || 'Tu respuesta escrita está lista. Puedes reintentar el audio.');
-          panels.forEach(p => { p.retry.hidden = false; });
+          panels.forEach(p => { p.player.card.hidden = true; p.retry.hidden = false; });
           return false;
         } finally { loading = false; }
       }
@@ -364,15 +419,13 @@
     window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
     render();
     return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
-      attachInput(handles,url){
-        attachAudio(handles,url,'Escuchar mi pregunta de audio');
-        for (const {card,paragraph} of handles) {
-          if (!paragraph) continue;
-          const details = document.createElement('details'), summary = document.createElement('summary');
-          details.className = 'coach-voice-transcript';
-          summary.textContent = 'Ver mi transcripción';
-          details.append(summary,paragraph);
-          card.append(details);
+      attachInput(handles,url,duration){
+        for (const {card, target} of handles) {
+          const player = createPlayer('Tu audio', 'Escuchar mi pregunta de audio');
+          player.setSource(url,duration);
+          card.classList.add('coach-message-with-voice');
+          card.append(player.card);
+          if (target) target.scrollTop = target.scrollHeight;
         }
       } };
   }

@@ -17888,7 +17888,7 @@ async function loadCoachAppPage() {
     if (!text || coachChatBusy) return { ok: false };
     coachVoice?.pausePlayback(null, options.replyMode === "audio");
     const userHandles = addCoachMessage(chatMessages, "user", text);
-    if (options.audioUrl) coachVoice?.attachInput(userHandles, options.audioUrl);
+    if (options.audioUrl) coachVoice?.attachInput(userHandles, options.audioUrl, options.audioDuration);
     clearCoachChatInputs();
     toggleCoachChatBusy(true);
     setCoachChatStatusText("Conectando...");
@@ -17969,7 +17969,7 @@ async function loadCoachAppPage() {
         setActiveCoachDemoOutcomeContext(data.activeDemoOutcomeContext);
       }
       if (options.replyMode === "audio") {
-        setCoachChatStatusText("Preparando voz…");
+        setCoachChatStatusText("Listo");
         await coachVoice?.speak(finalReply, assistantMessageHandles);
       }
       return { ok: true };
