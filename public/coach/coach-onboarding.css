@@ -1,0 +1,18 @@
+html .tec-onboarding{width:min(600px,calc(100vw - 32px));max-width:100%;max-height:calc(100dvh - 32px);padding:0;margin:auto;overflow:auto;border:1px solid #d8e2ec;border-radius:22px;background:#fff;color:#102b4e;box-shadow:0 24px 80px #071f3b55;font-family:inherit}
+html .tec-onboarding[hidden]{display:none!important}
+.tec-onboarding::backdrop{background:#071f3b99}
+.tec-onboarding [hidden]{display:none!important}
+.tec-onboarding .tec-onboarding__header{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:20px 24px;border-bottom:1px solid #e0e7ef}
+.tec-onboarding .tec-onboarding__eyebrow{color:#a81732;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tec-onboarding button{min-height:44px;border:1px solid #cad7e2;border-radius:10px;padding:10px 14px;color:#173b5d;background:#f7f9fc;font:inherit;font-size:.82rem;line-height:1.4;cursor:pointer}
+.tec-onboarding button:focus-visible{outline:3px solid #3385c3;outline-offset:3px}
+.tec-onboarding .tec-onboarding__content{padding:28px 28px 20px}
+.tec-onboarding .tec-onboarding__progress{font-size:.73rem;color:#536a7d;margin:0 0 18px}
+.tec-onboarding h2{font-family:"Bricolage Grotesque",sans-serif;font-size:clamp(1.65rem,4vw,2rem);line-height:1.15;letter-spacing:-.03em;color:#102b4e;margin:0 0 16px}
+.tec-onboarding [data-onboarding-copy]{font-size:.95rem;line-height:1.75;color:#3e5870;margin:0}
+.tec-onboarding .tec-onboarding__route{margin:24px 0 16px;border-left:3px solid #c8102e;border-radius:0 10px 10px 0;background:#f2f6fa;color:#0a3159;font-size:.82rem;font-weight:600;line-height:1.8;padding:16px}
+.tec-onboarding .tec-onboarding__hint{font-size:.77rem;color:#536a7d;line-height:1.7;margin:0}
+.tec-onboarding .tec-onboarding__actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;padding:0 28px 20px}
+.tec-onboarding [data-onboarding-next]{background:#c8102e;border-color:#c8102e;color:#fff}
+.tec-onboarding .tec-onboarding__reopen{border-top:1px solid #e0e7ef;font-size:.7rem;color:#536a7d;line-height:1.6;padding:16px 28px;margin:0}
+@media(max-width:520px){html .tec-onboarding{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px}.tec-onboarding .tec-onboarding__header{padding:16px 20px}.tec-onboarding .tec-onboarding__content{padding:22px 20px 18px}.tec-onboarding .tec-onboarding__actions{padding:0 20px 18px}.tec-onboarding .tec-onboarding__actions button{flex:1 1 auto}.tec-onboarding .tec-onboarding__reopen{padding:16px 20px}}

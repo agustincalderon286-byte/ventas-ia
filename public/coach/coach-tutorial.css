@@ -38,3 +38,13 @@ html .tec-tutorial[hidden]{display:none!important}html .tec-tutorial[open]{displ
 .tec-tutorial .tec-tutorial__install video{width:min(100%,300px);aspect-ratio:9/16;margin:16px auto 0}
 .tec-tutorial .tec-tutorial__install-body p{font-size:.8rem}
 @media(max-width:600px){.tec-tutorial .tec-tutorial__install-grid{grid-template-columns:1fr}}
+
+.tec-tutorial .tec-tutorial__chapters{margin:16px 0 0;border:1px solid #d3dfe9;border-radius:10px;background:#fff}
+.tec-tutorial .tec-tutorial__chapters summary{padding:12px;font-size:.83rem}
+.tec-tutorial .tec-tutorial__chapters summary span{margin-left:8px;color:#536a7d;font-size:.72rem;font-weight:400}
+.tec-tutorial .tec-tutorial__chapter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 12px 12px}
+.tec-tutorial .tec-tutorial__chapter-grid button{display:flex;align-items:center;gap:10px;white-space:normal;text-align:left;font-size:.75rem;line-height:1.5;padding:10px;background:#f7f9fc;min-width:0}
+.tec-tutorial .tec-tutorial__chapter-grid button[aria-current=true]{border-color:#c8102e;background:#fff1f4;color:#94132b}
+.tec-tutorial .tec-tutorial__chapter-grid .tec-tutorial__chapter-time{font-size:.72rem;font-variant-numeric:tabular-nums;flex:0 0 32px;margin:0;color:#536a7d}
+.tec-tutorial .tec-tutorial__chapter-status{font-size:.77rem;line-height:1.6;color:#405d73;margin:10px 0 0;min-height:1.6em}
+@media(max-width:600px){.tec-tutorial .tec-tutorial__chapter-grid{grid-template-columns:1fr}}

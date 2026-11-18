@@ -28,8 +28,10 @@ function fixture(){
  opener.menu=menu;menu.open=true;menu.nodes.set('summary',summary);source.dataset.tutorialVideoSrc='/api/coach/tutorial/media/recorrido-3min.mp4';dialog.hidden=true;error.hidden=true;
  video.nodes.set('[data-tutorial-video-src]',source);video.parentElement=dialog;
  const mobile=['iphone','android'].map(name=>{const v=new Node(),src=new Node(),section=new Node(),err=new Node();v.parentElement=section;v.menu=section;v.nodes.set('[data-tutorial-video-src]',src);section.nodes.set('[data-tutorial-video-error]',err);src.dataset.tutorialVideoSrc=`/api/coach/tutorial/media/instalar-${name}.mp4`;err.hidden=true;return{video:v,source:src,section,error:err};});
+ const chapterStatus=new Node(),chapters=[56.5,127.5].map((seconds,i)=>{const n=new Node();n.dataset.tutorialChapter=String(seconds);n.dataset.chapterLabel=i?'Audiolibros':'Calculadora';return n;});
+ dialog.nodes.set('[data-tutorial-chapter]',chapters);dialog.nodes.set('[data-tutorial-chapter-status]',chapterStatus);video.readyState=0;video.duration=NaN;video.currentTime=0;
  dialog.nodes.set('video',[video,...mobile.map(p=>p.video)]);root.nodes.set('audio,video',[video,otherAudio,...mobile.map(p=>p.video)]);
- vm.runInNewContext(sourceCode,{document:root,window});return{root,dialog,opener,close,video,source,search,result,error,menu,summary,items,otherAudio,window,mobile};
+ vm.runInNewContext(sourceCode,{document:root,window});return{root,dialog,opener,close,video,source,search,result,error,menu,summary,items,otherAudio,window,mobile,chapters,chapterStatus};
 }
 test('opening is read-only, lazy-loads the video without playing it, and closes the account menu',()=>{
  const f=fixture();assert.equal(f.video.loads,0);f.opener.click();assert.equal(f.dialog.open,true);assert.equal(f.dialog.hidden,false);assert.equal(f.menu.open,false);assert.equal(f.video.loads,1);assert.equal(f.source.getAttribute('src'),f.source.dataset.tutorialVideoSrc);assert.equal(f.close.focused,true);
@@ -63,4 +65,14 @@ test('phone videos load only when expanded, remain exclusive, pause when folded 
  iphone.video.error=null;iphone.video.fire('loadeddata');assert.equal(iphone.error.hidden,true);
  f.close.click();assert.equal(iphone.video.pauses,3);assert.equal(android.video.pauses,3);
  const n=iphone.video.pauses;iphone.video.fire('play');assert.equal(iphone.video.pauses,n+1);
+});
+
+test('chapters wait for metadata, use the latest choice and seek without auto-playing',()=>{
+ const f=fixture();f.opener.click();f.chapters[0].click();assert.equal(f.video.currentTime,0);assert.match(f.chapterStatus.textContent,/Preparando/);
+ f.chapters[1].click();f.video.duration=180;f.video.readyState=1;f.video.fire('loadedmetadata');assert.equal(f.video.currentTime,127.5);assert.equal(f.chapters[1].getAttribute('aria-current'),'true');assert.equal(f.chapters[0].getAttribute('aria-current'),null);assert.match(f.chapterStatus.textContent,/Audiolibros.*reproducir/);assert.ok(f.mobile.every(p=>p.video.pauses===2));assert.equal(f.otherAudio.pauses,0);
+ f.video.duration=120;f.chapters[1].click();assert.equal(f.video.currentTime,119.95);
+});
+test('closing cancels pending chapter seeks so late metadata cannot move a hidden video',()=>{
+ const f=fixture();f.opener.click();f.chapters[0].click();f.close.click();f.video.readyState=1;f.video.duration=180;f.video.fire('loadedmetadata');assert.equal(f.video.currentTime,0);assert.equal(f.chapterStatus.textContent,'');
+ f.chapters[1].click();assert.equal(f.video.currentTime,0);
 });

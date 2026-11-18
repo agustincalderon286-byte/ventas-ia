@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
+import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
@@ -837,6 +838,14 @@ const coachUserSchema = new mongoose.Schema({
   username: { type: String, trim: true, match: /^[2-9]\d{2}[2-9]\d{6}$/ },
   passwordHash: { type: String, required: true },
   passwordSalt: { type: String, required: true },
+  // Missing on legacy users: never default it during hydration, because an
+  // unrelated save could otherwise overwrite a concurrent password reset.
+  credentialVersion: { type: String },
+  passwordResetDigest: { type: String, select: false },
+  passwordResetExpiresAt: { type: Date, select: false },
+  passwordResetRequestedAt: { type: Date, select: false },
+  passwordResetSalt: { type: String, select: false },
+  passwordResetEmail: { type: String, select: false },
   accountType: { type: String, default: "owner" },
   teamSupervisionEnabled: { type: Boolean, default: false },
   parentUserId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachUser", index: true, default: null },
@@ -959,6 +968,7 @@ const coachSessionSchema = new mongoose.Schema({
     index: true
   },
   tokenHash: { type: String, required: true, unique: true },
+  credentialVersion: { type: String, default: "" },
   ipAddress: String,
   userAgent: String,
   adminVerifiedAt: Date,
@@ -2240,6 +2250,7 @@ messageSchema.index({ coachOwnerUserId: 1, chefSlug: 1, createdAt: -1 });
 // Email uniqueness is preserved for actual emails; phone-only seats omit email.
 coachUserSchema.index({ email: 1 }, { name: "coach_email_present_unique", unique: true, partialFilterExpression: { email: { $type: "string" } } });
 coachUserSchema.index({ username: 1 }, { name: "coach_username_unique", unique: true, partialFilterExpression: { username: { $type: "string" } } });
+coachUserSchema.index({ passwordResetDigest: 1 }, { sparse: true });
 coachUserSchema.index({ stripeCustomerId: 1 });
 coachUserSchema.index({ stripeSubscriptionId: 1 });
 coachUserSchema.index({ parentUserId: 1, seatStatus: 1 });
@@ -2396,7 +2407,7 @@ const coachTeamPush = createCoachTeamPush({
     const session = await CoachSession.findOne({_id:device.sessionId,userId:device.accountId,expiresAt:{$gt:new Date()}}).lean();
     if(!session)return false;
     const user = await CoachUser.findById(device.accountId).lean();
-    if(!user || !(await coachTieneAccesoOperativo(user)))return false;
+    if(!user || !coachSessionCredentialsMatch(session,user) || !(await coachTieneAccesoOperativo(user)))return false;
     try { return await resolveTeamChatGroup(user,target,{users:CoachUser,getOwnKey:getCoachTeamChatKey,getDelegations:getCoachChatDelegations}) === target; } catch { return false; }
   }
 });
@@ -20368,7 +20379,7 @@ async function obtenerCoachAuthPorToken(token = "", options = {}) {
     expiresAt: { $gt: new Date() }
   }).populate("userId");
 
-  if (!session || !session.userId) {
+  if (!session || !session.userId || !coachSessionCredentialsMatch(session, session.userId)) {
     return { session: null, user: null };
   }
 
@@ -20383,7 +20394,9 @@ async function obtenerCoachAuthPorToken(token = "", options = {}) {
   };
 }
 
-async function crearCoachSesion(req, res, userId) {
+async function crearCoachSesion(req, res, userDoc) {
+  const userId = userDoc._id;
+  const credentialVersion = String(userDoc.credentialVersion || "");
   const token = generarTokenSeguro();
   const tokenHash = hashTokenSeguro(token);
   const expiresAt = new Date(Date.now() + COACH_SESSION_DAYS * 24 * 60 * 60 * 1000);
@@ -20406,6 +20419,7 @@ async function crearCoachSesion(req, res, userId) {
   await CoachSession.create({
     userId,
     tokenHash,
+    credentialVersion,
     ipAddress: obtenerCoachIp(req),
     userAgent: String(req.headers["user-agent"] || "").slice(0, 400),
     expiresAt,
@@ -25332,7 +25346,7 @@ app.post("/api/coach/signup-checkout", async (req, res) => {
     let profileDoc = await asegurarCoachDistributorProfile(userDoc);
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
 
-    await crearCoachSesion(req, res, userDoc._id);
+    await crearCoachSesion(req, res, userDoc);
 
     if (accesoDePrueba) {
       const userView = await construirCoachUserView(userDoc);
@@ -25396,7 +25410,7 @@ app.post("/api/coach/login", async (req, res) => {
     await userDoc.save();
     let profileDoc = await asegurarCoachDistributorProfile(userDoc);
     ({ userDoc, profileDoc } = await aplicarCoachAccountPreset(userDoc, profileDoc));
-    await crearCoachSesion(req, res, userDoc._id);
+    await crearCoachSesion(req, res, userDoc);
     limpiarCoachLoginFallidos(req, email);
 
     res.json({ user: await construirCoachUserView(userDoc) });
@@ -29259,13 +29273,19 @@ app.post("/api/coach/team/seats/:userId/reset-password", async (req, res) => {
 
     const temporaryPassword = generarCoachSeatPasswordTemporal();
     const passwordSeguro = await crearPasswordSeguro(temporaryPassword);
+    const previousCredentialVersion = String(seatDoc.credentialVersion || "");
 
     seatDoc.passwordHash = passwordSeguro.hash;
     seatDoc.passwordSalt = passwordSeguro.salt;
+    seatDoc.credentialVersion = generarTokenSeguro();
+    seatDoc.passwordResetDigest = undefined;
+    seatDoc.passwordResetExpiresAt = undefined;
+    seatDoc.passwordResetSalt = undefined;
+    seatDoc.passwordResetEmail = undefined;
     seatDoc.updatedAt = new Date();
     await seatDoc.save();
 
-    await CoachSession.deleteMany({ userId: seatDoc._id });
+    await CoachSession.deleteMany(coachPreviousSessionsQuery(seatDoc._id, previousCredentialVersion));
 
     const seatProfile = await asegurarCoachDistributorProfile(seatDoc);
 
@@ -29326,7 +29346,7 @@ app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
     }
 
     setCoachReturnCookie(res, req, currentToken);
-    await crearCoachSesion(req, res, seatDoc._id);
+    await crearCoachSesion(req, res, seatDoc);
 
     res.json({
       ok: true,
@@ -32537,6 +32557,16 @@ registerTecAudiobooks(app, {
 const tecSendMail = createTecMailer({
   hostingerToken: String(process.env.TEC_HOSTINGER_MAIL_TOKEN || "").trim(),
   resendApiKey: AUDIO_RESEND_API_KEY, resendFrom: AUDIO_RESEND_FROM_EMAIL
+});
+registerCoachPasswordRecovery(app, {
+  users: CoachUser, sessions: CoachSession,
+  createPassword: async password => {
+    const credentials = await crearPasswordSeguro(password);
+    return { passwordHash: credentials.hash, passwordSalt: credentials.salt };
+  },
+  sendMail: tecSendMail,
+  publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",
+  clearCookies: (req,res) => { clearCoachCookie(res,req); clearCoachReturnCookie(res,req); }
 });
 registerAudiobookSupport(app, {
   publicOrigin: process.env.APP_BASE_URL || "https://totalelitecoaching.com",

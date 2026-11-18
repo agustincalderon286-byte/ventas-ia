@@ -15912,6 +15912,8 @@ async function initPlanPage() {
   const activeSection = document.querySelector("[data-active-section]");
   const signupForm = document.querySelector("[data-signup-checkout-form]");
   const signupMessage = signupForm?.querySelector(".form-result");
+  const signupUx = window.TecSignupUx?.init(signupForm);
+  let signupSubmitting = false;
   const startCheckoutButton = document.querySelector("[data-start-checkout]");
   const portalButton = document.querySelector("[data-open-billing-portal]");
   const planInput = document.querySelector("[data-plan-input]");
@@ -16003,7 +16005,11 @@ async function initPlanPage() {
 
   signupForm?.addEventListener("submit", async event => {
     event.preventDefault();
+    if (signupSubmitting || (signupUx && !signupUx.validate())) return;
     clearMessage(signupMessage);
+    signupSubmitting = true;
+    signupForm.setAttribute("aria-busy", "true");
+    planSelectButtons.forEach(button => { button.disabled = true; });
 
     const submitButton = signupForm.querySelector('button[type="submit"]');
     const formData = new FormData(signupForm);
@@ -16023,10 +16029,15 @@ async function initPlanPage() {
 
       window.location.href = data.url;
     } catch (error) {
-      setMessage(signupMessage, error.message, "error");
+      setMessage(signupMessage, signupUx ? signupUx.serverError(error) : "No pudimos continuar. Revisa tus datos o intenta iniciar sesión si ya creaste tu cuenta.", "error");
       setButtonLoading(submitButton, false);
+    } finally {
+      signupSubmitting = false;
+      signupForm.setAttribute("aria-busy", "false");
+      planSelectButtons.forEach(button => { button.disabled = false; });
     }
   });
+  signupUx?.setReady();
 
   startCheckoutButton?.addEventListener("click", async event => {
     event.preventDefault();
@@ -17183,6 +17194,9 @@ async function initCoachAppPage() {
     appPage.hidden = false;
     if (loading) loading.hidden = true;
     window.TecVisitHeader?.ready();
+    if (ready && getCoachPortalMode(ready) !== "telemarketing") {
+      try { window.TecCoachOnboarding?.init({ user: ready }); } catch { /* Optional welcome must not block account access. */ }
+    }
   } catch (error) {
     appPage.hidden = true;
     if (loading) loading.hidden = false;
@@ -18261,6 +18275,7 @@ async function loadCoachAppPage() {
       }
     });
   });
+  return me.user;
 }
 
 async function initSuccessPage() {

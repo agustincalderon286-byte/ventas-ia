@@ -1,0 +1,10 @@
+.coach-public-body [data-signup-checkout-form] .tec-signup-error{margin:7px 0 0;color:#a20d25;font-size:.78rem;line-height:1.55}
+.coach-public-body [data-signup-checkout-form] .tec-signup-hint{margin:7px 0 0;color:#4b6279;font-size:.75rem;line-height:1.5}
+.coach-public-body [data-signup-checkout-form] input[aria-invalid="true"]{border:2px solid #b51c35;background:#fff9fa}
+.coach-public-body .tec-signup-password{position:relative}
+.coach-public-body .tec-signup-password input{padding-right:86px}
+.coach-public-body .tec-signup-password-toggle{position:absolute;top:4px;right:4px;min-height:40px;min-width:72px;padding:7px 10px;border:0;border-radius:7px;color:#123b60;background:#f0f4f8;font:600 .75rem/1.4 "Sora",sans-serif;cursor:pointer}
+.coach-public-body .tec-signup-password-toggle[aria-pressed="true"]{background:#e4edf5}
+.coach-public-body .tec-signup-recovery{margin:8px 0 0}
+.coach-public-body .tec-signup-recovery a{color:#a20d25;text-decoration:underline;text-underline-offset:3px;font-weight:600}
+.coach-public-body [data-signup-checkout-form] [hidden]{display:none!important}

@@ -24,7 +24,7 @@
     <meta name="twitter:title" content="TEC | Total Elite Coaching" />
     <meta name="twitter:description" content="Tu coach privado para avanzar cada presentacion y cerrar con confianza." />
     <meta name="twitter:image" content="https://totalelitecoaching.com/coach/assets/brand/tec-share-card.png?v=20261021" />
-    <link rel="manifest" href="/coach/site.webmanifest?v=20261023-product-picker2" />
+    <link rel="manifest" href="/coach/site.webmanifest?v=20261117-install1" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="/coach/styles.css?v=20261023-product-picker2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
     <link rel="stylesheet" href="/coach/coach-public.css?v=20261117-public2">
+    <link rel="stylesheet" href="/coach/signup-ux.css?v=20261117-signup1">
 </head>
   <body class="coach-public-body">
     <div class="coach-shell" data-coach-plan-page>
@@ -130,12 +131,13 @@
               Completa tus datos para continuar al pago seguro de tu membresía.
             </p>
 
-            <form class="coach-form" data-signup-checkout-form>
+            <form class="coach-form" data-signup-checkout-form method="post" action="/coach/planes/">
               <input type="hidden" name="plan" value="monthly" data-plan-input />
 
               <div>
                 <label for="coach-signup-name">Nombre</label>
-                <input id="coach-signup-name" name="name" type="text" autocomplete="name" placeholder="Tu nombre" required />
+                <input id="coach-signup-name" name="name" type="text" autocomplete="name" placeholder="Tu nombre" aria-describedby="coach-signup-name-error" required />
+                <p class="tec-signup-error" id="coach-signup-name-error" data-signup-error="name" hidden></p>
               </div>
 
               <div>
@@ -146,25 +148,36 @@
                   autocomplete="email"
                   type="email"
                   placeholder="tu-correo@ejemplo.com"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  aria-describedby="coach-signup-email-error"
                   required
                 />
+                <p class="tec-signup-error" id="coach-signup-email-error" data-signup-error="email" hidden></p>
               </div>
 
               <div>
                 <label for="coach-signup-password">Contraseña</label>
+                <div class="tec-signup-password">
                 <input
                   id="coach-signup-password"
                   name="password"
                   autocomplete="new-password"
                   type="password"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Crea tu contraseña"
+                  aria-describedby="coach-signup-password-hint coach-signup-password-error"
                   minlength="8"
                   required
                 />
+                <button class="tec-signup-password-toggle" type="button" data-password-toggle data-password-toggle-text aria-controls="coach-signup-password" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña" hidden>Mostrar</button>
+                </div>
+                <p class="tec-signup-hint" id="coach-signup-password-hint">Usa al menos 8 caracteres.</p>
+                <p class="tec-signup-error" id="coach-signup-password-error" data-signup-error="password" hidden></p>
               </div>
 
               <button class="primary-button" type="submit" data-plan-submit-label>Crear cuenta y continuar al mensual</button>
-              <div class="form-result"></div>
+              <div class="form-result" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"></div>
+              <p class="tec-signup-recovery" data-signup-existing-account hidden><a href="/coach/login/">Entrar a mi cuenta y continuar</a></p>
             </form>
 
             <p class="mini-note">
@@ -226,7 +239,9 @@
 
     <script src="/coach/pwa-safety.js?v=20261023-product-picker2"></script>
     <script src="/coach/ui-coherence.js?v=20261023-product-picker2"></script>
-    <script src="/coach/app.js?v=20261104-security1"></script>
+    <script src="/coach/password-visibility.js?v=20261117-signup1"></script>
+    <script src="/coach/signup-ux.js?v=20261117-signup1"></script>
+    <script src="/coach/app.js?v=20261117-five1"></script>
     <script type="module" src="/coach/analytics.js?v=20261104-analytics1"></script>
 </body>
 </html>

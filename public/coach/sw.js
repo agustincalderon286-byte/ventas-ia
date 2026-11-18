@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261117-help-mobile1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-help-mobile1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261117-five1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-five1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,12 +7,21 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
+  "/coach/signup-ux.js?v=20261117-signup1",
+  "/coach/signup-ux.css?v=20261117-signup1",
+  "/coach/password-visibility.js?v=20261117-signup1",
+  "/coach/coach-onboarding.js?v=20261117-welcome1",
+  "/coach/coach-onboarding.css?v=20261117-welcome1",
+  "/coach/coach-install.js?v=20261117-install1",
+  "/coach/coach-install.css?v=20261117-install1",
+  "/coach/app.js?v=20261117-five1",
+
   "/coach/coach-public.css?v=20261117-public2",
   "/coach/team-chat-push.js?v=20261117-push1",
   "/coach/team-chat-push-worker.js?v=20261117-push1",
   "/coach/app.js?v=20261117-push1",
-  "/coach/coach-tutorial.js?v=20261117-help-mobile1",
-  "/coach/coach-tutorial.css?v=20261117-help-mobile1",
+  "/coach/coach-tutorial.js?v=20261117-help-chapters1",
+  "/coach/coach-tutorial.css?v=20261117-help-chapters1",
   "/coach/coach-voice.js?v=20261117-hold1",
   "/coach/coach-voice.css?v=20261117-hold1",
   "/coach/team-chat.js?v=20261117-rigochat1",
@@ -76,7 +85,7 @@ const TEC_CORE_ASSETS = [
   "/coach/",
   "/coach/login/",
   "/coach/password-visibility.js?v=20261028-password-eye1",
-  "/coach/site.webmanifest?v=20261025-native-offline2",
+  "/coach/site.webmanifest?v=20261117-install1",
   "/coach/app.js?v=20261025-native-offline2",
   "/coach/app.js?v=20261028-image-viewer1",
   "/coach/product-image-viewer.js?v=20261028-image-viewer1",
@@ -258,6 +267,9 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) {
     return;
   }
+
+  // Password recovery and token exchanges must never enter offline caches.
+  if (url.pathname === "/coach/recuperar/" || url.pathname === "/coach/recuperar" || url.pathname.startsWith("/api/coach/password/")) return;
 
   // Tutorial media requires a live session and never enters shared offline caches.
   if (url.pathname.startsWith("/api/coach/tutorial/media/")) return;

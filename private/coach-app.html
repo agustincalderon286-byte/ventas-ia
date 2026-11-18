@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="TEC Coach" />
-<link rel="manifest" href="/coach/site.webmanifest?v=20261025-native-offline2" />
+<link rel="manifest" href="/coach/site.webmanifest?v=20261117-install1" />
     <link rel="icon" type="image/png" sizes="64x64" href="/coach/icons/favicon-64.png?v=20261021" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coach/icons/apple-touch-icon.png?v=20261021" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,10 +34,12 @@
     <link rel="stylesheet" href="/coach/document-viewer.css?v=20261028-visit-tools2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
     <link rel="stylesheet" href="/coach/card-order.css?v=20261117-order1">
-    <link rel="stylesheet" href="/coach/coach-tutorial.css?v=20261117-help-mobile1">
+    <link rel="stylesheet" href="/coach/coach-tutorial.css?v=20261117-help-chapters1">
+    <link rel="stylesheet" href="/coach/coach-onboarding.css?v=20261117-welcome1">
     <link rel="stylesheet" href="/coach/coach-voice.css?v=20261117-hold1">
     <link rel="stylesheet" href="/coach/team-chat.css?v=20261117-rigochat1">
     <link rel="stylesheet" href="/coach/message-center.css?v=20261117-push1">
+    <link rel="stylesheet" href="/coach/coach-install.css?v=20261117-install1">
 </head>
   <body class="coach-app-body tec-compact-page">
     <section class="tec-loading" data-coach-loading role="status" aria-live="polite">
@@ -75,6 +77,8 @@
 <details class="tec-account-menu" data-visit-account-menu><summary>Mi cuenta <span aria-hidden="true">⌄</span></summary>
 <nav class="coach-nav-links">
           <button type="button" class="nav-button" data-open-coach-tutorial>Tutorial y ayuda</button>
+          <button type="button" class="nav-button" data-open-coach-onboarding hidden>Guía de bienvenida</button>
+          <button type="button" class="nav-button" data-open-tec-install>Instalar TEC</button>
           <a class="nav-link" href="/coach/">Inicio</a>
           <a class="nav-link" href="/coach/planes/">Plan</a>
           <a class="nav-link" href="/coach/chef/" data-tec-chef-admin-link hidden>Chef</a>
@@ -5745,12 +5749,21 @@
       </form>
     </dialog>
 
+    <dialog class="tec-onboarding" data-coach-onboarding aria-labelledby="tec-onboarding-title" aria-describedby="tec-onboarding-copy" hidden>
+      <header class="tec-onboarding__header"><span class="tec-onboarding__eyebrow">Bienvenido a TEC</span><button type="button" data-onboarding-skip>Ahora no</button></header>
+      <div class="tec-onboarding__content"><p class="tec-onboarding__progress" data-onboarding-progress aria-live="polite"></p><h2 id="tec-onboarding-title" data-onboarding-title></h2><p id="tec-onboarding-copy" data-onboarding-copy></p><div class="tec-onboarding__route" data-onboarding-route aria-label="Dónde encontrarlo"></div><p class="tec-onboarding__hint" data-onboarding-hint></p></div>
+      <footer class="tec-onboarding__actions"><button type="button" data-onboarding-back>Anterior</button><button type="button" data-onboarding-next>Siguiente</button><button type="button" data-onboarding-tutorial hidden>Terminar y ver tutorial</button></footer>
+      <p class="tec-onboarding__reopen">Puedes repetir esta guía desde Mi cuenta → Guía de bienvenida.</p>
+    </dialog>
+
     <dialog class="tec-tutorial" data-coach-tutorial aria-labelledby="tec-tutorial-title" hidden>
   <header class="tec-tutorial__header"><div><span class="tec-tutorial__eyebrow">Aprende a usar TEC</span><h2 id="tec-tutorial-title">Tutorial y ayuda</h2></div><button type="button" data-close-coach-tutorial aria-label="Cerrar tutorial">Cerrar <span aria-hidden="true">×</span></button></header>
   <div class="tec-tutorial__body" data-tutorial-scroll>
     <section class="tec-tutorial__intro" aria-labelledby="tec-tutorial-video-title"><span class="tec-tutorial__eyebrow">Empieza aquí · 3 minutos</span><h3 id="tec-tutorial-video-title">Conoce tus herramientas</h3><p>Un recorrido por la presentación, la calculadora, los audiolibros y el seguimiento de tus visitas.</p>
     <video controls playsinline preload="none" poster="/api/coach/tutorial/media/portada.jpg" aria-label="Recorrido de TEC Coach de tres minutos"><source data-tutorial-video-src="/api/coach/tutorial/media/recorrido-3min.mp4" type="video/mp4"></video>
     <p class="tec-tutorial__error" data-tutorial-video-error role="status" hidden>No se pudo cargar el video. Comprueba tu conexión y vuelve a abrir el tutorial. Las guías de abajo te explican los pasos.</p>
+
+    <details class="tec-tutorial__chapters"><summary>Ir a una herramienta <span>14 capítulos</span></summary><div class="tec-tutorial__chapter-grid" role="group" aria-label="Capítulos del recorrido"><button type="button" data-tutorial-chapter="0.0" data-chapter-label="Bienvenida"><span class="tec-tutorial__chapter-time">0:00</span> Bienvenida</button><button type="button" data-tutorial-chapter="10.5" data-chapter-label="Presentación y orden"><span class="tec-tutorial__chapter-time">0:10</span> Presentación y orden</button><button type="button" data-tutorial-chapter="20.5" data-chapter-label="Referencias y citas"><span class="tec-tutorial__chapter-time">0:20</span> Referencias y citas</button><button type="button" data-tutorial-chapter="32.5" data-chapter-label="Encuesta de salud"><span class="tec-tutorial__chapter-time">0:32</span> Encuesta de salud</button><button type="button" data-tutorial-chapter="45.5" data-chapter-label="Recursos y agua"><span class="tec-tutorial__chapter-time">0:45</span> Recursos y agua</button><button type="button" data-tutorial-chapter="56.5" data-chapter-label="Calculadora · Power Blender Max"><span class="tec-tutorial__chapter-time">0:56</span> Calculadora · Power Blender Max</button><button type="button" data-tutorial-chapter="80.0" data-chapter-label="Balance de decisión"><span class="tec-tutorial__chapter-time">1:20</span> Balance de decisión</button><button type="button" data-tutorial-chapter="91.5" data-chapter-label="Perfil del cliente"><span class="tec-tutorial__chapter-time">1:31</span> Perfil del cliente</button><button type="button" data-tutorial-chapter="103.0" data-chapter-label="Oferta e invitación al negocio"><span class="tec-tutorial__chapter-time">1:43</span> Oferta e invitación al negocio</button><button type="button" data-tutorial-chapter="115.0" data-chapter-label="Audio, resultado y RoyalOne"><span class="tec-tutorial__chapter-time">1:55</span> Audio, resultado y RoyalOne</button><button type="button" data-tutorial-chapter="127.5" data-chapter-label="Audiolibros y lectura"><span class="tec-tutorial__chapter-time">2:07</span> Audiolibros y lectura</button><button type="button" data-tutorial-chapter="142.5" data-chapter-label="Mi actividad"><span class="tec-tutorial__chapter-time">2:22</span> Mi actividad</button><button type="button" data-tutorial-chapter="155.0" data-chapter-label="Mapa"><span class="tec-tutorial__chapter-time">2:35</span> Mapa</button><button type="button" data-tutorial-chapter="166.0" data-chapter-label="Mensajes y soporte"><span class="tec-tutorial__chapter-time">2:46</span> Mensajes y soporte</button></div></details><p class="tec-tutorial__chapter-status" data-tutorial-chapter-status role="status" aria-live="polite"></p>
     <p class="tec-tutorial__note">El video usa ejemplos de una visita. Para los controles nuevos de voz y chat, consulta las guías de abajo.</p></section>
     <section class="tec-tutorial__section" aria-labelledby="tec-tutorial-install-title">
       <span class="tec-tutorial__eyebrow">TEC en tu teléfono</span><h3 id="tec-tutorial-install-title">Añádelo a tu pantalla de inicio</h3>
@@ -5797,7 +5810,9 @@
 <details class="tec-tutorial__faq" data-tutorial-faq><summary>¿Mi cliente verá la cuenta del distribuidor al abrir el Chef?</summary><div class="tec-tutorial__answer"><p>El enlace y el QR abren una página independiente que solo muestra el Chef y la opción para solicitar información. Las herramientas del distribuidor están separadas y requieren su propia sesión de TEC.</p></div></details>
 </div></section><p class="tec-tutorial__note tec-tutorial__updated">Guía actualizada en noviembre de 2026. Algunas opciones dependen de tu acceso.</p></div></dialog>
 
-    <script src="/coach/coach-tutorial.js?v=20261117-help-mobile1"></script>
+    <script src="/coach/coach-tutorial.js?v=20261117-help-chapters1"></script>
+    <script src="/coach/coach-onboarding.js?v=20261117-welcome1"></script>
+    <script src="/coach/coach-install.js?v=20261117-install1"></script>
     <script src="/coach/demo-recorder-panel.js?v=20261028-floating-tools1"></script>
     <script src="/coach/external-tools.js?v=20261029-konverta1"></script>
     <script src="/coach/document-viewer.js?v=20261028-visit-tools2"></script>
@@ -5818,7 +5833,7 @@
     <script src="/coach/team-chat-push.js?v=20261117-push1"></script>
     <script src="/coach/team-chat-media.js?v=20261117-push1"></script>
     <script src="/coach/team-chat.js?v=20261117-rigochat1"></script>
-    <script src="/coach/app.js?v=20261117-push1"></script>
+    <script src="/coach/app.js?v=20261117-five1"></script>
     <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
     <script src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script>
     <script src="/coach/audiobooks.js?v=20261112-editorial1"></script>

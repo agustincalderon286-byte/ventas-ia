@@ -9,6 +9,7 @@
       button.setAttribute("aria-pressed", String(visible));
       button.setAttribute("aria-label", label);
       button.title = label;
+      if (button.hasAttribute("data-password-toggle-text")) button.textContent = visible ? "Ocultar" : "Mostrar";
     };
 
     button.hidden = false;

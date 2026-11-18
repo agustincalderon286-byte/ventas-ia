@@ -1,0 +1,93 @@
+{
+  "video": "private/coach-tutorial/recorrido-3min.mp4",
+  "video_sha256": "99be143ac51c8faaeac1ec873537f61932a4ccef8c3fb6455c16a312b8b60086",
+  "timeline_source": "marketing-tec/tec-coach-demo-cuenta-20261117/version-3min-power-blender/audio/Linea-de-tiempo.json",
+  "timeline_sha256": "992eafb2ced96f62cbf1ac1882b941d0b6d08c0e7ca4da13edd636b985399551",
+  "duration_s": 180,
+  "chapters": [
+    {
+      "label": "Bienvenida",
+      "start_s": 0.0,
+      "end_s": 10.5,
+      "scene": "01-inicio"
+    },
+    {
+      "label": "Presentación y orden",
+      "start_s": 10.5,
+      "end_s": 20.5,
+      "scene": "02-presentacion"
+    },
+    {
+      "label": "Referencias y citas",
+      "start_s": 20.5,
+      "end_s": 32.5,
+      "scene": "03-referencias"
+    },
+    {
+      "label": "Encuesta de salud",
+      "start_s": 32.5,
+      "end_s": 45.5,
+      "scene": "04-encuesta"
+    },
+    {
+      "label": "Recursos y agua",
+      "start_s": 45.5,
+      "end_s": 56.5,
+      "scene": "05-recursos"
+    },
+    {
+      "label": "Calculadora · Power Blender Max",
+      "start_s": 56.5,
+      "end_s": 80.0,
+      "scene": "06-power-blender"
+    },
+    {
+      "label": "Balance de decisión",
+      "start_s": 80.0,
+      "end_s": 91.5,
+      "scene": "07-balance"
+    },
+    {
+      "label": "Perfil del cliente",
+      "start_s": 91.5,
+      "end_s": 103.0,
+      "scene": "08-perfil"
+    },
+    {
+      "label": "Oferta e invitación al negocio",
+      "start_s": 103.0,
+      "end_s": 115.0,
+      "scene": "09-oferta-negocio"
+    },
+    {
+      "label": "Audio, resultado y RoyalOne",
+      "start_s": 115.0,
+      "end_s": 127.5,
+      "scene": "10-audio-pedido"
+    },
+    {
+      "label": "Audiolibros y lectura",
+      "start_s": 127.5,
+      "end_s": 142.5,
+      "scene": "11-audiolibros"
+    },
+    {
+      "label": "Mi actividad",
+      "start_s": 142.5,
+      "end_s": 155.0,
+      "scene": "12-actividad"
+    },
+    {
+      "label": "Mapa",
+      "start_s": 155.0,
+      "end_s": 166.0,
+      "scene": "13-mapa"
+    },
+    {
+      "label": "Mensajes y soporte",
+      "start_s": 166.0,
+      "end_s": 180.0,
+      "scene": "14-mensajes-cierre"
+    }
+  ]
+}
