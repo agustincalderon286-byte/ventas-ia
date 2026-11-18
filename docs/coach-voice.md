@@ -39,3 +39,9 @@ La primera prueba real con la voz anterior tardó unos 13,6 segundos hasta el ar
 ## Interacción mínima · 17 noviembre 2026
 
 94 pruebas pasan en conjunto, incluidas diez nuevas de mantener/soltar, cancelar y volver desde la papelera, permisos tardíos o denegados, interrupciones, teclado, límite y reintento. La revisión visual con la plantilla real y micrófono sintético confirmó un solo envío al soltar, ningún envío al deslizar y la interfaz de 390×844. Las pruebas iniciales del apartado de validación corresponden a la interfaz anterior; sus flujos de adjunto y confirmación fueron reemplazados.
+
+## Jorge, español de México
+
+En Render, configurar juntas `AZURE_SPEECH_KEY` y `AZURE_SPEECH_REGION` con los valores del mismo recurso de Azure Speech. El servidor lee cada respuesta con `es-MX-JorgeNeural` en estilo de conversación. Envía a Microsoft el texto que debe leer. La grabación original continúa por el servicio de transcripción existente. El teléfono recibe PCM a 24 kHz y puede reproducirlo mientras llega.
+
+Con ambas variables vacías sigue activo el proveedor anterior. Una configuración parcial o un fallo de Azure conserva la respuesta escrita y permite reintentar con Jorge. Para validar con el servicio real, ejecutar `node scripts/coach-voice-smoke.mjs` en el entorno configurado y probar una pregunta nueva por micrófono en el Coach.

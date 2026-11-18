@@ -13,6 +13,54 @@ export function pcmToWav(chunks) {
   header.writeUInt32LE(48000,28); header.writeUInt16LE(2,32); header.writeUInt16LE(16,34); header.write('data',36); header.writeUInt32LE(pcm.length,40);
   return Buffer.concat([header,pcm]);
 }
+async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }) {
+  const key = env.AZURE_SPEECH_KEY;
+  const region = env.AZURE_SPEECH_REGION?.trim().toLowerCase();
+  if (!key || !/^[a-z][a-z0-9]{1,30}$/.test(region || '')) {
+    throw new Error('Incomplete Azure Speech configuration');
+  }
+
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const chunks = [];
+  let bytes = 0;
+  // Azure caps individual responses at ten minutes. Split longer replies at
+  // word boundaries, preserving their order and using Jorge for every part.
+  const parts = text.match(/[\s\S]{1,3000}(?:\s+|$)|[\s\S]{1,3000}/gu) || [];
+  for (const part of parts) {
+    const escaped = part.toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, ' ')
+      .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    const response = await fetcher(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+      method: 'POST',
+      redirect: 'error',
+      signal: requestSignal,
+      headers: {
+        'Ocp-Apim-Subscription-Key': key,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'raw-24khz-16bit-mono-pcm',
+        'User-Agent': 'TEC-Coach'
+      },
+      body: `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${escaped}</mstts:express-as></voice></speak>`
+    });
+    if (!response.ok || !response.body) {
+      await response.body?.cancel();
+      throw Object.assign(new Error('Azure Speech unavailable'), { code: response.status });
+    }
+    let partBytes = 0;
+    for await (const data of response.body) {
+      const chunk = Buffer.from(data);
+      bytes += chunk.length;
+      partBytes += chunk.length;
+      if (bytes > 25 * 1024 * 1024) throw new Error('Speech too large');
+      chunks.push(chunk);
+      onChunk?.(chunk);
+    }
+    if (!partBytes || partBytes % 2) throw new Error('Incomplete Azure speech');
+  }
+  if (!bytes) throw new Error('Empty Azure speech');
+  return pcmToWav(chunks);
+}
+
 export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, Socket = WebSocket, timeoutMs = 90000 } = {}) {
   const key = () => { if (!env.OPENAI_API_KEY) throw new Error('Voice service unavailable'); return env.OPENAI_API_KEY; };
   return {
@@ -26,6 +74,9 @@ export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, S
       const data = await response.json(); return typeof data.text === 'string' ? data.text.trim() : '';
     },
     async speak(text, userId, { onChunk, signal } = {}) {
+      if (env.AZURE_SPEECH_KEY || env.AZURE_SPEECH_REGION) {
+        return speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal });
+      }
       const apiKey = key(), model = env.COACH_VOICE_SPEECH_MODEL || 'gpt-realtime-2.1-mini';
       return new Promise((resolve,reject) => {
         const socket = new Socket(`wss://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`,{headers:{Authorization:`Bearer ${apiKey}`,'OpenAI-Safety-Identifier':crypto.createHash('sha256').update(String(userId)).digest('hex')}});

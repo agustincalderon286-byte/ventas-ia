@@ -121,3 +121,40 @@ test('voice playback preserves every PCM sample and plays through 180 ms of pack
   }
   assert.equal(index,audio.length/2);
 });
+
+test('Azure Speech streams Jorge in Mexican Spanish, escaping the reply and keeping account information private', async () => {
+ const requests = [], played = [];
+ const provider = createCoachVoiceProvider({
+   env: { AZURE_SPEECH_KEY: 'fixture', AZURE_SPEECH_REGION: 'eastus' },
+   fetcher: async (url, options) => {
+     requests.push({url, options});
+     return new Response(new Uint8Array([20,0,30,0]));
+   }
+ });
+ const reply = 'Anticipo de $50 & total < $300. ';
+ const wav = await provider.speak(reply.repeat(130), 'private-account', {onChunk: part => played.push(part)});
+ assert.ok(requests.length > 1);
+ for (const {url,options} of requests) {
+   assert.equal(url,'https://eastus.tts.speech.microsoft.com/cognitiveservices/v1');
+   assert.equal(options.headers['X-Microsoft-OutputFormat'],'raw-24khz-16bit-mono-pcm');
+   assert.equal(options.headers['Ocp-Apim-Subscription-Key'],'fixture');
+   assert.ok(options.body.includes('name="es-MX-JorgeNeural"'));
+   assert.ok(options.body.includes('style="chat"'));
+   assert.ok(!options.body.includes('private-account'));
+ }
+ const spoken = requests.map(({options}) => options.body.match(/style="chat">([\s\S]*?)<\/mstts:express-as>/)[1]).join('');
+ assert.equal(spoken,reply.repeat(130).replaceAll('&','&amp;').replaceAll('<','&lt;'));
+ assert.equal(wav.readUInt32LE(24),24000);
+ assert.deepEqual(wav.subarray(44),Buffer.concat(played));
+});
+
+test('Jorge rejects missing credentials, unsafe regions, failed requests and incomplete audio', async () => {
+ const env = { AZURE_SPEECH_KEY:'fixture', AZURE_SPEECH_REGION:'eastus' };
+ const unreachable = () => { assert.fail('unexpected network call'); };
+ for (const config of [{AZURE_SPEECH_REGION:'eastus'},{...env,AZURE_SPEECH_REGION:'other.example/path'}]) {
+   await assert.rejects(createCoachVoiceProvider({env:config,fetcher:unreachable}).speak('Hola','user'), /configuration/);
+ }
+ for (const response of [new Response(null,{status:403}),new Response(new Uint8Array(1)),new Response(new Uint8Array())]) {
+   await assert.rejects(createCoachVoiceProvider({env,fetcher:async()=>response}).speak('Hola','user'), /Azure/);
+ }
+});
