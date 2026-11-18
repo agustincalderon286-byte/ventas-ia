@@ -189,7 +189,7 @@ test('catalog pronunciations cover branded and English product names without cha
   });
   await voice.speak('Royal Prestige® Deluxe Easy Release, Power Blender Go Plus, ALL–IN–ONE KNIFE BLOCK, Chef’s Knife, Milk & Butter Warmers, FrescaPure 5500, Precision Series III™ y MaxCup. Novelista y multicocina.', 'user');
   for (const [name,alias] of [
-    ['Royal Prestige','Róyal Prestísh'], ['Deluxe Easy Release','Deláks Ísi Rilís'],
+    ['Royal Prestige','Róial Prestísh'], ['Deluxe Easy Release','Deláks Ísi Rilís'],
     ['Power Blender Go Plus','Páuer Blénder Góu Plás'],
     ['Chef’s Knife','Shefs Náif'], ['Milk &amp; Butter Warmers','Milk and Báder Uórmers'],
     ['FrescaPure','Fresca Piúr'], ['Precision Series III','Presíshon Síris Tres'], ['MaxCup','Máx Cap']
@@ -197,4 +197,23 @@ test('catalog pronunciations cover branded and English product names without cha
   assert.ok(ssml.includes('<phoneme alphabet="ipa" ph="ol in ˈwɑn ˈnɑif ˈblok">ALL–IN–ONE KNIFE BLOCK</phoneme>'));
   assert.match(ssml,/Novelista y multicocina/);
   assert.doesNotMatch(ssml,/[®™]|undefined/);
+});
+
+test('Jorge covers Royal Prestige business vocabulary alongside catalog and part terms', async () => {
+  let ssml;
+  const voice = createCoachVoiceProvider({
+    env: { AZURE_SPEECH_KEY: 'fixture', AZURE_SPEECH_REGION: 'eastus' },
+    fetcher: async (_url, { body }) => { ssml = body; return new Response(new Uint8Array([20, 0])); }
+  });
+  await voice.speak('Hy‑Cite® Enterprises, LLC y HYCITE. Royal Prestige®RoyalShine, RoyalPrestige y Royal PrestigeMixing Bowls. En DocuCite, Order Review muestra Uploaded. Royal-One, Blue Network y Premier Network Leader. MoneyGram®ExpressPayment y Maxtractor. desroyalizado, BM1234 y tazón de mezcla.', 'user');
+  for (const [term, alias] of [
+    ['Hy‑Cite Enterprises','Jái Sáit Énterpraisis'], ['LLC','ele ele ce'], ['HYCITE','Jái Sáit'],
+    ['Royal Prestige','Róial Prestísh'], ['RoyalPrestige','Róial Prestísh'], ['RoyalShine','Róial Sháin'],
+    ['Royal PrestigeMixing Bowls','Róial Prestísh Míxing Bóuls'], ['DocuCite','Dókiu Sáit'],
+    ['Order Review','Órder Riviú'], ['Uploaded','Aplóuded'], ['Royal-One','Róial Uán'],
+    ['Blue Network','Blú Nétuork'], ['Premier Network Leader','Primír Nétuork Líder'],
+    ['MoneyGram','Máni Gram'], ['ExpressPayment','Exprés Péiment'], ['Maxtractor','Máx Tráctor']
+  ]) assert.ok(ssml.includes('<sub alias="' + alias + '">' + term + '</sub>'),term);
+  assert.match(ssml,/desroyalizado, BM1234 y tazón de mezcla\./u);
+  assert.doesNotMatch(ssml, /[®™]|undefined/u);
 });

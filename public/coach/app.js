@@ -17338,9 +17338,12 @@ async function loadCoachAppPage() {
 
   const portalMode = getCoachPortalMode(me.user);
   const isTelemarketingPortal = portalMode === "telemarketing";
-  if (!isTelemarketingPortal) window.TecCardOrder?.init({
-    userId: me.user.id, order: me.cardOrder || [], request: apiRequest, offline: Boolean(me.offline)
-  });
+  if (!isTelemarketingPortal) {
+    window.TecCardOrder?.init({
+      userId: me.user.id, order: me.cardOrder || [], request: apiRequest, offline: Boolean(me.offline)
+    });
+    window.TecClosingSupervisor?.init({ userId: me.user.id, request: apiRequest });
+  }
   initCoachWorkspaceTabs();
 
   if (!isTelemarketingPortal && me.user?.managesTeam) {

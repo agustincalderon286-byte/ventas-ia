@@ -2970,6 +2970,40 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   margin-top: 16px;
 }
 
+.coach-closing-supervisor {
+  border-block: 1px solid var(--line);
+  margin-block: 20px;
+  padding-block: 16px;
+}
+
+.coach-closing-supervisor [hidden] {
+  display: none;
+}
+
+.coach-supervisor-status:empty {
+  margin: 0;
+}
+
+.coach-closing-supervisor fieldset {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.coach-closing-supervisor .dashboard-actions {
+  margin-top: 8px;
+}
+
+.coach-closing-supervisor :is(button, a) {
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
 .resource-card {
   position: relative;
   overflow: hidden;

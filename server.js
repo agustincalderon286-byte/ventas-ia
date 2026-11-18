@@ -4,6 +4,7 @@ import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
+import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
 import { createCoachPushModels, createCoachTeamPush } from "./src/coach-team-chat-push.js";
@@ -835,6 +836,10 @@ const coachDailyRollupSchema = new mongoose.Schema(
 
 const coachUserSchema = new mongoose.Schema({
   coachCardOrder: { type: [String], default: [] },
+  coachClosingSupervisor: {
+    type: new mongoose.Schema({ name: String, phone: String }, { _id: false }),
+    select: false
+  },
   name: { type: String, required: true, trim: true },
   email: { type: String, required() { return !this.username; }, trim: true, lowercase: true },
   username: { type: String, trim: true, match: /^[2-9]\d{2}[2-9]\d{6}$/ },
@@ -25520,6 +25525,7 @@ app.get("/api/coach/me", async (req, res) => {
 });
 
 registerCoachCardOrder(app, { requireActive: requireCoachActivo, users: CoachUser });
+registerCoachClosingSupervisor(app, { requireActive: requireCoachActivo, users: CoachUser });
 
 app.get("/api/coach/integrations/highlevel", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
