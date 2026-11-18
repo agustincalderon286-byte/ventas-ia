@@ -13,6 +13,33 @@ export function pcmToWav(chunks) {
   header.writeUInt32LE(48000,28); header.writeUInt16LE(2,32); header.writeUInt16LE(16,34); header.write('data',36); header.writeUInt32LE(pcm.length,40);
   return Buffer.concat([header,pcm]);
 }
+const ORDER_AMOUNT = String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)(?!\d|[.,]\d)`;
+const OTHER_CURRENCY = String.raw`MXN|CAD|AUD|NZD|HKD|SGD|BRL|ARS|CLP|COP|UYU|DOP|pesos?(?:\s+mexicanos?)?|d[oó]lares?\s+(?:canadienses?|australianos?)`;
+const orderMoney = new RegExp(
+  String.raw`(?<![\p{L}\p{N}$])(?<prefix>(?:USD|US)\s*\$|USD\b|(?:(?:${OTHER_CURRENCY})\s*)?\$)\s*(?<amount>${ORDER_AMOUNT})(?:\s*(?<unit>USD|(?:${OTHER_CURRENCY})|d[oó]lares?(?:\s+estadounidenses?)?)(?!\p{L}))?(?!\p{L})|(?<![\p{L}\p{N}.,])(?<usdAmount>${ORDER_AMOUNT})\s*USD\b`,
+  'giu'
+);
+
+function jorgeSpeechMarkup(text) {
+  // Escape the reply before adding markup controlled by the app.
+  const escaped = text.toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, ' ')
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  return escaped
+    .replace(/\bPower[ \t]+Blender(?:[ \t]+(Max|Go))?\b/gi, (name, model) => {
+      const suffix = { max: ' Máx', go: ' Góu' }[model?.toLowerCase()] || '';
+      return `<sub alias="Páuer Blénder${suffix}">${name}</sub>`;
+    })
+    .replace(orderMoney, (match, ...args) => {
+      const { prefix, amount, unit, usdAmount } = args.at(-1);
+      if (prefix && !/^(?:US(?:D)?\s*\$|USD|\$)$/i.test(prefix)) return match;
+      if (unit && !/^(?:USD|d[oó]lares?(?:\s+estadounidenses?)?)$/i.test(unit)) return match;
+      // TEC order prices use USD. A final separator with 1–2 digits is cents.
+      const [, whole, cents] = (amount || usdAmount).match(/^([\d.,]+?)(?:[.,](\d{1,2}))?$/);
+      const value = whole.replace(/[.,]/g, '') + (cents ? '.' + cents.padEnd(2, '0') : '');
+      return `<say-as interpret-as="currency">${value} USD</say-as>`;
+    });
+}
+
 async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }) {
   const key = env.AZURE_SPEECH_KEY;
   const region = env.AZURE_SPEECH_REGION?.trim().toLowerCase();
@@ -28,8 +55,6 @@ async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }
   // word boundaries, preserving their order and using Jorge for every part.
   const parts = text.match(/[\s\S]{1,3000}(?:\s+|$)|[\s\S]{1,3000}/gu) || [];
   for (const part of parts) {
-    const escaped = part.toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, ' ')
-      .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     const response = await fetcher(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
       method: 'POST',
       redirect: 'error',
@@ -40,7 +65,7 @@ async function speakWithJorge(text, { env, fetcher, timeoutMs, onChunk, signal }
         'X-Microsoft-OutputFormat': 'raw-24khz-16bit-mono-pcm',
         'User-Agent': 'TEC-Coach'
       },
-      body: `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${escaped}</mstts:express-as></voice></speak>`
+      body: `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-MX"><voice name="es-MX-JorgeNeural"><mstts:express-as style="chat">${jorgeSpeechMarkup(part)}</mstts:express-as></voice></speak>`
     });
     if (!response.ok || !response.body) {
       await response.body?.cancel();
@@ -68,7 +93,7 @@ export function createCoachVoiceProvider({ env = process.env, fetcher = fetch, S
       const form = new FormData(); form.append('file',new Blob([buffer],{type:mimeType}),`coach-audio.${formats.get(mimeType)}`);
       form.append('model',env.COACH_VOICE_TRANSCRIPTION_MODEL || env.COACH_DEMO_TRANSCRIPTION_MODEL || 'gpt-transcribe');
       form.append('response_format','json');
-      form.append('prompt',prompt || 'Transcribe fielmente la pregunta al Coach de ventas en español. Royal Prestige, 4 en 14, ollas, filtros, objeciones, pagos y cierre. No inventes palabras si no hay voz.');
+      form.append('prompt',prompt || 'Transcribe fielmente la pregunta al Coach de ventas en español. Royal Prestige, Power Blender, Power Blender Max, Power Blender Go, 4 en 14, ollas, filtros, objeciones, pagos y cierre. No inventes palabras si no hay voz.');
       const response = await fetcher('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:`Bearer ${key()}`},body:form,signal:AbortSignal.timeout(timeoutMs)});
       if (!response.ok) throw Object.assign(new Error('Transcription failed'),{code:response.status});
       const data = await response.json(); return typeof data.text === 'string' ? data.text.trim() : '';

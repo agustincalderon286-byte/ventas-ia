@@ -131,7 +131,7 @@ test('Azure Speech streams Jorge in Mexican Spanish, escaping the reply and keep
      return new Response(new Uint8Array([20,0,30,0]));
    }
  });
- const reply = 'Anticipo de $50 & total < $300. ';
+ const reply = 'Anticipo de 50 & total < 300. ';
  const wav = await provider.speak(reply.repeat(130), 'private-account', {onChunk: part => played.push(part)});
  assert.ok(requests.length > 1);
  for (const {url,options} of requests) {
@@ -157,4 +157,22 @@ test('Jorge rejects missing credentials, unsafe regions, failed requests and inc
  for (const response of [new Response(null,{status:403}),new Response(new Uint8Array(1)),new Response(new Uint8Array())]) {
    await assert.rejects(createCoachVoiceProvider({env,fetcher:async()=>response}).speak('Hola','user'), /Azure/);
  }
+});
+
+test('Jorge pronounces Power Blender and explicitly reads TEC prices in US dollars', async () => {
+  let ssml;
+  const provider = createCoachVoiceProvider({
+    env: { AZURE_SPEECH_KEY: 'fixture', AZURE_SPEECH_REGION: 'eastus' },
+    fetcher: async (_url, { body }) => {
+      ssml = body;
+      return new Response(new Uint8Array([20, 0]));
+    }
+  });
+  await provider.speak('La Power Blender Max cuesta $1,250.50. Power Blender Go por 1.025,10 USD. Anticipo: US$1. Saldo: USD 49.50. MXN $250, $700 pesos mexicanos, y CAD $250.', 'user');
+  assert.ok(ssml.includes('<sub alias="Páuer Blénder Máx">Power Blender Max</sub>'));
+  assert.ok(ssml.includes('<sub alias="Páuer Blénder Góu">Power Blender Go</sub>'));
+  for (const value of ['1250.50', '1025.10', '1', '49.50']) {
+    assert.ok(ssml.includes(`<say-as interpret-as="currency">${value} USD</say-as>`));
+  }
+  assert.ok(ssml.includes('MXN $250, $700 pesos mexicanos, y CAD $250.'));
 });

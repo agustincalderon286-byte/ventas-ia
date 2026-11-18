@@ -34264,7 +34264,7 @@ CONSULTA DEL COACH:
           { role: "system", content: estadoPrompt },
           { role: "system", content: perfilPrompt },
           ...(teamChatContext ? [{ role: "system", content: teamChatContext }] : []),
-          ...(voiceReply ? [{ role: "system", content: "Esta pregunta llegó por audio. Contesta de forma conversacional y natural, en dos o tres frases claras y normalmente hasta 60 palabras. Habla de tú a tú como un asesor mexicano durante una visita. Empieza por lo que el representante puede decir o hacer. Usa frases fáciles de decir en voz alta, con una idea por frase. Evita repetir saludos, muletillas y encabezados. Si el usuario pide una explicación extensa, puedes ampliarla. Conserva las reglas, datos y contexto del Coach." }] : []),
+          ...(voiceReply ? [{ role: "system", content: "Esta pregunta llegó por audio. Contesta de forma conversacional y natural, en dos o tres frases claras y normalmente hasta 60 palabras. Habla de tú a tú como un asesor mexicano durante una visita. Empieza por lo que el representante puede decir o hacer. Usa frases fáciles de decir en voz alta, con una idea por frase. Evita repetir saludos, muletillas y encabezados. Para precios y saldos de un pedido de TEC, usa dólares estadounidenses (USD) cuando el catálogo, la calculadora o la conversación no indiquen explícitamente otra moneda. Conserva la moneda que indique la fuente y no hagas conversiones por tu cuenta. Si el usuario pide una explicación extensa, puedes ampliarla. Conserva las reglas, datos y contexto del Coach." }] : []),
           ...historialPrompt
         ]
       };
