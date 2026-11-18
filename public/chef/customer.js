@@ -3,6 +3,7 @@
   const $=selector=>document.querySelector(selector),id=()=>crypto.randomUUID();
   const slug=decodeURIComponent(location.pathname.split('/').filter(Boolean)[1]||'').toLowerCase();
   const suffix=slug?'?chef='+encodeURIComponent(slug):'',key='tec-chef-public:'+slug;
+  let photo='',preparingPhoto=false;
   let sessionId='',busy=false,pendingChat=null,sellerName='',contactAvailable=false,leadBusy=false,pendingLead=null;
   const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
   const status=(target,text,error=false)=>{target.textContent=text;target.dataset.error=String(error);};
@@ -11,12 +12,65 @@
     const response=await fetch('/api/chef/public/'+kind+suffix+extra,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'No pude completar la solicitud. Conserva tus datos y vuelve a intentarlo.');return data;
   }
-  function bubble(role,text,sources=[]){
-    const card=node('div','chef-message '+(role==='user'?'user':'assistant'));card.append(node('div','message-label',role==='user'?'TÚ':'TEC CHEF'),node('div','',String(text).replace(/\*\*/g,'')));
+  function bubble(role,text,sources=[],hasPhoto=false){
+    const card=node('div','chef-message '+(role==='user'?'user':'assistant'));
+    card.append(node('div','message-label',role==='user'?'TÚ':'TEC CHEF'));
+    if(hasPhoto&&role==='user')card.append(node('div','message-photo-label','Foto adjunta'));
+    card.append(node('div','',String(text).replace(/\*\*/g,'')));
     if(sources.length){const links=node('div','message-sources');for(const source of sources){try{const url=new URL(source.url);if(url.protocol!=='https:'||!['royalprestige.com','www.royalprestige.com','youtube.com','www.youtube.com'].includes(url.hostname))continue;const a=node('a','',source.title);a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';links.append(a);}catch{}}card.append(links);}
     $('#messages').append(card);scroll();return card;
   }
-  function setBusy(value){busy=value;$('#send').disabled=$('#question').disabled=$('#new-chat').disabled=value;document.querySelectorAll('[data-prompt]').forEach(button=>button.disabled=value);}
+  function syncComposer(){
+    $('#question').disabled=busy;
+    $('#send').disabled=$('#new-chat').disabled=$('#attach-photo').disabled=$('#remove-photo').disabled=busy||preparingPhoto;
+    $('.chef-prompts').hidden=Boolean(photo);
+    document.querySelectorAll('[data-prompt]').forEach(button=>button.disabled=busy||preparingPhoto);
+  }
+  function setPhoto(encoded){
+    photo=encoded;
+    const preview=$('#photo-preview'),thumb=$('#photo-thumb');
+    preview.hidden=!encoded;
+    if(encoded)thumb.src='data:image/jpeg;base64,'+encoded;
+    else thumb.removeAttribute('src');
+    $('#question').placeholder=encoded?'Comenta si quieres…':'Escríbele al Chef…';
+    syncComposer();
+  }
+  async function preparePhoto(file){
+    if(file.type==='image/svg+xml')throw Error('Usa una foto de la cámara o la galería.');
+    if(!file.size||file.size>25*1024*1024)throw Error('Usa una foto de hasta 25 MB.');
+    const url=URL.createObjectURL(file);
+    try{
+      const image=await new Promise((resolve,reject)=>{
+        const picture=new Image();
+        picture.onload=()=>resolve(picture);
+        picture.onerror=()=>reject(Error('No pude abrir esta imagen. Prueba con otra foto o con un archivo JPG.'));
+        picture.src=url;
+      });
+      const {naturalWidth:width,naturalHeight:height}=image;
+      if(!width||!height||width*height>60000000)throw Error('La foto es demasiado grande. Prueba otra imagen.');
+      const scale=Math.min(1,1440/Math.max(width,height));
+      const canvas=node('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+      const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw Error('No pude preparar la foto en este navegador.');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+      const jpeg=canvas.toDataURL('image/jpeg',.82),prefix='data:image/jpeg;base64,';
+      if(!jpeg.startsWith(prefix)||jpeg.length-prefix.length>4*Math.ceil((2*1024*1024)/3))throw Error('No pude preparar la foto. Prueba otra más pequeña.');
+      return jpeg.slice(prefix.length);
+    }finally{URL.revokeObjectURL(url);}
+  }
+  $('#attach-photo').addEventListener('click',()=>$('#photo-picker').showModal());
+  $('#close-photo').addEventListener('click',()=>$('#photo-picker').close());
+  for(const [button,input] of [['#take-photo','#photo-camera'],['#choose-photo','#photo-file']]){
+    $(button).addEventListener('click',()=>{$('#photo-picker').close();$(input).click();});
+    $(input).addEventListener('change',async event=>{
+      const control=event.currentTarget,file=control.files?.[0];control.value='';
+      if(!file||busy||preparingPhoto)return;
+      preparingPhoto=true;syncComposer();status($('#chat-status'),'Preparando la foto…');
+      try{setPhoto(await preparePhoto(file));status($('#chat-status'),'');}
+      catch(error){status($('#chat-status'),error.message,true);}
+      finally{preparingPhoto=false;syncComposer();}
+    });
+  }
+  $('#remove-photo').addEventListener('click',()=>{setPhoto('');status($('#chat-status'),'');$('#attach-photo').focus({preventScroll:true});});
   function openContact(){if(!contactAvailable||leadBusy)return;$('#contact-dialog').showModal();$('#contact-form').elements.fullName.focus({preventScroll:true});}
   $('#request-information').addEventListener('click',openContact);
   $('#contact-close').addEventListener('click',()=>{if(!leadBusy)$('#contact-dialog').close();});
@@ -25,21 +79,32 @@
   $('#request-demo').addEventListener('change',()=>{const checked=$('#request-demo').checked;$('#preferred-time-label').hidden=!checked;$('#contact-form').elements.appointmentPreferredTime.required=checked;});
   async function history(){
     const query=(suffix?'&':'?')+'sessionId='+encodeURIComponent(sessionId),data=await api('conversation',null,query);$('#messages').replaceChildren();
-    if(!data.messages.length)bubble('assistant','¡Hola! Soy TEC Chef. ¿Qué ingredientes tienes o qué producto quieres usar?');
-    for(const item of data.messages)bubble(item.role,item.content,item.sources);
+    if(!data.messages.length)bubble('assistant','¡Hola! Soy TEC Chef. Cuéntame qué tienes a mano o envíame una foto para pensar en un platillo.');
+    for(const item of data.messages)bubble(item.role,item.content,item.sources,item.hasPhoto);
   }
   async function send(question){
-    question=String(question||'').trim();if(!question||busy)return;
-    if(navigator.onLine===false){status($('#chat-status'),'Necesitas conexión. Tu pregunta sigue aquí.',true);return;}
-    if(!pendingChat||pendingChat.question!==question)pendingChat={question,requestId:id()};
-    setBusy(true);status($('#chat-status'),'El Chef está escribiendo…');
-    try{const data=await api('chat',{pregunta:question,sessionId,requestId:pendingChat.requestId});bubble('user',question);const reply=bubble('assistant',data.respuesta,data.sources);if(data.appointmentSuggested&&contactAvailable){const b=node('button','chef-button compact appointment-action','Solicitar información');b.type='button';b.addEventListener('click',openContact);reply.append(b);}pendingChat=null;$('#question').value='';status($('#chat-status'),'');}
-    catch(error){status($('#chat-status'),error.message||'No se completó la respuesta. Tu pregunta sigue aquí.',true);}finally{setBusy(false);$('#question').focus({preventScroll:true});}
+    question=String(question||'').trim();
+    const uploaded=photo;
+    if(busy||preparingPhoto)return;
+    if(!question&&!uploaded){status($('#chat-status'),'Escribe una pregunta o adjunta una foto.',true);return;}
+    if(navigator.onLine===false){status($('#chat-status'),'Necesitas conexión. Tu mensaje sigue aquí.',true);return;}
+    if(!pendingChat||pendingChat.question!==question||pendingChat.photo!==uploaded)pendingChat={question,photo:uploaded,requestId:id()};
+    busy=true;syncComposer();status($('#chat-status'),uploaded?'El Chef está revisando la foto…':'El Chef está escribiendo…');
+    try{
+      const data=await api('chat',{pregunta:question,sessionId,requestId:pendingChat.requestId,...(uploaded?{photo:uploaded}:{})});
+      bubble('user',question||(uploaded?'¿Qué platillos puedo preparar con lo que hay en la foto?':''),[],Boolean(uploaded));
+      const reply=bubble('assistant',data.respuesta,data.sources);
+      if(data.appointmentSuggested&&contactAvailable){const b=node('button','chef-button compact appointment-action','Solicitar información');b.type='button';b.addEventListener('click',openContact);reply.append(b);}
+      pendingChat=null;
+      if(uploaded)setPhoto('');
+      $('#question').value='';status($('#chat-status'),'');
+    }catch(error){status($('#chat-status'),error.message||'No se completó la respuesta. Tu mensaje sigue aquí.',true);}
+    finally{busy=false;syncComposer();if(!uploaded)$('#question').focus({preventScroll:true});}
   }
   $('#chat-form').addEventListener('submit',event=>{event.preventDefault();send($('#question').value);});
   $('#question').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('#chat-form').requestSubmit();}});
   document.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{$('#question').value=button.dataset.prompt;send(button.dataset.prompt);}));
-  $('#new-chat').addEventListener('click',async()=>{if(busy)return;sessionId=id();try{sessionStorage.setItem(key,sessionId);}catch{}pendingChat=null;$('#question').value='';try{await history();status($('#chat-status'),'Nueva conversación.');}catch(error){status($('#chat-status'),error.message,true);}});
+  $('#new-chat').addEventListener('click',async()=>{if(busy||preparingPhoto)return;sessionId=id();try{sessionStorage.setItem(key,sessionId);}catch{}pendingChat=null;if(photo)setPhoto('');$('#question').value='';try{await history();status($('#chat-status'),'Nueva conversación.');}catch(error){status($('#chat-status'),error.message,true);}});
   $('#contact-form').addEventListener('submit',async event=>{
     event.preventDefault();if(leadBusy||!contactAvailable)return;const form=event.currentTarget;
     if(!form.reportValidity())return;
@@ -63,7 +128,7 @@
   });
   async function init(){
     try{
-      const data=await api('bootstrap');sellerName=data.sellerName;contactAvailable=data.contactAvailable;
+      const data=await api('bootstrap');$('#attach-photo').hidden=data.canAttachPhoto!==true;sellerName=data.sellerName;contactAvailable=data.contactAvailable;
       $('#representative-note').textContent=contactAvailable?'Este Chef te lo comparte '+sellerName+'.':'Recetas e ideas para tu cocina, sin iniciar sesión.';
       $('#recipient-name').textContent=$('#consent-recipient').textContent=sellerName;
       $('#request-information').hidden=!contactAvailable;

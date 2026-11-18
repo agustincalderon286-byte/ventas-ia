@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import express from 'express';
+import sharp from 'sharp';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
@@ -15,7 +16,7 @@ const account=(n,name,parent=null,role='seat',supervised=false)=>({_id:String(n)
 const owner=account(1,'Owner',null,'owner'),lorena=account(2,'Lorena',owner._id,'seat',true),eric=account(3,'Eric',lorena._id),peer=account(4,'Peer',owner._id),outside=account(5,'Outside',null,'owner');
 const profile=user=>({slug:user.name.toLowerCase(),userDoc:user,ownership:{ownerUserId:user===outside?outside._id:owner._id,ownerName:user===outside?outside.name:owner.name,ownerEmail:user===outside?outside.email:owner.email}});
 async function fixture(t,{limits={},defaultContext=profile(owner),syncFailure=false}={}){
- const app=express();app.use(express.json());
+ const app=express();app.use(express.json({limit:'15mb'}));
  const users=memory([owner,lorena,eric,peer,outside]),visitors=memory(),conversations=memory(),leads=memory(),contexts=new Map([owner,lorena,eric,peer,outside].map(user=>[user.name.toLowerCase(),profile(user)])),ai=[],synced=[];
  const auth=async(req,res)=>{const user=users.docs.find(u=>u._id===req.get('X-Test-User'));if(!user){res.status(401).json({error:'Acceso requerido'});return null;}return{user};};
  registerPublicChef(app,{requireActive:auth,getBySlug:async slug=>contexts.get(slug)||null,getDefault:async()=>defaultContext,getOwnContext:async user=>contexts.get(user.name.toLowerCase())||null,getDownline:user=>downlineMembers({...user,teamSupervisionEnabled:true},users),hasDownline:async user=>users.docs.some(member=>member.parentUserId===user._id),visitors,conversations,leads,privateDir:path.join(root,'private'),publicDir:path.join(root,'public'),limits,completion:async messages=>{ai.push(messages);return 'Respuesta de cocina.';},syncCrm:async(user,lead)=>{synced.push({user,lead});if(syncFailure)throw Error('crm');}});
@@ -94,3 +95,35 @@ test('production schemas enforce unique anonymous conversations and expire visit
 });
 
 test('a seller who is an actual parent can supervise Chef leads without gaining global team-management rights',async t=>{const f=await fixture(t);const cookie=await f.bootstrap();await f.request('/api/chef/public/leads?chef=eric',{cookie,body:lead()});const parent=f.users.docs.find(user=>user._id===lorena._id);parent.teamSupervisionEnabled=false;const r=await f.request('/api/chef/workspace?scope=team',{user:parent});assert.equal(r.status,200);const data=await r.json();assert.equal(data.canViewTeam,true);assert.deepEqual(data.leads.map(row=>row.sellerName),['Eric']);assert.equal(parent.teamSupervisionEnabled,false);});
+
+test('public Chef transmits a resized photo once, retains only text, and accepts a correction',async t=>{
+ const f=await fixture(t),cookie=await f.bootstrap(),sessionId=randomUUID();
+ const photo=(await sharp({create:{width:1900,height:700,channels:3,background:'#42a55f'}}).withMetadata({orientation:6}).jpeg().toBuffer()).toString('base64');
+ const body={photo,sessionId,requestId:randomUUID()},chat='/api/chef/public/chat?chef=eric';
+ assert.equal((await f.request(chat,{body})).status,401);
+ assert.equal((await f.request(chat,{cookie,body})).status,200);
+ const [text,image]=f.ai[0].at(-1).content;
+ assert.match(text.text,/platillos/);
+ const meta=await sharp(Buffer.from(image.image_url.url.split(',')[1],'base64')).metadata();
+ assert.equal(meta.format,'jpeg');assert.equal(meta.height,1440);assert.equal(meta.orientation,undefined);
+ assert.equal((await f.request(chat,{cookie,body})).status,200);assert.equal(f.ai.length,1);
+ const differentPhoto=(await sharp({create:{width:32,height:32,channels:3,background:'#833'}}).jpeg().toBuffer()).toString('base64');
+ assert.equal((await f.request(chat,{cookie,body:{...body,photo:differentPhoto}})).status,409);
+ const history=await(await f.request('/api/chef/public/conversation?chef=eric&sessionId='+sessionId,{cookie})).json();
+ assert.equal(history.messages[0].hasPhoto,true);assert.equal(history.messages[1].content,'Respuesta de cocina.');
+ assert.doesNotMatch(JSON.stringify(f.conversations.docs),/data:image|base64/);
+ assert.equal(f.leads.docs.length,0);
+ const followUp={pregunta:'Era calabacita, no pepino',sessionId,requestId:randomUUID()};
+ assert.equal((await f.request(chat,{cookie,body:followUp})).status,200);
+ assert.match(f.ai[1].at(-2).content,/Respuesta de cocina/);
+ assert.doesNotMatch(JSON.stringify(f.ai[1]),/data:image/);
+});
+
+test('invalid image data is rejected before AI and follows the same origin rules',async t=>{
+ const f=await fixture(t),cookie=await f.bootstrap(),chat='/api/chef/public/chat?chef=eric';
+ const body={sessionId:randomUUID(),requestId:randomUUID(),pregunta:'Quiero una receta'};
+ const svg=Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"></svg>').toString('base64');
+ for(const photo of [null,'!',svg,'AAAA'.repeat(700000)])assert.equal((await f.request(chat,{cookie,body:{...body,photo}})).status,400);
+ assert.equal((await f.request(chat,{cookie,body:{...body,photo:svg},headers:{Origin:'https://otro.example'}})).status,403);
+ assert.equal(f.ai.length,0);assert.equal(f.conversations.docs.length,0);
+});
