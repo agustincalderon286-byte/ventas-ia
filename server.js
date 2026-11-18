@@ -12511,6 +12511,33 @@ function formatearCoachDemoKnownOutcome(value = "") {
   return labels[normalizarCoachDemoKnownOutcome(value)] || labels.unknown;
 }
 
+function resumirTextoDemo(texto, maxPalabras) {
+  if (typeof texto !== "string") return "";
+  const palabras = texto.trim().split(/\s+/);
+  if (palabras.length <= maxPalabras) return palabras.join(" ");
+  const fragmento = palabras.slice(0, maxPalabras).join(" ");
+  // Prefer a complete sentence when shortening an older report.
+  const frase = fragmento.match(/^(.+[.!?])(?:\s|$)/u);
+  return frase ? frase[1] : fragmento.replace(/[,;:]$/, "") + "…";
+}
+
+function resumirCoachDemoReport(report) {
+  const resumen = String(report.summary || "").split("\n").filter(linea =>
+    !linea.startsWith("REPORTE PARCIAL: hubo una interrupcion del audio.") &&
+    !linea.startsWith("Pausa sin audio: desde el minuto ")
+  ).join(" ");
+  const fortalezas = Array.isArray(report.strengths) ? report.strengths : [];
+  const pasos = Array.isArray(report.nextSteps) ? report.nextSteps : [];
+  const mejoras = Array.isArray(report.improvements) ? report.improvements : [];
+  const primero = opciones => opciones.find(texto => typeof texto === "string" && texto.trim());
+  return {
+    summary: resumirTextoDemo(resumen, 36),
+    strength: resumirTextoDemo(primero(fortalezas.map(item => item?.evidence)) || primero(fortalezas.map(item => item?.title)), 24),
+    nextStep: resumirTextoDemo(primero(pasos) || primero(mejoras.map(item => item?.recommendation)), 26),
+    partial: Boolean(report.partial || report.recordingGaps?.length || /^\[Parcial\]/i.test(report.title || ""))
+  };
+}
+
 function limpiarCoachDemoAnalysis(doc = null, options = {}) {
   if (!doc?._id) {
     return null;
@@ -12536,6 +12563,7 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
     durationSeconds: Math.max(0, Math.round(Number(doc.durationSeconds || 0))),
     chunkCount: Number(doc.chunkCount || chunks.length || 0),
     completedChunks,
+    brief: doc.status === "completed" && doc.report ? resumirCoachDemoReport(doc.report) : null,
     report: includeDetail ? doc.report || null : doc.report
       ? {
           title: doc.report.title || "Analisis de demostracion",
@@ -12749,14 +12777,21 @@ async function analizarCoachDemoTranscript({ transcript = "", knownOutcome = "un
             "hispanohablantes. Evalua solo lo que aparece en la transcripcion. Separa hechos de inferencias, no " +
             "inventes quien dijo una frase si no es claro y cita evidencia con parafrasis breves. Tu meta es ayudar " +
             "al representante a mejorar conexion, descubrimiento de necesidades, demostracion de valor, manejo de " +
-            "objeciones y cierre. Responde en espanol claro, directo, respetuoso y accionable."
+            "objeciones y cierre. Escribe en español natural. No incluyas datos personales en el resumen ni en las recomendaciones. " +
+            "Si falta audio, limita cada observación a los fragmentos disponibles. No deduzcas una venta ni un rechazo del silencio."
         },
         {
           role: "user",
           content:
             `Resultado indicado por el representante: ${outcomeLabel}.\n\n` +
             "Analiza la demostracion completa. Explica las razones probables del resultado, que hizo bien, que debe " +
-            "mejorar y que puede practicar antes de la proxima cita. Los marcadores de minuto son aproximados.\n\n" +
+            "mejorar y que puede practicar antes de la proxima cita. Los marcadores de minuto son aproximados. " +
+            "Para Mi actividad, usa un título corto y específico. En summary escribe hasta dos frases y 35 palabras: " +
+            "di qué buscaba el cliente y qué decidió o qué objeción quedó, solo si se escucha. " +
+            "En la primera fortaleza describe una conducta concreta del vendedor en hasta 20 palabras. " +
+            "Pon primero en nextSteps una acción concreta de hasta 22 palabras. Prioriza el seguimiento acordado si lo hubo, " +
+            "con su plazo si se mencionó; si es una sugerencia, redáctala como tal. Evita repetir el resumen. " +
+            "Si falta evidencia, deja vacía la lista correspondiente.\n\n" +
             `TRANSCRIPCION:\n${transcript}`
         }
       ],
@@ -34533,6 +34568,7 @@ export {
   construirPromptModo,
   construirImagenProductoCatalogoCoach,
   analizarCoachDemoTranscript,
+  limpiarCoachDemoAnalysis,
   construirCoachProgram414StartWindow,
   construirCoachProgramSheetWorkspaceQuery,
   construirCoachCrmLeadSeedOperation,

@@ -323,6 +323,34 @@
   grid-column: 1 / -1;
 }
 
+.coach-demo-brief {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.coach-demo-brief dt {
+  color: #0a3159;
+  font-weight: 750;
+}
+
+.coach-demo-brief dd,
+.coach-demo-history-item p {
+  margin: 3px 0 0;
+  color: #354b61;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.coach-demo-partial {
+  color: #784411;
+  font-weight: 700;
+}
+
+[data-demo-analysis-feedback]:empty {
+  margin: 0;
+}
+
 .coach-demo-transcript {
   margin-top: 14px;
   border-top: 1px solid #dce5ee;
@@ -383,7 +411,14 @@
 
 .coach-demo-history-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.coach-demo-history-item .coach-demo-history-state {
+  margin: 0;
+  color: #fff;
 }
 
 .coach-demo-history-actions button {

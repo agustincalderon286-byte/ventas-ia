@@ -16217,6 +16217,7 @@ function renderCoachDemoReport(root, analysis = null) {
   }
 
   const report = analysis.report || {};
+  const brief = analysis.brief || { summary: report.summary, partial: Boolean(report.partial || report.recordingGaps?.length) };
   const scores = report.scores || {};
   const scoreItems = [
     ["Conexion", scores.conexion],
@@ -16224,7 +16225,7 @@ function renderCoachDemoReport(root, analysis = null) {
     ["Presenta", scores.presentacion],
     ["Objeciones", scores.objeciones],
     ["Cierre", scores.cierre]
-  ];
+  ].filter(([, score]) => Number.isFinite(score));
   const renderSimpleList = items =>
     Array.isArray(items) && items.length
       ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
@@ -16238,11 +16239,26 @@ function renderCoachDemoReport(root, analysis = null) {
   root.innerHTML = `
     <div class="coach-demo-report-header">
       <div>
-        <div class="eyebrow">Reporte privado</div>
-        <h4>${escapeHtml(report.title || "Analisis de tu demostracion")}</h4>
+        <div class="eyebrow">Resumen de la visita</div>
+        <h4>${escapeHtml(report.title || "Demostración")}</h4>
+        <p>${escapeHtml(analysis.knownOutcome && analysis.knownOutcome !== "unknown" ? analysis.knownOutcomeLabel : "Resultado por confirmar")}</p>
+      </div>
+    </div>
+    ${brief.partial ? '<p class="coach-demo-partial">Resumen parcial · Faltan tramos de audio.</p>' : ""}
+    ${!brief.summary && !brief.strength && !brief.nextStep ? '<p class="mini-note">La grabación no aporta suficiente información para un resumen.</p>' : ""}
+    <dl class="coach-demo-brief">
+      ${[["Qué pasó", brief.summary], ["Qué funcionó", brief.strength], ["Próximo paso", brief.nextStep]]
+        .filter(([, value]) => value)
+        .map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+    </dl>
+    <details class="coach-demo-transcript">
+      <summary>Ver análisis completo</summary>
+      <div class="coach-demo-report-header">
+      <div>
+        <div class="eyebrow">Evaluación de la visita</div>
         <p>${escapeHtml(report.summary || "")}</p>
       </div>
-      <span class="coach-demo-score-pill">${Math.max(0, Math.min(100, Number(report.overallScore || 0)))}/100</span>
+      ${Number.isFinite(report.overallScore) ? `<span class="coach-demo-score-pill">${Math.max(0, Math.min(100, report.overallScore))}/100</span>` : ""}
     </div>
     <div class="coach-demo-score-grid">
       ${scoreItems
@@ -16329,13 +16345,14 @@ function renderCoachDemoReport(root, analysis = null) {
         <p>${escapeHtml(report.practiceScript || "")}</p>
       </section>
     </div>
-    <details class="coach-demo-transcript">
-      <summary>Ver transcripcion completa</summary>
-      <pre>${escapeHtml(analysis.transcript || "")}</pre>
+      <p class="mini-note">${escapeHtml(
+        report.disclaimer || "El análisis se basa en la transcripción de la visita."
+      )}</p>
     </details>
-    <p class="mini-note">${escapeHtml(
-      report.disclaimer || "Este analisis es una herramienta de entrenamiento y puede interpretar partes de forma imperfecta."
-    )}</p>
+    ${analysis.transcript ? `<details class="coach-demo-transcript">
+      <summary>Ver transcripción completa</summary>
+      <pre>${escapeHtml(analysis.transcript)}</pre>
+    </details>` : ""}
   `;
   root.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -16657,15 +16674,20 @@ function initCoachDemoRecorder() {
     }
   };
 
+  const feedback = document.querySelector("[data-demo-analysis-feedback]");
+  let requestedAnalysis = null;
   const loadAnalysis = async id => {
-    setRecorderMessage("Abriendo tu reporte...", "info");
+    const request = { id };
+    requestedAnalysis = request;
+    if (feedback) feedback.textContent = "Abriendo tu resumen…";
     try {
       const data = await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(id)}`);
+      if (request !== requestedAnalysis) return;
       currentReport.dataset.analysisId = id;
       renderCoachDemoReport(currentReport, data.analysis);
-      setRecorderMessage("Reporte listo.", "success");
+      if (feedback) feedback.textContent = "";
     } catch (error) {
-      setRecorderMessage(error.message, "error");
+      if (request === requestedAnalysis && feedback) feedback.textContent = error.message;
     }
   };
 
@@ -16674,30 +16696,29 @@ function initCoachDemoRecorder() {
       return;
     }
     if (!Array.isArray(analyses) || !analyses.length) {
-      list.innerHTML = '<p class="mini-note">Todavia no hay demostraciones analizadas.</p>';
+      list.innerHTML = '<p class="mini-note">Aquí aparecerá tu resumen cuando termines de grabar una demostración.</p>';
       return;
     }
     list.innerHTML = analyses
       .map(analysis => {
         const completed = analysis.status === "completed" && analysis.report;
+        const brief = completed ? analysis.brief : null;
         const stateLabel = completed
-          ? `${Number(analysis.report?.overallScore || 0)}/100`
-          : analysis.status === "error"
-            ? "Pendiente"
-            : analysis.status === "processing"
-              ? "Procesando"
-              : "Grabacion";
+          ? (brief?.partial ? "Resumen parcial" : "")
+          : ({ error: "Análisis pendiente", needs_audio: "Audio insuficiente", processing: "Procesando", recording: "Grabación iniciada" }[analysis.status] || "Pendiente");
         return `
           <article class="coach-demo-history-item">
             <div>
               <strong>${escapeHtml(analysis.report?.title || "Demostracion")}</strong>
               <span>${analysis.ownerName ? `${escapeHtml(analysis.ownerName)} · ` : ""}${escapeHtml(formatCoachDemoAnalysisDate(analysis.startedAt || analysis.createdAt))} · ${escapeHtml(
                 formatCoachDemoRecordingTime(analysis.durationSeconds)
-              )} · ${escapeHtml(analysis.knownOutcomeLabel || "Resultado pendiente")}</span>
+              )} · ${escapeHtml(analysis.knownOutcome && analysis.knownOutcome !== "unknown" ? analysis.knownOutcomeLabel : "Resultado por confirmar")}</span>
+              ${brief?.summary ? `<p>${escapeHtml(brief.summary)}</p>` : ""}
+              ${brief?.nextStep ? `<p><b>Próximo paso</b> · ${escapeHtml(brief.nextStep)}</p>` : ""}
             </div>
             <div class="coach-demo-history-actions">
-              <span class="coach-demo-history-state">${escapeHtml(stateLabel)}</span>
-              ${completed ? `<button type="button" data-demo-analysis-open="${escapeHtml(analysis.id)}">Abrir</button>` : ""}
+              ${stateLabel ? `<span class="coach-demo-history-state">${escapeHtml(stateLabel)}</span>` : ""}
+              ${completed ? `<button type="button" data-demo-analysis-open="${escapeHtml(analysis.id)}">Ver resumen</button>` : ""}
               ${analysis.canDelete ? `<button type="button" data-demo-analysis-delete="${escapeHtml(analysis.id)}">Eliminar</button>` : ""}
             </div>
           </article>`;
@@ -16845,13 +16866,15 @@ function initCoachDemoRecorder() {
     recoveryUrls = nextUrls;
     localRecovery.replaceChildren(fragment);
   };
+  let historyRequest = 0;
   const loadHistory = async () => {
-    await renderLocalRecovery().catch(() => null);
+    const request = ++historyRequest;
+    void renderLocalRecovery().catch(() => null);
     try {
       const data = await apiRequest("/api/coach/demo-analyses");
-      renderHistory(data.analyses || []);
+      if (request === historyRequest) renderHistory(data.analyses || []);
     } catch (error) {
-      if (list) {
+      if (request === historyRequest && list) {
         list.innerHTML = `<p class="mini-note">${escapeHtml(error.message)}</p>`;
       }
     }
@@ -16923,17 +16946,16 @@ function initCoachDemoRecorder() {
         await loadHistory();
         return;
       }
-      currentReport.dataset.analysisId = analysis?.id || state.sessionId;
       showAnalysisNotice({
-        title: autoStopped ? "La grabacion termino a los 90 minutos" : "Tu analisis esta listo",
-        copy: "Los segmentos completos quedaron enviados. Revísalo cuando hayas terminado con el cliente.",
+        title: autoStopped ? "La grabación terminó a los 90 minutos" : "Tu resumen está listo",
+        copy: "Guardado en Mi actividad, en Mis demostraciones.",
         analysisId: analysis?.id || state.sessionId,
         ready: true
       });
       setRecorderMessage(
         autoStopped
-          ? "Llegaste a 90 minutos. El reporte quedo guardado en Mis analisis."
-          : "Reporte guardado en Mis analisis de demostracion.", "success"
+          ? "Llegaste a 90 minutos. El resumen quedó guardado en Mi actividad."
+          : "Resumen guardado en Mi actividad.", "success"
       );
       await loadHistory();
     } catch (error) {
@@ -17134,13 +17156,14 @@ function initCoachDemoRecorder() {
       }
       try {
         await apiRequest(`/api/coach/demo-analyses/${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (requestedAnalysis?.id === id) requestedAnalysis = null;
         if (currentReport.dataset.analysisId === id) {
           renderCoachDemoReport(currentReport, null);
         }
         await loadHistory();
-        setRecorderMessage("Analisis eliminado.", "success");
+        if (feedback) feedback.textContent = "Demostración eliminada.";
       } catch (error) {
-        setRecorderMessage(error.message, "error");
+        if (feedback) feedback.textContent = error.message;
       }
     }
   });
@@ -17160,7 +17183,7 @@ function initCoachDemoRecorder() {
       analysisNotice.hidden = true;
       loadHistory();
     } else if (recovered?.id && recovered.status === "completed" && recovered.report) {
-      showAnalysisNotice({ title: "Tu analisis esta listo", copy: "La grabación pendiente se recuperó y el reporte quedó guardado.", analysisId: recovered.id, ready: true });
+      showAnalysisNotice({ title: "Tu resumen está listo", copy: "Recuperamos la grabación. El resumen está en Mi actividad.", analysisId: recovered.id, ready: true });
       loadHistory();
     } else renderLocalRecovery().catch(() => null);
   });

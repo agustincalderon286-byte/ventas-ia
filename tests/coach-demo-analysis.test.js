@@ -6,6 +6,7 @@ process.env.NODE_ENV = "test";
 const {
   analizarCoachDemoTranscript,
   extraerCoachDemoResponseText,
+  limpiarCoachDemoAnalysis,
   formatearCoachDemoKnownOutcome,
   normalizarCoachDemoKnownOutcome
 } = await import("../server.js");
@@ -75,5 +76,55 @@ test("solicita a OpenAI un reporte estricto y estructurado", async () => {
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.OPENAI_API_KEY;
+  }
+});
+
+const recordedDemo = {
+  _id: "demo-prueba",
+  ownerUserId: "vendedor",
+  status: "completed",
+  knownOutcome: "follow_up",
+  transcript: "TRANSCRIPCIÓN PRIVADA DE PRUEBA",
+  chunks: [{ status: "transcribed", text: "Fragmento privado" }],
+  report: {
+    title: "Seguimiento de la mensualidad",
+    summary: "El cliente preguntó por la mensualidad. Acordaron revisar las opciones el viernes.",
+    strengths: [{ title: "Escucha", evidence: "Preguntaste qué mensualidad le quedaba cómoda." }],
+    nextSteps: ["Llama el viernes con las dos opciones acordadas."],
+    improvements: [{ recommendation: "Practica cómo explicar las dos opciones." }]
+  }
+};
+
+test("el historial y el detalle dan el mismo resumen y solo el detalle lleva la transcripción", () => {
+  const history = limpiarCoachDemoAnalysis(recordedDemo);
+  const detail = limpiarCoachDemoAnalysis(recordedDemo, { includeDetail: true });
+  assert.deepEqual(history.brief, detail.brief);
+  assert.deepEqual(history.brief, { summary: recordedDemo.report.summary, strength: recordedDemo.report.strengths[0].evidence,
+    nextStep: recordedDemo.report.nextSteps[0], partial: false });
+  assert.equal(history.knownOutcomeLabel, "Seguimiento");
+  assert.equal(history.transcript, "");
+  assert.deepEqual(history.chunks, []);
+  assert.equal(detail.transcript, recordedDemo.transcript);
+  assert.deepEqual(detail.report, recordedDemo.report);
+});
+
+test("un reporte anterior con pausas mantiene el aviso separado del resumen y recupera una recomendación", () => {
+  const report = { title: "[Parcial] Batería", summary: "Pausa sin audio: desde el minuto 3.1, durante 40 segundos.\n\nREPORTE PARCIAL: hubo una interrupcion del audio. Solo se evaluan los segmentos disponibles.\n\n" + recordedDemo.report.summary,
+    nextSteps: ["  "], strengths: [{ title: "Escucha" }], improvements: recordedDemo.report.improvements };
+  const detail = limpiarCoachDemoAnalysis({ ...recordedDemo, knownOutcome: "unknown", report }, { includeDetail: true });
+  assert.equal(detail.brief.summary, recordedDemo.report.summary);
+  assert.equal(detail.brief.partial, true);
+  assert.equal(detail.brief.strength, "Escucha");
+  assert.equal(detail.brief.nextStep, recordedDemo.report.improvements[0].recommendation);
+  assert.equal(detail.knownOutcome, "unknown");
+  assert.equal(detail.report.summary, report.summary);
+});
+
+test("acota los informes largos y evita recomendaciones o resultados ficticios cuando falta información", () => {
+  const summary = "El cliente pidió comparar dos opciones. " + "Palabra ".repeat(80);
+  const saved = limpiarCoachDemoAnalysis({ ...recordedDemo, report: { summary, recordingGaps: [{}] } });
+  assert.deepEqual(saved.brief, { summary: "El cliente pidió comparar dos opciones.", strength: "", nextStep: "", partial: true });
+  for (const status of ["processing", "needs_audio", "error"]) {
+    assert.equal(limpiarCoachDemoAnalysis({ ...recordedDemo, status }).brief, null);
   }
 });
