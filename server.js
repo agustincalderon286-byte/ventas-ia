@@ -1269,7 +1269,8 @@ const coachDemoAnalysisChunkSchema = new mongoose.Schema(
     languages: [String],
     error: String,
     uploadedAt: Date,
-    transcribedAt: Date
+    transcribedAt: Date,
+    lastAudioRetryId: String
   },
   { _id: false }
 );
@@ -12548,6 +12549,11 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
   const ownerUserId = String(doc.ownerUserId || "");
   const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
   const completedChunks = chunks.filter(chunk => chunk?.status === "transcribed" && chunk?.text).length;
+  // Older reports saved only the duration of segments containing speech.
+  const included = doc.report?.includedChunkIndexes;
+  const knownSelection = !doc.report?.partial || Array.isArray(included);
+  const recordedSeconds = doc.status === "completed" && knownSelection
+    ? duracionSegmentosCoachDemo(chunks, included) : null;
 
   return {
     id: String(doc._id),
@@ -12560,7 +12566,7 @@ function limpiarCoachDemoAnalysis(doc = null, options = {}) {
     knownOutcomeLabel: formatearCoachDemoKnownOutcome(doc.knownOutcome || "unknown"),
     startedAt: doc.startedAt || null,
     stoppedAt: doc.stoppedAt || null,
-    durationSeconds: Math.max(0, Math.round(Number(doc.durationSeconds || 0))),
+    durationSeconds: recordedSeconds ?? Math.max(0, Math.round(Number(doc.durationSeconds || 0))),
     chunkCount: Number(doc.chunkCount || chunks.length || 0),
     completedChunks,
     brief: doc.status === "completed" && doc.report ? resumirCoachDemoReport(doc.report) : null,
@@ -31644,6 +31650,15 @@ async function withCoachDemoMutation(key, action) {
   finally { if (coachDemoMutations.get(key) === task) coachDemoMutations.delete(key); }
 }
 
+function duracionSegmentosCoachDemo(chunks, included) {
+  const selected = chunks.filter(chunk => chunk?.status === "transcribed" &&
+    (!Array.isArray(included) || included.includes(Number(chunk.index))));
+  if (!selected.length || selected.some(chunk => !Number.isFinite(chunk.durationSeconds) || chunk.durationSeconds <= 0)) {
+    return null;
+  }
+  return Math.min(COACH_DEMO_MAX_SECONDS, Math.round(selected.reduce((total, chunk) => total + chunk.durationSeconds, 0)));
+}
+
 app.post("/api/coach/demo-analyses", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -31746,10 +31761,18 @@ app.post(
       }
 
       const previousChunk = doc.chunks.find(chunk => Number(chunk.index) === index);
-      // A lost receipt must remain retryable even after /complete succeeded.
-      // Silence is also a successfully transcribed segment (with empty text).
-      const retryEmpty = req.headers["x-coach-retry-empty"] === "1" && !String(previousChunk?.text || "").trim();
-      if (previousChunk?.status === "transcribed" && !retryEmpty) {
+      // A manual retry belongs to one review and may span several segments.
+      // A lost receipt for an accepted segment must never cause a second charge.
+      const retryRequested = req.headers["x-coach-retry-empty"] === "1";
+      const clientRetryId = req.headers["x-coach-retry-id"];
+      if (clientRetryId !== undefined && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientRetryId)) {
+        return responderCoachError(res, 400, "El identificador del reintento de audio no es válido.");
+      }
+      // Older installed clients have no ID. Their attempt begins at the last /complete.
+      const retryId = retryRequested && doc.status === "needs_audio"
+        ? clientRetryId || "legacy:" + (doc.stoppedAt?.getTime() || 0) : "";
+      const retranscribe = retryId && previousChunk?.lastAudioRetryId !== retryId;
+      if (previousChunk?.status === "transcribed" && !retranscribe) {
         return res.json({
           ok: true,
           duplicate: true,
@@ -31792,11 +31815,13 @@ app.post(
           languages: transcription.languages,
           error: "",
           uploadedAt: now,
-          transcribedAt: new Date()
+          transcribedAt: new Date(),
+          ...(retryId ? { lastAudioRetryId: retryId } : {})
         });
         doc.durationSeconds = otherDuration + durationSeconds;
         doc.chunkCount = doc.chunks.length;
-        doc.status = "recording";
+        // Keep every segment eligible for this review until /complete is called.
+        doc.status = retryId ? "needs_audio" : "recording";
         doc.error = "";
         doc.updatedAt = new Date();
         await doc.save();
@@ -31812,7 +31837,8 @@ app.post(
         });
       } catch (error) {
         doc.chunks = doc.chunks.filter(chunk => Number(chunk.index) !== index);
-        doc.chunks.push({
+        // Keep the last successful transcription when the provider fails on a retry.
+        doc.chunks.push(previousChunk?.status === "transcribed" ? previousChunk : {
           index,
           durationSeconds,
           mimeType,
@@ -31895,13 +31921,14 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
       return responderCoachError(res, 409, "Todavia hay segmentos pendientes de transcribir. La grabacion se conserva para reintentar.");
     }
 
-    let elapsedSeconds = 0;
+    const recordedSeconds = duracionSegmentosCoachDemo(doc.chunks, partial ? included : null);
+    if (recordedSeconds !== null) doc.durationSeconds = recordedSeconds;
+    doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
     let transcript = successfulChunks
       .map(chunk => {
         const precedingSeconds = doc.chunks.filter(other => Number(other.index) < Number(chunk.index))
           .reduce((total, other) => total + Math.max(0, Number(other.durationSeconds || 0)), 0);
         const startMinute = Math.floor(precedingSeconds / 60);
-        elapsedSeconds += Math.max(1, Number(chunk.durationSeconds || 0));
         const endMinute = Math.max(startMinute + 1, Math.ceil((precedingSeconds + Number(chunk.durationSeconds || 0)) / 60));
         return `[Segmento ${Number(chunk.index) + 1}; minutos aproximados ${startMinute}-${endMinute}]\n${String(chunk.text || "").trim()}`;
       })
@@ -31926,9 +31953,7 @@ app.post("/api/coach/demo-analyses/:id/complete", async (req, res) => {
     const gapNotice = rawGaps.map(gap => `Pausa sin audio: desde el minuto ${(gap.offsetSeconds / 60).toFixed(1)}, durante ${Math.round(gap.durationSeconds)} segundos.`).join("\n");
     if (gapNotice) transcript = `${gapNotice}\nLos minutos de los segmentos son aproximados y no incluyen necesariamente estos intervalos.\n\n${transcript}`;
     doc.status = "processing";
-    doc.knownOutcome = normalizarCoachDemoKnownOutcome(req.body?.knownOutcome || doc.knownOutcome || "unknown");
     doc.stoppedAt = new Date();
-    doc.durationSeconds = Math.min(COACH_DEMO_MAX_SECONDS, elapsedSeconds);
     doc.transcript = transcript;
     doc.error = "";
     doc.updatedAt = new Date();

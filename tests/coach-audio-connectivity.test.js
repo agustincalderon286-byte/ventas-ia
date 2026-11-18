@@ -66,9 +66,9 @@ test("local audio stays available even after a transcription receipt, until the 
   let payload = {}, httpStatus = 200, deletes = 0;
   const upload = vm.runInNewContext(`(${body.trim()})`, {
     fetch: async () => ({ ok: httpStatus === 200, status: httpStatus, json: async () => payload }),
-    tecOfflineDelete: async () => { deletes++; }
+    tecOfflineDelete: async () => { deletes++; }, tecOfflineGet: async () => null, tecOfflinePut: async () => {}
   });
-  const chunk = { key: "local:0000", mimeType: "audio/mp4", blob: new Blob(["fictional audio"]), durationSeconds: 10 };
+  const chunk = { index: 0, key: "local:0000", mimeType: "audio/mp4", blob: new Blob(["fictional audio"]), durationSeconds: 10 };
   await assert.rejects(upload("session", chunk), error => error.status === 502);
   assert.equal(deletes, 0);
   httpStatus = 401; payload = { error: "Session ended" };

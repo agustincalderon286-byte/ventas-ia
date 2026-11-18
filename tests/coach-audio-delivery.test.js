@@ -159,22 +159,24 @@ test('actual client sync recovers lost upload and report responses, clears pendi
   const client = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
   let local = { localId: 'local', serverSessionId: id, ownerEmail: 'test@example.invalid', consentConfirmed: true, status: 'ready', protectedChunks: 2 };
   const chunks = new Map([0, 1].map(index => [String(index), { key: String(index), index, durationSeconds: 240, mimeType: 'audio/mp4', blob: new Blob([`audio-${index}`.padEnd(64, '.')]) }]));
-  const events = [];
+  const events = [], uploadIndices = [], receipts = new Map();
   let loseChunkReceipt = true, loseReportReceipt = true;
   const ctx = vm.createContext({
     navigator: { onLine: true }, Blob, AbortController, CustomEvent, tecActiveRecordingIds: new Set(),
     window: { setTimeout, clearTimeout, dispatchEvent: event => events.push(event) },
     fetch: async (url, options) => {
+      if (url.endsWith('/chunks')) uploadIndices.push(options.headers['X-Coach-Chunk-Index']);
       const response = await fetch(base + url.replace('/api/coach/demo-analyses', ''), options);
       if (url.endsWith('/chunks') && loseChunkReceipt) { loseChunkReceipt = false; throw new TypeError('Lost upload response'); }
       if (url.endsWith('/complete') && loseReportReceipt) { loseReportReceipt = false; throw new TypeError('Lost report response'); }
       return response;
     },
-    tecOfflineGet: async () => local,
+    tecOfflineGet: async (store, key) => store === 'cache' ? receipts.get(key) : local,
+    tecOfflinePut: async (store, item) => { assert.equal(store, 'cache'); receipts.set(item.key, item); },
     getTecCachedViewer: async () => ({ user: { email: 'test@example.invalid' } }),
     getTecAudioTail: async () => [], getTecOfflineAudioChunks: async () => [...chunks.values()],
     saveTecOfflineRecording: async value => (local = { ...local, ...value }),
-    tecOfflineDelete: async (store, key) => { if (store === 'recordings') local = null; else chunks.delete(key); }
+    tecOfflineDelete: async (store, key) => { if (store === 'recordings') local = null; else if (store === 'cache') receipts.delete(key); else chunks.delete(key); }
   });
   vm.runInContext(client.slice(0, client.indexOf('\nconst ')) +
     client.slice(client.indexOf('async function uploadTecStoredAudioChunk'), client.indexOf('async function syncTecOfflineRecording(localId')) +
@@ -188,6 +190,8 @@ test('actual client sync recovers lost upload and report responses, clears pendi
   const recovered = await sync();
   assert.equal(recovered.id, id); assert.equal(local, null); assert.equal(chunks.size, 0);
   assert.equal(events.at(-1).detail.analysis.id, id);
+  assert.deepEqual(uploadIndices, ['0', '0', '1']); // Only the lost receipt caused an extra upload.
+  assert.equal(receipts.size, 0);
   assert.deepEqual(counts, { transcriptions: 2, reports: 1 });
 }));
 
@@ -235,4 +239,80 @@ test('transcription rejects malformed success responses rather than silently acc
   assert.equal(form.get('response_format'), 'json');
   payload = { text: '' }; assert.equal((await transcribe(Buffer.from('fictional'))).text, '');
   payload = { text: ' Texto de prueba ' }; assert.equal((await transcribe(Buffer.from('fictional'))).text, 'Texto de prueba');
+});
+
+test('a reviewed multi-segment short recording retranscribes each segment once per explicit attempt', () => harness(async ({ create, chunk, request, counts, records }) => {
+  const id = await create();
+  await chunk(id, 0);
+  await chunk(id, 1);
+  const initial = records.get(id);
+  initial.chunks[0].text = 'Sí, claro.';
+  initial.chunks[1].text = 'El viernes.';
+  const complete = () => request(`/${id}/complete`, { expectedChunkIndexes: [0, 1], knownOutcome: 'follow_up', audioReviewVersion: 1 });
+  const review = (await complete()).data.analysis;
+  assert.equal(review.status, 'needs_audio');
+  assert.equal(review.knownOutcome, 'follow_up');
+  assert.equal(review.durationSeconds, 480);
+  const retry = { 'X-Coach-Retry-Empty': '1', 'X-Coach-Retry-Id': 'retry-dialogue-1' };
+  const [first, duplicate] = await Promise.all([chunk(id, 0, retry), chunk(id, 0, retry)]);
+  assert.equal(first.status, 200);
+  assert.equal(duplicate.data.duplicate, true);
+  assert.equal((await chunk(id, 1, retry)).status, 200);
+  assert.equal(counts.transcriptions, 4);
+  assert.equal((await complete()).data.analysis.status, 'completed');
+  assert.deepEqual(counts, { transcriptions: 4, reports: 1 });
+  const completed = structuredClone(records.get(id));
+  assert.equal((await chunk(id, 0, { ...retry, 'X-Coach-Retry-Id': 'later-attempt' })).data.duplicate, true);
+  assert.deepEqual(records.get(id), completed);
+  assert.deepEqual(counts, { transcriptions: 4, reports: 1 });
+}));
+
+test('recorded duration includes silent audio and partial reports count only included segments', () => harness(async ({ create, chunk, request, records }) => {
+  const capture = async () => {
+    const id = await create();
+    for (const [index, seconds] of [40, 20, 10].entries()) {
+      await chunk(id, index, { 'X-Coach-Chunk-Duration': String(seconds) });
+    }
+    records.get(id).chunks[0].text = '';
+    return id;
+  };
+  const full = await capture();
+  const result = (await request(`/${full}/complete`)).data.analysis;
+  assert.equal(result.durationSeconds, 70);
+  assert.doesNotMatch(result.transcript, /Segmento 1;/);
+  const partial = await capture();
+  const selected = (await request(`/${partial}/complete`, { allowPartial: true, includedChunkIndexes: [0, 2] })).data.analysis;
+  assert.equal(selected.durationSeconds, 50);
+  assert.doesNotMatch(selected.transcript, /Segmento [12];/);
+  assert.match(selected.transcript, /Segmento 3;/);
+}));
+
+test("el recibo evita enviar o leer dos veces el audio nativo y cada reintento manual tiene identidad propia", async () => {
+  const client = readFileSync(new URL('../public/coach/app.js', import.meta.url), 'utf8');
+  const uploadSource = client.slice(client.indexOf('async function uploadTecStoredAudioChunk'), client.indexOf('async function syncTecOfflineRecording(localId'));
+  const receipts = new Map(), sent = [];
+  let reads = 0, wrongIndex = false;
+  const upload = vm.runInNewContext(`(${uploadSource.trim()})`, {
+    window: { TecNativeOffline: {} },
+    tecOfflineGet: async (_store, key) => receipts.get(key),
+    tecOfflinePut: async (_store, item) => receipts.set(item.key, item),
+    materializeTecAudioBlob: async value => { reads++; assert.ok(value.nativeKey); return new Blob(['audio']); },
+    fetch: async (_url, options) => {
+      sent.push(options.headers);
+      return Response.json({ ok: true, chunk: { index: wrongIndex ? 1 : 0, status: 'transcribed' } });
+    }
+  });
+  const chunk = { index: 0, durationSeconds: 10, blob: { size: 50, nativeKey: 'original' } };
+  await upload('first', chunk);
+  await upload('first', chunk); // Normal completion reuses the live upload receipt.
+  await upload('first', chunk, { retryId: 'retry-one' });
+  await upload('first', chunk, { retryId: 'retry-one' }); // Recovery of the same retry.
+  await upload('first', chunk, { retryId: 'retry-two' }); // New tap after insufficient dialogue.
+  wrongIndex = true;
+  await assert.rejects(upload('second', chunk), error => error.status === 502);
+  wrongIndex = false;
+  await upload('second', chunk);
+  assert.deepEqual(sent.map(h => h['X-Coach-Retry-Id']), [undefined, 'retry-one', 'retry-two', undefined, undefined]);
+  assert.equal(sent[1]['X-Coach-Retry-Empty'], '1');
+  assert.equal(reads, sent.length);
 });

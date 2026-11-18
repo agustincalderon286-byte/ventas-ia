@@ -128,3 +128,17 @@ test("acota los informes largos y evita recomendaciones o resultados ficticios c
     assert.equal(limpiarCoachDemoAnalysis({ ...recordedDemo, status }).brief, null);
   }
 });
+
+test('los resúmenes históricos recuperan la duración de los segmentos silenciosos y respetan la selección parcial', () => {
+  const old = { ...recordedDemo, durationSeconds: 20, chunks: [
+    { index: 0, status: 'transcribed', text: '', durationSeconds: 40 },
+    { index: 1, status: 'transcribed', text: 'Hubo una conversación.', durationSeconds: 20 },
+    { index: 2, status: 'transcribed', text: '', durationSeconds: 10 }
+  ] };
+  assert.equal(limpiarCoachDemoAnalysis(old).durationSeconds, 70);
+  assert.equal(limpiarCoachDemoAnalysis(old, { includeDetail: true }).durationSeconds, 70);
+  assert.equal(limpiarCoachDemoAnalysis({ ...old, report: { partial: true, includedChunkIndexes: [0, 1] } }).durationSeconds, 60);
+  assert.equal(limpiarCoachDemoAnalysis({ ...old, report: { partial: true } }).durationSeconds, 20);
+  assert.equal(limpiarCoachDemoAnalysis({ ...old, chunks: [] }).durationSeconds, 20);
+  assert.equal(limpiarCoachDemoAnalysis({ ...old, chunks: [{status: 'transcribed'}] }).durationSeconds, 20);
+});

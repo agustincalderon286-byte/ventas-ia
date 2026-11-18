@@ -767,7 +767,14 @@ async function holdTecRecordingLock(localId) {
   });
 }
 
-async function uploadTecStoredAudioChunk(serverSessionId, chunk, { retryEmpty = false } = {}) {
+async function uploadTecStoredAudioChunk(serverSessionId, chunk, { retryId = "" } = {}) {
+  // Store receipts separately from the audio. Native copies can remain on disk
+  // without decoding or rewriting their binary contents.
+  const receiptKey = `demo-audio-receipts:${serverSessionId}`;
+  const receipt = await tecOfflineGet("cache", receiptKey).catch(() => null);
+  const confirmed = receipt?.confirmed || {};
+  if (Object.hasOwn(confirmed, chunk.index) && (!retryId || confirmed[chunk.index] === retryId)) return;
+
   const response = await fetch(`/api/coach/demo-analyses/${encodeURIComponent(serverSessionId)}/chunks`, {
     method: "POST",
     credentials: "same-origin",
@@ -775,7 +782,7 @@ async function uploadTecStoredAudioChunk(serverSessionId, chunk, { retryEmpty = 
       "Content-Type": chunk.mimeType || chunk.blob?.type || "audio/webm",
       "X-Coach-Chunk-Index": String(chunk.index),
       "X-Coach-Chunk-Duration": String(Math.max(1, Math.round(Number(chunk.durationSeconds || 0)))),
-      ...(retryEmpty ? { "X-Coach-Retry-Empty": "1" } : {})
+      ...(retryId ? { "X-Coach-Retry-Empty": "1", "X-Coach-Retry-Id": retryId } : {})
     },
     body: globalThis.window?.TecNativeOffline ? await materializeTecAudioBlob(chunk.blob) : chunk.blob
   });
@@ -785,12 +792,12 @@ async function uploadTecStoredAudioChunk(serverSessionId, chunk, { retryEmpty = 
     error.status = response.status;
     throw error;
   }
-  if (data.ok !== true || data.chunk?.status !== "transcribed") {
+  if (data.ok !== true || data.chunk?.status !== "transcribed" || data.chunk.index !== chunk.index) {
     throw Object.assign(new Error("El servidor no confirmó la transcripción del segmento. La copia local se conserva."), { status: 502 });
   }
-  // Keep the original bytes until a complete report is acknowledged. An empty
-  // transcript or a failed analysis must not destroy the user's only audio copy.
-  return data;
+  // An unavailable receipt store can cost another upload on recovery. The
+  // server deduplicates it, and we never discard the original audio here.
+  await tecOfflinePut("cache", { key: receiptKey, confirmed: { ...confirmed, [chunk.index]: retryId } }).catch(() => null);
 }
 
 async function syncTecOfflineRecording(localId = "") {
@@ -825,7 +832,9 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
     return null;
   }
 
-  recording = await saveTecOfflineRecording({ ...recording, status: "syncing" });
+  // Older clients persisted the retry flag without an operation ID.
+  const retryId = recording.retryEmpty ? recording.retryId || createTecOfflineId("retranscripcion") : "";
+  recording = await saveTecOfflineRecording({ ...recording, status: "syncing", retryId });
 
   let failureStage = "session";
   try {
@@ -860,7 +869,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
     const includedChunks = chunks.filter(chunk => (chunk.blob?.size || 0) >= 32);
     if (partial && !includedChunks.length) throw Object.assign(new Error("No hay segmentos válidos en este dispositivo para analizar."), { status: 422, captureInterrupted: true });
     for (const chunk of includedChunks) {
-      await uploadTecStoredAudioChunk(recording.serverSessionId, chunk, { retryEmpty: recording.retryEmpty === true });
+      await uploadTecStoredAudioChunk(recording.serverSessionId, chunk, { retryId });
     }
 
     failureStage = "analysis";
@@ -880,7 +889,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
       }
     );
     if (completed.analysis?.id === recording.serverSessionId && completed.analysis.status === "needs_audio") {
-      await saveTecOfflineRecording({ ...recording, status: "needs-audio", retryEmpty: false,
+      await saveTecOfflineRecording({ ...recording, status: "needs-audio", retryEmpty: false, retryId: "",
         lastError: completed.analysis.error || "No se obtuvo suficiente diálogo para analizar.", lastStatus: 0 });
       window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { recordingId: localId, analysis: completed.analysis } }));
       return completed.analysis;
@@ -894,10 +903,16 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
     } else {
       for (const chunk of chunks) await tecOfflineDelete("audioChunks", chunk.key);
       await tecOfflineDelete("recordings", localId);
+      await tecOfflineDelete("cache", `demo-audio-receipts:${recording.serverSessionId}`).catch(() => null);
     }
     window.dispatchEvent(new CustomEvent("tec:offline-status", { detail: { synced: 1, recordingId: localId, analysis: completed.analysis } }));
     return completed.analysis || null;
   } catch (error) {
+    // The server can explicitly report missing transcriptions. Let the next
+    // sync recover them from the original audio even if a local receipt exists.
+    if (failureStage === "analysis" && error.status === 409) {
+      await tecOfflineDelete("cache", `demo-audio-receipts:${recording.serverSessionId}`).catch(() => null);
+    }
     await saveTecOfflineRecording({
       ...recording,
       status: error.captureInterrupted || error.status === 422 ? "needs-review" : "ready",
@@ -16365,6 +16380,8 @@ function initCoachDemoRecorder() {
 
   const consent = root.querySelector("[data-demo-recorder-consent]");
   const outcome = document.querySelector("[data-demo-recorder-outcome]");
+  consent.checked = false;
+  outcome.value = "unknown";
   const startButton = root.querySelector("[data-demo-recorder-start]");
   const stopButton = document.querySelector("[data-demo-recorder-stop]");
   const resumeButton = document.querySelector("[data-demo-recorder-resume]");
@@ -16436,14 +16453,22 @@ function initCoachDemoRecorder() {
     if (recorderState) recorderState.textContent = state.capturePaused ? "Grabación pausada" : state.verifyingResume ? "Verificando micrófono…" : "Grabando demostración";
   };
 
-  const showAnalysisNotice = ({ title, copy, analysisId = "", ready = false } = {}) => {
+  const showAnalysisNotice = ({ title, copy, analysisId = "", reviewId = "", ready = false } = {}) => {
     analysisNotice.hidden = false;
     analysisNotice.dataset.analysisId = analysisId;
-    analysisNotice.dataset.state = ready ? "ready" : "processing";
+    analysisNotice.dataset.reviewId = reviewId;
+    analysisNotice.dataset.state = ready || reviewId ? "ready" : "processing";
     analysisNoticeTitle.textContent = title || "Preparando tu analisis";
     analysisNoticeCopy.textContent = copy || "Puedes continuar con el cierre mientras terminamos.";
-    analysisNoticeOpen.hidden = !ready || !analysisId;
+    analysisNoticeOpen.hidden = !reviewId && (!ready || !analysisId);
+    analysisNoticeOpen.textContent = reviewId ? "Revisar audio" : "Ver resumen";
   };
+
+  const showAudioReviewNotice = reviewId => showAnalysisNotice({
+    title: "Hay poco diálogo para preparar el resumen",
+    copy: "El audio está guardado en este dispositivo. Puedes escucharlo y volver a transcribirlo.",
+    reviewId
+  });
 
   const releaseWakeLock = async () => {
     if (state.wakeLock) {
@@ -16522,24 +16547,11 @@ function initCoachDemoRecorder() {
     let lastError = null;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
-        const response = await fetch(`/api/coach/demo-analyses/${encodeURIComponent(state.sessionId)}/chunks`, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": blob.type || "audio/webm",
-            "X-Coach-Chunk-Index": String(index),
-            "X-Coach-Chunk-Duration": String(Math.max(1, Math.round(durationSeconds)))
-          },
-          body: blob
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw Object.assign(new Error(data.error || "No pude subir un fragmento."), { status: response.status });
-        if (data.ok !== true || data.chunk?.status !== "transcribed") throw Object.assign(new Error("El servidor no confirmó la transcripción del segmento. La copia local se conserva."), { status: 502 });
-        // The local original is removed only after /complete confirms a report.
+        await uploadTecStoredAudioChunk(state.sessionId, { blob, durationSeconds, index });
         chunkStatus.textContent = `${state.uploadedChunks} fragmento${state.uploadedChunks === 1 ? "" : "s"} protegido${
           state.uploadedChunks === 1 ? "" : "s"
         }`;
-        return data;
+        return;
       } catch (error) {
         lastError = error;
         await saveTecOfflineRecording({ localId: state.localSessionId,
@@ -16737,6 +16749,7 @@ function initCoachDemoRecorder() {
     const fragment = document.createDocumentFragment();
     for (const row of rows) {
       const card = document.createElement("section");
+      card.dataset.recordingId = row.localId;
       const title = document.createElement("h4");
       title.textContent = "Audio guardado en este dispositivo";
       const copy = document.createElement("p");
@@ -16822,7 +16835,7 @@ function initCoachDemoRecorder() {
             download.className = "secondary-button";
             card.append(player, download);
           }
-          if (!finalized.length && row.status === "needs-audio") copy.textContent = "La transcripción de esta grabación anterior quedó vacía y no hay una copia de audio disponible en este dispositivo. Inicia una nueva demostración; esta ya no se reintentará automáticamente.";
+          if (!finalized.length && row.status === "needs-audio") copy.textContent = "La transcripción anterior no contiene suficiente diálogo y no hay una copia de audio disponible en este dispositivo. Inicia una nueva demostración; esta ya no se reintentará automáticamente.";
         }
         const partialRecovery = Boolean(invalid.length || tail.length || row.interruptionReason || ["needs-review", "recording"].includes(row.status));
         const hasComplete = finalized.some(chunk => (chunk.blob?.size || 0) >= 32) ||
@@ -16846,15 +16859,23 @@ function initCoachDemoRecorder() {
             const prepared = await withTecRecordingLock(row.localId, async () => {
               const current = await tecOfflineGet("recordings", row.localId);
               if (!current || current.ownerEmail !== email || tecActiveRecordingIds.has(row.localId)) return null;
-              return saveTecOfflineRecording({ ...current, status: "ready", analyzeCompletePartsOnly: partialRecovery, retryEmpty: row.status === "needs-audio" });
+              if (current.status !== row.status || ["synced", "partial-synced"].includes(current.status)) return null;
+              const retry = current.status === "needs-audio";
+              return saveTecOfflineRecording({
+                ...current, status: "ready", analyzeCompletePartsOnly: partialRecovery,
+                retryEmpty: retry || current.retryEmpty === true,
+                retryId: retry ? createTecOfflineId("retranscripcion") : current.retryId || ""
+              });
             });
             if (!prepared) throw new Error("La grabación está abierta en otra ventana. Ciérrala antes de continuar.");
             const analysis = await syncTecOfflineRecording(row.localId);
             if (!analysis) throw new Error("El envío sigue en otra ventana. Tu copia local se conserva.");
-            if (analysis.status === "needs_audio") { setRecorderMessage("No se obtuvo suficiente diálogo. Puedes escuchar la copia disponible en Revisar audio.", "info"); await loadHistory(); return; }
-            setRecorderMessage(partialRecovery ? "Análisis parcial listo: no incluye los tramos vacíos o interrumpidos." : "Análisis recuperado.", "success");
+            if (feedback) feedback.textContent = analysis.status === "needs_audio"
+              ? "La nueva transcripción sigue teniendo poco diálogo. Escucha el audio para comprobar qué quedó grabado."
+              : partialRecovery ? "El resumen parcial está listo." : "El resumen está listo.";
+
             await loadHistory();
-          } catch (error) { setRecorderMessage(error.message, "error"); }
+          } catch (error) { if (feedback) feedback.textContent = error.message; }
           finally { button.disabled = false; }
         });
         card.append(button);
@@ -16885,6 +16906,8 @@ function initCoachDemoRecorder() {
       return;
     }
 
+    const knownOutcome = outcome.value || "unknown";
+    outcome.value = "unknown";
     state.recording = false;
     state.processing = true;
     state.captureMonitor?.dispose();
@@ -16913,7 +16936,7 @@ function initCoachDemoRecorder() {
         interruptionReason: state.interruptionReason,
         recordingGaps: state.recordingGaps,
         analyzeCompletePartsOnly: Boolean(state.recordingGaps.length),
-        knownOutcome: outcome.value || "unknown",
+        knownOutcome,
         stoppedAt: new Date().toISOString()
       });
       tecActiveRecordingIds.delete(state.localSessionId);
@@ -16941,7 +16964,7 @@ function initCoachDemoRecorder() {
       const analysis = await syncTecOfflineRecording(state.localSessionId);
       if (!analysis) throw new Error("El envío está pendiente o abierto en otra ventana. La copia local se conserva.");
       if (analysis.status === "needs_audio") {
-        analysisNotice.hidden = true;
+        showAudioReviewNotice(state.localSessionId);
         setRecorderMessage("No se obtuvo suficiente diálogo para el reporte. Tu audio sigue guardado: puedes escucharlo y volver a transcribirlo en Revisar audio.", "info");
         await loadHistory();
         return;
@@ -16994,9 +17017,12 @@ function initCoachDemoRecorder() {
       return;
     }
 
+    // Each confirmation applies to one attempt to record this visit.
+    consent.checked = false;
+    outcome.value = "unknown";
     state.processing = true;
     updateControls();
-    setRecorderMessage("Solicitando permiso para usar el microfono...", "info");
+    setRecorderMessage("Solicitando permiso para usar el micrófono…", "info");
 
     try {
       state.stream = await navigator.mediaDevices.getUserMedia({
@@ -17016,7 +17042,7 @@ function initCoachDemoRecorder() {
         localId: state.localSessionId,
         status: "recording",
         consentConfirmed: true,
-        knownOutcome: outcome.value || "unknown",
+        knownOutcome: "unknown",
         protectedChunks: 0,
         startedAt,
         serverSessionId: ""
@@ -17030,7 +17056,7 @@ function initCoachDemoRecorder() {
             method: "POST", timeoutMs: 8000,
             body: {
               consentConfirmed: true,
-              knownOutcome: outcome.value || "unknown",
+              knownOutcome: "unknown",
               startedAt,
               clientRecordingId: state.localSessionId
             }
@@ -17106,7 +17132,7 @@ function initCoachDemoRecorder() {
       }
       setRecorderMessage(
         error?.name === "NotAllowedError"
-          ? "El microfono no tiene permiso. Abre la configuracion del navegador y permite el acceso."
+          ? "El micrófono no tiene permiso. Permite el acceso en tu navegador y confirma el consentimiento para volver a intentar."
           : error.message,
         "error"
       );
@@ -17114,6 +17140,12 @@ function initCoachDemoRecorder() {
     }
   };
 
+  root.addEventListener("close", () => {
+    if (!consent.checked) return;
+    consent.checked = false;
+    updateControls();
+    setRecorderMessage("Confirma el consentimiento antes de iniciar la demostración.", "info");
+  });
   consent.addEventListener("change", () => {
     updateControls();
     if (!state.recording && !state.processing) {
@@ -17131,11 +17163,18 @@ function initCoachDemoRecorder() {
   refreshButton?.addEventListener("click", loadHistory);
   analysisNoticeOpen?.addEventListener("click", async () => {
     const id = analysisNotice.dataset.analysisId || "";
-    if (!id) {
+    const reviewId = analysisNotice.dataset.reviewId;
+    if (!id && !reviewId) {
       return;
     }
     analysisNotice.hidden = true;
     setCoachWorkspaceTab("actividad");
+    if (reviewId) {
+      await renderLocalRecovery().catch(() => null);
+      const card = Array.from(localRecovery.children).find(item => item.dataset.recordingId === reviewId);
+      (card || analysisCenter)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     analysisCenter?.scrollIntoView({ behavior: "smooth", block: "start" });
     await loadAnalysis(id);
   });
@@ -17180,7 +17219,7 @@ function initCoachDemoRecorder() {
     if (state.recording) return;
     const recovered = event.detail?.analysis;
     if (recovered?.status === "needs_audio") {
-      analysisNotice.hidden = true;
+      showAudioReviewNotice(event.detail.recordingId);
       loadHistory();
     } else if (recovered?.id && recovered.status === "completed" && recovered.report) {
       showAnalysisNotice({ title: "Tu resumen está listo", copy: "Recuperamos la grabación. El resumen está en Mi actividad.", analysisId: recovered.id, ready: true });

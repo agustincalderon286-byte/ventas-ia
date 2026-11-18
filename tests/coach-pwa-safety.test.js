@@ -100,8 +100,9 @@ test("actual recorder finish freezes interrupted capture, saves for review and n
     let saved, stopped = 0, syncs = 0, clockCleared = false;
     const notices = [];
     const body = app.slice(app.indexOf('  const finishRecording = async autoStopped =>'), app.indexOf('  const startRecording = async () =>'));
+    const outcome = { value: 'follow_up' };
     const finish = vm.runInNewContext(body + '\nfinishRecording;', {
-      state, navigator: { onLine: true }, outcome: { value: 'unknown' }, CustomEvent,
+      state, navigator: { onLine: true }, outcome, CustomEvent,
       window: { clearInterval() { clockCleared = true; }, clearTimeout() {}, dispatchEvent() {} },
       updateControls() {}, showAnalysisNotice: value => notices.push(value), setRecorderMessage() {},
       rotateSegment: async () => { if (timing === 'empty-final-blob') state.interruptionReason = 'Archivo sin audio'; },
@@ -110,6 +111,7 @@ test("actual recorder finish freezes interrupted capture, saves for review and n
       syncTecOfflineRecording: async () => { syncs++; }, renderLocalRecovery: async () => {}
     });
     await finish(false);
+    assert.equal(saved.knownOutcome, 'follow_up'); assert.equal(outcome.value, 'unknown');
     assert.equal(saved.status, 'needs-review'); assert.ok(saved.interruptionReason);
     assert.equal(state.recording, false); assert.equal(state.processing, false);
     assert.equal(state.localSessionId, ''); assert.ok(stopped); assert.ok(clockCleared);
@@ -280,4 +282,29 @@ test("offline private HTML and its exact versioned assets can fall back to the p
   vm.runInContext(worker, context);
   assert.equal(await vm.runInContext('networkFirst("/coach/app/", TEC_RUNTIME_CACHE)', context), html);
   assert.equal(await vm.runInContext('cacheFirst("/coach/app.js?v=previous", TEC_CACHE_VERSION)', context), asset);
+});
+
+test("cada intento de grabar requiere consentimiento nuevo y parte de un resultado por definir", async () => {
+  const state = { recording: false, processing: false };
+  const consent = { checked: false }, outcome = { value: 'sale' };
+  let requests = 0;
+  const startAt = app.indexOf('  const startRecording = async () =>');
+  const endAt = app.indexOf('  root.addEventListener("close"', startAt);
+  const start = vm.runInNewContext(app.slice(startAt, endAt) + '\nstartRecording;', {
+    state, consent, outcome, emergency: { hidden: true },
+    window: { MediaRecorder: {}, TecPwaSafety: { createAudioJournal() {} } },
+    navigator: { mediaDevices: { async getUserMedia() {
+      requests++;
+      assert.equal(consent.checked, false);
+      assert.equal(outcome.value, 'unknown');
+      throw Object.assign(new Error('Permiso denegado'), { name: 'NotAllowedError' });
+    } } },
+    updateControls() {}, setRecorderMessage() {}, stopMediaTracks() {}, releaseWakeLock() {}
+  });
+  await start(); assert.equal(requests, 0);
+  consent.checked = true;
+  await start(); assert.equal(requests, 1);
+  await start(); assert.equal(requests, 1);
+  consent.checked = true;
+  await start(); assert.equal(requests, 2);
 });
