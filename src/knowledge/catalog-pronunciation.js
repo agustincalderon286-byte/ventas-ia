@@ -3,7 +3,6 @@ const aliases = {
   // Brand, cookware and appliances
   'Royal Prestige': 'Róyal Prestísh',
   'Royal Prestige Guard': 'Róyal Prestísh Gard',
-  'Royal Core': 'Róyal Cor',
   'Royal Wok': 'Róyal Uók',
   'INNOVE': 'Inóve',
   'NOVEL': 'Nóvel',
@@ -25,7 +24,6 @@ const aliases = {
   'Square Grill': 'Escuér Gril',
   'Round Grill': 'Ráund Gril',
   'Double Grill': 'Dábol Gril',
-  'Smart Temp': 'Smart Temp',
   'Precision Cook': 'Presíshon Cuk',
   'Precision Series III': 'Presíshon Síris Tres',
   'Precision Series 3': 'Presíshon Síris Tres',
@@ -35,7 +33,6 @@ const aliases = {
   'Perfetc Pop': 'Pérfect Pap',
   'Perfet Pop': 'Pérfect Pap',
   'Salad Machine': 'Sálad Mashín',
-  'Warmer Pro': 'Uórmer Próu',
   'Milk & Butter Warmers': 'Milk and Báder Uórmers',
   'Milk and Butter Warmers': 'Milk and Báder Uórmers',
   'Tea Kettle': 'Tí Kétol',
@@ -79,7 +76,6 @@ const aliases = {
   'Ice Cream Bowl Set': 'Áis Crím Bóul Set',
 
   // Knife collections and kitchen accessories
-  'All-in-One Knife Block': 'Ol in Uán Náif Blak',
   'Kitchen Knife Set': 'Kíchen Náif Set',
   'Steak Knife Sets': 'Stéik Náif Sets',
   'Steak Knife Set': 'Stéik Náif Set',
@@ -125,7 +121,14 @@ const aliases = {
 };
 const key = name => name.toLowerCase().replaceAll('’', "'").replace(/[\s‐‑–-]+/g, ' ').replaceAll('&amp;', '&');
 const lookup = new Map(Object.entries(aliases).map(([name, alias]) => [key(name), alias]));
-const alternatives = [...lookup.keys()].sort((a, b) => b.length - a.length).map(name =>
+// These names need specific consonants and stress in Jorge's conversational style.
+const phonetic = new Map([
+  ['warmer pro', 'ˈwoɾ.meɾ ˈpɾow'],
+  ['all in one knife block', 'ol in ˈwɑn ˈnɑif ˈblok'],
+  ['smart temp', 'esˈmɑɾt ˈtemp'],
+  ['royal core', 'ˈrojɑl ˈkoɾ']
+]);
+const alternatives = [...lookup.keys(), ...phonetic.keys()].sort((a, b) => b.length - a.length).map(name =>
   name.replaceAll('&', '&amp;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     .replaceAll(' ', '[\\s‐‑–-]+').replaceAll("'", "['’]")
 );
@@ -133,7 +136,11 @@ const names = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives.join('|')})(?![\\
 
 export function markCatalogPronunciations(escapedText) {
   return escapedText.replace(/(?<=\p{L})(?:[®™]|&amp;(?:reg|trade);)(?=\p{L})/giu, ' ')
-    .replace(/[®™]|&amp;(?:reg|trade);/gi, '').replace(names, name =>
-    `<sub alias="${lookup.get(key(name))}">${name}</sub>`
-  );
+    .replace(/[®™]|&amp;(?:reg|trade);/gi, '').replace(names, name => {
+      const spelling = key(name);
+      const phones = phonetic.get(spelling);
+      return phones
+        ? `<phoneme alphabet="ipa" ph="${phones}">${name}</phoneme>`
+        : `<sub alias="${lookup.get(spelling)}">${name}</sub>`;
+    });
 }

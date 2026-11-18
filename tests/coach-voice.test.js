@@ -186,10 +186,11 @@ test('catalog pronunciations cover branded and English product names without cha
   await voice.speak('Royal Prestige® Deluxe Easy Release, Power Blender Go Plus, ALL–IN–ONE KNIFE BLOCK, Chef’s Knife, Milk & Butter Warmers, FrescaPure 5500, Precision Series III™ y MaxCup. Novelista y multicocina.', 'user');
   for (const [name,alias] of [
     ['Royal Prestige','Róyal Prestísh'], ['Deluxe Easy Release','Deláks Ísi Rilís'],
-    ['Power Blender Go Plus','Páuer Blénder Góu Plás'], ['ALL–IN–ONE KNIFE BLOCK','Ol in Uán Náif Blak'],
+    ['Power Blender Go Plus','Páuer Blénder Góu Plás'],
     ['Chef’s Knife','Shefs Náif'], ['Milk &amp; Butter Warmers','Milk and Báder Uórmers'],
     ['FrescaPure','Fresca Piúr'], ['Precision Series III','Presíshon Síris Tres'], ['MaxCup','Máx Cap']
   ]) assert.ok(ssml.includes(`<sub alias="${alias}">${name}</sub>`),name);
+  assert.ok(ssml.includes('<phoneme alphabet="ipa" ph="ol in ˈwɑn ˈnɑif ˈblok">ALL–IN–ONE KNIFE BLOCK</phoneme>'));
   assert.match(ssml,/Novelista y multicocina/);
   assert.doesNotMatch(ssml,/[®™]|undefined/);
 });
