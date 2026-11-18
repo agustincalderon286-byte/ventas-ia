@@ -7,3 +7,9 @@ El video es la versión vigente de TEC Coach con Power Blender Max, de 180 segun
 Todos los medios permanecen en `private/coach-tutorial/`. `/api/coach/tutorial/media/:asset` exige acceso activo, permite solo la lista explícita de archivos y devuelve `private, no-store`, `Vary: Cookie` y `noindex`. Express conserva los rangos de bytes para adelantar el MP4. El service worker excluye estos medios de sus cachés; solo se añaden el CSS y JS genéricos al shell. El video usa controles nativos, no se reproduce automáticamente y tiene texto alternativo mediante las guías. Las imágenes se abren en otra pestaña para ampliarlas.
 
 104 pruebas pasan en conjunto, incluidas diez nuevas sobre autenticación de medios, rangos, rutas ajenas, referencias, carga perezosa, cierre/foco, búsqueda con acentos, error de video y pausa en segundo plano. La revisión local con plantilla real y cuenta ficticia comprobó reproducción a 180 s/1080p, pausa al cerrar, menú, búsqueda sin resultados y lectura móvil de 390×844 sin desbordamiento.
+
+## Acceso desde iPhone y Android · 17 noviembre 2026
+
+El tutorial añade dos videos verticales dentro de guías desplegables: iPhone/Safari (64 s) y Android/Chrome (67.5 s). Son los MP4 originales de las grabaciones de los simuladores, con voz BF16 local, música y subtítulos; se copiaron sin recodificar. Android muestra Create shortcut y un icono que abre Chrome, no una instalación WebAPK verificada. Los medios nuevos mantienen el mismo acceso activo, caché privada y soporte de rangos. Cada video móvil se carga al abrir su guía; cerrar, plegar o abandonar el tutorial detiene la reproducción, y reproducir un video pausa los otros.
+
+La entrada pública `/coach/` y el registro `/coach/planes/` comparten `coach-public.css`, limitado a `coach-public-body`. Conservan el flujo de cuenta, planes, precios y pago existente; usan los colores azul/rojo y superficies claras de la aplicación.

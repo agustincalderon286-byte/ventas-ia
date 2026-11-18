@@ -1,5 +1,5 @@
 import {fileURLToPath} from 'node:url';
-export const coachTutorialAssets=Object.freeze(['recorrido-3min.mp4','portada.jpg','inicio.jpg','orden.jpg','encuesta.jpg','calculadora.jpg','voz.jpg','mensajes.jpg','audiolibros.jpg','actividad.jpg','mapa.jpg']);
+export const coachTutorialAssets=Object.freeze(['instalar-iphone.mp4','instalar-android.mp4','instalar-iphone.jpg','instalar-android.jpg','recorrido-3min.mp4','portada.jpg','inicio.jpg','orden.jpg','encuesta.jpg','calculadora.jpg','voz.jpg','mensajes.jpg','audiolibros.jpg','actividad.jpg','mapa.jpg']);
 export function registerCoachTutorial(app,{requireActive,directory=fileURLToPath(new URL('../private/coach-tutorial/',import.meta.url))}={}){
   app.get('/api/coach/tutorial/media/:asset',async(req,res)=>{
     res.set({'Cache-Control':'private, no-store','Vary':'Cookie','X-Robots-Tag':'noindex, nofollow'});

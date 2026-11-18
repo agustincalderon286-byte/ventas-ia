@@ -26,7 +26,10 @@ function fixture(){
  root.nodes.set('[data-coach-tutorial]',dialog);root.nodes.set('[data-open-coach-tutorial]',[opener]);root.nodes.set('audio,video',[video,otherAudio]);
  for(const [key,node] of [['[data-close-coach-tutorial]',close],['video',video],['[data-tutorial-video-src]',source],['[data-tutorial-search]',search],['[data-tutorial-search-result]',result],['[data-tutorial-faq]',items],['[data-tutorial-video-error]',error]])dialog.nodes.set(key,node);
  opener.menu=menu;menu.open=true;menu.nodes.set('summary',summary);source.dataset.tutorialVideoSrc='/api/coach/tutorial/media/recorrido-3min.mp4';dialog.hidden=true;error.hidden=true;
- vm.runInNewContext(sourceCode,{document:root,window});return{root,dialog,opener,close,video,source,search,result,error,menu,summary,items,otherAudio,window};
+ video.nodes.set('[data-tutorial-video-src]',source);video.parentElement=dialog;
+ const mobile=['iphone','android'].map(name=>{const v=new Node(),src=new Node(),section=new Node(),err=new Node();v.parentElement=section;v.menu=section;v.nodes.set('[data-tutorial-video-src]',src);section.nodes.set('[data-tutorial-video-error]',err);src.dataset.tutorialVideoSrc=`/api/coach/tutorial/media/instalar-${name}.mp4`;err.hidden=true;return{video:v,source:src,section,error:err};});
+ dialog.nodes.set('video',[video,...mobile.map(p=>p.video)]);root.nodes.set('audio,video',[video,otherAudio,...mobile.map(p=>p.video)]);
+ vm.runInNewContext(sourceCode,{document:root,window});return{root,dialog,opener,close,video,source,search,result,error,menu,summary,items,otherAudio,window,mobile};
 }
 test('opening is read-only, lazy-loads the video without playing it, and closes the account menu',()=>{
  const f=fixture();assert.equal(f.video.loads,0);f.opener.click();assert.equal(f.dialog.open,true);assert.equal(f.dialog.hidden,false);assert.equal(f.menu.open,false);assert.equal(f.video.loads,1);assert.equal(f.source.getAttribute('src'),f.source.dataset.tutorialVideoSrc);assert.equal(f.close.focused,true);
@@ -47,3 +50,17 @@ test('video playback pauses other audio and stops when the app becomes hidden',(
 });
 
 test('a pending browser play event cannot restart the video after closing the tutorial',()=>{const f=fixture();f.opener.click();f.close.click();const count=f.video.pauses;f.video.fire('play');assert.equal(f.video.pauses,count+1);assert.equal(f.otherAudio.pauses,0);});
+
+test('phone videos load only when expanded, remain exclusive, pause when folded or closed, and retry per player',()=>{
+ const f=fixture(),[iphone,android]=f.mobile;
+ f.opener.click();assert.equal(iphone.video.loads,0);assert.equal(android.video.loads,0);
+ iphone.section.open=true;iphone.section.fire('toggle');assert.equal(iphone.video.loads,1);assert.equal(android.video.loads,0);
+ iphone.video.fire('play');assert.equal(f.video.pauses,1);assert.equal(android.video.pauses,1);
+ android.section.open=true;android.section.fire('toggle');android.video.fire('play');assert.equal(iphone.video.pauses,1);
+ android.section.open=false;android.section.fire('toggle');assert.equal(android.video.pauses,2);
+ iphone.video.error={code:4};iphone.video.fire('error');assert.equal(iphone.error.hidden,false);assert.equal(f.error.hidden,true);
+ iphone.section.open=false;iphone.section.fire('toggle');iphone.section.open=true;iphone.section.fire('toggle');assert.equal(iphone.video.loads,2);
+ iphone.video.error=null;iphone.video.fire('loadeddata');assert.equal(iphone.error.hidden,true);
+ f.close.click();assert.equal(iphone.video.pauses,3);assert.equal(android.video.pauses,3);
+ const n=iphone.video.pauses;iphone.video.fire('play');assert.equal(iphone.video.pauses,n+1);
+});

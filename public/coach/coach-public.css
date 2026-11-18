@@ -1,0 +1,83 @@
+/* Public entry and registration: TEC blue, red and light surfaces. */
+body.coach-public-body{--bg:#f3f6fa;--panel:#fff;--panel-strong:#fff;--text:#102b4e;--muted:#4b6279;--line:#dce5ed;--gold:#c8102e;--gold-deep:#a20d25;--shadow:0 14px 36px #071f3b0a;color:var(--text);background:#f3f6fa}
+.coach-public-body::before{display:none}
+.coach-public-body [hidden]{display:none!important}
+.coach-public-body .coach-shell{width:min(1180px,calc(100% - 40px));padding-bottom:24px}
+.coach-public-body .coach-nav{min-height:76px;gap:24px;margin:16px 0 0;padding:12px 20px;border:0;border-radius:18px;background:linear-gradient(100deg,#061b34,#0a3159);box-shadow:0 10px 28px #071f3b14}
+.coach-public-body .coach-brand-logo-frame{width:150px;height:60px;padding:5px 10px;border-radius:10px;box-shadow:none;background:#fff}
+.coach-public-body .coach-nav-links{gap:16px;flex-wrap:wrap}
+.coach-public-body .coach-nav .nav-link{color:#e0e9f4;font-size:.78rem}
+.coach-public-body .coach-nav .nav-button{color:#fff;border-color:#ffffff55;background:#ffffff0d;font-size:.78rem}
+.coach-public-body :is(.primary-button,.secondary-button,.nav-button){min-height:46px;border-radius:11px;padding:12px 18px;font-size:.85rem;line-height:1.4;box-shadow:none;white-space:normal;text-align:center}
+.coach-public-body .primary-button{color:#fff;background:#c8102e;border:1px solid #c8102e}
+.coach-public-body .primary-button:hover{background:#a20d25;transform:none}
+.coach-public-body .secondary-button{color:#123b60;background:#fff;border:1px solid #bdccd9}
+.coach-public-body :is(a,button,input,summary):focus-visible{outline:3px solid #337eb8;outline-offset:4px}
+.coach-public-body h1,.coach-public-body h2,.coach-public-body h3,.coach-public-body h4{color:#102b4e}
+.coach-public-body .eyebrow{border:0;background:none;color:#ab1732;padding:0;font-size:.7rem;letter-spacing:.1em;font-weight:700}
+.coach-public-body .coach-hero{grid-template-columns:1.05fr 1fr;gap:54px;align-items:center;padding:56px 0 60px}
+.coach-public-body .hero-copy{padding:0;border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none}
+.coach-public-body .hero-copy h1{font-family:"Bricolage Grotesque",sans-serif;font-size:clamp(2.5rem,4.5vw,4rem);line-height:1.05;letter-spacing:-.045em;max-width:15ch;margin:20px 0 0}
+.coach-public-body .hero-copy .lede{font-size:1rem;line-height:1.8;margin-top:24px;color:#4b6279}
+.coach-public-body .hero-actions{margin-top:26px;gap:12px}
+.coach-public-body .tec-public-caption{font-size:.72rem;line-height:1.6;margin:16px 0 0;color:#4b6279}
+.coach-public-body .tec-public-preview{border:1px solid #dce5ed;border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 18px 40px #071f3b10}
+.coach-public-body .tec-public-preview>img{display:block;width:100%;height:240px;object-fit:cover}
+.coach-public-body .tec-public-preview-copy{padding:26px}
+.coach-public-body .tec-public-preview-copy h2{font-size:1.6rem;line-height:1.2;margin:10px 0 24px;letter-spacing:-.025em}
+.coach-public-body .tec-public-preview ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin:0;gap:12px;list-style:none}
+.coach-public-body .tec-public-preview li{font-size:.7rem;font-weight:600}
+.coach-public-body .tec-public-preview li span{display:block;width:32px;height:32px;line-height:32px;text-align:center;margin-bottom:10px;border-radius:50%;color:#fff;background:#0a3159;font-size:.65rem}
+.coach-public-body .tec-public-preview li:last-child span{background:#c8102e}
+.coach-public-body .tec-public-section{padding:38px 0;scroll-margin-top:24px}
+.coach-public-body .section-heading{font-size:clamp(1.7rem,3vw,2.3rem);line-height:1.15;letter-spacing:-.03em;margin:12px 0}
+.coach-public-body .section-copy{color:#4b6279;line-height:1.75}
+.coach-public-body .coach-grid{gap:20px;margin-top:26px}
+.coach-public-body .coach-section-card{border-radius:16px;background:#fff;padding:26px;box-shadow:none;backdrop-filter:none}
+.coach-public-body .tec-public-number{display:block;color:#a91832;font-size:.75rem;font-weight:700;margin-bottom:22px}
+.coach-public-body .coach-section-card h3{font-size:1.15rem;margin:0 0 12px}
+.coach-public-body .coach-section-card p{font-size:.85rem;color:#4b6279;line-height:1.75;margin:0}
+.coach-public-body .tec-public-included{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;margin:30px 0 48px;padding:38px;border-radius:20px;background:#071f3b;color:#e0e9f4;scroll-margin-top:24px}
+.coach-public-body .tec-public-included .eyebrow{color:#ff9eae}
+.coach-public-body .tec-public-included h2{color:#fff;font-size:2rem;line-height:1.1;margin:14px 0}
+.coach-public-body .tec-public-included p{font-size:.85rem;line-height:1.75;margin:0}
+.coach-public-body .tec-public-included ul{padding:0;margin:0;list-style:none}
+.coach-public-body .tec-public-included li{padding:12px 0;border-bottom:1px solid #ffffff24;font-size:.85rem;line-height:1.5}
+.coach-public-body .tec-public-included li:last-child{border:0}
+.coach-public-body .tec-public-membership{display:flex;justify-content:space-between;align-items:center;gap:28px;padding:28px 0 40px}
+.coach-public-body .tec-public-membership p{color:#4b6279;font-size:.9rem;line-height:1.75}
+.coach-public-body .tec-public-membership .primary-button{flex-shrink:0}
+.coach-public-body .tec-public-faq{border-top:1px solid #d0dce7;margin-top:24px}
+.coach-public-body .tec-public-faq details{border-bottom:1px solid #d0dce7}
+.coach-public-body .tec-public-faq summary{cursor:pointer;padding:20px 0;line-height:1.5;font-size:.9rem;font-weight:600}
+.coach-public-body .tec-public-faq p{font-size:.85rem;color:#4b6279;margin:0 0 20px;line-height:1.7;max-width:780px}
+.coach-public-body .tec-public-faq a,.coach-public-body .mini-note a{color:#a20d25;text-decoration:underline;text-underline-offset:3px}
+.coach-public-body .tec-public-footer{margin-top:30px;border-top:1px solid #d0dce7;padding-top:24px;color:#4b6279;font-size:.72rem}
+.coach-public-body .tec-public-footer a{color:#304f6c}
+.coach-public-body .tec-public-plan-heading{padding:44px 0 28px;max-width:700px}
+.coach-public-body .tec-public-plan-heading h1{font-family:"Bricolage Grotesque",sans-serif;font-size:clamp(2.3rem,4vw,3.3rem);letter-spacing:-.04em;line-height:1.1;margin:16px 0}
+.coach-public-body .tec-public-plan-heading p{color:#4b6279;font-size:.95rem;line-height:1.7}
+.coach-public-body .plan-layout{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:24px;align-items:start}
+.coach-public-body .plan-card{background:#fff;border:1px solid #dce5ed;box-shadow:none;backdrop-filter:none;border-radius:20px;padding:28px;min-width:0}
+.coach-public-body .plan-card .section-heading{font-size:1.6rem}
+.coach-public-body .plan-card .section-copy{font-size:.85rem}
+.coach-public-body .pricing-option{border:1px solid #cedbe5;border-radius:14px;background:#f7f9fc;box-shadow:none;transform:none}
+.coach-public-body .pricing-option.highlight{background:#f7f9fc}
+.coach-public-body .pricing-option.is-selected{border:2px solid #c8102e;padding:19px;background:#fff7f8;box-shadow:none;transform:none}
+.coach-public-body .pricing-option :is(p,ul){color:#4b6279;font-size:.8rem}
+.coach-public-body .pricing-option h3{font-size:1.15rem}
+.coach-public-body .plan-badge,.coach-public-body .plan-badge.subtle,.coach-public-body .plan-badge.highlight{color:#a20d25;background:#f8e8ec;border:0;font-size:.65rem}
+.coach-public-body .plan-option-price strong{color:#102b4e}
+.coach-public-body .plan-option-price span{color:#4b6279;font-size:.72rem}
+.coach-public-body .selected-plan-box{border:1px solid #dce5ed;border-radius:12px;background:#f3f6fa;box-shadow:none}
+.coach-public-body .selected-plan-box :is(h4,p){color:#304f6c}
+.coach-public-body .selected-plan-box p{font-size:.8rem;line-height:1.6}
+.coach-public-body .auth-card{padding:22px 0 0;background:none;border:0;border-top:1px solid #dce5ed;border-radius:0;box-shadow:none;backdrop-filter:none}
+.coach-public-body .auth-card p,.coach-public-body .mini-note{color:#4b6279;font-size:.78rem;line-height:1.7}
+.coach-public-body .coach-form label{font-size:.78rem;color:#304f6c;font-weight:600}
+.coach-public-body .coach-form input{background:#fff;color:#102b4e;border:1px solid #bdccd9;border-radius:10px;min-height:48px;font-size:16px;padding:12px}
+.coach-public-body .coach-form input::placeholder{color:#607386;opacity:1}
+.coach-public-body .form-result.error{color:#a20d25;background:#fff1f3;border-color:#edb3be}
+@media(max-width:900px){.coach-public-body .coach-hero{gap:28px}.coach-public-body .coach-nav{align-items:center;gap:16px}.coach-public-body .coach-nav-links{gap:10px}.coach-public-body .coach-nav .nav-link{display:none}.coach-public-body .plan-layout{grid-template-columns:1fr 1fr}.coach-public-body .plan-card{padding:22px}}
+@media(max-width:680px){.coach-public-body .coach-shell{width:calc(100% - 28px)}.coach-public-body .coach-nav{padding:10px 12px;min-height:64px;border-radius:14px;flex-direction:row;align-items:center;justify-content:space-between}.coach-public-body .coach-brand-logo-frame{width:106px;height:44px;padding:4px 6px}.coach-public-body .coach-nav-links{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:7px;width:auto}.coach-public-body .coach-nav-links>:is(a,button){width:auto;flex:0 0 auto}.coach-public-body .coach-nav :is(.nav-button,.primary-button){padding:9px 10px;min-height:40px;font-size:.67rem}.coach-public-body .coach-hero{grid-template-columns:1fr;padding:36px 2px;gap:28px}.coach-public-body .hero-copy h1{font-size:2.7rem;max-width:15ch}.coach-public-body .hero-copy .lede{font-size:.92rem}.coach-public-body .tec-public-preview>img{height:190px}.coach-public-body .tec-public-preview-copy{padding:22px}.coach-public-body .tec-public-preview-copy h2{font-size:1.4rem}.coach-public-body .coach-grid{grid-template-columns:1fr}.coach-public-body .tec-public-section{padding:28px 0}.coach-public-body .tec-public-included{grid-template-columns:1fr;padding:26px;gap:20px;margin:24px 0}.coach-public-body .tec-public-included h2{font-size:1.65rem}.coach-public-body .tec-public-membership{display:block;padding:28px 0}.coach-public-body .tec-public-membership .primary-button{display:inline-flex;margin-top:10px}.coach-public-body .plan-layout{grid-template-columns:1fr}.coach-public-body .plan-card{padding:22px}.coach-public-body .tec-public-plan-heading{padding:32px 0 16px}.coach-public-body .tec-public-footer nav{gap:12px;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.coach-public-body *{scroll-behavior:auto!important;transition:none!important}}

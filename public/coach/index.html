@@ -35,8 +35,9 @@
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261025-native-offline2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
+    <link rel="stylesheet" href="/coach/coach-public.css?v=20261117-public2">
 </head>
-  <body>
+  <body class="coach-public-body">
     <div class="coach-shell">
       <header class="coach-nav">
         <a class="coach-brand coach-brand--tec" href="/coach/" aria-label="TEC Total Elite Coaching">
@@ -49,268 +50,32 @@
           <a class="nav-link" href="/coach/#beneficios">Beneficios</a>
           <a class="nav-link" href="/coach/#incluye">Incluye</a>
           <a class="nav-link" href="/coach/#faq">Preguntas</a>
-          <a class="nav-button" href="/coach/login/">Login</a>
+          <a class="nav-button" href="/coach/login/">Entrar</a>
           <a class="primary-button" href="/coach/planes/">Suscribirme</a>
         </nav>
       </header>
 
-      <section class="coach-hero">
-        <article class="hero-copy">
-          <div class="eyebrow">Privado · Premium · Distribuidores</div>
-          <h2>Vende mejor. Responde mejor. Cierra mejor.</h2>
-          <p class="lede">
-            TEC Total Elite Coaching es la plataforma privada pensada para distribuidores. Te ayuda a cerrar mejor, contestar
-            objeciones, dar precios, sacar pagos, armar paquetes y negociar con mas claridad desde una sola experiencia
-            protegida.
-          </p>
-
-          <div class="hero-actions">
-            <a class="primary-button" href="/coach/planes/">Ver membresias</a>
-            <a class="secondary-button" href="/coach/login/">Ya tengo acceso</a>
-          </div>
-
-          <div class="hero-metrics">
-            <div class="metric-card">
-              <strong>1</strong>
-              <span>un solo lugar para objeciones, cierres, precios y paquetes</span>
-            </div>
-            <div class="metric-card">
-              <strong>$50</strong>
-              <span>al mes por acceso privado a TEC Total Elite Coaching</span>
-            </div>
-            <div class="metric-card">
-              <strong>$500</strong>
-              <span>al año y ahorra el equivalente a 2 meses</span>
-            </div>
-          </div>
-        </article>
-
-        <aside class="hero-side">
-          <div class="glass-card">
-            <h3>Lo que hace por ti</h3>
-            <p>
-              Te ayuda a contestar objeciones, acomodar ideas, decir lo correcto en la demo y sacar numeros rapidos
-              sin estar brincando entre notas, cursos y chats.
-            </p>
-            <ul class="micro-list">
-              <li>respuestas cortas para objeciones comunes</li>
-              <li>precios, pagos y paquetes al momento</li>
-              <li>cierres y siguientes pasos mas claros</li>
-            </ul>
-          </div>
-
-          <div class="callout-card">
-            <h3>Activa tu acceso hoy</h3>
-            <p>
-              Elige la membresia mensual de $50 o ahorra el equivalente a 2 meses con la membresia anual de $500.
-            </p>
-            <div class="callout-actions">
-              <a class="primary-button" href="/coach/planes/">Elegir membresia</a>
-              <a class="secondary-button" href="/coach/login/">Ya tengo cuenta</a>
-            </div>
-          </div>
-        </aside>
-      </section>
-
-      <section id="beneficios">
-        <h2 class="section-heading">Que cambia cuando el distribuidor trae Coach</h2>
-        <p class="section-copy">
-          En vez de improvisar, el distribuidor entra a la demo con una guia viva. Eso ayuda a responder mas claro,
-          dar numeros mas rapido y mover la venta con menos vueltas.
-        </p>
-
-        <div class="coach-grid">
-          <article class="coach-section-card">
-            <h3>Objeciones en tiempo real</h3>
-            <p>
-              Si el cliente dice que está caro, que lo va a pensar o que ya tiene otra batería, el Coach puede sugerir
-              respuestas claras, simples y más útiles.
-            </p>
-          </article>
-
-          <article class="coach-section-card">
-            <h3>Precios y pagos al momento</h3>
-            <p>
-              Si te dicen un precio de catalogo, el Coach te ayuda a sacar total, pago mensual y paquete sin enredarte
-              con la matematica.
-            </p>
-          </article>
-
-          <article class="coach-section-card">
-            <h3>Cierre y negociacion</h3>
-            <p>
-              Te ayuda a saber que decir, cuando callarte y cual es el siguiente movimiento mas fuerte para cerrar sin
-              hablar de mas.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="split-section" id="incluye">
-        <div class="panel-stack">
-          <article class="panel">
-            <h3>Incluye</h3>
-            <ul>
-              <li>coach de objeciones</li>
-              <li>ayuda para cierres y negociacion</li>
-              <li>calculo rapido de precios y pagos</li>
-              <li>armado de paquetes sin complicarte</li>
-              <li>frases claras para usar en demo</li>
-              <li>acceso privado y protegido</li>
-            </ul>
-          </article>
-
-          <article class="panel">
-            <h3>Ideal para</h3>
-            <ul>
-              <li>distribuidores que se traban al cerrar</li>
-              <li>quien ocupa ayuda para dar precios rapido</li>
-              <li>quien quiere negociar sin sonar duro ni nervioso</li>
-              <li>quien ocupa apoyo para armar paquetes al momento</li>
-            </ul>
-          </article>
-        </div>
-
-        <div class="panel">
-          <h3>Cómo entra al flujo</h3>
-          <div class="steps">
-            <article class="step-card">
-              <div class="step-label">1</div>
-              <h4>Ve el plan</h4>
-              <p>El distribuidor llega a la landing privada, entiende qué resuelve y compara mensual con anual.</p>
-            </article>
-
-            <article class="step-card">
-              <div class="step-label">2</div>
-              <h4>Se suscribe</h4>
-              <p>Paga $50 al mes o $500 al año con Stripe y su cuenta queda lista para activarse.</p>
-            </article>
-
-            <article class="step-card">
-              <div class="step-label">3</div>
-              <h4>Hace login</h4>
-              <p>Solo usuarios con suscripción activa podrán entrar al Coach y usar el modo privado.</p>
-            </article>
-
-            <article class="step-card">
-              <div class="step-label">4</div>
-              <h4>Usa el Coach</h4>
-              <p>Desde ahi consulta objeciones, cierres, precios, pagos, paquetes y negociacion.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="plan-layout">
-        <article class="plan-card">
-          <div class="eyebrow">Dos opciones simples</div>
-          <h2 class="section-heading">Coach de Ventas</h2>
-          <p class="section-copy">
-            Un acceso privado para distribuidores que quieren vender con mas estructura, menos improvisacion y mejor
-            apoyo al momento de cerrar.
-          </p>
-
-          <div class="plan-price">
-            <strong>$50</strong>
-            <span>USD / mes · $500 USD / año</span>
-          </div>
-
-          <div class="feature-list">
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Objeciones y cierre</strong>
-                <span>Ayuda para responder preguntas dificiles sin sonar duro ni tecnico.</span>
-              </div>
-            </div>
-
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Precios y pagos</strong>
-                <span>Apoyo para sacar numeros rapidos y contestar con mas seguridad.</span>
-              </div>
-            </div>
-
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Paquetes y negociacion</strong>
-                <span>Te ayuda a juntar productos y mover la venta al siguiente paso.</span>
-              </div>
-            </div>
-
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <div>
-                <strong>Acceso privado</strong>
-                <span>Acceso reservado para distribuidores con cuenta activa.</span>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <aside class="plan-card">
-          <h3>Empieza hoy</h3>
-          <p class="section-copy">
-            Desde aqui un distribuidor puede crear su cuenta, activar su suscripcion y entrar a su Coach privado.
-          </p>
-
-            <div class="checkout-placeholder">
-              <p>
-                Desde aqui un distribuidor puede ver el plan, crear cuenta, pagar y despues entrar a su area privada.
-              </p>
-              <div class="checkout-actions">
-                <a class="primary-button" href="/coach/planes/">Ver plan</a>
-                <a class="secondary-button" href="/coach/login/">Entrar a mi cuenta</a>
-            </div>
-          </div>
-
-          <p class="mini-note">
-            Despues del pago, el usuario entra por login y solo con suscripcion activa ve TEC Total Elite Coaching.
-          </p>
-        </aside>
-      </section>
-
-      <section id="faq">
-        <h2 class="section-heading">Preguntas comunes</h2>
-
-        <div class="faq-list">
-          <article class="faq-card is-open">
-            <button class="faq-trigger" type="button">
-              <span>¿Esto es para clientes?</span>
-              <span>+</span>
-            </button>
-            <div class="faq-content">
-              No. TEC Total Elite Coaching es una herramienta privada pensada para distribuidores.
-            </div>
-          </article>
-
-          <article class="faq-card">
-            <button class="faq-trigger" type="button">
-              <span>¿Por qué el Coach debe ir protegido?</span>
-              <span>+</span>
-            </button>
-            <div class="faq-content">
-              Porque ahi vive el conocimiento de ventas, precios, paquetes, cierres y apoyo interno del distribuidor.
-            </div>
-          </article>
-
-          <article class="faq-card">
-            <button class="faq-trigger" type="button">
-              <span>¿Que hace hoy el Coach?</span>
-              <span>+</span>
-            </button>
-            <div class="faq-content">
-              Hoy te ayuda a contestar objeciones, cerrar mejor, dar precios, sacar pagos mensuales, negociar y armar
-              paquetes mas claros durante la demo.
-            </div>
-          </article>
-        </div>
-      </section>
-
+      <main>
+        <section class="coach-hero">
+          <div class="hero-copy"><span class="eyebrow">Tu Coach de ventas · TEC</span><h1>Tu mejor presentación empieza aquí.</h1><p class="lede">Acompaña cada visita con una guía clara, respuestas a objeciones y herramientas para calcular, presentar y dar seguimiento.</p><div class="hero-actions"><a class="primary-button" href="/coach/planes/">Crear mi cuenta</a><a class="secondary-button" href="/coach/login/">Ya tengo acceso</a></div><p class="tec-public-caption">Acceso privado para distribuidores · Desde $50 USD al mes</p></div>
+          <aside class="tec-public-preview" aria-label="Tu ruta en TEC"><img src="/coach/assets/coach-conexion-home.jpg" alt="Mesa preparada para una conversación durante una visita" width="960" height="540" fetchpriority="high"><div class="tec-public-preview-copy"><span class="eyebrow">De la conexión al cierre</span><h2>Una ruta para cada visita.</h2><ol><li><span>01</span>Conecta</li><li><span>02</span>Descubre</li><li><span>03</span>Demuestra</li><li><span>04</span>Cierra</li></ol></div></aside>
+        </section>
+        <section id="beneficios" class="tec-public-section"><span class="eyebrow">Prepárate. Presenta. Avanza.</span><h2 class="section-heading">Concéntrate en la conversación.</h2><p class="section-copy">Las herramientas que necesitas, a la mano durante tu demostración.</p><div class="coach-grid">
+          <article class="coach-section-card"><span class="tec-public-number">01</span><h3>Presenta con claridad</h3><p>Sigue los pasos de la visita y consulta al Coach para preparar respuestas a objeciones y próximos pasos.</p></article>
+          <article class="coach-section-card"><span class="tec-public-number">02</span><h3>Haz los números</h3><p>Consulta productos y calcula anticipos, balances y pagos estimados desde una sola herramienta.</p></article>
+          <article class="coach-section-card"><span class="tec-public-number">03</span><h3>Sigue aprendiendo</h3><p>Retoma tus audiolibros, revisa tu actividad y mantente en contacto con tu equipo.</p></article>
+        </div></section>
+        <section id="incluye" class="tec-public-included"><div><span class="eyebrow">Dentro de tu cuenta</span><h2>Todo listo para acompañarte.</h2><p>Entra desde tu computadora o añade TEC a la pantalla de inicio de tu teléfono.</p></div><ul><li>Guía de presentación y apoyo del Coach</li><li>Calculadora y herramientas de cierre</li><li>Audiolibros y seguimiento de actividad</li><li>Tutoriales paso a paso para comenzar</li></ul></section>
+        <section class="tec-public-membership"><div><span class="eyebrow">Elige cómo avanzar</span><h2 class="section-heading">Una cuenta. Tu Coach completo.</h2><p>$50 USD al mes o $500 USD al año.<br>El plan anual ahorra el equivalente a dos meses.</p></div><a class="primary-button" href="/coach/planes/">Ver planes y registrarme <span aria-hidden="true">→</span></a></section>
+        <section id="faq" class="tec-public-section"><h2 class="section-heading">Antes de empezar</h2><div class="tec-public-faq">
+          <details><summary>¿Para quién es TEC Coach?</summary><p>Es una herramienta privada para distribuidores que buscan apoyo durante sus visitas y demostraciones.</p></details>
+          <details><summary>¿Cómo activo mi acceso?</summary><p>Elige tu plan, crea tu cuenta y completa el pago. Después entra con tu cuenta y una membresía activa.</p></details>
+          <details><summary>¿Puedo usarlo desde mi teléfono?</summary><p>Sí. Puedes abrirlo en el navegador y añadirlo a tu pantalla de inicio. En Mi cuenta → Tutorial y ayuda encontrarás los videos para iPhone y Android.</p></details>
+          <details><summary>¿Ya tengo cuenta?</summary><p><a href="/coach/login/">Entra al Coach</a> con tu correo o teléfono y tu contraseña.</p></details>
+        </div></section>
+      </main>
       <footer class="footer-note tec-public-footer">
-        <span>Coach privado para distribuidores con login, pago y acceso protegido.</span>
+        <span>TEC Total Elite Coaching · Tu preparación, en un solo lugar.</span>
         <nav aria-label="Información legal de TEC">
           <a href="/coach/privacidad/">Privacidad</a>
           <a href="/coach/terminos/">Términos</a>

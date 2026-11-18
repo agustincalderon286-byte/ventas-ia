@@ -13,7 +13,7 @@ async function fixture(t){
 }
 test('tutorial video and screenshots require active access, including byte-range requests',async t=>{
  const get=await fixture(t);
- for(const asset of ['recorrido-3min.mp4','voz.jpg']){const r=await get(asset,{Range:'bytes=0-15'});assert.equal(r.status,401);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.match(r.headers.get('vary'),/Cookie/);}
+ for(const asset of ['recorrido-3min.mp4','instalar-iphone.mp4','instalar-android.mp4','instalar-iphone.jpg','instalar-android.jpg','voz.jpg']){const r=await get(asset,{Range:'bytes=0-15'});assert.equal(r.status,401);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.match(r.headers.get('vary'),/Cookie/);}
 });
 test('authenticated members receive seekable video ranges and private images',async t=>{
  const get=await fixture(t);let r=await get('recorrido-3min.mp4',{'X-Test-Active':'yes',Range:'bytes=0-15'});assert.equal(r.status,206);assert.equal(r.headers.get('content-type'),'video/mp4');assert.match(r.headers.get('content-range'),/^bytes 0-15\//);assert.deepEqual(Buffer.from(await r.arrayBuffer()),fs.readFileSync(path.join(root,'recorrido-3min.mp4')).subarray(0,16));assert.equal(r.headers.get('cache-control'),'private, no-store');
@@ -29,4 +29,9 @@ test('every tutorial image and video reference maps to a private existing asset;
  assert.equal((html.match(/data-open-coach-tutorial/g)||[]).length,1);assert.match(html,/<details class="tec-account-menu"[\s\S]*data-open-coach-tutorial/);
  assert.match(html,/preload="none"/);assert.doesNotMatch(html.match(/<video controls[\s\S]*?<\/video>/)[0],/autoplay/);
  const sw=fs.readFileSync(new URL('../public/coach/sw.js',import.meta.url),'utf8');assert.match(sw,/if \(url.pathname.startsWith\("\/api\/coach\/tutorial\/media\/"\)\) return;/);
+});
+
+test('both phone tutorials support authenticated seeking without exposing media to anonymous viewers',async t=>{
+ const get=await fixture(t);
+ for(const name of ['instalar-iphone.mp4','instalar-android.mp4']){const r=await get(name,{'X-Test-Active':'yes',Range:'bytes=128-255'});assert.equal(r.status,206);assert.equal(r.headers.get('content-type'),'video/mp4');assert.deepEqual(Buffer.from(await r.arrayBuffer()),fs.readFileSync(path.join(root,name)).subarray(128,256));assert.equal(r.headers.get('cache-control'),'private, no-store');}
 });

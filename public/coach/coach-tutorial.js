@@ -5,26 +5,32 @@
     const openers=Array.from(root.querySelectorAll('[data-open-coach-tutorial]'));
     if(!dialog || !openers.length || dialog.dataset.ready)return;
     dialog.dataset.ready='true';
-    const close=dialog.querySelector('[data-close-coach-tutorial]'),video=dialog.querySelector('video'),source=dialog.querySelector('[data-tutorial-video-src]');
+    const close=dialog.querySelector('[data-close-coach-tutorial]');
+    const players=Array.from(dialog.querySelectorAll('video')).map(video=>({video,source:video.querySelector('[data-tutorial-video-src]'),section:video.closest('[data-tutorial-install]'),error:video.parentElement.querySelector('[data-tutorial-video-error]')}));
+    const load=({video,source})=>{if(source && (!source.getAttribute('src') || video.error)){source.setAttribute('src',source.dataset.tutorialVideoSrc);video.load();}};
     const search=dialog.querySelector('[data-tutorial-search]'),result=dialog.querySelector('[data-tutorial-search-result]'),items=Array.from(dialog.querySelectorAll('[data-tutorial-faq]'));
     let opener=null;
-    const pause=()=>video?.pause();
+    const pause=()=>players.forEach(({video})=>video.pause());
     const restore=()=>{pause();dialog.hidden=true;opener?.focus({preventScroll:true});};
     const fold=text=>String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     for(const button of openers)button.addEventListener('click',()=>{
       const menu=button.closest('[data-visit-account-menu]');opener=menu?.querySelector('summary') || button;if(menu)menu.open=false;
       dialog.hidden=false;
-      if(source && (!source.getAttribute('src') || video.error)){source.setAttribute('src',source.dataset.tutorialVideoSrc);video.load();}
+      for(const player of players)if(!player.section || player.section.open)load(player);
       if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
       close.focus({preventScroll:true});
     });
     close.addEventListener('click',()=>{if(typeof dialog.close==='function')dialog.close();else{dialog.removeAttribute('open');restore();}});
     dialog.addEventListener('close',restore);
     dialog.addEventListener('cancel',()=>{if(typeof dialog.close!=='function'){dialog.removeAttribute('open');restore();}});
-    const fail=()=>{dialog.querySelector('[data-tutorial-video-error]').hidden=false;};
-    video.addEventListener('error',fail);source.addEventListener('error',fail);
-    video.addEventListener('loadeddata',()=>{dialog.querySelector('[data-tutorial-video-error]').hidden=true;});
-    video.addEventListener('play',()=>{if(dialog.hidden || !dialog.open || document.hidden){pause();return;}root.querySelectorAll('audio,video').forEach(media=>{if(media!==video)media.pause();});});
+    for(const player of players){
+      const {video,source,section,error}=player;
+      const fail=()=>{if(error)error.hidden=false;};
+      video.addEventListener('error',fail);source?.addEventListener('error',fail);
+      video.addEventListener('loadeddata',()=>{if(error)error.hidden=true;});
+      video.addEventListener('play',()=>{if(dialog.hidden || !dialog.open || document.hidden || (section && !section.open)){video.pause();return;}root.querySelectorAll('audio,video').forEach(media=>{if(media!==video)media.pause();});});
+      section?.addEventListener('toggle',()=>{if(!section.open){video.pause();return;}if(!dialog.hidden && dialog.open)load(player);});
+    }
     document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
     window.addEventListener('pagehide',pause);
     search.addEventListener('input',()=>{

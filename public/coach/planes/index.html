@@ -35,8 +35,9 @@
     />
     <link rel="stylesheet" href="/coach/styles.css?v=20261023-product-picker2" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
+    <link rel="stylesheet" href="/coach/coach-public.css?v=20261117-public2">
 </head>
-  <body>
+  <body class="coach-public-body">
     <div class="coach-shell" data-coach-plan-page>
       <header class="coach-nav">
         <a class="coach-brand coach-brand--tec" href="/coach/" aria-label="TEC Total Elite Coaching">
@@ -47,12 +48,13 @@
 
         <nav class="coach-nav-links">
           <a class="nav-link" href="/coach/">Inicio</a>
-          <a class="nav-link" href="/coach/login/">Login</a>
+          <a class="nav-button" href="/coach/login/">Entrar</a>
           <a class="nav-button" href="/">Sitio principal</a>
         </nav>
       </header>
 
-      <section class="plan-layout" style="padding-top: 28px;">
+      <main><header class="tec-public-plan-heading"><span class="eyebrow">Tu siguiente paso</span><h1>Empieza con tu Coach.</h1><p>Elige tu membresía y crea tu cuenta para acompañar cada presentación.</p></header>
+      <section class="plan-layout">
         <article class="plan-card">
           <div class="eyebrow">Elige tu acceso</div>
           <h2 class="section-heading">Una membresía TEC, dos formas de pagar.</h2>
@@ -94,7 +96,7 @@
                   <span>USD / año</span>
                 </div>
               </div>
-              <p>La mejor opcion si ya sabes que lo vas a usar de verdad y quieres pagar menos por todo el año.</p>
+              <p>La mejor opción si ya sabes que lo vas a usar de verdad y quieres pagar menos por todo el año.</p>
               <ul>
                 <li>equivale a 10 meses pagados</li>
                 <li>mejor valor para uso constante</li>
@@ -125,7 +127,7 @@
             <div class="eyebrow">Nuevo distribuidor</div>
             <h4>Crea tu cuenta y sigue</h4>
             <p>
-              Llena tus datos una sola vez. Despues de eso se abre el flujo correcto segun el plan que elegiste.
+              Completa tus datos para continuar al pago seguro de tu membresía.
             </p>
 
             <form class="coach-form" data-signup-checkout-form>
@@ -133,7 +135,7 @@
 
               <div>
                 <label for="coach-signup-name">Nombre</label>
-                <input id="coach-signup-name" name="name" type="text" placeholder="Tu nombre" required />
+                <input id="coach-signup-name" name="name" type="text" autocomplete="name" placeholder="Tu nombre" required />
               </div>
 
               <div>
@@ -141,6 +143,7 @@
                 <input
                   id="coach-signup-email"
                   name="email"
+                  autocomplete="email"
                   type="email"
                   placeholder="tu-correo@ejemplo.com"
                   required
@@ -152,8 +155,9 @@
                 <input
                   id="coach-signup-password"
                   name="password"
+                  autocomplete="new-password"
                   type="password"
-                  placeholder="Minimo 8 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   minlength="8"
                   required
                 />
@@ -208,8 +212,9 @@
         </aside>
       </section>
 
+      </main>
       <footer class="footer-note tec-public-footer">
-        <span>Membresia privada TEC para distribuidores, disponible en pago mensual o anual.</span>
+        <span>Membresía privada TEC para distribuidores, disponible en pago mensual o anual.</span>
         <nav aria-label="Información legal de TEC">
           <a href="/coach/privacidad/">Privacidad</a>
           <a href="/coach/terminos/">Términos</a>

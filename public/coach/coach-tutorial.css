@@ -29,3 +29,12 @@ html .tec-tutorial[hidden]{display:none!important}html .tec-tutorial[open]{displ
 .tec-tutorial input:focus-visible,.tec-tutorial summary:focus-visible,.tec-tutorial button:focus-visible,.tec-tutorial a:focus-visible{outline:3px solid #3385c3;outline-offset:3px}
 .tec-tutorial .tec-tutorial__updated{padding-top:20px;border-top:1px solid #dce5ed;margin-top:28px}
 @media(max-width:520px){html .tec-tutorial{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border-radius:14px}.tec-tutorial .tec-tutorial__header{padding:14px 16px;gap:10px}.tec-tutorial .tec-tutorial__body{padding:16px}.tec-tutorial .tec-tutorial__intro{padding:14px}.tec-tutorial .tec-tutorial__header h2{font-size:1.1rem}.tec-tutorial .tec-tutorial__intro h3{font-size:1.2rem}}
+
+.tec-tutorial .tec-tutorial__install-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.tec-tutorial .tec-tutorial__install{border:1px solid #dce5ed;border-radius:14px;background:#f7f9fc;overflow:hidden}
+.tec-tutorial .tec-tutorial__install summary{padding:16px;color:#102e4b;font-size:1rem}
+.tec-tutorial .tec-tutorial__install summary span{display:block;margin:6px 0 0 18px;font-size:.78rem;font-weight:500;color:#4b6274}
+.tec-tutorial .tec-tutorial__install-body{padding:0 16px 16px}
+.tec-tutorial .tec-tutorial__install video{width:min(100%,300px);aspect-ratio:9/16;margin:16px auto 0}
+.tec-tutorial .tec-tutorial__install-body p{font-size:.8rem}
+@media(max-width:600px){.tec-tutorial .tec-tutorial__install-grid{grid-template-columns:1fr}}
