@@ -4274,6 +4274,16 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 }
 .order-calc-image-open:focus-visible { outline: 3px solid #2a72af; outline-offset: -3px; }
 
+.tec-image-viewer-open, .tec-image-viewer-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.tec-image-viewer-open body {
+  position: fixed;
+  top: var(--tec-image-page-top);
+  left: var(--tec-image-page-left);
+  width: 100%;
+}
 .tec-product-image-dialog {
   position: fixed;
   inset: 0;
@@ -4299,7 +4309,7 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
 .tec-product-image-header p { margin: 5px 0 0; color: #52677e; font-size: 12px; }
 .tec-product-image-close { flex-shrink: 0; display: flex; align-items: center; gap: 8px; min-width: 48px; min-height: 48px; padding: 10px 14px; border: 0; border-radius: 12px; color: #fff; background: #a71932; font: inherit; cursor: pointer; }
 .tec-product-image-close:focus-visible { outline: 3px solid #2a72af; outline-offset: 3px; }
-.tec-product-image-content { min-height: 0; padding: 12px; overflow: auto; display: grid; place-items: center; }
+.tec-product-image-content { min-width: 0; min-height: 0; padding: 12px; overflow: hidden; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; }
 .tec-product-image-content img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .tec-product-image-content [hidden] { display: none; }
 .tec-product-image-content p { color: #a71932; padding: 20px; }

@@ -1,5 +1,21 @@
 (() => {
-  let dialog, image, title, detail, error, opener, previousOverflow;
+  let dialog, image, title, detail, error, opener, scrollPosition;
+
+  const root = document.documentElement;
+  const viewport = window.visualViewport;
+
+  function fitViewport() {
+    // Keep native pinch zoom available. At normal scale WebKit can pan its
+    // visual viewport independently of the page while the keyboard retracts.
+    if (viewport && Math.abs(viewport.scale - 1) < 0.01) {
+      dialog.style.top = viewport.offsetTop + "px";
+      dialog.style.left = viewport.offsetLeft + "px";
+      dialog.style.width = viewport.width + "px";
+      dialog.style.height = viewport.height + "px";
+    } else {
+      for (const property of ["top", "left", "width", "height"]) dialog.style.removeProperty(property);
+    }
+  }
 
   function createViewer() {
     dialog = document.createElement("dialog");
@@ -23,7 +39,13 @@
     image.addEventListener("error", () => { error.hidden = false; image.hidden = true; });
     image.addEventListener("load", () => { error.hidden = true; image.hidden = false; });
     dialog.addEventListener("close", () => {
-      document.body.style.overflow = previousOverflow;
+      if (dialog.open) return;
+      viewport?.removeEventListener("resize", fitViewport);
+      viewport?.removeEventListener("scroll", fitViewport);
+      root.classList.remove("tec-image-viewer-open");
+      root.style.removeProperty("--tec-image-page-top");
+      root.style.removeProperty("--tec-image-page-left");
+      window.scrollTo({ ...scrollPosition, behavior: "instant" });
       image.removeAttribute("src");
       image.alt = "";
       if (opener?.isConnected) opener.focus({ preventScroll: true });
@@ -52,8 +74,13 @@
     image.alt = source.alt || title.textContent;
     // Reuse the displayed image, including its native/offline URL and browser cache.
     image.src = source.currentSrc || source.src;
-    previousOverflow = document.body.style.overflow;
+    scrollPosition = { top: window.scrollY, left: window.scrollX };
+    root.style.setProperty("--tec-image-page-top", -scrollPosition.top + "px");
+    root.style.setProperty("--tec-image-page-left", -scrollPosition.left + "px");
+    root.classList.add("tec-image-viewer-open");
     dialog.showModal();
-    document.body.style.overflow = "hidden";
+    fitViewport();
+    viewport?.addEventListener("resize", fitViewport);
+    viewport?.addEventListener("scroll", fitViewport);
   });
 })();
