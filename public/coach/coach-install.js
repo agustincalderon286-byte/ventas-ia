@@ -28,6 +28,7 @@
     const restore=()=>{dialog.hidden=true;opener?.focus({preventScroll:true});};
     for(const button of openers){button.setAttribute('aria-controls',dialog.id);button.addEventListener('click',()=>{
       opener=button;const menu=button.closest('[data-visit-account-menu]');if(menu)menu.open=false;
+      root.querySelectorAll('audio,video').forEach(media=>media.pause());
       render();steps.open=!deferred&&!standalone()&&!accepted;dialog.hidden=false;
       if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
       close.focus({preventScroll:true});

@@ -59,3 +59,5 @@ test('the manifest preserves app identity, launch scope and real image assets ma
 });
 
 test('desktop installation describes the current computer rather than phone-only steps',async()=>{const f=fixture({userAgent:'Chrome Mac'});await f.opener.fire('click');const text=f.instructions.children.map(n=>n.textContent).join(' ');assert.match(text,/Chrome o Edge.*barra de direcciones.*computadora/);assert.doesNotMatch(text,/tres puntos|pantalla de inicio/);});
+
+test('opening the installation guide pauses playing media before another dialog is shown',async()=>{const f=fixture();let pauses=0;f.root.nodes.set('audio,video',[{pause(){pauses++;}}]);await f.opener.fire('click');assert.equal(pauses,1);assert.equal(f.dialog.open,true);});
