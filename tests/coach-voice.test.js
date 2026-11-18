@@ -176,3 +176,20 @@ test('Jorge pronounces Power Blender and explicitly reads TEC prices in US dolla
   }
   assert.ok(ssml.includes('MXN $250, $700 pesos mexicanos, y CAD $250.'));
 });
+
+test('catalog pronunciations cover branded and English product names without changing unrelated words', async () => {
+  let ssml;
+  const voice = createCoachVoiceProvider({
+    env: { AZURE_SPEECH_KEY: 'fixture', AZURE_SPEECH_REGION: 'eastus' },
+    fetcher: async (_url, {body}) => { ssml=body; return new Response(new Uint8Array([20,0])); }
+  });
+  await voice.speak('Royal Prestige® Deluxe Easy Release, Power Blender Go Plus, ALL–IN–ONE KNIFE BLOCK, Chef’s Knife, Milk & Butter Warmers, FrescaPure 5500, Precision Series III™ y MaxCup. Novelista y multicocina.', 'user');
+  for (const [name,alias] of [
+    ['Royal Prestige','Róyal Prestísh'], ['Deluxe Easy Release','Deláks Ísi Rilís'],
+    ['Power Blender Go Plus','Páuer Blénder Góu Plás'], ['ALL–IN–ONE KNIFE BLOCK','Ol in Uán Náif Blak'],
+    ['Chef’s Knife','Shefs Náif'], ['Milk &amp; Butter Warmers','Milk and Báder Uórmers'],
+    ['FrescaPure','Fresca Piúr'], ['Precision Series III','Presíshon Síris Tres'], ['MaxCup','Máx Cap']
+  ]) assert.ok(ssml.includes(`<sub alias="${alias}">${name}</sub>`),name);
+  assert.match(ssml,/Novelista y multicocina/);
+  assert.doesNotMatch(ssml,/[®™]|undefined/);
+});

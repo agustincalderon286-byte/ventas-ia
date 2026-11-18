@@ -1,6 +1,7 @@
 import express from 'express';
 import { WebSocket } from 'undici';
 import crypto from 'node:crypto';
+import { markCatalogPronunciations } from './knowledge/catalog-pronunciation.js';
 export const VOICE_MAX_BYTES = 8 * 1024 * 1024;
 const formats = new Map([['audio/webm','webm'],['video/webm','webm'],['audio/mp4','m4a'],['audio/x-m4a','m4a'],['audio/mpeg','mp3'],['audio/mp3','mp3'],['audio/wav','wav'],['audio/x-wav','wav'],['audio/ogg','ogg']]);
 export function speechText(value) {
@@ -24,11 +25,7 @@ function jorgeSpeechMarkup(text) {
   // Escape the reply before adding markup controlled by the app.
   const escaped = text.toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, ' ')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-  return escaped
-    .replace(/\bPower[ \t]+Blender(?:[ \t]+(Max|Go))?\b/gi, (name, model) => {
-      const suffix = { max: ' Máx', go: ' Góu' }[model?.toLowerCase()] || '';
-      return `<sub alias="Páuer Blénder${suffix}">${name}</sub>`;
-    })
+  return markCatalogPronunciations(escaped)
     .replace(orderMoney, (match, ...args) => {
       const { prefix, amount, unit, usdAmount } = args.at(-1);
       if (prefix && !/^(?:US(?:D)?\s*\$|USD|\$)$/i.test(prefix)) return match;
