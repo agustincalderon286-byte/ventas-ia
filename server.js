@@ -45,6 +45,7 @@ import { createSupportMailer, registerAudiobookSupport } from "./src/tec-audiobo
 import { createTecMailer, createAudioAccountMailer } from "./src/tec-mail.js";
 import { createPublicChefModels, registerPublicChef } from "./src/tec-chef-public.js";
 import { CHEF_PRIVATE_PILOT, createChefModels, registerTecChef } from "./src/tec-chef.js";
+import { TEC_CHAT_MODEL } from "./src/tec-chat-model.js";
 import { productSearch, retailProducts, retailIndex } from "./src/knowledge/product-catalog.js";
 import { COACH_CONSULTATION_PROMPT, applyCoachResponseStyle, buildCoachKnowledgeContext, classifyCoachQuestion, isCoachKnowledgeQuestion, coachKnowledgeCacheKey, warmCoachKnowledge, getCoachKnowledgeDirectReply } from "./src/knowledge/coach-knowledge.js";
 import {
@@ -2942,7 +2943,7 @@ function construirAiCacheKey({
   const safeMode = cleanLower(mode || "coach") || "coach";
   const safeScope = cleanText(scope || "").trim() || "public";
   if (safeMode === "coach") return normalizedQuestion ? coachKnowledgeCacheKey({
-    scope: safeScope, question, activeWorkspace, activeDemoStage, statePrompt, profilePrompt, history, extra
+    model: TEC_CHAT_MODEL, scope: safeScope, question, activeWorkspace, activeDemoStage, statePrompt, profilePrompt, history, extra
   }) : "";
   const semanticQuestion = construirPreguntaSemanticaIA({
     question,
@@ -2975,7 +2976,7 @@ function construirAiCacheKey({
     extra
   });
 
-  return `agustin:ai-cache:${safeMode}:${safeScope}:${signature}`;
+  return `agustin:ai-cache:${safeMode}:${safeScope}:${TEC_CHAT_MODEL}:${signature}`;
 }
 
 async function obtenerRespuestaAiCacheada(options = {}) {
@@ -23867,7 +23868,7 @@ CANAL ACTIVO:
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-5-mini", reasoning_effort: "low",
+          model: TEC_CHAT_MODEL, reasoning_effort: "low",
           messages: [
             { role: "system", content: construirPromptModo(modoChat) },
             { role: "system", content: modoPrompt },
@@ -34261,7 +34262,7 @@ CONSULTA DEL COACH:
       const [contexto, historialPrompt] = await Promise.all([contextoPromise, historialPromptPromise]);
 
       const openAiPayload = {
-        model: "gpt-5-mini", reasoning_effort: "low",
+        model: TEC_CHAT_MODEL, reasoning_effort: "low",
         messages: [
           { role: "system", content: construirPromptModo(modoChat) },
           { role: "system", content: modoPrompt },

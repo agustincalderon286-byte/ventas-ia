@@ -1,3 +1,4 @@
+import { TEC_CHAT_MODEL } from '../src/tec-chat-model.js';
 // Synthetic opt-in checks only: no customer data, chats, orders or memberships written.
 import assert from 'node:assert/strict';
 import { applyCoachResponseStyle, buildCoachKnowledgeContext, COACH_CONSULTATION_PROMPT, COACH_PROMPT_VERSION, getCoachKnowledgeDirectReply } from '../src/knowledge/coach-knowledge.js';
@@ -26,7 +27,7 @@ if (!process.argv.includes('--live')) {
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY unavailable');
   let failures=0;
   for (const c of cases) {
-    const payload=applyCoachResponseStyle({model:'gpt-5-mini',reasoning_effort:'low',max_completion_tokens:2400,messages:[
+    const payload=applyCoachResponseStyle({model:TEC_CHAT_MODEL,reasoning_effort:'low',max_completion_tokens:2400,messages:[
       {role:'system',content:COACH_CONSULTATION_PROMPT},
       {role:'system',content:buildCoachKnowledgeContext(c.q,{history:c.history||[]})},
       // Regression fixture: demo context must not cause an unrequested sales essay.

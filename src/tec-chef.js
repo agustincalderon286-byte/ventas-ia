@@ -1,3 +1,4 @@
+import { TEC_CHAT_MODEL } from './tec-chat-model.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { CHEF_VERSION, CHEF_PROMPT, chefManifest, chefDirectReply, buildChefContext, chefRequestFingerprint, chefAppointmentIntent } from './knowledge/chef-knowledge.js';
@@ -61,7 +62,7 @@ export function createChefModels(mongoose) {
 }
 export async function completeChef(messages,{apiKey=process.env.OPENAI_API_KEY,fetchImpl=fetch}={}) {
  if(!apiKey)throw Error('ai_unconfigured');
- const response=await fetchImpl('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:'gpt-5-mini',reasoning_effort:'low',verbosity:'low',max_completion_tokens:3500,store:false,messages})});
+ const response=await fetchImpl('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:TEC_CHAT_MODEL,reasoning_effort:'low',verbosity:'low',max_completion_tokens:3500,store:false,messages})});
  if(!response.ok)throw Error('ai_unavailable');
  const result=await response.json(),choice=result.choices?.[0];
  if(choice?.finish_reason!=='stop'||typeof choice.message?.content!=='string'||!choice.message.content.trim())throw Error('ai_incomplete');
