@@ -275,18 +275,13 @@
                 <label>Radio de búsqueda<select name="radius"><option value="100">100 metros</option><option value="200" selected>200 metros</option><option value="300">300 metros</option><option value="500">500 metros</option><option value="750">750 metros</option><option value="1000">1 km</option></select></label>
                 <button class="primary-button" type="submit" data-property-submit>Buscar propiedades</button>
               </form>
-              <div class="tec-property-search-tools"><button class="tec-property-text-button" type="button" data-property-use-appointment>Usar dirección del cliente activo ↗</button><span>Calle y ciudad en un solo campo. Elige una sugerencia y busca alrededor.</span></div>
+              <div class="tec-property-search-tools"><button class="tec-property-text-button" type="button" data-property-location>Mi ubicación</button><button class="tec-property-text-button" type="button" data-property-use-appointment>Usar dirección del cliente activo ↗</button><span>Calle y ciudad en un solo campo. Elige una sugerencia y busca alrededor.</span></div>
             </section>
             <p class="tec-property-status" data-property-feedback role="status" aria-live="polite">Busca una dirección para explorar sus alrededores. Tu recorrido guardado sigue disponible.</p>
             <div class="tec-property-candidates" data-property-candidates hidden></div>
             <div class="tec-property-dashboard">
               <section class="tec-property-explore" aria-label="Explorar propiedades">
-                <div class="tec-property-empty-state" data-property-empty>
-                  <svg viewBox="0 0 220 140" fill="none" aria-hidden="true"><path d="M20 38 78 18l63 21 59-20v100l-59 20-63-21-58 20Z" fill="#eaf1f7" stroke="#c4d4e2" stroke-width="2"/><path d="M78 18v100m63-79v100" stroke="#c4d4e2" stroke-width="2"/><path d="m51 85 45-25 38 29 42-33" stroke="#267c78" stroke-width="4" stroke-dasharray="6 7"/><path d="M128 51c0 16-17 32-17 32S94 67 94 51a17 17 0 1 1 34 0Z" fill="#bd2945"/><circle cx="111" cy="51" r="6" fill="white"/></svg>
-                  <h3>Una zona. Muchas oportunidades.</h3><p>Busca la dirección de tu cita para ver las casas cercanas y elegir tus próximas paradas.</p>
-                  <ol><li><span>1</span> Encuentra tu zona</li><li><span>2</span> Agrega casas</li><li><span>3</span> Inicia tu recorrido</li></ol>
-                </div>
-                <div class="tec-property-results" data-property-results data-view="map" hidden>
+                <div class="tec-property-results" data-property-results data-view="map">
                   <div class="tec-property-summary" data-property-summary></div>
                   <div class="tec-property-viewbar"><h3>Explora la zona</h3><div class="tec-property-view-switch" role="group" aria-label="Vista de propiedades"><button type="button" data-property-view="map" aria-pressed="true">Mapa</button><button type="button" data-property-view="list" aria-pressed="false">Casas <span data-property-result-count></span></button></div></div>
                   <div class="tec-property-layout">
@@ -5819,7 +5814,7 @@
     <script src="/coach/order-calculator.js?v=20261025-native-offline2"></script>
     <script src="/coach/offline-forms.js?v=20261112-phone1"></script>
     <script src="/coach/pwa-safety.js?v=20261112-phone1"></script>
-    <script type="module" src="/coach/property-map.js?v=20261112-phone1"></script>
+    <script type="module" src="/coach/property-map.js?v=20261117-mapas1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/product-search.js?v=20261025-alias1"></script>
     <script src="/coach/product-image-viewer.js?v=20261028-program-gifts1"></script>

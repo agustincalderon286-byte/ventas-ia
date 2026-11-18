@@ -129,6 +129,13 @@ export function createPropertyLab({getRoute,request,complete,followup,onFallback
   }
   function resize(){if(dialog.open)map?.resize();}
   const observer=window.ResizeObserver?new ResizeObserver(resize):null;observer?.observe(mapBox);
+  let styleTimer = null;
+  function useSimpleMap() {
+    if (!dialog.open) return;
+    navigatorLab.stop();
+    dialog.close();
+    onFallback();
+  }
   async function open(){
     if(opening||dialog.open)return;opening=true;openedBy=document.activeElement;dialog.showModal();update();
     timer=setInterval(()=>navigatorLab.tick(),5000);
@@ -141,6 +148,7 @@ export function createPropertyLab({getRoute,request,complete,followup,onFallback
         map.on('dragstart',()=>follow=false);map.on('rotatestart',event=>{if(event.originalEvent)follow=false;});
         map.on('error',()=>{if(dialog.open)feedback.textContent='No pude cargar algunas calles. Tus casas y el avance siguen disponibles.';});
         map.on('style.load',()=>{
+          clearTimeout(styleTimer);
           mapReady=true;map.addSource('tml-route',{type:'geojson',data:empty});
           map.addLayer({id:'tml-route-outline',type:'line',source:'tml-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':10}});
           map.addLayer({id:'tml-route-blue',type:'line',source:'tml-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1677ed','line-width':6}});
@@ -148,12 +156,13 @@ export function createPropertyLab({getRoute,request,complete,followup,onFallback
           const state=navigatorLab.get();if(state.plan){previousPlan=state.plan;map.getSource('tml-route').setData(routeLine(state.plan));}if(state.position)paintPosition(state.position,state.active&&follow);
         });
       } else {map.resize();fitRoute();}
+      if (!mapReady) styleTimer = setTimeout(useSimpleMap, 12000);
       if(autoStart&&dialog.open&&nextRouteStop(getRoute())){navigatorLab.start();acquireWake();}
-    }catch(error){feedback.textContent=error.message;}
+    }catch{useSimpleMap();}
     finally{opening=false;}
   }
   close.addEventListener('click',()=>dialog.close());
-  dialog.addEventListener('close',()=>{navigatorLab.stop();if(details.open)details.close();if(info.open)info.close();clearInterval(timer);timer=null;cancelVoice();releaseWake();openedBy?.focus?.({preventScroll:true});});
+  dialog.addEventListener('close',()=>{clearTimeout(styleTimer);navigatorLab.stop();if(details.open)details.close();if(info.open)info.close();clearInterval(timer);timer=null;cancelVoice();releaseWake();if (!document.querySelector('dialog[open]')) openedBy?.focus?.({preventScroll:true});});
   start.addEventListener('click',()=>{if(navigatorLab.get().active)navigatorLab.stop();else{follow=true;navigatorLab.start();acquireWake();}});
   voice.addEventListener('click',()=>{voiceMenu.hidden=!voiceMenu.hidden;voice.setAttribute('aria-expanded',String(!voiceMenu.hidden));});
   mute.addEventListener('click',()=>{muted=!muted;mute.textContent=muted?'Activar voz':'Silenciar voz';voice.setAttribute('aria-label',muted?'Opciones de voz, silenciada':'Opciones de voz');if(muted)cancelVoice();});
@@ -161,7 +170,7 @@ export function createPropertyLab({getRoute,request,complete,followup,onFallback
   center.addEventListener('click',()=>{follow=true;const p=navigatorLab.get().position;if(p)paintPosition(p,true);else{fitRoute();gpsStatus.textContent='Esperando tu ubicación';}});
   overview.addEventListener('click',()=>{follow=false;fitRoute();});
   view.addEventListener('click',()=>{tilted=!tilted;view.textContent=tilted?'Vista 2D':'Vista 3D';view.setAttribute('aria-pressed',String(tilted));if(map)map.easeTo({pitch:tilted?45:0,bearing:tilted?map.getBearing():0,duration:500});});
-  fallback.addEventListener('click',()=>{dialog.close();onFallback();});
+  fallback.addEventListener('click',useSimpleMap);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelVoice();releaseWake();}else if(dialog.open){resize();navigatorLab.tick();acquireWake();}});
   window.addEventListener('pagehide',()=>navigatorLab.stop());
   return {open,update,close:()=>{navigatorLab.stop();if(dialog.open)dialog.close();},isOpen:()=>dialog.open};

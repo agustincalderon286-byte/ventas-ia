@@ -1,6 +1,6 @@
-import {createPropertyWalk} from './property-walk.js?v=20261029-lab1';
+import {createPropertyWalk} from './property-walk.js?v=20261117-mapas1';
 import { PROPERTY_VISIT_STATUSES, propertyVisitKey, mergePropertyVisits, propertyVisitFromQueuedItem } from "./property-visit-helpers.js?v=20261023-product-picker2";
-import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261101-recorrido1";
+import { initTecAddressSuggestions } from "./address-suggestions.js?v=20261117-mapas1";
 
 import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteStore, toggleRouteStop, completeRouteStop, moveRouteStop, nextRouteStop, orderRouteByProximity, routeNavigationUrl, mergeRouteOwners } from "./property-route-state.js?v=20261028-walk2";
 
@@ -56,13 +56,49 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     }
     root.querySelectorAll('[data-property-view]').forEach(button => button.addEventListener('click', () => setView(button.dataset.propertyView)));
     find('fit')?.addEventListener('click', () => ensureMap());
+    const countyCenter = [41.85, -87.82];
+    let locationLayer = null, locationRevision = 0;
+    const locationButton = find('location');
+    locationButton?.addEventListener('click', async () => {
+      if (!navigator.geolocation) {
+        message('Este navegador no ofrece ubicación. Puedes buscar por dirección.', 'error');
+        return;
+      }
+      const revision = ++locationRevision;
+      locationButton.disabled = true;
+      message('Buscando tu ubicación…');
+      try {
+        const fix = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy:true, timeout:15000, maximumAge:10000}));
+        if (revision !== locationRevision || root.hidden) return;
+        setView('map', true);
+        await ensureMap(false);
+        if (revision !== locationRevision || root.hidden || !map) return;
+        const point = [fix.coords.latitude, fix.coords.longitude];
+        const accuracy = Math.ceil(fix.coords.accuracy);
+        locationLayer?.remove();
+        locationLayer = window.L.layerGroup().addTo(map);
+        const area = window.L.circle(point, {radius: Math.max(accuracy, 10), color:'#1375bd', weight:1, fillOpacity:0.10}).addTo(locationLayer);
+        window.L.circleMarker(point, {radius:8, color:'#fff', weight:3, fillColor:'#1375bd', fillOpacity:1})
+          .bindTooltip('Mi ubicación').addTo(locationLayer);
+        map.fitBounds(area.getBounds(), {maxZoom:17, padding:[20,20]});
+        message(`Tu ubicación tiene una precisión aproximada de ${accuracy} m. Busca una dirección de Cook County para ver las casas cercanas.`);
+      } catch (error) {
+        if (revision === locationRevision) message(error.code === 1
+          ? 'El permiso de ubicación está desactivado. Puedes buscar por dirección o permitir ubicación en los ajustes del sitio.'
+          : 'No pude obtener tu ubicación. Intenta otra vez o busca por dirección.', 'error');
+      } finally { if (revision === locationRevision) locationButton.disabled = false; }
+    });
+    function cancelLocationRequest() {
+      locationRevision++;
+      if (locationButton) locationButton.disabled = false;
+    }
     let savedListSignature = null;
     function syncResultList() {
-      if (find('empty')) find('empty').hidden = !results.hidden;
       const properties = data?.properties || selected;
       if (find('result-count')) find('result-count').textContent = String(properties.length);
       if (!data) {
-        find('summary').replaceChildren(node('strong', '', 'Tu recorrido guardado'), node('span', '', 'Estas casas siguen disponibles aunque todavía no hayas buscado otra zona.'));
+        find('summary').replaceChildren(node('strong', '', properties.length ? 'Tu recorrido guardado' : 'Mapa de Cook County'));
         const signature = JSON.stringify(properties);
         if (signature !== savedListSignature) { savedListSignature = signature; renderList(properties); refreshVisitDecorations(); }
       }
@@ -77,7 +113,14 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       }
     }
     const routeStore = createPropertyRouteStore({ accountId, email, request, offline,
-      onChange: value => { routeState = value; selected = value.stops.map(stop => stop.property); syncRoute(); hydrateOwners(); if (selected.length && (!map || results.hidden)) ensureMap(); },
+      onChange: value => {
+        const firstSavedRoute = !data && !selected.length && value.stops.length > 0;
+        routeState = value;
+        selected = value.stops.map(stop => stop.property);
+        syncRoute();
+        hydrateOwners();
+        if (firstSavedRoute) ensureMap();
+      },
       onStatus: text => { find("route-status").textContent = text; }
     });
     async function changeRoute(update) {
@@ -87,7 +130,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       catch (error) { find("route-status").textContent = `No pude guardar el cambio: ${error.message}. Inténtalo de nuevo.`; return false; }
       finally { routeBusy = false; syncRoute(); }
     }
-    routeStore.ready.then(() => { syncRoute(); ensureMap(); routeStore.sync(); }).catch(() => {});
+    routeStore.ready.then(() => { syncRoute(); routeStore.sync(); }).catch(() => {});
     async function hydrateOwners() {
       const pins = [...new Set(routeState.stops.filter(s => !s.property.ownerChecked && !s.property.ownerName && !s.property.ownerNames?.length).map(s => s.property.pin))].sort();
       if (!pins.length || ownerLoading || !navigator.onLine || ownerAttempt === pins.join(',')) return;
@@ -120,11 +163,11 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       if (labOpening) return;
       labOpening = true; if(labButton)labButton.disabled = true;
       try {
-        const { createPropertyLab } = await import('./property-lab.js?v=20261101-recorrido1');
+        const { createPropertyLab } = await import('./property-lab.js?v=20261117-mapas1');
         await walk.close();
         lab ||= createPropertyLab({ ...routeTools, onFallback: () => walk.open() });
         await lab.open();
-      } catch { find('route-status').textContent = 'No pude abrir el recorrido. Tu avance sigue guardado. Reintenta o usa Google Maps / Apple Maps.'; }
+      } catch { if (!root.hidden) await walk.open(); }
       finally { labOpening = false; syncRoute(); }
     }
     const visitMeta = status => PROPERTY_VISIT_STATUSES.find(item => item.value === status);
@@ -387,15 +430,17 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     function mapProperties() {
       return [...new Map([...selected, ...(data?.properties || [])].map(property => [propertyVisitKey(property), property])).values()];
     }
-    async function ensureMap() {
-      const anchor = data?.anchor || routeState.anchor;
-      if (root.hidden || !anchor || (!data && !selected.length)) return;
+    async function ensureMap(fit = true) {
+      if (root.hidden) return;
       results.hidden = false;
+      const legacyPlaceholder = find('empty');
+      if (legacyPlaceholder) legacyPlaceholder.hidden = true;
       syncResultList();
       try {
         const L = await loadLeaflet();
+        if (root.hidden) return;
         if (!map) {
-          map = L.map(mapBox, { scrollWheelZoom: false }).setView([anchor.lat, anchor.lon], 17);
+          map = L.map(mapBox, { scrollWheelZoom: false }).setView(countyCenter, 10);
           let failedTiles = 0;
           const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
@@ -408,7 +453,11 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         }
         map.invalidateSize();
         drawMarkers();
-        map.fitBounds(L.latLngBounds([anchor, ...mapProperties()].map(item => [item.lat, item.lon])), { padding: [28, 28], maxZoom: 18 });
+        if (fit) {
+          const points = data ? [data.anchor, ...data.properties] : [routeState.anchor, ...selected].filter(Boolean);
+          if (points.length) map.fitBounds(L.latLngBounds(points.map(item => [item.lat, item.lon])), { padding: [28, 28], maxZoom: 18 });
+          else map.setView(countyCenter, 10);
+        }
       } catch (error) { find("map-note").textContent = error.message; }
     }
 
@@ -453,7 +502,7 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       find("progress").textContent = `${completed} ${completed === 1 ? "visitada" : "visitadas"} · ${remaining} ${remaining === 1 ? "pendiente" : "pendientes"}`;
       find("next").textContent = next ? next.property.formattedAddress : selected.length ? "Recorrido terminado" : "Agrega casas para empezar tu recorrido";
       find("next-owner").textContent = next ? "Propietario registrado: " + ownerText(next.property) : "";
-      find("walk").disabled = !routeState.stops.length;
+      find("walk").disabled = !next;
       walk?.update();
       if (labButton) labButton.disabled = labOpening || !routeStore.isReady();
       lab?.update();
@@ -495,8 +544,6 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         button.disabled = disabled || loading || (index < 0 && selected.length >= MAX_STOPS);
         card.classList.toggle("is-selected", index >= 0);
       }
-      if (!data && !selected.length) results.hidden = true;
-      if (find('empty')) find('empty').hidden = !results.hidden;
       drawMarkers();
     }
     function toggleStop(property) {
@@ -522,9 +569,11 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         card.classList.toggle('is-selected', routeIndex >= 0);
         select.addEventListener("click", () => toggleStop(property));
         const locate = node("button", "tec-property-locate", "Ver en mapa"); locate.type = "button";
-        locate.addEventListener("click", () => {
+        locate.addEventListener("click", async () => {
           setView("map", true);
-          if (!map) { ensureMap(); return; }
+          if (!map) await ensureMap(false);
+          if (!map || root.hidden) return;
+          map.invalidateSize();
           map.setView([property.lat, property.lon], 18); markers.get(property.pin)?.openPopup();
           mapBox.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
         });
@@ -532,7 +581,9 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
         const badge = node("div", "tec-visit-card-details"); badge.dataset.visitBadge = "true";
         actions.append(select, locate, followup); card.append(badge, actions); list.append(card);
       }
-      if (!properties.length) list.append(node("p", "tec-property-empty", "No encontré propiedades con dirección disponible en este radio. Prueba ampliar la distancia."));
+      if (!properties.length) list.append(node("p", "tec-property-empty", data
+        ? "No encontré propiedades con dirección disponible en este radio. Prueba ampliar la distancia."
+        : "Busca una dirección para ver las casas cercanas."));
     }
 
     async function loadNearby(candidate) {
@@ -562,11 +613,33 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
       event.preventDefault();
       if (loading) return;
       if (!navigator.onLine) { message("Esta búsqueda necesita internet. Vuelve a intentarlo cuando tengas conexión.", "error"); return; }
+      cancelLocationRequest();
       busy(true); candidatesBox.hidden = true; syncRoute();
       message("Buscando la dirección y sus propiedades cercanas…");
       try {
-        const payload = await request(`/api/coach/properties/search?${new URLSearchParams({ address: form.elements.address.value.trim(), city: form.elements.city.value.trim() })}`);
+        const query = new URLSearchParams({ address: form.elements.address.value.trim(), city: form.elements.city.value.trim() });
+        const payload = await request(`/api/coach/properties/search?${query}`);
         if (!payload.candidates.length) {
+          if (!payload.missingCoordinates) {
+            const alternatives = await request(`/api/coach/properties/suggest?${query}`).catch(() => null);
+            if (alternatives?.suggestions?.length) {
+              candidatesBox.replaceChildren();
+              for (const suggestion of alternatives.suggestions) {
+                const button = node('button', 'nav-button', suggestion.formattedAddress);
+                button.type = 'button';
+                button.addEventListener('click', () => {
+                  form.elements.address.value = suggestion.address;
+                  form.elements.city.value = suggestion.city;
+                  addressSuggestions.refresh?.();
+                  form.requestSubmit();
+                });
+                candidatesBox.append(button);
+              }
+              candidatesBox.hidden = false;
+              message('No encontré la dirección exacta. Selecciona una de estas coincidencias para buscar sus casas cercanas.');
+              return;
+            }
+          }
           message(payload.missingCoordinates ? "Encontré la dirección, pero no tiene coordenadas disponibles. Prueba otra dirección cercana." : "No encontré esa dirección. Revisa número, calle y ciudad. Por ahora cubrimos Cook County, Illinois.", "error");
         } else if (payload.candidates.length === 1) await loadNearby(payload.candidates[0]);
         else {
@@ -601,8 +674,9 @@ import { MAX_ROUTE_STOPS as MAX_STOPS, emptyPropertyRoute, createPropertyRouteSt
     appleRoute.addEventListener("click", event => { if (!appleRoute.hasAttribute("href")) event.preventDefault(); });
     route.addEventListener("click", event => { if (!route.hasAttribute("href")) event.preventDefault(); });
     window.addEventListener("coach:workspace-change", event => {
-      if (event.detail?.workspace === "mapa") { requestAnimationFrame(ensureMap); refreshVisits(); routeStore.refresh(); }
-      else { addressSuggestions.close(); walk.close(); lab?.close(); if (dialog.open) void requestVisitClose({reason:'workspace'}); }
+      if (event.detail?.workspace === "mapa") { requestAnimationFrame(() => ensureMap(!map)); refreshVisits(); routeStore.refresh(); }
+      else { cancelLocationRequest(); addressSuggestions.close(); walk.close(); lab?.close(); if (dialog.open) void requestVisitClose({reason:'workspace'}); }
     });
+    if (!root.hidden) ensureMap();
   };
 })();

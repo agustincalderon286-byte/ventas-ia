@@ -68,7 +68,7 @@ export function initTecAddressSuggestions({form,request,onChoose=()=>{}}) {
       element.addEventListener('pointerup',e=>{if(!pointer||pointer.id!==e.pointerId)return;const moved=Math.hypot(e.clientX-pointer.x,e.clientY-pointer.y)>10;pointer=null;if(moved){handled=true;return;}if(e.pointerType!=='mouse'){e.preventDefault();select();}});
       element.addEventListener('pointercancel',()=>{pointer=null;handled=true;});element.addEventListener('click',select);list.append(element);
     });
-    show(options.length?'Elige la dirección completa de tu cita.':'Añade la ciudad en este mismo campo para buscar en Cook County, por ejemplo «4415 Harrison St, Hillside».');
+    show(options.length?'Elige la dirección completa de tu cita.':parseCombinedAddress(input.value)?'Sin sugerencias para esa calle. Pulsa Buscar propiedades para consultar la dirección completa.':'Añade la ciudad en este mismo campo para buscar en Cook County, por ejemplo «4415 Harrison St, Hillside».');
   }
   function schedule(){close();selectionRevision++;verification=null;queuedSubmit=null;selectedText='';prepare();if(composing)return;const query=input.value.trim();if(query.length<5||!/^\d[\dA-Z/-]*\s+[\p{L}]/iu.test(query))return;
     if(!navigator.onLine){show('Las sugerencias necesitan internet. Tu recorrido guardado sigue disponible.');return;}
