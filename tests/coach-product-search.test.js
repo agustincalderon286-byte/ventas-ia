@@ -88,6 +88,49 @@ test('Coach routes nicknames/functions to verified identities, asks instead of a
   assert.doesNotMatch(buildCoachKnowledgeContext('¿Por qué mi olla tiene una capa blanca?'),/Coincidencias de identidad/);
 });
 
+test('Coach uses the internal catalog across the photographed parts conversation',()=>{
+  const original={role:'user',content:'¿Cuál es el código para los aros de silicón del sartén de cinco piezas, del, ya, del cinco piezas?'};
+  const history=[
+    original,
+    {role:'assistant',content:'¿A qué modelo o medida del sartén de 5 piezas te refieres?'},
+    {role:'user',content:'A cualquiera, solamente quiero saber el código.'},
+    {role:'assistant',content:'¿Te refieres al sartén de 5 piezas o a otra línea de sartenes?'}
+  ];
+  const expected=[/RP9713.*Easy Release.*18 cm/,/RP9714.*Easy Release.*20 cm/];
+  for(const answer of [original.content,'A cualquiera, solamente quiero saber el código.','¿Qué modelos hay disponibles?','El modelo ER.','A los modelos de tapas de 18 centímetros, 20 centímetros.','Respuestas, códigos.']){
+    const reply=getCoachKnowledgeDirectReply(answer,{history});
+    expected.forEach(pattern=>assert.match(reply,pattern,answer));
+    assert.doesNotMatch(reply,/RP3412|RP2287|PB Max|\?/);
+    assert.match(reply,/Lista interna de repuestos y códigos TEC/);
+  }
+  const withSizes=[...history,
+    {role:'user',content:'A las tapas de 18 cm y 20 cm.'},
+    {role:'assistant',content:'¿Qué necesitas exactamente, códigos o compatibilidad?'}
+  ];
+  const matches=searchCoachKnowledge('Códigos.',{history:withSizes});
+  assert.deepEqual(matches.records.map(record=>record.code).sort(),['RP9713','RP9714']);
+  const single=getCoachKnowledgeDirectReply('A las tapas de 20 cm.',{history});
+  assert.match(single,expected[1]);
+  assert.doesNotMatch(single,/RP9713/);
+  assert.match(getCoachKnowledgeDirectReply('A las tapas de 99 cm.',{history}),/no tiene un código verificado/);
+  assert.doesNotMatch(getCoachKnowledgeDirectReply('Necesito una olla de 20 cm.',{history}),/RP9714/);
+  assert.doesNotMatch(getCoachKnowledgeDirectReply('A cualquiera.',{
+    history:[...history,{role:'user',content:'¿Qué recetas puedo hacer con pollo?'},{role:'assistant',content:'¿Al horno o al sartén?'}]
+  }),/RP9714/);
+});
+
+test('parts lists stay in the requested component and equipment family',()=>{
+  const multi=getCoachKnowledgeDirectReply('Códigos de los aros de silicona para Easy Release de 18 y 20 cm');
+  assert.match(multi,/RP9713.*18 cm/);
+  assert.match(multi,/RP9714.*20 cm/);
+  const blender=getCoachKnowledgeDirectReply('Código del aro de silicona de la tapa Power Blender Max');
+  assert.match(blender,/RP3412/);
+  assert.doesNotMatch(blender,/RP9714|RP2287/);
+  const equipmentParts=getCoachKnowledgeDirectReply('¿Qué repuestos hay para la Power Blender Max?');
+  assert.match(equipmentParts,/Power Blender Max/);
+  assert.doesNotMatch(equipmentParts,/RP9714|RP2287|folleto/);
+  assert.equal(getCoachKnowledgeDirectReply('¿Es compatible el aro de silicona de la tapa de 20 cm con mi sartén?'),'');
+});
 test('500 local lookups retain low latency',()=>{
   const times=[];
   for(let i=0;i<500;i++) { const start=performance.now();findProducts(cases[i%cases.length][0]);times.push(performance.now()-start); }

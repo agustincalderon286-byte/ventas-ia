@@ -1,6 +1,13 @@
 (() => {
   'use strict';
   const MAX_BYTES = 8 * 1024 * 1024, MAX_SECONDS = 90;
+  function microphoneSettings() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+      return 'En Safari, abre el menú de página de TEC → Ajustes del sitio web → Micrófono → Permitir.';
+    }
+    return 'Abre los permisos de este sitio junto a la dirección de TEC y guarda Micrófono en Permitir.';
+  }
   function recordingMime(Recorder = window.MediaRecorder) {
     return ['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(type => Recorder?.isTypeSupported?.(type)) || '';
   }
@@ -69,6 +76,9 @@
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
     let draft = null, draftText = '', draftUrl = '', draftDuration = 0, previewUrl = '', active = null, gesture = null, seconds = 0, finishAction = 'hold';
     const controls = [], players = new Set(), urls = new Set();
+    let micPermission, micRequest;
+    // The browser owns this permission. Reading its live state never opens a prompt.
+    navigator.permissions?.query?.({name:'microphone'}).then(status => { micPermission = status; }, () => {});
     const HOLD_LABEL = 'Mantén presionado para grabar. Suelta para enviar. Desliza a la izquierda para borrar.';
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
@@ -163,14 +173,15 @@
       const previous=gesture;gesture=null;
       if(previous?.pointerId != null){try{previous.item.record.releasePointerCapture(previous.pointerId);}catch{}}
     }
-    function cancel(message = 'Audio borrado.') {
+    function cancel(message = phase === 'requesting' && micPermission?.state !== 'granted'
+      ? 'Si aparece el aviso de micrófono, elige Permitir para este sitio. Después, mantén presionado para grabar. ' + microphoneSettings() : 'Audio borrado.') {
       generation++; resetGesture();clearTimer();stopRecording();recorder=null;clearDraft();phase='idle';seconds=0;notify(message);render();
     }
     function finish() {
       if(!gesture)return;
       const cancelled=gesture.cancelled;resetGesture();
       if(cancelled){cancel();return;}
-      if(phase==='requesting'){cancel('Si el navegador pide permiso, acéptalo y mantén presionado otra vez para grabar.');return;}
+      if(phase==='requesting'){cancel(micPermission?.state === 'granted' ? 'Mantén presionado un poco más para grabar.' : undefined);return;}
       unlockAudio();
       if(phase==='recording'){stopRecording('send');render();}
       else if(phase==='finishing')finishAction='send';
@@ -178,11 +189,15 @@
     }
     async function start(item) {
       if(chatBusy || phase !== 'idle' || draft)return;
-      active=item;pausePlayback();unlockAudio();seconds=0;
+      active=item;
       if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {resetGesture();notify('Este navegador no permite grabar. Puedes escribir tu pregunta.');return;}
-      const token=++generation;phase='requesting';notify('Permite el micrófono y mantén presionado para grabar.');render();
+      if(micPermission?.state === 'denied') {resetGesture();notify('El micrófono está bloqueado. ' + microphoneSettings());return;}
+      if(micRequest) {resetGesture();notify('El navegador todavía está esperando tu permiso para el micrófono.');return;}
+      pausePlayback();unlockAudio();seconds=0;
+      const token=++generation;phase='requesting';notify('Preparando micrófono…');render();
       try {
-        const captured=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        micRequest=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        const captured=await micRequest;
         if(token!==generation || document.hidden || !gesture){captured.getTracks().forEach(track=>track.stop());if(token===generation){phase='idle';render();}return;}
         stream=captured;const mime=recordingMime(),chunks=[];
         const recording=new MediaRecorder(captured,mime?{mimeType:mime}:{});recorder=recording;const started=Date.now();
@@ -200,7 +215,9 @@
         timer=window.setInterval(()=>{seconds++;render();if(seconds>=MAX_SECONDS)stopRecording();},1000);
       } catch(error) {
         if(token!==generation)return;stopTracks();resetGesture();phase='idle';
-        notify(error.name==='NotAllowedError' ? 'El micrófono está bloqueado. Permítelo en el navegador para grabar.' : 'No pude abrir el micrófono. Revisa que esté disponible.');render();
+        notify(error.name==='NotAllowedError' ? 'El micrófono está bloqueado. ' + microphoneSettings() : 'No pude abrir el micrófono. Revisa que esté disponible.');render();
+      } finally {
+        micRequest=null;
       }
     }
     async function request(url, options = {}) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { searchCoachKnowledge as search, buildCoachKnowledgeContext as context, classifyCoachQuestion as classify, getCoachKnowledgeManifest, coachKnowledgeCacheKey, COACH_KNOWLEDGE_VERSION, publishCoachKnowledge, warmCoachKnowledge } from '../src/knowledge/coach-knowledge.js';
+import { searchCoachKnowledge as search, buildCoachKnowledgeContext as context, classifyCoachQuestion as classify, isCoachKnowledgeQuestion, getCoachKnowledgeManifest, coachKnowledgeCacheKey, COACH_KNOWLEDGE_VERSION, publishCoachKnowledge, warmCoachKnowledge } from '../src/knowledge/coach-knowledge.js';
 const load = name => JSON.parse(fs.readFileSync(new URL('../src/data/'+name, import.meta.url)));
 
 test('years and cooking time are not prices; accents and common misspellings work', () => {
@@ -59,6 +59,45 @@ test('followup carries product but a new explicit topic does not', () => {
   assert.match(search('¿Y su garantía?',{history}).records[0].title, /Easy Release/);
   assert.match(search('garantía Power Blender Max',{history}).records[0].title, /Blender Max/);
 });
+test('spoken and typed short choices resume the original warranty request in the order shown', () => {
+  const history = [
+    {role:'user',content:'¿Cuál es la garantía de Power Blender?'},
+    {role:'assistant',content:'¿Te refieres a la Power Blender Go o a la Power Blender Max?'}
+  ];
+  for (const [answer, model, years, other] of [
+    ['La primera.', /Blender Go/, /2 años/, /Blender Max/],
+    ['Go', /Blender Go/, /2 años/, /Blender Max/],
+    ['La segunda', /Blender Max/, /7 años/, /Blender Go/],
+    ['La opción 2.', /Blender Max/, /7 años/, /Blender Go/]
+  ]) {
+    const options = {history:[...history, {role:'user',content:answer}]};
+    const result = search(answer, options);
+    assert.equal(isCoachKnowledgeQuestion(answer, options), true, answer);
+    assert.equal(result.intent.warranty, true, answer);
+    assert.match(result.records[0].title, model, answer);
+    assert.match(result.records[0].text, years, answer);
+    assert.ok(result.records.every(record => !other.test(record.title)), answer);
+    assert.match(context(answer, options), /Elección confirmada/);
+  }
+  const reversed = [history[0], {role:'assistant',content:'¿Power Blender Max o Go?'}];
+  assert.match(search('La primera',{history:reversed}).records[0].title, /Blender Max/);
+  assert.match(search('La segunda',{history:reversed}).records[0].title, /Blender Go/);
+  const single = [history[0], {role:'assistant',content:'¿Te refieres a la Power Blender Go?'}];
+  assert.match(search('Sí, esa.',{history:single}).records[0].title, /Blender Go/);
+  assert.equal(search('Sí.',{history}).choice, null, 'yes alone cannot choose between two models');
+  assert.equal(search('La tercera.',{history}).choice, null);
+  assert.equal(search('La primera.',{history:[...history,{role:'user',content:'Hola'},{role:'assistant',content:'Hola, ¿cómo te ayudo?'}]}).choice,null);
+  assert.equal(search('¿Qué garantía tiene Easy Release?',{history}).choice,null);
+  assert.equal(search('Compara la garantía de Power Blender Go y Power Blender Max').records.filter(record => record.kind === 'warranty' && /Blender (?:Go|Max)/.test(record.title)).length,2);
+});
+test('a confirmed choice also applies to other catalog families and intents', () => {
+  const history = [
+    {role:'user',content:'¿Cuánto cuesta el filtro FrescaPure?'},
+    {role:'assistant',content:'¿Te refieres al FrescaPure 3500 o al FrescaPure 5500?'}
+  ];
+  assert.equal(search('El segundo',{history}).records[0].code,'WF0482');
+});
+
 test('conflicting price codes are flagged, never silently selected', () => {
   for (const code of ['WF0654']) {
     assert.equal(search('precio '+code).status,'ambiguous_price');

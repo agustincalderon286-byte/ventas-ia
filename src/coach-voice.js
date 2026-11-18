@@ -2,10 +2,19 @@ import express from 'express';
 import { WebSocket } from 'undici';
 import crypto from 'node:crypto';
 import { markCatalogPronunciations } from './knowledge/catalog-pronunciation.js';
+import { internalCodeProducts, retailProducts } from './knowledge/product-catalog.js';
 export const VOICE_MAX_BYTES = 8 * 1024 * 1024;
 const formats = new Map([['audio/webm','webm'],['video/webm','webm'],['audio/mp4','m4a'],['audio/x-m4a','m4a'],['audio/mpeg','mp3'],['audio/mp3','mp3'],['audio/wav','wav'],['audio/x-wav','wav'],['audio/ogg','ogg']]);
+const catalogCodes = new Set([...retailProducts.map(item => item.codigo_producto), ...internalCodeProducts.map(item => item.code)]
+  .map(code => code.trim().toUpperCase()).filter(Boolean));
+
 export function speechText(value) {
-  return String(value || '').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[*#_`]/g,'').trim();
+  return String(value || '').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'')
+    .replace(/[*#_`]/g,'').replace(/[ \t]*\(([^()\n]+)\)/g, (match, contents) => {
+      const codes = contents.trim().replace(/^(?:sku|c[oó]digos?(?:\s+del?\s+producto)?)(?:\s*:\s*|\s+)/i, '')
+        .split(/\s*[,;/·]\s*|\s+(?:y|o)\s+/i);
+      return codes.every(code => catalogCodes.has(code.toUpperCase())) ? '' : match;
+    }).trim();
 }
 export function pcmToWav(chunks) {
   const pcm = Buffer.concat(chunks), header = Buffer.alloc(44);

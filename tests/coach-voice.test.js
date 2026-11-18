@@ -11,6 +11,10 @@ test('voice uses complete PCM output with a valid WAV header and readable text',
  const wav=pcmToWav([Buffer.from([1,2]),Buffer.from([3,4])]);assert.equal(wav.toString('ascii',0,4),'RIFF');assert.equal(wav.readUInt32LE(24),24000);assert.equal(wav.readUInt32LE(40),4);assert.deepEqual([...wav.subarray(44)],[1,2,3,4]);
  assert.equal(speechText('**Hola** [catálogo](https://example.com/a)\n# Precio: $20.'),'Hola catálogo\n Precio: $20.');
 });
+test('the speech copy skips parenthetical catalog codes and preserves other spoken details',()=>{
+ const reply = '**Power Blender Go (ES4200)** tiene 2 años. Power Blender Max (SKU: ES0082; es4200) tiene 7 años (desde la compra). Código: ES4200. Referencia ajena (ZZ9876).';
+ assert.equal(speechText(reply), 'Power Blender Go tiene 2 años. Power Blender Max tiene 7 años (desde la compra). Código: ES4200. Referencia ajena (ZZ9876).');
+});
 test('provider sends the recorded format for transcription and returns actual generated audio only after successful completion',async()=>{
  let request,connection,event;
  class Socket extends EventTarget {
@@ -41,7 +45,7 @@ async function fixture(t,{provider,maxRequests=40}={}){
 }
 test('voice endpoints require active account and origin, accept audio, and return private WAV without touching the chat model',async t=>{
  const f=await fixture(t);let r=await f.send('transcribe',Buffer.alloc(100));assert.equal(r.status,200);assert.equal((await r.json()).text,'Pregunta transcrita');
- r=await f.send('speech','**Respuesta**');assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'audio/wav');assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal((await r.arrayBuffer()).byteLength,48);
+ r=await f.send('speech','**Respuesta (ES4200)**');assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'audio/wav');assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal((await r.arrayBuffer()).byteLength,48);
  assert.deepEqual(f.calls,[{kind:'transcribe',mime:'audio/webm',bytes:100},{kind:'speech',text:'Respuesta',user:'alice'}]);
  for(const options of [{user:'unsigned'},{user:'bob'},{origin:'https://foreign.example'}])assert.ok([401,403].includes((await f.send('transcribe',Buffer.alloc(100),options)).status));assert.equal(f.calls.length,2);
 });

@@ -20,13 +20,20 @@ class Element {
  setPointerCapture(id){this.capture=id;}
  releasePointerCapture(id){this.capture=null;this.fire('lostpointercapture',{pointerId:id});}
 }
-function fixture({deferred=false,fail=false,denied=false,speech=false}={}){
- let now=0,captureResolve,trackStops=0,urlCount=0;const calls=[],sent=[],intervals=new Map(),contexts=[],sources=[];
+function fixture({deferred=false,fail=false,denied=false,speech=false,permissionState,userAgent}={}){
+ let now=0,captureResolve,trackStops=0,urlCount=0,micRequests=0;const calls=[],sent=[],intervals=new Map(),contexts=[],sources=[];
  const form=new Element('form'),textarea=new Element('textarea'),submit=new Element('button'),dialog=new Element('dialog');submit.type='submit';form.dialog=dialog;form.append(textarea,submit);
  const document=new Element('document');document.createElement=tag=>new Element(tag);document.hidden=false;
  const window=new Element('window');Object.assign(window,{setInterval(fn){intervals.set(1,fn);return 1;},clearInterval(id){intervals.delete(id);},setTimeout(){return 2;},clearTimeout(){}});
  const track={stop(){trackStops++;}},stream={getTracks:()=>[track]};
- const navigator={mediaDevices:{getUserMedia:()=>denied?Promise.reject(Object.assign(new Error('denied'),{name:'NotAllowedError'})):deferred?new Promise(resolve=>{captureResolve=resolve;}):Promise.resolve(stream)}};
+ const permission = {state:permissionState};
+ const navigator={userAgent,permissions:permissionState ? {query:async()=>permission} : undefined,mediaDevices:{getUserMedia(){
+   micRequests++;
+   if(denied)return Promise.reject(Object.assign(new Error('denied'),{name:'NotAllowedError'}));
+   if(deferred)return new Promise(resolve=>{captureResolve=resolve;});
+   return Promise.resolve(stream);
+ }}};
+
  class Recorder extends Element {
   static isTypeSupported(){return true;}
   constructor(){super();this.state='inactive';this.mimeType='audio/webm';}
@@ -64,7 +71,7 @@ function fixture({deferred=false,fail=false,denied=false,speech=false}={}){
    return{ok:true};}});
  const all=node=>[node,...node.children.flatMap(all)],find=name=>all(form).find(n=>n.className===name);
  const record=find('coach-voice-hold');
- return{question,transcript,answer,contexts,sources,form,textarea,submit,dialog,document,window,calls,sent,record,find,controller,advance(ms){now+=ms;},get stopped(){return trackStops;},resolveCapture(){captureResolve(stream);},recover(){fail=false;},tick(){intervals.get(1)?.();},down(){gestureRunning=true;record.fire('pointerdown',{button:0,isPrimary:true,pointerId:1,clientX:300});gestureRunning=false;},move(x){record.fire('pointermove',{pointerId:1,clientX:x});},up(){gestureRunning=true;record.fire('pointerup',{pointerId:1});gestureRunning=false;}};
+ return{question,transcript,answer,contexts,sources,form,textarea,submit,dialog,document,window,calls,sent,record,find,controller,advance(ms){now+=ms;},get stopped(){return trackStops;},get micRequests(){return micRequests;},permission,resolveCapture(){captureResolve(stream);},recover(){fail=false;},tick(){intervals.get(1)?.();},down(){gestureRunning=true;record.fire('pointerdown',{button:0,isPrimary:true,pointerId:1,clientX:300});gestureRunning=false;},move(x){record.fire('pointermove',{pointerId:1,clientX:x});},up(){gestureRunning=true;record.fire('pointerup',{pointerId:1});gestureRunning=false;}};
 }
 test('one microphone replaces the empty text send button; typing switches to text send',()=>{
  const f=fixture();assert.equal(f.submit.hidden,true);assert.equal(f.find('coach-voice-tools').hidden,false);assert.equal(f.form.children.filter(n=>n.tagName==='input').length,0);
@@ -88,6 +95,25 @@ test('release before permission resolves rejects a late stream and never records
 });
 test('permission denial resets the gesture and displays an actionable error',async()=>{
  const f=fixture({denied:true});f.down();await turn();assert.equal(f.calls.length,0);assert.match(f.find('coach-voice-status').textContent,/bloqueado/);assert.equal(f.textarea.disabled,false);
+});
+test('a slow browser prompt is never duplicated and a granted site records after a fresh load',async()=>{
+ const first=fixture({deferred:true,permissionState:'prompt',userAgent:'iPhone'});
+ await turn();assert.equal(first.micRequests,0);
+ first.down();first.window.fire('blur');first.up();await turn();
+ assert.match(first.find('coach-voice-status').textContent,/Ajustes del sitio web.*Permitir/);
+ first.down();await turn();assert.equal(first.micRequests,1);
+ first.permission.state='granted';first.resolveCapture();await turn();assert.equal(first.stopped,1);assert.equal(first.calls.length,0);
+ const reopened=fixture({permissionState:'granted',userAgent:'iPhone'});
+ await turn();assert.equal(reopened.micRequests,0);
+ reopened.down();await turn();reopened.advance(700);reopened.up();await turn();
+ assert.equal(reopened.micRequests,1);assert.equal(reopened.sent.length,1);assert.equal(reopened.stopped,1);
+});
+test('a saved denial shows how to change the site setting and a later grant uses the mic',async()=>{
+ const f=fixture({permissionState:'denied',userAgent:'iPhone'});
+ await turn();f.down();await turn();assert.equal(f.micRequests,0);
+ assert.match(f.find('coach-voice-status').textContent,/Safari.*Micrófono.*Permitir/);
+ f.permission.state='granted';f.down();await turn();f.advance(700);f.up();await turn();
+ assert.equal(f.micRequests,1);assert.equal(f.sent.length,1);assert.equal(f.stopped,1);
 });
 test('pointer cancellation, loss of capture, dialog close, blur and hiding cancel without sending',async()=>{
  for(const cancel of [f=>f.record.fire('pointercancel',{pointerId:1}),f=>f.record.fire('lostpointercapture',{pointerId:1}),f=>f.dialog.fire('close'),f=>f.window.fire('blur'),f=>{f.document.hidden=true;f.document.fire('visibilitychange');}]){

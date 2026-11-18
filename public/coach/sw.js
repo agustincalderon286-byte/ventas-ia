@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261118-voz4";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261118-voz4";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261118-microfono1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261118-microfono1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -27,7 +27,7 @@ const TEC_CORE_ASSETS = [
   "/coach/coach-tutorial.css?v=20261117-help-chapters2",
   "/coach/coach-tutorial.js?v=20261117-help-chapters2",
   "/coach/coach-voice.css?v=20261118-voz4",
-  "/coach/coach-voice.js?v=20261118-voz4",
+  "/coach/coach-voice.js?v=20261118-microfono1",
   "/coach/compact-header.js?v=20261102-audiobooks1",
   "/coach/demo-recorder-panel.js?v=20261028-floating-tools1",
   "/coach/document-viewer.css?v=20261028-visit-tools2",

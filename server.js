@@ -33818,6 +33818,7 @@ app.post("/chat", async (req, res) => {
     let perfilPrompt = "";
     let preferFastCoachContext = false;
     let coachUserMessageTask = null;
+    const coachCatalogHistory = modoChat === "coach" ? obtenerHistorialConversacionMemoria(sessionId, 12) : [];
     const persistirCoachFastContext = () => {
       if (modoChat !== "coach") {
         return null;
@@ -33885,7 +33886,9 @@ app.post("/chat", async (req, res) => {
         detectedTopics: [`coach_user:${String(coachAuth.user._id)}`]
       });
 
-      const coachHelpReply = (teamChatQuestion || isCoachKnowledgeQuestion(preguntaLimpia)) ? null : construirCoachHelpReply({
+      const coachHelpReply = (teamChatQuestion || isCoachKnowledgeQuestion(preguntaLimpia, {
+        history: coachCatalogHistory
+      })) ? null : construirCoachHelpReply({
         userDoc: coachAuth.user,
         profileDoc: coachProfileDoc,
         question: preguntaLimpia,
@@ -34207,7 +34210,9 @@ CONSULTA DEL COACH:
           ? COACH_TURBO_MAX_HISTORY_MESSAGES
           : COACH_PROMPT_HISTORY_MESSAGES
         : MAX_PROMPT_HISTORY_MESSAGES;
-    const cacheHistory = obtenerHistorialConversacionMemoria(sessionId, Math.min(historyLimit, 6));
+    const cacheHistory = modoChat === "coach"
+      ? [...coachCatalogHistory, { role: "user", content: preguntaLimpia }]
+      : obtenerHistorialConversacionMemoria(sessionId, Math.min(historyLimit, 6));
     const aiCacheOptions = {
       mode: modoChat,
       scope:
