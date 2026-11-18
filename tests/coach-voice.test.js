@@ -92,3 +92,32 @@ test('browser decodes streaming audio before completion and retains every sample
  await assert.rejects(decode(new Response(JSON.stringify({type:'audio',data:'AQI='})+'\n',{headers:{'Content-Type':'application/x-ndjson'}})),/interrumpió/);
  await assert.rejects(decode(new Response(JSON.stringify({type:'error',error:'Voice failed'})+'\n',{headers:{'Content-Type':'application/x-ndjson'}})),/Voice failed/);
 });
+
+test('voice playback preserves every PCM sample and plays through 180 ms of packet jitter', () => {
+  const scope = {window:{}, Uint8Array, DataView};
+  vm.runInNewContext(fs.readFileSync(new URL('../public/coach/coach-voice.js',import.meta.url),'utf8'),scope);
+  const scheduled = [], context = {currentTime:0,
+    createBuffer(_channels,count,rate) {
+      const samples = new Float32Array(count);
+      return {duration:count/rate,samples,getChannelData:()=>samples};
+    },
+    createBufferSource() {return {connect(){},start(at){scheduled.push({at,buffer:this.buffer});}};}
+  };
+  const audio = Buffer.alloc(48000*3);
+  for (let i=0;i<audio.length/2;i++) audio.writeInt16LE((i%32768)-16384,i*2);
+  const queue = scope.window.TecCoachVoice.createSpeechBuffer(context,()=>{});
+  let offset=0;
+  for (let i=0;offset<audio.length;i++) {
+    context.currentTime = i/10 + (i===8 ? .18 : i===9 ? .09 : 0);
+    const end = Math.min(audio.length,offset+(i%2===0 ? 4801 : 4799));
+    queue.append(audio.subarray(offset,end));offset=end;
+  }
+  queue.finish();
+  let index=0;
+  for (let i=0;i<scheduled.length;i++) {
+    const {at,buffer}=scheduled[i];
+    if(i) assert.ok(Math.abs(at-scheduled[i-1].at-scheduled[i-1].buffer.duration)<1e-7);
+    for(const value of buffer.samples) assert.equal(value*32768,audio.readInt16LE(index++*2));
+  }
+  assert.equal(index,audio.length/2);
+});

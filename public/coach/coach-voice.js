@@ -28,6 +28,41 @@
     write(0,'RIFF');view.setUint32(4,length+36,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,24000,true);view.setUint32(28,48000,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,length,true);
     return new Blob([header,...chunks],{type:'audio/wav'});
   }
+  // Keep a short lead over the speaker clock so normal packet jitter is inaudible.
+  function createSpeechBuffer(context, onEnded) {
+    const rate = 24000;
+    let pending = [], size = 0, next = 0, last = null, finished = false;
+    function schedule(final = false) {
+      const count = size - size % 2;
+      if (!count || (!final && next <= context.currentTime && count < rate * 2 * 0.45)) return false;
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const part of pending) { bytes.set(part, offset); offset += part.length; }
+      pending = size === count ? [] : [bytes.slice(count)];
+      size -= count;
+      const samples = count / 2;
+      const buffer = context.createBuffer(1, samples, rate);
+      const output = buffer.getChannelData(0);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < samples; i++) output[i] = view.getInt16(i * 2, true) / 32768;
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      if (last) last.onended = null;
+      last = source;
+      source.onended = () => { if (last === source) { last = null; if (finished) onEnded(); } };
+      const at = next > context.currentTime ? next : context.currentTime + 0.04;
+      source.start(at);
+      next = at + buffer.duration;
+      return true;
+    }
+    return {
+      append(bytes) { pending.push(bytes); size += bytes.length; return schedule(); },
+      finish() { finished = true; schedule(true); if (!last) onEnded(); },
+      get playing() { return last !== null; }
+    };
+  }
+
   function init({ userId, forms = [], sendMessage }) {
     if (!userId || !forms.length) return null;
     let phase = 'idle', chatBusy = false, generation = 0, recorder = null, stream = null, timer = null;
@@ -36,8 +71,14 @@
     const HOLD_LABEL = 'Mantén presionado para grabar. Suelta para enviar. Desliza a la izquierda para borrar.';
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
-    let liveContext = null;const liveStopButtons=new Set();
-    const stopLive = () => {liveStopButtons.forEach(button=>{button.hidden=true;});const previous=liveContext;liveContext=null;previous?.close().catch(()=>{});};
+    let liveContext = null, liveFinished = null, playbackEpoch = 0;
+    function stopLive() {
+      playbackEpoch++;
+      liveFinished?.();
+      const previous = liveContext;
+      liveContext = null;
+      previous?.close().catch(() => {});
+    }
     function unlockAudio(){
       if(!liveContext){try{const Context=window.AudioContext || window.webkitAudioContext;if(Context)liveContext=new Context();}catch{}}
       liveContext?.resume().catch(()=>{});
@@ -45,7 +86,38 @@
     const makeUrl = blob => { const url = URL.createObjectURL(blob); urls.add(url); return url; };
     const release = url => { if(url) { URL.revokeObjectURL(url); urls.delete(url); } };
     const pausePlayback = (except, preserveContext = false) => {if(!preserveContext)stopLive();players.forEach(audio => { if(audio !== except) audio.pause(); });};
-    const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
+    let stopMeter = () => {};
+    function monitorVolume(item, captured) {
+      if (!liveContext?.createMediaStreamSource || !window.requestAnimationFrame) return;
+      let frame, source, analyser;
+      stopMeter = () => {
+        window.cancelAnimationFrame(frame);
+        source?.disconnect();
+        analyser?.disconnect();
+        item.meter.style.removeProperty('--voice-level');
+        item.meter.hidden = true;
+        stopMeter = () => {};
+      };
+      try {
+        source = liveContext.createMediaStreamSource(captured);
+        analyser = liveContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        const data = new Float32Array(analyser.fftSize);
+        let peak = 0;
+        item.meter.hidden = false;
+        function update() {
+          analyser.getFloatTimeDomainData(data);
+          let energy = 0;
+          for (const sample of data) energy += sample * sample;
+          peak = Math.max(peak * 0.82, Math.min(1, Math.sqrt(energy / data.length) * 6));
+          item.meter.style.setProperty('--voice-level', String(peak));
+          frame = window.requestAnimationFrame(update);
+        }
+        update();
+      } catch { stopMeter(); }
+    }
+    const stopTracks = () => { stopMeter(); stream?.getTracks().forEach(track => track.stop()); stream = null; };
     const clearTimer = () => { window.clearInterval(timer); timer = null; };
     const notify = text => { if(active) active.status.textContent = text; };
     const capturing = () => ['requesting','recording','finishing','ready'].includes(phase);
@@ -122,7 +194,7 @@
           else {phase='ready';notify('Llegaste a 90 segundos. Suelta para enviar o desliza para borrar.');render();}
         });
         recording.addEventListener('error',()=>{if(token===generation)cancel('No pude completar la grabación. Vuelve a intentarlo.');});
-        recording.start(500);phase='recording';notify('Grabando. Suelta para enviar o desliza a la izquierda para borrar.');render();
+        recording.start(500);monitorVolume(item, captured);phase='recording';notify('Grabando. Suelta para enviar o desliza a la izquierda para borrar.');render();
         timer=window.setInterval(()=>{seconds++;render();if(seconds>=MAX_SECONDS)stopRecording();},1000);
       } catch(error) {
         if(token!==generation)return;stopTracks();resetGesture();phase='idle';
@@ -186,7 +258,7 @@
       item.hint=document.createElement('small');item.hint.className='coach-voice-hint';item.hint.textContent='Mantén el micrófono para hablar';
       item.activity=document.createElement('div');item.activity.className='coach-voice-activity';item.activity.hidden=true;item.activity.setAttribute('aria-hidden','true');
       const bin=document.createElement('span');bin.className='coach-voice-bin';bin.innerHTML=BIN_ICON;
-      const meter=document.createElement('span');meter.className='coach-voice-meter';meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
+      const meter=document.createElement('span');meter.className='coach-voice-meter';item.meter=meter;meter.hidden=true;meter.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
       item.elapsed=document.createElement('span');item.elapsed.className='coach-voice-elapsed';
       item.slide=document.createElement('span');item.slide.className='coach-voice-slide';item.activity.append(bin,meter,item.elapsed,item.slide);
       item.preview=document.createElement('div');item.preview.className='coach-voice-preview';item.preview.hidden=true;
@@ -205,36 +277,84 @@
       }
       return audios;
     }
-    async function speak(text,handles) {
-      const panels=(handles || []).map(({card})=>{
-        const panel=document.createElement('div');panel.className='coach-voice-reply';
-        const label=document.createElement('small');label.textContent='Preparando la voz de IA…';
-        const retry=button('Reintentar audio',()=>generate());retry.hidden=true;const stop=button('Detener voz',()=>{pausePlayback();label.textContent='Voz generada por IA';});stop.hidden=true;liveStopButtons.add(stop);panel.append(label,stop,retry);card.append(panel);return {panel,label,retry,stop};
+    async function speak(text, handles) {
+      const panels = (handles || []).map(({card}) => {
+        const panel = document.createElement('div');
+        panel.className = 'coach-voice-reply';
+        const label = document.createElement('small');
+        label.setAttribute('role','status');
+        const control = button('Pausar', toggle);
+        const retry = button('Reintentar audio', generate);
+        control.hidden = retry.hidden = true;
+        panel.append(label, control, retry);
+        card.append(panel);
+        return {panel, label, control, retry};
       });
-      async function generate() {
-        unlockAudio();const context=liveContext;let playhead=0, streamed=false;
-        panels.forEach(p=>{p.retry.hidden=true;p.label.textContent='Preparando la voz de IA…';});
+      let context, paused = false, loading = false, playing = false, audios = [];
+      function status(value) { panels.forEach(p => { p.label.textContent = value; }); }
+      function complete() {
+        playing = paused = false;
+        panels.forEach(p => { p.control.hidden = true; });
+        audios.forEach(audio => { audio.hidden = false; });
+        status('Voz del Coach · IA');
+        if (liveFinished === complete) liveFinished = null;
+      }
+      async function toggle() {
+        if (!playing || context !== liveContext) return;
         try {
-          const response=await request('/api/coach/voice/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:String(userId),text,stream:true})});
-          const blob=await readSpeech(response,bytes=>{
-            if(document.hidden || !context || context!==liveContext || context.state!=='running' || !panels.some(p=>p.panel.getClientRects().length))return;
-            const samples=Math.floor(bytes.length/2);if(!samples)return;
-            const buffer=context.createBuffer(1,samples,24000), channel=buffer.getChannelData(0), data=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
-            for(let i=0;i<samples;i++)channel[i]=data.getInt16(i*2,true)/32768;
-            const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);
-            playhead=Math.max(context.currentTime+.06,playhead);source.start(playhead);playhead+=buffer.duration;streamed=true;
-            panels.forEach(p=>{p.label.textContent='Voz de IA · reproduciendo…';p.stop.hidden=false;});
-          });if(blob.size < 44)throw new Error('No se completó el audio.');
-          const url=makeUrl(blob), audios=attachAudio(handles,url,'Escuchar respuesta del Coach');
-          panels.forEach(p=>{p.label.textContent=streamed && context===liveContext ? 'Voz de IA · reproduciendo…' : 'Voz generada por IA';p.retry.hidden=true;});
-          if(streamed)window.setTimeout(()=>panels.forEach(p=>{p.stop.hidden=true;p.label.textContent='Voz generada por IA';}),Math.max(0,(playhead-(context?.currentTime || 0))*1000));
-          const player=document.hidden ? null : audios.find(audio=>audio.getClientRects().length);
-          if(player && !streamed)await player.play().catch(()=>panels.forEach(p=>{p.label.textContent='Voz de IA lista. Pulsa reproducir para escuchar.';}));
+          if (paused) await context.resume(); else await context.suspend();
+          if (context !== liveContext || !playing) return;
+          paused = context.state === 'suspended';
+          panels.forEach(p => { p.control.textContent = paused ? 'Continuar' : 'Pausar'; });
+          status(paused ? 'Voz del Coach · En pausa' : 'Voz del Coach · Reproduciendo');
+        } catch { pausePlayback(); }
+      }
+      async function generate() {
+        if (loading) return;
+        loading = true;
+        pausePlayback(null, true);
+        if (liveFinished) stopLive();
+        unlockAudio();
+        context = liveContext;
+        const attempt = playbackEpoch;
+        const canPlay = () => attempt === playbackEpoch && !document.hidden &&
+          context === liveContext && panels.some(p => p.panel.getClientRects().length);
+        let skipped = false;
+        const queue = context ? createSpeechBuffer(context, complete) : null;
+        panels.forEach(p => { p.retry.hidden = true; p.control.hidden = true; p.control.textContent = 'Pausar'; });
+        status('Preparando la voz del Coach…');
+        try {
+          const response = await request('/api/coach/voice/speech', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountId:String(userId),text,stream:true})});
+          const blob = await readSpeech(response, bytes => {
+            if (!queue || skipped) return;
+            if (!canPlay() || (context.state !== 'running' && !paused)) { skipped = true; return; }
+            if (queue.append(bytes) && !playing) {
+              playing = true;
+              liveFinished = complete;
+              status('Voz del Coach · Reproduciendo');
+              panels.forEach(p => { p.control.hidden = false; });
+            }
+          });
+          if (blob.size < 44) throw new Error('No se completó el audio.');
+          audios = attachAudio(panels.map(p => ({card:p.panel})), makeUrl(blob), 'Escuchar o repetir la respuesta del Coach');
+          if (playing && !skipped && canPlay()) {
+            audios.forEach(audio => { audio.hidden = true; });
+            queue.finish();
+          } else {
+            if (playing) stopLive();
+            complete();
+            if (canPlay()) {
+              const player = audios.find(audio => audio.getClientRects().length);
+              await player?.play().catch(() => status('Voz del Coach lista · Pulsa reproducir'));
+            }
+          }
           return true;
-        } catch(error) {
-          stopLive();
-          panels.forEach(p=>{p.label.textContent=error.message || 'La respuesta escrita está lista. Reintenta el audio.';p.retry.hidden=false;});return false;
-        }
+        } catch (error) {
+          if (context === liveContext && attempt === playbackEpoch) stopLive();
+          status(error.message || 'Tu respuesta escrita está lista. Puedes reintentar el audio.');
+          panels.forEach(p => { p.retry.hidden = false; });
+          return false;
+        } finally { loading = false; }
       }
       return generate();
     }
@@ -244,7 +364,17 @@
     window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
     render();
     return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
-      attachInput(handles,url){attachAudio(handles,url,'Escuchar mi pregunta de audio');} };
+      attachInput(handles,url){
+        attachAudio(handles,url,'Escuchar mi pregunta de audio');
+        for (const {card,paragraph} of handles) {
+          if (!paragraph) continue;
+          const details = document.createElement('details'), summary = document.createElement('summary');
+          details.className = 'coach-voice-transcript';
+          summary.textContent = 'Ver mi transcripción';
+          details.append(summary,paragraph);
+          card.append(details);
+        }
+      } };
   }
-  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech});
+  window.TecCoachVoice=Object.freeze({init,recordingMime,readSpeech,createSpeechBuffer});
 })();

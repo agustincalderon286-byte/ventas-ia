@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import ffmpeg from 'ffmpeg-static';
 import path from 'node:path';
 import express from 'express';
 import sharp from 'sharp';
@@ -99,28 +102,40 @@ test('public share pages and media expose only approved excerpts, retain canonic
 });
 
 test('real FFmpeg extracts a bounded MP3 and vertical H264 video using range requests without copying the book', async t => {
-  const sample = new URL('../public/audiolibros/muestras/como-un-hombre-piensa.m4a', import.meta.url);
-  const bytes = fs.statSync(sample).size;
-  const fixtureBook = { ...book, audio: { ...book.audio, r2Key: undefined, r2ETag: undefined, bytes } };
+  const excerpt = fileURLToPath(new URL('../public/audiolibros/muestras/como-un-hombre-piensa.m4a', import.meta.url));
   const cacheDir = await mkdtemp(path.join(os.tmpdir(), 'tec-sharing-test-'));
   t.after(() => rm(cacheDir, { recursive: true, force: true }));
+  // A small excerpt can fit in a Linux loopback socket before FFmpeg closes its initial probe.
+  // Use a book-sized AAC fixture and require a real seek for each export.
+  const sample = path.join(cacheDir, 'book.m4a');
+  execFileSync(ffmpeg, ['-nostdin','-loglevel','error','-stream_loop','11','-i',excerpt,'-c:a','copy','-movflags','+faststart',sample]);
+  const bytes = fs.statSync(sample).size;
+  const fixtureBook = { ...book, audio: { ...book.audio, r2Key: undefined, r2ETag: undefined, bytes } };
   let transferred = 0;
+  const starts = [];
   const renderer = createClipRenderer({ cacheDir,
     media: { findOne() { return { async lean() { return { fileId: 'sample' }; } }; } },
     getBucket: () => ({
       find() { return { limit() { return { async toArray() { return [{ length: bytes }]; } }; } }; },
       openDownloadStream(_id, range = {}) {
+        starts.push(range.start || 0);
         const stream = fs.createReadStream(sample, { ...(range.start !== undefined ? { start: range.start } : {}), ...(range.end !== undefined ? { end: range.end - 1 } : {}) });
         stream.on('data', data => { transferred += data.length; }); return stream;
       }
     })
   });
-  const clip = { _id: 'b'.repeat(32), start: 90, end: 94, quote: 'Como un hombre piensa.' };
+  const clip = { _id: 'b'.repeat(32), start: 1800, end: 1804, quote: 'Como un hombre piensa.' };
   const mp3 = await renderer(fixtureBook, clip, 'mp3');
   assert.ok(mp3.length > 20000 && mp3.length < 150000);
+  assert.ok(starts.some(start => start > bytes / 3), 'MP3 export must seek into the book');
+  assert.ok(transferred < bytes, 'MP3 extraction must not copy the whole book');
+  starts.length = 0;
+  transferred = 0;
   assert.deepEqual(await renderer(fixtureBook, clip, 'mp3'), mp3);
+  assert.equal(transferred, 0, 'a cached clip must not read from the source');
   const card = await quoteCard(book, clip, origin + '/audiolibros/compartir/' + clip._id, 'story');
   const mp4 = await renderer(fixtureBook, clip, 'mp4', card);
   assert.equal(mp4.toString('ascii', 4, 8), 'ftyp'); assert.ok(mp4.length > 30000);
-  assert.ok(transferred < bytes * 2, 'Seeking must avoid downloading the full book for each clip');
+  assert.ok(starts.some(start => start > bytes / 3), 'MP4 export must seek into the book');
+  assert.ok(transferred < bytes, 'MP4 extraction must not copy the whole book');
 });
