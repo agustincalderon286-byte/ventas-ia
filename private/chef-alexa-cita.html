@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Solicitar demostración | Chef TEC</title>
+  <link rel="stylesheet" href="/chef/alexa/pagina.css">
+</head>
+<body>
+  <main>
+    <a href="/chef/" class="brand"><img src="/chef/public/robot.webp" alt="" width="42" height="45"> Chef TEC</a>
+    <h1>Solicitar una demostración</h1>
+    <p>Usa el código o enlace de Chef TEC que te compartió tu vendedor. En el siguiente paso verás su nombre antes de enviar tus datos.</p>
+    <form method="get" action="/chef/alexa/cita/">
+      <label for="seller">Código o enlace de tu vendedor</label>
+      <input id="seller" name="vendedor" type="text" autocapitalize="none" autocomplete="off" spellcheck="false" maxlength="180" required aria-describedby="seller-help seller-error">
+      <small id="seller-help">Si todavía no lo tienes, pídeselo a quien te recomendó Chef TEC.</small>
+      <p id="seller-error" hidden role="alert">No encontramos un vendedor activo con ese código o enlace. Revísalo e inténtalo otra vez.</p>
+      <button type="submit">Continuar</button>
+    </form>
+    <footer><a href="/chef/alexa/privacidad/">Privacidad</a> <a href="/chef/alexa/condiciones/">Condiciones de uso</a></footer>
+  </main>
+</body>
+</html>

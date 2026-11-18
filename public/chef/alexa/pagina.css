@@ -1,0 +1,14 @@
+body { margin: 0; background: #f1f6fa; color: #102f52; font: 1rem/1.55 "DM Sans", system-ui, sans-serif; }
+main { box-sizing: border-box; max-width: 44rem; margin: 2rem auto; padding: clamp(1.25rem, 5vw, 3rem); background: #fff; border-radius: 1.25rem; }
+h1 { line-height: 1.15; margin: 1rem 0; }
+h2 { font-size: 1.2rem; }
+a { color: #164975; }
+.brand { display: inline-flex; align-items: center; gap: .65rem; font-weight: 700; }
+form { display: grid; gap: .65rem; margin: 1.75rem 0; }
+label { font-weight: 700; }
+input, button { box-sizing: border-box; padding: .75rem; border-radius: .55rem; font: inherit; }
+input { width: 100%; border: 1px solid #8295a8; }
+button { justify-self: start; border: 0; background: #102f52; color: white; cursor: pointer; min-height: 44px; }
+[role="alert"] { color: #9c1733; margin: 0; }
+footer { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; font-size: .9rem; }
+@media (max-width: 44rem) { main { margin: 0; border-radius: 0; min-height: 100vh; } }

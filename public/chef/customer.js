@@ -3,6 +3,7 @@
   const $=selector=>document.querySelector(selector),id=()=>crypto.randomUUID();
   const slug=decodeURIComponent(location.pathname.split('/').filter(Boolean)[1]||'').toLowerCase();
   const suffix=slug?'?chef='+encodeURIComponent(slug):'',key='tec-chef-public:'+slug;
+  const alexaAppointment=Boolean(slug&&new URLSearchParams(location.search).get('origen')==='alexa');
   let photo='',preparingPhoto=false,voice=null,voiceBusy=false,resetting=false;
   let sessionId='',busy=false,pendingChat=null,sellerName='',contactAvailable=false,leadBusy=false,pendingLead=null;
   const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
@@ -86,12 +87,26 @@
     });
   }
   $('#remove-photo').addEventListener('click',()=>{setPhoto('');status($('#chat-status'),'');$('#attach-photo').focus({preventScroll:true});});
-  function openContact(){if(!contactAvailable||leadBusy)return;$('#contact-dialog').showModal();$('#contact-form').elements.fullName.focus({preventScroll:true});}
+  function openContact(){
+    if(!contactAvailable||leadBusy||$('#contact-dialog').open)return;
+    if(alexaAppointment){
+      $('#contact-heading').textContent='Solicitar demostración';
+      $('#request-demo').checked=true;
+      updateAppointmentFields();
+    }
+    $('#contact-dialog').showModal();
+    $('#contact-form').elements.fullName.focus({preventScroll:true});
+  }
   $('#request-information').addEventListener('click',openContact);
   $('#contact-close').addEventListener('click',()=>{if(!leadBusy)$('#contact-dialog').close();});
   $('#contact-dialog').addEventListener('cancel',event=>{if(leadBusy)event.preventDefault();});
   $('#contact-dialog').addEventListener('close',()=>$('#request-information').focus({preventScroll:true}));
-  $('#request-demo').addEventListener('change',()=>{const checked=$('#request-demo').checked;$('#preferred-time-label').hidden=!checked;$('#contact-form').elements.appointmentPreferredTime.required=checked;});
+  function updateAppointmentFields(){
+    const checked=$('#request-demo').checked;
+    $('#preferred-time-label').hidden=!checked;
+    $('#contact-form').elements.appointmentPreferredTime.required=checked;
+  }
+  $('#request-demo').addEventListener('change',updateAppointmentFields);
   async function history(){
     const query=(suffix?'&':'?')+'sessionId='+encodeURIComponent(sessionId),data=await api('conversation',null,query);$('#messages').replaceChildren();
     if(!data.messages.length)bubble('assistant','¡Hola! Soy TEC Chef. Cuéntame qué tienes a mano o envíame una foto para pensar en un platillo.');
@@ -146,6 +161,7 @@
     const fields=new FormData(form),contact=String(fields.get('contact')||'').trim(),isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact),phone=contact.replace(/[^+\d]/g,'');
     if(!isEmail&&!/^\+?\d{10,15}$/.test(phone)){status($('#contact-status'),'Revisa tu teléfono o correo.',true);return;}
     const body={fullName:fields.get('fullName'),phone:isEmail?'':phone,email:isEmail?contact:'',city:fields.get('city'),interest:fields.get('interest'),notes:fields.get('notes'),appointmentRequested:fields.has('appointmentRequested'),appointmentPreferredTime:fields.has('appointmentRequested')?fields.get('appointmentPreferredTime'):'',consentGiven:fields.has('consentGiven')};
+    if(alexaAppointment&&body.appointmentRequested)body.origin='alexa';
     if(!body.consentGiven){status($('#contact-status'),'Confirma la autorización antes de enviar.',true);return;}
     leadBusy=true;$('#contact-submit').disabled=$('#contact-close').disabled=true;form.querySelectorAll('input,textarea').forEach(input=>input.disabled=true);status($('#contact-status'),'Guardando tu solicitud…');
     try{
@@ -167,6 +183,7 @@
       $('#representative-note').textContent=contactAvailable?'Este Chef te lo comparte '+sellerName+'.':'Recetas e ideas para tu cocina, sin iniciar sesión.';
       $('#recipient-name').textContent=$('#consent-recipient').textContent=sellerName;
       $('#request-information').hidden=!contactAvailable;
+      if(alexaAppointment)openContact();
       try{sessionId=sessionStorage.getItem(key)||id();sessionStorage.setItem(key,sessionId);}catch{sessionId=id();}
       $('#customer-content').hidden=false;await history();
       if(data.canSendVoice) initVoice();

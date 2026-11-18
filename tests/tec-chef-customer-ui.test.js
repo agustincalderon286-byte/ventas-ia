@@ -18,13 +18,13 @@ class Element{
   reset(){for(const e of Object.values(this.elements||{})){e.value='';e.checked=false;}}
 }
 const settle=async()=>{for(let i=0;i<10;i++)await new Promise(resolve=>setImmediate(resolve));};
-async function fixture({storage=new Map(),storageBlocked=false,failFirst=false}={}){
+async function fixture({storage=new Map(),storageBlocked=false,failFirst=false,search=""}={}){
   const nodes=new Map(),requests=[];let attempts=0;
   const get=selector=>{if(!nodes.has(selector))nodes.set(selector,new Element());return nodes.get(selector);};
   const form=get('#contact-form');form.elements={};for(const key of ['fullName','contact','city','interest','notes','appointmentRequested','appointmentPreferredTime','consentGiven'])form.elements[key]=new Element();nodes.set('#request-demo',form.elements.appointmentRequested);
   class Fields{constructor(form){this.data=new Map(Object.entries(form.elements).filter(([name,node])=>!['appointmentRequested','consentGiven'].includes(name)||node.checked).map(([name,node])=>[name,['appointmentRequested','consentGiven'].includes(name)?'on':node.value]));}get(k){return this.data.get(k)||'';}has(k){return this.data.has(k);}}
   const sessionStorage={getItem:key=>{if(storageBlocked)throw Error('blocked');return storage.get(key)||null;},setItem:(key,value)=>{if(storageBlocked)throw Error('blocked');storage.set(key,value);},removeItem:key=>{if(storageBlocked)throw Error('blocked');storage.delete(key);}};
-  const context={document:{querySelector:get,querySelectorAll:()=>[],createElement:()=>new Element()},crypto:webcrypto,TextEncoder,Uint8Array,FormData:Fields,sessionStorage,navigator:{onLine:true},location:{pathname:'/chef/eric/'},URL,AbortSignal,fetch:async(url,options)=>{
+  const context={document:{querySelector:get,querySelectorAll:()=>[],createElement:()=>new Element()},crypto:webcrypto,TextEncoder,Uint8Array,FormData:Fields,sessionStorage,navigator:{onLine:true},location:{pathname:'/chef/eric/',search},URL,URLSearchParams,AbortSignal,fetch:async(url,options)=>{
     const body=options.body?JSON.parse(options.body):undefined;requests.push({url,body});let data={},ok=true;
     if(url.includes('/bootstrap'))data={sellerName:'Eric Bautista',contactAvailable:true};
     else if(url.includes('/conversation'))data={messages:[]};
@@ -53,4 +53,25 @@ test('reload can recover a failed request key without storing personal contact f
 });
 test('a normal recipe question does not create or transmit a lead',async()=>{
   const f=await fixture();f.get('#question').value='Una receta con arroz';await f.get('#chat-form').fire('submit');await settle();const posts=f.requests.filter(r=>r.body);assert.equal(posts.length,1);assert.match(posts[0].url,/public\/chat/);assert.equal(posts[0].body.pregunta,'Una receta con arroz');assert.equal(posts[0].body.fullName,undefined);
+});
+
+test('Alexa opens the selected seller appointment without posting until contact is authorized',async()=>{
+  const f=await fixture({search:'?origen=alexa'});
+  assert.equal(f.get('#contact-dialog').open,true);
+  assert.equal(f.get('#request-demo').checked,true);
+  assert.equal(f.get('#recipient-name').textContent,'Eric Bautista');
+  assert.equal(f.requests.filter(r=>r.body).length,0);
+  f.fill();
+  f.get('#request-demo').checked=true;
+  f.form.elements.appointmentPreferredTime.value='Viernes por la tarde';
+  f.form.elements.consentGiven.checked=false;
+  await f.form.fire('submit');
+  assert.equal(f.requests.filter(r=>r.body).length,0);
+  f.form.elements.consentGiven.checked=true;
+  await f.form.fire('submit');
+  await settle();
+  const sent=f.requests.find(r=>r.body);
+  assert.equal(sent.url,'/api/chef/public/leads?chef=eric');
+  assert.equal(sent.body.origin,'alexa');
+  assert.equal(sent.body.appointmentRequested,true);
 });

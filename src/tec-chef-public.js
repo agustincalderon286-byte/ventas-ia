@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import express from 'express';
+import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import {completeChef,normalizeChefLead} from './tec-chef.js';
@@ -39,7 +40,7 @@ export function publicChefLeadPayload(ctx,body,visitorHash,now=new Date()){
     ownerUserId:ownership.ownerUserId,ownerName:ownership.ownerName||'',ownerEmail:ownership.ownerEmail||'',
     generatedByUserId:ctx.userDoc._id,generatedByName:ctx.userDoc.name||'',generatedByAccountType:ctx.userDoc.accountType||'owner',
     offlineRequestId:'chef-public:'+hash(visitorHash+'\n'+String(ctx.userDoc._id)+'\n'+body.requestId),
-    ...lead,chefSlug:ctx.slug,source:'chef_personal',sourceDetail:'TEC Chef · enlace público',
+    ...lead,chefSlug:ctx.slug,source:'chef_personal',sourceDetail:body.origin==='alexa'?'TEC Chef · Alexa':'TEC Chef · enlace público',
     status:'nuevo',consentGiven:true,appointmentStatus:lead.appointmentRequested?'solicitada':'',tags:['TEC Chef','enlace_personal'],createdAt:now,updatedAt:now
   };
 }
@@ -91,6 +92,21 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     const file=assets.get(req.params.asset);if(!file)return res.status(404).end();
     res.set('Cache-Control','public, max-age=3600').sendFile(path.join(publicDir,file));
   });
+  app.get(['/chef/alexa/cita','/chef/alexa/cita/'],wrap(async(req,res)=>{
+    if(req.query.vendedor===undefined)return res.sendFile(path.join(privateDir,'chef-alexa-cita.html'));
+    const reference=clean(req.query.vendedor,180).toLowerCase();
+    let slug=reference;
+    if(/^https:\/\//.test(reference)){
+      try{
+        const link=new URL(reference);
+        slug=link.origin===origin?link.pathname.match(/^\/chef\/([a-z0-9-]{1,48})\/?$/)?.[1]:'';
+      }catch{slug='';}
+    }
+    if(validSlug(slug)&&await getBySlug(slug))return res.redirect(303,'/chef/'+slug+'/?origen=alexa');
+    const page=await readFile(path.join(privateDir,'chef-alexa-cita.html'),'utf8');
+    res.status(400).type('html').send(page.replace('id="seller-error" hidden','id="seller-error"'));
+  }));
+
   app.get(/^\/chef\/(?:([a-z0-9-]{1,48})\/?)?$/i,wrap(async(req,res)=>{
     const slug=req.params[0];
     if(slug&&!await getBySlug(slug.toLowerCase()))return res.status(404).type('html').send('<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TEC Chef</title><body style="font:18px system-ui;max-width:600px;margin:60px auto;padding:24px"><h1>Este Chef no está disponible</h1><p>Pide un enlace actualizado a quien te lo compartió.</p></body></html>');
@@ -224,7 +240,11 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     await withVoiceLimit(req,res,'speech',()=>streamVoiceResponse(req,res,voice,text,scope.visitorHash));
   }));
   app.post('/api/chef/public/leads',wrap(async(req,res)=>{
-    if(!sameOrigin(req,res))return;const ctx=await context(req,res);if(ctx===undefined)return;
+    if(!sameOrigin(req,res))return;
+    if(req.body?.origin==='alexa'&&(!validSlug(req.query.chef)||req.body.appointmentRequested!==true)){
+      return res.status(400).json({error:'Elige tu distribuidor para solicitar una demostración desde Alexa.'});
+    }
+    const ctx=await context(req,res);if(ctx===undefined)return;
     if(!ctx)return res.status(400).json({error:'Abre el enlace del Chef que te compartió tu distribuidor para solicitar información.'});
     const visitorHash=await visitor(req,res);if(!visitorHash)return;
     let payload;try{payload=publicChefLeadPayload(ctx,req.body,visitorHash,new Date(now()));}catch(error){return res.status(400).json({error:error.message});}

@@ -167,3 +167,31 @@ test('Chef receives private recordings and speaks only an audio turn from the sa
   assert.deepEqual(output,['Respuesta de cocina.']);
   assert.doesNotMatch(JSON.stringify(f.conversations.docs),/base64|UklGR/);
 });
+
+test('Alexa handoff requires an active seller and only records a consented demonstration for that seller',async t=>{
+  const f=await fixture(t),entry='/chef/alexa/cita/';
+  const page=await f.request(entry);
+  assert.equal(page.status,200);
+  assert.match(await page.text(),/Código o enlace de tu vendedor/);
+  for(const value of ['eric','https://totalelitecoaching.com/chef/eric/']){
+    const r=await f.request(entry+'?vendedor='+encodeURIComponent(value));
+    assert.equal(r.status,303);
+    assert.equal(r.headers.get('location'),'/chef/eric/?origen=alexa');
+  }
+  for(const value of ['desconocido','https://otro.example/chef/eric/','https://totalelitecoaching.com/coach/eric/']){
+    const r=await f.request(entry+'?vendedor='+encodeURIComponent(value));
+    assert.equal(r.status,400);
+    assert.match(await r.text(),/id="seller-error" role="alert"/);
+  }
+  assert.equal(f.leads.docs.length,0);
+  const cookie=await f.bootstrap('eric');
+  const body={...lead(),origin:'alexa',appointmentRequested:true,appointmentPreferredTime:'Viernes por la tarde'};
+  assert.equal((await f.request('/api/chef/public/leads',{cookie,body})).status,400);
+  assert.equal((await f.request('/api/chef/public/leads?chef=eric',{cookie,body:{...body,consentGiven:false}})).status,400);
+  assert.equal(f.leads.docs.length,0);
+  for(let n=0;n<2;n++)assert.equal((await f.request('/api/chef/public/leads?chef=eric',{cookie,body})).status,200);
+  assert.equal(f.leads.docs.length,1);
+  assert.equal(f.leads.docs[0].chefSlug,'eric');
+  assert.equal(f.leads.docs[0].sourceDetail,'TEC Chef · Alexa');
+  assert.equal(f.leads.docs[0].appointmentStatus,'solicitada');
+});
