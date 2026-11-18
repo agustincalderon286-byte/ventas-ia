@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {createRecoveryDelivery} from './coach-recovery-delivery.js';
 
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 const fresh = () => crypto.randomBytes(32).toString('base64url');
@@ -12,7 +13,8 @@ export const COACH_RECOVERY_MESSAGE = 'Si hay una cuenta asociada a ese correo, 
 export const coachSessionCredentialsMatch = (session,user) => Boolean(session && user && String(session.credentialVersion || '') === String(user.credentialVersion || ''));
 export const coachPreviousSessionsQuery = (userId,credentialVersion) => ({userId,$or:[{credentialVersion:String(credentialVersion || '')},{credentialVersion:{$exists:false}}]});
 
-export function createCoachPasswordRecovery({users,sessions,createPassword,sendMail,publicOrigin='https://totalelitecoaching.com',now=()=>Date.now(),logger=console}={}){
+export function createCoachPasswordRecovery({users,sessions,createPassword,sendMail,jobs,deliverySecret,publicOrigin='https://totalelitecoaching.com',now=()=>Date.now(),logger=console}={}){
+  if (jobs && sendMail && !deliverySecret) throw new Error('coach_recovery_missing_delivery_secret');
   const origin=new URL(publicOrigin);
   if(!['https:','http:'].includes(origin.protocol) || origin.username || origin.password || (origin.protocol!=='https:' && !['localhost','127.0.0.1','[::1]'].includes(origin.hostname)))throw new Error('coach_recovery_invalid_origin');
   const landing=new URL('/coach/recuperar/',origin.origin).href;
@@ -25,19 +27,26 @@ export function createCoachPasswordRecovery({users,sessions,createPassword,sendM
     return bucket.count<=max;
   }
   const queryOne=(query)=>users.findOne(query).select('+passwordResetDigest +passwordResetExpiresAt +passwordResetRequestedAt +passwordResetSalt +passwordResetEmail').lean();
-  async function issue(email){
+  async function issue(email,job){
     if(!sendMail)return;
     const user=await queryOne({email});
     // Only the stored email is a recovery channel; a provisioned phone username is not one.
     if(!user || !validEmail(user.email) || emailOf(user.email)!==email || !user.passwordSalt)return;
-    const secret=fresh(),hash=digest(secret),time=now();
-    const claim=await users.findOneAndUpdate({_id:user._id,email:user.email,passwordSalt:user.passwordSalt,
-      $or:[{passwordResetRequestedAt:{$exists:false}},{passwordResetRequestedAt:{$lte:new Date(time-60000)}}]},
-      {$set:{passwordResetDigest:hash,passwordResetExpiresAt:new Date(time+30*60000),passwordResetRequestedAt:new Date(time),passwordResetSalt:user.passwordSalt,passwordResetEmail:user.email}}, {new:true}).lean();
-    if(!claim)return;
-    try{await sendMail({to:[user.email],subject:'Restablece tu contraseña de TEC Coach',text:`Recibimos una solicitud para restablecer tu contraseña de TEC Coach.\n\nElige una nueva contraseña aquí:\n\n${landing}#token=${secret}\n\nEste enlace es de un solo uso y caduca en 30 minutos. Si no lo solicitaste, ignora este correo: tu contraseña no cambia hasta completar el formulario.\n\nAyuda: agustin@totalelitecoaching.com`});}
-    catch{await users.updateOne({_id:user._id,passwordResetDigest:hash},{$unset:resetFields});logger.warn('TEC Coach: no se pudo enviar un correo de recuperación.');}
+    const time=job?new Date(job.createdAt).getTime():now();
+    const secret=job?crypto.createHmac('sha256',deliverySecret).update('TEC recovery v1/'+job._id+'/'+user.passwordSalt).digest('base64url'):fresh();
+    const hash=digest(secret);
+    const sameGrant=job && user.passwordResetDigest===hash && +new Date(user.passwordResetRequestedAt)===time;
+    if (!sameGrant) {
+      const claim=await users.findOneAndUpdate({_id:user._id,email:user.email,passwordSalt:user.passwordSalt,
+        $or:[{passwordResetRequestedAt:{$exists:false}},{passwordResetRequestedAt:{$lte:new Date(time-60000)}}]},
+        {$set:{passwordResetDigest:hash,passwordResetExpiresAt:new Date(time+30*60000),passwordResetRequestedAt:new Date(time),passwordResetSalt:user.passwordSalt,passwordResetEmail:user.email}}, {new:true}).lean();
+      if(!claim)return false;
+    }
+    try{await sendMail({...(job?{idempotencyKey:'tec-recovery-'+job._id}:{}),to:[user.email],subject:'Restablece tu contraseña de TEC Coach',text:`Recibimos una solicitud para restablecer tu contraseña de TEC Coach.\n\nElige una nueva contraseña aquí:\n\n${landing}#token=${secret}\n\nEste enlace es de un solo uso y caduca en 30 minutos. Si no lo solicitaste, ignora este correo: tu contraseña no cambia hasta completar el formulario.\n\nAyuda: agustin@totalelitecoaching.com`});}
+    catch(cause){if(job)throw cause;await users.updateOne({_id:user._id,passwordResetDigest:hash},{$unset:resetFields});logger.warn('TEC Coach: no se pudo enviar un correo de recuperación.');return false;}
+    return true;
   }
+  const delivery=jobs?createRecoveryDelivery({jobs,deliver:issue,now,logger}):null;
   function pump(){
     while(active<2 && queue.length){const email=queue.shift();active++;Promise.resolve().then(()=>issue(email)).catch(()=>logger.warn('TEC Coach: recuperación temporalmente no disponible.')).finally(()=>{active--;pump();if(!active&&!queue.length)waiters.splice(0).forEach(fn=>fn());});}
   }
@@ -47,7 +56,10 @@ export function createCoachPasswordRecovery({users,sessions,createPassword,sendM
     if(!sendMail || queue.length>=64)throw error(503,'La recuperación está temporalmente ocupada. Inténtalo de nuevo.');
     if(!allow('request-ip',ip,12,15*60000))throw error(429,'Has solicitado varios enlaces. Espera unos minutos antes de volver a intentarlo.');
     // The public response never depends on account existence or SMTP timing.
-    if(allow('request-email',email,3,3600000) && queue.length<64){queue.push(email);pump();}
+    if(allow('request-email',email,3,3600000)){
+      if(delivery)return delivery.enqueue(email).then(()=>({message:COACH_RECOVERY_MESSAGE}));
+      queue.push(email);pump();
+    }
     return {message:COACH_RECOVERY_MESSAGE};
   }
   async function resetPassword({token,password,passwordConfirmation}={},ip=''){
@@ -66,7 +78,7 @@ export function createCoachPasswordRecovery({users,sessions,createPassword,sendM
     if(sendMail){try{await sendMail({to:[updated.email],subject:'Tu contraseña de TEC Coach cambió',text:'Se restableció la contraseña de tu cuenta de TEC Coach. Por seguridad cerramos las sesiones anteriores.\n\nEntra con tu correo o teléfono y la nueva contraseña en https://totalelitecoaching.com/coach/login/\n\nSi no reconoces este cambio, contacta a agustin@totalelitecoaching.com.'});}catch{logger.warn('TEC Coach: no se pudo enviar la notificación del cambio de contraseña.');}}
     return {ok:true,message:'Tu contraseña se actualizó. Entra de nuevo con tu nueva contraseña.'};
   }
-  return {requestRecovery,resetPassword,drain:()=>active||queue.length?new Promise(resolve=>waiters.push(resolve)):Promise.resolve()};
+  return {requestRecovery,resetPassword,resume:delivery?.pump,busy:()=>delivery?.busy() || active>0,drain:()=>active||queue.length?new Promise(resolve=>waiters.push(resolve)):Promise.resolve()};
 }
 
 export function registerCoachPasswordRecovery(app,{clearCookies=()=>{},...options}={}){

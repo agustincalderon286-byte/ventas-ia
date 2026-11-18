@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261028-password-eye1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261117-audit1" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
 </head>
   <body class="coach-login-body">
@@ -98,7 +98,7 @@
 
           <div class="form-result coach-login-banner" data-login-banner></div>
 
-          <form class="coach-form coach-login-form" data-login-form>
+          <form class="coach-form coach-login-form" data-login-form method="post" action="/coach/login/">
             <div class="coach-login-field">
               <label for="coach-email">Correo o teléfono</label>
               <div class="coach-login-input-wrap">
@@ -151,13 +151,13 @@
               </div>
             </div>
 
-            <button class="primary-button coach-login-submit" type="submit">
+            <button class="primary-button coach-login-submit" type="submit" disabled>
               Entrar al Coach
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h14m-5-5 5 5-5 5" />
               </svg>
             </button>
-            <div class="form-result"></div>
+            <div class="form-result" role="status" aria-live="polite"></div><noscript>Activa JavaScript para iniciar sesión en TEC.</noscript>
           </form>
 
           <details class="coach-login-recovery">
@@ -190,10 +190,11 @@
       </footer>
     </div>
 
-    <script src="/coach/password-visibility.js?v=20261028-password-eye1"></script>
+    <script src="/coach/password-visibility.js?v=20261117-signup1"></script>
     <script src="/coach/pwa-safety.js?v=20261112-phone1"></script>
     <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
-    <script src="/coach/app.js?v=20261112-phone1"></script>
+    <script src="/coach/session-lock.js?v=20261117-audit1"></script>
+    <script src="/coach/app.js?v=20261117-audit1"></script>
     <script type="module" src="/coach/analytics.js?v=20261104-analytics1"></script>
 </body>
 </html>

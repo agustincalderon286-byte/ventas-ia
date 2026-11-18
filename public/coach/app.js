@@ -269,11 +269,13 @@ async function tecNativeCachedList(url) {
 }
 
 async function getTecCachedViewer() {
+  if (globalThis.window?.TecSessionLock?.locked()) return null;
   const entry = await tecOfflineGet("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
   return entry?.value ? { ...entry.value, offlineVerifiedAt: entry.verifiedAt || entry.savedAt } : null;
 }
 
 async function cacheTecViewer(value = null) {
+  if (globalThis.window?.TecSessionLock?.locked()) return;
   if (!value?.authenticated || !(value?.user?.storageIdentity || value?.user?.email)) {
     return;
   }
@@ -490,7 +492,9 @@ async function flushTecOfflineOutbox() {
     let synced = 0;
 
     for (const item of items) {
-      if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail) {
+      const viewerId = String(viewer?.user?.id || viewer?.user?._id || "");
+      const differentOwner = [item.ownerAccountId, item.body?.accountId].some(id => id && String(id) !== viewerId);
+      if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail || differentOwner) {
         continue;
       }
 
@@ -1568,12 +1572,35 @@ function initCoachWorkspaceTabs() {
     activeTab = defaultTab;
   }
 
+  for (const button of tabButtons) {
+    const name = button.dataset.coachWorkspaceTab;
+    const sections = workspaceSections.filter(section => section.dataset.coachWorkspaceSection === name);
+    button.id ||= 'tec-tab-' + name;
+    button.setAttribute('role', 'tab');
+    sections.forEach((section, index) => {
+      section.id ||= 'tec-panel-' + name + '-' + index;
+      section.setAttribute('role', 'tabpanel');
+      section.setAttribute('aria-labelledby', button.id);
+    });
+    button.setAttribute('aria-controls', sections.map(section => section.id).join(' '));
+    button.addEventListener('keydown', event => {
+      const visible = tabButtons.filter(item => !item.hidden);
+      const i = visible.indexOf(button);
+      const destinations = {ArrowRight:(i+1)%visible.length, ArrowLeft:(i+visible.length-1)%visible.length, Home:0, End:visible.length-1};
+      if (!Object.hasOwn(destinations, event.key)) return;
+      event.preventDefault();
+      const next = visible[destinations[event.key]];
+      next.click();
+      next.focus({preventScroll:true});
+    });
+  }
   const syncWorkspace = nextTab => {
     const safeTab = validTabs.has(nextTab) ? nextTab : defaultTab;
 
     tabButtons.forEach(button => {
       const isActive = button.dataset.coachWorkspaceTab === safeTab;
       button.classList.toggle("is-active", isActive);
+      button.tabIndex = isActive || (safeTab === 'mensajes' && button === visibleTabButtons[0]) ? 0 : -1;
       button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
 
@@ -1603,6 +1630,8 @@ function initCoachWorkspaceTabs() {
     button.addEventListener("click", () => {
       const nextTab = button.dataset.coachWorkspaceTab || defaultTab;
       syncWorkspace(nextTab);
+      document.querySelector("[data-coach-workspace-title]")?.focus?.({preventScroll:true});
+      window.scrollTo?.({top:0, left:0, behavior:'instant'});
       const labelMeta =
         {
           crm: {
@@ -9297,8 +9326,10 @@ function updateCoachMessage(messageHandles, content, options = {}) {
 }
 
 async function fetchViewer() {
+  if (globalThis.window?.TecSessionLock?.locked()) return {authenticated:false};
   try {
     const viewer = await apiRequest("/api/coach/me", { timeoutMs: 6000 });
+    if (globalThis.window?.TecSessionLock?.locked()) return {authenticated:false};
     if (!viewer.authenticated) { await clearTecCachedViewer(); return viewer; }
     await cacheTecViewer(viewer);
     return viewer;
@@ -15907,6 +15938,12 @@ async function initPlanPage() {
     return;
   }
 
+  const compactPlans = window.matchMedia?.("(max-width: 800px)");
+  function showPlanBenefits() {
+    planPage.querySelectorAll(".plan-benefits").forEach(details => { details.open = !compactPlans?.matches; });
+  }
+  showPlanBenefits();
+  compactPlans?.addEventListener?.("change", showPlanBenefits);
   const signupSection = document.querySelector("[data-signup-section]");
   const memberSection = document.querySelector("[data-member-section]");
   const activeSection = document.querySelector("[data-active-section]");
@@ -16089,22 +16126,6 @@ async function initLoginPage() {
   const loginForm = document.querySelector("[data-login-form]");
   const loginMessage = loginForm?.querySelector(".form-result");
   const infoBanner = document.querySelector("[data-login-banner]");
-  const me = await fetchViewer();
-
-  if (me.authenticated && hasCoachAccess(me.user)) {
-    setMessage(
-      infoBanner,
-      "Tu cuenta ya esta activa. Puedes entrar directo al Coach privado.",
-      "success"
-    );
-  } else if (me.authenticated) {
-    setMessage(
-      infoBanner,
-      "Tu cuenta ya existe. Solo falta activar o retomar tu suscripcion.",
-      "info"
-    );
-  }
-
   loginForm?.addEventListener("submit", async event => {
     event.preventDefault();
     clearMessage(loginMessage);
@@ -16136,6 +16157,25 @@ async function initLoginPage() {
       setButtonLoading(submitButton, false);
     }
   });
+  const submit = loginForm?.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = false;
+  const me = await apiRequest("/api/coach/me", { timeoutMs: 6000 }).catch(() => ({}));
+
+  if (me.authenticated && hasCoachAccess(me.user)) {
+    setMessage(
+      infoBanner,
+      "Tu cuenta ya esta activa. Puedes entrar directo al Coach privado.",
+      "success"
+    );
+  } else if (me.authenticated) {
+    setMessage(
+      infoBanner,
+      "Tu cuenta ya existe. Solo falta activar o retomar tu suscripcion.",
+      "info"
+    );
+  }
+
+
 }
 
 function formatCoachDemoRecordingTime(totalSeconds = 0) {
@@ -17333,6 +17373,13 @@ async function loadCoachAppPage() {
     initRecruitmentTool(me.user);
     initHealthSurveyTool(me.user);
     initOrderCalculator();
+    document.querySelectorAll('[data-jump-calculator]').forEach(shortcut => shortcut.addEventListener('click', () => {
+      const toggle = document.querySelector('[data-order-calc-toggle]');
+      if (!toggle) return;
+      if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+      toggle.scrollIntoView({block:'center', behavior:'instant'});
+      toggle.focus({preventScroll:true});
+    }));
     initSurveyProductPicker();
     const orderCalcRoot = document.querySelector("[data-order-calc]");
     if (orderCalcRoot) {
@@ -18243,13 +18290,10 @@ async function loadCoachAppPage() {
       setButtonLoading(button, true, "Cerrando...");
 
       try {
-        await apiRequest("/api/coach/logout", {
-          method: "POST"
-        });
-
+        window.TecSessionLock.lock();
+        appPage.hidden = true;
         await clearTecCachedViewer();
-
-        window.location.href = "/coach/login/";
+        window.location.replace("/coach/login/");
       } catch (error) {
         setMessage(appMessage, error.message, "error");
         setButtonLoading(button, false);

@@ -76,7 +76,7 @@ test('saving a hydrated legacy login after reset cannot overwrite its credential
  Object.assign(h.records[0],changes.$set);assert.equal(h.records[0].credentialVersion,rotated);
  // Exercise the real issuer with the pre-reset login snapshot, after the reset committed.
  const issuerStart=source.indexOf('async function crearCoachSesion('),issuerEnd=source.indexOf('\nasync function destruirCoachSesion(',issuerStart),created=[];
- const context={Date,COACH_SESSION_DAYS:30,COACH_MAX_ACTIVE_SESSIONS:4,generarTokenSeguro:()=> 'z'.repeat(43),hashTokenSeguro:hash,obtenerCoachIp:()=> '127.0.0.1',setCoachCookie:()=>{},CoachSession:{find:()=>({sort:async()=>[]}),create:async value=>created.push(value)}};
+ const context={Date,revokeLocallyLockedCoachSession:async()=>{},COACH_SESSION_DAYS:30,COACH_MAX_ACTIVE_SESSIONS:4,generarTokenSeguro:()=> 'z'.repeat(43),hashTokenSeguro:hash,obtenerCoachIp:()=> '127.0.0.1',setCoachCookie:()=>{},CoachSession:{find:()=>({sort:async()=>[]}),create:async value=>created.push(value)}};
  vm.createContext(context);vm.runInContext(source.slice(issuerStart,issuerEnd),context);await context.crearCoachSesion({headers:{}},{},legacy);
  assert.equal(created[0].credentialVersion,'');assert.equal(coachSessionCredentialsMatch(created[0],h.records[0]),false);
  // The session schema may normalize its own legacy snapshot to ''; it never saves user credentials.

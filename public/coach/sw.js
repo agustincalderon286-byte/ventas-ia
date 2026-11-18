@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261117-mapas1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-mapas1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261117-audit1";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261117-audit1";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -7,146 +7,79 @@ const TEC_OFFLINE_DB_NAME = "tec-coach-offline";
 const TEC_OFFLINE_DB_VERSION = 1;
 
 const TEC_CORE_ASSETS = [
-  "/coach/signup-ux.js?v=20261117-signup1",
-  "/coach/signup-ux.css?v=20261117-signup1",
-  "/coach/password-visibility.js?v=20261117-signup1",
-  "/coach/coach-onboarding.js?v=20261117-welcome1",
-  "/coach/coach-onboarding.css?v=20261117-welcome1",
-  "/coach/coach-install.js?v=20261117-install2",
-  "/coach/coach-install.css?v=20261117-install2",
-  "/coach/app.js?v=20261117-five1",
-
-  "/coach/coach-public.css?v=20261117-public2",
-  "/coach/team-chat-push.js?v=20261117-push1",
-  "/coach/team-chat-push-worker.js?v=20261117-push1",
-  "/coach/app.js?v=20261117-push1",
-  "/coach/coach-tutorial.js?v=20261117-help-chapters2",
-  "/coach/coach-tutorial.css?v=20261117-help-chapters2",
-  "/coach/coach-voice.js?v=20261117-hold1",
-  "/coach/coach-voice.css?v=20261117-hold1",
-  "/coach/team-chat.js?v=20261117-rigochat1",
-  "/coach/team-chat-media.js?v=20261117-push1",
-  "/coach/team-chat.css?v=20261117-rigochat1",
-  "/coach/message-center.css?v=20261117-push1",
-  "/coach/app.js?v=20261117-team1",
-  "/coach/app.js?v=20261117-voice2",
-  "/coach/coach-voice.js?v=20261117-voice2",
-  "/coach/coach-voice.css?v=20261117-voice2",
-  "/coach/app.js?v=20261117-voice1",
-  "/coach/coach-voice.js?v=20261117-voice1",
-  "/coach/coach-voice.css?v=20261117-voice1",
-  "/coach/app.js?v=20261117-read1",
-  "/coach/app.js?v=20261117-messages1",
-  "/coach/card-order.js?v=20261117-order1",
-  "/coach/card-order.css?v=20261117-order1",
-  "/coach/app.js?v=20261117-order1",
-  "/coach/app.js?v=20261112-phone1",
-  "/coach/product-models-catalog.js?v=20261110-product3d1",
-  "/coach/product-models.js?v=20261110-product3d1",
-  "/coach/product-models.css?v=20261110-product3d1",
-  "/coach/property-map.css?v=20261104-map-design1",
-  "/coach/property-map.js?v=20261117-mapas1",
-  "/coach/address-suggestions.js?v=20261117-mapas1",
-  "/coach/property-walk.js?v=20261117-mapas1",
-  "/coach/property-lab.js?v=20261117-mapas1",
-  "/coach/styles.css?v=20261104-chat-scroll2",
-  "/coach/app.js?v=20261104-chat-scroll2",
-  "/coach/audiobook-reader.js?v=20261103-readalong1",
-  "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
   "/audiolibros/audio-delivery.js?v=20261112-editorial1",
-  "/coach/audiobooks.js?v=20261112-editorial1",
-  "/coach/audiobooks.css?v=20261103-readalong1",
-  "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
-  "/coach/compact-header.js?v=20261103-readalong1",
-  "/coach/app.js?v=20261103-readalong1",
-  "/coach/analytics.js?v=20261104-analytics1",
+  "/coach/address-suggestions.js?v=20261117-mapas1",
   "/coach/analytics-events.js?v=20261104-analytics1",
   "/coach/analytics.css?v=20261104-analytics1",
-  "/coach/address-suggestions.js?v=20261101-recorrido1",
-  "/coach/property-lab.js?v=20261101-recorrido1",
+  "/coach/analytics.js?v=20261104-analytics1",
+  "/coach/app.js?v=20261117-audit1",
+  "/coach/audiobook-reader.js?v=20261103-readalong1",
+  "/coach/audiobooks.css?v=20261103-readalong1",
+  "/coach/audiobooks.js?v=20261112-editorial1",
+  "/coach/card-order.css?v=20261117-order1",
+  "/coach/card-order.js?v=20261117-order1",
+  "/coach/coach-install.css?v=20261117-install2",
+  "/coach/coach-install.js?v=20261117-install2",
+  "/coach/coach-onboarding.css?v=20261117-welcome1",
+  "/coach/coach-onboarding.js?v=20261117-welcome1",
+  "/coach/coach-public.css?v=20261117-audit1",
+  "/coach/coach-tutorial.css?v=20261117-help-chapters2",
+  "/coach/coach-tutorial.js?v=20261117-help-chapters2",
+  "/coach/coach-voice.css?v=20261117-hold1",
+  "/coach/coach-voice.js?v=20261117-hold1",
+  "/coach/compact-header.js?v=20261102-audiobooks1",
+  "/coach/demo-recorder-panel.js?v=20261028-floating-tools1",
+  "/coach/document-viewer.css?v=20261028-visit-tools2",
+  "/coach/document-viewer.js?v=20261028-visit-tools2",
+  "/coach/external-tools.js?v=20261029-konverta1",
+  "/coach/message-center.css?v=20261117-push1",
+  "/coach/offline-forms.js?v=20261112-phone1",
+  "/coach/order-calculator.js?v=20261025-native-offline2",
+  "/coach/password-visibility.js?v=20261117-signup1",
+  "/coach/product-image-viewer.js?v=20261028-program-gifts1",
+  "/coach/product-models-catalog.js?v=20261110-product3d1",
+  "/coach/product-models.css?v=20261110-product3d1",
+  "/coach/product-models.js?v=20261110-product3d1",
+  "/coach/product-search.js?v=20261025-alias1",
+  "/coach/product-videos-catalog.js?v=20261028-recipes1",
+  "/coach/product-videos.css?v=20261028-recipes1",
+  "/coach/product-videos.js?v=20261028-recipes1",
   "/coach/property-lab-guidance.js?v=20261029-lab1",
-  "/coach/property-map.js?v=20261101-recorrido1",
   "/coach/property-lab.css?v=20261101-recorrido1",
-  "/coach/property-map.js?v=20261029-lab2",
-  "/coach/property-map.js?v=20261029-lab1",
-  "/coach/property-walk.js?v=20261029-lab1",
-  "/coach/property-lab.css?v=20261029-lab1",
-  "/coach/property-walk.js?v=20261028-walk2",
-  "/coach/route-guidance.js?v=20261028-walk2",
-  "/coach/property-map.js?v=20261028-walk2",
-  "/coach/property-map.css?v=20261028-walk2",
+  "/coach/property-lab.js?v=20261117-mapas1",
+  "/coach/property-map.css?v=20261117-audit1",
+  "/coach/property-map.js?v=20261117-mapas1",
   "/coach/property-route-state.js?v=20261028-walk2",
   "/coach/property-visit-helpers.js",
   "/coach/property-visit-helpers.js?v=20261023-product-picker2",
-  "/coach/app.js?v=20261028-visit-tools2",
-  "/coach/styles.css?v=20261029-konverta1",
-  "/coach/external-tools.js?v=20261029-konverta1",
-  "/coach/document-viewer.js?v=20261028-visit-tools2",
-  "/coach/document-viewer.css?v=20261028-visit-tools2",
-  "/coach/property-map.js?v=20261028-visit-tools2",
-  "/coach/address-suggestions.js?v=20261028-visit-tools2",
+  "/coach/property-walk.js?v=20261117-mapas1",
+  "/coach/pwa-safety.js?v=20261112-phone1",
+  "/coach/route-guidance.js?v=20261028-walk2",
+  "/coach/session-lock.js?v=20261117-audit1",
+  "/coach/signup-ux.css?v=20261117-signup1",
+  "/coach/signup-ux.js?v=20261117-signup1",
+  "/coach/styles.css?v=20261117-audit1",
+  "/coach/team-chat-media.js?v=20261117-push1",
+  "/coach/team-chat-push-worker.js?v=20261117-push1",
+  "/coach/team-chat-push.js?v=20261117-push1",
+  "/coach/team-chat.css?v=20261117-rigochat1",
+  "/coach/team-chat.js?v=20261117-rigochat1",
+  "/coach/ui-coherence.js?v=20261025-native-offline2",
+  "/coach/vendor/leaflet/leaflet.css",
+  "/coach/vendor/leaflet/leaflet.js",
+  "/coach/assets/audiobooks/acres-de-diamantes-ilustrada-v2.jpg",
+  "/coach/assets/audiobooks/como-un-hombre-piensa-ilustrada-v2.jpg",
   "/coach/",
   "/coach/login/",
-  "/coach/password-visibility.js?v=20261028-password-eye1",
   "/coach/site.webmanifest?v=20261117-install1",
-  "/coach/app.js?v=20261025-native-offline2",
-  "/coach/app.js?v=20261028-image-viewer1",
-  "/coach/product-image-viewer.js?v=20261028-image-viewer1",
-  "/coach/app.js?v=20261028-survey-images1",
-  "/coach/product-image-viewer.js?v=20261028-survey-images1",
-  "/coach/app.js?v=20261028-program-gifts1",
-  "/coach/app.js?v=20261028-program-gifts2",
-  "/coach/app.js?v=20261028-videos1",
-  "/coach/app.js?v=20261028-chef1",
-  "/coach/app.js?v=20261028-floating-tools1",
-  "/coach/app.js?v=20261028-compact-header1",
-  "/coach/styles.css?v=20261028-compact-header1",
-  "/coach/compact-header.js?v=20261028-compact-header1",
-  "/coach/styles.css?v=20261028-floating-tools1",
-  "/coach/product-videos-catalog.js?v=20261028-videos1",
-  "/coach/product-videos-catalog.js?v=20261028-videos3",
-  "/coach/product-videos-catalog.js?v=20261028-videos4",
-  "/coach/product-videos-catalog.js?v=20261028-recipes1",
-  "/coach/product-videos.js?v=20261028-videos1",
-  "/coach/product-videos.js?v=20261028-videos2",
-  "/coach/product-videos.js?v=20261028-videos4",
-  "/coach/product-videos.js?v=20261028-recipes1",
-  "/coach/product-videos.js?v=20261028-chef1",
-  "/coach/product-videos.css?v=20261028-videos1",
-  "/coach/product-videos.css?v=20261028-recipes1",
-  "/coach/product-image-viewer.js?v=20261028-program-gifts1",
-  "/coach/product-search.js?v=20261025-alias1",
-  "/coach/order-calculator.js?v=20261025-native-offline2",
-  "/coach/offline-forms.js?v=20261112-phone1",
-  "/coach/pwa-safety.js?v=20261112-phone1",
-  "/coach/ui-coherence.js?v=20261025-native-offline2",
-  "/coach/styles.css?v=20261025-native-offline2",
-  "/coach/styles.css?v=20261028-password-eye1",
-  "/coach/styles.css?v=20261028-image-viewer1",
-  "/coach/styles.css?v=20261028-survey-images1",
-  "/coach/styles.css?v=20261028-program-gifts1",
   "/coach/assets/catalog/programa-4-en-14/utensilios-6-piezas.jpg",
   "/coach/assets/catalog/programa-4-en-14/tazones-4-piezas-original-hycite.jpg",
   "/coach/assets/catalog/programa-4-en-14/tablas-bambu.jpg",
   "/coach/assets/catalog/programa-4-en-14/santoku-5-pulgadas.jpg",
   "/coach/assets/catalog/programa-4-en-14/cacerola-actual.webp",
   "/coach/assets/catalog/programa-4-en-14/tazones-mezclar.webp",
-  "/coach/property-map.js?v=20261025-native-offline2",
-  "/coach/property-map.css?v=20261025-native-offline2",
-  "/coach/property-map.js?v=20261028-address1",
-  "/coach/property-map.css?v=20261028-address1",
-  "/coach/address-suggestions.js?v=20261028-address1",
-  "/coach/property-visit-helpers.js?v=20261025-native-offline2",
   "/coach/document.html",
-  "/coach/demo-recorder-panel.js?v=20261028-floating-tools1",
-  "/coach/external-tools.js?v=20261028-floating-tools1",
-  "/coach/document-viewer.js?v=20261028-floating-tools1",
-  "/coach/document-viewer.css?v=20261028-floating-tools1",
-  "/coach/document-viewer.js?v=20261025-native-offline2",
-  "/coach/document-viewer.css?v=20261025-native-offline2",
   "/coach/assets/documents/manifest-v1.json",
-  "/coach/vendor/leaflet/leaflet.js",
-  "/coach/vendor/leaflet/leaflet.css",
   "/coach/icons/favicon-64.png?v=20261021",
   "/coach/icons/apple-touch-icon.png?v=20261021",
   "/coach/icons/icon-192.png?v=20261021",
@@ -233,6 +166,11 @@ async function networkFirst(request, cacheName, fallbackRequest = null) {
         const page = (await old.match(request)) || (fallbackRequest ? await old.match(fallbackRequest) : null);
         if (page) return page;
       }
+    }
+    if (fallbackRequest === "/coach/login/") {
+      const shell = await caches.open(TEC_CACHE_VERSION);
+      const login = await shell.match(fallbackRequest);
+      if (login) return login;
     }
     throw error;
   }
@@ -465,15 +403,19 @@ async function broadcastOfflineStatus(synced = 0) {
 async function flushOutboxInServiceWorker() {
   const viewerResponse = await fetch("/api/coach/me", { credentials: "include", cache: "no-store" });
   if (!viewerResponse.ok) {
+    if ([408, 425, 429].includes(viewerResponse.status) || viewerResponse.status >= 500) throw Error("Reintentar la verificación de cuenta");
     return;
   }
   const viewer = await viewerResponse.json().catch(() => ({}));
   const viewerEmail = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   const items = (await getAllOutboxItems()).sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || Number(a.kind === "property-lead") - Number(b.kind === "property-lead"));
   let synced = 0;
+  let retryPending = false;
 
   for (const item of items) {
-    if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail) {
+    const viewerId = String(viewer?.user?.id || viewer?.user?._id || "");
+    const differentOwner = [item.ownerAccountId, item.body?.accountId].some(id => id && String(id) !== viewerId);
+    if (!item.ownerEmail || !viewerEmail || item.ownerEmail !== viewerEmail || differentOwner) {
       continue;
     }
     const response = await fetch(item.url, {
@@ -492,6 +434,7 @@ async function flushOutboxInServiceWorker() {
         const data = await response.json().catch(() => ({}));
         await recordOfflineFormError(item, data.error || `Error ${response.status}`, response.status);
       }
+      if ([408,425,429].includes(response.status) || response.status >= 500) retryPending = true;
       if (response.status === 401 || response.status === 403) {
         break;
       }
@@ -506,11 +449,12 @@ async function flushOutboxInServiceWorker() {
   }
 
   await broadcastOfflineStatus(synced);
+  if (retryPending) throw Error("Hay envíos pendientes para reintentar");
 }
 
 self.addEventListener("sync", event => {
   if (event.tag === "tec-sync-outbox") {
-    event.waitUntil(flushOutboxInServiceWorker().catch(() => null));
+    event.waitUntil(flushOutboxInServiceWorker());
   }
 });
 

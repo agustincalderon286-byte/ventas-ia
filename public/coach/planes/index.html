@@ -33,9 +33,9 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261023-product-picker2" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261117-audit1" />
     <link rel="stylesheet" href="/coach/analytics.css?v=20261104-analytics1">
-    <link rel="stylesheet" href="/coach/coach-public.css?v=20261117-public2">
+    <link rel="stylesheet" href="/coach/coach-public.css?v=20261117-audit1">
     <link rel="stylesheet" href="/coach/signup-ux.css?v=20261117-signup1">
 </head>
   <body class="coach-public-body">
@@ -76,11 +76,11 @@
                 </div>
               </div>
               <p>Para distribuidores que quieren acceso continuo al Coach y prefieren pagar poco a poco.</p>
-              <ul>
+              <details class="plan-benefits" open><summary>Ver beneficios del plan</summary><ul>
                 <li>acceso privado completo</li>
                 <li>objeciones, cierres, pagos y paquetes</li>
                 <li>entra y sales mes por mes</li>
-              </ul>
+              </ul></details>
               <button type="button" class="secondary-button plan-action" data-plan-select="monthly">
                 Elegir mensual
               </button>
@@ -98,11 +98,11 @@
                 </div>
               </div>
               <p>La mejor opción si ya sabes que lo vas a usar de verdad y quieres pagar menos por todo el año.</p>
-              <ul>
+              <details class="plan-benefits" open><summary>Ver beneficios del plan</summary><ul>
                 <li>equivale a 10 meses pagados</li>
                 <li>mejor valor para uso constante</li>
                 <li>mismo Coach completo todo el año</li>
-              </ul>
+              </ul></details>
               <button type="button" class="secondary-button plan-action" data-plan-select="annual">
                 Elegir anual
               </button>
@@ -237,11 +237,12 @@
       </footer>
     </div>
 
-    <script src="/coach/pwa-safety.js?v=20261023-product-picker2"></script>
-    <script src="/coach/ui-coherence.js?v=20261023-product-picker2"></script>
+    <script src="/coach/pwa-safety.js?v=20261112-phone1"></script>
+    <script src="/coach/ui-coherence.js?v=20261025-native-offline2"></script>
     <script src="/coach/password-visibility.js?v=20261117-signup1"></script>
     <script src="/coach/signup-ux.js?v=20261117-signup1"></script>
-    <script src="/coach/app.js?v=20261117-five1"></script>
+    <script src="/coach/session-lock.js?v=20261117-audit1"></script>
+    <script src="/coach/app.js?v=20261117-audit1"></script>
     <script type="module" src="/coach/analytics.js?v=20261104-analytics1"></script>
 </body>
 </html>

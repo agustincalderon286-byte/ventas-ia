@@ -1,4 +1,4 @@
-import { MEASUREMENT_ID, CAMPAIGN_KEY, pageContext, safeAudioEvent, safeReferrer, safeCampaign, savedCampaign, socialReferral, campaignEventParams } from './analytics-events.js?v=20261113-social1';
+import { MEASUREMENT_ID, CAMPAIGN_KEY, pageContext, safeAudioEvent, safeReferrer, safeCampaign, savedCampaign, socialReferral, campaignEventParams } from './analytics-events.js?v=20261117-audit1';
 
 const KEY = 'tec.audiobooks.analytics.choice.v2';
 const disableKey = 'ga-disable-' + MEASUREMENT_ID;

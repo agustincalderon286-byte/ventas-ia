@@ -289,3 +289,8 @@ html .coach-app-body.tec-compact-page .coach-sidebar:has(> .tec-property-workspa
 
 @media (max-width:600px) { .tec-property-search select { font-size:14px; padding:12px 9px; } }
 .tec-property-workspace .tec-property-search { margin:0; }
+
+@media (max-width: 600px) {
+  .tec-property-workspace .tec-property-legend { font-size: 13px; line-height: 1.4; }
+  .tec-property-workspace .tec-property-search-tools .tec-property-text-button { font-size: 14px; }
+}

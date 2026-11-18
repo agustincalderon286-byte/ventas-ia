@@ -9402,3 +9402,11 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
 }
+
+.tec-calc-shortcut { margin: 4px 0 10px; border: 1px solid #b7c8d6; background: white; color: #163955; border-radius: 8px; padding: 8px 12px; min-height: 44px; font: inherit; cursor: pointer; }
+[data-coach-workspace-tab]:focus-visible, [data-jump-calculator]:focus-visible { outline: 3px solid #176ca4; outline-offset: -3px; }
+@media (max-width: 900px) {
+  .coach-login-layout { display: flex; flex-direction: column; }
+  .coach-login-layout .coach-login-card { order: -1; width: 100%; box-sizing: border-box; }
+  .coach-login-layout .coach-login-visual { width: 100%; box-sizing: border-box; }
+}

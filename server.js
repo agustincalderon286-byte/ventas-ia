@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { parseCoachLogin } from "./src/tec-coach-login.js";
+import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
@@ -20322,6 +20323,10 @@ function responderCoachError(res, statusCode, message) {
 }
 
 function setCoachCookie(res, req, token) {
+  if (parsearCookies(req.headers.cookie || "").tec_coach_local_lock === "1") {
+    res.clearCookie("tec_coach_local_lock", { path: "/", sameSite: "lax", secure: requestEsSeguro(req) });
+    clearCoachReturnCookie(res, req);
+  }
   res.cookie(COACH_SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -20395,6 +20400,7 @@ async function obtenerCoachAuthPorToken(token = "", options = {}) {
 }
 
 async function crearCoachSesion(req, res, userDoc) {
+  await revokeLocallyLockedCoachSession(req);
   const userId = userDoc._id;
   const credentialVersion = String(userDoc.credentialVersion || "");
   const token = generarTokenSeguro();
@@ -20446,8 +20452,16 @@ async function destruirCoachSesion(req, res) {
   clearCoachReturnCookie(res, req);
 }
 
+async function revokeLocallyLockedCoachSession(req) {
+  const cookies = parsearCookies(req.headers.cookie || "");
+  if (cookies.tec_coach_local_lock !== "1") return;
+  const tokens = [cookies[COACH_SESSION_COOKIE], cookies[COACH_RETURN_SESSION_COOKIE]].filter(Boolean);
+  if (tokens.length) await CoachSession.deleteMany({ tokenHash: { $in: tokens.map(token => hashTokenSeguro(token)) } });
+}
+
 async function obtenerCoachAuth(req) {
   const cookies = parsearCookies(req.headers.cookie || "");
+  if (cookies.tec_coach_local_lock === "1") return {session:null,user:null};
   const token = cookies[COACH_SESSION_COOKIE];
 
   return obtenerCoachAuthPorToken(token, { touch: true });
@@ -20455,6 +20469,7 @@ async function obtenerCoachAuth(req) {
 
 async function obtenerCoachReturnAuth(req) {
   const cookies = parsearCookies(req.headers.cookie || "");
+  if (cookies.tec_coach_local_lock === "1") return {session:null,user:null};
   const token = cookies[COACH_RETURN_SESSION_COOKIE];
   return obtenerCoachAuthPorToken(token, { touch: false });
 }
@@ -25430,8 +25445,14 @@ app.post("/api/coach/logout", async (req, res) => {
   }
 });
 
+app.post("/api/coach/session/revoke-local", async (req,res) => {
+  await revokeLocallyLockedCoachSession(req);
+  res.status(204).end();
+});
+
 app.get("/api/coach/me", async (req, res) => {
   try {
+    await revokeLocallyLockedCoachSession(req);
     const auth = await obtenerCoachAuth(req);
 
     if (!auth.user) {
@@ -32558,7 +32579,10 @@ const tecSendMail = createTecMailer({
   hostingerToken: String(process.env.TEC_HOSTINGER_MAIL_TOKEN || "").trim(),
   resendApiKey: AUDIO_RESEND_API_KEY, resendFrom: AUDIO_RESEND_FROM_EMAIL
 });
-registerCoachPasswordRecovery(app, {
+const recoveryJobs = recoveryJobModel(mongoose);
+const recoveryService = registerCoachPasswordRecovery(app, {
+  jobs: recoveryJobs,
+  deliverySecret: process.env.COACH_RECOVERY_SECRET || process.env.TEC_HOSTINGER_MAIL_TOKEN || AUDIO_RESEND_API_KEY,
   users: CoachUser, sessions: CoachSession,
   createPassword: async password => {
     const credentials = await crearPasswordSeguro(password);
@@ -34457,6 +34481,13 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
+    let recoveryTimer;
+    if (tecSendMail) {
+      await recoveryJobs.init();
+      void recoveryService.resume();
+      recoveryTimer = setInterval(recoveryService.resume, 15000);
+      recoveryTimer.unref();
+    }
     await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome].map(model => model.init()));
     await coachTeamPush.initialize();
     console.log("MongoDB Atlas conectado");
@@ -34471,8 +34502,8 @@ async function iniciarServidor() {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

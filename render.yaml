@@ -2,7 +2,7 @@ services:
   - type: web
     name: cmwf-crm-api
     runtime: node
-    buildCommand: npm ci --omit=dev --prefer-offline --no-audit --no-fund
+    buildCommand: npm ci --include=dev --prefer-offline --no-audit --no-fund && node scripts/coach-release-assets.mjs --check && env -i PATH="$PATH" NODE_ENV=test node --test && npm prune --omit=dev --ignore-scripts --no-audit --no-fund
     startCommand: npm start
     healthCheckPath: /api/healthz
     maxShutdownDelaySeconds: 300
