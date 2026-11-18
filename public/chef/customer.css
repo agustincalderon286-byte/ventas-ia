@@ -30,3 +30,60 @@
   --voice-play-bg:#fff;
   --voice-play-fg:#153c64;
 }
+
+
+.chef-alexa-link {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 44px;
+  padding: 8px 16px;
+  margin: 5px 0;
+  border: 1px solid #b1c7d8;
+  border-radius: 100px;
+  background: white;
+  color: #173f60;
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.chef-alexa-link:hover { background: #e5eff7; }
+.chef-alexa {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: clamp(20px, 5vw, 65px);
+  align-items: center;
+  max-width: 970px;
+  margin: clamp(24px, 4vw, 52px) auto 0;
+  padding: clamp(20px, 4.5vw, 65px);
+  border-radius: 24px;
+  background: #102f46;
+  color: #f6fbfc;
+  scroll-margin-top: 18px;
+}
+.chef-alexa h2 { margin: 0 0 14px; font-size: clamp(1.55rem, 4vw, 2.4rem); line-height: 1.12; }
+.chef-alexa-copy p { margin: 0 0 16px; line-height: 1.55; }
+.chef-alexa-status { color: #d1e2ea; font-size: .88rem; }
+.chef-alexa .chef-alexa-download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #a9efdf;
+  font-size: .9rem;
+  text-underline-offset: .23em;
+}
+.chef-alexa-video {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  justify-self: center;
+  border: 1px solid #466477;
+  border-radius: 18px;
+  background: #091f30;
+}
+@media (max-width: 640px) {
+  .chef-alexa { grid-template-columns: minmax(0, 1fr); }
+}

@@ -82,6 +82,9 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     return value;
   }
   const assets=new Map([
+    ['alexa-demo.mp4','chef/assets/alexa-demo.mp4'],
+    ['alexa-demo.jpg','chef/assets/alexa-demo.jpg'],
+    ['alexa-demo.es.vtt','chef/assets/alexa-demo.es.vtt'],
     ['customer.js','chef/customer.js'],['customer.css','chef/customer.css'],['robot.webp','chef/assets/tec-chef-robot-v1.webp'],['tec-chef.css','chef/tec-chef.css']
   ]);
   app.get('/chef/public/:asset',(req,res)=>{
