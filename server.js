@@ -2465,6 +2465,8 @@ const chefPublicModels=createPublicChefModels(mongoose);
 registerPublicChef(app, {
   ...chefPublicModels, voice: process.env.OPENAI_API_KEY ? createCoachVoiceProvider() : null, requireActive: requireCoachActivo, privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, leads: CoachLeadInbox,
   getBySlug: resolverCoachChefContextPorSlug, getDefault: resolverCoachChefContextPublicoPredeterminado,
+  // Voice demonstration requests stay disabled until this secret is shared with the Alexa Lambda.
+  alexaVoiceKey: process.env.TEC_CHEF_ALEXA_VOICE_KEY || "",
   getOwnContext: async user => {
     const profile=await asegurarCoachDistributorProfile(user);
     return profile?.chefSlug && profile.chefEnabled!==false ? resolverCoachChefContextPorSlug(profile.chefSlug) : null;

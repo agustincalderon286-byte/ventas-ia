@@ -16,6 +16,7 @@ const DAY=86400000;
 const validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(value);
 const validSlug=value=>typeof value==='string'&&/^[a-z0-9-]{1,48}$/.test(value);
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
+const hashBytes=value=>crypto.createHash('sha256').update(String(value)).digest();
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
 const compareFields=['fullName','phone','email','city','interest','notes','appointmentRequested','appointmentPreferredTime'];
 const publicName=ctx=>ctx?.userDoc?.name||'Tu distribuidor TEC';
@@ -31,6 +32,39 @@ export function createPublicChefModels(mongoose){
   return {visitors:mongoose.models.TecChefPublicVisitor||mongoose.model('TecChefPublicVisitor',session),conversations:mongoose.models.TecChefPublicConversation||mongoose.model('TecChefPublicConversation',conversation)};
 }
 
+// Alexa cannot read the printed QR. The customer says the identifier that the QR already
+// contains (the part after /chef/ in the seller link). Speech recognition drops hyphens and
+// spells digits or letters as words, so the server tries a few readings and accepts only one seller.
+const SPOKEN_DIGITS={cero:'0',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
+const SPOKEN_LETTERS={be:'b',ce:'c',de:'d',efe:'f'};
+const SPOKEN_FILLER=/^(?:(?:el|mi|su|es|codigo|enlace|link|vendedor|vendedora|distribuidor|distribuidora|tec|tech|https?|www|totalelitecoaching|punto|com|barra|slash)\s+)+/;
+export function spokenSellerCandidates(value){
+  let words=clean(value,180).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/https?:\/\/\S*?\/chef\//,'').replace(/[^a-z0-9]+/g,' ').trim();
+  // A spoken link ends with "chef barra <identifier>": try what follows the last "chef", and also the
+  // whole phrase, because generated identifiers can start with "chef-".
+  const after=words.match(/(?:^|\s)chef(?:\s+(?:barra|slash))?\s+(.+)$/)?.[1];
+  const join=parts=>parts.join('-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+  const candidates=new Set();
+  for(const phrase of after?[after,words]:[words]){
+    const text=phrase.replace(SPOKEN_FILLER,'').replace(/\bguion(?: medio)?\b/g,' - ').replace(/\bbarra\b/g,' ').trim();
+    if(!text)continue;
+    const tokens=text.split(/\s+/);
+    candidates.add(join(tokens.map(t=>t==='-'?'':t)));
+    // Spelled suffixes such as "a tres efe nueve" belong to one segment: a3f9.
+    const parts=[];let run='';
+    for(const token of tokens){
+      const ch=token==='-'?'':SPOKEN_DIGITS[token]||SPOKEN_LETTERS[token]||(/^(?:[a-z]|\d+)$/.test(token)?token:'');
+      if(ch){run+=ch;continue;}
+      if(run){parts.push(run);run='';}
+      if(token!=='-')parts.push(token);
+    }
+    if(run)parts.push(run);
+    candidates.add(join(parts));
+  }
+  return [...candidates].filter(validSlug).slice(0,4);
+}
+
 export function publicChefLeadPayload(ctx,body,visitorHash,now=new Date()){
   if(body?.consentGiven!==true)throw Error('Confirma que autorizas al distribuidor y a su equipo de supervisión a recibir tu solicitud y contactarte.');
   const lead=normalizeChefLead({...body,consentGiven:true});
@@ -40,12 +74,12 @@ export function publicChefLeadPayload(ctx,body,visitorHash,now=new Date()){
     ownerUserId:ownership.ownerUserId,ownerName:ownership.ownerName||'',ownerEmail:ownership.ownerEmail||'',
     generatedByUserId:ctx.userDoc._id,generatedByName:ctx.userDoc.name||'',generatedByAccountType:ctx.userDoc.accountType||'owner',
     offlineRequestId:'chef-public:'+hash(visitorHash+'\n'+String(ctx.userDoc._id)+'\n'+body.requestId),
-    ...lead,chefSlug:ctx.slug,source:'chef_personal',sourceDetail:body.origin==='alexa'?'TEC Chef · Alexa':'TEC Chef · enlace público',
-    status:'nuevo',consentGiven:true,appointmentStatus:lead.appointmentRequested?'solicitada':'',tags:['TEC Chef','enlace_personal'],createdAt:now,updatedAt:now
+    ...lead,chefSlug:ctx.slug,source:'chef_personal',sourceDetail:body.origin==='alexa-voz'?'TEC Chef · Alexa por voz':body.origin==='alexa'?'TEC Chef · Alexa':'TEC Chef · enlace público',
+    status:'nuevo',consentGiven:true,appointmentStatus:lead.appointmentRequested?'solicitada':'',tags:body.origin==='alexa-voz'?['TEC Chef','enlace_personal','alexa_voz']:['TEC Chef','enlace_personal'],createdAt:now,updatedAt:now
   };
 }
 
-export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,voice=null,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',now=Date.now,limits={}}){
+export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,voice=null,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',alexaVoiceKey='',now=Date.now,limits={}}){
   const origin=new URL(publicOrigin).origin,rates=new Map(),busy=new Set(),activeVoice=new Set();
   let activePhotoRequests=0;
   const headers=res=>res.set({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Vary':'Cookie','X-TEC-Chef-Public-Version':'20261118-voz1'});
@@ -252,15 +286,62 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     if(!ctx)return res.status(400).json({error:'Abre el enlace del Chef que te compartió tu distribuidor para solicitar información.'});
     const visitorHash=await visitor(req,res);if(!visitorHash)return;
     let payload;try{payload=publicChefLeadPayload(ctx,req.body,visitorHash,new Date(now()));}catch(error){return res.status(400).json({error:error.message});}
+    await storeLead(res,ctx,payload,()=>consume('lead:'+visitorHash,10,900000,res)&&consume('lead-ip:'+ipKey(req),limits.leadsPerIpQuarterHour||30,900000,res));
+  }));
+  // One write path for every channel: the unique ownerUserId + offlineRequestId index makes a
+  // retry return the same lead, and a reused key with other data is refused.
+  async function storeLead(res,ctx,payload,allowNew){
     const scope={ownerUserId:payload.ownerUserId,offlineRequestId:payload.offlineRequestId};
     let doc=await leads.findOne(scope).lean();
+    const existing=Boolean(doc);
     if(!doc){
-      if(!consume('lead:'+visitorHash,10,900000,res)||!consume('lead-ip:'+ipKey(req),limits.leadsPerIpQuarterHour||30,900000,res))return;
+      if(!allowNew())return;
       try{doc=await leads.findOneAndUpdate(scope,{$setOnInsert:payload},{new:true,upsert:true});}catch(error){if(error.code!==11000)throw error;doc=await leads.findOne(scope).lean();}
     }
     if(!doc||String(doc.generatedByUserId)!==String(ctx.userDoc._id)||compareFields.some(key=>key==='appointmentRequested'?Boolean(doc[key])!==payload[key]:String(doc[key]||'')!==String(payload[key]||'')))return res.status(409).json({error:'Este envío ya corresponde a otra solicitud. Revisa tus datos antes de continuar.'});
     let crmSynced=true;try{await syncCrm(ctx.userDoc,doc);}catch{crmSynced=false;}
-    res.json({ok:true,id:String(doc._id),sellerName:publicName(ctx),crmSynced,appointmentStatus:payload.appointmentRequested?'solicitada':null});
+    res.json({ok:true,id:String(doc._id),sellerName:publicName(ctx),crmSynced,duplicate:existing,appointmentStatus:payload.appointmentRequested?'solicitada':null});
+  }
+
+  // Voice requests from the Chef TEC Alexa skill. They stay disabled until the server and the Lambda
+  // share TEC_CHEF_ALEXA_VOICE_KEY; meanwhile the skill sends people to the web form.
+  const voiceKeyHash=alexaVoiceKey?hashBytes(alexaVoiceKey):null;
+  function alexaVoice(req,res){
+    if(!voiceKeyHash){res.status(503).json({error:'La solicitud por voz no está disponible.',fallback:true});return false;}
+    if(!crypto.timingSafeEqual(hashBytes(req.get('X-TEC-Alexa-Key')||''),voiceKeyHash)){res.status(401).json({error:'No autorizado.'});return false;}
+    if(!req.is('application/json')){res.status(415).json({error:'Solicitud inválida.'});return false;}
+    // A hash of the Alexa skill user, never the Amazon identifier itself.
+    if(typeof req.body?.alexaUser!=='string'||!/^[a-f0-9]{64}$/.test(req.body.alexaUser)){res.status(400).json({error:'Solicitud inválida.'});return false;}
+    return true;
+  }
+  app.post('/api/chef/public/alexa/seller',wrap(async(req,res)=>{
+    if(!alexaVoice(req,res))return;
+    if(!consume('alexa-seller:'+req.body.alexaUser,limits.alexaSellerLookups||12,900000,res)||!consume('alexa-seller-all',limits.alexaSellerLookupsPerHour||1200,3600000,res))return;
+    const found=new Map();
+    for(const slug of spokenSellerCandidates(req.body.vendedor)){
+      const ctx=await getBySlug(slug);
+      if(ctx?.userDoc?._id&&ctx.ownership?.ownerUserId)found.set(String(ctx.userDoc._id),{slug:ctx.slug||slug,sellerName:publicName(ctx)});
+    }
+    // Two different sellers for one utterance are never resolved by guessing.
+    if(found.size!==1)return res.status(found.size?409:404).json({error:'No pude verificar ese vendedor.',fallback:true});
+    res.json([...found.values()][0]);
+  }));
+  app.post('/api/chef/public/alexa/leads',wrap(async(req,res)=>{
+    if(!alexaVoice(req,res))return;
+    const slug=req.body.slug;
+    if(!validSlug(slug))return res.status(400).json({error:'No pude verificar ese vendedor.',fallback:true});
+    if(req.body.consentGiven!==true)return res.status(400).json({error:'Sin autorización de contacto no se guarda la solicitud.'});
+    const ctx=await getBySlug(slug);
+    if(!ctx?.userDoc?._id||!ctx.ownership?.ownerUserId)return res.status(404).json({error:'No pude verificar ese vendedor.',fallback:true});
+    const preference=clean(req.body.appointmentPreferredTime,140);
+    const body={requestId:req.body.requestId,fullName:req.body.fullName,phone:req.body.phone,email:'',city:req.body.city,
+      interest:'Demostración solicitada por voz en Alexa',
+      notes:'Solicitud por voz en Alexa. El día y la hora son una preferencia del cliente; confirma disponibilidad antes de agendar.',
+      appointmentRequested:true,appointmentPreferredTime:preference?'Preferencia: '+preference:'',consentGiven:true,origin:'alexa-voz'};
+    let payload;
+    try{payload=publicChefLeadPayload(ctx,body,'alexa-voz:'+req.body.alexaUser,new Date(now()));}
+    catch(error){return res.status(400).json({error:error.message,field:/tel[eé]fono/i.test(error.message)?'phone':'details'});}
+    await storeLead(res,ctx,payload,()=>consume('alexa-lead:'+req.body.alexaUser,limits.alexaLeadsPerUserDay||4,DAY,res)&&consume('alexa-lead-all',limits.alexaLeadsPerHour||300,3600000,res));
   }));
 
   app.get('/api/chef/workspace',wrap(async(req,res)=>{
