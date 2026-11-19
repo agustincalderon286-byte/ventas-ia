@@ -181,7 +181,7 @@
     try{
       const data=await api('bootstrap');$('#attach-photo').hidden=data.canAttachPhoto!==true;sellerName=data.sellerName;contactAvailable=data.contactAvailable;
       $('#representative-note').textContent=contactAvailable?'Este Chef te lo comparte '+sellerName+'.':'Recetas e ideas para tu cocina, sin iniciar sesión.';
-      $('#recipient-name').textContent=$('#consent-recipient').textContent=sellerName;
+      $('#recipient-name').textContent=$('#consent-recipient').textContent=sellerName;const voiceCode=contactAvailable&&/^\d{6}$/.test(data.voiceCode||'')?data.voiceCode:'';$('#alexa-voice-code').textContent=voiceCode?'¿Tienes Alexa? Di «Alexa, abre Chef TEC», luego «quiero una demostración» y el código '+voiceCode.split('').join(' ')+'.':'';$('#alexa-voice-code').hidden=!voiceCode;
       $('#request-information').hidden=!contactAvailable;
       if(alexaAppointment)openContact();
       try{sessionId=sessionStorage.getItem(key)||id();sessionStorage.setItem(key,sessionId);}catch{sessionId=id();}
