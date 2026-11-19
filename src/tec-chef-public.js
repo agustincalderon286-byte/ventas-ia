@@ -37,7 +37,16 @@ export function createPublicChefModels(mongoose){
 // spells digits or letters as words, so the server tries a few readings and accepts only one seller.
 const SPOKEN_DIGITS={cero:'0',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
 const SPOKEN_LETTERS={be:'b',ce:'c',de:'d',efe:'f'};
-const SPOKEN_FILLER=/^(?:(?:el|mi|su|es|codigo|enlace|link|vendedor|vendedora|distribuidor|distribuidora|tec|tech|https?|www|totalelitecoaching|punto|com|barra|slash)\s+)+/;
+const SPOKEN_FILLER=/^(?:(?:el|mi|su|es|se|llama|nombre|codigo|numero|para|de|del|alexa|enlace|link|vendedor|vendedora|distribuidor|distribuidora|tec|tech|https?|www|totalelitecoaching|punto|com|barra|slash)\s+)+/;
+// The six-digit code shown next to the seller's QR, read digit by digit ("cuatro ocho dos...").
+export function spokenVoiceCode(value){
+  const words=(clean(value,180).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()+' ').replace(SPOKEN_FILLER,'');
+  let digits='';
+  for(const token of words.split(/\s+/).filter(Boolean)){
+    if(/^\d+$/.test(token))digits+=token;else if(SPOKEN_DIGITS[token])digits+=SPOKEN_DIGITS[token];else return '';
+  }
+  return /^\d{6}$/.test(digits)?digits:'';
+}
 export function spokenSellerCandidates(value){
   let words=clean(value,180).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/https?:\/\/\S*?\/chef\//,'').replace(/[^a-z0-9]+/g,' ').trim();
@@ -79,7 +88,7 @@ export function publicChefLeadPayload(ctx,body,visitorHash,now=new Date()){
   };
 }
 
-export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,voice=null,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',alexaVoiceKey='',now=Date.now,limits={}}){
+export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOwnContext,getDownline,hasDownline=async()=>false,visitors,conversations,leads,privateDir,publicDir,completion=completeChef,voice=null,syncCrm=async()=>{},publicOrigin='https://totalelitecoaching.com',alexaVoiceKey='',getByVoiceCode=null,now=Date.now,limits={}}){
   const origin=new URL(publicOrigin).origin,rates=new Map(),busy=new Set(),activeVoice=new Set();
   let activePhotoRequests=0;
   const headers=res=>res.set({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Vary':'Cookie','X-TEC-Chef-Public-Version':'20261118-voz1'});
@@ -155,7 +164,7 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
 
   app.get('/api/chef/public/bootstrap',wrap(async(req,res)=>{
     const ctx=await context(req,res);if(ctx===undefined)return;if(!await visitor(req,res,true))return;
-    res.json({sellerName:ctx?publicName(ctx):'',contactAvailable:Boolean(ctx),canAttachPhoto:true,canSendVoice:Boolean(voice),manifest:chefManifest});
+    res.json({sellerName:ctx?publicName(ctx):'',voiceCode:req.query.chef&&ctx?.voiceCode||'',contactAvailable:Boolean(ctx),canAttachPhoto:true,canSendVoice:Boolean(voice),manifest:chefManifest});
   }));
   app.get('/api/chef/public/conversation',wrap(async(req,res)=>{
     const ctx=await context(req,res);if(ctx===undefined)return;const visitorHash=await visitor(req,res);if(!visitorHash)return;
@@ -279,6 +288,8 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
   }));
   app.post('/api/chef/public/leads',wrap(async(req,res)=>{
     if(!sameOrigin(req,res))return;
+    // Only the authenticated Alexa route may label a request as made by voice.
+    if(req.body?.origin==='alexa-voz')return res.status(400).json({error:'Envía tu solicitud desde el formulario del Chef.'});
     if(req.body?.origin==='alexa'&&(!validSlug(req.query.chef)||req.body.appointmentRequested!==true)){
       return res.status(400).json({error:'Elige tu distribuidor para solicitar una demostración desde Alexa.'});
     }
@@ -317,7 +328,11 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
   app.post('/api/chef/public/alexa/seller',wrap(async(req,res)=>{
     if(!alexaVoice(req,res))return;
     if(!consume('alexa-seller:'+req.body.alexaUser,limits.alexaSellerLookups||12,900000,res)||!consume('alexa-seller-all',limits.alexaSellerLookupsPerHour||1200,3600000,res))return;
-    const found=new Map();
+    const found=new Map(),code=spokenVoiceCode(req.body.vendedor);
+    if(code&&getByVoiceCode){
+      const ctx=await getByVoiceCode(code);
+      if(ctx?.userDoc?._id&&ctx.ownership?.ownerUserId&&validSlug(ctx.slug))found.set(String(ctx.userDoc._id),{slug:ctx.slug,sellerName:publicName(ctx)});
+    }
     for(const slug of spokenSellerCandidates(req.body.vendedor)){
       const ctx=await getBySlug(slug);
       if(ctx?.userDoc?._id&&ctx.ownership?.ownerUserId)found.set(String(ctx.userDoc._id),{slug:ctx.slug||slug,sellerName:publicName(ctx)});
@@ -333,9 +348,9 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     if(req.body.consentGiven!==true)return res.status(400).json({error:'Sin autorización de contacto no se guarda la solicitud.'});
     const ctx=await getBySlug(slug);
     if(!ctx?.userDoc?._id||!ctx.ownership?.ownerUserId)return res.status(404).json({error:'No pude verificar ese vendedor.',fallback:true});
-    const preference=clean(req.body.appointmentPreferredTime,140);
+    const preference=clean(req.body.appointmentPreferredTime,140),interest=clean(req.body.interest,200);
     const body={requestId:req.body.requestId,fullName:req.body.fullName,phone:req.body.phone,email:'',city:req.body.city,
-      interest:'Demostración solicitada por voz en Alexa',
+      interest:interest.length>=2?interest:'Demostración solicitada por voz en Alexa',
       notes:'Solicitud por voz en Alexa. El día y la hora son una preferencia del cliente; confirma disponibilidad antes de agendar.',
       appointmentRequested:true,appointmentPreferredTime:preference?'Preferencia: '+preference:'',consentGiven:true,origin:'alexa-voz'};
     let payload;
@@ -351,7 +366,7 @@ export function registerPublicChef(app,{requireActive,getBySlug,getDefault,getOw
     const members=team?await getDownline(auth.user):[],ids=[auth.user._id,...members.map(m=>m._id)],selected=req.query.seller;
     if(selected!=null&&(typeof selected!=='string'||!ids.some(id=>String(id)===selected)))return res.status(403).json({error:'Ese vendedor no está dentro de tu red autorizada.'});
     const docs=await leads.find({source:'chef_personal',generatedByUserId:{$in:selected?[ids.find(id=>String(id)===selected)]:ids}}).select('fullName phone email city interest notes status appointmentRequested appointmentPreferredTime appointmentStatus generatedByUserId generatedByName createdAt').sort({createdAt:-1,_id:-1}).limit(100).lean();
-    res.json({user:{id:String(auth.user._id),name:auth.user.name||''},canViewTeam,scope:team?'team':'mine',shareUrl:ctx?origin+'/chef/'+ctx.slug+'/':'',sharingEnabled:Boolean(ctx),leads:docs.map(doc=>({id:String(doc._id),fullName:doc.fullName,phone:doc.phone||'',email:doc.email||'',city:doc.city||'',interest:doc.interest||'',notes:doc.notes||'',status:doc.status||'nuevo',sellerId:String(doc.generatedByUserId),sellerName:doc.generatedByName||'',appointmentRequested:Boolean(doc.appointmentRequested),appointmentPreferredTime:doc.appointmentPreferredTime||'',appointmentStatus:doc.appointmentStatus||'',createdAt:doc.createdAt}))});
+    res.json({user:{id:String(auth.user._id),name:auth.user.name||''},canViewTeam,scope:team?'team':'mine',shareUrl:ctx?origin+'/chef/'+ctx.slug+'/':'',voiceCode:ctx?.voiceCode||'',sharingEnabled:Boolean(ctx),leads:docs.map(doc=>({id:String(doc._id),fullName:doc.fullName,phone:doc.phone||'',email:doc.email||'',city:doc.city||'',interest:doc.interest||'',notes:doc.notes||'',status:doc.status||'nuevo',sellerId:String(doc.generatedByUserId),sellerName:doc.generatedByName||'',appointmentRequested:Boolean(doc.appointmentRequested),appointmentPreferredTime:doc.appointmentPreferredTime||'',appointmentStatus:doc.appointmentStatus||'',createdAt:doc.createdAt}))});
   }));
   app.get('/api/chef/workspace/qr.svg',wrap(async(req,res)=>{
     const auth=await requireActive(req,res);if(!auth)return;if(req.query.account&&req.query.account!==String(auth.user._id))return res.status(403).json({error:'La cuenta cambió. Recarga la página.'});const ctx=await getOwnContext(auth.user);

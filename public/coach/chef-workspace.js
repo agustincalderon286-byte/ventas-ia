@@ -4,7 +4,7 @@
   let userId='',shareUrl='',scope='mine',loading=false,blocked=false,timer;
   const node=(tag,cls,text)=>{const item=document.createElement(tag);if(cls)item.className=cls;if(text)item.textContent=text;return item;};
   const status=(text,error=false)=>{$('#workspace-status').textContent=text;$('#workspace-status').dataset.error=String(error);};
-  function lock(){blocked=true;shareUrl='';$('#chef-share-url').value='';$('#copy-chef-url').disabled=true;$('#share-chef-url').hidden=true;$('#open-customer-chef').hidden=true;$('#chef-personal-qr').hidden=true;$('#chef-leads').replaceChildren();$('#chef-leads-count').textContent='';$('#chef-workspace-user').textContent='Mi cuenta';clearTimeout(timer);}
+  function lock(){blocked=true;shareUrl='';$('#chef-share-url').value='';$('#copy-chef-url').disabled=true;$('#share-chef-url').hidden=true;$('#open-customer-chef').hidden=true;$('#chef-personal-qr').hidden=true;$('#chef-voice-code').hidden=true;$('#chef-leads').replaceChildren();$('#chef-leads-count').textContent='';$('#chef-workspace-user').textContent='Mi cuenta';clearTimeout(timer);}
   function renderLeads(rows){
     const list=$('#chef-leads');list.replaceChildren();
     if(!rows.length)list.append(node('p','chef-workspace-empty',scope==='team'?'Todavía no hay solicitudes del Chef en tu red.':'Todavía no tienes solicitudes del Chef. Comparte tu enlace o QR con tus clientes.'));
@@ -30,6 +30,9 @@
       shareUrl=data.shareUrl;$('#chef-share-url').value=shareUrl;$('#copy-chef-url').disabled=!shareUrl;
       $('#open-customer-chef').href=shareUrl;$('#open-customer-chef').hidden=!shareUrl;
       $('#share-chef-url').hidden=!shareUrl||typeof navigator.share!=='function';
+      const voiceCode=/^\d{6}$/.test(data.voiceCode||'')?data.voiceCode:'';
+      $('#chef-voice-code').textContent=voiceCode?'Código para Alexa: '+voiceCode.slice(0,3)+' '+voiceCode.slice(3)+'. Tu cliente lo dice para pedir una demostración por voz.':'';
+      $('#chef-voice-code').hidden=!voiceCode||!shareUrl;
       const qr=$('#chef-personal-qr'),qrUrl='/api/chef/workspace/qr.svg?account='+encodeURIComponent(userId);if(shareUrl&&qr.getAttribute('src')!==qrUrl)qr.src=qrUrl;qr.hidden=!shareUrl;
       $('[data-chef-scope="team"]').hidden=!data.canViewTeam;
       $('#chef-scope-note').textContent=scope==='team'?'Tu red autorizada incluye tus leads y los de las personas debajo de ti. No muestra otras ramas ni a tu upline.':'Solo se muestran tus contactos. La lista se actualiza mientras esta página está abierta.';
