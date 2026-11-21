@@ -129,7 +129,7 @@
       for (const input of [...Object.values(fields), verified.input]) input.disabled = !include.checked;
     });
     panel.append(group);
-    return { label: (tickets ? "la boleta " : "el referido ") + index, include, fields, verified };
+    return { label: (tickets ? "la boleta " : "el referido ") + index, group, include, fields, verified };
   }
 
   function phoneProblem(phone, verified, label) {
@@ -142,13 +142,13 @@
     return null;
   }
 
-  function bind({ form, readPhoto, apply, exportTickets, isCurrentSeller }) {
+  function bind({ form, container = form, readPhoto, apply, exportTickets, saveTickets, openLeads, createRequestId, isCurrentSeller }) {
     bindings.get(form)?.destroy();
-    const gallery = form.querySelector("[data-fourteen-photo]");
-    const camera = form.querySelector("[data-fourteen-photo-camera]");
-    const read = form.querySelector("[data-fourteen-photo-read]");
-    const preview = form.querySelector("[data-fourteen-photo-preview]");
-    const status = form.querySelector("[data-fourteen-photo-status]");
+    const gallery = container.querySelector("[data-fourteen-photo]");
+    const camera = container.querySelector("[data-fourteen-photo-camera]");
+    const read = container.querySelector("[data-fourteen-photo-read]");
+    const preview = container.querySelector("[data-fourteen-photo-preview]");
+    const status = container.querySelector("[data-fourteen-photo-status]");
     if (!gallery || !read || !preview || !status || typeof isCurrentSeller !== "function") return;
 
     const pickers = [gallery, camera].filter(Boolean);
@@ -157,6 +157,7 @@
     let visit = "";
     let dataUrl = "";
     let originalUrl = "";
+    let removePhoto;
     let active = true;
     function listen(element, type, handler) {
       element.addEventListener(type, handler);
@@ -174,7 +175,11 @@
       if (originalUrl) URL.revokeObjectURL(originalUrl);
       originalUrl = "";
       read.disabled = true;
-      for (const picker of pickers) if (picker !== keepPicker) picker.value = "";
+      for (const picker of pickers) {
+        picker.disabled = false;
+        if (picker !== keepPicker) picker.value = "";
+      }
+      removePhoto = null;
       preview.replaceChildren();
       preview.hidden = true;
       say("");
@@ -230,8 +235,7 @@
         say(problem.message, "error");
         problem.input.focus();
       };
-      const confirm = button(tickets ? "Descargar CSV de boletas" : "Pasar al formulario", "secondary-button", () => {
-        if (!current(id) || confirm.disabled) return;
+      function collect() {
         const selected = editors.filter(editor => editor.include.checked);
         if (!tickets && selected.length > maxReferrals) return say("Selecciona hasta 11 referidos para esta hoja.", "error");
         if (tickets && !selected.length) return say("Selecciona al menos una boleta con nombre y teléfono completos.", "error");
@@ -254,29 +258,84 @@
             if (problem) return report(problem);
           }
         }
-        confirm.disabled = true;
+        return result;
+      }
+      const excludedCopy = count => count ? (tickets ? " Boletas que dejaste fuera: " : " Referidos que dejaste fuera: ") + count + "." : "";
+      const remainingCopy = overflow || (!tickets && rows.length > maxReferrals)
+        ? (tickets ? " Toma otra foto de las boletas restantes." : " Revisa en la foto cuáles quedan para otra hoja.") : "";
+      function transfer() {
+        if (!current(id) || confirm.disabled) return;
+        const result = collect();
+        if (!result) return;
         try {
           const feedback = tickets ? exportTickets(result) : apply(result);
           if (tickets ? feedback?.exported === false : !feedback?.applied) {
-            say(feedback?.message || "Revisa los datos y vuelve a intentarlo.", "error");
-            confirm.disabled = false;
-            return;
+            return say(feedback?.message || "Revisa los datos y vuelve a intentarlo.", "error");
           }
-          reset();
-          const messages = [feedback?.message || (tickets ? "CSV de boletas preparado." : "Datos incorporados al formulario.")];
-          const excluded = editors.length - selected.length;
-          if (excluded) messages.push((tickets ? "Boletas que dejaste fuera: " : "Referidos que dejaste fuera: ") + excluded + ".");
-          if (overflow || (!tickets && rows.length > maxReferrals)) {
-            messages.push(tickets ? "Toma otra foto de las boletas restantes." : "Revisa en la foto cuáles quedan para otra hoja.");
-          }
-          if (!tickets) messages.push("Comprueba la hoja y pulsa Guardar en TEC o Descargar CSV cuando esté lista.");
-          say(messages.join(" "), "success");
+          if (!tickets) reset();
+          let message = feedback?.message || (tickets ? "CSV de boletas preparado." : "Datos incorporados al formulario.");
+          message += excludedCopy(editors.length - result.referrals.length) + remainingCopy;
+          if (!tickets) message += " Comprueba la hoja y pulsa Guardar en TEC o Descargar CSV cuando esté lista.";
+          say(message, "success");
         } catch (error) {
           say(error.message || "Revisa los datos y vuelve a intentarlo.", "error");
-          confirm.disabled = false;
         }
-      });
-      panel.append(confirm);
+      }
+      const actions = node("div", "", "dashboard-actions");
+      const confirm = button(tickets ? "Descargar CSV de boletas" : "Pasar al formulario", "secondary-button", transfer);
+      if (tickets && saveTickets) {
+        let previousBatch = "", requestId = "", saved = false;
+        const openFolder = button("Ver mis leads", "primary-button", () => {
+          if (saved && current(id)) openLeads?.();
+        });
+        openFolder.hidden = true;
+        const save = button("Guardar en mis leads", "primary-button", async () => {
+          if (!current(id) || save.disabled || saved) return;
+          if (editors.filter(row => row.include.checked).length > maxReferrals) {
+            return say("Selecciona hasta 11 boletas por guardado. Puedes descargar todas las boletas revisadas en CSV.", "error");
+          }
+          const result = collect();
+          if (!result) return;
+          const batch = JSON.stringify(result.referrals);
+          if (batch !== previousBatch) {
+            requestId = createRequestId();
+            previousBatch = batch;
+          }
+          const rows = editors.map(editor => editor.group);
+          for (const element of [...rows, ...pickers, removePhoto, save, confirm]) element.disabled = true;
+          save.dataset.loading = "true";
+          say("Guardando las boletas seleccionadas en Mis leads…");
+          try {
+            const receipt = await saveTickets(result, requestId);
+            if (!current(id)) return;
+            if (!Number.isInteger(receipt?.createdCount) || receipt.createdCount < 0 ||
+                !Number.isInteger(receipt.duplicateCount) || receipt.duplicateCount < 0 ||
+                receipt.createdCount + receipt.duplicateCount !== result.referrals.length) {
+              throw new Error("No recibí la confirmación de TEC. Reintenta con la misma selección.");
+            }
+            saved = true;
+            save.textContent = "Boletas procesadas";
+            if (openLeads) {
+              save.hidden = true;
+              openFolder.hidden = false;
+            }
+            say("Leads nuevos: " + receipt.createdCount + ". Boletas repetidas: " + receipt.duplicateCount + "."
+              + excludedCopy(editors.length - result.referrals.length) + remainingCopy, "success");
+          } catch (error) {
+            if (current(id)) say(error.message || "No pude confirmar el guardado. Inténtalo de nuevo.", "error");
+          } finally {
+            if (current(id)) {
+              for (const element of [...pickers, removePhoto, confirm]) element.disabled = false;
+              for (const row of rows) row.disabled = saved;
+              save.disabled = saved;
+              delete save.dataset.loading;
+            }
+          }
+        });
+        actions.append(save, openFolder);
+      }
+      actions.append(confirm);
+      panel.append(actions);
       preview.append(panel);
     }
 
@@ -313,8 +372,8 @@
           zoom.textContent = enlarged ? "Reducir foto" : "Ampliar foto original";
         });
         zoom.setAttribute("aria-expanded", "false");
-        const remove = button("Quitar foto", "nav-button", () => { if (current(id)) reset(); });
-        preview.replaceChildren(zoom, viewport, remove);
+        removePhoto = button("Quitar foto", "nav-button", () => { if (!removePhoto?.disabled && current(id)) reset(); });
+        preview.replaceChildren(zoom, viewport, removePhoto);
         preview.hidden = false;
         read.disabled = false;
         say("Foto lista. Pulsa " + read.textContent.trim() + " para extraer los datos.");
@@ -361,6 +420,7 @@
     listen(form, "reset", reset);
     listen(window, "pagehide", reset);
     listen(window, "storage", checkOwner);
+    listen(window, "tec:coach-session-change", checkOwner);
     listen(window, "focus", checkOwner);
     listen(document, "visibilitychange", checkOwner);
     reset();

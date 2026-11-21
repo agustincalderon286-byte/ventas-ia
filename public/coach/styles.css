@@ -9498,7 +9498,8 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
 
 /* Revisión de una hoja de referencias en el teléfono. */
 .fourteen-photo-tool { padding: 1rem; border: 1px solid currentColor; border-radius: 12px; }
-.fourteen-photo-tool summary { cursor: pointer; font-weight: 650; }
+.fourteen-photo-tool > h4 { margin: 0 0 .4rem; }
+.fourteen-photo-tool > p { max-width: 68ch; }
 .fourteen-photo-picker { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
 .fourteen-photo-picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .fourteen-photo-picker:focus-within { outline: 2px solid currentColor; outline-offset: 3px; }

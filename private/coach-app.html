@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261121-lector3" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261121-lector5" />
     <link rel="stylesheet" href="/coach/audiobooks.css?v=20261103-readalong1" />
     <link rel="stylesheet" href="/coach/product-models.css?v=20261110-product3d1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
@@ -1558,6 +1558,18 @@
               </figure>
             </div>
 
+            <section class="fourteen-photo-tool" id="tec-referral-photo" tabindex="-1" data-fourteen-photo-tool aria-labelledby="fourteen-photo-title">
+              <h4 id="fourteen-photo-title">Subir foto de rifas o referidos</h4>
+              <p>Con «Leer con IA», TEC envía la foto a OpenAI para transcribirla. Revisa los teléfonos y guarda tus boletas en Mis leads o pasa tus referidos a la hoja 4 en 14.</p>
+              <div class="dashboard-actions">
+                <label class="nav-button fourteen-photo-picker">Tomar foto<input type="file" accept="image/*" capture="environment" data-fourteen-photo-camera /></label>
+                <label class="nav-button fourteen-photo-picker">Elegir foto<input type="file" accept="image/*" data-fourteen-photo /></label>
+                <button type="button" class="secondary-button" data-fourteen-photo-read disabled>Leer con IA</button>
+              </div>
+              <p role="status" aria-live="polite" data-fourteen-photo-status></p>
+              <div data-fourteen-photo-preview hidden></div>
+            </section>
+
             <section class="tec-program-gifts" aria-labelledby="tec-program-gifts-title">
               <div class="tec-program-gifts-heading">
                 <h4 id="tec-program-gifts-title">Conoce los regalos</h4>
@@ -1611,17 +1623,6 @@
 
             <div class="native-lead-wrap" id="tec-fourteen-sheet" data-fourteen-sheet-wrap hidden>
               <form class="native-lead-form fourteen-sheet-form" data-fourteen-sheet-form>
-                <details class="fourteen-photo-tool">
-                  <summary>Leer una hoja 4 en 14 o varias boletas</summary>
-                  <p>Al pulsar «Leer con IA», TEC envía la foto a OpenAI para transcribirla. Compara cada teléfono con la foto. Puedes pasar tus referidos al 4 en 14 o descargar tus boletas en CSV.</p>
-                  <div class="dashboard-actions">
-                    <label class="nav-button fourteen-photo-picker">Tomar foto<input type="file" accept="image/*" capture="environment" data-fourteen-photo-camera /></label>
-                    <label class="nav-button fourteen-photo-picker">Elegir foto<input type="file" accept="image/*" data-fourteen-photo /></label>
-                    <button type="button" class="secondary-button" data-fourteen-photo-read>Leer con IA</button>
-                  </div>
-                  <p role="status" aria-live="polite" data-fourteen-photo-status></p>
-                  <div data-fourteen-photo-preview hidden></div>
-                </details>
                 <div class="native-lead-grid">
                   <label class="native-lead-field">
                     <span>Nombre del anfitrión</span>
@@ -2060,7 +2061,7 @@
             </p>
           </article>
 
-          <article class="dashboard-card lead-folder-card" data-coach-workspace-section="prospeccion" hidden>
+          <article class="dashboard-card lead-folder-card" data-personal-lead-folder data-coach-workspace-section="prospeccion" hidden>
             <div class="eyebrow">Carpeta privada</div>
             <h3>Mis leads</h3>
             <p>
@@ -2076,6 +2077,7 @@
               >
                 Abrir carpeta
               </button>
+              <button type="button" class="nav-button" data-jump-ticket-photo aria-controls="tec-referral-photo">Subir foto de boletas</button>
             </div>
 
             <div class="lead-folder-wrap" data-lead-folder-wrap hidden>
@@ -5843,10 +5845,10 @@
     <script src="/coach/team-chat-push.js?v=20261117-push1"></script>
     <script src="/coach/team-chat-media.js?v=20261117-push1"></script>
     <script src="/coach/team-chat.js?v=20261117-rigochat1"></script>
-    <script src="/coach/session-lock.js?v=20261117-audit1"></script>
+    <script src="/coach/session-lock.js?v=20261121-lector5"></script>
     <script src="/coach/referral-sheet.js?v=20261121-lector3"></script>
-    <script src="/coach/referral-sheet-photo.js?v=20261121-lector3"></script>
-    <script src="/coach/app.js?v=20261121-lector4"></script>
+    <script src="/coach/referral-sheet-photo.js?v=20261121-lector5"></script>
+    <script src="/coach/app.js?v=20261121-lector5"></script>
     <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
     <script src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script>
     <script src="/coach/audiobooks.js?v=20261112-editorial1"></script>

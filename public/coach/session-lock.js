@@ -12,6 +12,7 @@
     document.cookie = name + '=1; Path=/; Max-Age=31536000; SameSite=Lax' +
       (location.protocol === 'https:' ? '; Secure' : '');
     if (!locked()) throw Error('Activa las cookies para bloquear este dispositivo.');
+    window.dispatchEvent?.(new Event('tec:coach-session-change'));
     try { localStorage.setItem(name, crypto.randomUUID()); } catch {}
   }
   async function revoke() {

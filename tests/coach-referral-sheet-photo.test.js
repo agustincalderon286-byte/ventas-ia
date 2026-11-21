@@ -5,6 +5,8 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../public/coach/referral-sheet-photo.js", import.meta.url), "utf8");
 const sheetTools = readFileSync(new URL("../public/coach/referral-sheet.js", import.meta.url), "utf8");
+const appSource = readFileSync(new URL("../public/coach/app.js", import.meta.url), "utf8");
+const appPage = readFileSync(new URL("../private/coach-app.html", import.meta.url), "utf8");
 const syntheticPhoto = { name: "hoja.png", type: "image/png", size: 5_000_000 };
 const contact = (i = 1) => ({
   fullName: "Referido " + i, phone: "555010" + String(i).padStart(4, "0"), address: "Calle " + i,
@@ -17,6 +19,7 @@ class Element {
   constructor(tag = "div") {
     this.tagName = tag.toUpperCase();
     this.children = [];
+    this.disabled = false;
     this.dataset = {};
     this.listeners = new Map();
     this.value = this.textContent = "";
@@ -70,7 +73,7 @@ function harness(options = {}) {
   form.querySelector = selector => controls[selector.slice("[data-fourteen-photo".length, -1)];
   const window = new Element();
   const document = new Element();
-  const shots = [], encodings = [], reads = [], applied = [], exported = [], filesRead = [];
+  const shots = [], encodings = [], reads = [], applied = [], exported = [], saved = [], filesRead = [];
   const revoked = [];
   const URL = {
     createObjectURL(file) { shots.push(file); return "blob:local/" + shots.length; },
@@ -110,8 +113,15 @@ function harness(options = {}) {
   vm.runInContext(sheetTools, context);
   vm.runInContext(source, context);
   let owner = true;
+  let requestNumber = 0, folderOpens = 0;
   const args = {
     form, isCurrentSeller: () => owner,
+    openLeads: () => { folderOpens++; },
+    createRequestId: () => "test-key-" + (++requestNumber),
+    saveTickets: options.visiting ? null : async (data, requestId) => {
+      saved.push({ data: JSON.parse(JSON.stringify(data)), requestId });
+      return options.saveTickets ? options.saveTickets(data, requestId) : { createdCount: data.referrals.length, duplicateCount: 0 };
+    },
     readPhoto: async base64 => {
       reads.push(base64);
       return options.readPhoto ? options.readPhoto() : sheet();
@@ -141,7 +151,9 @@ function harness(options = {}) {
   };
   return {
     form, window, document, gallery, camera, read, preview, status, encodings, reads, applied,
-    filesRead, shots, revoked, binding, args, select, readSheet, exported, verify: (el = preview) => verify(el),
+    filesRead, shots, revoked, binding, args, select, readSheet, exported, saved, verify: (el = preview) => verify(el),
+    save() { return preview.named("button", "Guardar en mis leads"); },
+    folderOpens: () => folderOpens,
     csv() { return preview.named("button", "Descargar CSV de boletas"); },
     setOwner(value) { owner = value; }, confirm() { return preview.named("button", "Pasar al formulario"); }
   };
@@ -470,4 +482,304 @@ test("ticket export rejects an empty selection, keeps a recoverable CSV error ed
   assert.equal(f.exported.length, 1);
   assert.equal(f.preview.hidden, true);
   assert.equal(f.applied.length, 0);
+});
+
+test("saving tickets is an explicit action independent from CSV and the host sheet, including two people sharing a phone", async () => {
+  const people = [contact(), { ...contact(), fullName: "Segunda persona" }, contact(3)];
+  const f = harness({ readPhoto: () => tickets(people), saveTickets: () => ({ createdCount: 1, duplicateCount: 1 }) });
+  await f.readSheet();
+  const save = f.save();
+  const open = f.preview.named("button", "Ver mis leads");
+  assert.equal(open.hidden, true);
+  await save.fire("click");
+  assert.equal(f.saved.length, 0);
+  const exclude = f.preview.tagged("fieldset")[2].field("Incluir esta boleta");
+  exclude.checked = false;
+  await exclude.fire("change");
+  await f.verify();
+  await f.csv().fire("click");
+  assert.equal(f.saved.length, 0);
+  assert.equal(save.disabled, false);
+  await save.fire("click");
+  assert.equal(f.applied.length, 0);
+  assert.equal(f.saved.length, 1);
+  assert.deepEqual(f.saved[0].data, tickets(people.slice(0, 2)));
+  assert.match(f.status.textContent, /Leads nuevos: 1.*repetidas: 1.*fuera: 1/);
+  assert.equal(save.disabled, true);
+  assert.equal(open.hidden, false);
+  await open.fire("click");
+  assert.equal(f.folderOpens(), 1);
+  await save.fire("click");
+  await f.csv().fire("click");
+  assert.equal(f.saved.length, 1);
+  assert.equal(f.exported.length, 2);
+});
+
+test("a failed ticket save keeps the same request key on retry and a different reviewed batch gets a fresh key", async () => {
+  const initial = pending();
+  let attempts = 0;
+  const f = harness({ readPhoto: () => tickets(), saveTickets: () => {
+    attempts++;
+    if (attempts === 1) return initial.promise;
+    if (attempts === 2) throw new Error("Conexión interrumpida");
+    return { createdCount: 1, duplicateCount: 0 };
+  } });
+  await f.readSheet();
+  await f.verify();
+  const save = f.save(), csv = f.csv();
+  const flight = save.fire("click");
+  assert.equal(f.gallery.disabled, true);
+  assert.equal(save.disabled, true);
+  assert.equal(csv.disabled, true);
+  await save.fire("click");
+  assert.equal(f.saved.length, 1);
+  initial.resolve({});
+  await flight;
+  assert.match(f.status.textContent, /No recibí la confirmación/);
+  assert.equal(save.disabled, false);
+  assert.equal(f.gallery.disabled, false);
+  await save.fire("click");
+  assert.equal(f.saved[0].requestId, f.saved[1].requestId);
+  const name = f.preview.field("Nombre");
+  name.value = "Nombre corregido";
+  await name.fire("input");
+  await save.fire("click");
+  assert.equal(f.saved.length, 2);
+  await f.verify();
+  await save.fire("click");
+  assert.notEqual(f.saved[2].requestId, f.saved[1].requestId);
+});
+
+test("a late save receipt cannot write into the next visit or seller session; visits and referrals cannot import tickets", async () => {
+  const pendingSave = pending();
+  const f = harness({ readPhoto: () => tickets(), saveTickets: () => pendingSave.promise });
+  await f.readSheet();
+  await f.verify();
+  const flight = f.save().fire("click");
+  f.setOwner(false);
+  await f.window.fire("storage");
+  pendingSave.resolve({ createdCount: 1, duplicateCount: 0 });
+  await flight;
+  assert.equal(f.preview.hidden, true);
+  assert.equal(f.status.textContent, "");
+  const visitor = harness({ readPhoto: () => tickets(), visiting: true });
+  await visitor.readSheet();
+  assert.equal(visitor.save(), undefined);
+  assert.ok(visitor.csv());
+  const referrals = harness();
+  await referrals.readSheet();
+  assert.equal(referrals.save(), undefined);
+  assert.ok(referrals.confirm());
+});
+
+test("the referral step exposes camera and gallery before the manual form, and Mis leads targets that reader", () => {
+  const photo = appPage.match(/<section class="fourteen-photo-tool"[^>]*>([\s\S]*?)<\/section>/);
+  assert.ok(photo);
+  const manual = appPage.indexOf('id="tec-fourteen-sheet"');
+  assert.ok(appPage.indexOf('id="paso-4-en-14"') < photo.index && photo.index < manual);
+  assert.doesNotMatch(photo[0].split(">")[0], /hidden/);
+  assert.match(photo[1], /capture="environment" data-fourteen-photo-camera/);
+  assert.match(photo[1], /data-fourteen-photo\s*\//);
+  assert.equal(appPage.match(/data-fourteen-photo-read/g)?.length, 1);
+  const folder = appPage.slice(appPage.indexOf("<h3>Mis leads</h3>"), appPage.indexOf("data-lead-folder-wrap"));
+  assert.match(folder, /data-jump-ticket-photo aria-controls="tec-referral-photo">Subir foto de boletas/);
+});
+
+test("the integration sends reviewed rows once with an account-bound key and opens the host form only when applying referrals", async () => {
+  const start = appSource.indexOf('  const photoTool = document.querySelector("[data-fourteen-photo-tool]")');
+  const end = appSource.indexOf("  const exportSheet =", start);
+  const requests = [], toggles = [];
+  let bound, own = true, loads = 0;
+  const context = {
+    window: { TecReferralPhoto: { bind: args => { bound = args; } } }, document: { querySelector: () => null },
+    form: { scrollIntoView() {} }, accountId: "seller-a", visiting: false, isCurrentSeller: () => own,
+    createTecOfflineId: () => "stable-test-key", apiRequest: async (url, options) => {
+      requests.push({ url, options: JSON.parse(JSON.stringify(options)) });
+      return { createdCount: 1, duplicateCount: 0 };
+    }, loadLeads: async () => { loads++; }, sheetTools: { applyPhoto: () => ({ applied: true }) },
+    FOURTEEN_SHEET_MAX_REFERRALS: 11, appendReferralRow() {}, openTicketFolder() {}, syncToggle: open => toggles.push(open)
+  };
+  vm.runInNewContext(appSource.slice(start, end), context);
+  await bound.saveTickets(tickets(), bound.createRequestId());
+  assert.equal(requests[0].url, "/api/coach/leads/from-tickets");
+  assert.deepEqual(requests[0].options.body, { accountId: "seller-a", requestId: "stable-test-key", reviewed: true, referrals: [contact()] });
+  assert.equal(requests[0].options.offlineQueue, undefined);
+  assert.equal(loads, 1);
+  assert.equal(toggles.length, 0);
+  own = false;
+  await assert.rejects(bound.saveTickets(tickets(), "stable-test-key"), /cuenta/);
+  assert.equal(requests.length, 1);
+  own = true;
+  bound.apply(sheet());
+  assert.deepEqual(toggles, [true]);
+});
+
+test("contact links and labels preserve international numbers even when the total length equals a US number", () => {
+  const dial = appSource.slice(appSource.indexOf("function normalizeLeadPhone("), appSource.indexOf("function formatLeadNextActionLabel("));
+  const format = appSource.slice(appSource.indexOf("function formatLeadPhone("), appSource.indexOf("function formatLeadStatusLabel("));
+  const helpers = vm.runInNewContext(dial + format + "\n({leadDialPhone,formatLeadPhone});");
+  assert.equal(helpers.leadDialPhone("+49 1234 5678"), "+4912345678");
+  assert.equal(helpers.formatLeadPhone("+49 1234 5678"), "+49 1234 5678");
+  assert.equal(helpers.leadDialPhone("5550100001"), "+15550100001");
+  assert.equal(helpers.leadDialPhone("+1 (555) 010-0001"), "+15550100001");
+});
+
+test("the same folder stays in Prospección when available, otherwise sellers reach it in Mi actividad", () => {
+  const start = appSource.indexOf('  const leadFolder = document.querySelector("[data-personal-lead-folder]")');
+  const end = appSource.indexOf("\n}", start);
+  for (const hidden of [false, true]) {
+    const folder = { dataset: { coachWorkspaceSection: "prospeccion" } };
+    const document = { querySelector: selector => ({
+      "[data-personal-lead-folder]": folder, '[data-coach-workspace-tab="prospeccion"]': { hidden },
+      '[data-coach-workspace-tab="actividad"]': { hidden: false }
+    })[selector] };
+    vm.runInNewContext(appSource.slice(start, end), { document, isTelemarketing: false });
+    assert.equal(folder.dataset.coachWorkspaceSection, hidden ? "actividad" : "prospeccion");
+  }
+  const folderStart = appSource.indexOf("  const openTicketFolder = () => {");
+  const folderEnd = appSource.indexOf("  initFourteenSheetTool(", folderStart);
+  const state = { panel: "program_4_14", filter: "cliente" };
+  const actions = [];
+  const open = vm.runInNewContext(appSource.slice(folderStart, folderEnd) + "\nopenTicketFolder", {
+    state, folderWrap: { closest: () => ({ dataset: { coachWorkspaceSection: "actividad" } }) },
+    setCoachWorkspaceTab(tab) { actions.push(tab); return true; }, syncFolderToggle(value) { actions.push(value); },
+    renderSummary() {}, renderLeadList() {}, loadLeads: async () => {},
+    folderToggle: { focus() { actions.push("focus"); }, scrollIntoView() {} }
+  });
+  open();
+  assert.deepEqual(actions, ["actividad", true, "focus"]);
+  assert.deepEqual(state, { panel: "rifa_capture", filter: "todos" });
+});
+
+function inboxHarness({ native = false, visiting = false } = {}) {
+  const start = appSource.indexOf("  let listRevision = 0;");
+  const end = appSource.indexOf("  syncCaptureToggle(false);", start);
+  const calls = [], responses = [];
+  const state = { leads: [] };
+  const surface = { contacts: [], folderOpen: true };
+  const context = {
+    state, accountId: "owner-1", window: new Element(), document: new Element(), visiting, navigator: { onLine: true },
+    COACH_ACTIVE_SELLER_KEY: "seller-key", isActiveCoachSeller: id => id === "owner-1",
+    renderSummary() {}, renderLeadList() { surface.contacts = [...state.leads]; }, syncFolderToggle(value) { surface.folderOpen = value; },
+    apiRequest: url => { calls.push(url); const response = pending(); responses.push(response); return response.promise; },
+    tecNativeCachedList: async url => { calls.push(url); return { leads: [] }; }
+  };
+  context.window.TecNativeOffline = native;
+  const load = vm.runInNewContext(appSource.slice(start, end) + "\nloadLeads", context);
+  return { calls, responses, state, surface, context, load };
+}
+
+test("private raffle leads are fetched only online from the seller's URL and an obsolete response cannot replace a newer list", async () => {
+  const { calls, responses, context, load } = inboxHarness();
+  const first = load(), next = load();
+  const records = [{ personalTicket: true, id: "qa" }];
+  responses[1].resolve({ leads: records });
+  await next;
+  responses[0].resolve({ leads: [] });
+  await first;
+  assert.equal(context.state.leads, records);
+  assert.deepEqual(calls, ["/api/coach/leads?accountId=owner-1", "/api/coach/leads?accountId=owner-1"]);
+  context.visiting = true;
+  await load();
+  context.visiting = false;
+  context.navigator.onLine = false;
+  await load();
+  assert.deepEqual(calls.slice(2), ["/api/coach/leads", "/api/coach/leads"]);
+});
+
+test("seller changes, local locks and a lost session immediately clear rendered contacts and reject late results", async () => {
+  const cases = [
+    async h => h.context.window.fire("storage", { key: "seller-key", newValue: "owner-2" }),
+    async h => h.context.window.fire("storage", { key: "seller-key", newValue: null }),
+    async h => h.context.window.fire("storage", { key: "tec_coach_local_lock", newValue: "locked" }),
+    async h => { h.context.isActiveCoachSeller = () => false; await h.context.window.fire("tec:coach-session-change"); },
+    async h => { h.context.isActiveCoachSeller = () => false; await h.context.document.fire("visibilitychange"); }
+  ];
+  for (const revoke of cases) {
+    const h = inboxHarness();
+    const first = h.load(), records = [{ id: "first", personalTicket: true }];
+    h.responses[0].resolve({ leads: records });
+    await first;
+    assert.equal(h.surface.contacts.length, 1);
+    const late = h.load();
+    await revoke(h);
+    assert.equal(h.surface.contacts.length, 0);
+    assert.equal(h.state.leads.length, 0);
+    assert.equal(h.surface.folderOpen, false);
+    h.responses[1].resolve({ leads: records });
+    await late;
+    assert.equal(h.surface.contacts.length, 0);
+    await h.load();
+    assert.equal(h.calls.length, 2);
+  }
+  for (const serverDenied of [false, true]) {
+    const h = inboxHarness({ native: true });
+    const records = [{ id: "stale", personalTicket: true }];
+    const first = h.load();
+    h.responses[0].resolve({ leads: records }); await first;
+    const next = h.load();
+    if (serverDenied) {
+      h.responses[1].reject(Object.assign(new Error("different seller"), { status: 403 }));
+      await assert.rejects(next, /different seller/);
+    } else {
+      h.context.isActiveCoachSeller = () => false;
+      h.responses[1].resolve({ leads: records }); await next;
+    }
+    assert.equal(h.state.leads.length, 0);
+    assert.equal(h.surface.contacts.length, 0);
+    assert.equal(h.surface.folderOpen, false);
+  }
+});
+
+test("native online refresh also updates the historical list, which excludes private tickets on cache writes and offline reads", async () => {
+  const h = inboxHarness({ native: true });
+  const start = appSource.indexOf("async function tecNativeCachedList(");
+  const end = appSource.indexOf("async function getTecCachedViewer(", start);
+  const written = [], paths = [], privateRow = { id: "secret", personalTicket: true }, ordinary = { id: "ordinary" };
+  let offline = false;
+  const historical = vm.runInNewContext(appSource.slice(start, end) + "\ntecNativeCachedList", {
+    window: { TecNativeOffline: true }, getTecCachedViewer: async () => ({ user: { email: "qa@example.invalid" } }),
+    verifyTecNativeSyncOwner: async () => {}, tecOfflinePut: async (_store, entry) => { written.push(entry); },
+    tecOfflineGet: async () => ({ ownerEmail: "qa@example.invalid", value: { leads: [ordinary, privateRow] } }),
+    apiRequest: async url => {
+      paths.push(url);
+      if (offline) throw new Error("offline");
+      return { leads: [ordinary, privateRow] };
+    }
+  });
+  h.context.tecNativeCachedList = historical;
+  const request = h.load();
+  h.responses[0].resolve({ leads: [ordinary, privateRow] }); await request;
+  assert.deepEqual(paths, ["/api/coach/leads"]);
+  assert.equal(written.length, 1);
+  assert.deepEqual(Array.from(written[0].value.leads), [ordinary]);
+  assert.equal(h.surface.contacts.length, 2);
+  const retry = h.load(); h.responses[1].reject(new Error("timeout")); await retry;
+  assert.deepEqual(h.surface.contacts, [ordinary]);
+  offline = true; h.context.navigator.onLine = false;
+  await h.load();
+  assert.deepEqual(h.surface.contacts, [ordinary]);
+});
+
+test("ticket saves accept 11 selected rows and leave a larger verified set available for local CSV", async () => {
+  const f = harness({ readPhoto: () => tickets(Array.from({ length: 12 }, (_, i) => contact(i + 1))) });
+  await f.readSheet();
+  await f.verify();
+  await f.save().fire("click");
+  assert.match(f.status.textContent, /hasta 11 boletas por guardado/);
+  assert.equal(f.saved.length, 0);
+  await f.csv().fire("click");
+  assert.equal(f.exported[0].referrals.length, 12);
+  const include = f.preview.tagged("fieldset")[11].field("Incluir esta boleta");
+  include.checked = false; await include.fire("change");
+  await f.save().fire("click");
+  assert.equal(f.saved[0].data.referrals.length, 11);
+});
+
+test("ticket request IDs fit the import contract using both browser UUIDs and the legacy random fallback", () => {
+  const start = appSource.indexOf("function createTecOfflineId("), end = appSource.indexOf("function openTecOfflineDb(", start);
+  for (const crypto of [{ randomUUID: () => "56368e78-b168-4b42-9d9b-301654e8fdcb" }, undefined]) {
+    const id = vm.runInNewContext(appSource.slice(start, end) + '\ncreateTecOfflineId("ticket")', { window: { crypto } });
+    assert.match(id, /^[a-zA-Z0-9_-]{8,100}$/);
+  }
 });

@@ -32,6 +32,15 @@ function memoryCollection(t, model, initial = []) {
     const doc = selected(query)[0];
     return doc ? copy(doc) : null;
   });
+  t.mock.method(collection, 'countDocuments', async query => selected(query).length);
+  t.mock.method(collection, 'findOneAndUpdate', async (query, update, options) => {
+    let doc = selected(query)[0];
+    if (!doc && options.upsert) {
+      doc = copy({ ...query, ...update.$setOnInsert });
+      rows.push(doc);
+    }
+    return doc ? copy(doc) : null;
+  });
   t.mock.method(collection, 'find', (query, options = {}) => ({
     toArray: async () => selected(query).sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, options.limit || rows.length).map(copy)
@@ -47,8 +56,12 @@ function memoryCollection(t, model, initial = []) {
     rows.push(copy(doc));
     return { acknowledged: true, insertedId: doc._id };
   });
-  t.mock.method(collection, 'updateOne', async (filter, update) => {
-    const doc = selected(filter)[0];
+  t.mock.method(collection, 'updateOne', async (filter, update, options = {}) => {
+    let doc = selected(filter)[0];
+    if (!doc && options.upsert) {
+      doc = copy({ _id: id(), ...filter, ...update.$setOnInsert });
+      rows.push(doc);
+    }
     if (!doc) return { matchedCount: 0, modifiedCount: 0 };
     for (const [path, value] of Object.entries(update.$set || {})) {
       const keys = path.split('.');
@@ -82,6 +95,8 @@ async function fixture(t) {
   const captured = memoryCollection(t, CoachPersonalProgramSheet);
   const leads = memoryCollection(t, CoachLeadInbox);
   const crm = memoryCollection(t, CoachCrmRecord);
+  const tickets = memoryCollection(t, mongoose.models.CoachPersonalTicketLead);
+  const imports = memoryCollection(t, mongoose.models.CoachTicketImport);
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); });
@@ -96,7 +111,7 @@ async function fixture(t) {
     });
     return { status: res.status, data: await res.json() };
   }
-  return { request, captured, historical, leads, crm, sessionModes };
+  return { request, captured, historical, leads, crm, sessionModes, tickets, imports };
 }
 
 const who = seller => String(users[seller]._id);
@@ -197,4 +212,97 @@ test('GET, POST, photo and personal PATCH require own active session and matchin
   f.sessionModes[0] = undefined;
   assert.equal((await f.request(0, base)).status, 200);
   assert.equal(f.captured.length + f.leads.length + f.crm.length, 0);
+});
+
+const ticketPath = '/api/coach/leads/from-tickets';
+const contact = (fullName, phone = '312-555-0101') => ({ fullName, phone, address: 'Calle Ficticia 8', city: 'Ciudad de Prueba', relationship: '' });
+const ticketInput = (seller, rows, requestId = 'ticket-test-request') =>
+  ({ reviewed: true, accountId: who(seller), requestId, referrals: rows });
+
+test('reviewed raffle slips become separate personal inbox leads; duplicate names and telephone numbers require the same identity', async t => {
+  const f = await fixture(t);
+  const indexes = mongoose.models.CoachPersonalTicketLead.schema.indexes();
+  assert.ok(indexes.some(([idx, options]) => idx.ownerUserId && idx.ticketContactKey && options.unique));
+  assert.equal(indexes.some(([idx, options]) => idx.phone && options.unique), false);
+  const rows = [
+    { ...contact('Primera Persona'), consentGiven: true, appointmentRequested: true, source: 'programa_4_en_14', ownerUserId: who(1), health: 'NO-GUARDAR' },
+    contact('  primera   persona ', '+1 312 555 0101'), contact('Segunda Persona'), contact('Primera Persona', '+3125550101'),
+    contact('Tercera Persona', '+52 55 5555 0100')
+  ];
+  const payload = ticketInput(0, rows);
+  const save = () => f.request(0, ticketPath, { method: 'POST', body: payload });
+  const [first, again] = await Promise.all([save(), save()]);
+  for (const response of [first, again]) {
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.data, { createdCount: 4, duplicateCount: 1 });
+  }
+  assert.equal(f.captured.length + f.leads.length + f.crm.length, 0);
+  assert.equal(f.tickets.length, 4);
+  assert.equal(f.imports.length, 1);
+  assert.doesNotMatch(JSON.stringify(f.imports), /Persona|3125550101|Calle/);
+  assert.ok(f.tickets.every(doc => doc.source === 'rifa_digital' && doc.consentGiven === false && !doc.appointmentRequested));
+  assert.ok(f.tickets.every(doc => String(doc.ownerUserId) === who(0) && !doc.health));
+  assert.deepEqual(f.tickets.filter(doc => doc.fullName === 'Primera Persona').map(doc => doc.phone).sort(), ['+3125550101', '3125550101']);
+  assert.ok(f.tickets.some(doc => doc.phone === '+525555550100'));
+  const list = await f.request(0, '/api/coach/leads?accountId=' + who(0));
+  assert.equal(list.status, 200);
+  assert.equal(list.data.leads.length, 4);
+  assert.ok(list.data.leads.every(row => row.personalTicket && row.generatedByUserId === who(0) && !row.consentGiven));
+  const leadId = list.data.leads[0].id;
+  const patch = (actor, body) => f.request(actor, '/api/coach/leads/' + leadId, { method: 'PATCH', body });
+  for (const actor of [1, 2]) {
+    assert.equal((await f.request(actor, '/api/coach/leads?accountId=' + who(actor))).data.leads.length, 0);
+    assert.equal((await patch(actor, { accountId: who(actor), status: 'cliente' })).status, 404);
+    assert.equal((await patch(actor, { status: 'cliente' })).status, 404);
+  }
+  const followup = await patch(0, { accountId: who(0), status: 'contactado', notes: 'Nota de prueba' });
+  assert.equal(followup.status, 200);
+  assert.ok(followup.data.lead.personalTicket);
+  assert.equal(followup.data.lead.status, 'contactado');
+  assert.equal(f.crm.length + f.captured.length, 0);
+  assert.equal((await f.request(0, ticketPath, { method: 'POST', body: ticketInput(0, [contact('Cambiada')]) })).status, 409);
+  assert.deepEqual((await f.request(0, ticketPath, { method: 'POST', body: ticketInput(0, rows, 'another-batch-id') })).data, { createdCount: 0, duplicateCount: 5 });
+  assert.deepEqual((await f.request(1, ticketPath, { method: 'POST', body: ticketInput(1, rows) })).data, { createdCount: 4, duplicateCount: 1 });
+});
+
+test('an interrupted raffle import resumes with stable counts; a shared historic lead protects only its own seller from duplicates', async t => {
+  const f = await fixture(t);
+  const initial = (seller, fullName) => new mongoose.models.CoachLeadInbox({
+    ownerUserId: ownerId, generatedByUserId: users[seller]._id, fullName, phone: '3125550101'
+  }).toObject();
+  f.leads.push(initial(0, 'Ya existe'), initial(1, 'Con otro vendedor'));
+  const rows = ['Ya existe', 'Con otro vendedor', 'Otro nombre'].map(name => contact(name));
+  const submit = () => f.request(0, ticketPath, { method: 'POST', body: ticketInput(0, rows) });
+  mongoose.models.CoachPersonalTicketLead.collection.updateOne.mock.mockImplementationOnce(async () => { throw Error('Synthetic interruption'); }, 1);
+  assert.equal((await submit()).status, 503);
+  assert.equal(f.tickets.length, 1);
+  const retried = await submit();
+  assert.equal(retried.status, 200);
+  assert.deepEqual(retried.data, { createdCount: 2, duplicateCount: 1 });
+  assert.deepEqual(f.tickets.map(doc => doc.fullName).sort(), ['Con otro vendedor', 'Otro nombre']);
+  assert.deepEqual((await submit()).data, retried.data);
+  assert.equal(f.leads.length, 2);
+});
+
+test('raffle import validates the entire confirmed batch and account before persisting any lead', async t => {
+  const f = await fixture(t);
+  const body = ticketInput(0, [contact('Primera Persona')]);
+  const submit = (actor, value, options = {}) => f.request(actor, ticketPath, { method: 'POST', body: value, ...options });
+  assert.equal((await submit(null, body)).status, 401);
+  assert.equal((await submit(1, body)).status, 403);
+  assert.equal((await submit(0, body, { visiting: true })).status, 403);
+  assert.equal((await submit(0, body, { accountHeader: who(1) })).status, 403);
+  assert.equal((await submit(0, { ...body, reviewed: false })).status, 422);
+  assert.equal((await submit(0, { ...body, requestId: 'id' })).status, 400);
+  const tooMany = await submit(0, { ...body, referrals: Array(12).fill(body.referrals[0]) });
+  assert.equal(tooMany.status, 422);
+  assert.match(tooMany.data.error, /11 boletas/);
+  assert.equal((await submit(0, { ...body, referrals: [...body.referrals, contact('Incompleta', '5550101')] })).status, 422);
+  assert.equal(f.tickets.length + f.imports.length, 0);
+  assert.equal((await submit(0, body)).status, 200);
+  f.sessionModes[0] = 'team_visit';
+  assert.equal((await submit(0, body)).status, 403);
+  assert.equal((await f.request(0, '/api/coach/leads?accountId=' + who(0))).data.leads.length, 0);
+  assert.equal((await f.request(0, '/api/coach/leads')).data.leads.length, 0);
+  assert.equal((await f.request(1, '/api/coach/leads?accountId=' + who(0))).status, 403);
 });

@@ -250,7 +250,11 @@ window.prepareTecNativeOffline = async () => {
 };
 
 async function tecNativeCachedList(url) {
-  if (!globalThis.window?.TecNativeOffline) return apiRequest(url);
+  // This historical inbox is shared with existing offline workflows. Private
+  // ticket records are served through a separate, online-only account query.
+  const historicalOnly = data => url === "/api/coach/leads" && Array.isArray(data?.leads)
+    ? { ...data, leads: data.leads.filter(lead => !lead.personalTicket) } : data;
+  if (!globalThis.window?.TecNativeOffline) return historicalOnly(await apiRequest(url));
   const viewer = await getTecCachedViewer();
   const email = String(viewer?.user?.storageIdentity || viewer?.user?.email || "").trim().toLowerCase();
   if (!email) throw new Error("Entra con tu cuenta para consultar los datos guardados.");
@@ -258,13 +262,13 @@ async function tecNativeCachedList(url) {
   try {
     // Prevent caching a changed server session under the previous account.
     await verifyTecNativeSyncOwner(email);
-    const data = await apiRequest(url, { timeoutMs: 8000 });
+    const data = historicalOnly(await apiRequest(url, { timeoutMs: 8000 }));
     await tecOfflinePut("cache", { key, ownerEmail: email, value: data, savedAt: new Date().toISOString() });
     return data;
   } catch (error) {
     if ([401, 403].includes(error.status)) throw error;
     const stored = await tecOfflineGet("cache", key);
-    if (stored?.ownerEmail === email && stored.value) return { ...stored.value, offline: true };
+    if (stored?.ownerEmail === email && stored.value) return { ...historicalOnly(stored.value), offline: true };
     throw error;
   }
 }
@@ -1181,6 +1185,7 @@ function resetCoachChatForAccount(accountId = "") {
       window.sessionStorage.removeItem(COACH_CHAT_SESSION_KEY);
       if (owner) window.sessionStorage.setItem(COACH_CHAT_OWNER_KEY, owner);
       else window.sessionStorage.removeItem(COACH_CHAT_OWNER_KEY);
+      window.dispatchEvent?.(new Event("tec:coach-session-change"));
     }
   } catch { /* Storage denial must not block login or saving a form. */ }
 }
@@ -1391,6 +1396,12 @@ function syncCoachManagerUi(user = null) {
         : [COACH_FOCUSED_WORKSPACE_TAB, "actividad", "mapa", "audiolibros"];
       node.hidden = !focusedTabs.includes(tabId);
     });
+  }
+  const leadFolder = document.querySelector("[data-personal-lead-folder]");
+  const prospectingTab = document.querySelector('[data-coach-workspace-tab="prospeccion"]');
+  const activityTab = document.querySelector('[data-coach-workspace-tab="actividad"]');
+  if (leadFolder && !isTelemarketing && activityTab && !activityTab.hidden) {
+    leadFolder.dataset.coachWorkspaceSection = prospectingTab && !prospectingTab.hidden ? "prospeccion" : "actividad";
   }
 }
 
@@ -1900,6 +1911,13 @@ function normalizeLeadPhone(value = "") {
   return digits;
 }
 
+function leadDialPhone(value = "") {
+  const raw = String(value).trim();
+  if (raw.startsWith("+")) return "+" + raw.replace(/\D/g, "");
+  const digits = normalizeLeadPhone(raw);
+  return digits ? "+1" + digits : "";
+}
+
 function formatLeadNextActionLabel(value = "") {
   const found = COACH_LEAD_NEXT_ACTION_OPTIONS.find(option => option.value === value);
   return found?.label || "Sin proxima accion";
@@ -2011,6 +2029,7 @@ function formatDateOnlyLabel(dateValue = "") {
 }
 
 function formatLeadPhone(value = "") {
+  if (String(value).trim().startsWith("+") && !leadDialPhone(value).startsWith("+1")) return value;
   const digits = normalizeLeadPhone(value);
 
   if (digits.length === 10) {
@@ -4042,7 +4061,15 @@ function ownFourteenSheetsUrl(accountId) {
   return "/api/coach/program-4-in-14?scope=mine&accountId=" + encodeURIComponent(accountId);
 }
 
-function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user }) {
+function isActiveCoachSeller(accountId) {
+  try {
+    const sharedOwner = window.localStorage.getItem(COACH_ACTIVE_SELLER_KEY);
+    return Boolean(accountId) && (!sharedOwner || sharedOwner === accountId) &&
+      !window.TecSessionLock?.locked() && window.sessionStorage.getItem(COACH_CHAT_OWNER_KEY) === accountId;
+  } catch { return false; }
+}
+
+function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openTicketFolder, user, visiting }) {
   const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
   const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
   const form = document.querySelector("[data-fourteen-sheet-form]");
@@ -4086,13 +4113,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
   };
 
   const accountId = String(user?.id || user?._id || "");
-  const isCurrentSeller = () => {
-    try {
-      const sharedOwner = window.localStorage.getItem(COACH_ACTIVE_SELLER_KEY);
-      return Boolean(accountId) && (!sharedOwner || sharedOwner === accountId) &&
-        !window.TecSessionLock?.locked() && window.sessionStorage.getItem(COACH_CHAT_OWNER_KEY) === accountId;
-    } catch { return false; }
-  };
+  const isCurrentSeller = () => isActiveCoachSeller(accountId);
   window.addEventListener("storage", event => {
     if (event.key === COACH_ACTIVE_SELLER_KEY && event.newValue !== accountId) {
       wrap.hidden = true;
@@ -4164,8 +4185,15 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
     syncAddButton();
   };
 
+  const photoTool = document.querySelector("[data-fourteen-photo-tool]");
+  document.querySelector("[data-jump-ticket-photo]")?.addEventListener("click", () => {
+    if (!photoTool || !setCoachWorkspaceTab("cierre")) return;
+    photoTool.scrollIntoView({ block: "start" });
+    photoTool.focus({ preventScroll: true });
+  });
   window.TecReferralPhoto?.bind({
-    form, isCurrentSeller,
+    form, container: photoTool || form, isCurrentSeller,
+    openLeads: openTicketFolder,
     readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
       method:"POST", body:{photo:image, accountId}, timeoutMs:110000
     }),
@@ -4176,7 +4204,24 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
       sheetTools.download(sheet);
       return {exported:true};
     },
-    apply: sheet => sheetTools.applyPhoto(form, sheet, FOURTEEN_SHEET_MAX_REFERRALS, appendReferralRow)
+    createRequestId: () => createTecOfflineId("ticket"),
+    saveTickets: visiting ? null : async (sheet, requestId) => {
+      if (!isCurrentSeller() || sheet.documentType !== "tickets") throw new Error("Vuelve a abrir la lectura desde tu cuenta.");
+      const receipt = await apiRequest("/api/coach/leads/from-tickets", {
+        method: "POST", requestId, timeoutMs: 45000,
+        body: { accountId, requestId, reviewed: true, referrals: sheet.referrals }
+      });
+      if (isCurrentSeller()) loadLeads().catch(() => null);
+      return receipt;
+    },
+    apply: sheet => {
+      const result = sheetTools.applyPhoto(form, sheet, FOURTEEN_SHEET_MAX_REFERRALS, appendReferralRow);
+      if (result.applied) {
+        syncToggle(true);
+        form.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+      return result;
+    }
   });
   const exportSheet = (sheet, target) => {
     if (!isCurrentSeller()) return setMessage(target, "Vuelve a abrir la hoja desde tu cuenta.", "error");
@@ -5515,7 +5560,7 @@ function initCoachPrivateResources() {
   });
 }
 
-function initCoachLeadWorkspace(user) {
+function initCoachLeadWorkspace(user, sessionSwitch) {
   const captureWrap = document.querySelector("[data-native-lead-wrap]");
   const captureToggle = document.querySelector("[data-native-lead-toggle]");
   const captureForm = document.querySelector("[data-native-lead-form]");
@@ -5539,6 +5584,8 @@ function initCoachLeadWorkspace(user) {
     return;
   }
 
+  const visiting = Boolean(sessionSwitch?.canReturn || sessionSwitch?.returnUser);
+  const accountId = String(user.id || user._id || "");
   const state = {
     leads: [],
     filter: "todos",
@@ -5637,7 +5684,8 @@ function initCoachLeadWorkspace(user) {
         return `<option value="${option.value}"${selected}>${option.label}</option>`;
       }).join("");
 
-      const phoneHref = normalizeLeadPhone(lead.phone);
+      const phoneHref = leadDialPhone(lead.phone);
+      const smsAvailable = phoneHref && !lead.personalTicket;
       const dateCopy = formatDate(lead.createdAt);
       const nextActionCopy = lead.nextAction ? formatLeadNextActionLabel(lead.nextAction) : "Sin proxima accion";
       const nextActionAtCopy = lead.nextActionAt ? formatDateTime(lead.nextActionAt) : "Sin fecha";
@@ -5675,8 +5723,8 @@ function initCoachLeadWorkspace(user) {
         <div class="lead-folder-actions-row">
           ${
             phoneHref
-              ? `<a class="secondary-button" href="tel:+1${phoneHref}">Llamar</a>
-                 <button type="button" class="nav-button" data-coach-lead-sms-open>Abrir SMS</button>`
+              ? `<a class="secondary-button" href="tel:${phoneHref}">Llamar</a>
+                 ${smsAvailable ? '<button type="button" class="nav-button" data-coach-lead-sms-open>Abrir SMS</button>' : ""}`
               : ""
           }
           ${
@@ -5686,7 +5734,7 @@ function initCoachLeadWorkspace(user) {
           }
         </div>
         ${
-          phoneHref
+          smsAvailable
             ? `<div class="lead-folder-sms-wrap" data-coach-lead-sms-wrap hidden>
                  <label class="lead-folder-field lead-folder-field-full">
                    <span>Mensaje SMS</span>
@@ -5902,8 +5950,53 @@ function initCoachLeadWorkspace(user) {
     }, 250);
   };
 
+  let listRevision = 0;
+  let revoked = false;
+  const clearLeadAccess = () => {
+    if (revoked) return;
+    revoked = true;
+    listRevision++;
+    state.leads = [];
+    renderSummary();
+    renderLeadList();
+    syncFolderToggle(false);
+  };
+  const checkLeadAccess = () => {
+    if (!isActiveCoachSeller(accountId)) clearLeadAccess();
+    return !revoked;
+  };
+  window.addEventListener("storage", event => {
+    if ((event.key === COACH_ACTIVE_SELLER_KEY && event.newValue !== accountId) ||
+        event.key === "tec_coach_local_lock" || event.key === null) clearLeadAccess();
+  });
+  window.addEventListener("tec:coach-session-change", checkLeadAccess);
+  window.addEventListener("focus", checkLeadAccess);
+  window.addEventListener("pageshow", checkLeadAccess);
+  document.addEventListener("visibilitychange", checkLeadAccess);
   const loadLeads = async () => {
-    const data = await tecNativeCachedList("/api/coach/leads");
+    if (!checkLeadAccess()) return;
+    const revision = ++listRevision;
+    let data;
+    try {
+      if (visiting || !navigator.onLine) {
+        data = await tecNativeCachedList("/api/coach/leads");
+      } else {
+        const [personal, history] = await Promise.allSettled([
+          apiRequest("/api/coach/leads?accountId=" + encodeURIComponent(accountId), { timeoutMs: 10000 }),
+          window.TecNativeOffline ? tecNativeCachedList("/api/coach/leads") : null
+        ]);
+        for (const result of [personal, history]) {
+          if (result.status === "rejected" && [401, 403].includes(result.reason?.status)) throw result.reason;
+        }
+        if (personal.status === "fulfilled") data = personal.value;
+        else if (history.status === "fulfilled" && history.value) data = history.value;
+        else throw personal.reason;
+      }
+    } catch (error) {
+      if ([401, 403].includes(error.status)) clearLeadAccess();
+      throw error;
+    }
+    if (!checkLeadAccess() || revision !== listRevision) return;
     state.leads = Array.isArray(data.leads) ? data.leads : [];
     renderSummary();
     renderLeadList();
@@ -5911,7 +6004,21 @@ function initCoachLeadWorkspace(user) {
 
   syncCaptureToggle(false);
   syncFolderToggle(false);
-  initFourteenSheetTool({ loadLeads, syncFolderToggle, user,
+  const openTicketFolder = () => {
+    const section = folderWrap.closest("[data-personal-lead-folder]");
+    if (!section || !setCoachWorkspaceTab(section.dataset.coachWorkspaceSection)) return;
+    state.panel = "rifa_capture";
+    state.filter = "todos";
+    syncFolderToggle(true);
+    renderSummary();
+    renderLeadList();
+    folderToggle.focus({ preventScroll: true });
+    folderToggle.scrollIntoView({ block: "start" });
+    loadLeads().catch(() => {
+      if (leadListNote) leadListNote.textContent = "No pude actualizar la carpeta. Vuelve a abrirla con conexión.";
+    });
+  };
+  initFourteenSheetTool({ loadLeads, syncFolderToggle, openTicketFolder, user, visiting,
     getOwnLeads: () => state.leads.filter(lead => String(lead.generatedByUserId || lead.ownerUserId) === String(user.id || user._id))
   });
   const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(captureForm, {
@@ -6117,6 +6224,7 @@ function initCoachLeadWorkspace(user) {
       await apiRequest(`/api/coach/leads/${encodeURIComponent(leadId)}`, {
         method: "PATCH",
         body: {
+          ...(state.leads.find(lead => lead.id === leadId)?.personalTicket ? { accountId } : {}),
           status: nextStatus,
           nextAction,
           nextActionAt,
@@ -17647,7 +17755,7 @@ async function loadCoachAppPage() {
     });
     initCoachMarketingWorkspace(me.user, me.marketing || null);
     initCoachPrivateResources();
-    initCoachLeadWorkspace(me.user);
+    initCoachLeadWorkspace(me.user, me.sessionSwitch);
     initCoachAgendaWorkspace(me.user);
     initChefCampaignTool();
     initCoachTeamChatWorkspace(me.user);

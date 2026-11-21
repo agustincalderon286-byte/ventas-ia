@@ -55,7 +55,7 @@ async function extractPhoto(content, { signal, fetchImpl, apiKey }) {
   return JSON.parse(choice.message.content);
 }
 
-function isCompletePhone(value) {
+export function isCompletePhone(value) {
   if (!/^\+?[\d().\s\p{Pd}]+$/u.test(value)) return false;
   const digits = value.replace(/\D/g, '');
   if (value.startsWith('+') && !digits.startsWith('1')) return /^[2-9]\d{9,14}$/.test(digits);

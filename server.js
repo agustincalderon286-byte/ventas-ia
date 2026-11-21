@@ -5,6 +5,7 @@ import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPrevi
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { COACH_REFERRAL_PHOTO_PATH, FOURTEEN_SHEET_MAX_REFERRALS, createCoachReferralPhotoHandler } from "./src/coach-referral-photo.js";
+import { createRaffleLeadModels, importRaffleLeads } from "./src/coach-raffle-leads.js";
 import { connectionConfig, registerCoachConnections } from "./src/coach-connections.js";
 import { createFollowupStore } from "./src/coach-followup-store.js";
 import { COACH_META_WEBHOOK_PATH, createCoachMetaInboundModel, createCoachMetaWebhook } from "./src/coach-meta-webhook.js";
@@ -2392,6 +2393,7 @@ personalSheetSchema.index({ ownerUserId: 1, updatedAt: -1 });
 personalSheetSchema.index({ ownerUserId: 1, "referrals.phone": 1 });
 const CoachPersonalProgramSheet = mongoose.models.CoachPersonalProgramSheet ||
   mongoose.model("CoachPersonalProgramSheet", personalSheetSchema);
+const raffleLeadModels = createRaffleLeadModels(mongoose, coachLeadInboxSchema);
 const CoachHealthSurvey =
   mongoose.models.CoachHealthSurvey || mongoose.model("CoachHealthSurvey", coachHealthSurveySchema);
 const CoachRecruitmentApplication =
@@ -5441,6 +5443,10 @@ function isOwnCaptureSession(req, auth, accountId) {
   const direct = mode === "direct" || (!mode && auth.user.accountType !== "seat");
   return direct && accountId === String(auth.user._id) && (!headerAccount || headerAccount === accountId) &&
     !parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE];
+}
+
+function limpiarBoletaPersonal(doc) {
+  return { ...limpiarCoachInboxLead(doc), personalTicket: true, relationship: doc.relationship || "" };
 }
 
 async function requireOwnPhotoSession(req, res) {
@@ -30814,6 +30820,7 @@ app.get("/api/coach/catalog-offline", async (req, res) => {
 });
 
 app.get("/api/coach/leads", async (req, res) => {
+  res.set("Cache-Control", "private, no-store").vary("Cookie");
   const auth = await requireCoachActivo(req, res);
 
   if (!auth) {
@@ -30821,11 +30828,22 @@ app.get("/api/coach/leads", async (req, res) => {
   }
 
   try {
-    const leadDocs = await CoachLeadInbox.find(construirCoachWorkspaceQuery(auth.user))
-      .sort({ createdAt: -1 })
-      .limit(300)
-      .lean();
-    const leads = leadDocs.map(limpiarCoachInboxLead).filter(Boolean);
+    const accountId = req.query.accountId;
+    const headerAccount = req.get("X-TEC-Account-ID");
+    if (accountId !== undefined && (accountId !== String(auth.user._id) || (headerAccount && headerAccount !== accountId))) {
+      return responderCoachError(res, 403, "Abre Mis leads desde tu propia cuenta de TEC.");
+    }
+    const includeTickets = accountId !== undefined && isOwnCaptureSession(req, auth, accountId);
+    const [legacy, tickets] = await Promise.all([
+      CoachLeadInbox.find(construirCoachWorkspaceQuery(auth.user)).sort({ createdAt: -1 }).limit(300).lean(),
+      includeTickets ? raffleLeadModels.leads.find({ ownerUserId: auth.user._id }).sort({ createdAt: -1 }).limit(300).lean() : []
+    ]);
+    const leads = legacy.map(limpiarCoachInboxLead).filter(Boolean);
+    if (tickets.length) {
+      leads.push(...tickets.map(limpiarBoletaPersonal));
+      leads.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+      leads.splice(300);
+    }
 
     res.json({
       summary: construirCoachLeadInboxSummary(leads),
@@ -30932,6 +30950,26 @@ app.post("/api/coach/campaigns/chef-intro/send", async (req, res) => {
   } catch (error) {
     console.error("Error enviando campana Chef:", error.message);
     responderCoachError(res, 500, "No pude enviar la campana del Chef en este momento.");
+  }
+});
+
+app.post("/api/coach/leads/from-tickets", async (req, res) => {
+  const auth = await requireCoachActivo(req, res);
+  if (!auth) return;
+  if (!isOwnCaptureSession(req, auth, req.body?.accountId)) {
+    return responderCoachError(res, 403, "Inicia sesión directamente con tu cuenta de TEC para guardar estas boletas.");
+  }
+  try {
+    const counts = await importRaffleLeads({
+      ...raffleLeadModels,
+      findExisting: (user, phones) => CoachLeadInbox.find(construirCoachWorkspaceQuery(user, {
+        ...coachPersonalCaptureFilter(user), phone: { $in: phones }
+      })).select("fullName phone").lean()
+    }, auth.user, req.body);
+    return res.json(counts);
+  } catch (error) {
+    if ([400,409,422].includes(error.status)) return responderCoachError(res, error.status, error.message);
+    return responderCoachError(res, 503, "No pude confirmar el guardado de las boletas. Reintenta desde la misma revisión.");
   }
 });
 
@@ -31695,7 +31733,12 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
   const nextActionAt = parseCoachLeadNextActionAt(req.body?.nextActionAt);
 
   try {
-    const leadDoc = await CoachLeadInbox.findOne(construirCoachWorkspaceQuery(auth.user, { _id: leadId }));
+    const accountId = req.body?.accountId;
+    if (accountId !== undefined && !isOwnCaptureSession(req, auth, accountId)) {
+      return responderCoachError(res, 403, "Abre el seguimiento desde tu propia cuenta de TEC.");
+    }
+    const ticket = accountId !== undefined && await raffleLeadModels.leads.findOne({ ownerUserId: auth.user._id, _id: leadId });
+    const leadDoc = ticket || await CoachLeadInbox.findOne(construirCoachWorkspaceQuery(auth.user, { _id: leadId }));
 
     if (!leadDoc) {
       return responderCoachError(res, 404, "No encontre ese lead.");
@@ -31724,6 +31767,8 @@ app.patch("/api/coach/leads/:leadId", async (req, res) => {
     leadDoc.summary = construirCoachLeadSummary(leadDoc);
     leadDoc.updatedAt = now;
     await leadDoc.save();
+
+    if (ticket) return res.json({ lead: limpiarBoletaPersonal(leadDoc.toObject()) });
 
     try {
       await sincronizarCoachLeadInboxACrmRecord(auth.user, leadDoc);
@@ -34742,7 +34787,7 @@ async function iniciarServidor() {
       recoveryTimer = setInterval(recoveryService.resume, 15000);
       recoveryTimer.unref();
     }
-    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet].map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),...Object.values(raffleLeadModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet].map(model => model.init()));
     await coachTeamPush.initialize();
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)
