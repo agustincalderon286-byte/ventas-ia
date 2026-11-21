@@ -25,10 +25,16 @@ test('las acciones de correo unen botones al código que se vio y usan enlaces d
     {type:'calendarConfirm',id:'aabbcc123456'},
     {type:'calendarCancel',id:'aabbcc123456'},
     {type:'calendarEvent',url:'https://www.google.com/calendar/event?eid=def456'},
-    {type:'calendarEvent',url:'https://calendar.google.com.example.test/calendar/event?eid=def456'}
+    {type:'calendarEvent',url:'https://calendar.google.com.example.test/calendar/event?eid=def456'},
+    {type:'waPersonalConfirm',id:'aa11bb22cc33'},
+    {type:'waCancel',id:'aa11bb22cc33'},
+    {type:'waOpen',accountId:'a',sessionId:'s1',to:'+13125550123',text:'Hola María & José',url:'https://example.invalid'},
+    {type:'waOpen',accountId:'a',sessionId:'s1',to:'https://example.invalid',text:'Hola'},
+    {type:'waOpen',to:'+13125550123',text:'Hola'},
+    {type:'waConfirm',id:'aa11bb22cc33'}
   ]);
   const controls=card.children[0].children;
-  assert.equal(controls.length,8);
+  assert.equal(controls.length,11);
   assert.equal(controls[0].dataset.coachChatActionWorkspace,'cierre');
   assert.equal(controls[1].dataset.coachMailCommand,'Confirmar envío AA11BB22CC33');
   assert.equal(controls[2].dataset.coachMailCommand,'Cancelar borrador AA11BB22CC33');
@@ -37,15 +43,21 @@ test('las acciones de correo unen botones al código que se vio y usan enlaces d
   assert.equal(controls[5].dataset.coachMailCommand,'Confirmar cita AABBCC123456');
   assert.equal(controls[6].dataset.coachMailCommand,'Descartar cita AABBCC123456');
   assert.equal(controls[7].href,'https://www.google.com/calendar/event?eid=def456');
+  assert.equal(controls[8].dataset.coachMailCommand,'Confirmar borrador WhatsApp AA11BB22CC33');
+  assert.equal(controls[9].dataset.coachMailCommand,'Descartar WhatsApp AA11BB22CC33');
+  assert.equal(controls[10].href,'https://wa.me/13125550123?text=Hola%20Mar%C3%ADa%20%26%20Jos%C3%A9');
   assert.equal(controls[3].target,'_blank');assert.equal(controls[4].rel,'noopener noreferrer');
   const register=app.slice(app.indexOf('  [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {',app.indexOf('  coachVoice = window.TecCoachVoice?.init')),app.indexOf('  chatInput?.addEventListener',app.indexOf('  coachVoice = window.TecCoachVoice?.init')));
   let events={},commands=[];
   vm.runInNewContext(register,{
     chatMessages:{addEventListener:(name,fn)=>{events[name]=fn;}}, floatingChatMessages:null,
-    sendCoachMessage:txt=>commands.push(txt),setCoachWorkspaceTab() {}
+    sendCoachMessage:txt=>commands.push(txt),setCoachWorkspaceTab() {},me:{user:{id:'b'}},getCoachChatSessionId:()=>'s1',setCoachChatStatusText(){}
   });
   events.click({target:{closest:name=>name==='[data-coach-mail-command]'?controls[1]:null}});
   assert.deepEqual(commands,['Confirmar envío AA11BB22CC33']);
+  let blocked=false;
+  events.click({target:{closest:name=>name==='[data-coach-whatsapp-account]'?controls[10]:null},preventDefault(){blocked=true;}});
+  assert.equal(blocked,true);
 });
 
 function chatFixture(responses) {
@@ -94,6 +106,22 @@ test('una precisión de cita conserva su propia conversación y reemplaza el con
   assert.deepEqual(f.requests.map(p=>p.coachCalendarPending),[undefined,undefined,'cita']);
   assert.deepEqual(f.requests.map(p=>p.coachMailPending),[undefined,'correo',undefined]);
   assert.ok(f.requests.every(p=>p.coachTimeZone && p.coachCalendarVersion===1));
+  assert.deepEqual(f.spoken,[]);
+});
+
+test('WhatsApp presenta el enlace solo en la respuesta confirmada y asocia el borrador al chat propio',async()=>{
+  const f=chatFixture([
+    {coachMailAgent:true,coachWhatsAppAgent:true,respuesta:'Revisa el texto',coachWhatsAppPending:'draft-token',coachHelpActions:[{type:'waPersonalConfirm',id:'aa11bb22cc33'}]},
+    {coachMailAgent:true,coachWhatsAppAgent:true,respuesta:'Toca Enviar en WhatsApp',coachHelpActions:[{type:'waOpen',to:'+13125550123',text:'Hola'}]},
+    {respuesta:'Listo'}
+  ]);
+  await f.send('Prepara un WhatsApp',{replyMode:'audio'});
+  await f.send('Confirmar borrador WhatsApp AA11BB22CC33',{replyMode:'audio'});
+  f.setSession('s2');await f.send('Hola');
+  assert.deepEqual(f.requests.map(p=>p.coachWhatsAppPending),[undefined,'draft-token',undefined]);
+  assert.equal(f.updates[0].opts.actions[0].type,'waPersonalConfirm');
+  assert.equal(f.updates[1].opts.actions[0].accountId,'a');
+  assert.equal(f.updates[1].opts.actions[0].sessionId,'s1');
   assert.deepEqual(f.spoken,[]);
 });
 

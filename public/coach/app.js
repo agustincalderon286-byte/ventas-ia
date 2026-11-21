@@ -9294,14 +9294,26 @@ function renderCoachMessageActions(card, actions = []) {
       element.type = "button";
       element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
       element.textContent = String(action.label).trim();
-    } else if (["mailConfirm", "mailCancel", "calendarConfirm", "calendarCancel"].includes(action?.type) &&
+    } else if (["mailConfirm", "mailCancel", "calendarConfirm", "calendarCancel", "waPersonalConfirm", "waCancel"].includes(action?.type) &&
         typeof action.id === "string" && /^[a-f0-9]{12}$/i.test(action.id)) {
       element = document.createElement("button");
       element.type = "button";
       const labels = { mailConfirm: "Confirmar envío", mailCancel: "Cancelar borrador",
-        calendarConfirm: "Confirmar cita", calendarCancel: "Descartar cita" };
+        calendarConfirm: "Confirmar cita", calendarCancel: "Descartar cita",
+        waPersonalConfirm: "Confirmar borrador WhatsApp", waCancel: "Descartar WhatsApp" };
       element.textContent = labels[action.type];
       element.dataset.coachMailCommand = element.textContent + " " + action.id.toUpperCase();
+    } else if (action?.type === "waOpen") {
+      if (typeof action.to !== "string" || !/^\+[1-9]\d{6,14}$/.test(action.to) ||
+          typeof action.text !== "string" || !action.text.trim() || action.text.length > 4096 ||
+          !action.accountId || !action.sessionId) return;
+      element = document.createElement("a");
+      element.href = "https://wa.me/" + action.to.slice(1) + "?text=" + encodeURIComponent(action.text);
+      element.target = "_blank";
+      element.rel = "noopener noreferrer";
+      element.dataset.coachWhatsappAccount = action.accountId;
+      element.dataset.coachWhatsappSession = action.sessionId;
+      element.textContent = "Abrir en mi WhatsApp";
     } else if (["connections", "mailSource", "calendarEvent"].includes(action?.type)) {
       let href = "/mis-conexiones/";
       if (action.type === "mailSource") {
@@ -17992,6 +18004,7 @@ async function loadCoachAppPage() {
         accountId: String(me.user.id),
         coachMailVersion: 1,
         coachCalendarVersion: 1,
+        coachWhatsAppVersion: 1,
         coachTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         responseMode: options.replyMode === "audio" ? "audio" : "text",
         pregunta: text,
@@ -18022,6 +18035,9 @@ async function loadCoachAppPage() {
       if (pendingCalendarStep?.accountId === requestBody.accountId && pendingCalendarStep.sessionId === requestBody.sessionId) {
         requestBody.coachCalendarPending = pendingCalendarStep.token;
       }
+      if (pendingWhatsAppStep?.accountId === requestBody.accountId && pendingWhatsAppStep.sessionId === requestBody.sessionId) {
+        requestBody.coachWhatsAppPending = pendingWhatsAppStep.token;
+      }
       assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
       let streamedReply = "";
       const data = await streamCoachChatReply(requestBody, {
@@ -18048,9 +18064,14 @@ async function loadCoachAppPage() {
       pendingCalendarStep = mailAgent && typeof data.coachCalendarPending === "string" && data.coachCalendarPending
         ? { accountId: requestBody.accountId, sessionId: requestBody.sessionId, token: data.coachCalendarPending }
         : null;
+      pendingWhatsAppStep = mailAgent && typeof data.coachWhatsAppPending === "string" && data.coachWhatsAppPending
+        ? { accountId: requestBody.accountId, sessionId: requestBody.sessionId, token: data.coachWhatsAppPending }
+        : null;
       const actions = Array.isArray(data.coachHelpActions) ? data.coachHelpActions : [];
       updateCoachMessage(assistantMessageHandles, finalReply, {
-        actions: mailAgent ? actions : actions.filter(action => action?.type === "workspace")
+        actions: mailAgent ? actions.map(action => action?.type === "waOpen"
+          ? { ...action, accountId: requestBody.accountId, sessionId: requestBody.sessionId } : action)
+          : actions.filter(action => action?.type === "workspace")
       });
       // Keep private messages and appointments on screen and out of the speech provider.
       if (mailAgent) return { ok: true };
@@ -18104,6 +18125,7 @@ async function loadCoachAppPage() {
 
   let pendingMailStep = null;
   let pendingCalendarStep = null;
+  let pendingWhatsAppStep = null;
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })
@@ -18116,6 +18138,15 @@ async function loadCoachAppPage() {
 
   [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {
     root.addEventListener("click", event => {
+      const personalLink = event.target.closest("[data-coach-whatsapp-account]");
+      if (personalLink) {
+        if (personalLink.dataset.coachWhatsappAccount !== String(me.user.id) ||
+            personalLink.dataset.coachWhatsappSession !== getCoachChatSessionId()) {
+          event.preventDefault();
+          setCoachChatStatusText("Vuelve a preparar el WhatsApp desde tu conversación actual.");
+        }
+        return;
+      }
       const mailButton = event.target.closest("[data-coach-mail-command]");
       if (mailButton) {
         sendCoachMessage(mailButton.dataset.coachMailCommand);

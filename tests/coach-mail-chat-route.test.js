@@ -151,3 +151,62 @@ test('el Chef público omite el agente privado y una pregunta normal del Coach s
   assert.deepEqual(recorded.db,[]); assert.deepEqual(recorded.gmail,[]);
   assert.deepEqual(recorded.usage,[]);
 });
+
+test('un WhatsApp desde /chat no consulta el Gmail previo ni publica el destino o texto en historial',async()=>{
+  let prepared;
+  const {recorded,request}=harness({
+    waProfile:{load:async owner=>{assert.equal(owner,user._id);return '+13125550109';}},
+    waDrafts:{prepare:async fields=>{prepared=fields;return {...fields,id:'A0B1C2D3E4F5',status:'pending'};}}
+  });
+  const inbox=await request(base);
+  const body={...base,pregunta:'Prepara un WhatsApp para +13125550101. Mensaje: Puedo pasar el jueves.',coachMailPending:inbox.data.coachMailPending,stream:true};
+  const response=await request(body);
+  const answer=response.chunks.map(line=>JSON.parse(line)).at(-1).payload;
+  assert.equal(answer.coachWhatsAppAgent,true);
+  assert.equal(prepared.owner,user._id);
+  assert.equal(prepared.to,'+13125550101');
+  assert.equal(prepared.senderPhone,'+13125550109');
+  assert.match(answer.respuesta,/número de referencia: \+13125550109/i);
+  assert.match(answer.respuesta,/Puedo pasar el jueves/);
+  assert.ok(answer.coachHelpActions.some(a=>a.type==='waPersonalConfirm'));
+  assert.ok(answer.coachHelpActions.every(a=>a.type!=='waOpen'));
+  assert.equal(recorded.gmail.length,1);
+  assert.equal(recorded.model.length,0);
+  assert.doesNotMatch(JSON.stringify(recorded.usage),/3125550101|3125550109|pasar el jueves/);
+});
+
+test('el chat resuelve un contacto, corrige el WhatsApp y permite cambiar de canal',async()=>{
+  const contacts=['Rosa Luna','Rosa Vega'];
+  const lookups=[];
+  let draft;
+  const {request,recorded}=harness({
+    findLeads:async query=>{
+      lookups.push(query);
+      return contacts.filter(name=>name.includes(query.name)).map(name=>({name,phone:name==='Rosa Vega'?'+13125550102':'+13125550101'}));
+    },
+    waDrafts:{
+      prepare:async fields=>(draft={...fields,id:'A0B1C2D3E4F5',status:'pending'}),
+      view:async()=>draft,
+      revise:async({body})=>(draft={...draft,body})
+    }
+  });
+  const turn=async(pregunta,previous)=> (await request({...base,pregunta,coachWhatsAppPending:previous?.coachWhatsAppPending})).data;
+  const choices=await turn('Prepara un WhatsApp para Rosa. Mensaje: ¿Nos vemos mañana?');
+  assert.match(choices.respuesta,/Rosa Luna.*Rosa Vega/);
+  assert.equal(draft,undefined);
+  const preview=await turn('Rosa Vega',choices);
+  assert.equal(preview.coachWhatsAppAgent,true);
+  assert.equal(draft.to,'+13125550102');
+  assert.deepEqual(lookups, ['Rosa','Rosa Vega'].map(name=>({owner:user._id,name,includePhone:true})));
+  const revision=await turn('Mensaje: ¿Te viene bien el viernes?',preview);
+  assert.equal(draft.body,'¿Te viene bien el viernes?');
+  assert.equal(revision.coachWhatsAppAgent,true);
+  assert.ok(revision.coachHelpActions.every(a=>a.type!=='waOpen'));
+  const agenda=await turn('Agenda una llamada con Rosa mañana',revision);
+  assert.equal(agenda.coachCalendarAgent,true);
+  const inbox=await turn('Revisa mis correos',revision);
+  assert.equal(inbox.coachMailAgent,true);
+  assert.equal(inbox.coachWhatsAppAgent,undefined);
+  assert.equal(recorded.gmail.length,1);
+  assert.doesNotMatch(JSON.stringify(recorded.usage),/Rosa|3125550102|el viernes/);
+});

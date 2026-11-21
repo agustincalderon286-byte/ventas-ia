@@ -1,4 +1,6 @@
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
+import { createCoachWaAgent } from './coach-wa-chat.js';
+import { createWaProfile } from './coach-wa-profile.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
 import { createCoachMailAgent } from './coach-mail-agent.js';
 import { createMailDrafts } from './coach-mail-drafts.js';
@@ -9,6 +11,7 @@ import { gmailClient, openToken, sealToken, gmailScope, gmailSendScope } from '.
 
 const page = '/mis-conexiones/';
 const api = '/api/coach/conexiones/gmail/';
+const waProfileApi = '/api/coach/conexiones/whatsapp/';
 const random = () => randomBytes(32).toString('base64url');
 const digest = data => createHash('sha256').update(data).digest('base64url');
 const schema = new mongoose.Schema({
@@ -29,7 +32,7 @@ export function connectionConfig(env) {
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, findLeads, syncLead, followups }) {
+  calendarStore, calendarGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }) }) {
   const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle});
   const back = (res, result) => res.redirect(303, page + '?estado=' + result);
   const own = handler => async (req, res) => {
@@ -44,8 +47,14 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       const pilot = config.pilot.includes('*') || config.pilot.includes(email);
       if (req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
       if (req.method === 'POST' && req.body?.csrf !== session) return res.status(403).send('La sesión cambió. Vuelve a abrir Mis conexiones.');
+      if (req.method === 'POST' && req.path.startsWith(waProfileApi)) {
+        const site = req.get('Sec-Fetch-Site');
+        const fromPanel = site ? site === 'same-origin' : req.get('Origin') === req.protocol + '://' + req.get('host');
+        if (!fromPanel) return res.status(403).send('Abre el formulario desde Mis conexiones.');
+      }
       await handler(req, res, { id, session, pilot, email });
     } catch (error) {
+      if (req.path.startsWith(waProfileApi)) return back(res, 'waProfileFailed');
       if (req.path.startsWith('/api/coach/conexiones/calendar/') ||
           (req.path === api + 'callback' && typeof req.query.state === 'string' && req.query.state.startsWith('cal.'))) {
         return back(res, error.reauthorize ? 'calendarReconnect' : 'calendarFailed');
@@ -56,14 +65,28 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   };
 
   calendar.register(app, own, back);
-  app.get(page, own(async (req, res, { id, session, pilot }) => {
-    const [doc, cal] = pilot ? await Promise.all([store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean(), calendar.panel(id)]) : [null,null];
+  app.post(waProfileApi + 'save', own(async (req,res,{id}) => {
+    if (config.key?.length !== 32) return back(res, 'waProfileFailed');
+    const saved = await waProfile.save(id, req.body.phone);
+    return back(res, saved ? 'waProfileSaved' : 'waPhoneInvalid');
+  }));
+  app.post(waProfileApi + 'remove', own(async (_req,res,{id}) => {
+    await waProfile.remove(id);
+    return back(res, 'waProfileRemoved');
+  }));
+  app.get(page, own(async (req, res, { id, session, pilot, email }) => {
+    const personalWhatsAppReady = config.key?.length === 32;
+    const [doc, cal, senderPhone] = pilot ? await Promise.all([
+      store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean(), calendar.panel(id),
+      personalWhatsAppReady ? waProfile.load(id).catch(() => null) : null
+    ]) : [null,null,null];
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
     res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
-    res.send(connectionsPage({ doc, cal, pilot, ready: config.ready, calendarReady:config.calendarReady, csrf:session, message }));
+    res.send(connectionsPage({ doc, cal, pilot, ready: config.ready, calendarReady:config.calendarReady,
+      personalWhatsAppReady, senderPhone, coachEmail:email, csrf:session, message }));
   }));
 
   const startAuthorization = requestSend => own(async (_req, res, { id, session }) => {
@@ -145,5 +168,6 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   }));
   const runCalendar = createCoachCalendarAgent({config,calendar:calendar.service,switched,findLeads,syncLead,followups});
   const runMail = createCoachMailAgent({config,store,gmail,drafts,syncSales,switched});
-  return async args => (await runCalendar(args)) || runMail(args);
+  const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,getSenderPhone:owner=>waProfile.load(owner)});
+  return async args => (await runWhatsApp(args)) || (await runCalendar(args)) || runMail(args);
 }

@@ -10,7 +10,7 @@ function fixture(options={}) {
     users:{findById(id){return chain({_id:id});}},
     viewerQuery:async()=>({ownerUserId:options.team || 'seller'}),
     records:{
-      find(filter){calls.search=filter;return chain([{_id:leadId,leadName:'María Cruz',nextActionAt:null}]);},
+      find(filter){calls.search=filter;return chain([{_id:leadId,leadName:'María Cruz',phone:'+13125550123',nextActionAt:null}]);},
       findOneAndUpdate(filter,update){calls.filter=filter;calls.update=update;return chain(options.conflict ? null : {ownerUserId:'seller'});}
     },
     applySources:async(...args)=>{calls.sources=args;}, invalidate:async(...args)=>{calls.invalidate=args;}
@@ -25,6 +25,9 @@ test('el CRM busca nombres sin acentos y conserva la pertenencia del vendedor en
   assert.equal(calls.search.ownerUserId,'equipo');
   assert.ok(calls.search.$or.every(role=>Object.values(role)[0]==='seller'));
   assert.deepEqual(await crm.findLeads({owner:'seller',name:'.*'}),[]);
+  assert.equal((await crm.findLeads({owner:'seller',id:leadId,includePhone:true}))[0].phone,'+13125550123');
+  assert.equal(calls.search.ownerUserId,'equipo');
+  assert.ok(calls.search.$or.every(role=>Object.values(role)[0]==='seller'));
 });
 test('la actualización de un prospecto respeta un cambio posterior de la fecha y propaga la cita aplicada',async()=>{
   const detail={owner:'seller',leadId,start:'2026-12-01T21:30:00Z',action:'llamar',expectedStart:null};

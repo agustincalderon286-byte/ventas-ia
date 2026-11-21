@@ -2,6 +2,10 @@ const actions = '/api/coach/conexiones/gmail/';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const date = value => new Intl.DateTimeFormat('es-US', { dateStyle: 'medium', timeZone: 'America/Chicago' }).format(new Date(value));
 export const notices = {
+  waProfileSaved: 'Guardaste tu número de referencia para los próximos borradores de WhatsApp.',
+  waProfileRemoved: 'Borraste tu número de referencia para los próximos borradores de WhatsApp.',
+  waPhoneInvalid: 'Escribe un solo número de WhatsApp con el signo + y el prefijo del país.',
+  waProfileFailed: 'No se pudo actualizar tu número de referencia. Vuelve a intentarlo.',
   calendarConnected: 'Google Calendar conectado. Ya puedes agendar seguimientos desde el chat.',
   calendarDisconnected: 'Se desconectó Google Calendar de Coach. Tus citas siguen en tu calendario.',
   calendarPending: 'Google aún no confirmó la creación del calendario. Comprueba si ya aparece en tu cuenta.',
@@ -24,7 +28,7 @@ export const notices = {
   busy: 'La conexión cambió. Revisa el estado actual.'
 };
 
-export function connectionsPage({ doc, cal, pilot, ready, calendarReady, csrf, message }) {
+export function connectionsPage({ doc, cal, pilot, ready, calendarReady, personalWhatsAppReady, senderPhone, coachEmail, csrf, message }) {
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
   const calForm = (action,label,secondary,fields) => form(action,label,secondary,'/api/coach/conexiones/calendar/',fields);
   function rows(title, items, empty) {
@@ -62,11 +66,22 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, csrf, m
     calendar = `<section><h2>Google Calendar</h2>${controls}<p>Al desconectar, Coach elimina su permiso guardado. Tus citas permanecen en Google. Puedes retirar el acceso de todo TEC desde <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">tu cuenta de Google</a>.</p></section>`;
   }
   const snapshot = doc?.snapshot;
+  const waApi = '/api/coach/conexiones/whatsapp/';
+  const personalWhatsApp = pilot && personalWhatsAppReady ? `<section><h2>WhatsApp</h2>
+    <p>Coach de <strong>${esc(coachEmail)}</strong></p>
+    ${senderPhone === null ? '<p>Tu número de referencia no está disponible en este momento.</p>' :
+      `<p>Puedes guardar el número desde el que envías tus seguimientos. El Coach lo mostrará como referencia al revisar tus próximos borradores.</p>
+      <div class="actions">${form('save','Guardar mi número',false,waApi,
+        '<label>Mi número de WhatsApp (con prefijo de país) <input type="tel" inputmode="tel" autocomplete="tel" name="phone" value="'+esc(senderPhone)+'" required maxlength="50"></label> ')}
+      ${senderPhone ? form('remove','Borrar mi número',true,waApi) : ''}</div>`}
+    <p>Escribe «Prepara un WhatsApp de seguimiento para María» en el chat del Coach. Revisa el número y el texto, o pide una corrección.</p>
+    <p>Al confirmar, abre el borrador en WhatsApp Messenger o WhatsApp Business en tu teléfono. Comprueba que la cuenta activa es la tuya y pulsa Enviar en la app.</p>
+    <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>` : '';
   const results = connected && snapshot ? `<p>Última consulta el ${date(doc.syncedAt)}. ${snapshot.limited ? 'Se alcanzó el límite de 100 avisos. El conteo es parcial.' : 'Período consultado: últimos 90 días.'}</p>
     ${rows('Ventas confirmadas', snapshot.confirmed, 'Sin ventas confirmadas en los avisos consultados.')}
     ${rows('Avisos para revisar', snapshot.review, 'Sin avisos pendientes de revisión.')}` : '';
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mis conexiones · Coach TEC</title><link rel="stylesheet" href="/coach/connections.css"></head><body><main>
     <a href="/coach/app/?abrirCoach=1">← Volver al chat del Coach</a><h1>Mis conexiones</h1>
     ${message ? '<p role="status" class="notice">' + esc(message) + '</p>' : ''}
-    <section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${results}</main></body></html>`;
+    ${personalWhatsApp}<section><h2>Gmail y ventas de Hy Cite</h2>${content}</section>${calendar}${results}</main></body></html>`;
 }

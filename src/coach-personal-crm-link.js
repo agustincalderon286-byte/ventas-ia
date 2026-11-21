@@ -17,15 +17,17 @@ export function personalCalendarCrm({ users, records, viewerQuery, applySources,
     return { user, filter: { ...visible, $or: involved } };
   }
   return {
-    async findLeads({ owner, name, id }) {
+    async findLeads({ owner, name, id, includePhone = false }) {
       const pattern = id ? null : contactPattern(name);
       if (id ? !/^[\da-f]{24}$/i.test(String(id)) : !pattern) return [];
       const selector = id ? { _id: id } : { leadName: pattern };
       const scope = await sellerScope(owner);
       if (!scope) return [];
-      const matches = await records.find({ ...scope.filter, ...selector }).select('_id leadName nextActionAt')
+      const fields = includePhone ? '_id leadName nextActionAt phone' : '_id leadName nextActionAt';
+      const matches = await records.find({ ...scope.filter, ...selector }).select(fields)
         .sort({ leadName: 1, _id: 1 }).limit(6).lean();
-      return matches.map(row => ({ id: String(row._id), name: row.leadName, nextActionAt: row.nextActionAt?.toISOString() || null }));
+      return matches.map(row => ({ id: String(row._id), name: row.leadName, nextActionAt: row.nextActionAt?.toISOString() || null,
+        ...(includePhone && { phone: String(row.phone || '') }) }));
     },
     async syncLead({ owner, leadId, start, action, expectedStart }) {
       if (!/^[\da-f]{24}$/i.test(String(leadId))) return false;
