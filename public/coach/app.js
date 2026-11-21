@@ -4069,7 +4069,7 @@ function isActiveCoachSeller(accountId) {
   } catch { return false; }
 }
 
-function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openTicketFolder, user, visiting }) {
+function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openTicketFolder, user, visiting, reviewSheets }) {
   const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
   const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
   const form = document.querySelector("[data-fourteen-sheet-form]");
@@ -4194,6 +4194,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
   window.TecReferralPhoto?.bind({
     form, container: photoTool || form, isCurrentSeller,
     openLeads: openTicketFolder,
+    reviewSheets,
     readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
       method:"POST", body:{photo:image, accountId}, timeoutMs:110000
     }),
@@ -4234,6 +4235,11 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
     if (problem) return setMessage(feedbackNode, problem, "error");
     exportSheet(sheet, feedbackNode);
   });
+  const sheetsButton = form.querySelector("[data-fourteen-sheets]");
+  if (sheetsButton && reviewSheets) {
+    sheetsButton.hidden = false;
+    sheetsButton.addEventListener("click", () => reviewSheets(sheetTools.readForm(form)));
+  }
 
   const rebuildForm = ({ clearFeedback = true, resetFields = false } = {}) => {
     if (resetFields) {
@@ -4318,6 +4324,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
                 ${isCurrent ? "Trabajando esta" : "Abrir hoja"}
               </button>
               <button type="button" class="nav-button" data-fourteen-saved-csv>Descargar CSV</button>
+              ${reviewSheets ? '<button type="button" class="nav-button" data-fourteen-saved-sheets>Revisar en Google Sheets</button>' : ""}
             </div>
           </article>
         `;
@@ -4601,7 +4608,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
   });
 
   savedList?.addEventListener("click", event => {
-    const openButton = event.target.closest("[data-fourteen-saved-open], [data-fourteen-saved-csv]");
+    const openButton = event.target.closest("[data-fourteen-saved-open], [data-fourteen-saved-csv], [data-fourteen-saved-sheets]");
 
     if (!openButton) {
       return;
@@ -4615,6 +4622,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, openT
       return;
     }
 
+    if (openButton.hasAttribute("data-fourteen-saved-sheets")) return reviewSheets?.(sheet);
     if (openButton.hasAttribute("data-fourteen-saved-csv")) return exportSheet(sheet, savedNote);
     activateSavedSheet(sheet, { scrollToInstant: true });
   });
@@ -5586,6 +5594,11 @@ function initCoachLeadWorkspace(user, sessionSwitch) {
 
   const visiting = Boolean(sessionSwitch?.canReturn || sessionSwitch?.returnUser);
   const accountId = String(user.id || user._id || "");
+  const reviewSheets = !visiting && window.TecSheetsTransfer
+    ? sheet => window.TecSheetsTransfer.open(sheet, accountId, () => isActiveCoachSeller(accountId))
+    : null;
+  const isOwnRaffle = lead => lead?.personalTicket || (lead?.source === "rifa_digital" &&
+    String(lead.generatedByUserId || lead.ownerUserId) === accountId);
   const state = {
     leads: [],
     filter: "todos",
@@ -5721,6 +5734,7 @@ function initCoachLeadWorkspace(user, sessionSwitch) {
           </div>
         </div>
         <div class="lead-folder-actions-row">
+          ${reviewSheets && isOwnRaffle(lead) ? '<button type="button" class="nav-button" data-coach-ticket-sheets>Revisar en Google Sheets</button>' : ""}
           ${
             phoneHref
               ? `<a class="secondary-button" href="tel:${phoneHref}">Llamar</a>
@@ -6018,7 +6032,7 @@ function initCoachLeadWorkspace(user, sessionSwitch) {
       if (leadListNote) leadListNote.textContent = "No pude actualizar la carpeta. Vuelve a abrirla con conexión.";
     });
   };
-  initFourteenSheetTool({ loadLeads, syncFolderToggle, openTicketFolder, user, visiting,
+  initFourteenSheetTool({ loadLeads, syncFolderToggle, openTicketFolder, user, visiting, reviewSheets,
     getOwnLeads: () => state.leads.filter(lead => String(lead.generatedByUserId || lead.ownerUserId) === String(user.id || user._id))
   });
   const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(captureForm, {
@@ -6139,6 +6153,15 @@ function initCoachLeadWorkspace(user, sessionSwitch) {
   });
 
   leadList.addEventListener("click", async event => {
+    const sheetButton = event.target.closest("[data-coach-ticket-sheets]");
+    if (sheetButton) {
+      const id = sheetButton.closest("[data-coach-lead-id]")?.dataset.coachLeadId;
+      const lead = state.leads.find(record => record.id === id && isOwnRaffle(record));
+      if (lead && reviewSheets) reviewSheets({ documentType: "tickets", referrals: [{
+        fullName: lead.fullName, phone: lead.phone, address:lead.address, city:lead.city, relationship:lead.relationship
+      }] });
+      return;
+    }
     const smsOpenButton = event.target.closest("[data-coach-lead-sms-open]");
 
     if (smsOpenButton) {

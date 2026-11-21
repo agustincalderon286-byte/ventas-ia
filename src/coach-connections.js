@@ -4,6 +4,8 @@ import { createCoachWaAgent } from './coach-wa-chat.js';
 import { createWaProfile } from './coach-wa-profile.js';
 import { createWaCloud, waCloudConfig, waCloudSeller } from './coach-wa-cloud.js';
 import { createWaCloudTemplate } from './coach-wa-cloud-template.js';
+import { createCoachSheetsConnections, sheetsApi } from './coach-sheets-connections.js';
+import { registerCoachSheetsRoutes } from './coach-sheets-routes.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
 import { createCoachMailAgent } from './coach-mail-agent.js';
 import { createMailDrafts } from './coach-mail-drafts.js';
@@ -34,11 +36,16 @@ export function connectionConfig(env) {
   const pilot = (env.COACH_CONNECTIONS_PILOT_EMAILS ?? 'calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v => v.trim()).filter(Boolean);
   const domains = (env.COACH_HYCITE_DOMAINS || 'hycite.com').toLowerCase().split(',').map(v => v.trim()).filter(v => /^(?:[a-z\d-]+\.)+[a-z]{2,}$/.test(v));
   const clientId = env.COACH_GMAIL_CLIENT_ID, secret = env.COACH_GMAIL_CLIENT_SECRET;
-  return { key, origin, pilot, domains, clientId, secret, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
+  const sheetsPickerKey = env.COACH_SHEETS_PICKER_KEY || '';
+  const sheetsAppId = env.COACH_SHEETS_APP_ID || (/^(\d+)-/.exec(clientId || '') || [])[1] || '';
+  const sheetsPilot = (env.COACH_SHEETS_PILOT_EMAILS ?? env.COACH_CONNECTIONS_PILOT_EMAILS ??
+    'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
+  const sheetsReady = Boolean(clientId && secret && key.length===32 && sheetsPickerKey && /^\d+$/.test(sheetsAppId));
+  return { key, origin, pilot, domains, clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
+  calendarStore, calendarGoogle, readSheetsSession, sheetsStore, sheetsGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
   waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
   // Gmail time offers need the real Mongo stores unless a test injects its own.
@@ -46,6 +53,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   const followupStore = followups || createFollowupStore({key:config.key});
   const offerStore = offers !== undefined ? offers : store === Store ? createMailOffers({key:config.key,
     rememberEvent:(b,receipt) => followupStore.rememberEvent(b,receipt)}) : null;
+  const sheets = createCoachSheetsConnections({config,store:sheetsStore,google:sheetsGoogle});
   const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle,
     ...(offerStore && { purge: async (args,key) => {
       await purgeCalendarProposals(args,key);
@@ -62,15 +70,31 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       const session = digest('coach-connections:' + auth.session.tokenHash);
       const email = String(auth.user.email || '').trim().toLowerCase();
       const pilot = config.pilot.includes('*') || config.pilot.includes(email);
-      if (req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
+      const sheetsRequest = req.path.startsWith(sheetsApi) || (req.path===api+'callback' &&
+        typeof req.query.state==='string' && req.query.state.startsWith('sheets.'));
+      const direct = auth.session.accessMode === 'direct' || (!auth.session.accessMode && auth.user.accountType !== 'seat');
+      const sheetsPilot = direct && Boolean(config.sheetsPilot?.some(value => value==='*' || value===email));
+      if (sheetsRequest && !sheetsPilot) return res.status(403).send('Abre Google Sheets desde tu propia cuenta del piloto.');
+      if (!sheetsRequest && req.path !== page && req.path !== '/mis-conexiones' && !pilot) return res.status(403).send('Esta cuenta aún no participa en el piloto.');
       if (req.method === 'POST' && req.body?.csrf !== session) return res.status(403).send('La sesión cambió. Vuelve a abrir Mis conexiones.');
-      if (req.method === 'POST' && req.path.startsWith(waProfileApi)) {
+      if (req.method === 'POST' && (sheetsRequest || req.path.startsWith(waProfileApi))) {
         const site = req.get('Sec-Fetch-Site');
         const fromPanel = site ? site === 'same-origin' : req.get('Origin') === req.protocol + '://' + req.get('host');
         if (!fromPanel) return res.status(403).send('Abre el formulario desde Mis conexiones.');
       }
-      await handler(req, res, { id, session, pilot, email });
+      const isSessionCurrent = async () => {
+        if (!readSheetsSession || switched(req)) return false;
+        const fresh = await readSheetsSession(req);
+        if (!fresh?.session || !fresh.user || String(fresh.user._id)!==String(id) ||
+          fresh.session.tokenHash!==auth.session.tokenHash) return false;
+        return fresh.session.accessMode==='direct' || (!fresh.session.accessMode && fresh.user.accountType!=='seat');
+      };
+      await handler(req, res, { id, session, pilot, sheetsPilot, email, sellerName:String(auth.user.name || '').trim(), isSessionCurrent });
     } catch (error) {
+      if (req.path === sheetsApi+'picker-token') return res.status(error.status || 503).json({error:'Vuelve a abrir Google Sheets en Mis conexiones.'});
+      if (req.path.startsWith(sheetsApi) || (req.path===api+'callback' && typeof req.query.state==='string' && req.query.state.startsWith('sheets.'))) {
+        return back(res,error.reauthorize ? 'sheetsReconnect' : error.status===422 ? 'sheetsFileUnavailable' : 'sheetsFailed');
+      }
       if (req.path.startsWith(waProfileApi)) return back(res, 'waProfileFailed');
       if (req.path.startsWith('/api/coach/conexiones/calendar/') ||
           (req.path === api + 'callback' && typeof req.query.state === 'string' && req.query.state.startsWith('cal.'))) {
@@ -82,6 +106,8 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   };
 
   calendar.register(app, own, back);
+  sheets.register(app, own, back);
+  registerCoachSheetsRoutes(app,{own,sheets:sheets.service});
   app.post(waProfileApi + 'save', own(async (req,res,{id}) => {
     if (config.key?.length !== 32) return back(res, 'waProfileFailed');
     const saved = await waProfile.save(id, req.body.phone);
@@ -91,14 +117,14 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     await waProfile.remove(id);
     return back(res, 'waProfileRemoved');
   }));
-  app.get(page, own(async (req, res, { id, session, pilot, email }) => {
+  app.get(page, own(async (req, res, { id, session, pilot, sheetsPilot, email }) => {
     const personalWhatsAppReady = config.key?.length === 32;
     // Solo el email exacto del piloto ve la línea Business, y solo con el alta completa (igual que el chat);
     // mientras tanto conserva el flujo manual. El estado lo confirma Graph en cada carga.
     const businessSeller = waCloudSeller(waCloud?.config, { email });
     const businessPending = !businessSeller && Boolean(waCloud?.config?.email) && email === waCloud.config.email;
-    const [doc, cal, senderPhone, businessLine] = await Promise.all([
-      pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, pilot ? calendar.panel(id) : null,
+    const [doc, cal, sheetProfile, senderPhone, businessLine] = await Promise.all([
+      pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, pilot ? calendar.panel(id) : null, sheetsPilot ? sheets.panel(id) : null,
       pilot && personalWhatsAppReady && !businessSeller ? waProfile.load(id).catch(() => null) : null,
       businessSeller ? (personalWhatsAppReady ? waCloud.verify().catch(() => ({ ok:false, reason:'unreachable' }))
         : { ok:false, reason:'notConfigured' }) : null
@@ -108,7 +134,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
-    res.send(connectionsPage({ doc, cal, pilot, ready: config.ready, calendarReady:config.calendarReady,
+    res.send(connectionsPage({ doc, cal, pilot, sheets:sheetProfile, sheetsPilot, sheetsReady:config.sheetsReady, ready: config.ready, calendarReady:config.calendarReady,
       personalWhatsAppReady, senderPhone, businessLine, businessPending,
       businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), coachEmail:email, csrf:session, message }));
   }));
@@ -138,6 +164,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
 
   app.get(api + 'callback', own(async (req, res, identity) => {
     const {id,session} = identity;
+    if (typeof req.query.state === 'string' && req.query.state.startsWith('sheets.')) return sheets.callback(req,res,identity,back);
     if (typeof req.query.state === 'string' && req.query.state.startsWith('cal.')) {
       return calendar.callback(req,res,identity,back);
     }

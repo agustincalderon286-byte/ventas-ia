@@ -592,7 +592,7 @@ test("the integration sends reviewed rows once with an account-bound key and ope
   let bound, own = true, loads = 0;
   const context = {
     window: { TecReferralPhoto: { bind: args => { bound = args; } } }, document: { querySelector: () => null },
-    form: { scrollIntoView() {} }, accountId: "seller-a", visiting: false, isCurrentSeller: () => own,
+    form: { scrollIntoView() {} }, accountId: "seller-a", visiting: false, isCurrentSeller: () => own, reviewSheets() {},
     createTecOfflineId: () => "stable-test-key", apiRequest: async (url, options) => {
       requests.push({ url, options: JSON.parse(JSON.stringify(options)) });
       return { createdCount: 1, duplicateCount: 0 };

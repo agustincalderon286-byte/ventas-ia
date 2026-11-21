@@ -25676,6 +25676,7 @@ app.get("/mis-conexiones/", async (req, res, next) => {
 const personalConnectionsConfig = connectionConfig(process.env);
 const personalFollowups = createFollowupStore({ key: personalConnectionsConfig.key });
 const runCoachConnectedAgent = registerCoachConnections(app, {
+  readSheetsSession: req => obtenerCoachAuth(req),
   config: personalConnectionsConfig, followups: personalFollowups,
   requireActive: requireCoachActivo,
   ...personalCalendarCrm({ users: CoachUser, records: CoachCrmRecord, viewerQuery: construirCoachCrmViewerQuery,

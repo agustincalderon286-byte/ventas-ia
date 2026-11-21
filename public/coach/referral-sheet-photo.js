@@ -142,7 +142,7 @@
     return null;
   }
 
-  function bind({ form, container = form, readPhoto, apply, exportTickets, saveTickets, openLeads, createRequestId, isCurrentSeller }) {
+  function bind({ form, container = form, readPhoto, apply, exportTickets, saveTickets, openLeads, reviewSheets, createRequestId, isCurrentSeller }) {
     bindings.get(form)?.destroy();
     const gallery = container.querySelector("[data-fourteen-photo]");
     const camera = container.querySelector("[data-fourteen-photo-camera]");
@@ -335,6 +335,11 @@
         actions.append(save, openFolder);
       }
       actions.append(confirm);
+      if (tickets && reviewSheets) actions.append(button("Revisar en Google Sheets", "secondary-button", () => {
+        if (!current(id) || confirm.disabled) return;
+        const result = collect();
+        if (result) reviewSheets(result);
+      }));
       panel.append(actions);
       preview.append(panel);
     }

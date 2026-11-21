@@ -9499,6 +9499,14 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
 /* Revisión de una hoja de referencias en el teléfono. */
 .fourteen-photo-tool { padding: 1rem; border: 1px solid currentColor; border-radius: 12px; }
 .fourteen-photo-tool > h4 { margin: 0 0 .4rem; }
+.coach-sheets-review { width: min(38rem, calc(100vw - 2rem)); max-height: 85dvh; box-sizing: border-box; overflow: auto; color: #172d43; background: #fff; padding: 1.25rem; border: 1px solid #b8c5cf; border-radius: .8rem; }
+.coach-sheets-review::backdrop { background: rgb(12 28 43 / 60%); }
+.coach-sheets-review h3 { margin: 0; }
+.coach-sheets-contact { padding: .65rem 0; border-top: 1px solid #d8e1e8; }
+.coach-sheets-contact label { display: flex; align-items: baseline; gap: .55rem; overflow-wrap: anywhere; }
+.coach-sheets-contact input { width: 1.15rem; height: 1.15rem; flex: 0 0 auto; }
+.coach-sheets-contact small { display: block; margin: .15rem 0 0 1.7rem; }
+.coach-sheets-review .primary-button { margin-top: .7rem; }
 .fourteen-photo-tool > p { max-width: 68ch; }
 .fourteen-photo-picker { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
 .fourteen-photo-picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
