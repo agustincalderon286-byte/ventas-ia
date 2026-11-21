@@ -18392,8 +18392,17 @@ async function loadCoachAppPage() {
           : actions.filter(action => action?.type === "workspace")
       });
       retireCoachOffers(offerRoots, assistantMessageHandles.map(handle => handle?.card), outcome);
-      // Keep private messages and appointments on screen and out of the speech provider.
-      if (mailAgent) return { ok: true };
+      if (mailAgent) {
+        if (data.coachPrivateVoice === true) {
+          const slots = actions.filter(action => action?.type === "calendarSlot" ||
+            (action?.type === "planAction" && action.op === "slot"));
+          const slotLabels = slots.map(action => String(action.label || "").trim()).filter(label => label && !finalReply.includes(label));
+          const narration = [finalReply, ...slotLabels].join("\n");
+          setCoachChatStatusText("Listo");
+          coachVoice?.readPrivateReply?.(narration, assistantMessageHandles, { autoplay: options.replyMode === "audio", isCurrent: stillMyChat });
+        }
+        return { ok: true };
+      }
 
       if (data.profile) {
         renderCoachProfile(data.profile);

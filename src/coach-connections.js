@@ -238,7 +238,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   const runPlan=createConversationPlan({config,plans:createPlanStore({key:config.key}),sheets:sheets.service,
     sheetTools:createCoachSheetTools({google:sheetsReader}),channels:createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts}),
     readSession:readSheetsSession,switched,...planDependencies});
-  return async args => {
+  async function dispatch(args) {
     const body = args.req?.body;
     const planFocused = body?.coachPlanVersion === 1 && body.coachPlanPending && body.coachQuestionFocus === 'plan';
     const direct = directDraftInput(body,args.text);
@@ -259,5 +259,14 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     }
     if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
     return (await runSheets(args)) || (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
+  }
+  return async args => {
+    const result=await dispatch(args);
+    if (!result?.coachMailAgent) return result;
+    const {user,session}=args.auth || {};
+    const direct=session?.accessMode==='direct' || (session && !session.accessMode && user?.accountType!=='seat');
+    const eligible=user && config.planPilot?.some(email=>email==='*' || email===String(user.email).toLowerCase());
+    if (!direct || !eligible || switched(args.req) || String(user._id)!==args.req.body.accountId) return result;
+    return {...result,coachPrivateVoice:true};
   };
 }

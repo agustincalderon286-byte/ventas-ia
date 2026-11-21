@@ -112,6 +112,19 @@ function ui(){
   return {...browser,state,click,controls};
 }
 
+test('la lectura privada queda disponible solo en la sesión personal del piloto',async()=>{
+  const {send,calls}=chat();
+  for (const owner of participants) {
+    const voice=await send(owner,mixed,{responseMode:'audio',stream:true});
+    assert.equal(voice.data.coachPrivateVoice,true);
+    const typed=await send(owner,mixed,{responseMode:'text'});
+    assert.equal(typed.data.coachPrivateVoice,true);
+    const switched=await send(owner,mixed,{responseMode:'audio',coachPlanPending:'123'},{switched:true});
+    assert.notEqual(switched.data?.coachPrivateVoice,true);
+  }
+  assert.deepEqual(calls.writes,[]);
+});
+
 test('del chat normal al botón, cada cuenta puede elegir solo la nota y revisar el correo sin enviarlo',async()=>{
   const {send,calls}=chat(), b=ui();
   for(const owner of participants){

@@ -112,6 +112,25 @@ test('el token pasa una vez a la misma conversación; el resultado privado exclu
   assert.equal(f.updates[0].opts.actions[0].id,'111111111111');
 });
 
+test('lee la respuesta privada completa y los horarios disponibles localmente; solo el turno de voz pide reproducción automática',async()=>{
+  const privateText='Ficha de Julia. Para: julia@example.invalid. Asunto: Llamada. Hola, Julia, ¿te va bien el lunes?';
+  const first='lunes a las doce', second='lunes a las doce y cuarenta y cinco';
+  const actions=[{type:'planAction',op:'slot',label:first},{type:'calendarSlot',label:second},
+    {type:'planAction',op:'close',label:'Cerrar propuesta'}];
+  const agent={coachMailAgent:true,coachPlanAgent:true,coachPrivateVoice:true,respuesta:privateText,coachHelpActions:actions};
+  const read=[],remote=[];
+  const f=chatFixture([agent,agent,{...agent,respuesta:privateText+' '+first},{...agent,coachPrivateVoice:false}],{
+    coachVoice:{pausePlayback(){},speak:text=>remote.push(text),readPrivateReply:(text,handles,options)=>read.push({text,...options})}
+  });
+  await f.send('Prueba',{replyMode:'audio'});await f.send('Texto');
+  await f.send('Prueba de opciones repetidas',{replyMode:'audio'});await f.send('Fuera del piloto',{replyMode:'audio'});
+  assert.equal(read.length,3);assert.deepEqual(remote,[]);
+  assert.equal(read[0].text,[privateText,first,second].join('\n'));
+  assert.deepEqual(read.map(r=>r.autoplay),[true,false,true]);
+  assert.equal(read[2].text,[privateText+' '+first,second].join('\n'));
+  assert.equal(read[0].isCurrent(),true);f.setSession('otro');assert.equal(read[0].isCurrent(),false);
+});
+
 test('un cambio de conversación o cuenta descarta el token privado anterior',async()=>{
   const prepared={respuesta:'Dirección?',coachMailAgent:true,coachMailPending:'opaque'};
   const f=chatFixture([prepared,prepared,{respuesta:'Otro chat'}]);

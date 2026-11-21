@@ -83,6 +83,7 @@
     const MIC_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg>';
     const BIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg>';
     let liveContext = null, liveFinished = null, playbackEpoch = 0;
+    let stopPrivateRead = null;
     function stopLive() {
       playbackEpoch++;
       liveFinished?.();
@@ -96,7 +97,11 @@
     }
     const makeUrl = blob => { const url = URL.createObjectURL(blob); urls.add(url); return url; };
     const release = url => { if(url) { URL.revokeObjectURL(url); urls.delete(url); } };
-    const pausePlayback = (except, preserveContext = false) => {if(!preserveContext)stopLive();players.forEach(audio => { if(audio !== except) audio.pause(); });};
+    const pausePlayback = (except, preserveContext = false) => {
+      stopPrivateRead?.();
+      if (!preserveContext) stopLive();
+      players.forEach(audio => { if(audio !== except) audio.pause(); });
+    };
     let stopMeter = () => {};
     function monitorVolume(item, captured) {
       if (!liveContext?.createMediaStreamSource || !window.requestAnimationFrame) return;
@@ -353,6 +358,103 @@
       form.querySelector('textarea')?.addEventListener('input',render);
       form.closest('dialog')?.addEventListener('close',()=>{pausePlayback();if(capturing())cancel();});
     }
+    // This path never submits connection data to the remote speech service.
+    // Each chunk belongs to this reply and is queued only after its predecessor finishes.
+    function readPrivateReply(text, handles, {autoplay = false, isCurrent}) {
+      const synth = window.speechSynthesis;
+      const Utterance = window.SpeechSynthesisUtterance;
+      const panels = (handles || []).map(({card, target}) => {
+        const panel = document.createElement('div');
+        panel.className = 'coach-voice-reply';
+        const toggle = button('Escuchar respuesta completa', () => {
+          if (stopPrivateRead === stop) stop();
+          else play();
+        });
+        const status = document.createElement('small');
+        status.setAttribute('role','status');
+        status.hidden = true;
+        panel.append(toggle, status);
+        card.classList.add('coach-message-with-voice');
+        card.append(panel);
+        if (target) target.scrollTop = target.scrollHeight;
+        return {panel, toggle, status};
+      });
+      const words = text.match(/\S+/gu) || [];
+      const chunks = [];
+      let chunk = '';
+      for (const word of words) {
+        if (chunk && chunk.length + word.length > 150) { chunks.push(chunk); chunk = ''; }
+        chunk += (chunk ? ' ' : '') + word;
+      }
+      if (chunk) chunks.push(chunk);
+
+      let run = 0, utterance = null, timer = null, voicesReady = null;
+      const visible = () => !document.hidden && isCurrent() && panels.some(p => p.panel.getClientRects().length);
+      function display(playing, message = '') {
+        for (const p of panels) {
+          p.toggle.textContent = playing ? 'Detener lectura' : 'Escuchar respuesta completa';
+          p.status.textContent = message;
+          p.status.hidden = !message;
+        }
+      }
+      function clearWait() {
+        window.clearTimeout(timer);
+        if (voicesReady) synth?.removeEventListener?.('voiceschanged', voicesReady);
+        voicesReady = null;
+      }
+      function stop(message = '') {
+        ++run;
+        clearWait();
+        if (stopPrivateRead === stop) {
+          stopPrivateRead = null;
+          if (utterance) synth?.cancel();
+        }
+        utterance = null;
+        display(false, message);
+      }
+      const unavailable = 'Para escuchar la respuesta completa, activa una voz en español en tu dispositivo y toca Escuchar respuesta completa.';
+      function play() {
+        if (!visible() || !chunks.length) return;
+        pausePlayback(null, true);
+        if (liveFinished) stopLive();
+        if (!synth || !Utterance) { display(false, unavailable); return; }
+        stopPrivateRead = stop;
+        const current = ++run;
+        display(true);
+        function start(allowWait) {
+          if (current !== run) return;
+          if (!visible()) { stop(); return; }
+          const voices = synth.getVoices().filter(v => v.localService === true && /^es(?:[-_]|$)/i.test(v.lang));
+          const voice = voices.find(v => v.default) || voices.find(v => /^es[-_](?:US|MX)$/i.test(v.lang)) || voices[0];
+          if (!voice) {
+            if (!allowWait) { stop(unavailable); return; }
+            voicesReady = () => { clearWait(); start(false); };
+            synth.addEventListener?.('voiceschanged', voicesReady);
+            timer = window.setTimeout(voicesReady, 1400);
+            return;
+          }
+          let index = 0;
+          function next() {
+            if (current !== run) return;
+            if (!visible() || index === chunks.length) { utterance = null; stop(); return; }
+            utterance = new Utterance(chunks[index++]);
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+            utterance.onstart = () => { if (current === run) clearWait(); };
+            utterance.onend = () => { if (current === run) { clearWait(); next(); } };
+            const failed = () => { if (current === run) stop('Toca Escuchar respuesta completa para iniciar la voz en este dispositivo.'); };
+            utterance.onerror = failed;
+            // Some mobile browsers silently block autoplay until the next tap.
+            timer = window.setTimeout(failed, 5000);
+            try { synth.speak(utterance); } catch { failed(); }
+          }
+          next();
+        }
+        start(true);
+      }
+      if (autoplay) play();
+    }
+    window.addEventListener('tec:coach-session-change', () => stopPrivateRead?.());
     async function speak(text, handles, reference) {
       const panels = (handles || []).map(({card, target}) => {
         const panel = document.createElement('div');
@@ -448,7 +550,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape' && capturing())cancel();});
     window.addEventListener('pagehide',event=>{generation++;resetGesture();clearTimer();stopRecording();pausePlayback();if(!event.persisted)urls.forEach(release);});
     render();
-    return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak,
+    return { setChatBusy(value){chatBusy=Boolean(value);render();}, pausePlayback, speak, readPrivateReply,
       reset() {
         pausePlayback();
         cancel('');

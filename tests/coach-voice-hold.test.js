@@ -147,3 +147,57 @@ test('audio chat keeps the transcription visible and starts playback with the mi
  assert.equal(f.answer.children[0].children[1].classes.has('is-playing'),false);
  assert.equal(f.answer.children[0].children[1].children[0].disabled,false,'the complete answer is ready to replay');
 });
+
+function privateSpeechFixture(voices) {
+  const f=fixture(), utterances=[];
+  const synth=new Element('speech');
+  synth.getVoices=()=>voices;
+  synth.speak=u=>{utterances.push(u);u.onstart?.();};
+  synth.cancel=()=>{synth.cancels=(synth.cancels || 0)+1;};
+  synth.removeEventListener=(type,fn)=>synth.events.set(type,(synth.events.get(type)||[]).filter(x=>x!==fn));
+  f.window.speechSynthesis=synth;
+  f.window.SpeechSynthesisUtterance=class {constructor(text){this.text=text;}};
+  let current=true;
+  const read=(text,autoplay=true)=>f.controller.readPrivateReply(text,[{card:f.answer}],{autoplay,isCurrent:()=>current});
+  const toggle=()=>f.answer.children.at(-1).children[0];
+  const status=()=>f.answer.children.at(-1).children[1].textContent;
+  return {...f,read,toggle,status,utterances,synth,switchChat(){current=false;f.window.fire('tec:coach-session-change');}};
+}
+
+test('lee todo el correo y ambos horarios con la voz española del dispositivo sin red',()=>{
+  const local={lang:'es-MX',localService:true}, remote={lang:'es-US',default:true,localService:false};
+  const f=privateSpeechFixture([remote,local]);
+  const text='Para: ensayo@example.invalid. Asunto: Seguimiento. '+('Este es el siguiente párrafo del correo completo. '.repeat(18))+'12:00 o 12:45 p. m.';
+  f.read(text);
+  assert.equal(f.toggle().textContent,'Detener lectura');
+  for(let i=0;i<f.utterances.length;i++) f.utterances[i].onend();
+  assert.ok(f.utterances.length>3);
+  assert.ok(f.utterances.every(u=>u.voice===local));
+  assert.equal(f.utterances.map(u=>u.text).join(' '),text.replace(/\s+/g,' ').trim());
+  assert.equal(f.toggle().textContent,'Escuchar respuesta completa');assert.equal(f.calls.length,0);
+});
+
+test('un mensaje escrito espera un toque, cancelar o cambiar de sesión impide continuar o reproducir detalles anteriores',()=>{
+  const f=privateSpeechFixture([{lang:'es-ES',localService:true}]);
+  f.read('Una conversación privada que se puede detener. '.repeat(20),false);
+  assert.equal(f.utterances.length,0);f.toggle().fire('click');assert.equal(f.utterances.length,1);
+  const previous=f.utterances[0];f.toggle().fire('click');previous.onend();assert.equal(f.utterances.length,1);
+  f.toggle().fire('click');assert.equal(f.utterances.length,2);
+  f.switchChat();f.utterances[1].onend();f.toggle().fire('click');assert.equal(f.utterances.length,2);
+  assert.equal(f.synth.cancels,2);assert.equal(f.calls.length,0);
+});
+
+test('espera las voces locales y permite reintentar si el navegador bloquea el audio',()=>{
+  const voices=[{lang:'es-US',localService:false}],f=privateSpeechFixture(voices);
+  f.read('Este texto solo se escucha en el dispositivo.');
+  assert.equal(f.utterances.length,0);
+  f.synth.fire('voiceschanged');
+  assert.match(f.status(),/activa una voz en español/);assert.equal(f.calls.length,0);
+  f.toggle().fire('click');
+  voices.push({lang:'es-US',localService:true});f.synth.fire('voiceschanged');
+  assert.equal(f.utterances.length,1);
+  f.utterances[0].onerror();assert.match(f.status(),/Toca Escuchar/);
+  f.toggle().fire('click');assert.equal(f.utterances.length,2);
+  f.document.hidden=true;f.document.fire('visibilitychange');f.utterances[1].onend();
+  assert.equal(f.utterances.length,2);assert.equal(f.calls.length,0);
+});
