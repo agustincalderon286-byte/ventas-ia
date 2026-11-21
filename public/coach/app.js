@@ -4167,7 +4167,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
   window.TecReferralPhoto?.bind({
     form, isCurrentSeller,
     readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
-      method:"POST", body:{photo:image, accountId}, timeoutMs:65000
+      method:"POST", body:{photo:image, accountId}, timeoutMs:110000
     }),
     exportTickets: sheet => {
       if (!isCurrentSeller() || sheet.documentType !== "tickets") {

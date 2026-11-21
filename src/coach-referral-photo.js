@@ -1,5 +1,4 @@
 import { prepareReferralDocument } from './coach-referral-document-image.js';
-import { TEC_CHAT_MODEL } from './tec-chat-model.js';
 
 export const COACH_REFERRAL_PHOTO_PATH = '/api/coach/program-4-in-14/photo';
 export const FOURTEEN_SHEET_MAX_REFERRALS = 11;
@@ -15,6 +14,8 @@ Solo toma hostName y hostPhone del bloque explícito de anfitrión/cliente que r
 Boletas: sigue los bordes, giros y superposiciones para distinguir cada papel. En location indica "Boleta" y su posición en la foto, con un ordinal si hay dos cercanas. Usa solamente un nombre o teléfono realmente escrito en el grupo de campos del inscrito. Omite una boleta tapada si solo aparecen logos, dirección impresa del evento o casillas sin contacto; no le prestes los datos de la boleta contigua ni al talón que la tapa. Si abajo hay un talón de encuesta superpuesto, cuenta únicamente su propio bloque de contacto cuando tiene nombre o teléfono atribuibles a ese mismo papel; usa una etiqueta como «Talón inferior izquierdo». La boleta parcialmente tapada puede aportar su parte legible sin tomar datos del talón. Ignora cualquier marca de salud, interés o cita: no deduzcas consentimiento, disponibilidad ni cita.
 
 Para cada contacto, fullName es el nombre completo exactamente visible; phone un solo teléfono completo; address la dirección del domicilio y city la ciudad escrita; relationship solo el parentesco o vínculo literal. No deduzcas ciudad del código de área ni incluyas ciudad en address si está en un campo separado. Si hay más de un teléfono sin principal claro, un dígito dudoso o solo siete dígitos, deja phone vacío y añade "phone" a uncertainFields. Un guion o salto de renglón puede separar partes de UN teléfono: únelas solo si todos sus dígitos son inequívocos y están en la misma casilla. No unas dos opciones. Nunca adivines letras, dígitos, domicilios ni apellidos de pareja. Todo campo ilegible o ambiguo queda vacío y su clave va en uncertainFields o uncertainHostFields. Un campo genuinamente sin rellenar queda vacío, sin esa marca.
+
+En estas hojas es habitual que los tres dígitos del código de área estén encima de los otros siete, incluso encima del rótulo Teléfono. Lee ambas líneas del mismo recuadro, vuelve a los detalles y coteja los dígitos uno a uno. Los números de 10 dígitos claramente escritos son transcripciones válidas aunque no tengan paréntesis o guiones. Cuando solo una parte de un nombre es legible, conserva el nombre o nombres inequívocos sin completar el resto. Un apellido dudoso no invalida el teléfono del contacto.
 
 Entrega una fila por contacto físico, una sola vez aunque se vea en varios recortes. Hasta ${FOURTEEN_SHEET_MAX_REFERRALS} entradas, en orden estable de lectura. Marca overflow solo si existen más contactos escritos. Si documentType es unknown, devuelve campos vacíos y ninguna fila.`;
 
@@ -40,7 +41,7 @@ async function extractPhoto(content, { signal, fetchImpl, apiKey }) {
     method: 'POST', signal, redirect: 'error',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
     body: JSON.stringify({
-      model: TEC_CHAT_MODEL, store: false, reasoning_effort: 'low', max_completion_tokens: 5500,
+      model: 'gpt-6.2-sol', store: false, reasoning_effort: 'medium', max_completion_tokens: 9000,
       messages: [{ role: 'system', content: PROMPT }, { role: 'user', content }],
       response_format: { type: 'json_schema', json_schema: { name: 'hoja_de_referidos', strict: true, schema: photoSchema } }
     })
@@ -136,7 +137,7 @@ function reviewExtraction(raw, lowResolution) {
 
 export function createCoachReferralPhotoHandler({
   requireActive, fetchImpl = fetch, apiKey = process.env.OPENAI_API_KEY, now = Date.now,
-  dailyLimit = 12, timeoutMs = 55000
+  dailyLimit = 12, timeoutMs = 95000
 }) {
   const usage = new Map();
   const active = new Set();

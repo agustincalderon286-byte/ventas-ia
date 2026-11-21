@@ -39,8 +39,8 @@ export async function prepareReferralDocument(base64) {
     for (const [topLabel, top] of [['superior', 0], ['inferior', height - cropHeight]]) {
       for (const [sideLabel, left] of [['izquierdo', 0], ['derecho', width - cropWidth]]) {
         const rect = { top, left, width: cropWidth, height: cropHeight };
-        const crop = await pixels().extract(rect).resize(1650, 1650, { fit: 'inside', withoutEnlargement: true })
-          .jpeg(jpegOptions).toBuffer();
+        // The largest crop is 1920 px at the 3200 px upload working size.
+        const crop = await pixels().extract(rect).jpeg(jpegOptions).toBuffer();
         const pct = (value, total) => Math.round(100 * value / total);
         content.push({ type: 'text', text: `Detalle ${topLabel} ${sideLabel} de la MISMA foto, x ${pct(left, width)}–${pct(left + cropWidth, width)}%, y ${pct(top, height)}–${pct(top + cropHeight, height)}% desde la esquina superior izquierda. Hay solapamiento con otros detalles.` }, imagePart(crop));
       }
