@@ -4,7 +4,7 @@ import express from 'express';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {registerPublicChef,spokenSellerCandidates} from '../src/tec-chef-public.js';
+import {registerPublicChef,spokenSellerCandidates,spokenVoiceCode} from '../src/tec-chef-public.js';
 import {chefPublicMemoryModel as memory} from './helpers/chef-public-memory.js';
 
 // Fictional accounts only. 555 numbers are reserved for fiction.
@@ -20,14 +20,16 @@ async function fixture(t,{key=KEY,limits={}}={}){
   const leads=memory(),synced=[];
   const contexts=new Map([['eric-ejemplo',eric],['lorena-prueba',lorena],['eric-ejemplo-dos',peer],['eric-ejemplo-2',lorena],['chef-1a2b3c4d',peer]]
     .map(([slug,user])=>[slug,{slug,userDoc:user,ownership:{ownerUserId:owner._id,ownerName:owner.name}}]));
+  contexts.get('eric-ejemplo').voiceCode='482913';
   registerPublicChef(app,{requireActive:async()=>null,getBySlug:async slug=>contexts.get(slug)||null,getDefault:async()=>null,getOwnContext:async()=>null,getDownline:async()=>[],
     visitors:memory(),conversations:memory(),leads,privateDir:path.join(root,'private'),publicDir:path.join(root,'public'),
-    alexaVoiceKey:key,limits,completion:async()=>'Respuesta de cocina.',syncCrm:async(user,lead)=>{synced.push({user,lead});}});
+    alexaVoiceKey:key,limits,getByVoiceCode:async code=>[...contexts.values()].find(ctx=>ctx.voiceCode===code)||null,completion:async()=>'Respuesta de cocina.',syncCrm:async(user,lead)=>{synced.push({user,lead});}});
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
   t.after(()=>{server.closeAllConnections();server.close();});
   const base='http://127.0.0.1:'+server.address().port;
   const post=(url,body,{headerKey=KEY}={})=>fetch(base+url,{method:'POST',headers:{'Content-Type':'application/json',...(headerKey?{'X-TEC-Alexa-Key':headerKey}:{})},body:JSON.stringify(body)});
-  return {post,leads,contexts,synced};
+  const get=url=>fetch(base+url);
+  return {post,get,base,leads,contexts,synced};
 }
 const demo=(overrides={})=>({alexaUser,slug:'eric-ejemplo',requestId:'a'.repeat(40),fullName:'Ana Prueba',phone:'7085550100',city:'Chicago',appointmentPreferredTime:'el sábado en la tarde',consentGiven:true,...overrides});
 
@@ -125,4 +127,42 @@ test('voice lookups and new requests are limited per Alexa user without blocking
   assert.equal((await f.post('/api/chef/public/alexa/leads',demo())).status,200);
   assert.equal((await f.post('/api/chef/public/alexa/leads',demo({requestId:'b'.repeat(40)}))).status,429);
   assert.equal(f.leads.docs.length,1);
+});
+
+test('the seller can be named with «se llama» or with the six-digit code shown next to the QR',async t=>{
+  assert.deepEqual(spokenSellerCandidates('mi vendedor se llama Eric Ejemplo'),['eric-ejemplo']);
+  assert.equal(spokenVoiceCode('el código para alexa es cuatro ocho dos nueve uno tres'),'482913');
+  assert.equal(spokenVoiceCode('482 913'),'482913');
+  assert.equal(spokenVoiceCode('cuatro ocho dos'),'');
+  assert.equal(spokenVoiceCode('eric ejemplo'),'');
+  const f=await fixture(t);
+  for(const vendedor of ['mi vendedor se llama Eric Ejemplo','cuatro ocho dos nueve uno tres','el código es 482913']){
+    const r=await f.post('/api/chef/public/alexa/seller',{alexaUser,vendedor});
+    assert.equal(r.status,200,vendedor);assert.deepEqual(await r.json(),{slug:'eric-ejemplo',sellerName:'Eric Ejemplo'});
+  }
+  assert.equal((await f.post('/api/chef/public/alexa/seller',{alexaUser,vendedor:'cuatro ocho dos nueve uno cuatro'})).status,404);
+  f.contexts.delete('eric-ejemplo');
+  assert.equal((await f.post('/api/chef/public/alexa/seller',{alexaUser:otherAlexaUser,vendedor:'482913'})).status,404);
+});
+
+test('the product said by voice becomes the interest; without it the generic text stays',async t=>{
+  const f=await fixture(t);
+  assert.equal((await f.post('/api/chef/public/alexa/leads',demo({interest:'las ollas'}))).status,200);
+  assert.equal((await f.post('/api/chef/public/alexa/leads',demo({requestId:'b'.repeat(40)}))).status,200);
+  assert.deepEqual(f.leads.docs.map(doc=>doc.interest),['las ollas','Demostración solicitada por voz en Alexa']);
+});
+
+test('only the authenticated voice route can label a request as made by voice',async t=>{
+  const f=await fixture(t);
+  const r=await fetch(f.base+'/api/chef/public/leads?chef=eric-ejemplo',
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...demo(),email:'',interest:'ollas',origin:'alexa-voz',appointmentRequested:true})});
+  assert.equal(r.status,400);
+  assert.equal(f.leads.docs.length,0);
+});
+
+test('the customer page and the seller panel show the seller code only for that seller',async t=>{
+  const f=await fixture(t);
+  assert.equal((await (await f.get('/api/chef/public/bootstrap?chef=eric-ejemplo')).json()).voiceCode,'482913');
+  assert.equal((await (await f.get('/api/chef/public/bootstrap?chef=lorena-prueba')).json()).voiceCode,'');
+  assert.equal((await (await f.get('/api/chef/public/bootstrap')).json()).voiceCode,'');
 });

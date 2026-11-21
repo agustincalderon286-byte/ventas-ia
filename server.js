@@ -917,6 +917,7 @@ const coachDistributorProfileSchema = new mongoose.Schema({
   preferredCloseStyle: String,
   chefSlug: String,
   chefShareCode: String,
+  chefVoiceCode: String,
   chefEnabled: { type: Boolean, default: true },
   teamRole: String,
   seatLabel: String,
@@ -2276,6 +2277,7 @@ coachUserSchema.index({ sponsorUserId: 1, accountType: 1 });
 coachDistributorProfileSchema.index({ email: 1 });
 coachDistributorProfileSchema.index({ chefSlug: 1 }, { unique: true, sparse: true });
 coachDistributorProfileSchema.index({ chefShareCode: 1 }, { unique: true, sparse: true });
+coachDistributorProfileSchema.index({ chefVoiceCode: 1 }, { unique: true, sparse: true });
 coachDistributorAnalyticsSchema.index({ email: 1 });
 coachSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 coachLeadInboxSchema.index({ ownerUserId: 1, createdAt: -1 });
@@ -2488,6 +2490,7 @@ const chefPublicModels=createPublicChefModels(mongoose);
 registerPublicChef(app, {
   ...chefPublicModels, voice: process.env.OPENAI_API_KEY ? createCoachVoiceProvider() : null, requireActive: requireCoachActivo, privateDir: PRIVATE_DIR, publicDir: PUBLIC_DIR, leads: CoachLeadInbox,
   getBySlug: resolverCoachChefContextPorSlug, getDefault: resolverCoachChefContextPublicoPredeterminado,
+  getByVoiceCode: resolverCoachChefContextPorCodigoVoz,
   // Voice demonstration requests stay disabled until this secret is shared with the Alexa Lambda.
   alexaVoiceKey: process.env.TEC_CHEF_ALEXA_VOICE_KEY || "",
   getOwnContext: async user => {
@@ -4592,11 +4595,28 @@ async function resolverCoachChefContextPorSlug(chefSlug = "") {
 
   return {
     slug,
+    voiceCode: profileDoc.chefVoiceCode || "",
     userDoc,
     profileDoc,
     ownerProfileDoc: ownerProfileDoc || profileDoc,
     ownership
   };
+}
+
+async function resolverCoachChefContextPorCodigoVoz(voiceCode = "") {
+  const code = String(voiceCode || "");
+
+  if (!/^\d{6}$/.test(code)) {
+    return null;
+  }
+
+  const profileDoc = await CoachDistributorProfile.findOne({
+    chefVoiceCode: code,
+    chefEnabled: { $ne: false }
+  }).select("chefSlug").lean();
+
+  // The same checks as the QR link: active access, active seat, ownership.
+  return profileDoc?.chefSlug ? resolverCoachChefContextPorSlug(profileDoc.chefSlug) : null;
 }
 
 async function resolverCoachChefContextPorOwnerEmail(email = "") {
@@ -4894,6 +4914,26 @@ async function generarCoachChefShareCodeDisponible(excludeProfileId = null) {
   return crypto.randomBytes(6).toString("hex");
 }
 
+// Six digits a customer can read aloud to Alexa. Shown next to the seller's QR and on their Chef page.
+async function generarCoachChefVoiceCodeDisponible(excludeProfileId = null) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const candidate = String(crypto.randomInt(100000, 1000000));
+    const query = { chefVoiceCode: candidate };
+
+    if (excludeProfileId) {
+      query._id = { $ne: excludeProfileId };
+    }
+
+    const existing = await CoachDistributorProfile.findOne(query).select("_id").lean();
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
 async function asegurarCoachUserBase(userDoc = null) {
   if (!userDoc?._id) {
     return userDoc;
@@ -4996,6 +5036,15 @@ async function asegurarCoachDistributorProfile(userDoc = null, profileDoc = null
   if (!doc.chefShareCode) {
     doc.chefShareCode = await generarCoachChefShareCodeDisponible(doc._id);
     dirty = true;
+  }
+
+  if (!doc.chefVoiceCode) {
+    const voiceCode = await generarCoachChefVoiceCodeDisponible(doc._id);
+
+    if (voiceCode) {
+      doc.chefVoiceCode = voiceCode;
+      dirty = true;
+    }
   }
 
   if (dirty) {

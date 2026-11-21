@@ -28,33 +28,34 @@ La clave idempotente de cada lead combina visitante, vendedor y requestId. El í
 
 Las listas y QR privados usan no-store y validación de cuenta para pestañas con sesión cambiada. El panel borra su contenido y solicita recargar si cambia la cuenta. Actualiza cada 20 segundos cuando está visible. No incorpora notificaciones push con TEC cerrado.
 
-## Solicitud de demostración por voz en Alexa (local, 19 de noviembre de 2026)
+## Solicitud de demostración por voz en Alexa (19 de noviembre de 2026)
 
-Alexa no puede leer el QR físico. El cliente dice el mismo identificador que contiene el QR: el slug de `/chef/<slug>/`. No se creó ningún código comercial nuevo. Ese slug llega como texto (por ejemplo, «mi vendedor es eric ejemplo»). El servidor lo convierte en lecturas posibles con `spokenSellerCandidates`: guiones, dígitos y letras deletreadas, y el enlace dicho completo. Después lo resuelve con la misma `getBySlug` del QR. Solo acepta el resultado si corresponde a un único vendedor activo. Si dos lecturas llevan a vendedores distintos, responde 409 y no adivina.
+Alexa no puede leer el QR físico. Cada vendedor tiene un **código para Alexa de seis dígitos** (`chefVoiceCode`, único, generado junto al slug y al código de compartir en `asegurarCoachDistributorProfile`). El panel del vendedor lo muestra debajo de su QR y la página `/chef/<slug>/` lo muestra al cliente. El cliente lo dice dígito a dígito («cuatro ocho dos nueve uno tres»). `spokenVoiceCode` lo reconoce y `resolverCoachChefContextPorCodigoVoz` lo resuelve con las mismas comprobaciones que el enlace del QR. También se acepta el slug dicho (`spokenSellerCandidates`), con frases como «mi vendedor es…» o «mi vendedor se llama…». Solo se acepta un único vendedor activo; si una frase lleva a dos, responde 409 y no adivina.
 
 Flujo en la skill (`alexa-local/lambda/demo_request.py`):
 
-1. «Quiero una demostración» → Alexa pide el identificador.
+1. «Quiero una demostración» → Alexa pide el código para Alexa o el identificador.
 2. TEC resuelve el vendedor y Alexa lee su nombre. Debe confirmarse con un sí. Un «no» descarta ese vendedor y, al segundo intento fallido, la skill envía al formulario.
-3. Alexa pregunta nombre, teléfono, ciudad y día u horario preferidos. Se explica que es una preferencia y que el vendedor confirmará la cita.
+3. Alexa pregunta nombre, teléfono, ciudad, producto de interés y día u horario preferidos. Dos respuestas no entendidas seguidas en la misma pregunta envían al formulario sin guardar nada.
 4. Alexa lee el resumen y pregunta si el cliente autoriza que el vendedor y su equipo de supervisión reciban los datos y lo contacten. Solo un sí explícito envía. Un no o una respuesta ambigua no guarda nada.
-5. `POST /api/chef/public/alexa/leads` escribe en CoachLeadInbox con `storeLead`, el mismo camino del formulario web. Se guardan `ownerUserId` del contexto, `generatedByUserId` del vendedor, `chefSlug`, `source chef_personal`, `sourceDetail «TEC Chef · Alexa por voz»`, la etiqueta `alexa_voz` y `appointmentStatus solicitada`. La preferencia queda como «Preferencia: …», con una nota que pide confirmar disponibilidad. El cliente no puede fijar dueño, vendedor ni estado.
+5. `POST /api/chef/public/alexa/leads` escribe en CoachLeadInbox con `storeLead`, el mismo camino del formulario web. Se guardan `ownerUserId` del contexto, `generatedByUserId` del vendedor, `chefSlug`, `source chef_personal`, `sourceDetail «TEC Chef · Alexa por voz»`, la etiqueta `alexa_voz`, el producto en `interest` y `appointmentStatus solicitada`. La preferencia queda como «Preferencia: …», con una nota que pide confirmar disponibilidad. El cliente no puede fijar dueño, vendedor ni estado. La ruta pública del formulario rechaza `origin: alexa-voz`, así que solo la ruta autenticada de Alexa puede marcar una solicitud como hecha por voz.
 
-Respaldo: si no hay identificador, el vendedor no se verifica, TEC no responde o la voz no está configurada, Alexa deja la tarjeta con `/chef/alexa/cita/`, el formulario existente, y no guarda nada. Esa página ahora explica cómo decir el identificador.
+Fuera de una solicitud abierta, las frases de ciudad, producto u horario («estoy en el paso tres», «me interesa el pollo») se responden como preguntas de cocina. Las de nombre o teléfono no se guardan ni se envían a TEC. El modelo no usa portadoras amplias como «puedo…», «soy…» o «estoy en…».
+
+Respaldo: si no hay código, el vendedor no se verifica, TEC no responde o la voz no está configurada, Alexa deja la tarjeta con `/chef/alexa/cita/`, el formulario existente, y no guarda nada.
 
 Protección de datos: los endpoints de voz exigen el encabezado `X-TEC-Alexa-Key`, que se compara por hash en tiempo constante con `TEC_CHEF_ALEXA_VOICE_KEY`. Sin esa variable responden 503 y la skill sigue usando solo el formulario. TEC recibe un hash del usuario de Alexa, nunca el identificador de Amazon. Los datos de contacto viven solo en los atributos de la sesión de Alexa hasta que se envían o cancelan. No se escriben en DynamoDB, en registros ni en la tarjeta. Hay límites por usuario de Alexa y globales para búsquedas y solicitudes.
 
-Duplicados: la clave de la solicitud es un hash de vendedor + respuestas + fecha UTC y se conserva en la sesión. Un reintento después de perder la respuesta, un «sí» repetido o la misma solicitud en otra sesión del mismo día devuelven el lead existente (`duplicate: true`). Alexa responde «ya estaba registrada». El índice único `ownerUserId + offlineRequestId` cubre la concurrencia. Reutilizar la clave con otros datos responde 409.
+Duplicados: la clave de la solicitud es un hash de vendedor + respuestas + fecha UTC y se conserva en la sesión. Un reintento después de perder la respuesta, un «sí» repetido o la misma solicitud en otra sesión del mismo día devuelven el lead existente (`duplicate: true`). El índice único `ownerUserId + offlineRequestId` cubre la concurrencia. Reutilizar la clave con otros datos responde 409.
 
-Modelo de interacción (es-US y es-MX, idénticos): SellerCodeIntent, DemoNameIntent, DemoPhoneIntent (AMAZON.NUMBER), DemoCityIntent y DemoTimeIntent, todos con frase portadora. No hay muestras de una sola palabra, para no quitar «dos» o «la primera» a las recetas. Las respuestas que Alexa envía a otro intent se aceptan en el paso actual. Las recetas en curso siguen en el mismo paso después de la solicitud.
+Aviso de privacidad, condiciones y la página `/chef/alexa/cita/` ya describen la solicitud por voz (publicados el 19 de noviembre con el commit 9b74012 y actualizados aquí con el código para Alexa y el producto).
 
-### Pendientes para decidir con Agustín
+### Pendientes
 
 - Configurar `TEC_CHEF_ALEXA_VOICE_KEY` con el mismo valor secreto en Render y en la Lambda. Mientras no exista, producción se comporta como antes.
-- Confirmar que el slug, que hoy se genera desde el nombre y puede llevar un sufijo hexadecimal, es aceptable como identificador para decir en voz alta. La alternativa sería un código temporal mostrado en `/chef/<slug>/`. No se fijó un código comercial permanente.
-- Política si un vendedor queda inactivo entre la confirmación y el envío. Hoy no se reasigna: se envía al formulario y no se guarda. No se definió reasignación automática.
-- Revisar el aviso de privacidad de Alexa (`public/chef/alexa/privacidad/`) y el cuestionario de certificación, porque la skill ahora recopila nombre, teléfono y ciudad por voz. El aviso actual describe solo el formulario y no se modificó. Borrador propuesto para «Cuando solicitas una demostración»: «También puedes solicitarla por voz. Dices el identificador del enlace de tu vendedor y Alexa te dice su nombre para que lo confirmes. Después das tu nombre, teléfono, ciudad y horario preferido. Solo con tu autorización expresa guardamos la solicitud en TEC para ese vendedor y su equipo de supervisión. Si no autorizas, no se guarda nada». También probar en la consola de desarrollo que AMAZON.NUMBER reconoce bien teléfonos de 10 dígitos en es-US y es-MX. No se publicó ni se envió a certificación.
-- Las solicitudes por voz no llevan producto de interés: `interest` queda como «Demostración solicitada por voz en Alexa».
+- Probar en el simulador y en el Echo que Alexa reconoce el código de seis dígitos, los teléfonos de 10 dígitos (AMAZON.NUMBER) y las frases de producto en es-US.
+- Política si un vendedor queda inactivo entre la confirmación y el envío. Hoy no se reasigna: se envía al formulario y no se guarda.
+- Cuestionario de certificación de Amazon: declarar que la skill recopila nombre, teléfono, ciudad y producto por voz. No se publicó ni se envió a certificación.
 
 ## Verificación
 
