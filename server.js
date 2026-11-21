@@ -25576,7 +25576,7 @@ app.get("/mis-conexiones/", async (req, res, next) => {
   req.tecRequestAuth = auth;
   next();
 });
-registerCoachConnections(app, {
+const runCoachMailAgent = registerCoachConnections(app, {
   requireActive: requireCoachActivo,
   switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE])
 });
@@ -33879,6 +33879,16 @@ app.post("/chat", async (req, res) => {
   limpiarMemoriaSesiones();
 
   try {
+    if (modoChat === "coach") {
+      const mailReply = await runCoachMailAgent({ req, auth: coachAuth, sessionId, text: preguntaLimpia });
+      if (mailReply) {
+        // Count the interaction without copying the mailbox or draft into model history.
+        await guardarMensajeRaw({ visitorId: visitorIdLimpio, sessionId, role: "user",
+          content: "[Acción de Gmail del vendedor]", intent: "coach_chat",
+          detectedTopics: [`coach_user:${String(coachAuth.user._id)}`] });
+        return finishChatResponse(mailReply);
+      }
+    }
     let leadGuardado = null;
     let profileGuardado = null;
     let coachChefContext = null;
@@ -34022,6 +34032,7 @@ ESTADO DEL COACH:
       perfilPrompt = `
 CONTEXTO INTERNO DEL COACH:
 - esta conversacion pertenece al area privada del distribuidor
+- Las acciones reales de Gmail se atienden mediante las herramientas de correo del chat. Nunca afirmes haber consultado, enviado o programado algo sin el resultado de la herramienta.
 - no capturar lead
 - no pedir telefono
 - no mandar informacion a Google Sheets

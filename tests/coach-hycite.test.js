@@ -68,7 +68,7 @@ test('dos vendedores conectan Gmail, consultan órdenes y desconectan de forma i
     notices: async code=>summarizeMessages([notice('Venta confirmada #'+(code==='a'?1111:2222),100)],['hycite.com']),
     revoke: async code=>{revoked.push(code);return true;}
   };
-  registerCoachConnections(app,{store,gmail,config,switched:r=>r.switched,requireActive:async req=>({user:{_id:req.account,email:req.account+'@test.invalid'},session:{tokenHash:'session-'+req.account}})});
+  registerCoachConnections(app,{store,gmail,config,drafts:{purge:async()=>{}},switched:r=>r.switched,requireActive:async req=>({user:{_id:req.account,email:req.account+'@test.invalid'},session:{tokenHash:'session-'+req.account}})});
   const page='/mis-conexiones/', api='/api/coach/conexiones/gmail/';
   async function run(method,path,account,parts={}) {
     const r={set(){return this},vary(){return this},status(code){this.statusCode=code;return this},send(body){this.body=body},redirect(code,to){this.to=to;this.statusCode=code}};

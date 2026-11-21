@@ -1,7 +1,9 @@
+import { createCoachMailAgent } from './coach-mail-agent.js';
+import { createMailDrafts } from './coach-mail-drafts.js';
 import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectionsPage, notices } from './coach-connections-page.js';
-import { gmailClient, openToken, sealToken, gmailScope } from './coach-hycite-gmail.js';
+import { gmailClient, openToken, sealToken, gmailScope, gmailSendScope } from './coach-hycite-gmail.js';
 
 const page = '/mis-conexiones/';
 const api = '/api/coach/conexiones/gmail/';
@@ -10,6 +12,7 @@ const digest = data => createHash('sha256').update(data).digest('base64url');
 const schema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId, mailbox: String, encryptedToken: String,
   grant: String, stateHash: String, sessionId: String, deadline: Date, verifier: String,
+  sendEnabled: Boolean, requestSend: Boolean, exchangeId: String,
   syncId: String, snapshot: mongoose.Schema.Types.Mixed, syncedAt: Date
 }, { versionKey: false });
 const Store = mongoose.models.CoachPersonalGmail || mongoose.model('CoachPersonalGmail', schema);
@@ -23,7 +26,7 @@ export function connectionConfig(env) {
   return { key, origin, pilot, domains, clientId, secret, ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
-export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config) }) {
+export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}) }) {
   const back = (res, result) => res.redirect(303, page + '?estado=' + result);
   const own = handler => async (req, res) => {
     res.set({ 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).vary('Cookie');
@@ -44,7 +47,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   };
 
   app.get(page, own(async (req, res, { id, session, pilot }) => {
-    const doc = pilot ? await store.findById(id, 'mailbox snapshot syncedAt').lean() : null;
+    const doc = pilot ? await store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null;
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
     res.set('Referrer-Policy', 'same-origin');
@@ -53,51 +56,71 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     res.send(connectionsPage({ doc, pilot, ready: config.ready, csrf: session, message }));
   }));
 
-  app.post(api + 'start', own(async (_req, res, { id, session }) => {
+  const startAuthorization = requestSend => own(async (_req, res, { id, session }) => {
     if (!config.ready) return back(res, 'failed');
     const state = random(), verifier = random();
+    const pending = {
+      stateHash: digest(state), verifier, requestSend, sessionId: session, deadline: new Date(Date.now() + 10 * 60000)
+    };
+    if (requestSend) {
+      const connection = await store.findOneAndUpdate({ _id: id, mailbox: { $exists: true } },
+        { $set: pending, $unset: { exchangeId: 1 } }, { new: true }).lean();
+      if (!connection) return back(res, 'busy');
+      return res.redirect(303, gmail.authorize(state, digest(verifier), { send: true, mailbox: connection.mailbox }));
+    }
     try {
-      await store.updateOne({ _id: id, mailbox: { $exists: false } }, { $set: {
-        stateHash: digest(state), verifier, sessionId: session, deadline: new Date(Date.now() + 10 * 60000)
-      } }, { upsert: true });
+      await store.updateOne({ _id: id, mailbox: { $exists: false } }, { $set: pending, $unset: { exchangeId: 1 } }, { upsert: true });
     } catch (error) {
       if (error.code === 11000) return back(res, 'busy');
       throw error;
     }
     res.redirect(303, gmail.authorize(state, digest(verifier)));
-  }));
+  });
+  app.post(api + 'start', startAuthorization(false));
+  app.post(api + 'enable-send', startAuthorization(true));
 
   app.get(api + 'callback', own(async (req, res, { id, session }) => {
     if (!config.ready || typeof req.query.state !== 'string') return back(res, 'expired');
-    const grant = random();
+    const exchangeId = random();
     const pending = await store.findOneAndUpdate({
       _id: id, sessionId: session, stateHash: digest(req.query.state), deadline: { $gt: new Date() }
-    }, { $set: { grant }, $unset: { stateHash: 1, verifier: 1, deadline: 1, sessionId: 1 } }, { new: false }).lean();
+    }, { $set: { exchangeId }, $unset: { stateHash: 1, verifier: 1, deadline: 1, sessionId: 1, requestSend: 1 } }, { new: false }).lean();
     if (!pending) return back(res, 'expired');
     if (req.query.error || typeof req.query.code !== 'string') return back(res, 'denied');
     const tokens = await gmail.exchange(req.query.code, pending.verifier);
-    if (!tokens.refresh_token || !tokens.access_token || !tokens.scope?.split(' ').includes(gmailScope)) return back(res, 'denied');
+    const scopes = new Set(String(tokens.scope || '').split(/\s+/));
+    if (!tokens.refresh_token || !tokens.access_token || !scopes.has(gmailScope) ||
+        (pending.requestSend && !scopes.has(gmailSendScope))) return back(res, 'denied');
     const { emailAddress } = await gmail.profile(tokens.access_token);
     if (!emailAddress) return back(res, 'failed');
-    const result = await store.updateOne({ _id: id, grant, stateHash: { $exists: false } }, { $set: {
-      mailbox: emailAddress, encryptedToken: sealToken(tokens.refresh_token, config.key, id)
-    } });
-    return back(res, result.matchedCount ? 'connected' : 'busy');
+    if (pending.requestSend && emailAddress.toLowerCase() !== pending.mailbox?.toLowerCase()) return back(res, 'wrongMailbox');
+    const result = await store.updateOne({ _id: id, exchangeId }, { $set: {
+      mailbox: emailAddress, encryptedToken: sealToken(tokens.refresh_token, config.key, id),
+      grant: pending.grant || random(), sendEnabled: Boolean(pending.requestSend)
+    }, $unset: { exchangeId: 1 } });
+    if (!result.matchedCount) return back(res, 'busy');
+    return back(res, pending.requestSend ? 'sendEnabled' : 'connected');
   }));
 
-  app.post(api + 'sync', own(async (_req, res, { id }) => {
-    if (!config.ready) return back(res, 'failed');
+  async function syncSales(id, grant) {
     const syncId = random();
-    const doc = await store.findOneAndUpdate({ _id: id, mailbox: { $exists: true } }, { $set: { syncId } }, { new: true }).lean();
-    if (!doc) return back(res, 'busy');
+    const filter = { _id: id, mailbox: { $exists: true } };
+    if (grant) filter.grant = grant;
+    const doc = await store.findOneAndUpdate(filter, { $set: { syncId } }, { new: true }).lean();
+    if (!doc) return null;
     const token = await gmail.refresh(openToken(doc.encryptedToken, config.key, id));
     const snapshot = await gmail.notices(token.access_token);
     const result = await store.updateOne({ _id: id, grant: doc.grant, syncId }, { $set: { snapshot, syncedAt: new Date() } });
-    return back(res, result.matchedCount ? 'updated' : 'busy');
+    return result.matchedCount ? snapshot : null;
+  }
+  app.post(api + 'sync', own(async (_req, res, { id }) => {
+    if (!config.ready) return back(res, 'failed');
+    return back(res, await syncSales(id) ? 'updated' : 'busy');
   }));
 
   app.post(api + 'disconnect', own(async (_req, res, { id }) => {
     const doc = await store.findOneAndDelete({ _id: id }).lean();
+    if (doc?.grant) await drafts.purge({owner:id, grant:doc.grant}).catch(() => {});
     if (doc?.encryptedToken) {
       try {
         if (!await gmail.revoke(openToken(doc.encryptedToken, config.key, id))) return back(res, 'localOnly');
@@ -105,4 +128,5 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     }
     back(res, 'disconnected');
   }));
+  return createCoachMailAgent({config, store, gmail, drafts, syncSales, switched});
 }

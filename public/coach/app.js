@@ -9288,16 +9288,36 @@ function renderCoachMessageActions(card, actions = []) {
   actionsWrap.className = "coach-message-actions";
 
   actions.forEach(action => {
-    if (action?.type !== "workspace" || !action?.workspace || !action?.label) {
+    let element;
+    if (action?.type === "workspace" && action.workspace && action.label) {
+      element = document.createElement("button");
+      element.type = "button";
+      element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
+      element.textContent = String(action.label).trim();
+    } else if ((action?.type === "mailConfirm" || action?.type === "mailCancel") &&
+        typeof action.id === "string" && /^[a-f0-9]{12}$/i.test(action.id)) {
+      element = document.createElement("button");
+      element.type = "button";
+      const confirm = action.type === "mailConfirm";
+      element.textContent = confirm ? "Confirmar envío" : "Cancelar borrador";
+      element.dataset.coachMailCommand = element.textContent + " " + action.id.toUpperCase();
+    } else if (action?.type === "connections" || action?.type === "mailSource") {
+      let href = "/mis-conexiones/";
+      if (action.type === "mailSource") {
+        if (typeof action.id !== "string" || !/^[a-f0-9]{1,64}$/i.test(action.id) ||
+            typeof action.mailbox !== "string" || !/^[^\s@]+@[^\s@]+$/.test(action.mailbox)) return;
+        href = "https://mail.google.com/mail/?authuser=" + encodeURIComponent(action.mailbox) + "#all/" + action.id;
+      }
+      element = document.createElement("a");
+      element.href = href;
+      element.target = "_blank";
+      element.rel = "noopener noreferrer";
+      element.textContent = String(action.label || (action.type === "connections" ? "Mis conexiones" : "Ver correo"));
+    } else {
       return;
     }
-
-    const actionButton = document.createElement("button");
-    actionButton.type = "button";
-    actionButton.className = "coach-message-action";
-    actionButton.dataset.coachChatActionWorkspace = String(action.workspace || "").trim();
-    actionButton.textContent = String(action.label || "").trim();
-    actionsWrap.appendChild(actionButton);
+    element.className = "coach-message-action";
+    actionsWrap.appendChild(element);
   });
 
   if (actionsWrap.childElementCount) {
@@ -17721,7 +17741,8 @@ async function loadCoachAppPage() {
   };
 
   syncRoyalOneDock(false);
-  syncFloatingCoachDock("idle");
+  const openCoachChat = new URLSearchParams(window.location?.search || "").get("abrirCoach") === "1";
+  syncFloatingCoachDock(openCoachChat ? "open" : "idle");
 
   const openChefShareModal = () => {
     if (!chefShareModal) {
@@ -17878,7 +17899,7 @@ async function loadCoachAppPage() {
       throw new Error(errorData.error || "No pude completar esa accion.");
     }
 
-    if (!response.body) {
+    if (!response.body || response.headers.get("content-type")?.includes("application/json")) {
       return await response.json().catch(() => ({}));
     }
 
@@ -17963,6 +17984,7 @@ async function loadCoachAppPage() {
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const requestBody = {
         accountId: String(me.user.id),
+        coachMailVersion: 1,
         responseMode: options.replyMode === "audio" ? "audio" : "text",
         pregunta: text,
         sessionId: getCoachChatSessionId(),
@@ -17985,6 +18007,9 @@ async function loadCoachAppPage() {
         mode: "coach",
         teamChatOwnerId: window.TecTeamChat?.getTeamOwnerId?.() || ""
       };
+      if (pendingMailStep?.accountId === requestBody.accountId && pendingMailStep.sessionId === requestBody.sessionId) {
+        requestBody.coachMailPending = pendingMailStep.token;
+      }
       assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
       let streamedReply = "";
       const data = await streamCoachChatReply(requestBody, {
@@ -18004,9 +18029,16 @@ async function loadCoachAppPage() {
       });
       const finalReply = data.respuesta || streamedReply || "No pude responder en este momento.";
 
+      const mailAgent = data.coachMailAgent === true;
+      pendingMailStep = mailAgent && typeof data.coachMailPending === "string" && data.coachMailPending
+        ? { accountId: requestBody.accountId, sessionId: requestBody.sessionId, token: data.coachMailPending }
+        : null;
+      const actions = Array.isArray(data.coachHelpActions) ? data.coachHelpActions : [];
       updateCoachMessage(assistantMessageHandles, finalReply, {
-        actions: Array.isArray(data.coachHelpActions) ? data.coachHelpActions : []
+        actions: mailAgent ? actions : actions.filter(action => action?.type === "workspace")
       });
+      // Private mail replies stay on screen and do not go to the speech provider.
+      if (mailAgent) return { ok: true };
 
       if (data.profile) {
         renderCoachProfile(data.profile);
@@ -18055,6 +18087,7 @@ async function loadCoachAppPage() {
     }
   };
 
+  let pendingMailStep = null;
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })
@@ -18067,6 +18100,12 @@ async function loadCoachAppPage() {
 
   [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {
     root.addEventListener("click", event => {
+      const mailButton = event.target.closest("[data-coach-mail-command]");
+      if (mailButton) {
+        sendCoachMessage(mailButton.dataset.coachMailCommand);
+        return;
+      }
+
       const actionButton = event.target.closest("[data-coach-chat-action-workspace]");
 
       if (!actionButton) {
