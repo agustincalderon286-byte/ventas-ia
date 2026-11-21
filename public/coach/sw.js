@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261121-referencias1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261121-referencias1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261121-referencias2";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261121-referencias2";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -63,7 +63,7 @@ const TEC_CORE_ASSETS = [
   "/coach/signup-ux.css?v=20261117-signup1",
   "/coach/signup-ux.js?v=20261117-signup1",
   "/coach/styles.css?v=20261117-visor1",
-  "/coach/styles.css?v=20261121-referencias1",
+  "/coach/styles.css?v=20261121-referencias2",
   "/coach/team-chat-media.js?v=20261117-push1",
   "/coach/team-chat-push-worker.js?v=20261117-push1",
   "/coach/team-chat-push.js?v=20261117-push1",

@@ -3476,6 +3476,12 @@ html[data-coach-portal-mode="telemarketing"] .coach-shell {
   background: rgba(120, 255, 191, 0.08);
 }
 
+.fourteen-saved-item .health-survey-folder-chip {
+  color: #173e2d;
+  background: #e4f3ea;
+  border-color: #b1ccbc;
+}
+
 .fourteen-instant-wrap {
   margin-top: 18px;
   display: grid;
