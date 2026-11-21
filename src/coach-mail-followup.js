@@ -34,6 +34,12 @@ export function isDraftCorrection(text) {
   return editCommand.test(text.trim().replace(speaker, ''));
 }
 
+// A field value or quoted substitution is seller-authored copy, even if it contains another command.
+export function isLiteralDraftEdit(text) {
+  const input = text.trim().replace(speaker, '');
+  return /^(?:(?:mensaje|texto|cuerpo|asunto|para)\s*:|(?:agrega|a[nñ]ade)(?:le)? al final\b|(?:cambia|sustituye|reemplaza|quita)\s+[«“"])/i.test(input);
+}
+
 const weekdays = /\b(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi;
 const cleanQuote = value => value.trim().replace(/^[«“"]([\s\S]*)[»”"]$/, '$1');
 const guide = 'Puedes decir «cambia jueves por viernes», «agrega al final: Gracias» o escribir el texto completo después de «Mensaje:».';
@@ -53,7 +59,9 @@ export function correction(draft, input) {
   }
   const addition = /^(?:agrega|a[nñ]ade)(?:le)?(?: al final)?\s*[:,]?\s+([\s\S]+)$/i.exec(value);
   if (addition) return {body:draft.body + '\n' + cleanQuote(addition[1])};
-  const substitute = /^(?:cambia|sustituye|reemplaza)\s+(.+?)\s+por\s+([\s\S]+)$/i.exec(value);
+  // Match the entire quoted original before looking for the separator in «Gracias por ...».
+  const quoted = /^(?:cambia|sustituye|reemplaza)\s+(«[^»]+»|“[^”]+”|"[^"]+")\s+por\s+([\s\S]+)$/i.exec(value);
+  const substitute = quoted || /^(?:cambia|sustituye|reemplaza)\s+(.+?)\s+por\s+([\s\S]+)$/i.exec(value);
   const remove = /^quita(?:le)?\s+(.+)$/i.exec(value);
   if (substitute || remove) {
     const needle = cleanQuote((substitute || remove)[1]), normalized = draft.body.toLowerCase();

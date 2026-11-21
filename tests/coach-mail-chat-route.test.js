@@ -224,7 +224,8 @@ test('el chat resuelve un contacto, corrige el WhatsApp y permite cambiar de can
 });
 
 test('el chat conserva la bandeja y corrige la respuesta al hilo después de consultar horarios',async()=>{
-  let draft, writes=0;
+  let draft;
+  const sent = [];
   const {request,recorded}=harness(({key,doc})=>{
     doc.sendEnabled=true;
     const cal={_id:user._id,mailbox:user.email,grant:'cal-grant',calendarId:'cal-demo',availabilityEnabled:true,
@@ -238,12 +239,17 @@ test('el chat conserva la bandeja y corrige la respuesta al hilo después de con
         inbox:async()=>[{id:'a12',from:'cliente@example.invalid',date:'2026-01-01T12:00:00Z',subject:'Demo'}],
         replyTarget:async(_,id)=>{assert.equal(id,'a12');return {to:'cliente@example.invalid',subject:'Demo',
           thread:{threadId:'hilo-a',parent:'<msg@example.invalid>',references:['<msg@example.invalid>']}};},
-        send:async()=>{writes++;return {id:'unexpected'};}
+        send:async(token, message)=>{assert.equal(token,'mail-access'); sent.push(message); return {id:'abc123'};}
       },
       drafts:{
         prepare:async input=>(draft={...input,id:'ABCDEF123456',status:'pending'}),
         view:async()=>draft,
-        revise:async({changes})=>(draft={...draft,...changes,id:'123456ABCDEF'})
+        revise:async({changes})=>(draft={...draft,...changes,id:'123456ABCDEF'}),
+        confirm:async({id,deliver})=>{
+          if (id!==draft.id) return {status:'unavailable'};
+          const receipt=await deliver(draft);
+          return {status:'sent',messageId:receipt.id};
+        }
       }
     };
   });
@@ -265,7 +271,23 @@ test('el chat conserva la bandeja y corrige la respuesta al hilo después de con
   assert.match(edited.respuesta,/Nos vemos el lunes/);
   assert.equal(edited.coachHelpActions.find(a=>a.type==='mailConfirm').id,'123456ABCDEF');
   assert.equal(draft.thread.threadId,'hilo-a');
-  assert.equal(writes,0);
+  const body = 'Gracias por tu mensaje.\nPara la demo, busca dos horarios libres. Podemos hablar por WhatsApp.';
+  const literal = await ask('Mensaje: ' + body);
+  assert.equal(literal.coachCalendarAgent,undefined);
+  assert.equal(draft.body,body);
+  const editedQuote = await ask('Cambia «Gracias por tu mensaje.» por «Gracias por responder.»');
+  assert.equal(draft.body,body.replace('tu mensaje','responder'));
+  const action=editedQuote.coachHelpActions.find(a=>a.type==='mailConfirm');
+  assert.ok(action);
+  assert.ok((await ask('Busca dos horarios libres el viernes')).coachCalendarPending);
+  assert.equal(sent.length,0);
+  assert.match((await ask('Confirmar envío ABCDEF123456')).respuesta,/caducó/);
+  assert.equal(sent.length,0);
+  const receipt=await ask(action.label+' '+action.id);
+  assert.match(receipt.respuesta,/Gmail confirmó el envío/);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].body,draft.body);
+  assert.equal(sent[0].thread.threadId,'hilo-a');
   assert.equal(recorded.model.length,0);
 });
 

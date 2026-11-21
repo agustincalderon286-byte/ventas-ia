@@ -1,4 +1,4 @@
-import { isDraftCorrection } from './coach-mail-followup.js';
+import { isDraftCorrection, isLiteralDraftEdit } from './coach-mail-followup.js';
 import {offerRequest, bookingRequest} from './coach-offer-text.js';
 import { classifyMailIntent } from './coach-mail-intent.js';
 import { calendarIntent } from './coach-followup-input.js';
@@ -25,6 +25,23 @@ function explicitOtherChannel(input, focus) {
   if (focus !== 'whatsapp' && (whatsAppIntent(input) || whatsAppWords.test(folded))) return true;
   if (focus !== 'mail' && mailWords.test(folded)) return true;
   return false;
+}
+
+// A code selects a Gmail revision even if another channel asked the last question.
+export function directDraftInput(body, text) {
+  if (!body || typeof text !== 'string') return null;
+  if (!isLiteralDraftEdit(text)) {
+    if (!/[a-f0-9]{12}[.!]?\s*$/i.test(text)) return null;
+    const intent = classifyMailIntent(text);
+    return ['confirm', 'cancel'].includes(intent?.kind) ? { channel:'mail', literal:false } : null;
+  }
+  const channels = draftChannels.filter(channel => {
+    const token = body[coachPendingFields[channel]];
+    return typeof token === 'string' && token.length > 0;
+  });
+  const focus = [body.coachDraftFocus, body.coachQuestionFocus].find(channel => channels.includes(channel));
+  const channel = focus || (channels.length === 1 ? channels[0] : null);
+  return channel ? { channel, literal:true } : null;
 }
 
 export function scopeCoachPending(body, text) {

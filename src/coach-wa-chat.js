@@ -59,8 +59,8 @@ export function createCoachWaAgent({config,findLeads,switched,getSenderPhone,clo
     try {return (await isWindowOpen(to))===true;} catch {return false;}
   };
   const notSent=reason=>Object.assign(Error('No enviado.'),{beforeSend:true,reason});
-  return async ({req,auth,sessionId,text})=>{
-    const input=String(text||'').trim(), intent=whatsAppIntent(input), pending=req.body?.coachWhatsAppPending;
+  return async ({req,auth,sessionId,text,literalDraftInput=false})=>{
+    const input=String(text||'').trim(), intent=literalDraftInput ? null : whatsAppIntent(input), pending=req.body?.coachWhatsAppPending;
     if (!pending && (req.body?.coachMailPending || req.body?.coachCalendarPending) && isDraftCorrection(input)) return null;
     if (!intent && (!pending || otherTask.test(foldWa(input)))) return null;
     const actor=auth?.user;

@@ -25,11 +25,13 @@ const statuses = {
 export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody, offerHooks = null }) {
   const load = id => store.findById(id, 'mailbox encryptedToken grant sendEnabled').lean();
   const access = async doc => (await gmail.refresh(openToken(doc.encryptedToken, config.key, doc._id))).access_token;
-  return async ({ req, auth, sessionId, text }) => {
+  return async ({ req, auth, sessionId, text, literalDraftInput = false }) => {
     const pending = req.body?.coachMailPending;
     let intent;
-    if (classifySalesMailReport(text)) intent = { kind: 'report' };
-    else intent = pending ? classifyMailIntent(text) : await resolveMailIntent(text);
+    if (!literalDraftInput) {
+      if (classifySalesMailReport(text)) intent = { kind: 'report' };
+      else intent = pending ? classifyMailIntent(text) : await resolveMailIntent(text);
+    }
     if (!intent && !pending) return null;
     if (req.body?.responseMode === 'audio' && req.body?.coachMailVersion !== 1) {
       return answer('Actualiza la página del Coach para consultar Gmail desde el chat de voz.');
@@ -84,6 +86,9 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
         return preview(updated,context.sellerText);
       }
       if (context?.kind === 'preview' && !intent && cancelFollowup) intent = {kind:'cancel', id:context.id};
+      if (literalDraftInput && context?.kind === 'inbox') {
+        return answer('Primero elige el correo que quieres responder, por ejemplo «Responde al primero».', [], pending);
+      }
       if (!intent && (context?.kind === 'preview' || context?.kind === 'inbox')) {
         // A passive list or preview must not suppress normal language routing for the next request.
         intent = await resolveMailIntent(text);

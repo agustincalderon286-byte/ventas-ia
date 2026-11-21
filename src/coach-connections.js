@@ -1,4 +1,4 @@
-import {scopeCoachPending} from './coach-chat-pending.js';
+import {directDraftInput, scopeCoachPending} from './coach-chat-pending.js';
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
 import { createCoachWaAgent } from './coach-wa-chat.js';
 import { createWaProfile } from './coach-wa-profile.js';
@@ -200,6 +200,11 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,cloud:waCloud,
     isWindowOpen:waWindowOpen,templates:waTemplates,getSenderPhone:owner=>waProfile.load(owner)});
   return async args => {
+    const direct = directDraftInput(args.req?.body,args.text);
+    if (direct) {
+      const agent = direct.channel === 'mail' ? runMail : runWhatsApp;
+      return agent({...args,literalDraftInput:direct.literal});
+    }
     if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
     return (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
   };
