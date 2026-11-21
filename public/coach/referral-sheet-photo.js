@@ -2,7 +2,7 @@
   "use strict";
 
   const bindings = new WeakMap();
-  const maxBase64Length = 2 * 1024 * 1024;
+  const maxJpegBytes = 2 * 1024 * 1024;
   const maxReferrals = 11;
   const unreadable = "No pude abrir la foto. Elige una imagen JPG, PNG o WebP o toma otra foto.";
 
@@ -24,17 +24,13 @@
     });
   }
 
-  async function preparePhoto(file, current) {
-    if (!file.size || (file.type && (!file.type.startsWith("image/") || file.type === "image/svg+xml"))) {
-      throw new Error(unreadable);
-    }
-    const url = URL.createObjectURL(file);
+  async function preparePhoto(url, current) {
     const canvas = document.createElement("canvas");
     try {
       const image = await loadImage(url);
       const longest = Math.max(image.naturalWidth, image.naturalHeight);
       if (!longest) throw new Error(unreadable);
-      let edge = Math.min(2400, longest);
+      let edge = Math.min(3200, longest);
       while (current()) {
         canvas.width = Math.max(1, Math.round(image.naturalWidth * edge / longest));
         canvas.height = Math.max(1, Math.round(image.naturalHeight * edge / longest));
@@ -43,17 +39,17 @@
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const jpeg = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));
-        if (!jpeg?.size || jpeg.type !== "image/jpeg") throw new Error(unreadable);
-        if (4 * Math.ceil(jpeg.size / 3) <= maxBase64Length) {
-          return current() ? await readDataUrl(jpeg) : "";
+        for (const quality of [0.88, 0.80]) {
+          const jpeg = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", quality));
+          if (!current()) return "";
+          if (!jpeg?.size || jpeg.type !== "image/jpeg") throw new Error(unreadable);
+          if (jpeg.size <= maxJpegBytes) return await readDataUrl(jpeg);
         }
         if (edge <= 800) throw new Error("La foto supera 2 MB al prepararla. Vuelve a tomarla con la hoja dentro del encuadre.");
         edge = Math.max(800, Math.floor(edge * 0.8));
       }
       return "";
     } finally {
-      URL.revokeObjectURL(url);
       canvas.width = canvas.height = 1;
     }
   }
@@ -83,7 +79,70 @@
     return input;
   }
 
-  function bind({ form, readPhoto, apply, isCurrentSeller }) {
+  function checkbox(parent, label, checked = false) {
+    const wrapper = node("label", "", "fourteen-photo-check");
+    const input = node("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    wrapper.append(input, node("span", label));
+    parent.append(wrapper);
+    return input;
+  }
+
+  function verifyPhone(parent, fields, label) {
+    const input = checkbox(parent, label);
+    let confirmed = "";
+    const values = () => JSON.stringify(Object.values(fields).map(field => field.value.trim()));
+    function invalidate() {
+      input.checked = false;
+      confirmed = "";
+    }
+    for (const field of Object.values(fields)) {
+      field.addEventListener("input", invalidate);
+      field.addEventListener("change", invalidate);
+    }
+    input.addEventListener("change", () => { confirmed = input.checked ? values() : ""; });
+    return { input, invalidate, matches: () => input.checked && confirmed === values() };
+  }
+
+  function reviewRow(panel, row, index, tickets, uncertain) {
+    const noun = tickets ? "Boleta " : "Referido ";
+    const group = node("fieldset", "", "fourteen-sheet-referral");
+    group.append(node("legend", noun + index));
+    const include = checkbox(group, tickets ? "Incluir esta boleta" : "Incluir este referido", true);
+    if (uncertain || !row.fullName || !row.phone) {
+      group.append(node("p", "Comprueba los campos poco claros. Completa el nombre y el teléfono o quita la selección.", "mini-note"));
+    }
+    const grid = node("div", "", "fourteen-sheet-referral-grid");
+    const fields = {
+      fullName: field(grid, "Nombre", row.fullName),
+      phone: field(grid, "Teléfono", row.phone, "tel"),
+      address: field(grid, "Dirección", row.address),
+      city: field(grid, "Ciudad", row.city),
+      relationship: field(grid, "Relación o parentesco", row.relationship),
+      location: field(grid, "Ubicación en la foto", row.location)
+    };
+    group.append(grid);
+    const verified = verifyPhone(group, fields, "Comparé el teléfono con el nombre en la foto y confirmé cada dígito.");
+    include.addEventListener("change", () => {
+      verified.invalidate();
+      for (const input of [...Object.values(fields), verified.input]) input.disabled = !include.checked;
+    });
+    panel.append(group);
+    return { label: (tickets ? "la boleta " : "el referido ") + index, include, fields, verified };
+  }
+
+  function phoneProblem(phone, verified, label) {
+    if (!window.TecReferralSheet.validPhotoPhone(phone.value.trim())) {
+      return { input: phone, message: "Completa el teléfono en " + label + " con el código de área y sus 10 dígitos, o con + y el código del país si es internacional. Si está tapado, exclúyelo." };
+    }
+    if (!verified.matches()) {
+      return { input: verified.input, message: "Compara cada dígito del teléfono en " + label + " con la foto y marca su confirmación." };
+    }
+    return null;
+  }
+
+  function bind({ form, readPhoto, apply, exportTickets, isCurrentSeller }) {
     bindings.get(form)?.destroy();
     const gallery = form.querySelector("[data-fourteen-photo]");
     const camera = form.querySelector("[data-fourteen-photo-camera]");
@@ -97,6 +156,7 @@
     let revision = 0;
     let visit = "";
     let dataUrl = "";
+    let originalUrl = "";
     let active = true;
     function listen(element, type, handler) {
       element.addEventListener(type, handler);
@@ -111,6 +171,8 @@
       revision++;
       visit = "";
       dataUrl = "";
+      if (originalUrl) URL.revokeObjectURL(originalUrl);
+      originalUrl = "";
       read.disabled = true;
       for (const picker of pickers) if (picker !== keepPicker) picker.value = "";
       preview.replaceChildren();
@@ -130,82 +192,84 @@
 
     function showReview(sheet, id) {
       const panel = node("section", "", "fourteen-photo-review");
+      const tickets = sheet.documentType === "tickets";
       const rows = sheet.referrals;
       const uncertain = new Set(sheet.review?.incompleteRows || []);
       const overflow = Boolean(sheet.review?.overflow);
-      const overflowCopy = "La foto contiene más de 11 referidos. La hoja admite 11. Registra los restantes en otra hoja.";
-      panel.append(node("strong", "Revisa la lectura con la foto"));
-      if (overflow || rows.length > maxReferrals) panel.append(node("p", overflowCopy, "mini-note"));
-      else if (rows.length === maxReferrals) panel.append(node("p", "Se alcanzó el límite de 11 referidos por hoja.", "mini-note"));
-      const host = node("div", "", "fourteen-sheet-referral-grid");
-      const hostName = field(host, "Nombre del anfitrión", sheet.hostName);
-      const hostPhone = field(host, "Teléfono del anfitrión", sheet.hostPhone, "tel");
-      panel.append(host, node("p", "Si ya capturaste al anfitrión en el formulario, puedes dejar estos campos vacíos.", "mini-note"));
-      const editors = rows.map((row, i) => {
-        const group = node("fieldset", "", "fourteen-sheet-referral");
-        const index = i + 1;
-        group.append(node("legend", "Referido " + index));
-        const label = node("label");
-        const include = node("input");
-        include.type = "checkbox";
-        include.checked = true;
-        label.append(include, node("span", "Incluir este referido"));
-        group.append(label);
-        if (uncertain.has(index) || !row.fullName || !row.phone) {
-          group.append(node("p", "Comprueba los datos de este renglón. Completa el nombre y el teléfono o quita la selección.", "mini-note"));
-        }
+      panel.append(node("strong", tickets ? "Revisa las boletas" : "Revisa la hoja de referidos"));
+      if (sheet.review?.lowResolution) {
+        panel.append(node("p", "La resolución es baja. Si no distingues cada dígito al ampliar la foto, toma otra más cerca y con buena luz.", "mini-note"));
+      }
+      if (tickets) {
+        panel.append(node("p", "Si las boletas se superponen, verifica que cada nombre y teléfono aparezcan en la misma boleta. Excluye las que tengan números tapados.", "mini-note"));
+        if (overflow) panel.append(node("p", "Quedaron boletas fuera de la lectura. Toma otra foto de las restantes.", "mini-note"));
+      } else if (overflow || rows.length > maxReferrals) {
+        panel.append(node("p", "La foto contiene más de 11 referidos. La hoja admite 11. Registra los restantes en otra hoja.", "mini-note"));
+      } else if (rows.length === maxReferrals) {
+        panel.append(node("p", "Se alcanzó el límite de 11 referidos por hoja.", "mini-note"));
+      }
+      panel.append(node("p", "Deja vacíos los datos opcionales que no aparezcan en la foto.", "mini-note"));
+      let host;
+      if (!tickets) {
         const grid = node("div", "", "fourteen-sheet-referral-grid");
-        const fullName = field(grid, "Nombre", row.fullName);
-        const phone = field(grid, "Teléfono", row.phone, "tel");
-        const address = field(grid, "Dirección", row.address);
-        include.addEventListener("change", () => {
-          for (const input of [fullName, phone, address]) input.disabled = !include.checked;
-        });
-        group.append(grid);
-        panel.append(group);
-        return { index, include, fullName, phone, address };
-      });
-
-      const confirm = button("Pasar al formulario", "secondary-button", () => {
+        const fields = {
+          hostName: field(grid, "Nombre del anfitrión", sheet.hostName),
+          hostPhone: field(grid, "Teléfono del anfitrión", sheet.hostPhone, "tel")
+        };
+        panel.append(grid);
+        const verified = verifyPhone(panel, fields, "Comparé y confirmé cada dígito del teléfono del anfitrión.");
+        const syncHostCheck = () => { verified.input.parentElement.hidden = !fields.hostPhone.value.trim(); };
+        syncHostCheck();
+        fields.hostPhone.addEventListener("input", syncHostCheck);
+        fields.hostPhone.addEventListener("change", syncHostCheck);
+        panel.append(node("p", "Si ya capturaste al anfitrión en el formulario, puedes dejar estos campos vacíos.", "mini-note"));
+        host = { fields, verified };
+      }
+      const editors = rows.map((row, i) => reviewRow(panel, row, i + 1, tickets, uncertain.has(i + 1)));
+      const report = problem => {
+        say(problem.message, "error");
+        problem.input.focus();
+      };
+      const confirm = button(tickets ? "Descargar CSV de boletas" : "Pasar al formulario", "secondary-button", () => {
         if (!current(id) || confirm.disabled) return;
         const selected = editors.filter(editor => editor.include.checked);
-        if (selected.length > maxReferrals) {
-          say("Selecciona hasta 11 referidos para esta hoja.", "error");
-          return;
-        }
+        if (!tickets && selected.length > maxReferrals) return say("Selecciona hasta 11 referidos para esta hoja.", "error");
+        if (tickets && !selected.length) return say("Selecciona al menos una boleta con nombre y teléfono completos.", "error");
+        const result = { documentType: sheet.documentType, referrals: [] };
         for (const row of selected) {
-          const missing = [row.fullName, row.phone].find(input => !input.value.trim());
-          if (missing) {
-            say("Completa el nombre y el teléfono del referido " + row.index + " o quita su selección.", "error");
-            missing.focus();
-            return;
+          if (!row.fields.fullName.value.trim() || !row.fields.phone.value.trim()) {
+            return report({ message: "Completa el nombre y el teléfono en " + row.label + " o quita su selección.",
+              input: row.fields.fullName.value.trim() ? row.fields.phone : row.fields.fullName });
           }
+          const problem = phoneProblem(row.fields.phone, row.verified, row.label);
+          if (problem) return report(problem);
+          result.referrals.push(Object.fromEntries(Object.entries(row.fields).map(([key, input]) => [key, input.value.trim()])));
         }
-        const result = {
-          hostName: hostName.value.trim(),
-          hostPhone: hostPhone.value.trim(),
-          referrals: selected.map(row => ({
-            fullName: row.fullName.value.trim(), phone: row.phone.value.trim(), address: row.address.value.trim()
-          }))
-        };
-        if (!result.hostName && !result.hostPhone && !selected.length) {
-          say("Incluye al menos un referido o un dato del anfitrión para pasar al formulario.", "error");
-          return;
+        if (host) {
+          result.hostName = host.fields.hostName.value.trim();
+          result.hostPhone = host.fields.hostPhone.value.trim();
+          if (!result.hostName && !result.hostPhone && !selected.length) return say("Incluye un referido o un dato del anfitrión.", "error");
+          if (result.hostPhone) {
+            const problem = phoneProblem(host.fields.hostPhone, host.verified, "el anfitrión");
+            if (problem) return report(problem);
+          }
         }
         confirm.disabled = true;
         try {
-          const feedback = apply(result);
-          if (!feedback?.applied) {
+          const feedback = tickets ? exportTickets(result) : apply(result);
+          if (tickets ? feedback?.exported === false : !feedback?.applied) {
             say(feedback?.message || "Revisa los datos y vuelve a intentarlo.", "error");
             confirm.disabled = false;
             return;
           }
           reset();
+          const messages = [feedback?.message || (tickets ? "CSV de boletas preparado." : "Datos incorporados al formulario.")];
           const excluded = editors.length - selected.length;
-          const messages = [feedback.message || "Datos incorporados al formulario."];
-          if (excluded) messages.push("Referidos que dejaste fuera: " + excluded + ".");
-          if (overflow || rows.length > maxReferrals) messages.push("Revisa en la foto cuáles quedan para otra hoja.");
-          messages.push("Comprueba la hoja y pulsa Guardar en TEC o Descargar CSV cuando esté lista.");
+          if (excluded) messages.push((tickets ? "Boletas que dejaste fuera: " : "Referidos que dejaste fuera: ") + excluded + ".");
+          if (overflow || (!tickets && rows.length > maxReferrals)) {
+            messages.push(tickets ? "Toma otra foto de las boletas restantes." : "Revisa en la foto cuáles quedan para otra hoja.");
+          }
+          if (!tickets) messages.push("Comprueba la hoja y pulsa Guardar en TEC o Descargar CSV cuando esté lista.");
           say(messages.join(" "), "success");
         } catch (error) {
           say(error.message || "Revisa los datos y vuelve a intentarlo.", "error");
@@ -226,38 +290,57 @@
       if (!current(id)) return;
       say("Preparando la foto…");
       try {
-        const result = await preparePhoto(file, () => current(id));
+        if (!file.size || (file.type && (!file.type.startsWith("image/") || file.type === "image/svg+xml"))) {
+          throw new Error(unreadable);
+        }
+        originalUrl = URL.createObjectURL(file);
+        const result = await preparePhoto(originalUrl, () => current(id));
         if (!current(id)) return;
         if (!result?.startsWith("data:image/jpeg;base64,")) throw new Error(unreadable);
         dataUrl = result;
         const image = node("img", "", "fourteen-photo-image");
         image.src = result;
-        image.alt = "Foto de la hoja 4 en 14 seleccionada";
+        image.alt = "Foto seleccionada para comparar con la lectura";
+        const viewport = node("div", "", "fourteen-photo-zoom");
+        viewport.append(image);
+        let enlarged = false;
+        const zoom = button("Ampliar foto original", "nav-button", () => {
+          if (!current(id)) return;
+          enlarged = !enlarged;
+          image.src = enlarged ? originalUrl : dataUrl;
+          image.className = enlarged ? "fourteen-photo-original" : "fourteen-photo-image";
+          zoom.setAttribute("aria-expanded", String(enlarged));
+          zoom.textContent = enlarged ? "Reducir foto" : "Ampliar foto original";
+        });
+        zoom.setAttribute("aria-expanded", "false");
         const remove = button("Quitar foto", "nav-button", () => { if (current(id)) reset(); });
-        preview.replaceChildren(image, remove);
+        preview.replaceChildren(zoom, viewport, remove);
         preview.hidden = false;
         read.disabled = false;
         say("Foto lista. Pulsa " + read.textContent.trim() + " para extraer los datos.");
       } catch (error) {
         if (current(id)) {
-          picker.value = "";
+          reset();
           say(error.message || unreadable, "error");
         }
       }
     }
     async function startRead() {
       const id = revision;
-      if (!current(id) || !dataUrl || read.disabled) return;
+      if (!dataUrl || read.disabled || !current(id)) return;
       read.disabled = true;
       say("Leyendo la hoja…");
       try {
         const sheet = await readPhoto(dataUrl.slice("data:image/jpeg;base64,".length));
         if (!current(id)) return;
-        if (!Array.isArray(sheet?.referrals) || (!sheet.hostName && !sheet.hostPhone && !sheet.referrals.length)) {
-          throw new Error("No se distinguieron datos. Elige una foto mejor iluminada o continúa en el formulario.");
+        if (!["referrals", "tickets"].includes(sheet?.documentType)) {
+          throw new Error("No pude identificar una hoja de referidos ni boletas. Acerca la cámara, separa los documentos y vuelve a tomar la foto.");
+        }
+        if (!Array.isArray(sheet.referrals) || (!sheet.referrals.length && (sheet.documentType === "tickets" || (!sheet.hostName && !sheet.hostPhone)))) {
+          throw new Error("No se distinguieron datos. Elige una foto mejor iluminada o escribe los datos a mano.");
         }
         showReview(sheet, id);
-        say("Compara los datos con la foto y corrige o excluye los renglones antes de pasarlos al formulario.");
+        say("Amplía la foto, compara los teléfonos y marca cada número que hayas confirmado.");
       } catch (error) {
         if (current(id)) {
           say(error.message || "No pude leer la foto. Vuelve a intentarlo.", "error");

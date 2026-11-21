@@ -38,7 +38,7 @@ function captureForm() {
   for (const key of ["hostName","hostPhone","startDate","giftSelected","representativeName"]) add(key);
   const append = () => {
     rows++;
-    for (const suffix of ["Name","Phone","Address","Notes"]) add("referral" + suffix + rows);
+    for (const suffix of ["Name","Phone","Address","Notes","City","Relationship"]) add("referral" + suffix + rows);
   };
   append();
   return {fields, append, form: {
@@ -73,4 +73,24 @@ test("si la foto repite un teléfono, supera el espacio o difiere el anfitrión,
   assert.equal(edits(), 0);
   assert.equal(fields.get("hostPhone").value, "");
   assert.equal(fields.has("referralName2"), false);
+});
+
+test("el CSV de boletas conserva datos revisados y prescinde de anfitrión", () => {
+  const ticket = {fullName:"Persona de prueba", phone:"+1 (312) 555-0101", address:"Prueba, 1",
+    city:"Chicago", relationship:"", location:"Boleta superior derecha"};
+  const output = tools.csv({documentType:"tickets", referrals:[ticket]});
+  assert.match(output, /"Persona de prueba","3125550101","Prueba, 1","Chicago","","Boleta superior derecha"/);
+  assert.doesNotMatch(output, /Anfitrión/);
+  assert.equal(tools.applyPhoto(captureForm().form, {documentType:"tickets"}, 11, () => {}).applied, false);
+});
+
+test("una foto solo acepta teléfonos completos y la ciudad y el parentesco llegan al CSV de referidos", () => {
+  for (const value of ["555-0101", "+1 312-55", "(312) 555-010?", "+1234567890"]) assert.equal(tools.validPhotoPhone(value), false);
+  for (const value of ["312-555-0104", "+1 312-555-0104", "+52 55 5555 0104"]) assert.equal(tools.validPhotoPhone(value), true);
+  const {form,append}=captureForm();
+  const photo={...sheet,documentType:"referrals",referrals:[{...sheet.referrals[0],city:"Chicago",relationship:"Prima"}]};
+  assert.equal(tools.applyPhoto(form,photo,11,append).applied,true);
+  const out=tools.csv(tools.readForm(form));
+  assert.match(out, /"Ciudad o zona","Relación con el anfitrión"/);
+  assert.match(out, /"Chicago","Prima"/);
 });

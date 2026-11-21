@@ -4,9 +4,14 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const source = readFileSync(new URL("../public/coach/referral-sheet-photo.js", import.meta.url), "utf8");
+const sheetTools = readFileSync(new URL("../public/coach/referral-sheet.js", import.meta.url), "utf8");
 const syntheticPhoto = { name: "hoja.png", type: "image/png", size: 5_000_000 };
-const contact = (i = 1) => ({ fullName: "Referido " + i, phone: "555010" + String(i).padStart(4, "0"), address: "Calle " + i });
-const sheet = (referrals = [contact()]) => ({ hostName: "Anfitriona", hostPhone: "5550100000", referrals });
+const contact = (i = 1) => ({
+  fullName: "Referido " + i, phone: "555010" + String(i).padStart(4, "0"), address: "Calle " + i,
+  city: "", relationship: "", location: ""
+});
+const sheet = (referrals = [contact()]) => ({ documentType: "referrals", hostName: "Anfitriona", hostPhone: "5550100000", referrals });
+const tickets = (referrals = [contact()]) => ({ documentType: "tickets", referrals });
 
 class Element {
   constructor(tag = "div") {
@@ -17,7 +22,7 @@ class Element {
     this.value = this.textContent = "";
   }
   append(...nodes) {
-    for (const node of nodes) { node.parent = this; this.children.push(node); }
+    for (const node of nodes) { node.parent = this; node.parentElement = this; this.children.push(node); }
   }
   replaceChildren(...nodes) {
     this.children.forEach(node => { node.parent = null; });
@@ -27,7 +32,9 @@ class Element {
   walk() { return [this, ...this.children.flatMap(node => node.walk())]; }
   tagged(tag) { return this.walk().filter(node => node.tagName === tag.toUpperCase()); }
   named(tag, text) { return this.tagged(tag).find(node => node.textContent === text); }
+  field(label) { return this.tagged("label").find(el => el.children.some(child => child.textContent === label))?.tagged("input")[0]; }
   containsText(text) { return this.walk().some(node => node.textContent.includes(text)); }
+  setAttribute(name, value) { this[name] = value; }
   focus() { this.focused = true; }
   addEventListener(type, handle) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
@@ -63,7 +70,7 @@ function harness(options = {}) {
   form.querySelector = selector => controls[selector.slice("[data-fourteen-photo".length, -1)];
   const window = new Element();
   const document = new Element();
-  const shots = [], encodings = [], reads = [], applied = [], filesRead = [];
+  const shots = [], encodings = [], reads = [], applied = [], exported = [], filesRead = [];
   const revoked = [];
   const URL = {
     createObjectURL(file) { shots.push(file); return "blob:local/" + shots.length; },
@@ -93,13 +100,15 @@ function harness(options = {}) {
       el.getContext = () => ({ fillRect() {}, drawImage() {} });
       el.toBlob = (done, type, quality) => {
         encodings.push({ width: el.width, height: el.height, type, quality });
-        const size = options.encodedSize?.(el.width, el.height) ?? 120;
+        const size = options.encodedSize?.(el.width, el.height, quality) ?? 120;
         done({ type, size });
       };
     }
     return el;
   };
-  vm.runInNewContext(source, { window, document, URL, Image, FileReader });
+  const context = vm.createContext({ window, document, URL, Image, FileReader });
+  vm.runInContext(sheetTools, context);
+  vm.runInContext(source, context);
   let owner = true;
   const args = {
     form, isCurrentSeller: () => owner,
@@ -110,6 +119,10 @@ function harness(options = {}) {
     apply: data => {
       applied.push(JSON.parse(JSON.stringify(data)));
       return options.apply ? options.apply(data) : { applied: true };
+    },
+    exportTickets: data => {
+      exported.push(JSON.parse(JSON.stringify(data)));
+      return options.exportTickets ? options.exportTickets(data) : { exported: true };
     }
   };
   const binding = window.TecReferralPhoto.bind(args);
@@ -119,33 +132,41 @@ function harness(options = {}) {
     return picker.fire("change");
   };
   const readSheet = async () => { await select(); await read.fire("click"); };
+  const verify = async container => {
+    for (const field of container.tagged("input").filter(el => el.type === "checkbox" && el.parent.containsText("Comparé"))) {
+      if (field.disabled || field.parent.hidden) continue;
+      field.checked = true;
+      await field.fire("change");
+    }
+  };
   return {
     form, window, document, gallery, camera, read, preview, status, encodings, reads, applied,
-    filesRead, shots, revoked, binding, args, select, readSheet,
+    filesRead, shots, revoked, binding, args, select, readSheet, exported, verify: (el = preview) => verify(el),
+    csv() { return preview.named("button", "Descargar CSV de boletas"); },
     setOwner(value) { owner = value; }, confirm() { return preview.named("button", "Pasar al formulario"); }
   };
 }
 
-test("gallery and camera prepare the whole portrait locally and send only a small JPEG after Leer foto", async () => {
-  const f = harness({ encodedSize: (_w, h) => h > 1920 ? 2_000_000 : 1_500_000 });
+test("gallery and camera shrink the whole portrait locally and send only a bounded JPEG after Leer con IA", async () => {
+  const f = harness({ encodedSize: (_w, h) => h > 2560 ? 2_097_153 : 2_097_152 });
   assert.equal(f.read.disabled, true);
   await f.select();
-  assert.equal(f.encodings[0].width, 1600);
-  assert.equal(f.encodings[0].height, 2400);
+  assert.equal(f.encodings[0].width, 2133);
+  assert.equal(f.encodings[0].height, 3200);
   assert.equal(f.encodings[0].type, "image/jpeg");
-  assert.deepEqual(f.encodings.map(e => e.height), [2400, 1920]);
+  assert.deepEqual(f.encodings.map(e => [e.height, e.quality]), [[3200, 0.88], [3200, 0.80], [2560, 0.88]]);
   assert.equal(f.reads.length, 0);
   assert.equal(f.preview.tagged("img").length, 1);
   assert.match(f.status.textContent, /Pulsa Leer con IA/);
   assert.equal(f.read.disabled, false);
   await f.select(f.camera);
   assert.equal(f.gallery.value, "");
-  assert.equal(f.revoked.length, 2);
+  assert.equal(f.revoked.length, 1);
   assert.equal(f.reads.length, 0);
   await f.read.fire("click");
   assert.equal(f.reads.length, 1);
-  assert.ok(f.reads[0].length <= 2 * 1024 * 1024);
-  assert.equal(Buffer.from(f.reads[0], "base64").length, 1_500_000);
+  assert.equal(f.reads[0].length, 4 * Math.ceil(2 * 1024 * 1024 / 3));
+  assert.equal(Buffer.from(f.reads[0], "base64").length, 2 * 1024 * 1024);
   assert.equal(f.applied.length, 0);
   assert.equal(f.filesRead.every(blob => blob.type === "image/jpeg"), true);
 });
@@ -173,10 +194,11 @@ test("review inputs do not participate in form submission or draft events and on
   assert.deepEqual(drafts, []);
   const approval = f.confirm();
   assert.equal(f.applied.length, 0);
+  await f.verify();
   await approval.fire("click");
   await approval.fire("click");
-  assert.deepEqual(f.applied, [{ hostName: "Anfitriona", hostPhone: "5550100000", referrals: [
-    { fullName: name.value, phone: phone.value, address: address.value }
+  assert.deepEqual(f.applied, [{ documentType: "referrals", hostName: "Anfitriona", hostPhone: "5550100000", referrals: [
+    { ...contact(), fullName: name.value, phone: phone.value, address: address.value }
   ] }]);
   assert.equal(f.preview.hidden, true);
   assert.match(f.status.textContent, /fuera: 1/);
@@ -194,12 +216,14 @@ test("shows uncertain and excess rows, requires completing or excluding a partia
   assert.equal(rows.length, 11);
   assert.ok(rows[3].containsText("Comprueba"));
   assert.ok(rows[5].containsText("Comprueba"));
+  await f.verify();
   await f.confirm().fire("click");
   assert.equal(f.applied.length, 0);
   assert.match(f.status.textContent, /referido 4/);
   const phone = rows[3].tagged("input")[2];
   assert.equal(phone.focused, true);
   phone.value = "5550100444";
+  await f.verify(rows[3]);
   await f.confirm().fire("click");
   assert.equal(f.applied[0].referrals.length, 11);
   assert.match(f.status.textContent, /otra hoja/);
@@ -217,10 +241,12 @@ test("excess returned rows remain available to choose and transactional conflict
   assert.equal(f.applied.length, 0);
   assert.match(f.status.textContent, /hasta 11/);
   rows[0].tagged("input")[0].checked = false;
+  await f.verify();
   await f.confirm().fire("click");
   assert.equal(f.confirm().disabled, false);
   assert.match(f.status.textContent, /ya está capturado/);
   f.preview.tagged("input")[0].value = "";
+  await f.verify();
   await f.confirm().fire("click");
   assert.equal(f.applied[1].referrals.length, 11);
   assert.deepEqual(f.applied[1].referrals.at(-1), contact(12));
@@ -245,7 +271,7 @@ test("a second read click is ignored while waiting, but a failed request is retr
 });
 
 test("an empty extraction can be retried and a manual form remains available", async () => {
-  const f = harness({ readPhoto: () => ({ hostName: "", hostPhone: "", referrals: [] }) });
+  const f = harness({ readPhoto: () => ({ documentType: "referrals", hostName: "", hostPhone: "", referrals: [] }) });
   await f.readSheet();
   assert.match(f.status.textContent, /No se distinguieron datos/);
   assert.equal(f.read.disabled, false);
@@ -283,7 +309,7 @@ test("an abandoned decode cannot display the previous photo after a new camera s
   await old;
   assert.equal(f.preview.tagged("img")[0], displayed);
   assert.equal(f.filesRead.length, 1);
-  assert.equal(f.revoked.length, 2);
+  assert.deepEqual(f.revoked, ["blob:local/1"]);
 });
 
 test("a pending read is invalidated on reset, removal, page exit, visit change, seller change, or controller replacement", async () => {
@@ -321,4 +347,127 @@ test("changing seller after review clears personal data and a detached approval 
   await f.select();
   assert.equal(f.applied.length, 0);
   assert.equal(f.shots.length, 1);
+});
+
+test("zoom compares against the full local original without a second request and releases it on reset", async () => {
+  const f = harness({ encodedSize: (_w, _h, quality) => quality > 0.80 ? 3_000_000 : 1_900_000 });
+  await f.select();
+  assert.deepEqual(f.encodings.map(e => e.height), [3200, 3200]);
+  const zoom = f.preview.named("button", "Ampliar foto original");
+  const image = f.preview.tagged("img")[0];
+  const thumbnail = image.src;
+  await zoom.fire("click");
+  assert.equal(image.src, "blob:local/1");
+  assert.equal(image.className, "fourteen-photo-original");
+  assert.equal(zoom["aria-expanded"], "true");
+  await zoom.fire("click");
+  assert.equal(image.src, thumbnail);
+  assert.equal(f.reads.length, 0);
+  await f.form.fire("reset");
+  assert.deepEqual(f.revoked, ["blob:local/1"]);
+  await zoom.fire("click");
+  assert.equal(zoom["aria-expanded"], "false");
+});
+
+test("ticket CSV sends selected verified rows with their corrected location, city, and relationship, independent of the host form", async () => {
+  const response = { ...tickets([contact(), contact(2)]), hostName: "Ignorar", hostPhone: "5550108888",
+    review: { incompleteRows: [2], lowResolution: true, overflow: true } };
+  const f = harness({ readPhoto: () => response });
+  await f.readSheet();
+  assert.equal(f.confirm(), undefined);
+  assert.equal(f.preview.containsText("anfitrión"), false);
+  assert.equal(f.preview.containsText("superponen"), true);
+  assert.equal(f.preview.containsText("resolución es baja"), true);
+  const [first, second] = f.preview.tagged("fieldset");
+  const includeSecond = second.field("Incluir esta boleta");
+  includeSecond.checked = false;
+  await includeSecond.fire("change");
+  await f.csv().fire("click");
+  assert.equal(f.exported.length, 0);
+  assert.match(f.status.textContent, /confirmación/);
+  const fields = [["Ubicación en la foto", "Abajo derecha"], ["Ciudad", "El Paso"], ["Relación o parentesco", "Amiga"]];
+  for (const [label, value] of fields) {
+    const input = first.field(label);
+    input.value = value;
+    await input.fire("input");
+  }
+  await f.verify(first);
+  await f.csv().fire("click");
+  assert.equal(f.applied.length, 0);
+  assert.deepEqual(f.exported, [{ documentType: "tickets", referrals: [
+    { ...contact(), location: "Abajo derecha", city: "El Paso", relationship: "Amiga" }
+  ] }]);
+  assert.match(f.status.textContent, /CSV de boletas preparado/);
+  assert.match(f.status.textContent, /Boletas que dejaste fuera: 1/);
+});
+
+test("only complete numbers can be approved and each changed name or phone needs another confirmation", async () => {
+  const f = harness({ readPhoto: () => tickets([{ ...contact(), phone: "5550100" }]) });
+  await f.readSheet();
+  const row = f.preview.tagged("fieldset")[0];
+  const status = row.tagged("input").at(-1);
+  await f.verify(row);
+  await f.csv().fire("click");
+  assert.equal(f.exported.length, 0);
+  assert.match(f.status.textContent, /código de área/);
+  const phone = row.field("Teléfono");
+  phone.value = "5550100123";
+  await phone.fire("input");
+  assert.equal(status.checked, false);
+  await f.verify(row);
+  row.field("Nombre").value = "Nombre corregido";
+  await f.csv().fire("click");
+  assert.match(f.status.textContent, /confirmación/);
+  assert.equal(f.exported.length, 0);
+  await f.verify(row);
+  await f.csv().fire("click");
+  assert.equal(f.exported[0].referrals[0].phone, "5550100123");
+});
+
+test("referrals verify the host phone and transfer the additional fields without losing the original row", async () => {
+  const row = { ...contact(), location: "Renglón 3", city: "Chicago", relationship: "Vecino" };
+  const f = harness({ readPhoto: () => sheet([row]) });
+  await f.readSheet();
+  await f.verify(f.preview.tagged("fieldset")[0]);
+  await f.confirm().fire("click");
+  assert.match(f.status.textContent, /anfitrión/);
+  assert.equal(f.applied.length, 0);
+  await f.verify();
+  await f.confirm().fire("click");
+  assert.deepEqual(f.applied[0], sheet([row]));
+});
+
+test("unknown or missing document type cannot be applied or exported even when the response includes names", async () => {
+  for (const type of ["unknown", undefined, "unrecognized"]) {
+    const f = harness({ readPhoto: () => ({ ...sheet(), documentType: type }) });
+    await f.readSheet();
+    assert.match(f.status.textContent, /identificar una hoja de referidos ni boletas/);
+    assert.equal(f.csv(), undefined);
+    assert.equal(f.confirm(), undefined);
+    assert.equal(f.read.disabled, false);
+    assert.equal(f.applied.length + f.exported.length, 0);
+  }
+});
+
+test("ticket export rejects an empty selection, keeps a recoverable CSV error editable and guards a changed visit", async () => {
+  const f = harness({ readPhoto: () => tickets(), exportTickets: () => ({ exported: false, message: "Revisa el número repetido." }) });
+  await f.readSheet();
+  const csv = f.csv();
+  const incl = f.preview.field("Incluir esta boleta");
+  incl.checked = false;
+  await incl.fire("change");
+  await csv.fire("click");
+  assert.match(f.status.textContent, /al menos una boleta/);
+  assert.equal(f.exported.length, 0);
+  incl.checked = true;
+  await incl.fire("change");
+  await f.verify();
+  await csv.fire("click");
+  assert.match(f.status.textContent, /repetido/);
+  assert.equal(csv.disabled, false);
+  f.form.dataset.tecVisitId = "new";
+  await csv.fire("click");
+  assert.equal(f.exported.length, 1);
+  assert.equal(f.preview.hidden, true);
+  assert.equal(f.applied.length, 0);
 });

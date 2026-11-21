@@ -4002,30 +4002,38 @@ function createFourteenSheetReferralRow(index) {
         <span>Nombre, teléfono y una nota corta si hace falta.</span>
       </div>
     </div>
-	    <div class="fourteen-sheet-referral-grid">
-	      <label class="native-lead-field">
-	        <span>Nombre</span>
-	        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
-	      </label>
-	      <label class="native-lead-field">
-	        <span>Teléfono</span>
-	        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
-	      </label>
-	      <label class="native-lead-field native-lead-field-full">
-	        <span>Dirección</span>
-	        <input
-	          type="text"
-	          name="referralAddress${index}"
-	          maxlength="240"
-	          placeholder="2059 Desplaines St Blue Island IL 60406"
-	          autocomplete="street-address"
-	        />
-	      </label>
-	      <label class="native-lead-field native-lead-field-full">
-	        <span>Notas</span>
-	        <input type="text" name="referralNotes${index}" maxlength="240" placeholder="Ej. mejor despues de las 6 pm" />
-	      </label>
-	    </div>
+    <div class="fourteen-sheet-referral-grid">
+      <label class="native-lead-field">
+        <span>Nombre</span>
+        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
+      </label>
+      <label class="native-lead-field">
+        <span>Teléfono</span>
+        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
+      </label>
+      <label class="native-lead-field native-lead-field-full">
+        <span>Dirección</span>
+        <input
+          type="text"
+          name="referralAddress${index}"
+          maxlength="240"
+          placeholder="2059 Desplaines St Blue Island IL 60406"
+          autocomplete="street-address"
+          />
+      </label>
+      <label class="native-lead-field">
+        <span>Ciudad o zona</span>
+        <input type="text" name="referralCity${index}" maxlength="100" />
+      </label>
+      <label class="native-lead-field">
+        <span>Relación con el anfitrión</span>
+        <input type="text" name="referralRelationship${index}" maxlength="100" />
+      </label>
+      <label class="native-lead-field native-lead-field-full">
+        <span>Notas</span>
+        <input type="text" name="referralNotes${index}" maxlength="240" placeholder="Ej. mejor despues de las 6 pm" />
+      </label>
+    </div>
   `;
   return row;
 }
@@ -4161,6 +4169,13 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
     readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
       method:"POST", body:{photo:image, accountId}, timeoutMs:65000
     }),
+    exportTickets: sheet => {
+      if (!isCurrentSeller() || sheet.documentType !== "tickets") {
+        return {exported:false, message:"Vuelve a abrir la lectura desde tu cuenta."};
+      }
+      sheetTools.download(sheet);
+      return {exported:true};
+    },
     apply: sheet => sheetTools.applyPhoto(form, sheet, FOURTEEN_SHEET_MAX_REFERRALS, appendReferralRow)
   });
   const exportSheet = (sheet, target) => {
@@ -4478,12 +4493,7 @@ function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user 
   const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(form, {
     user, kind: "programa-4-en-14", contextFields: ["activeCrmRecordId"],
     collect: () => ({ ...Object.fromEntries(new FormData(form)), captureMode: "tec_sheet", activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
-      referrals: Array.from(referralsRoot.querySelectorAll("[data-fourteen-referral-row]")).map((row, index) => ({
-        fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
-        phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
-        address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
-        notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
-      })).filter(r => r.fullName || r.phone || r.address || r.notes) }),
+      referrals: sheetTools.readForm(form).referrals }),
     beforeRestore: fields => {
       const count = Math.min(FOURTEEN_SHEET_MAX_REFERRALS, Math.max(0, ...Object.keys(fields).map(k => Number(k.match(/^referralName(\d+)$/)?.[1] || 0))));
       while (referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length < count) appendReferralRow();
@@ -8849,6 +8859,8 @@ function initCoachCrmWorkspace(user = null) {
       .map((row, index) => ({
         fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
         phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
+        city: row.querySelector(`[name="referralCity${index + 1}"]`)?.value || "",
+        relationship: row.querySelector(`[name="referralRelationship${index + 1}"]`)?.value || "",
         address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
         notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
       }))

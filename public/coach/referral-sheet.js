@@ -5,12 +5,21 @@
   const phoneDigits = value => text(value).replace(/\D/g, "");
   const phoneKey = value => phoneDigits(value).replace(/^1(?=\d{10}$)/, "");
   const validPhone = value => /^\+?[\d().\s\p{Pd}]+$/u.test(text(value)) && /^\d{7,15}$/.test(phoneDigits(value));
-  const hasContent = row => [row.fullName, row.phone, row.address, row.notes].some(value => text(value));
+  function validPhotoPhone(value) {
+    const digits = phoneDigits(value);
+    if (!validPhone(value)) return false;
+    if (text(value).startsWith("+") && !digits.startsWith("1")) {
+      return /^[2-9]\d{9,14}$/.test(digits);
+    }
+    return (digits.length === 10 && !text(value).startsWith("+")) || /^1\d{10}$/.test(digits);
+  }
+  const hasContent = row => [row.fullName, row.phone, row.address, row.notes, row.city, row.relationship].some(value => text(value));
 
   function readForm(form) {
     const value = name => text(form.elements.namedItem(name)?.value);
     const referrals = Array.from(form.querySelectorAll("[data-fourteen-referral-row]"), (row, index) => ({
       fullName: value("referralName" + (index + 1)), phone: value("referralPhone" + (index + 1)),
+      city: value("referralCity" + (index + 1)), relationship: value("referralRelationship" + (index + 1)),
       address: value("referralAddress" + (index + 1)), notes: value("referralNotes" + (index + 1))
     }));
     return { hostName:value("hostName"), hostPhone:value("hostPhone"), representativeName:value("representativeName"),
@@ -31,12 +40,20 @@
   }
 
   function csv(sheet) {
-    const rows = [["Anfitrión", "Teléfono anfitrión", "Nombre", "Teléfono", "Dirección", "Notas del referido", "Representante", "Regalo", "Fecha inicio"]];
+    const tickets = sheet.documentType === "tickets";
+    const extraColumns = !tickets && sheet.referrals.some(row => row.city || row.relationship);
+    const header = tickets
+      ? ["Nombre", "Teléfono", "Dirección", "Ciudad o zona", "Relación", "Ubicación en la foto"]
+      : ["Anfitrión", "Teléfono anfitrión", "Nombre", "Teléfono", "Dirección", "Notas del referido", "Representante", "Regalo", "Fecha inicio"];
+    if (extraColumns) header.push("Ciudad o zona", "Relación con el anfitrión");
+    const rows = [header];
     for (const item of sheet.referrals) {
-      rows.push([
+      const row = tickets ? [item.fullName, phoneKey(item.phone), item.address, item.city, item.relationship, item.location] : [
         sheet.hostName, phoneKey(sheet.hostPhone), item.fullName, phoneKey(item.phone), item.address,
         item.notes, sheet.representativeName, sheet.giftSelected, text(sheet.startDate).slice(0, 10)
-      ]);
+      ];
+      if (extraColumns) row.push(item.city, item.relationship);
+      rows.push(row);
     }
     const quote = field => {
       const value = text(field);
@@ -51,7 +68,7 @@
     const link = document.createElement("a");
     link.href = url;
     const name = text(sheet.hostName).replace(/[^\p{L}\p{N}]+/gu, "-").slice(0,60).replace(/^-|-$/g,"");
-    link.download = "TEC-4-en-14" + (name ? "-" + name : "") + ".csv";
+    link.download = sheet.documentType === "tickets" ? "TEC-boletas.csv" : "TEC-4-en-14" + (name ? "-" + name : "") + ".csv";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -59,6 +76,9 @@
   }
 
   function applyPhoto(form, photo, maxRows, appendRow) {
+    if (photo.documentType && photo.documentType !== "referrals") {
+      return {applied:false, message:"Esta foto no corresponde a una hoja de referidos 4 en 14."};
+    }
     const field = name => form.elements.namedItem(name);
     const manual = readForm(form);
     const conflict = (a,b) => a && b && a !== b;
@@ -80,16 +100,18 @@
     if (!manual.hostPhone && photo.hostPhone) field("hostPhone").value = photo.hostPhone;
     let index = 1;
     for (const row of photo.referrals) {
-      while (field("referralName" + index) && ["Name","Phone","Address","Notes"].some(k => text(field("referral" + k + index)?.value))) index++;
+      while (field("referralName" + index) && ["Name","Phone","Address","Notes","City","Relationship"].some(k => text(field("referral" + k + index)?.value))) index++;
       if (!field("referralName" + index)) appendRow();
       field("referralName" + index).value = row.fullName;
       field("referralPhone" + index).value = row.phone;
       field("referralAddress" + index).value = row.address || "";
+      field("referralCity" + index).value = row.city || "";
+      field("referralRelationship" + index).value = row.relationship || "";
       index++;
     }
     form.dispatchEvent(new Event("input", {bubbles:true}));
     return {applied:true,message:"Datos incorporados al formulario."};
   }
 
-  window.TecReferralSheet = {readForm, review, csv, download, applyPhoto, phoneKey};
+  window.TecReferralSheet = {readForm, review, csv, download, applyPhoto, phoneKey, validPhone, validPhotoPhone};
 })();

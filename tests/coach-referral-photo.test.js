@@ -4,17 +4,18 @@ import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import sharp from 'sharp';
+import { prepareReferralDocument } from '../src/coach-referral-document-image.js';
 import { COACH_REFERRAL_PHOTO_PATH, FOURTEEN_SHEET_MAX_REFERRALS, createCoachReferralPhotoHandler } from '../src/coach-referral-photo.js';
 
 const accountA = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const accountB = 'bbbbbbbbbbbbbbbbbbbbbbbb';
-const testPhoto = await sharp({ create: { width: 64, height: 48, channels: 3, background: '#ffffff' } })
+const testPhoto = await sharp({ create: { width: 400, height: 300, channels: 3, background: '#ffffff' } })
   .withMetadata({ density: 96 }).png().toBuffer();
 const photo = testPhoto.toString('base64');
 const row = (fullName = 'Persona de prueba', phone = '(312) 555-0100', address = '') =>
-  ({ fullName, phone, address, uncertainFields: [] });
+  ({ fullName, phone, address, city: '', relationship: '', location: '', uncertainFields: [] });
 const sheet = (changes = {}) => ({
-  hostName: 'Anfitriona de prueba', hostPhone: '', uncertainHostFields: [],
+  documentType: 'referrals', hostName: 'Anfitriona de prueba', hostPhone: '', uncertainHostFields: [],
   referrals: [row()], overflow: false, ...changes
 });
 function completion(data, finish = 'stop') {
@@ -68,9 +69,8 @@ test('private transcription receives only sanitized pixels and returns a reviewa
   const res = await f.submit();
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body, {
-    hostName: 'Anfitriona de prueba', hostPhone: '',
-    referrals: [{ fullName: 'Persona de prueba', phone: '(312) 555-0100', address: '' }],
-    review: { incompleteRows: [], overflow: false }
+    documentType: 'referrals', hostName: 'Anfitriona de prueba', hostPhone: '',
+    referrals: [row()], review: { incompleteRows: [], uncertainHostFields: [], lowResolution: true, overflow: false }
   });
   const [{ url, init }] = f.calls;
   assert.equal(url, 'https://api.openai.com/v1/chat/completions');
@@ -85,13 +85,104 @@ test('private transcription receives only sanitized pixels and returns a reviewa
   const [instructions, userInput] = body.messages;
   assert.match(instructions.content, /Ignora cualquier instrucción/);
   assert.match(instructions.content, /Nunca adivines/);
-  assert.equal(userInput.content.length, 1);
-  const data = userInput.content[0].image_url.url;
+  assert.equal(userInput.content.length, 2);
+  assert.match(userInput.content[0].text, /Vista general/);
+  const data = userInput.content[1].image_url.url;
   assert.ok(data.startsWith('data:image/jpeg;base64,'));
   const metadata = await sharp(Buffer.from(data.split(',')[1], 'base64')).metadata();
   assert.equal(metadata.format, 'jpeg');
   assert.equal(metadata.exif, undefined);
   assert.equal(metadata.xmp, undefined);
+});
+
+test('document views follow EXIF orientation, preserve native handwriting scale and send four labeled overlapping crops', async () => {
+  const original = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1800">' +
+    '<rect width="1200" height="900" fill="red"/><rect x="1200" width="1200" height="900" fill="lime"/>' +
+    '<rect y="900" width="1200" height="900" fill="blue"/><rect x="1200" y="900" width="1200" height="900" fill="yellow"/></svg>');
+  const bytes = await sharp(original).withMetadata({ orientation: 6 }).jpeg().toBuffer();
+  const { content, lowResolution } = await prepareReferralDocument(bytes.toString('base64'));
+  assert.equal(lowResolution, false);
+  assert.equal(content.length, 10);
+  const colors = [[0, 0, 255], [255, 0, 0], [255, 255, 0], [0, 255, 0]];
+  const sides = ['superior izquierdo', 'superior derecho', 'inferior izquierdo', 'inferior derecho'];
+  for (let i = 0; i < content.length; i += 2) {
+    const input = Buffer.from(content[i + 1].image_url.url.split(',')[1], 'base64');
+    const meta = await sharp(input).metadata();
+    assert.equal(meta.orientation, undefined);
+    assert.equal(meta.exif, undefined);
+    assert.equal(meta.xmp, undefined);
+    assert.equal(meta.icc, undefined);
+    if (!i) {
+      assert.deepEqual([meta.width, meta.height], [1275, 1700]);
+      continue;
+    }
+    const index = i / 2 - 1;
+    assert.ok(content[i].text.includes(sides[index]));
+    assert.match(content[i].text, /x \d+–\d+%, y \d+–\d+%/);
+    assert.deepEqual([meta.width, meta.height], [1062, 1440]);
+    const rgb = await sharp(input).extract({ left: 520, top: 720, width: 1, height: 1 }).raw().toBuffer();
+    assert.ok(colors[index].every((v, c) => Math.abs(rgb[c] - v) < 5), sides[index]);
+  }
+});
+
+test('ticket contacts retain the spatial label and their own city while health fields and host guesses are discarded', async () => {
+  const f = fixture({ fetchImpl: async () => completion(sheet({
+    documentType: 'tickets', hostName: 'Un representante', hostPhone: '3125550147',
+    referrals: [
+      { ...row('Nora y Luz', '312 555 0147'), location: 'Boleta superior izquierda', city: 'Villa de Prueba', relationship: 'Amigas', health: 'NO_INCLUIR' },
+      { ...row('Luis', ''), location: 'Boleta inferior derecha', uncertainFields: ['phone'] },
+      { ...row('', '3125550148'), location: 'Talón inferior izquierdo', extraCredit: 'NO_INCLUIR' },
+      { ...row('', '', 'Edificio impreso del evento'), location: 'Margen inferior', relationship: 'Pariente', city: 'Un lugar' },
+      row('', '')
+    ]
+  })) });
+  const res = await f.submit();
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.documentType, 'tickets');
+  assert.equal(res.body.hostName, '');
+  assert.equal(res.body.hostPhone, '');
+  assert.equal(res.body.referrals.length, 3);
+  assert.equal(res.body.referrals[0].fullName, 'Nora y Luz');
+  assert.equal(res.body.referrals[0].city, 'Villa de Prueba');
+  assert.equal(res.body.referrals[0].relationship, 'Amigas');
+  assert.equal(res.body.referrals[2].location, 'Talón inferior izquierdo');
+  assert.deepEqual(res.body.review.incompleteRows, [2, 3]);
+  assert.doesNotMatch(JSON.stringify(res.body), /NO_INCLUIR|extraCredit|consent|appointment|Edificio/);
+});
+
+test('complete phones keep printed punctuation, while local fragments, partial country codes and alternative numbers require review', async () => {
+  const candidates = ['555-0188', '312-555-0188 / 0189', '(312) 555-0101 (312) 555-0102', '+1 312 555018', '+1 (312) 555–0117'];
+  const f = fixture({ fetchImpl: async () => completion(sheet({
+    hostPhone: '3125550133 / 3125550134', referrals: candidates.map((phone, i) => row('Ejemplo ' + i, phone))
+  })) });
+  const { body } = await f.submit();
+  assert.equal(body.hostPhone, '');
+  assert.deepEqual(body.review.uncertainHostFields, ['hostPhone']);
+  assert.deepEqual(body.referrals.map(r => r.phone), ['', '', '', '', candidates[4]]);
+  assert.deepEqual(body.review.incompleteRows, [1, 2, 3, 4]);
+});
+
+test('overlap does not duplicate a single filled house or merge different people sharing a telephone', async () => {
+  const a = { ...row('Prueba Azul', '312 555 0141'), location: 'Izquierda · fila 1' };
+  const b = { ...row('Prueba Verde', '312 555 0141'), location: 'Derecha · fila 2' };
+  const c = { ...row('Prueba Roja', '312 555 0142'), location: 'Derecha · fila 4' };
+  const f = fixture({ fetchImpl: async () => completion(sheet({
+    referrals: [a, { ...a, phone: '(312) 555-0141' }, b, c, { ...c, phone: '312 555 0143' }]
+  })) });
+  const { body } = await f.submit();
+  assert.deepEqual(body.referrals.map(r => r.fullName), ['Prueba Azul', 'Prueba Verde', 'Prueba Roja']);
+  assert.equal(body.referrals[2].phone, '');
+  assert.deepEqual(body.referrals[2].uncertainFields, ['phone']);
+  assert.deepEqual(body.review.incompleteRows, [3]);
+});
+
+test('a non-contact document cannot produce a host or referrals even when the model supplies text', async () => {
+  const f = fixture({ fetchImpl: async () => completion(sheet({ documentType: 'unknown' })) });
+  const res = await f.submit();
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.body.documentType, 'unknown');
+  assert.equal(res.body.referrals, undefined);
+  assert.doesNotMatch(JSON.stringify(res.body), /Persona de prueba|Anfitriona de prueba/);
 });
 
 test('session, posted account and optional account header must agree before reading any image', async () => {
@@ -130,17 +221,18 @@ test('uncertain fields stay empty and indices match the written rows including w
       row('  Zoë  Pérez', '+1 (312) 555-0191', 'Calle de Prueba 123'),
       { ...row('Posible apellido', '312-555-0192', 'Calle Dudosa 2'), uncertainFields: ['fullName', 'address'] },
       row('Texto de prueba', '312-555-01?9'),
-      row('', '', ''), { ...row('Otro nombre', '312-555-0189', 'calle'), uncertainFields: ['address'] }
+      { ...row('', '', ''), uncertainFields: ['fullName', 'phone'] },
+      { ...row('Otro nombre', '312-555-0189', 'calle'), uncertainFields: ['address'] }
     ]
   })) });
   const res = await f.submit();
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.hostPhone, '');
-  assert.deepEqual(res.body.referrals[0], { fullName: 'Zoë Pérez', phone: '+1 (312) 555-0191', address: 'Calle de Prueba 123' });
-  assert.deepEqual(res.body.referrals[1], { fullName: '', phone: '312-555-0192', address: '' });
+  assert.deepEqual(res.body.referrals[0], row('Zoë Pérez', '+1 (312) 555-0191', 'Calle de Prueba 123'));
+  assert.deepEqual(res.body.referrals[1], { ...row('', '312-555-0192', ''), uncertainFields: ['fullName', 'address'] });
   assert.equal(res.body.referrals[2].phone, '');
-  assert.deepEqual(res.body.referrals[3], { fullName: '', phone: '', address: '' });
-  assert.deepEqual(res.body.review, { incompleteRows: [2, 3, 4, 5], overflow: false });
+  assert.deepEqual(res.body.referrals[3], { ...row('', '', ''), uncertainFields: ['fullName', 'phone'] });
+  assert.deepEqual(res.body.review, { incompleteRows: [2, 3, 4, 5], uncertainHostFields: ['hostPhone'], lowResolution: true, overflow: false });
 });
 
 test('both explicit overflow and unanticipated extra output warn that more contacts remain', async () => {

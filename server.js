@@ -1077,6 +1077,8 @@ const coachProgramSheetReferralSchema = new mongoose.Schema(
     fullName: String,
     phone: String,
     address: String,
+    city: String,
+    relationship: String,
     notes: String,
     createdLeadId: { type: mongoose.Schema.Types.ObjectId, ref: "CoachLeadInbox", default: null },
     instantCallStatus: String,
@@ -16604,6 +16606,8 @@ function limpiarCoachProgramReferral(item = null) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 240);
+  const city = cleanText(item?.city || "").trim().slice(0, 100);
+  const relationship = cleanText(item?.relationship || "").trim().slice(0, 100);
   const notes = String(item?.notes || "").trim().slice(0, 240);
 
   if (!fullName && !phone && !address && !notes) {
@@ -16618,6 +16622,8 @@ function limpiarCoachProgramReferral(item = null) {
     fullName,
     phone,
     address,
+    ...(city ? {city} : {}),
+    ...(relationship ? {relationship} : {}),
     notes
   };
 }
@@ -16693,6 +16699,8 @@ function limpiarCoachProgramReferralView(referral = null, index = 0, sheet = nul
     fullName: referral.fullName || "",
     phone: referral.phone || "",
     address: referral.address || "",
+    city: referral.city || "",
+    relationship: referral.relationship || "",
     notes: referral.notes || "",
     createdLeadId: referral.createdLeadId ? String(referral.createdLeadId) : "",
     instantCallStatus: normalizarCoachProgramInstantStatus(referral.instantCallStatus || ""),
