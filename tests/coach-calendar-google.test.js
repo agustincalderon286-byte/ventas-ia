@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { gmailClient, gmailScope, gmailSendScope } from '../src/coach-hycite-gmail.js';
-import { calendarGoogleClient, calendarScope, isSecondaryCalendarId } from '../src/coach-calendar-google.js';
+import { availabilityScope, calendarGoogleClient, calendarScope, isSecondaryCalendarId } from '../src/coach-calendar-google.js';
 
 const calendarId = 'abcdef0123456789@group.calendar.google.com', otherCalendar = 'feeeddcc00112233@group.calendar.google.com';
 const event = { owner:'seller1', eventId:'c123456789abcdef', calendarId, operationId:'test-confirm-1',
@@ -13,6 +13,8 @@ const json = (status, data) => ({ status, ok:status < 300,json:async()=>data });
 test('Calendar solicita únicamente identidad y acceso a los calendarios creados por TEC con PKCE', () => {
   const url = new URL(calendarGoogleClient(config).authorize('cal.123','challenge','seller@example.com'));
   assert.deepEqual(new Set(url.searchParams.get('scope').split(' ')),new Set(['openid','email',calendarScope]));
+  const upgraded = new URL(calendarGoogleClient(config).authorize('cal.456','challenge','seller@example.com',true));
+  assert.deepEqual(upgraded.searchParams.get('scope').split(' '),['openid','email',calendarScope,availabilityScope]);
   assert.equal(url.searchParams.get('code_challenge_method'),'S256');
   const granted = gmailClient({...config,calendarReady:true}).authorize('gmail-state','challenge',{send:true,mailbox:'seller@example.com'});
   const upgrade = new URL(granted).searchParams;
@@ -20,6 +22,51 @@ test('Calendar solicita únicamente identidad y acceso a los calendarios creados
   assert.deepEqual(new Set(upgrade.get('scope').split(' ')),new Set([gmailScope,gmailSendScope]));
   assert.equal(url.searchParams.get('redirect_uri'),config.origin + '/api/coach/conexiones/gmail/callback');
   for (const id of ['primary','a@example.com','../private','example.com@attacker.test']) assert.equal(isSecondaryCalendarId(id),false);
+});
+
+test('disponibilidad lee solo los dos calendarios del vendedor y falla ante respuestas parciales',async()=>{
+  const start='2035-12-01T19:00:00Z',end='2035-12-01T21:00:00Z',mailbox='seller@example.test';
+  let data={timeMin:start,timeMax:end,calendars:{[mailbox]:{busy:[{start:'2035-12-01T19:20:00Z',end:'2035-12-01T19:50:00Z',summary:'privado'}]},[calendarId]:{busy:[]}}};
+  const google=calendarGoogleClient(config,async(input,init)=>{
+    assert.equal(input,'https://www.googleapis.com/calendar/v3/freeBusy');
+    assert.deepEqual(JSON.parse(init.body),{timeMin:start,timeMax:end,items:[{id:'primary'},{id:calendarId}]});
+    assert.equal(init.headers.Authorization,'Bearer token');return json(200,data);
+  });
+  const query=()=>google.availability('token',calendarId,{start,end},mailbox);
+  assert.deepEqual(await query(),[{start:'2035-12-01T19:20:00.000Z',end:'2035-12-01T19:50:00.000Z'}]);
+  const valid={busy:[]};
+  for(const calendars of [{primary:valid},{[calendarId]:valid},{primary:valid,[calendarId]:{busy:[],errors:[{reason:'notFound'}]}},
+    {primary:{busy:[{start:'bad',end}]},[calendarId]:valid},{primary:{},[calendarId]:valid}]) {
+    data={timeMin:start,timeMax:end,calendars};await assert.rejects(query(),e=>e.status===503);
+  }
+  data={timeMin:end,timeMax:end,calendars:{primary:valid,[calendarId]:valid}};
+  await assert.rejects(query(),e=>e.status===503);
+  data={timeMin:start,timeMax:end,calendars:{primary:{errors:[{reason:'forbidden'}]},[calendarId]:valid}};
+  await assert.rejects(query(),e=>e.status===403 && e.reauthorize);
+});
+
+test('recomprueba el horario al confirmar y recupera sin insertar dos veces tras perder la respuesta',async()=>{
+  const candidate={...event,start:'2090-12-01T20:00:00Z',end:'2090-12-01T20:45:00Z',checkAvailability:true};
+  let busy=true, row, loseResponse=true;
+  const calls=[];
+  const google=calendarGoogleClient(config,async(input,init)=>{
+    if(input.endsWith('/freeBusy')) {
+      calls.push('busy');const {timeMin,timeMax}=JSON.parse(init.body);
+      return json(200,{timeMin,timeMax,calendars:{primary:{busy:busy?[{start:timeMin,end:timeMax}]:[]},[calendarId]:{busy:[]}}});
+    }
+    if(init.method==='GET'){calls.push('read');return row?json(200,row):json(404,{});}
+    assert.equal(init.method,'POST');calls.push('insert');
+    row={...JSON.parse(init.body),etag:'v1'};
+    if(loseResponse) {loseResponse=false;throw Error('sin respuesta');}
+    return json(200,row);
+  });
+  await assert.rejects(google.saveEvent('token',calendarId,candidate),e=>e.status===409&&e.slotBusy);
+  busy=false;
+  await assert.rejects(google.saveEvent('token',calendarId,{...candidate,start:'2001-01-01T12:00:00Z',end:'2001-01-01T13:00:00Z'}),e=>e.slotBusy);
+  await assert.rejects(google.saveEvent('token',calendarId,{...candidate,retryGoogle:true}),/sin respuesta/);
+  busy=true;
+  assert.equal((await google.saveEvent('token',calendarId,{...candidate,retryGoogle:true})).id,candidate.eventId);
+  assert.deepEqual(calls,['busy','busy','read','busy','insert','read']);
 });
 test('eventos personales son idempotentes, se mueven en el mismo calendario y no agregan asistentes',async()=>{
   const records = new Map(), writes=[];

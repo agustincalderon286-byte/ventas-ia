@@ -7,6 +7,8 @@ export const notices = {
   waPhoneInvalid: 'Escribe un solo número de WhatsApp con el signo + y el prefijo del país.',
   waProfileFailed: 'No se pudo actualizar tu número de referencia. Vuelve a intentarlo.',
   calendarConnected: 'Google Calendar conectado. Ya puedes agendar seguimientos desde el chat.',
+  availabilityConnected: 'Ya puedes pedir dos horarios libres para una demo en el chat del Coach.',
+  availabilityMissing: 'Tu calendario de seguimientos está conectado. Para consultar horarios libres, activa el permiso de disponibilidad en Google.',
   calendarDisconnected: 'Se desconectó Google Calendar de Coach. Tus citas siguen en tu calendario.',
   calendarPending: 'Google aún no confirmó la creación del calendario. Comprueba si ya aparece en tu cuenta.',
   calendarWrongAccount: 'Para este piloto, elige la cuenta de Google con el mismo correo que usas en tu Coach.',
@@ -72,10 +74,14 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, persona
   else content = `<p>Autoriza la lectura de Gmail para consultar desde tu Coach el remitente, asunto y un extracto de tus correos recientes. Al consultar ventas de Hy Cite, Coach revisa los últimos 90 días y guarda el asunto, la fecha y el número de orden para que puedas comprobarlos.</p>${form('start', 'Conectar mi Gmail')}`;
   let calendar = '';
   if (pilot && calendarReady) {
+    const availabilityField = '<input type="hidden" name="availability" value="yes">';
+    const availabilityForm = calForm('start','Activar horarios libres',false,availabilityField);
+    const availabilityInfo = 'Para buscar horarios, el Coach consulta los bloques ocupados de tu calendario principal y de «Seguimientos TEC».';
     let controls;
     if (cal?.grant && cal.calendarId) {
       controls = `<p>Conectado con <strong>${esc(cal.mailbox)}</strong>. Tus citas se guardan en el calendario «Seguimientos TEC». Pide en el chat «Agenda una llamada con María mañana a las diez de la mañana».</p>
-        <div class="actions">${calForm('start','Volver a autorizar',true)}${calForm('disconnect','Desconectar Calendar',true)}</div>`;
+        <p>${cal.availabilityEnabled ? 'Horarios libres activados. Pide «Busca dos horarios libres mañana para una demo de 45 minutos».' : availabilityInfo}</p>
+        <div class="actions">${cal.availabilityEnabled ? '' : availabilityForm}${calForm('start','Volver a autorizar',true,cal.availabilityEnabled ? availabilityField : '')}${calForm('disconnect','Desconectar Calendar',true)}</div>`;
     } else if (cal?.grant && cal.provisionState) {
       controls = `<p>Comprueba en Google Calendar si ya aparece «Seguimientos TEC». Si aparece, abre sus ajustes y copia el ID de «Integrar calendario».</p>
         ${calForm('prepare','Vincular mi calendario',false,'<label>ID de Seguimientos TEC <input name="calendarId" required maxlength="280"></label>')}
@@ -84,7 +90,7 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, persona
     } else if (cal?.grant) {
       controls = `<p>Google autorizó tu cuenta ${esc(cal.mailbox)}.</p>${calForm('prepare','Crear mi calendario de seguimientos')}${calForm('start','Volver a autorizar',true)}${calForm('disconnect','Desconectar Calendar',true)}`;
     } else {
-      controls = `<p>Conecta la cuenta de Google que usas en el piloto. Coach creará «Seguimientos TEC» para tus citas y recordatorios.</p>${calForm('start','Conectar mi Google Calendar')}`;
+      controls = `<p>Conecta la cuenta de Google que usas en el piloto. Coach creará «Seguimientos TEC» para tus citas y recordatorios. ${availabilityInfo}</p><div class="actions">${calForm('start','Conectar mi Google Calendar')}${availabilityForm}</div>`;
     }
     calendar = `<section><h2>Google Calendar</h2>${controls}<p>Al desconectar, Coach elimina su permiso guardado. Tus citas permanecen en Google. Puedes retirar el acceso de todo TEC desde <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">tu cuenta de Google</a>.</p></section>`;
   }

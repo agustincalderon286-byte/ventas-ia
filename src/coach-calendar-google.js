@@ -1,11 +1,16 @@
 import { createHash } from 'node:crypto';
 
 export const calendarScope = 'https://www.googleapis.com/auth/calendar.app.created';
+export const availabilityScope = 'https://www.googleapis.com/auth/calendar.freebusy';
 const calendarApi = 'https://www.googleapis.com/calendar/v3';
 const googleToken = 'https://oauth2.googleapis.com/token';
 export const calendarName = 'Seguimientos TEC';
 
 const fail = (text, status) => Object.assign(new Error(text), { status });
+const isoTime = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,9})?)?(?:Z|[+-]\d\d:\d\d)$/;
+const timestamp = value => typeof value === 'string' && isoTime.test(value) ? Date.parse(value) : NaN;
+const unavailableSlot = () => Object.assign(fail('Ese horario ya no está disponible.', 409), {slotBusy:true});
+const incompleteAvailability = () => fail('Google no pudo verificar ambos calendarios.', 503);
 const calendarPath = id => {
   if (!isSecondaryCalendarId(id)) throw fail('Elige el calendario personal de TEC.', 400);
   return '/calendars/' + encodeURIComponent(id);
@@ -21,7 +26,9 @@ export function calendarGoogleClient(config, fetcher = fetch) {
     if (res.ok) return res.json();
     const error = fail('Google Calendar no pudo completar la operación.', res.status);
     const body = await res.json().catch(() => ({}));
-    if (res.status === 401 || body.error === 'invalid_grant') error.reauthorize = true;
+    if (res.status === 401 || body.error === 'invalid_grant' ||
+        (res.status === 403 && (body.error?.errors?.some(item => item.reason === 'insufficientPermissions') ||
+          body.error?.details?.some(item => item.reason === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT')))) error.reauthorize = true;
     throw error;
   }
   const token = fields => request(googleToken, { method: 'POST', body: new URLSearchParams({
@@ -32,11 +39,41 @@ export function calendarGoogleClient(config, fetcher = fetch) {
       ...(data && { 'Content-Type': 'application/json' }), ...(etag && { 'If-Match': etag }) },
     ...(data && { body: JSON.stringify(data) })
   });
+  async function availability(access, calendarId, {start,end}, mailbox) {
+    const from = timestamp(start), to = timestamp(end);
+    if (!isSecondaryCalendarId(calendarId) || !Number.isFinite(from) || !Number.isFinite(to) || from >= to) {
+      throw fail('Revisa el período para buscar horarios libres.', 400);
+    }
+    const result = await api(access,'/freeBusy',{method:'POST',data:{
+      timeMin:start,timeMax:end,items:[{id:'primary'},{id:calendarId}]
+    }});
+    if (!(timestamp(result?.timeMin) <= from && timestamp(result?.timeMax) >= to)) throw incompleteAvailability();
+    const calendars = result.calendars;
+    const primary = calendars?.primary ?? (mailbox && calendars?.[mailbox]);
+    const blocks = [];
+    for (const item of [primary,calendars?.[calendarId]]) {
+      if (Array.isArray(item?.errors) && item.errors.some(error => ['forbidden','insufficientPermissions'].includes(error?.reason))) {
+        throw Object.assign(fail('Google solicita renovar el permiso de disponibilidad.',403),{reauthorize:true});
+      }
+      if (!Array.isArray(item?.busy) || (item.errors !== undefined && (!Array.isArray(item.errors) || item.errors.length))) {
+        throw incompleteAvailability();
+      }
+      for (const block of item.busy) {
+        const left = timestamp(block?.start), right = timestamp(block?.end);
+        if (!(left < right)) throw incompleteAvailability();
+        if (left < to && right > from) blocks.push({
+          start:new Date(Math.max(from,left)).toISOString(),end:new Date(Math.min(to,right)).toISOString()
+        });
+      }
+    }
+    return blocks.sort((a,b) => a.start.localeCompare(b.start));
+  }
   return {
-    authorize(state, challenge, email) {
+    availability,
+    authorize(state, challenge, email, withAvailability = false) {
       const params = new URLSearchParams({
         client_id: config.clientId, redirect_uri: redirect, state, code_challenge: challenge,
-        code_challenge_method: 'S256', scope: 'openid email ' + calendarScope, response_type: 'code',
+        code_challenge_method: 'S256', scope: ['openid','email',calendarScope,...(withAvailability ? [availabilityScope] : [])].join(' '), response_type: 'code',
         access_type: 'offline', prompt: 'consent select_account', login_hint: email
       });
       return 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
@@ -62,14 +99,29 @@ export function calendarGoogleClient(config, fetcher = fetch) {
       };
       let row;
       if (mode === 'create') {
-        try {
-          row = await api(access, base + '?sendUpdates=none&fields=id,htmlLink,etag', {
-            method:'POST', data:{ id:eventId, ...payload }
-          });
-        } catch (error) {
-          if (error.status !== 409) throw error;
-          row = await exact();
-          if (row.extendedProperties.private.tecOperation !== operationId || !matchesConfirmedFields(row,payload)) throw fail('Esta cita ya cambió.', 409);
+        const confirmedEvent = async () => {
+          const existing = await exact();
+          if (existing.extendedProperties.private.tecOperation !== operationId || !matchesConfirmedFields(existing,payload)) throw fail('Esta cita ya cambió.', 409);
+          return existing;
+        };
+        if (event.checkAvailability && event.retryGoogle) {
+          // The previous insert may have succeeded even when its response was lost.
+          try { row = await confirmedEvent(); }
+          catch (error) { if (error.status !== 404) throw error; }
+        }
+        if (!row) {
+          if (event.checkAvailability) {
+            const blocks = await availability(access,calendarId,event,event.mailbox);
+            if (blocks.length || timestamp(event.start) <= Date.now()) throw unavailableSlot();
+          }
+          try {
+            row = await api(access, base + '?sendUpdates=none&fields=id,htmlLink,etag', {
+              method:'POST', data:{ id:eventId, ...payload }
+            });
+          } catch (error) {
+            if (error.status !== 409) throw error;
+            row = await confirmedEvent();
+          }
         }
       } else {
         row = await exact();

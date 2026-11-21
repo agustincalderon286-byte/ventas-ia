@@ -9294,6 +9294,12 @@ function renderCoachMessageActions(card, actions = []) {
       element.type = "button";
       element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
       element.textContent = String(action.label).trim();
+    } else if (action?.type === "calendarSlot" && [1, 2].includes(action.choice) &&
+        typeof action.searchId === "string" && /^[a-f0-9]{32}$/.test(action.searchId)) {
+      element = document.createElement("button");
+      element.type = "button";
+      element.textContent = "Elegir horario " + action.choice;
+      element.dataset.coachCalendarChoice = element.textContent + " " + action.searchId;
     } else if (["mailConfirm", "mailCancel", "calendarConfirm", "calendarCancel", "waPersonalConfirm", "waCancel"].includes(action?.type) &&
         typeof action.id === "string" && /^[a-f0-9]{12}$/i.test(action.id)) {
       element = document.createElement("button");
@@ -18008,7 +18014,7 @@ async function loadCoachAppPage() {
 
     if (!text || coachChatBusy) return { ok: false };
     coachVoice?.pausePlayback(null, options.replyMode === "audio");
-    const userHandles = addCoachMessage(chatMessages, "user", text);
+    const userHandles = addCoachMessage(chatMessages, "user", options.displayText || text);
     if (options.audioUrl) coachVoice?.attachInput(userHandles, options.audioUrl, options.audioDuration);
     clearCoachChatInputs();
     toggleCoachChatBusy(true);
@@ -18174,6 +18180,11 @@ async function loadCoachAppPage() {
         cloudButton.dataset.coachWaCloudUsed = "1";
         cloudButton.disabled = true;
         sendCoachMessage(cloudButton.dataset.coachWaCloudSend);
+        return;
+      }
+      const slotButton = event.target.closest("[data-coach-calendar-choice]");
+      if (slotButton) {
+        sendCoachMessage(slotButton.dataset.coachCalendarChoice, { displayText: slotButton.textContent });
         return;
       }
       const mailButton = event.target.closest("[data-coach-mail-command]");

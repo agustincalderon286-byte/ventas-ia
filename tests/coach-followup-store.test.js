@@ -32,7 +32,10 @@ function database() {
     return old;
   }
   const result=value=>({lean:async()=>structuredClone(value)});
-  return {rows,create:async d=>rows.push(structuredClone(d)),findOne:q=>result(rows.find(d=>matches(d,q))),
+  return {rows,create:async d=>{
+    if (rows.some(row=>row._id===d._id)) throw Object.assign(new Error('duplicate'),{code:11000});
+    rows.push(structuredClone(d));
+  },findOne:q=>result(rows.find(d=>matches(d,q))),
     find:q=>({sort:()=>({limit:n=>result(rows.filter(d=>matches(d,q)).sort((a,b)=>a.startsAt-b.startsAt).slice(0,n))})}),
     updateOne:async (q,updateDoc)=>({matchedCount:update(q,updateDoc)?1:0}),
     findOneAndUpdate:(q,updateDoc)=>result(update(q,updateDoc))};
@@ -104,4 +107,34 @@ test('Google puede reconciliar respuestas perdidas usando el mismo eventId y ope
   assert.equal((await repo.confirm(binding,id,api)).status,'retry');
   assert.equal((await repo.confirm(binding,id,api)).status,'saved');
   assert.deepEqual(calls[0],calls[1]);
+});
+
+test('una búsqueda solo permite confirmar la última opción y conserva su identidad al recuperar una respuesta perdida',async()=>{
+  const {repo}=create();
+  const options={...input,checkAvailability:true,availabilitySearchId:'f'.repeat(32)};
+  const first=await repo.prepare(binding,options);
+  const second=await repo.prepare(binding,{...options,start:'2027-01-09T02:00:00.000Z',end:'2027-01-09T02:30:00.000Z'});
+  assert.equal((await repo.confirm(binding,first.id,{})).status,'unavailable');
+  const calls=[];
+  const api={saveEvent:async event=>{
+    calls.push(event);
+    if (calls.length===1) throw new Error('response lost');
+    return {id:event.eventId};
+  },syncLead:async()=>true};
+  assert.equal((await repo.confirm(binding,second.id,api)).status,'retry');
+  assert.equal(await repo.prepare(binding,options),null);
+  assert.equal((await repo.confirm(binding,second.id,api)).status,'saved');
+  assert.deepEqual(calls.map(event=>event.retryGoogle),[false,true]);
+  assert.equal(calls[0].eventId,calls[1].eventId);
+  assert.equal(await repo.prepare(binding,options),null);
+});
+
+test('un horario que se ocupó vence la propuesta sin registrar un seguimiento en TEC',async()=>{
+  const {repo}=create();
+  const {id}=await repo.prepare(binding,{...input,checkAvailability:true,availabilitySearchId:'a'.repeat(32)});
+  const api={saveEvent:async()=>{throw Object.assign(new Error('ocupado'),{slotBusy:true,status:409});},
+    syncLead:async()=>assert.fail('no se debe cambiar el prospecto')};
+  assert.equal((await repo.confirm(binding,id,api)).status,'slotBusy');
+  assert.equal((await repo.confirm(binding,id,api)).status,'unavailable');
+  assert.deepEqual(await repo.search(binding),[]);
 });

@@ -1,19 +1,22 @@
 import mongoose from 'mongoose';
 import { purgeCalendarProposals } from './coach-followup-store.js';
 import { createHash, randomBytes } from 'node:crypto';
-import { calendarGoogleClient, calendarScope, calendarDescription, isSecondaryCalendarId } from './coach-calendar-google.js';
+import { availabilityScope, calendarGoogleClient, calendarScope, calendarDescription, isSecondaryCalendarId } from './coach-calendar-google.js';
 import { openToken, sealToken } from './coach-hycite-gmail.js';
 
 const schema = new mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId, stateHash:String, sessionId:String, deadline:Date, verifier:String,
   exchangeId:String, accountSub:{type:String,unique:true,sparse:true}, mailbox:String, encryptedToken:String,
-  grant:String, calendarId:String, marker:String, provisionState:String, provisionTime:Date
+  grant:String, calendarId:String, marker:String, provisionState:String, provisionTime:Date,
+  requestAvailability:Boolean, availabilityEnabled:Boolean, bookingLease:String, bookingLeaseUntil:Date
 }, {versionKey:false, writeConcern:{w:'majority'}});
 const Store = mongoose.models.CoachPersonalCalendar || mongoose.model('CoachPersonalCalendar', schema);
 const random = () => randomBytes(32).toString('base64url');
 const digest = text => createHash('sha256').update(text).digest('base64url');
 const ownerKey = id => 'calendar-refresh:' + id;
 const api = '/api/coach/conexiones/calendar/';
+// Longer than the sum of bounded token, availability, event and reconciliation requests.
+const bookingLeaseMs = 2 * 60000;
 
 export function createCoachCalendarConnections({config,store=Store,google=calendarGoogleClient(config),purge=purgeCalendarProposals}) {
   const access = async doc => {
@@ -42,20 +45,52 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
     return saved.matchedCount ? 'calendarConnected' : 'busy';
   }
 
+  async function connectedCalendar(owner,grant,needsAvailability) {
+    if (!owner || typeof grant !== 'string' || !grant || !config.calendarReady) throw new Error('Conecta Google Calendar.');
+    const doc = await store.findOne({_id:owner,grant,calendarId:{$exists:true}}).lean();
+    if (!doc?.encryptedToken) throw new Error('La conexión cambió.');
+    if (needsAvailability && !doc.availabilityEnabled) {
+      throw Object.assign(new Error('Activa horarios libres en Mis conexiones.'),{status:403,reauthorize:true});
+    }
+    return doc;
+  }
+  async function authorizedToken(doc,needsAvailability,lease) {
+    const token = await access(doc);
+    if (!await store.exists({_id:doc._id,grant:doc.grant,calendarId:doc.calendarId,
+      ...(needsAvailability && {availabilityEnabled:true}),...(lease && {bookingLease:lease})})) {
+      throw new Error('La conexión cambió.');
+    }
+    return token;
+  }
+
   const service = {
     async getConnection(owner) {
       if (!config.calendarReady) return null;
-      const doc = await store.findById(owner,'mailbox calendarId grant').lean();
-      return doc?.grant && doc.calendarId ? {grant:doc.grant,mailbox:doc.mailbox,calendarId:doc.calendarId} : null;
+      const doc = await store.findById(owner,'mailbox calendarId grant availabilityEnabled').lean();
+      return doc?.grant && doc.calendarId ? {grant:doc.grant,mailbox:doc.mailbox,calendarId:doc.calendarId,availabilityEnabled:doc.availabilityEnabled === true} : null;
+    },
+    async availability({owner,grant,start,end}) {
+      const doc = await connectedCalendar(owner,grant,true);
+      const token = await authorizedToken(doc,true);
+      return google.availability(token,doc.calendarId,{start,end},doc.mailbox);
     },
     async saveEvent(event) {
-      const {owner,grant} = event;
-      if (!owner || typeof grant !== 'string' || !grant) throw new Error('La conexión cambió.');
-      const doc = await store.findOne({_id:owner,grant,calendarId:{$exists:true}}).lean();
-      if (!doc?.encryptedToken || !config.calendarReady) throw new Error('Conecta Google Calendar.');
-      const token = await access(doc);
-      if (!await store.exists({_id:owner,grant,calendarId:doc.calendarId})) throw new Error('La conexión cambió.');
-      return google.saveEvent(token,doc.calendarId,{...event,calendarId:doc.calendarId});
+      const doc = await connectedCalendar(event.owner,event.grant,event.checkAvailability);
+      const save = async lease => google.saveEvent(await authorizedToken(doc,event.checkAvailability,lease),
+        doc.calendarId,{...event,calendarId:doc.calendarId,mailbox:doc.mailbox});
+      if (!event.checkAvailability) return save();
+      const lease = random();
+      const guard = {_id:doc._id,grant:doc.grant,calendarId:doc.calendarId,availabilityEnabled:true};
+      const now = new Date();
+      const locked = await store.updateOne({...guard,$or:[
+        {bookingLeaseUntil:{$exists:false}}, {bookingLeaseUntil:{$lte:now}}
+      ]},{$set:{bookingLease:lease,bookingLeaseUntil:new Date(now.getTime()+bookingLeaseMs)}});
+      if (!locked.matchedCount) throw Object.assign(new Error('Hay otra cita en proceso de confirmación.'),{status:503});
+      try {
+        return await save(lease);
+      } finally {
+        await store.updateOne({_id:doc._id,bookingLease:lease},{$unset:{bookingLease:1,bookingLeaseUntil:1}});
+      }
     }
   };
 
@@ -63,21 +98,22 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
     service,
     async panel(id) {
       if (!config.calendarReady) return null;
-      return store.findById(id,'mailbox grant calendarId provisionState provisionTime').lean();
+      return store.findById(id,'mailbox grant calendarId provisionState provisionTime availabilityEnabled').lean();
     },
     register(app, own, back) {
-      app.post(api + 'start', own(async (_req,res,{id,session,email}) => {
+      app.post(api + 'start', own(async (req,res,{id,session,email}) => {
         if (!config.calendarReady) return back(res,'calendarDisabled');
         const state = 'cal.' + random(), verifier = random();
-        await store.updateOne({_id:id},{$set:{stateHash:digest(state),verifier,sessionId:session,
+        const requestAvailability = req.body?.availability === 'yes';
+        await store.updateOne({_id:id},{$set:{stateHash:digest(state),verifier,sessionId:session,requestAvailability,
           deadline:new Date(Date.now()+10*60000)},$unset:{exchangeId:1}},{upsert:true});
-        return res.redirect(303,google.authorize(state,digest(verifier),email));
+        return res.redirect(303,google.authorize(state,digest(verifier),email,requestAvailability));
       }));
       app.post(api + 'disconnect', own(async (_req,res,{id}) => {
         // Google revokes the project's grants together, including this seller's Gmail.
         // Drop the usable credential while retaining the calendar ID for reconnection.
         const previous = await store.findOneAndUpdate({_id:id},{$unset:{grant:1,encryptedToken:1,stateHash:1,exchangeId:1,
-          sessionId:1,deadline:1,verifier:1}},{new:false}).lean();
+          sessionId:1,deadline:1,verifier:1,requestAvailability:1,availabilityEnabled:1}},{new:false}).lean();
         if (previous?.grant) await purge({owner:id,grant:previous.grant},config.key);
         return back(res,'calendarDisconnected');
       }));
@@ -107,16 +143,22 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
       if (!config.calendarReady) return back(res,'calendarDisabled');
       const exchangeId = random();
       const pending = await store.findOneAndUpdate({_id:id,stateHash:digest(req.query.state),sessionId:session,deadline:{$gt:new Date()}},
-        {$set:{exchangeId},$unset:{stateHash:1,sessionId:1,verifier:1,deadline:1}},{new:false}).lean();
+        {$set:{exchangeId},$unset:{stateHash:1,sessionId:1,verifier:1,deadline:1,requestAvailability:1}},{new:false}).lean();
       if (!pending) return back(res,'expired');
       if (req.query.error || typeof req.query.code !== 'string') return back(res,'denied');
       const tokens = await google.exchange(req.query.code,pending.verifier);
-      if (!tokens.access_token || !String(tokens.scope || '').split(/\s+/).includes(calendarScope)) return back(res,'denied');
+      const scopes = String(tokens.scope || '').split(/\s+/);
+      if (!tokens.access_token || !scopes.includes(calendarScope)) return back(res,'denied');
       const user = await google.profile(tokens.access_token);
       if (user.email_verified !== true || !user.sub || !user.email || user.email.toLowerCase() !== email ||
           (pending.accountSub && pending.accountSub !== user.sub)) return back(res,'calendarWrongAccount');
       const encryptedToken = tokens.refresh_token ? sealToken(tokens.refresh_token,config.key,ownerKey(id)) : pending.encryptedToken;
       if (!encryptedToken) return back(res,'denied');
+      let availabilityEnabled = pending.requestAvailability === true && scopes.includes(availabilityScope);
+      if (availabilityEnabled && !tokens.refresh_token && !pending.availabilityEnabled) {
+        const renewed = await google.refresh(openToken(encryptedToken,config.key,ownerKey(id)));
+        availabilityEnabled = Boolean(renewed.access_token) && String(renewed.scope || '').split(/\s+/).includes(availabilityScope);
+      }
       let calendarId = pending.calendarId;
       if (calendarId) {
         try {
@@ -133,13 +175,17 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
       const unset = replaceMissing ? {exchangeId:1,calendarId:1,provisionState:1,provisionTime:1} : {exchangeId:1};
       try {
         const saved = await store.updateOne({_id:id,exchangeId},{$set:{accountSub:user.sub,mailbox:user.email,
-          encryptedToken,grant,marker},$unset:unset});
+          encryptedToken,grant,marker,availabilityEnabled},$unset:unset});
         if (!saved.matchedCount) return back(res,'busy');
       } catch (error) {
         if (error.code === 11000) return back(res,'calendarWrongAccount');
         throw error;
       }
-      return back(res,calendarId ? 'calendarConnected' : await provision(id,grant,tokens.access_token));
+      const status = calendarId ? 'calendarConnected' : await provision(id,grant,tokens.access_token);
+      if (status === 'calendarConnected' && pending.requestAvailability) {
+        return back(res,availabilityEnabled ? 'availabilityConnected' : 'availabilityMissing');
+      }
+      return back(res,status);
     }
   };
 }

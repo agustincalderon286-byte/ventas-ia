@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import {createHash, randomBytes} from 'node:crypto';
 import {createCoachCalendarConnections} from '../src/coach-calendar-connections.js';
 import {registerCoachConnections} from '../src/coach-connections.js';
-import {calendarScope,calendarDescription} from '../src/coach-calendar-google.js';
+import {availabilityScope,calendarScope,calendarDescription} from '../src/coach-calendar-google.js';
 
 function harness() {
   const docs = new Map(), calls=[], calendars=new Map(), routes=new Map();
   const match = (row,filter) => row && Object.entries(filter).every(([key,value])=>{
+    if (key === '$or') return value.some(condition => match(row,condition));
     if (value?.$exists != null) return (key in row) === value.$exists;
     if (value?.$gt) return row[key] > value.$gt;
+    if (value?.$lte) return row[key] <= value.$lte;
     return value instanceof Date ? row[key]?.getTime() === value.getTime() : row[key] === value;
   });
   const change=(row,updates)=>{
@@ -35,7 +37,7 @@ function harness() {
   };
   const config={calendarReady:true,key:randomBytes(32)};
   const google={
-    authorize:(state,challenge,email)=>({state,challenge,email}),
+    authorize:(state,challenge,email,withAvailability)=>({state,challenge,email,withAvailability}),
     exchange:async(code,verifier)=>{
       calls.push({name:'exchange',code,verifier});
       return {access_token:code,refresh_token:code,scope:code==='denied'?'openid':calendarScope};
@@ -107,6 +109,66 @@ test('si Google crea el calendario y se pierde la respuesta, se recupera comprob
   assert.equal(h.calls.filter(c=>c.name==='createCalendar').length,2);
 });
 
+test('el permiso de horarios libres pertenece al vendedor y requiere consentimiento explícito y persistente',async()=>{
+  const h=harness(),a=h.seller('a'),b=h.seller('b');
+  const exchange=h.google.exchange;
+  h.google.exchange=async(...args)=>({...await exchange(...args),scope:calendarScope+' '+availabilityScope});
+  const first=await h.post('start',a);
+  assert.equal(first.withAvailability,false);await h.callback(a,first.state,'a');
+  const as=await h.service.getConnection('a');
+  assert.equal(as.availabilityEnabled,false);
+  const upgraded=await h.post('start',b,{availability:'yes'});
+  assert.equal(upgraded.withAvailability,true);assert.equal(await h.callback(b,upgraded.state,'b'),'availabilityConnected');
+  const bs=await h.service.getConnection('b');
+  assert.equal(bs.availabilityEnabled,true);
+  const input={start:'2035-12-01T18:00:00Z',end:'2035-12-01T22:00:00Z'};
+  h.google.availability=async(token,id,period,mailbox)=>{assert.equal(token,'b');assert.equal(id,bs.calendarId);assert.deepEqual(period,input);assert.equal(mailbox,b.email);return [];};
+  await assert.rejects(h.service.availability({owner:a.id,grant:as.grant,...input}),e=>e.reauthorize);
+  await assert.rejects(h.service.availability({owner:a.id,grant:bs.grant,...input}));
+  assert.deepEqual(await h.service.availability({owner:b.id,grant:bs.grant,calendarId:as.calendarId,mailbox:a.email,...input}),[]);
+  await assert.rejects(h.service.saveEvent({owner:a.id,grant:as.grant,checkAvailability:true}),e=>e.reauthorize);
+  h.google.exchange=async(...args)=>({...await exchange(...args),scope:calendarScope+' '+availabilityScope,refresh_token:undefined});
+  assert.equal(await h.callback(a,(await h.post('start',a,{availability:'yes'})).state,'a'),'availabilityMissing');
+  h.google.refresh=async key=>({access_token:key,scope:calendarScope+' '+availabilityScope});
+  assert.equal(await h.callback(a,(await h.post('start',a,{availability:'yes'})).state,'a'),'availabilityConnected');
+  h.google.exchange=exchange;
+  assert.equal(await h.callback(a,(await h.post('start',a,{availability:'yes'})).state,'a'),'availabilityMissing');
+  assert.equal((await h.service.getConnection('a')).availabilityEnabled,false);
+  assert.equal((await h.service.getConnection('b')).availabilityEnabled,true);
+});
+
+test('dos propuestas distintas para el mismo horario se comprueban por turnos, independientemente para cada vendedor',async()=>{
+  const h=harness();
+  const exchange=h.google.exchange;
+  h.google.exchange=async(...args)=>({...await exchange(...args),scope:calendarScope+' '+availabilityScope});
+  async function proposal(owner,eventId) {
+    const actor=h.seller(owner);
+    await h.callback(actor,(await h.post('start',actor,{availability:'yes'})).state,owner);
+    return {owner,grant:(await h.service.getConnection(owner)).grant,eventId,checkAvailability:true,
+      start:'2090-12-01T18:00:00Z',end:'2090-12-01T19:00:00Z'};
+  }
+  const first=await proposal('a','first'), alternative={...first,eventId:'alternative'}, other=await proposal('b','other');
+  const inGoogle=Promise.withResolvers(), finish=Promise.withResolvers(), taken=new Set(), checks=[];
+  h.google.saveEvent=async(_token,calendarId,event)=>{
+    checks.push(event.eventId);
+    if (event.eventId==='first') {inGoogle.resolve();await finish.promise;}
+    const key=calendarId+'/'+event.start;
+    if(taken.has(key)) throw Object.assign(new Error('Se ocupó el horario'),{slotBusy:true,status:409});
+    taken.add(key);return {id:event.eventId};
+  };
+  h.docs.get('a').bookingLease='expired';
+  h.docs.get('a').bookingLeaseUntil=new Date(0);
+  const pending=h.service.saveEvent(first);
+  await inGoogle.promise;
+  await assert.rejects(h.service.saveEvent(alternative),e=>e.status===503);
+  assert.deepEqual(await h.service.saveEvent(other),{id:'other'});
+  finish.resolve();assert.deepEqual(await pending,{id:'first'});
+  assert.equal(h.docs.get('a').bookingLease,undefined);
+  await assert.rejects(h.service.saveEvent(alternative),e=>e.slotBusy&&e.status===409);
+  assert.deepEqual(checks,['first','other','alternative']);
+  assert.equal(h.docs.get('a').bookingLease,undefined);
+});
+
 test('Mis conexiones y callback compartido conservan las barreras de sesión, piloto y CSRF para Calendar',async()=>{
   const h=harness(), routes=new Map(), gmailQueries=[];
   const project={key:randomBytes(32),ready:true,calendarReady:true,pilot:['a@example.com','b@example.com']};
@@ -128,6 +190,7 @@ test('Mis conexiones y callback compartido conservan las barreras de sesión, pi
   const page='/mis-conexiones/',cal='/api/coach/conexiones/calendar/',mail='/api/coach/conexiones/gmail/';
   const panel=await run('get',page,'a');
   assert.match(panel.body,/Conectar mi Google Calendar/);assert.match(panel.body,/a@example.com/);
+  assert.match(panel.body,/name="availability" value="yes"/);assert.match(panel.body,/Activar horarios libres/);
   const csrf=panel.body.match(/name="csrf" value="([^"]+)"/)[1];
   assert.equal((await run('post',cal+'start','b',{body:{csrf}})).code,403);
   assert.equal((await run('post',cal+'start','z',{body:{csrf}})).code,403);

@@ -31,10 +31,13 @@ test('las acciones de correo unen botones al código que se vio y usan enlaces d
     {type:'waOpen',accountId:'a',sessionId:'s1',to:'+13125550123',text:'Hola María & José',url:'https://example.invalid'},
     {type:'waOpen',accountId:'a',sessionId:'s1',to:'https://example.invalid',text:'Hola'},
     {type:'waOpen',to:'+13125550123',text:'Hola'},
-    {type:'waConfirm',id:'aa11bb22cc33'}
+    {type:'waConfirm',id:'aa11bb22cc33'},
+    {type:'calendarSlot',choice:2,searchId:'f'.repeat(32)},
+    {type:'calendarSlot',choice:3,searchId:'f'.repeat(32)},
+    {type:'calendarSlot',choice:1,searchId:'otra búsqueda'}
   ]);
   const controls=card.children[0].children;
-  assert.equal(controls.length,11);
+  assert.equal(controls.length,12);
   assert.equal(controls[0].dataset.coachChatActionWorkspace,'cierre');
   assert.equal(controls[1].dataset.coachMailCommand,'Confirmar envío AA11BB22CC33');
   assert.equal(controls[2].dataset.coachMailCommand,'Cancelar borrador AA11BB22CC33');
@@ -46,6 +49,8 @@ test('las acciones de correo unen botones al código que se vio y usan enlaces d
   assert.equal(controls[8].dataset.coachMailCommand,'Confirmar borrador WhatsApp AA11BB22CC33');
   assert.equal(controls[9].dataset.coachMailCommand,'Descartar WhatsApp AA11BB22CC33');
   assert.equal(controls[10].href,'https://wa.me/13125550123?text=Hola%20Mar%C3%ADa%20%26%20Jos%C3%A9');
+  assert.equal(controls[11].textContent,'Elegir horario 2');
+  assert.equal(controls[11].dataset.coachCalendarChoice,'Elegir horario 2 '+'f'.repeat(32));
   assert.equal(controls[3].target,'_blank');assert.equal(controls[4].rel,'noopener noreferrer');
   const register=app.slice(app.indexOf('  [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {',app.indexOf('  coachVoice = window.TecCoachVoice?.init')),app.indexOf('  chatInput?.addEventListener',app.indexOf('  coachVoice = window.TecCoachVoice?.init')));
   let events={},commands=[];

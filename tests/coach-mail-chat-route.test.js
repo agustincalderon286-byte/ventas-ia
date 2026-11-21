@@ -142,6 +142,18 @@ test('el agente exige sesión propia, participación en el piloto y cuenta activ
   assert.deepEqual(recorded.db,[]); assert.deepEqual(recorded.gmail,[]); assert.deepEqual(recorded.model,[]);
 });
 
+test('una búsqueda de horarios desde el chat dirige al vendedor al permiso opcional sin consultar Gmail ni al modelo',async()=>{
+  const {request,recorded}=harness({
+    calendarStore:{findById(id){assert.equal(id,user._id);return {lean:async()=>({calendarId:'tec',grant:'own',mailbox:user.email})};}}
+  });
+  const result=await request({...base,pregunta:'Búscame dos espacios de 45 minutos mañana para una demo',coachTimeZone:'America/Chicago'});
+  assert.equal(result.data.coachCalendarAgent,true);
+  assert.match(result.data.respuesta,/disponibilidad/);
+  assert.equal(result.data.coachHelpActions[0].type,'connections');
+  assert.deepEqual(recorded.model,[]);
+  assert.deepEqual(recorded.gmail,[]);
+});
+
 test('el Chef público omite el agente privado y una pregunta normal del Coach sigue a su ruta habitual', async () => {
   const {request,recorded}=harness();
   await request({...base,mode:'chef'}, {anonymous:true});

@@ -51,7 +51,13 @@ export function createFollowupStore({key,store=Model,now=Date.now}) {
     },
     async prepare(b,proposal,existing) {
       const nowMs=now(), id=randomId(6).toUpperCase();
-      const row={...scope(b),_id:existing?.eventId || randomId(16)};
+      const searchId=proposal.availabilitySearchId;
+      if (proposal.checkAvailability && (!/^[a-f0-9]{32}$/.test(searchId || '') || existing)) return null;
+      // All choices from one signed search share one Google event ID.
+      const eventId=proposal.checkAvailability
+        ? createHmac('sha256',key).update(JSON.stringify([b.owner.toString(),b.calendarId,b.grant,b.session,searchId])).digest('hex').slice(0,32)
+        : existing?.eventId || randomId(16);
+      const row={...scope(b),_id:eventId};
       const deadline=new Date(nowMs+30*minute);
       const pending={...authorization(b),id,phase:'preview',deadline,content:seal(row,id,proposal)};
       if (existing) {
@@ -59,7 +65,15 @@ export function createFollowupStore({key,store=Model,now=Date.now}) {
         const result=await store.updateOne(query,{$set:{pending}});
         if (!result.matchedCount) return null;
       } else {
-        await store.create({...row,ref:row._id.slice(0,12).toUpperCase(),version:0,pending,removeAfter:deadline});
+        try {
+          await store.create({...row,ref:row._id.slice(0,12).toUpperCase(),version:0,pending,removeAfter:deadline});
+        } catch (error) {
+          if (error.code!==11000 || !proposal.checkAvailability) throw error;
+          // A different choice supersedes the previous preview, up to the instant confirmation starts.
+          const editable={...row,current:{$exists:false},'pending.phase':'preview'};
+          const changed=await store.updateOne(editable,{$set:{pending,removeAfter:deadline}});
+          if (!changed.matchedCount) return null;
+        }
       }
       return {id};
     },
@@ -91,7 +105,8 @@ export function createFollowupStore({key,store=Model,now=Date.now}) {
       let receipt=saved.pending.phase==='crm' ? current(saved) : null;
       try {
         if (!receipt) {
-          const response=await saveEvent({...proposal,owner:b.owner,grant:b.grant,eventId:saved._id,operationId:id.toLowerCase()});
+          const response=await saveEvent({...proposal,owner:b.owner,grant:b.grant,eventId:saved._id,operationId:id.toLowerCase(),
+            ...(proposal.checkAvailability && {retryGoogle:saved.pending.phase==='google'})});
           if (response?.id !== saved._id) throw new Error('Respuesta incompleta de Calendar');
           receipt={...proposal,operationId:id.toLowerCase(),htmlLink:response.htmlLink || '',etag:response.etag || ''};
           const checkpoint=await store.updateOne(guard,{$set:{
@@ -115,7 +130,7 @@ export function createFollowupStore({key,store=Model,now=Date.now}) {
           const changes={$unset:{pending:1}};
           if (!saved.current) changes.$set={removeAfter:new Date(nowMs+30*minute)};
           await store.updateOne(guard,changes);
-          return {status:e.reauthorize?'reconnect':'changed'};
+          return {status:e.slotBusy?'slotBusy':e.reauthorize?'reconnect':'changed'};
         }
         await store.updateOne(guard,{$set:{'pending.leaseUntil':new Date(now())}});
         return {status:receipt?'crmPending':e?.reauthorize?'reconnect':'retry'};

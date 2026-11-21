@@ -17,10 +17,13 @@ export function calendarIntent(text) {
   // Instructions for an email stay in the mail agent, including dates mentioned in its body.
   if (/\b(?:correo|gmail|email|borrador|responde|respondele|contestale)\b/.test(t) && !/^(?:agenda(?:me)?|programa(?:me)?|reagenda|reprograma|mueve)\b/.test(t)) return null;
   const object = /\b(?:seguimientos?|citas?|agendas?|calendarios?|calendar|llamadas?|demos?|reuniones?|visitas?|recordatorios?)\b/.test(t);
-  if (!object) return null;
+  const slotRequest = /\b(?:horarios?|espacios?|huecos?|horas?|bloques?|cupos?|ratos?|momentos?) (?:libres?|disponibles?)\b|\b(?:mi disponibilidad|(?:que )?disponibilidad (?:tengo|hay)|tengo disponibilidad|tengo (?:tiempo|espacio) libre|cuando puedo (?:agendar|hacer|programar|reservar)|(?:cuando (?:estoy|tengo)|estoy) libre)\b/.test(t)
+    || /\b(?:busca(?:me)?|encuentra(?:me)?|propon(?:me)?|sugiere(?:me)?|dame|necesito|quiero)\b.*\b(?:espacios?|horarios?|huecos?|opciones|disponibilidad)\b/.test(t) && (object || /\b(?:para (?:hoy|manana)|de \d+ minutos|disponibilidad|(?:dos|2) (?:horarios|espacios|huecos))\b/.test(t));
+  if (!object && !slotRequest) return null;
   if (/\b(?:como (?:puedo|debo|se)|ejemplo de|explicame|ense[nñ]ame|practicar|simula|supongamos|no (?:me )?(?:agendes|programes|muevas|quiero))\b/.test(t)) return null;
   if (/\b(?:cada|diari[ao]|semanal(?:mente)?|mensual(?:mente)?|todos los|todas las|recurrente)\b/.test(t)) return {kind:'recurring'};
   if (/\b(?:invita(?:r|le)?|invitacion|invitados|manda(?:le)? una invitacion)\b/.test(t) && !/\bsin invitados\b/.test(t)) return {kind:'invitation'};
+  if (slotRequest) return {kind:'availability'};
   if (/\b(?:mueve(?:me)?|cambia(?:me)?|reagenda(?:me|r)?|reprograma(?:me|r)?|pospon(?:me)?|aplaza(?:me)?)\b/.test(t)) return {kind:'move'};
   if (/\b(?:muestra(?:me)?|consulta(?:r)?|que (?:tengo|citas|seguimientos)|ver mi|lista(?:me)?|revisa(?:me)?)\b/.test(t)) return {kind:'list'};
   if (/\b(?:agenda(?:me|r)?|programa(?:me|r)?|crea(?:me|r)?|agrega(?:me|r)?|anota(?:me|r)?|pon(?:me)?|reservame)\b/.test(t) && !/^(?:mi |la )?agenda$/.test(t)) return {kind:'create'};
@@ -86,7 +89,7 @@ function parseClock(t) {
 
 // Try offsets on both sides of a DST transition. A skipped or repeated local hour
 // needs clarification before any calendar request.
-function resolveInstant(civilDay, hour, minute, zone) {
+export function resolveInstant(civilDay, hour, minute, zone) {
   const wall = civilDay + (hour*60+minute)*60000;
   const fmt = new Intl.DateTimeFormat('en-GB',{timeZone:zone, timeZoneName:'longOffset'});
   const candidates = new Set();
@@ -114,18 +117,22 @@ export function readFollowup(text, previous = {}, {timeZone, now=Date.now()} = {
   const result = question => ({state,question});
   const today = zone ? localDate(now,zone) : null;
   const destination = previous.kind === 'move' ? t.match(/\bdel?\s+(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)\s+(?:al?|para el)\s+(.+)$/)?.[1] : '';
-  const day = today == null ? null : parseDate(destination || t,today);
+  const dateText = previous.kind === 'availability'
+    ? t.replace(/\besta (?:manana|tarde|noche)\b/g,'hoy').replace(/\b(?:en|por|de) la manana\b/g,'')
+    : t;
+  const day = today == null ? null : parseDate(destination || dateText,today);
   if (Number.isNaN(day)) return result('Esa fecha no existe. ¿Qué fecha quieres usar?');
   if (day != null) state.day = day;
   const timeText = t.replace(/^\d{4}-\d{2}-\d{2}\b|^\d{1,2}[/-]\d{1,2}[/-]\d{4}\b|^\d{1,2} de [a-z]+\b/,'');
-  const parsed = parseClock(timeText);
+  const parsed = previous.kind === 'availability' ? null : parseClock(timeText);
   if (parsed?.invalid) return result('¿A qué hora? Escribe, por ejemplo, «18:30».');
   if (parsed) state.clock = parsed;
   else if (state.clock?.ambiguous && /^(?:por la |de la |en la )?(?:am|pm|tarde|noche|manana)[.!]?$/.test(t)) {
     state.clock = {hour:(state.clock.ambiguous % 12) + (/pm|tarde|noche/.test(t)?12:0),minute:state.clock.minute};
     if (t === 'manana' && previous.day != null) state.day = previous.day;
   }
-  const nameLabel = /(?:\bcon\s+|\b(?:llam(?:ar|ada)|visitar)\s+a\s+|\bseguimiento\s+a\s+)(?:la (?:clienta|cliente) |el cliente )?(.+?)(?=\s+(?:(?:para |por )?el (?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d)|(?:el |para )?d[ií]a\b|(?:para |del |el |al |este |pr[oó]ximo )?(?:hoy|pasado ma[ñn]ana|ma[ñn]ana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{4}[-/]|\d{1,2} (?:de |[/-]))|a la[s]?\b|en mi\b|(?:y )?(?:recu[eé]rdame|av[ií]same)|durante\b|por \d|solo (?:en )?(?:mi |el )?calendario)|[,.;!?]|$)/iu.exec(clean);
+  const contactText=previous.kind==='availability' ? clean.replace(/\b(?:por|en|de) la (?:ma[ñn]ana|tarde|noche)\b|\b(?:entre|de|desde) (?:las? )?\d+(?::\d+|\s)|\bde (?:media|una?|dos) horas?\b/giu,',') : clean;
+  const nameLabel = /(?:\bcon\s+|\b(?:llam(?:ar|ada)|visitar)\s+a\s+|\bseguimiento\s+a\s+)(?:la (?:clienta|cliente) |el cliente )?(.+?)(?=\s+(?:(?:para |por )?el (?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d)|(?:el |para )?d[ií]a\b|(?:para |del |el |al |este |pr[oó]ximo )?(?:hoy|pasado ma[ñn]ana|ma[ñn]ana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{4}[-/]|\d{1,2} (?:de |[/-]))|a la[s]?\b|en mi\b|(?:y )?(?:recu[eé]rdame|av[ií]same)|durante\b|por \d|solo (?:en )?(?:mi |el )?calendario)|[,.;!?]|$)/iu.exec(contactText);
   if (/^solo (?:en )?(?:mi |el )?calendario[.!]?$/.test(t)) state.calendarOnly=true;
   if (nameLabel) { state.name = nameLabel[1].trim(); delete state.selectedId; }
   else if (['name','choice'].includes(previous.waiting) && /^[\p{L}][\p{L} .’'-]{0,75}$/u.test(clean) && !day && !parsed && !zoneName && !state.calendarOnly) state.name = clean.replace(/[.!]+$/,'');
@@ -144,6 +151,14 @@ export function readFollowup(text, previous = {}, {timeZone, now=Date.now()} = {
   const duration = new RegExp('(?:durante |duracion (?:de )?|dura |por )'+quantity).exec(t);
   if (reminder) state.reminderMinutes = toMinutes(reminder);
   if (duration) state.durationMinutes = toMinutes(duration);
+  if (previous.kind==='availability') {
+    const length=/\b(\d+(?:[,.]\d+)?|media|una?|dos|quince|treinta|cuarenta y cinco)\s*(min(?:utos?)?s?|h(?:oras?|rs?)?)(?: y (media|cuarto))?\b(?! antes)/.exec(t);
+    if (length) {
+      const n=Number(length[1].replace(',','.'));
+      const amount=Number.isFinite(n) ? n : {media:0.5,un:1,una:1,dos:2,quince:15,treinta:30,'cuarenta y cinco':45}[length[1]];
+      state.durationMinutes=amount*(length[2].startsWith('h')?60:1)+(length[3]==='media'?30:length[3]==='cuarto'?15:0);
+    }
+  }
   if (/\bsin (?:aviso|recordatorio)\b/.test(t)) state.reminderMinutes = null;
   return {state};
 }
