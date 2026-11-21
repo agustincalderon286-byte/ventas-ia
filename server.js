@@ -4,6 +4,7 @@ import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
+import { registerCoachConnections } from "./src/coach-connections.js";
 import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
@@ -25568,6 +25569,17 @@ app.get("/api/coach/me", async (req, res) => {
 });
 
 registerCoachCardOrder(app, { requireActive: requireCoachActivo, users: CoachUser });
+app.get("/mis-conexiones/", async (req, res, next) => {
+  res.set("Cache-Control", "private, no-store").vary("Cookie");
+  const auth = await obtenerCoachAuth(req);
+  if (!auth.user) return res.redirect(303, "/coach/login/");
+  req.tecRequestAuth = auth;
+  next();
+});
+registerCoachConnections(app, {
+  requireActive: requireCoachActivo,
+  switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE])
+});
 registerCoachClosingSupervisor(app, { requireActive: requireCoachActivo, users: CoachUser });
 
 app.get("/api/coach/integrations/highlevel", async (req, res) => {
