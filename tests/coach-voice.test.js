@@ -68,7 +68,7 @@ function chatFixture(){
   coachChatBusy:false,coachVoice:{pausePlayback(){},attachInput:(handles,url)=>inputAudio.push(url),speak:async(text)=>{spoken.push(text);return false;}},
   addCoachMessage:(container,role,text)=>{messages.push({role,text});return [{}];},updateCoachMessage:(handles,text)=>messages.push({role:'assistant-update',text}),
   clearCoachChatInputs(){},toggleCoachChatBusy(value){busy=value;context.coachChatBusy=value;},setCoachChatStatusText(){},getCoachDemoStageMeta:()=>({id:'conexion'}),getCoachDemoStageId:()=> 'conexion',getCoachChatSessionId:()=> 'session-test',getCoachVisitorId:()=> 'visitor-test',getCoachDemoEvents:()=>[],
-  getActiveCoachHealthSurveyContext:()=>null,getActiveCoachProgram414Context:()=>null,getActiveCoachOrderCalcContext:()=>null,getActiveCoachDecisionContext:()=>null,getActiveCoachDemoOutcomeContext:()=>null,
+  getActiveCoachHealthSurveyContext:()=>null,getActiveCoachProgram414Context:()=>null,getActiveCoachOrderCalcContext:()=>null,getActiveCoachDecisionContext:()=>null,getActiveCoachDemoOutcomeContext:()=>null,getActiveCoachCrmContext:()=>null,
   streamCoachChatReply:async(body,handlers)=>{sent.push(body);handlers.onDelta('Respuesta');return{respuesta:'Respuesta completa'};},renderCoachRepLeadSummary(){},renderActiveLeadContext(){},floatingCoachMode:'idle',floatingChatInput:null,chatInput:{focus(){}}};
  const send=vm.runInNewContext(source+';sendCoachMessage',context);return{send,messages,spoken,sent,inputAudio,get busy(){return busy;}};
 }

@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { createCoachMailAgent } from '../src/coach-mail-agent.js';
+import { sealToken } from '../src/coach-hycite-gmail.js';
 import { createMailDrafts } from '../src/coach-mail-drafts.js';
 
 function memoryStore() {
@@ -134,4 +136,75 @@ test('si se pierde la escritura del recibo después de la aceptación de Gmail, 
   assert.equal((await drafts.confirm({...p,deliver:async()=>({id:'google-id'})})).status,'sent');
   advance(3*60000);
   assert.equal((await drafts.confirm({...p,deliver:()=>assert.fail('envío duplicado')})).status,'unknown');
+});
+
+test('una corrección invalida el código anterior y conserva las cabeceras al enviar la versión revisada', async()=>{
+  const {drafts} = fixture();
+  const thread = {threadId:'afe12', parent:'<parent@example.test>',references:['<parent@example.test>']};
+  const first = await drafts.prepare({...alice,...example,thread});
+  await assert.rejects(drafts.revise({...alice,id:first.id,changes:{subject:''}}));
+  const edited = await drafts.revise({...alice,id:first.id,changes:{body:'Nos vemos el viernes.'}});
+  assert.equal(edited.status,'pending'); assert.notEqual(edited.id,first.id);
+  const forbidden = () => assert.fail('Nunca se puede enviar una versión desactualizada.');
+  assert.equal((await drafts.confirm({...alice,id:first.id,deliver:forbidden})).status,'unavailable');
+  assert.equal((await drafts.cancel({...alice,id:first.id})).status,'unavailable');
+  assert.equal((await drafts.view({...alice,owner:'otro',id:edited.id})).status,'unavailable');
+  const sent = [];
+  const send = id => drafts.confirm({...alice,id,deliver:async m=>{sent.push(m);return {id:'message'};}});
+  await Promise.all([send(edited.id),send(edited.id)]);
+  assert.deepEqual(sent,[{...example,body:'Nos vemos el viernes.',thread}]);
+});
+
+test('dos correcciones simultáneas no dejan dos versiones enviables, incluso en borradores del piloto anterior',async()=>{
+  const {drafts,store} = fixture();
+  const first = await drafts.prepare({...alice,...example});
+  delete store.docs.get(first.id).revisionCode;
+  const revisions = await Promise.all(['A','B'].map(body=>drafts.revise({...alice,id:first.id,changes:{body}})));
+  assert.deepEqual(revisions.map(r=>r.status).sort(),['pending','unavailable']);
+  const current = revisions.find(r=>r.id);
+  const deliveries = [];
+  const deliver = async m=>{deliveries.push(m.body);return {id:'new'};};
+  await Promise.all([drafts.confirm({...alice,id:first.id,deliver}),drafts.confirm({...alice,id:current.id,deliver})]);
+  assert.deepEqual(deliveries,[current.body]);
+});
+
+test('desde el chat: segundo correo, texto en otro turno, corrección, revisión rechazada y un envío en el hilo elegido',async()=>{
+  const {drafts} = fixture(), key = randomBytes(32), sends = [], ids = [], model = [];
+  const thread={threadId:'02bf',parent:'<segundo@cliente.test>',references:['<segundo@cliente.test>']};
+  const account = id => ({_id:id,mailbox:id+'@tec.test',grant:id+'-grant',sendEnabled:true,encryptedToken:sealToken(id+'-token',key,id)});
+  const apps = {a:account('a'),b:account('b')};
+  const agent=createCoachMailAgent({config:{ready:true,pilot:['*'],key}, drafts, switched:()=>false,
+    store:{findById:id=>({lean:async()=>apps[id]})},syncSales:async()=>({confirmed:[],review:[],limited:false}),
+    gmail:{refresh:async t=>({access_token:t}),
+      inbox:async()=>['0fa','02b'].map(id=>({id,subject:'Seguimiento',from:'cliente',date:new Date().toISOString()})),
+      replyTarget:async(token,id)=>{ids.push([token,id]);return {to:'contacto@cliente.test',subject:'Seguimiento',thread};},
+      send:async(token,msg)=>{sends.push({token,msg});return {id:'enviado'};}
+    },rewrite:async(body,text)=>{model.push({body,text});return {body:'Hola, '+body};}
+  });
+  const call=(text,token='',owner='a',sessionId='chat')=>agent({req:{body:{accountId:owner,coachMailPending:token}},
+    auth:{user:{_id:owner,email:owner+'@tec.test'},session:{tokenHash:'login-'+owner}},sessionId,text});
+  const list = await call('Revisa mis correos');
+  for (const [id,chat] of [['b','chat'],['a','otro']]) {
+    const wrong = await call('Responde al segundo',list.coachMailPending,id,chat);
+    assert.match(wrong.respuesta,/Primero pídeme/);
+  }
+  const question=await call('Responde al segundo',list.coachMailPending);
+  assert.match(question.respuesta,/Qué quieres decirle/);
+  const draft=await call('Mensaje: Puedo pasar el jueves.',question.coachMailPending);
+  assert.deepEqual(ids,[['a-token','02b']]);assert.match(draft.respuesta,/Respuesta en el mismo hilo/);
+  const edit = await call('Mejor el viernes',draft.coachMailPending);
+  const code = r => r.coachHelpActions.find(a=>a.type==='mailConfirm').id;
+  assert.match(edit.respuesta,/Puedo pasar el viernes/);assert.notEqual(code(draft),code(edit));
+  const polished = await call('Hazlo más amable',edit.coachMailPending);
+  assert.deepEqual(model,[{body:'Puedo pasar el viernes.',text:'Hazlo más amable'}]);
+  assert.deepEqual(sends,[]);
+  await call('Confirmar envío '+code(edit));
+  assert.deepEqual(sends,[]);
+  assert.equal(await call('¿Cómo hago una demo?',polished.coachMailPending),null);
+  await Promise.all([call('Confirmar envío '+code(polished)),call('Confirmar envío '+code(polished))]);
+  assert.equal(sends.length,1);assert.equal(sends[0].token,'a-token');
+  assert.deepEqual(sends[0].msg,{from:'a@tec.test',to:'contacto@cliente.test',subject:'Seguimiento',body:'Hola, Puedo pasar el viernes.',thread});
+  const report = await call('Mándame por correo mi resumen de ventas de Hy Cite');
+  const fallback = await call('Hazlo más amable',report.coachMailPending);
+  assert.match(fallback.respuesta,/Mensaje:/);assert.equal(model.length,1);
 });

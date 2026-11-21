@@ -9294,25 +9294,31 @@ function renderCoachMessageActions(card, actions = []) {
       element.type = "button";
       element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
       element.textContent = String(action.label).trim();
-    } else if ((action?.type === "mailConfirm" || action?.type === "mailCancel") &&
+    } else if (["mailConfirm", "mailCancel", "calendarConfirm", "calendarCancel"].includes(action?.type) &&
         typeof action.id === "string" && /^[a-f0-9]{12}$/i.test(action.id)) {
       element = document.createElement("button");
       element.type = "button";
-      const confirm = action.type === "mailConfirm";
-      element.textContent = confirm ? "Confirmar envío" : "Cancelar borrador";
+      const labels = { mailConfirm: "Confirmar envío", mailCancel: "Cancelar borrador",
+        calendarConfirm: "Confirmar cita", calendarCancel: "Descartar cita" };
+      element.textContent = labels[action.type];
       element.dataset.coachMailCommand = element.textContent + " " + action.id.toUpperCase();
-    } else if (action?.type === "connections" || action?.type === "mailSource") {
+    } else if (["connections", "mailSource", "calendarEvent"].includes(action?.type)) {
       let href = "/mis-conexiones/";
       if (action.type === "mailSource") {
         if (typeof action.id !== "string" || !/^[a-f0-9]{1,64}$/i.test(action.id) ||
             typeof action.mailbox !== "string" || !/^[^\s@]+@[^\s@]+$/.test(action.mailbox)) return;
         href = "https://mail.google.com/mail/?authuser=" + encodeURIComponent(action.mailbox) + "#all/" + action.id;
+      } else if (action.type === "calendarEvent") {
+        if (typeof action.url !== "string" ||
+            !/^https:\/\/(?:calendar\.google\.com|www\.google\.com)\/calendar\/[^\s\\]*$/.test(action.url)) return;
+        href = action.url;
       }
       element = document.createElement("a");
       element.href = href;
       element.target = "_blank";
       element.rel = "noopener noreferrer";
-      element.textContent = String(action.label || (action.type === "connections" ? "Mis conexiones" : "Ver correo"));
+      element.textContent = action.type === "calendarEvent" ? "Abrir en Google Calendar" :
+        String(action.label || (action.type === "connections" ? "Mis conexiones" : "Ver correo"));
     } else {
       return;
     }
@@ -17985,6 +17991,8 @@ async function loadCoachAppPage() {
       const requestBody = {
         accountId: String(me.user.id),
         coachMailVersion: 1,
+        coachCalendarVersion: 1,
+        coachTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         responseMode: options.replyMode === "audio" ? "audio" : "text",
         pregunta: text,
         sessionId: getCoachChatSessionId(),
@@ -18004,11 +18012,15 @@ async function loadCoachAppPage() {
         activeOrderCalcContext: getActiveCoachOrderCalcContext() || null,
         activeDecisionContext: getActiveCoachDecisionContext() || null,
         activeDemoOutcomeContext: getActiveCoachDemoOutcomeContext() || null,
+        activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
         mode: "coach",
         teamChatOwnerId: window.TecTeamChat?.getTeamOwnerId?.() || ""
       };
       if (pendingMailStep?.accountId === requestBody.accountId && pendingMailStep.sessionId === requestBody.sessionId) {
         requestBody.coachMailPending = pendingMailStep.token;
+      }
+      if (pendingCalendarStep?.accountId === requestBody.accountId && pendingCalendarStep.sessionId === requestBody.sessionId) {
+        requestBody.coachCalendarPending = pendingCalendarStep.token;
       }
       assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
       let streamedReply = "";
@@ -18033,11 +18045,14 @@ async function loadCoachAppPage() {
       pendingMailStep = mailAgent && typeof data.coachMailPending === "string" && data.coachMailPending
         ? { accountId: requestBody.accountId, sessionId: requestBody.sessionId, token: data.coachMailPending }
         : null;
+      pendingCalendarStep = mailAgent && typeof data.coachCalendarPending === "string" && data.coachCalendarPending
+        ? { accountId: requestBody.accountId, sessionId: requestBody.sessionId, token: data.coachCalendarPending }
+        : null;
       const actions = Array.isArray(data.coachHelpActions) ? data.coachHelpActions : [];
       updateCoachMessage(assistantMessageHandles, finalReply, {
         actions: mailAgent ? actions : actions.filter(action => action?.type === "workspace")
       });
-      // Private mail replies stay on screen and do not go to the speech provider.
+      // Keep private messages and appointments on screen and out of the speech provider.
       if (mailAgent) return { ok: true };
 
       if (data.profile) {
@@ -18088,6 +18103,7 @@ async function loadCoachAppPage() {
   };
 
   let pendingMailStep = null;
+  let pendingCalendarStep = null;
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })

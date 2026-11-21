@@ -21,15 +21,22 @@ test('las acciones de correo unen botones al código que se vio y usan enlaces d
     {type:'connections',href:'https://example.invalid/'},
     {type:'mailSource',id:'ab1234',mailbox:'a+tec@example.test',label:'Abrir aviso',href:'https://example.invalid/'},
     {type:'mailSource',id:'javascript:bad',mailbox:'foo@example.test'},
-    {type:'mailConfirm',id:'aa11bb22cc33 extra'}
+    {type:'mailConfirm',id:'aa11bb22cc33 extra'},
+    {type:'calendarConfirm',id:'aabbcc123456'},
+    {type:'calendarCancel',id:'aabbcc123456'},
+    {type:'calendarEvent',url:'https://www.google.com/calendar/event?eid=def456'},
+    {type:'calendarEvent',url:'https://calendar.google.com.example.test/calendar/event?eid=def456'}
   ]);
   const controls=card.children[0].children;
-  assert.equal(controls.length,5);
+  assert.equal(controls.length,8);
   assert.equal(controls[0].dataset.coachChatActionWorkspace,'cierre');
   assert.equal(controls[1].dataset.coachMailCommand,'Confirmar envío AA11BB22CC33');
   assert.equal(controls[2].dataset.coachMailCommand,'Cancelar borrador AA11BB22CC33');
   assert.equal(controls[3].href,'/mis-conexiones/');
   assert.equal(controls[4].href,'https://mail.google.com/mail/?authuser=a%2Btec%40example.test#all/ab1234');
+  assert.equal(controls[5].dataset.coachMailCommand,'Confirmar cita AABBCC123456');
+  assert.equal(controls[6].dataset.coachMailCommand,'Descartar cita AABBCC123456');
+  assert.equal(controls[7].href,'https://www.google.com/calendar/event?eid=def456');
   assert.equal(controls[3].target,'_blank');assert.equal(controls[4].rel,'noopener noreferrer');
   const register=app.slice(app.indexOf('  [chatMessages, floatingChatMessages].filter(Boolean).forEach(root => {',app.indexOf('  coachVoice = window.TecCoachVoice?.init')),app.indexOf('  chatInput?.addEventListener',app.indexOf('  coachVoice = window.TecCoachVoice?.init')));
   let events={},commands=[];
@@ -48,7 +55,7 @@ function chatFixture(responses) {
     window:{sessionStorage:{getItem:()=>'cierre'}}, COACH_WORKSPACE_TAB_KEY:'workspace',
     getCoachChatSessionId:()=>currentSession,getCoachVisitorId:()=>'',getCoachDemoStageMeta:()=>({id:'a'}),
     getCoachDemoStageId:()=>'',getCoachDemoEvents:()=>[],getActiveCoachHealthSurveyContext:()=>null,
-    getActiveCoachProgram414Context:()=>null,getActiveCoachOrderCalcContext:()=>null,getActiveCoachDecisionContext:()=>null,getActiveCoachDemoOutcomeContext:()=>null,
+    getActiveCoachProgram414Context:()=>null,getActiveCoachOrderCalcContext:()=>null,getActiveCoachDecisionContext:()=>null,getActiveCoachDemoOutcomeContext:()=>null,getActiveCoachCrmContext:()=>null,
     clearCoachChatInputs(){},toggleCoachChatBusy:value=>{context.coachChatBusy=value;},setCoachChatStatusText(){}, coachVoice:{pausePlayback(){},speak:t=>spoken.push(t)},
     addCoachMessage:()=>[{}],updateCoachMessage:(_handle,txt,opts)=>updates.push({txt,opts}),
     renderCoachRepLeadSummary(){},renderActiveLeadContext(){},floatingCoachMode:'idle',floatingChatInput:null,chatInput:null,
@@ -75,6 +82,19 @@ test('un cambio de conversación o cuenta descarta el token privado anterior',as
   f.setSession('s2');await f.send('hola');
   f.context.me.user.id='b';await f.send('hola');
   assert.ok(f.requests.every(p=>!p.coachMailPending));
+});
+
+test('una precisión de cita conserva su propia conversación y reemplaza el contexto de Gmail',async()=>{
+  const f=chatFixture([
+    {coachMailAgent:true,respuesta:'Borrador',coachMailPending:'correo'},
+    {coachMailAgent:true,respuesta:'¿A qué hora?',coachCalendarPending:'cita'},
+    {coachMailAgent:true,respuesta:'Listo'}
+  ]);
+  for (const text of ['Revisa Gmail','Agéndame una llamada','A las 3 pm']) await f.send(text,{replyMode:'audio'});
+  assert.deepEqual(f.requests.map(p=>p.coachCalendarPending),[undefined,undefined,'cita']);
+  assert.deepEqual(f.requests.map(p=>p.coachMailPending),[undefined,'correo',undefined]);
+  assert.ok(f.requests.every(p=>p.coachTimeZone && p.coachCalendarVersion===1));
+  assert.deepEqual(f.spoken,[]);
 });
 
 test('el chat admite la respuesta JSON del agente incluso cuando fetch expone ReadableStream',async()=>{

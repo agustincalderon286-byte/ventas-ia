@@ -1,5 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
+import { isGmailAddress } from './coach-mail-address.js';
+import { replyEnvelope, threadSubjectHeader, validatedThread } from './coach-gmail-thread.js';
+export { isGmailAddress };
+
 export const gmailScope = 'https://www.googleapis.com/auth/gmail.readonly';
 export const gmailSendScope = 'https://www.googleapis.com/auth/gmail.send';
 const api = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -34,18 +38,6 @@ async function requestJson(url, options) {
   return response.json();
 }
 
-// Each draft has exactly one explicit recipient. Display names and address lists
-// are intentionally not interpreted as mailboxes.
-export function isGmailAddress(address) {
-  if (typeof address !== 'string' || address.length > 254 || /[\s\x00-\x1f\x7f]/u.test(address)) return false;
-  const parts = address.split('@');
-  if (parts.length !== 2 || parts[0].length > 64) return false;
-  const local = /^[a-z\d!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z\d!#$%&'*+\/=?^_`{|}~-]+)*$/i;
-  const label = /^[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?$/i;
-  const domain = parts[1].split('.');
-  return local.test(parts[0]) && domain.length >= 2 && domain.every(part => label.test(part));
-}
-
 function encodedSubject(subject) {
   // RFC 2047 encoded words must fit 75 characters and must not split a UTF-8 character.
   const words = [];
@@ -61,15 +53,17 @@ function encodedSubject(subject) {
   return words.map(word => '=?UTF-8?B?' + Buffer.from(word).toString('base64') + '?=').join('\r\n ');
 }
 
-function rawMessage({ from, to, subject, body }) {
+function rawMessage({ from, to, subject, body, thread }) {
   if (!isGmailAddress(from) || !isGmailAddress(to)) throw new Error('Se necesita una dirección de correo válida.');
-  if (typeof subject !== 'string' || !subject.trim() || subject.length > 300 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(subject)) {
+  if (typeof subject !== 'string' || (!thread && !subject.trim()) || subject.length > (thread ? 900 : 300) || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(subject)) {
     throw new Error('Revisa el asunto del correo.');
   }
   if (typeof body !== 'string' || !body.trim() || Buffer.byteLength(body) > 50000) throw new Error('Revisa el texto del correo.');
   const encodedBody = Buffer.from(body.replace(/\r\n|\r|\n/g, '\r\n')).toString('base64');
   const mime = ['Date: ' + new Date().toUTCString(), 'From: ' + from, 'To: ' + to,
-    'Subject: ' + encodedSubject(subject), 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8',
+    'Subject: ' + (thread && (threadSubjectHeader(subject) || !subject) ? subject : encodedSubject(subject)),
+    ...(thread ? ['In-Reply-To: ' + thread.parent, 'References: ' + thread.references.join('\r\n ')] : []),
+    'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64', '', ...encodedBody.match(/.{1,76}/g), ''].join('\r\n');
   return Buffer.from(mime).toString('base64url');
 }
@@ -116,7 +110,9 @@ export function gmailClient(config) {
         code_challenge: challenge, code_challenge_method: 'S256', scope: send ? gmailScope + ' ' + gmailSendScope : gmailScope,
         response_type: 'code', access_type: 'offline', prompt: send ? 'consent' : 'consent select_account' });
       if (send) {
-        query.set('include_granted_scopes', 'true');
+        // With Calendar enabled, keep its independent grant out of the Gmail token.
+        // Both Gmail scopes requested by the send upgrade are explicit above.
+        query.set('include_granted_scopes', config.calendarReady ? 'false' : 'true');
         query.set('login_hint', mailbox);
       }
       return 'https://accounts.google.com/o/oauth2/v2/auth?' + query;
@@ -145,11 +141,23 @@ export function gmailClient(config) {
       }));
       return rows.filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
     },
+    async replyTarget(access, id) {
+      if (typeof id !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(id)) return null;
+      const params = new URLSearchParams({ format:'metadata', fields:'id,threadId,payload/headers' });
+      for (const name of ['From','Reply-To','Subject','Message-ID','References','In-Reply-To']) params.append('metadataHeaders', name);
+      let message;
+      try { message = await read(api + '/messages/' + encodeURIComponent(id) + '?' + params, access); }
+      catch (error) { if (error.status === 404) return null; throw error; }
+      if (message.id !== id) return null;
+      try { return replyEnvelope(message); }
+      catch { return null; }
+    },
     async send(access, message) {
-      const raw = rawMessage(message);
+      const thread = message.thread ? validatedThread(message.thread) : undefined;
+      const raw = rawMessage({ ...message, thread });
       const result = await requestJson(api + '/messages/send', {
         method: 'POST', headers: { Authorization: 'Bearer ' + access, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw })
+        body: JSON.stringify({ raw, ...(thread ? { threadId:thread.threadId } : {}) })
       });
       if (!result?.id) throw new Error('Google no devolvió el comprobante de envío.');
       return { id: result.id };

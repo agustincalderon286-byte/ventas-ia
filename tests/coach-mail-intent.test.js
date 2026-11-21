@@ -111,7 +111,7 @@ test('el router semántico clasifica instrucciones personales y nunca ve el buz�
 });
 
 test('el router distingue hipótesis, negaciones y tareas no soportadas antes de consultar el modelo', async () => {
-  for (const input of ['Imagina que revisas mi buzón','Nunca revises mis correos','Elimina mis correos antiguos','Reenvía el correo del cliente','Responde al correo más reciente','Sí, envíalo','Confirmo envío 12']) {
+  for (const input of ['Imagina que revisas mi buzón','Nunca revises mis correos','Elimina mis correos antiguos','Reenvía el correo del cliente','Sí, envíalo','Confirmo envío 12']) {
     assert.deepEqual(await resolveMailIntent(input,{infer:assert.fail}), {kind:'help'},input);
   }
   const plausible = 'Dale una mirada a mi buzón';

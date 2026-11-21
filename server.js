@@ -5,6 +5,7 @@ import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPrevi
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachConnections } from "./src/coach-connections.js";
+import { personalCalendarCrm } from "./src/coach-personal-crm-link.js";
 import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
 import { buildTeamChatContext, isTeamChatQuestion, publishSaleAnnouncement, createTeamChatWorker } from "./src/coach-team-chat-context.js";
@@ -25576,8 +25577,10 @@ app.get("/mis-conexiones/", async (req, res, next) => {
   req.tecRequestAuth = auth;
   next();
 });
-const runCoachMailAgent = registerCoachConnections(app, {
+const runCoachConnectedAgent = registerCoachConnections(app, {
   requireActive: requireCoachActivo,
+  ...personalCalendarCrm({ users: CoachUser, records: CoachCrmRecord, viewerQuery: construirCoachCrmViewerQuery,
+    applySources: aplicarCoachCrmActualizacionAFuentes, invalidate: invalidarCoachWorkspaceCaches }),
   switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE])
 });
 registerCoachClosingSupervisor(app, { requireActive: requireCoachActivo, users: CoachUser });
@@ -33880,13 +33883,13 @@ app.post("/chat", async (req, res) => {
 
   try {
     if (modoChat === "coach") {
-      const mailReply = await runCoachMailAgent({ req, auth: coachAuth, sessionId, text: preguntaLimpia });
-      if (mailReply) {
-        // Count the interaction without copying the mailbox or draft into model history.
+      const privateReply = await runCoachConnectedAgent({ req, auth: coachAuth, sessionId, text: preguntaLimpia });
+      if (privateReply) {
+        // Count the interaction without copying mail or appointment details into chat history.
         await guardarMensajeRaw({ visitorId: visitorIdLimpio, sessionId, role: "user",
-          content: "[Acción de Gmail del vendedor]", intent: "coach_chat",
+          content: "[Acción en las conexiones del vendedor]", intent: "coach_chat",
           detectedTopics: [`coach_user:${String(coachAuth.user._id)}`] });
-        return finishChatResponse(mailReply);
+        return finishChatResponse(privateReply);
       }
     }
     let leadGuardado = null;

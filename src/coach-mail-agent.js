@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { classifyMailIntent, resolveMailIntent, composeMailDraft, mailReadOptions, mailReadClarification } from './coach-mail-intent.js';
+import { classifyMailIntent, resolveMailIntent, composeMailDraft, rewriteSellerBody, mailReadOptions, mailReadClarification } from './coach-mail-intent.js';
 import { openToken, sealToken } from './coach-hycite-gmail.js';
 
 import { classifySalesMailReport, draftSalesReport } from './coach-mail-sales-report.js';
+import { correction, isDraftCorrection, replyText } from './coach-mail-followup.js';
 import { mailPeriod } from './coach-mail-period.js';
 
 const connections = { type: 'connections', label: 'Mis conexiones' };
@@ -20,7 +21,7 @@ const statuses = {
   failed: 'El correo no salió. Revisa el permiso de envío en Mis conexiones y vuelve a preparar el borrador.'
 };
 
-export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft }) {
+export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody }) {
   const load = id => store.findById(id, 'mailbox encryptedToken grant sendEnabled').lean();
   const access = async doc => (await gmail.refresh(openToken(doc.encryptedToken, config.key, doc._id))).access_token;
   return async ({ req, auth, sessionId, text }) => {
@@ -39,7 +40,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
     if (!config.pilot.includes('*') && !config.pilot.includes(String(actor.email || '').toLowerCase())) {
       return answer('Tu cuenta aún no participa en el piloto de Gmail.');
     }
-    if (intent?.kind === 'help') return answer('Puedo consultar tu bandeja de entrada, revisar las ventas de Hy Cite o preparar un correo. Prueba «Revisa mis correos» o «Prepara un correo para…». Para enviar, te mostraré el texto y te pediré confirmación.', [connections]);
+    if (intent?.kind === 'help') return answer('Puedo revisar tus correos y ventas de Hy Cite, preparar un mensaje o responder en su hilo. Después de «Revisa mis correos», prueba «Responde al segundo». Puedes corregir el borrador antes de confirmar el envío.', [connections]);
     try {
       if (!config.ready) return answer('La conexión de Gmail está temporalmente fuera de servicio.');
       const doc = await load(actor._id);
@@ -47,22 +48,73 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       const session = createHash('sha256').update(auth.session.tokenHash + ':' + sessionId).digest('hex');
       const binding = { owner: actor._id, session, grant: doc.grant };
       const aad = 'draft-question:' + actor._id + ':' + session + ':' + doc.grant;
-      let previousText = '';
-      let continuationKind = 'draft';
-      if (pending && (!intent || intent.kind === 'draft')) {
+      const contextToken = (context, minutes = 30) => sealToken(JSON.stringify({ ...context, until:Date.now() + minutes * 60000 }), config.key, aad);
+      let context;
+      if (typeof pending === 'string' && pending.length <= 40000) {
         try {
-          if (typeof pending !== 'string' || pending.length > 40000) throw new Error();
-          const decoded = JSON.parse(openToken(pending, config.key, aad));
-          if (decoded.until > Date.now()) {
-            previousText = decoded.text;
-            continuationKind = decoded.kind === 'report' ? 'report' : 'draft';
-          }
-        } catch { /* A pending question belongs to one connected seller and chat. */ }
-        if (!intent && !previousText) return answer('Ya caducó la pregunta del borrador. Vuelve a decirme qué correo quieres preparar.');
-        if (!intent && /^(?:cancela(?:r)?|ol[vb][íi]dalo|ya no|no gracias|cancelar borrador)[.!]?$/i.test(text.trim())) {
-          return answer('Dejé de preparar ese correo.');
+          const saved = JSON.parse(openToken(pending, config.key, aad));
+          if (saved.until > Date.now()) context = saved;
+        } catch { /* Only this seller, login, conversation and grant may use the selection. */ }
+      }
+      const preview = (draft, sellerText) => {
+        const actions = [];
+        if (!doc.sendEnabled) actions.push(connections);
+        actions.push({ type:'mailConfirm', id:draft.id, label:'Confirmar envío' }, { type:'mailCancel', id:draft.id, label:'Cancelar borrador' });
+        const header = draft.thread ? 'Respuesta en el mismo hilo desde ' : 'Borrador desde ';
+        const guide = 'Puedes pedirme una corrección, por ejemplo «cambia jueves por viernes».';
+        const permission = doc.sendEnabled ? '' : 'Para enviar, abre Mis conexiones y autoriza el envío en Google. Después, vuelve a este chat.\n';
+        return answer(header + doc.mailbox + '\nPara: ' + draft.to + '\nAsunto: ' + (draft.subject || '(sin asunto)') + '\n\n' + draft.body + '\n\n' + guide + '\n' + permission + 'Confirma con el botón o escribe «Confirmar envío ' + draft.id + '». El borrador dura 30 minutos.', actions, contextToken({kind:'preview',id:draft.id,sellerText:sellerText === true}));
+      };
+      const cancelFollowup = /^(?:cancela(?:r)?|ol[vb][íi]dalo|ya no|no gracias|cancelar borrador)[.!]?$/i.test(text.trim());
+      if (context?.kind === 'preview' && !['confirm','cancel'].includes(intent?.kind) && isDraftCorrection(text)) {
+        const ref = { ...binding, id:context.id };
+        const old = await drafts.view(ref);
+        if (old.status !== 'pending') return answer(statuses[old.status] || statuses.unavailable);
+        let changes = correction(old,text);
+        if (changes.freeform && context.sellerText === true) {
+          try { changes = await rewrite(old.body,text); }
+          catch { /* Keep the precise text replacement option when the model is unavailable. */ }
         }
-        intent ||= { kind: continuationKind };
+        if (changes.question) return answer(changes.question, [], pending);
+        const updated = await drafts.revise({ ...ref, changes });
+        if (updated.status !== 'pending') return answer(statuses[updated.status] || statuses.unavailable);
+        return preview(updated,context.sellerText);
+      }
+      if (context?.kind === 'preview' && !intent && cancelFollowup) intent = {kind:'cancel', id:context.id};
+      if (!intent && (context?.kind === 'preview' || context?.kind === 'inbox')) {
+        // A passive list or preview must not suppress normal language routing for the next request.
+        intent = await resolveMailIntent(text);
+        if (intent?.kind === 'help') return answer(context.kind === 'preview'
+          ? 'Para enviar esta versión, pulsa Confirmar envío en el borrador o escribe «Confirmar envío ' + context.id + '».'
+          : 'Puedes elegir un correo de la lista para responder, por ejemplo «Responde al segundo».', [], pending);
+      }
+      if (context?.kind === 'replyBody' && !intent) {
+        if (cancelFollowup) return answer('Dejé de preparar la respuesta.');
+        intent = {kind:'reply', instruction:text, messageId:context.id};
+      }
+      if (intent?.kind === 'reply') {
+        if (intent.unsupported) return answer('Elige un solo mensaje de la lista, por ejemplo «Responde al segundo».', [], context?.kind === 'inbox' ? pending : '');
+        let ids = context?.kind === 'inbox' ? context.ids : [];
+        if (!ids.length && intent.latest && !pending) ids = (await gmail.inbox(await access(doc))).map(m => m.id);
+        const id = intent.messageId || ids[intent.index - 1];
+        if (!id) return answer(ids.length ? 'Ese número no está en la lista. Indica el número de uno de los correos mostrados.' : 'Primero pídeme «Revisa mis correos» para elegir el mensaje al que quieres responder.', [], ids.length ? pending : '');
+        const body = replyText(intent.instruction || '');
+        if (!body) return answer('¿Qué quieres decirle en tu respuesta? Puedes escribir el texto exacto después de «Mensaje:».', [], contextToken({kind:'replyBody',id},15));
+        if (body.length > 12000) return answer('La respuesta puede tener hasta 12 000 caracteres.', [], contextToken({kind:'replyBody',id},15));
+        const target = await gmail.replyTarget(await access(doc),id);
+        if (!target) return answer('No pude verificar un solo destinatario y el hilo de ese mensaje. Ábrelo en Gmail para responder.', [source(doc,id,'Abrir correo')]);
+        if ((await load(actor._id))?.grant !== doc.grant) return answer('La conexión cambió. Vuelve a consultar tu bandeja.');
+        return preview(await drafts.prepare({ ...binding, ...target, body }),true);
+      }
+      let previousText = '';
+      if ((!intent || intent.kind === 'draft') && ['report','draft'].includes(context?.kind)) {
+        if (cancelFollowup) return answer('Dejé de preparar ese correo.');
+        previousText = context.text;
+        intent ||= {kind:context.kind};
+      }
+      if (!intent) {
+        if (!context && pending) return answer('Ya caducó la pregunta del borrador. Vuelve a decirme qué correo quieres preparar.');
+        return null;
       }
       if (intent.kind === 'draft' || intent.kind === 'report') {
         let message;
@@ -82,14 +134,10 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
           message = await compose(text, { previousText });
         }
         if (message.question) {
-          const continuation = message.pendingText ? sealToken(JSON.stringify({ text: message.pendingText, kind: intent.kind, until: Date.now() + 15 * 60000 }), config.key, aad) : '';
+          const continuation = message.pendingText ? contextToken({text:message.pendingText, kind:intent.kind},15) : '';
           return answer(message.question, [], continuation);
         }
-        const draft = await drafts.prepare({ ...binding, ...message });
-        const actions = [];
-        if (!doc.sendEnabled) actions.push(connections);
-        actions.push({ type: 'mailConfirm', id: draft.id, label: 'Confirmar envío' }, { type: 'mailCancel', id: draft.id, label: 'Cancelar borrador' });
-        return answer(`Borrador desde ${doc.mailbox}\nPara: ${draft.to}\nAsunto: ${draft.subject}\n\n${draft.body}\n\n${doc.sendEnabled ? '' : 'Para enviar, abre Mis conexiones y autoriza el envío en Google. Después, vuelve a este chat.\n'}Confirma con el botón o escribe «Confirmar envío ${draft.id}». El borrador dura 30 minutos.`, actions);
+        return preview(await drafts.prepare({ ...binding, ...message }),intent.kind === 'draft');
       }
       if (intent.kind === 'confirm' || intent.kind === 'cancel') {
         if (intent.kind === 'confirm' && !doc.sendEnabled) return answer('Para enviar este borrador, autoriza el envío en Mis conexiones y vuelve a confirmarlo aquí.', [connections]);
@@ -119,7 +167,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
         const where = 'en la bandeja de entrada de ' + doc.mailbox + (filters ? ' (' + filters + ')' : '');
         if (!messages.length) return answer('No encontré mensajes ' + where + '.');
         const lines = messages.map((m,i) => `${i+1}. ${m.subject || '(Sin asunto)'} — ${m.from || 'Sin remitente'} · ${stamp(m.date)}${m.snippet ? '\n' + m.snippet : ''}`);
-        return answer('Estos son los mensajes más recientes ' + where + ':\n\n' + lines.join('\n\n'), messages.map((m,i) => source(doc, m.id, 'Abrir correo ' + (i+1))));
+        return answer('Estos son los mensajes más recientes ' + where + ':\n\n' + lines.join('\n\n') + '\n\nPara contestar en el mismo hilo, escribe «Responde al primero» o indica el número del correo.', messages.map((m,i) => source(doc, m.id, 'Abrir correo ' + (i+1))), contextToken({kind:'inbox',ids:messages.map(m => m.id)}));
       }
       if (intent.kind === 'sales') {
         if (options.unread || options.from) return answer('Las ventas se calculan con los avisos de Hy Cite de tu cuenta. Para filtrar por remitente o por correos sin leer, pídeme revisar la bandeja de entrada.');

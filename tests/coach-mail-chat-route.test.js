@@ -20,9 +20,9 @@ const streaming = section('function prepararRespuestaStreamingChat(', 'async fun
 const user = { _id:'test-seller', email:'vendedor@example.invalid' };
 const base = { accountId:user._id, sessionId:'session-mail-123', mode:'coach', pregunta:'Revisa mis correos' };
 
-function harness() {
+function harness(extraConnections = {}) {
   const key = randomBytes(32);
-  const config = { ...connectionConfig({COACH_CONNECTIONS_PILOT_EMAILS:user.email}), key, ready:true };
+  const config = { ...connectionConfig({COACH_CONNECTIONS_PILOT_EMAILS:user.email}), key, ready:true, calendarReady:true };
   const doc = { _id:user._id, mailbox:'piloto@example.invalid', grant:'test-grant',
     encryptedToken:sealToken('personal-refresh-token',key,user._id) };
   const recorded = { db:[], gmail:[], usage:[], model:[], scopes:[] };
@@ -48,7 +48,8 @@ function harness() {
         return [{id:'abcd1234',subject:'Asunto confidencial del piloto',from:'cliente@example.invalid',
           snippet:'Texto privado de prueba',date:'2026-11-20T12:34:56Z'}];
       }
-    }
+    },
+    ...extraConnections
   });
   // This marker stops the normal model path at its first call. Anything else unexpected is a test failure.
   const normalChat = new Error('Entered normal chat');
@@ -59,7 +60,7 @@ function harness() {
     limpiarCoachDecisionContext:inert, limpiarCoachOrderCalcContext:inert, limpiarCoachDemoOutcomeContext:inert,
     asegurarSesionRedisCargada:inert, obtenerCoachContextoSesion:inert, validarLimiteUsoCoach:async()=>({allowed:true}),
     validarLimiteUsoChef:async()=>({allowed:true}), marcarSesionActiva:inert, limpiarMemoriaSesiones:inert,
-    runCoachMailAgent:args=>{recorded.scopes.push(args.sessionId);return agent(args);},
+    runCoachConnectedAgent:args=>{recorded.scopes.push(args.sessionId);return agent(args);},
     guardarMensajeRaw:async row=>recorded.usage.push(row),
     construirContextoModoPrompt:mode=>{recorded.model.push(mode); throw normalChat;},
     console:{error:err=>{ if (err!==normalChat) throw err; }}
@@ -105,6 +106,24 @@ for (const stream of [false,true]) {
     assert.deepEqual([...new Set(recorded.db)],[user._id]);
   });
 }
+
+test('el chat cambia de la bandeja a Calendar, muestra la propuesta y conserva la privacidad en streaming',async()=>{
+  let previews=0;
+  const {request,recorded}=harness({
+    calendarStore:{findById(owner){assert.equal(owner,user._id);return {lean:async()=>({grant:'calGrant',calendarId:'personal',mailbox:user.email})};}},
+    followups:{prepare:async(binding,event)=>{assert.equal(binding.owner,user._id);assert.equal(event.leadId,'mycrm');previews++;return {id:'A0B1C2D3E4F5'};}},
+    findLeads:async({owner,name})=>{assert.equal(owner,user._id);assert.equal(name,'María');return [{id:'mycrm',name:'María',nextActionAt:null}];}
+  });
+  const inbox=await request(base);
+  const preview=await request({...base,stream:true,coachTimeZone:'America/Chicago',coachCalendarVersion:1,
+    coachMailPending:inbox.data.coachMailPending,pregunta:'Agenda una llamada con María mañana a las 4 pm'});
+  const result=preview.chunks.map(line=>JSON.parse(line)).at(-1).payload;
+  assert.equal(result.coachCalendarAgent,true);assert.equal(previews,1);
+  assert.match(result.respuesta,/María/);
+  assert.equal(result.coachHelpActions[0].type,'calendarConfirm');
+  assert.equal(recorded.model.length,0);assert.equal(recorded.usage.length,2);
+  assert.doesNotMatch(JSON.stringify(recorded.usage),/María|personal-refresh|calGrant/);
+});
 
 test('el agente exige sesión propia, participación en el piloto y cuenta activa en la pestaña', async () => {
   const {request,recorded}=harness();

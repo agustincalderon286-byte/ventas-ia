@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { isGmailAddress, openToken, sealToken } from './coach-hycite-gmail.js';
 
+import { validatedThread } from './coach-gmail-thread.js';
+
 const minute = 60_000;
 const draftLifetime = 30 * minute;
 const resultLifetime = 24 * 60 * minute;
@@ -13,6 +15,7 @@ const draftSchema = new mongoose.Schema({
   grantDigest: { type: String, required: true },
   state: { type: String, required: true },
   content: String,
+  revisionCode: { type: String, unique:true, sparse:true },
   deadline: { type: Date, required: true },
   removeAfter: { type: Date, required: true, expires: 0 },
   claimedAt: Date,
@@ -49,17 +52,17 @@ function resultOf(doc, now) {
   return { status: doc.state };
 }
 
-function messageFields({ to, subject, body }) {
+function messageFields({ to, subject, body, thread }) {
   if (!isGmailAddress(to)) {
     throw new Error('Indica una sola dirección de correo válida.');
   }
-  if (typeof subject !== 'string' || !subject.trim() || subject.length > 200 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(subject)) {
+  if (typeof subject !== 'string' || (!thread && !subject.trim()) || subject.length > (thread ? 900 : 200) || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(subject)) {
     throw new Error('Escribe un asunto de hasta 200 caracteres en una línea.');
   }
   if (typeof body !== 'string' || !body.trim() || body.length > 12000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(body)) {
     throw new Error('Escribe un mensaje de hasta 12 000 caracteres.');
   }
-  return { to, subject: subject.trim(), body: body.replace(/\r\n?/g, '\n').trim() };
+  return { ...(thread ? {thread:validatedThread(thread)} : {}), to, subject: subject.trim(), body: body.replace(/\r\n?/g, '\n').trim() };
 }
 
 export function createMailDrafts({ store = Store, key = Buffer.from(process.env.COACH_GMAIL_ENCRYPTION_KEY || '', 'base64'), now = Date.now } = {}) {
@@ -67,6 +70,16 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
   const decode = doc => JSON.parse(openToken(doc.content, key, binding(doc)));
   const lookup = filter => store.findOne(filter).lean();
 
+  // The original ID remains the encryption binding. Only the code of the displayed revision
+  // may authorize a later send, including for drafts created before revision codes existed.
+  async function locate(input) {
+    const original = findDraft(input);
+    if (!original) return null;
+    const { _id:code, ...account } = original;
+    const doc = await lookup(original) || await lookup({ ...account, revisionCode:code });
+    return doc && (doc.revisionCode || doc._id) === code ? doc : null;
+  }
+  const current = doc => ({ _id:doc._id, state:'pending', content:doc.content, deadline:{ $gt:new Date(now()) } });
   async function finish(filter, state, messageId) {
     await store.updateOne({ ...filter, state: 'sending' }, {
       $set: { state, ...(messageId ? { messageId } : {}) }, $unset: { content: 1 }
@@ -83,7 +96,7 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
         const id = randomBytes(6).toString('hex').toUpperCase();
         const filter = { _id: id, ...account };
         try {
-          await store.create({ ...filter, state: 'pending', content: sealToken(JSON.stringify(message), key, binding(filter)),
+          await store.create({ ...filter, revisionCode:id, state: 'pending', content: sealToken(JSON.stringify(message), key, binding(filter)),
             deadline: new Date(time + draftLifetime), removeAfter: new Date(time + draftLifetime) });
           return { id, ...message };
         } catch (error) {
@@ -92,31 +105,56 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       }
     },
     async view(input) {
-      const filter = findDraft(input);
-      const doc = filter ? await lookup(filter) : null;
+      const doc = await locate(input);
       const status = resultOf(doc, now());
-      return status.status === 'pending' ? { ...status, id: doc._id, ...decode(doc) } : status;
+      return status.status === 'pending' ? { ...status, id: doc.revisionCode || doc._id, ...decode(doc) } : status;
+    },
+    async revise(input) {
+      const doc = await locate(input);
+      const status = resultOf(doc, now());
+      if (status.status !== 'pending') return status;
+      const prior = decode(doc);
+      const patch = input.changes || {};
+      if (prior.thread && ((patch.to !== undefined && patch.to !== prior.to) || (patch.subject !== undefined && patch.subject !== prior.subject))) {
+        throw new Error('Una respuesta conserva el destinatario y el asunto del hilo.');
+      }
+      const message = messageFields({ ...prior, to:patch.to ?? prior.to, subject:patch.subject ?? prior.subject, body:patch.body ?? prior.body });
+      const time = now();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const id = randomBytes(6).toString('hex').toUpperCase();
+        if (id === (doc.revisionCode || doc._id)) continue;
+        try {
+          const changed = await store.updateOne(current(doc), { $set:{
+            revisionCode:id, content:sealToken(JSON.stringify(message), key, binding(doc)),
+            deadline:new Date(time + draftLifetime), removeAfter:new Date(time + draftLifetime)
+          } });
+          return changed.matchedCount ? { status:'pending', id, ...message } : resultOf(await locate(input), now());
+        } catch (error) { if (error.code !== 11000 || attempt === 2) throw error; }
+      }
+      throw new Error('Vuelve a intentar la corrección.');
     },
     async cancel(input) {
-      const filter = findDraft(input);
-      if (!filter) return { status: 'unavailable' };
+      const doc = await locate(input);
       const time = now();
-      const result = await store.updateOne({ ...filter, state: 'pending', deadline: { $gt: new Date(time) } }, {
+      const status = resultOf(doc, time);
+      if (status.status !== 'pending') return status;
+      const result = await store.updateOne(current(doc), {
         $set: { state: 'cancelled', removeAfter: new Date(time + resultLifetime) }, $unset: { content: 1 }
       });
-      return result.matchedCount ? { status: 'cancelled' } : resultOf(await lookup(filter), time);
+      return result.matchedCount ? { status: 'cancelled' } : resultOf(await locate(input), time);
     },
     async confirm(input) {
-      const filter = findDraft(input);
-      if (!filter) return { status: 'unavailable' };
-      if (typeof input.deliver !== 'function') throw new Error('Falta el envío de Gmail.');
+      const found = await locate(input);
       const time = now();
-      // Only the winner of this durable transition may call Gmail. Keep the sealed payload
-      // in the pre-image returned to the winner, not in a long-lived delivery receipt.
-      const doc = await store.findOneAndUpdate({ ...filter, state: 'pending', deadline: { $gt: new Date(time) } }, {
+      const previous = resultOf(found, time);
+      if (previous.status !== 'pending') return previous;
+      if (typeof input.deliver !== 'function') throw new Error('Falta el envío de Gmail.');
+      // Comparing the sealed content makes confirmation, cancellation and revision compete
+      // for the exact version the seller reviewed.
+      const doc = await store.findOneAndUpdate(current(found), {
         $set: { state: 'sending', claimedAt: new Date(time), removeAfter: new Date(time + resultLifetime) }, $unset: { content: 1 }
       }, { new: false }).lean();
-      if (!doc) return resultOf(await lookup(filter), now());
+      if (!doc) return resultOf(await locate(input), now());
 
       let status = 'failed';
       let messageId;
@@ -133,7 +171,7 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       }
       // The receipt from Gmail still establishes delivery if persisting it temporarily fails.
       // The original claim blocks a second call even across restarts.
-      await finish(filter, status, messageId).catch(() => {});
+      await finish({ _id:doc._id }, status, messageId).catch(() => {});
       return messageId ? { status, messageId } : { status };
     },
     async purge(input) {
