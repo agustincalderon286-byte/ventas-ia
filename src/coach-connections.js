@@ -46,6 +46,8 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   app.get(page, own(async (req, res, { id, session, pilot }) => {
     const doc = pilot ? await store.findById(id, 'mailbox snapshot syncedAt').lean() : null;
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
+    // Keep the origin on same-site form POSTs for the existing Coach request guard.
+    res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
     res.send(connectionsPage({ doc, pilot, ready: config.ready, csrf: session, message }));
