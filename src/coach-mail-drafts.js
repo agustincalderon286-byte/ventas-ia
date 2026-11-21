@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { isGmailAddress, openToken, sealToken } from './coach-hycite-gmail.js';
 
 import { validatedThread } from './coach-gmail-thread.js';
+import { validatedOffer } from './coach-mail-offers.js';
+import { offerKeepsSlots } from './coach-offer-text.js';
 
 const minute = 60_000;
 const draftLifetime = 30 * minute;
@@ -18,6 +20,7 @@ const draftSchema = new mongoose.Schema({
   revisionCode: { type: String, unique:true, sparse:true },
   deadline: { type: Date, required: true },
   removeAfter: { type: Date, required: true, expires: 0 },
+  offerReceipt: String,
   claimedAt: Date,
   messageId: String
 }, { versionKey: false, writeConcern: { w: 'majority' } });
@@ -52,7 +55,19 @@ function resultOf(doc, now) {
   return { status: doc.state };
 }
 
-function messageFields({ to, subject, body, thread }) {
+function messageFields({ to, subject, body, thread, offer }) {
+  if (offer) {
+    // A time offer is always a reply to the prospect's thread and keeps both options intact.
+    const clean = validatedOffer(offer);
+    if (!thread || String(to).toLowerCase() !== clean.prospect || !offerKeepsSlots(clean, String(body ?? '').replace(/\r\n?/g, '\n').trim())) {
+      throw Object.assign(new Error('La respuesta debe conservar los dos horarios ofrecidos.'), { offerEdit:true });
+    }
+    return { ...plainFields({ to, subject, body, thread }), offer:clean };
+  }
+  return plainFields({ to, subject, body, thread });
+}
+
+function plainFields({ to, subject, body, thread }) {
   if (!isGmailAddress(to)) {
     throw new Error('Indica una sola dirección de correo válida.');
   }
@@ -80,9 +95,9 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
     return doc && (doc.revisionCode || doc._id) === code ? doc : null;
   }
   const current = doc => ({ _id:doc._id, state:'pending', content:doc.content, deadline:{ $gt:new Date(now()) } });
-  async function finish(filter, state, messageId) {
+  async function finish(filter, state, messageId, offerReceipt) {
     await store.updateOne({ ...filter, state: 'sending' }, {
-      $set: { state, ...(messageId ? { messageId } : {}) }, $unset: { content: 1 }
+      $set: { state, ...(messageId ? { messageId } : {}), ...(offerReceipt && {offerReceipt}) }, $unset: { content: 1 }
     });
   }
 
@@ -118,6 +133,7 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       if (prior.thread && ((patch.to !== undefined && patch.to !== prior.to) || (patch.subject !== undefined && patch.subject !== prior.subject))) {
         throw new Error('Una respuesta conserva el destinatario y el asunto del hilo.');
       }
+      if (prior.offer && patch.body !== undefined && !offerKeepsSlots(prior.offer, String(patch.body).replace(/\r\n?/g, '\n').trim())) return { status:'pending', offerEdit:true, id:doc.revisionCode || doc._id, ...prior };
       const message = messageFields({ ...prior, to:patch.to ?? prior.to, subject:patch.subject ?? prior.subject, body:patch.body ?? prior.body });
       const time = now();
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -147,6 +163,9 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       const found = await locate(input);
       const time = now();
       const previous = resultOf(found, time);
+      if (previous.status === 'sent' && found?.offerReceipt) {
+        return {...previous, offerDelivery:JSON.parse(openToken(found.offerReceipt,key,binding(found)+':sent-offer'))};
+      }
       if (previous.status !== 'pending') return previous;
       if (typeof input.deliver !== 'function') throw new Error('Falta el envío de Gmail.');
       // Comparing the sealed content makes confirmation, cancellation and revision compete
@@ -157,13 +176,14 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       if (!doc) return resultOf(await locate(input), now());
 
       let status = 'failed';
-      let messageId;
+      let messageId,offerDelivery;
       try {
         const message = decode(doc);
         status = 'unknown';
         const receipt = await input.deliver(message);
         if (typeof receipt?.id === 'string' && receipt.id) {
           messageId = receipt.id;
+          if (message.offer) offerDelivery={offer:message.offer,thread:{threadId:message.thread.threadId}};
           status = 'sent';
         }
       } catch (error) {
@@ -171,8 +191,9 @@ export function createMailDrafts({ store = Store, key = Buffer.from(process.env.
       }
       // The receipt from Gmail still establishes delivery if persisting it temporarily fails.
       // The original claim blocks a second call even across restarts.
-      await finish({ _id:doc._id }, status, messageId).catch(() => {});
-      return messageId ? { status, messageId } : { status };
+      const checkpoint=offerDelivery && sealToken(JSON.stringify(offerDelivery),key,binding(doc)+':sent-offer');
+      await finish({ _id:doc._id }, status, messageId, checkpoint).catch(() => {});
+      return messageId ? { status, messageId, ...(offerDelivery && {offerDelivery}) } : { status };
     },
     async purge(input) {
       await store.deleteMany(ownerAndGrant(input));

@@ -18,7 +18,7 @@ const api = '/api/coach/conexiones/calendar/';
 // Longer than the sum of bounded token, availability, event and reconciliation requests.
 const bookingLeaseMs = 2 * 60000;
 
-export function createCoachCalendarConnections({config,store=Store,google=calendarGoogleClient(config),purge=purgeCalendarProposals}) {
+export function createCoachCalendarConnections({config,store=Store,google=calendarGoogleClient(config),purge=purgeCalendarProposals,now=Date.now}) {
   const access = async doc => {
     const token = await google.refresh(openToken(doc.encryptedToken, config.key, ownerKey(doc._id)));
     if (!token.access_token) throw new Error('Google no devolvió acceso a Calendar.');
@@ -75,17 +75,23 @@ export function createCoachCalendarConnections({config,store=Store,google=calend
       return google.availability(token,doc.calendarId,{start,end},doc.mailbox);
     },
     async saveEvent(event) {
+      if (event.reconcileOnly) {
+        // Read-only: returns the event this operation already wrote, or null. Never inserts or patches.
+        const doc = await connectedCalendar(event.owner,event.grant,false);
+        return google.findEvent(await authorizedToken(doc,false),doc.calendarId,{...event,calendarId:doc.calendarId});
+      }
       const doc = await connectedCalendar(event.owner,event.grant,event.checkAvailability);
       const save = async lease => google.saveEvent(await authorizedToken(doc,event.checkAvailability,lease),
         doc.calendarId,{...event,calendarId:doc.calendarId,mailbox:doc.mailbox});
       if (!event.checkAvailability) return save();
       const lease = random();
       const guard = {_id:doc._id,grant:doc.grant,calendarId:doc.calendarId,availabilityEnabled:true};
-      const now = new Date();
+      const at = new Date(now());
       const locked = await store.updateOne({...guard,$or:[
-        {bookingLeaseUntil:{$exists:false}}, {bookingLeaseUntil:{$lte:now}}
-      ]},{$set:{bookingLease:lease,bookingLeaseUntil:new Date(now.getTime()+bookingLeaseMs)}});
-      if (!locked.matchedCount) throw Object.assign(new Error('Hay otra cita en proceso de confirmación.'),{status:503});
+        {bookingLeaseUntil:{$exists:false}}, {bookingLeaseUntil:{$lte:at}}
+      ]},{$set:{bookingLease:lease,bookingLeaseUntil:new Date(at.getTime()+bookingLeaseMs)}});
+      // Another booking of this seller is being checked; nothing was sent to Google and the slot may still be free.
+      if (!locked.matchedCount) throw Object.assign(new Error('Hay otra cita en proceso de confirmación.'),{status:503,bookingBusy:true});
       try {
         return await save(lease);
       } finally {

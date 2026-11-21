@@ -26,6 +26,7 @@ function showReceipt(result,id) {
   if (result.status==='saved') {
     let message='Google Calendar confirmó «'+result.summary+'» para el '+format(result.start,result.timeZone)+'.';
     if (result.crm==='updated') message+=' También actualicé la fecha de seguimiento del prospecto en TEC.';
+    if (result.crm==='expired') message+=' Venció el plazo para actualizar la ficha de TEC. Revisa su próxima acción en el CRM.';
     if (result.crm==='conflict') message+=' La ficha de TEC cambió después de la vista previa. Conservé la fecha que tiene ahora la ficha.';
     const link=calendarLink(result.htmlLink);
     return reply(message+' Referencia de la cita: '+result.reference+'.',link?[{type:'calendarEvent',label:'Abrir en Google Calendar',url:link}]:[]);
@@ -35,6 +36,8 @@ function showReceipt(result,id) {
   if (result.status==='reconnect') return reply('Google solicita renovar la conexión de Calendar. Abre Mis conexiones y vuelve a revisar la cita.',[connections]);
   if (result.status==='slotBusy') return reply('Ese horario ya no está disponible. Pídeme «Busca dos horarios libres para la demo» para revisar otras opciones.');
   if (result.status==='changed') return reply('Google no aceptó el cambio. Revisa la cita en tu calendario antes de preparar otra propuesta.',[connections]);
+  if (result.status==='bookingBusy') return reply('Tu calendario está procesando otra reserva. Espera un momento y vuelve a pulsar «Confirmar cita».',[confirmAction(id)]);
+  if (result.status==='expired') return reply('Venció el plazo de confirmación. Pídeme una vista previa nueva para revisar la cita.');
   if (result.status==='working') return reply('Estoy confirmando esta cita. Vuelve a comprobarla con el mismo botón.',[confirmAction(id)]);
   return reply('La propuesta caducó, cambió o pertenece a otra conversación. Vuelve a pedirme el seguimiento.');
 }

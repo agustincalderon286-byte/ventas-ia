@@ -14,6 +14,11 @@ function mailbox(value) {
   return match && isGmailAddress(match[1]) ? match[1] : '';
 }
 
+// The single mailbox of a From or Reply-To header, lower-cased, or '' when it is not exactly one address.
+export function senderAddress(value) {
+  return mailbox(unfold(value)).toLowerCase();
+}
+
 export function validatedThread(thread) {
   if (!thread || !gmailId(thread.threadId) || !safeId(thread.parent) ||
       !Array.isArray(thread.references) || !thread.references.length || thread.references.length > 20 ||

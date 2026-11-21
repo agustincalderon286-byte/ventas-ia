@@ -21,7 +21,8 @@ const statuses = {
   failed: 'El correo no salió. Revisa el permiso de envío en Mis conexiones y vuelve a preparar el borrador.'
 };
 
-export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody }) {
+// offerHooks (optional): {beforeSend, afterSend} from coach-offer-agent.js for replies that carry two time options.
+export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, switched, compose = composeMailDraft, rewrite = rewriteSellerBody, offerHooks = null }) {
   const load = id => store.findById(id, 'mailbox encryptedToken grant sendEnabled').lean();
   const access = async doc => (await gmail.refresh(openToken(doc.encryptedToken, config.key, doc._id))).access_token;
   return async ({ req, auth, sessionId, text }) => {
@@ -61,7 +62,8 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
         if (!doc.sendEnabled) actions.push(connections);
         actions.push({ type:'mailConfirm', id:draft.id, label:'Confirmar envío' }, { type:'mailCancel', id:draft.id, label:'Cancelar borrador' });
         const header = draft.thread ? 'Respuesta en el mismo hilo desde ' : 'Borrador desde ';
-        const guide = 'Puedes pedirme una corrección, por ejemplo «cambia jueves por viernes».';
+        const guide = draft.offer ? 'Puedes corregir el saludo o la despedida; los dos horarios se mantienen.'
+          : 'Puedes pedirme una corrección, por ejemplo «cambia jueves por viernes».';
         const permission = doc.sendEnabled ? '' : 'Para enviar, abre Mis conexiones y autoriza el envío en Google. Después, vuelve a este chat.\n';
         return answer(header + doc.mailbox + '\nPara: ' + draft.to + '\nAsunto: ' + (draft.subject || '(sin asunto)') + '\n\n' + draft.body + '\n\n' + guide + '\n' + permission + 'Confirma con el botón o escribe «Confirmar envío ' + draft.id + '». El borrador dura 30 minutos.', actions, contextToken({kind:'preview',id:draft.id,sellerText:sellerText === true}));
       };
@@ -78,6 +80,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
         if (changes.question) return answer(changes.question, [], pending);
         const updated = await drafts.revise({ ...ref, changes });
         if (updated.status !== 'pending') return answer(statuses[updated.status] || statuses.unavailable);
+        if (updated.offerEdit) return answer('Esa corrección cambiaría los dos horarios ofrecidos o añadiría otra fecha. Puedes cambiar el saludo o la despedida; para otros horarios, pídeme una oferta nueva. El borrador anterior sigue igual.', [], pending);
         return preview(updated,context.sellerText);
       }
       if (context?.kind === 'preview' && !intent && cancelFollowup) intent = {kind:'cancel', id:context.id};
@@ -142,6 +145,7 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
       if (intent.kind === 'confirm' || intent.kind === 'cancel') {
         if (intent.kind === 'confirm' && !doc.sendEnabled) return answer('Para enviar este borrador, autoriza el envío en Mis conexiones y vuelve a confirmarlo aquí.', [connections]);
         const ref = { ...binding, id: intent.id };
+        let offerProblem = '', deliveredOffer;
         const result = intent.kind === 'cancel' ? await drafts.cancel(ref) : await drafts.confirm({
           ...ref, deliver: async message => {
             let token;
@@ -150,10 +154,32 @@ export function createCoachMailAgent({ config, store, gmail, drafts, syncSales, 
               if (!current?.sendEnabled || current.grant !== doc.grant) throw new Error();
               token = await access(current);
             } catch { throw Object.assign(new Error('La conexión cambió.'), { beforeSend: true }); }
-            return gmail.send(token, { ...message, from: doc.mailbox });
+            if (message.offer) {
+              // Re-read the thread and both Google connections right before the reply leaves.
+              try {
+                offerProblem = offerHooks ? await offerHooks.beforeSend({ owner:actor._id, email:actor.email, mailbox:doc.mailbox, token, message })
+                  : 'Las ofertas de horarios no están disponibles en este momento.';
+              } catch { offerProblem = 'No pude volver a comprobar el hilo y tu calendario. No envié el correo; pídeme la oferta de nuevo en un momento.'; }
+              if (offerProblem) throw Object.assign(new Error(offerProblem), { beforeSend: true });
+            }
+            const { offer, ...outgoing } = message;
+            const receipt = await gmail.send(token, { ...outgoing, from: doc.mailbox });
+            if (offer && receipt?.id) {
+              deliveredOffer = {offer,thread:{threadId:message.thread.threadId}};
+            }
+            return receipt;
           }
         });
+        if (offerProblem) return answer(offerProblem, [connections]);
         const links = result.status === 'sent' && result.messageId ? [source(doc, result.messageId, 'Ver en Gmail')] : [];
+        deliveredOffer ||= result.offerDelivery;
+        if (intent.kind==='confirm' && result.status === 'sent' && deliveredOffer) {
+          const offerSaved=await offerHooks.afterSend({owner:actor._id,gmailGrant:doc.grant,message:deliveredOffer,receipt:{id:result.messageId}}).catch(()=>null);
+          return answer(offerSaved?.ref
+            ? 'Gmail confirmó el envío con los dos horarios. Registré la oferta (Ref. ' + offerSaved.ref + '); no reservé nada todavía. Cuando la clienta conteste en el hilo, pídeme «Revisa la respuesta de la oferta».'
+            : 'Gmail confirmó el envío. Pulsa «Registrar horarios enviados» para terminar de guardar la oferta en TEC.', offerSaved?.ref ? links :
+              [...links,{type:'mailRetryReceipt',id:intent.id,label:'Registrar horarios enviados'}]);
+        }
         return answer(statuses[result.status] || statuses.unavailable, links);
       }
       const clarify = mailReadClarification(text, intent.kind);

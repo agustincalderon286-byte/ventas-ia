@@ -77,10 +77,13 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, persona
     const availabilityField = '<input type="hidden" name="availability" value="yes">';
     const availabilityForm = calForm('start','Activar horarios libres',false,availabilityField);
     const availabilityInfo = 'Para buscar horarios, el Coach consulta los bloques ocupados de tu calendario principal y de «Seguimientos TEC».';
+    const offerReady = cal?.availabilityEnabled && doc?.sendEnabled && doc.mailbox &&
+      [cal.mailbox, coachEmail].every(account => typeof account === 'string' && account.toLowerCase() === doc.mailbox.toLowerCase());
+    const offerHelp = offerReady ? '<p>Para ofrecer una demo por Gmail, escribe «Revisa mis correos» y luego «Ofrécele dos horarios al primero para mañana por la tarde». Revisa y confirma el correo. Cuando el cliente conteste, pide «Revisa la respuesta de la oferta» para elegir y confirmar la cita.</p>' : '';
     let controls;
     if (cal?.grant && cal.calendarId) {
       controls = `<p>Conectado con <strong>${esc(cal.mailbox)}</strong>. Tus citas se guardan en el calendario «Seguimientos TEC». Pide en el chat «Agenda una llamada con María mañana a las diez de la mañana».</p>
-        <p>${cal.availabilityEnabled ? 'Horarios libres activados. Pide «Busca dos horarios libres mañana para una demo de 45 minutos».' : availabilityInfo}</p>
+        <p>${cal.availabilityEnabled ? 'Horarios libres activados. Pide «Busca dos horarios libres mañana para una demo de 45 minutos».' : availabilityInfo}</p>${offerHelp}
         <div class="actions">${cal.availabilityEnabled ? '' : availabilityForm}${calForm('start','Volver a autorizar',true,cal.availabilityEnabled ? availabilityField : '')}${calForm('disconnect','Desconectar Calendar',true)}</div>`;
     } else if (cal?.grant && cal.provisionState) {
       controls = `<p>Comprueba en Google Calendar si ya aparece «Seguimientos TEC». Si aparece, abre sus ajustes y copia el ID de «Integrar calendario».</p>

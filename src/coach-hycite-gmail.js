@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 import { isGmailAddress } from './coach-mail-address.js';
-import { replyEnvelope, threadSubjectHeader, validatedThread } from './coach-gmail-thread.js';
+import { replyEnvelope, senderAddress, threadSubjectHeader, validatedThread } from './coach-gmail-thread.js';
 export { isGmailAddress };
 
 export const gmailScope = 'https://www.googleapis.com/auth/gmail.readonly';
@@ -151,6 +151,44 @@ export function gmailClient(config) {
       if (message.id !== id) return null;
       try { return replyEnvelope(message); }
       catch { return null; }
+    },
+    // Metadata and the short snippet of every visible message in a thread, oldest first.
+    // Drafts, trash and spam are not part of the conversation with the prospect.
+    async thread(access, threadId) {
+      if (typeof threadId !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(threadId)) return null;
+      const params = new URLSearchParams({ format:'metadata', fields:'id,messages(id,threadId,internalDate,labelIds,snippet,payload/headers)' });
+      for (const name of ['From','Reply-To']) params.append('metadataHeaders', name);
+      let thread;
+      try { thread = await read(api + '/threads/' + encodeURIComponent(threadId) + '?' + params, access); }
+      catch (error) { if (error.status === 404) return null; throw error; }
+      if (thread?.id !== threadId || !Array.isArray(thread.messages)) return null;
+      const rows = [];
+      for (const message of thread.messages) {
+        const labels = Array.isArray(message.labelIds) ? message.labelIds : [];
+        if (labels.includes('DRAFT')) continue;
+        if (labels.includes('TRASH') || labels.includes('SPAM')) return null;
+        const headers = message.payload?.headers || [];
+        const one = name => {
+          const found = headers.filter(h => String(h.name).toLowerCase() === name);
+          return found.length === 1 ? senderAddress(found[0].value) : found.length ? null : '';
+        };
+        const date = Number(message.internalDate);
+        if (typeof message.id !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(message.id) || message.threadId !== threadId || !Number.isSafeInteger(date)) return null;
+        rows.push({ id:message.id, date, sent:labels.includes('SENT'), from:one('from'), replyTo:one('reply-to'), snippet:inboxText(message.snippet, 400) });
+      }
+      rows.sort((a,b) => a.date - b.date);
+      const last = rows.at(-1);
+      // Metadata format can omit snippets. Request just the excerpt of the latest reply, never the body.
+      if (last && !last.sent && !last.snippet) {
+        const detail = new URLSearchParams({format:'full', fields:'id,threadId,labelIds,snippet'});
+        let message;
+        try { message = await read(api + '/messages/' + encodeURIComponent(last.id) + '?' + detail, access); }
+        catch (error) { if (error.status === 404) return null; throw error; }
+        if (message?.id !== last.id || message.threadId !== threadId || !Array.isArray(message.labelIds) ||
+            message.labelIds.some(label => ['DRAFT','SPAM','TRASH','SENT'].includes(label))) return null;
+        last.snippet = inboxText(message.snippet,400);
+      }
+      return rows;
     },
     async send(access, message) {
       const thread = message.thread ? validatedThread(message.thread) : undefined;

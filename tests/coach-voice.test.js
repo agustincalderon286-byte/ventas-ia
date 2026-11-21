@@ -63,8 +63,9 @@ test('silence and failed audio generation keep explicit errors instead of claimi
 });
 function chatFixture(){
  const messages=[],spoken=[],sent=[],inputAudio=[];let busy=false;
- const source=appSource.slice(appSource.indexOf('  const sendCoachMessage = async'),appSource.indexOf('  coachVoice = window.TecCoachVoice?.init'));
- const context={String,Number,Array,chatMessages:null,me:{user:{id:'alice'}},window:{sessionStorage:{getItem:()=> 'cierre'}},COACH_WORKSPACE_TAB_KEY:'workspace',
+ const helpers=appSource.slice(appSource.indexOf('function createCoachAgentContexts'),appSource.indexOf('function addCoachMessage('));
+ const source=helpers+appSource.slice(appSource.indexOf('  const sendCoachMessage = async'),appSource.indexOf('  coachVoice = window.TecCoachVoice?.init'));
+ const context={String,Number,Array,chatMessages:null,floatingChatMessages:null,me:{user:{id:'alice'}},window:{sessionStorage:{getItem:()=> 'cierre'}},COACH_WORKSPACE_TAB_KEY:'workspace',
   coachChatBusy:false,coachVoice:{pausePlayback(){},attachInput:(handles,url)=>inputAudio.push(url),speak:async(text)=>{spoken.push(text);return false;}},
   addCoachMessage:(container,role,text)=>{messages.push({role,text});return [{}];},updateCoachMessage:(handles,text)=>messages.push({role:'assistant-update',text}),
   clearCoachChatInputs(){},toggleCoachChatBusy(value){busy=value;context.coachChatBusy=value;},setCoachChatStatusText(){},getCoachDemoStageMeta:()=>({id:'conexion'}),getCoachDemoStageId:()=> 'conexion',getCoachChatSessionId:()=> 'session-test',getCoachVisitorId:()=> 'visitor-test',getCoachDemoEvents:()=>[],

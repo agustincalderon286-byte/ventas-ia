@@ -4,7 +4,8 @@ import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
-import { registerCoachConnections } from "./src/coach-connections.js";
+import { connectionConfig, registerCoachConnections } from "./src/coach-connections.js";
+import { createFollowupStore } from "./src/coach-followup-store.js";
 import { COACH_META_WEBHOOK_PATH, createCoachMetaInboundModel, createCoachMetaWebhook } from "./src/coach-meta-webhook.js";
 import { personalCalendarCrm } from "./src/coach-personal-crm-link.js";
 import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
@@ -25582,7 +25583,10 @@ app.get("/mis-conexiones/", async (req, res, next) => {
   req.tecRequestAuth = auth;
   next();
 });
+const personalConnectionsConfig = connectionConfig(process.env);
+const personalFollowups = createFollowupStore({ key: personalConnectionsConfig.key });
 const runCoachConnectedAgent = registerCoachConnections(app, {
+  config: personalConnectionsConfig, followups: personalFollowups,
   requireActive: requireCoachActivo,
   ...personalCalendarCrm({ users: CoachUser, records: CoachCrmRecord, viewerQuery: construirCoachCrmViewerQuery,
     applySources: aplicarCoachCrmActualizacionAFuentes, invalidate: invalidarCoachWorkspaceCaches }),
@@ -34588,6 +34592,17 @@ async function iniciarServidor() {
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
+    let expiringFollowups = false;
+    async function expireFollowups() {
+      if (expiringFollowups) return;
+      expiringFollowups = true;
+      try { await personalFollowups.expireInterrupted(); }
+      catch { console.warn("No se completó la limpieza de propuestas de Calendar."); }
+      finally { expiringFollowups = false; }
+    }
+    void expireFollowups();
+    const followupTimer = setInterval(expireFollowups, 15 * 60 * 1000);
+    followupTimer.unref();
     let recoveryTimer;
     if (tecSendMail) {
       await recoveryJobs.init();
@@ -34609,8 +34624,8 @@ async function iniciarServidor() {
       console.log(`Servidor corriendo en puerto ${PORT}`);
     });
     installGracefulShutdown({ server, setDraining: () => { serverDraining = true; },
-      stopWorker: () => { clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
-      workerBusy: () => recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
+      stopWorker: () => { clearInterval(followupTimer); clearInterval(recoveryTimer); coachTeamPush.stop(); teamChatWorker.stop(); clearInterval(coachAsyncJobWorkerInterval); clearTimeout(coachAsyncJobWakeTimer); },
+      workerBusy: () => expiringFollowups || recoveryService.busy() || coachAsyncJobWorkerRunning || teamChatWorker.busy() || coachTeamPush.busy(), disconnect: () => mongoose.disconnect() });
   } catch (error) {
     console.error("Error conectando MongoDB Atlas:", error.message);
     process.exit(1);

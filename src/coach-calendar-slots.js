@@ -41,27 +41,39 @@ export function slotBounds(state) {
   return {start:new Date(start).toISOString(),end:new Date(end).toISOString()};
 }
 
-// Offer non-overlapping intervals, including gaps that do not begin on a quarter hour.
+// Prefer quarter-hour starts and a break between alternatives when the available time allows.
 export function availableSlots({start,end}, busy, duration, now) {
   const length=duration*minute;
   if (!Number.isSafeInteger(duration) || duration<=0) throw new Error('Duración inválida');
   const endMs=Date.parse(end);
-  let cursor=Math.max(Date.parse(start), Math.floor(now/minute)*minute + minute);
+  const first=Math.max(Date.parse(start), Math.floor(now/minute)*minute + minute);
   const windows=busy.map(block=>{
     const a=Date.parse(block.start), b=Date.parse(block.end);
     if (!Number.isFinite(a) || !Number.isFinite(b) || b<=a) throw new Error('Respuesta de disponibilidad incompleta');
     return [a,b];
   }).sort((a,b)=>a[0]-b[0]);
-  const slots=[];
-  for (const [from,to] of [...windows,[endMs,endMs]]) {
-    while (slots.length<2 && cursor+length<=Math.min(from,endMs)) {
-      slots.push({start:new Date(cursor).toISOString(),end:new Date(cursor+length).toISOString()});
-      cursor+=length;
+  windows.push([endMs,endMs]);
+  function collect(step, breakMinutes) {
+    const slots=[];
+    let cursor=first;
+    for (const [from,to] of windows) {
+      cursor=Math.ceil(cursor/step)*step;
+      while (cursor+length<=Math.min(from,endMs)) {
+        slots.push({start:new Date(cursor).toISOString(),end:new Date(cursor+length).toISOString()});
+        if (slots.length===2) return slots;
+        cursor=Math.ceil((cursor+length+breakMinutes*minute)/step)*step;
+      }
+      cursor=Math.max(cursor,to);
     }
-    if (slots.length===2) break;
-    cursor=Math.max(cursor,Math.ceil(to/minute)*minute);
+    return slots;
   }
-  return slots;
+  let best=[];
+  for (const [step,gap] of [[15*minute,15],[15*minute,0],[minute,0]]) {
+    const slots=collect(step,gap);
+    if (slots.length===2) return slots;
+    if (slots.length>best.length) best=slots;
+  }
+  return best;
 }
 
 export function slotChoice(text) {

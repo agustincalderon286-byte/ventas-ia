@@ -49,7 +49,7 @@ function harness(extraConnections = {}) {
           snippet:'Texto privado de prueba',date:'2026-11-20T12:34:56Z'}];
       }
     },
-    ...extraConnections
+    ...(typeof extraConnections === 'function' ? extraConnections({key,doc,recorded}) : extraConnections)
   });
   // This marker stops the normal model path at its first call. Anything else unexpected is a test failure.
   const normalChat = new Error('Entered normal chat');
@@ -221,4 +221,87 @@ test('el chat resuelve un contacto, corrige el WhatsApp y permite cambiar de can
   assert.equal(inbox.coachWhatsAppAgent,undefined);
   assert.equal(recorded.gmail.length,1);
   assert.doesNotMatch(JSON.stringify(recorded.usage),/Rosa|3125550102|el viernes/);
+});
+
+test('el chat conserva la bandeja y corrige la respuesta al hilo después de consultar horarios',async()=>{
+  let draft, writes=0;
+  const {request,recorded}=harness(({key,doc})=>{
+    doc.sendEnabled=true;
+    const cal={_id:user._id,mailbox:user.email,grant:'cal-grant',calendarId:'cal-demo',availabilityEnabled:true,
+      encryptedToken:sealToken('refresh-calendar',key,'calendar-refresh:'+user._id)};
+    const row=()=>({lean:async()=>cal});
+    return {
+      calendarStore:{findById:row,findOne:row,exists:async()=>true},
+      calendarGoogle:{refresh:async()=>({access_token:'calendar-access'}),availability:async()=>[]},
+      gmail:{
+        refresh:async()=>({access_token:'mail-access'}),
+        inbox:async()=>[{id:'a12',from:'cliente@example.invalid',date:'2026-01-01T12:00:00Z',subject:'Demo'}],
+        replyTarget:async(_,id)=>{assert.equal(id,'a12');return {to:'cliente@example.invalid',subject:'Demo',
+          thread:{threadId:'hilo-a',parent:'<msg@example.invalid>',references:['<msg@example.invalid>']}};},
+        send:async()=>{writes++;return {id:'unexpected'};}
+      },
+      drafts:{
+        prepare:async input=>(draft={...input,id:'ABCDEF123456',status:'pending'}),
+        view:async()=>draft,
+        revise:async({changes})=>(draft={...draft,...changes,id:'123456ABCDEF'})
+      }
+    };
+  });
+  const client=readFileSync(new URL('../public/coach/app.js',import.meta.url),'utf8');
+  const contexts=vm.runInNewContext(client.slice(client.indexOf('function createCoachAgentContexts()'),client.indexOf('function retireCoachOffers('))+';createCoachAgentContexts()');
+  async function ask(pregunta) {
+    const body={...base,pregunta,coachTimeZone:'America/Chicago'};
+    contexts.attach(body);
+    const result=(await request(body)).data;
+    contexts.record(body,result,result.coachHelpActions);
+    return result;
+  }
+  await ask('Revisa mis correos');
+  assert.ok((await ask('Busca dos horarios libres mañana para la demo')).coachCalendarPending);
+  assert.match((await ask('Responde al primero')).respuesta,/qué quieres decirle/i);
+  assert.match((await ask('Mensaje: Nos vemos el jueves.')).respuesta,/cliente@example.invalid/);
+  assert.ok((await ask('Busca dos horarios libres el viernes')).coachCalendarPending);
+  const edited=await ask('cambia jueves por lunes');
+  assert.match(edited.respuesta,/Nos vemos el lunes/);
+  assert.equal(edited.coachHelpActions.find(a=>a.type==='mailConfirm').id,'123456ABCDEF');
+  assert.equal(draft.thread.threadId,'hilo-a');
+  assert.equal(writes,0);
+  assert.equal(recorded.model.length,0);
+});
+
+test('desde /chat el borrador ofrece exactamente los horarios que el vendedor vio en Calendar',async()=>{
+  let offered,occupied=false;
+  const {request,recorded}=harness(({key,doc})=>{
+    doc.sendEnabled=true; doc.mailbox=user.email;
+    const cal={_id:user._id,mailbox:user.email,grant:'cal-a',calendarId:'cal-demo',availabilityEnabled:true,
+      encryptedToken:sealToken('calendar',key,'calendar-refresh:'+user._id)};
+    const row=()=>({lean:async()=>cal});
+    return {
+      calendarStore:{findById:row,findOne:row,exists:async()=>true},
+      calendarGoogle:{refresh:async()=>({access_token:'calendar'}),availability:async()=>occupied?[offered.offer.slots[0]]:[]},
+      gmail:{
+        refresh:async()=>({access_token:'mail'}),
+        inbox:async()=>[{id:'abc',from:'ana@example.test',date:'2026-01-01T12:00:00Z',subject:'Demo'}],
+        replyTarget:async()=>({to:'ana@example.test',subject:'Demo',thread:{threadId:'def'}}),
+        thread:async()=>[{id:'abc',from:'ana@example.test',sent:false,replyTo:'',snippet:'Me gustaría una demo.'}]
+      },
+      offers:{newId:()=> '1'.repeat(32),isId:()=>false,isCode:()=>false},findLeads:async()=>[],
+      drafts:{prepare:async input=>(offered={...input,id:'ABCDEF123456'})}
+    };
+  });
+  const inbox=(await request({...base})).data;
+  const slots=(await request({...base,pregunta:'Busca dos horarios libres mañana por la tarde',coachTimeZone:'America/Chicago',
+    coachMailPending:inbox.coachMailPending})).data;
+  const body={...base,pregunta:'Responde al primero con esos dos horarios',coachTimeZone:'America/Chicago',
+    coachMailPending:inbox.coachMailPending,coachCalendarPending:slots.coachCalendarPending,coachQuestionFocus:'calendar'};
+  const draft=(await request(body)).data;
+  assert.equal(draft.coachOfferAgent,true,draft.respuesta);
+  assert.equal(offered.to,'ana@example.test');
+  assert.equal(offered.thread.threadId,'def');
+  const clock=new Intl.DateTimeFormat('es-US',{timeZone:'America/Chicago',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  assert.deepEqual(offered.offer.slots.map(s=>'Elegir '+clock.format(new Date(s.start))),slots.coachHelpActions.map(a=>a.label));
+  assert.equal(draft.coachHelpActions[0].type,'mailConfirm');
+  occupied=true;
+  assert.match((await request(body)).data.respuesta,/se ocupó/);
+  assert.equal(recorded.model.length,0);
 });

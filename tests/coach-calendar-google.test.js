@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import { gmailClient, gmailScope, gmailSendScope } from '../src/coach-hycite-gmail.js';
 import { availabilityScope, calendarGoogleClient, calendarScope, isSecondaryCalendarId } from '../src/coach-calendar-google.js';
 
@@ -113,6 +114,28 @@ test('eventos personales son idempotentes, se mueven en el mismo calendario y no
   await assert.rejects(google.saveEvent('seller-token',otherCalendar,{...moved,calendarId:otherCalendar}));
   assert.equal(writes.length,2);
 });
+test('findEvent solo lee y devuelve el evento escrito por esa misma operación',async()=>{
+  const methods=[];let row=null;
+  const google=calendarGoogleClient(config,async(input,init)=>{
+    methods.push(init.method);assert.equal(init.body,undefined);
+    assert.ok(input.includes('/events/'+event.eventId+'?'));
+    return row?json(200,row):json(404,{});
+  });
+  assert.equal(await google.findEvent('token',calendarId,event),null);
+  const tecEvent=createHash('sha256').update([event.owner,calendarId,event.eventId].join(':')).digest('hex');
+  row={id:event.eventId,etag:'v1',htmlLink:'https://calendar.google.com/calendar/event?eid=x',status:'confirmed',summary:event.summary,
+    start:{dateTime:event.start},end:{dateTime:event.end},reminders:{useDefault:false,overrides:[{method:'popup',minutes:30}]},
+    extendedProperties:{private:{tecEvent,tecOperation:event.operationId}}};
+  assert.deepEqual(await google.findEvent('token',calendarId,event),{id:event.eventId,htmlLink:row.htmlLink,etag:'v1',operationId:event.operationId});
+  assert.equal(await google.findEvent('token',calendarId,{...event,operationId:'another-op'}),null);
+  assert.equal(await google.findEvent('token',calendarId,{...event,owner:'another'}),null);
+  row.status='cancelled';
+  assert.equal(await google.findEvent('token',calendarId,event),null);
+  row.status='confirmed';row.start={dateTime:'2026-12-01T21:00:00.000Z'};
+  await assert.rejects(google.findEvent('token',calendarId,event),e=>e.status===409);
+  assert.ok(methods.every(method=>method==='GET'));
+});
+
 test('rechaza campos o fechas inválidos antes de acceder al proveedor',async()=>{
   const google=calendarGoogleClient(config,async()=>assert.fail('No debe llegar a Google'));
   for (const bad of [{operationId:'a\nb'}, {reminderMinutes:50000}, {start:'2026-12-01'}, {eventId:'../otro'}, {timeZone:'Fake/Zone'}]) {

@@ -1,3 +1,5 @@
+import {isGmailAddress} from './coach-mail-address.js';
+
 // Match whole name tokens, including unaccented spellings typed on a phone.
 function contactPattern(name) {
   const letters = { a: '[aáàä]', e: '[eéèë]', i: '[iíìï]', o: '[oóòö]', u: '[uúùü]', n: '[nñ]' };
@@ -5,6 +7,11 @@ function contactPattern(name) {
   if (!input || input.length > 100 || !/^[\p{L} '\u2019-]+$/u.test(input)) return null;
   const words = input.split(/\s+/).map(word => Array.from(word, c => letters[c] || c).join(''));
   return new RegExp('(?:^|\\s)' + words.join('\\s+') + '(?:$|\\s)', 'i');
+}
+
+function exactEmail(email) {
+  const literal = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('^' + literal + '$','i');
 }
 
 export function personalCalendarCrm({ users, records, viewerQuery, applySources, invalidate }) {
@@ -17,10 +24,23 @@ export function personalCalendarCrm({ users, records, viewerQuery, applySources,
     return { user, filter: { ...visible, $or: involved } };
   }
   return {
-    async findLeads({ owner, name, id, includePhone = false }) {
-      const pattern = id ? null : contactPattern(name);
-      if (id ? !/^[\da-f]{24}$/i.test(String(id)) : !pattern) return [];
-      const selector = id ? { _id: id } : { leadName: pattern };
+    async findLeads({ owner, name, id, email, includePhone = false }) {
+      let selector;
+      if (email !== undefined) {
+        if (!isGmailAddress(email)) return [];
+        selector = { email: exactEmail(email) };
+        if (id) {
+          if (!/^[\da-f]{24}$/i.test(String(id))) return [];
+          selector._id = id;
+        }
+      } else if (id) {
+        if (!/^[\da-f]{24}$/i.test(String(id))) return [];
+        selector = { _id: id };
+      } else {
+        const pattern = contactPattern(name);
+        if (!pattern) return [];
+        selector = { leadName: pattern };
+      }
       const scope = await sellerScope(owner);
       if (!scope) return [];
       const fields = includePhone ? '_id leadName nextActionAt phone' : '_id leadName nextActionAt';
@@ -29,15 +49,16 @@ export function personalCalendarCrm({ users, records, viewerQuery, applySources,
       return matches.map(row => ({ id: String(row._id), name: row.leadName, nextActionAt: row.nextActionAt?.toISOString() || null,
         ...(includePhone && { phone: String(row.phone || '') }) }));
     },
-    async syncLead({ owner, leadId, start, action, expectedStart }) {
+    async syncLead({ owner, leadId, start, action, expectedStart, expectedEmail }) {
       if (!/^[\da-f]{24}$/i.test(String(leadId))) return false;
+      if (expectedEmail !== undefined && !isGmailAddress(expectedEmail)) return false;
       const nextActionAt = new Date(start);
       const before = expectedStart ? new Date(expectedStart) : null;
       if (!start || !Number.isFinite(+nextActionAt) || (before && !Number.isFinite(+before))) return false;
       const scope = await sellerScope(owner);
       if (!scope) return false;
       const nextAction = ['llamar', 'cita', 'demo', 'seguimiento'].includes(action) ? action : 'seguimiento';
-      const filter = { ...scope.filter, _id: leadId, nextActionAt: { $in: [before, nextActionAt] } };
+      const filter = { ...scope.filter, _id: leadId, ...(expectedEmail && {email:exactEmail(expectedEmail)}), nextActionAt: { $in: [before, nextActionAt] } };
       // Compare with the date seen in the preview. A retry may already have written the new time.
       const updates = { nextAction, nextActionAt };
       const row = await records.findOneAndUpdate(filter, [{ $set: {

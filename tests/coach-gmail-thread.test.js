@@ -63,3 +63,19 @@ test('selecciona un solo correo por posición y conserva texto exacto, correccio
   assert.match(correction({body:'El jueves o el lunes'},'Mejor el viernes').question,/frase/);
   assert.match(correction({thread:{},body:'Hola'},'Asunto: otro').question,/hilo/);
 });
+
+test('lee solo el fragmento de la última respuesta si Gmail omite el texto en metadata',async t=>{
+  const client=gmailClient({origin:'https://example.test'}),requests=[];
+  const message={...sample(),internalDate:'100',labelIds:['INBOX']};
+  t.mock.method(globalThis,'fetch',async url=>{
+    const u=new URL(url);requests.push(u);
+    if (u.pathname.endsWith('/threads/def')) return Response.json({id:'def',messages:[message]});
+    assert.equal(u.searchParams.get('fields'),'id,threadId,labelIds,snippet');
+    return Response.json({id:'abc',threadId:'def',labelIds:['INBOX'],snippet:'La segunda, gracias.'});
+  });
+  assert.equal((await client.thread('test','def'))[0].snippet,'La segunda, gracias.');
+  assert.deepEqual(requests.map(u=>u.searchParams.get('format')),['metadata','full']);
+  message.labelIds=['TRASH'];
+  assert.equal(await client.thread('test','def'),null);
+  assert.equal(requests.length,3);
+});

@@ -4,6 +4,8 @@ import {randomBytes} from 'node:crypto';
 import {createCoachCalendarAgent} from '../src/coach-calendar-agent.js';
 import {availableSlots,readSlotHours,slotBounds} from '../src/coach-calendar-slots.js';
 
+import {offerBody,offerChoice,offerKeepsSlots,slotLabel} from '../src/coach-offer-text.js';
+
 const now=Date.parse('2026-11-20T17:00:00Z');
 const iso=time=>'2026-11-21T'+time+':00.000Z';
 const block=(a,b)=>({start:iso(a),end:iso(b)});
@@ -31,7 +33,7 @@ test('consulta los dos horarios, elegir crea solo la vista previa, se confirma p
   const f=fixture({busy:[block('15:00','15:25'),block('16:30','17:00')]});
   const result=await f.send('Búscame dos espacios de 45 minutos mañana para una demo');
   assert.deepEqual(f.queries,[{owner:'a',grant:'a-grant',start:iso('15:00'),end:'2026-11-22T01:00:00.000Z'}]);
-  assert.match(result.respuesta,/09:25–10:10/);
+  assert.match(result.respuesta,/09:30–10:15/);
   assert.match(result.respuesta,/11:00–11:45/);
   assert.equal(result.coachHelpActions.length,2);
   assert.equal(f.drafts.length,0);
@@ -86,11 +88,31 @@ test('solo propone opciones que caben, pide permiso a cuentas antiguas y aclara 
 
 test('combina bloques desordenados, respeta límites, zona, cambio horario y el futuro',()=>{
   const all=block('15:00','18:00'), gaps=availableSlots(all,[block('15:33','16:00'),block('15:05','15:55')],45,Date.parse(iso('15:00')));
-  assert.deepEqual(gaps,[block('16:00','16:45'),block('16:45','17:30')]);
+  assert.deepEqual(gaps,[block('16:00','16:45'),block('17:00','17:45')]);
   assert.deepEqual(availableSlots(all,[all],10,now),[]);
   assert.deepEqual(availableSlots(all,[],45,Date.parse(iso('17:15'))),[]);
   assert.throws(()=>availableSlots(all,[{start:'invalid',end:all.end}],10,now));
   assert.equal(slotBounds({timeZone:'America/Chicago',day:Date.UTC(2027,2,14),slotHours:[120,240]}).start,undefined);
   assert.equal(slotBounds({timeZone:'America/Chicago',day:Date.UTC(2027,2,14)}).start,'2027-03-14T14:00:00.000Z');
   assert.deepEqual(readSlotHours('entre las 2 pm y las 5 pm'),{hours:[840,1020]});
+});
+
+
+test('prefiere cuartos de hora separados sin perder dos huecos ajustados',()=>{
+  assert.deepEqual(availableSlots(block('15:03','16:33'),[],45,now),
+    [block('15:03','15:48'),block('15:48','16:33')]);
+  assert.deepEqual(availableSlots(block('15:03','17:15'),[],35,now),
+    [block('15:15','15:50'),block('16:15','16:50')]);
+});
+
+test('la edición del correo conserva el orden de las dos opciones y su zona',()=>{
+  const slots=[block('15:00','15:45'),block('17:00','17:45')];
+  const timeZone='America/Chicago';
+  const offer={name:'Ana',timeZone,labels:slots.map(slot=>slotLabel(slot.start,timeZone))};
+  const body=offerBody(offer);
+  assert.ok(offerKeepsSlots(offer,body+'\nGracias, Agustín.'));
+  assert.equal(offerKeepsSlots(offer,body.replace(timeZone,'America/New_York')),false);
+  assert.equal(offerKeepsSlots(offer,body.replace('1. '+offer.labels[0],'2. '+offer.labels[0])),false);
+  assert.equal(offerKeepsSlots(offer,body+'\nMejor ven el miércoles.'),false);
+  assert.equal(offerChoice('La primera no.',slots,timeZone).index,undefined);
 });

@@ -5,6 +5,7 @@ export const availabilityScope = 'https://www.googleapis.com/auth/calendar.freeb
 const calendarApi = 'https://www.googleapis.com/calendar/v3';
 const googleToken = 'https://oauth2.googleapis.com/token';
 export const calendarName = 'Seguimientos TEC';
+const eventFields = 'id,htmlLink,etag,status,summary,start/dateTime,end/dateTime,reminders,extendedProperties/private,attendees(email),attendeesOmitted';
 
 const fail = (text, status) => Object.assign(new Error(text), { status });
 const isoTime = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,9})?)?(?:Z|[+-]\d\d:\d\d)$/;
@@ -84,12 +85,25 @@ export function calendarGoogleClient(config, fetcher = fetch) {
     createCalendar: (access, marker) => api(access, '/calendars?fields=id', { method:'POST',
       data: { summary:calendarName, description:calendarDescription(marker) } }),
     getCalendar: (access, id) => api(access, calendarPath(id) + '?fields=id,description'),
+    // Read-only reconciliation: the event written by exactly this operation, or null if it never landed.
+    async findEvent(access, calendarId, event) {
+      const payload = eventBody({...event,calendarId});
+      let row;
+      try { row = await api(access, calendarPath(calendarId) + '/events/' + event.eventId + '?fields=' + eventFields); }
+      catch (error) { if ([404,410].includes(error.status)) return null; throw error; }
+      const own = row?.extendedProperties?.private;
+      if (row?.id !== event.eventId || row.status === 'cancelled' || own?.tecEvent !== payload.extendedProperties.private.tecEvent ||
+          own?.tecOperation !== event.operationId) return null;
+      if (!matchesConfirmedFields(row,payload)) throw fail('La cita se editó en Calendar.', 409);
+      if (!row.etag) throw fail('Google todavía no confirmó la cita.', 503);
+      return { id:row.id, htmlLink:row.htmlLink || '', etag:row.etag, operationId:event.operationId };
+    },
     async saveEvent(access, calendarId, event) {
       const { eventId, operationId, mode, previousOperationId, previousEtag } = event;
       const payload = eventBody({...event,calendarId});
       const base = calendarPath(calendarId) + '/events';
       const target = base + '/' + eventId;
-      const fields = 'id,htmlLink,etag,status,summary,start/dateTime,end/dateTime,reminders,extendedProperties/private,attendees(email),attendeesOmitted';
+      const fields = eventFields;
       const exact = async () => {
         const row = await api(access, target + '?fields=' + fields);
         if (row.id !== eventId || row.status === 'cancelled' || row.extendedProperties?.private?.tecEvent !== payload.extendedProperties.private.tecEvent) {

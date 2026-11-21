@@ -5,7 +5,7 @@ import {createCoachCalendarConnections} from '../src/coach-calendar-connections.
 import {registerCoachConnections} from '../src/coach-connections.js';
 import {availabilityScope,calendarScope,calendarDescription} from '../src/coach-calendar-google.js';
 
-function harness() {
+function harness({now}={}) {
   const docs = new Map(), calls=[], calendars=new Map(), routes=new Map();
   const match = (row,filter) => row && Object.entries(filter).every(([key,value])=>{
     if (key === '$or') return value.some(condition => match(row,condition));
@@ -56,7 +56,7 @@ function harness() {
     },
     async saveEvent(token,id,event) {calls.push({name:'event',token,id,event});return {id:event.eventId};}
   };
-  const integration=createCoachCalendarConnections({config,store,google,purge:async v=>calls.push({name:'purge',...v})});
+  const integration=createCoachCalendarConnections({config,store,google,now,purge:async v=>calls.push({name:'purge',...v})});
   const back=(_res,result)=>result;
   integration.register({post:(path,h)=>routes.set(path.split('/').at(-1),h)},h=>h,back);
   const seller=(id,session=id)=>({id,session,email:id+'@example.com'});
@@ -160,12 +160,34 @@ test('dos propuestas distintas para el mismo horario se comprueban por turnos, i
   h.docs.get('a').bookingLeaseUntil=new Date(0);
   const pending=h.service.saveEvent(first);
   await inGoogle.promise;
-  await assert.rejects(h.service.saveEvent(alternative),e=>e.status===503);
+  await assert.rejects(h.service.saveEvent(alternative),e=>e.status===503 && e.bookingBusy===true && !e.slotBusy);
   assert.deepEqual(await h.service.saveEvent(other),{id:'other'});
   finish.resolve();assert.deepEqual(await pending,{id:'first'});
   assert.equal(h.docs.get('a').bookingLease,undefined);
   await assert.rejects(h.service.saveEvent(alternative),e=>e.slotBusy&&e.status===409);
   assert.deepEqual(checks,['first','other','alternative']);
+  assert.equal(h.docs.get('a').bookingLease,undefined);
+});
+
+test('la reconciliación solo lee el evento del vendedor y la reserva de horarios usa el reloj inyectado',async()=>{
+  let clock=Date.UTC(2090,0,1);
+  const h=harness({now:()=>clock}), a=h.seller('a');
+  await h.callback(a,(await h.post('start',a)).state,'a');
+  const conn=await h.service.getConnection('a');
+  const reads=[];
+  h.google.saveEvent=async()=>assert.fail('No debe escribir en Google');
+  h.google.findEvent=async(token,calendarId,event)=>{reads.push({token,calendarId,event});return null;};
+  h.docs.get('a').bookingLease='other';h.docs.get('a').bookingLeaseUntil=new Date(clock+60000);
+  assert.equal(await h.service.saveEvent({owner:'a',grant:conn.grant,eventId:'e1',checkAvailability:true,reconcileOnly:true,calendarId:'forged'}),null);
+  assert.equal(reads.length,1);assert.equal(reads[0].token,'a');
+  assert.equal(reads[0].calendarId,conn.calendarId);assert.equal(reads[0].event.calendarId,conn.calendarId);
+  assert.equal(h.docs.get('a').bookingLease,'other');
+  await assert.rejects(h.service.saveEvent({owner:'b',grant:conn.grant,eventId:'e1',reconcileOnly:true}));
+  h.google.saveEvent=async(_token,_calendar,event)=>({id:event.eventId});
+  h.docs.get('a').availabilityEnabled=true;
+  await assert.rejects(h.service.saveEvent({owner:'a',grant:conn.grant,eventId:'e2',checkAvailability:true}),e=>e.bookingBusy && e.status===503);
+  clock+=60000;
+  assert.deepEqual(await h.service.saveEvent({owner:'a',grant:conn.grant,eventId:'e2',checkAvailability:true}),{id:'e2'});
   assert.equal(h.docs.get('a').bookingLease,undefined);
 });
 

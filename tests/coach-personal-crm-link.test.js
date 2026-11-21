@@ -41,3 +41,17 @@ test('la actualización de un prospecto respeta un cambio posterior de la fecha 
   assert.equal(await changed.crm.syncLead(detail),false);
   assert.equal(changed.calls.sources,undefined);
 });
+
+test('el hilo identifica por dirección completa en el CRM accesible al vendedor',async()=>{
+  const {crm,calls}=fixture({team:'equipo'});
+  await crm.findLeads({owner:'seller',email:'Ana.M+demo@example.test'});
+  assert.ok(calls.search.email.test('ana.m+demo@example.test'));
+  assert.ok(!calls.search.email.test('Otro.ana.m+demo@example.test'));
+  assert.ok(!calls.search.email.test('AnaXMdemo@example.test'));
+  assert.equal(calls.search.ownerUserId,'equipo');
+  assert.ok(calls.search.$or.every(role=>Object.values(role)[0]==='seller'));
+  await crm.findLeads({owner:'seller',id:leadId,email:'ana@example.test'});
+  assert.equal(calls.search._id,leadId);
+  assert.ok(calls.search.email.test('ana@example.test'));
+  assert.deepEqual(await crm.findLeads({owner:'seller',email:'',name:'María'}),[]);
+});

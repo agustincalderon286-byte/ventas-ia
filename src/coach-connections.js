@@ -1,3 +1,4 @@
+import {scopeCoachPending} from './coach-chat-pending.js';
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
 import { createCoachWaAgent } from './coach-wa-chat.js';
 import { createWaProfile } from './coach-wa-profile.js';
@@ -6,6 +7,9 @@ import { createWaCloudTemplate } from './coach-wa-cloud-template.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
 import { createCoachMailAgent } from './coach-mail-agent.js';
 import { createMailDrafts } from './coach-mail-drafts.js';
+import { createMailOffers } from './coach-mail-offers.js';
+import { createCoachOfferAgent, createOfferHooks } from './coach-offer-agent.js';
+import { createFollowupStore, purgeCalendarProposals } from './coach-followup-store.js';
 import { createHash, randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectionsPage, notices } from './coach-connections-page.js';
@@ -36,8 +40,17 @@ export function connectionConfig(env) {
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
   calendarStore, calendarGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
-  waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}) }) {
-  const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle});
+  waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
+  // Gmail time offers need the real Mongo stores unless a test injects its own.
+  offers }) {
+  const followupStore = followups || createFollowupStore({key:config.key});
+  const offerStore = offers !== undefined ? offers : store === Store ? createMailOffers({key:config.key,
+    rememberEvent:(b,receipt) => followupStore.rememberEvent(b,receipt)}) : null;
+  const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle,
+    ...(offerStore && { purge: async (args,key) => {
+      await purgeCalendarProposals(args,key);
+      await offerStore.purge({owner:args.owner,calendarGrant:args.grant}).catch(() => {});
+    } })});
   const back = (res, result) => res.redirect(303, page + '?estado=' + result);
   const own = handler => async (req, res) => {
     res.set({ 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).vary('Cookie');
@@ -169,6 +182,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   app.post(api + 'disconnect', own(async (_req, res, { id }) => {
     const doc = await store.findOneAndDelete({ _id: id }).lean();
     if (doc?.grant) await drafts.purge({owner:id, grant:doc.grant}).catch(() => {});
+    if (doc?.grant && offerStore) await offerStore.purge({owner:id, gmailGrant:doc.grant}).catch(() => {});
     if (doc?.encryptedToken && config.calendarReady) return back(res, 'gmailDisconnectedLocal');
     if (doc?.encryptedToken) {
       try {
@@ -177,9 +191,16 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     }
     back(res, 'disconnected');
   }));
-  const runCalendar = createCoachCalendarAgent({config,calendar:calendar.service,switched,findLeads,syncLead,followups});
-  const runMail = createCoachMailAgent({config,store,gmail,drafts,syncSales,switched});
+  const runCalendar = createCoachCalendarAgent({config,calendar:calendar.service,switched,findLeads,syncLead,followups:followupStore});
+  const offerHooks = offerStore ? createOfferHooks({config,calendar:calendar.service,gmail,offers:offerStore}) : null;
+  const runMail = createCoachMailAgent({config,store,gmail,drafts,syncSales,switched,offerHooks});
+  // Runs before Calendar and Gmail: it claims only offer requests and IDs tagged as offers.
+  const runOffer = offerStore ? createCoachOfferAgent({config,store,gmail,drafts,calendar:calendar.service,offers:offerStore,findLeads,syncLead,switched})
+    : async () => null;
   const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,cloud:waCloud,
     isWindowOpen:waWindowOpen,templates:waTemplates,getSenderPhone:owner=>waProfile.load(owner)});
-  return async args => (await runWhatsApp(args)) || (await runCalendar(args)) || runMail(args);
+  return async args => {
+    if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
+    return (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
+  };
 }
