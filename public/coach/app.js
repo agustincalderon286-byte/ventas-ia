@@ -9578,7 +9578,7 @@ function renderCoachMessageActions(card, actions = []) {
 // only replaces the context of the agent that answered, and every context is
 // bound to the account and conversation that produced it.
 function createCoachAgentContexts() {
-  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending" };
+  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending", sheets: "coachSheetsPending" };
   const offerTypes = { mailRetryReceipt: "mail", mailConfirm: "mail", mailCancel: "mail", calendarConfirm: "calendar", calendarCancel: "calendar",
     calendarSlot: "calendar", waPersonalConfirm: "whatsapp", waCancel: "whatsapp", waCloudSend: "whatsapp" };
   const previewTypes = ["mailConfirm", "waPersonalConfirm", "waCloudSend"];
@@ -9609,7 +9609,7 @@ function createCoachAgentContexts() {
     },
     record(body, data, actions = []) {
       if (data?.coachMailAgent !== true) return null;
-      const channel = data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
+      const channel = data.coachSheetsAgent === true ? "sheets" : data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
       if (owner !== ownerOf(body)) return null;
       const field = fields[channel];
       const sent = typeof body[field] === "string" ? body[field] : "";

@@ -5,6 +5,8 @@ import { createWaProfile } from './coach-wa-profile.js';
 import { createWaCloud, waCloudConfig, waCloudSeller } from './coach-wa-cloud.js';
 import { createWaCloudTemplate } from './coach-wa-cloud-template.js';
 import { createCoachSheetsConnections, sheetsApi } from './coach-sheets-connections.js';
+import { createSheetsChatAgent } from './coach-sheets-agent.js';
+import { createSheetsGoogle } from './coach-sheets-google.js';
 import { registerCoachSheetsRoutes } from './coach-sheets-routes.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
 import { createCoachMailAgent } from './coach-mail-agent.js';
@@ -45,7 +47,7 @@ export function connectionConfig(env) {
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, readSheetsSession, sheetsStore, sheetsGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
+  calendarStore, calendarGoogle, readSheetsSession, sheetsStore, sheetsGoogle, sheetsReader=createSheetsGoogle(), findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
   waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
   // Gmail time offers need the real Mongo stores unless a test injects its own.
@@ -219,6 +221,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     back(res, 'disconnected');
   }));
   const runCalendar = createCoachCalendarAgent({config,calendar:calendar.service,switched,findLeads,syncLead,followups:followupStore});
+  const runSheets = createSheetsChatAgent({config,sheets:sheets.service,google:sheetsReader,switched,readSession:readSheetsSession,calendar:runCalendar});
   const offerHooks = offerStore ? createOfferHooks({config,calendar:calendar.service,gmail,offers:offerStore}) : null;
   const runMail = createCoachMailAgent({config,store,gmail,drafts,syncSales,switched,offerHooks});
   // Runs before Calendar and Gmail: it claims only offer requests and IDs tagged as offers.
@@ -233,6 +236,6 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       return agent({...args,literalDraftInput:direct.literal});
     }
     if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
-    return (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
+    return (await runSheets(args)) || (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);
   };
 }

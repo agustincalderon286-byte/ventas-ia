@@ -43,8 +43,8 @@ function showReceipt(result,id) {
 }
 
 export function createCoachCalendarAgent({config,calendar,switched,findLeads,syncLead,followups=createFollowupStore({key:config.key}),now=Date.now}) {
-  return async ({req,auth,sessionId,text}) => {
-    const requested=calendarIntent(text);
+  return async ({req,auth,sessionId,text,sheetsContact}) => {
+    const requested=sheetsContact ? {kind:sheetsContact.slots ? 'availability' : 'create'} : calendarIntent(text);
     const pending=req.body?.coachCalendarPending;
     const slotCommand=/^Elegir horario ([12]) ([a-f0-9]{32})$/i.exec(String(text || '').trim());
     if (!requested && !slotCommand && (!pending || /\b(?:correos?|gmail|borrador|ventas|hy cite|enviar|responde)\b/i.test(text))) return null;
@@ -81,7 +81,13 @@ export function createCoachCalendarAgent({config,calendar,switched,findLeads,syn
           state=decoded.state;
         } catch { return reply('La propuesta anterior caducó. Vuelve a pedirme la cita.'); }
         if (/^(?:cancela(?:r)?|descarta(?:r)?|ol[vb][íi]dalo|ya no|no gracias)[.!]?$/i.test(text.trim())) return reply('Dejé de preparar la cita.');
-      } else { state.kind=requested.kind; }
+      } else {
+        state.kind=requested.kind;
+        if (sheetsContact) {
+          state.sheetName=sheetsContact.name;
+          state.calendarOnly=true;
+        }
+      }
       const ask=(field,question,actions=[])=>reply(question,actions,sealToken(JSON.stringify({state:{...state,waiting:field},until:now()+15*60000}),config.key,aad));
       const selecting = state.waiting==='slot';
       if (slotCommand && (!selecting || slotCommand[2]!==state.availabilitySearchId)) return reply('Ese botón pertenece a otra búsqueda. Elige una opción de la lista más reciente.',[],pending);
@@ -98,7 +104,7 @@ export function createCoachCalendarAgent({config,calendar,switched,findLeads,syn
         if (parsed.question) return ask('details',parsed.question);
       }
       const search=state.kind==='availability';
-      if (search && !connection.availabilityEnabled) return reply('Para buscar horarios en tu calendario principal y en «Seguimientos TEC», activa el permiso de disponibilidad de Google Calendar en Mis conexiones.',[connections]);
+      if ((search || state.sheetName) && !connection.availabilityEnabled) return reply('Para buscar horarios en tu calendario principal y en «Seguimientos TEC», activa el permiso de disponibilidad de Google Calendar en Mis conexiones.',[connections]);
       let lead;
       if ((state.kind==='create' || search && !state.chosenSlot) && !state.name && !state.calendarOnly && /^[0-9a-f]{24}$/i.test(req.body?.activeCrmRecordId || '')) {
         const selected=await findLeads({owner:user._id,id:req.body.activeCrmRecordId});
@@ -152,11 +158,11 @@ export function createCoachCalendarAgent({config,calendar,switched,findLeads,syn
         lead=candidates[0];
       }
       const action=target?.action || state.action || 'seguimiento';
-      const name=target?.name || lead?.name || state.name || 'personal';
+      const name=state.sheetName || target?.name || lead?.name || state.name || 'personal';
       const duration=(Date.parse(when.end)-Date.parse(when.start))/60000;
       const reminder=Object.hasOwn(state,'reminderMinutes') ? state.reminderMinutes : 15;
       const proposal={
-        ...(search && {checkAvailability:true,availabilitySearchId:state.availabilitySearchId}),
+        ...((search || state.sheetName) && {checkAvailability:true,availabilitySearchId:state.availabilitySearchId || randomBytes(16).toString('hex')}),
         ...when,timeZone:state.timeZone,summary:target?.summary || (actionLabels[action]+' · '+name),name,action,reminderMinutes:reminder,
         mode:target?'move':'create',previousOperationId:target?.operationId || '',previousEtag:target?.etag || '',leadId:target?.leadId || lead?.id || '',
         expectedStart:target?.start || lead?.nextActionAt || null
@@ -171,7 +177,7 @@ export function createCoachCalendarAgent({config,calendar,switched,findLeads,syn
       } else {
         message+=state.name&&!state.calendarOnly?'\nSin coincidencia en tus prospectos. La cita se guardará solo en tu calendario.':'\nLa cita se guardará solo en tu calendario.';
       }
-      if (search) message+='\nVolveré a comprobar ambos calendarios cuando confirmes.';
+      if (search || state.sheetName) message+='\nVolveré a comprobar ambos calendarios cuando confirmes.';
       message+='\nEs una cita personal, sin invitados. Confirma con el botón o escribe «Confirmar cita '+draft.id+'».';
       return reply(message,[confirmAction(draft.id),cancelAction(draft.id)]);
     } catch (error) {

@@ -12,6 +12,10 @@ const headerPatterns = {
   relationship:/^(?:relacion(?: con el (?:anfitrion|cliente))?|parentesco|vinculo|relationship)$/,
   seller:/^(?:vendedor(?: que prospecto)?|representante|seller)$/,
   startDate:/^(?:fecha del 4 14|fecha del 4 en 14|fecha del programa)$/,
+  history:/^(?:comentarios? (?:del? )?telemarketing|historial(?: de (?:llamadas|seguimiento))?|notas? de seguimiento|follow up notes)$/,
+  result:/^(?:resultado (?:de (?:la )?)?cita|resultado del seguimiento|appointment result)$/,
+  followupDate:/^(?:fecha (?:del? )?(?:proximo )?seguimiento|proxim[ao] (?:seguimiento|llamada)|fecha (?:de )?proxima llamada|(?:next )?follow up date)$/,
+  status:/^(?:estado|estatus|status)(?: del? (?:lead|prospecto|seguimiento))?$/,
 };
 
 function layout(info, headerRows, kind) {
@@ -47,9 +51,9 @@ function guardBook(book) {
 }
 
 async function readJson(res) {
-  // Only the selected header, name and phone columns are fetched. Fail closed if a scan cannot finish.
   const maxBytes = 12 * 1024 * 1024;
-  if (Number(res.headers?.get('content-length')) > maxBytes) throw fail(422, 'El archivo es demasiado grande para revisar todos los duplicados.');
+  const tooLarge = () => fail(422, 'La hoja es demasiado grande para completar la revisión.');
+  if (Number(res.headers?.get('content-length')) > maxBytes) throw tooLarge();
   if (!res.body?.getReader) return res.json();
   const reader = res.body.getReader(), chunks = [];
   let total = 0;
@@ -59,11 +63,54 @@ async function readJson(res) {
     total += value.length;
     if (total > maxBytes) {
       await reader.cancel();
-      throw fail(422, 'El archivo es demasiado grande para revisar todos los duplicados.');
+      throw tooLarge();
     }
     chunks.push(Buffer.from(value));
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+function followupCell(field, cell) {
+  const value = String(cell?.formattedValue ?? '').trim();
+  if (field !== 'followupDate') return value;
+  // Sheets serials denote local calendar days, independently of the server's timezone.
+  const serial = cell?.effectiveValue?.numberValue;
+  if (['DATE','DATE_TIME'].includes(cell?.effectiveFormat?.numberFormat?.type) &&
+      Number.isFinite(serial) && serial >= 1 && serial < 2958466) {
+    return new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000).toISOString().slice(0, 10);
+  }
+  return value;
+}
+
+function hostName(value) {
+  // A Chicago host cell can contain a second line with the host's telephone.
+  const line = value.split(/[\r\n]+/)[0].replace(/(?:\+?1[ .-]?)?\(?\d{3}\)?[ .-]?\d{3}[ .-]?\d{4}/g,'').trim();
+  const label = normal(line);
+  if (!line || line.length > 100 || !/^[\p{L}][\p{L}\p{M} .,–’'&-]*$/u.test(line) || headerPatterns.host.test(label) ||
+      /\b(?:referencia|referidos?|telefono|tel|celular|historial|comentarios?|telemarketing|buzon|contesto|llamadas?|llamar|instrucciones)\b/.test(label)) return '';
+  return line;
+}
+
+function assignGroupedHost(group, item) {
+  const number = /^\d+$/.test(item.number) ? Number(item.number) : 0;
+  const label = headerPatterns.host.test(normal(item.host));
+  const expectedName = group.nameLabelRow?.row === item.row-1;
+  // Footer/history rows end a block. Never carry their preceding host into a new partial list.
+  if (label || number > 0 && number <= group.number || !number && !expectedName && (item.host || item.fullName)) {
+    group.host = '';
+    group.nameLabelRow = null;
+    group.number = 0;
+  }
+  if (label) {
+    // The Chicago template places the prospect on the caption row and the host's name directly below.
+    group.nameLabelRow = item;
+  } else if (number === 1 || group.nameLabelRow?.row === item.row-1) {
+    group.host = hostName(item.host);
+    if (group.nameLabelRow) group.nameLabelRow.host = group.host;
+    group.nameLabelRow = null;
+  }
+  if (number) group.number = number;
+  item.host = number ? group.host : '';
 }
 
 export function createSheetsGoogle(fetcher = fetch) {
@@ -83,28 +130,34 @@ export function createSheetsGoogle(fetcher = fetch) {
     if (res.status === 400) throw fail(409, 'La estructura de la hoja cambió. Abre una vista previa nueva.', { definite:true });
     throw fail(503, 'Google Sheets no completó la operación. Reintenta esta misma revisión.', { definite:res.status === 429 });
   }
-  const grid = (access, book, ranges) => request(access, book,
-    ':getByDataFilter?fields=sheets(properties(sheetId),data(startRow,startColumn,rowData(values(formattedValue,effectiveValue(numberValue),note))))',
+  const grid = (access, book, ranges, cellFields='formattedValue,effectiveValue(numberValue),note') => request(access, book,
+    ':getByDataFilter?fields=sheets(properties(sheetId),data(startRow,startColumn,rowData(values('+cellFields+'))))',
     {dataFilters:ranges.map(gridRange => ({gridRange})),includeGridData:true});
+  async function layouts(access, book) {
+    const meta = await request(access, book, '?fields=properties(title,locale),sheets(properties(sheetId,title,sheetType,gridProperties(rowCount,columnCount)))');
+    const sheets = ['tickets','referrals'].map(kind => {
+      const id = kind === 'tickets' ? book.ticketsSheetId : book.referralsSheetId;
+      const info = meta.sheets?.find(s => (s.properties.sheetId ?? 0) === id)?.properties;
+      if (!info || info.sheetType !== 'GRID' || !info.gridProperties?.columnCount || !info.gridProperties?.rowCount) {
+        throw fail(409, 'Una pestaña elegida ya no está disponible. Revisa Mis conexiones.');
+      }
+      return { ...info, sheetId:id, kind };
+    });
+    const headers = await grid(access, book, sheets.map(s => ({ sheetId:s.sheetId, startRowIndex:0,
+      endRowIndex:Math.min(s.gridProperties.rowCount, 30), startColumnIndex:0, endColumnIndex:Math.min(s.gridProperties.columnCount, 48) })), 'formattedValue');
+    const state = { title:meta.properties.title };
+    for (const info of sheets) {
+      const page = headers.sheets?.find(s => (s.properties.sheetId ?? 0) === info.sheetId);
+      const rows = page?.data?.[0]?.rowData?.map(r => r.values || []) || [];
+      state[info.kind] = layout(info, rows, info.kind);
+    }
+    return {sheets,state,locale:meta.properties.locale || ''};
+  }
   return {
     async read(access, book) {
-      const meta = await request(access, book, '?fields=properties(title),sheets(properties(sheetId,title,sheetType,gridProperties(rowCount,columnCount)))');
-      const sheets = ['tickets','referrals'].map(kind => {
-        const id = kind === 'tickets' ? book.ticketsSheetId : book.referralsSheetId;
-        const info = meta.sheets?.find(s => (s.properties.sheetId ?? 0) === id)?.properties;
-        if (!info || info.sheetType !== 'GRID' || !info.gridProperties?.columnCount || !info.gridProperties?.rowCount) {
-          throw fail(409, 'Una pestaña elegida ya no está disponible. Revisa Mis conexiones.');
-        }
-        return { ...info, sheetId:id, kind };
-      });
-      const headers = await grid(access, book, sheets.map(s => ({ sheetId:s.sheetId, startRowIndex:0,
-        endRowIndex:Math.min(s.gridProperties.rowCount, 30), startColumnIndex:0, endColumnIndex:Math.min(s.gridProperties.columnCount, 48) })));
-      const state = { title:meta.properties.title, contacts:[], notes:new Set() };
-      for (const info of sheets) {
-        const page = headers.sheets?.find(s => (s.properties.sheetId ?? 0) === info.sheetId);
-        const rows = page?.data?.[0]?.rowData?.map(r => r.values || []) || [];
-        state[info.kind] = layout(info, rows, info.kind);
-      }
+      const {sheets,state} = await layouts(access, book);
+      state.contacts = [];
+      state.notes = new Set();
       const ranges = [];
       for (const info of sheets) {
         const dest = state[info.kind];
@@ -137,6 +190,75 @@ export function createSheetsGoogle(fetcher = fetch) {
         for (const person of people.values()) state.contacts.push(person);
       }
       return state;
+    },
+    async readFollowups(access, book) {
+      const {sheets, state, locale} = await layouts(access, book);
+      const columns = ['fullName', 'host', 'number', 'seller', 'history', 'result', 'followupDate', 'status'];
+      const destinations = sheets.map(info => state[info.kind]);
+      for (const dest of destinations) {
+        if (!['history','result','followupDate','status'].some(field => dest.cols[field] != null)) {
+          throw fail(422, 'No reconocí columnas de seguimiento en «'+dest.title+'». Revisa los encabezados en la hoja.');
+        }
+      }
+
+      // Google omits trailing empty rows in a values read. A sheet may have a very large
+      // allocated grid and empty blocks between referrals, so never stop at a blank page.
+      const nameRanges = sheets.flatMap(info => {
+        const dest = state[info.kind];
+        if (dest.headerRow >= info.gridProperties.rowCount) return [];
+        return [{gridRange:{sheetId:dest.sheetId, startRowIndex:dest.headerRow,
+          startColumnIndex:dest.cols.fullName, endColumnIndex:dest.cols.fullName+1}}];
+      });
+      const response = nameRanges.length && await request(access, book, '/values:batchGetByDataFilter?fields=valueRanges(dataFilters,valueRange(range,values))',
+        {dataFilters:nameRanges, majorDimension:'ROWS', valueRenderOption:'FORMATTED_VALUE'});
+      const rows = [];
+      let textSize = 0;
+      for (const info of sheets) {
+        const dest = state[info.kind];
+        if (dest.headerRow >= info.gridProperties.rowCount) continue;
+        const valueRange = response.valueRanges?.find(entry => entry.dataFilters?.some(({gridRange:r}) =>
+          r && (r.sheetId ?? 0) === dest.sheetId && (r.startColumnIndex ?? 0) === dest.cols.fullName && r.startRowIndex === dest.headerRow))?.valueRange;
+        if (!valueRange) throw fail(503, 'Google no devolvió todos los nombres para revisar los seguimientos.');
+        const namesCount = valueRange.values?.length ?? 0;
+        if (namesCount > 16000) throw fail(422, 'La pestaña «'+dest.title+'» supera las 16000 filas que puedo revisar de una vez.');
+        // If the last prospect is on the host caption row, the name may be outside the used range of the prospect column.
+        const count = dest.grouped && namesCount ? Math.min(namesCount+1, info.gridProperties.rowCount-dest.headerRow) : namesCount;
+        const fields = columns.filter(field => dest.cols[field] != null);
+        let group = {host:'',number:0,nameLabelRow:null};
+        for (let offset=0; offset<count; offset+=1000) {
+          const pageSize = Math.min(1000, count-offset);
+          const start = dest.headerRow + offset;
+          const ranges = fields.map(field => ({sheetId:dest.sheetId, startRowIndex:start, endRowIndex:start+pageSize,
+            startColumnIndex:dest.cols[field], endColumnIndex:dest.cols[field]+1}));
+          const page = await grid(access, book, ranges, 'formattedValue,effectiveValue(numberValue),effectiveFormat(numberFormat(type))');
+          const data = page.sheets?.find(sheet => (sheet.properties.sheetId ?? 0) === dest.sheetId)?.data;
+          const blocks = fields.map(field => {
+            const block = data?.find(column => (column.startColumn ?? 0) === dest.cols[field] && (column.startRow ?? 0) === start);
+            if (!block) throw fail(503, 'Google no devolvió todas las columnas de seguimiento. Vuelve a intentarlo.');
+            return [field, block.rowData || []];
+          });
+          for (let i=0; i<pageSize; i++) {
+            const item = {kind:info.kind,sheetTitle:dest.title,sheetId:dest.sheetId,row:start+i+1,
+              fullName:'',host:'',seller:'',sellerColumn:dest.cols.seller != null,history:'',result:'',followupDate:'',status:''};
+            for (const [field, cells] of blocks) {
+              item[field] = followupCell(field, cells[i]?.values?.[0]);
+            }
+            const label = normal(item.fullName), hostLabel = normal(item.host);
+            if (headerPatterns.fullName.test(label) || label === 'referidos' || (hostLabel === 'referencia' && !item.fullName)) {
+              group = {host:'',number:0,nameLabelRow:null};
+              continue;
+            }
+            if (dest.grouped) assignGroupedHost(group,item);
+            else item.host = hostName(item.host);
+            delete item.number;
+            if (!item.fullName) continue;
+            textSize += item.fullName.length + item.host.length + item.seller.length + item.history.length + item.result.length + item.followupDate.length + item.status.length;
+            if (textSize > 4*1024*1024) throw fail(422, 'El historial es demasiado extenso para completar la revisión.');
+            rows.push(item);
+          }
+        }
+      }
+      return {rows,locale};
     },
     async append(access, book, dest, input, selected, marker) {
       const rows = selected.map((index, order) => {
