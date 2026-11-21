@@ -65,6 +65,7 @@ async function apiRequest(url, options = {}) {
 const COACH_CHAT_API_URL = "/chat";
 const COACH_CHAT_SESSION_KEY = "agustin-coach-chat-session-id";
 const COACH_CHAT_OWNER_KEY = "tec-coach-chat-account-v1";
+const COACH_ACTIVE_SELLER_KEY = "tec-coach-active-seller";
 const COACH_CHAT_VISITOR_KEY = "agustin-coach-visitor-id";
 const COACH_WORKSPACE_TAB_KEY = "agustin-coach-workspace-tab";
 const coachMessageUnreadState = { accountId: "", internal: 0, team: 0 };
@@ -233,7 +234,7 @@ window.prepareTecNativeOffline = async () => {
   await verifyTecNativeSyncOwner(String(viewer?.user?.storageIdentity || viewer?.user?.email || "").toLowerCase());
   const products = await loadCoachOfflineCatalog({ refresh: true });
   if (!products.length) throw new Error("No pude descargar los productos.");
-  await Promise.all(["/api/coach/leads", "/api/coach/program-4-in-14", "/api/coach/health-surveys"].map(tecNativeCachedList));
+  await Promise.all(["/api/coach/leads", ownFourteenSheetsUrl(viewer.user.id), "/api/coach/health-surveys"].map(tecNativeCachedList));
   const registration = await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) =>
     setTimeout(() => reject(new Error("No pude preparar la pantalla local. Reabre TEC con conexión.")), 15000))]);
   const worker = navigator.serviceWorker.controller || registration.active;
@@ -280,6 +281,7 @@ async function cacheTecViewer(value = null) {
     return;
   }
   resetCoachChatForAccount(value.user.id || value.user._id);
+  try { window.localStorage.setItem(COACH_ACTIVE_SELLER_KEY, String(value.user.id || value.user._id)); } catch {}
   await tecOfflinePut("cache", {
     key: TEC_VIEWER_CACHE_KEY,
     value,
@@ -290,6 +292,7 @@ async function cacheTecViewer(value = null) {
 
 async function clearTecCachedViewer() {
   resetCoachChatForAccount("");
+  try { window.localStorage.removeItem(COACH_ACTIVE_SELLER_KEY); } catch {}
   await tecOfflineDelete("cache", TEC_VIEWER_CACHE_KEY).catch(() => null);
 }
 
@@ -399,7 +402,7 @@ function initTecNewClient(user) {
     if (!window.confirm("¿Empezar con un nuevo cliente? Se limpiarán encuesta, calculadora, notas y contexto de esta visita. Los registros guardados, envíos pendientes y grabaciones NO se borran. Conservaremos una copia local de los datos actuales.")) return;
     button.disabled = true;
     try {
-      const snapshot = scopes.map(selector => ({ selector, fields: Array.from(document.querySelector(selector)?.querySelectorAll("input,select,textarea") || []).filter(field => !["password", "file"].includes(field.type)).map(field => ({ name: field.name || field.id || "", value: field.value, checked: field.checked })) }));
+      const snapshot = scopes.map(selector => ({ selector, fields: Array.from(document.querySelector(selector)?.querySelectorAll("input,select,textarea") || []).filter(field => !["password", "file"].includes(field.type) && !field.closest("[data-fourteen-photo-preview]")).map(field => ({ name: field.name || field.id || "", value: field.value, checked: field.checked })) }));
       const email = String(user.storageIdentity || user.email || "").toLowerCase();
       const archive = { key: `visit-archive:${email}:${createTecOfflineId('visit')}`, ownerEmail: email, savedAt: new Date().toISOString(), value: snapshot };
       await tecOfflinePut("cache", archive);
@@ -1860,11 +1863,6 @@ function openCoachCrmLinkedTool(tool = "", record = null) {
 
     prefillCoachHealthSurveyFromCrm(safeRecord);
     wrap?.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-
-  if (safeTool === "program414" && document.querySelector("[data-open-konverta]")) {
-    window.TecExternalTools?.openKonverta();
     return;
   }
 
@@ -4001,7 +3999,7 @@ function createFourteenSheetReferralRow(index) {
     <div class="fourteen-sheet-referral-head">
       <div>
         <strong>Referido ${index}</strong>
-        <span>Nombre, telefono y una nota corta si hace falta.</span>
+        <span>Nombre, teléfono y una nota corta si hace falta.</span>
       </div>
     </div>
 	    <div class="fourteen-sheet-referral-grid">
@@ -4010,11 +4008,11 @@ function createFourteenSheetReferralRow(index) {
 	        <input type="text" name="referralName${index}" placeholder="Nombre del referido" />
 	      </label>
 	      <label class="native-lead-field">
-	        <span>Telefono</span>
+	        <span>Teléfono</span>
 	        <input type="tel" name="referralPhone${index}" placeholder="7735551234" />
 	      </label>
 	      <label class="native-lead-field native-lead-field-full">
-	        <span>Direccion</span>
+	        <span>Dirección</span>
 	        <input
 	          type="text"
 	          name="referralAddress${index}"
@@ -4032,7 +4030,11 @@ function createFourteenSheetReferralRow(index) {
   return row;
 }
 
-function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
+function ownFourteenSheetsUrl(accountId) {
+  return "/api/coach/program-4-in-14?scope=mine&accountId=" + encodeURIComponent(accountId);
+}
+
+function initFourteenSheetTool({ loadLeads, getOwnLeads, syncFolderToggle, user }) {
   const wrap = document.querySelector("[data-fourteen-sheet-wrap]");
   const toggle = document.querySelector("[data-fourteen-sheet-toggle]");
   const form = document.querySelector("[data-fourteen-sheet-form]");
@@ -4072,8 +4074,40 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   const syncToggle = open => {
     wrap.hidden = !open;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.textContent = open ? "Cerrar hoja" : "Abrir hoja";
+    toggle.textContent = open ? "Cerrar hoja de TEC" : "Llenar el 4 en 14 en TEC";
   };
+
+  const accountId = String(user?.id || user?._id || "");
+  const isCurrentSeller = () => {
+    try {
+      const sharedOwner = window.localStorage.getItem(COACH_ACTIVE_SELLER_KEY);
+      return Boolean(accountId) && (!sharedOwner || sharedOwner === accountId) &&
+        !window.TecSessionLock?.locked() && window.sessionStorage.getItem(COACH_CHAT_OWNER_KEY) === accountId;
+    } catch { return false; }
+  };
+  window.addEventListener("storage", event => {
+    if (event.key === COACH_ACTIVE_SELLER_KEY && event.newValue !== accountId) {
+      wrap.hidden = true;
+      window.location.reload();
+    }
+  });
+  const sheetTools = window.TecReferralSheet;
+  const existingNotice = form.querySelector("[data-fourteen-existing]");
+  const showExistingPhones = () => {
+    if (!existingNotice) return;
+    let matches = [];
+    if (isCurrentSeller()) {
+      const previous = [...getOwnLeads(), ...state.savedSheets.flatMap(sheet => sheet.referrals || [])];
+      const phones = new Set(previous.filter(row => row.phone).map(row => sheetTools.phoneKey(row.phone)));
+      matches = sheetTools.readForm(form).referrals.filter(row => row.phone && phones.has(sheetTools.phoneKey(row.phone)));
+    }
+    existingNotice.hidden = matches.length === 0;
+    existingNotice.textContent = matches.length
+      ? "Estos teléfonos ya aparecen entre tus referidos. Revisa si son las mismas personas: " +
+        matches.map(row => row.fullName || row.phone).join(", ") + "."
+      : "";
+  };
+  form.addEventListener("input", showExistingPhones);
 
   const syncAddButton = () => {
     const currentCount = referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length;
@@ -4122,6 +4156,25 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
     syncAddButton();
   };
 
+  window.TecReferralPhoto?.bind({
+    form, isCurrentSeller,
+    readPhoto: image => apiRequest("/api/coach/program-4-in-14/photo", {
+      method:"POST", body:{photo:image, accountId}, timeoutMs:65000
+    }),
+    apply: sheet => sheetTools.applyPhoto(form, sheet, FOURTEEN_SHEET_MAX_REFERRALS, appendReferralRow)
+  });
+  const exportSheet = (sheet, target) => {
+    if (!isCurrentSeller()) return setMessage(target, "Vuelve a abrir la hoja desde tu cuenta.", "error");
+    sheetTools.download(sheet);
+    setMessage(target, "CSV preparado. La descarga contiene solo los referidos de esta hoja.", "success");
+  };
+  form.querySelector("[data-fourteen-csv]")?.addEventListener("click", () => {
+    const sheet = sheetTools.readForm(form);
+    const problem = sheetTools.review(sheet);
+    if (problem) return setMessage(feedbackNode, problem, "error");
+    exportSheet(sheet, feedbackNode);
+  });
+
   const rebuildForm = ({ clearFeedback = true, resetFields = false } = {}) => {
     if (resetFields) {
       form.reset();
@@ -4134,6 +4187,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
       clearMessage(feedbackNode);
     }
     syncFourteenDateRange(form, { forceToday: true });
+    showExistingPhones();
   };
 
   const setInstantFeedback = (message = "", state = "info") => {
@@ -4189,7 +4243,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
         const isCurrent = activeSheet?.id === sheet.id;
 
         return `
-          <article class="fourteen-saved-item ${isCurrent ? "is-current" : ""}" data-fourteen-saved-id="${sheet.id}">
+          <article class="fourteen-saved-item ${isCurrent ? "is-current" : ""}" data-fourteen-saved-id="${escapeHtml(sheet.id)}">
             <div class="health-survey-folder-head">
               <div>
                 <strong>${escapeHtml(sheet.hostName || "Casa sin nombre")}</strong>
@@ -4203,6 +4257,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
               <button type="button" class="secondary-button" data-fourteen-saved-open>
                 ${isCurrent ? "Trabajando esta" : "Abrir hoja"}
               </button>
+              <button type="button" class="nav-button" data-fourteen-saved-csv>Descargar CSV</button>
             </div>
           </article>
         `;
@@ -4235,7 +4290,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
 
     setInstantFeedback("", "info");
   };
-  window.addEventListener("coach:new-client", () => { activeSheet = null; resetInstantSelection(); rebuildForm({ resetFields: false }); renderSavedList(); });
+  window.addEventListener("coach:new-client", () => { photo?.reset(); activeSheet = null; resetInstantSelection(); rebuildForm({ resetFields: false }); renderSavedList(); });
 
   const activateSavedSheet = (sheet, options = {}) => {
     activeSheet = sheet?.id ? sheet : null;
@@ -4268,8 +4323,10 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   };
 
   const loadSavedSheets = async ({ focusLatest = false, focusSheetId = "", scrollToInstant = false } = {}) => {
-    const data = await tecNativeCachedList("/api/coach/program-4-in-14");
+    const data = await tecNativeCachedList(ownFourteenSheetsUrl(accountId));
+    if (!isCurrentSeller()) return;
     state.savedSheets = Array.isArray(data.sheets) ? data.sheets : [];
+    showExistingPhones();
 
     let sheetToActivate = null;
 
@@ -4370,6 +4427,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
             {
               method: "PATCH",
               body: {
+                accountId,
                 activate: true
               }
             }
@@ -4419,7 +4477,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
 
   const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(form, {
     user, kind: "programa-4-en-14", contextFields: ["activeCrmRecordId"],
-    collect: () => ({ ...Object.fromEntries(new FormData(form)), activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
+    collect: () => ({ ...Object.fromEntries(new FormData(form)), captureMode: "tec_sheet", activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
       referrals: Array.from(referralsRoot.querySelectorAll("[data-fourteen-referral-row]")).map((row, index) => ({
         fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
         phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
@@ -4430,7 +4488,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
       const count = Math.min(FOURTEEN_SHEET_MAX_REFERRALS, Math.max(0, ...Object.keys(fields).map(k => Number(k.match(/^referralName(\d+)$/)?.[1] || 0))));
       while (referralsRoot.querySelectorAll("[data-fourteen-referral-row]").length < count) appendReferralRow();
     },
-    onRestore: () => syncFourteenDateRange(form),
+    onRestore: () => { syncFourteenDateRange(form); showExistingPhones(); },
     onSynced: async data => {
       setMessage(feedbackNode, "Hoja 4 en 14 confirmada por el servidor.", "success");
       await loadSavedSheets({ focusSheetId: data.sheet?.id || "" });
@@ -4443,7 +4501,6 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   });
 
   toggle.addEventListener("click", async () => {
-    if (document.querySelector("[data-open-konverta]")) { window.TecExternalTools?.openKonverta(); return; }
     const willOpen = wrap.hidden;
     syncToggle(willOpen);
 
@@ -4489,7 +4546,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
   });
 
   savedList?.addEventListener("click", event => {
-    const openButton = event.target.closest("[data-fourteen-saved-open]");
+    const openButton = event.target.closest("[data-fourteen-saved-open], [data-fourteen-saved-csv]");
 
     if (!openButton) {
       return;
@@ -4503,6 +4560,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
       return;
     }
 
+    if (openButton.hasAttribute("data-fourteen-saved-csv")) return exportSheet(sheet, savedNote);
     activateSavedSheet(sheet, { scrollToInstant: true });
   });
 
@@ -4512,16 +4570,13 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
 
     const submitButton = form.querySelector('button[type="submit"]');
     const formData = new FormData(form);
-    const referrals = Array.from(referralsRoot.querySelectorAll("[data-fourteen-referral-row]"))
-      .map((row, index) => ({
-        fullName: row.querySelector(`[name="referralName${index + 1}"]`)?.value || "",
-        phone: row.querySelector(`[name="referralPhone${index + 1}"]`)?.value || "",
-        address: row.querySelector(`[name="referralAddress${index + 1}"]`)?.value || "",
-        notes: row.querySelector(`[name="referralNotes${index + 1}"]`)?.value || ""
-      }))
-      .filter(item => item.fullName || item.phone || item.address || item.notes);
-
+    if (!isCurrentSeller()) return setMessage(feedbackNode, "Vuelve a abrir la hoja desde tu cuenta.", "error");
+    const sheet = sheetTools.readForm(form);
+    const problem = sheetTools.review(sheet);
+    if (problem) return setMessage(feedbackNode, problem, "error");
+    const referrals = sheet.referrals;
     const payload = {
+      captureMode: "tec_sheet",
       activeCrmRecordId: getActiveCoachCrmContext()?.id || "",
       hostName: formData.get("hostName"),
       hostPhone: formData.get("hostPhone"),
@@ -4543,7 +4598,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
         offlineQueue: true,
         offlineKind: "programa-4-en-14",
         offlineFallback: {
-          createdLeadCount: referrals.length,
+          savedReferralCount: referrals.length,
           duplicateCount: 0,
           delivery: { attempted: false, queued: true }
         }
@@ -4564,7 +4619,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
       }
 
       const duplicateCopy = data.duplicateCount
-        ? ` ${data.duplicateCount} ya existian y se actualizaron.`
+        ? ` ${data.duplicateCount} ya aparecían entre tus referidos.`
         : "";
       const deliveryCopy = data.delivery?.queued
         ? " Tambien voy mandando la hoja a tu destino."
@@ -4574,7 +4629,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
 
       setMessage(
         feedbackNode,
-        `Hoja guardada. Se registraron ${data.createdLeadCount || 0} referido(s).${duplicateCopy}${deliveryCopy}`,
+        `Hoja guardada en tu carpeta con ${data.savedReferralCount ?? data.sheet?.referrals?.length ?? referrals.length} referido(s).${duplicateCopy}${deliveryCopy}`,
         "success"
       );
       await loadSavedSheets({
@@ -4622,6 +4677,7 @@ function initFourteenSheetTool({ loadLeads, syncFolderToggle, user }) {
           {
             method: "PATCH",
             body: {
+              accountId,
               instantCallStatus: nextStatus,
               instantCallNotes: instantNotes?.value || "",
               appointmentDetails: instantAppointment?.value || ""
@@ -5845,7 +5901,9 @@ function initCoachLeadWorkspace(user) {
 
   syncCaptureToggle(false);
   syncFolderToggle(false);
-  initFourteenSheetTool({ loadLeads, syncFolderToggle, user });
+  initFourteenSheetTool({ loadLeads, syncFolderToggle, user,
+    getOwnLeads: () => state.leads.filter(lead => String(lead.generatedByUserId || lead.ownerUserId) === String(user.id || user._id))
+  });
   const nativeOfflineForm = globalThis.window?.TecNativeOffline && user ? attachTecOfflineForm(captureForm, {
     user, kind: "lead",
     collect: () => { const values = Object.fromEntries(new FormData(captureForm)); return { ...values, consentGiven: values.consentGiven === "on" }; },
@@ -17478,6 +17536,7 @@ async function loadCoachAppPage() {
   }
 
   if (me.offline) {
+    resetCoachChatForAccount(me.user.id || me.user._id);
     const notice = document.createElement("p");
     notice.className = "tec-form-status";
     notice.dataset.tecOfflineAccess = "";

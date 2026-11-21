@@ -4,6 +4,7 @@ import { recoveryJobModel } from './src/coach-recovery-delivery.js';
 import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPreviousSessionsQuery } from "./src/coach-password-recovery.js";
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
+import { COACH_REFERRAL_PHOTO_PATH, FOURTEEN_SHEET_MAX_REFERRALS, createCoachReferralPhotoHandler } from "./src/coach-referral-photo.js";
 import { connectionConfig, registerCoachConnections } from "./src/coach-connections.js";
 import { createFollowupStore } from "./src/coach-followup-store.js";
 import { COACH_META_WEBHOOK_PATH, createCoachMetaInboundModel, createCoachMetaWebhook } from "./src/coach-meta-webhook.js";
@@ -980,6 +981,7 @@ const coachSessionSchema = new mongoose.Schema({
   },
   tokenHash: { type: String, required: true, unique: true },
   credentialVersion: { type: String, default: "" },
+  accessMode: { type: String, enum: ["direct", "team_visit"] },
   ipAddress: String,
   userAgent: String,
   adminVerifiedAt: Date,
@@ -2380,6 +2382,14 @@ const CoachSession = mongoose.models.CoachSession || mongoose.model("CoachSessio
 const CoachLeadInbox = mongoose.models.CoachLeadInbox || mongoose.model("CoachLeadInbox", coachLeadInboxSchema);
 const CoachProgramSheet =
   mongoose.models.CoachProgramSheet || mongoose.model("CoachProgramSheet", coachProgramSheetSchema);
+// Team reports, CRM seeding and marketing all consume the legacy collection.
+// Keep a personal capture and its contacts together in a seller-owned document.
+const personalSheetSchema = coachProgramSheetSchema.clone();
+personalSheetSchema.add({ requestFingerprint: String, previousPhoneCount: Number });
+personalSheetSchema.index({ ownerUserId: 1, updatedAt: -1 });
+personalSheetSchema.index({ ownerUserId: 1, "referrals.phone": 1 });
+const CoachPersonalProgramSheet = mongoose.models.CoachPersonalProgramSheet ||
+  mongoose.model("CoachPersonalProgramSheet", personalSheetSchema);
 const CoachHealthSurvey =
   mongoose.models.CoachHealthSurvey || mongoose.model("CoachHealthSurvey", coachHealthSurveySchema);
 const CoachRecruitmentApplication =
@@ -2459,6 +2469,7 @@ app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarW
 const coachMetaWebhook = createCoachMetaWebhook({ store: createCoachMetaInboundModel(mongoose) });
 app.get(COACH_META_WEBHOOK_PATH, coachMetaWebhook.verify);
 app.post(COACH_META_WEBHOOK_PATH, coachMetaWebhook.rawBody, coachMetaWebhook.receive);
+app.post(COACH_REFERRAL_PHOTO_PATH, express.json({ limit: "3mb" }));
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(["/api/coach", "/api/control", "/chat"], createCoachRequestGuard({ requireActive: requireCoachActivo, publicOrigin: process.env.APP_BASE_URL }));
@@ -5411,6 +5422,31 @@ function construirCoachProgramSheetWorkspaceQuery(userDoc = null, extra = {}) {
     ...extra,
     ownerUserId: resolverCoachOwnerUserId(userDoc)
   };
+}
+
+// Older owner-created records may predate generatedByUserId. A team seat must
+// never inherit these records when opening its own capture folder.
+function coachPersonalCaptureFilter(userDoc) {
+  const ownWorkspace = String(resolverCoachOwnerUserId(userDoc)) === String(userDoc._id);
+  return { generatedByUserId: ownWorkspace ? { $in:[userDoc._id, null] } : userDoc._id };
+}
+
+function isOwnCaptureSession(req, auth, accountId) {
+  const headerAccount = req.get("X-TEC-Account-ID");
+  // Only seat accounts supported delegated visits before sessions recorded
+  // their provenance. A legacy seat session must sign in directly once.
+  const mode = auth.session?.accessMode;
+  const direct = mode === "direct" || (!mode && auth.user.accountType !== "seat");
+  return direct && accountId === String(auth.user._id) && (!headerAccount || headerAccount === accountId) &&
+    !parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE];
+}
+
+async function requireOwnPhotoSession(req, res) {
+  const auth = await requireCoachActivo(req, res);
+  if (!auth) return null;
+  if (isOwnCaptureSession(req, auth, req.body?.accountId)) return auth;
+  responderCoachError(res, 403, "Inicia sesión directamente con tu cuenta de TEC para abrir la hoja.");
+  return null;
 }
 
 async function coachTieneAccesoOperativo(userDoc = null) {
@@ -11430,18 +11466,7 @@ async function vincularCoachCrmConResultadoDemo(recordDoc = null, outcomeDoc = n
   return recordDoc;
 }
 
-async function crearCoachProgram414Sheet({
-  userDoc = null,
-  profileDoc = null,
-  ownership = null,
-  linkedCrmRecordDoc = null,
-  payload = null,
-  sendDestination = true
-} = {}) {
-  if (!userDoc?._id || !payload) {
-    throw new Error("No pude preparar la hoja 4 en 14.");
-  }
-
+function prepararDatosHoja414(payload) {
   const hostName =
     seleccionarNombreConfiable(payload?.hostName || "") || String(payload?.hostName || "").trim();
   const hostPhone = normalizePhone(payload?.hostPhone || "");
@@ -11461,10 +11486,8 @@ async function crearCoachProgram414Sheet({
   });
   const notes = String(payload?.notes || "").trim().slice(0, 500);
   const referrals = Array.isArray(payload?.referrals)
-    ? payload.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, 11)
+    ? payload.referrals.map(limpiarCoachProgramReferral).filter(Boolean).slice(0, FOURTEEN_SHEET_MAX_REFERRALS)
     : [];
-  const offlineRequestId = String(payload?.offlineRequestId || "").trim().slice(0, 100);
-
   if (!hostName) {
     throw new Error("El nombre del anfitrion es requerido.");
   }
@@ -11473,6 +11496,69 @@ async function crearCoachProgram414Sheet({
     throw new Error("Pon por lo menos un referido con nombre y telefono.");
   }
 
+  return {
+    programType: "4_en_14", hostName, hostPhone, giftSelected, representativeName, representativePhone,
+    startDate, deadlineDate, startWindow, notes, referrals, referralCount: referrals.length
+  };
+}
+
+async function guardarHoja414Personal(userDoc, payload, offlineRequestId) {
+  const fields = prepararDatosHoja414(payload);
+  const ownerUserId = userDoc._id;
+  const requestFingerprint = offlineRequestId ? hashTokenSeguro(JSON.stringify(fields)) : "";
+  const requestKey = { ownerUserId, offlineRequestId };
+  const result = (doc, duplicateRequest) => {
+    if (offlineRequestId && doc.requestFingerprint !== requestFingerprint) {
+      throw Object.assign(new Error("Este guardado ya se usó con otros datos. Revisa la hoja."), { status: 409 });
+    }
+    return {
+      sheet: limpiarCoachProgramSheet(doc.toObject()), savedReferralCount: doc.referralCount,
+      createdLeadCount: 0, duplicateCount: Number(doc.previousPhoneCount || 0), duplicateRequest,
+      delivery: { attempted: false, delivered: false, skipped: true }
+    };
+  };
+  if (offlineRequestId) {
+    const previous = await CoachPersonalProgramSheet.findOne(requestKey);
+    if (previous) return result(previous, true);
+  }
+  const phones = fields.referrals.map(row => row.phone);
+  const matchPhones = { "referrals.phone": { $in: phones } };
+  const matches = await Promise.all([
+    CoachPersonalProgramSheet.distinct("referrals.phone", { ownerUserId, ...matchPhones }),
+    CoachProgramSheet.distinct("referrals.phone", construirCoachProgramSheetWorkspaceQuery(userDoc, {
+      ...coachPersonalCaptureFilter(userDoc), ...matchPhones
+    }))
+  ]);
+  const previousPhones = new Set(matches.flat());
+  try {
+    const doc = await CoachPersonalProgramSheet.create({
+      ...fields, ownerUserId, ownerName: userDoc.name, ownerEmail: userDoc.email,
+      generatedByUserId: ownerUserId, generatedByName: userDoc.name, generatedByAccountType: userDoc.accountType,
+      ...(offlineRequestId ? { offlineRequestId, requestFingerprint } : {}),
+      previousPhoneCount: phones.filter(phone => previousPhones.has(phone)).length,
+      summary: construirCoachProgramSheetSummary(fields), updatedAt: new Date()
+    });
+    return result(doc, false);
+  } catch (error) {
+    if (error.code !== 11000 || !offlineRequestId) throw error;
+    const winner = await CoachPersonalProgramSheet.findOne(requestKey);
+    if (!winner) throw error;
+    return result(winner, true);
+  }
+}
+
+async function crearCoachProgram414Sheet({
+  userDoc = null,
+  profileDoc = null,
+  ownership = null,
+  linkedCrmRecordDoc = null,
+  payload = null,
+  sendDestination = true
+} = {}) {
+  if (!userDoc?._id || !payload) throw new Error("No pude preparar la hoja 4 en 14.");
+  const fields = prepararDatosHoja414(payload);
+  const { referrals, giftSelected } = fields;
+  const offlineRequestId = String(payload?.offlineRequestId || "").trim().slice(0, 100);
   const effectiveOwnership = ownership || (await construirCoachOwnershipSnapshot(userDoc));
 
   if (offlineRequestId) {
@@ -11508,18 +11594,7 @@ async function crearCoachProgram414Sheet({
     generatedByAccountType: effectiveOwnership.generatedByAccountType,
     ...(offlineRequestId ? { offlineRequestId } : {}),
     linkedCrmRecordId: linkedCrmRecordDoc?._id || null,
-    programType: "4_en_14",
-    hostName,
-    hostPhone,
-    giftSelected,
-    representativeName,
-    representativePhone,
-    startDate,
-    deadlineDate,
-    startWindow,
-    notes,
-    referrals,
-    referralCount: referrals.length,
+    ...fields,
     updatedAt: now
   };
 
@@ -20456,7 +20531,7 @@ async function obtenerCoachAuthPorToken(token = "", options = {}) {
   };
 }
 
-async function crearCoachSesion(req, res, userDoc) {
+async function crearCoachSesion(req, res, userDoc, accessMode = "direct") {
   await revokeLocallyLockedCoachSession(req);
   const userId = userDoc._id;
   const credentialVersion = String(userDoc.credentialVersion || "");
@@ -20483,6 +20558,7 @@ async function crearCoachSesion(req, res, userDoc) {
     userId,
     tokenHash,
     credentialVersion,
+    accessMode,
     ipAddress: obtenerCoachIp(req),
     userAgent: String(req.headers["user-agent"] || "").slice(0, 400),
     expiresAt,
@@ -29443,7 +29519,7 @@ app.post("/api/coach/team/seats/:userId/switch", async (req, res) => {
     }
 
     setCoachReturnCookie(res, req, currentToken);
-    await crearCoachSesion(req, res, seatDoc);
+    await crearCoachSesion(req, res, seatDoc, "team_visit");
 
     res.json({
       ok: true,
@@ -31249,6 +31325,8 @@ app.post("/api/coach/health-surveys", guardCoachFormWrite, async (req, res) => {
   }
 });
 
+app.post(COACH_REFERRAL_PHOTO_PATH, createCoachReferralPhotoHandler({ requireActive: requireOwnPhotoSession }));
+
 app.get("/api/coach/program-4-in-14", async (req, res) => {
   const auth = await requireCoachActivo(req, res);
 
@@ -31257,15 +31335,27 @@ app.get("/api/coach/program-4-in-14", async (req, res) => {
   }
 
   try {
-    const sheetDocs = await CoachProgramSheet.find(
+    const personal = req.query.scope === "mine";
+    if (personal && !isOwnCaptureSession(req, auth, req.query.accountId)) {
+      return responderCoachError(res, 403, "Inicia sesión directamente con tu cuenta de TEC para abrir tus hojas.");
+    }
+    const legacySheets = CoachProgramSheet.find(
       construirCoachProgramSheetWorkspaceQuery(auth.user, {
-        programType: "4_en_14"
+        programType: "4_en_14",
+        ...(personal ? coachPersonalCaptureFilter(auth.user) : {})
       })
     )
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(100)
       .lean();
-
+    const [historical, captured] = await Promise.all([
+      legacySheets,
+      personal ? CoachPersonalProgramSheet.find({ ownerUserId: auth.user._id })
+        .sort({ updatedAt: -1, createdAt: -1 }).limit(100).lean() : []
+    ]);
+    const sheetDocs = personal ? [...captured, ...historical].sort((a, b) =>
+      new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+    ).slice(0, 100) : historical;
     res.json({
       sheets: sheetDocs.map(limpiarCoachProgramSheet).filter(Boolean)
     });
@@ -31282,6 +31372,30 @@ app.post("/api/coach/program-4-in-14", async (req, res) => {
     return;
   }
 
+  const personalCapture = req.body?.captureMode === "tec_sheet";
+  if (personalCapture) {
+    if (!isOwnCaptureSession(req, auth, req.body.accountId)) {
+      return responderCoachError(res, 403, "Inicia sesión directamente con tu cuenta de TEC para guardar tu hoja.");
+    }
+    const phoneValid = phone => /^\+?[\d().\s\p{Pd}]+$/u.test(String(phone || "").trim()) && /^\d{7,15}$/.test(String(phone || "").replace(/\D/g, ""));
+    const referrals = req.body.referrals;
+    if (!String(req.body.hostName || "").trim() || !phoneValid(req.body.hostPhone) ||
+        !Array.isArray(referrals) || !referrals.length || referrals.length > FOURTEEN_SHEET_MAX_REFERRALS ||
+        referrals.some(row => !String(row?.fullName || "").trim() || !phoneValid(row?.phone)) ||
+        new Set(referrals.map(row => normalizePhone(row.phone))).size !== referrals.length) {
+      return responderCoachError(res, 422, "Revisa el anfitrión y los referidos. Cada renglón necesita nombre y teléfono, sin teléfonos repetidos.");
+    }
+    const requestId = req.get("X-TEC-Request-ID") || "";
+    if (requestId && !/^[a-zA-Z0-9_-]{8,100}$/.test(requestId)) {
+      return responderCoachError(res, 400, "El identificador del guardado no es válido.");
+    }
+    try {
+      return res.json(await guardarHoja414Personal(auth.user, req.body, requestId));
+    } catch (error) {
+      if (error.status === 409) return responderCoachError(res, 409, error.message);
+      return responderCoachError(res, 503, "No pude confirmar el guardado de tu hoja. Inténtalo de nuevo.");
+    }
+  }
   const activeCrmRecordId = String(req.body?.activeCrmRecordId || "").trim();
 
   try {
@@ -31342,8 +31456,14 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
   }
 
   try {
-    const sheetDoc = await CoachProgramSheet.findOne({
+    const personal = Object.hasOwn(req.body || {}, "accountId");
+    if (personal && !isOwnCaptureSession(req, auth, req.body.accountId)) {
+      return responderCoachError(res, 403, "Inicia sesión directamente con tu cuenta de TEC para abrir la cita.");
+    }
+    const privateSheet = personal && await CoachPersonalProgramSheet.findOne({ ownerUserId: auth.user._id, _id: sheetId });
+    const sheetDoc = privateSheet || await CoachProgramSheet.findOne({
       ...construirCoachWorkspaceQuery(auth.user),
+      ...(personal ? coachPersonalCaptureFilter(auth.user) : {}),
       _id: sheetId
     });
 
@@ -31398,6 +31518,10 @@ app.patch("/api/coach/program-4-in-14/:sheetId/referrals/:referralIndex/instant-
 
     sheetDoc.updatedAt = now;
     await sheetDoc.save();
+    if (privateSheet) {
+      const sheet = limpiarCoachProgramSheet(sheetDoc.toObject());
+      return res.json({ sheet, referral: sheet.referrals[referralIndex] });
+    }
     let linkedLeadDoc = null;
 
     if (referral.createdLeadId && mongoose.Types.ObjectId.isValid(referral.createdLeadId)) {
@@ -34610,7 +34734,7 @@ async function iniciarServidor() {
       recoveryTimer = setInterval(recoveryService.resume, 15000);
       recoveryTimer.unref();
     }
-    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome].map(model => model.init()));
+    await Promise.all([...Object.values(coachTeamChatModels),...Object.values(coachPushModels),...Object.values(chefPublicModels),CoachLeadInbox,CoachDemoOutcome,CoachPersonalProgramSheet].map(model => model.init()));
     await coachTeamPush.initialize();
     console.log("MongoDB Atlas conectado");
     void warmCoachKnowledge(mongoose.connection.db)

@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/coach/styles.css?v=20261118-resumen1" />
+    <link rel="stylesheet" href="/coach/styles.css?v=20261121-referencias1" />
     <link rel="stylesheet" href="/coach/audiobooks.css?v=20261103-readalong1" />
     <link rel="stylesheet" href="/coach/product-models.css?v=20261110-product3d1" />
     <link rel="stylesheet" href="/coach/product-videos.css?v=20261028-recipes1" />
@@ -1531,7 +1531,7 @@
                 <div class="eyebrow">Paso 3 · Programa 4 en 14</div>
                 <h3>Referencias y regalos</h3>
                 <p>
-                  Registra tus referencias y da seguimiento desde Konverta.
+                  Elige dónde registrar las referencias de esta visita.
                 </p>
 
                 <div class="dashboard-actions compact-top">
@@ -1540,10 +1540,10 @@
                   <button
                     type="button"
                     class="secondary-button native-lead-toggle"
-                    data-fourteen-sheet-toggle hidden
+                    data-fourteen-sheet-toggle aria-controls="tec-fourteen-sheet"
                     aria-expanded="false"
                   >
-                    Abrir hoja
+                    Llenar el 4 en 14 en TEC
                   </button>
                 </div>
 
@@ -1561,7 +1561,7 @@
             <section class="tec-program-gifts" aria-labelledby="tec-program-gifts-title">
               <div class="tec-program-gifts-heading">
                 <h4 id="tec-program-gifts-title">Conoce los regalos</h4>
-                <p>Toca una foto para verla en grande. Registra tus referencias en Konverta.</p>
+                <p>Toca una foto para ver el regalo en grande.</p>
               </div>
               <div class="tec-program-gift-grid">
                 <figure class="tec-program-gift" data-program-gift-visual>
@@ -1609,15 +1609,26 @@
               </div>
             </section>
 
-            <div class="native-lead-wrap" data-fourteen-sheet-wrap hidden>
+            <div class="native-lead-wrap" id="tec-fourteen-sheet" data-fourteen-sheet-wrap hidden>
               <form class="native-lead-form fourteen-sheet-form" data-fourteen-sheet-form>
+                <details class="fourteen-photo-tool">
+                  <summary>Leer una hoja desde una foto</summary>
+                  <p>Al pulsar «Leer con IA», TEC envía la foto a OpenAI para transcribirla. Revisa los nombres y teléfonos antes de pasarlos al formulario.</p>
+                  <div class="dashboard-actions">
+                    <label class="nav-button fourteen-photo-picker">Tomar foto<input type="file" accept="image/*" capture="environment" data-fourteen-photo-camera /></label>
+                    <label class="nav-button fourteen-photo-picker">Elegir foto<input type="file" accept="image/*" data-fourteen-photo /></label>
+                    <button type="button" class="secondary-button" data-fourteen-photo-read>Leer con IA</button>
+                  </div>
+                  <p role="status" aria-live="polite" data-fourteen-photo-status></p>
+                  <div data-fourteen-photo-preview hidden></div>
+                </details>
                 <div class="native-lead-grid">
                   <label class="native-lead-field">
-                    <span>Nombre del anfitrion</span>
+                    <span>Nombre del anfitrión</span>
                     <input type="text" name="hostName" placeholder="Nombre completo" required />
                   </label>
                   <label class="native-lead-field">
-                    <span>Telefono del anfitrion</span>
+                    <span>Teléfono del anfitrión</span>
                     <input type="tel" name="hostPhone" placeholder="7735551234" required />
                   </label>
                   <label class="native-lead-field">
@@ -1629,7 +1640,7 @@
                     <input type="text" name="representativeName" placeholder="Tu nombre o el de tu socio" />
                   </label>
                   <label class="native-lead-field">
-                    <span>Telefono del representante</span>
+                    <span>Teléfono del representante</span>
                     <input type="tel" name="representativePhone" placeholder="Opcional" />
                   </label>
                   <label class="native-lead-field">
@@ -1646,18 +1657,18 @@
                       name="notes"
                       rows="3"
                       maxlength="500"
-                      placeholder="Algo importante sobre el anfitrion o el programa"
+                      placeholder="Algo importante sobre el anfitrión o el programa"
                     ></textarea>
                   </label>
                   <p class="mini-note native-lead-field-full" data-fourteen-date-note>
-                    Elige la fecha de inicio y el sistema calcula los 14 dias del programa.
+                    Elige la fecha de inicio y el sistema calcula los 14 días del programa.
                   </p>
                 </div>
 
                 <div class="fourteen-sheet-head">
                   <div>
                     <strong>Referidos del programa</strong>
-                    <span>Empieza con 4 y si ocupas mas puedes abrir mas espacios.</span>
+                    <span>Empieza con cuatro espacios y agrega hasta once referidos por hoja.</span>
                   </div>
                   <button type="button" class="nav-button" data-fourteen-sheet-add>
                     Agregar otro nombre
@@ -1665,9 +1676,11 @@
                 </div>
 
                 <div class="fourteen-sheet-referrals" data-fourteen-sheet-referrals></div>
+                <p class="mini-note" data-fourteen-existing role="status" hidden></p>
 
                 <div class="dashboard-actions">
-                  <button type="submit" class="primary-button">Guardar hoja</button>
+                  <button type="submit" class="primary-button">Guardar en TEC</button>
+                  <button type="button" class="secondary-button" data-fourteen-csv>Descargar CSV</button>
                   <button type="reset" class="nav-button">Limpiar</button>
                 </div>
 
@@ -1785,7 +1798,7 @@
             </div>
 
             <p class="mini-note">
-              Organiza tus referencias, citas y seguimiento en Konverta.
+              Retoma tus hojas guardadas en TEC o abre Konverta para continuar allí.
             </p>
           </article>
 
@@ -5831,7 +5844,9 @@
     <script src="/coach/team-chat-media.js?v=20261117-push1"></script>
     <script src="/coach/team-chat.js?v=20261117-rigochat1"></script>
     <script src="/coach/session-lock.js?v=20261117-audit1"></script>
-    <script src="/coach/app.js?v=20261121-ofertas"></script>
+    <script src="/coach/referral-sheet.js?v=20261121-referencias1"></script>
+    <script src="/coach/referral-sheet-photo.js?v=20261121-referencias1"></script>
+    <script src="/coach/app.js?v=20261121-referencias1"></script>
     <script src="/coach/audiobook-reader.js?v=20261103-readalong1"></script>
     <script src="/audiolibros/audio-delivery.js?v=20261112-editorial1"></script>
     <script src="/coach/audiobooks.js?v=20261112-editorial1"></script>
