@@ -9495,6 +9495,17 @@ function renderCoachMessageActions(card, actions = []) {
       element.type = "button";
       element.dataset.coachChatActionWorkspace = String(action.workspace).trim();
       element.textContent = String(action.label).trim();
+    } else if (action?.type === "planAction" && /^[a-f0-9]{24}$/.test(action.revision) &&
+        ["apply","slot","contact","close","page"].includes(action.op) && /^[a-z0-9,]{1,40}$/.test(action.arg) &&
+        typeof action.label === "string" && action.label.trim() && action.accountId && action.sessionId) {
+      element = document.createElement("button");
+      element.type = "button";
+      element.textContent = String(action.label).slice(0,140);
+      element.dataset.coachPlanAction = ["TECPLAN", action.revision, action.op, action.arg].join(" ");
+      element.dataset.coachPlanAccount = action.accountId;
+      element.dataset.coachPlanSession = action.sessionId;
+      element.dataset.coachOfferChannel = "plan";
+      element.dataset.coachOfferKind = "slot";
     } else if (action?.type === "calendarSlot" && [1, 2].includes(action.choice) &&
         typeof action.searchId === "string" && /^[a-f0-9]{32}$/.test(action.searchId)) {
       element = document.createElement("button");
@@ -9578,7 +9589,7 @@ function renderCoachMessageActions(card, actions = []) {
 // only replaces the context of the agent that answered, and every context is
 // bound to the account and conversation that produced it.
 function createCoachAgentContexts() {
-  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending", sheets: "coachSheetsPending" };
+  const fields = { mail: "coachMailPending", calendar: "coachCalendarPending", whatsapp: "coachWhatsAppPending", sheets: "coachSheetsPending", plan: "coachPlanPending" };
   const offerTypes = { mailRetryReceipt: "mail", mailConfirm: "mail", mailCancel: "mail", calendarConfirm: "calendar", calendarCancel: "calendar",
     calendarSlot: "calendar", waPersonalConfirm: "whatsapp", waCancel: "whatsapp", waCloudSend: "whatsapp" };
   const previewTypes = ["mailConfirm", "waPersonalConfirm", "waCloudSend"];
@@ -9609,7 +9620,7 @@ function createCoachAgentContexts() {
     },
     record(body, data, actions = []) {
       if (data?.coachMailAgent !== true) return null;
-      const channel = data.coachSheetsAgent === true ? "sheets" : data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
+      const channel = data.coachPlanAgent === true ? "plan" : data.coachSheetsAgent === true ? "sheets" : data.coachWhatsAppAgent === true ? "whatsapp" : data.coachCalendarAgent === true ? "calendar" : "mail";
       if (owner !== ownerOf(body)) return null;
       const field = fields[channel];
       const sent = typeof body[field] === "string" ? body[field] : "";
@@ -9620,6 +9631,8 @@ function createCoachAgentContexts() {
         else delete tokens[channel];
         questionFocus = next ? channel : "";
       }
+      const retiredPlan = channel !== "plan" && data.coachPlanPending === undefined && Boolean(tokens.plan);
+      if (retiredPlan) delete tokens.plan;
       const bookingOffer = data.coachOfferAgent === true &&
         !actions.some(action => offerTypes[action?.type] === "mail");
       const controlsChannel = bookingOffer ? "offer" : channel;
@@ -9628,7 +9641,7 @@ function createCoachAgentContexts() {
       if (offers.some(action => previewTypes.includes(action.type))) draftFocus = [...draftFocus.filter(item => item !== channel), channel];
       else if (updatesToken && (!next || next !== sent)) draftFocus = draftFocus.filter(item => item !== channel);
       const command = /\b([a-f0-9]{12})[.!]?$/i.exec(String(body.pregunta || "").trim());
-      return { channel: controlsChannel, renewed: offers.length > 0, contextChanged: next !== sent, commandId: command ? command[1].toUpperCase() : "" };
+      return { channel: controlsChannel, renewed: offers.length > 0, contextChanged: next !== sent, retiredPlan, commandId: command ? command[1].toUpperCase() : "" };
     }
   };
 }
@@ -9642,7 +9655,7 @@ function retireCoachOffers(roots, keepCards, outcome) {
     Array.from(root.querySelectorAll?.("[data-coach-offer-channel]") || []).forEach(element => {
       if (element.dataset.coachOfferStale === "1" || keep.some(card => card.contains?.(element))) return;
       const sameChannel = element.dataset.coachOfferChannel === outcome.channel;
-      const stale = outcome.all === true || sameChannel && (outcome.renewed ||
+      const stale = outcome.all === true || (outcome.retiredPlan && element.dataset.coachOfferChannel === "plan") || sameChannel && (outcome.renewed ||
         (outcome.commandId && element.dataset.coachOfferId === outcome.commandId) ||
         (outcome.contextChanged && element.dataset.coachOfferKind === "slot"));
       if (!stale) return;
@@ -18314,6 +18327,7 @@ async function loadCoachAppPage() {
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const requestBody = {
         accountId: String(me.user.id),
+        coachPlanVersion: 1,
         coachMailVersion: 1,
         coachCalendarVersion: 1,
         coachWhatsAppVersion: 2,
@@ -18342,6 +18356,7 @@ async function loadCoachAppPage() {
         teamChatOwnerId: window.TecTeamChat?.getTeamOwnerId?.() || ""
       };
       const offerRoots = [chatMessages, floatingChatMessages];
+      const stillMyChat = () => requestBody.accountId === String(me.user.id) && requestBody.sessionId === getCoachChatSessionId();
       if (coachAgentContexts.attach(requestBody)) retireCoachOffers(offerRoots, [], { all: true });
       assistantMessageHandles = addCoachMessage(chatMessages, "assistant", "");
       let streamedReply = "";
@@ -18352,7 +18367,7 @@ async function loadCoachAppPage() {
           }
         },
         onDelta: chunk => {
-          if (!chunk) {
+          if (!chunk || !stillMyChat()) {
             return;
           }
 
@@ -18360,6 +18375,10 @@ async function loadCoachAppPage() {
           updateCoachMessage(assistantMessageHandles, streamedReply || "...");
         }
       });
+      if (!stillMyChat()) {
+        updateCoachMessage(assistantMessageHandles, "Cambiaste de cuenta o conversación.");
+        return { ok: false };
+      }
       const finalReply = data.respuesta || streamedReply || "No pude responder en este momento.";
 
       const mailAgent = data.coachMailAgent === true;
@@ -18367,7 +18386,7 @@ async function loadCoachAppPage() {
       // Only the agent that answered replaces its own context; general replies keep them all.
       const outcome = coachAgentContexts.record(requestBody, data, actions);
       updateCoachMessage(assistantMessageHandles, finalReply, {
-        actions: mailAgent ? actions.map(action => action?.type === "waOpen"
+        actions: mailAgent ? actions.map(action => ["waOpen", "planAction"].includes(action?.type)
           ? { ...action, accountId: requestBody.accountId, sessionId: requestBody.sessionId }
           : data.coachOfferAgent && ["calendarSlot","calendarConfirm","calendarCancel"].includes(action?.type) ? { ...action, fromOffer: true } : action)
           : actions.filter(action => action?.type === "workspace")
@@ -18461,6 +18480,16 @@ async function loadCoachAppPage() {
         cloudButton.dataset.coachWaCloudUsed = "1";
         cloudButton.disabled = true;
         sendCoachMessage(cloudButton.dataset.coachWaCloudSend);
+        return;
+      }
+      const planButton = event.target.closest("[data-coach-plan-action]");
+      if (planButton) {
+        if (planButton.dataset.coachPlanAccount !== String(me.user.id) ||
+            planButton.dataset.coachPlanSession !== getCoachChatSessionId()) {
+          setCoachChatStatusText("Abre una propuesta desde tu cuenta y conversación actual.");
+          return;
+        }
+        sendCoachMessage(planButton.dataset.coachPlanAction, {displayText:planButton.textContent});
         return;
       }
       const slotButton = event.target.closest("[data-coach-calendar-choice]");

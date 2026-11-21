@@ -39,7 +39,7 @@ export function sheetsChatIntent(input) {
   return {kind:'list',page,only};
 }
 
-function saleScope(row, userName) {
+export function saleScope(row, userName) {
   const assigned=fold(row.seller);
   if (!assigned) return 'compartido, sin vendedor indicado';
   const name=fold(userName).replace(/\s+/g,' ');

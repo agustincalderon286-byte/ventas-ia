@@ -116,7 +116,7 @@ function parts(text) {
   };
 }
 
-async function structuredResult({ instruction, system, name, properties, timeout }) {
+export async function structuredResult({ instruction, system, name, properties, timeout }) {
   if (!process.env.OPENAI_API_KEY) throw new Error('El modelo no está disponible');
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST', signal: AbortSignal.timeout(timeout), redirect: 'error',

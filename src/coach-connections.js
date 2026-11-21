@@ -1,11 +1,15 @@
-import {directDraftInput, scopeCoachPending} from './coach-chat-pending.js';
+import {createConversationPlan} from './coach-conversation-plan.js';
+import {createPlanStore} from './coach-plan-store.js';
+import {createPlanChannels} from './coach-plan-channels.js';
+import {createCoachSheetTools} from './coach-sheets-tools.js';
+import {coachPendingFields, directDraftInput, scopeCoachPending} from './coach-chat-pending.js';
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
 import { createCoachWaAgent } from './coach-wa-chat.js';
 import { createWaProfile } from './coach-wa-profile.js';
 import { createWaCloud, waCloudConfig, waCloudSeller } from './coach-wa-cloud.js';
 import { createWaCloudTemplate } from './coach-wa-cloud-template.js';
 import { createCoachSheetsConnections, sheetsApi } from './coach-sheets-connections.js';
-import { createSheetsChatAgent } from './coach-sheets-agent.js';
+import { createSheetsChatAgent, sheetsChatIntent } from './coach-sheets-agent.js';
 import { createSheetsGoogle } from './coach-sheets-google.js';
 import { registerCoachSheetsRoutes } from './coach-sheets-routes.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
@@ -20,6 +24,7 @@ import { connectionsPage, notices } from './coach-connections-page.js';
 import { gmailClient, openToken, sealToken, gmailScope, gmailSendScope } from './coach-hycite-gmail.js';
 
 const page = '/mis-conexiones/';
+const pendingFields = {...coachPendingFields,sheets:'coachSheetsPending'};
 const api = '/api/coach/conexiones/gmail/';
 const waProfileApi = '/api/coach/conexiones/whatsapp/';
 const random = () => randomBytes(32).toString('base64url');
@@ -43,11 +48,12 @@ export function connectionConfig(env) {
   const sheetsPilot = (env.COACH_SHEETS_PILOT_EMAILS ?? env.COACH_CONNECTIONS_PILOT_EMAILS ??
     'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
   const sheetsReady = Boolean(clientId && secret && key.length===32 && sheetsPickerKey && /^\d+$/.test(sheetsAppId));
-  return { key, origin, pilot, domains, clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
+  const planPilot=(env.COACH_PLAN_PILOT_EMAILS ?? 'agustincalderon286@gmail.com,calderonrigoberto51@gmail.com').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean);
+  return { key, origin, pilot, planPilot, domains, clientId, secret, sheetsPickerKey, sheetsAppId, sheetsPilot, sheetsReady, calendarReady: Boolean(clientId && secret && key.length === 32), ready: Boolean(clientId && secret && key.length === 32 && domains.length) };
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, readSheetsSession, sheetsStore, sheetsGoogle, sheetsReader=createSheetsGoogle(), findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
+  calendarStore, calendarGoogle, readSheetsSession, sheetsStore, sheetsGoogle, sheetsReader=createSheetsGoogle(), planDependencies={}, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
   // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
   waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}),
   // Gmail time offers need the real Mongo stores unless a test injects its own.
@@ -229,11 +235,27 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     : async () => null;
   const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,cloud:waCloud,
     isWindowOpen:waWindowOpen,templates:waTemplates,getSenderPhone:owner=>waProfile.load(owner)});
+  const runPlan=createConversationPlan({config,plans:createPlanStore({key:config.key}),sheets:sheets.service,
+    sheetTools:createCoachSheetTools({google:sheetsReader}),channels:createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts}),
+    readSession:readSheetsSession,switched,...planDependencies});
   return async args => {
-    const direct = directDraftInput(args.req?.body,args.text);
-    if (direct) {
+    const body = args.req?.body;
+    const planFocused = body?.coachPlanVersion === 1 && body.coachPlanPending && body.coachQuestionFocus === 'plan';
+    const direct = directDraftInput(body,args.text);
+    if (direct && !(direct.literal && planFocused)) {
       const agent = direct.channel === 'mail' ? runMail : runWhatsApp;
       return agent({...args,literalDraftInput:direct.literal});
+    }
+    const focus=body?.coachQuestionFocus;
+    const legacyFocus=Object.hasOwn(pendingFields,focus) && body[pendingFields[focus]] ? focus : '';
+    const explicitSheetSelection=!body?.coachPlanPending && body?.coachSheetsPending && sheetsChatIntent(args.text)?.kind === 'select';
+    if (!explicitSheetSelection) {
+      const planAnswer=await runPlan({...args,legacyFocus});
+      if (planAnswer) return planAnswer;
+      if (direct?.literal && planFocused) {
+        return {mode:'coach',coachMailAgent:true,coachPlanAgent:true,coachPlanPending:body.coachPlanPending,
+          respuesta:'¿Qué parte de la propuesta quieres corregir? Puedes indicar si es la nota, la cita o el correo.'};
+      }
     }
     if (args.req?.body) args.req.body = scopeCoachPending(args.req.body,args.text);
     return (await runSheets(args)) || (await runWhatsApp(args)) || (await runOffer(args)) || (await runCalendar(args)) || runMail(args);

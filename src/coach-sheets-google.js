@@ -3,6 +3,7 @@ const fail = (status, message, details = {}) => Object.assign(new Error(message)
 const normal = value => String(value || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const headerPatterns = {
   fullName:/^(?:nombre(?:s)?(?: y apellido(?:s)?)?|nombre completo|nombre(?:s)? del (?:referido|prospecto|contacto)|prospecto|contacto|full name|name)$/,
+  email:/^(?:correo(?: electronico)?(?: del (?:prospecto|referido))?|e mail|email(?: address)?)$/,
   phone:/^(?:telefono(?:s)?(?: (?:del (?:referido|prospecto)|celular|de contacto))?|celular|numero de telefono|phone(?: number)?)$/,
   host:/^(?:anfitrion(?:a)?|nombre del anfitrion|quien refiere|referido por|referente|host(?: name)?)$/,
   hostPhone:/^(?:telefono (?:del )?anfitrion|host phone)$/,
@@ -191,9 +192,10 @@ export function createSheetsGoogle(fetcher = fetch) {
       }
       return state;
     },
-    async readFollowups(access, book) {
+    async readFollowups(access, book, { forPlan = false } = {}) {
       const {sheets, state, locale} = await layouts(access, book);
       const columns = ['fullName', 'host', 'number', 'seller', 'history', 'result', 'followupDate', 'status'];
+      if (forPlan) columns.push('email','phone');
       const destinations = sheets.map(info => state[info.kind]);
       for (const dest of destinations) {
         if (!['history','result','followupDate','status'].some(field => dest.cols[field] != null)) {
@@ -230,7 +232,8 @@ export function createSheetsGoogle(fetcher = fetch) {
           const start = dest.headerRow + offset;
           const ranges = fields.map(field => ({sheetId:dest.sheetId, startRowIndex:start, endRowIndex:start+pageSize,
             startColumnIndex:dest.cols[field], endColumnIndex:dest.cols[field]+1}));
-          const page = await grid(access, book, ranges, 'formattedValue,effectiveValue(numberValue),effectiveFormat(numberFormat(type))');
+          const cellFields='formattedValue,effectiveValue(numberValue),effectiveFormat(numberFormat(type))';
+          const page = await grid(access, book, ranges, forPlan ? cellFields+',userEnteredValue' : cellFields);
           const data = page.sheets?.find(sheet => (sheet.properties.sheetId ?? 0) === dest.sheetId)?.data;
           const blocks = fields.map(field => {
             const block = data?.find(column => (column.startColumn ?? 0) === dest.cols[field] && (column.startRow ?? 0) === start);
@@ -240,8 +243,15 @@ export function createSheetsGoogle(fetcher = fetch) {
           for (let i=0; i<pageSize; i++) {
             const item = {kind:info.kind,sheetTitle:dest.title,sheetId:dest.sheetId,row:start+i+1,
               fullName:'',host:'',seller:'',sellerColumn:dest.cols.seller != null,history:'',result:'',followupDate:'',status:''};
+            if (forPlan) item.editable = {};
             for (const [field, cells] of blocks) {
-              item[field] = followupCell(field, cells[i]?.values?.[0]);
+              const cell = cells[i]?.values?.[0];
+              item[field] = followupCell(field, cell);
+              if (forPlan && (field === 'history' || field === 'followupDate')) {
+                // Edits are checked against the exact value displayed at this one cell.
+                item.editable[field] = {column:dest.cols[field], displayed:String(cell?.formattedValue ?? ''),
+                  formula:typeof cell?.userEnteredValue?.formulaValue === 'string'};
+              }
             }
             const label = normal(item.fullName), hostLabel = normal(item.host);
             if (headerPatterns.fullName.test(label) || label === 'referidos' || (hostLabel === 'referencia' && !item.fullName)) {
@@ -259,6 +269,18 @@ export function createSheetsGoogle(fetcher = fetch) {
         }
       }
       return {rows,locale};
+    },
+    async replaceFollowupCell(access, book, {sheetId, row, column, before, after}) {
+      if (![book.ticketsSheetId,book.referralsSheetId].includes(sheetId) || !Number.isSafeInteger(row) || row < 2 ||
+          !Number.isSafeInteger(column) || column < 0 || typeof before !== 'string' || typeof after !== 'string' ||
+          after.length > 50000 || !after || after.startsWith('=')) throw fail(422,'Revisa la celda del seguimiento.');
+      const result = await request(access, book, ':batchUpdate', {requests:[{findReplace:{
+        range:{sheetId,startRowIndex:row-1,endRowIndex:row,startColumnIndex:column,endColumnIndex:column+1},
+        find:before ? before.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '^$',
+        matchCase:true, matchEntireCell:true, includeFormulas:false, searchByRegex:true,
+        replacement:after.replace(/[$\\]/g, c=>'\\'+c)
+      }}]});
+      return result.replies?.[0]?.findReplace?.occurrencesChanged === 1;
     },
     async append(access, book, dest, input, selected, marker) {
       const rows = selected.map((index, order) => {

@@ -1,0 +1,259 @@
+import {createHash} from 'node:crypto';
+import {interpretCoachPlan} from './coach-plan-language.js';
+import {validTimeZone,readFollowup} from './coach-followup-input.js';
+import {sheetsToday} from './coach-sheets-followup-input.js';
+
+const labels={note:'Guardar nota',add:'Agregar prospecto',appointment:'Confirmar cita',email:'Enviar correo'};
+const titles={note:'Nota en Sheets',add:'Alta en Sheets',appointment:'Cita personal',email:'Correo'};
+const direct=auth=>!!(auth?.user && auth.session?.tokenHash) && (auth.session.accessMode==='direct' || (!auth.session.accessMode && auth.user.accountType!=='seat'));
+const hash=value=>createHash('sha256').update(value).digest('hex');
+const reply=(respuesta,revision='',actions=[])=>({mode:'coach',coachMailAgent:true,coachPlanAgent:true,coachPlanPending:revision,coachHelpActions:actions,respuesta});
+const initial=()=>({ops:[],fields:{},steps:{},choices:[],waiting:'',questions:{},calendarState:{},options:[],selection:[]});
+const stale='Esta propuesta cambió o caducó. Revisa la versión actual antes de confirmar.';
+const clean=v=>String(v||'').replace(/[\p{Cc}\p{Cf}]+/gu,' ').trim().slice(0,130);
+const userError=e=>e.publicMessage || ([400,403,409,422].includes(e.status)?e.message:'No pude completar esta operación. Vuelve a revisarla.');
+const writable=Object.keys(labels);
+const canExecute=(s,k)=>['ready','retry'].includes(s.steps[k]?.status) && (k!=='email' || s.sendEmail);
+const command=/^TECPLAN ([a-f0-9]{24}) (apply|slot|contact|close|page) ([a-z0-9,]+)$/;
+
+function view(s,revision,prefix='') {
+  const lines=prefix?[prefix]:[], buttons=[];
+  const button=(op,arg,label)=>buttons.push({type:'planAction',revision,op,arg,label});
+  if (s.listTitle) lines.push(s.listTitle);
+  if (s.choices.length) {
+    for (const [i,c] of s.choices.entries()) {
+      lines.push((i+1)+'. '+clean(c.fullName)+(c.host?' · referido por '+clean(c.host):'')+
+        ' ('+clean(c.sheetTitle)+', fila '+c.row+').'+(c.reason?' '+c.reason:''));
+      button('contact',String(i+1),'Elegir '+(i+1)+' · '+clean(c.fullName));
+    }
+  }
+  for (const page of s.pages || []) button('page',page.arg,page.label);
+  if (s.chosen) lines.push('Prospecto de la hoja: '+clean(s.chosen.fullName)+' ('+clean(s.chosen.sheetTitle)+', fila '+s.chosen.row+').');
+  for (const k of s.ops) {
+    const step=s.steps[k];
+    if (step) lines.push(titles[k]+': '+(step.status==='saved'?'✓ '+step.message:step.preview+(step.message?'\n'+step.message:'')));
+  }
+  lines.push(...Object.values(s.questions).filter(Boolean));
+  for (const [i,label] of (s.slotLabels || []).entries()) button('slot',String(i+1),label);
+  const selected=s.selection.filter(k=>canExecute(s,k));
+  if (selected.length>1) button('apply',selected.join(','),'Confirmar únicamente: '+selected.map(k=>titles[k]).join(' + '));
+  for (const k of writable.filter(k=>canExecute(s,k) && (!s.restricted || selected.includes(k)))) button('apply',k,labels[k]);
+  if (!s.running) button('close','0','Cerrar propuesta');
+  return reply(lines.filter(Boolean).join('\n\n') || '¿Qué te gustaría preparar?',revision,buttons);
+}
+
+function merge(s,intent) {
+  const newOps=intent.operations || [];
+  for (const op of newOps) if (!s.ops.includes(op)) s.ops.push(op);
+  for (const field of ['contact','host','bucket','phone','leadKind','to','mailInstruction','note','noteSchedule','schedule']) {
+    if (intent[field]) s.fields[field]=intent[field];
+  }
+  if (intent.schedule) {s.fields.slots=intent.slots;s.options=[];s.slotLabels=[];delete s.slot;}
+  if (newOps.includes('email') || intent.mailInstruction || intent.sendEmail) s.sendEmail=!!intent.sendEmail;
+  s.selection=[];s.restricted=false;
+}
+function invalidate(s,k) {
+  if (s.steps[k]?.status==='saved' || s.steps[k]?.status==='retry') return;
+  delete s.steps[k];
+}
+function pick(s,c) {
+  s.chosen=c;s.fields.contact=c.fullName;s.choices=[];s.pages=[];s.listTitle='';s.waiting='';s.questions={};
+}
+
+export function createConversationPlan({config,plans,sheets,sheetTools,channels,readSession,switched,interpret=interpretCoachPlan,now=Date.now}) {
+  return async args=>{
+    const {req,auth,sessionId,text}=args, body=req.body||{};
+    const cmd=command.exec(text), client=body.coachPlanPending;
+    if (body.coachPlanVersion!==1) return null;
+    const email=String(auth?.user?.email || '').toLowerCase();
+    const inPilot=list=>list?.some(x=>x==='*' || x===email);
+    const allowed=inPilot(config.sheetsPilot) && inPilot(config.planPilot ?? config.sheetsPilot);
+    if (!allowed || !direct(auth) || !sessionId || switched(req) || body.accountId!==String(auth.user._id)) return cmd||client?reply('Abre tu sesión personal del piloto para continuar.'):null;
+    if (/^(?:confirmar|descartar|cancelar|elegir horario|registrar horarios|enviar whatsapp)\b.*\b[a-f0-9]{12,32}[.!]?$/i.test(text)) return null;
+    const owner=auth.user._id, session=hash(auth.session.tokenHash+':'+sessionId), scope=hash(JSON.stringify([String(owner),session]));
+    const current=async()=>{const a=await readSession(req);return direct(a) && !switched(req) && String(a.user._id)===String(owner) && a.session.tokenHash===auth.session.tokenHash;};
+    const zone=validTimeZone(body.coachTimeZone);
+    const actor={owner,session,current,zone,email:auth.user.email};
+    let ctxCache;
+    const ctx=async()=>{
+      if (!ctxCache) {
+        const {token,grant,...workbook}=await sheets.access(owner);
+        ctxCache={owner,session,grant,workbook,access:token,sellerName:auth.user.name,isCurrent:async()=>await current() && await sheets.current(owner,grant)};
+      }
+      return ctxCache;
+    };
+    let record,s;
+    const save=async(prefix='')=>{
+      if (!await current()) return reply('Tu sesión cambió. Abre de nuevo tu Coach.');
+      const revision=await plans.save(scope,record?.revision,s);
+      return revision?view(s,revision,prefix):reply(stale);
+    };
+    try {
+      record=await plans.load(scope);
+      const recovery=cmd?.[2]==='apply' && record?.data?.running?.from===cmd[1] && record.data.running.arg===cmd[3];
+      if ((client || cmd) && (!record?.data || (!recovery && (client!==record.revision || cmd && cmd[1]!==record.revision)))) return reply(stale);
+      if (!client && !cmd && record?.data?.running) return reply('Todavía se está confirmando una propuesta de esta conversación.');
+      s=(client || cmd ? record?.data : null) || initial();
+      if (s.sheetGrant && (await ctx()).grant!==s.sheetGrant) return reply('Cambiaste la conexión de Sheets. Pídeme una consulta nueva.');
+      if (s.running && (!recovery || now()-s.running.at < 90000)) return reply('Hay una confirmación en curso. Espera su resultado antes de modificar la propuesta.',client);
+      if (cmd?.[2]==='apply') {
+        const keys=cmd[3].split(',');
+        if (!recovery && (new Set(keys).size!==keys.length || keys.some(k=>!canExecute(s,k)) ||
+            s.restricted && keys.some(k=>!s.selection.includes(k)) || keys.length>1 && keys.join(',')!==s.selection.join(','))) return reply(stale,client);
+        if (!await current()) return reply('Abre de nuevo tu sesión del Coach.');
+        s.running={from:cmd[1],arg:cmd[3],at:now()};
+        let version=await plans.save(scope,record.revision,s);
+        if (!version) return reply(stale);
+        for (const k of keys) {
+          const step=s.steps[k];
+          if (step.status==='saved') continue;
+          try {
+            if (!await current()) throw Error();
+            if (s.chosen?.identityKey && ['appointment','email'].includes(k)) await sheetTools.revalidate(await ctx(),s.chosen.identityKey);
+            const actions={note:async()=>sheetTools.confirmNote(await ctx(),step.proposal),add:async()=>sheetTools.confirmAdd(await ctx(),step.proposal),
+              appointment:()=>channels.confirmAppointment(actor,step.proposal),email:()=>channels.confirmEmail(actor,step.proposal)};
+            const result=await actions[k]();
+            step.status=result.status==='saved'?'saved':result.status==='retry'?'retry':'blocked';step.message=result.message;
+          } catch(e) {step.status=[400,403,409,422].includes(e.status)||e.publicMessage?'blocked':'retry';step.message=userError(e);}
+          version=await plans.save(scope,version,s);
+          if (!version) return reply('La confirmación cambió. Comprueba el resultado antes de repetirla.');
+          if (step.status!=='saved') break;
+        }
+        s.running=null;s.selection=s.selection.filter(k=>s.steps[k]?.status!=='saved');
+        record={revision:version};return save('Resultado de tu confirmación');
+      }
+      if (cmd?.[2]==='close') {
+        s=initial();const revision=await plans.save(scope,record.revision,s);
+        return reply(revision?'Cerré la propuesta.':'La propuesta ya cambió.');
+      }
+      let intent,slotChanged=false;
+      let requestedPage=0, deferredOrdinal=0;
+      if (cmd?.[2]==='page') {
+        const page=/^(today|overdue|undated|match)([1-9]\d*)$/.exec(cmd[3]);
+        if (!page || !s.pages?.some(p=>p.arg===cmd[3])) return reply(stale,client);
+        requestedPage=Number(page[2]);
+        intent={kind:'revise',operations:[],bucket:page[1]==='match'?'':page[1]};
+      } else if (cmd) intent={kind:'revise',operations:[],ordinal:Number(cmd[3])};
+      else {
+        intent=await interpret(text,{context:{operations:s.ops,hasSelection:!!s.chosen,hasReview:Object.values(s.steps).some(x=>x.status==='ready'),waiting:s.waiting}});
+        if (args.legacyFocus && !client && !['plan','capabilities','unsupported'].includes(intent.kind)) return null;
+        if (intent.kind==='none' || intent.kind==='unavailable') return client && intent.kind==='unavailable'?reply('No pude interpretar ese cambio. Tu propuesta sigue disponible.',client):null;
+        if (intent.kind==='capabilities') return reply('Con tus conexiones del piloto puedo buscar un referido por nombre o anfitrión, revisar pendientes, preparar un alta o una nota, consultar horarios, agendar una cita personal y redactar un correo. Puedes combinarlo y elegir qué guardar. También puedes corregirme antes de confirmar.',client);
+        if (intent.kind==='unsupported' || intent.kind==='clarify') return reply(intent.question || 'Esa petición incluye una operación que aún no tengo. Puedo preparar una nota, un alta, una cita personal o un correo individual.',client);
+      }
+      if (!zone) return reply('Necesito la zona horaria de tu dispositivo para preparar el seguimiento.',client);
+      if (intent.kind==='select') {
+        s.sendEmail=intent.select.includes('email') && intent.sendEmail;
+        s.selection=intent.select.filter(k=>canExecute(s,k));s.restricted=true;
+        return save(s.selection.length?'Revisa los cambios elegidos y confirma con el botón.':'La selección no contiene un cambio listo para confirmar.');
+      }
+      // A new objective starts fresh. A reference to the last displayed list keeps its candidates.
+      if (intent.kind==='plan' && (intent.bucket || !intent.ordinal && !(client && s.chosen && !intent.contact && !intent.host && !intent.operations.includes('list')))) s=initial();
+      if (intent.contact || intent.host) delete s.fields.bucket;
+      if (intent.bucket && !intent.contact && !intent.host) {delete s.fields.host;delete s.fields.contact;}
+      const oldChoices=s.choices;
+      if ((intent.contact || intent.host || intent.ordinal && s.waiting!=='slot') && s.chosen &&
+          (intent.contact!==s.chosen.fullName || intent.host)) {
+        delete s.fields.to;delete s.fields.mailInstruction;delete s.fields.note;delete s.fields.noteSchedule;s.sendEmail=false;
+        if (Object.values(s.steps).some(step=>['saved','retry'].includes(step.status))) return reply('Esta propuesta ya tiene resultados. Cierra la propuesta antes de cambiar de prospecto.',client);
+      }
+      if (intent.ordinal) {
+        if (s.options.length && (cmd?.[2]==='slot' || !cmd && s.waiting==='slot')) {
+          const slot=s.options[intent.ordinal-1]; if (!slot) return reply('Elige uno de los horarios mostrados.',client);
+          s.slot=slot;s.options=[];s.slotLabels=[];slotChanged=true;
+        } else {
+          const candidate=oldChoices[intent.ordinal-1];
+          if (candidate) pick(s,candidate);
+          else if (!cmd && intent.kind==='plan' && intent.operations.includes('list')) deferredOrdinal=intent.ordinal;
+          else return reply('Elige un prospecto de la lista que acabo de mostrarte.',client);
+        }
+      } else if (intent.contact || intent.host || intent.bucket) {
+        const candidate=intent.contact && !intent.host && oldChoices.filter(c=>c.fullName.toLocaleLowerCase('es')===intent.contact.toLocaleLowerCase('es'));
+        if (candidate?.length===1) pick(s,candidate[0]);
+        else {delete s.chosen;s.choices=[];s.pages=[];s.listTitle='';}
+      }
+      const oldFields={...s.fields};
+      const priorDraft=intent.kind==='revise' && !intent.contact && !intent.host && !intent.to && !deferredOrdinal
+        && (!intent.ordinal || slotChanged) ? s.steps.email?.baseDraft : null;
+      // Capture the previous date even if a contact question interrupted the first request.
+      if (intent.schedule && oldFields.schedule && s.calendarState.day==null) {
+        s.calendarState=readFollowup(oldFields.schedule,{...s.calendarState,kind:oldFields.slots?'availability':'create'},{timeZone:zone,now:now()}).state;
+      }
+      merge(s,intent);
+      if (intent.ordinal || intent.contact || intent.host) for (const k of writable) invalidate(s,k);
+      if (intent.note || intent.noteSchedule) invalidate(s,'note');
+      if (intent.schedule || slotChanged) invalidate(s,'appointment');
+      if (intent.mailInstruction || intent.to || intent.schedule || slotChanged) invalidate(s,'email');
+      if (intent.phone || intent.leadKind) invalidate(s,'add');
+      s.questions={};s.waiting='';
+      const f=s.fields,today=sheetsToday(now(),zone), needsLookup=s.ops.includes('list') || s.ops.includes('note') || !!f.host && !s.ops.includes('add');
+      if (needsLookup && !s.chosen) {
+        if (!f.contact && !f.host && !f.bucket && s.ops.includes('note')) { s.questions.contact='¿En la ficha de quién guardamos la nota?';s.waiting='contact';return save(); }
+        const context=await ctx();s.sheetGrant=context.grant;
+        const group=f.bucket || (!f.contact && !f.host?'today':'');
+        const lookup=(bucket,offset=0)=>sheetTools.search(context,{name:f.contact,host:f.host,bucket,today,offset});
+        const page=requestedPage || 1, limit=10, offset=(page-1)*limit;
+        const result=await lookup(group,offset);
+        s.choices=result.contacts.slice(0,limit);
+        s.pages=[];
+        if (deferredOrdinal && s.choices[deferredOrdinal-1]) pick(s,s.choices[deferredOrdinal-1]);
+        else if (!deferredOrdinal && result.total===1 && (f.contact || f.host || s.ops.length>1)) pick(s,s.choices[0]);
+        else {
+          const names={today:'Para hoy',overdue:'Vencidos',undated:'Pendientes sin fecha',match:'Coincidencias de tu hoja'};
+          const key=group || 'match';
+          s.listTitle=names[key]+' ('+result.total+').';
+          if (result.total>limit) s.listTitle+=' Página '+page+' de '+Math.ceil(result.total/limit)+'.';
+          if (page>1) s.pages.push({arg:key+(page-1),label:'Página anterior'});
+          if (offset+limit<result.total) s.pages.push({arg:key+(page+1),label:'Ver más · '+names[key]});
+          if (group==='today' && !f.contact && !f.host && page===1) {
+            const [late,undated]=await Promise.all([lookup('overdue'),lookup('undated')]);
+            s.listTitle+=' Vencidos ('+late.total+'). Pendientes sin fecha ('+undated.total+').';
+            for (const [k,total] of [['overdue',late.total],['undated',undated.total]]) {
+              if (total) s.pages.push({arg:k+'1',label:'Ver '+names[k].toLowerCase()+' ('+total+')'});
+            }
+          }
+          s.waiting='choice';
+          s.questions.contact=deferredOrdinal?'Elige un prospecto de los que aparecen en esta página.':result.total?'¿Con quién seguimos?':'Puedes elegir otro grupo o darme un nombre o anfitrión.';
+          return save();
+        }
+      }
+      if (s.ops.includes('add') && s.ops.includes('note')) {s.questions.note='¿Quieres dar de alta al prospecto o anotar una gestión en una ficha existente? Pídeme una de estas acciones primero.';return save();}
+      const dateState=readFollowup(f.noteSchedule || '',{},{timeZone:zone,now:now()}).state;
+      // Calendar supplies the checked time to a related draft, independent of operation order in the request.
+      const relatedMail=s.ops.includes('appointment') && (priorDraft && s.mailUsesTime || /\b(cita|demo|demostraci[oó]n|horarios?|llamada|hora|reuni[oó]n|visita)\b/i.test(f.mailInstruction || ''));
+      s.mailUsesTime=!!relatedMail;
+      for (const k of ['note','add','appointment','email'].filter(op=>s.ops.includes(op))) {
+        if (s.steps[k]) continue;
+        try {
+          let result;
+          if (s.chosen?.identityKey && ['appointment','email'].includes(k)) await sheetTools.revalidate(await ctx(),s.chosen.identityKey);
+          if (k==='appointment') {
+            result=await channels.appointment(actor,s.calendarState,{name:s.chosen?.fullName || f.contact,
+              schedule:intent.schedule || (s.slot || oldFields.schedule===f.schedule && s.calendarState.day!=null ? '' : f.schedule) || '',
+              slots:f.slots,slot:s.slot});
+            s.calendarState=result.state || s.calendarState;
+            if (result.options) {s.options=result.options;s.slotLabels=result.labels;}
+          } else if (k==='email') {
+            if (relatedMail && !s.steps.appointment?.whenText) {
+              s.questions.email='Cuando elijas el horario, lo incluiré en el borrador.';continue;
+            }
+            result=await channels.email(actor,{to:f.to || s.chosen?.email,instruction:f.mailInstruction,priorDraft,editInstruction:priorDraft?intent.mailInstruction:'',whenText:relatedMail?s.steps.appointment.whenText:''});
+          }
+          else if (k==='note') {
+            if (f.noteSchedule && dateState.day==null) result={question:'¿Para qué fecha queda el seguimiento en la hoja?'};
+            else if (!f.note && dateState.day==null) result={question:'¿Qué quieres anotar o para qué día queda el próximo seguimiento?'};
+            else result=await sheetTools.prepareNote(await ctx(),{key:s.chosen.key,note:f.note||'',today,
+              followupDate:dateState.day!=null?new Date(dateState.day).toISOString().slice(0,10):''});
+          } else {
+            if (!f.contact || !f.phone || !f.leadKind || f.leadKind==='referrals' && !f.host)
+              result={question:'Para el alta dime el nombre, teléfono y si es rifa o referido. Si es referido, dime también el anfitrión.'};
+            else {const context=await ctx();s.sheetGrant=context.grant;result=await sheetTools.prepareAdd(context,{kind:f.leadKind,fullName:f.contact,phone:f.phone,hostName:f.host});}
+          }
+          if (result.proposal) s.steps[k]={status:'ready',preview:result.preview,proposal:result.proposal,...(result.whenText && {whenText:result.whenText}),...(result.baseDraft && {baseDraft:result.baseDraft})};
+          else if (result.question) {s.questions[k]=result.question;s.waiting ||= k==='appointment'?(s.options.length?'slot':'schedule'):k==='email'?(f.to || s.chosen?.email?'purpose':'to'):k==='add'?'phone':'note';}
+        } catch(e){s.questions[k]=userError(e);s.waiting ||= k==='email'?'to':k==='appointment'?'schedule':k==='note'?'note':'contact';}
+      }
+      return save();
+    } catch(e) {return reply(userError(e),client);}
+  };
+}
