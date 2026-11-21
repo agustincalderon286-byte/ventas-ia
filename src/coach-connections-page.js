@@ -28,7 +28,30 @@ export const notices = {
   busy: 'La conexión cambió. Revisa el estado actual.'
 };
 
-export function connectionsPage({ doc, cal, pilot, ready, calendarReady, personalWhatsAppReady, senderPhone, coachEmail, csrf, message }) {
+const lineStatus = {
+  notConfigured: 'TEC todavía no completó la conexión de tu línea con Meta.',
+  unreachable: 'No se pudo comprobar la línea con Meta en este momento. Coach no enviará hasta verificarla.',
+  token: 'La autorización de Meta para tu línea caducó o fue retirada. TEC debe renovarla.',
+  rejected: 'Meta no reconoce la línea configurada para tu cuenta.',
+  mismatch: 'Meta indica un número distinto al configurado para tu cuenta. Coach no enviará hasta que TEC lo corrija.'
+};
+function businessSection(line, coachEmail, template) {
+  const status = line.ok
+    ? `<p class="notice">Conectada · Meta confirma el número <strong>${esc(line.phone)}</strong>${line.name ? ' (' + esc(line.name) + ')' : ''}.</p>`
+    : `<p class="notice">Sin conexión verificada. ${esc(lineStatus[line.reason] || lineStatus.unreachable)}</p>`;
+  return `<section><h2>WhatsApp Business</h2>
+    <p>Coach de <strong>${esc(coachEmail)}</strong></p>${status}
+    <p>Tu número sigue en tu app de WhatsApp Business. Coach envía desde esa misma línea por Meta solo después de que revises el destinatario y el texto y pulses «Enviar por WhatsApp Business».</p>
+    <p>«Aceptado por Meta» significa que Meta recibió el mensaje para enviarlo; la entrega y la lectura se comprueban en tu app. Si el resultado queda sin confirmar, Coach no lo reintenta.</p>
+    <p>Meta solo admite texto libre si la persona te escribió en las últimas 24 horas; Coach lo comprueba con los mensajes que Meta le notifica y no envía texto libre si no puede confirmarlo. ${template
+      ? 'Fuera de ese plazo, Coach solo te ofrecerá la plantilla de texto fijo aprobada por Meta que configuró TEC: verás su texto exacto, no se puede editar y, al enviarla, confirmas que la persona aceptó tus mensajes y que el texto corresponde a lo que te pidió.'
+      : 'TEC todavía no configuró una plantilla aprobada para escribir fuera de ese plazo, así que en ese caso Coach no prepara envíos: escríbele desde tu app de WhatsApp Business.'}</p>
+    <a href="/coach/app/?abrirCoach=1">Preparar un WhatsApp en el Coach</a></section>`;
+}
+
+export function connectionsPage({ doc, cal, pilot, ready, calendarReady, personalWhatsAppReady, senderPhone, businessLine, businessPending = false, businessTemplate = false, coachEmail, csrf, message }) {
+  // Alta de la línea Business incompleta: se mantiene el flujo manual y se avisa sin datos de la configuración.
+  const pendingNote = businessPending ? '<p class="notice">TEC todavía no completó la conexión de tu línea de WhatsApp Business con Meta. Mientras tanto, prepara tus borradores aquí y envíalos desde tu app.</p>' : '';
   const form = (action, label, secondary = false, prefix = actions, fields = '') => `<form method="post" action="${prefix}${action}"><input type="hidden" name="csrf" value="${esc(csrf)}">${fields}<button class="${secondary ? 'secondary' : ''}" type="submit">${label}</button></form>`;
   const calForm = (action,label,secondary,fields) => form(action,label,secondary,'/api/coach/conexiones/calendar/',fields);
   function rows(title, items, empty) {
@@ -67,8 +90,8 @@ export function connectionsPage({ doc, cal, pilot, ready, calendarReady, persona
   }
   const snapshot = doc?.snapshot;
   const waApi = '/api/coach/conexiones/whatsapp/';
-  const personalWhatsApp = pilot && personalWhatsAppReady ? `<section><h2>WhatsApp</h2>
-    <p>Coach de <strong>${esc(coachEmail)}</strong></p>
+  const personalWhatsApp = businessLine ? businessSection(businessLine, coachEmail, businessTemplate) : pilot && personalWhatsAppReady ? `<section><h2>WhatsApp</h2>
+    <p>Coach de <strong>${esc(coachEmail)}</strong></p>${pendingNote}
     ${senderPhone === null ? '<p>Tu número de referencia no está disponible en este momento.</p>' :
       `<p>Puedes guardar el número desde el que envías tus seguimientos. El Coach lo mostrará como referencia al revisar tus próximos borradores.</p>
       <div class="actions">${form('save','Guardar mi número',false,waApi,

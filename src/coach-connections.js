@@ -1,6 +1,8 @@
 import { createCoachCalendarAgent } from './coach-calendar-agent.js';
 import { createCoachWaAgent } from './coach-wa-chat.js';
 import { createWaProfile } from './coach-wa-profile.js';
+import { createWaCloud, waCloudConfig, waCloudSeller } from './coach-wa-cloud.js';
+import { createWaCloudTemplate } from './coach-wa-cloud-template.js';
 import { createCoachCalendarConnections } from './coach-calendar-connections.js';
 import { createCoachMailAgent } from './coach-mail-agent.js';
 import { createMailDrafts } from './coach-mail-drafts.js';
@@ -32,7 +34,9 @@ export function connectionConfig(env) {
 }
 
 export function registerCoachConnections(app, { requireActive, switched, config = connectionConfig(process.env), store = Store, gmail = gmailClient(config), drafts = createMailDrafts({key:config.key}),
-  calendarStore, calendarGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }) }) {
+  calendarStore, calendarGoogle, findLeads, syncLead, followups, waDrafts, waProfile = createWaProfile({ key: config.key }), waCloud = createWaCloud(waCloudConfig(process.env)),
+  // Sin consulta del webhook auténtico la ventana de 24 h se trata como cerrada (no hay texto libre).
+  waWindowOpen = null, waTemplates = createWaCloudTemplate(waCloud?.config || {}) }) {
   const calendar = createCoachCalendarConnections({config,store:calendarStore,google:calendarGoogle});
   const back = (res, result) => res.redirect(303, page + '?estado=' + result);
   const own = handler => async (req, res) => {
@@ -76,17 +80,24 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   }));
   app.get(page, own(async (req, res, { id, session, pilot, email }) => {
     const personalWhatsAppReady = config.key?.length === 32;
-    const [doc, cal, senderPhone] = pilot ? await Promise.all([
-      store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean(), calendar.panel(id),
-      personalWhatsAppReady ? waProfile.load(id).catch(() => null) : null
-    ]) : [null,null,null];
+    // Solo el email exacto del piloto ve la línea Business, y solo con el alta completa (igual que el chat);
+    // mientras tanto conserva el flujo manual. El estado lo confirma Graph en cada carga.
+    const businessSeller = waCloudSeller(waCloud?.config, { email });
+    const businessPending = !businessSeller && Boolean(waCloud?.config?.email) && email === waCloud.config.email;
+    const [doc, cal, senderPhone, businessLine] = await Promise.all([
+      pilot ? store.findById(id, 'mailbox sendEnabled snapshot syncedAt').lean() : null, pilot ? calendar.panel(id) : null,
+      pilot && personalWhatsAppReady && !businessSeller ? waProfile.load(id).catch(() => null) : null,
+      businessSeller ? (personalWhatsAppReady ? waCloud.verify().catch(() => ({ ok:false, reason:'unreachable' }))
+        : { ok:false, reason:'notConfigured' }) : null
+    ]);
     const message = Object.hasOwn(notices, req.query.estado) ? notices[req.query.estado] : '';
     // Keep the origin on same-site form POSTs for the existing Coach request guard.
     res.set('Referrer-Policy', 'same-origin');
     // Chromium applies form-action to the redirect from our POST to Google as well.
     res.set('Content-Security-Policy', "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com");
     res.send(connectionsPage({ doc, cal, pilot, ready: config.ready, calendarReady:config.calendarReady,
-      personalWhatsAppReady, senderPhone, coachEmail:email, csrf:session, message }));
+      personalWhatsAppReady, senderPhone, businessLine, businessPending,
+      businessTemplate: Boolean(businessSeller && waTemplates?.settings?.ready), coachEmail:email, csrf:session, message }));
   }));
 
   const startAuthorization = requestSend => own(async (_req, res, { id, session }) => {
@@ -168,6 +179,7 @@ export function registerCoachConnections(app, { requireActive, switched, config 
   }));
   const runCalendar = createCoachCalendarAgent({config,calendar:calendar.service,switched,findLeads,syncLead,followups});
   const runMail = createCoachMailAgent({config,store,gmail,drafts,syncSales,switched});
-  const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,getSenderPhone:owner=>waProfile.load(owner)});
+  const runWhatsApp = createCoachWaAgent({config,switched,findLeads,waDrafts,cloud:waCloud,
+    isWindowOpen:waWindowOpen,templates:waTemplates,getSenderPhone:owner=>waProfile.load(owner)});
   return async args => (await runWhatsApp(args)) || (await runCalendar(args)) || runMail(args);
 }

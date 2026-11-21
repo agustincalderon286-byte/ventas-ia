@@ -8,7 +8,7 @@ import {waRequestParts,whatsAppIntent} from '../src/coach-wa-chat-input.js';
 function fixture({contacts=[],switched=false,model,getSenderPhone}={}) {
   const docs=new Map(), matches=[];
   function find(q) {
-    return [...docs.values()].find(d=>Object.entries(q).every(([k,v])=>v?.$gt?d[k]>v.$gt:d[k]===v));
+    return [...docs.values()].find(d=>Object.entries(q).every(([k,v])=>v?.$gt?d[k]>v.$gt:v&&typeof v==='object'&&'$ne' in v?d[k]!==v.$ne:d[k]===v));
   }
   let time=Date.UTC(2026,10,20,17);
   const now=()=>time,key=randomBytes(32);

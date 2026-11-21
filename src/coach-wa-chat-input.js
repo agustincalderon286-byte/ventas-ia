@@ -6,8 +6,10 @@ const composition = /\b(?:prepar\w*|mand\w*|escrib\w*|envia\w*|redact\w*|respond
 
 export function whatsAppIntent(text) {
   const t=foldWa(text);
-  const command=/^(confirmar borrador whatsapp|descartar whatsapp)\s+([a-f\d]{12})[.!]?$/.exec(t);
-  if (command) return {kind:command[1]==='descartar whatsapp'?'cancel':'confirm',id:command[2].toUpperCase()};
+  // «Enviar WhatsApp Business» es el único comando que puede enviar; es distinto del
+  // comando personal, que solo devuelve el enlace para abrir la app del vendedor.
+  const command=/^(confirmar borrador whatsapp|descartar whatsapp|enviar whatsapp business)\s+([a-f\d]{12})[.!]?$/.exec(t);
+  if (command) return {kind:{'descartar whatsapp':'cancel','enviar whatsapp business':'send'}[command[1]] || 'confirm',id:command[2].toUpperCase()};
   if (!channel.test(t)) {
     if (/^(?:prepara(?:me)?|redacta(?:me)?|escribe(?:me)?) (?:un |el )?mensaje de seguimiento\b/.test(t) && !/\b(?:correo|email|sms|telegram)\b/.test(t)) return {kind:'compose'};
     return null;

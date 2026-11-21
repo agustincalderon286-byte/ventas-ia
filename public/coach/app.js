@@ -9303,6 +9303,23 @@ function renderCoachMessageActions(card, actions = []) {
         waPersonalConfirm: "Confirmar borrador WhatsApp", waCancel: "Descartar WhatsApp" };
       element.textContent = labels[action.type];
       element.dataset.coachMailCommand = element.textContent + " " + action.id.toUpperCase();
+    } else if (action?.type === "waCloudSend") {
+      // Muestra destinatario y texto de la revisión vista; el servidor envía solo lo que guardó.
+      if (typeof action.id !== "string" || !/^[a-f0-9]{12}$/i.test(action.id) ||
+          typeof action.to !== "string" || !/^\+[1-9]\d{6,14}$/.test(action.to) ||
+          typeof action.text !== "string" || !action.text.trim() || action.text.length > 4096) return;
+      element = document.createElement("button");
+      element.type = "button";
+      element.textContent = "Enviar por WhatsApp Business";
+      element.dataset.coachWaCloudSend = "Enviar WhatsApp Business " + action.id.toUpperCase();
+      element.dataset.coachWaCloudTo = action.to;
+      element.dataset.coachWaCloudText = action.text;
+    } else if (action?.type === "waCloudStatus") {
+      const labels = { accepted: "Aceptado por Meta", sending: "Enviando…", unknown: "Resultado sin confirmar", failed: "No enviado" };
+      if (!Object.hasOwn(labels, action.state)) return;
+      element = document.createElement("span");
+      element.dataset.coachWaCloudState = action.state;
+      element.textContent = labels[action.state];
     } else if (action?.type === "waOpen") {
       if (typeof action.to !== "string" || !/^\+[1-9]\d{6,14}$/.test(action.to) ||
           typeof action.text !== "string" || !action.text.trim() || action.text.length > 4096 ||
@@ -18004,7 +18021,7 @@ async function loadCoachAppPage() {
         accountId: String(me.user.id),
         coachMailVersion: 1,
         coachCalendarVersion: 1,
-        coachWhatsAppVersion: 1,
+        coachWhatsAppVersion: 2,
         coachTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         responseMode: options.replyMode === "audio" ? "audio" : "text",
         pregunta: text,
@@ -18145,6 +18162,18 @@ async function loadCoachAppPage() {
           event.preventDefault();
           setCoachChatStatusText("Vuelve a preparar el WhatsApp desde tu conversación actual.");
         }
+        return;
+      }
+      const cloudButton = event.target.closest("[data-coach-wa-cloud-send]");
+      if (cloudButton) {
+        if (cloudButton.dataset.coachWaCloudUsed === "1") return;
+        const ok = window.confirm("¿Enviar este WhatsApp desde tu línea Business?\n\nPara: " +
+          cloudButton.dataset.coachWaCloudTo + "\n\n" + cloudButton.dataset.coachWaCloudText);
+        if (!ok) return;
+        // Un solo envío por botón; el servidor además reclama la revisión una sola vez.
+        cloudButton.dataset.coachWaCloudUsed = "1";
+        cloudButton.disabled = true;
+        sendCoachMessage(cloudButton.dataset.coachWaCloudSend);
         return;
       }
       const mailButton = event.target.closest("[data-coach-mail-command]");

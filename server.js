@@ -5,6 +5,7 @@ import { registerCoachPasswordRecovery, coachSessionCredentialsMatch, coachPrevi
 import express from "express";
 import { readCoachCardOrder, registerCoachCardOrder } from "./src/coach-card-order.js";
 import { registerCoachConnections } from "./src/coach-connections.js";
+import { COACH_META_WEBHOOK_PATH, createCoachMetaInboundModel, createCoachMetaWebhook } from "./src/coach-meta-webhook.js";
 import { personalCalendarCrm } from "./src/coach-personal-crm-link.js";
 import { registerCoachClosingSupervisor } from "./src/coach-closing-supervisor.js";
 import { registerCoachAnnouncementRead } from "./src/coach-announcement-read.js";
@@ -2453,6 +2454,10 @@ const CoachMarketingAutomationRun =
   mongoose.model("CoachMarketingAutomationRun", coachMarketingAutomationRunSchema);
 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), manejarWebhookStripe);
+// Meta signs the exact bytes, so these routes must run before the global JSON parser.
+const coachMetaWebhook = createCoachMetaWebhook({ store: createCoachMetaInboundModel(mongoose) });
+app.get(COACH_META_WEBHOOK_PATH, coachMetaWebhook.verify);
+app.post(COACH_META_WEBHOOK_PATH, coachMetaWebhook.rawBody, coachMetaWebhook.receive);
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(["/api/coach", "/api/control", "/chat"], createCoachRequestGuard({ requireActive: requireCoachActivo, publicOrigin: process.env.APP_BASE_URL }));
@@ -25581,7 +25586,9 @@ const runCoachConnectedAgent = registerCoachConnections(app, {
   requireActive: requireCoachActivo,
   ...personalCalendarCrm({ users: CoachUser, records: CoachCrmRecord, viewerQuery: construirCoachCrmViewerQuery,
     applySources: aplicarCoachCrmActualizacionAFuentes, invalidate: invalidarCoachWorkspaceCaches }),
-  switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE])
+  switched: req => Boolean(parsearCookies(req.headers.cookie || "")[COACH_RETURN_SESSION_COOKIE]),
+  // Ventana de 24 h solo a partir de mensajes entrantes auténticos firmados por Meta.
+  waWindowOpen: coachMetaWebhook.isWindowOpen
 });
 registerCoachClosingSupervisor(app, { requireActive: requireCoachActivo, users: CoachUser });
 

@@ -1,5 +1,5 @@
-const TEC_CACHE_VERSION = "tec-coach-shell-20261120-whatsapp1";
-const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261120-whatsapp1";
+const TEC_CACHE_VERSION = "tec-coach-shell-20261120-whatsapp2";
+const TEC_RUNTIME_CACHE = "tec-coach-runtime-20261120-whatsapp2";
 const TEC_CATALOG_CACHE = "tec-coach-catalog-20261021-pwa1";
 const TEC_DOCUMENT_CACHE = "tec-coach-documents-v1";
 const TEC_PDF_CACHE = "tec-coach-pdfjs-6.4.299";
@@ -13,7 +13,7 @@ const TEC_CORE_ASSETS = [
   "/coach/analytics.css?v=20261104-analytics1",
   "/coach/analytics.js?v=20261104-analytics1",
   "/coach/app.js?v=20261117-audit1",
-  "/coach/app.js?v=20261120-whatsapp1",
+  "/coach/app.js?v=20261120-whatsapp2",
   "/coach/audiobook-reader.js?v=20261103-readalong1",
   "/coach/audiobooks.css?v=20261103-readalong1",
   "/coach/audiobooks.js?v=20261112-editorial1",
