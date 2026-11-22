@@ -193,3 +193,25 @@ test('la lectura con detalle tolera nombres incompletos o mal escritos, busca en
   assert.deepEqual([byZip.contacts.map(c=>c.fullName),byZip.total,byZip.perZone],[['Ana Demostración'],2,[1,1]]);
   assert.equal((await tools.byZone(ctx('l'),{zones:['Harvey'],today})).total,0);
 });
+
+test('la ficha por identidad entrega la versión vigente de la fila y el teléfono marcable, solo al vendedor que la leyó',async()=>{
+  const cellAt=value=>({column:7,displayed:value,formula:false});
+  const base={kind:'referrals',sheetId:9,sheetTitle:'4 en 14',host:'Rosa Silva',seller:'',sellerColumn:false,result:'',status:'',followupDate:''};
+  const rows=[
+    {...base,row:4,fullName:'Lidia Ejemplo',phone:'(312) 555-0131',email:'lidia@example.invalid',address:'12 Calle Ficticia',city:'Chicago',history:'Quiere la olla grande.',editable:{history:cellAt('Quiere la olla grande.')}},
+    {...base,row:5,fullName:'Lidia Prueba',phone:'312-555-0132',email:'',history:'Pidió que no la llamen.',editable:{history:cellAt('Pidió que no la llamen.')}}];
+  const tools=createCoachSheetTools({google:{async readFollowups() { return {locale:'en_US',rows:structuredClone(rows)}; }}});
+  const seller=ctx('agustin');
+  const [first,second]=(await tools.search(seller,{name:'Lidia',today,detail:true})).contacts;
+  const card=await tools.card(seller,first.identityKey);
+  assert.deepEqual([card.fullName,card.row,card.sheetTitle,card.phone,card.email,card.noCalls],['Lidia Ejemplo',4,'4 en 14','+13125550131','lidia@example.invalid',false]);
+  assert.equal('address' in card,false);
+  // La versión sirve para preparar la nota aunque la búsqueda se hiciera con dirección.
+  assert.match((await tools.prepareNote(seller,{key:card.key,note:'No contestó.',today})).preview,/Lidia Ejemplo — 4 en 14, fila 4\./);
+  const quiet=await tools.card(seller,second.identityKey);
+  assert.equal(quiet.noCalls,true);
+  assert.equal('phone' in quiet,false);
+  await assert.rejects(tools.card(ctx('rigoberto'),first.identityKey),/fila/);
+  rows[0].fullName='Lidia Otra';
+  await assert.rejects(tools.card(seller,first.identityKey),/fila/);
+});

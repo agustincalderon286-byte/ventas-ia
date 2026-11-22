@@ -9611,6 +9611,14 @@ function renderCoachMessageActions(card, actions = []) {
       element.dataset.coachWhatsappAccount = action.accountId;
       element.dataset.coachWhatsappSession = action.sessionId;
       element.textContent = "Abrir en mi WhatsApp";
+    } else if (action?.type === "smsOpen") {
+      // Abre la aplicación de mensajes del teléfono con el número y el texto puestos; el vendedor lo envía.
+      // «?&body=» es la forma que aceptan tanto iPhone como Android.
+      if (typeof action.to !== "string" || !/^\+[1-9]\d{6,14}$/.test(action.to) ||
+          typeof action.text !== "string" || !action.text.trim() || action.text.length > 1000) return;
+      element = document.createElement("a");
+      element.href = "sms:" + action.to + "?&body=" + encodeURIComponent(action.text);
+      element.textContent = String(action.label || "Abrir Mensajes").slice(0,140);
     } else if (["connections", "mailSource", "calendarEvent"].includes(action?.type)) {
       let href = "/mis-conexiones/";
       if (action.type === "mailSource") {

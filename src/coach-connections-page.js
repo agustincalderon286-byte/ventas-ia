@@ -156,7 +156,7 @@ function assistantSection({form,assistant}) {
     <li><div>De tu hoja: el nombre, el anfitrión, el estado y el historial de cada ficha, y su ciudad o código postal para ordenarlas por cercanía.</div></li>
     <li><div>De tus contactos: el nombre.</div></li></ul>
     <p>No se envían los teléfonos, la calle y el número de las direcciones ni los correos de tus fichas y contactos: el Coach los añade a la respuesta que ves en tu pantalla. TEC guarda cifrados los tres últimos intercambios de la conversación durante 20 minutos para entender tus preguntas de seguimiento.</p>
-    <p>El asistente solo lee. Nada se envía, se reserva ni se guarda sin que pulses el botón de confirmar.</p>
+    <p>El asistente lee y deja listas propuestas: una nota o el resultado de una llamada en tu hoja, una cita en tu calendario, el alta de un prospecto o un mensaje de texto que tú envías desde tu teléfono. Nada se envía, se reserva ni se guarda sin que pulses el botón de confirmar.</p>
     <p>Puedes retirar el permiso cuando quieras y el Coach seguirá funcionando como antes. Más detalles en la <a href="/coach/privacidad/">política de privacidad</a>.</p>
     ${on ? form('revoke','Retirar el permiso',true,api) : form('accept','Permitir que el asistente consulte mis cuentas',false,api)}</section>`;
 }

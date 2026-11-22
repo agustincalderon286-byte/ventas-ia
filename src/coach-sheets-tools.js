@@ -222,6 +222,15 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       return {...review,pending:review.pending.map(({hit,order,reason})=>({...contactOf(hit,null,true),order,reason}))};
     },
 
+    // Ficha vigente por su identidad, con la versión de la fila y el teléfono marcable,
+    // para que el asistente prepare una nota, una cita o un mensaje sobre la persona que ya leyó.
+    async card(ctx,identityKey) {
+      const hit=(await load(ctx)).rows.find(({id})=>id===identityKey);
+      if (!hit) throw conflict();
+      const contact=contactOf(hit,null,true);
+      return {...contact,noCalls:excludesPhoneContact(hit.row)};
+    },
+
     async revalidate(ctx,identityKey) {
       const hit=(await load(ctx)).rows.find(({id})=>id===identityKey);
       if (!hit) throw conflict();

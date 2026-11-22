@@ -170,6 +170,27 @@ NODE_ENV=test node scripts/coach-agent-bench.mjs --system loop --run
 - Las seis herramientas de propuesta y la corrección de borradores por conversación.
 - **Aceptación:** cero escrituras sin botón en todo el conjunto de evaluación, incluidos los casos de órdenes ocultas; cita, correo, nota y alta completados con cuentas ficticias.
 
+**Estado (22 de noviembre de 2026): primera parte hecha en el código, sin publicar y sin medir con el modelo real.**
+
+El asistente ya deja listas cuatro propuestas. Ninguna herramienta escribe: la propuesta se guarda en el mismo registro y con la misma forma que el plan de conversación (`initialPlan` y `planView` de `src/coach-conversation-plan.js`), y el botón `TECPLAN … apply` la confirma allí, con las comprobaciones de siempre.
+
+| Herramienta | Qué prepara | Botón |
+| --- | --- | --- |
+| `preparar_nota` | Resultado de una llamada o visita en el historial de la ficha y su próximo seguimiento. | Guardar nota |
+| `preparar_cita` | Cita, demostración o llamada en «Seguimientos TEC», con el horario comprobado. | Confirmar cita |
+| `preparar_alta` | Un referido con su anfitrión o una boleta. Una persona por propuesta. | Agregar prospecto |
+| `preparar_mensaje` | Mensaje de texto para alguien de la hoja. No pasa por el plan: el chat muestra el texto y un enlace `sms:` que abre Mensajes en el teléfono con el número y el texto puestos; el vendedor lo envía. | Abrir Mensajes |
+
+Decisiones de esta parte:
+- **Referencias de ficha estables.** Cada ficha llega al modelo con una `ref` derivada de su identidad (`f3a9c1`), igual en todas las búsquedas y turnos. Las herramientas de propuesta solo aceptan una `ref` que este vendedor ya leyó, y vuelven a leer la fila en ese momento (`sheetTools.card`), así que respetan «no llamar» y la versión vigente.
+- **Una propuesta trata de una sola persona** y puede llevar su nota y su cita juntas. Un alta va sola. Otra persona en el mismo turno se rechaza; en un turno nuevo sustituye a la propuesta anterior.
+- **El asistente sigue atendiendo su propia propuesta** (marca `agentLoop` en el estado): la corrige por conversación («mejor a las 5») y la mantiene vigente tras una lectura. Se aparta mientras hay una confirmación en curso o una que quedó sin resultado claro, y ante cualquier propuesta del flujo existente.
+- **El modelo no puede dar nada por hecho.** Si su texto dice que guardó, agendó o envió algo, se le corrige una vez; si insiste, la propuesta se entrega con un texto neutro. Sin ninguna herramienta, esa afirmación no se entrega.
+- **Los correos siguen en el flujo existente** (`pasar_al_coach`). Su redactor recibe la dirección del destinatario, y el permiso del asistente dice que los correos de las fichas no se envían al modelo. Para traerlos al ciclo hay que redactar sin la dirección o cambiar el texto del permiso y subir `CONSENT_VERSION`.
+- **El permiso no cambió de versión**: el modelo recibe los mismos datos que antes. Se actualizó el texto de Mis conexiones y de la política de privacidad, que decían «solo lee».
+
+Pendiente de la Fase 2: correos dentro del ciclo, varias altas a la vez y la hoja del 4 en 14 por foto, WhatsApp, contactos, trayectos y postventa; los casos de propuesta en `scripts/coach-agent-bench.mjs` (su ejecutor ficticio aún no conoce las herramientas nuevas); y probar el enlace de Mensajes en un teléfono real.
+
 ### Fase 3 · Continuidad y alcance
 - Historial corto cifrado por sesión para que entienda «el segundo», «ese mismo» y «mándaselo también a ella».
 - Jorge en vivo usa el mismo ciclo, de modo que voz y texto responden igual.
@@ -188,7 +209,7 @@ NODE_ENV=test node scripts/coach-agent-bench.mjs --system loop --run
 | `src/coach-live-jorge.js` | Se extrae el libro de presupuesto a un módulo compartido. |
 | `scripts/coach-agent-eval.mjs`, `tests/coach-agent-*.test.js` | Evaluación ampliada y pruebas del ciclo. |
 
-No se tocan: OAuth y Mis conexiones, `coach-plan-channels.js`, `coach-sheets-tools.js`, el envío de Gmail ni la captura del 4 en 14.
+No se tocan: OAuth, `coach-plan-channels.js`, el envío de Gmail ni la captura del 4 en 14. En `coach-sheets-tools.js` solo se añadieron lecturas (`byZone`, `card`, búsqueda con detalle); las escrituras no cambiaron.
 
 ## Decisiones para Agustín
 

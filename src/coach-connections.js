@@ -273,6 +273,8 @@ export function registerCoachConnections(app, { requireActive, switched, config 
     sheets:sheets.service,sheetTools,switched,readSession:readSheetsSession,...contactsDependencies});
   const runRoute=createCoachRouteAgent({config,calendar:calendar.service,sheets:sheets.service,sheetsGoogle:sheetsReader,
     readSession:readSheetsSession,switched,...routeDependencies});
+  // El plan de conversación y el asistente con ciclo preparan las citas con el mismo código.
+  const planChannels=createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts});
   const runPlan=createConversationPlan({config,plans:createPlanStore({key:config.key}),sheets:sheets.service,
     readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service}),
     readMail:(args,readTool)=>runMail({...args,readTool}),
@@ -281,12 +283,12 @@ export function registerCoachConnections(app, { requireActive, switched, config 
       if (!config.calendarReady) return 'Google Calendar no está disponible en TEC en este momento.';
       return readCoachAgenda({calendar:calendar.service,owner:actor.owner,zone:actor.zone,current:actor.current,text});
     },
-    sheetTools,readSales:createPostSaleReader({config,store,gmail}),channels:createPlanChannels({config,calendar:calendar.service,followups:followupStore,store,gmail,drafts}),
+    sheetTools,readSales:createPostSaleReader({config,store,gmail}),channels:planChannels,
     readSession:readSheetsSession,switched,...planDependencies});
   // Asistente con ciclo de herramientas. Solo actúa para COACH_AGENT_LOOP_EMAILS; para los demás devuelve null.
   const mailAad=(owner,session,grant)=>'draft-question:'+owner+':'+session+':'+grant;
   const runLoop=createSellerAgent({config,plans:createPlanStore({key:config.key}),memory:createPlanStore({key:config.key}),
-    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,
+    bindTools:createAgentTools({config,calendar:calendar.service,store,gmail,syncSales,sheets:sheets.service,sheetTools,contacts:contacts.service,channels:planChannels,
       readConnections:agentConnectionReader({config,store,sheets:sheets.service,calendar:calendar.service})}),
     // Mismo formato y vínculo que la ficha de bandeja del agente de Gmail, para que «Responde al primero» continúe allí.
     inboxToken:({owner,session,grant,ids})=>sealToken(JSON.stringify({kind:'inbox',ids,until:Date.now()+30*60000}),config.key,mailAad(owner,session,grant)),

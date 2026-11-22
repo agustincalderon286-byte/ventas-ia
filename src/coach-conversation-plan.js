@@ -54,6 +54,9 @@ function view(s,revision,prefix='') {
   return reply(lines.filter(Boolean).join('\n\n') || '¿Qué te gustaría preparar?',revision,buttons);
 }
 
+// El asistente con ciclo arma propuestas con este mismo estado y esta misma vista; la confirmación sigue aquí.
+export {initial as initialPlan, view as planView};
+
 function merge(s,intent) {
   const newOps=intent.operations || [];
   for (const op of newOps) if (!s.ops.includes(op)) s.ops.push(op);

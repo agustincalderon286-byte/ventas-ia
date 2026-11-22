@@ -1,7 +1,9 @@
-// Catálogo de lecturas del asistente del vendedor. Cada herramienta usa los servicios
+// Catálogo de herramientas del asistente del vendedor. Cada una usa los servicios
 // ya existentes con la cuenta del vendedor y devuelve datos, nunca texto para mostrar.
-// Ninguna escribe. Los identificadores de Google no salen de aquí: el modelo recibe
-// referencias cortas («m1») válidas solo para este vendedor y esta conversación.
+// Ninguna escribe. Las de lectura consultan; las «preparar_…» dejan una propuesta en el mismo
+// estado que usa el plan de conversación, y solo el botón del vendedor la confirma allí.
+// Los identificadores de Google no salen de aquí: el modelo recibe
+// referencias cortas («m1», «f3a9c1») válidas solo para este vendedor y esta conversación.
 // El contenido de correos, hojas y contactos es de terceros: se entrega como datos.
 // Teléfonos, direcciones y correos de fichas y contactos no se entregan al modelo: recibe un
 // marcador como [[tel:ab12cd]] y el servidor pone el dato real en la respuesta que ve el vendedor.
@@ -11,8 +13,10 @@ import {availableSlots} from './coach-calendar-slots.js';
 import {sheetsToday} from './coach-sheets-followup-input.js';
 import {openToken} from './coach-hycite-gmail.js';
 import {isGmailAddress} from './coach-mail-address.js';
+import {initialPlan} from './coach-conversation-plan.js';
 
 const day = {type:'string',maxLength:10,description:'Fecha AAAA-MM-DD en la zona del vendedor.'};
+const fichaRef = {type:'string',maxLength:8,description:'Referencia «ref» de la ficha, tal como llegó en una búsqueda de la hoja.'};
 const tool = (name,source,description,properties={}) => ({name,source,description,
   parameters:{type:'object',additionalProperties:false,properties,required:Object.keys(properties)}});
 
@@ -43,7 +47,20 @@ export const agentTools = Object.freeze([
   tool('buscar_contactos','contacts','Busca una persona en los Contactos de Google del vendedor. Devuelve su nombre y los marcadores de sus teléfonos y correos.',
     {nombre:{type:'string',maxLength:80}}),
   tool('estado_conexiones','connections','Indica qué cuentas del vendedor están conectadas al Coach y cuáles faltan.'),
-  tool('pasar_al_coach',null,'Entrega el mensaje al flujo existente del Coach cuando el vendedor pide consejo o entrenamiento de ventas, o pide preparar, cambiar, guardar o enviar algo (cita, correo, WhatsApp, nota, alta, contacto), un trayecto entre visitas o la postventa enlazada a su hoja.',
+  tool('preparar_nota','note','Prepara, sin guardar, una nota en el historial de una ficha de la hoja y, si aplica, su próxima fecha de seguimiento. Sirve para registrar el resultado de una llamada o una visita. El vendedor la guarda con un botón.',
+    {ref:fichaRef,nota:{type:'string',maxLength:600,description:'Lo que pasó, con las palabras del vendedor. Vacío si solo cambia la fecha.'},
+      proximoSeguimiento:{type:'string',maxLength:10,description:'Fecha AAAA-MM-DD del próximo seguimiento, o vacío.'}}),
+  tool('preparar_cita','appointment','Prepara, sin reservar, una cita, demostración o llamada en el calendario «Seguimientos TEC» del vendedor. Comprueba que el horario esté libre. El vendedor la confirma con un botón.',
+    {ref:{type:'string',maxLength:8,description:'Referencia de la ficha si la persona está en la hoja, o vacío.'},
+      nombre:{type:'string',maxLength:80,description:'Nombre de la persona. Con «ref» se usa el de la ficha.'},dia:day,
+      hora:{type:'string',maxLength:5,description:'HH:MM en 24 horas.'},minutos:{type:'integer',minimum:15,maximum:240},
+      tipo:{type:'string',enum:['cita','demo','llamada','seguimiento']}}),
+  tool('preparar_alta','add','Prepara, sin guardar, el alta de una persona nueva en la hoja: un referido del 4 en 14 con su anfitrión o una boleta de rifa. Una persona por propuesta. El vendedor la confirma con un botón.',
+    {nombre:{type:'string',maxLength:80},telefono:{type:'string',maxLength:30,description:'Teléfono tal como lo dijo el vendedor.'},
+      tipo:{type:'string',enum:['referido','boleta']},anfitrion:{type:'string',maxLength:80,description:'Nombre del anfitrión para un referido. Vacío para una boleta.'}}),
+  tool('preparar_mensaje','sms','Deja listo un mensaje de texto para una persona de la hoja. El vendedor verá el texto y un botón que abre la aplicación Mensajes de su teléfono con el número y el texto puestos; él lo envía. Máximo tres por respuesta.',
+    {ref:fichaRef,texto:{type:'string',maxLength:480,description:'Mensaje completo en nombre del vendedor, corto y natural, sin marcadores.'}}),
+  tool('pasar_al_coach',null,'Entrega el mensaje al flujo existente del Coach cuando el vendedor pide consejo o entrenamiento de ventas, un correo, un WhatsApp, un cambio en sus Contactos de Google, varias altas a la vez o la captura de una hoja del 4 en 14, un trayecto entre visitas o la postventa enlazada a su hoja.',
     {motivo:{type:'string',enum:['consejo','gestion','trayecto','postventa','otro']}})
 ]);
 
@@ -79,7 +96,11 @@ function failure(error, conexion) {
   return {estado:'fallo',nota:'La consulta no se completó. No se leyó nada.'};
 }
 
-export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections}) {
+const pendingNote = 'Quedó como propuesta: no se ha guardado, reservado ni enviado nada. El vendedor verá la vista previa con su botón de confirmar; no repitas la vista previa ni digas que ya quedó hecho.';
+
+// channels: el mismo preparador de citas que usa el plan de conversación. Los correos siguen en el flujo existente:
+// su redactor recibe la dirección del destinatario, y el asistente no entrega direcciones al modelo.
+export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,sheetTools,contacts,readConnections,channels}) {
   const inList = (list,email) => Boolean(list?.some(item=>item==='*' || item===email));
 
   // actor: {owner,session,email,name,zone,current,now}. refs conserva las referencias entre turnos.
@@ -134,17 +155,60 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
       }
       return {ctx:sheetContext};
     }
-    const card=(c,index)=>({ref:'r'+(index+1),nombre:clean(c.fullName,130),anfitrion:clean(c.host,130),tipo:c.kind==='tickets'?'boleta':'referido',
+    // La referencia de una ficha es estable entre búsquedas y turnos: identifica a la persona, no su posición en una lista.
+    const refOf=c=>{
+      const ref='f'+createHash('sha256').update(String(c.identityKey)).digest('hex').slice(0,5);
+      delete refs[ref];
+      refs[ref]=c.identityKey;
+      return ref;
+    };
+    const knownFicha=ref=>/^f[a-f0-9]{5}$/.test(ref) && Object.hasOwn(refs,ref) ? refs[ref] : '';
+    const noFicha=()=>invalid('Esa referencia no existe. Busca primero a la persona en la hoja y usa la «ref» de su ficha.');
+    const card=(c)=>({ref:refOf(c),nombre:clean(c.fullName,130),anfitrion:clean(c.host,130),tipo:c.kind==='tickets'?'boleta':'referido',
       hoja:clean(c.sheetTitle,80),fila:c.row,
       ...(c.bucket && {seguimiento:{estado:({today:'hoy',overdue:'vencido',undated:'sin fecha',future:'futuro',new:'primer contacto'})[c.bucket] || c.bucket,
         fecha:c.date || '',motivo:clean(c.reason)}})});
 
     // Ficha completa para el modelo: datos de gestión en claro y datos de contacto como marcadores.
-    const ficha=(c,index,historyLength)=>({...card(c,index),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
+    const ficha=(c,historyLength)=>({...card(c),...(c.status && {estadoFicha:clean(c.status,80)}),...(c.result && {resultado:clean(c.result,160)}),
       ...(c.followupDate && {proximaFecha:clean(c.followupDate,40)}),...(c.history && {historial:clean(c.history.slice(-historyLength),historyLength)}),
       telefono:c.noCalls ? 'no llamar: la ficha pide no ser contactada' : c.rawPhone ? marker('tel',c.identityKey,clean(c.rawPhone,40)) : 'sin teléfono en la hoja',
       direccion:c.address ? marker('dir',c.identityKey,clean(c.address,240)) : 'sin dirección en la hoja',
       ...(c.rawEmail && {correo:marker('correo',c.identityKey,clean(c.rawEmail,254))})});
+
+    // Propuesta de este turno. `turn.plan.draft` tiene la forma del plan de conversación; el asistente
+    // del vendedor la guarda al terminar y muestra los botones. Una propuesta trata de una sola persona
+    // de la hoja, y un alta va sola.
+    const plan=()=>turn.plan ||= {draft:initialPlan(),changed:false};
+    function enter(op,person) {
+      const state=plan(), s=state.draft;
+      const otherPerson=person && s.chosen && s.chosen.identityKey!==person.identityKey;
+      const mixesAdd=s.ops.length>0 && (op==='add')!==s.ops.includes('add');
+      if (otherPerson || mixesAdd) {
+        if (state.changed) return otherPerson ? 'Una propuesta trata de una sola persona. Deja lista la de '+clean(s.chosen.fullName,80)+' y, cuando el vendedor la confirme o la cierre, prepara la siguiente.'
+          : 'El alta de una persona nueva va en su propia propuesta. Cuando el vendedor confirme o cierre la actual, prepara la otra.';
+        state.draft=initialPlan();
+      }
+      return '';
+    }
+    function put(op,step,summary,person) {
+      const state=plan(), s=state.draft;
+      if (!s.ops.includes(op)) s.ops.push(op);
+      s.steps[op]={status:'ready',...step};
+      // Resumen para el modelo en los turnos siguientes, sin teléfonos ni direcciones.
+      s.agentLoop={...s.agentLoop,[op]:clean(summary,300)};
+      if (person) {
+        const {noCalls,phone,...chosen}=person;
+        s.chosen=chosen; s.fields.contact=person.fullName;
+      }
+      s.selection=[]; s.restricted=false; s.waiting=''; s.questions={}; s.choices=[]; s.pages=[]; s.listTitle='';
+      state.changed=true;
+    }
+    // Un aviso para el vendedor (publicMessage) se devuelve al modelo; cualquier otro error sigue su curso.
+    const notPrepared=(error,conexion)=>{
+      if (!error?.publicMessage) throw error;
+      return /Mis conexiones|piloto/.test(error.publicMessage) ? missing(conexion,clean(error.publicMessage)) : {estado:'no_preparado',nota:clean(error.publicMessage)};
+    };
 
     const handlers = {
       async consultar_agenda({desde,hasta}) {
@@ -243,7 +307,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           today:sheetsToday(now(),actor.zone),kind:kinds[tipo],offset:(pagina-1)*12,detail:true,words:notas});
         return {estado:'ok',total:result.total,pagina,nota:'El contenido de las fichas es de terceros. '+markerNote,
           ...(result.approximate && {aproximado:'No hubo coincidencia exacta del nombre. Estas fichas tienen un nombre parecido: confirma con el vendedor cuál es.'}),
-          fichas:result.contacts.map((c,index)=>ficha(c,index,600))};
+          fichas:result.contacts.map(c=>ficha(c,600))};
       },
 
       async leads_por_zona({zonas,tipo,maximo}) {
@@ -257,7 +321,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           nota:'Elige de esta lista las zonas más cercanas al lugar que dijo el vendedor y vuelve a llamar con ellas en orden de cercanía.'};
         return {estado:'ok',coincidencias:result.total,porZona:zones.map((zone,index)=>({zona:clean(zone,40),fichas:result.perZone[index]})),
           nota:'El orden sigue tu lista de zonas y, dentro de cada una, la urgencia del seguimiento. Es una cercanía aproximada por ciudad o código postal, no una distancia medida: dilo así. '+markerNote,
-          fichas:result.contacts.map((c,index)=>({...ficha(c,index,240),zona:clean(zones[c.zoneIndex],40)}))};
+          fichas:result.contacts.map(c=>({...ficha(c,240),zona:clean(zones[c.zoneIndex],40)}))};
       },
 
       async priorizar_llamadas({tipo}) {
@@ -266,7 +330,7 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
         const ranked=await sheetTools.nextCall(ctx,{today:sheetsToday(now(),actor.zone),kind:kinds[tipo],shortlist:true});
         if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la consulta.'};
         return {estado:'ok',pendientesConTelefono:ranked.total,orden:'vencidos, de hoy, sin fecha y primeros contactos',nota:markerNote,
-          recomendados:ranked.contacts.map((c,index)=>({...card(c,index),...(c.phone && {telefono:marker('tel',c.identityKey,clean(c.phone,40))})}))};
+          recomendados:ranked.contacts.map(c=>({...card(c),...(c.phone && {telefono:marker('tel',c.identityKey,clean(c.phone,40))})}))};
       },
 
       async buscar_contactos({nombre}) {
@@ -289,13 +353,93 @@ export function createAgentTools({config,calendar,store,gmail,syncSales,sheets,s
           horariosLibres:label(state.availability),sheets:label(state.sheets)};
       },
 
+      async preparar_nota({ref,nota,proximoSeguimiento}) {
+        const id=knownFicha(ref);
+        if (!id) return noFicha();
+        if (proximoSeguimiento && civil(proximoSeguimiento)==null) return invalid('Usa la fecha AAAA-MM-DD para el próximo seguimiento.');
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const person=await sheetTools.card(ctx,id);
+        const blocked=enter('note',person);
+        if (blocked) return invalid(blocked);
+        const made=await sheetTools.prepareNote(ctx,{key:person.key,note:nota,followupDate:proximoSeguimiento,today:sheetsToday(now(),actor.zone)});
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la preparación.'};
+        put('note',{preview:made.preview,proposal:made.proposal},'Nota para '+person.fullName+': «'+nota.trim()+'»'+(proximoSeguimiento ? ' · próximo seguimiento '+proximoSeguimiento : ''),person);
+        const s=plan().draft;
+        s.sheetGrant=ctx.grant; s.fields.note=nota.trim(); s.fields.noteSchedule=proximoSeguimiento;
+        return {estado:'preparado',persona:clean(person.fullName,130),hoja:clean(person.sheetTitle,80),fila:person.row,nota:pendingNote};
+      },
+
+      async preparar_cita({ref,nombre,dia,hora,minutos,tipo}) {
+        if (civil(dia)==null || !clock(hora)) return invalid('Usa el día AAAA-MM-DD y la hora HH:MM en 24 horas.');
+        let person=null, grant='';
+        if (ref) {
+          const id=knownFicha(ref);
+          if (!id) return noFicha();
+          const {ctx,problem}=await sheetAccess();
+          if (problem) return problem;
+          person=await sheetTools.card(ctx,id);
+          grant=ctx.grant;
+        }
+        const name=clean(person?.fullName || nombre,80);
+        if (!name || !/^[\p{L}\p{N} .’'-]+$/u.test(name)) return invalid('Indica el nombre de la persona solo con letras y números.');
+        const blocked=enter('appointment',person);
+        if (blocked) return invalid(blocked);
+        // El mismo lector de fechas del plan de conversación: una fecha y una hora sin ambigüedad.
+        const schedule=dia+' a las '+hora+({cita:' cita',demo:' demo',llamada:' llamada',seguimiento:''})[tipo]+' durante '+minutos+' minutos';
+        let made;
+        try { made=await channels.appointment(actor,{},{name,schedule}); }
+        catch (error) { return notPrepared(error,'calendar'); }
+        if (!made.proposal) return {estado:'no_preparado',motivo:clean(made.question),nota:'No se preparó la cita. Si el horario está ocupado, busca horarios libres y propón otro.'};
+        put('appointment',{preview:made.preview,proposal:made.proposal,whenText:made.whenText},tipo+' con '+name+' el '+dia+' a las '+hora+', '+minutos+' min',person);
+        const s=plan().draft;
+        if (person) s.sheetGrant=grant;
+        s.calendarState=made.state || {}; s.fields.schedule=schedule;
+        return {estado:'preparado',persona:name,cuando:clean(made.whenText,120),nota:pendingNote};
+      },
+
+      async preparar_alta({nombre,telefono,tipo,anfitrion}) {
+        const kind=tipo==='boleta' ? 'tickets' : 'referrals';
+        const fullName=nombre.trim(), host=anfitrion.trim(), phone=telefono.trim();
+        if (!fullName || !phone) return invalid('Para el alta hacen falta el nombre y el teléfono.');
+        if (kind==='referrals' && !host) return invalid('Para un referido indica quién es su anfitrión. Pregúntaselo al vendedor.');
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const blocked=enter('add',null);
+        if (blocked) return invalid(blocked);
+        const made=await sheetTools.prepareAdd(ctx,{kind,fullName,phone,hostName:kind==='referrals' ? host : undefined});
+        if (!await ctx.isCurrent()) return {estado:'fallo',nota:'La conexión de la hoja cambió durante la preparación.'};
+        put('add',{preview:made.preview,proposal:made.proposal},'Alta de '+fullName+(kind==='referrals' ? ', referido de '+host : ', boleta de rifa'));
+        const s=plan().draft;
+        delete s.chosen;
+        s.sheetGrant=ctx.grant; Object.assign(s.fields,{contact:fullName,phone,leadKind:kind,...(kind==='referrals' && {host})});
+        return {estado:'preparado',persona:clean(fullName,130),...(/Posible duplicado/.test(made.preview) && {aviso:'La hoja ya tiene un nombre o teléfono parecido. Díselo al vendedor para que lo revise antes de confirmar.'}),nota:pendingNote};
+      },
+
+      async preparar_mensaje({ref,texto}) {
+        const id=knownFicha(ref);
+        if (!id) return noFicha();
+        const text=clean(texto,480);
+        if (!text) return invalid('Escribe el mensaje completo.');
+        if ((turn.messages || []).length>=3) return invalid('Ya hay tres mensajes en esta respuesta. Prepara los demás en el siguiente turno.');
+        const {ctx,problem}=await sheetAccess();
+        if (problem) return problem;
+        const person=await sheetTools.card(ctx,id);
+        if (person.noCalls) return {estado:'no_permitido',nota:'La ficha pide no ser contactada. No se preparó el mensaje.'};
+        if (!person.phone) return {estado:'no_disponible',nota:'La ficha no tiene un teléfono completo para enviarle un mensaje.'};
+        (turn.messages ||= []).push({to:person.phone,name:clean(person.fullName,80),text});
+        return {estado:'preparado',persona:clean(person.fullName,130),
+          nota:'El vendedor verá el texto y un botón que abre Mensajes en su teléfono con el número y el texto puestos. No se ha enviado nada: lo envía él. No repitas el texto del mensaje en tu respuesta.'};
+      },
+
       async pasar_al_coach({motivo}) { return {estado:'derivado',detener:motivo}; }
     };
 
     return async (name,args) => {
       if (!Object.hasOwn(handlers,name)) return {estado:'herramienta_desconocida'};
       const source=agentTools.find(t=>t.name===name).source;
-      const connection=({agenda:'calendar',slots:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',referrals:'sheets',calls:'sheets',contacts:'contacts'})[source];
+      const connection=({agenda:'calendar',slots:'calendar',appointment:'calendar',inbox:'gmail',thread:'gmail',sales:'gmail',
+        referrals:'sheets',calls:'sheets',note:'sheets',add:'sheets',sms:'sheets',contacts:'contacts'})[source];
       try {
         await guard();
         const result=await handlers[name](args);
