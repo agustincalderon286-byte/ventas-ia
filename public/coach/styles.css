@@ -9568,3 +9568,20 @@ html .coach-app-body.tec-compact-page .coach-float-panel::backdrop {
   padding: .35rem 0;
 }
 .fourteen-photo-check input { flex: none; margin-top: .2em; }
+
+.demo-close-dialog {
+  box-sizing: border-box; width: min(42rem, calc(100vw - 1.25rem)); max-height: 88dvh;
+  padding: 1rem; border: 1px solid #cbd5df; border-radius: 1rem; color: #122c45; background: #fff;
+}
+.demo-close-dialog::backdrop { background: rgb(15 32 52 / 55%); }
+.demo-close { display: grid; gap: .75rem; min-width: 0; margin-block: 1rem; }
+.demo-close h2, .demo-close p { margin: 0; }
+.demo-close-row { display: grid; gap: .4rem; padding: .6rem .75rem; min-width: 0; border: 1px solid #dbe2e9; border-radius: .65rem; }
+.demo-close-row legend { font-weight: 650; padding-inline: .2rem; }
+.demo-close-row input:not([type=checkbox]):not([type=radio]), .demo-close-row select, .demo-close-row textarea, select.demo-close-row {
+  box-sizing: border-box; max-width: 100%; width: 100%; min-height: 2.75rem; font: inherit; padding: .4rem;
+}
+.demo-close-sale:not([hidden]) { display: flex; align-items: baseline; gap: .5rem; }
+.demo-close-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .55rem; }
+.demo-close-actions button { min-height: 2.75rem; padding: .4rem .85rem; border: 1px solid #c3cfd9; border-radius: .65rem; color: #173951; background: #fff; font: inherit; cursor: pointer; }
+.demo-close-actions button[type=submit] { background: #0d304e; color: white; }

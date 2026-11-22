@@ -852,6 +852,7 @@ async function syncTecOfflineRecordingUnlocked(localId = "") {
           consentConfirmed: true,
           knownOutcome: recording.knownOutcome || "unknown",
           startedAt: recording.startedAt || recording.createdAt,
+          ...(recording.closeVisitId ? { closeVisitId:recording.closeVisitId, closeCrmId:recording.closeCrmId || "" } : {}),
           clientRecordingId: recording.localId
         }, timeoutMs: 15000
       });
@@ -2993,6 +2994,7 @@ function initOrderCalculator() {
     [summaryDown, summaryDescFixed, summaryDescPercent].forEach(input => { if (input) input.value = ""; });
     recalculate();
   };
+  window.TecDemoCloseTools?.mountCalculator(root);
 }
 
 function createDecisionToolRow(kind, index) {
@@ -5040,6 +5042,11 @@ function initHealthSurveyTool(user) {
       await loadSurveys().catch(() => null);
     }
   });
+  form.showClosedSurvey = survey => {
+    activateSurvey(survey);
+    fillForm(survey);
+    loadSurveys().catch(() => null);
+  };
 
   syncFormToggle(false);
   syncFolderToggle(false);
@@ -16153,7 +16160,14 @@ function initCoachDemoOutcomeWorkspace(user = null) {
     renderCoachDemoOutcomeWorkspace(data);
   };
 
-  typeSelect.addEventListener("change", syncTypeUi);
+  typeSelect.addEventListener("change", () => {
+    form.dataset.closeOutcomeChosen = "true";
+    syncTypeUi();
+  });
+  form.addEventListener("reset", () => {
+    delete form.dataset.closeOutcomeChosen;
+    queueMicrotask(syncTypeUi);
+  });
   syncTypeUi();
 
   const collectOutcome = () => {
@@ -16677,6 +16691,7 @@ function renderCoachDemoReport(root, analysis = null) {
         .filter(([, value]) => value)
         .map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
     </dl>
+    ${analysis.closeAvailable ? '<section data-demo-close-root></section>' : ""}
     <details class="coach-demo-transcript">
       <summary>Ver análisis completo</summary>
       <div class="coach-demo-report-header">
@@ -16780,10 +16795,12 @@ function renderCoachDemoReport(root, analysis = null) {
       <pre>${escapeHtml(analysis.transcript)}</pre>
     </details>` : ""}
   `;
+  const closeRoot=root.querySelector("[data-demo-close-root]");
+  if (closeRoot) window.tecVisitClose?.mount(closeRoot,analysis.id);
   root.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function initCoachDemoRecorder() {
+function initCoachDemoRecorder(closePilot = false) {
   const root = document.querySelector("[data-demo-recorder]");
   if (!root) {
     return;
@@ -17382,7 +17399,7 @@ function initCoachDemoRecorder() {
       }
       showAnalysisNotice({
         title: autoStopped ? "La grabación terminó a los 90 minutos" : "Tu resumen está listo",
-        copy: "Guardado en Mi actividad, en Mis demostraciones.",
+        copy: analysis.closeAvailable ? "Tu Coach tiene el cierre listo. Puedes aclararlo con un audio." : "Guardado en Mi actividad, en Mis demostraciones.",
         analysisId: analysis?.id || state.sessionId,
         ready: true
       });
@@ -17446,6 +17463,7 @@ function initCoachDemoRecorder() {
         video: false
       });
       const startedAt = new Date().toISOString();
+      const visitLink = closePilot ? {closeVisitId:getTecVisitId(), closeCrmId:getActiveCoachCrmContext()?.id || ""} : {};
       state.localSessionId = createTecOfflineId("recording");
       state.releaseCaptureLock = await holdTecRecordingLock(state.localSessionId);
       tecActiveRecordingIds.add(state.localSessionId);
@@ -17453,6 +17471,7 @@ function initCoachDemoRecorder() {
         localId: state.localSessionId,
         status: "recording",
         consentConfirmed: true,
+        ...visitLink,
         knownOutcome: "unknown",
         protectedChunks: 0,
         startedAt,
@@ -17468,6 +17487,7 @@ function initCoachDemoRecorder() {
             body: {
               consentConfirmed: true,
               knownOutcome: "unknown",
+              ...visitLink,
               startedAt,
               clientRecordingId: state.localSessionId
             }
@@ -17870,7 +17890,7 @@ async function loadCoachAppPage() {
     initBuyerProfileTool();
     initDailyPrizeTool(me.user);
     initCoachDemoOutcomeWorkspace(me.user);
-    initCoachDemoRecorder();
+    initCoachDemoRecorder(me.demoClosePilot === true);
     initTecNewClient(me.user);
   }
 
@@ -18373,9 +18393,19 @@ async function loadCoachAppPage() {
     let assistantMessageHandles = [];
 
     try {
+      const answeringSession = getCoachChatSessionId();
+      const answer = window.tecVisitClose?.hasPending() ? await window.tecVisitClose.answer(text) : null;
+      if (answer) {
+        if (answeringSession !== getCoachChatSessionId()) return {ok:false};
+        assistantMessageHandles=addCoachMessage(chatMessages,"assistant",answer.text);
+        window.tecVisitClose.controls(assistantMessageHandles,answer.id,false);
+        if (options.replyMode==="audio") await coachVoice?.speak(answer.text,assistantMessageHandles,undefined,{verbatim:true,isCurrent:()=>answeringSession === getCoachChatSessionId()});
+        return {ok:true};
+      }
       const activeDemoStageMeta = getCoachDemoStageMeta(getCoachDemoStageId());
       const requestBody = {
         accountId: String(me.user.id),
+        ...(me.demoClosePilot ? {closeVisitId:getTecVisitId()} : {}),
         coachPlanVersion: 1,
         coachMailVersion: 1,
         coachCalendarVersion: 1,
@@ -18501,6 +18531,11 @@ async function loadCoachAppPage() {
   };
 
   const coachAgentContexts = createCoachAgentContexts();
+  window.tecVisitClose = me.demoClosePilot && window.TecDemoCloseChat ? window.TecDemoCloseChat.init({
+    accountId:String(me.user.id), request:apiRequest, addMessage:t=>addCoachMessage(chatMessages,"assistant",t),
+    openChat:()=>syncFloatingCoachDock("open"), visitId:getTecVisitId, crmId:()=>getActiveCoachCrmContext()?.id || "",
+    prepareReminder:t=>sendCoachMessage(t)
+  }) : null;
   coachVoice = window.TecCoachVoice?.init({
     userId: me.user.id, forms: [chatForm, floatingChatForm].filter(Boolean),
     sendMessage: (text, audio) => sendCoachMessage(text, { ...audio, replyMode: "audio" })

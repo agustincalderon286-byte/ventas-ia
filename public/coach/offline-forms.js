@@ -155,6 +155,7 @@
     window.addEventListener("tec:offline-status", () => { ready.then(() => refresh()).catch(() => null); });
     return {
       ready, hasDraft: () => Boolean(draft), wasRestored: () => restored,
+      getDraftContext: () => draft?.context ? { ...draft.context } : null,
       async startNewVisit() {
         await ready; await chain;
         if (draft) await storage.put("cache", { key: `form-archive:${email}:${accountId}:${kind}:${storage.id('archive')}`, ownerEmail: email, accountId, kind, value: draft });
