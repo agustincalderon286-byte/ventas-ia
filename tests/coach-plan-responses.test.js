@@ -103,3 +103,8 @@ test('respeta un pedido de no consultar incluso si el proveedor equivoca la herr
   assert.equal((await run('No me agendes nada, solo dime si estoy ocupado mañana','consultar_agenda',{schedule:'mañana'})).kind,'agenda');
   assert.equal((await run('No busques nada','leer_bandeja')).kind,'clarify');
 });
+
+test('la herramienta de recomendaciones admite lenguaje libre y respeta excluir Sheets',async()=>{
+  assert.equal((await run('De mi lista de referencias, ¿por dónde empiezo las llamadas?', 'priorizar_referidos', {})).kind,'referralCalls');
+  assert.equal((await run('No consultes mi hoja, solo dame una idea.', 'priorizar_referidos', {})).kind,'clarify');
+});

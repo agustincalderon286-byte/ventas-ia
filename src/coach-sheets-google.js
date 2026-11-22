@@ -135,9 +135,9 @@ export function createSheetsGoogle(fetcher = fetch) {
   const grid = (access, book, ranges, cellFields='formattedValue,effectiveValue(numberValue),note') => request(access, book,
     ':getByDataFilter?fields=sheets(properties(sheetId),data(startRow,startColumn,rowData(values('+cellFields+'))))',
     {dataFilters:ranges.map(gridRange => ({gridRange})),includeGridData:true});
-  async function layouts(access, book) {
+  async function layouts(access, book, kinds = ['tickets','referrals']) {
     const meta = await request(access, book, '?fields=properties(title,locale),sheets(properties(sheetId,title,sheetType,gridProperties(rowCount,columnCount)))');
-    const sheets = ['tickets','referrals'].map(kind => {
+    const sheets = kinds.map(kind => {
       const id = kind === 'tickets' ? book.ticketsSheetId : book.referralsSheetId;
       const info = meta.sheets?.find(s => (s.properties.sheetId ?? 0) === id)?.properties;
       if (!info || info.sheetType !== 'GRID' || !info.gridProperties?.columnCount || !info.gridProperties?.rowCount) {
@@ -193,8 +193,8 @@ export function createSheetsGoogle(fetcher = fetch) {
       }
       return state;
     },
-    async readFollowups(access, book, { forPlan = false, forRoute = false } = {}) {
-      const {sheets, state, locale} = await layouts(access, book);
+    async readFollowups(access, book, { forPlan = false, forRoute = false, referralsOnly = false } = {}) {
+      const {sheets, state, locale} = await layouts(access, book, referralsOnly ? ['referrals'] : undefined);
       const columns = forRoute ? ['fullName','host','number','seller','address','city'] :
         ['fullName','host','number','seller','history','result','followupDate','status'];
       if (forPlan) columns.push('email','phone','order');

@@ -155,6 +155,15 @@ async function interpret(text, options, pilot) {
   if (typeof text!=='string' || !text.trim()) return empty('none');
   if (text.length>6000) return ask('¿Puedes dividir el pedido en dos mensajes más cortos?');
   const words=text.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim();
+  // Recognize an unqualified personal lookup even when the planner is offline.
+  // Anchoring leaves named contacts, exclusions, other dates and combined tasks to the planner.
+  if (pilot) {
+    const question=words.replace(/^(?:oye )?(?:jorge |coach )?(?:dime )?/,'')
+      .replace(/\b(?:de|en) (?:mi|mis|el) (?:4 en 14|cuatro en catorce|4 en catorce|cuatro en 14|referidos)\b/, 'FUENTE')
+      .replace(/ por favor$/,'');
+    if (question.includes('FUENTE') && /^(?:a )?(?:quien(?:es)?|que (?:personas|referidos|contactos))(?: FUENTE)? (?:me (?:recomiendas?|aconsejas?|sugieres?) (?:que )?|(?:debo|deberia|conviene) )?(?:llamar|llame|marcar|les marco|llamo|marco)(?: (?:hoy|ahora|primero|FUENTE)){0,3}$/.test(question))
+      return empty('referralCalls');
+  }
   // The ordinary shorthand for a single next call works even if the interpreter is offline.
   // Qualified queries, corrections and combinations continue through the full interpreter.
   if (!pilot && /^(?:a quien (?:le )?(?:marco|llamo)(?: (?:ahorita|ahora|primero|ahora mismo))?|(?:dame|pasame) (?:el |la )?siguiente (?:pendiente|llamada|contacto))(?: por (?:favor|fa))?$/.test(words)) {
@@ -176,7 +185,7 @@ async function interpret(text, options, pilot) {
         }
       }
       const result=await requestPilotTool({message,context:inputContext,properties,operationInstructions,excluded},options);
-      if (['agenda','inbox','sales'].includes(result.kind)) {
+      if (['agenda','inbox','sales','referralCalls'].includes(result.kind)) {
         const bounds=sourceFragment(result.schedule || '',message,values);
         if (bounds===null) return ask('¿Para qué fecha u horario quieres que consulte la agenda?');
         return {...empty(result.kind),schedule:bounds};

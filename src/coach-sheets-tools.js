@@ -60,10 +60,10 @@ function contactOf({row,key,id},followup,withPhone=false) {
 export function createCoachSheetTools({google=createSheetsGoogle(),transfer=createSheetsTransfer({google})}={}) {
   // ctx belongs to one authenticated chat request. Only list/search shares a snapshot.
   const searchReads=new WeakMap();
-  async function load(ctx) {
+  async function load(ctx, referralsOnly=false) {
     const binding=scope(ctx);
     await check(ctx);
-    const data=await google.readFollowups(ctx.access,ctx.workbook,{forPlan:true});
+    const data=await google.readFollowups(ctx.access,ctx.workbook,{forPlan:true, ...(referralsOnly && {referralsOnly:true})});
     await check(ctx);
     return {locale:data.locale,rows:data.rows.filter(row=>saleScope(row,ctx.sellerName)).map(row=>{
       const id=identity(binding,row);
@@ -99,20 +99,23 @@ export function createCoachSheetTools({google=createSheetsGoogle(),transfer=crea
       return {contacts:matches.slice(offset,offset+12),total:matches.length};
     },
 
-    async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind}={}) {
-      const {rows,locale}=await load(ctx);
-      const priority=['overdue','today','undated'];
+    async nextCall(ctx,{today,seen=[],name='',host='',bucket='',kind,shortlist=false}={}) {
+      const {rows,locale}=await load(ctx,shortlist && kind==='referrals');
+      const priority=['overdue','today','undated','new'];
       const ranked=[];
       for (const hit of rows) {
         if (kind && hit.row.kind!==kind) continue;
         if (!matchWords(hit.row.fullName,fold(name)) || !matchWords(hit.row.host,fold(host))) continue;
-        const followup=classifySheetsFollowup(hit.row,{today,locale});
+        let followup=classifySheetsFollowup(hit.row,{today,locale});
+        if (shortlist && !followup && ['history','result','followupDate','status'].every(k=>!text(hit.row[k])))
+          followup={bucket:'new',date:'',reason:'La ficha todavía no tiene una gestión registrada.'};
         if (!followup || !priority.includes(followup.bucket) || bucket && bucket!==followup.bucket) continue;
         const contact=contactOf(hit,followup,true);
         if (contact.phone) ranked.push(contact);
       }
       ranked.sort((a,b)=>priority.indexOf(a.bucket)-priority.indexOf(b.bucket) || a.date.localeCompare(b.date) || a.row-b.row);
       if (name && ranked.length>1) throw fail(422,'Hay varias fichas pendientes con ese nombre. Dime el nombre completo y el anfitrión antes de llamar.');
+      if (shortlist) return {contacts:ranked.slice(0,5),total:ranked.length};
       return {contact:ranked.find(c=>!seen.includes(c.identityKey)),total:ranked.length};
     },
 

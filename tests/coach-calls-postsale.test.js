@@ -86,10 +86,15 @@ test('el lector usa únicamente la autorización personal y descarta resultados 
  switched=true;await assert.rejects(read(actor),/Cambió/);assert.equal(calls,2);
 });
 
-function fixture() {
+function fixture(pilot=false) {
  const rows=[row('Ana',4,'2026-11-17: llamar el 2026-11-20'),row('Bea',5,'Llamar el 2026-11-21'),row('Eva',6,'Buzón'),
    row('Sol',7,'Llamar el 2026-11-18',{seller:'Rigoberto'}),row('Excluida',8,'No llamar',{followupDate:today}),
    row('Corta',9,'Llamar el 2026-11-16',{phone:'312-55'}),row('Mañana',10,'Llamar el 2026-11-22')];
+ const participants=pilot?['agustincalderon286@gmail.com','calderonrigoberto51@gmail.com']:emails;
+ if (pilot) {
+   for(const r of rows) Object.assign(r,{kind:'referrals',sheetTitle:'4 en 14',sheetId:3});
+   rows.push(row('Rifa',14,'Pendiente'),row('Nueva',15,'',{kind:'referrals',sheetTitle:'4 en 14',sheetId:3}));
+ }
  const records=new Map(),updates=[],scans=[];
  const plans={
    async load(s){return structuredClone(records.get(s));},
@@ -108,10 +113,10 @@ function fixture() {
    ['Le llamé, recuérdame el jueves a las seis y media de la tarde',{kind:'revise',operations:['note','appointment'],note:'Le llamé',noteSchedule:'el jueves',schedule:'el jueves a las seis y media de la tarde'}],
    ['¿A quién falta ofrecer demo de uso de mis ventas de esta semana?',{kind:'plan',operations:['postSale'],salesPeriod:'week'}]
  ]);
- const run=createConversationPlan({config:{sheetsPilot:emails,planPilot:emails},plans,sheets,sheetTools:createCoachSheetTools({google}),
+ const run=createConversationPlan({config:{sheetsPilot:participants,planPilot:participants},...(pilot && {readConnections:async()=>({sheets:"connected"})}),plans,sheets,sheetTools:createCoachSheetTools({google}),
    channels,switched:req=>!!req.switched,readSession:req=>req.auth,interpret:async t=>answers.get(t),readSales,now:()=>now});
  function ask(owner,text,rev='',body={}) {
-   const auth={user:{_id:owner,name:owner,email:owner.toLowerCase()+'@example.invalid'},session:{tokenHash:'login'+owner,accessMode:'direct'}};
+   const auth={user:{_id:owner,name:owner,email:participants[owner==='Agustin'?0:1]},session:{tokenHash:'login'+owner,accessMode:'direct'}};
    const req={auth,body:{accountId:owner,coachPlanVersion:1,coachPlanPending:rev,coachTimeZone:zone,...body}};
    return run({auth,req,text,sessionId:'personal'});
  }
@@ -161,4 +166,18 @@ test('el lenguaje cotidiano para marcar ahorita funciona incluso si el intérpre
  for (const other of ['No me digas a quién le marco ahorita','¿A quién le marco ahorita para la postventa de la semana?']) {
    const intent=await interpretCoachPlan(other,{infer:offline});assert.deepEqual(intent.operations,[]);
  }
+});
+
+test('la pregunta dictada de Agustín recomienda varios referidos en orden y conserva la cuenta',async()=>{
+ const f=fixture(true);
+ for(const [owner,expected,excluded] of [['Agustin',['Ana','Bea','Eva','Nueva'],['Sol','Rifa','Excluida','Corta','Mañana']],['Rigoberto',['Sol'],['Ana','Rifa','Bea']]]) {
+   const res=await f.ask(owner,'¿Qué personas de mi 4 en 14 me recomienda llamar hoy?', '',{responseMode:'audio'});
+   const choices=res.coachHelpActions.filter(a=>a.op==='contact');
+   assert.deepEqual(choices.map(a=>a.label.split(' · ')[1]),expected);
+   for(const name of excluded) assert.ok(!res.respuesta.includes(name));
+   assert.match(res.respuesta,/Seguimiento vencido/);
+   const selected=await f.ask(owner,'TECPLAN '+res.coachPlanPending+' contact 1',res.coachPlanPending);
+   assert.ok(selected.coachHelpActions.some(a=>a.type==='planCall'));
+ }
+ assert.deepEqual(f.updates,[]);
 });

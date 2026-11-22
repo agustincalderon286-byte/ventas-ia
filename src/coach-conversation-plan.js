@@ -173,6 +173,19 @@ export function createConversationPlan({config,plans,sheets,sheetTools,channels,
             const read=offlineRead(text,s.lastRead);
             if (read && (!s.waiting || !client || s.lastRead==='agenda')) intent={kind:read};
           }
+          if (intent.kind==='referralCalls') {
+            if (!zone) return reply('Necesito tu zona horaria para revisar los seguimientos de hoy.',client);
+            const context=await ctx();
+            const ranked=await sheetTools.nextCall(context,{today:sheetsToday(now(),zone),kind:'referrals',shortlist:true});
+            if (!await context.isCurrent()) return reply('Tu conexión cambió durante la consulta. Vuelve a abrir tu Coach.',client);
+            if (!ranked.total) return reply('Revisé tu 4 en 14. No encontré referidos pendientes con teléfono disponible para llamar hoy.',client);
+            const title='De tu 4 en 14, te recomiendo llamar en este orden:';
+            const choices=ranked.contacts.map(c=>({...c,reason:({overdue:'Seguimiento vencido el '+c.date,today:'Seguimiento para hoy',undated:'Pendiente sin fecha',new:'Primer contacto'})[c.bucket]+'. '+clean(c.reason)}));
+            if (s.ops.length && client) return reply([title,...choices.map((c,i)=>(i+1)+'. '+clean(c.fullName)+' · '+c.reason+' (fila '+c.row+').')].join('\n'),client);
+            s=initial();s.ops=['call'];s.sheetGrant=context.grant;s.fields.leadKind='referrals';
+            s.listTitle=title;s.choices=choices;s.waiting='choice';
+            return save();
+          }
           if (['agenda','inbox','sales'].includes(intent.kind)) {
             if (!await current()) return reply('Tu sesión cambió. Abre de nuevo tu Coach.');
             if (intent.kind!=='agenda') {
