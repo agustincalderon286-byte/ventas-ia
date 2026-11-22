@@ -69,6 +69,8 @@ test('boletas, siguientes preguntas y novedades no confunden a los vendedores ni
   assert.match(refs.text,/Contacto C/);assert.doesNotMatch(refs.text,/Contacto A/);
   assert.equal(await read(user(0),'¿Cómo se llena el 4 en 14?'),null);
   assert.equal(await read(user(0),'Redacta un correo a mi equipo'),null);
+  assert.equal(await read(user(0),'No leas mi correo por favor'),null);
+  assert.equal(await read(user(0),'Si te pidiera revisar mi correo, ¿qué harías?'),null);
   assert.equal(await read(user(0),'Necesito practicar el cierre'),null);
   assert.equal(await read(user(0),'¿Qué dice el segundo?',[{role:'assistant',content:'viernes',sources:['calendar']}]),null);
   assert.ok(!calls.some(c=>c[0]==='native'));

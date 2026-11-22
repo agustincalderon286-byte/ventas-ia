@@ -13,6 +13,7 @@ const labels = {sheets414:'En Sheets, 4 en 14',sheetsTickets:'En Sheets, boletas
 const readCue = /\b(?:mi|mis|me|tenemos|tengo|revisa(?:me)?|chec[ak]a(?:me)?|checa(?:me)?|busca(?:me)?|mira|muestra(?:me)?|dime|lee(?:me)?|consulta|cuant[oa]s?|cuales|quienes|hay|llego|llegaron|nuev[oa]s?|novedades|a quien|como va|que tal|estado|pendientes?|vencidos?)\b/;
 const teaching = /\b(?:como (?:se |puedo |debo |puede |podria |tengo que )?(?:hago|hacer|conect\w*|llen\w*|escrib\w*|envi\w*|uso|us[ao]r|funciona|trabaj\w*|mejor\w*|consig\w*|capt\w*|pid[oa]|pido|pedir|revis\w*)|que (?:es|son|significa)|como (?:le |les )?digo|practiquemos|ensename|dame (?:un )?(?:ejemplo|guion|consejo)|simul\w*|redact\w*|preparame un correo)\b/;
 const writeCue = /\b(?:envia(?:le|me)?|mandale|manda(?:me)? (?:un |el )?(?:correo|mensaje)|responde(?:le)? (?:a|al)|borra|elimina|actualiza|guarda|registra|agenda(?:me)? (?:una|la)|agrega|anade|modifica|marca como)\b/;
+const noRead = /\b(?:sin (?:que )?(?:leer|consult\w*|revis\w*|abrir|usar|toc\w*) (?:mi|el|la|ningun)|no (?:me |quiero que |necesito que |vayas a |hace falta que )*(?:leas|lean|revis\w*|consult\w*|busqu\w*|abras|uses|toques)|si (?:yo |te )?(?:pidiera|pidiese)|supongamos que)\b/;
 const hycite = /\b(?:hy[\s-]?cite|hi[\s-]?cite|jai\s?sait)\b/;
 const four = /\b(?:4|cuatro)\s*(?:en|por|de|[-/x])\s*(?:14|catorce)\b/;
 const tickets = /\b(?:boletas?|rifas?|boletos?)\b/;
@@ -29,8 +30,11 @@ function clean(value, max=60) {
 }
 function subject(value) {
   const raw = clean(value,70);
-  if (/\b(?:passcode|one.time|verification code|codigo de (?:seguridad|verificacion|acceso)|password reset)\b/.test(fold(raw))) return 'aviso de seguridad';
+  if (privateMailText(value)) return 'aviso de seguridad';
   return raw || 'Sin asunto';
+}
+function privateMailText(value) {
+  return /\b(?:passcode|one.time|verification code|security code|codigo de (?:seguridad|verificacion|acceso)|password|contrasena|pin de acceso|token de acceso|api key|bearer [a-z0-9._-]{10,}|sk-[a-z0-9_-]{12,}|eyj[a-z\d_-]{8,}\.[a-z\d_-]+\.[a-z\d_-]+)\b/.test(fold(value));
 }
 function ordinal(text) {
   const word=fold(text).match(/\b(primer[oa]?|segund[oa]|tercer[oa]?|cuart[oa]|quint[oa])\b/);
@@ -52,7 +56,7 @@ function directSources(q) {
 }
 function selectIntent(input,recent) {
   const q=fold(input);
-  if (!q || teaching.test(q) || writeCue.test(q)) return null;
+  if (!q || teaching.test(q) || writeCue.test(q) || noRead.test(q)) return null;
   const last=recent?.at(-1);
   const previous=last?.role==='assistant' && Array.isArray(last.sources) ? last.sources.filter(v=>liveSources.has(v)) : [];
   const priorUser=recent?.at(-2)?.role==='user' ? recent.at(-2).content : '';
@@ -108,7 +112,7 @@ function inboxSummary(rows,more,index,previousText,where) {
     if(!message)return 'Gmail: no hay un correo en esa posición entre los resultados.';
     const title=subject(message.subject);
     if(previousText && !previousText.includes(title) || rows.filter(row=>subject(row.subject)===title).length>1) return 'La lista de Gmail cambió o el asunto se repite. Pídeme la lista actualizada antes de elegir.';
-    const summary=title==='aviso de seguridad'?'':clean(message.snippet,140);
+    const summary=title==='aviso de seguridad' || privateMailText(message.snippet)?'':clean(message.snippet,140);
     return 'Gmail, «'+title+'». '+(summary?'Vista previa: '+summary:'El remitente es '+clean(message.from?.split('<')[0] || message.from,55)+'.');
   }
   return 'Gmail'+where+': '+rows.length+(more?' o más':'')+' '+(rows.length===1?'correo':'correos')+'. '+rows.slice(0,3).map((m,i)=>(i+1)+'. «'+subject(m.subject)+'»').join(' ')+'.';
